@@ -1,0 +1,18 @@
+version: "3.8"
+
+services:
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: n8n
+    ports:
+      - "${N8N_PORT}:${N8N_PORT}"
+    environment:
+      - N8N_HOST=${N8N_HOST}
+      - N8N_PROTOCOL=${N8N_PROTOCOL}
+      - NODE_ENV=${NODE_ENV}
+      - GENERIC_TIMEZONE=${GENERIC_TIMEZONE}
+      - WEBHOOK_URL=${WEBHOOK_URL}
+      - N8N_EDITOR_BASE_URL=${N8N_EDITOR_BASE_URL}
+    restart: unless-stopped
+    volumes:
+      - ./n8n_data:/home/node/.n8n

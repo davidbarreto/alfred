@@ -1,1 +1,744 @@
-{"updatedAt":"2026-05-05T20:25:27.266Z","createdAt":"2026-05-04T12:00:26.310Z","id":"ENuZF4ke1-v_zXMhug9C3","name":"AlfredTaskHandling","description":null,"active":true,"isArchived":false,"nodes":[{"parameters":{"rules":{"values":[{"conditions":{"options":{"caseSensitive":true,"leftValue":"","typeValidation":"strict","version":3},"conditions":[{"id":"686cf9a3-c471-4ab8-a8de-0986c5dd8028","leftValue":"={{ $json.alfred.command }}","rightValue":"^/(todo|taskadd)$","operator":{"type":"string","operation":"regex"}}],"combinator":"and"},"renameOutput":true,"outputKey":"task"},{"conditions":{"options":{"caseSensitive":true,"leftValue":"","typeValidation":"strict","version":3},"conditions":[{"id":"195af21d-9520-4826-a3f6-ce9befefb362","leftValue":"={{ $json.alfred.command }}","rightValue":"/tasklist","operator":{"type":"string","operation":"equals","name":"filter.operator.equals"}}],"combinator":"and"},"renameOutput":true,"outputKey":"tasklist"}]},"options":{"fallbackOutput":"extra"}},"type":"n8n-nodes-base.switch","typeVersion":3.4,"position":[-832,96],"id":"68d69a00-1bf1-4b44-863d-981bd0dbacad","name":"Note command Switch"},{"parameters":{"inputSource":"passthrough"},"type":"n8n-nodes-base.executeWorkflowTrigger","typeVersion":1.1,"position":[-1040,112],"id":"d2f85e49-4f7d-4cf0-a6c7-23af9bdfe55b","name":"When Executed by Another Workflow"},{"parameters":{"rules":{"values":[{"conditions":{"options":{"caseSensitive":true,"leftValue":"","typeValidation":"strict","version":3},"conditions":[{"leftValue":"={{ $json.items }}","rightValue":"","operator":{"type":"string","operation":"notEmpty","singleValue":true},"id":"918e7b78-86fa-48a0-9411-757bd34e9c38"}],"combinator":"and"},"renameOutput":true,"outputKey":"Tasks"}]},"options":{"fallbackOutput":"extra"}},"type":"n8n-nodes-base.switch","typeVersion":3.4,"position":[-80,432],"id":"210fa006-b7c5-4b04-ada3-e3d2fc9b53c9","name":"Switch"},{"parameters":{"assignments":{"assignments":[{"id":"6df4de13-1f7c-4c78-a8ff-ed68ac82519e","name":"type","value":"command_typo","type":"string"}]},"options":{}},"type":"n8n-nodes-base.set","typeVersion":3.4,"position":[-448,640],"id":"50664b5c-e009-4c83-a20e-dde0f225195a","name":"Set argument for Command Typo message"},{"parameters":{"workflowId":{"__rl":true,"value":"4m18tYp6mJT5fFMGH15b5","mode":"list","cachedResultUrl":"/workflow/4m18tYp6mJT5fFMGH15b5","cachedResultName":"MessagesService"},"workflowInputs":{"mappingMode":"defineBelow","value":{},"matchingColumns":[],"schema":[],"attemptToConvertTypes":false,"convertFieldsToString":true},"options":{}},"type":"n8n-nodes-base.executeWorkflow","typeVersion":1.3,"position":[768,848],"id":"e9a39f27-aaa3-4c80-b56a-dc737aa494af","name":"Generate Command Typo message","executeOnce":false},{"parameters":{"assignments":{"assignments":[{"id":"eca7064f-0277-4aae-af02-7ed66ccae494","name":"type","value":"internal_error","type":"string"}]},"options":{}},"type":"n8n-nodes-base.set","typeVersion":3.4,"position":[-144,176],"id":"97b41e4b-010e-4bd5-b718-b17c6b83f628","name":"Set argument for Notion Internal Error message"},{"parameters":{"workflowId":{"__rl":true,"value":"4m18tYp6mJT5fFMGH15b5","mode":"list","cachedResultUrl":"/workflow/4m18tYp6mJT5fFMGH15b5","cachedResultName":"MessagesService"},"workflowInputs":{"mappingMode":"defineBelow","value":{},"matchingColumns":[],"schema":[],"attemptToConvertTypes":false,"convertFieldsToString":true},"options":{}},"type":"n8n-nodes-base.executeWorkflow","typeVersion":1.3,"position":[768,176],"id":"407bc718-4644-4514-a87d-990108fb93f2","name":"Generate Notion Internal Error message"},{"parameters":{"mode":"combine","combineBy":"combineByPosition","options":{}},"type":"n8n-nodes-base.merge","typeVersion":3.2,"position":[576,512],"id":"4c88955a-123f-4a34-b4a1-63dc4950f561","name":"Merge"},{"parameters":{"jsCode":"const it = $input.all();\n\nif (!it || it.length === 0 || it.every(item => Object.keys(item.json).length === 0)) {\n  return [{ json: { items: null } }];\n}\n\nconst fmtDate = (iso) => new Date(iso).toLocaleString('en-GB', {\n  day: '2-digit', month: 'short', year: 'numeric',\n  hour: '2-digit', minute: '2-digit'\n});\n\nconst priorityEmoji = (p) => ({ High: '🔴', Medium: '🟡', Low: '🟢' }[p] ?? '⚪');\nconst urgencyEmoji  = (u) => ({ Urgent: '⚡', Normal: '🕐', Low: '🐢' }[u] ?? '⚪');\nconst statusEmoji   = (s) => ({ 'Not started': '⬜', 'In progress': '🔄', 'Done': '✅' }[s] ?? '⬜');\n\nconst lines = it.map((item) => {\n  const props = item.json.properties;\n\n  const name     = props?.Name?.title?.map(t => t.plain_text).join('') || '—';\n  const status   = props?.status?.status?.name || 'Not started';\n  const priority = props?.Priority?.select?.name || null;\n  const urgency  = props?.Urgency?.select?.name || null;\n  const tags     = props?.Tags?.multi_select?.map(t => t.name).join(', ') || 'None';\n  const dueDate  = props?.['Due date']?.date?.start ? fmtDate(props['Due date'].date.start) : 'No due date';\n\n  return [\n    `${statusEmoji(status)} *${name}*`,\n    `📌 Status: ${status}`,\n    priority ? `${priorityEmoji(priority)} Priority: ${priority}` : null,\n    urgency  ? `${urgencyEmoji(urgency)} Urgency: ${urgency}`   : null,\n    `🏷 Tags: ${tags}`,\n    `📅 Due: ${dueDate}`,\n  ].filter(Boolean).join('\\n');\n});\n\nconst items = \"\\n\\n\" + lines.join('\\n\\n---\\n\\n');\n\nreturn [{ json: { items } }];"},"type":"n8n-nodes-base.code","typeVersion":2,"position":[-256,432],"id":"bc293e8a-a04f-4efb-b2e1-c94e659aed03","name":"Code in JavaScript"},{"parameters":{"resource":"databasePage","databaseId":{"__rl":true,"value":"356cfb8f-c081-80db-9355-cb73235224e2","mode":"list","cachedResultName":"Personal TODO list","cachedResultUrl":"https://www.notion.so/356cfb8fc08180db9355cb73235224e2"},"title":"={{ $json.alfred.args }}","options":{}},"type":"n8n-nodes-base.notion","typeVersion":2.2,"position":[-512,16],"id":"48500eb2-b064-4d78-816e-65e3322c0d61","name":"Create Task","credentials":{"notionApi":{"id":"w7qNgbzQ9iWGhreC","name":"Notion account"}},"onError":"continueErrorOutput"},{"parameters":{"assignments":{"assignments":[{"id":"8e8dc0e8-a2fc-44a1-8dac-1c21193bea70","name":"type","value":"task_success","type":"string"}]},"options":{}},"type":"n8n-nodes-base.set","typeVersion":3.4,"position":[0,0],"id":"155943f6-f006-48e0-af0f-9bd2b1b6bc8e","name":"Set argument for Task Added message"},{"parameters":{"workflowId":{"__rl":true,"value":"4m18tYp6mJT5fFMGH15b5","mode":"list","cachedResultUrl":"/workflow/4m18tYp6mJT5fFMGH15b5","cachedResultName":"MessagesService"},"workflowInputs":{"mappingMode":"defineBelow","value":{},"matchingColumns":[],"schema":[],"attemptToConvertTypes":false,"convertFieldsToString":true},"options":{}},"type":"n8n-nodes-base.executeWorkflow","typeVersion":1.3,"position":[768,0],"id":"b647a9d3-c1f9-45e2-85d2-217b216a17ec","name":"Generate Task Added message"},{"parameters":{"resource":"databasePage","operation":"getAll","databaseId":{"__rl":true,"value":"356cfb8f-c081-80db-9355-cb73235224e2","mode":"list","cachedResultName":"Personal TODO list","cachedResultUrl":"https://www.notion.so/356cfb8fc08180db9355cb73235224e2"},"simple":false,"options":{}},"type":"n8n-nodes-base.notion","typeVersion":2.2,"position":[-512,224],"id":"5ca7bade-4da4-4916-9c70-0f687470a121","name":"Get all Tasks","alwaysOutputData":true,"credentials":{"notionApi":{"id":"w7qNgbzQ9iWGhreC","name":"Notion account"}},"onError":"continueErrorOutput"},{"parameters":{"assignments":{"assignments":[{"id":"c11a2e10-590d-4f50-a0a6-7d10f820809b","name":"type","value":"task_list","type":"string"}]},"options":{}},"type":"n8n-nodes-base.set","typeVersion":3.4,"position":[128,320],"id":"bde2cfa6-081b-4818-9c26-e60c6602dac0","name":"Set argument for Task List message"},{"parameters":{"workflowId":{"__rl":true,"value":"4m18tYp6mJT5fFMGH15b5","mode":"list","cachedResultUrl":"/workflow/4m18tYp6mJT5fFMGH15b5","cachedResultName":"MessagesService"},"workflowInputs":{"mappingMode":"defineBelow","value":{},"matchingColumns":[],"schema":[],"attemptToConvertTypes":false,"convertFieldsToString":true},"options":{}},"type":"n8n-nodes-base.executeWorkflow","typeVersion":1.3,"position":[336,320],"id":"15373b58-a40c-4a38-b591-ecb541d9eed9","name":"Generate Task List message"},{"parameters":{"assignments":{"assignments":[{"id":"9899d5bd-464b-47f0-a8a0-46d08c68f98d","name":"type","value":"note_empty","type":"string"}]},"options":{}},"type":"n8n-nodes-base.set","typeVersion":3.4,"position":[272,608],"id":"ae2e81bd-9496-4496-8c40-f08b6479a5a8","name":"Set argument for Task empty message"},{"parameters":{"assignments":{"assignments":[{"id":"d1ddc1d8-fd9c-441d-b505-6a4b6a8cd0cb","name":"success","value":"={{ $json.success }}","type":"boolean"},{"id":"311770c5-447f-4565-ad3f-40888e9f21c7","name":"message","value":"={{ $json.message + $json.items }}","type":"string"}]},"options":{}},"type":"n8n-nodes-base.set","typeVersion":3.4,"position":[768,512],"id":"b2ff6cc3-88c8-4ddd-ac1c-922447c5bfb6","name":"Output Tasks List"},{"parameters":{"workflowId":{"__rl":true,"value":"4m18tYp6mJT5fFMGH15b5","mode":"list","cachedResultUrl":"/workflow/4m18tYp6mJT5fFMGH15b5","cachedResultName":"MessagesService"},"workflowInputs":{"mappingMode":"defineBelow","value":{},"matchingColumns":[],"schema":[],"attemptToConvertTypes":false,"convertFieldsToString":true},"options":{}},"type":"n8n-nodes-base.executeWorkflow","typeVersion":1.3,"position":[768,672],"id":"2f4f4971-f143-403f-af86-d13210bc9c52","name":"Generate Task empty message"}],"connections":{"Note command Switch":{"main":[[{"node":"Create Task","type":"main","index":0}],[{"node":"Get all Tasks","type":"main","index":0}],[{"node":"Set argument for Command Typo message","type":"main","index":0}]]},"When Executed by Another Workflow":{"main":[[{"node":"Note command Switch","type":"main","index":0}]]},"Switch":{"main":[[{"node":"Set argument for Task List message","type":"main","index":0},{"node":"Merge","type":"main","index":1}],[{"node":"Set argument for Task empty message","type":"main","index":0}]]},"Set argument for Command Typo message":{"main":[[{"node":"Generate Command Typo message","type":"main","index":0}]]},"Set argument for Notion Internal Error message":{"main":[[{"node":"Generate Notion Internal Error message","type":"main","index":0}]]},"Merge":{"main":[[{"node":"Output Tasks List","type":"main","index":0}]]},"Code in JavaScript":{"main":[[{"node":"Switch","type":"main","index":0}]]},"Create Task":{"main":[[{"node":"Set argument for Task Added message","type":"main","index":0}],[{"node":"Set argument for Notion Internal Error message","type":"main","index":0}]]},"Set argument for Task Added message":{"main":[[{"node":"Generate Task Added message","type":"main","index":0}]]},"Get all Tasks":{"main":[[{"node":"Code in JavaScript","type":"main","index":0}],[{"node":"Set argument for Notion Internal Error message","type":"main","index":0}]]},"Set argument for Task List message":{"main":[[{"node":"Generate Task List message","type":"main","index":0}]]},"Generate Task List message":{"main":[[{"node":"Merge","type":"main","index":0}]]},"Set argument for Task empty message":{"main":[[{"node":"Generate Task empty message","type":"main","index":0}]]}},"settings":{"executionOrder":"v1","availableInMCP":false,"timeSavedMode":"fixed","callerPolicy":"workflowsFromSameOwner"},"staticData":null,"meta":null,"pinData":{"When Executed by Another Workflow":[{"json":{"alfred":{"command":"/tasklist","args":"","text":"/tasklist","chat_id":7170085884,"chat_name":"David","user_id":7170085884,"user_display_name":"David","user_handle":null}}}]},"versionId":"1f6479b4-703c-4097-8503-71e6880a9489","activeVersionId":"1f6479b4-703c-4097-8503-71e6880a9489","versionCounter":198,"triggerCount":0,"tags":[],"shared":[{"updatedAt":"2026-05-04T12:00:26.313Z","createdAt":"2026-05-04T12:00:26.313Z","role":"workflow:owner","workflowId":"ENuZF4ke1-v_zXMhug9C3","projectId":"e8O4zN9X6fOfPKr3","project":{"updatedAt":"2026-02-02T01:07:08.778Z","createdAt":"2026-02-02T01:05:48.713Z","id":"e8O4zN9X6fOfPKr3","name":"David Ferreira <david.brto@gmail.com>","type":"personal","icon":null,"description":null,"creatorId":"42a699b4-f94a-4811-adcd-5cbbc5ee5e27"}}]}
+{
+    "updatedAt": "2026-05-05T20:25:27.266Z",
+    "createdAt": "2026-05-04T12:00:26.310Z",
+    "id": "ENuZF4ke1-v_zXMhug9C3",
+    "name": "AlfredTaskHandling",
+    "description": null,
+    "active": true,
+    "isArchived": false,
+    "nodes": [
+        {
+            "parameters": {
+                "rules": {
+                    "values": [
+                        {
+                            "conditions": {
+                                "options": {
+                                    "caseSensitive": true,
+                                    "leftValue": "",
+                                    "typeValidation": "strict",
+                                    "version": 3
+                                },
+                                "conditions": [
+                                    {
+                                        "id": "686cf9a3-c471-4ab8-a8de-0986c5dd8028",
+                                        "leftValue": "={{ $json.alfred.command }}",
+                                        "rightValue": "^/(todo|taskadd)$",
+                                        "operator": {
+                                            "type": "string",
+                                            "operation": "regex"
+                                        }
+                                    }
+                                ],
+                                "combinator": "and"
+                            },
+                            "renameOutput": true,
+                            "outputKey": "task"
+                        },
+                        {
+                            "conditions": {
+                                "options": {
+                                    "caseSensitive": true,
+                                    "leftValue": "",
+                                    "typeValidation": "strict",
+                                    "version": 3
+                                },
+                                "conditions": [
+                                    {
+                                        "id": "195af21d-9520-4826-a3f6-ce9befefb362",
+                                        "leftValue": "={{ $json.alfred.command }}",
+                                        "rightValue": "/tasklist",
+                                        "operator": {
+                                            "type": "string",
+                                            "operation": "equals",
+                                            "name": "filter.operator.equals"
+                                        }
+                                    }
+                                ],
+                                "combinator": "and"
+                            },
+                            "renameOutput": true,
+                            "outputKey": "tasklist"
+                        }
+                    ]
+                },
+                "options": {
+                    "fallbackOutput": "extra"
+                }
+            },
+            "type": "n8n-nodes-base.switch",
+            "typeVersion": 3.4,
+            "position": [
+                -832,
+                96
+            ],
+            "id": "68d69a00-1bf1-4b44-863d-981bd0dbacad",
+            "name": "Note command Switch"
+        },
+        {
+            "parameters": {
+                "inputSource": "passthrough"
+            },
+            "type": "n8n-nodes-base.executeWorkflowTrigger",
+            "typeVersion": 1.1,
+            "position": [
+                -1040,
+                112
+            ],
+            "id": "d2f85e49-4f7d-4cf0-a6c7-23af9bdfe55b",
+            "name": "When Executed by Another Workflow"
+        },
+        {
+            "parameters": {
+                "rules": {
+                    "values": [
+                        {
+                            "conditions": {
+                                "options": {
+                                    "caseSensitive": true,
+                                    "leftValue": "",
+                                    "typeValidation": "strict",
+                                    "version": 3
+                                },
+                                "conditions": [
+                                    {
+                                        "leftValue": "={{ $json.items }}",
+                                        "rightValue": "",
+                                        "operator": {
+                                            "type": "string",
+                                            "operation": "notEmpty",
+                                            "singleValue": true
+                                        },
+                                        "id": "918e7b78-86fa-48a0-9411-757bd34e9c38"
+                                    }
+                                ],
+                                "combinator": "and"
+                            },
+                            "renameOutput": true,
+                            "outputKey": "Tasks"
+                        }
+                    ]
+                },
+                "options": {
+                    "fallbackOutput": "extra"
+                }
+            },
+            "type": "n8n-nodes-base.switch",
+            "typeVersion": 3.4,
+            "position": [
+                -80,
+                432
+            ],
+            "id": "210fa006-b7c5-4b04-ada3-e3d2fc9b53c9",
+            "name": "Switch"
+        },
+        {
+            "parameters": {
+                "assignments": {
+                    "assignments": [
+                        {
+                            "id": "6df4de13-1f7c-4c78-a8ff-ed68ac82519e",
+                            "name": "type",
+                            "value": "command_typo",
+                            "type": "string"
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "type": "n8n-nodes-base.set",
+            "typeVersion": 3.4,
+            "position": [
+                -448,
+                640
+            ],
+            "id": "50664b5c-e009-4c83-a20e-dde0f225195a",
+            "name": "Set argument for Command Typo message"
+        },
+        {
+            "parameters": {
+                "workflowId": {
+                    "__rl": true,
+                    "value": "4m18tYp6mJT5fFMGH15b5",
+                    "mode": "list",
+                    "cachedResultUrl": "/workflow/4m18tYp6mJT5fFMGH15b5",
+                    "cachedResultName": "MessagesService"
+                },
+                "workflowInputs": {
+                    "mappingMode": "defineBelow",
+                    "value": {},
+                    "matchingColumns": [],
+                    "schema": [],
+                    "attemptToConvertTypes": false,
+                    "convertFieldsToString": true
+                },
+                "options": {}
+            },
+            "type": "n8n-nodes-base.executeWorkflow",
+            "typeVersion": 1.3,
+            "position": [
+                768,
+                848
+            ],
+            "id": "e9a39f27-aaa3-4c80-b56a-dc737aa494af",
+            "name": "Generate Command Typo message",
+            "executeOnce": false
+        },
+        {
+            "parameters": {
+                "assignments": {
+                    "assignments": [
+                        {
+                            "id": "eca7064f-0277-4aae-af02-7ed66ccae494",
+                            "name": "type",
+                            "value": "internal_error",
+                            "type": "string"
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "type": "n8n-nodes-base.set",
+            "typeVersion": 3.4,
+            "position": [
+                -144,
+                176
+            ],
+            "id": "97b41e4b-010e-4bd5-b718-b17c6b83f628",
+            "name": "Set argument for Notion Internal Error message"
+        },
+        {
+            "parameters": {
+                "workflowId": {
+                    "__rl": true,
+                    "value": "4m18tYp6mJT5fFMGH15b5",
+                    "mode": "list",
+                    "cachedResultUrl": "/workflow/4m18tYp6mJT5fFMGH15b5",
+                    "cachedResultName": "MessagesService"
+                },
+                "workflowInputs": {
+                    "mappingMode": "defineBelow",
+                    "value": {},
+                    "matchingColumns": [],
+                    "schema": [],
+                    "attemptToConvertTypes": false,
+                    "convertFieldsToString": true
+                },
+                "options": {}
+            },
+            "type": "n8n-nodes-base.executeWorkflow",
+            "typeVersion": 1.3,
+            "position": [
+                768,
+                176
+            ],
+            "id": "407bc718-4644-4514-a87d-990108fb93f2",
+            "name": "Generate Notion Internal Error message"
+        },
+        {
+            "parameters": {
+                "mode": "combine",
+                "combineBy": "combineByPosition",
+                "options": {}
+            },
+            "type": "n8n-nodes-base.merge",
+            "typeVersion": 3.2,
+            "position": [
+                576,
+                512
+            ],
+            "id": "4c88955a-123f-4a34-b4a1-63dc4950f561",
+            "name": "Merge"
+        },
+        {
+            "parameters": {
+                "jsCode": "const it = $input.all();\n\nif (!it || it.length === 0 || it.every(item => Object.keys(item.json).length === 0)) {\n  return [{ json: { items: null } }];\n}\n\nconst fmtDate = (iso) => new Date(iso).toLocaleString('en-GB', {\n  day: '2-digit', month: 'short', year: 'numeric',\n  hour: '2-digit', minute: '2-digit'\n});\n\nconst priorityEmoji = (p) => ({ High: '🔴', Medium: '🟡', Low: '🟢' }[p] ?? '⚪');\nconst urgencyEmoji  = (u) => ({ Urgent: '⚡', Normal: '🕐', Low: '🐢' }[u] ?? '⚪');\nconst statusEmoji   = (s) => ({ 'Not started': '⬜', 'In progress': '🔄', 'Done': '✅' }[s] ?? '⬜');\n\nconst lines = it.map((item) => {\n  const props = item.json.properties;\n\n  const name     = props?.Name?.title?.map(t => t.plain_text).join('') || '—';\n  const status   = props?.status?.status?.name || 'Not started';\n  const priority = props?.Priority?.select?.name || null;\n  const urgency  = props?.Urgency?.select?.name || null;\n  const tags     = props?.Tags?.multi_select?.map(t => t.name).join(', ') || 'None';\n  const dueDate  = props?.['Due date']?.date?.start ? fmtDate(props['Due date'].date.start) : 'No due date';\n\n  return [\n    `${statusEmoji(status)} *${name}*`,\n    `📌 Status: ${status}`,\n    priority ? `${priorityEmoji(priority)} Priority: ${priority}` : null,\n    urgency  ? `${urgencyEmoji(urgency)} Urgency: ${urgency}`   : null,\n    `🏷 Tags: ${tags}`,\n    `📅 Due: ${dueDate}`,\n  ].filter(Boolean).join('\\n');\n});\n\nconst items = \"\\n\\n\" + lines.join('\\n\\n---\\n\\n');\n\nreturn [{ json: { items } }];"
+            },
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                -256,
+                432
+            ],
+            "id": "bc293e8a-a04f-4efb-b2e1-c94e659aed03",
+            "name": "Code in JavaScript"
+        },
+        {
+            "parameters": {
+                "resource": "databasePage",
+                "databaseId": {
+                    "__rl": true,
+                    "value": "356cfb8f-c081-80db-9355-cb73235224e2",
+                    "mode": "list",
+                    "cachedResultName": "Personal TODO list",
+                    "cachedResultUrl": "https://www.notion.so/356cfb8fc08180db9355cb73235224e2"
+                },
+                "title": "={{ $json.alfred.args }}",
+                "options": {}
+            },
+            "type": "n8n-nodes-base.notion",
+            "typeVersion": 2.2,
+            "position": [
+                -512,
+                16
+            ],
+            "id": "48500eb2-b064-4d78-816e-65e3322c0d61",
+            "name": "Create Task",
+            "credentials": {
+                "notionApi": {
+                    "id": "w7qNgbzQ9iWGhreC",
+                    "name": "Notion account"
+                }
+            },
+            "onError": "continueErrorOutput"
+        },
+        {
+            "parameters": {
+                "assignments": {
+                    "assignments": [
+                        {
+                            "id": "8e8dc0e8-a2fc-44a1-8dac-1c21193bea70",
+                            "name": "type",
+                            "value": "task_success",
+                            "type": "string"
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "type": "n8n-nodes-base.set",
+            "typeVersion": 3.4,
+            "position": [
+                0,
+                0
+            ],
+            "id": "155943f6-f006-48e0-af0f-9bd2b1b6bc8e",
+            "name": "Set argument for Task Added message"
+        },
+        {
+            "parameters": {
+                "workflowId": {
+                    "__rl": true,
+                    "value": "4m18tYp6mJT5fFMGH15b5",
+                    "mode": "list",
+                    "cachedResultUrl": "/workflow/4m18tYp6mJT5fFMGH15b5",
+                    "cachedResultName": "MessagesService"
+                },
+                "workflowInputs": {
+                    "mappingMode": "defineBelow",
+                    "value": {},
+                    "matchingColumns": [],
+                    "schema": [],
+                    "attemptToConvertTypes": false,
+                    "convertFieldsToString": true
+                },
+                "options": {}
+            },
+            "type": "n8n-nodes-base.executeWorkflow",
+            "typeVersion": 1.3,
+            "position": [
+                768,
+                0
+            ],
+            "id": "b647a9d3-c1f9-45e2-85d2-217b216a17ec",
+            "name": "Generate Task Added message"
+        },
+        {
+            "parameters": {
+                "resource": "databasePage",
+                "operation": "getAll",
+                "databaseId": {
+                    "__rl": true,
+                    "value": "356cfb8f-c081-80db-9355-cb73235224e2",
+                    "mode": "list",
+                    "cachedResultName": "Personal TODO list",
+                    "cachedResultUrl": "https://www.notion.so/356cfb8fc08180db9355cb73235224e2"
+                },
+                "simple": false,
+                "options": {}
+            },
+            "type": "n8n-nodes-base.notion",
+            "typeVersion": 2.2,
+            "position": [
+                -512,
+                224
+            ],
+            "id": "5ca7bade-4da4-4916-9c70-0f687470a121",
+            "name": "Get all Tasks",
+            "alwaysOutputData": true,
+            "credentials": {
+                "notionApi": {
+                    "id": "w7qNgbzQ9iWGhreC",
+                    "name": "Notion account"
+                }
+            },
+            "onError": "continueErrorOutput"
+        },
+        {
+            "parameters": {
+                "assignments": {
+                    "assignments": [
+                        {
+                            "id": "c11a2e10-590d-4f50-a0a6-7d10f820809b",
+                            "name": "type",
+                            "value": "task_list",
+                            "type": "string"
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "type": "n8n-nodes-base.set",
+            "typeVersion": 3.4,
+            "position": [
+                128,
+                320
+            ],
+            "id": "bde2cfa6-081b-4818-9c26-e60c6602dac0",
+            "name": "Set argument for Task List message"
+        },
+        {
+            "parameters": {
+                "workflowId": {
+                    "__rl": true,
+                    "value": "4m18tYp6mJT5fFMGH15b5",
+                    "mode": "list",
+                    "cachedResultUrl": "/workflow/4m18tYp6mJT5fFMGH15b5",
+                    "cachedResultName": "MessagesService"
+                },
+                "workflowInputs": {
+                    "mappingMode": "defineBelow",
+                    "value": {},
+                    "matchingColumns": [],
+                    "schema": [],
+                    "attemptToConvertTypes": false,
+                    "convertFieldsToString": true
+                },
+                "options": {}
+            },
+            "type": "n8n-nodes-base.executeWorkflow",
+            "typeVersion": 1.3,
+            "position": [
+                336,
+                320
+            ],
+            "id": "15373b58-a40c-4a38-b591-ecb541d9eed9",
+            "name": "Generate Task List message"
+        },
+        {
+            "parameters": {
+                "assignments": {
+                    "assignments": [
+                        {
+                            "id": "9899d5bd-464b-47f0-a8a0-46d08c68f98d",
+                            "name": "type",
+                            "value": "note_empty",
+                            "type": "string"
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "type": "n8n-nodes-base.set",
+            "typeVersion": 3.4,
+            "position": [
+                272,
+                608
+            ],
+            "id": "ae2e81bd-9496-4496-8c40-f08b6479a5a8",
+            "name": "Set argument for Task empty message"
+        },
+        {
+            "parameters": {
+                "assignments": {
+                    "assignments": [
+                        {
+                            "id": "d1ddc1d8-fd9c-441d-b505-6a4b6a8cd0cb",
+                            "name": "success",
+                            "value": "={{ $json.success }}",
+                            "type": "boolean"
+                        },
+                        {
+                            "id": "311770c5-447f-4565-ad3f-40888e9f21c7",
+                            "name": "message",
+                            "value": "={{ $json.message + $json.items }}",
+                            "type": "string"
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "type": "n8n-nodes-base.set",
+            "typeVersion": 3.4,
+            "position": [
+                768,
+                512
+            ],
+            "id": "b2ff6cc3-88c8-4ddd-ac1c-922447c5bfb6",
+            "name": "Output Tasks List"
+        },
+        {
+            "parameters": {
+                "workflowId": {
+                    "__rl": true,
+                    "value": "4m18tYp6mJT5fFMGH15b5",
+                    "mode": "list",
+                    "cachedResultUrl": "/workflow/4m18tYp6mJT5fFMGH15b5",
+                    "cachedResultName": "MessagesService"
+                },
+                "workflowInputs": {
+                    "mappingMode": "defineBelow",
+                    "value": {},
+                    "matchingColumns": [],
+                    "schema": [],
+                    "attemptToConvertTypes": false,
+                    "convertFieldsToString": true
+                },
+                "options": {}
+            },
+            "type": "n8n-nodes-base.executeWorkflow",
+            "typeVersion": 1.3,
+            "position": [
+                768,
+                672
+            ],
+            "id": "2f4f4971-f143-403f-af86-d13210bc9c52",
+            "name": "Generate Task empty message"
+        }
+    ],
+    "connections": {
+        "Note command Switch": {
+            "main": [
+                [
+                    {
+                        "node": "Create Task",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "Get all Tasks",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "Set argument for Command Typo message",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "When Executed by Another Workflow": {
+            "main": [
+                [
+                    {
+                        "node": "Note command Switch",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Switch": {
+            "main": [
+                [
+                    {
+                        "node": "Set argument for Task List message",
+                        "type": "main",
+                        "index": 0
+                    },
+                    {
+                        "node": "Merge",
+                        "type": "main",
+                        "index": 1
+                    }
+                ],
+                [
+                    {
+                        "node": "Set argument for Task empty message",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Set argument for Command Typo message": {
+            "main": [
+                [
+                    {
+                        "node": "Generate Command Typo message",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Set argument for Notion Internal Error message": {
+            "main": [
+                [
+                    {
+                        "node": "Generate Notion Internal Error message",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Merge": {
+            "main": [
+                [
+                    {
+                        "node": "Output Tasks List",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Code in JavaScript": {
+            "main": [
+                [
+                    {
+                        "node": "Switch",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Create Task": {
+            "main": [
+                [
+                    {
+                        "node": "Set argument for Task Added message",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "Set argument for Notion Internal Error message",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Set argument for Task Added message": {
+            "main": [
+                [
+                    {
+                        "node": "Generate Task Added message",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Get all Tasks": {
+            "main": [
+                [
+                    {
+                        "node": "Code in JavaScript",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "Set argument for Notion Internal Error message",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Set argument for Task List message": {
+            "main": [
+                [
+                    {
+                        "node": "Generate Task List message",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Generate Task List message": {
+            "main": [
+                [
+                    {
+                        "node": "Merge",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Set argument for Task empty message": {
+            "main": [
+                [
+                    {
+                        "node": "Generate Task empty message",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    },
+    "settings": {
+        "executionOrder": "v1",
+        "availableInMCP": false,
+        "timeSavedMode": "fixed",
+        "callerPolicy": "workflowsFromSameOwner"
+    },
+    "staticData": null,
+    "meta": null,
+    "pinData": {
+        "When Executed by Another Workflow": [
+            {
+                "json": {
+                    "alfred": {
+                        "command": "/tasklist",
+                        "args": "",
+                        "text": "/tasklist",
+                        "chat_id": 7170085884,
+                        "chat_name": "David",
+                        "user_id": 7170085884,
+                        "user_display_name": "David",
+                        "user_handle": null
+                    }
+                }
+            }
+        ]
+    },
+    "versionId": "1f6479b4-703c-4097-8503-71e6880a9489",
+    "activeVersionId": "1f6479b4-703c-4097-8503-71e6880a9489",
+    "versionCounter": 198,
+    "triggerCount": 0,
+    "tags": [],
+    "shared": [
+        {
+            "updatedAt": "2026-05-04T12:00:26.313Z",
+            "createdAt": "2026-05-04T12:00:26.313Z",
+            "role": "workflow:owner",
+            "workflowId": "ENuZF4ke1-v_zXMhug9C3",
+            "projectId": "e8O4zN9X6fOfPKr3",
+            "project": {
+                "updatedAt": "2026-02-02T01:07:08.778Z",
+                "createdAt": "2026-02-02T01:05:48.713Z",
+                "id": "e8O4zN9X6fOfPKr3",
+                "name": "David Ferreira <david.brto@gmail.com>",
+                "type": "personal",
+                "icon": null,
+                "description": null,
+                "creatorId": "42a699b4-f94a-4811-adcd-5cbbc5ee5e27"
+            }
+        }
+    ]
+}

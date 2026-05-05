@@ -1,1 +1,708 @@
-{"updatedAt":"2026-05-05T20:11:17.128Z","createdAt":"2026-04-30T23:45:13.761Z","id":"tCd5pcRfwQiuVOQ5rtCCD","name":"AlfredChat","description":null,"active":true,"isArchived":false,"nodes":[{"parameters":{"promptType":"define","text":"=Return plain text only. No Markdown formatting. Here is the user prompt:\n{{ $json.alfred.text }}","batching":{}},"type":"@n8n/n8n-nodes-langchain.chainLlm","typeVersion":1.9,"position":[672,704],"id":"47884e70-fe76-4a1f-8ea7-6aad86daf618","name":"Basic LLM Chain","onError":"continueErrorOutput"},{"parameters":{"options":{}},"type":"@n8n/n8n-nodes-langchain.lmChatGoogleGemini","typeVersion":1,"position":[672,944],"id":"b3e7e291-7a5c-4fb0-9370-a03c40d9f9c9","name":"Google Gemini Chat Model","credentials":{"googlePalmApi":{"id":"aGj1lM58mJuDbCWB","name":"Google Gemini(PaLM) Api account"}}},{"parameters":{"updates":["message"],"additionalFields":{}},"type":"n8n-nodes-base.telegramTrigger","typeVersion":1.2,"position":[-16,112],"id":"d5f45077-849a-4ceb-9ad7-8d3a8630c031","name":"Receive message","webhookId":"b47c6b3b-185b-48bb-b841-5dc8d7cf5629","credentials":{"telegramApi":{"id":"t63z4EHeYTEZtFAR","name":"Telegram account"}}},{"parameters":{"workflowId":{"__rl":true,"value":"ieGooMfjO95Nx2upz3Rfv","mode":"list","cachedResultUrl":"/workflow/ieGooMfjO95Nx2upz3Rfv","cachedResultName":"AlfredNoteHandling"},"workflowInputs":{"mappingMode":"defineBelow","value":{},"matchingColumns":[],"schema":[],"attemptToConvertTypes":false,"convertFieldsToString":true},"options":{}},"type":"n8n-nodes-base.executeWorkflow","typeVersion":1.3,"position":[768,240],"id":"748a95a5-087a-4b2e-97a4-6b3669661dee","name":"Notes Handling"},{"parameters":{"workflowId":{"__rl":true,"value":"ENuZF4ke1-v_zXMhug9C3","mode":"list","cachedResultUrl":"/workflow/ENuZF4ke1-v_zXMhug9C3","cachedResultName":"AlfredTaskHandling"},"workflowInputs":{"mappingMode":"defineBelow","value":{},"matchingColumns":[],"schema":[],"attemptToConvertTypes":false,"convertFieldsToString":true},"options":{}},"type":"n8n-nodes-base.executeWorkflow","typeVersion":1.3,"position":[768,0],"id":"9ce5e4f6-0544-48eb-9745-3c4abf50d988","name":"Tasks Handling"},{"parameters":{"chatId":"={{ $json.alfred.chat_id }}","text":"={{ $json.message }}","additionalFields":{"appendAttribution":false}},"type":"n8n-nodes-base.telegram","typeVersion":1.2,"position":[2096,368],"id":"48665de6-f371-435f-a1a6-79551afc128b","name":"Send a text message","webhookId":"d4cbb017-7081-48ce-bf64-8b002bcc0b1a","credentials":{"telegramApi":{"id":"t63z4EHeYTEZtFAR","name":"Telegram account"}}},{"parameters":{"mode":"runOnceForEachItem","jsCode":"const message = $input.item.json.message;\nconst text = message.text ?? '';\nconst entities = message.entities ?? [];\n\n// Parse command + args\nconst cmdEntity = entities.find(e => e.type === 'bot_command');\nlet command = null;\nlet args = '';\n\nif (cmdEntity) {\n  const rawCmd = text.slice(cmdEntity.offset, cmdEntity.offset + cmdEntity.length);\n  command = rawCmd.split('@')[0].toLowerCase();\n  args = text.slice(cmdEntity.offset + cmdEntity.length).trim();\n}\n\nreturn {\n  alfred: {\n    command,\n    args,\n    text,\n    chat_id:   message.chat.id,\n    chat_name: message.chat.title ?? message.chat.first_name ?? message.chat.username ?? 'Unknown',\n    user_id:   message.from?.id ?? null,\n    user_display_name: message.from?.first_name ?? message.from?.username ?? 'Unknown',\n    user_handle:  message.from?.username ?? null,\n  }\n};"},"type":"n8n-nodes-base.code","typeVersion":2,"position":[192,112],"id":"8396ee31-885e-4308-a35c-80911f336825","name":"Normalize message"},{"parameters":{"rules":{"values":[{"conditions":{"options":{"caseSensitive":true,"leftValue":"","typeValidation":"strict","version":3},"conditions":[{"id":"79dcf6bb-87fe-4f76-b4a5-2dd20bcd29c6","leftValue":"={{ $json.alfred.command }}","rightValue":"^/(todo|task.*)$","operator":{"type":"string","operation":"regex"}}],"combinator":"and"},"renameOutput":true,"outputKey":"task"},{"conditions":{"options":{"caseSensitive":true,"leftValue":"","typeValidation":"strict","version":3},"conditions":[{"id":"686cf9a3-c471-4ab8-a8de-0986c5dd8028","leftValue":"={{ $json.alfred.command }}","rightValue":"/note","operator":{"type":"string","operation":"startsWith"}}],"combinator":"and"},"renameOutput":true,"outputKey":"note"},{"conditions":{"options":{"caseSensitive":true,"leftValue":"","typeValidation":"strict","version":3},"conditions":[{"id":"be96ebdf-a156-4544-b77c-fe2885436788","leftValue":"={{ $json.alfred.command }}","rightValue":"/","operator":{"type":"string","operation":"startsWith"}}],"combinator":"and"},"renameOutput":true,"outputKey":"unknown command"}]},"options":{"fallbackOutput":"extra"}},"type":"n8n-nodes-base.switch","typeVersion":3.4,"position":[384,96],"id":"b0b7baca-d634-4131-8655-e0086f2d2d7a","name":"Feature switch"},{"parameters":{"assignments":{"assignments":[{"id":"d7a3d1bd-6329-4d2a-9e44-ac5b9ef1e4bc","name":"sucess","value":"true","type":"string"},{"id":"add80faa-7dde-4ea5-b3f7-f636a6f49651","name":"message","value":"={{ $json.text }}","type":"string"}]},"options":{}},"type":"n8n-nodes-base.set","typeVersion":3.4,"position":[1024,640],"id":"5ee02fa3-7360-40da-8d0b-31d9a762730d","name":"LLM response"},{"parameters":{"mode":"combine","combineBy":"combineByPosition","options":{}},"type":"n8n-nodes-base.merge","typeVersion":3.2,"position":[1840,368],"id":"cb582b47-c35f-4b11-b9d7-e3839f367c05","name":"Merge output with normalized data"},{"parameters":{"assignments":{"assignments":[{"id":"6df4de13-1f7c-4c78-a8ff-ed68ac82519e","name":"type","value":"internal_error","type":"string"}]},"options":{}},"type":"n8n-nodes-base.set","typeVersion":3.4,"position":[1024,784],"id":"2f0082c8-8009-4371-9ce8-d5bd09140345","name":"Set argument for Internal Error message"},{"parameters":{"assignments":{"assignments":[{"id":"ed55030d-ed2c-4967-a875-10fa1be46861","name":"type","value":"unknown_command","type":"string"}]},"options":{}},"type":"n8n-nodes-base.set","typeVersion":3.4,"position":[656,464],"id":"e4f3717f-5267-43c6-a308-a783b4bccbad","name":"Set argument for Unknown Command message","executeOnce":true},{"parameters":{"assignments":{"assignments":[{"id":"be1ccd57-38a7-4ad8-a680-d9dbe7414473","name":"success","value":"false","type":"string"},{"id":"a4c6c1bd-8209-4dac-9df4-7407b953e767","name":"message","value":"={{ $json.message }}","type":"string"}]},"options":{}},"type":"n8n-nodes-base.set","typeVersion":3.4,"position":[1056,464],"id":"5f257ce2-a0c7-48b9-af6f-6548e0b2ebc1","name":"Unknown command message output"},{"parameters":{"workflowId":{"__rl":true,"value":"4m18tYp6mJT5fFMGH15b5","mode":"list","cachedResultUrl":"/workflow/4m18tYp6mJT5fFMGH15b5","cachedResultName":"MessagesService"},"workflowInputs":{"mappingMode":"defineBelow","value":{},"matchingColumns":[],"schema":[],"attemptToConvertTypes":false,"convertFieldsToString":true},"options":{}},"type":"n8n-nodes-base.executeWorkflow","typeVersion":1.3,"position":[864,464],"id":"60b85132-fdca-4243-b7d8-1c4a32d4b2e1","name":"Generate Unknown command message"},{"parameters":{"workflowId":{"__rl":true,"value":"4m18tYp6mJT5fFMGH15b5","mode":"list","cachedResultUrl":"/workflow/4m18tYp6mJT5fFMGH15b5","cachedResultName":"MessagesService"},"workflowInputs":{"mappingMode":"defineBelow","value":{},"matchingColumns":[],"schema":[],"attemptToConvertTypes":false,"convertFieldsToString":true},"options":{}},"type":"n8n-nodes-base.executeWorkflow","typeVersion":1.3,"position":[1232,784],"id":"0969e4f8-2b30-401f-9c57-926f70b3c590","name":"Generate Internal Error message","executeOnce":false},{"parameters":{"assignments":{"assignments":[{"id":"83494cf3-7074-41c7-8803-a5d84bb3d96a","name":"success","value":"true","type":"string"},{"id":"025f4b11-bdd4-450f-a8c2-5eadd7f1a4de","name":"message","value":"={{ $json.message }}","type":"string"}]},"options":{}},"type":"n8n-nodes-base.set","typeVersion":3.4,"position":[1440,784],"id":"0426b33c-030a-4ab3-b0a0-8c7cd81c01f9","name":"Internal Error message output"}],"connections":{"Google Gemini Chat Model":{"ai_languageModel":[[{"node":"Basic LLM Chain","type":"ai_languageModel","index":0}]]},"Basic LLM Chain":{"main":[[{"node":"LLM response","type":"main","index":0}],[{"node":"Set argument for Internal Error message","type":"main","index":0}]]},"Receive message":{"main":[[{"node":"Normalize message","type":"main","index":0}]]},"Tasks Handling":{"main":[[{"node":"Merge output with normalized data","type":"main","index":0}]]},"Notes Handling":{"main":[[{"node":"Merge output with normalized data","type":"main","index":0}]]},"Normalize message":{"main":[[{"node":"Feature switch","type":"main","index":0}]]},"Feature switch":{"main":[[{"node":"Tasks Handling","type":"main","index":0},{"node":"Merge output with normalized data","type":"main","index":1}],[{"node":"Notes Handling","type":"main","index":0},{"node":"Merge output with normalized data","type":"main","index":1}],[{"node":"Merge output with normalized data","type":"main","index":1},{"node":"Set argument for Unknown Command message","type":"main","index":0}],[{"node":"Basic LLM Chain","type":"main","index":0},{"node":"Merge output with normalized data","type":"main","index":1}]]},"LLM response":{"main":[[{"node":"Merge output with normalized data","type":"main","index":0}]]},"Merge output with normalized data":{"main":[[{"node":"Send a text message","type":"main","index":0}]]},"Set argument for Internal Error message":{"main":[[{"node":"Generate Internal Error message","type":"main","index":0}]]},"Set argument for Unknown Command message":{"main":[[{"node":"Generate Unknown command message","type":"main","index":0}]]},"Unknown command message output":{"main":[[{"node":"Merge output with normalized data","type":"main","index":0}]]},"Generate Unknown command message":{"main":[[{"node":"Unknown command message output","type":"main","index":0}]]},"Generate Internal Error message":{"main":[[{"node":"Internal Error message output","type":"main","index":0}]]},"Internal Error message output":{"main":[[{"node":"Merge output with normalized data","type":"main","index":0}]]}},"settings":{"executionOrder":"v1","availableInMCP":false},"staticData":null,"meta":{"templateCredsSetupCompleted":true},"pinData":{},"versionId":"ba60e456-e728-4ec8-bcd4-78969926e0e2","activeVersionId":"ba60e456-e728-4ec8-bcd4-78969926e0e2","versionCounter":712,"triggerCount":1,"tags":[],"shared":[{"updatedAt":"2026-04-30T23:45:13.766Z","createdAt":"2026-04-30T23:45:13.766Z","role":"workflow:owner","workflowId":"tCd5pcRfwQiuVOQ5rtCCD","projectId":"e8O4zN9X6fOfPKr3","project":{"updatedAt":"2026-02-02T01:07:08.778Z","createdAt":"2026-02-02T01:05:48.713Z","id":"e8O4zN9X6fOfPKr3","name":"David Ferreira <david.brto@gmail.com>","type":"personal","icon":null,"description":null,"creatorId":"42a699b4-f94a-4811-adcd-5cbbc5ee5e27"}}]}
+{
+    "updatedAt": "2026-05-05T20:11:17.128Z",
+    "createdAt": "2026-04-30T23:45:13.761Z",
+    "id": "tCd5pcRfwQiuVOQ5rtCCD",
+    "name": "AlfredChat",
+    "description": null,
+    "active": true,
+    "isArchived": false,
+    "nodes": [
+        {
+            "parameters": {
+                "promptType": "define",
+                "text": "=Return plain text only. No Markdown formatting. Here is the user prompt:\n{{ $json.alfred.text }}",
+                "batching": {}
+            },
+            "type": "@n8n/n8n-nodes-langchain.chainLlm",
+            "typeVersion": 1.9,
+            "position": [
+                672,
+                704
+            ],
+            "id": "47884e70-fe76-4a1f-8ea7-6aad86daf618",
+            "name": "Basic LLM Chain",
+            "onError": "continueErrorOutput"
+        },
+        {
+            "parameters": {
+                "options": {}
+            },
+            "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+            "typeVersion": 1,
+            "position": [
+                672,
+                944
+            ],
+            "id": "b3e7e291-7a5c-4fb0-9370-a03c40d9f9c9",
+            "name": "Google Gemini Chat Model",
+            "credentials": {
+                "googlePalmApi": {
+                    "id": "aGj1lM58mJuDbCWB",
+                    "name": "Google Gemini(PaLM) Api account"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "updates": [
+                    "message"
+                ],
+                "additionalFields": {}
+            },
+            "type": "n8n-nodes-base.telegramTrigger",
+            "typeVersion": 1.2,
+            "position": [
+                -16,
+                112
+            ],
+            "id": "d5f45077-849a-4ceb-9ad7-8d3a8630c031",
+            "name": "Receive message",
+            "webhookId": "b47c6b3b-185b-48bb-b841-5dc8d7cf5629",
+            "credentials": {
+                "telegramApi": {
+                    "id": "t63z4EHeYTEZtFAR",
+                    "name": "Telegram account"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "workflowId": {
+                    "__rl": true,
+                    "value": "ieGooMfjO95Nx2upz3Rfv",
+                    "mode": "list",
+                    "cachedResultUrl": "/workflow/ieGooMfjO95Nx2upz3Rfv",
+                    "cachedResultName": "AlfredNoteHandling"
+                },
+                "workflowInputs": {
+                    "mappingMode": "defineBelow",
+                    "value": {},
+                    "matchingColumns": [],
+                    "schema": [],
+                    "attemptToConvertTypes": false,
+                    "convertFieldsToString": true
+                },
+                "options": {}
+            },
+            "type": "n8n-nodes-base.executeWorkflow",
+            "typeVersion": 1.3,
+            "position": [
+                768,
+                240
+            ],
+            "id": "748a95a5-087a-4b2e-97a4-6b3669661dee",
+            "name": "Notes Handling"
+        },
+        {
+            "parameters": {
+                "workflowId": {
+                    "__rl": true,
+                    "value": "ENuZF4ke1-v_zXMhug9C3",
+                    "mode": "list",
+                    "cachedResultUrl": "/workflow/ENuZF4ke1-v_zXMhug9C3",
+                    "cachedResultName": "AlfredTaskHandling"
+                },
+                "workflowInputs": {
+                    "mappingMode": "defineBelow",
+                    "value": {},
+                    "matchingColumns": [],
+                    "schema": [],
+                    "attemptToConvertTypes": false,
+                    "convertFieldsToString": true
+                },
+                "options": {}
+            },
+            "type": "n8n-nodes-base.executeWorkflow",
+            "typeVersion": 1.3,
+            "position": [
+                768,
+                0
+            ],
+            "id": "9ce5e4f6-0544-48eb-9745-3c4abf50d988",
+            "name": "Tasks Handling"
+        },
+        {
+            "parameters": {
+                "chatId": "={{ $json.alfred.chat_id }}",
+                "text": "={{ $json.message }}",
+                "additionalFields": {
+                    "appendAttribution": false
+                }
+            },
+            "type": "n8n-nodes-base.telegram",
+            "typeVersion": 1.2,
+            "position": [
+                2096,
+                368
+            ],
+            "id": "48665de6-f371-435f-a1a6-79551afc128b",
+            "name": "Send a text message",
+            "webhookId": "d4cbb017-7081-48ce-bf64-8b002bcc0b1a",
+            "credentials": {
+                "telegramApi": {
+                    "id": "t63z4EHeYTEZtFAR",
+                    "name": "Telegram account"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "mode": "runOnceForEachItem",
+                "jsCode": "const message = $input.item.json.message;\nconst text = message.text ?? '';\nconst entities = message.entities ?? [];\n\n// Parse command + args\nconst cmdEntity = entities.find(e => e.type === 'bot_command');\nlet command = null;\nlet args = '';\n\nif (cmdEntity) {\n  const rawCmd = text.slice(cmdEntity.offset, cmdEntity.offset + cmdEntity.length);\n  command = rawCmd.split('@')[0].toLowerCase();\n  args = text.slice(cmdEntity.offset + cmdEntity.length).trim();\n}\n\nreturn {\n  alfred: {\n    command,\n    args,\n    text,\n    chat_id:   message.chat.id,\n    chat_name: message.chat.title ?? message.chat.first_name ?? message.chat.username ?? 'Unknown',\n    user_id:   message.from?.id ?? null,\n    user_display_name: message.from?.first_name ?? message.from?.username ?? 'Unknown',\n    user_handle:  message.from?.username ?? null,\n  }\n};"
+            },
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                192,
+                112
+            ],
+            "id": "8396ee31-885e-4308-a35c-80911f336825",
+            "name": "Normalize message"
+        },
+        {
+            "parameters": {
+                "rules": {
+                    "values": [
+                        {
+                            "conditions": {
+                                "options": {
+                                    "caseSensitive": true,
+                                    "leftValue": "",
+                                    "typeValidation": "strict",
+                                    "version": 3
+                                },
+                                "conditions": [
+                                    {
+                                        "id": "79dcf6bb-87fe-4f76-b4a5-2dd20bcd29c6",
+                                        "leftValue": "={{ $json.alfred.command }}",
+                                        "rightValue": "^/(todo|task.*)$",
+                                        "operator": {
+                                            "type": "string",
+                                            "operation": "regex"
+                                        }
+                                    }
+                                ],
+                                "combinator": "and"
+                            },
+                            "renameOutput": true,
+                            "outputKey": "task"
+                        },
+                        {
+                            "conditions": {
+                                "options": {
+                                    "caseSensitive": true,
+                                    "leftValue": "",
+                                    "typeValidation": "strict",
+                                    "version": 3
+                                },
+                                "conditions": [
+                                    {
+                                        "id": "686cf9a3-c471-4ab8-a8de-0986c5dd8028",
+                                        "leftValue": "={{ $json.alfred.command }}",
+                                        "rightValue": "/note",
+                                        "operator": {
+                                            "type": "string",
+                                            "operation": "startsWith"
+                                        }
+                                    }
+                                ],
+                                "combinator": "and"
+                            },
+                            "renameOutput": true,
+                            "outputKey": "note"
+                        },
+                        {
+                            "conditions": {
+                                "options": {
+                                    "caseSensitive": true,
+                                    "leftValue": "",
+                                    "typeValidation": "strict",
+                                    "version": 3
+                                },
+                                "conditions": [
+                                    {
+                                        "id": "be96ebdf-a156-4544-b77c-fe2885436788",
+                                        "leftValue": "={{ $json.alfred.command }}",
+                                        "rightValue": "/",
+                                        "operator": {
+                                            "type": "string",
+                                            "operation": "startsWith"
+                                        }
+                                    }
+                                ],
+                                "combinator": "and"
+                            },
+                            "renameOutput": true,
+                            "outputKey": "unknown command"
+                        }
+                    ]
+                },
+                "options": {
+                    "fallbackOutput": "extra"
+                }
+            },
+            "type": "n8n-nodes-base.switch",
+            "typeVersion": 3.4,
+            "position": [
+                384,
+                96
+            ],
+            "id": "b0b7baca-d634-4131-8655-e0086f2d2d7a",
+            "name": "Feature switch"
+        },
+        {
+            "parameters": {
+                "assignments": {
+                    "assignments": [
+                        {
+                            "id": "d7a3d1bd-6329-4d2a-9e44-ac5b9ef1e4bc",
+                            "name": "sucess",
+                            "value": "true",
+                            "type": "string"
+                        },
+                        {
+                            "id": "add80faa-7dde-4ea5-b3f7-f636a6f49651",
+                            "name": "message",
+                            "value": "={{ $json.text }}",
+                            "type": "string"
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "type": "n8n-nodes-base.set",
+            "typeVersion": 3.4,
+            "position": [
+                1024,
+                640
+            ],
+            "id": "5ee02fa3-7360-40da-8d0b-31d9a762730d",
+            "name": "LLM response"
+        },
+        {
+            "parameters": {
+                "mode": "combine",
+                "combineBy": "combineByPosition",
+                "options": {}
+            },
+            "type": "n8n-nodes-base.merge",
+            "typeVersion": 3.2,
+            "position": [
+                1840,
+                368
+            ],
+            "id": "cb582b47-c35f-4b11-b9d7-e3839f367c05",
+            "name": "Merge output with normalized data"
+        },
+        {
+            "parameters": {
+                "assignments": {
+                    "assignments": [
+                        {
+                            "id": "6df4de13-1f7c-4c78-a8ff-ed68ac82519e",
+                            "name": "type",
+                            "value": "internal_error",
+                            "type": "string"
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "type": "n8n-nodes-base.set",
+            "typeVersion": 3.4,
+            "position": [
+                1024,
+                784
+            ],
+            "id": "2f0082c8-8009-4371-9ce8-d5bd09140345",
+            "name": "Set argument for Internal Error message"
+        },
+        {
+            "parameters": {
+                "assignments": {
+                    "assignments": [
+                        {
+                            "id": "ed55030d-ed2c-4967-a875-10fa1be46861",
+                            "name": "type",
+                            "value": "unknown_command",
+                            "type": "string"
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "type": "n8n-nodes-base.set",
+            "typeVersion": 3.4,
+            "position": [
+                656,
+                464
+            ],
+            "id": "e4f3717f-5267-43c6-a308-a783b4bccbad",
+            "name": "Set argument for Unknown Command message",
+            "executeOnce": true
+        },
+        {
+            "parameters": {
+                "assignments": {
+                    "assignments": [
+                        {
+                            "id": "be1ccd57-38a7-4ad8-a680-d9dbe7414473",
+                            "name": "success",
+                            "value": "false",
+                            "type": "string"
+                        },
+                        {
+                            "id": "a4c6c1bd-8209-4dac-9df4-7407b953e767",
+                            "name": "message",
+                            "value": "={{ $json.message }}",
+                            "type": "string"
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "type": "n8n-nodes-base.set",
+            "typeVersion": 3.4,
+            "position": [
+                1056,
+                464
+            ],
+            "id": "5f257ce2-a0c7-48b9-af6f-6548e0b2ebc1",
+            "name": "Unknown command message output"
+        },
+        {
+            "parameters": {
+                "workflowId": {
+                    "__rl": true,
+                    "value": "4m18tYp6mJT5fFMGH15b5",
+                    "mode": "list",
+                    "cachedResultUrl": "/workflow/4m18tYp6mJT5fFMGH15b5",
+                    "cachedResultName": "MessagesService"
+                },
+                "workflowInputs": {
+                    "mappingMode": "defineBelow",
+                    "value": {},
+                    "matchingColumns": [],
+                    "schema": [],
+                    "attemptToConvertTypes": false,
+                    "convertFieldsToString": true
+                },
+                "options": {}
+            },
+            "type": "n8n-nodes-base.executeWorkflow",
+            "typeVersion": 1.3,
+            "position": [
+                864,
+                464
+            ],
+            "id": "60b85132-fdca-4243-b7d8-1c4a32d4b2e1",
+            "name": "Generate Unknown command message"
+        },
+        {
+            "parameters": {
+                "workflowId": {
+                    "__rl": true,
+                    "value": "4m18tYp6mJT5fFMGH15b5",
+                    "mode": "list",
+                    "cachedResultUrl": "/workflow/4m18tYp6mJT5fFMGH15b5",
+                    "cachedResultName": "MessagesService"
+                },
+                "workflowInputs": {
+                    "mappingMode": "defineBelow",
+                    "value": {},
+                    "matchingColumns": [],
+                    "schema": [],
+                    "attemptToConvertTypes": false,
+                    "convertFieldsToString": true
+                },
+                "options": {}
+            },
+            "type": "n8n-nodes-base.executeWorkflow",
+            "typeVersion": 1.3,
+            "position": [
+                1232,
+                784
+            ],
+            "id": "0969e4f8-2b30-401f-9c57-926f70b3c590",
+            "name": "Generate Internal Error message",
+            "executeOnce": false
+        },
+        {
+            "parameters": {
+                "assignments": {
+                    "assignments": [
+                        {
+                            "id": "83494cf3-7074-41c7-8803-a5d84bb3d96a",
+                            "name": "success",
+                            "value": "true",
+                            "type": "string"
+                        },
+                        {
+                            "id": "025f4b11-bdd4-450f-a8c2-5eadd7f1a4de",
+                            "name": "message",
+                            "value": "={{ $json.message }}",
+                            "type": "string"
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "type": "n8n-nodes-base.set",
+            "typeVersion": 3.4,
+            "position": [
+                1440,
+                784
+            ],
+            "id": "0426b33c-030a-4ab3-b0a0-8c7cd81c01f9",
+            "name": "Internal Error message output"
+        }
+    ],
+    "connections": {
+        "Google Gemini Chat Model": {
+            "ai_languageModel": [
+                [
+                    {
+                        "node": "Basic LLM Chain",
+                        "type": "ai_languageModel",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Basic LLM Chain": {
+            "main": [
+                [
+                    {
+                        "node": "LLM response",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "Set argument for Internal Error message",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Receive message": {
+            "main": [
+                [
+                    {
+                        "node": "Normalize message",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Tasks Handling": {
+            "main": [
+                [
+                    {
+                        "node": "Merge output with normalized data",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Notes Handling": {
+            "main": [
+                [
+                    {
+                        "node": "Merge output with normalized data",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Normalize message": {
+            "main": [
+                [
+                    {
+                        "node": "Feature switch",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Feature switch": {
+            "main": [
+                [
+                    {
+                        "node": "Tasks Handling",
+                        "type": "main",
+                        "index": 0
+                    },
+                    {
+                        "node": "Merge output with normalized data",
+                        "type": "main",
+                        "index": 1
+                    }
+                ],
+                [
+                    {
+                        "node": "Notes Handling",
+                        "type": "main",
+                        "index": 0
+                    },
+                    {
+                        "node": "Merge output with normalized data",
+                        "type": "main",
+                        "index": 1
+                    }
+                ],
+                [
+                    {
+                        "node": "Merge output with normalized data",
+                        "type": "main",
+                        "index": 1
+                    },
+                    {
+                        "node": "Set argument for Unknown Command message",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "Basic LLM Chain",
+                        "type": "main",
+                        "index": 0
+                    },
+                    {
+                        "node": "Merge output with normalized data",
+                        "type": "main",
+                        "index": 1
+                    }
+                ]
+            ]
+        },
+        "LLM response": {
+            "main": [
+                [
+                    {
+                        "node": "Merge output with normalized data",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Merge output with normalized data": {
+            "main": [
+                [
+                    {
+                        "node": "Send a text message",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Set argument for Internal Error message": {
+            "main": [
+                [
+                    {
+                        "node": "Generate Internal Error message",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Set argument for Unknown Command message": {
+            "main": [
+                [
+                    {
+                        "node": "Generate Unknown command message",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Unknown command message output": {
+            "main": [
+                [
+                    {
+                        "node": "Merge output with normalized data",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Generate Unknown command message": {
+            "main": [
+                [
+                    {
+                        "node": "Unknown command message output",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Generate Internal Error message": {
+            "main": [
+                [
+                    {
+                        "node": "Internal Error message output",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Internal Error message output": {
+            "main": [
+                [
+                    {
+                        "node": "Merge output with normalized data",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        }
+    },
+    "settings": {
+        "executionOrder": "v1",
+        "availableInMCP": false
+    },
+    "staticData": null,
+    "meta": {
+        "templateCredsSetupCompleted": true
+    },
+    "pinData": {},
+    "versionId": "ba60e456-e728-4ec8-bcd4-78969926e0e2",
+    "activeVersionId": "ba60e456-e728-4ec8-bcd4-78969926e0e2",
+    "versionCounter": 712,
+    "triggerCount": 1,
+    "tags": [],
+    "shared": [
+        {
+            "updatedAt": "2026-04-30T23:45:13.766Z",
+            "createdAt": "2026-04-30T23:45:13.766Z",
+            "role": "workflow:owner",
+            "workflowId": "tCd5pcRfwQiuVOQ5rtCCD",
+            "projectId": "e8O4zN9X6fOfPKr3",
+            "project": {
+                "updatedAt": "2026-02-02T01:07:08.778Z",
+                "createdAt": "2026-02-02T01:05:48.713Z",
+                "id": "e8O4zN9X6fOfPKr3",
+                "name": "David Ferreira <david.brto@gmail.com>",
+                "type": "personal",
+                "icon": null,
+                "description": null,
+                "creatorId": "42a699b4-f94a-4811-adcd-5cbbc5ee5e27"
+            }
+        }
+    ]
+}

@@ -1,0 +1,87 @@
+from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.crud.monitor import (
+    create_monitor,
+    delete_monitor,
+    get_monitor,
+    get_monitor_logs,
+    get_monitors,
+    update_monitor,
+)
+from app.db.session import get_session
+from app.schemas.monitor import (
+    MonitorCreate,
+    MonitorLogRead,
+    MonitorRead,
+    MonitorUpdate,
+)
+from app.services.monitor import MonitorService
+
+router = APIRouter(prefix="/monitors", tags=["monitors"])
+
+@router.get("/", response_model=list[MonitorRead])
+async def read_monitors(
+    skip: int = 0,
+    limit: int = 100,
+    session: AsyncSession = Depends(get_session),
+):
+    return await get_monitors(session=session, skip=skip, limit=limit)
+
+@router.get("/{monitor_id}", response_model=MonitorRead)
+async def read_monitor(monitor_id: int, session: AsyncSession = Depends(get_session)):
+    monitor = await get_monitor(session=session, monitor_id=monitor_id)
+    if monitor is None:
+        raise HTTPException(status_code=404, detail="Monitor not found")
+    return monitor
+
+@router.post("/", response_model=MonitorRead)
+async def create_new_monitor(
+    monitor_create: MonitorCreate,
+    session: AsyncSession = Depends(get_session),
+):
+    return await create_monitor(session=session, monitor_create=monitor_create)
+
+@router.delete("/{monitor_id}", response_model=MonitorRead)
+async def delete_existing_monitor(monitor_id: int, session: AsyncSession = Depends(get_session)):
+    monitor = await delete_monitor(session=session, monitor_id=monitor_id)
+    if monitor is None:
+        raise HTTPException(status_code=404, detail="Monitor not found")
+    return monitor
+
+@router.patch("/{monitor_id}", response_model=MonitorRead)
+async def patch_monitor(
+    monitor_id: int,
+    monitor_update: MonitorUpdate,
+    session: AsyncSession = Depends(get_session),
+):
+    monitor = await update_monitor(
+        session=session,
+        monitor_id=monitor_id,
+        monitor_update=monitor_update,
+    )
+    if monitor is None:
+        raise HTTPException(status_code=404, detail="Monitor not found")
+    return monitor
+
+@router.post("/run", response_model=list[MonitorLogRead])
+async def run_active_monitors(session: AsyncSession = Depends(get_session)):
+    return await MonitorService.run_due(session=session)
+
+@router.post("/{monitor_id}/run", response_model=MonitorLogRead)
+async def run_monitor_by_id(monitor_id: int, session: AsyncSession = Depends(get_session)):
+    log = await MonitorService.run_monitor_by_id(session=session, monitor_id=monitor_id)
+    if log is None:
+        raise HTTPException(status_code=404, detail="Monitor not found")
+    return log
+
+@router.get("/{monitor_id}/log", response_model=list[MonitorLogRead])
+async def read_monitor_log(
+    monitor_id: int,
+    limit: int = Query(10, ge=1, le=100),
+    session: AsyncSession = Depends(get_session),
+):
+    monitor = await get_monitor(session=session, monitor_id=monitor_id)
+    if monitor is None:
+        raise HTTPException(status_code=404, detail="Monitor not found")
+    return await get_monitor_logs(session=session, monitor_id=monitor_id, limit=limit)

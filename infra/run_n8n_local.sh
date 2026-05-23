@@ -1,1 +1,0 @@
-docker-compose -f docker-compose-n8n.yml --env-file .env.local up -d

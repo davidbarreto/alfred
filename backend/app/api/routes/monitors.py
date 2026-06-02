@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
+from app.api.auth import require_auth
 
 from app.crud.monitor import (
     create_monitor,
@@ -18,7 +19,7 @@ from app.schemas.monitor import (
 )
 from app.services.monitor import MonitorService
 
-router = APIRouter(prefix="/monitors", tags=["monitors"])
+router = APIRouter(prefix="/monitors", tags=["monitors"], dependencies=[Depends(require_auth)])
 
 @router.get("/", response_model=list[MonitorRead])
 async def read_monitors(

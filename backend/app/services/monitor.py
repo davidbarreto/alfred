@@ -8,7 +8,7 @@ import requests
 from bs4 import BeautifulSoup
 from app.crud.monitor import create_monitor_log, get_active_monitors, get_monitor
 from app.db.models import Monitor
-from app.util.pagination import paginate
+from app.utils.api.pagination import paginate
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait

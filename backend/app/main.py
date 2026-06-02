@@ -12,8 +12,8 @@ logging.basicConfig(level=numeric_level, force=True)
 
 from fastapi import FastAPI
 
-from app.api.routes.llm import router as llm_router
 from app.api.routes.monitors import router as monitors_router
+from app.api.routes.commands import router as commands_router
 from app.core.config import settings
 
 logger = logging.getLogger(__name__)
@@ -30,8 +30,8 @@ def configure_logging() -> None:
 
 
 app = FastAPI(title="Alfred Backend", version="0.1.0")
-app.include_router(llm_router)
 app.include_router(monitors_router)
+app.include_router(commands_router)
 
 @app.on_event("startup")
 async def startup_event():
@@ -44,5 +44,4 @@ async def health():
     return {
         "status": "ok",
         "database_url": settings.database_url,
-        "ollama_url": settings.ollama_url,
     }

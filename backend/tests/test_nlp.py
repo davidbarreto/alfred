@@ -1,5 +1,7 @@
 import pytest
-from app.utils.nlp import clean_text, extract_entities, normalize_date
+from app.nlp.normalizer import clean_text, normalize_date
+from app.nlp.extractor import extract_entities
+
 
 def test_clean_text():
     assert clean_text("remind me to buy milk") == "buy milk"

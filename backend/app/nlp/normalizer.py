@@ -1,38 +1,11 @@
 import re
 from datetime import datetime, date
-from typing import Dict, Any, Tuple, Optional
+from typing import Optional
 import dateparser
 
-# Constants for NLP enrichment
-PRIORITY_MAP = {
-    "urgent": "high", "urgently": "high", "asap": "high",
-    "as soon as possible": "high", "critical": "high",
-    "important": "medium",
-    "low priority": "low", "not urgent": "low",
-}
+from app.nlp.patterns import _CLEANUP_RE, PRIORITY_MAP
 
-_DATE_HINTS = [
-    r"\b(today|tomorrow|yesterday)\b",
-    r"\b(monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b",
-    r"\b(?:next|this)\s+(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b",
-    r"\b(next\s+week|this\s+week|next\s+month)\b",
-    r"\b(in\s+\d+\s+(days?|weeks?|months?))\b",
-    r"\b(on|by|due|at)\s+(?:today|tomorrow|yesterday|monday|tuesday|wednesday|thursday|friday|saturday|sunday|next\s+week|this\s+week|next\s+month|in\s+\d+\s+(?:days?|weeks?|months?)|\d{1,2}/\d{1,2}(?:/\d{2,4})?|\d{4}-\d{2}-\d{2})\b",
-    r"\b\d{1,2}/\d{1,2}(/\d{2,4})?\b",
-    r"\b\d{4}-\d{2}-\d{2}\b",
-    r"\bat\s+\d{1,2}(:\d{2})?\s*(am|pm)?\b",
-]
-
-_DATE_RE = re.compile("|".join(_DATE_HINTS), re.IGNORECASE)
-_PRIORITY_RE = re.compile("|".join([rf"\b{k}\b" for k in PRIORITY_MAP.keys()]), re.IGNORECASE)
-_CLEANUP_RE = re.compile(
-    r"^(?:\s*(?:i need to|i have to|i must|i should|remind me to|don't forget to|please|can you|could you|remember to|make sure to)\s+)|"
-    r"(?:\s+(?:please|thanks|thank you)\s*$)|"
-    r"\b(?:on|at|for|by|due|priority:?)\b",
-    re.IGNORECASE
-)
-
-def normalize_date(raw: str, base_date: Optional[datetime | date] = None) -> Optional[str]:
+def normalize_date(raw: str, base_date: Optional[datetime] = None) -> Optional[str]:
     """Parse any date string to ISO 8601 date (YYYY-MM-DD)."""
     if not raw:
         return None
@@ -127,42 +100,3 @@ def clean_text(text: str) -> str:
     """Remove filler phrases and normalize whitespace."""
     cleaned = _CLEANUP_RE.sub("", text)
     return re.sub(r"\s{2,}", " ", cleaned).strip()
-
-def extract_entities(text: str, base_date: Optional[datetime | date] = None) -> Tuple[str, Dict[str, Any]]:
-    """
-    Extracts dates and priorities from a text string.
-    Returns the cleaned text and a dictionary of extracted entities.
-    """
-    entities = {}
-    current_text = text
-
-    # Extract all priority occurrences and choose the strongest
-    prio_matches = list(_PRIORITY_RE.finditer(current_text))
-    if prio_matches:
-        levels = set()
-        for m in prio_matches:
-            levels.add(PRIORITY_MAP.get(m.group(0).lower(), "medium"))
-        # decide strongest level: high > medium > low
-        if "high" in levels:
-            entities["priority"] = "high"
-        elif "medium" in levels:
-            entities["priority"] = "medium"
-        else:
-            entities["priority"] = "low"
-        # remove all priority spans (reverse to keep indices valid)
-        for m in reversed(prio_matches):
-            current_text = current_text[:m.start()] + current_text[m.end():]
-
-    # Extract first deadline-like phrase
-    date_match = _DATE_RE.search(current_text)
-    if date_match:
-        iso_text = date_match.group(0)
-        # ensure a concrete base_date for relative parsing
-        effective_base = base_date if base_date is not None else datetime.now()
-        iso_date = normalize_date(iso_text, base_date=effective_base)
-        if iso_date:
-            entities["deadline"] = iso_date
-        # remove the matched date phrase from the text regardless of normalization
-        current_text = current_text[:date_match.start()] + current_text[date_match.end():]
-
-    return clean_text(current_text), entities

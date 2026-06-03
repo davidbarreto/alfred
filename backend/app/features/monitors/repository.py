@@ -1,8 +1,8 @@
 from sqlalchemy import delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db.models import Monitor, MonitorLog
-from app.schemas.monitor import MonitorCreate, MonitorUpdate
+from app.features.monitors.tables import Monitor, MonitorLog
+from app.features.monitors.schemas import MonitorCreate, MonitorUpdate
 
 
 async def get_monitor(session: AsyncSession, monitor_id: int) -> Monitor | None:
@@ -12,12 +12,12 @@ async def get_monitor(session: AsyncSession, monitor_id: int) -> Monitor | None:
 
 async def get_monitors(session: AsyncSession, skip: int = 0, limit: int = 100) -> list[Monitor]:
     result = await session.execute(select(Monitor).offset(skip).limit(limit))
-    return result.scalars().all()
+    return list(result.scalars().all())
 
 
 async def get_active_monitors(session: AsyncSession) -> list[Monitor]:
     result = await session.execute(select(Monitor).where(Monitor.enabled.is_(True)))
-    return result.scalars().all()
+    return list(result.scalars().all())
 
 
 async def create_monitor(session: AsyncSession, monitor_create: MonitorCreate) -> Monitor:
@@ -94,4 +94,4 @@ async def get_monitor_logs(
         .order_by(MonitorLog.created_at.desc())
         .limit(limit)
     )
-    return result.scalars().all()
+    return list(result.scalars().all())

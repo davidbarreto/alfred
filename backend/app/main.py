@@ -14,7 +14,7 @@ from fastapi import FastAPI
 
 from app.api.routes.monitors import router as monitors_router
 from app.api.routes.commands import router as commands_router
-from app.core.config import settings
+from app.config import settings
 
 logger = logging.getLogger(__name__)
 

@@ -2,7 +2,7 @@ import time
 import requests
 from typing import Any, Generator
 
-def _get_nested(data: dict, path: str, default=None) -> Any:
+def _get_nested(data: dict, path: str, default: Any = None) -> Any:
     """
     Resolve a dot-notation path against a nested dict.
 
@@ -15,7 +15,10 @@ def _get_nested(data: dict, path: str, default=None) -> Any:
     for key in path.split("."):
         if not isinstance(data, dict):
             return default
-        data = data.get(key, default)
+        next_data = data.get(key, default)
+        if next_data is None:
+            return default
+        data = next_data
     return data
 
 def fetch_page(url: str, page: int, page_size: int = 32, **kwargs) -> dict:
@@ -122,17 +125,3 @@ def fetch_all(
     ):
         all_items.extend(page_content)
     return all_items
-
-# ── Quick smoke-test (replace URL + params with real values) ───────────────
-if __name__ == "__main__":
-    API_URL = "https://api.example.com/offers"
-
-    total = 0
-    for page_items in paginate(API_URL, page_size=32, delay=0.2, storeId=499):
-        print(f"  Got {len(page_items)} items on this page")
-        for item in page_items:
-            print(f"    - [{item.get('storeId')}] {item.get('title')} "
-                f"| min {item.get('minPrice')} {item.get('currency')}")
-        total += len(page_items)
-
-    print(f"\nTotal items fetched: {total}")

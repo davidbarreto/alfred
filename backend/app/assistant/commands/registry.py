@@ -1,5 +1,5 @@
 from typing import Any, Dict, List
-from app.schemas.command import CommandMetadata
+from app.assistant.commands.schemas import CommandMetadata
 
 # --- Shared Flag Constants ---
 FLAG_TAGS = {"-t": "tags", "--tags": "tags"}

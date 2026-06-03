@@ -6,9 +6,9 @@ import logging
 import requests
 
 from bs4 import BeautifulSoup
-from app.crud.monitor import create_monitor_log, get_active_monitors, get_monitor
-from app.db.models import Monitor
-from app.utils.api.pagination import paginate
+from app.features.monitors.repository import create_monitor_log, get_active_monitors, get_monitor
+from app.features.monitors.tables import Monitor
+from app.integrations.http.pagination import paginate
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
@@ -219,7 +219,6 @@ class MonitorService:
             return needle in haystack
 
         try:
-            import requests
 
             needle = target if case_sensitive else target.lower()
             total_items_checked = 0
@@ -315,22 +314,22 @@ class MonitorService:
                 "url": monitor.url,
             }
 
-    @classmethod
-    async def run_monitor(cls, session: AsyncSession, monitor: Monitor):
-        result = await run_in_threadpool(cls.dispatch_monitor, monitor)
+    @staticmethod
+    async def run_monitor(session: AsyncSession, monitor: Monitor):
+        result = await run_in_threadpool(MonitorService.dispatch_monitor, monitor)
         return await create_monitor_log(session=session, monitor=monitor, result=result)
 
-    @classmethod
-    async def run_due(cls, session: AsyncSession):
+    @staticmethod
+    async def run_due(session: AsyncSession):
         monitors = await get_active_monitors(session=session)
         logs = []
         for monitor in monitors:
-            logs.append(await cls.run_monitor(session=session, monitor=monitor))
+            logs.append(await MonitorService.run_monitor(session=session, monitor=monitor))
         return logs
 
-    @classmethod
-    async def run_monitor_by_id(cls, session: AsyncSession, monitor_id: int):
+    @staticmethod
+    async def run_monitor_by_id(session: AsyncSession, monitor_id: int):
         monitor = await get_monitor(session=session, monitor_id=monitor_id)
         if monitor is None:
             return None
-        return await cls.run_monitor(session=session, monitor=monitor)
+        return await MonitorService.run_monitor(session=session, monitor=monitor)

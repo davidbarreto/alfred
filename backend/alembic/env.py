@@ -10,17 +10,26 @@ from alembic import context
 
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 
-from app.core.config import settings
+from app.config import settings
 from app.db.base import Base
 
 config = context.config
-fileConfig(config.config_file_name)
+if config.config_file_name is not None:
+    fileConfig(config.config_file_name)
+
+# Override the sqlalchemy.url with the value from your settings or environment
+# Similar to how setup_db.py handles it:
+database_url = os.getenv("DATABASE_URL", settings.database_url)
+
+# If you are using async drivers (like asyncpg as seen in setup_db.py), 
+# ensure the URL is compatible with the engine being used in env.py
+config.set_main_option("sqlalchemy.url", database_url)
 
 target_metadata = Base.metadata
 
 
 def run_migrations_offline() -> None:
-    url = settings.database_url
+    url = database_url
     context.configure(
         url=url,
         target_metadata=target_metadata,
@@ -40,7 +49,7 @@ def do_run_migrations(connection: Connection) -> None:
 
 
 async def run_async_migrations() -> None:
-    connectable = create_async_engine(settings.database_url, future=True, echo=False)
+    connectable = create_async_engine(database_url, future=True, echo=False)
 
     async with connectable.connect() as connection:
         await connection.run_sync(do_run_migrations)

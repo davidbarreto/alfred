@@ -15,12 +15,11 @@ import logging
 
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy.engine import make_url
-from app.core.config import settings
+from app.config import settings
 # Important: We must import the models so that SQLAlchemy's Base.metadata 
 # is populated with table definitions before we call create_all(). 
 # We import them explicitly to ensure they are registered.
 from app.db.base import Base
-from app.db.models import Monitor, MonitorLog  # noqa: F401
 
 # Use Admin URL to ensure we have DROP/CREATE permissions
 DATABASE_ADMIN_URL = os.getenv("DATABASE_ADMIN_URL", settings.database_url)

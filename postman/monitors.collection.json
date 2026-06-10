@@ -1,0 +1,301 @@
+{
+  "info": {
+    "name": "Alfred - Monitors API",
+    "_postman_id": "alfred-monitors-v1",
+    "description": "Run in order: Health Check → Create → List → Get → Update → Run → Logs → Run All → Delete",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{api_token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "01 - Health Check",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Status is ok', () => {",
+              "    pm.expect(pm.response.json().status).to.eql('ok');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "auth": { "type": "noauth" },
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/health",
+          "host": ["{{base_url}}"],
+          "path": ["health"]
+        }
+      }
+    },
+    {
+      "name": "02 - Create Monitor",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Response has id and saves it', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json).to.have.property('id');",
+              "    pm.expect(json.name).to.eql('Test HTML Monitor');",
+              "    pm.expect(json.enabled).to.be.true;",
+              "    pm.expect(json.type).to.eql('html_static');",
+              "    pm.environment.set('monitor_id', json.id);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Test HTML Monitor\",\n  \"description\": \"Monitors example.com for its title text\",\n  \"type\": \"html_static\",\n  \"url\": \"https://example.com\",\n  \"target\": \"Example Domain\",\n  \"enabled\": true,\n  \"timeout\": 10\n}",
+          "options": { "raw": { "language": "json" } }
+        },
+        "url": {
+          "raw": "{{base_url}}/monitors",
+          "host": ["{{base_url}}"],
+          "path": ["monitors"]
+        }
+      }
+    },
+    {
+      "name": "03 - List Monitors",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Response is an array', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json).to.be.an('array');",
+              "    pm.expect(json.length).to.be.at.least(1);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/monitors?skip=0&limit=100",
+          "host": ["{{base_url}}"],
+          "path": ["monitors"],
+          "query": [
+            { "key": "skip", "value": "0" },
+            { "key": "limit", "value": "100" }
+          ]
+        }
+      }
+    },
+    {
+      "name": "04 - Get Monitor",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Response matches created monitor', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(String(json.id)).to.eql(String(pm.environment.get('monitor_id')));",
+              "    pm.expect(json.name).to.eql('Test HTML Monitor');",
+              "    pm.expect(json.url).to.eql('https://example.com');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/monitors/{{monitor_id}}",
+          "host": ["{{base_url}}"],
+          "path": ["monitors", "{{monitor_id}}"]
+        }
+      }
+    },
+    {
+      "name": "05 - Update Monitor",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Name and timeout were updated', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json.name).to.eql('Test HTML Monitor (Updated)');",
+              "    pm.expect(json.timeout).to.eql(15);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "PATCH",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Test HTML Monitor (Updated)\",\n  \"description\": \"Updated description\",\n  \"timeout\": 15\n}",
+          "options": { "raw": { "language": "json" } }
+        },
+        "url": {
+          "raw": "{{base_url}}/monitors/{{monitor_id}}",
+          "host": ["{{base_url}}"],
+          "path": ["monitors", "{{monitor_id}}"]
+        }
+      }
+    },
+    {
+      "name": "06 - Run Monitor",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Log has required fields', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json).to.have.property('id');",
+              "    pm.expect(json).to.have.property('monitor_id');",
+              "    pm.expect(json).to.have.property('found');",
+              "    pm.expect(json).to.have.property('created_at');",
+              "    pm.expect(json).to.have.property('elements_checked');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/monitors/{{monitor_id}}/run",
+          "host": ["{{base_url}}"],
+          "path": ["monitors", "{{monitor_id}}", "run"]
+        }
+      }
+    },
+    {
+      "name": "07 - Get Monitor Logs",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Response is an array with log entries', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json).to.be.an('array');",
+              "    pm.expect(json.length).to.be.at.least(1);",
+              "    pm.expect(json[0]).to.have.property('monitor_id');",
+              "    pm.expect(json[0]).to.have.property('found');",
+              "    pm.expect(json[0]).to.have.property('created_at');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/monitors/{{monitor_id}}/log?limit=10",
+          "host": ["{{base_url}}"],
+          "path": ["monitors", "{{monitor_id}}", "log"],
+          "query": [
+            { "key": "limit", "value": "10" }
+          ]
+        }
+      }
+    },
+    {
+      "name": "08 - Run All Active Monitors",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Response is an array', () => {",
+              "    pm.expect(pm.response.json()).to.be.an('array');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/monitors/run",
+          "host": ["{{base_url}}"],
+          "path": ["monitors", "run"]
+        }
+      }
+    },
+    {
+      "name": "09 - Delete Monitor",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Deleted monitor is returned', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(String(json.id)).to.eql(String(pm.environment.get('monitor_id')));",
+              "    pm.expect(json.name).to.eql('Test HTML Monitor (Updated)');",
+              "});",
+              "pm.environment.unset('monitor_id');"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/monitors/{{monitor_id}}",
+          "host": ["{{base_url}}"],
+          "path": ["monitors", "{{monitor_id}}"]
+        }
+      }
+    }
+  ]
+}

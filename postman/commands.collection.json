@@ -1,0 +1,167 @@
+{
+  "info": {
+    "name": "Alfred - Commands API",
+    "_postman_id": "alfred-commands-v1",
+    "description": "Test suite for the Commands API — resolves natural language text into structured commands.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{api_token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "01 - Health Check",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Status is ok', () => {",
+              "    pm.expect(pm.response.json().status).to.eql('ok');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "auth": { "type": "noauth" },
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/health",
+          "host": ["{{base_url}}"],
+          "path": ["health"]
+        }
+      }
+    },
+    {
+      "name": "02 - Resolve Task Command",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Response has status and commands', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json).to.have.property('status');",
+              "    pm.expect(json).to.have.property('commands');",
+              "    pm.expect(json).to.have.property('raw_text');",
+              "    pm.expect(json.commands).to.be.an('array');",
+              "});",
+              "pm.test('Command was parsed', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json.status).to.eql('ok');",
+              "    pm.expect(json.commands.length).to.be.at.least(1);",
+              "    const cmd = json.commands[0];",
+              "    pm.expect(cmd).to.have.property('type');",
+              "    pm.expect(cmd).to.have.property('command');",
+              "    pm.expect(cmd).to.have.property('confidence');",
+              "    pm.expect(cmd).to.have.property('arguments');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"text\": \"/task add Buy groceries priority:high\"\n}",
+          "options": { "raw": { "language": "json" } }
+        },
+        "url": {
+          "raw": "{{base_url}}/commands/resolve",
+          "host": ["{{base_url}}"],
+          "path": ["commands", "resolve"]
+        }
+      }
+    },
+    {
+      "name": "03 - Resolve Note Command",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Response has status and commands', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json).to.have.property('status');",
+              "    pm.expect(json).to.have.property('commands');",
+              "    pm.expect(json).to.have.property('raw_text');",
+              "    pm.expect(json.commands).to.be.an('array');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"text\": \"/note add Meeting notes from standup: discussed roadmap and Q3 priorities\"\n}",
+          "options": { "raw": { "language": "json" } }
+        },
+        "url": {
+          "raw": "{{base_url}}/commands/resolve",
+          "host": ["{{base_url}}"],
+          "path": ["commands", "resolve"]
+        }
+      }
+    },
+    {
+      "name": "04 - Resolve Unparseable Text",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Status is not_parsed for plain text', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json).to.have.property('status');",
+              "    pm.expect(json).to.have.property('raw_text');",
+              "    pm.expect(json.raw_text).to.eql('hello world');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"text\": \"hello world\"\n}",
+          "options": { "raw": { "language": "json" } }
+        },
+        "url": {
+          "raw": "{{base_url}}/commands/resolve",
+          "host": ["{{base_url}}"],
+          "path": ["commands", "resolve"]
+        }
+      }
+    }
+  ]
+}

@@ -30,12 +30,18 @@ class TaskService:
     async def update_task(
         self, task_id: int, task_update: TaskUpdate
     ) -> TaskRead | None:
-        task_orm = await self._repo.update_task(task_id, task_update)
-        if task_orm is None:
+        task = await self._repo.get_task(task_id)
+        if task is None:
             return None
+        await self._provider.update(
+            task.provider_id,
+            task_update.model_dump(exclude_unset=True, exclude={"additional_notes"}),
+        )
+        task_orm = await self._repo.update_task(task_id, task_update)
         return TaskRead.model_validate(task_orm)
 
     async def delete_task(self, task_id: int):
         task = await self._repo.get_task(task_id)
         if task:
+            await self._provider.delete(task.provider_id)
             await self._repo.delete_monitor(task_id)

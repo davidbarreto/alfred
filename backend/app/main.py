@@ -14,7 +14,10 @@ from fastapi import FastAPI
 
 from app.api.routes.monitors import router as monitors_router
 from app.api.routes.commands import router as commands_router
-from app.config import settings
+from app.api.routes.tasks import router as tasks_router
+from app.config import get_settings
+
+settings = get_settings()
 
 logger = logging.getLogger(__name__)
 
@@ -32,6 +35,7 @@ def configure_logging() -> None:
 app = FastAPI(title="Alfred Backend", version="0.1.0")
 app.include_router(monitors_router)
 app.include_router(commands_router)
+app.include_router(tasks_router)
 
 @app.on_event("startup")
 async def startup_event():

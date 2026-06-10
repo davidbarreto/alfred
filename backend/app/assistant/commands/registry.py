@@ -115,6 +115,13 @@ COMMAND_DEFINITIONS = {
             "flags": {},
             "requires_args": True
         }
+    },
+    "finance": {
+        "transaction_add": {
+            "aliases": ["/transactionadd", "/tradd", ""],
+            "flags": {},
+            "requires_args": True
+        }
     }
 }
 

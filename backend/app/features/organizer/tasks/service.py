@@ -23,7 +23,7 @@ class TaskService:
         return [TaskRead.model_validate(task_orm) for task_orm in tasks_orm]
 
     async def create_task(self, task_create: TaskCreate) -> TaskRead:
-        task_record = await self._provider.create(task_create.model_dump(exclude={"additional_notes"}))
+        task_record = await self._provider.create(task_create.model_dump())
         task_orm = await self._repo.create_task(task_create, task_record["id"])
         return TaskRead.model_validate(task_orm)
 
@@ -35,7 +35,7 @@ class TaskService:
             return None
         await self._provider.update(
             task.provider_id,
-            task_update.model_dump(exclude_unset=True, exclude={"additional_notes"}),
+            task_update.model_dump(exclude_unset=True),
         )
         task_orm = await self._repo.update_task(task_id, task_update)
         return TaskRead.model_validate(task_orm)

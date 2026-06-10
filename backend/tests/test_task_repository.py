@@ -21,7 +21,6 @@ def _make_task_orm(id=1, **kwargs):
     task.deadline = kwargs.get("deadline", None)
     task.recurrence_rule = kwargs.get("recurrence_rule", None)
     task.tags = kwargs.get("tags", [])
-    task.additional_notes = kwargs.get("additional_notes", None)
     task.provider_id = kwargs.get("provider_id", "provider-1")
     return task
 

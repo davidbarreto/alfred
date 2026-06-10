@@ -6,7 +6,7 @@ from app.features.organizer.tags.tables import Tag
 from app.features.organizer.tasks.tables import Task
 from app.features.organizer.tasks.schemas import TaskCreate, TaskUpdate, TaskFilters
 
-_TASK_EXCLUDE = {"tags", "additional_notes"}
+_TASK_EXCLUDE = {"tags"}
 
 class TaskRepository:
 

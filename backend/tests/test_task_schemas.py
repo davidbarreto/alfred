@@ -20,7 +20,6 @@ class TestTaskCreate:
         assert task.urgency == "NORMAL"
         assert task.tags == []
         assert task.deadline is None
-        assert task.additional_notes is None
         assert task.recurrence_rule is None
 
     def test_with_all_fields(self):
@@ -31,7 +30,6 @@ class TestTaskCreate:
             urgency="URGENT",
             deadline=datetime(2024, 6, 1),
             tags=["work", "urgent"],
-            additional_notes="Some notes",
             recurrence_rule="weekly",
         )
         assert task.status == "DOING"
@@ -49,7 +47,6 @@ class TestTaskUpdate:
         assert update.urgency is None
         assert update.deadline is None
         assert update.tags is None
-        assert update.additional_notes is None
         assert update.recurrence_rule is None
 
     def test_partial_update(self):

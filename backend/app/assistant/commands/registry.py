@@ -16,7 +16,7 @@ FLAG_END = {"-e": "end", "--end": "end"}
 FLAG_DURATION = {"-d": "duration", "--duration": "duration"}
 
 # --- Action-Specific Flag Compositions ---
-TASK_ADD_FLAGS = {**FLAG_DUE, **FLAG_PRIORITY, **FLAG_TAGS, **FLAG_RECURRENCE, **FLAG_NOTES}
+TASK_ADD_FLAGS = {**FLAG_DUE, **FLAG_PRIORITY, **FLAG_TAGS, **FLAG_RECURRENCE}
 TASK_LIST_FLAGS = {**FLAG_STATUS, **FLAG_DUE, **FLAG_PRIORITY, **FLAG_TAGS, **FLAG_LIMIT}
 TASK_UPDATE_FLAGS = {**FLAG_STATUS, **FLAG_DUE, **FLAG_PRIORITY, **FLAG_TITLE}
 

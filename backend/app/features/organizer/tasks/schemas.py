@@ -13,15 +13,17 @@ TaskStatusFilter: TypeAlias = Literal["TODO", "DOING", "DONE", "ALL"]
 TaskPriorityFilter: TypeAlias = Literal["LOW", "MEDIUM", "HIGH", "ALL"]
 TaskUrgencyFilter: TypeAlias = Literal["NORMAL", "URGENT", "ALL"]
 
-class TaskCreate(BaseModel):
+class TaskBase(BaseModel):
     title: str
     status: TaskStatus = "TODO"
     priority: TaskPriority = "LOW"
     urgency: TaskUrgency = "NORMAL"
     deadline: datetime | None = None
     tags: list[str] = []
-    additional_notes: str | None = None
     recurrence_rule: str | None = None
+
+class TaskCreate(TaskBase):
+    pass
 
 class TaskUpdate(BaseModel):
     title: str | None = None
@@ -30,10 +32,9 @@ class TaskUpdate(BaseModel):
     urgency: TaskUrgency | None = None
     deadline: datetime | None = None
     tags: list[str] | None = None
-    additional_notes: str | None = None
     recurrence_rule: str | None = None
 
-class TaskRead(TaskCreate):
+class TaskRead(TaskBase):
     id: int
 
     model_config = {"from_attributes": True}

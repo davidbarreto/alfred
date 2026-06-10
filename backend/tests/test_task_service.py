@@ -8,7 +8,7 @@ def _make_task_read(**kwargs):
     defaults = dict(
         id=1, title="Test Task", status="TODO",
         priority="LOW", urgency="NORMAL", tags=[],
-        deadline=None, additional_notes=None, recurrence_rule=None,
+        deadline=None, recurrence_rule=None,
     )
     defaults.update(kwargs)
     return TaskRead(**defaults)
@@ -24,7 +24,6 @@ def _make_task_orm(**kwargs):
     task.deadline = kwargs.get("deadline", None)
     task.recurrence_rule = kwargs.get("recurrence_rule", None)
     task.tags = kwargs.get("tags", [])
-    task.additional_notes = kwargs.get("additional_notes", None)
     task.provider_id = kwargs.get("provider_id", "provider-1")
     return task
 
@@ -99,9 +98,6 @@ class TestCreateTask:
         await service.create_task(task_create)
 
         mock_provider.create.assert_called_once()
-        # Ensure additional_notes is excluded from provider payload
-        call_args = mock_provider.create.call_args[0][0]
-        assert "additional_notes" not in call_args
 
     async def test_calls_repo_create_with_provider_id(self, service, mock_provider):
         task_create = TaskCreate(title="New Task")
@@ -131,7 +127,7 @@ class TestUpdateTask:
         assert isinstance(result, TaskRead)
 
     async def test_returns_none_when_not_found(self, service):
-        service._repo.update_task.return_value = None
+        service._repo.get_task.return_value = None
         result = await service.update_task(999, TaskUpdate(status="DONE"))
         assert result is None
 

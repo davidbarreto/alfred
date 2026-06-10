@@ -230,3 +230,4 @@ __marimo__/
 # never commit credentials or execution data
 docker_volumes
 n8n_export
+docs

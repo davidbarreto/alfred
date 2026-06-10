@@ -39,6 +39,13 @@ def _split_command_fragments(text: str) -> List[str]:
 
 def _extract_args_and_flags(tokens: List[str], flag_definitions: Dict[str, str]) -> Tuple[List[str], Dict[str, Any]]:
     """Separate positional arguments from flags defined in flag_definitions."""
+    # Build a reverse map from canonical name to canonical name (e.g. "priority" -> "priority")
+    # and from stripped flag name to canonical name (e.g. "due" -> "deadline")
+    _canonical_by_name: Dict[str, str] = {}
+    for flag_key, canonical in flag_definitions.items():
+        _canonical_by_name[flag_key.lstrip('-')] = canonical
+        _canonical_by_name[canonical] = canonical
+
     args = []
     flags = {}
     i = 0
@@ -57,6 +64,15 @@ def _extract_args_and_flags(tokens: List[str], flag_definitions: Dict[str, str])
                     found = True
                     key = flag_definitions[flag]
                     break
+
+        if not found and ':' in token:
+            # handle key:value inline syntax (e.g. priority:high, due:tomorrow)
+            kv_key, kv_val = token.split(':', 1)
+            canonical = _canonical_by_name.get(kv_key.lower())
+            if canonical:
+                flags[canonical] = kv_val
+                i += 1
+                continue
 
         if found:
             if i + 1 < len(tokens):

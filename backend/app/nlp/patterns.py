@@ -2,10 +2,10 @@ import re
 
 # Constants for NLP enrichment
 PRIORITY_MAP = {
-    "urgent": "high", "urgently": "high", "asap": "high",
-    "as soon as possible": "high", "critical": "high",
-    "important": "medium",
-    "low priority": "low", "not urgent": "low",
+    "high": "HIGH", "urgent": "HIGH", "urgently": "HIGH", "asap": "HIGH",
+    "as soon as possible": "HIGH", "critical": "HIGH",
+    "medium": "MEDIUM", "important": "MEDIUM",
+    "low": "LOW", "low priority": "LOW", "not urgent": "LOW",
 }
 
 _DATE_HINTS = [

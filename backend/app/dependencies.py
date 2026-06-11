@@ -26,7 +26,7 @@ def get_task_service(session: AsyncSession = Depends(get_session)) -> TaskServic
     return TaskService(get_task_provider(), session)
 
 def get_note_service(session: AsyncSession = Depends(get_session)) -> NoteService:
-    return NoteService(get_note_provider())
+    return NoteService(get_note_provider(), session)
 
 # Dependencies shortcuts
 # DB

@@ -28,3 +28,18 @@ _CLEANUP_RE = re.compile(
     r"\b(?:on|at|for|by|due|priority:?)\b",
     re.IGNORECASE
 )
+
+# --- Finance patterns ---
+_DATE_WORDS_RE = r'(?:yesterday|today|tomorrow|this|last|next|on|for|with|monday|tuesday|wednesday|thursday|friday|saturday|sunday)'
+
+_AMOUNT_RE = re.compile(
+    r'(?:[$€£¥])\s*(\d+(?:[.,]\d{1,2})?)'
+    r'|(\d+(?:[.,]\d{1,2})?)\s*(?:euros?|dollars?|pounds?|bucks?|[$€£¥])',
+    re.IGNORECASE,
+)
+_MERCHANT_RE = re.compile(
+    rf'\b(?:at|from)\s+([A-Za-z][a-zA-Z0-9]+(?:\s(?!{_DATE_WORDS_RE}\b)[A-Za-z][a-zA-Z0-9]+)?)\b',
+    re.IGNORECASE,
+)
+_EXPENSE_INTENT_RE = re.compile(r'\b(?:spent|paid|bought|charged|cost|expensed)\b', re.IGNORECASE)
+_INCOME_INTENT_RE = re.compile(r'\b(?:received|earned|income|salary|revenue|refund|got\s+paid)\b', re.IGNORECASE)

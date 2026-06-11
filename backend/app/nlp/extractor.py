@@ -2,8 +2,21 @@
 from datetime import date, datetime
 from typing import Any, Dict, Optional, Tuple
 
+import re
+
 from app.nlp.normalizer import clean_text, normalize_date
-from app.nlp.patterns import _DATE_RE, _PRIORITY_RE, PRIORITY_MAP
+from app.nlp.patterns import (
+    _DATE_RE, _PRIORITY_RE, PRIORITY_MAP,
+    _AMOUNT_RE, _MERCHANT_RE, _EXPENSE_INTENT_RE, _INCOME_INTENT_RE,
+)
+
+_CURRENCY_SYMBOL_MAP = {"$": "USD", "€": "EUR", "£": "GBP", "¥": "JPY"}
+_CURRENCY_WORD_MAP = {
+    "dollar": "USD", "dollars": "USD", "buck": "USD", "bucks": "USD",
+    "euro": "EUR", "euros": "EUR",
+    "pound": "GBP", "pounds": "GBP",
+    "yen": "JPY",
+}
 
 
 def extract_entities(text: str, base_date: Optional[datetime | date] = None) -> Tuple[str, Dict[str, Any]]:
@@ -44,3 +57,45 @@ def extract_entities(text: str, base_date: Optional[datetime | date] = None) -> 
         current_text = current_text[:date_match.start()] + current_text[date_match.end():]
 
     return clean_text(current_text), entities
+
+
+def extract_finance_entities(text: str, base_date: Optional[datetime | date] = None) -> Tuple[str, Dict[str, Any]]:
+    """
+    Extract finance entities (amount, currency, merchant, type, date) from text.
+    Returns the original text unchanged and a dict of extracted entities.
+    """
+    entities: Dict[str, Any] = {}
+    effective_base: datetime = (
+        base_date if isinstance(base_date, datetime)
+        else datetime.combine(base_date, datetime.min.time()) if base_date
+        else datetime.now()
+    )
+
+    m = _AMOUNT_RE.search(text)
+    if m:
+        raw = (m.group(1) or m.group(2)).replace(",", ".")
+        entities["amount"] = float(raw)
+        full = m.group(0)
+        for sym, code in _CURRENCY_SYMBOL_MAP.items():
+            if sym in full:
+                entities["currency"] = code
+                break
+        else:
+            word = re.search(r'\b(euros?|dollars?|pounds?|bucks?|yen)\b', text, re.IGNORECASE)
+            if word:
+                entities["currency"] = _CURRENCY_WORD_MAP.get(word.group(1).lower())
+
+    m = _MERCHANT_RE.search(text)
+    if m:
+        entities["merchant"] = m.group(1).strip()
+
+    if _EXPENSE_INTENT_RE.search(text):
+        entities["type"] = "expense"
+    elif _INCOME_INTENT_RE.search(text):
+        entities["type"] = "income"
+
+    date_match = _DATE_RE.search(text)
+    if date_match:
+        entities["date"] = normalize_date(date_match.group(0), base_date=effective_base)
+
+    return text, entities

@@ -6,24 +6,25 @@ from typing import List, Dict, Any, Tuple
 from app.assistant.commands.registry import COMMAND_REGISTRY
 from app.assistant.commands.schemas import CommandDetail, CommandResolveResponse
 from app.nlp.normalizer import normalize_date, normalize_priority, clean_text
-from app.nlp.extractor import extract_entities
+from app.nlp.extractor import extract_entities, extract_finance_entities
+
 
 def _normalize_date(date_str: str, base_date: datetime | date | None = None) -> str | None:
     """Convert relative date keywords or strings to ISO format."""
     if not date_str:
         return None
-    # Delegate to shared NLP normalizer which includes fallbacks.
     try:
         if base_date is None:
             effective_base = datetime.now()
         elif isinstance(base_date, datetime):
             effective_base = base_date
-        else:  # it's a date object
+        else:
             effective_base = datetime.combine(base_date, datetime.min.time())
         return normalize_date(date_str, base_date=effective_base)
     except Exception as ex:
         print(f"Error normalizing date: {ex}")
         return None
+
 
 def _parse_tokens(text: str) -> List[str]:
     """Safely split text into tokens, handling quotes."""
@@ -32,15 +33,15 @@ def _parse_tokens(text: str) -> List[str]:
     except ValueError:
         return text.split()
 
+
 def _split_command_fragments(text: str) -> List[str]:
     """Split the message into slash command fragments."""
     fragments = [fragment.strip() for fragment in re.split(r"(?<=\s)(?=/)", text.strip()) if fragment.strip()]
     return fragments
 
+
 def _extract_args_and_flags(tokens: List[str], flag_definitions: Dict[str, str]) -> Tuple[List[str], Dict[str, Any]]:
     """Separate positional arguments from flags defined in flag_definitions."""
-    # Build a reverse map from canonical name to canonical name (e.g. "priority" -> "priority")
-    # and from stripped flag name to canonical name (e.g. "due" -> "deadline")
     _canonical_by_name: Dict[str, str] = {}
     for flag_key, canonical in flag_definitions.items():
         _canonical_by_name[flag_key.lstrip('-')] = canonical
@@ -57,7 +58,6 @@ def _extract_args_and_flags(tokens: List[str], flag_definitions: Dict[str, str])
             found = True
             key = flag_definitions[token]
         else:
-            # try normalized long/short variants (e.g. '-title' -> '--title')
             stripped = token.lstrip('-')
             for flag in (f"--{stripped}", f"-{stripped}"):
                 if flag in flag_definitions:
@@ -66,7 +66,6 @@ def _extract_args_and_flags(tokens: List[str], flag_definitions: Dict[str, str])
                     break
 
         if not found and ':' in token:
-            # handle key:value inline syntax (e.g. priority:high, due:tomorrow)
             kv_key, kv_val = token.split(':', 1)
             canonical = _canonical_by_name.get(kv_key.lower())
             if canonical:
@@ -86,11 +85,29 @@ def _extract_args_and_flags(tokens: List[str], flag_definitions: Dict[str, str])
             i += 1
     return args, flags
 
-def _enrich_arguments(arguments: Dict[str, Any]) -> Dict[str, Any]:
-    """
-    Normalize existing arguments and extract implicit ones from text fields.
-    Ported from concepts in commands_old.py.
-    """
+
+def _enrich_finance(arguments: Dict[str, Any]) -> Dict[str, Any]:
+    """Finance-specific NLP enrichment."""
+    today = datetime.now().date()
+
+    for date_field in ("from_date", "to_date", "date"):
+        if date_field in arguments and isinstance(arguments[date_field], str):
+            arguments[date_field] = _normalize_date(arguments[date_field], base_date=today) or arguments[date_field]
+
+    if "description" in arguments and isinstance(arguments["description"], str):
+        _, entities = extract_finance_entities(arguments["description"], base_date=today)
+        for key in ("amount", "currency", "merchant", "type", "date"):
+            if key not in arguments and entities.get(key):
+                arguments[key] = entities[key]
+
+    return arguments
+
+
+def _enrich_arguments(arguments: Dict[str, Any], cmd_type: str = "") -> Dict[str, Any]:
+    """Normalize arguments and extract implicit entities from text fields."""
+    if cmd_type == "finance":
+        return _enrich_finance(arguments)
+
     today = datetime.now().date()
 
     if "deadline" in arguments and isinstance(arguments["deadline"], str):
@@ -119,10 +136,11 @@ def _enrich_arguments(arguments: Dict[str, Any]) -> Dict[str, Any]:
 
     return arguments
 
+
 def resolve(text: str) -> CommandResolveResponse:
     """
     Structured command resolver.
-    Uses a deterministic parser to handle task-related commands and flags.
+    Uses a deterministic parser to handle commands and flags.
     """
     fragments = _split_command_fragments(text)
     commands = []
@@ -142,26 +160,24 @@ def resolve(text: str) -> CommandResolveResponse:
             remaining_tokens = remaining_tokens[1:]
         args, flags = _extract_args_and_flags(remaining_tokens, meta.flags)
 
-        # Validation for required positional arguments (e.g., title or ID)
         if meta.requires_args and not args:
             continue
 
-        # Build arguments dynamically based on metadata definitions
-        arguments = {**flags}
+        # Explicit flags override implicit ones set by the alias (e.g. /expense sets type=expense
+        # but --type income would still win).
+        arguments = {**meta.implicit_flags, **flags}
+
         if meta.arg_keys:
             for i, key in enumerate(meta.arg_keys):
                 if i < len(args):
-                    # If this is the last expected key, join all remaining positional arguments
                     if i == len(meta.arg_keys) - 1:
                         arguments[key] = " ".join(args[i:])
                     else:
                         arguments[key] = args[i]
         elif args:
-            # Fallback for unexpected positional arguments
             arguments["_raw_args"] = args
 
-        # Apply NLP enrichment and normalization pass
-        arguments = _enrich_arguments(arguments)
+        arguments = _enrich_arguments(arguments, cmd_type=meta.type)
 
         commands.append(
             CommandDetail(

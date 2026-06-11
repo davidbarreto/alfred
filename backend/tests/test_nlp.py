@@ -205,16 +205,16 @@ class TestNormalizeDate:
 
 class TestNormalizePriority:
     @pytest.mark.parametrize("raw,expected", [
-        ("urgent", "high"),
-        ("urgently", "high"),
-        ("asap", "high"),
-        ("as soon as possible", "high"),
-        ("critical", "high"),
-        ("important", "medium"),
-        ("low priority", "low"),
-        ("not urgent", "low"),
-        ("URGENT", "high"),   # case insensitive
-        ("CRITICAL", "high"),
+        ("urgent", "HIGH"),
+        ("urgently", "HIGH"),
+        ("asap", "HIGH"),
+        ("as soon as possible", "HIGH"),
+        ("critical", "HIGH"),
+        ("important", "MEDIUM"),
+        ("low priority", "LOW"),
+        ("not urgent", "LOW"),
+        ("URGENT", "HIGH"),   # case insensitive
+        ("CRITICAL", "HIGH"),
     ])
     def test_known_keywords(self, raw, expected):
         assert normalize_priority(raw) == expected
@@ -223,7 +223,7 @@ class TestNormalizePriority:
         assert normalize_priority("somerandompriority") == "somerandompriority"
 
     def test_already_canonical(self):
-        assert normalize_priority("high") == "high"
+        assert normalize_priority("HIGH") == "HIGH"
 
 
 # ── extract_entities ──────────────────────────────────────────────────────────
@@ -231,7 +231,7 @@ class TestNormalizePriority:
 class TestExtractEntities:
     def test_priority_urgent(self):
         cleaned, entities = extract_entities("buy milk urgently")
-        assert entities["priority"] == "high"
+        assert entities["priority"] == "HIGH"
         assert "urgently" not in cleaned
 
     @freeze_time(FIXED_NOW)
@@ -245,7 +245,7 @@ class TestExtractEntities:
         cleaned, entities = extract_entities(
             "remind me to finish the report asap by friday", base_date=FIXED_NOW
         )
-        assert entities["priority"] == "high"
+        assert entities["priority"] == "HIGH"
         assert "deadline" in entities
         assert "asap" not in cleaned
 
@@ -256,11 +256,11 @@ class TestExtractEntities:
 
     def test_multiple_priorities_high_wins(self):
         cleaned, entities = extract_entities("important task that is also critical")
-        assert entities["priority"] == "high"
+        assert entities["priority"] == "HIGH"
 
     def test_only_low_priority(self):
         cleaned, entities = extract_entities("low priority task for later")
-        assert entities["priority"] == "low"
+        assert entities["priority"] == "LOW"
 
     @freeze_time(FIXED_NOW)
     def test_date_today(self):

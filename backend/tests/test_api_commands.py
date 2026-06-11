@@ -60,7 +60,7 @@ class TestResolveCommand:
         assert response.status_code == 200
         cmd = response.json()["commands"][0]
         assert cmd["command"] == "list"
-        assert cmd["arguments"]["priority"] == "high"
+        assert cmd["arguments"]["priority"] == "HIGH"
 
     def test_empty_text(self, client):
         response = client.post(

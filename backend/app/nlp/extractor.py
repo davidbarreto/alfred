@@ -20,13 +20,13 @@ def extract_entities(text: str, base_date: Optional[datetime | date] = None) -> 
         levels = set()
         for m in priority_matches:
             levels.add(PRIORITY_MAP.get(m.group(0).lower(), "medium"))
-        # decide strongest level: high > medium > low
-        if "high" in levels:
-            entities["priority"] = "high"
-        elif "medium" in levels:
-            entities["priority"] = "medium"
+        # decide strongest level: HIGH > MEDIUM > LOW
+        if "HIGH" in levels:
+            entities["priority"] = "HIGH"
+        elif "MEDIUM" in levels:
+            entities["priority"] = "MEDIUM"
         else:
-            entities["priority"] = "low"
+            entities["priority"] = "LOW"
         # remove all priority spans (reverse to keep indices valid)
         for m in reversed(priority_matches):
             current_text = current_text[:m.start()] + current_text[m.end():]

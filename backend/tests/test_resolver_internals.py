@@ -161,12 +161,12 @@ class TestEnrichArguments:
     def test_normalizes_priority_urgent(self):
         args = {"priority": "urgent"}
         result = _enrich_arguments(args)
-        assert result["priority"] == "high"
+        assert result["priority"] == "HIGH"
 
     def test_normalizes_priority_important(self):
         args = {"priority": "important"}
         result = _enrich_arguments(args)
-        assert result["priority"] == "medium"
+        assert result["priority"] == "MEDIUM"
 
     def test_joins_raw_args_into_task(self):
         args = {"_raw_args": ["Buy", "milk"]}
@@ -185,7 +185,7 @@ class TestEnrichArguments:
     def test_extracts_priority_from_task_field(self):
         args = {"task": "Fix critical bug"}
         result = _enrich_arguments(args)
-        assert result["priority"] == "high"
+        assert result["priority"] == "HIGH"
         assert "critical" not in result["task"]
 
     @freeze_time(FIXED_NOW)
@@ -198,20 +198,20 @@ class TestEnrichArguments:
     def test_extracts_from_title_field(self):
         args = {"title": "Critical meeting tomorrow"}
         result = _enrich_arguments(args)
-        assert result.get("priority") == "high"
+        assert result.get("priority") == "HIGH"
         assert result.get("deadline") == "2024-05-21"
 
     @freeze_time(FIXED_NOW)
     def test_extracts_from_content_field(self):
         args = {"content": "Important note for today"}
         result = _enrich_arguments(args)
-        assert result.get("priority") == "medium"
+        assert result.get("priority") == "MEDIUM"
 
     @freeze_time(FIXED_NOW)
     def test_extracts_from_description_field(self):
         args = {"description": "urgent: do this asap"}
         result = _enrich_arguments(args)
-        assert result.get("priority") == "high"
+        assert result.get("priority") == "HIGH"
 
     def test_no_enrichment_needed(self):
         args = {"task": "Buy groceries"}

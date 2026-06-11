@@ -30,7 +30,7 @@ def test_resolve_add_with_quotes_and_flags():
     assert cmd.arguments["task"] == "Study Kubernetes"
     assert cmd.arguments["tags"] == "learning"
     assert cmd.arguments["recurrence"] == "weekly"
-    assert cmd.arguments["priority"] == "high"
+    assert cmd.arguments["priority"] == "HIGH"
 
 
 def test_resolve_extracts_today_from_title(mock_now):
@@ -51,7 +51,7 @@ def test_resolve_with_nlp_extraction():
     assert response.status == "ok"
     args = response.commands[0].arguments
     assert args["task"] == "Buy milk"
-    assert args["priority"] == "high"
+    assert args["priority"] == "HIGH"
     assert re.match(r"\d{4}-\d{2}-\d{2}", args["deadline"])
 
 
@@ -75,7 +75,7 @@ def test_resolve_list_filters():
     assert response.status == "ok"
     args = response.commands[0].arguments
     assert args["status"] == "open"
-    assert args["priority"] == "high"
+    assert args["priority"] == "HIGH"
     assert args["limit"] == "5"
 
 
@@ -85,7 +85,7 @@ def test_resolve_update_with_id():
     assert response.status == "ok"
     args = response.commands[0].arguments
     assert args["id"] == "42"
-    assert args["priority"] == "high"
+    assert args["priority"] == "HIGH"
     assert args["title"] == "New Title"
 
 
@@ -209,7 +209,7 @@ def test_resolve_extracts_priority_and_date(mock_now):
     cmd = response.commands[0]
     assert "critical" not in cmd.arguments["task"]
     assert "asap" not in cmd.arguments["task"]
-    assert cmd.arguments["priority"] == "high"
+    assert cmd.arguments["priority"] == "HIGH"
     # 'asap' doesn't map to a date in our logic, but we verify title cleanup
     assert cmd.arguments["task"] == "Fix bug"
 
@@ -223,7 +223,7 @@ def test_resolve_extracts_date_with_other_flags(mock_now):
     cmd = response.commands[0]
     assert cmd.arguments["task"] == "Buy groceries"
     assert cmd.arguments["deadline"] == "2024-05-20"
-    assert cmd.arguments["priority"] == "medium"
+    assert cmd.arguments["priority"] == "MEDIUM"
 
 
 def test_normalise_date_logic(mock_now):

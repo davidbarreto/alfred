@@ -1,0 +1,1100 @@
+{
+  "info": {
+    "name": "Alfred - Finance API",
+    "_postman_id": "alfred-finance-v1",
+    "description": "Run folders in order: Accounts → Categories → Transactions → Budgets → Recurring Transactions. Within each folder run items in order (Create → List → Get → Update → Delete). Transactions depend on account_id and category_id, so create those first.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{api_token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "Accounts",
+      "item": [
+        {
+          "name": "01 - Create Account",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+                  "pm.test('Response has id and saves it', () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.have.property('id');",
+                  "    pm.expect(json.name).to.eql('Main Checking');",
+                  "    pm.expect(json.type).to.eql('checking');",
+                  "    pm.expect(json.currency).to.eql('EUR');",
+                  "    pm.expect(json.is_active).to.eql(true);",
+                  "    pm.environment.set('finance_account_id', json.id);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Main Checking\",\n  \"type\": \"checking\",\n  \"currency\": \"EUR\",\n  \"balance\": \"1500.00\",\n  \"institution\": \"My Bank\",\n  \"is_active\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/finance/accounts/",
+              "host": ["{{base_url}}"],
+              "path": ["finance", "accounts", ""]
+            }
+          }
+        },
+        {
+          "name": "02 - List Accounts",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Response is an array with at least one account', () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.be.an('array');",
+                  "    pm.expect(json.length).to.be.at.least(1);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/finance/accounts/?is_active=true",
+              "host": ["{{base_url}}"],
+              "path": ["finance", "accounts", ""],
+              "query": [
+                {
+                  "key": "is_active",
+                  "value": "true"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "03 - Get Account",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Response matches created account', () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(String(json.id)).to.eql(String(pm.environment.get('finance_account_id')));",
+                  "    pm.expect(json.name).to.eql('Main Checking');",
+                  "    pm.expect(json.type).to.eql('checking');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/finance/accounts/{{finance_account_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["finance", "accounts", "{{finance_account_id}}"]
+            }
+          }
+        },
+        {
+          "name": "04 - Update Account",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Institution was updated', () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.institution).to.eql('Updated Bank');",
+                  "    pm.expect(json.balance).to.eql('2000.00');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"institution\": \"Updated Bank\",\n  \"balance\": \"2000.00\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/finance/accounts/{{finance_account_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["finance", "accounts", "{{finance_account_id}}"]
+            }
+          }
+        },
+        {
+          "name": "05 - Delete Account",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 204', () => pm.response.to.have.status(204));",
+                  "pm.environment.unset('finance_account_id');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/finance/accounts/{{finance_account_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["finance", "accounts", "{{finance_account_id}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Categories",
+      "item": [
+        {
+          "name": "01 - Create Category",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+                  "pm.test('Response has id and saves it', () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.have.property('id');",
+                  "    pm.expect(json.name).to.eql('Groceries');",
+                  "    pm.expect(json.parent_id).to.be.null;",
+                  "    pm.environment.set('finance_category_id', json.id);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Groceries\",\n  \"parent_id\": null\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/finance/categories/",
+              "host": ["{{base_url}}"],
+              "path": ["finance", "categories", ""]
+            }
+          }
+        },
+        {
+          "name": "02 - List Categories",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Response is an array with at least one category', () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.be.an('array');",
+                  "    pm.expect(json.length).to.be.at.least(1);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/finance/categories/",
+              "host": ["{{base_url}}"],
+              "path": ["finance", "categories", ""]
+            }
+          }
+        },
+        {
+          "name": "03 - Get Category",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Response matches created category', () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(String(json.id)).to.eql(String(pm.environment.get('finance_category_id')));",
+                  "    pm.expect(json.name).to.eql('Groceries');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/finance/categories/{{finance_category_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["finance", "categories", "{{finance_category_id}}"]
+            }
+          }
+        },
+        {
+          "name": "04 - Update Category",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Name was updated', () => {",
+                  "    pm.expect(pm.response.json().name).to.eql('Food & Groceries');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Food & Groceries\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/finance/categories/{{finance_category_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["finance", "categories", "{{finance_category_id}}"]
+            }
+          }
+        },
+        {
+          "name": "05 - Delete Category",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 204', () => pm.response.to.have.status(204));",
+                  "pm.environment.unset('finance_category_id');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/finance/categories/{{finance_category_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["finance", "categories", "{{finance_category_id}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Transactions",
+      "item": [
+        {
+          "name": "01 - Create Transaction",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+                  "pm.test('Response has id and saves it', () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.have.property('id');",
+                  "    pm.expect(json.type).to.eql('expense');",
+                  "    pm.expect(json.amount).to.eql('45.50');",
+                  "    pm.expect(json.currency).to.eql('EUR');",
+                  "    pm.expect(json.merchant).to.eql('Supermarket');",
+                  "    pm.environment.set('finance_transaction_id', json.id);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"account_id\": {{finance_account_id}},\n  \"date\": \"2026-06-12T10:00:00\",\n  \"amount\": \"45.50\",\n  \"currency\": \"EUR\",\n  \"type\": \"expense\",\n  \"category_id\": {{finance_category_id}},\n  \"description\": \"Weekly grocery run\",\n  \"merchant\": \"Supermarket\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/finance/transactions/",
+              "host": ["{{base_url}}"],
+              "path": ["finance", "transactions", ""]
+            }
+          }
+        },
+        {
+          "name": "02 - List Transactions",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Response is an array with at least one transaction', () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.be.an('array');",
+                  "    pm.expect(json.length).to.be.at.least(1);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/finance/transactions/?limit=50&type=expense",
+              "host": ["{{base_url}}"],
+              "path": ["finance", "transactions", ""],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "50"
+                },
+                {
+                  "key": "type",
+                  "value": "expense"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "03 - Get Transaction",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Response matches created transaction', () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(String(json.id)).to.eql(String(pm.environment.get('finance_transaction_id')));",
+                  "    pm.expect(json.type).to.eql('expense');",
+                  "    pm.expect(json.merchant).to.eql('Supermarket');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/finance/transactions/{{finance_transaction_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["finance", "transactions", "{{finance_transaction_id}}"]
+            }
+          }
+        },
+        {
+          "name": "04 - Spending Report",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Response has spending report fields', () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.have.property('total');",
+                  "    pm.expect(json).to.have.property('currency');",
+                  "    pm.expect(json).to.have.property('from_date');",
+                  "    pm.expect(json).to.have.property('to_date');",
+                  "    pm.expect(json).to.have.property('transaction_count');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/finance/transactions/report?period=this month",
+              "host": ["{{base_url}}"],
+              "path": ["finance", "transactions", "report"],
+              "query": [
+                {
+                  "key": "period",
+                  "value": "this month"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "05 - Spending Average",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Response has spending average fields', () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.have.property('average_per_day');",
+                  "    pm.expect(json).to.have.property('total');",
+                  "    pm.expect(json).to.have.property('days');",
+                  "    pm.expect(json).to.have.property('from_date');",
+                  "    pm.expect(json).to.have.property('to_date');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/finance/transactions/average?period=this month",
+              "host": ["{{base_url}}"],
+              "path": ["finance", "transactions", "average"],
+              "query": [
+                {
+                  "key": "period",
+                  "value": "this month"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "06 - Spending Top",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Response has top spending fields', () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.have.property('transactions');",
+                  "    pm.expect(json.transactions).to.be.an('array');",
+                  "    pm.expect(json).to.have.property('top_n');",
+                  "    pm.expect(json.top_n).to.eql(5);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/finance/transactions/top?period=this month&top_n=5",
+              "host": ["{{base_url}}"],
+              "path": ["finance", "transactions", "top"],
+              "query": [
+                {
+                  "key": "period",
+                  "value": "this month"
+                },
+                {
+                  "key": "top_n",
+                  "value": "5"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "07 - Balance Forecast",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Response has forecast fields', () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.have.property('current_balance');",
+                  "    pm.expect(json).to.have.property('projected_income');",
+                  "    pm.expect(json).to.have.property('projected_expenses');",
+                  "    pm.expect(json).to.have.property('projected_balance');",
+                  "    pm.expect(json.currency).to.eql('EUR');",
+                  "    pm.expect(json).to.have.property('forecast_to');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/finance/transactions/forecast?period=this month",
+              "host": ["{{base_url}}"],
+              "path": ["finance", "transactions", "forecast"],
+              "query": [
+                {
+                  "key": "period",
+                  "value": "this month"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "08 - Update Transaction",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Description and merchant were updated', () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.description).to.eql('Monthly grocery run');",
+                  "    pm.expect(json.merchant).to.eql('Big Supermarket');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"description\": \"Monthly grocery run\",\n  \"merchant\": \"Big Supermarket\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/finance/transactions/{{finance_transaction_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["finance", "transactions", "{{finance_transaction_id}}"]
+            }
+          }
+        },
+        {
+          "name": "09 - Delete Transaction",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 204', () => pm.response.to.have.status(204));",
+                  "pm.environment.unset('finance_transaction_id');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/finance/transactions/{{finance_transaction_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["finance", "transactions", "{{finance_transaction_id}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Budgets",
+      "item": [
+        {
+          "name": "01 - Create Budget",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+                  "pm.test('Response has id and saves it', () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.have.property('id');",
+                  "    pm.expect(json.name).to.eql('Monthly Groceries');",
+                  "    pm.expect(json.period).to.eql('monthly');",
+                  "    pm.expect(json.amount).to.eql('300.00');",
+                  "    pm.environment.set('finance_budget_id', json.id);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Monthly Groceries\",\n  \"category_id\": {{finance_category_id}},\n  \"amount\": \"300.00\",\n  \"period\": \"monthly\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/finance/budgets/",
+              "host": ["{{base_url}}"],
+              "path": ["finance", "budgets", ""]
+            }
+          }
+        },
+        {
+          "name": "02 - List Budgets",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Response is an array with at least one budget', () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.be.an('array');",
+                  "    pm.expect(json.length).to.be.at.least(1);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/finance/budgets/?period=monthly",
+              "host": ["{{base_url}}"],
+              "path": ["finance", "budgets", ""],
+              "query": [
+                {
+                  "key": "period",
+                  "value": "monthly"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "03 - Get Budget",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Response matches created budget', () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(String(json.id)).to.eql(String(pm.environment.get('finance_budget_id')));",
+                  "    pm.expect(json.name).to.eql('Monthly Groceries');",
+                  "    pm.expect(json.period).to.eql('monthly');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/finance/budgets/{{finance_budget_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["finance", "budgets", "{{finance_budget_id}}"]
+            }
+          }
+        },
+        {
+          "name": "04 - Budget Remaining",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Response is an array of remaining budgets', () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.be.an('array');",
+                  "    if (json.length > 0) {",
+                  "        pm.expect(json[0]).to.have.property('budget_id');",
+                  "        pm.expect(json[0]).to.have.property('spent');",
+                  "        pm.expect(json[0]).to.have.property('remaining');",
+                  "    }",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/finance/budgets/remaining?period=this month",
+              "host": ["{{base_url}}"],
+              "path": ["finance", "budgets", "remaining"],
+              "query": [
+                {
+                  "key": "period",
+                  "value": "this month"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "05 - Update Budget",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Amount was updated', () => {",
+                  "    pm.expect(pm.response.json().amount).to.eql('350.00');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": \"350.00\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/finance/budgets/{{finance_budget_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["finance", "budgets", "{{finance_budget_id}}"]
+            }
+          }
+        },
+        {
+          "name": "06 - Delete Budget",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 204', () => pm.response.to.have.status(204));",
+                  "pm.environment.unset('finance_budget_id');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/finance/budgets/{{finance_budget_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["finance", "budgets", "{{finance_budget_id}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Recurring Transactions",
+      "item": [
+        {
+          "name": "01 - Create Recurring Transaction",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+                  "pm.test('Response has id and saves it', () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.have.property('id');",
+                  "    pm.expect(json.type).to.eql('expense');",
+                  "    pm.expect(json.amount).to.eql('9.99');",
+                  "    pm.expect(json.merchant).to.eql('Streaming Service');",
+                  "    pm.expect(json.active).to.eql(true);",
+                  "    pm.environment.set('finance_recurring_id', json.id);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"account_id\": {{finance_account_id}},\n  \"category_id\": {{finance_category_id}},\n  \"type\": \"expense\",\n  \"amount\": \"9.99\",\n  \"currency\": \"EUR\",\n  \"merchant\": \"Streaming Service\",\n  \"recurrence_rule\": \"RRULE:FREQ=MONTHLY;BYMONTHDAY=1\",\n  \"active\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/finance/recurring-transactions/",
+              "host": ["{{base_url}}"],
+              "path": ["finance", "recurring-transactions", ""]
+            }
+          }
+        },
+        {
+          "name": "02 - List Recurring Transactions",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Response is an array with at least one recurring transaction', () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.be.an('array');",
+                  "    pm.expect(json.length).to.be.at.least(1);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/finance/recurring-transactions/?active=true",
+              "host": ["{{base_url}}"],
+              "path": ["finance", "recurring-transactions", ""],
+              "query": [
+                {
+                  "key": "active",
+                  "value": "true"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "03 - Get Recurring Transaction",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Response matches created recurring transaction', () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(String(json.id)).to.eql(String(pm.environment.get('finance_recurring_id')));",
+                  "    pm.expect(json.merchant).to.eql('Streaming Service');",
+                  "    pm.expect(json.recurrence_rule).to.eql('RRULE:FREQ=MONTHLY;BYMONTHDAY=1');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/finance/recurring-transactions/{{finance_recurring_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["finance", "recurring-transactions", "{{finance_recurring_id}}"]
+            }
+          }
+        },
+        {
+          "name": "04 - Update Recurring Transaction",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Amount was updated', () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.amount).to.eql('12.99');",
+                  "    pm.expect(json.merchant).to.eql('Premium Streaming');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": \"12.99\",\n  \"merchant\": \"Premium Streaming\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/finance/recurring-transactions/{{finance_recurring_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["finance", "recurring-transactions", "{{finance_recurring_id}}"]
+            }
+          }
+        },
+        {
+          "name": "05 - Delete Recurring Transaction",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 204', () => pm.response.to.have.status(204));",
+                  "pm.environment.unset('finance_recurring_id');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/finance/recurring-transactions/{{finance_recurring_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["finance", "recurring-transactions", "{{finance_recurring_id}}"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -31,6 +31,36 @@
       "value": "",
       "type": "default",
       "enabled": true
+    },
+    {
+      "key": "finance_account_id",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "finance_category_id",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "finance_transaction_id",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "finance_budget_id",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "finance_recurring_id",
+      "value": "",
+      "type": "default",
+      "enabled": true
     }
   ],
   "_postman_variable_scope": "environment"

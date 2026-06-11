@@ -1,8 +1,8 @@
 from sqlalchemy import delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.features.monitors.tables import Monitor, MonitorLog
-from app.features.monitors.schemas import MonitorCreate, MonitorUpdate
+from app.features.monitoring.tables import Monitor, MonitorLog
+from app.features.monitoring.schemas import MonitorCreate, MonitorUpdate
 
 
 async def get_monitor(session: AsyncSession, monitor_id: int) -> Monitor | None:

@@ -75,7 +75,7 @@ class TestGetMonitors:
         assert response.json() == []
 
     def test_returns_monitor_list(self, client):
-        from app.features.monitors.schemas import MonitorRead
+        from app.features.monitoring.schemas import MonitorRead
         monitors = [MonitorRead(**_monitor_dict(id=i)) for i in range(2)]
         with patch("app.api.routes.monitors.get_monitors", new=AsyncMock(return_value=monitors)):
             response = client.get("/monitors/", headers=AUTH)
@@ -89,7 +89,7 @@ class TestGetMonitors:
 
 class TestGetMonitor:
     def test_found_returns_200(self, client):
-        from app.features.monitors.schemas import MonitorRead
+        from app.features.monitoring.schemas import MonitorRead
         monitor = MonitorRead(**_monitor_dict())
         with patch("app.api.routes.monitors.get_monitor", new=AsyncMock(return_value=monitor)):
             response = client.get("/monitors/1", headers=AUTH)
@@ -109,7 +109,7 @@ class TestGetMonitor:
 
 class TestCreateMonitor:
     def test_creates_monitor(self, client):
-        from app.features.monitors.schemas import MonitorRead
+        from app.features.monitoring.schemas import MonitorRead
         monitor = MonitorRead(**_monitor_dict(id=10, name="New Monitor"))
         with patch("app.api.routes.monitors.create_monitor", new=AsyncMock(return_value=monitor)):
             payload = {
@@ -130,7 +130,7 @@ class TestCreateMonitor:
 
 class TestDeleteMonitor:
     def test_found_returns_monitor(self, client):
-        from app.features.monitors.schemas import MonitorRead
+        from app.features.monitoring.schemas import MonitorRead
         monitor = MonitorRead(**_monitor_dict())
         with patch("app.api.routes.monitors.delete_monitor", new=AsyncMock(return_value=monitor)):
             response = client.delete("/monitors/1", headers=AUTH)
@@ -148,7 +148,7 @@ class TestDeleteMonitor:
 
 class TestUpdateMonitor:
     def test_found_returns_updated(self, client):
-        from app.features.monitors.schemas import MonitorRead
+        from app.features.monitoring.schemas import MonitorRead
         monitor = MonitorRead(**_monitor_dict(name="Updated"))
         with patch("app.api.routes.monitors.update_monitor", new=AsyncMock(return_value=monitor)):
             response = client.patch("/monitors/1", json={"name": "Updated"}, headers=AUTH)
@@ -167,7 +167,7 @@ class TestUpdateMonitor:
 
 class TestRunActiveMonitors:
     def test_runs_all_and_returns_logs(self, client):
-        from app.features.monitors.schemas import MonitorLogRead
+        from app.features.monitoring.schemas import MonitorLogRead
         logs = [MonitorLogRead(**_log_dict(id=i, monitor_id=1)) for i in range(2)]
         with patch("app.api.routes.monitors.MonitorService.run_due", new=AsyncMock(return_value=logs)):
             response = client.post("/monitors/run", headers=AUTH)
@@ -181,7 +181,7 @@ class TestRunActiveMonitors:
 
 class TestRunMonitorById:
     def test_found_returns_log(self, client):
-        from app.features.monitors.schemas import MonitorLogRead
+        from app.features.monitoring.schemas import MonitorLogRead
         log = MonitorLogRead(**_log_dict())
         with patch(
             "app.api.routes.monitors.MonitorService.run_monitor_by_id",
@@ -206,7 +206,7 @@ class TestRunMonitorById:
 
 class TestGetMonitorLog:
     def test_found_returns_logs(self, client):
-        from app.features.monitors.schemas import MonitorRead, MonitorLogRead
+        from app.features.monitoring.schemas import MonitorRead, MonitorLogRead
         monitor = MonitorRead(**_monitor_dict())
         logs = [MonitorLogRead(**_log_dict(id=i)) for i in range(3)]
         with patch("app.api.routes.monitors.get_monitor", new=AsyncMock(return_value=monitor)):
@@ -225,7 +225,7 @@ class TestGetMonitorLog:
         assert response.status_code == 403
 
     def test_limit_parameter(self, client):
-        from app.features.monitors.schemas import MonitorRead
+        from app.features.monitoring.schemas import MonitorRead
         monitor = MonitorRead(**_monitor_dict())
         with patch("app.api.routes.monitors.get_monitor", new=AsyncMock(return_value=monitor)):
             with patch("app.api.routes.monitors.get_monitor_logs", new=AsyncMock(return_value=[])) as mock_logs:

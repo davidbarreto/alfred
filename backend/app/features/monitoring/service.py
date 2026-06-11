@@ -6,8 +6,8 @@ import logging
 import requests
 
 from bs4 import BeautifulSoup
-from app.features.monitors.repository import create_monitor_log, get_active_monitors, get_monitor
-from app.features.monitors.tables import Monitor
+from app.features.monitoring.repository import create_monitor_log, get_active_monitors, get_monitor
+from app.features.monitoring.tables import Monitor
 from app.integrations.http.pagination import paginate
 from selenium import webdriver
 from selenium.webdriver.common.by import By

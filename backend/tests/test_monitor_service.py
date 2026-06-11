@@ -1,7 +1,7 @@
 import pytest
 from unittest.mock import patch, MagicMock, AsyncMock
-from app.features.monitors.service import MonitorService
-from app.features.monitors.tables import Monitor
+from app.features.monitoring.service import MonitorService
+from app.features.monitoring.tables import Monitor
 
 
 def _make_monitor(**overrides):
@@ -32,7 +32,7 @@ def _make_monitor(**overrides):
 # ── check_html_static ─────────────────────────────────────────────────────────
 
 class TestCheckHtmlStatic:
-    @patch("app.features.monitors.service.requests.get")
+    @patch("app.features.monitoring.service.requests.get")
     def test_found_target(self, mock_get):
         mock_get.return_value.text = '<div class="content">Target Text here</div>'
         mock_get.return_value.status_code = 200
@@ -46,7 +46,7 @@ class TestCheckHtmlStatic:
         assert result["error"] is None
         assert result["monitor_type"] == "html_static"
 
-    @patch("app.features.monitors.service.requests.get")
+    @patch("app.features.monitoring.service.requests.get")
     def test_not_found(self, mock_get):
         mock_get.return_value.text = '<div class="content">Other content</div>'
         mock_get.return_value.status_code = 200
@@ -57,7 +57,7 @@ class TestCheckHtmlStatic:
         assert result["found"] is False
         assert result["error"] is None
 
-    @patch("app.features.monitors.service.requests.get")
+    @patch("app.features.monitoring.service.requests.get")
     def test_case_insensitive_found(self, mock_get):
         mock_get.return_value.text = '<div class="content">target text</div>'
         mock_get.return_value.status_code = 200
@@ -70,7 +70,7 @@ class TestCheckHtmlStatic:
         )
         assert result["found"] is True
 
-    @patch("app.features.monitors.service.requests.get")
+    @patch("app.features.monitoring.service.requests.get")
     def test_no_elements_matched(self, mock_get):
         mock_get.return_value.text = "<html><body>no matching selector</body></html>"
         mock_get.return_value.status_code = 200
@@ -82,7 +82,7 @@ class TestCheckHtmlStatic:
         assert result["error"] is not None
         assert "No elements" in result["error"]
 
-    @patch("app.features.monitors.service.requests.get")
+    @patch("app.features.monitoring.service.requests.get")
     def test_request_exception(self, mock_get):
         import requests as req
         mock_get.side_effect = req.RequestException("Connection refused")
@@ -93,7 +93,7 @@ class TestCheckHtmlStatic:
         assert result["found"] is False
         assert "Request failed" in result["error"]
 
-    @patch("app.features.monitors.service.requests.get")
+    @patch("app.features.monitoring.service.requests.get")
     def test_multiple_elements_found_on_first(self, mock_get):
         mock_get.return_value.text = (
             '<div class="content">Target Text</div>'
@@ -107,7 +107,7 @@ class TestCheckHtmlStatic:
         assert result["found"] is True
         assert result["elements_checked"] == 2
 
-    @patch("app.features.monitors.service.requests.get")
+    @patch("app.features.monitoring.service.requests.get")
     def test_result_includes_metadata(self, mock_get):
         mock_get.return_value.text = "<html></html>"
         mock_get.return_value.status_code = 200
@@ -288,7 +288,7 @@ class TestDispatchMonitor:
 # ── run_monitor, run_due, run_monitor_by_id ───────────────────────────────────
 
 class TestRunMonitor:
-    @patch("app.features.monitors.service.create_monitor_log")
+    @patch("app.features.monitoring.service.create_monitor_log")
     @patch.object(MonitorService, "dispatch_monitor")
     async def test_run_monitor_dispatches_and_logs(self, mock_dispatch, mock_log):
         session = AsyncMock()
@@ -306,7 +306,7 @@ class TestRunMonitor:
 
 
 class TestRunDue:
-    @patch("app.features.monitors.service.get_active_monitors")
+    @patch("app.features.monitoring.service.get_active_monitors")
     @patch.object(MonitorService, "run_monitor")
     async def test_runs_all_active_monitors(self, mock_run, mock_get_active):
         session = AsyncMock()
@@ -320,7 +320,7 @@ class TestRunDue:
         assert mock_run.call_count == 3
         assert len(result) == 3
 
-    @patch("app.features.monitors.service.get_active_monitors")
+    @patch("app.features.monitoring.service.get_active_monitors")
     @patch.object(MonitorService, "run_monitor")
     async def test_empty_monitors_returns_empty_list(self, mock_run, mock_get_active):
         session = AsyncMock()
@@ -333,7 +333,7 @@ class TestRunDue:
 
 
 class TestRunMonitorById:
-    @patch("app.features.monitors.service.get_monitor")
+    @patch("app.features.monitoring.service.get_monitor")
     @patch.object(MonitorService, "run_monitor")
     async def test_runs_when_found(self, mock_run, mock_get):
         session = AsyncMock()
@@ -346,7 +346,7 @@ class TestRunMonitorById:
         mock_get.assert_called_once_with(session=session, monitor_id=1)
         mock_run.assert_called_once_with(session=session, monitor=monitor)
 
-    @patch("app.features.monitors.service.get_monitor")
+    @patch("app.features.monitoring.service.get_monitor")
     async def test_returns_none_when_not_found(self, mock_get):
         session = AsyncMock()
         mock_get.return_value = None

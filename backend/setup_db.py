@@ -24,7 +24,7 @@ from app.db.base import Base
 from app.features.organizer.tasks.tables import Task
 from app.features.organizer.notes.tables import Note
 from app.features.organizer.tags.tables import Tag, tasks_tags, notes_tags
-from app.features.monitors.tables import Monitor, MonitorLog
+from app.features.monitoring.tables import Monitor, MonitorLog
 
 # Use Admin URL to ensure we have DROP/CREATE permissions
 DATABASE_ADMIN_URL = os.getenv("DATABASE_ADMIN_URL", get_settings().database_url)

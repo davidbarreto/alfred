@@ -1,7 +1,7 @@
 import pytest
 from unittest.mock import AsyncMock, MagicMock
 from sqlalchemy.ext.asyncio import AsyncSession
-from app.features.monitors.repository import (
+from app.features.monitoring.repository import (
     get_monitor,
     get_monitors,
     get_active_monitors,
@@ -11,8 +11,8 @@ from app.features.monitors.repository import (
     create_monitor_log,
     get_monitor_logs,
 )
-from app.features.monitors.tables import Monitor, MonitorLog
-from app.features.monitors.schemas import MonitorCreate, MonitorUpdate
+from app.features.monitoring.tables import Monitor, MonitorLog
+from app.features.monitoring.schemas import MonitorCreate, MonitorUpdate
 
 
 def _make_session():

@@ -9,6 +9,11 @@ from app.integrations.google_calendar.provider import GoogleCalendarProvider
 from app.features.organizer.tasks.service import TaskService
 from app.features.organizer.notes.service import NoteService
 from app.features.organizer.calendar_events.service import CalendarEventService
+from app.features.finance.accounts.service import AccountService
+from app.features.finance.categories.service import CategoryService
+from app.features.finance.transactions.service import TransactionService
+from app.features.finance.budgets.service import BudgetService
+from app.features.finance.recurring_transactions.service import RecurringTransactionService
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.session import get_session
 
@@ -47,6 +52,21 @@ def get_calendar_event_provider() -> GoogleCalendarProvider:
 def get_calendar_event_service(session: AsyncSession = Depends(get_session)) -> CalendarEventService:
     return CalendarEventService(get_calendar_event_provider(), session)
 
+def get_account_service(session: AsyncSession = Depends(get_session)) -> AccountService:
+    return AccountService(session)
+
+def get_category_service(session: AsyncSession = Depends(get_session)) -> CategoryService:
+    return CategoryService(session)
+
+def get_transaction_service(session: AsyncSession = Depends(get_session)) -> TransactionService:
+    return TransactionService(session)
+
+def get_budget_service(session: AsyncSession = Depends(get_session)) -> BudgetService:
+    return BudgetService(session)
+
+def get_recurring_transaction_service(session: AsyncSession = Depends(get_session)) -> RecurringTransactionService:
+    return RecurringTransactionService(session)
+
 # Dependencies shortcuts
 # DB
 DbSessionDep = Annotated[AsyncSession, Depends(get_session)]
@@ -55,3 +75,8 @@ DbSessionDep = Annotated[AsyncSession, Depends(get_session)]
 TaskServiceDep = Annotated[TaskService, Depends(get_task_service)]
 NoteServiceDep = Annotated[NoteService, Depends(get_note_service)]
 CalendarEventServiceDep = Annotated[CalendarEventService, Depends(get_calendar_event_service)]
+AccountServiceDep = Annotated[AccountService, Depends(get_account_service)]
+CategoryServiceDep = Annotated[CategoryService, Depends(get_category_service)]
+TransactionServiceDep = Annotated[TransactionService, Depends(get_transaction_service)]
+BudgetServiceDep = Annotated[BudgetService, Depends(get_budget_service)]
+RecurringTransactionServiceDep = Annotated[RecurringTransactionService, Depends(get_recurring_transaction_service)]

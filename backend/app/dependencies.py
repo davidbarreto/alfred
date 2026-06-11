@@ -20,7 +20,7 @@ def get_task_provider() -> NotionProvider:
 
 @lru_cache
 def get_note_provider() -> NotionProvider:
-    return NotionProvider(get_notion_client(), get_settings().notion_notes_database_id)
+    return NotionProvider(get_notion_client(), get_settings().notion_notes_database_id, content_field="description")
 
 def get_task_service(session: AsyncSession = Depends(get_session)) -> TaskService:
     return TaskService(get_task_provider(), session)

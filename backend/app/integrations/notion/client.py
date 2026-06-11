@@ -69,6 +69,47 @@ class NotionClient:
             return response.json()
 
     # ------------------------------------------------------------------
+    # Blocks (page content)
+    # ------------------------------------------------------------------
+
+    async def append_block_children(self, block_id: str, children: list[dict[str, Any]]) -> dict[str, Any]:
+        async with httpx.AsyncClient() as http:
+            response = await http.patch(
+                f"{self._base_url}/blocks/{block_id}/children",
+                headers=self._headers,
+                json={"children": children},
+            )
+            self._raise(response)
+            return response.json()
+
+    async def get_block_children(self, block_id: str) -> list[dict[str, Any]]:
+        """Returns all block children, handling pagination automatically."""
+        results: list[dict[str, Any]] = []
+        params: dict[str, Any] = {"page_size": 100}
+        async with httpx.AsyncClient() as http:
+            while True:
+                response = await http.get(
+                    f"{self._base_url}/blocks/{block_id}/children",
+                    headers=self._headers,
+                    params=params,
+                )
+                self._raise(response)
+                data = response.json()
+                results.extend(data.get("results", []))
+                if not data.get("has_more"):
+                    break
+                params["start_cursor"] = data["next_cursor"]
+        return results
+
+    async def delete_block(self, block_id: str) -> None:
+        async with httpx.AsyncClient() as http:
+            response = await http.delete(
+                f"{self._base_url}/blocks/{block_id}",
+                headers=self._headers,
+            )
+            self._raise(response)
+
+    # ------------------------------------------------------------------
     # Database queries
     # ------------------------------------------------------------------
 

@@ -12,26 +12,49 @@ class NotionProvider:
     Notion's property format in both directions.
     """
 
-    def __init__(self, client: NotionClient, database_id: str) -> None:
+    # Notion rich_text content is capped at 2000 chars per text object.
+    _TEXT_LIMIT = 2000
+
+    def __init__(self, client: NotionClient, database_id: str, content_field: str | None = None) -> None:
         self._client = client
         self._db = database_id
+        self._content_field = content_field
 
     # ------------------------------------------------------------------
     # StorageProvider implementation
     # ------------------------------------------------------------------
 
     async def create(self, record: dict[str, Any]) -> dict[str, Any]:
-        properties = self._to_notion_properties(record)
+        content = record.get(self._content_field) if self._content_field else None
+        props_record = {k: v for k, v in record.items() if k != self._content_field}
+        properties = self._to_notion_properties(props_record)
         page = await self._client.create_page(self._db, properties)
+        if content:
+            await self._client.append_block_children(page["id"], self._text_to_blocks(content))
         return self._from_notion_page(page)
 
     async def get(self, record_id: str) -> dict[str, Any]:
         page = await self._client.get_page(record_id)
-        return self._from_notion_page(page)
+        result = self._from_notion_page(page)
+        if self._content_field:
+            blocks = await self._client.get_block_children(record_id)
+            result[self._content_field] = self._blocks_to_text(blocks)
+        return result
 
     async def update(self, record_id: str, record: dict[str, Any]) -> dict[str, Any]:
-        properties = self._to_notion_properties(record)
-        page = await self._client.update_page(record_id, properties)
+        props_record = {k: v for k, v in record.items() if k != self._content_field}
+        properties = self._to_notion_properties(props_record)
+        if properties:
+            page = await self._client.update_page(record_id, properties)
+        else:
+            page = await self._client.get_page(record_id)
+        if self._content_field and self._content_field in record:
+            content = record[self._content_field] or ""
+            existing_blocks = await self._client.get_block_children(record_id)
+            for block in existing_blocks:
+                await self._client.delete_block(block["id"])
+            if content:
+                await self._client.append_block_children(record_id, self._text_to_blocks(content))
         return self._from_notion_page(page)
 
     async def delete(self, record_id: str) -> None:
@@ -51,6 +74,44 @@ class NotionProvider:
 
     _SELECT_FIELDS = {"priority", "urgency"}
     _STATUS_FIELDS = {"status"}
+
+    # ------------------------------------------------------------------
+    # Page content (blocks) helpers
+    # ------------------------------------------------------------------
+
+    def _text_to_blocks(self, text: str) -> list[dict[str, Any]]:
+        """Convert a plain-text string into Notion paragraph blocks.
+
+        Splits on newlines so line structure is preserved round-trip.
+        Lines longer than _TEXT_LIMIT are chunked across multiple blocks.
+        """
+        if not text:
+            return []
+        blocks = []
+        for line in text.split("\n"):
+            if len(line) <= self._TEXT_LIMIT:
+                blocks.append(self._make_paragraph(line))
+            else:
+                for i in range(0, len(line), self._TEXT_LIMIT):
+                    blocks.append(self._make_paragraph(line[i : i + self._TEXT_LIMIT]))
+        return blocks
+
+    @staticmethod
+    def _make_paragraph(text: str) -> dict[str, Any]:
+        rt = [{"type": "text", "text": {"content": text}}] if text else []
+        return {"object": "block", "type": "paragraph", "paragraph": {"rich_text": rt}}
+
+    @staticmethod
+    def _blocks_to_text(blocks: list[dict[str, Any]]) -> str:
+        """Extract plain text from a list of Notion blocks, joined by newlines."""
+        lines = []
+        for block in blocks:
+            block_type = block.get("type")
+            if not block_type:
+                continue
+            rich_text = block.get(block_type, {}).get("rich_text", [])
+            lines.append("".join(rt.get("plain_text", "") for rt in rich_text))
+        return "\n".join(lines)
 
     def _to_notion_properties(self, record: dict[str, Any]) -> dict[str, Any]:
         """

@@ -9,6 +9,10 @@ os.environ.setdefault("NOTION_BASE_URL", "https://api.notion.com/v1")
 os.environ.setdefault("NOTION_API_VERSION", "2022-06-28")
 os.environ.setdefault("NOTION_TASKS_DATABASE_ID", "test-tasks-db-id")
 os.environ.setdefault("NOTION_NOTES_DATABASE_ID", "test-notes-db-id")
+os.environ.setdefault("GOOGLE_CALENDAR_CLIENT_ID", "test-gc-client-id")
+os.environ.setdefault("GOOGLE_CALENDAR_CLIENT_SECRET", "test-gc-client-secret")
+os.environ.setdefault("GOOGLE_CALENDAR_REFRESH_TOKEN", "test-gc-refresh-token")
+os.environ.setdefault("GOOGLE_CALENDAR_ID", "primary")
 
 import pytest
 from fastapi.testclient import TestClient

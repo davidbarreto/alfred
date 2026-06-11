@@ -1,0 +1,329 @@
+{
+  "info": {
+    "name": "Alfred - Calendar Events API",
+    "_postman_id": "alfred-calendar-events-v1",
+    "description": "Run in order: Health Check → Create → List → Get → Update → Filter by Date Range → Filter by Tags → Get 404 → Delete",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{api_token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "01 - Health Check",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Status is ok', () => {",
+              "    pm.expect(pm.response.json().status).to.eql('ok');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "auth": {
+          "type": "noauth"
+        },
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/health",
+          "host": ["{{base_url}}"],
+          "path": ["health"]
+        }
+      }
+    },
+    {
+      "name": "02 - Create Event",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+              "pm.test('Response has id and saves it', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json).to.have.property('id');",
+              "    pm.expect(json.title).to.eql('Q4 Planning Meeting');",
+              "    pm.expect(json.location).to.eql('Conference Room A');",
+              "    pm.expect(json.all_day).to.eql(false);",
+              "    pm.expect(json.tags).to.include('work');",
+              "    pm.environment.set('event_id', json.id);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"title\": \"Q4 Planning Meeting\",\n  \"description\": \"Quarterly planning session for the product team.\",\n  \"location\": \"Conference Room A\",\n  \"start_datetime\": \"2026-07-01T10:00:00\",\n  \"end_datetime\": \"2026-07-01T11:30:00\",\n  \"all_day\": false,\n  \"tags\": [\n    \"work\",\n    \"planning\"\n  ]\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{base_url}}/calendar-events",
+          "host": ["{{base_url}}"],
+          "path": ["calendar-events"]
+        }
+      }
+    },
+    {
+      "name": "03 - List Events",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Response is an array', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json).to.be.an('array');",
+              "    pm.expect(json.length).to.be.at.least(1);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/calendar-events?limit=100",
+          "host": ["{{base_url}}"],
+          "path": ["calendar-events"],
+          "query": [
+            {
+              "key": "limit",
+              "value": "100"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "04 - Get Event",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Response matches created event', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(String(json.id)).to.eql(String(pm.environment.get('event_id')));",
+              "    pm.expect(json.title).to.eql('Q4 Planning Meeting');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/calendar-events/{{event_id}}",
+          "host": ["{{base_url}}"],
+          "path": ["calendar-events", "{{event_id}}"]
+        }
+      }
+    },
+    {
+      "name": "05 - Update Event",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Title and location were updated', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json.title).to.eql('Q4 Planning Meeting - Final');",
+              "    pm.expect(json.location).to.eql('Board Room');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"title\": \"Q4 Planning Meeting - Final\",\n  \"location\": \"Board Room\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{base_url}}/calendar-events/{{event_id}}",
+          "host": ["{{base_url}}"],
+          "path": ["calendar-events", "{{event_id}}"]
+        }
+      }
+    },
+    {
+      "name": "06 - List Events (Filter by Date Range)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Response is an array', () => {",
+              "    pm.expect(pm.response.json()).to.be.an('array');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/calendar-events?start_from=2026-07-01T00:00:00&start_to=2026-07-31T23:59:59&limit=100",
+          "host": ["{{base_url}}"],
+          "path": ["calendar-events"],
+          "query": [
+            {
+              "key": "start_from",
+              "value": "2026-07-01T00:00:00"
+            },
+            {
+              "key": "start_to",
+              "value": "2026-07-31T23:59:59"
+            },
+            {
+              "key": "limit",
+              "value": "100"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "07 - List Events (Filter by Tags)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Response is an array', () => {",
+              "    pm.expect(pm.response.json()).to.be.an('array');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/calendar-events?tags=work&tags=planning&limit=100",
+          "host": ["{{base_url}}"],
+          "path": ["calendar-events"],
+          "query": [
+            {
+              "key": "tags",
+              "value": "work"
+            },
+            {
+              "key": "tags",
+              "value": "planning"
+            },
+            {
+              "key": "limit",
+              "value": "100"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "08 - Get Event Not Found",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 404', () => pm.response.to.have.status(404));",
+              "pm.test('Returns not found detail', () => {",
+              "    pm.expect(pm.response.json().detail).to.eql('Event not found');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/calendar-events/999999",
+          "host": ["{{base_url}}"],
+          "path": ["calendar-events", "999999"]
+        }
+      }
+    },
+    {
+      "name": "09 - Delete Event",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 204', () => pm.response.to.have.status(204));",
+              "pm.environment.unset('event_id');"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/calendar-events/{{event_id}}",
+          "host": ["{{base_url}}"],
+          "path": ["calendar-events", "{{event_id}}"]
+        }
+      }
+    }
+  ]
+}

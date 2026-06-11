@@ -4,8 +4,11 @@ from fastapi import Depends
 from app.config import get_settings
 from app.integrations.notion.client import NotionClient
 from app.integrations.notion.provider import NotionProvider
+from app.integrations.google_calendar.client import GoogleCalendarClient
+from app.integrations.google_calendar.provider import GoogleCalendarProvider
 from app.features.organizer.tasks.service import TaskService
 from app.features.organizer.notes.service import NoteService
+from app.features.organizer.calendar_events.service import CalendarEventService
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.session import get_session
 
@@ -28,6 +31,22 @@ def get_task_service(session: AsyncSession = Depends(get_session)) -> TaskServic
 def get_note_service(session: AsyncSession = Depends(get_session)) -> NoteService:
     return NoteService(get_note_provider(), session)
 
+@lru_cache
+def get_google_calendar_client() -> GoogleCalendarClient:
+    s = get_settings()
+    return GoogleCalendarClient(
+        client_id=s.google_calendar_client_id,
+        client_secret=s.google_calendar_client_secret,
+        refresh_token=s.google_calendar_refresh_token,
+    )
+
+@lru_cache
+def get_calendar_event_provider() -> GoogleCalendarProvider:
+    return GoogleCalendarProvider(get_google_calendar_client(), get_settings().google_calendar_id)
+
+def get_calendar_event_service(session: AsyncSession = Depends(get_session)) -> CalendarEventService:
+    return CalendarEventService(get_calendar_event_provider(), session)
+
 # Dependencies shortcuts
 # DB
 DbSessionDep = Annotated[AsyncSession, Depends(get_session)]
@@ -35,3 +54,4 @@ DbSessionDep = Annotated[AsyncSession, Depends(get_session)]
 # Services
 TaskServiceDep = Annotated[TaskService, Depends(get_task_service)]
 NoteServiceDep = Annotated[NoteService, Depends(get_note_service)]
+CalendarEventServiceDep = Annotated[CalendarEventService, Depends(get_calendar_event_service)]

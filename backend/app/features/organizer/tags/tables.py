@@ -6,6 +6,7 @@ from app.db.base import Base
 if TYPE_CHECKING:
     from app.features.organizer.tasks.tables import Task
     from app.features.organizer.notes.tables import Note
+    from app.features.organizer.calendar_events.tables import CalendarEvent
 
 
 # Association table for Task-Tag relationship
@@ -22,6 +23,15 @@ notes_tags = Table(
     "notes_tags",
     Base.metadata,
     Column("note_id", Integer, ForeignKey("organizer.notes.id", ondelete="CASCADE"), primary_key=True),
+    Column("tag_id", Integer, ForeignKey("organizer.tags.id", ondelete="CASCADE"), primary_key=True),
+    schema="organizer",
+)
+
+# Association table for CalendarEvent-Tag relationship
+calendar_events_tags = Table(
+    "calendar_events_tags",
+    Base.metadata,
+    Column("event_id", Integer, ForeignKey("organizer.calendar_events.id", ondelete="CASCADE"), primary_key=True),
     Column("tag_id", Integer, ForeignKey("organizer.tags.id", ondelete="CASCADE"), primary_key=True),
     schema="organizer",
 )
@@ -47,5 +57,10 @@ class Tag(Base):
     notes: Mapped[List["Note"]] = relationship(
         "Note",
         secondary=notes_tags,
+        back_populates="tags",
+    )
+    calendar_events: Mapped[List["CalendarEvent"]] = relationship(
+        "CalendarEvent",
+        secondary=calendar_events_tags,
         back_populates="tags",
     )

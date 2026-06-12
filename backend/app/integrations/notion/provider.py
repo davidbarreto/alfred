@@ -1,8 +1,17 @@
 from __future__ import annotations
+
+import logging
 from datetime import datetime
 from typing import Any
 
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.integrations.sync_log.repository import create_sync_log
+
 from .client import NotionClient
+
+logger = logging.getLogger(__name__)
+
 
 class NotionProvider:
     """
@@ -15,25 +24,52 @@ class NotionProvider:
     # Notion rich_text content is capped at 2000 chars per text object.
     _TEXT_LIMIT = 2000
 
-    def __init__(self, client: NotionClient, database_id: str, content_field: str | None = None) -> None:
+    def __init__(
+        self,
+        client: NotionClient,
+        database_id: str,
+        content_field: str | None = None,
+        entity_type: str = "unknown",
+    ) -> None:
         self._client = client
         self._db = database_id
         self._content_field = content_field
+        self._entity_type = entity_type
 
     # ------------------------------------------------------------------
     # StorageProvider implementation
     # ------------------------------------------------------------------
 
-    async def create(self, record: dict[str, Any]) -> dict[str, Any]:
+    async def create(
+        self, record: dict[str, Any], session: AsyncSession | None = None
+    ) -> dict[str, Any]:
         content = record.get(self._content_field) if self._content_field else None
         props_record = {k: v for k, v in record.items() if k != self._content_field}
         properties = self._to_notion_properties(props_record)
-        page = await self._client.create_page(self._db, properties)
+        request_payload: dict[str, Any] = {
+            "parent": {"database_id": self._db},
+            "properties": properties,
+        }
         if content:
-            await self._client.append_block_children(page["id"], self._text_to_blocks(content))
+            request_payload["content"] = content
+
+        error: str | None = None
+        page: dict[str, Any] | None = None
+        try:
+            page = await self._client.create_page(self._db, properties)
+            if content:
+                await self._client.append_block_children(page["id"], self._text_to_blocks(content))
+        except Exception as exc:
+            error = str(exc)
+            await self._write_log(session, "create", None, request_payload, None, error)
+            raise
+
+        await self._write_log(session, "create", page["id"], request_payload, page)
         return self._from_notion_page(page)
 
-    async def get(self, record_id: str) -> dict[str, Any]:
+    async def get(
+        self, record_id: str, session: AsyncSession | None = None
+    ) -> dict[str, Any]:
         page = await self._client.get_page(record_id)
         result = self._from_notion_page(page)
         if self._content_field:
@@ -41,32 +77,93 @@ class NotionProvider:
             result[self._content_field] = self._blocks_to_text(blocks)
         return result
 
-    async def update(self, record_id: str, record: dict[str, Any]) -> dict[str, Any]:
+    async def update(
+        self,
+        record_id: str,
+        record: dict[str, Any],
+        session: AsyncSession | None = None,
+    ) -> dict[str, Any]:
         props_record = {k: v for k, v in record.items() if k != self._content_field}
         properties = self._to_notion_properties(props_record)
-        if properties:
-            page = await self._client.update_page(record_id, properties)
-        else:
-            page = await self._client.get_page(record_id)
+        request_payload: dict[str, Any] = {"properties": properties}
         if self._content_field and self._content_field in record:
-            content = record[self._content_field] or ""
-            existing_blocks = await self._client.get_block_children(record_id)
-            for block in existing_blocks:
-                await self._client.delete_block(block["id"])
-            if content:
-                await self._client.append_block_children(record_id, self._text_to_blocks(content))
+            request_payload["content"] = record[self._content_field]
+
+        error: str | None = None
+        page: dict[str, Any] | None = None
+        try:
+            if properties:
+                page = await self._client.update_page(record_id, properties)
+            else:
+                page = await self._client.get_page(record_id)
+            if self._content_field and self._content_field in record:
+                content = record[self._content_field] or ""
+                existing_blocks = await self._client.get_block_children(record_id)
+                for block in existing_blocks:
+                    await self._client.delete_block(block["id"])
+                if content:
+                    await self._client.append_block_children(record_id, self._text_to_blocks(content))
+        except Exception as exc:
+            error = str(exc)
+            await self._write_log(session, "update", record_id, request_payload, None, error)
+            raise
+
+        await self._write_log(session, "update", record_id, request_payload, page)
         return self._from_notion_page(page)
 
-    async def delete(self, record_id: str) -> None:
-        await self._client.archive_page(record_id)
+    async def delete(
+        self, record_id: str, session: AsyncSession | None = None
+    ) -> None:
+        request_payload: dict[str, Any] = {"archived": True}
+        error: str | None = None
+        response: dict[str, Any] | None = None
+        try:
+            response = await self._client.archive_page(record_id)
+        except Exception as exc:
+            error = str(exc)
+            await self._write_log(session, "delete", record_id, request_payload, None, error)
+            raise
+
+        await self._write_log(session, "delete", record_id, request_payload, response)
 
     async def list(
         self,
         filters: dict[str, Any] | None = None,
+        session: AsyncSession | None = None,
     ) -> list[dict[str, Any]]:
         notion_filter = self._to_notion_filter(filters) if filters else None
         pages = await self._client.query_database(self._db, filter_payload=notion_filter)
         return [self._from_notion_page(p) for p in pages]
+
+    # ------------------------------------------------------------------
+    # Internal logging helper
+    # ------------------------------------------------------------------
+
+    async def _write_log(
+        self,
+        session: AsyncSession | None,
+        operation: str,
+        provider_entity_id: str | None,
+        request_payload: dict[str, Any] | None,
+        response_payload: dict[str, Any] | None,
+        error: str | None = None,
+    ) -> None:
+        if session is None:
+            return
+        try:
+            await create_sync_log(
+                session,
+                provider="notion",
+                operation=operation,
+                entity_type=self._entity_type,
+                provider_entity_id=provider_entity_id,
+                status="error" if error else "ok",
+                request_payload=request_payload,
+                response_payload=response_payload,
+                error=error,
+            )
+        except Exception:
+            logger.warning("Failed to write integration sync log", exc_info=True)
 
     # ------------------------------------------------------------------
     # Notion ↔ generic record translation

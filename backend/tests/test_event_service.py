@@ -156,7 +156,7 @@ class TestUpdateEvent:
 
         await service.update_event(1, event_update)
 
-        mock_provider.update.assert_called_once_with("gc-abc", {"title": "Updated"})
+        mock_provider.update.assert_called_once_with("gc-abc", {"title": "Updated"}, service._session)
 
 
 class TestDeleteEvent:
@@ -179,4 +179,4 @@ class TestDeleteEvent:
 
         await service.delete_event(1)
 
-        mock_provider.delete.assert_called_once_with("gc-abc")
+        mock_provider.delete.assert_called_once_with("gc-abc", service._session)

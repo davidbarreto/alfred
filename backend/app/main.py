@@ -13,6 +13,7 @@ logging.basicConfig(level=numeric_level, force=True)
 from fastapi import FastAPI
 
 from app.api.routes.monitoring.monitors import router as monitors_router
+from app.api.routes.integrations.sync_logs import router as sync_logs_router
 from app.api.routes.commands import router as commands_router
 from app.api.routes.organizer.tasks import router as tasks_router
 from app.api.routes.organizer.notes import router as notes_router
@@ -41,6 +42,7 @@ def configure_logging() -> None:
 
 app = FastAPI(title="Alfred Backend", version="0.1.0")
 app.include_router(monitors_router)
+app.include_router(sync_logs_router)
 app.include_router(commands_router)
 app.include_router(tasks_router)
 app.include_router(notes_router)

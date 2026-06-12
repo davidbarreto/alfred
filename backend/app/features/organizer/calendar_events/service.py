@@ -24,7 +24,7 @@ class CalendarEventService:
         return [EventRead.model_validate(e) for e in events_orm]
 
     async def create_event(self, event_create: EventCreate) -> EventRead:
-        event_record = await self._provider.create(event_create.model_dump())
+        event_record = await self._provider.create(event_create.model_dump(), self._session)
         event_orm = await self._repo.create_event(event_create, event_record["id"])
         return EventRead.model_validate(event_orm)
 
@@ -35,6 +35,7 @@ class CalendarEventService:
         await self._provider.update(
             event.provider_id,
             event_update.model_dump(exclude_unset=True),
+            self._session,
         )
         event_orm = await self._repo.update_event(event_id, event_update)
         return EventRead.model_validate(event_orm)
@@ -42,5 +43,5 @@ class CalendarEventService:
     async def delete_event(self, event_id: int) -> None:
         event = await self._repo.get_event(event_id)
         if event:
-            await self._provider.delete(event.provider_id)
+            await self._provider.delete(event.provider_id, self._session)
             await self._repo.delete_event(event_id)

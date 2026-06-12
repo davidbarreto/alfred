@@ -24,11 +24,11 @@ def get_notion_client() -> NotionClient:
 
 @lru_cache
 def get_task_provider() -> NotionProvider:
-    return NotionProvider(get_notion_client(), get_settings().notion_tasks_database_id)
+    return NotionProvider(get_notion_client(), get_settings().notion_tasks_database_id, entity_type="task")
 
 @lru_cache
 def get_note_provider() -> NotionProvider:
-    return NotionProvider(get_notion_client(), get_settings().notion_notes_database_id, content_field="description")
+    return NotionProvider(get_notion_client(), get_settings().notion_notes_database_id, content_field="description", entity_type="note")
 
 def get_task_service(session: AsyncSession = Depends(get_session)) -> TaskService:
     return TaskService(get_task_provider(), session)
@@ -47,7 +47,7 @@ def get_google_calendar_client() -> GoogleCalendarClient:
 
 @lru_cache
 def get_calendar_event_provider() -> GoogleCalendarProvider:
-    return GoogleCalendarProvider(get_google_calendar_client(), get_settings().google_calendar_id)
+    return GoogleCalendarProvider(get_google_calendar_client(), get_settings().google_calendar_id, entity_type="calendar_event")
 
 def get_calendar_event_service(session: AsyncSession = Depends(get_session)) -> CalendarEventService:
     return CalendarEventService(get_calendar_event_provider(), session)

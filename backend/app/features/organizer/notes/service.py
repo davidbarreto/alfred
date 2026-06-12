@@ -24,7 +24,7 @@ class NoteService:
         return [NoteRead.model_validate(note_orm) for note_orm in notes_orm]
 
     async def create_note(self, note_create: NoteCreate) -> NoteRead:
-        note_record = await self._provider.create(note_create.model_dump())
+        note_record = await self._provider.create(note_create.model_dump(), self._session)
         note_orm = await self._repo.create_note(note_create, note_record["id"])
         return NoteRead.model_validate(note_orm)
 
@@ -35,6 +35,7 @@ class NoteService:
         await self._provider.update(
             note.provider_id,
             note_update.model_dump(exclude_unset=True),
+            self._session,
         )
         note_orm = await self._repo.update_note(note_id, note_update)
         return NoteRead.model_validate(note_orm)
@@ -42,5 +43,5 @@ class NoteService:
     async def delete_note(self, note_id: int):
         note = await self._repo.get_note(note_id)
         if note:
-            await self._provider.delete(note.provider_id)
+            await self._provider.delete(note.provider_id, self._session)
             await self._repo.delete_note(note_id)

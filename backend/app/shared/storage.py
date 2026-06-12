@@ -1,6 +1,8 @@
 from __future__ import annotations
 from typing import Any, Protocol, runtime_checkable
 
+from sqlalchemy.ext.asyncio import AsyncSession
+
 
 @runtime_checkable
 class StorageProvider(Protocol):
@@ -22,25 +24,30 @@ class StorageProvider(Protocol):
     async def create(
         self,
         record: dict[str, Any],
+        session: AsyncSession | None = None,
     ) -> dict[str, Any]: ...
 
     async def get(
         self,
         record_id: str,
+        session: AsyncSession | None = None,
     ) -> dict[str, Any]: ...
 
     async def update(
         self,
         record_id: str,
         record: dict[str, Any],
+        session: AsyncSession | None = None,
     ) -> dict[str, Any]: ...
 
     async def delete(
         self,
         record_id: str,
+        session: AsyncSession | None = None,
     ) -> None: ...
 
     async def list(
         self,
         filters: dict[str, Any] | None = None,
+        session: AsyncSession | None = None,
     ) -> list[dict[str, Any]]: ...

@@ -1,13 +1,28 @@
+from __future__ import annotations
+
+import logging
 from datetime import datetime
 from typing import Any
 
-from app.integrations.google_calendar.client import GoogleCalendarClient
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.integrations.sync_log.repository import create_sync_log
+
+from .client import GoogleCalendarClient
+
+logger = logging.getLogger(__name__)
 
 
 class GoogleCalendarProvider:
-    def __init__(self, client: GoogleCalendarClient, calendar_id: str = "primary") -> None:
+    def __init__(
+        self,
+        client: GoogleCalendarClient,
+        calendar_id: str = "primary",
+        entity_type: str = "unknown",
+    ) -> None:
         self._client = client
         self._calendar_id = calendar_id
+        self._entity_type = entity_type
 
     def _to_google_event(self, record: dict[str, Any]) -> dict[str, Any]:
         event: dict[str, Any] = {}
@@ -76,24 +91,67 @@ class GoogleCalendarProvider:
             "invitees": [a["email"] for a in google_event.get("attendees", []) if "email" in a],
         }
 
-    async def create(self, record: dict[str, Any]) -> dict[str, Any]:
+    async def create(
+        self, record: dict[str, Any], session: AsyncSession | None = None
+    ) -> dict[str, Any]:
         google_event = self._to_google_event(record)
-        result = await self._client.create_event(self._calendar_id, google_event)
+
+        error: str | None = None
+        result: dict[str, Any] | None = None
+        try:
+            result = await self._client.create_event(self._calendar_id, google_event)
+        except Exception as exc:
+            error = str(exc)
+            await self._write_log(session, "create", None, google_event, None, error)
+            raise
+
+        await self._write_log(session, "create", result["id"], google_event, result)
         return self._from_google_event(result)
 
-    async def get(self, record_id: str) -> dict[str, Any]:
+    async def get(
+        self, record_id: str, session: AsyncSession | None = None
+    ) -> dict[str, Any]:
         result = await self._client.get_event(self._calendar_id, record_id)
         return self._from_google_event(result)
 
-    async def update(self, record_id: str, record: dict[str, Any]) -> dict[str, Any]:
+    async def update(
+        self,
+        record_id: str,
+        record: dict[str, Any],
+        session: AsyncSession | None = None,
+    ) -> dict[str, Any]:
         google_event = self._to_google_event(record)
-        result = await self._client.update_event(self._calendar_id, record_id, google_event)
+
+        error: str | None = None
+        result: dict[str, Any] | None = None
+        try:
+            result = await self._client.update_event(self._calendar_id, record_id, google_event)
+        except Exception as exc:
+            error = str(exc)
+            await self._write_log(session, "update", record_id, google_event, None, error)
+            raise
+
+        await self._write_log(session, "update", record_id, google_event, result)
         return self._from_google_event(result)
 
-    async def delete(self, record_id: str) -> None:
-        await self._client.delete_event(self._calendar_id, record_id)
+    async def delete(
+        self, record_id: str, session: AsyncSession | None = None
+    ) -> None:
+        error: str | None = None
+        try:
+            await self._client.delete_event(self._calendar_id, record_id)
+        except Exception as exc:
+            error = str(exc)
+            await self._write_log(session, "delete", record_id, None, None, error)
+            raise
 
-    async def list(self, filters: dict[str, Any] | None = None) -> list[dict[str, Any]]:
+        await self._write_log(session, "delete", record_id, None, None)
+
+    async def list(
+        self,
+        filters: dict[str, Any] | None = None,
+        session: AsyncSession | None = None,
+    ) -> list[dict[str, Any]]:
         params: dict[str, Any] = {}
         if filters:
             if "start_from" in filters and filters["start_from"] is not None:
@@ -104,3 +162,33 @@ class GoogleCalendarProvider:
                 params["timeMax"] = dt.isoformat() if isinstance(dt, datetime) else dt
         results = await self._client.list_events(self._calendar_id, params)
         return [self._from_google_event(e) for e in results]
+
+    # ------------------------------------------------------------------
+    # Internal logging helper
+    # ------------------------------------------------------------------
+
+    async def _write_log(
+        self,
+        session: AsyncSession | None,
+        operation: str,
+        provider_entity_id: str | None,
+        request_payload: dict[str, Any] | None,
+        response_payload: dict[str, Any] | None,
+        error: str | None = None,
+    ) -> None:
+        if session is None:
+            return
+        try:
+            await create_sync_log(
+                session,
+                provider="google_calendar",
+                operation=operation,
+                entity_type=self._entity_type,
+                provider_entity_id=provider_entity_id,
+                status="error" if error else "ok",
+                request_payload=request_payload,
+                response_payload=response_payload,
+                error=error,
+            )
+        except Exception:
+            logger.warning("Failed to write integration sync log", exc_info=True)

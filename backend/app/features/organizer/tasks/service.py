@@ -23,7 +23,7 @@ class TaskService:
         return [TaskRead.model_validate(task_orm) for task_orm in tasks_orm]
 
     async def create_task(self, task_create: TaskCreate) -> TaskRead:
-        task_record = await self._provider.create(task_create.model_dump())
+        task_record = await self._provider.create(task_create.model_dump(), self._session)
         task_orm = await self._repo.create_task(task_create, task_record["id"])
         return TaskRead.model_validate(task_orm)
 
@@ -36,6 +36,7 @@ class TaskService:
         await self._provider.update(
             task.provider_id,
             task_update.model_dump(exclude_unset=True),
+            self._session,
         )
         task_orm = await self._repo.update_task(task_id, task_update)
         return TaskRead.model_validate(task_orm)
@@ -43,5 +44,5 @@ class TaskService:
     async def delete_task(self, task_id: int):
         task = await self._repo.get_task(task_id)
         if task:
-            await self._provider.delete(task.provider_id)
+            await self._provider.delete(task.provider_id, self._session)
             await self._repo.delete_monitor(task_id)

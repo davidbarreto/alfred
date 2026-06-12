@@ -133,7 +133,7 @@ class TestUpdateNote:
 
         await service.update_note(1, note_update)
 
-        mock_provider.update.assert_called_once_with("provider-abc", {"title": "Updated"})
+        mock_provider.update.assert_called_once_with("provider-abc", {"title": "Updated"}, service._session)
 
 
 class TestDeleteNote:
@@ -156,4 +156,4 @@ class TestDeleteNote:
 
         await service.delete_note(1)
 
-        mock_provider.delete.assert_called_once_with("provider-abc")
+        mock_provider.delete.assert_called_once_with("provider-abc", service._session)

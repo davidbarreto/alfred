@@ -12,11 +12,11 @@ logging.basicConfig(level=numeric_level, force=True)
 
 from fastapi import FastAPI
 
-from app.api.routes.monitors import router as monitors_router
+from app.api.routes.monitoring.monitors import router as monitors_router
 from app.api.routes.commands import router as commands_router
-from app.api.routes.tasks import router as tasks_router
-from app.api.routes.notes import router as notes_router
-from app.api.routes.calendar_events import router as calendar_events_router
+from app.api.routes.organizer.tasks import router as tasks_router
+from app.api.routes.organizer.notes import router as notes_router
+from app.api.routes.organizer.calendar_events import router as calendar_events_router
 from app.api.routes.finance.accounts import router as finance_accounts_router
 from app.api.routes.finance.categories import router as finance_categories_router
 from app.api.routes.finance.transactions import router as finance_transactions_router

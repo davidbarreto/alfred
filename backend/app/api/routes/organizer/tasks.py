@@ -32,4 +32,3 @@ async def get_task(task_id: int, service: TaskServiceDep):
     if task_read is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found")
     return task_read
-

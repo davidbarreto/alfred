@@ -4,7 +4,7 @@ from freezegun import freeze_time
 from unittest.mock import patch
 
 from app.nlp.normalizer import clean_text, normalize_date, normalize_priority
-from app.nlp.extractor import extract_entities
+from app.nlp.extractor import extract_entities, extract_finance_entities
 
 FIXED_NOW = datetime(2024, 5, 20)  # Monday
 
@@ -289,3 +289,143 @@ class TestExtractEntities:
         with patch("app.nlp.extractor.normalize_date", return_value=None):
             cleaned, entities = extract_entities("do it tomorrow", base_date=FIXED_NOW)
             assert "deadline" not in entities
+
+
+# ── extract_finance_entities ──────────────────────────────────────────────────
+
+class TestExtractFinanceEntities:
+
+    # --- Amount and currency ---
+
+    def test_amount_with_dollar_symbol(self):
+        _, entities = extract_finance_entities("$50.00 coffee")
+        assert entities["amount"] == 50.0
+        assert entities["currency"] == "USD"
+
+    def test_amount_with_euro_symbol(self):
+        _, entities = extract_finance_entities("€30.50 lunch")
+        assert entities["amount"] == 30.5
+        assert entities["currency"] == "EUR"
+
+    def test_amount_with_pound_symbol(self):
+        _, entities = extract_finance_entities("£12.99 magazine")
+        assert entities["amount"] == 12.99
+        assert entities["currency"] == "GBP"
+
+    def test_amount_currency_word_euros(self):
+        _, entities = extract_finance_entities("spent 25 euros on groceries")
+        assert entities["amount"] == 25.0
+        assert entities["currency"] == "EUR"
+
+    def test_amount_currency_word_dollars(self):
+        _, entities = extract_finance_entities("received 1000 dollars salary")
+        assert entities["amount"] == 1000.0
+        assert entities["currency"] == "USD"
+
+    def test_amount_comma_decimal_separator(self):
+        _, entities = extract_finance_entities("paid €9,99 at store")
+        assert entities["amount"] == 9.99
+
+    def test_no_amount_key_absent(self):
+        _, entities = extract_finance_entities("coffee at Starbucks")
+        assert "amount" not in entities
+
+    # --- Merchant extraction ---
+
+    def test_merchant_from_at_keyword(self):
+        _, entities = extract_finance_entities("coffee at Starbucks")
+        assert entities["merchant"] == "Starbucks"
+
+    def test_merchant_from_from_keyword(self):
+        _, entities = extract_finance_entities("bought lunch from Subway")
+        assert entities["merchant"] == "Subway"
+
+    def test_no_merchant_when_absent(self):
+        _, entities = extract_finance_entities("spent 50 euros")
+        assert "merchant" not in entities
+
+    # --- Transaction type detection ---
+
+    def test_expense_type_from_spent(self):
+        _, entities = extract_finance_entities("spent €50")
+        assert entities["type"] == "expense"
+
+    def test_expense_type_from_paid(self):
+        _, entities = extract_finance_entities("paid 30 at restaurant")
+        assert entities["type"] == "expense"
+
+    def test_expense_type_from_bought(self):
+        _, entities = extract_finance_entities("bought groceries today")
+        assert entities["type"] == "expense"
+
+    def test_expense_type_from_charged(self):
+        _, entities = extract_finance_entities("charged to card €100")
+        assert entities["type"] == "expense"
+
+    def test_income_type_from_received(self):
+        _, entities = extract_finance_entities("received $1000")
+        assert entities["type"] == "income"
+
+    def test_income_type_from_salary(self):
+        _, entities = extract_finance_entities("salary payment this month")
+        assert entities["type"] == "income"
+
+    def test_income_type_from_earned(self):
+        _, entities = extract_finance_entities("earned €2000 this month")
+        assert entities["type"] == "income"
+
+    def test_income_type_from_refund(self):
+        _, entities = extract_finance_entities("refund from Amazon €15")
+        assert entities["type"] == "income"
+
+    def test_no_type_when_no_intent_keyword(self):
+        _, entities = extract_finance_entities("coffee at Starbucks €4")
+        assert "type" not in entities
+
+    # --- Date extraction ---
+
+    @freeze_time(FIXED_NOW)
+    def test_date_today_extracted(self):
+        _, entities = extract_finance_entities("paid €20 at cafe today", base_date=FIXED_NOW)
+        assert entities["date"] == "2024-05-20"
+
+    @freeze_time(FIXED_NOW)
+    def test_date_yesterday_extracted(self):
+        _, entities = extract_finance_entities("spent €30 yesterday", base_date=FIXED_NOW)
+        assert entities["date"] == "2024-05-19"
+
+    def test_no_date_when_absent(self):
+        _, entities = extract_finance_entities("spent €50 at Supermarket")
+        assert "date" not in entities
+
+    # --- Combined extraction ---
+
+    def test_combined_amount_merchant_type(self):
+        _, entities = extract_finance_entities("spent €45.50 at Supermarket")
+        assert entities["amount"] == 45.5
+        assert entities["currency"] == "EUR"
+        assert entities["merchant"] == "Supermarket"
+        assert entities["type"] == "expense"
+
+    @freeze_time(FIXED_NOW)
+    def test_all_fields_at_once(self):
+        _, entities = extract_finance_entities(
+            "paid €12.50 at Starbucks today", base_date=FIXED_NOW
+        )
+        assert entities["amount"] == 12.5
+        assert entities["currency"] == "EUR"
+        assert entities["merchant"] == "Starbucks"
+        assert entities["type"] == "expense"
+        assert entities["date"] == "2024-05-20"
+
+    # --- Text passthrough ---
+
+    def test_original_text_returned_unchanged(self):
+        text = "spent €50 at Starbucks"
+        returned_text, _ = extract_finance_entities(text)
+        assert returned_text == text
+
+    def test_empty_string_returns_empty_entities(self):
+        text, entities = extract_finance_entities("")
+        assert entities == {}
+        assert text == ""

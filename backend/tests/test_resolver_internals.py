@@ -8,6 +8,7 @@ from app.assistant.commands.resolver import (
     _parse_tokens,
     _extract_args_and_flags,
     _enrich_arguments,
+    _enrich_finance,
     _normalize_date,
     resolve,
 )
@@ -309,3 +310,232 @@ class TestResolveEdgeCases:
         text = "/taskadd Buy milk"
         response = resolve(text)
         assert response.raw_text == text
+
+
+# ── _enrich_finance ───────────────────────────────────────────────────────────
+
+class TestEnrichFinance:
+    @freeze_time(FIXED_NOW)
+    def test_normalizes_from_date(self):
+        result = _enrich_finance({"from_date": "yesterday"})
+        assert result["from_date"] == "2024-05-19"
+
+    @freeze_time(FIXED_NOW)
+    def test_normalizes_to_date(self):
+        result = _enrich_finance({"to_date": "tomorrow"})
+        assert result["to_date"] == "2024-05-21"
+
+    @freeze_time(FIXED_NOW)
+    def test_normalizes_date_field(self):
+        result = _enrich_finance({"date": "today"})
+        assert result["date"] == "2024-05-20"
+
+    def test_iso_date_unchanged(self):
+        result = _enrich_finance({"from_date": "2026-06-01"})
+        assert result["from_date"] == "2026-06-01"
+
+    def test_extracts_amount_and_currency_from_description(self):
+        result = _enrich_finance({"description": "spent €50 at Restaurant"})
+        assert result.get("amount") == 50.0
+        assert result.get("currency") == "EUR"
+
+    def test_extracts_merchant_from_description(self):
+        result = _enrich_finance({"description": "coffee at Starbucks"})
+        assert result.get("merchant") == "Starbucks"
+
+    def test_extracts_type_from_description(self):
+        result = _enrich_finance({"description": "paid €30 for lunch"})
+        assert result.get("type") == "expense"
+
+    def test_explicit_type_not_overwritten_by_nlp(self):
+        result = _enrich_finance({"description": "received 100 dollars", "type": "expense"})
+        assert result["type"] == "expense"
+
+    def test_explicit_amount_not_overwritten_by_nlp(self):
+        result = _enrich_finance({"description": "spent €50", "amount": "99.00"})
+        assert result["amount"] == "99.00"
+
+    def test_no_description_no_nlp_enrichment(self):
+        args = {"amount": "50", "type": "expense"}
+        result = _enrich_finance(args)
+        assert result == {"amount": "50", "type": "expense"}
+
+    def test_enrich_arguments_routes_to_finance_path(self):
+        result = _enrich_arguments({"description": "spent €50 at Supermarket"}, cmd_type="finance")
+        assert result.get("amount") == 50.0
+        assert result.get("type") == "expense"
+
+    def test_enrich_arguments_non_finance_not_routed_to_finance(self):
+        # Non-finance path should not extract amount/currency from description
+        result = _enrich_arguments({"description": "buy €50 groceries urgent"})
+        assert "amount" not in result
+        assert result.get("priority") == "HIGH"
+
+
+# ── resolve — finance commands ────────────────────────────────────────────────
+
+class TestResolveFinanceCommands:
+
+    def test_expense_alias_sets_implicit_type(self):
+        response = resolve("/expense coffee")
+        assert response.status == "ok"
+        cmd = response.commands[0]
+        assert cmd.type == "finance"
+        assert cmd.command == "transaction_add"
+        assert cmd.arguments["type"] == "expense"
+
+    def test_income_alias_sets_implicit_type(self):
+        response = resolve("/income salary")
+        assert response.status == "ok"
+        assert response.commands[0].arguments["type"] == "income"
+
+    def test_exp_short_alias(self):
+        response = resolve("/exp groceries")
+        assert response.status == "ok"
+        assert response.commands[0].command == "transaction_add"
+        assert response.commands[0].arguments["type"] == "expense"
+
+    def test_inc_short_alias(self):
+        response = resolve("/inc salary")
+        assert response.status == "ok"
+        assert response.commands[0].arguments["type"] == "income"
+
+    def test_explicit_type_flag_overrides_implicit(self):
+        response = resolve("/expense refund --type income")
+        assert response.status == "ok"
+        assert response.commands[0].arguments["type"] == "income"
+
+    def test_transaction_add_with_flags(self):
+        response = resolve("/tra coffee -a 4.50 -m Starbucks")
+        assert response.status == "ok"
+        cmd = response.commands[0]
+        assert cmd.command == "transaction_add"
+        assert cmd.arguments["amount"] == "4.50"
+        assert cmd.arguments["merchant"] == "Starbucks"
+        assert cmd.arguments["description"] == "coffee"
+
+    def test_transaction_list(self):
+        response = resolve("/transactions")
+        assert response.status == "ok"
+        assert response.commands[0].command == "transaction_list"
+        assert response.commands[0].type == "finance"
+
+    def test_transaction_list_with_filters(self):
+        response = resolve('/trl -tp expense --period "this month"')
+        assert response.status == "ok"
+        cmd = response.commands[0]
+        assert cmd.command == "transaction_list"
+        assert cmd.arguments["type"] == "expense"
+        assert cmd.arguments["period"] == "this month"
+
+    def test_transaction_delete(self):
+        response = resolve("/trd 42")
+        assert response.status == "ok"
+        cmd = response.commands[0]
+        assert cmd.command == "transaction_delete"
+        assert cmd.arguments["id"] == "42"
+
+    def test_transaction_update(self):
+        response = resolve("/tru 10 -a 99.00 -m Supermarket")
+        assert response.status == "ok"
+        cmd = response.commands[0]
+        assert cmd.command == "transaction_update"
+        assert cmd.arguments["id"] == "10"
+        assert cmd.arguments["amount"] == "99.00"
+        assert cmd.arguments["merchant"] == "Supermarket"
+
+    def test_spending_report_with_period(self):
+        response = resolve("/sr this month")
+        assert response.status == "ok"
+        cmd = response.commands[0]
+        assert cmd.command == "spending_report"
+        assert cmd.arguments["period"] == "this month"
+
+    def test_spending_report_alias_spent(self):
+        response = resolve("/spent last month")
+        assert response.status == "ok"
+        assert response.commands[0].command == "spending_report"
+
+    def test_spending_average_alias(self):
+        response = resolve("/sav last month")
+        assert response.status == "ok"
+        assert response.commands[0].command == "spending_average"
+        assert response.commands[0].arguments["period"] == "last month"
+
+    def test_spending_top_with_period(self):
+        response = resolve("/stp this week")
+        assert response.status == "ok"
+        cmd = response.commands[0]
+        assert cmd.command == "spending_top"
+        assert cmd.arguments["period"] == "this week"
+
+    def test_budget_add_with_flags(self):
+        response = resolve("/budget Monthly food -a 300 --period monthly")
+        assert response.status == "ok"
+        cmd = response.commands[0]
+        assert cmd.command == "budget_add"
+        assert cmd.arguments["name"] == "Monthly food"
+        assert cmd.arguments["amount"] == "300"
+        assert cmd.arguments["period"] == "monthly"
+
+    def test_budget_list(self):
+        response = resolve("/budgets")
+        assert response.status == "ok"
+        assert response.commands[0].command == "budget_list"
+
+    def test_budget_list_short_alias(self):
+        response = resolve("/bl")
+        assert response.status == "ok"
+        assert response.commands[0].command == "budget_list"
+
+    def test_budget_remaining_with_period(self):
+        response = resolve("/br this month")
+        assert response.status == "ok"
+        cmd = response.commands[0]
+        assert cmd.command == "budget_remaining"
+        assert cmd.arguments["period"] == "this month"
+
+    def test_balance_forecast(self):
+        response = resolve("/forecast this month")
+        assert response.status == "ok"
+        cmd = response.commands[0]
+        assert cmd.command == "balance_forecast"
+        assert cmd.arguments["period"] == "this month"
+
+    def test_balance_forecast_short_alias(self):
+        response = resolve("/bfc")
+        assert response.status == "ok"
+        assert response.commands[0].command == "balance_forecast"
+
+    @freeze_time(FIXED_NOW)
+    def test_date_flag_normalized(self):
+        response = resolve("/tra coffee --date yesterday")
+        assert response.status == "ok"
+        assert response.commands[0].arguments["date"] == "2024-05-19"
+
+    @freeze_time(FIXED_NOW)
+    def test_from_to_date_flags_normalized(self):
+        response = resolve("/trl --from yesterday --to today")
+        assert response.status == "ok"
+        cmd = response.commands[0]
+        assert cmd.arguments["from_date"] == "2024-05-19"
+        assert cmd.arguments["to_date"] == "2024-05-20"
+
+    def test_nlp_enriches_description_with_amount_and_merchant(self):
+        response = resolve("/expense spent €50 at Supermarket")
+        cmd = response.commands[0]
+        assert cmd.arguments.get("amount") == 50.0
+        assert cmd.arguments.get("currency") == "EUR"
+        assert cmd.arguments.get("merchant") == "Supermarket"
+        assert cmd.arguments["type"] == "expense"
+
+    def test_finance_enrichment_does_not_extract_priority(self):
+        # _enrich_finance runs extract_finance_entities, not extract_entities,
+        # so priority keywords in description never produce a priority field.
+        response = resolve("/expense critical coffee urgent")
+        cmd = response.commands[0]
+        assert "priority" not in cmd.arguments
+
+    def test_finance_enrichment_does_not_extract_deadline(self):
+        response = resolve("/expense coffee")
+        assert "deadline" not in response.commands[0].arguments

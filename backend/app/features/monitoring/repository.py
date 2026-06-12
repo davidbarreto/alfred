@@ -21,7 +21,7 @@ async def get_active_monitors(session: AsyncSession) -> list[Monitor]:
 
 
 async def create_monitor(session: AsyncSession, monitor_create: MonitorCreate) -> Monitor:
-    monitor = Monitor(**monitor_create.dict())
+    monitor = Monitor(**monitor_create.model_dump())
     session.add(monitor)
     await session.commit()
     await session.refresh(monitor)
@@ -37,7 +37,7 @@ async def update_monitor(
     if monitor is None:
         return None
 
-    for field, value in monitor_update.dict(exclude_unset=True).items():
+    for field, value in monitor_update.model_dump(exclude_unset=True).items():
         setattr(monitor, field, value)
 
     await session.commit()

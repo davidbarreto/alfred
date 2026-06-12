@@ -1,5 +1,6 @@
 import logging
 import os
+from contextlib import asynccontextmanager
 
 # Configure logging level from environment variable `LOG_LEVEL` (default: INFO)
 level_name = os.getenv("LOG_LEVEL", "INFO").upper()
@@ -11,6 +12,7 @@ except ValueError:
 logging.basicConfig(level=numeric_level, force=True)
 
 from fastapi import FastAPI
+from typing import AsyncGenerator
 
 from app.api.routes.monitoring.monitors import router as monitors_router
 from app.api.routes.integrations.sync_logs import router as sync_logs_router
@@ -40,7 +42,15 @@ def configure_logging() -> None:
         logging.getLogger(logger_name).setLevel(numeric_level)
 
 
-app = FastAPI(title="Alfred Backend", version="0.1.0")
+@asynccontextmanager
+async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
+    configure_logging()
+    logger.info("Startup logging configured: LOG_LEVEL=%s, root_level=%s", level_name, logging.getLogger().getEffectiveLevel())
+    app.state.settings = settings
+    yield
+
+
+app = FastAPI(title="Alfred Backend", version="0.1.0", lifespan=lifespan)
 app.include_router(monitors_router)
 app.include_router(sync_logs_router)
 app.include_router(commands_router)
@@ -52,12 +62,6 @@ app.include_router(finance_categories_router)
 app.include_router(finance_transactions_router)
 app.include_router(finance_budgets_router)
 app.include_router(finance_recurring_router)
-
-@app.on_event("startup")
-async def startup_event():
-    configure_logging()
-    logger.info("Startup logging configured: LOG_LEVEL=%s, root_level=%s", level_name, logging.getLogger().getEffectiveLevel())
-    app.state.settings = settings
 
 @app.get("/health")
 async def health():

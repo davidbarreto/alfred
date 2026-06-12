@@ -1,6 +1,6 @@
 from datetime import datetime
 from typing import Literal
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class MonitorBase(BaseModel):
@@ -44,13 +44,14 @@ class MonitorUpdate(BaseModel):
 
 
 class MonitorRead(MonitorBase):
-    id: int
+    model_config = ConfigDict(from_attributes=True)
 
-    class Config:
-        orm_mode = True
+    id: int
 
 
 class MonitorLogRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     monitor_id: int
     created_at: datetime
@@ -70,6 +71,3 @@ class MonitorLogRead(BaseModel):
     request_delay: int | None = None
     wait_selector: str | None = None
     json_path: str | None = None
-
-    class Config:
-        orm_mode = True

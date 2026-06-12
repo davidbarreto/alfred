@@ -5,7 +5,7 @@ import dateparser
 
 from app.nlp.patterns import _CLEANUP_RE, PRIORITY_MAP
 
-def normalize_date(raw: str, base_date: Optional[datetime] = None) -> Optional[str]:
+def normalize_date(raw: str, base_date: Optional[datetime | date] = None) -> Optional[str]:
     """Parse any date string to ISO 8601 date (YYYY-MM-DD)."""
     if not raw:
         return None

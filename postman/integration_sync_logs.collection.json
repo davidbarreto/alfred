@@ -1,0 +1,367 @@
+{
+  "info": {
+    "name": "Alfred - Integration Sync Logs API",
+    "_postman_id": "alfred-integration-sync-logs-v1",
+    "description": "Read-only. Run in order: Health Check → List → List (filtered by provider) → List (filtered by status) → List (text search) → List (date range) → Get by ID → Get 404",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{api_token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "01 - Health Check",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Status is ok', () => {",
+              "    pm.expect(pm.response.json().status).to.eql('ok');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "auth": { "type": "noauth" },
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/health",
+          "host": ["{{base_url}}"],
+          "path": ["health"]
+        }
+      }
+    },
+    {
+      "name": "02 - List Sync Logs",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Response is an array', () => {",
+              "    pm.expect(pm.response.json()).to.be.an('array');",
+              "});",
+              "pm.test('Items have expected shape', () => {",
+              "    const json = pm.response.json();",
+              "    if (json.length === 0) return;",
+              "    const item = json[0];",
+              "    ['id', 'provider', 'operation', 'entity_type', 'status', 'created_at'].forEach(field => {",
+              "        pm.expect(item).to.have.property(field);",
+              "    });",
+              "    pm.environment.set('sync_log_id', item.id);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/integration/sync-logs/?skip=0&limit=50",
+          "host": ["{{base_url}}"],
+          "path": ["integration", "sync-logs", ""],
+          "query": [
+            { "key": "skip", "value": "0" },
+            { "key": "limit", "value": "50" }
+          ]
+        }
+      }
+    },
+    {
+      "name": "03 - List Sync Logs - No Auth",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('No auth returns 403', () => pm.response.to.have.status(403));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "auth": { "type": "noauth" },
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/integration/sync-logs/",
+          "host": ["{{base_url}}"],
+          "path": ["integration", "sync-logs", ""]
+        }
+      }
+    },
+    {
+      "name": "04 - List Sync Logs - Wrong Token",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Wrong token returns 401', () => pm.response.to.have.status(401));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [{ "key": "token", "value": "invalid-token", "type": "string" }]
+        },
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/integration/sync-logs/",
+          "host": ["{{base_url}}"],
+          "path": ["integration", "sync-logs", ""]
+        }
+      }
+    },
+    {
+      "name": "05 - List Sync Logs - Filter by Provider",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('All items match provider filter', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json).to.be.an('array');",
+              "    json.forEach(item => {",
+              "        pm.expect(item.provider).to.eql('notion');",
+              "    });",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/integration/sync-logs/?provider=notion",
+          "host": ["{{base_url}}"],
+          "path": ["integration", "sync-logs", ""],
+          "query": [
+            { "key": "provider", "value": "notion" }
+          ]
+        }
+      }
+    },
+    {
+      "name": "06 - List Sync Logs - Filter by Status",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('All items match status filter', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json).to.be.an('array');",
+              "    json.forEach(item => {",
+              "        pm.expect(item.status).to.eql('ok');",
+              "    });",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/integration/sync-logs/?status=ok",
+          "host": ["{{base_url}}"],
+          "path": ["integration", "sync-logs", ""],
+          "query": [
+            { "key": "status", "value": "ok" }
+          ]
+        }
+      }
+    },
+    {
+      "name": "07 - List Sync Logs - Filter by Operation",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('All items match operation filter', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json).to.be.an('array');",
+              "    json.forEach(item => {",
+              "        pm.expect(item.operation).to.eql('create');",
+              "    });",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/integration/sync-logs/?operation=create",
+          "host": ["{{base_url}}"],
+          "path": ["integration", "sync-logs", ""],
+          "query": [
+            { "key": "operation", "value": "create" }
+          ]
+        }
+      }
+    },
+    {
+      "name": "08 - List Sync Logs - Text Search (q)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Response is an array', () => {",
+              "    pm.expect(pm.response.json()).to.be.an('array');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/integration/sync-logs/?q=timeout",
+          "host": ["{{base_url}}"],
+          "path": ["integration", "sync-logs", ""],
+          "query": [
+            { "key": "q", "value": "timeout" }
+          ]
+        }
+      }
+    },
+    {
+      "name": "09 - List Sync Logs - Date Range (after/before)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Response is an array', () => {",
+              "    pm.expect(pm.response.json()).to.be.an('array');",
+              "});",
+              "pm.test('Items fall within date range', () => {",
+              "    const json = pm.response.json();",
+              "    if (json.length === 0) return;",
+              "    const after = new Date('2020-01-01T00:00:00Z');",
+              "    const before = new Date('2099-12-31T23:59:59Z');",
+              "    json.forEach(item => {",
+              "        const ts = new Date(item.created_at);",
+              "        pm.expect(ts >= after && ts <= before).to.be.true;",
+              "    });",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/integration/sync-logs/?after=2020-01-01T00:00:00Z&before=2099-12-31T23:59:59Z",
+          "host": ["{{base_url}}"],
+          "path": ["integration", "sync-logs", ""],
+          "query": [
+            { "key": "after", "value": "2020-01-01T00:00:00Z" },
+            { "key": "before", "value": "2099-12-31T23:59:59Z" }
+          ]
+        }
+      }
+    },
+    {
+      "name": "10 - Get Sync Log by ID",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "const logId = pm.environment.get('sync_log_id');",
+              "if (!logId) {",
+              "    pm.test('Skipped — no sync_log_id (empty DB)', () => true);",
+              "    return;",
+              "}",
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Returned log matches requested ID', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(String(json.id)).to.eql(String(logId));",
+              "    ['provider', 'operation', 'entity_type', 'status', 'created_at'].forEach(field => {",
+              "        pm.expect(json).to.have.property(field);",
+              "    });",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/integration/sync-logs/{{sync_log_id}}",
+          "host": ["{{base_url}}"],
+          "path": ["integration", "sync-logs", "{{sync_log_id}}"]
+        }
+      }
+    },
+    {
+      "name": "11 - Get Sync Log - Not Found",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Non-existent log returns 404', () => pm.response.to.have.status(404));",
+              "pm.test('Error detail is present', () => {",
+              "    pm.expect(pm.response.json()).to.have.property('detail');",
+              "});",
+              "pm.environment.unset('sync_log_id');"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/integration/sync-logs/999999999",
+          "host": ["{{base_url}}"],
+          "path": ["integration", "sync-logs", "999999999"]
+        }
+      }
+    }
+  ]
+}

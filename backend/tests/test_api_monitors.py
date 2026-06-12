@@ -69,7 +69,7 @@ def client():
 
 class TestGetMonitors:
     def test_returns_empty_list(self, client):
-        with patch("app.api.routes.monitors.get_monitors", new=AsyncMock(return_value=[])):
+        with patch("app.api.routes.monitoring.monitors.get_monitors", new=AsyncMock(return_value=[])):
             response = client.get("/monitors/", headers=AUTH)
         assert response.status_code == 200
         assert response.json() == []
@@ -77,7 +77,7 @@ class TestGetMonitors:
     def test_returns_monitor_list(self, client):
         from app.features.monitoring.schemas import MonitorRead
         monitors = [MonitorRead(**_monitor_dict(id=i)) for i in range(2)]
-        with patch("app.api.routes.monitors.get_monitors", new=AsyncMock(return_value=monitors)):
+        with patch("app.api.routes.monitoring.monitors.get_monitors", new=AsyncMock(return_value=monitors)):
             response = client.get("/monitors/", headers=AUTH)
         assert response.status_code == 200
         assert len(response.json()) == 2
@@ -91,13 +91,13 @@ class TestGetMonitor:
     def test_found_returns_200(self, client):
         from app.features.monitoring.schemas import MonitorRead
         monitor = MonitorRead(**_monitor_dict())
-        with patch("app.api.routes.monitors.get_monitor", new=AsyncMock(return_value=monitor)):
+        with patch("app.api.routes.monitoring.monitors.get_monitor", new=AsyncMock(return_value=monitor)):
             response = client.get("/monitors/1", headers=AUTH)
         assert response.status_code == 200
         assert response.json()["id"] == 1
 
     def test_not_found_returns_404(self, client):
-        with patch("app.api.routes.monitors.get_monitor", new=AsyncMock(return_value=None)):
+        with patch("app.api.routes.monitoring.monitors.get_monitor", new=AsyncMock(return_value=None)):
             response = client.get("/monitors/999", headers=AUTH)
         assert response.status_code == 404
         assert response.json()["detail"] == "Monitor not found"
@@ -111,7 +111,7 @@ class TestCreateMonitor:
     def test_creates_monitor(self, client):
         from app.features.monitoring.schemas import MonitorRead
         monitor = MonitorRead(**_monitor_dict(id=10, name="New Monitor"))
-        with patch("app.api.routes.monitors.create_monitor", new=AsyncMock(return_value=monitor)):
+        with patch("app.api.routes.monitoring.monitors.create_monitor", new=AsyncMock(return_value=monitor)):
             payload = {
                 "name": "New Monitor",
                 "url": "http://example.com",
@@ -132,12 +132,12 @@ class TestDeleteMonitor:
     def test_found_returns_monitor(self, client):
         from app.features.monitoring.schemas import MonitorRead
         monitor = MonitorRead(**_monitor_dict())
-        with patch("app.api.routes.monitors.delete_monitor", new=AsyncMock(return_value=monitor)):
+        with patch("app.api.routes.monitoring.monitors.delete_monitor", new=AsyncMock(return_value=monitor)):
             response = client.delete("/monitors/1", headers=AUTH)
         assert response.status_code == 200
 
     def test_not_found_returns_404(self, client):
-        with patch("app.api.routes.monitors.delete_monitor", new=AsyncMock(return_value=None)):
+        with patch("app.api.routes.monitoring.monitors.delete_monitor", new=AsyncMock(return_value=None)):
             response = client.delete("/monitors/999", headers=AUTH)
         assert response.status_code == 404
 
@@ -150,13 +150,13 @@ class TestUpdateMonitor:
     def test_found_returns_updated(self, client):
         from app.features.monitoring.schemas import MonitorRead
         monitor = MonitorRead(**_monitor_dict(name="Updated"))
-        with patch("app.api.routes.monitors.update_monitor", new=AsyncMock(return_value=monitor)):
+        with patch("app.api.routes.monitoring.monitors.update_monitor", new=AsyncMock(return_value=monitor)):
             response = client.patch("/monitors/1", json={"name": "Updated"}, headers=AUTH)
         assert response.status_code == 200
         assert response.json()["name"] == "Updated"
 
     def test_not_found_returns_404(self, client):
-        with patch("app.api.routes.monitors.update_monitor", new=AsyncMock(return_value=None)):
+        with patch("app.api.routes.monitoring.monitors.update_monitor", new=AsyncMock(return_value=None)):
             response = client.patch("/monitors/999", json={"name": "X"}, headers=AUTH)
         assert response.status_code == 404
 
@@ -169,7 +169,7 @@ class TestRunActiveMonitors:
     def test_runs_all_and_returns_logs(self, client):
         from app.features.monitoring.schemas import MonitorLogRead
         logs = [MonitorLogRead(**_log_dict(id=i, monitor_id=1)) for i in range(2)]
-        with patch("app.api.routes.monitors.MonitorService.run_due", new=AsyncMock(return_value=logs)):
+        with patch("app.api.routes.monitoring.monitors.MonitorService.run_due", new=AsyncMock(return_value=logs)):
             response = client.post("/monitors/run", headers=AUTH)
         assert response.status_code == 200
         assert len(response.json()) == 2
@@ -184,7 +184,7 @@ class TestRunMonitorById:
         from app.features.monitoring.schemas import MonitorLogRead
         log = MonitorLogRead(**_log_dict())
         with patch(
-            "app.api.routes.monitors.MonitorService.run_monitor_by_id",
+            "app.api.routes.monitoring.monitors.MonitorService.run_monitor_by_id",
             new=AsyncMock(return_value=log),
         ):
             response = client.post("/monitors/1/run", headers=AUTH)
@@ -193,7 +193,7 @@ class TestRunMonitorById:
 
     def test_not_found_returns_404(self, client):
         with patch(
-            "app.api.routes.monitors.MonitorService.run_monitor_by_id",
+            "app.api.routes.monitoring.monitors.MonitorService.run_monitor_by_id",
             new=AsyncMock(return_value=None),
         ):
             response = client.post("/monitors/999/run", headers=AUTH)
@@ -209,14 +209,14 @@ class TestGetMonitorLog:
         from app.features.monitoring.schemas import MonitorRead, MonitorLogRead
         monitor = MonitorRead(**_monitor_dict())
         logs = [MonitorLogRead(**_log_dict(id=i)) for i in range(3)]
-        with patch("app.api.routes.monitors.get_monitor", new=AsyncMock(return_value=monitor)):
-            with patch("app.api.routes.monitors.get_monitor_logs", new=AsyncMock(return_value=logs)):
+        with patch("app.api.routes.monitoring.monitors.get_monitor", new=AsyncMock(return_value=monitor)):
+            with patch("app.api.routes.monitoring.monitors.get_monitor_logs", new=AsyncMock(return_value=logs)):
                 response = client.get("/monitors/1/log", headers=AUTH)
         assert response.status_code == 200
         assert len(response.json()) == 3
 
     def test_monitor_not_found_returns_404(self, client):
-        with patch("app.api.routes.monitors.get_monitor", new=AsyncMock(return_value=None)):
+        with patch("app.api.routes.monitoring.monitors.get_monitor", new=AsyncMock(return_value=None)):
             response = client.get("/monitors/999/log", headers=AUTH)
         assert response.status_code == 404
 
@@ -227,8 +227,8 @@ class TestGetMonitorLog:
     def test_limit_parameter(self, client):
         from app.features.monitoring.schemas import MonitorRead
         monitor = MonitorRead(**_monitor_dict())
-        with patch("app.api.routes.monitors.get_monitor", new=AsyncMock(return_value=monitor)):
-            with patch("app.api.routes.monitors.get_monitor_logs", new=AsyncMock(return_value=[])) as mock_logs:
+        with patch("app.api.routes.monitoring.monitors.get_monitor", new=AsyncMock(return_value=monitor)):
+            with patch("app.api.routes.monitoring.monitors.get_monitor_logs", new=AsyncMock(return_value=[])) as mock_logs:
                 client.get("/monitors/1/log?limit=5", headers=AUTH)
                 _, kwargs = mock_logs.call_args
                 assert kwargs.get("limit") == 5

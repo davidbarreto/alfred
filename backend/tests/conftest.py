@@ -13,6 +13,7 @@ os.environ.setdefault("GOOGLE_CALENDAR_CLIENT_ID", "test-gc-client-id")
 os.environ.setdefault("GOOGLE_CALENDAR_CLIENT_SECRET", "test-gc-client-secret")
 os.environ.setdefault("GOOGLE_CALENDAR_REFRESH_TOKEN", "test-gc-refresh-token")
 os.environ.setdefault("GOOGLE_CALENDAR_ID", "primary")
+os.environ.setdefault("EMBEDDING_MODEL", "all-MiniLM-L6-v2")
 
 import pytest
 from fastapi.testclient import TestClient

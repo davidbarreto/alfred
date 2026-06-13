@@ -2,7 +2,7 @@
   "info": {
     "name": "Alfred - Core API",
     "_postman_id": "alfred-core-v1",
-    "description": "Core module: sessions, messages, command executions, memories, working memory. Run in order — each section builds on the previous (session → message → command execution).",
+    "description": "Core module: sessions, messages, command executions, memories, working memory, embeddings. Run in order — each section builds on the previous (session → message → command execution). Note: embedding requests (60-62) call the OpenAI API and require OPENAI_API_KEY to be set.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -1045,6 +1045,153 @@
           "raw": "{{base_url}}/core/working-memory/{{core_wm_id}}",
           "host": ["{{base_url}}"],
           "path": ["core", "working-memory", "{{core_wm_id}}"]
+        }
+      }
+    },
+
+    {
+      "name": "60 - Embeddings - Create",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+              "pm.test('Response has expected shape', () => {",
+              "    const json = pm.response.json();",
+              "    ['id', 'source_type', 'source_id', 'content', 'model', 'dimensions', 'embedded_at'].forEach(f => pm.expect(json).to.have.property(f));",
+              "    pm.expect(json.source_type).to.eql('memory');",
+              "    pm.expect(json.dimensions).to.eql(1536);",
+              "});",
+              "pm.environment.set('core_embedding_id', pm.response.json().id);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"source_type\": \"memory\",\n  \"source_id\": 1,\n  \"content\": \"David works at Devexperts as a software engineer\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/core/embeddings/",
+          "host": ["{{base_url}}"],
+          "path": ["core", "embeddings", ""]
+        }
+      }
+    },
+    {
+      "name": "61 - Embeddings - Search",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Response is an array', () => pm.expect(pm.response.json()).to.be.an('array'));",
+              "pm.test('Results have similarity score', () => {",
+              "    const results = pm.response.json();",
+              "    if (results.length > 0) {",
+              "        pm.expect(results[0]).to.have.property('similarity');",
+              "        pm.expect(results[0].similarity).to.be.within(0, 1);",
+              "    }",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"query\": \"Where does David work?\",\n  \"limit\": 5,\n  \"threshold\": 0.5\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/core/embeddings/search",
+          "host": ["{{base_url}}"],
+          "path": ["core", "embeddings", "search"]
+        }
+      }
+    },
+    {
+      "name": "62 - Embeddings - Search with Source Type Filter",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('All results are memory type', () => {",
+              "    pm.response.json().forEach(r => pm.expect(r.source_type).to.eql('memory'));",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"query\": \"Where does David work?\",\n  \"source_types\": [\"memory\"],\n  \"limit\": 10,\n  \"threshold\": 0.5\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/core/embeddings/search",
+          "host": ["{{base_url}}"],
+          "path": ["core", "embeddings", "search"]
+        }
+      }
+    },
+    {
+      "name": "63 - Embeddings - Delete",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 204', () => pm.response.to.have.status(204));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/core/embeddings/{{core_embedding_id}}",
+          "host": ["{{base_url}}"],
+          "path": ["core", "embeddings", "{{core_embedding_id}}"]
+        }
+      }
+    },
+    {
+      "name": "64 - Embeddings - Delete 404",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Non-existent embedding returns 404', () => pm.response.to.have.status(404));",
+              "pm.environment.unset('core_embedding_id');"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/core/embeddings/999999999",
+          "host": ["{{base_url}}"],
+          "path": ["core", "embeddings", "999999999"]
         }
       }
     },

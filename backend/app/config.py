@@ -23,6 +23,10 @@ class Settings(BaseSettings):
     google_calendar_refresh_token: str = Field(validation_alias="GOOGLE_CALENDAR_REFRESH_TOKEN")
     google_calendar_id: str = Field(default="primary", validation_alias="GOOGLE_CALENDAR_ID")
 
+    # Embeddings
+    embedding_model: str = Field(default="all-MiniLM-L6-v2", validation_alias="EMBEDDING_MODEL")
+    openai_api_key: str | None = Field(default=None, validation_alias="OPENAI_API_KEY")
+
 @lru_cache()
 def get_settings() -> Settings:
     return Settings() # type: ignore[call-arg]

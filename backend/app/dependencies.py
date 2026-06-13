@@ -19,6 +19,8 @@ from app.features.core.messages.service import MessageService
 from app.features.core.command_executions.service import CommandExecutionService
 from app.features.core.memories.service import MemoryService
 from app.features.core.working_memory.service import WorkingMemoryService
+from app.features.core.embeddings.service import EmbeddingService
+from app.integrations.sentence_transformers.provider import SentenceTransformerEmbeddingProvider
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.session import get_session
 
@@ -87,6 +89,13 @@ def get_memory_service(session: AsyncSession = Depends(get_session)) -> MemorySe
 def get_working_memory_service(session: AsyncSession = Depends(get_session)) -> WorkingMemoryService:
     return WorkingMemoryService(session)
 
+@lru_cache
+def get_embedding_provider() -> SentenceTransformerEmbeddingProvider:
+    return SentenceTransformerEmbeddingProvider(get_settings().embedding_model)
+
+def get_embedding_service(session: AsyncSession = Depends(get_session)) -> EmbeddingService:
+    return EmbeddingService(session, get_embedding_provider())
+
 # Dependencies shortcuts
 # DB
 DbSessionDep = Annotated[AsyncSession, Depends(get_session)]
@@ -105,3 +114,4 @@ MessageServiceDep = Annotated[MessageService, Depends(get_message_service)]
 CommandExecutionServiceDep = Annotated[CommandExecutionService, Depends(get_command_execution_service)]
 MemoryServiceDep = Annotated[MemoryService, Depends(get_memory_service)]
 WorkingMemoryServiceDep = Annotated[WorkingMemoryService, Depends(get_working_memory_service)]
+EmbeddingServiceDep = Annotated[EmbeddingService, Depends(get_embedding_service)]

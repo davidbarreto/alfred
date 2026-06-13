@@ -3,7 +3,7 @@ from app.features.organizer.tasks.schemas import TaskRead, TaskCreate, TaskUpdat
 from app.api.auth import require_auth
 from app.dependencies import TaskServiceDep
 
-router = APIRouter(prefix="/tasks", tags=["commands"], dependencies=[Depends(require_auth)])
+router = APIRouter(prefix="/organizer/tasks", tags=["organizer"], dependencies=[Depends(require_auth)])
 
 @router.post("/", response_model=TaskRead, status_code=status.HTTP_201_CREATED)
 async def add_task(request: TaskCreate, service: TaskServiceDep):

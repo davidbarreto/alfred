@@ -19,7 +19,7 @@ from app.features.monitoring.schemas import (
 )
 from app.features.monitoring.service import MonitorService
 
-router = APIRouter(prefix="/monitors", tags=["monitors"], dependencies=[Depends(require_auth)])
+router = APIRouter(prefix="/monitoring/configs", tags=["monitoring"], dependencies=[Depends(require_auth)])
 
 
 @router.get("/", response_model=list[MonitorRead])
@@ -93,4 +93,4 @@ async def read_monitor_executions(
     monitor = await get_monitor(session=session, monitor_id=monitor_id)
     if monitor is None:
         raise HTTPException(status_code=404, detail="Monitor not found")
-    return await get_executions(session=session, monitor_id=monitor_id, limit=limit)
+    return await get_executions(session=session, config_id=monitor_id, limit=limit)

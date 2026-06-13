@@ -3,7 +3,7 @@ from app.features.organizer.notes.schemas import NoteRead, NoteCreate, NoteUpdat
 from app.api.auth import require_auth
 from app.dependencies import NoteServiceDep
 
-router = APIRouter(prefix="/notes", tags=["notes"], dependencies=[Depends(require_auth)])
+router = APIRouter(prefix="/organizer/notes", tags=["organizer"], dependencies=[Depends(require_auth)])
 
 
 @router.post("/", response_model=NoteRead, status_code=status.HTTP_201_CREATED)

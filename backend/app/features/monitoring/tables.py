@@ -40,7 +40,7 @@ class Execution(Base):
     __table_args__ = {"schema": "monitoring"}
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
-    monitor_id: Mapped[int] = mapped_column(
+    config_id: Mapped[int] = mapped_column(
         Integer, ForeignKey("monitoring.configs.id", ondelete="CASCADE"), nullable=False
     )
     status: Mapped[str] = mapped_column(String(20), nullable=False)  # found, not_found, error

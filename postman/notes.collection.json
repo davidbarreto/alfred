@@ -84,7 +84,7 @@
           }
         },
         "url": {
-          "raw": "{{base_url}}/notes",
+          "raw": "{{base_url}}/organizer/notes",
           "host": ["{{base_url}}"],
           "path": ["notes"]
         }
@@ -112,7 +112,7 @@
         "method": "GET",
         "header": [],
         "url": {
-          "raw": "{{base_url}}/notes?limit=100",
+          "raw": "{{base_url}}/organizer/notes?limit=100",
           "host": ["{{base_url}}"],
           "path": ["notes"],
           "query": [
@@ -146,7 +146,7 @@
         "method": "GET",
         "header": [],
         "url": {
-          "raw": "{{base_url}}/notes/{{note_id}}",
+          "raw": "{{base_url}}/organizer/notes/{{note_id}}",
           "host": ["{{base_url}}"],
           "path": ["notes", "{{note_id}}"]
         }
@@ -188,7 +188,7 @@
           }
         },
         "url": {
-          "raw": "{{base_url}}/notes/{{note_id}}",
+          "raw": "{{base_url}}/organizer/notes/{{note_id}}",
           "host": ["{{base_url}}"],
           "path": ["notes", "{{note_id}}"]
         }
@@ -214,7 +214,7 @@
         "method": "GET",
         "header": [],
         "url": {
-          "raw": "{{base_url}}/notes?tags=work&tags=planning&limit=100",
+          "raw": "{{base_url}}/organizer/notes?tags=work&tags=planning&limit=100",
           "host": ["{{base_url}}"],
           "path": ["notes"],
           "query": [
@@ -254,7 +254,7 @@
         "method": "GET",
         "header": [],
         "url": {
-          "raw": "{{base_url}}/notes/999999",
+          "raw": "{{base_url}}/organizer/notes/999999",
           "host": ["{{base_url}}"],
           "path": ["notes", "999999"]
         }
@@ -278,7 +278,7 @@
         "method": "DELETE",
         "header": [],
         "url": {
-          "raw": "{{base_url}}/notes/{{note_id}}",
+          "raw": "{{base_url}}/organizer/notes/{{note_id}}",
           "host": ["{{base_url}}"],
           "path": ["notes", "{{note_id}}"]
         }

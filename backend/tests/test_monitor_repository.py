@@ -41,10 +41,10 @@ def _make_monitor_orm(id=1, enabled=True):
     return monitor
 
 
-def _make_execution_orm(id=1, monitor_id=1, status="found"):
+def _make_execution_orm(id=1, config_id=1, status="found"):
     execution = MagicMock(spec=Execution)
     execution.id = id
-    execution.monitor_id = monitor_id
+    execution.config_id = config_id
     execution.status = status
     execution.result = "matched text"
     execution.error = None
@@ -224,7 +224,7 @@ class TestCreateExecution:
         )
 
         added_obj = session.add.call_args[0][0]
-        assert added_obj.monitor_id == 7
+        assert added_obj.config_id == 7
         assert added_obj.status == "not_found"
         assert added_obj.config_snapshot["url"] == monitor.url
         assert added_obj.config_snapshot["target"] == monitor.target
@@ -252,7 +252,7 @@ class TestGetExecutions:
         result_mock.scalars.return_value.all.return_value = executions
         session.execute.return_value = result_mock
 
-        result = await get_executions(session, monitor_id=1, limit=10)
+        result = await get_executions(session, config_id=1, limit=10)
         assert len(result) == 3
 
     async def test_empty(self):
@@ -261,7 +261,7 @@ class TestGetExecutions:
         result_mock.scalars.return_value.all.return_value = []
         session.execute.return_value = result_mock
 
-        result = await get_executions(session, monitor_id=1)
+        result = await get_executions(session, config_id=1)
         assert result == []
 
 
@@ -291,7 +291,7 @@ class TestGetAlerts:
         result_mock.scalars.return_value.all.return_value = []
         session.execute.return_value = result_mock
 
-        result = await get_alerts(session, status="pending", monitor_id=1, skip=0, limit=5)
+        result = await get_alerts(session, status="pending", config_id=1, skip=0, limit=5)
         session.execute.assert_called_once()
         assert result == []
 
@@ -299,7 +299,7 @@ class TestGetAlerts:
 class TestUpsertAlert:
     async def test_creates_alert_when_none_exists(self):
         session = _make_session()
-        execution = _make_execution_orm(id=10, monitor_id=1)
+        execution = _make_execution_orm(id=10, config_id=1)
         # _get_latest_alert_for_monitor returns None → create new
         session.execute.return_value = _scalar_first(None)
 
@@ -313,7 +313,7 @@ class TestUpsertAlert:
 
     async def test_does_nothing_when_pending_exists(self):
         session = _make_session()
-        execution = _make_execution_orm(id=11, monitor_id=1)
+        execution = _make_execution_orm(id=11, config_id=1)
         existing = MagicMock(spec=Alert)
         existing.status = "pending"
         session.execute.return_value = _scalar_first(existing)
@@ -326,7 +326,7 @@ class TestUpsertAlert:
 
     async def test_reopens_done_alert(self):
         session = _make_session()
-        execution = _make_execution_orm(id=12, monitor_id=1)
+        execution = _make_execution_orm(id=12, config_id=1)
         existing = MagicMock(spec=Alert)
         existing.status = "done"
         session.execute.return_value = _scalar_first(existing)

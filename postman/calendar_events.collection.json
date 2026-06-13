@@ -85,7 +85,7 @@
           }
         },
         "url": {
-          "raw": "{{base_url}}/calendar-events",
+          "raw": "{{base_url}}/organizer/calendar-events",
           "host": ["{{base_url}}"],
           "path": ["calendar-events"]
         }
@@ -113,7 +113,7 @@
         "method": "GET",
         "header": [],
         "url": {
-          "raw": "{{base_url}}/calendar-events?limit=100",
+          "raw": "{{base_url}}/organizer/calendar-events?limit=100",
           "host": ["{{base_url}}"],
           "path": ["calendar-events"],
           "query": [
@@ -147,7 +147,7 @@
         "method": "GET",
         "header": [],
         "url": {
-          "raw": "{{base_url}}/calendar-events/{{event_id}}",
+          "raw": "{{base_url}}/organizer/calendar-events/{{event_id}}",
           "host": ["{{base_url}}"],
           "path": ["calendar-events", "{{event_id}}"]
         }
@@ -189,7 +189,7 @@
           }
         },
         "url": {
-          "raw": "{{base_url}}/calendar-events/{{event_id}}",
+          "raw": "{{base_url}}/organizer/calendar-events/{{event_id}}",
           "host": ["{{base_url}}"],
           "path": ["calendar-events", "{{event_id}}"]
         }
@@ -215,7 +215,7 @@
         "method": "GET",
         "header": [],
         "url": {
-          "raw": "{{base_url}}/calendar-events?start_from=2026-07-01T00:00:00&start_to=2026-07-31T23:59:59&limit=100",
+          "raw": "{{base_url}}/organizer/calendar-events?start_from=2026-07-01T00:00:00&start_to=2026-07-31T23:59:59&limit=100",
           "host": ["{{base_url}}"],
           "path": ["calendar-events"],
           "query": [
@@ -255,7 +255,7 @@
         "method": "GET",
         "header": [],
         "url": {
-          "raw": "{{base_url}}/calendar-events?tags=work&tags=planning&limit=100",
+          "raw": "{{base_url}}/organizer/calendar-events?tags=work&tags=planning&limit=100",
           "host": ["{{base_url}}"],
           "path": ["calendar-events"],
           "query": [
@@ -295,7 +295,7 @@
         "method": "GET",
         "header": [],
         "url": {
-          "raw": "{{base_url}}/calendar-events/999999",
+          "raw": "{{base_url}}/organizer/calendar-events/999999",
           "host": ["{{base_url}}"],
           "path": ["calendar-events", "999999"]
         }
@@ -319,7 +319,7 @@
         "method": "DELETE",
         "header": [],
         "url": {
-          "raw": "{{base_url}}/calendar-events/{{event_id}}",
+          "raw": "{{base_url}}/organizer/calendar-events/{{event_id}}",
           "host": ["{{base_url}}"],
           "path": ["calendar-events", "{{event_id}}"]
         }

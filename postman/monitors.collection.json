@@ -2,7 +2,7 @@
   "info": {
     "name": "Alfred - Monitors API",
     "_postman_id": "alfred-monitors-v2",
-    "description": "Run in order: Health Check → Create → List → Get → Update → Run → Executions → Alerts → Run All → Delete",
+    "description": "Run in order: Health Check → Create → List → Get → Update → Run → Get Config Executions → List All Executions → List Alerts → List Pending Alerts → Run All → Delete",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -75,9 +75,9 @@
           "options": { "raw": { "language": "json" } }
         },
         "url": {
-          "raw": "{{base_url}}/monitors",
+          "raw": "{{base_url}}/monitoring/configs",
           "host": ["{{base_url}}"],
-          "path": ["monitors"]
+          "path": ["monitoring", "configs"]
         }
       }
     },
@@ -103,9 +103,9 @@
         "method": "GET",
         "header": [],
         "url": {
-          "raw": "{{base_url}}/monitors?skip=0&limit=100",
+          "raw": "{{base_url}}/monitoring/configs?skip=0&limit=100",
           "host": ["{{base_url}}"],
-          "path": ["monitors"],
+          "path": ["monitoring", "configs"],
           "query": [
             { "key": "skip", "value": "0" },
             { "key": "limit", "value": "100" }
@@ -136,9 +136,9 @@
         "method": "GET",
         "header": [],
         "url": {
-          "raw": "{{base_url}}/monitors/{{monitor_id}}",
+          "raw": "{{base_url}}/monitoring/configs/{{monitor_id}}",
           "host": ["{{base_url}}"],
-          "path": ["monitors", "{{monitor_id}}"]
+          "path": ["monitoring", "configs", "{{monitor_id}}"]
         }
       }
     },
@@ -171,9 +171,9 @@
           "options": { "raw": { "language": "json" } }
         },
         "url": {
-          "raw": "{{base_url}}/monitors/{{monitor_id}}",
+          "raw": "{{base_url}}/monitoring/configs/{{monitor_id}}",
           "host": ["{{base_url}}"],
-          "path": ["monitors", "{{monitor_id}}"]
+          "path": ["monitoring", "configs", "{{monitor_id}}"]
         }
       }
     },
@@ -188,7 +188,7 @@
               "pm.test('Execution has required fields', () => {",
               "    const json = pm.response.json();",
               "    pm.expect(json).to.have.property('id');",
-              "    pm.expect(json).to.have.property('monitor_id');",
+              "    pm.expect(json).to.have.property('config_id');",
               "    pm.expect(json).to.have.property('status');",
               "    pm.expect(json).to.have.property('config_snapshot');",
               "    pm.expect(json).to.have.property('created_at');",
@@ -204,14 +204,14 @@
         "method": "POST",
         "header": [],
         "url": {
-          "raw": "{{base_url}}/monitors/{{monitor_id}}/run",
+          "raw": "{{base_url}}/monitoring/configs/{{monitor_id}}/run",
           "host": ["{{base_url}}"],
-          "path": ["monitors", "{{monitor_id}}", "run"]
+          "path": ["monitoring", "configs", "{{monitor_id}}", "run"]
         }
       }
     },
     {
-      "name": "07 - Get Monitor Executions",
+      "name": "07 - Get Config Executions",
       "event": [
         {
           "listen": "test",
@@ -222,7 +222,7 @@
               "    const json = pm.response.json();",
               "    pm.expect(json).to.be.an('array');",
               "    pm.expect(json.length).to.be.at.least(1);",
-              "    pm.expect(json[0]).to.have.property('monitor_id');",
+              "    pm.expect(json[0]).to.have.property('config_id');",
               "    pm.expect(json[0]).to.have.property('status');",
               "    pm.expect(json[0]).to.have.property('config_snapshot');",
               "    pm.expect(json[0]).to.have.property('created_at');",
@@ -236,9 +236,9 @@
         "method": "GET",
         "header": [],
         "url": {
-          "raw": "{{base_url}}/monitors/{{monitor_id}}/executions?limit=10",
+          "raw": "{{base_url}}/monitoring/configs/{{monitor_id}}/executions?limit=10",
           "host": ["{{base_url}}"],
-          "path": ["monitors", "{{monitor_id}}", "executions"],
+          "path": ["monitoring", "configs", "{{monitor_id}}", "executions"],
           "query": [
             { "key": "limit", "value": "10" }
           ]
@@ -246,7 +246,101 @@
       }
     },
     {
-      "name": "08 - List All Alerts",
+      "name": "08 - List All Executions",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Response is an array of executions', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json).to.be.an('array');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/monitoring/executions/",
+          "host": ["{{base_url}}"],
+          "path": ["monitoring", "executions", ""]
+        }
+      }
+    },
+    {
+      "name": "08b - List Executions Filtered by Config",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('All executions belong to the config', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json).to.be.an('array');",
+              "    json.forEach(ex => {",
+              "        pm.expect(String(ex.config_id)).to.eql(String(pm.environment.get('monitor_id')));",
+              "    });",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/monitoring/executions/?config_id={{monitor_id}}&limit=20",
+          "host": ["{{base_url}}"],
+          "path": ["monitoring", "executions", ""],
+          "query": [
+            { "key": "config_id", "value": "{{monitor_id}}" },
+            { "key": "limit", "value": "20" }
+          ]
+        }
+      }
+    },
+    {
+      "name": "08c - List Executions Filtered by Status",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('All executions match status filter', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json).to.be.an('array');",
+              "    json.forEach(ex => {",
+              "        pm.expect(ex.status).to.eql('found');",
+              "    });",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/monitoring/executions/?status=found",
+          "host": ["{{base_url}}"],
+          "path": ["monitoring", "executions", ""],
+          "query": [
+            { "key": "status", "value": "found" }
+          ]
+        }
+      }
+    },
+    {
+      "name": "09 - List All Alerts",
       "event": [
         {
           "listen": "test",
@@ -265,14 +359,14 @@
         "method": "GET",
         "header": [],
         "url": {
-          "raw": "{{base_url}}/alerts/",
+          "raw": "{{base_url}}/monitoring/alerts/",
           "host": ["{{base_url}}"],
-          "path": ["alerts", ""]
+          "path": ["monitoring", "alerts", ""]
         }
       }
     },
     {
-      "name": "09 - List Pending Alerts for Monitor",
+      "name": "10 - List Pending Alerts for Config",
       "event": [
         {
           "listen": "test",
@@ -297,18 +391,18 @@
         "method": "GET",
         "header": [],
         "url": {
-          "raw": "{{base_url}}/alerts/?status=pending&monitor_id={{monitor_id}}",
+          "raw": "{{base_url}}/monitoring/alerts/?status=pending&config_id={{monitor_id}}",
           "host": ["{{base_url}}"],
-          "path": ["alerts", ""],
+          "path": ["monitoring", "alerts", ""],
           "query": [
             { "key": "status", "value": "pending" },
-            { "key": "monitor_id", "value": "{{monitor_id}}" }
+            { "key": "config_id", "value": "{{monitor_id}}" }
           ]
         }
       }
     },
     {
-      "name": "10 - Run All Active Monitors",
+      "name": "11 - Run All Active Monitors",
       "event": [
         {
           "listen": "test",
@@ -327,14 +421,14 @@
         "method": "POST",
         "header": [],
         "url": {
-          "raw": "{{base_url}}/monitors/run",
+          "raw": "{{base_url}}/monitoring/configs/run",
           "host": ["{{base_url}}"],
-          "path": ["monitors", "run"]
+          "path": ["monitoring", "configs", "run"]
         }
       }
     },
     {
-      "name": "11 - Delete Monitor",
+      "name": "12 - Delete Monitor",
       "event": [
         {
           "listen": "test",
@@ -357,9 +451,9 @@
         "method": "DELETE",
         "header": [],
         "url": {
-          "raw": "{{base_url}}/monitors/{{monitor_id}}",
+          "raw": "{{base_url}}/monitoring/configs/{{monitor_id}}",
           "host": ["{{base_url}}"],
-          "path": ["monitors", "{{monitor_id}}"]
+          "path": ["monitoring", "configs", "{{monitor_id}}"]
         }
       }
     }

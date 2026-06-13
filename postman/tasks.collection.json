@@ -90,7 +90,7 @@
           }
         },
         "url": {
-          "raw": "{{base_url}}/tasks",
+          "raw": "{{base_url}}/organizer/tasks",
           "host": [
             "{{base_url}}"
           ],
@@ -122,7 +122,7 @@
         "method": "GET",
         "header": [],
         "url": {
-          "raw": "{{base_url}}/tasks?limit=100",
+          "raw": "{{base_url}}/organizer/tasks?limit=100",
           "host": [
             "{{base_url}}"
           ],
@@ -161,7 +161,7 @@
         "method": "GET",
         "header": [],
         "url": {
-          "raw": "{{base_url}}/tasks/{{task_id}}",
+          "raw": "{{base_url}}/organizer/tasks/{{task_id}}",
           "host": [
             "{{base_url}}"
           ],
@@ -208,7 +208,7 @@
           }
         },
         "url": {
-          "raw": "{{base_url}}/tasks/{{task_id}}",
+          "raw": "{{base_url}}/organizer/tasks/{{task_id}}",
           "host": [
             "{{base_url}}"
           ],
@@ -253,7 +253,7 @@
           }
         },
         "url": {
-          "raw": "{{base_url}}/tasks/{{task_id}}",
+          "raw": "{{base_url}}/organizer/tasks/{{task_id}}",
           "host": [
             "{{base_url}}"
           ],
@@ -286,7 +286,7 @@
         "method": "GET",
         "header": [],
         "url": {
-          "raw": "{{base_url}}/tasks?status=DONE&limit=100",
+          "raw": "{{base_url}}/organizer/tasks?status=DONE&limit=100",
           "host": [
             "{{base_url}}"
           ],
@@ -326,7 +326,7 @@
         "method": "GET",
         "header": [],
         "url": {
-          "raw": "{{base_url}}/tasks?tags=personal&tags=errands&limit=100",
+          "raw": "{{base_url}}/organizer/tasks?tags=personal&tags=errands&limit=100",
           "host": [
             "{{base_url}}"
           ],
@@ -368,7 +368,7 @@
         "method": "DELETE",
         "header": [],
         "url": {
-          "raw": "{{base_url}}/tasks/{{task_id}}",
+          "raw": "{{base_url}}/organizer/tasks/{{task_id}}",
           "host": [
             "{{base_url}}"
           ],

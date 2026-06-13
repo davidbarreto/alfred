@@ -3,7 +3,7 @@ from app.features.organizer.calendar_events.schemas import EventRead, EventCreat
 from app.api.auth import require_auth
 from app.dependencies import CalendarEventServiceDep
 
-router = APIRouter(prefix="/calendar-events", tags=["calendar-events"], dependencies=[Depends(require_auth)])
+router = APIRouter(prefix="/organizer/calendar-events", tags=["organizer"], dependencies=[Depends(require_auth)])
 
 
 @router.post("/", response_model=EventRead, status_code=status.HTTP_201_CREATED)

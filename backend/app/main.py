@@ -16,6 +16,7 @@ from typing import AsyncGenerator
 
 from app.api.routes.monitoring.monitors import router as monitors_router
 from app.api.routes.monitoring.alerts import router as alerts_router
+from app.api.routes.monitoring.executions import router as executions_router
 from app.api.routes.integrations.provider_calls import router as provider_calls_router
 from app.api.routes.commands import router as commands_router
 from app.api.routes.organizer.tasks import router as tasks_router
@@ -59,6 +60,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 app = FastAPI(title="Alfred Backend", version="0.1.0", lifespan=lifespan)
 app.include_router(monitors_router)
 app.include_router(alerts_router)
+app.include_router(executions_router)
 app.include_router(provider_calls_router)
 app.include_router(commands_router)
 app.include_router(tasks_router)

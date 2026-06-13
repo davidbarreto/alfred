@@ -2,6 +2,8 @@ from datetime import datetime, timezone
 from sqlalchemy import delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.features.monitoring.schemas import ExecutionFilters
+
 from app.features.monitoring.tables import Alert, Execution, Monitor
 from app.features.monitoring.schemas import MonitorCreate, MonitorUpdate
 
@@ -75,7 +77,7 @@ async def create_execution(
         "wait_selector": monitor.wait_selector,
     }
     execution = Execution(
-        monitor_id=monitor.id,
+        config_id=monitor.id,
         status=status,
         result=result,
         error=error,
@@ -89,42 +91,62 @@ async def create_execution(
 
 async def get_executions(
     session: AsyncSession,
-    monitor_id: int,
+    config_id: int,
     limit: int = 20,
 ) -> list[Execution]:
     result = await session.execute(
         select(Execution)
-        .where(Execution.monitor_id == monitor_id)
+        .where(Execution.config_id == config_id)
         .order_by(Execution.created_at.desc())
         .limit(limit)
     )
     return list(result.scalars().all())
 
 
+async def get_all_executions(
+    session: AsyncSession,
+    filters: ExecutionFilters,
+) -> list[Execution]:
+    query = select(Execution)
+    if filters.config_id is not None:
+        query = query.where(Execution.config_id == filters.config_id)
+    if filters.status is not None:
+        query = query.where(Execution.status == filters.status)
+    if filters.before_date is not None:
+        query = query.where(Execution.created_at < filters.before_date)
+    if filters.after_date is not None:
+        query = query.where(Execution.created_at > filters.after_date)
+    if filters.result is not None:
+        query = query.where(Execution.result.ilike(f"%{filters.result}%"))
+    query = query.order_by(Execution.created_at.desc()).offset(filters.skip).limit(filters.limit)
+    result = await session.execute(query)
+    return list(result.scalars().all())
+
+
 async def get_alerts(
     session: AsyncSession,
     status: str | None = None,
-    monitor_id: int | None = None,
+    config_id: int | None = None,
     skip: int = 0,
     limit: int = 20,
 ) -> list[Alert]:
     query = select(Alert).join(Execution, Alert.execution_id == Execution.id)
     if status is not None:
         query = query.where(Alert.status == status)
-    if monitor_id is not None:
-        query = query.where(Execution.monitor_id == monitor_id)
+    if config_id is not None:
+        query = query.where(Execution.config_id == config_id)
     query = query.order_by(Alert.created_at.desc()).offset(skip).limit(limit)
     result = await session.execute(query)
     return list(result.scalars().all())
 
 
 async def _get_latest_alert_for_monitor(
-    session: AsyncSession, monitor_id: int
+    session: AsyncSession, config_id: int
 ) -> Alert | None:
     result = await session.execute(
         select(Alert)
         .join(Execution, Alert.execution_id == Execution.id)
-        .where(Execution.monitor_id == monitor_id)
+        .where(Execution.config_id == config_id)
         .order_by(Alert.created_at.desc())
         .limit(1)
     )
@@ -139,7 +161,7 @@ async def upsert_alert(session: AsyncSession, execution: Execution) -> Alert | N
     - Existing pending → do nothing (already queued)
     - Existing done → reopen as pending, point to current execution
     """
-    existing = await _get_latest_alert_for_monitor(session, execution.monitor_id)
+    existing = await _get_latest_alert_for_monitor(session, execution.config_id)
 
     if existing is None:
         alert = Alert(execution_id=execution.id, status="pending")

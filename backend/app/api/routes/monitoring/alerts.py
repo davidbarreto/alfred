@@ -7,13 +7,13 @@ from app.db.session import get_session
 from app.features.monitoring.repository import get_alerts
 from app.features.monitoring.schemas import AlertRead
 
-router = APIRouter(prefix="/alerts", tags=["alerts"], dependencies=[Depends(require_auth)])
+router = APIRouter(prefix="/monitoring/alerts", tags=["monitoring"], dependencies=[Depends(require_auth)])
 
 
 @router.get("/", response_model=list[AlertRead])
 async def list_alerts(
     status: Literal["pending", "done"] | None = Query(default=None),
-    monitor_id: int | None = Query(default=None),
+    config_id: int | None = Query(default=None),
     skip: int = Query(default=0, ge=0),
     limit: int = Query(default=20, ge=1, le=100),
     session: AsyncSession = Depends(get_session),
@@ -21,7 +21,7 @@ async def list_alerts(
     return await get_alerts(
         session=session,
         status=status,
-        monitor_id=monitor_id,
+        config_id=config_id,
         skip=skip,
         limit=limit,
     )

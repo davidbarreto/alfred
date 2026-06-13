@@ -1,5 +1,6 @@
 from datetime import datetime
-from typing import Any, Literal
+from typing import Annotated, Any, Literal
+from fastapi import Query
 from pydantic import BaseModel, ConfigDict, Field
 
 
@@ -47,11 +48,31 @@ class MonitorRead(MonitorBase):
     id: int
 
 
+class ExecutionFilters:
+    def __init__(
+        self,
+        config_id: Annotated[int | None, Query()] = None,
+        status: Annotated[str | None, Query()] = None,
+        before_date: Annotated[datetime | None, Query()] = None,
+        after_date: Annotated[datetime | None, Query()] = None,
+        result: Annotated[str | None, Query()] = None,
+        skip: Annotated[int, Query(ge=0)] = 0,
+        limit: Annotated[int, Query(ge=1, le=100)] = 20,
+    ) -> None:
+        self.config_id = config_id
+        self.status = status
+        self.before_date = before_date
+        self.after_date = after_date
+        self.result = result
+        self.skip = skip
+        self.limit = limit
+
+
 class ExecutionRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
-    monitor_id: int
+    config_id: int
     status: str
     result: str | None = None
     error: str | None = None

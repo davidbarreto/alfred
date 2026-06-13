@@ -232,3 +232,78 @@ def test_normalise_date_logic(mock_now):
     assert _normalize_date("next week") == "2024-05-27"
     assert _normalize_date("Sunday") == "2024-05-26"
     assert _normalize_date("2025-01-01") == "2025-01-01"
+
+
+# ---------------------------------------------------------------------------
+# Pre-extracted command + args hint path (Telegram entity flow)
+# ---------------------------------------------------------------------------
+
+def test_resolve_hint_basic():
+    response = resolve("/taskadd", command="/taskadd", args="buy milk")
+    assert response.status == "ok"
+    cmd = response.commands[0]
+    assert cmd.type == "task"
+    assert cmd.command == "add"
+    assert cmd.arguments["task"] == "buy milk"
+
+
+def test_resolve_hint_with_flags(mock_now):
+    response = resolve("/taskadd", command="/taskadd", args="buy milk -d sunday -p high")
+    assert response.status == "ok"
+    cmd = response.commands[0]
+    assert cmd.arguments["task"] == "buy milk"
+    assert cmd.arguments["deadline"] == "2024-05-26"
+    assert cmd.arguments["priority"] == "HIGH"
+
+
+def test_resolve_hint_no_args_required_command():
+    response = resolve("/tasklist", command="/tasklist", args=None)
+    assert response.status == "ok"
+    assert response.commands[0].command == "list"
+
+
+def test_resolve_hint_missing_required_args():
+    response = resolve("/taskadd", command="/taskadd", args=None)
+    assert response.status == "not_parsed"
+
+
+def test_resolve_hint_unknown_command():
+    response = resolve("/unknown", command="/unknown", args="something")
+    assert response.status == "not_parsed"
+
+
+def test_resolve_hint_note_add():
+    response = resolve("/noteadd", command="/noteadd", args="chocolate is good")
+    assert response.status == "ok"
+    cmd = response.commands[0]
+    assert cmd.type == "note"
+    assert cmd.command == "add"
+    assert cmd.arguments["content"] == "chocolate is good"
+
+
+def test_resolve_hint_skips_text_splitting():
+    """command hint must NOT split text — only the single provided command is resolved."""
+    response = resolve(
+        "/taskadd buy chocolate /noteadd chocolate is good",
+        command="/taskadd",
+        args="buy chocolate",
+    )
+    assert response.status == "ok"
+    assert len(response.commands) == 1
+    assert response.commands[0].type == "task"
+
+
+def test_resolve_hint_long_form_command():
+    """Pre-extracted /task alias (long form) with action sub-word in args should still work."""
+    response = resolve("/task", command="/task", args="add buy milk")
+    assert response.status == "ok"
+    cmd = response.commands[0]
+    assert cmd.type == "task"
+    assert cmd.command == "add"
+    assert cmd.arguments["task"] == "buy milk"
+
+
+def test_resolve_hint_raw_text_preserved():
+    full_text = "/taskadd buy chocolate /noteadd chocolate is good"
+    response = resolve(full_text, command="/taskadd", args="buy chocolate")
+    assert response.raw_text == full_text

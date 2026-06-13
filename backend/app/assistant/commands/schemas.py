@@ -18,6 +18,8 @@ class CommandDetail(BaseModel):
 
 class CommandResolveRequest(BaseModel):
     text: str
+    command: str | None = None
+    args: str | None = None
 
 class CommandResolveResponse(BaseModel):
     status: str

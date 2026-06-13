@@ -128,7 +128,89 @@
       }
     },
     {
-      "name": "04 - Resolve Unparseable Text",
+      "name": "04 - Resolve With Command Hint (Single Command)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Exactly one command resolved from hint', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json.status).to.eql('ok');",
+              "    pm.expect(json.commands).to.have.lengthOf(1);",
+              "    const cmd = json.commands[0];",
+              "    pm.expect(cmd.type).to.eql('task');",
+              "    pm.expect(cmd.command).to.eql('add');",
+              "    pm.expect(cmd.arguments.task).to.eql('buy chocolate');",
+              "});",
+              "pm.test('Raw text is original full message', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json.raw_text).to.eql('/taskadd buy chocolate /noteadd chocolate is good');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"text\": \"/taskadd buy chocolate /noteadd chocolate is good\",\n  \"command\": \"/taskadd\",\n  \"args\": \"buy chocolate\"\n}",
+          "options": { "raw": { "language": "json" } }
+        },
+        "url": {
+          "raw": "{{base_url}}/commands/resolve",
+          "host": ["{{base_url}}"],
+          "path": ["commands", "resolve"]
+        }
+      }
+    },
+    {
+      "name": "05 - Resolve With Command Hint (Note, With Flags)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Note command resolved with tag', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json.status).to.eql('ok');",
+              "    pm.expect(json.commands).to.have.lengthOf(1);",
+              "    const cmd = json.commands[0];",
+              "    pm.expect(cmd.type).to.eql('note');",
+              "    pm.expect(cmd.command).to.eql('add');",
+              "    pm.expect(cmd.arguments).to.have.property('tags');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"text\": \"/noteadd chocolate is good -t food\",\n  \"command\": \"/noteadd\",\n  \"args\": \"chocolate is good -t food\"\n}",
+          "options": { "raw": { "language": "json" } }
+        },
+        "url": {
+          "raw": "{{base_url}}/commands/resolve",
+          "host": ["{{base_url}}"],
+          "path": ["commands", "resolve"]
+        }
+      }
+    },
+    {
+      "name": "06 - Resolve Unparseable Text",
       "event": [
         {
           "listen": "test",

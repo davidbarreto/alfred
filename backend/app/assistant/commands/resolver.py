@@ -137,63 +137,73 @@ def _enrich_arguments(arguments: Dict[str, Any], cmd_type: str = "") -> Dict[str
     return arguments
 
 
-def resolve(text: str) -> CommandResolveResponse:
+def _resolve_fragment(cmd_alias: str, remaining_tokens: List[str]) -> CommandDetail | None:
+    """Resolve a single command alias + its remaining tokens into a CommandDetail."""
+    meta = COMMAND_REGISTRY.get(cmd_alias)
+    if not meta:
+        return None
+
+    # Handle long-form "/task add …" — strip the action sub-word
+    if remaining_tokens and remaining_tokens[0].lower() == meta.action and cmd_alias == f"/{meta.type}":
+        remaining_tokens = remaining_tokens[1:]
+
+    args, flags = _extract_args_and_flags(remaining_tokens, meta.flags)
+
+    if meta.requires_args and not args:
+        return None
+
+    # Explicit flags override implicit ones set by the alias (e.g. /expense sets type=expense
+    # but --type income would still win).
+    arguments: Dict[str, Any] = {**meta.implicit_flags, **flags}
+
+    if meta.arg_keys:
+        for i, key in enumerate(meta.arg_keys):
+            if i < len(args):
+                if i == len(meta.arg_keys) - 1:
+                    arguments[key] = " ".join(args[i:])
+                else:
+                    arguments[key] = args[i]
+    elif args:
+        arguments["_raw_args"] = args
+
+    arguments = _enrich_arguments(arguments, cmd_type=meta.type)
+
+    return CommandDetail(
+        type=meta.type,
+        command=meta.action,
+        confidence=0.99,
+        resolver="deterministic",
+        arguments=arguments,
+    )
+
+
+def resolve(text: str, command: str | None = None, args: str | None = None) -> CommandResolveResponse:
     """
     Structured command resolver.
-    Uses a deterministic parser to handle commands and flags.
+
+    When `command` is provided (pre-extracted by the caller, e.g. from a Telegram entity),
+    only `args` needs to be parsed — command extraction from `text` is skipped.
+    When `command` is absent, the resolver splits `text` into slash-command fragments
+    and resolves each one independently.
     """
+    if command:
+        tokens = _parse_tokens(args or "")
+        cmd = _resolve_fragment(command.lower(), tokens)
+        if not cmd:
+            return CommandResolveResponse(status="not_parsed", commands=[], raw_text=text)
+        return CommandResolveResponse(status="ok", commands=[cmd], raw_text=text)
+
     fragments = _split_command_fragments(text)
     commands = []
-
     for fragment in fragments:
         tokens = _parse_tokens(fragment)
         if not tokens:
             continue
-
-        cmd_alias = tokens[0].lower()
-        meta = COMMAND_REGISTRY.get(cmd_alias)
-        if not meta:
-            continue
-
-        remaining_tokens = tokens[1:]
-        if remaining_tokens and remaining_tokens[0].lower() == meta.action and cmd_alias == f"/{meta.type}":
-            remaining_tokens = remaining_tokens[1:]
-        args, flags = _extract_args_and_flags(remaining_tokens, meta.flags)
-
-        if meta.requires_args and not args:
-            continue
-
-        # Explicit flags override implicit ones set by the alias (e.g. /expense sets type=expense
-        # but --type income would still win).
-        arguments = {**meta.implicit_flags, **flags}
-
-        if meta.arg_keys:
-            for i, key in enumerate(meta.arg_keys):
-                if i < len(args):
-                    if i == len(meta.arg_keys) - 1:
-                        arguments[key] = " ".join(args[i:])
-                    else:
-                        arguments[key] = args[i]
-        elif args:
-            arguments["_raw_args"] = args
-
-        arguments = _enrich_arguments(arguments, cmd_type=meta.type)
-
-        commands.append(
-            CommandDetail(
-                type=meta.type,
-                command=meta.action,
-                confidence=0.99,
-                resolver="deterministic",
-                arguments=arguments
-            )
-        )
+        cmd = _resolve_fragment(tokens[0].lower(), tokens[1:])
+        if cmd:
+            commands.append(cmd)
 
     if not commands:
         return CommandResolveResponse(status="not_parsed", commands=[], raw_text=text)
 
-    return CommandResolveResponse(
-        status="ok",
-        commands=commands,
-        raw_text=text
-    )
+    return CommandResolveResponse(status="ok", commands=commands, raw_text=text)

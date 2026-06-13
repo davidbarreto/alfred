@@ -86,3 +86,55 @@ class TestResolveCommand:
     def test_missing_text_field(self, client):
         response = client.post("/commands/resolve", json={}, headers=AUTH)
         assert response.status_code == 422
+
+    def test_command_hint_resolves_single_command(self, client):
+        response = client.post(
+            "/commands/resolve",
+            json={"text": "/taskadd buy chocolate /noteadd chocolate is good", "command": "/taskadd", "args": "buy chocolate"},
+            headers=AUTH,
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["status"] == "ok"
+        assert len(data["commands"]) == 1
+        assert data["commands"][0]["type"] == "task"
+        assert data["commands"][0]["arguments"]["task"] == "buy chocolate"
+
+    def test_command_hint_note_add(self, client):
+        response = client.post(
+            "/commands/resolve",
+            json={"text": "/noteadd chocolate is good", "command": "/noteadd", "args": "chocolate is good"},
+            headers=AUTH,
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["status"] == "ok"
+        assert data["commands"][0]["type"] == "note"
+
+    def test_command_hint_with_flags(self, client):
+        response = client.post(
+            "/commands/resolve",
+            json={"text": "/taskadd buy milk -p high", "command": "/taskadd", "args": "buy milk -p high"},
+            headers=AUTH,
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["commands"][0]["arguments"]["priority"] == "HIGH"
+
+    def test_command_hint_null_args_list_command(self, client):
+        response = client.post(
+            "/commands/resolve",
+            json={"text": "/tasklist", "command": "/tasklist", "args": None},
+            headers=AUTH,
+        )
+        assert response.status_code == 200
+        assert response.json()["commands"][0]["command"] == "list"
+
+    def test_command_hint_unknown_command_not_parsed(self, client):
+        response = client.post(
+            "/commands/resolve",
+            json={"text": "/unknown", "command": "/unknown", "args": "something"},
+            headers=AUTH,
+        )
+        assert response.status_code == 200
+        assert response.json()["status"] == "not_parsed"

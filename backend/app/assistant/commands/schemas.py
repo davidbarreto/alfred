@@ -21,6 +21,19 @@ class CommandResolveRequest(BaseModel):
     command: str | None = None
     args: str | None = None
 
+
+class CommandExecuteRequest(BaseModel):
+    type: str
+    command: str
+    arguments: dict[str, Any]
+
+
+class CommandExecuteResponse(BaseModel):
+    type: str
+    command: str
+    status: str
+    result: Any = None
+
 class CommandResolveResponse(BaseModel):
     status: str
     commands: List[CommandDetail]

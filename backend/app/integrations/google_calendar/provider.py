@@ -6,7 +6,7 @@ from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.integrations.sync_log.repository import create_sync_log
+from app.integrations.provider_calls.repository import create_sync_log
 
 from .client import GoogleCalendarClient
 

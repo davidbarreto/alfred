@@ -63,7 +63,37 @@
       "enabled": true
     },
     {
-      "key": "sync_log_id",
+      "key": "provider_call_id",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "core_session_id",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "core_message_id",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "core_execution_id",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "core_memory_id",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "core_wm_id",
       "value": "",
       "type": "default",
       "enabled": true

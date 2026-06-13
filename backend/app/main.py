@@ -16,7 +16,7 @@ from typing import AsyncGenerator
 
 from app.api.routes.monitoring.monitors import router as monitors_router
 from app.api.routes.monitoring.alerts import router as alerts_router
-from app.api.routes.integrations.sync_logs import router as sync_logs_router
+from app.api.routes.integrations.provider_calls import router as provider_calls_router
 from app.api.routes.commands import router as commands_router
 from app.api.routes.organizer.tasks import router as tasks_router
 from app.api.routes.organizer.notes import router as notes_router
@@ -26,6 +26,11 @@ from app.api.routes.finance.categories import router as finance_categories_route
 from app.api.routes.finance.transactions import router as finance_transactions_router
 from app.api.routes.finance.budgets import router as finance_budgets_router
 from app.api.routes.finance.recurring_transactions import router as finance_recurring_router
+from app.api.routes.core.sessions import router as core_sessions_router
+from app.api.routes.core.messages import router as core_messages_router
+from app.api.routes.core.command_executions import router as core_command_executions_router
+from app.api.routes.core.memories import router as core_memories_router
+from app.api.routes.core.working_memory import router as core_working_memory_router
 from app.config import get_settings
 
 settings = get_settings()
@@ -54,7 +59,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 app = FastAPI(title="Alfred Backend", version="0.1.0", lifespan=lifespan)
 app.include_router(monitors_router)
 app.include_router(alerts_router)
-app.include_router(sync_logs_router)
+app.include_router(provider_calls_router)
 app.include_router(commands_router)
 app.include_router(tasks_router)
 app.include_router(notes_router)
@@ -64,6 +69,11 @@ app.include_router(finance_categories_router)
 app.include_router(finance_transactions_router)
 app.include_router(finance_budgets_router)
 app.include_router(finance_recurring_router)
+app.include_router(core_sessions_router)
+app.include_router(core_messages_router)
+app.include_router(core_command_executions_router)
+app.include_router(core_memories_router)
+app.include_router(core_working_memory_router)
 
 @app.get("/health")
 async def health():

@@ -1,7 +1,7 @@
 {
   "info": {
-    "name": "Alfred - Integration Sync Logs API",
-    "_postman_id": "alfred-integration-sync-logs-v1",
+    "name": "Alfred - Integration Provider Calls API",
+    "_postman_id": "alfred-integration-provider-calls-v1",
     "description": "Read-only. Run in order: Health Check → List → List (filtered by provider) → List (filtered by status) → List (text search) → List (date range) → Get by ID → Get 404",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
@@ -44,7 +44,7 @@
       }
     },
     {
-      "name": "02 - List Sync Logs",
+      "name": "02 - List Provider Calls",
       "event": [
         {
           "listen": "test",
@@ -61,7 +61,7 @@
               "    ['id', 'provider', 'operation', 'entity_type', 'status', 'created_at'].forEach(field => {",
               "        pm.expect(item).to.have.property(field);",
               "    });",
-              "    pm.environment.set('sync_log_id', item.id);",
+              "    pm.environment.set('provider_call_id', item.id);",
               "});"
             ],
             "type": "text/javascript"
@@ -72,9 +72,9 @@
         "method": "GET",
         "header": [],
         "url": {
-          "raw": "{{base_url}}/integration/sync-logs/?skip=0&limit=50",
+          "raw": "{{base_url}}/integration/provider-calls/?skip=0&limit=50",
           "host": ["{{base_url}}"],
-          "path": ["integration", "sync-logs", ""],
+          "path": ["integration", "provider-calls", ""],
           "query": [
             { "key": "skip", "value": "0" },
             { "key": "limit", "value": "50" }
@@ -83,7 +83,7 @@
       }
     },
     {
-      "name": "03 - List Sync Logs - No Auth",
+      "name": "03 - List Provider Calls - No Auth",
       "event": [
         {
           "listen": "test",
@@ -100,14 +100,14 @@
         "method": "GET",
         "header": [],
         "url": {
-          "raw": "{{base_url}}/integration/sync-logs/",
+          "raw": "{{base_url}}/integration/provider-calls/",
           "host": ["{{base_url}}"],
-          "path": ["integration", "sync-logs", ""]
+          "path": ["integration", "provider-calls", ""]
         }
       }
     },
     {
-      "name": "04 - List Sync Logs - Wrong Token",
+      "name": "04 - List Provider Calls - Wrong Token",
       "event": [
         {
           "listen": "test",
@@ -127,14 +127,14 @@
         "method": "GET",
         "header": [],
         "url": {
-          "raw": "{{base_url}}/integration/sync-logs/",
+          "raw": "{{base_url}}/integration/provider-calls/",
           "host": ["{{base_url}}"],
-          "path": ["integration", "sync-logs", ""]
+          "path": ["integration", "provider-calls", ""]
         }
       }
     },
     {
-      "name": "05 - List Sync Logs - Filter by Provider",
+      "name": "05 - List Provider Calls - Filter by Provider",
       "event": [
         {
           "listen": "test",
@@ -157,9 +157,9 @@
         "method": "GET",
         "header": [],
         "url": {
-          "raw": "{{base_url}}/integration/sync-logs/?provider=notion",
+          "raw": "{{base_url}}/integration/provider-calls/?provider=notion",
           "host": ["{{base_url}}"],
-          "path": ["integration", "sync-logs", ""],
+          "path": ["integration", "provider-calls", ""],
           "query": [
             { "key": "provider", "value": "notion" }
           ]
@@ -167,7 +167,7 @@
       }
     },
     {
-      "name": "06 - List Sync Logs - Filter by Status",
+      "name": "06 - List Provider Calls - Filter by Status",
       "event": [
         {
           "listen": "test",
@@ -190,9 +190,9 @@
         "method": "GET",
         "header": [],
         "url": {
-          "raw": "{{base_url}}/integration/sync-logs/?status=ok",
+          "raw": "{{base_url}}/integration/provider-calls/?status=ok",
           "host": ["{{base_url}}"],
-          "path": ["integration", "sync-logs", ""],
+          "path": ["integration", "provider-calls", ""],
           "query": [
             { "key": "status", "value": "ok" }
           ]
@@ -200,7 +200,7 @@
       }
     },
     {
-      "name": "07 - List Sync Logs - Filter by Operation",
+      "name": "07 - List Provider Calls - Filter by Operation",
       "event": [
         {
           "listen": "test",
@@ -223,9 +223,9 @@
         "method": "GET",
         "header": [],
         "url": {
-          "raw": "{{base_url}}/integration/sync-logs/?operation=create",
+          "raw": "{{base_url}}/integration/provider-calls/?operation=create",
           "host": ["{{base_url}}"],
-          "path": ["integration", "sync-logs", ""],
+          "path": ["integration", "provider-calls", ""],
           "query": [
             { "key": "operation", "value": "create" }
           ]
@@ -233,7 +233,7 @@
       }
     },
     {
-      "name": "08 - List Sync Logs - Text Search (q)",
+      "name": "08 - List Provider Calls - Text Search (q)",
       "event": [
         {
           "listen": "test",
@@ -252,9 +252,9 @@
         "method": "GET",
         "header": [],
         "url": {
-          "raw": "{{base_url}}/integration/sync-logs/?q=timeout",
+          "raw": "{{base_url}}/integration/provider-calls/?q=timeout",
           "host": ["{{base_url}}"],
-          "path": ["integration", "sync-logs", ""],
+          "path": ["integration", "provider-calls", ""],
           "query": [
             { "key": "q", "value": "timeout" }
           ]
@@ -262,7 +262,7 @@
       }
     },
     {
-      "name": "09 - List Sync Logs - Date Range (after/before)",
+      "name": "09 - List Provider Calls - Date Range (after/before)",
       "event": [
         {
           "listen": "test",
@@ -291,9 +291,9 @@
         "method": "GET",
         "header": [],
         "url": {
-          "raw": "{{base_url}}/integration/sync-logs/?after=2020-01-01T00:00:00Z&before=2099-12-31T23:59:59Z",
+          "raw": "{{base_url}}/integration/provider-calls/?after=2020-01-01T00:00:00Z&before=2099-12-31T23:59:59Z",
           "host": ["{{base_url}}"],
-          "path": ["integration", "sync-logs", ""],
+          "path": ["integration", "provider-calls", ""],
           "query": [
             { "key": "after", "value": "2020-01-01T00:00:00Z" },
             { "key": "before", "value": "2099-12-31T23:59:59Z" }
@@ -302,15 +302,15 @@
       }
     },
     {
-      "name": "10 - Get Sync Log by ID",
+      "name": "10 - Get Provider Call by ID",
       "event": [
         {
           "listen": "test",
           "script": {
             "exec": [
-              "const logId = pm.environment.get('sync_log_id');",
+              "const logId = pm.environment.get('provider_call_id');",
               "if (!logId) {",
-              "    pm.test('Skipped — no sync_log_id (empty DB)', () => true);",
+              "    pm.test('Skipped — no provider_call_id (empty DB)', () => true);",
               "    return;",
               "}",
               "pm.test('Status is 200', () => pm.response.to.have.status(200));",
@@ -330,14 +330,14 @@
         "method": "GET",
         "header": [],
         "url": {
-          "raw": "{{base_url}}/integration/sync-logs/{{sync_log_id}}",
+          "raw": "{{base_url}}/integration/provider-calls/{{provider_call_id}}",
           "host": ["{{base_url}}"],
-          "path": ["integration", "sync-logs", "{{sync_log_id}}"]
+          "path": ["integration", "provider-calls", "{{provider_call_id}}"]
         }
       }
     },
     {
-      "name": "11 - Get Sync Log - Not Found",
+      "name": "11 - Get Provider Call - Not Found",
       "event": [
         {
           "listen": "test",
@@ -347,7 +347,7 @@
               "pm.test('Error detail is present', () => {",
               "    pm.expect(pm.response.json()).to.have.property('detail');",
               "});",
-              "pm.environment.unset('sync_log_id');"
+              "pm.environment.unset('provider_call_id');"
             ],
             "type": "text/javascript"
           }
@@ -357,9 +357,9 @@
         "method": "GET",
         "header": [],
         "url": {
-          "raw": "{{base_url}}/integration/sync-logs/999999999",
+          "raw": "{{base_url}}/integration/provider-calls/999999999",
           "host": ["{{base_url}}"],
-          "path": ["integration", "sync-logs", "999999999"]
+          "path": ["integration", "provider-calls", "999999999"]
         }
       }
     }

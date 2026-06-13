@@ -2,8 +2,8 @@ import pytest
 from unittest.mock import AsyncMock, MagicMock, call, patch
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.integrations.sync_log.repository import create_sync_log, get_sync_log, get_sync_logs
-from app.integrations.sync_log.tables import IntegrationSyncLog
+from app.integrations.provider_calls.repository import create_sync_log, get_sync_log, get_sync_logs
+from app.integrations.provider_calls.tables import IntegrationSyncLog
 
 
 def _make_session():

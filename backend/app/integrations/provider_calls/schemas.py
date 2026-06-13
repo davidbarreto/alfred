@@ -18,4 +18,5 @@ class SyncLogRead(BaseModel):
     request_payload: dict[str, Any] | None
     response_payload: dict[str, Any] | None
     error: str | None
+    command_execution_id: int | None
     created_at: datetime

@@ -5,7 +5,7 @@ from datetime import datetime
 from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.integrations.sync_log.tables import IntegrationSyncLog
+from app.integrations.provider_calls.tables import IntegrationSyncLog
 
 
 async def create_sync_log(

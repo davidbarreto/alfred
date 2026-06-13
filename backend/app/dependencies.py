@@ -14,6 +14,11 @@ from app.features.finance.categories.service import CategoryService
 from app.features.finance.transactions.service import TransactionService
 from app.features.finance.budgets.service import BudgetService
 from app.features.finance.recurring_transactions.service import RecurringTransactionService
+from app.features.core.sessions.service import SessionService
+from app.features.core.messages.service import MessageService
+from app.features.core.command_executions.service import CommandExecutionService
+from app.features.core.memories.service import MemoryService
+from app.features.core.working_memory.service import WorkingMemoryService
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.session import get_session
 
@@ -67,6 +72,21 @@ def get_budget_service(session: AsyncSession = Depends(get_session)) -> BudgetSe
 def get_recurring_transaction_service(session: AsyncSession = Depends(get_session)) -> RecurringTransactionService:
     return RecurringTransactionService(session)
 
+def get_session_service(session: AsyncSession = Depends(get_session)) -> SessionService:
+    return SessionService(session)
+
+def get_message_service(session: AsyncSession = Depends(get_session)) -> MessageService:
+    return MessageService(session)
+
+def get_command_execution_service(session: AsyncSession = Depends(get_session)) -> CommandExecutionService:
+    return CommandExecutionService(session)
+
+def get_memory_service(session: AsyncSession = Depends(get_session)) -> MemoryService:
+    return MemoryService(session)
+
+def get_working_memory_service(session: AsyncSession = Depends(get_session)) -> WorkingMemoryService:
+    return WorkingMemoryService(session)
+
 # Dependencies shortcuts
 # DB
 DbSessionDep = Annotated[AsyncSession, Depends(get_session)]
@@ -80,3 +100,8 @@ CategoryServiceDep = Annotated[CategoryService, Depends(get_category_service)]
 TransactionServiceDep = Annotated[TransactionService, Depends(get_transaction_service)]
 BudgetServiceDep = Annotated[BudgetService, Depends(get_budget_service)]
 RecurringTransactionServiceDep = Annotated[RecurringTransactionService, Depends(get_recurring_transaction_service)]
+SessionServiceDep = Annotated[SessionService, Depends(get_session_service)]
+MessageServiceDep = Annotated[MessageService, Depends(get_message_service)]
+CommandExecutionServiceDep = Annotated[CommandExecutionService, Depends(get_command_execution_service)]
+MemoryServiceDep = Annotated[MemoryService, Depends(get_memory_service)]
+WorkingMemoryServiceDep = Annotated[WorkingMemoryService, Depends(get_working_memory_service)]

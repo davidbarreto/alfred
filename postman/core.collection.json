@@ -1,0 +1,1105 @@
+{
+  "info": {
+    "name": "Alfred - Core API",
+    "_postman_id": "alfred-core-v1",
+    "description": "Core module: sessions, messages, command executions, memories, working memory. Run in order — each section builds on the previous (session → message → command execution).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{api_token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "00 - Health Check",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Status is ok', () => {",
+              "    pm.expect(pm.response.json().status).to.eql('ok');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "auth": { "type": "noauth" },
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/health",
+          "host": ["{{base_url}}"],
+          "path": ["health"]
+        }
+      }
+    },
+
+    {
+      "name": "01 - Sessions - Create",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+              "pm.test('Response has expected shape', () => {",
+              "    const json = pm.response.json();",
+              "    ['id', 'created_at'].forEach(f => pm.expect(json).to.have.property(f));",
+              "    pm.expect(json.finished_at).to.be.null;",
+              "});",
+              "pm.environment.set('core_session_id', pm.response.json().id);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"summary\": \"Postman test session\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/core/sessions/",
+          "host": ["{{base_url}}"],
+          "path": ["core", "sessions", ""]
+        }
+      }
+    },
+    {
+      "name": "02 - Sessions - List",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Response is an array', () => {",
+              "    pm.expect(pm.response.json()).to.be.an('array');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/core/sessions/",
+          "host": ["{{base_url}}"],
+          "path": ["core", "sessions", ""]
+        }
+      }
+    },
+    {
+      "name": "03 - Sessions - List Active Only",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('All sessions are active (no finished_at)', () => {",
+              "    pm.response.json().forEach(s => {",
+              "        pm.expect(s.finished_at).to.be.null;",
+              "    });",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/core/sessions/?active_only=true",
+          "host": ["{{base_url}}"],
+          "path": ["core", "sessions", ""],
+          "query": [{ "key": "active_only", "value": "true" }]
+        }
+      }
+    },
+    {
+      "name": "04 - Sessions - Get by ID",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Returned session matches ID', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(String(json.id)).to.eql(String(pm.environment.get('core_session_id')));",
+              "    pm.expect(json.summary).to.eql('Postman test session');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/core/sessions/{{core_session_id}}",
+          "host": ["{{base_url}}"],
+          "path": ["core", "sessions", "{{core_session_id}}"]
+        }
+      }
+    },
+    {
+      "name": "05 - Sessions - Get 404",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Non-existent session returns 404', () => pm.response.to.have.status(404));",
+              "pm.test('Error detail present', () => pm.expect(pm.response.json()).to.have.property('detail'));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/core/sessions/999999999",
+          "host": ["{{base_url}}"],
+          "path": ["core", "sessions", "999999999"]
+        }
+      }
+    },
+    {
+      "name": "06 - Sessions - No Auth",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('No auth returns 403', () => pm.response.to.have.status(403));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "auth": { "type": "noauth" },
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/core/sessions/",
+          "host": ["{{base_url}}"],
+          "path": ["core", "sessions", ""]
+        }
+      }
+    },
+
+    {
+      "name": "10 - Messages - Create",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+              "pm.test('Response has expected shape', () => {",
+              "    const json = pm.response.json();",
+              "    ['id', 'session_id', 'source', 'input', 'created_at'].forEach(f => pm.expect(json).to.have.property(f));",
+              "    pm.expect(json.source).to.eql('api');",
+              "});",
+              "pm.environment.set('core_message_id', pm.response.json().id);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"session_id\": {{core_session_id}},\n  \"source\": \"api\",\n  \"input\": \"What are my tasks for today?\",\n  \"response\": null\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/core/messages/",
+          "host": ["{{base_url}}"],
+          "path": ["core", "messages", ""]
+        }
+      }
+    },
+    {
+      "name": "11 - Messages - List",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Response is an array', () => pm.expect(pm.response.json()).to.be.an('array'));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/core/messages/",
+          "host": ["{{base_url}}"],
+          "path": ["core", "messages", ""]
+        }
+      }
+    },
+    {
+      "name": "12 - Messages - List by Session",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('All messages belong to the session', () => {",
+              "    const sid = parseInt(pm.environment.get('core_session_id'));",
+              "    pm.response.json().forEach(m => pm.expect(m.session_id).to.eql(sid));",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/core/messages/?session_id={{core_session_id}}",
+          "host": ["{{base_url}}"],
+          "path": ["core", "messages", ""],
+          "query": [{ "key": "session_id", "value": "{{core_session_id}}" }]
+        }
+      }
+    },
+    {
+      "name": "13 - Messages - Get by ID",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Returned message matches ID', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(String(json.id)).to.eql(String(pm.environment.get('core_message_id')));",
+              "    pm.expect(json.input).to.eql('What are my tasks for today?');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/core/messages/{{core_message_id}}",
+          "host": ["{{base_url}}"],
+          "path": ["core", "messages", "{{core_message_id}}"]
+        }
+      }
+    },
+    {
+      "name": "14 - Messages - Get 404",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Non-existent message returns 404', () => pm.response.to.have.status(404));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/core/messages/999999999",
+          "host": ["{{base_url}}"],
+          "path": ["core", "messages", "999999999"]
+        }
+      }
+    },
+
+    {
+      "name": "20 - Command Executions - Create",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+              "pm.test('Response has expected shape', () => {",
+              "    const json = pm.response.json();",
+              "    ['id', 'message_id', 'status', 'created_at'].forEach(f => pm.expect(json).to.have.property(f));",
+              "    pm.expect(json.status).to.eql('pending');",
+              "    pm.expect(json.command_name).to.eql('task_list');",
+              "});",
+              "pm.environment.set('core_execution_id', pm.response.json().id);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"message_id\": {{core_message_id}},\n  \"intent\": \"list_tasks\",\n  \"command_name\": \"task_list\",\n  \"entities\": { \"date\": \"today\" },\n  \"status\": \"pending\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/core/command-executions/",
+          "host": ["{{base_url}}"],
+          "path": ["core", "command-executions", ""]
+        }
+      }
+    },
+    {
+      "name": "21 - Command Executions - List",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Response is an array', () => pm.expect(pm.response.json()).to.be.an('array'));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/core/command-executions/",
+          "host": ["{{base_url}}"],
+          "path": ["core", "command-executions", ""]
+        }
+      }
+    },
+    {
+      "name": "22 - Command Executions - Filter by Message",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('All executions belong to the message', () => {",
+              "    const mid = parseInt(pm.environment.get('core_message_id'));",
+              "    pm.response.json().forEach(e => pm.expect(e.message_id).to.eql(mid));",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/core/command-executions/?message_id={{core_message_id}}",
+          "host": ["{{base_url}}"],
+          "path": ["core", "command-executions", ""],
+          "query": [{ "key": "message_id", "value": "{{core_message_id}}" }]
+        }
+      }
+    },
+    {
+      "name": "23 - Command Executions - Filter by Status",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('All executions have pending status', () => {",
+              "    pm.response.json().forEach(e => pm.expect(e.status).to.eql('pending'));",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/core/command-executions/?status=pending",
+          "host": ["{{base_url}}"],
+          "path": ["core", "command-executions", ""],
+          "query": [{ "key": "status", "value": "pending" }]
+        }
+      }
+    },
+    {
+      "name": "24 - Command Executions - Get by ID",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Returned execution matches ID', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(String(json.id)).to.eql(String(pm.environment.get('core_execution_id')));",
+              "    pm.expect(json.command_name).to.eql('task_list');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/core/command-executions/{{core_execution_id}}",
+          "host": ["{{base_url}}"],
+          "path": ["core", "command-executions", "{{core_execution_id}}"]
+        }
+      }
+    },
+    {
+      "name": "25 - Command Executions - Update Status",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Status updated to success', () => {",
+              "    pm.expect(pm.response.json().status).to.eql('success');",
+              "    pm.expect(pm.response.json().duration_ms).to.eql(120);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "PATCH",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"status\": \"success\",\n  \"duration_ms\": 120\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/core/command-executions/{{core_execution_id}}",
+          "host": ["{{base_url}}"],
+          "path": ["core", "command-executions", "{{core_execution_id}}"]
+        }
+      }
+    },
+    {
+      "name": "26 - Command Executions - Get 404",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Non-existent execution returns 404', () => pm.response.to.have.status(404));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/core/command-executions/999999999",
+          "host": ["{{base_url}}"],
+          "path": ["core", "command-executions", "999999999"]
+        }
+      }
+    },
+
+    {
+      "name": "30 - Memories - Create (fact)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+              "pm.test('Response has expected shape', () => {",
+              "    const json = pm.response.json();",
+              "    ['id', 'category', 'content', 'importance', 'confidence', 'active', 'created_at', 'updated_at'].forEach(f => pm.expect(json).to.have.property(f));",
+              "    pm.expect(json.category).to.eql('fact');",
+              "    pm.expect(json.active).to.be.true;",
+              "});",
+              "pm.environment.set('core_memory_id', pm.response.json().id);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"category\": \"fact\",\n  \"content\": \"David works at Devexperts\",\n  \"importance\": 0.9,\n  \"confidence\": 1.0,\n  \"extra_metadata\": { \"subject\": \"david\", \"predicate\": \"works_at\", \"object\": \"Devexperts\" }\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/core/memories/",
+          "host": ["{{base_url}}"],
+          "path": ["core", "memories", ""]
+        }
+      }
+    },
+    {
+      "name": "31 - Memories - Create (preference)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+              "pm.test('Category is preference', () => pm.expect(pm.response.json().category).to.eql('preference'));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"category\": \"preference\",\n  \"content\": \"User likes concise bullet-point summaries\",\n  \"importance\": 0.7\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/core/memories/",
+          "host": ["{{base_url}}"],
+          "path": ["core", "memories", ""]
+        }
+      }
+    },
+    {
+      "name": "32 - Memories - Invalid Category",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Invalid category returns 422', () => pm.response.to.have.status(422));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"category\": \"not_a_valid_category\",\n  \"content\": \"test\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/core/memories/",
+          "host": ["{{base_url}}"],
+          "path": ["core", "memories", ""]
+        }
+      }
+    },
+    {
+      "name": "33 - Memories - List",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Response is an array with at least 2 items', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json).to.be.an('array');",
+              "    pm.expect(json.length).to.be.at.least(2);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/core/memories/",
+          "host": ["{{base_url}}"],
+          "path": ["core", "memories", ""]
+        }
+      }
+    },
+    {
+      "name": "34 - Memories - Filter by Category",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('All items are facts', () => {",
+              "    pm.response.json().forEach(m => pm.expect(m.category).to.eql('fact'));",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/core/memories/?category=fact",
+          "host": ["{{base_url}}"],
+          "path": ["core", "memories", ""],
+          "query": [{ "key": "category", "value": "fact" }]
+        }
+      }
+    },
+    {
+      "name": "35 - Memories - Filter Active",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('All items are active', () => {",
+              "    pm.response.json().forEach(m => pm.expect(m.active).to.be.true);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/core/memories/?active=true",
+          "host": ["{{base_url}}"],
+          "path": ["core", "memories", ""],
+          "query": [{ "key": "active", "value": "true" }]
+        }
+      }
+    },
+    {
+      "name": "36 - Memories - Get by ID",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Returned memory matches ID', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(String(json.id)).to.eql(String(pm.environment.get('core_memory_id')));",
+              "    pm.expect(json.content).to.eql('David works at Devexperts');",
+              "    pm.expect(json.extra_metadata).to.deep.eql({ subject: 'david', predicate: 'works_at', object: 'Devexperts' });",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/core/memories/{{core_memory_id}}",
+          "host": ["{{base_url}}"],
+          "path": ["core", "memories", "{{core_memory_id}}"]
+        }
+      }
+    },
+    {
+      "name": "37 - Memories - Update",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Importance updated', () => {",
+              "    pm.expect(pm.response.json().importance).to.eql(0.5);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "PATCH",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"importance\": 0.5\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/core/memories/{{core_memory_id}}",
+          "host": ["{{base_url}}"],
+          "path": ["core", "memories", "{{core_memory_id}}"]
+        }
+      }
+    },
+    {
+      "name": "38 - Memories - Deactivate",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Memory is now inactive', () => {",
+              "    pm.expect(pm.response.json().active).to.be.false;",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "PATCH",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"active\": false\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/core/memories/{{core_memory_id}}",
+          "host": ["{{base_url}}"],
+          "path": ["core", "memories", "{{core_memory_id}}"]
+        }
+      }
+    },
+    {
+      "name": "39 - Memories - Delete",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 204', () => pm.response.to.have.status(204));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/core/memories/{{core_memory_id}}",
+          "host": ["{{base_url}}"],
+          "path": ["core", "memories", "{{core_memory_id}}"]
+        }
+      }
+    },
+    {
+      "name": "40 - Memories - Get 404 After Delete",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Deleted memory returns 404', () => pm.response.to.have.status(404));",
+              "pm.environment.unset('core_memory_id');"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/core/memories/{{core_memory_id}}",
+          "host": ["{{base_url}}"],
+          "path": ["core", "memories", "{{core_memory_id}}"]
+        }
+      }
+    },
+
+    {
+      "name": "50 - Working Memory - Create",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+              "pm.test('Response has expected shape', () => {",
+              "    const json = pm.response.json();",
+              "    ['id', 'key', 'value', 'created_at'].forEach(f => pm.expect(json).to.have.property(f));",
+              "    pm.expect(json.key).to.eql('travel_context');",
+              "});",
+              "pm.environment.set('core_wm_id', pm.response.json().id);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"key\": \"travel_context\",\n  \"value\": \"Travelling to Belgium next week\",\n  \"importance\": 0.9,\n  \"session_id\": {{core_session_id}}\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/core/working-memory/",
+          "host": ["{{base_url}}"],
+          "path": ["core", "working-memory", ""]
+        }
+      }
+    },
+    {
+      "name": "51 - Working Memory - Create with Expiry",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+              "pm.test('expires_at is set', () => {",
+              "    pm.expect(pm.response.json().expires_at).to.not.be.null;",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"key\": \"mood\",\n  \"value\": \"user seems stressed today\",\n  \"importance\": 0.6,\n  \"expires_at\": \"2099-12-31T23:59:59Z\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/core/working-memory/",
+          "host": ["{{base_url}}"],
+          "path": ["core", "working-memory", ""]
+        }
+      }
+    },
+    {
+      "name": "52 - Working Memory - List Active",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Response is an array', () => pm.expect(pm.response.json()).to.be.an('array'));",
+              "pm.test('Items have key and value', () => {",
+              "    const json = pm.response.json();",
+              "    if (json.length === 0) return;",
+              "    json.forEach(w => {",
+              "        pm.expect(w).to.have.property('key');",
+              "        pm.expect(w).to.have.property('value');",
+              "    });",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/core/working-memory/",
+          "host": ["{{base_url}}"],
+          "path": ["core", "working-memory", ""]
+        }
+      }
+    },
+    {
+      "name": "53 - Working Memory - List by Session",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('All items belong to the session', () => {",
+              "    const sid = parseInt(pm.environment.get('core_session_id'));",
+              "    pm.response.json().forEach(w => pm.expect(w.session_id).to.eql(sid));",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/core/working-memory/?session_id={{core_session_id}}",
+          "host": ["{{base_url}}"],
+          "path": ["core", "working-memory", ""],
+          "query": [{ "key": "session_id", "value": "{{core_session_id}}" }]
+        }
+      }
+    },
+    {
+      "name": "54 - Working Memory - Get by ID",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Returned item matches ID', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(String(json.id)).to.eql(String(pm.environment.get('core_wm_id')));",
+              "    pm.expect(json.key).to.eql('travel_context');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/core/working-memory/{{core_wm_id}}",
+          "host": ["{{base_url}}"],
+          "path": ["core", "working-memory", "{{core_wm_id}}"]
+        }
+      }
+    },
+    {
+      "name": "55 - Working Memory - Delete",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 204', () => pm.response.to.have.status(204));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/core/working-memory/{{core_wm_id}}",
+          "host": ["{{base_url}}"],
+          "path": ["core", "working-memory", "{{core_wm_id}}"]
+        }
+      }
+    },
+    {
+      "name": "56 - Working Memory - Get 404 After Delete",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Deleted item returns 404', () => pm.response.to.have.status(404));",
+              "pm.environment.unset('core_wm_id');"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/core/working-memory/{{core_wm_id}}",
+          "host": ["{{base_url}}"],
+          "path": ["core", "working-memory", "{{core_wm_id}}"]
+        }
+      }
+    },
+
+    {
+      "name": "90 - Sessions - Finish",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Session is now finished', () => {",
+              "    pm.expect(pm.response.json().finished_at).to.not.be.null;",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/core/sessions/{{core_session_id}}/finish",
+          "host": ["{{base_url}}"],
+          "path": ["core", "sessions", "{{core_session_id}}", "finish"]
+        }
+      }
+    },
+    {
+      "name": "91 - Sessions - Delete",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 204', () => pm.response.to.have.status(204));",
+              "pm.environment.unset('core_session_id');",
+              "pm.environment.unset('core_message_id');",
+              "pm.environment.unset('core_execution_id');"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/core/sessions/{{core_session_id}}",
+          "host": ["{{base_url}}"],
+          "path": ["core", "sessions", "{{core_session_id}}"]
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,28 @@
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.features.core.sessions.repository import SessionRepository
+from app.features.core.sessions.schemas import SessionCreate, SessionFilters, SessionRead
+
+
+class SessionService:
+    def __init__(self, session: AsyncSession) -> None:
+        self._repo = SessionRepository(session)
+
+    async def get(self, session_id: int) -> SessionRead | None:
+        obj = await self._repo.get(session_id)
+        return SessionRead.model_validate(obj) if obj else None
+
+    async def list(self, filters: SessionFilters) -> list[SessionRead]:
+        items = await self._repo.list(filters)
+        return [SessionRead.model_validate(i) for i in items]
+
+    async def create(self, data: SessionCreate) -> SessionRead:
+        obj = await self._repo.create(data)
+        return SessionRead.model_validate(obj)
+
+    async def finish(self, session_id: int) -> SessionRead | None:
+        obj = await self._repo.finish(session_id)
+        return SessionRead.model_validate(obj) if obj else None
+
+    async def delete(self, session_id: int) -> bool:
+        return await self._repo.delete(session_id)

@@ -7,7 +7,7 @@ AUTH = {"Authorization": "Bearer test-api-token"}
 
 
 def _note_read(**kwargs):
-    defaults = dict(id=1, title="Test Note", description="Some content", tags=[], task_id=None)
+    defaults = dict(id=1, title="Test Note", description="Some content", tags=[])
     defaults.update(kwargs)
     return NoteRead(**defaults)
 
@@ -54,11 +54,6 @@ class TestGetNotes:
         filters = mock_service.get_notes.call_args[0][0]
         assert filters.tags == ["work", "ideas"]
 
-    def test_task_id_filter_passed_to_service(self, client, mock_service):
-        client.get("/organizer/notes/?task_id=5", headers=AUTH)
-        filters = mock_service.get_notes.call_args[0][0]
-        assert filters.task_id == 5
-
     def test_limit_filter_passed_to_service(self, client, mock_service):
         client.get("/organizer/notes/?limit=10", headers=AUTH)
         filters = mock_service.get_notes.call_args[0][0]
@@ -68,7 +63,6 @@ class TestGetNotes:
         client.get("/organizer/notes/", headers=AUTH)
         filters = mock_service.get_notes.call_args[0][0]
         assert filters.tags is None
-        assert filters.task_id is None
         assert filters.limit == 100
 
 

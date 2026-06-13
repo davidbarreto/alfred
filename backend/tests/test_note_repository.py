@@ -4,6 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.features.organizer.notes.repository import NoteRepository
 from app.features.organizer.notes.schemas import NoteCreate, NoteUpdate, NoteFilters
 import app.features.organizer.tasks.tables  # noqa: F401 — registers Task with SQLAlchemy mapper
+import app.features.organizer.calendar_events.tables  # noqa: F401 — registers CalendarEvent with SQLAlchemy mapper
 
 
 def _make_session() -> AsyncMock:
@@ -16,7 +17,6 @@ def _make_note_orm(id=1, **kwargs):
     note.title = kwargs.get("title", "Test Note")
     note.description = kwargs.get("description", "Some content")
     note.tags = kwargs.get("tags", [])
-    note.task_id = kwargs.get("task_id", None)
     note.provider_id = kwargs.get("provider_id", "provider-1")
     return note
 
@@ -80,14 +80,6 @@ class TestGetNotes:
         repo = NoteRepository(session)
         result = await repo.get_notes(NoteFilters())
         assert result == []
-
-    async def test_task_id_filter_applied(self):
-        session = _make_session()
-        session.execute.return_value = _scalar_all([])
-
-        repo = NoteRepository(session)
-        await repo.get_notes(NoteFilters(task_id=5))
-        session.execute.assert_called_once()
 
     async def test_tags_filter_applied(self):
         session = _make_session()

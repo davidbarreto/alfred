@@ -4,6 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.features.organizer.tasks.repository import TaskRepository
 from app.features.organizer.tasks.schemas import TaskCreate, TaskUpdate, TaskFilters
 import app.features.organizer.notes.tables  # noqa: F401 — registers Note with SQLAlchemy mapper
+import app.features.organizer.calendar_events.tables  # noqa: F401 — registers CalendarEvent with SQLAlchemy mapper
 
 
 def _make_session() -> AsyncMock:

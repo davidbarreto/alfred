@@ -16,18 +16,15 @@ class TestNoteCreate:
         note = NoteCreate(title="Test")
         assert note.description == ""
         assert note.tags == []
-        assert note.task_id is None
 
     def test_with_all_fields(self):
         note = NoteCreate(
             title="Full note",
             description="Some content here",
             tags=["work", "ideas"],
-            task_id=42,
         )
         assert note.description == "Some content here"
         assert note.tags == ["work", "ideas"]
-        assert note.task_id == 42
 
 
 class TestNoteUpdate:
@@ -36,7 +33,6 @@ class TestNoteUpdate:
         assert update.title is None
         assert update.description is None
         assert update.tags is None
-        assert update.task_id is None
 
     def test_partial_update(self):
         update = NoteUpdate(title="Updated title")
@@ -83,10 +79,8 @@ class TestNoteFilters:
         filters = NoteFilters()
         assert filters.limit == 100
         assert filters.tags is None
-        assert filters.task_id is None
 
     def test_custom_values(self):
-        filters = NoteFilters(limit=10, tags=["work"], task_id=5)
+        filters = NoteFilters(limit=10, tags=["work"])
         assert filters.limit == 10
         assert filters.tags == ["work"]
-        assert filters.task_id == 5

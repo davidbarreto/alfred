@@ -1,4 +1,4 @@
-from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, Text, func
+from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint, func
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import relationship, Mapped, mapped_column
 from typing import Optional
@@ -9,7 +9,10 @@ from app.db.base import Base
 
 class Monitor(Base):
     __tablename__ = "configs"
-    __table_args__ = {"schema": "monitoring"}
+    __table_args__ = (
+        UniqueConstraint("name", name="uq_monitoring_configs_name"),
+        {"schema": "monitoring"},
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
     name: Mapped[str] = mapped_column(String(255), nullable=False)

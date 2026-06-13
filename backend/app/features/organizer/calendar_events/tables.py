@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import List, Optional
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, Text
+from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
@@ -23,7 +23,10 @@ class CalendarEventInvitee(Base):
 
 class CalendarEvent(Base):
     __tablename__ = "calendar_events"
-    __table_args__ = {"schema": "organizer"}
+    __table_args__ = (
+        UniqueConstraint("provider_id", name="uq_calendar_events_provider_id"),
+        {"schema": "organizer"},
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
     provider_id: Mapped[str] = mapped_column(String(255), nullable=False)

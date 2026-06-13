@@ -5,7 +5,7 @@ from app.features.organizer.notes.schemas import NoteCreate, NoteUpdate, NoteFil
 
 
 def _make_note_read(**kwargs):
-    defaults = dict(id=1, title="Test Note", description="Some content", tags=[], task_id=None)
+    defaults = dict(id=1, title="Test Note", description="Some content", tags=[])
     defaults.update(kwargs)
     return NoteRead(**defaults)
 
@@ -16,7 +16,6 @@ def _make_note_orm(**kwargs):
     note.title = kwargs.get("title", "Test Note")
     note.description = kwargs.get("description", "Some content")
     note.tags = kwargs.get("tags", [])
-    note.task_id = kwargs.get("task_id", None)
     note.provider_id = kwargs.get("provider_id", "provider-1")
     return note
 
@@ -77,7 +76,7 @@ class TestGetNotes:
 
     async def test_passes_filters_to_repo(self, service):
         service._repo.get_notes.return_value = []
-        filters = NoteFilters(tags=["work"], task_id=5)
+        filters = NoteFilters(tags=["work"])
         await service.get_notes(filters)
         service._repo.get_notes.assert_called_once_with(filters)
 

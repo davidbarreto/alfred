@@ -22,8 +22,6 @@ class NoteRepository:
 
     async def get_notes(self, note_filter: NoteFilters) -> list[Note]:
         query = select(Note).options(selectinload(Note.tags))
-        if note_filter.task_id is not None:
-            query = query.where(Note.task_id == note_filter.task_id)
         if note_filter.tags:
             query = query.where(Note.tags.any(Tag.name.in_(note_filter.tags)))
         query = query.limit(note_filter.limit)

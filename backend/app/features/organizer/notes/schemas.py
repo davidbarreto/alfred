@@ -7,7 +7,6 @@ class NoteBase(BaseModel):
     title: str
     description: str = ""
     tags: list[str] = []
-    task_id: int | None = None
 
 
 class NoteCreate(NoteBase):
@@ -18,7 +17,6 @@ class NoteUpdate(BaseModel):
     title: str | None = None
     description: str | None = None
     tags: list[str] | None = None
-    task_id: int | None = None
 
 
 class NoteRead(NoteBase):
@@ -37,16 +35,12 @@ class NoteFilters:
         self,
         limit: Annotated[int, Query(ge=1)] = 100,
         tags: Annotated[Optional[List[str]], Query()] = None,
-        task_id: Annotated[Optional[int], Query()] = None,
     ) -> None:
         self.limit = limit
         self.tags = tags
-        self.task_id = task_id
 
     def __eq__(self, other: object) -> bool:
         return isinstance(other, NoteFilters) and vars(self) == vars(other)
 
     def __repr__(self) -> str:
-        return (
-            f"NoteFilters(limit={self.limit}, tags={self.tags!r}, task_id={self.task_id!r})"
-        )
+        return f"NoteFilters(limit={self.limit}, tags={self.tags!r})"

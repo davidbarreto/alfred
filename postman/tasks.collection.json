@@ -95,6 +95,7 @@
             "{{base_url}}"
           ],
           "path": [
+            "organizer",
             "tasks"
           ]
         }
@@ -127,6 +128,7 @@
             "{{base_url}}"
           ],
           "path": [
+            "organizer",
             "tasks"
           ],
           "query": [
@@ -166,6 +168,7 @@
             "{{base_url}}"
           ],
           "path": [
+            "organizer",
             "tasks",
             "{{task_id}}"
           ]
@@ -213,6 +216,7 @@
             "{{base_url}}"
           ],
           "path": [
+            "organizer",
             "tasks",
             "{{task_id}}"
           ]
@@ -258,6 +262,7 @@
             "{{base_url}}"
           ],
           "path": [
+            "organizer",
             "tasks",
             "{{task_id}}"
           ]
@@ -291,6 +296,7 @@
             "{{base_url}}"
           ],
           "path": [
+            "organizer",
             "tasks"
           ],
           "query": [
@@ -331,6 +337,7 @@
             "{{base_url}}"
           ],
           "path": [
+            "organizer",
             "tasks"
           ],
           "query": [
@@ -373,6 +380,7 @@
             "{{base_url}}"
           ],
           "path": [
+            "organizer",
             "tasks",
             "{{task_id}}"
           ]

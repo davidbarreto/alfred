@@ -2,7 +2,7 @@
   "info": {
     "name": "Alfred - Notes API",
     "_postman_id": "alfred-notes-v1",
-    "description": "Run in order: Health Check → Create → List → Get → Update → Filter by Tags → Filter by Task → Delete",
+    "description": "Run in order: Health Check \u2192 Create \u2192 List \u2192 Get \u2192 Update \u2192 Filter by Tags \u2192 Filter by Task \u2192 Delete",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -40,8 +40,12 @@
         "header": [],
         "url": {
           "raw": "{{base_url}}/health",
-          "host": ["{{base_url}}"],
-          "path": ["health"]
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "health"
+          ]
         }
       }
     },
@@ -85,8 +89,13 @@
         },
         "url": {
           "raw": "{{base_url}}/organizer/notes",
-          "host": ["{{base_url}}"],
-          "path": ["notes"]
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "notes"
+          ]
         }
       }
     },
@@ -113,8 +122,13 @@
         "header": [],
         "url": {
           "raw": "{{base_url}}/organizer/notes?limit=100",
-          "host": ["{{base_url}}"],
-          "path": ["notes"],
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "notes"
+          ],
           "query": [
             {
               "key": "limit",
@@ -147,8 +161,14 @@
         "header": [],
         "url": {
           "raw": "{{base_url}}/organizer/notes/{{note_id}}",
-          "host": ["{{base_url}}"],
-          "path": ["notes", "{{note_id}}"]
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "notes",
+            "{{note_id}}"
+          ]
         }
       }
     },
@@ -189,8 +209,14 @@
         },
         "url": {
           "raw": "{{base_url}}/organizer/notes/{{note_id}}",
-          "host": ["{{base_url}}"],
-          "path": ["notes", "{{note_id}}"]
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "notes",
+            "{{note_id}}"
+          ]
         }
       }
     },
@@ -215,8 +241,13 @@
         "header": [],
         "url": {
           "raw": "{{base_url}}/organizer/notes?tags=work&tags=planning&limit=100",
-          "host": ["{{base_url}}"],
-          "path": ["notes"],
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "notes"
+          ],
           "query": [
             {
               "key": "tags",
@@ -255,8 +286,14 @@
         "header": [],
         "url": {
           "raw": "{{base_url}}/organizer/notes/999999",
-          "host": ["{{base_url}}"],
-          "path": ["notes", "999999"]
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "notes",
+            "999999"
+          ]
         }
       }
     },
@@ -279,8 +316,14 @@
         "header": [],
         "url": {
           "raw": "{{base_url}}/organizer/notes/{{note_id}}",
-          "host": ["{{base_url}}"],
-          "path": ["notes", "{{note_id}}"]
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "notes",
+            "{{note_id}}"
+          ]
         }
       }
     }

@@ -2,7 +2,7 @@
   "info": {
     "name": "Alfred - Calendar Events API",
     "_postman_id": "alfred-calendar-events-v1",
-    "description": "Run in order: Health Check → Create → List → Get → Update → Filter by Date Range → Filter by Tags → Get 404 → Delete",
+    "description": "Run in order: Health Check \u2192 Create \u2192 List \u2192 Get \u2192 Update \u2192 Filter by Date Range \u2192 Filter by Tags \u2192 Get 404 \u2192 Delete",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -40,8 +40,12 @@
         "header": [],
         "url": {
           "raw": "{{base_url}}/health",
-          "host": ["{{base_url}}"],
-          "path": ["health"]
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "health"
+          ]
         }
       }
     },
@@ -86,8 +90,13 @@
         },
         "url": {
           "raw": "{{base_url}}/organizer/calendar-events",
-          "host": ["{{base_url}}"],
-          "path": ["calendar-events"]
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "calendar-events"
+          ]
         }
       }
     },
@@ -114,8 +123,13 @@
         "header": [],
         "url": {
           "raw": "{{base_url}}/organizer/calendar-events?limit=100",
-          "host": ["{{base_url}}"],
-          "path": ["calendar-events"],
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "calendar-events"
+          ],
           "query": [
             {
               "key": "limit",
@@ -148,8 +162,14 @@
         "header": [],
         "url": {
           "raw": "{{base_url}}/organizer/calendar-events/{{event_id}}",
-          "host": ["{{base_url}}"],
-          "path": ["calendar-events", "{{event_id}}"]
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "calendar-events",
+            "{{event_id}}"
+          ]
         }
       }
     },
@@ -190,8 +210,14 @@
         },
         "url": {
           "raw": "{{base_url}}/organizer/calendar-events/{{event_id}}",
-          "host": ["{{base_url}}"],
-          "path": ["calendar-events", "{{event_id}}"]
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "calendar-events",
+            "{{event_id}}"
+          ]
         }
       }
     },
@@ -216,8 +242,13 @@
         "header": [],
         "url": {
           "raw": "{{base_url}}/organizer/calendar-events?start_from=2026-07-01T00:00:00&start_to=2026-07-31T23:59:59&limit=100",
-          "host": ["{{base_url}}"],
-          "path": ["calendar-events"],
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "calendar-events"
+          ],
           "query": [
             {
               "key": "start_from",
@@ -256,8 +287,13 @@
         "header": [],
         "url": {
           "raw": "{{base_url}}/organizer/calendar-events?tags=work&tags=planning&limit=100",
-          "host": ["{{base_url}}"],
-          "path": ["calendar-events"],
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "calendar-events"
+          ],
           "query": [
             {
               "key": "tags",
@@ -296,8 +332,14 @@
         "header": [],
         "url": {
           "raw": "{{base_url}}/organizer/calendar-events/999999",
-          "host": ["{{base_url}}"],
-          "path": ["calendar-events", "999999"]
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "calendar-events",
+            "999999"
+          ]
         }
       }
     },
@@ -320,8 +362,14 @@
         "header": [],
         "url": {
           "raw": "{{base_url}}/organizer/calendar-events/{{event_id}}",
-          "host": ["{{base_url}}"],
-          "path": ["calendar-events", "{{event_id}}"]
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "calendar-events",
+            "{{event_id}}"
+          ]
         }
       }
     }

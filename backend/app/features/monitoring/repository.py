@@ -1,7 +1,8 @@
+from datetime import datetime, timezone
 from sqlalchemy import delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.features.monitoring.tables import Monitor, MonitorLog
+from app.features.monitoring.tables import Alert, Execution, Monitor
 from app.features.monitoring.schemas import MonitorCreate, MonitorUpdate
 
 
@@ -55,43 +56,105 @@ async def delete_monitor(session: AsyncSession, monitor_id: int) -> Monitor | No
     return monitor
 
 
-async def create_monitor_log(
-    session: AsyncSession, monitor: Monitor, result: dict
-) -> MonitorLog:
-    log = MonitorLog(
+async def create_execution(
+    session: AsyncSession, monitor: Monitor, status: str, result: str | None, error: str | None
+) -> Execution:
+    snapshot = {
+        "name": monitor.name,
+        "description": monitor.description,
+        "type": monitor.type,
+        "url": monitor.url,
+        "selector": monitor.selector,
+        "json_path": monitor.json_path,
+        "target": monitor.target,
+        "case_sensitive": monitor.case_sensitive,
+        "timeout": monitor.timeout,
+        "page_size": monitor.page_size,
+        "max_pages": monitor.max_pages,
+        "request_delay": monitor.request_delay,
+        "wait_selector": monitor.wait_selector,
+    }
+    execution = Execution(
         monitor_id=monitor.id,
-        monitor_name=monitor.name,
-        monitor_description=monitor.description,
-        monitor_type=monitor.type,
-        url=monitor.url,
-        selector=monitor.selector,
-        json_path=monitor.json_path,
-        target=monitor.target,
-        case_sensitive=monitor.case_sensitive,
-        timeout=monitor.timeout,
-        page_size=monitor.page_size,
-        max_pages=monitor.max_pages,
-        request_delay=monitor.request_delay,
-        wait_selector=monitor.wait_selector,
-        found=result.get("found", False),
-        elements_checked=result.get("elements_checked", 0),
-        error=result.get("error"),
+        status=status,
+        result=result,
+        error=error,
+        config_snapshot=snapshot,
     )
-    session.add(log)
+    session.add(execution)
     await session.commit()
-    await session.refresh(log)
-    return log
+    await session.refresh(execution)
+    return execution
 
 
-async def get_monitor_logs(
+async def get_executions(
     session: AsyncSession,
     monitor_id: int,
     limit: int = 20,
-) -> list[MonitorLog]:
+) -> list[Execution]:
     result = await session.execute(
-        select(MonitorLog)
-        .where(MonitorLog.monitor_id == monitor_id)
-        .order_by(MonitorLog.created_at.desc())
+        select(Execution)
+        .where(Execution.monitor_id == monitor_id)
+        .order_by(Execution.created_at.desc())
         .limit(limit)
     )
     return list(result.scalars().all())
+
+
+async def get_alerts(
+    session: AsyncSession,
+    status: str | None = None,
+    monitor_id: int | None = None,
+    skip: int = 0,
+    limit: int = 20,
+) -> list[Alert]:
+    query = select(Alert).join(Execution, Alert.execution_id == Execution.id)
+    if status is not None:
+        query = query.where(Alert.status == status)
+    if monitor_id is not None:
+        query = query.where(Execution.monitor_id == monitor_id)
+    query = query.order_by(Alert.created_at.desc()).offset(skip).limit(limit)
+    result = await session.execute(query)
+    return list(result.scalars().all())
+
+
+async def _get_latest_alert_for_monitor(
+    session: AsyncSession, monitor_id: int
+) -> Alert | None:
+    result = await session.execute(
+        select(Alert)
+        .join(Execution, Alert.execution_id == Execution.id)
+        .where(Execution.monitor_id == monitor_id)
+        .order_by(Alert.created_at.desc())
+        .limit(1)
+    )
+    return result.scalars().first()
+
+
+async def upsert_alert(session: AsyncSession, execution: Execution) -> Alert | None:
+    """Create, reopen, or skip an alert for the monitor that triggered this execution.
+
+    Rules:
+    - No existing alert → create pending
+    - Existing pending → do nothing (already queued)
+    - Existing done → reopen as pending, point to current execution
+    """
+    existing = await _get_latest_alert_for_monitor(session, execution.monitor_id)
+
+    if existing is None:
+        alert = Alert(execution_id=execution.id, status="pending")
+        session.add(alert)
+        await session.commit()
+        await session.refresh(alert)
+        return alert
+
+    if existing.status == "pending":
+        return existing
+
+    # status == "done" → reopen
+    existing.status = "pending"
+    existing.execution_id = execution.id
+    existing.resolved_at = None
+    await session.commit()
+    await session.refresh(existing)
+    return existing

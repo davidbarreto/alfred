@@ -1,6 +1,6 @@
 import pytest
 from unittest.mock import patch, MagicMock, AsyncMock
-from app.features.monitoring.service import MonitorService
+from app.features.monitoring.service import MonitorService, _derive_status
 from app.features.monitoring.tables import Monitor
 
 
@@ -29,6 +29,32 @@ def _make_monitor(**overrides):
     return monitor
 
 
+# ── _derive_status ────────────────────────────────────────────────────────────
+
+class TestDeriveStatus:
+    def test_found(self):
+        status, result, error = _derive_status({"found": True, "matched_content": "hello", "error": None})
+        assert status == "found"
+        assert result == "hello"
+        assert error is None
+
+    def test_not_found(self):
+        status, result, error = _derive_status({"found": False, "matched_content": None, "error": None})
+        assert status == "not_found"
+        assert result is None
+        assert error is None
+
+    def test_error_takes_precedence(self):
+        status, result, error = _derive_status({"found": False, "matched_content": None, "error": "Request failed"})
+        assert status == "error"
+        assert result is None
+        assert error == "Request failed"
+
+    def test_found_returns_matched_content(self):
+        status, result, error = _derive_status({"found": True, "matched_content": "the text", "error": None})
+        assert result == "the text"
+
+
 # ── check_html_static ─────────────────────────────────────────────────────────
 
 class TestCheckHtmlStatic:
@@ -42,9 +68,9 @@ class TestCheckHtmlStatic:
         )
 
         assert result["found"] is True
-        assert result["elements_checked"] == 1
+        assert result["matched_content"] is not None
+        assert "Target Text" in result["matched_content"]
         assert result["error"] is None
-        assert result["monitor_type"] == "html_static"
 
     @patch("app.features.monitoring.service.requests.get")
     def test_not_found(self, mock_get):
@@ -55,6 +81,7 @@ class TestCheckHtmlStatic:
             url="http://example.com", selector=".content", target="Missing"
         )
         assert result["found"] is False
+        assert result["matched_content"] is None
         assert result["error"] is None
 
     @patch("app.features.monitoring.service.requests.get")
@@ -94,34 +121,16 @@ class TestCheckHtmlStatic:
         assert "Request failed" in result["error"]
 
     @patch("app.features.monitoring.service.requests.get")
-    def test_multiple_elements_found_on_first(self, mock_get):
-        mock_get.return_value.text = (
-            '<div class="content">Target Text</div>'
-            '<div class="content">Other</div>'
-        )
+    def test_matched_content_truncated_at_500_chars(self, mock_get):
+        long_text = "Target Text " + "x" * 600
+        mock_get.return_value.text = f'<div class="content">{long_text}</div>'
         mock_get.return_value.status_code = 200
 
         result = MonitorService.check_html_static(
             url="http://example.com", selector=".content", target="Target Text"
         )
         assert result["found"] is True
-        assert result["elements_checked"] == 2
-
-    @patch("app.features.monitoring.service.requests.get")
-    def test_result_includes_metadata(self, mock_get):
-        mock_get.return_value.text = "<html></html>"
-        mock_get.return_value.status_code = 200
-
-        result = MonitorService.check_html_static(
-            url="http://example.com",
-            selector=".none",
-            target="Target",
-            timeout=30,
-        )
-        assert result["url"] == "http://example.com"
-        assert result["selector"] == ".none"
-        assert result["target"] == "Target"
-        assert result["timeout"] == 30
+        assert len(result["matched_content"]) <= 500
 
 
 # ── check_api ─────────────────────────────────────────────────────────────────
@@ -139,7 +148,7 @@ class TestCheckApi:
             url="http://api.example.com", json_path="content", target="Target Text"
         )
         assert result["found"] is True
-        assert result["elements_checked"] == 1
+        assert result["matched_content"] is not None
 
     @patch("app.integrations.http.pagination.requests.get")
     def test_not_found(self, mock_get):
@@ -153,6 +162,7 @@ class TestCheckApi:
             url="http://api.example.com", json_path="content", target="Missing"
         )
         assert result["found"] is False
+        assert result["matched_content"] is None
 
     @patch("app.integrations.http.pagination.requests.get")
     def test_empty_content_sets_error(self, mock_get):
@@ -194,21 +204,6 @@ class TestCheckApi:
         assert result["error"] is not None
 
     @patch("app.integrations.http.pagination.requests.get")
-    def test_nested_json_path(self, mock_get):
-        mock_get.return_value.json.return_value = {
-            "data": {"items": [{"value": "Target Text"}]},
-            "last": True,
-            "totalPages": 1,
-        }
-
-        result = MonitorService.check_api(
-            url="http://api.example.com",
-            json_path="data.items",
-            target="Target Text",
-        )
-        assert result["found"] is True
-
-    @patch("app.integrations.http.pagination.requests.get")
     def test_recursive_search_in_nested_dict(self, mock_get):
         mock_get.return_value.json.return_value = {
             "content": [{"nested": {"deep": "Target Text"}}],
@@ -222,23 +217,23 @@ class TestCheckApi:
         assert result["found"] is True
 
     @patch("app.integrations.http.pagination.requests.get")
-    def test_result_metadata(self, mock_get):
+    def test_matched_content_is_string(self, mock_get):
         mock_get.return_value.json.return_value = {
-            "content": [], "last": True, "totalPages": 1
+            "content": [{"name": "Target Text"}],
+            "last": True,
+            "totalPages": 1,
         }
 
         result = MonitorService.check_api(
-            url="http://api.example.com", json_path="content", target="T", timeout=5
+            url="http://api.example.com", json_path="content", target="Target Text"
         )
-        assert result["monitor_type"] == "api"
-        assert result["url"] == "http://api.example.com"
-        assert result["timeout"] == 5
+        assert isinstance(result["matched_content"], str)
 
 
 # ── dispatch_monitor ──────────────────────────────────────────────────────────
 
 class TestDispatchMonitor:
-    @patch.object(MonitorService, "check_html_static", return_value={"found": True})
+    @patch.object(MonitorService, "check_html_static", return_value={"found": True, "matched_content": "x", "error": None})
     def test_dispatches_html_static(self, mock_check):
         monitor = _make_monitor(type="html_static", selector=".content")
         result = MonitorService.dispatch_monitor(monitor)
@@ -250,22 +245,20 @@ class TestDispatchMonitor:
             case_sensitive=monitor.case_sensitive,
             timeout=monitor.timeout,
         )
-        assert result == {"found": True}
+        assert result["found"] is True
 
-    @patch.object(MonitorService, "check_html_javascript", return_value={"found": False})
+    @patch.object(MonitorService, "check_html_javascript", return_value={"found": False, "matched_content": None, "error": None})
     def test_dispatches_html_javascript(self, mock_check):
         monitor = _make_monitor(type="html_javascript")
-        result = MonitorService.dispatch_monitor(monitor)
-
+        MonitorService.dispatch_monitor(monitor)
         mock_check.assert_called_once()
 
-    @patch.object(MonitorService, "check_api", return_value={"found": True})
+    @patch.object(MonitorService, "check_api", return_value={"found": True, "matched_content": "x", "error": None})
     def test_dispatches_api(self, mock_check):
         monitor = _make_monitor(type="api", json_path="content", request_delay=100)
-        result = MonitorService.dispatch_monitor(monitor)
+        MonitorService.dispatch_monitor(monitor)
 
         mock_check.assert_called_once()
-        # request_delay is converted from ms to seconds
         _, kwargs = mock_check.call_args
         assert kwargs.get("request_delay") == pytest.approx(0.1)
 
@@ -276,7 +269,7 @@ class TestDispatchMonitor:
         assert result["found"] is False
         assert "Unknown monitor type" in result["error"]
 
-    @patch.object(MonitorService, "check_html_static", return_value={"found": False})
+    @patch.object(MonitorService, "check_html_static", return_value={"found": False, "matched_content": None, "error": None})
     def test_html_static_uses_empty_selector_when_none(self, mock_check):
         monitor = _make_monitor(type="html_static", selector=None)
         MonitorService.dispatch_monitor(monitor)
@@ -288,21 +281,54 @@ class TestDispatchMonitor:
 # ── run_monitor, run_due, run_monitor_by_id ───────────────────────────────────
 
 class TestRunMonitor:
-    @patch("app.features.monitoring.service.create_monitor_log")
+    @patch("app.features.monitoring.service.upsert_alert")
+    @patch("app.features.monitoring.service.create_execution")
     @patch.object(MonitorService, "dispatch_monitor")
-    async def test_run_monitor_dispatches_and_logs(self, mock_dispatch, mock_log):
+    async def test_found_creates_execution_and_alert(self, mock_dispatch, mock_create, mock_alert):
         session = AsyncMock()
         monitor = _make_monitor()
-        dispatch_result = {"found": True, "elements_checked": 1, "error": None}
-        mock_dispatch.return_value = dispatch_result
-        mock_log.return_value = MagicMock()
+        mock_dispatch.return_value = {"found": True, "matched_content": "match", "error": None}
+        execution = MagicMock()
+        mock_create.return_value = execution
 
         await MonitorService.run_monitor(session=session, monitor=monitor)
 
-        mock_dispatch.assert_called_once_with(monitor)
-        mock_log.assert_called_once_with(
-            session=session, monitor=monitor, result=dispatch_result
+        mock_create.assert_called_once_with(
+            session=session, monitor=monitor, status="found", result="match", error=None
         )
+        mock_alert.assert_called_once_with(session=session, execution=execution)
+
+    @patch("app.features.monitoring.service.upsert_alert")
+    @patch("app.features.monitoring.service.create_execution")
+    @patch.object(MonitorService, "dispatch_monitor")
+    async def test_not_found_skips_alert(self, mock_dispatch, mock_create, mock_alert):
+        session = AsyncMock()
+        monitor = _make_monitor()
+        mock_dispatch.return_value = {"found": False, "matched_content": None, "error": None}
+        mock_create.return_value = MagicMock()
+
+        await MonitorService.run_monitor(session=session, monitor=monitor)
+
+        mock_create.assert_called_once_with(
+            session=session, monitor=monitor, status="not_found", result=None, error=None
+        )
+        mock_alert.assert_not_called()
+
+    @patch("app.features.monitoring.service.upsert_alert")
+    @patch("app.features.monitoring.service.create_execution")
+    @patch.object(MonitorService, "dispatch_monitor")
+    async def test_error_skips_alert(self, mock_dispatch, mock_create, mock_alert):
+        session = AsyncMock()
+        monitor = _make_monitor()
+        mock_dispatch.return_value = {"found": False, "matched_content": None, "error": "Timeout"}
+        mock_create.return_value = MagicMock()
+
+        await MonitorService.run_monitor(session=session, monitor=monitor)
+
+        mock_create.assert_called_once_with(
+            session=session, monitor=monitor, status="error", result=None, error="Timeout"
+        )
+        mock_alert.assert_not_called()
 
 
 class TestRunDue:
@@ -341,7 +367,7 @@ class TestRunMonitorById:
         mock_get.return_value = monitor
         mock_run.return_value = MagicMock()
 
-        result = await MonitorService.run_monitor_by_id(session=session, monitor_id=1)
+        await MonitorService.run_monitor_by_id(session=session, monitor_id=1)
 
         mock_get.assert_called_once_with(session=session, monitor_id=1)
         mock_run.assert_called_once_with(session=session, monitor=monitor)

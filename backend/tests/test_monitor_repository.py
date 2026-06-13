@@ -8,10 +8,12 @@ from app.features.monitoring.repository import (
     create_monitor,
     update_monitor,
     delete_monitor,
-    create_monitor_log,
-    get_monitor_logs,
+    create_execution,
+    get_executions,
+    get_alerts,
+    upsert_alert,
 )
-from app.features.monitoring.tables import Monitor, MonitorLog
+from app.features.monitoring.tables import Alert, Execution, Monitor
 from app.features.monitoring.schemas import MonitorCreate, MonitorUpdate
 
 
@@ -37,6 +39,17 @@ def _make_monitor_orm(id=1, enabled=True):
     monitor.request_delay = 0
     monitor.wait_selector = None
     return monitor
+
+
+def _make_execution_orm(id=1, monitor_id=1, status="found"):
+    execution = MagicMock(spec=Execution)
+    execution.id = id
+    execution.monitor_id = monitor_id
+    execution.status = status
+    execution.result = "matched text"
+    execution.error = None
+    execution.config_snapshot = {}
+    return execution
 
 
 def _scalar_first(value):
@@ -164,7 +177,6 @@ class TestUpdateMonitor:
             session, monitor_id=1,
             monitor_update=MonitorUpdate(name="New Name", enabled=False)
         )
-        # setattr is called on the monitor mock for each field
         assert monitor.name == "New Name"
         assert monitor.enabled is False
 
@@ -174,8 +186,6 @@ class TestDeleteMonitor:
         session = _make_session()
         monitor = _make_monitor_orm()
 
-        # First call: get_monitor (first())
-        # Second call: DELETE execute
         session.execute.side_effect = [_scalar_first(monitor), MagicMock()]
 
         result = await delete_monitor(session, monitor_id=1)
@@ -191,58 +201,139 @@ class TestDeleteMonitor:
         assert result is None
 
 
-class TestCreateMonitorLog:
-    async def test_creates_log_entry(self):
+class TestCreateExecution:
+    async def test_creates_and_commits(self):
         session = _make_session()
         monitor = _make_monitor_orm()
-        check_result = {"found": True, "elements_checked": 5, "error": None}
 
-        log = await create_monitor_log(session, monitor=monitor, result=check_result)
+        execution = await create_execution(
+            session, monitor=monitor, status="found", result="matched text", error=None
+        )
 
         session.add.assert_called_once()
         session.commit.assert_called_once()
         session.refresh.assert_called_once()
-        assert log is not None
+        assert execution is not None
 
-    async def test_log_reflects_result_data(self):
+    async def test_snapshot_contains_monitor_fields(self):
+        session = _make_session()
+        monitor = _make_monitor_orm(id=7)
+
+        execution = await create_execution(
+            session, monitor=monitor, status="not_found", result=None, error=None
+        )
+
+        added_obj = session.add.call_args[0][0]
+        assert added_obj.monitor_id == 7
+        assert added_obj.status == "not_found"
+        assert added_obj.config_snapshot["url"] == monitor.url
+        assert added_obj.config_snapshot["target"] == monitor.target
+        assert added_obj.config_snapshot["type"] == monitor.type
+
+    async def test_error_status(self):
         session = _make_session()
         monitor = _make_monitor_orm()
-        check_result = {"found": False, "elements_checked": 0, "error": "Request failed"}
 
-        log = await create_monitor_log(session, monitor=monitor, result=check_result)
+        await create_execution(
+            session, monitor=monitor, status="error", result=None, error="Request failed"
+        )
 
-        assert log.found is False
-        assert log.elements_checked == 0
-        assert log.error == "Request failed"
+        added_obj = session.add.call_args[0][0]
+        assert added_obj.status == "error"
+        assert added_obj.error == "Request failed"
+        assert added_obj.result is None
 
-    async def test_log_reflects_monitor_data(self):
+
+class TestGetExecutions:
+    async def test_returns_executions(self):
         session = _make_session()
-        monitor = _make_monitor_orm(id=42)
-        check_result = {"found": True, "elements_checked": 1, "error": None}
-
-        log = await create_monitor_log(session, monitor=monitor, result=check_result)
-
-        assert log.monitor_id == 42
-        assert log.url == monitor.url
-        assert log.target == monitor.target
-
-
-class TestGetMonitorLogs:
-    async def test_returns_logs(self):
-        session = _make_session()
-        logs = [MagicMock(spec=MonitorLog) for _ in range(3)]
+        executions = [MagicMock(spec=Execution) for _ in range(3)]
         result_mock = MagicMock()
-        result_mock.scalars.return_value.all.return_value = logs
+        result_mock.scalars.return_value.all.return_value = executions
         session.execute.return_value = result_mock
 
-        result = await get_monitor_logs(session, monitor_id=1, limit=10)
+        result = await get_executions(session, monitor_id=1, limit=10)
         assert len(result) == 3
 
-    async def test_empty_logs(self):
+    async def test_empty(self):
         session = _make_session()
         result_mock = MagicMock()
         result_mock.scalars.return_value.all.return_value = []
         session.execute.return_value = result_mock
 
-        result = await get_monitor_logs(session, monitor_id=1)
+        result = await get_executions(session, monitor_id=1)
         assert result == []
+
+
+class TestGetAlerts:
+    async def test_returns_alerts(self):
+        session = _make_session()
+        alerts = [MagicMock(spec=Alert) for _ in range(3)]
+        result_mock = MagicMock()
+        result_mock.scalars.return_value.all.return_value = alerts
+        session.execute.return_value = result_mock
+
+        result = await get_alerts(session)
+        assert len(result) == 3
+
+    async def test_empty(self):
+        session = _make_session()
+        result_mock = MagicMock()
+        result_mock.scalars.return_value.all.return_value = []
+        session.execute.return_value = result_mock
+
+        result = await get_alerts(session)
+        assert result == []
+
+    async def test_passes_filters_without_error(self):
+        session = _make_session()
+        result_mock = MagicMock()
+        result_mock.scalars.return_value.all.return_value = []
+        session.execute.return_value = result_mock
+
+        result = await get_alerts(session, status="pending", monitor_id=1, skip=0, limit=5)
+        session.execute.assert_called_once()
+        assert result == []
+
+
+class TestUpsertAlert:
+    async def test_creates_alert_when_none_exists(self):
+        session = _make_session()
+        execution = _make_execution_orm(id=10, monitor_id=1)
+        # _get_latest_alert_for_monitor returns None → create new
+        session.execute.return_value = _scalar_first(None)
+
+        alert = await upsert_alert(session, execution=execution)
+
+        session.add.assert_called_once()
+        session.commit.assert_called_once()
+        added = session.add.call_args[0][0]
+        assert added.execution_id == 10
+        assert added.status == "pending"
+
+    async def test_does_nothing_when_pending_exists(self):
+        session = _make_session()
+        execution = _make_execution_orm(id=11, monitor_id=1)
+        existing = MagicMock(spec=Alert)
+        existing.status = "pending"
+        session.execute.return_value = _scalar_first(existing)
+
+        alert = await upsert_alert(session, execution=execution)
+
+        session.add.assert_not_called()
+        session.commit.assert_not_called()
+        assert alert is existing
+
+    async def test_reopens_done_alert(self):
+        session = _make_session()
+        execution = _make_execution_orm(id=12, monitor_id=1)
+        existing = MagicMock(spec=Alert)
+        existing.status = "done"
+        session.execute.return_value = _scalar_first(existing)
+
+        await upsert_alert(session, execution=execution)
+
+        assert existing.status == "pending"
+        assert existing.execution_id == 12
+        assert existing.resolved_at is None
+        session.commit.assert_called_once()

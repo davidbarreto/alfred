@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Literal
+from typing import Any, Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 
@@ -9,17 +9,15 @@ class MonitorBase(BaseModel):
     enabled: bool = True
     type: Literal["html_static", "html_javascript", "api"] = "html_static"
     url: str
-    selector: str | None = None  # For HTML monitoring
-    json_path: str | None = None  # For API monitoring (e.g. "content", "data.items")
+    selector: str | None = None
+    json_path: str | None = None
     target: str
     case_sensitive: bool = True
     timeout: int = Field(default=10, ge=1)
-    # API-specific fields
     page_size: int | None = Field(default=32, ge=1)
     max_pages: int | None = Field(default=None, ge=1)
-    request_delay: int | None = Field(default=0, ge=0)  # In milliseconds
-    # JavaScript rendering fields
-    wait_selector: str | None = None  # Selector to wait for before checking
+    request_delay: int | None = Field(default=0, ge=0)
+    wait_selector: str | None = None
 
 
 class MonitorCreate(MonitorBase):
@@ -49,25 +47,23 @@ class MonitorRead(MonitorBase):
     id: int
 
 
-class MonitorLogRead(BaseModel):
+class ExecutionRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
     monitor_id: int
-    created_at: datetime
-    monitor_name: str | None = None
-    monitor_description: str | None = None
-    monitor_type: str
-    url: str
-    found: bool
-    elements_checked: int
+    status: str
+    result: str | None = None
     error: str | None = None
-    selector: str | None = None
-    target: str | None = None
-    case_sensitive: bool | None = None
-    timeout: int | None = None
-    page_size: int | None = None
-    max_pages: int | None = None
-    request_delay: int | None = None
-    wait_selector: str | None = None
-    json_path: str | None = None
+    config_snapshot: dict[str, Any]
+    created_at: datetime
+
+
+class AlertRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    execution_id: int
+    status: str
+    created_at: datetime
+    resolved_at: datetime | None = None

@@ -6,8 +6,13 @@ import logging
 import requests
 
 from bs4 import BeautifulSoup
-from app.features.monitoring.repository import create_monitor_log, get_active_monitors, get_monitor
-from app.features.monitoring.tables import Monitor
+from app.features.monitoring.repository import (
+    create_execution,
+    get_active_monitors,
+    get_monitor,
+    upsert_alert,
+)
+from app.features.monitoring.tables import Execution, Monitor
 from app.integrations.http.pagination import paginate
 from selenium import webdriver
 from selenium.webdriver.common.by import By
@@ -19,6 +24,16 @@ from selenium.webdriver.chrome.service import Service
 
 logger = logging.getLogger(__name__)
 
+
+def _derive_status(raw: dict) -> tuple[str, str | None, str | None]:
+    """Return (status, result, error) from a raw check result dict."""
+    if raw.get("error"):
+        return "error", None, raw["error"]
+    if raw.get("found"):
+        return "found", raw.get("matched_content"), None
+    return "not_found", None, None
+
+
 class MonitorService:
     @staticmethod
     def check_html_static(
@@ -28,19 +43,10 @@ class MonitorService:
         case_sensitive: bool = True,
         timeout: int = 10,
     ) -> dict:
-        """
-        Check for target text in HTML elements matched by a CSS selector (static HTML, no JavaScript).
-        """
         result = {
-            "url": url,
-            "selector": selector,
-            "target": target,
-            "case_sensitive": case_sensitive,
             "found": False,
-            "elements_checked": 0,
+            "matched_content": None,
             "error": None,
-            "timeout": timeout,
-            "monitor_type": "html_static",
         }
 
         try:
@@ -52,22 +58,17 @@ class MonitorService:
             logger.debug("Request failed for %s: %s", url, exc)
             return result
 
-        # Log a short snippet of the fetched HTML so you can inspect it server-side
-        logger.debug("Fetched URL %s status=%s html_length=%d", url, getattr(response, "status_code", None), len(response.text or ""))
-        snippet = (response.text or "")[:2000]
-        logger.debug("HTML snippet (first 2000 chars) for %s:\n%s", url, snippet)
+        logger.debug(
+            "Fetched URL %s status=%s html_length=%d",
+            url,
+            getattr(response, "status_code", None),
+            len(response.text or ""),
+        )
 
         soup = BeautifulSoup(response.text, "html.parser")
         elements = soup.select(selector)
-        result["elements_checked"] = len(elements)
 
         logger.debug("Selector '%s' matched %d elements for %s", selector, len(elements), url)
-        if elements:
-            try:
-                first_text = elements[0].get_text(separator=" ", strip=True)
-                logger.debug("First matched element text: %s", first_text[:500])
-            except Exception:
-                logger.debug("Unable to get text of first matched element")
 
         if not elements:
             result["error"] = f"No elements matched selector '{selector}'"
@@ -79,6 +80,7 @@ class MonitorService:
             haystack = text if case_sensitive else text.lower()
             if needle in haystack:
                 result["found"] = True
+                result["matched_content"] = text[:500]
                 break
 
         return result
@@ -92,30 +94,19 @@ class MonitorService:
         timeout: int = 10,
         wait_selector: str | None = None,
     ) -> dict:
-        """
-        Check for target text in HTML elements matched by a CSS selector with JavaScript rendering.
-        Uses Selenium with headless Chrome to render JavaScript content.
-        """
         result = {
-            "url": url,
-            "selector": selector,
-            "target": target,
-            "case_sensitive": case_sensitive,
             "found": False,
-            "elements_checked": 0,
+            "matched_content": None,
             "error": None,
-            "timeout": timeout,
-            "monitor_type": "html_javascript",
         }
 
         try:
-            # Configure headless Chrome
             chrome_options = Options()
             chrome_options.add_argument("--headless")
             chrome_options.add_argument("--no-sandbox")
             chrome_options.add_argument("--disable-dev-shm-usage")
             chrome_options.add_argument("--disable-gpu")
-            chrome_options.add_argument(f"--user-agent=Mozilla/5.0 (alfred/1.0)")
+            chrome_options.add_argument("--user-agent=Mozilla/5.0 (alfred/1.0)")
 
             service = Service(ChromeDriverManager().install())
             driver = webdriver.Chrome(service=service, options=chrome_options)
@@ -123,28 +114,31 @@ class MonitorService:
                 driver.set_page_load_timeout(timeout)
                 driver.get(url)
 
-                # Wait for the target selector or wait_selector if provided
                 selector_to_wait = wait_selector or selector
                 if selector_to_wait:
                     try:
                         WebDriverWait(driver, timeout).until(
-                            EC.presence_of_all_elements_located((By.CSS_SELECTOR, selector_to_wait))
+                            EC.presence_of_all_elements_located(
+                                (By.CSS_SELECTOR, selector_to_wait)
+                            )
                         )
-                        logger.debug("Waited for selector '%s' on %s", selector_to_wait, url)
                     except Exception as wait_exc:
-                        logger.debug("Timeout waiting for selector '%s': %s", selector_to_wait, wait_exc)
+                        logger.debug(
+                            "Timeout waiting for selector '%s': %s", selector_to_wait, wait_exc
+                        )
 
-                # Find elements
                 elements = driver.find_elements(By.CSS_SELECTOR, selector)
-                result["elements_checked"] = len(elements)
-
-                logger.debug("Selector '%s' matched %d elements for %s (JS-rendered)", selector, len(elements), url)
+                logger.debug(
+                    "Selector '%s' matched %d elements for %s (JS-rendered)",
+                    selector,
+                    len(elements),
+                    url,
+                )
 
                 if not elements:
                     result["error"] = f"No elements matched selector '{selector}' after JS rendering"
                     return result
 
-                # Check if target text is found
                 needle = target if case_sensitive else target.lower()
                 for element in elements:
                     try:
@@ -152,6 +146,7 @@ class MonitorService:
                         haystack = text if case_sensitive else text.lower()
                         if needle in haystack:
                             result["found"] = True
+                            result["matched_content"] = text[:500]
                             break
                     except Exception as e:
                         logger.debug("Error reading element text: %s", e)
@@ -181,45 +176,31 @@ class MonitorService:
         max_pages: int | None = None,
         request_delay: float = 0.0,
     ) -> dict:
-        """
-        Check for target text in an API response by searching through paginated JSON data.
-        Uses dot-notation paths to navigate nested JSON structures.
-        
-        Args:
-            url: API endpoint
-            json_path: Dot-notation path to search in (e.g., "content", "data.items", "meta.results")
-            target: Text to find
-            case_sensitive: Whether search is case-sensitive
-            timeout: Request timeout in seconds
-            page_size: Items per page
-            max_pages: Maximum pages to fetch
-            request_delay: Delay between requests in seconds
-        """
         result = {
-            "url": url,
-            "json_path": json_path,
-            "target": target,
-            "case_sensitive": case_sensitive,
             "found": False,
-            "elements_checked": 0,
+            "matched_content": None,
             "error": None,
-            "timeout": timeout,
-            "monitor_type": "api",
         }
 
-        def search_recursive(obj: Any, needle: str, case_sensitive: bool) -> bool:
-            """Recursively search for needle in any value of a JSON structure."""
+        def _find_match(obj: Any, needle: str) -> str | None:
+            """Recursively search obj; return the matched string or None."""
             if isinstance(obj, dict):
-                return any(search_recursive(v, needle, case_sensitive) for v in obj.values())
+                for v in obj.values():
+                    match = _find_match(v, needle)
+                    if match is not None:
+                        return match
+                return None
             if isinstance(obj, list):
-                return any(search_recursive(item, needle, case_sensitive) for item in obj)
-            
+                for item in obj:
+                    match = _find_match(item, needle)
+                    if match is not None:
+                        return match
+                return None
             text = str(obj) if obj is not None else ""
             haystack = text if case_sensitive else text.lower()
-            return needle in haystack
+            return text[:500] if needle in haystack else None
 
         try:
-
             needle = target if case_sensitive else target.lower()
             total_items_checked = 0
 
@@ -230,26 +211,23 @@ class MonitorService:
                     delay=request_delay,
                     max_pages=max_pages,
                     content_key=json_path,
-                    last_key="last",  # Default, can be customized if needed
+                    last_key="last",
                     total_pages_key="totalPages",
                 ):
-                    # page_content is a list of items from the JSON path
                     if not isinstance(page_content, list):
                         page_content = [page_content]
 
                     for item in page_content:
                         total_items_checked += 1
-                        if search_recursive(item, needle, case_sensitive):
+                        match = _find_match(item, needle)
+                        if match is not None:
                             result["found"] = True
-                            break
-                            
-                        if result["found"]:
+                            result["matched_content"] = match
                             break
 
                     if result["found"]:
                         break
 
-                result["elements_checked"] = total_items_checked
                 if total_items_checked == 0:
                     result["error"] = f"No data found at JSON path '{json_path}'"
 
@@ -274,9 +252,6 @@ class MonitorService:
 
     @staticmethod
     def dispatch_monitor(monitor: Monitor) -> dict:
-        """
-        Dispatch to the appropriate monitor check method based on monitor type.
-        """
         if monitor.type == "html_static":
             return MonitorService.check_html_static(
                 url=monitor.url,
@@ -303,32 +278,40 @@ class MonitorService:
                 timeout=monitor.timeout,
                 page_size=monitor.page_size or 32,
                 max_pages=monitor.max_pages,
-                request_delay=(monitor.request_delay or 0) / 1000.0,  # Convert ms to seconds
+                request_delay=(monitor.request_delay or 0) / 1000.0,
             )
         else:
             return {
-                "error": f"Unknown monitor type: {monitor.type}",
                 "found": False,
-                "elements_checked": 0,
-                "monitor_type": monitor.type,
-                "url": monitor.url,
+                "matched_content": None,
+                "error": f"Unknown monitor type: {monitor.type}",
             }
 
     @staticmethod
-    async def run_monitor(session: AsyncSession, monitor: Monitor):
-        result = await run_in_threadpool(MonitorService.dispatch_monitor, monitor)
-        return await create_monitor_log(session=session, monitor=monitor, result=result)
+    async def run_monitor(session: AsyncSession, monitor: Monitor) -> Execution:
+        raw = await run_in_threadpool(MonitorService.dispatch_monitor, monitor)
+        status, result, error = _derive_status(raw)
+        execution = await create_execution(
+            session=session,
+            monitor=monitor,
+            status=status,
+            result=result,
+            error=error,
+        )
+        if status == "found":
+            await upsert_alert(session=session, execution=execution)
+        return execution
 
     @staticmethod
-    async def run_due(session: AsyncSession):
+    async def run_due(session: AsyncSession) -> list[Execution]:
         monitors = await get_active_monitors(session=session)
-        logs = []
+        executions = []
         for monitor in monitors:
-            logs.append(await MonitorService.run_monitor(session=session, monitor=monitor))
-        return logs
+            executions.append(await MonitorService.run_monitor(session=session, monitor=monitor))
+        return executions
 
     @staticmethod
-    async def run_monitor_by_id(session: AsyncSession, monitor_id: int):
+    async def run_monitor_by_id(session: AsyncSession, monitor_id: int) -> Execution | None:
         monitor = await get_monitor(session=session, monitor_id=monitor_id)
         if monitor is None:
             return None

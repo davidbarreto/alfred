@@ -244,6 +244,108 @@
           "path": ["commands", "resolve"]
         }
       }
+    },
+    {
+      "name": "07 - Execute Task Add",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Execute response has correct shape', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json.status).to.eql('ok');",
+              "    pm.expect(json.type).to.eql('task');",
+              "    pm.expect(json.command).to.eql('add');",
+              "    pm.expect(json).to.have.property('result');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"type\": \"task\",\n  \"command\": \"add\",\n  \"arguments\": {\n    \"task\": \"Buy groceries\",\n    \"priority\": \"HIGH\",\n    \"deadline\": \"2026-06-20\"\n  }\n}",
+          "options": { "raw": { "language": "json" } }
+        },
+        "url": {
+          "raw": "{{base_url}}/commands/execute",
+          "host": ["{{base_url}}"],
+          "path": ["commands", "execute"]
+        }
+      }
+    },
+    {
+      "name": "08 - Execute Note Add",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Note execute returns ok', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json.status).to.eql('ok');",
+              "    pm.expect(json.type).to.eql('note');",
+              "    pm.expect(json.command).to.eql('add');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"type\": \"note\",\n  \"command\": \"add\",\n  \"arguments\": {\n    \"content\": \"My girlfriend likes oat milk\",\n    \"tags\": \"personal\"\n  }\n}",
+          "options": { "raw": { "language": "json" } }
+        },
+        "url": {
+          "raw": "{{base_url}}/commands/execute",
+          "host": ["{{base_url}}"],
+          "path": ["commands", "execute"]
+        }
+      }
+    },
+    {
+      "name": "09 - Execute Task List",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Task list result is array', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json.status).to.eql('ok');",
+              "    pm.expect(json.result).to.be.an('array');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"type\": \"task\",\n  \"command\": \"list\",\n  \"arguments\": {\n    \"status\": \"TODO\",\n    \"priority\": \"HIGH\"\n  }\n}",
+          "options": { "raw": { "language": "json" } }
+        },
+        "url": {
+          "raw": "{{base_url}}/commands/execute",
+          "host": ["{{base_url}}"],
+          "path": ["commands", "execute"]
+        }
+      }
     }
   ]
 }

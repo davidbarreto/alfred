@@ -23,8 +23,20 @@ from app.config import get_settings
 from app.db.base import Base
 from app.features.organizer.tasks.tables import Task
 from app.features.organizer.notes.tables import Note
-from app.features.organizer.tags.tables import Tag, tasks_tags, notes_tags
-from app.features.monitoring.tables import Monitor, MonitorLog
+from app.features.organizer.tags.tables import Tag, tasks_tags, notes_tags, calendar_events_tags
+from app.features.organizer.calendar_events.tables import CalendarEvent, CalendarEventInvitee
+from app.features.monitoring.tables import Monitor, Execution, Alert
+from app.integrations.provider_calls.tables import IntegrationSyncLog
+from app.features.finance.accounts.tables import Account
+from app.features.finance.budgets.tables import Budget
+from app.features.finance.categories.tables import Category
+from app.features.finance.recurring_transactions.tables import RecurringTransaction
+from app.features.finance.transactions.tables import Transaction
+from app.features.core.sessions.tables import Session
+from app.features.core.messages.tables import Message
+from app.features.core.command_executions.tables import CommandExecution
+from app.features.core.memories.tables import Memory
+from app.features.core.working_memory.tables import WorkingMemory
 
 # Use Admin URL to ensure we have DROP/CREATE permissions
 DATABASE_ADMIN_URL = os.getenv("DATABASE_ADMIN_URL", get_settings().database_url)

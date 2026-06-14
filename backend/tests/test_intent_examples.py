@@ -1,4 +1,4 @@
-from backend.app.assistant.intents.intent_examples import INTENT_EXAMPLES, IntentExample
+from app.assistant.intents.intent_examples import INTENT_EXAMPLES, IntentExample
 
 _KNOWN_INTENTS = {
     "task.add",

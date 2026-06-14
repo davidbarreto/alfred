@@ -19,7 +19,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from app.db.session import async_session
 from app.features.core.embeddings.repository import EmbeddingRepository
-from backend.app.assistant.intents.intent_examples import INTENT_EXAMPLES
+from app.assistant.intents.intent_examples import INTENT_EXAMPLES
 from app.integrations.sentence_transformers.provider import (
     SentenceTransformerEmbeddingProvider,
 )

@@ -62,3 +62,12 @@ class TestIntentExamples:
         counts = Counter(ex.intent for ex in INTENT_EXAMPLES)
         sparse = {intent: n for intent, n in counts.items() if n < 3}
         assert not sparse, f"Intents with fewer than 3 examples: {sparse}"
+
+    def test_ids_are_unique(self):
+        ids = [ex.id for ex in INTENT_EXAMPLES]
+        duplicates = {i for i in ids if ids.count(i) > 1}
+        assert not duplicates, f"Duplicate IDs: {duplicates}"
+
+    def test_ids_are_sequential_from_one(self):
+        ids = sorted(ex.id for ex in INTENT_EXAMPLES)
+        assert ids == list(range(1, len(INTENT_EXAMPLES) + 1))

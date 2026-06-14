@@ -21,8 +21,8 @@ class IntentResult(BaseModel):
 # Lazy-loads the model on first call via @cached_property on the provider.
 _provider = SentenceTransformerEmbeddingProvider()
 
-# Map example text → intent label for reverse-lookup after similarity search.
-_INTENT_BY_TEXT: dict[str, str] = {ex.text: ex.intent for ex in INTENT_EXAMPLES}
+# Map example.id → intent label for reverse-lookup after similarity search.
+_INTENT_BY_ID: dict[int, str] = {ex.id: ex.intent for ex in INTENT_EXAMPLES}
 
 
 async def detect_intent(text: str, session: AsyncSession) -> IntentResult:
@@ -37,5 +37,5 @@ async def detect_intent(text: str, session: AsyncSession) -> IntentResult:
     if not results:
         return IntentResult(intent="unknown", confidence=0.0)
     embedding, similarity = results[0]
-    intent = _INTENT_BY_TEXT.get(embedding.content, "unknown")
+    intent = _INTENT_BY_ID.get(embedding.source_id, "unknown")
     return IntentResult(intent=intent, confidence=round(similarity, 4))

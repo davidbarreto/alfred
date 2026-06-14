@@ -5,11 +5,10 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from app.assistant.intents.intent_service import IntentResult, detect_intent
 
 
-def _make_embedding(content: str = "Add a task to buy groceries"):
+def _make_embedding(source_id: int = 2):
     obj = MagicMock()
     obj.source_type = "intent_example"
-    obj.source_id = 12345
-    obj.content = content
+    obj.source_id = source_id
     obj.model = "all-MiniLM-L6-v2"
     obj.dimensions = 384
     obj.embedded_at = datetime(2026, 6, 14, 12, 0, 0, tzinfo=timezone.utc)
@@ -33,8 +32,8 @@ def mock_repo():
 class TestDetectIntent:
     @pytest.mark.asyncio
     async def test_returns_matching_intent_and_confidence(self, mock_provider, mock_repo):
-        embedding = _make_embedding(content="Add a task to buy groceries")
-        mock_repo.search = AsyncMock(return_value=[(embedding, 0.92)])
+        # id=2 → "Add a task to buy groceries" → task.add
+        mock_repo.search = AsyncMock(return_value=[(_make_embedding(source_id=2), 0.92)])
 
         result = await detect_intent("add groceries task", AsyncMock())
 
@@ -44,8 +43,8 @@ class TestDetectIntent:
 
     @pytest.mark.asyncio
     async def test_confidence_is_rounded_to_4_decimal_places(self, mock_provider, mock_repo):
-        embedding = _make_embedding(content="Show me my to-do list")
-        mock_repo.search = AsyncMock(return_value=[(embedding, 0.876543210)])
+        # id=12 → "Show me my to-do list" → task.list
+        mock_repo.search = AsyncMock(return_value=[(_make_embedding(source_id=12), 0.876543210)])
 
         result = await detect_intent("what are my tasks", AsyncMock())
 
@@ -62,9 +61,8 @@ class TestDetectIntent:
         assert result.source == "intent_detection"
 
     @pytest.mark.asyncio
-    async def test_returns_unknown_for_unrecognised_content(self, mock_provider, mock_repo):
-        embedding = _make_embedding(content="This text is not in INTENT_EXAMPLES")
-        mock_repo.search = AsyncMock(return_value=[(embedding, 0.75)])
+    async def test_returns_unknown_for_unrecognised_source_id(self, mock_provider, mock_repo):
+        mock_repo.search = AsyncMock(return_value=[(_make_embedding(source_id=9999), 0.75)])
 
         result = await detect_intent("something obscure", AsyncMock())
 
@@ -85,9 +83,10 @@ class TestDetectIntent:
 
     @pytest.mark.asyncio
     async def test_result_is_intent_result_instance(self, mock_provider, mock_repo):
-        embedding = _make_embedding(content="Tell me a joke")
-        mock_repo.search = AsyncMock(return_value=[(embedding, 0.55)])
+        # id=142 → "Tell me a joke" → unknown
+        mock_repo.search = AsyncMock(return_value=[(_make_embedding(source_id=142), 0.55)])
 
         result = await detect_intent("joke please", AsyncMock())
 
         assert isinstance(result, IntentResult)
+        assert result.intent == "unknown"

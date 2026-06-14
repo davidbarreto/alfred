@@ -44,7 +44,7 @@ _INTENT_SCHEMAS: dict[str, type[BaseModel]] = {
 
 
 @functools.lru_cache(maxsize=None)
-def _get_agent(intent: str) -> Agent | None:
+def _get_agent(intent: str) -> Agent[None, BaseModel] | None:
     schema = _INTENT_SCHEMAS.get(intent)
     if schema is None:
         return None

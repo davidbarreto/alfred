@@ -33,6 +33,7 @@ from app.api.routes.core.command_executions import router as core_command_execut
 from app.api.routes.core.memories import router as core_memories_router
 from app.api.routes.core.working_memory import router as core_working_memory_router
 from app.api.routes.core.embeddings import router as core_embeddings_router
+from app.api.routes.core.chats import router as core_chats_router
 from app.config import get_settings
 
 settings = get_settings()
@@ -78,6 +79,7 @@ app.include_router(core_command_executions_router)
 app.include_router(core_memories_router)
 app.include_router(core_working_memory_router)
 app.include_router(core_embeddings_router)
+app.include_router(core_chats_router)
 
 @app.get("/health")
 async def health():

@@ -3,8 +3,13 @@ import shlex
 from datetime import datetime, date
 from typing import List, Dict, Any, Tuple
 
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.assistant.commands.registry import COMMAND_REGISTRY
 from app.assistant.commands.schemas import CommandDetail, CommandResolveResponse
+from app.assistant.intents.intent_service import detect_intent
+from app.assistant.intents.extraction_service import extract_args
+from app.config import get_settings
 from app.nlp.normalizer import normalize_date, normalize_priority, clean_text
 from app.nlp.extractor import extract_entities, extract_finance_entities
 
@@ -137,6 +142,14 @@ def _enrich_arguments(arguments: Dict[str, Any], cmd_type: str = "") -> Dict[str
     return arguments
 
 
+def _split_intent(intent: str) -> tuple[str, str]:
+    """Split 'task.add' → ('task', 'add'). Returns ('unknown', 'unknown') for bare labels."""
+    if "." not in intent:
+        return "unknown", "unknown"
+    cmd_type, cmd_action = intent.split(".", 1)
+    return cmd_type, cmd_action
+
+
 def _resolve_fragment(cmd_alias: str, remaining_tokens: List[str]) -> CommandDetail | None:
     """Resolve a single command alias + its remaining tokens into a CommandDetail."""
     meta = COMMAND_REGISTRY.get(cmd_alias)
@@ -171,20 +184,24 @@ def _resolve_fragment(cmd_alias: str, remaining_tokens: List[str]) -> CommandDet
     return CommandDetail(
         type=meta.type,
         command=meta.action,
-        confidence=0.99,
-        resolver="deterministic",
+        confidence=1.0,
+        source="deterministic",
         arguments=arguments,
     )
 
 
-def resolve(text: str, command: str | None = None, args: str | None = None) -> CommandResolveResponse:
+async def resolve(
+    text: str,
+    command: str | None = None,
+    args: str | None = None,
+    session: AsyncSession | None = None,
+) -> CommandResolveResponse:
     """
     Structured command resolver.
 
-    When `command` is provided (pre-extracted by the caller, e.g. from a Telegram entity),
-    only `args` needs to be parsed — command extraction from `text` is skipped.
-    When `command` is absent, the resolver splits `text` into slash-command fragments
-    and resolves each one independently.
+    1. Tries deterministic (slash-command) parsing first.
+    2. Falls back to intent detection + argument extraction when no slash commands
+       are found and a DB session is available.
     """
     if command:
         tokens = _parse_tokens(args or "")
@@ -203,7 +220,32 @@ def resolve(text: str, command: str | None = None, args: str | None = None) -> C
         if cmd:
             commands.append(cmd)
 
-    if not commands:
+    if commands:
+        return CommandResolveResponse(status="ok", commands=commands, raw_text=text)
+
+    if session is None or not text.strip():
         return CommandResolveResponse(status="not_parsed", commands=[], raw_text=text)
 
-    return CommandResolveResponse(status="ok", commands=commands, raw_text=text)
+    intent_result = await detect_intent(text, session)
+    threshold = get_settings().intent_threshold
+    cmd_type, cmd_action = _split_intent(intent_result.intent)
+
+    if intent_result.intent != "unknown" and intent_result.confidence >= threshold:
+        extracted = await extract_args(intent_result.intent, text)
+        detail = CommandDetail(
+            type=cmd_type,
+            command=cmd_action,
+            confidence=intent_result.confidence,
+            source="intent_detection",
+            arguments=extracted,
+        )
+    else:
+        detail = CommandDetail(
+            type=cmd_type,
+            command=cmd_action,
+            confidence=intent_result.confidence,
+            source="unknown",
+            arguments={},
+        )
+
+    return CommandResolveResponse(status="ok", commands=[detail], raw_text=text)

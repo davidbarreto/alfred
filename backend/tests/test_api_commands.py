@@ -1,5 +1,8 @@
 import pytest
 from fastapi.testclient import TestClient
+from unittest.mock import AsyncMock, patch
+
+from app.assistant.intents.intent_service import IntentResult
 
 AUTH = {"Authorization": "Bearer test-api-token"}
 
@@ -7,7 +10,11 @@ AUTH = {"Authorization": "Bearer test-api-token"}
 @pytest.fixture(scope="module")
 def client():
     from app.main import app
-    return TestClient(app)
+    from app.db.session import get_session
+    mock_session = AsyncMock()
+    app.dependency_overrides[get_session] = lambda: mock_session
+    yield TestClient(app)
+    app.dependency_overrides.clear()
 
 
 class TestResolveCommand:
@@ -24,16 +31,22 @@ class TestResolveCommand:
         assert data["commands"][0]["command"] == "add"
         assert data["commands"][0]["type"] == "task"
 
-    def test_not_parsed_returns_ok_with_not_parsed_status(self, client):
-        response = client.post(
-            "/commands/resolve",
-            json={"text": "This is not a command"},
-            headers=AUTH,
-        )
+    def test_natural_language_returns_unknown_source(self, client):
+        intent_result = IntentResult(intent="unknown", confidence=0.3)
+        with patch(
+            "app.assistant.commands.resolver.detect_intent",
+            new=AsyncMock(return_value=intent_result),
+        ):
+            response = client.post(
+                "/commands/resolve",
+                json={"text": "This is not a command"},
+                headers=AUTH,
+            )
         assert response.status_code == 200
         data = response.json()
-        assert data["status"] == "not_parsed"
-        assert data["commands"] == []
+        assert data["status"] == "ok"
+        assert data["commands"][0]["source"] == "unknown"
+        assert data["commands"][0]["arguments"] == {}
 
     def test_raw_text_preserved_in_response(self, client):
         text = "/taskadd Finish report"
@@ -138,3 +151,31 @@ class TestResolveCommand:
         )
         assert response.status_code == 200
         assert response.json()["status"] == "not_parsed"
+
+    def test_deterministic_source_field(self, client):
+        response = client.post(
+            "/commands/resolve",
+            json={"text": "/taskadd Buy milk"},
+            headers=AUTH,
+        )
+        assert response.json()["commands"][0]["source"] == "deterministic"
+
+    def test_intent_detection_above_threshold(self, client):
+        intent_result = IntentResult(intent="note.add", confidence=0.88)
+        extracted = {"title": None, "content": "banana bread recipe"}
+        with patch("app.assistant.commands.resolver.detect_intent", new=AsyncMock(return_value=intent_result)), \
+             patch("app.assistant.commands.resolver.extract_args", new=AsyncMock(return_value=extracted)):
+            response = client.post(
+                "/commands/resolve",
+                json={"text": "Jot down banana bread recipe"},
+                headers=AUTH,
+            )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["status"] == "ok"
+        cmd = data["commands"][0]
+        assert cmd["source"] == "intent_detection"
+        assert cmd["type"] == "note"
+        assert cmd["command"] == "add"
+        assert cmd["confidence"] == 0.88
+        assert cmd["arguments"] == extracted

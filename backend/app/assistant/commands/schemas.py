@@ -13,7 +13,7 @@ class CommandDetail(BaseModel):
     type: str
     command: str
     confidence: float
-    resolver: str
+    source: str
     arguments: dict[str, Any]
 
 class CommandResolveRequest(BaseModel):

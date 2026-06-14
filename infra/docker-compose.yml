@@ -46,6 +46,7 @@ services:
       - GOOGLE_API_KEY=${GOOGLE_API_KEY}
       - EMBEDDING_MODEL=${EMBEDDING_MODEL}
       - LLM_MODEL=${LLM_MODEL}
+      - INTENT_THRESHOLD=${INTENT_THRESHOLD}
 
   n8n:
     image: n8nio/n8n:latest

@@ -27,6 +27,10 @@ class Settings(BaseSettings):
     embedding_model: str = Field(default="all-MiniLM-L6-v2", validation_alias="EMBEDDING_MODEL")
     openai_api_key: str | None = Field(default=None, validation_alias="OPENAI_API_KEY")
 
+    # LLM (argument extraction via Gemini free tier)
+    google_api_key: str | None = Field(default=None, validation_alias="GOOGLE_API_KEY")
+    llm_model: str = Field(default="gemini-2.0-flash", validation_alias="LLM_MODEL")
+
 @lru_cache()
 def get_settings() -> Settings:
     return Settings() # type: ignore[call-arg]

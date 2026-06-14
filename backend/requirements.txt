@@ -18,3 +18,4 @@ greenlet>=3.0.0
 pgvector==0.3.6
 openai==1.82.0
 sentence-transformers==3.4.1
+pydantic-ai-slim[google]

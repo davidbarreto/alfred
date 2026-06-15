@@ -10,7 +10,7 @@ from app.features.organizer.tasks.service import TaskService
 async def handle_task(command: str, arguments: dict[str, Any], service: TaskService) -> Any:
     if command == "add":
         payload = TaskCreate(
-            title=arguments.get("task") or arguments.get("title", ""),
+            title=arguments.get("title", ""),
             priority=arguments.get("priority", "LOW"),
             deadline=parse_dt(arguments.get("deadline")),
             tags=parse_tags(arguments.get("tags")),

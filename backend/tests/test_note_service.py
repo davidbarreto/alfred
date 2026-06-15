@@ -5,7 +5,7 @@ from app.features.organizer.notes.schemas import NoteCreate, NoteUpdate, NoteFil
 
 
 def _make_note_read(**kwargs):
-    defaults = dict(id=1, title="Test Note", description="Some content", tags=[])
+    defaults = dict(id=1, title="Test Note", content="Some content", tags=[])
     defaults.update(kwargs)
     return NoteRead(**defaults)
 
@@ -14,7 +14,7 @@ def _make_note_orm(**kwargs):
     note = MagicMock()
     note.id = kwargs.get("id", 1)
     note.title = kwargs.get("title", "Test Note")
-    note.description = kwargs.get("description", "Some content")
+    note.content = kwargs.get("content", "Some content")
     note.tags = kwargs.get("tags", [])
     note.provider_id = kwargs.get("provider_id", "provider-1")
     return note

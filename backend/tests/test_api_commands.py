@@ -111,7 +111,7 @@ class TestResolveCommand:
         assert data["status"] == "ok"
         assert len(data["commands"]) == 1
         assert data["commands"][0]["type"] == "task"
-        assert data["commands"][0]["arguments"]["task"] == "buy chocolate"
+        assert data["commands"][0]["arguments"]["title"] == "buy chocolate"
 
     def test_command_hint_note_add(self, client):
         response = client.post(

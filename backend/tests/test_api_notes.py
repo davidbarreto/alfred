@@ -7,7 +7,7 @@ AUTH = {"Authorization": "Bearer test-api-token"}
 
 
 def _note_read(**kwargs):
-    defaults = dict(id=1, title="Test Note", description="Some content", tags=[])
+    defaults = dict(id=1, title="Test Note", content="Some content", tags=[])
     defaults.update(kwargs)
     return NoteRead(**defaults)
 
@@ -85,7 +85,7 @@ class TestGetNote:
 
 class TestCreateNote:
     def test_creates_and_returns_201(self, client):
-        payload = {"title": "Meeting notes", "description": "Discussed Q4 goals"}
+        payload = {"title": "Meeting notes", "content": "Discussed Q4 goals"}
         response = client.post("/organizer/notes/", json=payload, headers=AUTH)
         assert response.status_code == 201
         assert response.json()["title"] == "New Note"
@@ -95,7 +95,7 @@ class TestCreateNote:
         assert response.status_code == 403
 
     def test_missing_title_returns_422(self, client):
-        response = client.post("/organizer/notes/", json={"description": "No title"}, headers=AUTH)
+        response = client.post("/organizer/notes/", json={"content": "No title"}, headers=AUTH)
         assert response.status_code == 422
 
 

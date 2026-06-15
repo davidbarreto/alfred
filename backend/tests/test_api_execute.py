@@ -31,7 +31,7 @@ def _note_read_mock(id=1, title="Some note", tags=None):
     m.model_dump.return_value = {
         "id": id,
         "title": title,
-        "description": "",
+        "content": "",
         "tags": tags or [],
     }
     return m

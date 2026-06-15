@@ -6,11 +6,27 @@ from app.assistant.commands.handlers._utils import parse_tags
 from app.features.organizer.notes.schemas import NoteCreate, NoteFilters, NoteUpdate
 from app.features.organizer.notes.service import NoteService
 
+_TITLE_MAX = 60
+
+
+def _derive_note_fields(title_raw: str | None, content_raw: str | None) -> tuple[str, str]:
+    if not content_raw:
+        content_raw = title_raw or ""
+    if not title_raw:
+        title_raw = content_raw
+    title = title_raw if len(title_raw) <= _TITLE_MAX else title_raw[:_TITLE_MAX].rstrip() + "…"
+    return title, content_raw
+
 
 async def handle_note(command: str, arguments: dict[str, Any], service: NoteService) -> Any:
     if command == "add":
+        title, content = _derive_note_fields(
+            arguments.get("title"),
+            arguments.get("content"),
+        )
         payload = NoteCreate(
-            title=arguments.get("content", ""),
+            title=title,
+            content=content,
             tags=parse_tags(arguments.get("tags")),
         )
         result = await service.create_note(payload)
@@ -29,15 +45,17 @@ async def handle_note(command: str, arguments: dict[str, Any], service: NoteServ
         all_notes = await service.get_notes(NoteFilters(limit=200))
         filtered = [
             n for n in all_notes
-            if query in n.title.lower() or query in (n.description or "").lower()
+            if query in n.title.lower() or query in (n.content or "").lower()
         ]
         return [n.model_dump() for n in filtered]
 
     if command == "update":
         note_id = int(arguments["id"])
         update_fields: dict[str, Any] = {}
+        if "title" in arguments:
+            update_fields["title"] = arguments["title"]
         if "content" in arguments:
-            update_fields["title"] = arguments["content"]
+            update_fields["content"] = arguments["content"]
         if "tags" in arguments:
             update_fields["tags"] = parse_tags(arguments["tags"])
         result = await service.update_note(note_id, NoteUpdate(**update_fields))

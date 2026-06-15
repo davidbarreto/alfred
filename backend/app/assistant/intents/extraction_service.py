@@ -23,7 +23,7 @@ class GetTasksArgs(BaseModel):
 
 class CreateNoteArgs(BaseModel):
     title: str | None = Field(default=None)
-    content: str
+    content: str | None = Field(default=None)
 
 
 class GetCalendarArgs(BaseModel):

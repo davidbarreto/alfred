@@ -11,6 +11,7 @@ FLAG_DUE = {"-d": "deadline", "--due": "deadline"}
 FLAG_TITLE = {"-ti": "title", "--title": "title"}
 FLAG_LIMIT = {"-lim": "limit", "--limit": "limit"}
 FLAG_LINKS = {"-l": "links", "--links": "links"}
+FLAG_CONTENT = {"-c": "content", "--content": "content"}
 FLAG_START = {"-s": "start", "--start": "start"}
 FLAG_END = {"-e": "end", "--end": "end"}
 FLAG_DURATION = {"-du": "duration", "--duration": "duration"}
@@ -34,7 +35,7 @@ TASK_ADD_FLAGS = {**FLAG_DUE, **FLAG_PRIORITY, **FLAG_TAGS, **FLAG_RECURRENCE}
 TASK_LIST_FLAGS = {**FLAG_STATUS, **FLAG_DUE, **FLAG_PRIORITY, **FLAG_TAGS, **FLAG_LIMIT}
 TASK_UPDATE_FLAGS = {**FLAG_STATUS, **FLAG_DUE, **FLAG_PRIORITY, **FLAG_TITLE}
 
-NOTE_ADD_FLAGS = {**FLAG_TAGS, **FLAG_LINKS}
+NOTE_ADD_FLAGS = {**FLAG_TAGS, **FLAG_LINKS, **FLAG_TITLE, **FLAG_CONTENT}
 
 EVENT_ADD_FLAGS = {**FLAG_START, **FLAG_END, **FLAG_DURATION, **FLAG_RECURRENCE, **FLAG_NOTES}
 
@@ -58,7 +59,7 @@ COMMAND_DEFINITIONS = {
             "aliases": ["/taskadd", "/t", "/ta", "/task"],
             "flags": TASK_ADD_FLAGS,
             "requires_args": True,
-            "arg_keys": ["task"]
+            "arg_keys": ["title"]
         },
         "list": {
             "aliases": ["/tasklist", "/tl", "/list", "/tasks"],

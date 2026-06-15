@@ -177,7 +177,7 @@ def upgrade() -> None:
         sa.Column("id", sa.Integer, primary_key=True, index=True),
         sa.Column("provider_id", sa.String(255), nullable=False),
         sa.Column("title", sa.String(255), nullable=False),
-        sa.Column("description", sa.Text, nullable=False),
+        sa.Column("content", sa.Text, nullable=False),
         sa.UniqueConstraint("provider_id", name="uq_notes_provider_id"),
         schema="organizer",
     )

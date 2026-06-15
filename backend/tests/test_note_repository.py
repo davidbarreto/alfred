@@ -15,7 +15,7 @@ def _make_note_orm(id=1, **kwargs):
     note = MagicMock()
     note.id = id
     note.title = kwargs.get("title", "Test Note")
-    note.description = kwargs.get("description", "Some content")
+    note.content = kwargs.get("content", "Some content")
     note.tags = kwargs.get("tags", [])
     note.provider_id = kwargs.get("provider_id", "provider-1")
     return note

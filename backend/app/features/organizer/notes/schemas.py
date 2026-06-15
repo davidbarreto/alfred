@@ -5,7 +5,7 @@ from fastapi import Query
 
 class NoteBase(BaseModel):
     title: str
-    description: str = ""
+    content: str = ""
     tags: list[str] = []
 
 
@@ -15,7 +15,7 @@ class NoteCreate(NoteBase):
 
 class NoteUpdate(BaseModel):
     title: str | None = None
-    description: str | None = None
+    content: str | None = None
     tags: list[str] | None = None
 
 

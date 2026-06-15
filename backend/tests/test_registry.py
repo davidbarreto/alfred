@@ -48,7 +48,7 @@ class TestCommandRegistryTaskAdd:
         assert meta.type == "task"
         assert meta.action == "add"
         assert meta.requires_args is True
-        assert meta.arg_keys == ["task"]
+        assert meta.arg_keys == ["title"]
 
     def test_task_add_has_deadline_flag(self):
         meta = COMMAND_REGISTRY["/taskadd"]

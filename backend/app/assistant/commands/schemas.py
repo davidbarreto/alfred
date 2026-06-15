@@ -14,7 +14,7 @@ class CommandDetail(BaseModel):
     command: str
     confidence: float
     source: str
-    arguments: dict[str, Any]
+    args: dict[str, Any]
 
 class CommandResolveRequest(BaseModel):
     text: str
@@ -26,7 +26,7 @@ class CommandExecuteRequest(BaseModel):
     message_id: int
     type: str
     command: str
-    arguments: dict[str, Any]
+    args: dict[str, Any]
 
 
 class CommandExecuteResponse(BaseModel):

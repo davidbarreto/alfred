@@ -280,7 +280,7 @@ class TestResolveEdgeCases:
         response = await resolve("/ns kubernetes notes")
         assert response.status == "ok"
         assert response.commands[0].command == "search"
-        assert response.commands[0].arguments["query"] == "kubernetes notes"
+        assert response.commands[0].args["query"] == "kubernetes notes"
 
     async def test_note_list(self):
         response = await resolve("/nl")
@@ -297,7 +297,7 @@ class TestResolveEdgeCases:
         response = await resolve("/td 99")
         assert response.status == "ok"
         assert response.commands[0].command == "complete"
-        assert response.commands[0].arguments["id"] == "99"
+        assert response.commands[0].args["id"] == "99"
 
     async def test_source_field(self):
         response = await resolve("/taskadd Test task")
@@ -383,37 +383,37 @@ class TestResolveFinanceCommands:
         cmd = response.commands[0]
         assert cmd.type == "finance"
         assert cmd.command == "transaction_add"
-        assert cmd.arguments["type"] == "expense"
+        assert cmd.args["type"] == "expense"
 
     async def test_income_alias_sets_implicit_type(self):
         response = await resolve("/income salary")
         assert response.status == "ok"
-        assert response.commands[0].arguments["type"] == "income"
+        assert response.commands[0].args["type"] == "income"
 
     async def test_exp_short_alias(self):
         response = await resolve("/exp groceries")
         assert response.status == "ok"
         assert response.commands[0].command == "transaction_add"
-        assert response.commands[0].arguments["type"] == "expense"
+        assert response.commands[0].args["type"] == "expense"
 
     async def test_inc_short_alias(self):
         response = await resolve("/inc salary")
         assert response.status == "ok"
-        assert response.commands[0].arguments["type"] == "income"
+        assert response.commands[0].args["type"] == "income"
 
     async def test_explicit_type_flag_overrides_implicit(self):
         response = await resolve("/expense refund --type income")
         assert response.status == "ok"
-        assert response.commands[0].arguments["type"] == "income"
+        assert response.commands[0].args["type"] == "income"
 
     async def test_transaction_add_with_flags(self):
         response = await resolve("/tra coffee -a 4.50 -m Starbucks")
         assert response.status == "ok"
         cmd = response.commands[0]
         assert cmd.command == "transaction_add"
-        assert cmd.arguments["amount"] == "4.50"
-        assert cmd.arguments["merchant"] == "Starbucks"
-        assert cmd.arguments["description"] == "coffee"
+        assert cmd.args["amount"] == "4.50"
+        assert cmd.args["merchant"] == "Starbucks"
+        assert cmd.args["description"] == "coffee"
 
     async def test_transaction_list(self):
         response = await resolve("/transactions")
@@ -426,31 +426,31 @@ class TestResolveFinanceCommands:
         assert response.status == "ok"
         cmd = response.commands[0]
         assert cmd.command == "transaction_list"
-        assert cmd.arguments["type"] == "expense"
-        assert cmd.arguments["period"] == "this month"
+        assert cmd.args["type"] == "expense"
+        assert cmd.args["period"] == "this month"
 
     async def test_transaction_delete(self):
         response = await resolve("/trd 42")
         assert response.status == "ok"
         cmd = response.commands[0]
         assert cmd.command == "transaction_delete"
-        assert cmd.arguments["id"] == "42"
+        assert cmd.args["id"] == "42"
 
     async def test_transaction_update(self):
         response = await resolve("/tru 10 -a 99.00 -m Supermarket")
         assert response.status == "ok"
         cmd = response.commands[0]
         assert cmd.command == "transaction_update"
-        assert cmd.arguments["id"] == "10"
-        assert cmd.arguments["amount"] == "99.00"
-        assert cmd.arguments["merchant"] == "Supermarket"
+        assert cmd.args["id"] == "10"
+        assert cmd.args["amount"] == "99.00"
+        assert cmd.args["merchant"] == "Supermarket"
 
     async def test_spending_report_with_period(self):
         response = await resolve("/sr this month")
         assert response.status == "ok"
         cmd = response.commands[0]
         assert cmd.command == "spending_report"
-        assert cmd.arguments["period"] == "this month"
+        assert cmd.args["period"] == "this month"
 
     async def test_spending_report_alias_spent(self):
         response = await resolve("/spent last month")
@@ -461,23 +461,23 @@ class TestResolveFinanceCommands:
         response = await resolve("/sav last month")
         assert response.status == "ok"
         assert response.commands[0].command == "spending_average"
-        assert response.commands[0].arguments["period"] == "last month"
+        assert response.commands[0].args["period"] == "last month"
 
     async def test_spending_top_with_period(self):
         response = await resolve("/stp this week")
         assert response.status == "ok"
         cmd = response.commands[0]
         assert cmd.command == "spending_top"
-        assert cmd.arguments["period"] == "this week"
+        assert cmd.args["period"] == "this week"
 
     async def test_budget_add_with_flags(self):
         response = await resolve("/budget Monthly food -a 300 --period monthly")
         assert response.status == "ok"
         cmd = response.commands[0]
         assert cmd.command == "budget_add"
-        assert cmd.arguments["name"] == "Monthly food"
-        assert cmd.arguments["amount"] == "300"
-        assert cmd.arguments["period"] == "monthly"
+        assert cmd.args["name"] == "Monthly food"
+        assert cmd.args["amount"] == "300"
+        assert cmd.args["period"] == "monthly"
 
     async def test_budget_list(self):
         response = await resolve("/budgets")
@@ -494,14 +494,14 @@ class TestResolveFinanceCommands:
         assert response.status == "ok"
         cmd = response.commands[0]
         assert cmd.command == "budget_remaining"
-        assert cmd.arguments["period"] == "this month"
+        assert cmd.args["period"] == "this month"
 
     async def test_balance_forecast(self):
         response = await resolve("/forecast this month")
         assert response.status == "ok"
         cmd = response.commands[0]
         assert cmd.command == "balance_forecast"
-        assert cmd.arguments["period"] == "this month"
+        assert cmd.args["period"] == "this month"
 
     async def test_balance_forecast_short_alias(self):
         response = await resolve("/bfc")
@@ -512,34 +512,34 @@ class TestResolveFinanceCommands:
     async def test_date_flag_normalized(self):
         response = await resolve("/tra coffee --date yesterday")
         assert response.status == "ok"
-        assert response.commands[0].arguments["date"] == "2024-05-19"
+        assert response.commands[0].args["date"] == "2024-05-19"
 
     @freeze_time(FIXED_NOW)
     async def test_from_to_date_flags_normalized(self):
         response = await resolve("/trl --from yesterday --to today")
         assert response.status == "ok"
         cmd = response.commands[0]
-        assert cmd.arguments["from_date"] == "2024-05-19"
-        assert cmd.arguments["to_date"] == "2024-05-20"
+        assert cmd.args["from_date"] == "2024-05-19"
+        assert cmd.args["to_date"] == "2024-05-20"
 
     async def test_nlp_enriches_description_with_amount_and_merchant(self):
         response = await resolve("/expense spent €50 at Supermarket")
         cmd = response.commands[0]
-        assert cmd.arguments.get("amount") == 50.0
-        assert cmd.arguments.get("currency") == "EUR"
-        assert cmd.arguments.get("merchant") == "Supermarket"
-        assert cmd.arguments["type"] == "expense"
+        assert cmd.args.get("amount") == 50.0
+        assert cmd.args.get("currency") == "EUR"
+        assert cmd.args.get("merchant") == "Supermarket"
+        assert cmd.args["type"] == "expense"
 
     async def test_finance_enrichment_does_not_extract_priority(self):
         # _enrich_finance runs extract_finance_entities, not extract_entities,
         # so priority keywords in description never produce a priority field.
         response = await resolve("/expense critical coffee urgent")
         cmd = response.commands[0]
-        assert "priority" not in cmd.arguments
+        assert "priority" not in cmd.args
 
     async def test_finance_enrichment_does_not_extract_deadline(self):
         response = await resolve("/expense coffee")
-        assert "deadline" not in response.commands[0].arguments
+        assert "deadline" not in response.commands[0].args
 
 
 # ── resolve — intent detection fallback ──────────────────────────────────────
@@ -575,7 +575,7 @@ class TestResolveWithIntent:
         assert cmd.type == "task"
         assert cmd.command == "add"
         assert cmd.confidence == 0.85
-        assert cmd.arguments == extracted
+        assert cmd.args == extracted
 
     async def test_intent_below_threshold_returns_unknown_source(self):
         mock_session = AsyncMock()
@@ -590,7 +590,7 @@ class TestResolveWithIntent:
         assert cmd.type == "task"
         assert cmd.command == "add"
         assert cmd.confidence == 0.5
-        assert cmd.arguments == {}
+        assert cmd.args == {}
 
     async def test_unknown_intent_returns_unknown_type_and_command(self):
         mock_session = AsyncMock()

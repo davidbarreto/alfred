@@ -186,7 +186,7 @@ def _resolve_fragment(cmd_alias: str, remaining_tokens: List[str]) -> CommandDet
         command=meta.action,
         confidence=1.0,
         source="deterministic",
-        arguments=arguments,
+        args=arguments,
     )
 
 
@@ -237,7 +237,7 @@ async def resolve(
             command=cmd_action,
             confidence=intent_result.confidence,
             source="intent_detection",
-            arguments=extracted,
+            args=extracted,
         )
     else:
         detail = CommandDetail(
@@ -245,7 +245,7 @@ async def resolve(
             command=cmd_action,
             confidence=intent_result.confidence,
             source="unknown",
-            arguments={},
+            args={},
         )
 
     return CommandResolveResponse(status="ok", commands=[detail], raw_text=text)

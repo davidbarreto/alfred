@@ -19,7 +19,7 @@ async def test_resolve_add_basic():
     response = await resolve(text)
     assert response.status == "ok"
     assert response.commands[0].command == "add"
-    assert response.commands[0].arguments["title"] == "Buy milk"
+    assert response.commands[0].args["title"] == "Buy milk"
 
 
 async def test_resolve_add_with_quotes_and_flags():
@@ -27,10 +27,10 @@ async def test_resolve_add_with_quotes_and_flags():
     response = await resolve(text)
     assert response.status == "ok"
     cmd = response.commands[0]
-    assert cmd.arguments["title"] == "Study Kubernetes"
-    assert cmd.arguments["tags"] == "learning"
-    assert cmd.arguments["recurrence"] == "weekly"
-    assert cmd.arguments["priority"] == "HIGH"
+    assert cmd.args["title"] == "Study Kubernetes"
+    assert cmd.args["tags"] == "learning"
+    assert cmd.args["recurrence"] == "weekly"
+    assert cmd.args["priority"] == "HIGH"
 
 
 async def test_resolve_extracts_today_from_title(mock_now):
@@ -40,8 +40,8 @@ async def test_resolve_extracts_today_from_title(mock_now):
 
     assert response.status == "ok"
     cmd = response.commands[0]
-    assert cmd.arguments["title"] == "Buy milk"
-    assert cmd.arguments["deadline"] == "2024-05-20"
+    assert cmd.args["title"] == "Buy milk"
+    assert cmd.args["deadline"] == "2024-05-20"
 
 
 async def test_resolve_with_nlp_extraction():
@@ -49,7 +49,7 @@ async def test_resolve_with_nlp_extraction():
     text = "/taskadd Buy milk tomorrow urgently"
     response = await resolve(text)
     assert response.status == "ok"
-    args = response.commands[0].arguments
+    args = response.commands[0].args
     assert args["title"] == "Buy milk"
     assert args["priority"] == "HIGH"
     assert re.match(r"\d{4}-\d{2}-\d{2}", args["deadline"])
@@ -59,21 +59,21 @@ async def test_resolve_with_text_cleaning():
     # Test stripping of filler words like "remind me to"
     text = "/taskadd please remind me to call John"
     response = await resolve(text)
-    assert response.commands[0].arguments["title"] == "call John"
+    assert response.commands[0].args["title"] == "call John"
 
 
 async def test_resolve_deadline_mock(mock_now):
     # Testing the specific mock logic for "sunday"
     text = "/ta Buy milk -d sunday"
     response = await resolve(text)
-    assert response.commands[0].arguments["deadline"] == "2024-05-26"
+    assert response.commands[0].args["deadline"] == "2024-05-26"
 
 
 async def test_resolve_list_filters():
     text = "/tasklist -s open -p high --limit 5"
     response = await resolve(text)
     assert response.status == "ok"
-    args = response.commands[0].arguments
+    args = response.commands[0].args
     assert args["status"] == "open"
     assert args["priority"] == "HIGH"
     assert args["limit"] == "5"
@@ -83,7 +83,7 @@ async def test_resolve_update_with_id():
     text = "/tu 42 -p high -title 'New Title'"
     response = await resolve(text)
     assert response.status == "ok"
-    args = response.commands[0].arguments
+    args = response.commands[0].args
     assert args["id"] == "42"
     assert args["priority"] == "HIGH"
     assert args["title"] == "New Title"
@@ -96,7 +96,7 @@ async def test_resolve_done_and_delete_aliases():
         response = await resolve(cmd_str)
         assert response.status == "ok"
         assert response.commands[0].command == action
-        assert response.commands[0].arguments["id"] in ["123", "456"]
+        assert response.commands[0].args["id"] in ["123", "456"]
 
 
 async def test_resolve_corner_case_not_parsed():
@@ -125,8 +125,8 @@ async def test_resolve_corner_case_unknown_flags():
     text = "/taskadd Water plants -unknown flag"
     response = await resolve(text)
     assert response.status == "ok"
-    assert "-unknown" in response.commands[0].arguments["title"]
-    assert "flag" in response.commands[0].arguments["title"]
+    assert "-unknown" in response.commands[0].args["title"]
+    assert "flag" in response.commands[0].args["title"]
 
 
 async def test_resolve_corner_case_flag_no_value():
@@ -134,7 +134,7 @@ async def test_resolve_corner_case_flag_no_value():
     text = "/tasklist -p"
     response = await resolve(text)
     assert response.status == "ok"
-    assert response.commands[0].arguments["priority"] is True
+    assert response.commands[0].args["priority"] is True
 
 
 async def test_resolve_note_add():
@@ -143,7 +143,7 @@ async def test_resolve_note_add():
     response = await resolve(text)
     assert response.status == "ok"
     assert response.commands[0].type == "note"
-    assert response.commands[0].arguments["tags"] == "work"
+    assert response.commands[0].args["tags"] == "work"
 
 
 async def test_resolve_multiple_commands_in_one_message(mock_now):
@@ -158,13 +158,13 @@ async def test_resolve_multiple_commands_in_one_message(mock_now):
 
     assert event_command.type == "event"
     assert event_command.command == "add"
-    assert event_command.arguments["title"] == "Kenai's birthday"
-    assert event_command.arguments["deadline"] == "2024-05-25"
+    assert event_command.args["title"] == "Kenai's birthday"
+    assert event_command.args["deadline"] == "2024-05-25"
 
     assert task_command.type == "task"
     assert task_command.command == "add"
-    assert task_command.arguments["title"] == "buy present"
-    assert task_command.arguments["deadline"] == "2024-05-21"
+    assert task_command.args["title"] == "buy present"
+    assert task_command.args["deadline"] == "2024-05-21"
 
 
 async def test_resolve_extracts_tomorrow_from_title(mock_now):
@@ -174,8 +174,8 @@ async def test_resolve_extracts_tomorrow_from_title(mock_now):
 
     assert response.status == "ok"
     cmd = response.commands[0]
-    assert cmd.arguments["title"] == "Finish report"
-    assert cmd.arguments["deadline"] == "2024-05-21"
+    assert cmd.args["title"] == "Finish report"
+    assert cmd.args["deadline"] == "2024-05-21"
 
 
 async def test_resolve_normalises_date_flag(mock_now):
@@ -185,7 +185,7 @@ async def test_resolve_normalises_date_flag(mock_now):
 
     assert response.status == "ok"
     cmd = response.commands[0]
-    assert cmd.arguments["deadline"] == "2024-05-21"
+    assert cmd.args["deadline"] == "2024-05-21"
 
 
 async def test_resolve_extracts_weekday(mock_now):
@@ -196,8 +196,8 @@ async def test_resolve_extracts_weekday(mock_now):
 
     assert response.status == "ok"
     cmd = response.commands[0]
-    assert cmd.arguments["title"] == "Team lunch"
-    assert cmd.arguments["deadline"] == "2024-05-24"
+    assert cmd.args["title"] == "Team lunch"
+    assert cmd.args["deadline"] == "2024-05-24"
 
 
 async def test_resolve_extracts_priority_and_date(mock_now):
@@ -207,11 +207,11 @@ async def test_resolve_extracts_priority_and_date(mock_now):
 
     assert response.status == "ok"
     cmd = response.commands[0]
-    assert "critical" not in cmd.arguments["title"]
-    assert "asap" not in cmd.arguments["title"]
-    assert cmd.arguments["priority"] == "HIGH"
+    assert "critical" not in cmd.args["title"]
+    assert "asap" not in cmd.args["title"]
+    assert cmd.args["priority"] == "HIGH"
     # 'asap' doesn't map to a date in our logic, but we verify title cleanup
-    assert cmd.arguments["title"] == "Fix bug"
+    assert cmd.args["title"] == "Fix bug"
 
 
 async def test_resolve_extracts_date_with_other_flags(mock_now):
@@ -221,9 +221,9 @@ async def test_resolve_extracts_date_with_other_flags(mock_now):
 
     assert response.status == "ok"
     cmd = response.commands[0]
-    assert cmd.arguments["title"] == "Buy groceries"
-    assert cmd.arguments["deadline"] == "2024-05-20"
-    assert cmd.arguments["priority"] == "MEDIUM"
+    assert cmd.args["title"] == "Buy groceries"
+    assert cmd.args["deadline"] == "2024-05-20"
+    assert cmd.args["priority"] == "MEDIUM"
 
 
 def test_normalise_date_logic(mock_now):
@@ -244,16 +244,16 @@ async def test_resolve_hint_basic():
     cmd = response.commands[0]
     assert cmd.type == "task"
     assert cmd.command == "add"
-    assert cmd.arguments["title"] == "buy milk"
+    assert cmd.args["title"] == "buy milk"
 
 
 async def test_resolve_hint_with_flags(mock_now):
     response = await resolve("/taskadd", command="/taskadd", args="buy milk -d sunday -p high")
     assert response.status == "ok"
     cmd = response.commands[0]
-    assert cmd.arguments["title"] == "buy milk"
-    assert cmd.arguments["deadline"] == "2024-05-26"
-    assert cmd.arguments["priority"] == "HIGH"
+    assert cmd.args["title"] == "buy milk"
+    assert cmd.args["deadline"] == "2024-05-26"
+    assert cmd.args["priority"] == "HIGH"
 
 
 async def test_resolve_hint_no_args_required_command():
@@ -278,7 +278,7 @@ async def test_resolve_hint_note_add():
     cmd = response.commands[0]
     assert cmd.type == "note"
     assert cmd.command == "add"
-    assert cmd.arguments["content"] == "chocolate is good"
+    assert cmd.args["content"] == "chocolate is good"
 
 
 async def test_resolve_hint_skips_text_splitting():
@@ -300,7 +300,7 @@ async def test_resolve_hint_long_form_command():
     cmd = response.commands[0]
     assert cmd.type == "task"
     assert cmd.command == "add"
-    assert cmd.arguments["title"] == "buy milk"
+    assert cmd.args["title"] == "buy milk"
 
 
 async def test_resolve_hint_raw_text_preserved():

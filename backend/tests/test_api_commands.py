@@ -46,7 +46,7 @@ class TestResolveCommand:
         data = response.json()
         assert data["status"] == "ok"
         assert data["commands"][0]["source"] == "unknown"
-        assert data["commands"][0]["arguments"] == {}
+        assert data["commands"][0]["args"] == {}
 
     def test_raw_text_preserved_in_response(self, client):
         text = "/taskadd Finish report"
@@ -73,7 +73,7 @@ class TestResolveCommand:
         assert response.status_code == 200
         cmd = response.json()["commands"][0]
         assert cmd["command"] == "list"
-        assert cmd["arguments"]["priority"] == "HIGH"
+        assert cmd["args"]["priority"] == "HIGH"
 
     def test_empty_text(self, client):
         response = client.post(
@@ -111,7 +111,7 @@ class TestResolveCommand:
         assert data["status"] == "ok"
         assert len(data["commands"]) == 1
         assert data["commands"][0]["type"] == "task"
-        assert data["commands"][0]["arguments"]["title"] == "buy chocolate"
+        assert data["commands"][0]["args"]["title"] == "buy chocolate"
 
     def test_command_hint_note_add(self, client):
         response = client.post(
@@ -132,7 +132,7 @@ class TestResolveCommand:
         )
         assert response.status_code == 200
         data = response.json()
-        assert data["commands"][0]["arguments"]["priority"] == "HIGH"
+        assert data["commands"][0]["args"]["priority"] == "HIGH"
 
     def test_command_hint_null_args_list_command(self, client):
         response = client.post(
@@ -178,4 +178,4 @@ class TestResolveCommand:
         assert cmd["type"] == "note"
         assert cmd["command"] == "add"
         assert cmd["confidence"] == 0.88
-        assert cmd["arguments"] == extracted
+        assert cmd["args"] == extracted

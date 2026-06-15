@@ -66,7 +66,7 @@ class TestExecuteRoute:
     def test_requires_auth(self, client):
         response = client.post(
             "/commands/execute",
-            json={"message_id": 1, "type": "task", "command": "add", "arguments": {}},
+            json={"message_id": 1, "type": "task", "command": "add", "args": {}},
         )
         assert response.status_code == 403
 
@@ -80,7 +80,7 @@ class TestExecuteRoute:
         try:
             response = client.post(
                 "/commands/execute",
-                json={"message_id": 1, "type": "unknown", "command": "add", "arguments": {}},
+                json={"message_id": 1, "type": "unknown", "command": "add", "args": {}},
                 headers=AUTH,
             )
             assert response.status_code == 400
@@ -95,7 +95,7 @@ class TestExecuteRoute:
         try:
             response = client.post(
                 "/commands/execute",
-                json={"message_id": 1, "type": "task", "command": "add", "arguments": {"task": "Buy milk"}},
+                json={"message_id": 1, "type": "task", "command": "add", "args": {"task": "Buy milk"}},
                 headers=AUTH,
             )
             assert response.status_code == 200
@@ -116,7 +116,7 @@ class TestExecuteRoute:
         try:
             response = client.post(
                 "/commands/execute",
-                json={"message_id": 1, "type": "task", "command": "complete", "arguments": {"id": "42"}},
+                json={"message_id": 1, "type": "task", "command": "complete", "args": {"id": "42"}},
                 headers=AUTH,
             )
             assert response.status_code == 200
@@ -132,7 +132,7 @@ class TestExecuteRoute:
         try:
             response = client.post(
                 "/commands/execute",
-                json={"message_id": 1, "type": "task", "command": "delete", "arguments": {"id": "7"}},
+                json={"message_id": 1, "type": "task", "command": "delete", "args": {"id": "7"}},
                 headers=AUTH,
             )
             assert response.status_code == 200
@@ -150,7 +150,7 @@ class TestExecuteRoute:
         try:
             response = client.post(
                 "/commands/execute",
-                json={"message_id": 1, "type": "note", "command": "add", "arguments": {"content": "chocolate is good"}},
+                json={"message_id": 1, "type": "note", "command": "add", "args": {"content": "chocolate is good"}},
                 headers=AUTH,
             )
             assert response.status_code == 200
@@ -168,7 +168,7 @@ class TestExecuteRoute:
         try:
             response = client.post(
                 "/commands/execute",
-                json={"message_id": 1, "type": "task", "command": "complete", "arguments": {"id": "999"}},
+                json={"message_id": 1, "type": "task", "command": "complete", "args": {"id": "999"}},
                 headers=AUTH,
             )
             assert response.status_code == 404
@@ -183,7 +183,7 @@ class TestExecuteRoute:
         try:
             client.post(
                 "/commands/execute",
-                json={"message_id": 5, "type": "task", "command": "add", "arguments": {"task": "x"}},
+                json={"message_id": 5, "type": "task", "command": "add", "args": {"task": "x"}},
                 headers=AUTH,
             )
             created = mock_cmd_exec.create.call_args[0][0]
@@ -201,7 +201,7 @@ class TestExecuteRoute:
         try:
             client.post(
                 "/commands/execute",
-                json={"message_id": 5, "type": "task", "command": "add", "arguments": {"task": "x"}},
+                json={"message_id": 5, "type": "task", "command": "add", "args": {"task": "x"}},
                 headers=AUTH,
             )
             update_data = mock_cmd_exec.update.call_args[0][1]

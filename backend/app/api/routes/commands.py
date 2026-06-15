@@ -49,7 +49,7 @@ async def execute_command(
         CommandExecutionCreate(
             message_id=request.message_id,
             command_name=f"{request.type}.{request.command}",
-            entities=request.arguments,
+            entities=request.args,
         )
     )
 
@@ -57,7 +57,7 @@ async def execute_command(
         result: Any = await execute(
             cmd_type=request.type,
             command=request.command,
-            arguments=request.arguments,
+            arguments=request.args,
             task_service=task_service,
             note_service=note_service,
             event_service=event_service,

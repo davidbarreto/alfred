@@ -66,7 +66,7 @@
               "    pm.expect(cmd).to.have.property('type');",
               "    pm.expect(cmd).to.have.property('command');",
               "    pm.expect(cmd).to.have.property('confidence');",
-              "    pm.expect(cmd).to.have.property('arguments');",
+              "    pm.expect(cmd).to.have.property('args');",
               "});"
             ],
             "type": "text/javascript"
@@ -142,7 +142,7 @@
               "    const cmd = json.commands[0];",
               "    pm.expect(cmd.type).to.eql('task');",
               "    pm.expect(cmd.command).to.eql('add');",
-              "    pm.expect(cmd.arguments.task).to.eql('buy chocolate');",
+              "    pm.expect(cmd.args.task).to.eql('buy chocolate');",
               "});",
               "pm.test('Raw text is original full message', () => {",
               "    const json = pm.response.json();",
@@ -185,7 +185,7 @@
               "    const cmd = json.commands[0];",
               "    pm.expect(cmd.type).to.eql('note');",
               "    pm.expect(cmd.command).to.eql('add');",
-              "    pm.expect(cmd.arguments).to.have.property('tags');",
+              "    pm.expect(cmd.args).to.have.property('tags');",
               "});"
             ],
             "type": "text/javascript"
@@ -270,7 +270,7 @@
         "header": [{ "key": "Content-Type", "value": "application/json" }],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"type\": \"task\",\n  \"command\": \"add\",\n  \"arguments\": {\n    \"task\": \"Buy groceries\",\n    \"priority\": \"HIGH\",\n    \"deadline\": \"2026-06-20\"\n  }\n}",
+          "raw": "{\n  \"type\": \"task\",\n  \"command\": \"add\",\n  \"args\": {\n    \"task\": \"Buy groceries\",\n    \"priority\": \"HIGH\",\n    \"deadline\": \"2026-06-20\"\n  }\n}",
           "options": { "raw": { "language": "json" } }
         },
         "url": {
@@ -304,7 +304,7 @@
         "header": [{ "key": "Content-Type", "value": "application/json" }],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"type\": \"note\",\n  \"command\": \"add\",\n  \"arguments\": {\n    \"content\": \"My girlfriend likes oat milk\",\n    \"tags\": \"personal\"\n  }\n}",
+          "raw": "{\n  \"type\": \"note\",\n  \"command\": \"add\",\n  \"args\": {\n    \"content\": \"My girlfriend likes oat milk\",\n    \"tags\": \"personal\"\n  }\n}",
           "options": { "raw": { "language": "json" } }
         },
         "url": {
@@ -337,7 +337,7 @@
         "header": [{ "key": "Content-Type", "value": "application/json" }],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"type\": \"task\",\n  \"command\": \"list\",\n  \"arguments\": {\n    \"status\": \"TODO\",\n    \"priority\": \"HIGH\"\n  }\n}",
+          "raw": "{\n  \"type\": \"task\",\n  \"command\": \"list\",\n  \"args\": {\n    \"status\": \"TODO\",\n    \"priority\": \"HIGH\"\n  }\n}",
           "options": { "raw": { "language": "json" } }
         },
         "url": {

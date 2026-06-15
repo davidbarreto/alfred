@@ -10,7 +10,10 @@ from app.features.core.sessions.service import SessionService
 def _make_session_orm(**kwargs):
     s = MagicMock()
     s.id = kwargs.get("id", 1)
+    s.source = kwargs.get("source", None)
+    s.external_id = kwargs.get("external_id", None)
     s.summary = kwargs.get("summary", None)
+    s.last_interaction_at = kwargs.get("last_interaction_at", datetime(2026, 1, 1))
     s.created_at = kwargs.get("created_at", datetime(2026, 1, 1))
     s.finished_at = kwargs.get("finished_at", None)
     return s
@@ -55,6 +58,28 @@ class TestCreate:
         result = await service.create(SessionCreate(summary="Morning briefing"))
         assert isinstance(result, SessionRead)
         assert result.summary == "Morning briefing"
+
+
+class TestGetOrCreateActive:
+    async def test_returns_existing_active_session(self, service):
+        existing = _make_session_orm(id=5, source="telegram", external_id="42")
+        service._repo.get_active_by_source.return_value = existing
+        service._repo.touch = AsyncMock()
+        result = await service.get_or_create_active("telegram", "42")
+        assert result.id == 5
+        service._repo.touch.assert_called_once_with(5)
+        service._repo.create.assert_not_called()
+
+    async def test_creates_new_session_when_none_active(self, service):
+        service._repo.get_active_by_source.return_value = None
+        new_session = _make_session_orm(id=7, source="telegram", external_id="42")
+        service._repo.create.return_value = new_session
+        result = await service.get_or_create_active("telegram", "42")
+        assert result.id == 7
+        service._repo.create.assert_called_once()
+        created_data = service._repo.create.call_args[0][0]
+        assert created_data.source == "telegram"
+        assert created_data.external_id == "42"
 
 
 class TestFinish:

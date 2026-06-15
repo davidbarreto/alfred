@@ -2,7 +2,9 @@ import pytest
 from datetime import datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from app.features.core.chats.schemas import ChatRequest, ExecutedCommandResult
+from fastapi import HTTPException
+
+from app.features.core.chats.schemas import ChatRequest
 from app.features.core.chats.service import (
     ChatService,
     _build_system_prompt,
@@ -25,13 +27,12 @@ def _make_embedding_result(source_type: str, content: str, similarity: float = 0
     )
 
 
-def _make_message(input_text: str, response: str | None = "ok") -> MessageRead:
+def _make_message(content: str, role: str = "user") -> MessageRead:
     return MessageRead(
         id=1,
         session_id=1,
-        source="telegram",
-        input=input_text,
-        response=response,
+        role=role,
+        content=content,
         created_at=datetime(2024, 1, 1),
     )
 
@@ -56,136 +57,134 @@ def _stub_agent(text: str) -> MagicMock:
 
 class TestChatServiceResponse:
     async def test_returns_llm_response(self):
-        service, _, _ = _make_service()
+        service, _, message_service = _make_service()
+        message_service.list.return_value = [_make_message("Hello")]
         with patch("app.features.core.chats.service._create_agent", return_value=_stub_agent("Hello from Alfred!")):
-            result = await service.chat(ChatRequest(text="Hello"))
+            result = await service.chat(ChatRequest(session_id=1))
         assert result == "Hello from Alfred!"
 
-    async def test_uses_text_as_agent_input(self):
-        service, _, _ = _make_service()
+    async def test_uses_last_user_message_as_agent_input(self):
+        service, _, message_service = _make_service()
+        message_service.list.return_value = [_make_message("What tasks do I have?")]
         stub = _stub_agent("response")
         with patch("app.features.core.chats.service._create_agent", return_value=stub):
-            await service.chat(ChatRequest(text="What tasks do I have?"))
-        call_args = stub.run.call_args
-        assert call_args[0][0] == "What tasks do I have?"
+            await service.chat(ChatRequest(session_id=1))
+        assert stub.run.call_args[0][0] == "What tasks do I have?"
+
+    async def test_raises_422_when_no_messages_in_session(self):
+        service, _, message_service = _make_service()
+        message_service.list.return_value = []
+        with pytest.raises(HTTPException) as exc_info:
+            await service.chat(ChatRequest(session_id=1))
+        assert exc_info.value.status_code == 422
 
 
 class TestChatServiceHistory:
-    async def test_retrieves_history_when_session_id_provided(self):
+    async def test_retrieves_history_for_session(self):
         service, _, message_service = _make_service()
+        message_service.list.return_value = [_make_message("hi")]
         with patch("app.features.core.chats.service._create_agent", return_value=_stub_agent("ok")):
-            await service.chat(ChatRequest(text="hi", session_id=42))
-        message_service.list.assert_called_once()
+            await service.chat(ChatRequest(session_id=42))
         filters = message_service.list.call_args[0][0]
         assert filters.session_id == 42
 
-    async def test_no_history_retrieval_without_session_id(self):
+    async def test_excludes_current_message_from_history(self):
         service, _, message_service = _make_service()
-        with patch("app.features.core.chats.service._create_agent", return_value=_stub_agent("ok")):
-            await service.chat(ChatRequest(text="hi", session_id=None))
-        message_service.list.assert_not_called()
-
-    async def test_passes_history_to_agent(self):
-        service, _, message_service = _make_service()
-        messages = [_make_message("previous question", "previous answer")]
-        message_service.list = AsyncMock(return_value=messages)
+        msgs = [_make_message("previous"), _make_message("current")]
+        message_service.list.return_value = msgs
         stub = _stub_agent("ok")
         with patch("app.features.core.chats.service._create_agent", return_value=stub):
-            await service.chat(ChatRequest(text="follow-up", session_id=1))
-        call_kwargs = stub.run.call_args[1]
-        assert "message_history" in call_kwargs
-        assert len(call_kwargs["message_history"]) == 2  # request + response
+            await service.chat(ChatRequest(session_id=1))
+        history = stub.run.call_args[1]["message_history"]
+        assert len(history) == 1  # only "previous"
 
-    async def test_slices_to_last_10_messages(self):
+    async def test_slices_to_last_10_history_messages(self):
         service, _, message_service = _make_service()
-        messages = [_make_message(f"msg {i}") for i in range(15)]
-        message_service.list = AsyncMock(return_value=messages)
+        # 11 prior messages + 1 current = 12 total; only last 10 prior should appear in history
+        msgs = [_make_message(f"msg {i}") for i in range(12)]
+        message_service.list.return_value = msgs
         stub = _stub_agent("ok")
         with patch("app.features.core.chats.service._create_agent", return_value=stub):
-            await service.chat(ChatRequest(text="hi", session_id=1))
-        call_kwargs = stub.run.call_args[1]
-        # 10 messages × 2 history entries each (request + response) = 20
-        assert len(call_kwargs["message_history"]) == 20
+            await service.chat(ChatRequest(session_id=1))
+        history = stub.run.call_args[1]["message_history"]
+        assert len(history) == 10
 
 
 class TestChatServiceMemorySearch:
-    async def test_searches_memories_with_user_text(self):
-        service, embedding_service, _ = _make_service()
+    async def test_searches_memories_with_current_message_text(self):
+        service, embedding_service, message_service = _make_service()
+        message_service.list.return_value = [_make_message("what did I note about bread?")]
         with patch("app.features.core.chats.service._create_agent", return_value=_stub_agent("ok")):
-            await service.chat(ChatRequest(text="what did I note about bread?"))
-        embedding_service.search.assert_called_once()
+            await service.chat(ChatRequest(session_id=1))
         req = embedding_service.search.call_args[0][0]
         assert req.query == "what did I note about bread?"
         assert set(req.source_types) == {"memory", "note", "task"}
 
     async def test_empty_memories_still_works(self):
-        service, embedding_service, _ = _make_service()
+        service, embedding_service, message_service = _make_service()
+        message_service.list.return_value = [_make_message("hi")]
         embedding_service.search = AsyncMock(return_value=[])
         with patch("app.features.core.chats.service._create_agent", return_value=_stub_agent("ok")):
-            result = await service.chat(ChatRequest(text="hi"))
+            result = await service.chat(ChatRequest(session_id=1))
         assert result == "ok"
 
 
 class TestChatServiceMessageSaving:
-    async def test_saves_message_when_session_id_provided(self):
+    async def test_saves_assistant_message_after_reply(self):
         service, _, message_service = _make_service()
+        message_service.list.return_value = [_make_message("hello", role="user")]
         with patch("app.features.core.chats.service._create_agent", return_value=_stub_agent("Alfred's reply")):
-            await service.chat(ChatRequest(text="hello", session_id=5, source="telegram"))
+            await service.chat(ChatRequest(session_id=5))
         message_service.create.assert_called_once()
         created = message_service.create.call_args[0][0]
         assert created.session_id == 5
-        assert created.source == "telegram"
-        assert created.input == "hello"
-        assert created.response == "Alfred's reply"
+        assert created.role == "assistant"
+        assert created.content == "Alfred's reply"
 
-    async def test_does_not_save_without_session_id(self):
+    async def test_assistant_message_has_no_meta(self):
         service, _, message_service = _make_service()
+        message_service.list.return_value = [_make_message("hi")]
         with patch("app.features.core.chats.service._create_agent", return_value=_stub_agent("ok")):
-            await service.chat(ChatRequest(text="hi", session_id=None))
-        message_service.create.assert_not_called()
+            await service.chat(ChatRequest(session_id=1))
+        created = message_service.create.call_args[0][0]
+        assert created.meta is None
 
 
 class TestBuildSystemPrompt:
     def test_includes_persona(self):
-        prompt = _build_system_prompt([], [])
+        prompt = _build_system_prompt([])
         assert len(prompt) > 0
 
     def test_includes_memories(self):
         memories = [_make_embedding_result("memory", "David likes bread")]
-        prompt = _build_system_prompt(memories, [])
+        prompt = _build_system_prompt(memories)
         assert "David likes bread" in prompt
         assert "memory" in prompt
 
-    def test_includes_executed_commands(self):
-        cmds = [ExecutedCommandResult(type="task", command="add", result="Task created")]
-        prompt = _build_system_prompt([], cmds)
-        assert "task.add" in prompt
-        assert "Task created" in prompt
-
     def test_no_memory_section_when_empty(self):
-        prompt = _build_system_prompt([], [])
+        prompt = _build_system_prompt([])
         assert "Relevant context" not in prompt
-
-    def test_no_commands_section_when_empty(self):
-        prompt = _build_system_prompt([], [])
-        assert "Commands executed" not in prompt
 
 
 class TestToMessageHistory:
-    def test_converts_message_pair(self):
-        messages = [_make_message("hello", "hi there")]
-        history = _to_message_history(messages)
-        assert len(history) == 2
-
-    def test_skips_response_when_none(self):
-        messages = [_make_message("hello", None)]
+    def test_maps_user_message_to_model_request(self):
+        messages = [_make_message("hello", role="user")]
         history = _to_message_history(messages)
         assert len(history) == 1
 
+    def test_maps_assistant_message_to_model_response(self):
+        messages = [_make_message("hi there", role="assistant")]
+        history = _to_message_history(messages)
+        assert len(history) == 1
+
+    def test_preserves_order(self):
+        messages = [
+            _make_message("question", role="user"),
+            _make_message("answer", role="assistant"),
+            _make_message("follow-up", role="user"),
+        ]
+        history = _to_message_history(messages)
+        assert len(history) == 3
+
     def test_empty_list(self):
         assert _to_message_history([]) == []
-
-    def test_multiple_messages(self):
-        messages = [_make_message(f"msg{i}") for i in range(3)]
-        history = _to_message_history(messages)
-        assert len(history) == 6

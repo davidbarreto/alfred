@@ -1,8 +1,14 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from app.api.auth import require_auth
-from app.dependencies import MessageServiceDep
-from app.features.core.messages.schemas import MessageCreate, MessageFilters, MessageRead
+from app.dependencies import MessageServiceDep, SessionServiceDep
+from app.features.core.messages.schemas import (
+    MessageCreate,
+    MessageFilters,
+    MessageIngestRequest,
+    MessageIngestResponse,
+    MessageRead,
+)
 
 router = APIRouter(prefix="/core/messages", tags=["core"], dependencies=[Depends(require_auth)])
 
@@ -20,6 +26,14 @@ async def get_message(message_id: int, service: MessageServiceDep):
     return obj
 
 
-@router.post("/", response_model=MessageRead, status_code=status.HTTP_201_CREATED)
-async def create_message(data: MessageCreate, service: MessageServiceDep):
-    return await service.create(data)
+@router.post("/", response_model=MessageIngestResponse, status_code=status.HTTP_201_CREATED)
+async def ingest_message(
+    data: MessageIngestRequest,
+    session_service: SessionServiceDep,
+    message_service: MessageServiceDep,
+) -> MessageIngestResponse:
+    session = await session_service.get_or_create_active(data.source, data.external_id)
+    message = await message_service.create(
+        MessageCreate(session_id=session.id, role="user", content=data.text, meta=data.meta)
+    )
+    return MessageIngestResponse(message_id=message.id, session_id=session.id)

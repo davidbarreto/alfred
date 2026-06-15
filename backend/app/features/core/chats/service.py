@@ -2,13 +2,14 @@ from __future__ import annotations
 
 import pathlib
 
+from fastapi import HTTPException, status
 from pydantic_ai import Agent
 from pydantic_ai.messages import ModelRequest, ModelResponse, TextPart, UserPromptPart
 from pydantic_ai.models.google import GoogleModel
 from pydantic_ai.providers.google import GoogleProvider
 
 from app.config import get_settings
-from app.features.core.chats.schemas import ChatRequest, ExecutedCommandResult
+from app.features.core.chats.schemas import ChatRequest
 from app.features.core.embeddings.schemas import EmbeddingSearchRequest, EmbeddingSearchResult
 from app.features.core.embeddings.service import EmbeddingService
 from app.features.core.messages.schemas import MessageCreate, MessageFilters, MessageRead
@@ -27,22 +28,12 @@ def _load_persona() -> str:
         return "You are Alfred, a helpful personal AI assistant."
 
 
-def _build_system_prompt(
-    memories: list[EmbeddingSearchResult],
-    executed_commands: list[ExecutedCommandResult],
-) -> str:
+def _build_system_prompt(memories: list[EmbeddingSearchResult]) -> str:
     parts = [_load_persona()]
 
     if memories:
         lines = "\n".join(f"- [{m.source_type}] {m.content}" for m in memories)
         parts.append(f"## Relevant context from memory\n{lines}")
-
-    if executed_commands:
-        lines = "\n".join(
-            f"- {cmd.type}.{cmd.command}: {cmd.result if cmd.result is not None else 'no result'}"
-            for cmd in executed_commands
-        )
-        parts.append(f"## Commands executed this turn\n{lines}")
 
     return "\n\n".join(parts)
 
@@ -50,9 +41,10 @@ def _build_system_prompt(
 def _to_message_history(messages: list[MessageRead]) -> list:
     history: list = []
     for msg in messages:
-        history.append(ModelRequest(parts=[UserPromptPart(content=msg.input)]))
-        if msg.response:
-            history.append(ModelResponse(parts=[TextPart(content=msg.response)]))
+        if msg.role == "user":
+            history.append(ModelRequest(parts=[UserPromptPart(content=msg.content)]))
+        else:
+            history.append(ModelResponse(parts=[TextPart(content=msg.content)]))
     return history
 
 
@@ -71,36 +63,34 @@ class ChatService:
         self._message_service = message_service
 
     async def chat(self, request: ChatRequest) -> str:
-        history: list = []
-        if request.session_id is not None:
-            all_messages = await self._message_service.list(
-                MessageFilters(session_id=request.session_id)
+        all_messages = await self._message_service.list(
+            MessageFilters(session_id=request.session_id)
+        )
+        if not all_messages:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="No messages found in session. Call POST /core/messages first.",
             )
-            history = _to_message_history(all_messages[-_HISTORY_LIMIT:])
+
+        current_message = all_messages[-1]
+        history = _to_message_history(all_messages[:-1][-_HISTORY_LIMIT:])
 
         memories = await self._embedding_service.search(
             EmbeddingSearchRequest(
-                query=request.text,
+                query=current_message.content,
                 source_types=["memory", "note", "task"],
                 limit=_MEMORY_LIMIT,
                 threshold=_MEMORY_THRESHOLD,
             )
         )
 
-        system_prompt = _build_system_prompt(memories, request.executed_commands)
-
+        system_prompt = _build_system_prompt(memories)
         agent = _create_agent(system_prompt)
-        result = await agent.run(request.text, message_history=history)
+        result = await agent.run(current_message.content, message_history=history)
         response_text: str = result.output
 
-        if request.session_id is not None:
-            await self._message_service.create(
-                MessageCreate(
-                    session_id=request.session_id,
-                    source=request.source,
-                    input=request.text,
-                    response=response_text,
-                )
-            )
+        await self._message_service.create(
+            MessageCreate(session_id=request.session_id, role="assistant", content=response_text)
+        )
 
         return response_text

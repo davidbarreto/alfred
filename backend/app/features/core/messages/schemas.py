@@ -1,16 +1,17 @@
 from datetime import datetime
-from typing import Literal, Optional
+from typing import Any, Literal, Optional
 
 from pydantic import BaseModel, ConfigDict
 
+MessageRole = Literal["user", "assistant"]
 SourceChannel = Literal["telegram", "api", "web"]
 
 
 class MessageCreate(BaseModel):
     session_id: int
-    source: SourceChannel
-    input: str
-    response: Optional[str] = None
+    role: MessageRole
+    content: str
+    meta: Optional[dict[str, Any]] = None
 
 
 class MessageRead(BaseModel):
@@ -18,12 +19,24 @@ class MessageRead(BaseModel):
 
     id: int
     session_id: int
-    source: str
-    input: str
-    response: Optional[str] = None
+    role: str
+    content: str
+    meta: Optional[dict[str, Any]] = None
     created_at: datetime
 
 
 class MessageFilters(BaseModel):
     session_id: Optional[int] = None
-    source: Optional[str] = None
+    role: Optional[str] = None
+
+
+class MessageIngestRequest(BaseModel):
+    text: str
+    source: SourceChannel
+    external_id: str
+    meta: Optional[dict[str, Any]] = None
+
+
+class MessageIngestResponse(BaseModel):
+    message_id: int
+    session_id: int

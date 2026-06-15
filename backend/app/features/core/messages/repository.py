@@ -17,8 +17,8 @@ class MessageRepository:
         query = select(Message)
         if filters.session_id is not None:
             query = query.where(Message.session_id == filters.session_id)
-        if filters.source is not None:
-            query = query.where(Message.source == filters.source)
+        if filters.role is not None:
+            query = query.where(Message.role == filters.role)
         query = query.order_by(Message.created_at.asc())
         result = await self._session.execute(query)
         return list(result.scalars().all())

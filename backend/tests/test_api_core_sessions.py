@@ -12,7 +12,10 @@ AUTH = {"Authorization": "Bearer test-api-token"}
 def _session_read(**kwargs):
     defaults = dict(
         id=1,
+        source=None,
+        external_id=None,
         summary=None,
+        last_interaction_at=datetime(2026, 1, 1),
         created_at=datetime(2026, 1, 1),
         finished_at=None,
     )
@@ -75,6 +78,12 @@ class TestCreateSession:
     def test_creates_without_summary(self, client):
         response = client.post("/core/sessions/", json={}, headers=AUTH)
         assert response.status_code == 201
+
+    def test_response_includes_correlation_fields(self, client):
+        body = client.post("/core/sessions/", json={}, headers=AUTH).json()
+        assert "source" in body
+        assert "external_id" in body
+        assert "last_interaction_at" in body
 
 
 class TestFinishSession:

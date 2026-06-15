@@ -27,19 +27,23 @@ def upgrade() -> None:
     op.create_table(
         "sessions",
         sa.Column("id", sa.Integer, primary_key=True, index=True),
+        sa.Column("source", sa.String(50), nullable=True),
+        sa.Column("external_id", sa.String(255), nullable=True),
         sa.Column("summary", sa.Text, nullable=True),
+        sa.Column("last_interaction_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
         sa.Column("finished_at", sa.DateTime(timezone=True), nullable=True),
         schema="core",
     )
+    op.create_index("idx_sessions_source_external_id", "sessions", ["source", "external_id"], schema="core")
 
     op.create_table(
         "messages",
         sa.Column("id", sa.Integer, primary_key=True, index=True),
         sa.Column("session_id", sa.Integer, sa.ForeignKey("core.sessions.id", ondelete="CASCADE"), nullable=False, index=True),
-        sa.Column("source", sa.String(50), nullable=False),
-        sa.Column("input", sa.Text, nullable=False),
-        sa.Column("response", sa.Text, nullable=True),
+        sa.Column("role", sa.String(20), nullable=False),
+        sa.Column("content", sa.Text, nullable=False),
+        sa.Column("meta", JSONB, nullable=True),
         sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
         schema="core",
     )

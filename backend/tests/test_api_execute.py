@@ -37,9 +37,37 @@ def _note_read_mock(id=1, title="Some note", tags=None):
     return m
 
 
+def _override_services(app, task_svc=None, note_svc=None):
+    from app.dependencies import (
+        get_task_service, get_note_service, get_calendar_event_service,
+        get_transaction_service, get_account_service, get_budget_service,
+        get_recurring_transaction_service, get_command_execution_service,
+    )
+    mock_cmd_exec = AsyncMock()
+    mock_cmd_exec.create.return_value = MagicMock(id=99)
+    mock_cmd_exec.update = AsyncMock()
+    app.dependency_overrides[get_command_execution_service] = lambda: mock_cmd_exec
+
+    for dep, svc in [
+        (get_task_service, task_svc),
+        (get_note_service, note_svc),
+        (get_calendar_event_service, None),
+        (get_transaction_service, None),
+        (get_account_service, None),
+        (get_budget_service, None),
+        (get_recurring_transaction_service, None),
+    ]:
+        app.dependency_overrides[dep] = lambda s=svc: s or AsyncMock()
+
+    return mock_cmd_exec
+
+
 class TestExecuteRoute:
     def test_requires_auth(self, client):
-        response = client.post("/commands/execute", json={"type": "task", "command": "add", "arguments": {}})
+        response = client.post(
+            "/commands/execute",
+            json={"message_id": 1, "type": "task", "command": "add", "arguments": {}},
+        )
         assert response.status_code == 403
 
     def test_missing_fields_returns_422(self, client):
@@ -47,19 +75,12 @@ class TestExecuteRoute:
         assert response.status_code == 422
 
     def test_unknown_type_returns_400(self, client):
-        from app.dependencies import get_task_service, get_note_service, get_calendar_event_service
-        from app.dependencies import get_transaction_service, get_account_service, get_budget_service, get_recurring_transaction_service
         from app.main import app
-
-        for dep in (get_task_service, get_note_service, get_calendar_event_service,
-                    get_transaction_service, get_account_service, get_budget_service,
-                    get_recurring_transaction_service):
-            app.dependency_overrides[dep] = lambda: AsyncMock()
-
+        _override_services(app)
         try:
             response = client.post(
                 "/commands/execute",
-                json={"type": "unknown", "command": "add", "arguments": {}},
+                json={"message_id": 1, "type": "unknown", "command": "add", "arguments": {}},
                 headers=AUTH,
             )
             assert response.status_code == 400
@@ -67,22 +88,14 @@ class TestExecuteRoute:
             app.dependency_overrides.clear()
 
     def test_task_add(self, client):
-        from app.dependencies import get_task_service, get_note_service, get_calendar_event_service
-        from app.dependencies import get_transaction_service, get_account_service, get_budget_service, get_recurring_transaction_service
         from app.main import app
-
         mock_svc = AsyncMock()
         mock_svc.create_task.return_value = _task_read_mock(title="Buy milk")
-
-        app.dependency_overrides[get_task_service] = lambda: mock_svc
-        for dep in (get_note_service, get_calendar_event_service, get_transaction_service,
-                    get_account_service, get_budget_service, get_recurring_transaction_service):
-            app.dependency_overrides[dep] = lambda: AsyncMock()
-
+        _override_services(app, task_svc=mock_svc)
         try:
             response = client.post(
                 "/commands/execute",
-                json={"type": "task", "command": "add", "arguments": {"task": "Buy milk"}},
+                json={"message_id": 1, "type": "task", "command": "add", "arguments": {"task": "Buy milk"}},
                 headers=AUTH,
             )
             assert response.status_code == 200
@@ -91,52 +104,35 @@ class TestExecuteRoute:
             assert data["type"] == "task"
             assert data["command"] == "add"
             assert data["result"]["title"] == "Buy milk"
+            assert "command_execution_id" in data
         finally:
             app.dependency_overrides.clear()
 
     def test_task_complete(self, client):
-        from app.dependencies import get_task_service, get_note_service, get_calendar_event_service
-        from app.dependencies import get_transaction_service, get_account_service, get_budget_service, get_recurring_transaction_service
         from app.main import app
-
         mock_svc = AsyncMock()
         mock_svc.update_task.return_value = _task_read_mock(id=42, status="DONE")
-
-        app.dependency_overrides[get_task_service] = lambda: mock_svc
-        for dep in (get_note_service, get_calendar_event_service, get_transaction_service,
-                    get_account_service, get_budget_service, get_recurring_transaction_service):
-            app.dependency_overrides[dep] = lambda: AsyncMock()
-
+        _override_services(app, task_svc=mock_svc)
         try:
             response = client.post(
                 "/commands/execute",
-                json={"type": "task", "command": "complete", "arguments": {"id": "42"}},
+                json={"message_id": 1, "type": "task", "command": "complete", "arguments": {"id": "42"}},
                 headers=AUTH,
             )
             assert response.status_code == 200
-            data = response.json()
-            assert data["status"] == "ok"
-            assert data["result"]["status"] == "DONE"
+            assert response.json()["result"]["status"] == "DONE"
         finally:
             app.dependency_overrides.clear()
 
     def test_task_delete(self, client):
-        from app.dependencies import get_task_service, get_note_service, get_calendar_event_service
-        from app.dependencies import get_transaction_service, get_account_service, get_budget_service, get_recurring_transaction_service
         from app.main import app
-
         mock_svc = AsyncMock()
         mock_svc.delete_task.return_value = None
-
-        app.dependency_overrides[get_task_service] = lambda: mock_svc
-        for dep in (get_note_service, get_calendar_event_service, get_transaction_service,
-                    get_account_service, get_budget_service, get_recurring_transaction_service):
-            app.dependency_overrides[dep] = lambda: AsyncMock()
-
+        _override_services(app, task_svc=mock_svc)
         try:
             response = client.post(
                 "/commands/execute",
-                json={"type": "task", "command": "delete", "arguments": {"id": "7"}},
+                json={"message_id": 1, "type": "task", "command": "delete", "arguments": {"id": "7"}},
                 headers=AUTH,
             )
             assert response.status_code == 200
@@ -147,51 +143,71 @@ class TestExecuteRoute:
             app.dependency_overrides.clear()
 
     def test_note_add(self, client):
-        from app.dependencies import get_task_service, get_note_service, get_calendar_event_service
-        from app.dependencies import get_transaction_service, get_account_service, get_budget_service, get_recurring_transaction_service
         from app.main import app
-
         mock_svc = AsyncMock()
         mock_svc.create_note.return_value = _note_read_mock(title="chocolate is good")
-
-        app.dependency_overrides[get_note_service] = lambda: mock_svc
-        for dep in (get_task_service, get_calendar_event_service, get_transaction_service,
-                    get_account_service, get_budget_service, get_recurring_transaction_service):
-            app.dependency_overrides[dep] = lambda: AsyncMock()
-
+        _override_services(app, note_svc=mock_svc)
         try:
             response = client.post(
                 "/commands/execute",
-                json={"type": "note", "command": "add", "arguments": {"content": "chocolate is good"}},
+                json={"message_id": 1, "type": "note", "command": "add", "arguments": {"content": "chocolate is good"}},
                 headers=AUTH,
             )
             assert response.status_code == 200
             data = response.json()
             assert data["status"] == "ok"
-            assert data["type"] == "note"
             assert data["result"]["title"] == "chocolate is good"
         finally:
             app.dependency_overrides.clear()
 
     def test_task_not_found_returns_404(self, client):
-        from app.dependencies import get_task_service, get_note_service, get_calendar_event_service
-        from app.dependencies import get_transaction_service, get_account_service, get_budget_service, get_recurring_transaction_service
         from app.main import app
-
         mock_svc = AsyncMock()
         mock_svc.update_task.return_value = None
-
-        app.dependency_overrides[get_task_service] = lambda: mock_svc
-        for dep in (get_note_service, get_calendar_event_service, get_transaction_service,
-                    get_account_service, get_budget_service, get_recurring_transaction_service):
-            app.dependency_overrides[dep] = lambda: AsyncMock()
-
+        _override_services(app, task_svc=mock_svc)
         try:
             response = client.post(
                 "/commands/execute",
-                json={"type": "task", "command": "complete", "arguments": {"id": "999"}},
+                json={"message_id": 1, "type": "task", "command": "complete", "arguments": {"id": "999"}},
                 headers=AUTH,
             )
             assert response.status_code == 404
+        finally:
+            app.dependency_overrides.clear()
+
+    def test_creates_pending_execution_before_running(self, client):
+        from app.main import app
+        mock_svc = AsyncMock()
+        mock_svc.create_task.return_value = _task_read_mock()
+        mock_cmd_exec = _override_services(app, task_svc=mock_svc)
+        try:
+            client.post(
+                "/commands/execute",
+                json={"message_id": 5, "type": "task", "command": "add", "arguments": {"task": "x"}},
+                headers=AUTH,
+            )
+            created = mock_cmd_exec.create.call_args[0][0]
+            assert created.message_id == 5
+            assert created.command_name == "task.add"
+            assert created.status == "pending"
+        finally:
+            app.dependency_overrides.clear()
+
+    def test_updates_execution_to_success_after_run(self, client):
+        from app.main import app
+        mock_svc = AsyncMock()
+        mock_svc.create_task.return_value = _task_read_mock(id=10)
+        mock_cmd_exec = _override_services(app, task_svc=mock_svc)
+        try:
+            client.post(
+                "/commands/execute",
+                json={"message_id": 5, "type": "task", "command": "add", "arguments": {"task": "x"}},
+                headers=AUTH,
+            )
+            update_data = mock_cmd_exec.update.call_args[0][1]
+            assert update_data.status == "success"
+            assert update_data.entity_type == "task"
+            assert update_data.entity_id == 10
+            assert update_data.executed_at is not None
         finally:
             app.dependency_overrides.clear()

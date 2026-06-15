@@ -18,12 +18,13 @@ class CommandExecution(Base):
     message_id: Mapped[int] = mapped_column(
         Integer, ForeignKey("core.messages.id", ondelete="CASCADE"), nullable=False, index=True
     )
-    intent: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
-    command_name: Mapped[Optional[str]] = mapped_column(String(100), nullable=True, index=True)
+    command_name: Mapped[str] = mapped_column(String(100), nullable=False, index=True)
     entities: Mapped[Optional[dict]] = mapped_column(JSONB, nullable=True)
     status: Mapped[str] = mapped_column(String(20), nullable=False, default="pending")
     error: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
-    duration_ms: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    entity_type: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    entity_id: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    executed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )

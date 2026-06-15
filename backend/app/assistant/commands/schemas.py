@@ -23,12 +23,14 @@ class CommandResolveRequest(BaseModel):
 
 
 class CommandExecuteRequest(BaseModel):
+    message_id: int
     type: str
     command: str
     arguments: dict[str, Any]
 
 
 class CommandExecuteResponse(BaseModel):
+    command_execution_id: int
     type: str
     command: str
     status: str

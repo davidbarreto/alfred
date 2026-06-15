@@ -3,23 +3,22 @@ from typing import Any, Literal, Optional
 
 from pydantic import BaseModel, ConfigDict
 
-CommandStatus = Literal["pending", "success", "failure"]
+CommandStatus = Literal["pending", "success", "error"]
 
 
 class CommandExecutionCreate(BaseModel):
     message_id: int
-    intent: Optional[str] = None
-    command_name: Optional[str] = None
+    command_name: str
     entities: Optional[dict[str, Any]] = None
     status: CommandStatus = "pending"
-    error: Optional[str] = None
-    duration_ms: Optional[int] = None
 
 
 class CommandExecutionUpdate(BaseModel):
     status: Optional[CommandStatus] = None
     error: Optional[str] = None
-    duration_ms: Optional[int] = None
+    entity_type: Optional[str] = None
+    entity_id: Optional[int] = None
+    executed_at: Optional[datetime] = None
 
 
 class CommandExecutionRead(BaseModel):
@@ -27,12 +26,13 @@ class CommandExecutionRead(BaseModel):
 
     id: int
     message_id: int
-    intent: Optional[str] = None
-    command_name: Optional[str] = None
+    command_name: str
     entities: Optional[dict[str, Any]] = None
     status: str
     error: Optional[str] = None
-    duration_ms: Optional[int] = None
+    entity_type: Optional[str] = None
+    entity_id: Optional[int] = None
+    executed_at: Optional[datetime] = None
     created_at: datetime
 
 

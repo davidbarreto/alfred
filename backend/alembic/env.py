@@ -19,7 +19,7 @@ if config.config_file_name is not None:
 
 # Override the sqlalchemy.url with the value from your settings or environment
 # Similar to how setup_db.py handles it:
-database_url = os.getenv("DATABASE_URL", get_settings().database_url)
+database_url = os.getenv("DATABASE_ADMIN_URL") or os.getenv("DATABASE_URL", get_settings().database_url)
 
 # If you are using async drivers (like asyncpg as seen in setup_db.py), 
 # ensure the URL is compatible with the engine being used in env.py

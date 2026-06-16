@@ -33,4 +33,6 @@ class SentenceTransformerEmbeddingProvider:
 
     @property
     def dimensions(self) -> int:
-        return self._model.get_sentence_embedding_dimension()
+        dim = self._model.get_sentence_embedding_dimension()
+        assert dim is not None, "Model did not report embedding dimension"
+        return dim

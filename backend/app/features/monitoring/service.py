@@ -289,8 +289,13 @@ class MonitorService:
 
     @staticmethod
     async def run_monitor(session: AsyncSession, monitor: Monitor) -> Execution:
+        logger.info("Monitor run start: id=%d type=%s url=%s", monitor.id, monitor.type, monitor.url)
         raw = await run_in_threadpool(MonitorService.dispatch_monitor, monitor)
         status, result, error = _derive_status(raw)
+        logger.info(
+            "Monitor run result: id=%d status=%s%s",
+            monitor.id, status, f" error={error!r}" if error else "",
+        )
         execution = await create_execution(
             session=session,
             monitor=monitor,
@@ -299,12 +304,14 @@ class MonitorService:
             error=error,
         )
         if status == "found":
+            logger.info("Monitor alert triggered: id=%d url=%s", monitor.id, monitor.url)
             await upsert_alert(session=session, execution=execution)
         return execution
 
     @staticmethod
     async def run_due(session: AsyncSession) -> list[Execution]:
         monitors = await get_active_monitors(session=session)
+        logger.info("Running %d due monitor(s)", len(monitors))
         executions = []
         for monitor in monitors:
             executions.append(await MonitorService.run_monitor(session=session, monitor=monitor))
@@ -314,5 +321,6 @@ class MonitorService:
     async def run_monitor_by_id(session: AsyncSession, monitor_id: int) -> Execution | None:
         monitor = await get_monitor(session=session, monitor_id=monitor_id)
         if monitor is None:
+            logger.warning("Monitor not found: id=%d", monitor_id)
             return None
         return await MonitorService.run_monitor(session=session, monitor=monitor)

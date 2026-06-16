@@ -1,3 +1,4 @@
+import logging
 from datetime import date
 from decimal import Decimal, InvalidOperation
 from typing import Any
@@ -5,6 +6,8 @@ from typing import Any
 from fastapi import HTTPException, status
 
 from app.assistant.commands.handlers._utils import parse_dt
+
+logger = logging.getLogger(__name__)
 from app.features.finance.accounts.schemas import AccountFilters
 from app.features.finance.accounts.service import AccountService
 from app.features.finance.budgets.schemas import BudgetCreate, BudgetFilters, BudgetUpdate
@@ -54,6 +57,8 @@ async def handle_finance(
     budget_service: BudgetService,
     recurring_service: RecurringTransactionService,
 ) -> Any:
+    logger.debug("handle_finance: command=%s args_keys=%s", command, list(arguments.keys()))
+
     # --- Transactions ---
 
     if command == "transaction_add":

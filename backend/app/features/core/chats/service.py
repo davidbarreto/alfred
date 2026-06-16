@@ -1,10 +1,13 @@
 from __future__ import annotations
 
+import logging
 import pathlib
 import time
 
 from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
+
+logger = logging.getLogger(__name__)
 
 from app.features.core.chats.schemas import ChatRequest
 from app.features.core.embeddings.schemas import EmbeddingSearchRequest, EmbeddingSearchResult
@@ -55,6 +58,7 @@ class ChatService:
         self._message_service = message_service
 
     async def chat(self, request: ChatRequest) -> str:
+        logger.info("Chat: session_id=%s", request.session_id)
         all_messages = await self._message_service.list(
             MessageFilters(session_id=request.session_id)
         )
@@ -67,6 +71,7 @@ class ChatService:
         current_message = all_messages[-1]
         history = _to_message_dicts(all_messages[:-1][-_HISTORY_LIMIT:])
 
+        logger.debug("Chat: %d history messages, searching memory for context", len(history))
         memories = await self._embedding_service.search(
             EmbeddingSearchRequest(
                 query=current_message.content,
@@ -75,6 +80,7 @@ class ChatService:
                 threshold=_MEMORY_THRESHOLD,
             )
         )
+        logger.debug("Chat: %d memory items retrieved", len(memories))
 
         system_prompt = _build_system_prompt(memories)
         messages = history + [{"role": "user", "content": current_message.content}]
@@ -82,6 +88,11 @@ class ChatService:
         t0 = time.monotonic()
         llm_response = await self._llm_provider.complete(messages, system=system_prompt)
         latency_ms = int((time.monotonic() - t0) * 1000)
+
+        logger.info(
+            "Chat: LLM response session_id=%s latency_ms=%d tokens_in=%s tokens_out=%s",
+            request.session_id, latency_ms, llm_response.tokens_input, llm_response.tokens_output,
+        )
 
         await create_llm_call(
             self._session,

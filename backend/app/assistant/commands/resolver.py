@@ -1,3 +1,4 @@
+import logging
 import re
 import shlex
 from datetime import datetime, date
@@ -14,6 +15,8 @@ from app.shared.llm import LlmProvider
 from app.nlp.normalizer import normalize_date, normalize_priority, clean_text
 from app.nlp.extractor import extract_entities, extract_finance_entities
 
+logger = logging.getLogger(__name__)
+
 
 def _normalize_date(date_str: str, base_date: datetime | date | None = None) -> str | None:
     """Convert relative date keywords or strings to ISO format."""
@@ -28,7 +31,7 @@ def _normalize_date(date_str: str, base_date: datetime | date | None = None) -> 
             effective_base = datetime.combine(base_date, datetime.min.time())
         return normalize_date(date_str, base_date=effective_base)
     except Exception as ex:
-        print(f"Error normalizing date: {ex}")
+        logger.error("Date normalization failed for %r: %s", date_str, ex)
         return None
 
 
@@ -206,10 +209,13 @@ async def resolve(
        are found and a DB session is available.
     """
     if command:
+        logger.debug("Resolve: explicit command=%s args=%r", command, args)
         tokens = _parse_tokens(args or "")
         cmd = _resolve_fragment(command.lower(), tokens)
         if not cmd:
+            logger.info("Resolve: explicit command=%s not parsed (missing required args or unknown)", command)
             return CommandResolveResponse(status="not_parsed", commands=[], raw_text=text)
+        logger.info("Resolve: explicit command=%s parsed source=deterministic", command)
         return CommandResolveResponse(status="ok", commands=[cmd], raw_text=text)
 
     fragments = _split_command_fragments(text)
@@ -223,16 +229,23 @@ async def resolve(
             commands.append(cmd)
 
     if commands:
+        logger.info("Resolve: %d deterministic command(s) parsed from text", len(commands))
         return CommandResolveResponse(status="ok", commands=commands, raw_text=text)
 
     if session is None or llm_provider is None or not text.strip():
+        logger.debug("Resolve: no slash commands found and no session/provider available, returning not_parsed")
         return CommandResolveResponse(status="not_parsed", commands=[], raw_text=text)
 
+    logger.debug("Resolve: no slash commands, falling back to intent detection text=%r", text[:100])
     intent_result = await detect_intent(text, session)
     threshold = get_settings().intent_threshold
     cmd_type, cmd_action = _split_intent(intent_result.intent)
 
     if intent_result.intent != "unknown" and intent_result.confidence >= threshold:
+        logger.info(
+            "Resolve: intent=%s confidence=%.4f >= threshold=%.4f, extracting args",
+            intent_result.intent, intent_result.confidence, threshold,
+        )
         extracted = await extract_args(intent_result.intent, text, llm_provider=llm_provider, session=session)
         detail = CommandDetail(
             type=cmd_type,
@@ -242,6 +255,10 @@ async def resolve(
             args=extracted,
         )
     else:
+        logger.info(
+            "Resolve: intent=%s confidence=%.4f below threshold=%.4f or unknown, command unresolved",
+            intent_result.intent, intent_result.confidence, threshold,
+        )
         detail = CommandDetail(
             type=cmd_type,
             command=cmd_action,

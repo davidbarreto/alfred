@@ -1,9 +1,12 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 from functools import cached_property
 
 from sentence_transformers import SentenceTransformer
+
+logger = logging.getLogger(__name__)
 
 
 class SentenceTransformerEmbeddingProvider:
@@ -18,9 +21,11 @@ class SentenceTransformerEmbeddingProvider:
 
     @cached_property
     def _model(self) -> SentenceTransformer:
+        logger.info("Loading SentenceTransformer model: %s", self._model_name)
         return SentenceTransformer(self._model_name)
 
     async def embed(self, text: str) -> list[float]:
+        logger.debug("SentenceTransformer: embedding text len=%d", len(text))
         loop = asyncio.get_event_loop()
         vector = await loop.run_in_executor(
             None, lambda: self._model.encode(text, convert_to_numpy=True).tolist()

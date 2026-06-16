@@ -1,3 +1,4 @@
+import logging
 from datetime import timedelta
 from typing import Any
 
@@ -7,8 +8,11 @@ from app.assistant.commands.handlers._utils import parse_dt, parse_tags
 from app.features.organizer.calendar_events.schemas import EventCreate, EventFilters, EventUpdate
 from app.features.organizer.calendar_events.service import CalendarEventService
 
+logger = logging.getLogger(__name__)
+
 
 async def handle_event(command: str, arguments: dict[str, Any], service: CalendarEventService) -> Any:
+    logger.debug("handle_event: command=%s args_keys=%s", command, list(arguments.keys()))
     if command == "add":
         # start_datetime: explicit -s/--start flag, or date extracted from title by NLP
         start_dt = parse_dt(arguments.get("start") or arguments.get("deadline"))

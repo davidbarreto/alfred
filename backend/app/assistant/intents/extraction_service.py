@@ -80,7 +80,9 @@ async def extract_args(
             )
 
         parsed = schema_cls.model_validate_json(llm_response.text)
-        return parsed.model_dump()
+        result = parsed.model_dump()
+        logger.debug("Extraction successful: intent=%s fields=%s", intent, list(result.keys()))
+        return result
     except Exception as exc:
         logger.warning("LLM extraction failed (intent=%s): %s", intent, exc)
         return {}

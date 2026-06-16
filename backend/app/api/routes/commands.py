@@ -1,7 +1,10 @@
+import logging
 from datetime import datetime, timezone
 from typing import Any
 
 from fastapi import APIRouter, Depends
+
+logger = logging.getLogger(__name__)
 
 from app.assistant.commands.executor import execute
 from app.assistant.commands.resolver import resolve
@@ -31,6 +34,7 @@ router = APIRouter(prefix="/commands", tags=["commands"], dependencies=[Depends(
 
 @router.post("/resolve", response_model=CommandResolveResponse)
 async def resolve_command(request: CommandResolveRequest, session: DbSessionDep, llm_provider: LlmProviderDep):
+    logger.info("POST /commands/resolve text=%r command=%s", request.text[:80], request.command)
     return await resolve(request.text, command=request.command, args=request.args, session=session, llm_provider=llm_provider)
 
 
@@ -46,6 +50,7 @@ async def execute_command(
     budget_service: BudgetServiceDep,
     recurring_service: RecurringTransactionServiceDep,
 ):
+    logger.info("POST /commands/execute %s.%s", request.type, request.command)
     execution = await cmd_execution_service.create(
         CommandExecutionCreate(
             message_id=request.message_id,
@@ -68,6 +73,10 @@ async def execute_command(
             recurring_service=recurring_service,
         )
         entity_id = result.get("id") if isinstance(result, dict) else None
+        logger.info(
+            "Command executed: %s.%s execution_id=%d status=success entity_id=%s",
+            request.type, request.command, execution.id, entity_id,
+        )
         await cmd_execution_service.update(
             execution.id,
             CommandExecutionUpdate(
@@ -78,6 +87,10 @@ async def execute_command(
             ),
         )
     except Exception as exc:
+        logger.error(
+            "Command failed: %s.%s execution_id=%d error=%s",
+            request.type, request.command, execution.id, exc,
+        )
         await cmd_execution_service.update(
             execution.id,
             CommandExecutionUpdate(

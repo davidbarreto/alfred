@@ -1,3 +1,4 @@
+import logging
 from typing import Any
 
 from fastapi import HTTPException, status
@@ -5,6 +6,8 @@ from fastapi import HTTPException, status
 from app.assistant.commands.handlers._utils import parse_tags
 from app.features.organizer.notes.schemas import NoteCreate, NoteFilters, NoteUpdate
 from app.features.organizer.notes.service import NoteService
+
+logger = logging.getLogger(__name__)
 
 _TITLE_MAX = 60
 
@@ -19,6 +22,7 @@ def _derive_note_fields(title_raw: str | None, content_raw: str | None) -> tuple
 
 
 async def handle_note(command: str, arguments: dict[str, Any], service: NoteService) -> Any:
+    logger.debug("handle_note: command=%s args_keys=%s", command, list(arguments.keys()))
     if command == "add":
         title, content = _derive_note_fields(
             arguments.get("title"),

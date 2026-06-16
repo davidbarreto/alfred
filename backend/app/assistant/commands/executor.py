@@ -1,3 +1,4 @@
+import logging
 from typing import Any
 
 from fastapi import HTTPException, status
@@ -14,6 +15,8 @@ from app.features.organizer.calendar_events.service import CalendarEventService
 from app.features.organizer.notes.service import NoteService
 from app.features.organizer.tasks.service import TaskService
 
+logger = logging.getLogger(__name__)
+
 
 async def execute(
     cmd_type: str,
@@ -27,6 +30,8 @@ async def execute(
     budget_service: BudgetService,
     recurring_service: RecurringTransactionService,
 ) -> Any:
+    logger.info("Execute: %s.%s args_keys=%s", cmd_type, command, list(arguments.keys()))
+
     if cmd_type == "task":
         return await handle_task(command, arguments, task_service)
 
@@ -46,6 +51,7 @@ async def execute(
             recurring_service=recurring_service,
         )
 
+    logger.error("Execute: unknown command type=%s command=%s", cmd_type, command)
     raise HTTPException(
         status_code=status.HTTP_400_BAD_REQUEST,
         detail=f"Unknown command type: {cmd_type}",

@@ -1,3 +1,4 @@
+import logging
 from typing import Any, cast
 
 from fastapi import HTTPException, status
@@ -6,8 +7,11 @@ from app.assistant.commands.handlers._utils import parse_dt, parse_tags
 from app.features.organizer.tasks.schemas import TaskCreate, TaskFilters, TaskPriorityFilter, TaskStatusFilter, TaskUpdate
 from app.features.organizer.tasks.service import TaskService
 
+logger = logging.getLogger(__name__)
+
 
 async def handle_task(command: str, arguments: dict[str, Any], service: TaskService) -> Any:
+    logger.debug("handle_task: command=%s args_keys=%s", command, list(arguments.keys()))
     if command == "add":
         payload = TaskCreate(
             title=arguments.get("title", ""),

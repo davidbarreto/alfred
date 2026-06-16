@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from typing import Literal
 
 from pydantic import BaseModel
@@ -10,6 +11,8 @@ from app.features.core.embeddings.repository import EmbeddingRepository
 from app.integrations.sentence_transformers.provider import (
     SentenceTransformerEmbeddingProvider,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class IntentResult(BaseModel):
@@ -35,7 +38,9 @@ async def detect_intent(text: str, session: AsyncSession) -> IntentResult:
         threshold=0.0,
     )
     if not results:
+        logger.debug("Intent detection: no embedding matches for text=%r", text[:100])
         return IntentResult(intent="unknown", confidence=0.0)
     embedding, similarity = results[0]
     intent = _INTENT_BY_ID.get(embedding.source_id, "unknown")
+    logger.debug("Intent detected: intent=%s confidence=%.4f source_id=%d", intent, similarity, embedding.source_id)
     return IntentResult(intent=intent, confidence=round(similarity, 4))

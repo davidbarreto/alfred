@@ -18,6 +18,7 @@ from app.api.routes.monitoring.monitors import router as monitors_router
 from app.api.routes.monitoring.alerts import router as alerts_router
 from app.api.routes.monitoring.executions import router as executions_router
 from app.api.routes.integrations.provider_calls import router as provider_calls_router
+from app.api.routes.integrations.llm_calls import router as llm_calls_router
 from app.api.routes.commands import router as commands_router
 from app.api.routes.organizer.tasks import router as tasks_router
 from app.api.routes.organizer.notes import router as notes_router
@@ -64,6 +65,7 @@ app.include_router(monitors_router)
 app.include_router(alerts_router)
 app.include_router(executions_router)
 app.include_router(provider_calls_router)
+app.include_router(llm_calls_router)
 app.include_router(commands_router)
 app.include_router(tasks_router)
 app.include_router(notes_router)

@@ -109,6 +109,20 @@ def upgrade() -> None:
 
     # --- integration ---
     op.create_table(
+        "llm_calls",
+        sa.Column("id", sa.Integer, primary_key=True, index=True),
+        sa.Column("provider", sa.String(50), nullable=False),
+        sa.Column("model", sa.String(100), nullable=False),
+        sa.Column("feature", sa.String(100), nullable=False),
+        sa.Column("prompt", JSONB, nullable=False),
+        sa.Column("response", sa.Text, nullable=False),
+        sa.Column("tokens_input", sa.Integer, nullable=True),
+        sa.Column("tokens_output", sa.Integer, nullable=True),
+        sa.Column("latency_ms", sa.Integer, nullable=True),
+        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
+        schema="integration",
+    )
+    op.create_table(
         "provider_calls",
         sa.Column("id", sa.Integer, primary_key=True, index=True),
         sa.Column("provider", sa.String(50), nullable=False),
@@ -338,6 +352,7 @@ def downgrade() -> None:
     op.drop_table("tags", schema="organizer")
 
     # integration (depends on core.command_executions)
+    op.drop_table("llm_calls", schema="integration")
     op.drop_table("provider_calls", schema="integration")
 
     # core (dependents before parents)

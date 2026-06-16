@@ -37,6 +37,7 @@ from app.features.core.messages.tables import Message
 from app.features.core.command_executions.tables import CommandExecution
 from app.features.core.memories.tables import Memory
 from app.features.core.working_memory.tables import WorkingMemory
+from app.features.core.embeddings.tables import Embedding
 
 # Use Admin URL to ensure we have DROP/CREATE permissions
 DATABASE_ADMIN_URL = os.getenv("DATABASE_ADMIN_URL", get_settings().database_url)
@@ -59,8 +60,11 @@ async def create_all_tables():
         logger.error("❌ No tables found in Base.metadata! Ensure all models are imported and share the same 'Base'.")
         return
 
-    logger.info(f"Creating tables: {', '.join(detected_tables)}")    
+    logger.info(f"Creating tables: {', '.join(detected_tables)}")
     async with engine.begin() as conn:
+        logger.info("Ensuring vector extension exists...")
+        await conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
+
         # Explicitly create schemas defined in models
         schemas = {table.schema for table in Base.metadata.tables.values() if table.schema}
         for schema_name in schemas:

@@ -1,14 +1,18 @@
 from __future__ import annotations
 
 import functools
+import logging
 from typing import Literal
 
 from pydantic import BaseModel, Field
 from pydantic_ai import Agent
+from pydantic_ai.exceptions import ModelHTTPError
 from pydantic_ai.models.google import GoogleModel
 from pydantic_ai.providers.google import GoogleProvider
 
 from app.config import get_settings
+
+logger = logging.getLogger(__name__)
 
 
 class CreateTaskArgs(BaseModel):
@@ -60,5 +64,9 @@ async def extract_args(intent: str, text: str) -> dict:
     agent = _get_agent(intent)
     if agent is None:
         return {}
-    result = await agent.run(text)
-    return result.output.model_dump()
+    try:
+        result = await agent.run(text)
+        return result.output.model_dump()
+    except ModelHTTPError as exc:
+        logger.warning("LLM extraction failed (intent=%s, status=%s): %s", intent, exc.status_code, exc)
+        return {}

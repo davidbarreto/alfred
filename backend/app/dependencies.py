@@ -22,6 +22,7 @@ from app.features.core.working_memory.service import WorkingMemoryService
 from app.features.core.embeddings.service import EmbeddingService
 from app.features.core.chats.service import ChatService
 from app.integrations.sentence_transformers.provider import SentenceTransformerEmbeddingProvider
+from app.integrations.google.llm_provider import GoogleLlmProvider
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.session import get_session
 
@@ -94,11 +95,20 @@ def get_working_memory_service(session: AsyncSession = Depends(get_session)) -> 
 def get_embedding_provider() -> SentenceTransformerEmbeddingProvider:
     return SentenceTransformerEmbeddingProvider(get_settings().embedding_model)
 
+@lru_cache
+def get_llm_provider() -> GoogleLlmProvider:
+    s = get_settings()
+    if not s.google_api_key:
+        raise RuntimeError("GOOGLE_API_KEY is not set")
+    return GoogleLlmProvider(api_key=s.google_api_key, model_name=s.llm_model)
+
 def get_embedding_service(session: AsyncSession = Depends(get_session)) -> EmbeddingService:
     return EmbeddingService(session, get_embedding_provider())
 
 def get_chat_service(session: AsyncSession = Depends(get_session)) -> ChatService:
     return ChatService(
+        session=session,
+        llm_provider=get_llm_provider(),
         embedding_service=EmbeddingService(session, get_embedding_provider()),
         message_service=MessageService(session),
     )
@@ -123,3 +133,4 @@ MemoryServiceDep = Annotated[MemoryService, Depends(get_memory_service)]
 WorkingMemoryServiceDep = Annotated[WorkingMemoryService, Depends(get_working_memory_service)]
 EmbeddingServiceDep = Annotated[EmbeddingService, Depends(get_embedding_service)]
 ChatServiceDep = Annotated[ChatService, Depends(get_chat_service)]
+LlmProviderDep = Annotated[GoogleLlmProvider, Depends(get_llm_provider)]

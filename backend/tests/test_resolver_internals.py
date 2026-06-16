@@ -3,6 +3,8 @@ from datetime import datetime
 from freezegun import freeze_time
 from unittest.mock import AsyncMock, patch
 
+from unittest.mock import MagicMock
+
 from app.assistant.commands.resolver import (
     _split_command_fragments,
     _parse_tokens,
@@ -13,6 +15,14 @@ from app.assistant.commands.resolver import (
     resolve,
 )
 from app.assistant.intents.intent_service import IntentResult
+from app.shared.llm import LlmResponse
+
+
+def _make_llm_provider() -> MagicMock:
+    provider = MagicMock()
+    provider.provider = "google"
+    provider.model = "gemini-2.0-flash"
+    return provider
 
 FIXED_NOW = datetime(2024, 5, 20)  # Monday
 
@@ -551,8 +561,12 @@ class TestResolveWithIntent:
         assert response.status == "not_parsed"
         assert response.commands == []
 
+    async def test_no_llm_provider_returns_not_parsed(self):
+        response = await resolve("Buy milk tomorrow", session=AsyncMock())
+        assert response.status == "not_parsed"
+
     async def test_empty_text_returns_not_parsed_even_with_session(self):
-        response = await resolve("   ", session=AsyncMock())
+        response = await resolve("   ", session=AsyncMock(), llm_provider=_make_llm_provider())
         assert response.status == "not_parsed"
 
     async def test_slash_command_uses_deterministic_path_ignores_session(self):
@@ -567,7 +581,7 @@ class TestResolveWithIntent:
 
         with patch("app.assistant.commands.resolver.detect_intent", new=AsyncMock(return_value=intent_result)), \
              patch("app.assistant.commands.resolver.extract_args", new=AsyncMock(return_value=extracted)):
-            response = await resolve("Buy milk tomorrow", session=mock_session)
+            response = await resolve("Buy milk tomorrow", session=mock_session, llm_provider=_make_llm_provider())
 
         assert response.status == "ok"
         cmd = response.commands[0]
@@ -582,7 +596,7 @@ class TestResolveWithIntent:
         intent_result = IntentResult(intent="task.add", confidence=0.5)
 
         with patch("app.assistant.commands.resolver.detect_intent", new=AsyncMock(return_value=intent_result)):
-            response = await resolve("ambiguous text", session=mock_session)
+            response = await resolve("ambiguous text", session=mock_session, llm_provider=_make_llm_provider())
 
         assert response.status == "ok"
         cmd = response.commands[0]
@@ -597,7 +611,7 @@ class TestResolveWithIntent:
         intent_result = IntentResult(intent="unknown", confidence=0.55)
 
         with patch("app.assistant.commands.resolver.detect_intent", new=AsyncMock(return_value=intent_result)):
-            response = await resolve("some random text", session=mock_session)
+            response = await resolve("some random text", session=mock_session, llm_provider=_make_llm_provider())
 
         cmd = response.commands[0]
         assert cmd.type == "unknown"
@@ -611,6 +625,6 @@ class TestResolveWithIntent:
 
         with patch("app.assistant.commands.resolver.detect_intent", new=AsyncMock(return_value=intent_result)), \
              patch("app.assistant.commands.resolver.extract_args", new=mock_extract):
-            await resolve("ambiguous", session=mock_session)
+            await resolve("ambiguous", session=mock_session, llm_provider=_make_llm_provider())
 
         mock_extract.assert_not_called()

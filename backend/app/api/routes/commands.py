@@ -18,6 +18,7 @@ from app.dependencies import (
     CalendarEventServiceDep,
     CommandExecutionServiceDep,
     DbSessionDep,
+    LlmProviderDep,
     NoteServiceDep,
     RecurringTransactionServiceDep,
     TaskServiceDep,
@@ -29,8 +30,8 @@ router = APIRouter(prefix="/commands", tags=["commands"], dependencies=[Depends(
 
 
 @router.post("/resolve", response_model=CommandResolveResponse)
-async def resolve_command(request: CommandResolveRequest, session: DbSessionDep):
-    return await resolve(request.text, command=request.command, args=request.args, session=session)
+async def resolve_command(request: CommandResolveRequest, session: DbSessionDep, llm_provider: LlmProviderDep):
+    return await resolve(request.text, command=request.command, args=request.args, session=session, llm_provider=llm_provider)
 
 
 @router.post("/execute", response_model=CommandExecuteResponse)

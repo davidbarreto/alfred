@@ -27,6 +27,7 @@ from app.features.organizer.tags.tables import Tag, tasks_tags, notes_tags, cale
 from app.features.organizer.calendar_events.tables import CalendarEvent, CalendarEventInvitee
 from app.features.monitoring.tables import Monitor, Execution, Alert
 from app.integrations.provider_calls.tables import IntegrationSyncLog
+from app.integrations.llm_calls.tables import LlmCall
 from app.features.finance.accounts.tables import Account
 from app.features.finance.budgets.tables import Budget
 from app.features.finance.categories.tables import Category

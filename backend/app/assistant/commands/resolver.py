@@ -10,6 +10,7 @@ from app.assistant.commands.schemas import CommandDetail, CommandResolveResponse
 from app.assistant.intents.intent_service import detect_intent
 from app.assistant.intents.extraction_service import extract_args
 from app.config import get_settings
+from app.shared.llm import LlmProvider
 from app.nlp.normalizer import normalize_date, normalize_priority, clean_text
 from app.nlp.extractor import extract_entities, extract_finance_entities
 
@@ -195,6 +196,7 @@ async def resolve(
     command: str | None = None,
     args: str | None = None,
     session: AsyncSession | None = None,
+    llm_provider: LlmProvider | None = None,
 ) -> CommandResolveResponse:
     """
     Structured command resolver.
@@ -223,7 +225,7 @@ async def resolve(
     if commands:
         return CommandResolveResponse(status="ok", commands=commands, raw_text=text)
 
-    if session is None or not text.strip():
+    if session is None or llm_provider is None or not text.strip():
         return CommandResolveResponse(status="not_parsed", commands=[], raw_text=text)
 
     intent_result = await detect_intent(text, session)
@@ -231,7 +233,7 @@ async def resolve(
     cmd_type, cmd_action = _split_intent(intent_result.intent)
 
     if intent_result.intent != "unknown" and intent_result.confidence >= threshold:
-        extracted = await extract_args(intent_result.intent, text)
+        extracted = await extract_args(intent_result.intent, text, llm_provider=llm_provider, session=session)
         detail = CommandDetail(
             type=cmd_type,
             command=cmd_action,

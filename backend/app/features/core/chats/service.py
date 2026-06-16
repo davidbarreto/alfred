@@ -1,19 +1,18 @@
 from __future__ import annotations
 
 import pathlib
+import time
 
 from fastapi import HTTPException, status
-from pydantic_ai import Agent
-from pydantic_ai.messages import ModelRequest, ModelResponse, TextPart, UserPromptPart
-from pydantic_ai.models.google import GoogleModel
-from pydantic_ai.providers.google import GoogleProvider
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.config import get_settings
 from app.features.core.chats.schemas import ChatRequest
 from app.features.core.embeddings.schemas import EmbeddingSearchRequest, EmbeddingSearchResult
 from app.features.core.embeddings.service import EmbeddingService
 from app.features.core.messages.schemas import MessageCreate, MessageFilters, MessageRead
 from app.features.core.messages.service import MessageService
+from app.integrations.llm_calls.repository import create_llm_call
+from app.shared.llm import LlmProvider
 
 _PERSONA_PATH = pathlib.Path(__file__).parents[4] / "assistant" / "persona.md"
 _HISTORY_LIMIT = 10
@@ -38,27 +37,20 @@ def _build_system_prompt(memories: list[EmbeddingSearchResult]) -> str:
     return "\n\n".join(parts)
 
 
-def _to_message_history(messages: list[MessageRead]) -> list:
-    history: list = []
-    for msg in messages:
-        if msg.role == "user":
-            history.append(ModelRequest(parts=[UserPromptPart(content=msg.content)]))
-        else:
-            history.append(ModelResponse(parts=[TextPart(content=msg.content)]))
-    return history
-
-
-def _create_agent(system_prompt: str) -> Agent:
-    settings = get_settings()
-    model = GoogleModel(
-        settings.llm_model,
-        provider=GoogleProvider(api_key=settings.google_api_key),
-    )
-    return Agent(model, output_type=str, system_prompt=system_prompt)
+def _to_message_dicts(messages: list[MessageRead]) -> list[dict[str, str]]:
+    return [{"role": msg.role, "content": msg.content} for msg in messages]
 
 
 class ChatService:
-    def __init__(self, embedding_service: EmbeddingService, message_service: MessageService) -> None:
+    def __init__(
+        self,
+        session: AsyncSession,
+        llm_provider: LlmProvider,
+        embedding_service: EmbeddingService,
+        message_service: MessageService,
+    ) -> None:
+        self._session = session
+        self._llm_provider = llm_provider
         self._embedding_service = embedding_service
         self._message_service = message_service
 
@@ -73,7 +65,7 @@ class ChatService:
             )
 
         current_message = all_messages[-1]
-        history = _to_message_history(all_messages[:-1][-_HISTORY_LIMIT:])
+        history = _to_message_dicts(all_messages[:-1][-_HISTORY_LIMIT:])
 
         memories = await self._embedding_service.search(
             EmbeddingSearchRequest(
@@ -85,12 +77,26 @@ class ChatService:
         )
 
         system_prompt = _build_system_prompt(memories)
-        agent = _create_agent(system_prompt)
-        result = await agent.run(current_message.content, message_history=history)
-        response_text: str = result.output
+        messages = history + [{"role": "user", "content": current_message.content}]
 
-        await self._message_service.create(
-            MessageCreate(session_id=request.session_id, role="assistant", content=response_text)
+        t0 = time.monotonic()
+        llm_response = await self._llm_provider.complete(messages, system=system_prompt)
+        latency_ms = int((time.monotonic() - t0) * 1000)
+
+        await create_llm_call(
+            self._session,
+            provider=self._llm_provider.provider,
+            model=self._llm_provider.model,
+            feature="chat",
+            prompt=[{"role": "system", "content": system_prompt}] + messages,
+            response=llm_response.text,
+            tokens_input=llm_response.tokens_input,
+            tokens_output=llm_response.tokens_output,
+            latency_ms=latency_ms,
         )
 
-        return response_text
+        await self._message_service.create(
+            MessageCreate(session_id=request.session_id, role="assistant", content=llm_response.text)
+        )
+
+        return llm_response.text

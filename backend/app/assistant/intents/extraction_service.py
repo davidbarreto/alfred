@@ -1,16 +1,15 @@
 from __future__ import annotations
 
-import functools
+import json
 import logging
+import time
 from typing import Literal
 
 from pydantic import BaseModel, Field
-from pydantic_ai import Agent
-from pydantic_ai.exceptions import ModelHTTPError
-from pydantic_ai.models.google import GoogleModel
-from pydantic_ai.providers.google import GoogleProvider
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.config import get_settings
+from app.integrations.llm_calls.repository import create_llm_call
+from app.shared.llm import LlmProvider
 
 logger = logging.getLogger(__name__)
 
@@ -34,11 +33,6 @@ class GetCalendarArgs(BaseModel):
     date_range: str | None = Field(default=None)
 
 
-_SYSTEM_PROMPT = (
-    "Extract the requested structured fields from the user message. "
-    "Return only the extracted field values — no explanation or commentary."
-)
-
 _INTENT_SCHEMAS: dict[str, type[BaseModel]] = {
     "task.add": CreateTaskArgs,
     "task.list": GetTasksArgs,
@@ -46,27 +40,47 @@ _INTENT_SCHEMAS: dict[str, type[BaseModel]] = {
     "event.list": GetCalendarArgs,
 }
 
-
-@functools.lru_cache(maxsize=None)
-def _get_agent(intent: str) -> Agent[None, BaseModel] | None:
-    schema = _INTENT_SCHEMAS.get(intent)
-    if schema is None:
-        return None
-    settings = get_settings()
-    model = GoogleModel(
-        settings.llm_model,
-        provider=GoogleProvider(api_key=settings.google_api_key),
-    )
-    return Agent(model, output_type=schema, system_prompt=_SYSTEM_PROMPT)
+_SYSTEM_PROMPT_TEMPLATE = (
+    "Extract the requested structured fields from the user message. "
+    "Return ONLY a valid JSON object matching this schema — no explanation or commentary:\n{schema}"
+)
 
 
-async def extract_args(intent: str, text: str) -> dict:
-    agent = _get_agent(intent)
-    if agent is None:
+async def extract_args(
+    intent: str,
+    text: str,
+    llm_provider: LlmProvider,
+    session: AsyncSession | None = None,
+) -> dict:
+    schema_cls = _INTENT_SCHEMAS.get(intent)
+    if schema_cls is None:
         return {}
+
+    system_prompt = _SYSTEM_PROMPT_TEMPLATE.format(
+        schema=json.dumps(schema_cls.model_json_schema(), indent=2)
+    )
+    messages = [{"role": "user", "content": text}]
+
     try:
-        result = await agent.run(text)
-        return result.output.model_dump()
-    except ModelHTTPError as exc:
-        logger.warning("LLM extraction failed (intent=%s, status=%s): %s", intent, exc.status_code, exc)
+        t0 = time.monotonic()
+        llm_response = await llm_provider.complete(messages, system=system_prompt)
+        latency_ms = int((time.monotonic() - t0) * 1000)
+
+        if session is not None:
+            await create_llm_call(
+                session,
+                provider=llm_provider.provider,
+                model=llm_provider.model,
+                feature=f"intent_extraction.{intent}",
+                prompt=[{"role": "system", "content": system_prompt}] + messages,
+                response=llm_response.text,
+                tokens_input=llm_response.tokens_input,
+                tokens_output=llm_response.tokens_output,
+                latency_ms=latency_ms,
+            )
+
+        parsed = schema_cls.model_validate_json(llm_response.text)
+        return parsed.model_dump()
+    except Exception as exc:
+        logger.warning("LLM extraction failed (intent=%s): %s", intent, exc)
         return {}

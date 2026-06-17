@@ -1,6 +1,6 @@
 import pytest
-from datetime import datetime
-from unittest.mock import AsyncMock, MagicMock
+from datetime import datetime, timezone
+from unittest.mock import AsyncMock, MagicMock, patch
 
 from fastapi import HTTPException
 
@@ -152,10 +152,15 @@ class TestChatServiceMessageSaving:
         assert created.meta is None
 
 
+def _fixed_now(year=2026, month=6, day=17, hour=14, minute=30):
+    return datetime(year, month, day, hour, minute, tzinfo=timezone.utc)
+
+
 class TestBuildSystemPrompt:
-    def test_includes_persona(self):
+    def test_includes_real_persona_not_fallback(self):
         prompt = _build_system_prompt([])
-        assert len(prompt) > 0
+        # A string only present in the real persona.md — fails if path is wrong and fallback fires
+        assert "Alfred" in prompt and "David" in prompt
 
     def test_includes_memories(self):
         memories = [_make_embedding_result("memory", "David likes bread")]
@@ -166,6 +171,17 @@ class TestBuildSystemPrompt:
     def test_no_memory_section_when_empty(self):
         prompt = _build_system_prompt([])
         assert "Relevant context" not in prompt
+
+    def test_includes_current_datetime(self):
+        with patch("app.features.core.chats.service.datetime") as mock_dt:
+            mock_dt.now.return_value = _fixed_now()
+            prompt = _build_system_prompt([])
+        assert "Wednesday, June 17, 2026 at 14:30 UTC" in prompt
+
+    def test_includes_formatting_instructions(self):
+        prompt = _build_system_prompt([])
+        assert "plain text" in prompt
+        assert "Telegram" in prompt
 
 
 class TestToMessageDicts:

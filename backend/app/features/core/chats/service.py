@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 import pathlib
 import time
+from datetime import datetime, timezone
 
 from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -17,7 +18,7 @@ from app.features.core.messages.service import MessageService
 from app.integrations.llm_calls.repository import create_llm_call
 from app.shared.llm import LlmProvider
 
-_PERSONA_PATH = pathlib.Path(__file__).parents[4] / "assistant" / "persona.md"
+_PERSONA_PATH = pathlib.Path(__file__).parents[3] / "assistant" / "persona.md"
 _HISTORY_LIMIT = 10
 _MEMORY_LIMIT = 5
 _MEMORY_THRESHOLD = 0.6
@@ -30,8 +31,21 @@ def _load_persona() -> str:
         return "You are Alfred, a helpful personal AI assistant."
 
 
+_FORMATTING_INSTRUCTIONS = (
+    "## Output format\n"
+    "Messages are delivered through Telegram. "
+    "Use only plain text — no markdown, no asterisks for bold, no underscores for italic, no backtick code blocks. "
+    "Use line breaks and simple punctuation for structure instead."
+)
+
+
 def _build_system_prompt(memories: list[EmbeddingSearchResult]) -> str:
-    parts = [_load_persona()]
+    now = datetime.now(tz=timezone.utc).strftime("%A, %B %d, %Y at %H:%M UTC")
+    parts = [
+        _load_persona(),
+        f"## Current date and time\nNow is {now}.",
+        _FORMATTING_INSTRUCTIONS,
+    ]
 
     if memories:
         lines = "\n".join(f"- [{m.source_type}] {m.content}" for m in memories)

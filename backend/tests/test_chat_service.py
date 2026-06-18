@@ -8,6 +8,7 @@ from app.features.core.chats.schemas import ChatRequest
 from app.features.core.chats.service import (
     ChatService,
     _build_system_prompt,
+    _strip_markdown,
     _to_message_dicts,
 )
 from app.features.core.embeddings.schemas import EmbeddingSearchResult
@@ -105,15 +106,13 @@ class TestChatServiceHistory:
         assert messages[-1]["content"] == "current"
         assert len([m for m in messages if m["content"] == "previous"]) == 1
 
-    async def test_slices_to_last_10_history_messages(self):
-        service, llm_provider, _, message_service = _make_service()
-        # 11 prior messages + 1 current = 12 total; only last 10 prior should appear before current
-        msgs = [_make_message(f"msg {i}") for i in range(12)]
-        message_service.list.return_value = msgs
+    async def test_requests_history_limit_plus_one_from_repository(self):
+        service, _, _, message_service = _make_service()
+        message_service.list.return_value = [_make_message("hi")]
         await service.chat(ChatRequest(session_id=1))
-        messages = llm_provider.complete.call_args[0][0]
-        # last message is current; preceding 10 are history
-        assert len(messages) == 11  # 10 history + 1 current
+        filters = message_service.list.call_args[0][0]
+        # service delegates limiting to the repository: _HISTORY_LIMIT history + 1 current
+        assert filters.limit == 11
 
 
 class TestChatServiceMemorySearch:
@@ -182,6 +181,38 @@ class TestBuildSystemPrompt:
         prompt = _build_system_prompt([])
         assert "plain text" in prompt
         assert "Telegram" in prompt
+
+
+class TestStripMarkdown:
+    def test_removes_bold_asterisks(self):
+        assert _strip_markdown("Hello **world**") == "Hello world"
+
+    def test_removes_italic_asterisks(self):
+        assert _strip_markdown("Hello *world*") == "Hello world"
+
+    def test_removes_italic_underscores(self):
+        assert _strip_markdown("Hello _world_") == "Hello world"
+
+    def test_removes_bold_underscores(self):
+        assert _strip_markdown("Hello __world__") == "Hello world"
+
+    def test_removes_inline_code(self):
+        assert _strip_markdown("Use `print()` to debug") == "Use print() to debug"
+
+    def test_removes_code_block(self):
+        assert _strip_markdown("```\ncode here\n```") == ""
+
+    def test_removes_headings(self):
+        assert _strip_markdown("## Section title") == "Section title"
+
+    def test_preserves_plain_text(self):
+        assert _strip_markdown("Hello, how are you?") == "Hello, how are you?"
+
+    def test_realistic_llm_response(self):
+        text = "**Event Name:** Batizado Capoeira\n**Date:** Next Sunday\n**Start Time:** 3:00 PM"
+        result = _strip_markdown(text)
+        assert "**" not in result
+        assert "Batizado Capoeira" in result
 
 
 class TestToMessageDicts:

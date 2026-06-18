@@ -19,6 +19,10 @@ class MessageRepository:
             query = query.where(Message.session_id == filters.session_id)
         if filters.role is not None:
             query = query.where(Message.role == filters.role)
+        if filters.limit is not None:
+            query = query.order_by(Message.created_at.desc()).limit(filters.limit)
+            result = await self._session.execute(query)
+            return list(reversed(result.scalars().all()))
         query = query.order_by(Message.created_at.asc())
         result = await self._session.execute(query)
         return list(result.scalars().all())

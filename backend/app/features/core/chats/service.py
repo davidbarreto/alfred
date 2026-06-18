@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 import pathlib
+import re
 import time
 from datetime import datetime, timezone
 
@@ -54,6 +55,24 @@ def _build_system_prompt(memories: list[EmbeddingSearchResult]) -> str:
     return "\n\n".join(parts)
 
 
+_MD_PATTERNS = [
+    (re.compile(r"\*\*(.+?)\*\*", re.DOTALL), r"\1"),   # **bold**
+    (re.compile(r"\*(.+?)\*", re.DOTALL), r"\1"),        # *italic*
+    (re.compile(r"__(.+?)__", re.DOTALL), r"\1"),        # __bold__
+    (re.compile(r"_(.+?)_", re.DOTALL), r"\1"),          # _italic_
+    (re.compile(r"```.*?```", re.DOTALL), r""),           # ```code block```
+    (re.compile(r"`(.+?)`"), r"\1"),                      # `inline code`
+    (re.compile(r"^#{1,6}\s+", re.MULTILINE), r""),      # ## headings
+    (re.compile(r"^\s*[-*]\s+", re.MULTILINE), r"- "),   # normalise bullet points
+]
+
+
+def _strip_markdown(text: str) -> str:
+    for pattern, replacement in _MD_PATTERNS:
+        text = pattern.sub(replacement, text)
+    return text.strip()
+
+
 def _to_message_dicts(messages: list[MessageRead]) -> list[dict[str, str]]:
     return [{"role": msg.role, "content": msg.content} for msg in messages]
 
@@ -73,17 +92,17 @@ class ChatService:
 
     async def chat(self, request: ChatRequest) -> str:
         logger.info("Chat: session_id=%s", request.session_id)
-        all_messages = await self._message_service.list(
-            MessageFilters(session_id=request.session_id)
+        messages = await self._message_service.list(
+            MessageFilters(session_id=request.session_id, limit=_HISTORY_LIMIT + 1)
         )
-        if not all_messages:
+        if not messages:
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
                 detail="No messages found in session. Call POST /core/messages first.",
             )
 
-        current_message = all_messages[-1]
-        history = _to_message_dicts(all_messages[:-1][-_HISTORY_LIMIT:])
+        current_message = messages[-1]
+        history = _to_message_dicts(messages[:-1])
 
         logger.debug("Chat: %d history messages, searching memory for context", len(history))
         memories = await self._embedding_service.search(
@@ -103,6 +122,8 @@ class ChatService:
         llm_response = await self._llm_provider.complete(messages, system=system_prompt)
         latency_ms = int((time.monotonic() - t0) * 1000)
 
+        response_text = _strip_markdown(llm_response.text)
+
         logger.info(
             "Chat: LLM response session_id=%s latency_ms=%d tokens_in=%s tokens_out=%s",
             request.session_id, latency_ms, llm_response.tokens_input, llm_response.tokens_output,
@@ -114,14 +135,14 @@ class ChatService:
             model=self._llm_provider.model,
             feature="chat",
             prompt=[{"role": "system", "content": system_prompt}] + messages,
-            response=llm_response.text,
+            response=response_text,
             tokens_input=llm_response.tokens_input,
             tokens_output=llm_response.tokens_output,
             latency_ms=latency_ms,
         )
 
         await self._message_service.create(
-            MessageCreate(session_id=request.session_id, role="assistant", content=llm_response.text)
+            MessageCreate(session_id=request.session_id, role="assistant", content=response_text)
         )
 
-        return llm_response.text
+        return response_text

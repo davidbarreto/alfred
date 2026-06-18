@@ -28,6 +28,7 @@ class MessageRead(BaseModel):
 class MessageFilters(BaseModel):
     session_id: Optional[int] = None
     role: Optional[str] = None
+    limit: Optional[int] = None
 
 
 class MessageIngestRequest(BaseModel):

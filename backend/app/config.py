@@ -20,7 +20,7 @@ class Settings(BaseSettings):
     # Google Calendar
     google_calendar_client_id: str = Field(validation_alias="GOOGLE_CALENDAR_CLIENT_ID")
     google_calendar_client_secret: str = Field(validation_alias="GOOGLE_CALENDAR_CLIENT_SECRET")
-    google_calendar_refresh_token: str = Field(validation_alias="GOOGLE_CALENDAR_REFRESH_TOKEN")
+    google_calendar_oauth_redirect_uri: str = Field(validation_alias="GOOGLE_CALENDAR_OAUTH_REDIRECT_URI")
     google_calendar_id: str = Field(default="primary", validation_alias="GOOGLE_CALENDAR_ID")
 
     # Embeddings

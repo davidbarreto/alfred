@@ -71,8 +71,13 @@ class TestExecuteRoute:
         assert response.status_code == 403
 
     def test_missing_fields_returns_422(self, client):
-        response = client.post("/commands/execute", json={"type": "task"}, headers=AUTH)
-        assert response.status_code == 422
+        from app.main import app
+        _override_services(app)
+        try:
+            response = client.post("/commands/execute", json={"type": "task"}, headers=AUTH)
+            assert response.status_code == 422
+        finally:
+            app.dependency_overrides.clear()
 
     def test_unknown_type_returns_400(self, client):
         from app.main import app

@@ -1,11 +1,12 @@
 from functools import lru_cache
 from typing import Annotated
-from fastapi import Depends
+from fastapi import Depends, HTTPException, status
 from app.config import get_settings
 from app.integrations.notion.client import NotionClient
 from app.integrations.notion.provider import NotionProvider
 from app.integrations.google_calendar.client import GoogleCalendarClient
 from app.integrations.google_calendar.provider import GoogleCalendarProvider
+from app.integrations.oauth_tokens.repository import get_oauth_token
 from app.features.organizer.tasks.service import TaskService
 from app.features.organizer.notes.service import NoteService
 from app.features.organizer.calendar_events.service import CalendarEventService
@@ -45,21 +46,24 @@ def get_task_service(session: AsyncSession = Depends(get_session)) -> TaskServic
 def get_note_service(session: AsyncSession = Depends(get_session)) -> NoteService:
     return NoteService(get_note_provider(), session)
 
-@lru_cache
-def get_google_calendar_client() -> GoogleCalendarClient:
+async def get_google_calendar_client(session: AsyncSession = Depends(get_session)) -> GoogleCalendarClient:
     s = get_settings()
+    token = await get_oauth_token(session, "google_calendar")
+    if not token:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Google Calendar not authorized. Open GET /integration/google-calendar/oauth/url to start the flow.",
+        )
     return GoogleCalendarClient(
         client_id=s.google_calendar_client_id,
         client_secret=s.google_calendar_client_secret,
-        refresh_token=s.google_calendar_refresh_token,
+        refresh_token=token.refresh_token,
     )
 
-@lru_cache
-def get_calendar_event_provider() -> GoogleCalendarProvider:
-    return GoogleCalendarProvider(get_google_calendar_client(), get_settings().google_calendar_id, entity_type="calendar_event")
-
-def get_calendar_event_service(session: AsyncSession = Depends(get_session)) -> CalendarEventService:
-    return CalendarEventService(get_calendar_event_provider(), session)
+async def get_calendar_event_service(session: AsyncSession = Depends(get_session)) -> CalendarEventService:
+    client = await get_google_calendar_client(session)
+    provider = GoogleCalendarProvider(client, get_settings().google_calendar_id, entity_type="calendar_event")
+    return CalendarEventService(provider, session)
 
 def get_account_service(session: AsyncSession = Depends(get_session)) -> AccountService:
     return AccountService(session)

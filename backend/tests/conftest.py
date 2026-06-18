@@ -11,8 +11,9 @@ os.environ.setdefault("NOTION_TASKS_DATABASE_ID", "test-tasks-db-id")
 os.environ.setdefault("NOTION_NOTES_DATABASE_ID", "test-notes-db-id")
 os.environ.setdefault("GOOGLE_CALENDAR_CLIENT_ID", "test-gc-client-id")
 os.environ.setdefault("GOOGLE_CALENDAR_CLIENT_SECRET", "test-gc-client-secret")
-os.environ.setdefault("GOOGLE_CALENDAR_REFRESH_TOKEN", "test-gc-refresh-token")
+os.environ.setdefault("GOOGLE_CALENDAR_OAUTH_REDIRECT_URI", "http://localhost:8000/integration/google-calendar/oauth/callback")
 os.environ.setdefault("GOOGLE_CALENDAR_ID", "primary")
+
 os.environ.setdefault("EMBEDDING_MODEL", "all-MiniLM-L6-v2")
 
 import pytest

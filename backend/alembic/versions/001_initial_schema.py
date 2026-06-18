@@ -326,7 +326,19 @@ def upgrade() -> None:
     )
 
 
+    op.create_table(
+        "oauth_tokens",
+        sa.Column("provider", sa.String(50), primary_key=True),
+        sa.Column("refresh_token", sa.Text, nullable=False),
+        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
+        sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.func.now(), nullable=False),
+        schema="integration",
+    )
+
+
 def downgrade() -> None:
+    op.drop_table("oauth_tokens", schema="integration")
+
     # Association tables first (no other tables depend on them)
     op.drop_table("calendar_events_tags", schema="organizer")
     op.drop_table("notes_tags", schema="organizer")

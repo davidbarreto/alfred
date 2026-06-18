@@ -3,6 +3,7 @@ import pytest
 from unittest.mock import AsyncMock, MagicMock
 
 from app.assistant.intents.extraction_service import (
+    CreateEventArgs,
     CreateTaskArgs,
     CreateNoteArgs,
     GetCalendarArgs,
@@ -89,3 +90,63 @@ class TestExtractArgs:
         provider.complete = AsyncMock(side_effect=Exception("connection error"))
         result = await extract_args("task.add", "Buy milk", llm_provider=provider)
         assert result == {}
+
+    async def test_strips_json_markdown_fences(self):
+        raw = {"title": "Buy milk", "due_date": None, "priority": None}
+        fenced = f"```json\n{json.dumps(raw)}\n```"
+        provider = _make_provider(fenced)
+        result = await extract_args("task.add", "Buy milk", llm_provider=provider)
+        assert result["title"] == "Buy milk"
+
+    async def test_strips_plain_markdown_fences(self):
+        raw = {"title": "Buy milk", "due_date": None, "priority": None}
+        fenced = f"```\n{json.dumps(raw)}\n```"
+        provider = _make_provider(fenced)
+        result = await extract_args("task.add", "Buy milk", llm_provider=provider)
+        assert result["title"] == "Buy milk"
+
+
+class TestExtractArgsEventAdd:
+    async def test_event_add_extracts_fields(self):
+        payload = json.dumps({
+            "title": "Batizado Capoeira",
+            "start": "2026-06-22T15:00:00",
+            "end": "2026-06-22T16:00:00",
+            "additional_notes": None,
+            "recurrence": None,
+        })
+        provider = _make_provider(payload)
+        result = await extract_args("event.add", "Create an event Batizado Capoeira next Sunday at 3 PM (1h)", llm_provider=provider)
+        assert result["title"] == "Batizado Capoeira"
+        assert result["start"] == "2026-06-22T15:00:00"
+        assert result["end"] == "2026-06-22T16:00:00"
+
+    async def test_event_add_optional_fields_default_to_none(self):
+        payload = json.dumps({"title": "Standup"})
+        provider = _make_provider(payload)
+        result = await extract_args("event.add", "Add standup tomorrow", llm_provider=provider)
+        assert result["start"] is None
+        assert result["end"] is None
+        assert result["additional_notes"] is None
+        assert result["recurrence"] is None
+
+    async def test_event_add_date_context_in_system_prompt(self):
+        payload = json.dumps({"title": "Gym"})
+        provider = _make_provider(payload)
+        await extract_args("event.add", "Add gym session", llm_provider=provider)
+        system = provider.complete.call_args[1]["system"]
+        assert "current date" in system.lower()
+
+    async def test_non_date_intent_has_no_date_context(self):
+        payload = json.dumps({"title": "My note", "content": None})
+        provider = _make_provider(payload)
+        await extract_args("note.add", "Save a note", llm_provider=provider)
+        system = provider.complete.call_args[1]["system"]
+        assert "current date" not in system.lower()
+
+    async def test_event_add_strips_markdown_fences(self):
+        raw = {"title": "Batizado Capoeira", "start": "2026-06-22T15:00:00", "end": "2026-06-22T16:00:00", "additional_notes": None, "recurrence": None}
+        fenced = f"```json\n{json.dumps(raw)}\n```"
+        provider = _make_provider(fenced)
+        result = await extract_args("event.add", "Create event next Sunday", llm_provider=provider)
+        assert result["title"] == "Batizado Capoeira"

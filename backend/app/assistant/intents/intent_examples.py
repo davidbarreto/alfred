@@ -102,6 +102,12 @@ INTENT_EXAMPLES: list[IntentExample] = [
     IntentExample(id=68, text="Put a reminder for the product review on Thursday", intent="event.add"),
     IntentExample(id=69, text="Schedule gym session every Monday at 7am", intent="event.add"),
     IntentExample(id=70, text="Add a recurring standup meeting every weekday at 9am", intent="event.add"),
+    IntentExample(id=153, text="Can you create an event for next Sunday at 3pm?", intent="event.add"),
+    IntentExample(id=154, text="Can you add something to my calendar for Saturday?", intent="event.add"),
+    IntentExample(id=155, text="I need to create an event called team lunch next Friday", intent="event.add"),
+    IntentExample(id=156, text="Please add a 1-hour event for the capoeira class on Sunday", intent="event.add"),
+    IntentExample(id=157, text="Can you put a birthday party on my calendar for next Saturday at 6pm?", intent="event.add"),
+    IntentExample(id=158, text="I have a doctor visit next Monday at 9am, can you add it?", intent="event.add"),
 
     # --- event.list ---
     IntentExample(id=71, text="What's on my calendar today?", intent="event.list"),

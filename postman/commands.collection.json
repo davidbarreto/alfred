@@ -44,7 +44,76 @@
       }
     },
     {
-      "name": "02 - Resolve Task Command",
+      "name": "02 - Detect Intent (task.list)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Response has intent and confidence', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json).to.have.property('intent');",
+              "    pm.expect(json).to.have.property('confidence');",
+              "    pm.expect(json.intent).to.be.a('string').and.not.empty;",
+              "    pm.expect(json.confidence).to.be.a('number').and.within(0, 1);",
+              "});",
+              "pm.test('Intent is task.list', () => {",
+              "    pm.expect(pm.response.json().intent).to.eql('task.list');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"text\": \"What are my pending tasks?\"\n}",
+          "options": { "raw": { "language": "json" } }
+        },
+        "url": {
+          "raw": "{{base_url}}/commands/intents",
+          "host": ["{{base_url}}"],
+          "path": ["commands", "intents"]
+        }
+      }
+    },
+    {
+      "name": "03 - Detect Intent (unknown)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Returns unknown for conversational text', () => {",
+              "    pm.expect(pm.response.json().intent).to.eql('unknown');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"text\": \"What's the capital of France?\"\n}",
+          "options": { "raw": { "language": "json" } }
+        },
+        "url": {
+          "raw": "{{base_url}}/commands/intents",
+          "host": ["{{base_url}}"],
+          "path": ["commands", "intents"]
+        }
+      }
+    },
+    {
+      "name": "04 - Resolve Task Command",
       "event": [
         {
           "listen": "test",
@@ -91,7 +160,7 @@
       }
     },
     {
-      "name": "03 - Resolve Note Command",
+      "name": "05 - Resolve Note Command",
       "event": [
         {
           "listen": "test",
@@ -128,7 +197,7 @@
       }
     },
     {
-      "name": "04 - Resolve With Command Hint (Single Command)",
+      "name": "06 - Resolve With Command Hint (Single Command)",
       "event": [
         {
           "listen": "test",
@@ -171,7 +240,7 @@
       }
     },
     {
-      "name": "05 - Resolve With Command Hint (Note, With Flags)",
+      "name": "07 - Resolve With Command Hint (Note, With Flags)",
       "event": [
         {
           "listen": "test",
@@ -210,7 +279,7 @@
       }
     },
     {
-      "name": "06 - Resolve Unparseable Text",
+      "name": "08 - Resolve Unparseable Text",
       "event": [
         {
           "listen": "test",
@@ -246,7 +315,7 @@
       }
     },
     {
-      "name": "07 - Execute Task Add",
+      "name": "09 - Execute Task Add",
       "event": [
         {
           "listen": "test",
@@ -281,7 +350,7 @@
       }
     },
     {
-      "name": "08 - Execute Note Add",
+      "name": "10 - Execute Note Add",
       "event": [
         {
           "listen": "test",
@@ -315,7 +384,7 @@
       }
     },
     {
-      "name": "09 - Execute Task List",
+      "name": "11 - Execute Task List",
       "event": [
         {
           "listen": "test",
@@ -348,7 +417,7 @@
       }
     },
     {
-      "name": "10 - Respond to Command Results",
+      "name": "12 - Respond to Command Results",
       "event": [
         {
           "listen": "test",
@@ -381,7 +450,7 @@
       }
     },
     {
-      "name": "11 - Respond - No executions (empty response)",
+      "name": "13 - Respond - No executions (empty response)",
       "event": [
         {
           "listen": "test",

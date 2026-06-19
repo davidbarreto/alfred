@@ -9,6 +9,8 @@ logger = logging.getLogger(__name__)
 from app.assistant.commands.executor import execute
 from app.assistant.commands.resolver import resolve
 from app.assistant.commands.schemas import (
+    CommandDetectIntentRequest,
+    CommandDetectIntentResponse,
     CommandExecuteRequest,
     CommandExecuteResponse,
     CommandRespondRequest,
@@ -16,6 +18,7 @@ from app.assistant.commands.schemas import (
     CommandResolveRequest,
     CommandResolveResponse,
 )
+from app.assistant.intents.intent_service import detect_intent
 from app.api.auth import require_auth
 from app.dependencies import (
     AccountServiceDep,
@@ -33,6 +36,16 @@ from app.dependencies import (
 from app.features.core.command_executions.schemas import CommandExecutionCreate, CommandExecutionFilters, CommandExecutionUpdate
 
 router = APIRouter(prefix="/commands", tags=["commands"], dependencies=[Depends(require_auth)])
+
+
+@router.post("/intents", response_model=CommandDetectIntentResponse)
+async def detect_command_intent(
+    request: CommandDetectIntentRequest,
+    session: DbSessionDep,
+) -> CommandDetectIntentResponse:
+    logger.info("POST /commands/intents text=%r", request.text[:80])
+    result = await detect_intent(request.text, session)
+    return CommandDetectIntentResponse(intent=result.intent, confidence=result.confidence)
 
 
 @router.post("/resolve", response_model=CommandResolveResponse)

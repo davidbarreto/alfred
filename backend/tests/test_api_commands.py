@@ -27,6 +27,32 @@ def client():
     app.dependency_overrides.clear()
 
 
+class TestDetectCommandIntent:
+    def test_returns_intent_and_confidence(self, client):
+        result = IntentResult(intent="task.list", confidence=0.91)
+        with patch("app.api.routes.commands.detect_intent", new=AsyncMock(return_value=result)):
+            response = client.post("/commands/intents", json={"text": "what are my tasks?"}, headers=AUTH)
+        assert response.status_code == 200
+        data = response.json()
+        assert data["intent"] == "task.list"
+        assert data["confidence"] == 0.91
+
+    def test_returns_unknown_for_conversational_text(self, client):
+        result = IntentResult(intent="unknown", confidence=0.2)
+        with patch("app.api.routes.commands.detect_intent", new=AsyncMock(return_value=result)):
+            response = client.post("/commands/intents", json={"text": "tell me a joke"}, headers=AUTH)
+        assert response.status_code == 200
+        assert response.json()["intent"] == "unknown"
+
+    def test_requires_auth(self, client):
+        response = client.post("/commands/intents", json={"text": "test"})
+        assert response.status_code == 403
+
+    def test_missing_text_returns_422(self, client):
+        response = client.post("/commands/intents", json={}, headers=AUTH)
+        assert response.status_code == 422
+
+
 class TestResolveCommand:
     def test_task_add_command_resolves(self, client):
         response = client.post(

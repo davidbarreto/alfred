@@ -48,3 +48,12 @@ class CommandRespondRequest(BaseModel):
 
 class CommandRespondResponse(BaseModel):
     response: str
+
+
+class CommandDetectIntentRequest(BaseModel):
+    text: str
+
+
+class CommandDetectIntentResponse(BaseModel):
+    intent: str
+    confidence: float

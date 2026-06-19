@@ -47,7 +47,7 @@ def _make_llm_provider(text: str = "ok") -> MagicMock:
     return provider
 
 
-def _make_service(llm_text: str = "ok") -> tuple[ChatService, MagicMock, AsyncMock, AsyncMock]:
+def _make_service(llm_text: str = "ok") -> tuple[ChatService, MagicMock, AsyncMock, AsyncMock, MagicMock]:
     session = AsyncMock()
     session.add = MagicMock()
     llm_provider = _make_llm_provider(llm_text)
@@ -56,24 +56,30 @@ def _make_service(llm_text: str = "ok") -> tuple[ChatService, MagicMock, AsyncMo
     message_service = AsyncMock()
     message_service.list = AsyncMock(return_value=[])
     message_service.create = AsyncMock()
+    memory_extraction_service = MagicMock()
+    memory_extraction_service.extract_and_save = AsyncMock()
+    session_summary_service = MagicMock()
+    session_summary_service.get_recent_summaries = AsyncMock(return_value=[])
     service = ChatService(
         session=session,
         llm_provider=llm_provider,
         embedding_service=embedding_service,
         message_service=message_service,
+        memory_extraction_service=memory_extraction_service,
+        session_summary_service=session_summary_service,
     )
-    return service, llm_provider, embedding_service, message_service
+    return service, llm_provider, embedding_service, message_service, memory_extraction_service
 
 
 class TestChatServiceResponse:
     async def test_returns_llm_response(self):
-        service, _, _, message_service = _make_service("Hello from Alfred!")
+        service, _, _, message_service, _ = _make_service("Hello from Alfred!")
         message_service.list.return_value = [_make_message("Hello")]
         result = await service.chat(ChatRequest(session_id=1))
         assert result == "Hello from Alfred!"
 
     async def test_uses_last_user_message_as_agent_input(self):
-        service, llm_provider, _, message_service = _make_service()
+        service, llm_provider, _, message_service, _ = _make_service()
         message_service.list.return_value = [_make_message("What tasks do I have?")]
         await service.chat(ChatRequest(session_id=1))
         messages = llm_provider.complete.call_args[0][0]
@@ -81,7 +87,7 @@ class TestChatServiceResponse:
         assert messages[-1]["role"] == "user"
 
     async def test_raises_422_when_no_messages_in_session(self):
-        service, _, _, message_service = _make_service()
+        service, _, _, message_service, _ = _make_service()
         message_service.list.return_value = []
         with pytest.raises(HTTPException) as exc_info:
             await service.chat(ChatRequest(session_id=1))
@@ -90,14 +96,14 @@ class TestChatServiceResponse:
 
 class TestChatServiceHistory:
     async def test_retrieves_history_for_session(self):
-        service, _, _, message_service = _make_service()
+        service, _, _, message_service, _ = _make_service()
         message_service.list.return_value = [_make_message("hi")]
         await service.chat(ChatRequest(session_id=42))
         filters = message_service.list.call_args[0][0]
         assert filters.session_id == 42
 
     async def test_excludes_current_message_from_history(self):
-        service, llm_provider, _, message_service = _make_service()
+        service, llm_provider, _, message_service, _ = _make_service()
         msgs = [_make_message("previous"), _make_message("current")]
         message_service.list.return_value = msgs
         await service.chat(ChatRequest(session_id=1))
@@ -107,7 +113,7 @@ class TestChatServiceHistory:
         assert len([m for m in messages if m["content"] == "previous"]) == 1
 
     async def test_requests_history_limit_plus_one_from_repository(self):
-        service, _, _, message_service = _make_service()
+        service, _, _, message_service, _ = _make_service()
         message_service.list.return_value = [_make_message("hi")]
         await service.chat(ChatRequest(session_id=1))
         filters = message_service.list.call_args[0][0]
@@ -117,7 +123,7 @@ class TestChatServiceHistory:
 
 class TestChatServiceMemorySearch:
     async def test_searches_memories_with_current_message_text(self):
-        service, _, embedding_service, message_service = _make_service()
+        service, _, embedding_service, message_service, _ = _make_service()
         message_service.list.return_value = [_make_message("what did I note about bread?")]
         await service.chat(ChatRequest(session_id=1))
         req = embedding_service.search.call_args[0][0]
@@ -125,7 +131,7 @@ class TestChatServiceMemorySearch:
         assert set(req.source_types) == {"memory", "note", "task"}
 
     async def test_empty_memories_still_works(self):
-        service, _, embedding_service, message_service = _make_service("ok")
+        service, _, embedding_service, message_service, _ = _make_service("ok")
         message_service.list.return_value = [_make_message("hi")]
         embedding_service.search = AsyncMock(return_value=[])
         result = await service.chat(ChatRequest(session_id=1))
@@ -134,7 +140,7 @@ class TestChatServiceMemorySearch:
 
 class TestChatServiceMessageSaving:
     async def test_saves_assistant_message_after_reply(self):
-        service, _, _, message_service = _make_service("Alfred's reply")
+        service, _, _, message_service, _ = _make_service("Alfred's reply")
         message_service.list.return_value = [_make_message("hello", role="user")]
         await service.chat(ChatRequest(session_id=5))
         message_service.create.assert_called_once()
@@ -144,7 +150,7 @@ class TestChatServiceMessageSaving:
         assert created.content == "Alfred's reply"
 
     async def test_assistant_message_has_no_meta(self):
-        service, _, _, message_service = _make_service()
+        service, _, _, message_service, _ = _make_service()
         message_service.list.return_value = [_make_message("hi")]
         await service.chat(ChatRequest(session_id=1))
         created = message_service.create.call_args[0][0]
@@ -181,6 +187,57 @@ class TestBuildSystemPrompt:
         prompt = _build_system_prompt([])
         assert "plain text" in prompt
         assert "Telegram" in prompt
+
+    def test_includes_detected_intents_in_prompt(self):
+        prompt = _build_system_prompt([], detected_intents=["event.add"])
+        assert "event.add" in prompt
+        assert "Parallel command pipeline" in prompt
+
+    def test_no_intent_section_when_none(self):
+        prompt = _build_system_prompt([])
+        assert "Parallel command pipeline" not in prompt
+
+    def test_includes_recent_session_summaries(self):
+        summaries = [(_fixed_now(), "User discussed event scheduling.")]
+        prompt = _build_system_prompt([], recent_summaries=summaries)
+        assert "Recent conversations" in prompt
+        assert "User discussed event scheduling." in prompt
+        assert "June 17, 2026" in prompt
+
+    def test_no_summary_section_when_empty(self):
+        prompt = _build_system_prompt([], recent_summaries=[])
+        assert "Recent conversations" not in prompt
+
+    def test_summaries_appear_before_memories(self):
+        memories = [_make_embedding_result("memory", "Likes coffee")]
+        summaries = [(_fixed_now(), "Talked about tasks.")]
+        prompt = _build_system_prompt(memories, recent_summaries=summaries)
+        assert prompt.index("Recent conversations") < prompt.index("Relevant context from memory")
+
+
+class TestChatServiceMemoryExtraction:
+    async def test_schedules_extraction_after_chat(self):
+        service, _, _, message_service, memory_extraction_service = _make_service()
+        msg = _make_message("I prefer dark mode")
+        message_service.list.return_value = [msg]
+        with patch("app.features.core.chats.service.asyncio.create_task") as mock_create_task:
+            await service.chat(ChatRequest(session_id=1))
+        mock_create_task.assert_called_once()
+
+    async def test_detected_intents_appear_in_system_prompt(self):
+        service, llm_provider, _, message_service, _ = _make_service()
+        message_service.list.return_value = [_make_message("add event")]
+        await service.chat(ChatRequest(session_id=1, detected_intents=["event.add"]))
+        system_prompt = llm_provider.complete.call_args[1]["system"]
+        assert "event.add" in system_prompt
+        assert "Parallel command pipeline" in system_prompt
+
+    async def test_no_intent_hint_when_not_provided(self):
+        service, llm_provider, _, message_service, _ = _make_service()
+        message_service.list.return_value = [_make_message("hi")]
+        await service.chat(ChatRequest(session_id=1))
+        system_prompt = llm_provider.complete.call_args[1]["system"]
+        assert "Parallel command pipeline" not in system_prompt
 
 
 class TestStripMarkdown:

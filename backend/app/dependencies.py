@@ -22,6 +22,7 @@ from app.features.core.memories.service import MemoryService
 from app.features.core.working_memory.service import WorkingMemoryService
 from app.features.core.embeddings.service import EmbeddingService
 from app.features.core.chats.service import ChatService
+from app.features.core.memories.extraction_service import MemoryExtractionService
 from app.features.core.sessions.summary_service import SessionSummaryService
 from app.integrations.sentence_transformers.provider import SentenceTransformerEmbeddingProvider
 from app.integrations.google.llm_provider import GoogleLlmProvider
@@ -118,6 +119,13 @@ def get_embedding_service(session: AsyncSession = Depends(get_session)) -> Embed
     return EmbeddingService(session, get_embedding_provider())
 
 @lru_cache
+def get_memory_extraction_service() -> MemoryExtractionService:
+    return MemoryExtractionService(
+        llm_provider=get_extraction_llm_provider(),
+        embedding_provider=get_embedding_provider(),
+    )
+
+@lru_cache
 def get_session_summary_service() -> SessionSummaryService:
     return SessionSummaryService(llm_provider=get_extraction_llm_provider())
 
@@ -127,6 +135,8 @@ def get_chat_service(session: AsyncSession = Depends(get_session)) -> ChatServic
         llm_provider=get_llm_provider(),
         embedding_service=EmbeddingService(session, get_embedding_provider()),
         message_service=MessageService(session),
+        memory_extraction_service=get_memory_extraction_service(),
+        session_summary_service=get_session_summary_service(),
     )
 
 # Dependencies shortcuts

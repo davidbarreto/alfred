@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import logging
 import pathlib
 import re
@@ -14,8 +15,10 @@ logger = logging.getLogger(__name__)
 from app.features.core.chats.schemas import ChatRequest
 from app.features.core.embeddings.schemas import EmbeddingSearchRequest, EmbeddingSearchResult
 from app.features.core.embeddings.service import EmbeddingService
+from app.features.core.memories.extraction_service import MemoryExtractionService
 from app.features.core.messages.schemas import MessageCreate, MessageFilters, MessageRead
 from app.features.core.messages.service import MessageService
+from app.features.core.sessions.summary_service import SessionSummaryService
 from app.integrations.llm_calls.repository import create_llm_call
 from app.shared.llm import LlmProvider
 
@@ -40,7 +43,11 @@ _FORMATTING_INSTRUCTIONS = (
 )
 
 
-def _build_system_prompt(memories: list[EmbeddingSearchResult]) -> str:
+def _build_system_prompt(
+    memories: list[EmbeddingSearchResult],
+    detected_intents: list[str] | None = None,
+    recent_summaries: list[tuple[datetime, str]] | None = None,
+) -> str:
     now = datetime.now(tz=timezone.utc).strftime("%A, %B %d, %Y at %H:%M UTC")
     parts = [
         _load_persona(),
@@ -48,9 +55,25 @@ def _build_system_prompt(memories: list[EmbeddingSearchResult]) -> str:
         _FORMATTING_INSTRUCTIONS,
     ]
 
+    if recent_summaries:
+        lines = "\n".join(
+            f"{ts.strftime('%B %d, %Y')}: {summary}"
+            for ts, summary in recent_summaries
+        )
+        parts.append(f"## Recent conversations\n{lines}")
+
     if memories:
         lines = "\n".join(f"- [{m.source_type}] {m.content}" for m in memories)
         parts.append(f"## Relevant context from memory\n{lines}")
+
+    if detected_intents:
+        intent_list = ", ".join(detected_intents)
+        parts.append(
+            f"## Parallel command pipeline\n"
+            f"The following commands are being processed in parallel: {intent_list}.\n"
+            f"Acknowledge what you are doing naturally. Do not confirm completion — "
+            f"a separate message will follow with the results."
+        )
 
     return "\n\n".join(parts)
 
@@ -84,11 +107,15 @@ class ChatService:
         llm_provider: LlmProvider,
         embedding_service: EmbeddingService,
         message_service: MessageService,
+        memory_extraction_service: MemoryExtractionService,
+        session_summary_service: SessionSummaryService,
     ) -> None:
         self._session = session
         self._llm_provider = llm_provider
         self._embedding_service = embedding_service
         self._message_service = message_service
+        self._memory_extraction_service = memory_extraction_service
+        self._session_summary_service = session_summary_service
 
     async def chat(self, request: ChatRequest) -> str:
         logger.info("Chat: session_id=%s", request.session_id)
@@ -115,7 +142,10 @@ class ChatService:
         )
         logger.debug("Chat: %d memory items retrieved", len(memories))
 
-        system_prompt = _build_system_prompt(memories)
+        recent_summaries = await self._session_summary_service.get_recent_summaries(request.session_id)
+        logger.debug("Chat: %d recent session summaries loaded", len(recent_summaries))
+
+        system_prompt = _build_system_prompt(memories, request.detected_intents, recent_summaries)
         messages = history + [{"role": "user", "content": current_message.content}]
 
         t0 = time.monotonic()
@@ -143,6 +173,13 @@ class ChatService:
 
         await self._message_service.create(
             MessageCreate(session_id=request.session_id, role="assistant", content=response_text)
+        )
+
+        asyncio.create_task(
+            self._memory_extraction_service.extract_and_save(
+                user_message=current_message.content,
+                message_id=current_message.id,
+            )
         )
 
         return response_text

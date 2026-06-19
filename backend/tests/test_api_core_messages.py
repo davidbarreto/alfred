@@ -48,16 +48,24 @@ def mock_message_service():
 @pytest.fixture
 def mock_session_service():
     svc = AsyncMock()
-    svc.get_or_create_active.return_value = _session_read(id=10)
+    svc.get_or_create_active.return_value = (_session_read(id=10), False)
     return svc
 
 
 @pytest.fixture
-def client(mock_message_service, mock_session_service):
+def mock_summary_service():
+    svc = AsyncMock()
+    svc.summarise_and_save = AsyncMock()
+    return svc
+
+
+@pytest.fixture
+def client(mock_message_service, mock_session_service, mock_summary_service):
     from app.main import app
-    from app.dependencies import get_message_service, get_session_service
+    from app.dependencies import get_message_service, get_session_service, get_session_summary_service
     app.dependency_overrides[get_message_service] = lambda: mock_message_service
     app.dependency_overrides[get_session_service] = lambda: mock_session_service
+    app.dependency_overrides[get_session_summary_service] = lambda: mock_summary_service
     yield TestClient(app)
     app.dependency_overrides.clear()
 

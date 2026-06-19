@@ -20,13 +20,13 @@ class SessionService:
         obj = await self._repo.create(data)
         return SessionRead.model_validate(obj)
 
-    async def get_or_create_active(self, source: str, external_id: str) -> SessionRead:
+    async def get_or_create_active(self, source: str, external_id: str) -> tuple[SessionRead, bool]:
         obj = await self._repo.get_active_by_source(source, external_id)
         if obj is not None:
             await self._repo.touch(obj.id)
-            return SessionRead.model_validate(obj)
+            return SessionRead.model_validate(obj), False
         obj = await self._repo.create(SessionCreate(source=source, external_id=external_id))
-        return SessionRead.model_validate(obj)
+        return SessionRead.model_validate(obj), True
 
     async def finish(self, session_id: int) -> SessionRead | None:
         obj = await self._repo.finish(session_id)

@@ -22,5 +22,9 @@ class SessionRead(BaseModel):
     finished_at: Optional[datetime] = None
 
 
+class SessionUpdate(BaseModel):
+    summary: Optional[str] = None
+
+
 class SessionFilters(BaseModel):
     active_only: bool = False

@@ -1,7 +1,7 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, status
 
 from app.api.auth import require_auth
-from app.dependencies import MessageServiceDep, SessionServiceDep
+from app.dependencies import MessageServiceDep, SessionServiceDep, SessionSummaryServiceDep
 from app.features.core.messages.schemas import (
     MessageCreate,
     MessageFilters,
@@ -31,8 +31,17 @@ async def ingest_message(
     data: MessageIngestRequest,
     session_service: SessionServiceDep,
     message_service: MessageServiceDep,
+    summary_service: SessionSummaryServiceDep,
+    background_tasks: BackgroundTasks,
 ) -> MessageIngestResponse:
-    session = await session_service.get_or_create_active(data.source, data.external_id)
+    session, was_created = await session_service.get_or_create_active(data.source, data.external_id)
+    if was_created:
+        background_tasks.add_task(
+            summary_service.summarise_and_save,
+            source=data.source,
+            external_id=data.external_id,
+            new_session_id=session.id,
+        )
     message = await message_service.create(
         MessageCreate(session_id=session.id, role="user", content=data.text, meta=data.meta)
     )

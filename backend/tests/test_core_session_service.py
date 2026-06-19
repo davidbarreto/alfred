@@ -65,8 +65,9 @@ class TestGetOrCreateActive:
         existing = _make_session_orm(id=5, source="telegram", external_id="42")
         service._repo.get_active_by_source.return_value = existing
         service._repo.touch = AsyncMock()
-        result = await service.get_or_create_active("telegram", "42")
+        result, was_created = await service.get_or_create_active("telegram", "42")
         assert result.id == 5
+        assert was_created is False
         service._repo.touch.assert_called_once_with(5)
         service._repo.create.assert_not_called()
 
@@ -74,8 +75,9 @@ class TestGetOrCreateActive:
         service._repo.get_active_by_source.return_value = None
         new_session = _make_session_orm(id=7, source="telegram", external_id="42")
         service._repo.create.return_value = new_session
-        result = await service.get_or_create_active("telegram", "42")
+        result, was_created = await service.get_or_create_active("telegram", "42")
         assert result.id == 7
+        assert was_created is True
         service._repo.create.assert_called_once()
         created_data = service._repo.create.call_args[0][0]
         assert created_data.source == "telegram"

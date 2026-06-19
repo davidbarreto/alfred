@@ -22,6 +22,7 @@ from app.features.core.memories.service import MemoryService
 from app.features.core.working_memory.service import WorkingMemoryService
 from app.features.core.embeddings.service import EmbeddingService
 from app.features.core.chats.service import ChatService
+from app.features.core.sessions.summary_service import SessionSummaryService
 from app.integrations.sentence_transformers.provider import SentenceTransformerEmbeddingProvider
 from app.integrations.google.llm_provider import GoogleLlmProvider
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -116,6 +117,10 @@ def get_extraction_llm_provider() -> GoogleLlmProvider:
 def get_embedding_service(session: AsyncSession = Depends(get_session)) -> EmbeddingService:
     return EmbeddingService(session, get_embedding_provider())
 
+@lru_cache
+def get_session_summary_service() -> SessionSummaryService:
+    return SessionSummaryService(llm_provider=get_extraction_llm_provider())
+
 def get_chat_service(session: AsyncSession = Depends(get_session)) -> ChatService:
     return ChatService(
         session=session,
@@ -144,5 +149,6 @@ MemoryServiceDep = Annotated[MemoryService, Depends(get_memory_service)]
 WorkingMemoryServiceDep = Annotated[WorkingMemoryService, Depends(get_working_memory_service)]
 EmbeddingServiceDep = Annotated[EmbeddingService, Depends(get_embedding_service)]
 ChatServiceDep = Annotated[ChatService, Depends(get_chat_service)]
+SessionSummaryServiceDep = Annotated[SessionSummaryService, Depends(get_session_summary_service)]
 LlmProviderDep = Annotated[GoogleLlmProvider, Depends(get_llm_provider)]
 ExtractionLlmProviderDep = Annotated[GoogleLlmProvider, Depends(get_extraction_llm_provider)]

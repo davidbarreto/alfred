@@ -35,9 +35,16 @@ class CommandExecuteResponse(BaseModel):
     command: str
     status: str
     result: Any = None
-    message: str | None = None
 
 class CommandResolveResponse(BaseModel):
     status: str
     commands: List[CommandDetail]
     raw_text: str
+
+
+class CommandRespondRequest(BaseModel):
+    message_id: int
+
+
+class CommandRespondResponse(BaseModel):
+    response: str

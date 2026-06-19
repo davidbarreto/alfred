@@ -11,6 +11,8 @@ from app.assistant.commands.resolver import resolve
 from app.assistant.commands.schemas import (
     CommandExecuteRequest,
     CommandExecuteResponse,
+    CommandRespondRequest,
+    CommandRespondResponse,
     CommandResolveRequest,
     CommandResolveResponse,
 )
@@ -28,8 +30,7 @@ from app.dependencies import (
     TaskServiceDep,
     TransactionServiceDep,
 )
-from app.assistant.commands.formatter import format_result_message
-from app.features.core.command_executions.schemas import CommandExecutionCreate, CommandExecutionUpdate
+from app.features.core.command_executions.schemas import CommandExecutionCreate, CommandExecutionFilters, CommandExecutionUpdate
 
 router = APIRouter(prefix="/commands", tags=["commands"], dependencies=[Depends(require_auth)])
 
@@ -109,5 +110,40 @@ async def execute_command(
         command=request.command,
         status="ok",
         result=result,
-        message=format_result_message(request.type, request.command, result),
     )
+
+
+_RESPOND_SYSTEM = (
+    "You are Alfred, a helpful personal AI assistant. "
+    "Inform the user about the result of the operations below in 1-2 sentences, "
+    "natural and friendly tone. Plain text only, no markdown."
+)
+
+
+@router.post("/respond", response_model=CommandRespondResponse)
+async def respond_to_commands(
+    request: CommandRespondRequest,
+    cmd_execution_service: CommandExecutionServiceDep,
+    llm_provider: ExtractionLlmProviderDep,
+) -> CommandRespondResponse:
+    logger.info("POST /commands/respond message_id=%d", request.message_id)
+    executions = await cmd_execution_service.list(
+        CommandExecutionFilters(message_id=request.message_id)
+    )
+    if not executions:
+        logger.warning("No executions found for message_id=%d", request.message_id)
+        return CommandRespondResponse(response="")
+
+    lines = []
+    for ex in executions:
+        if ex.status == "success":
+            lines.append(f"- {ex.command_name}: completed successfully")
+        else:
+            lines.append(f"- {ex.command_name}: failed — {ex.error or 'unknown error'}")
+
+    summary = "\n".join(lines)
+    llm_response = await llm_provider.complete(
+        [{"role": "user", "content": f"Commands executed:\n{summary}"}],
+        system=_RESPOND_SYSTEM,
+    )
+    return CommandRespondResponse(response=llm_response.text.strip())

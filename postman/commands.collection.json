@@ -346,6 +346,71 @@
           "path": ["commands", "execute"]
         }
       }
+    },
+    {
+      "name": "10 - Respond to Command Results",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Response has friendly text', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json).to.have.property('response');",
+              "    pm.expect(json.response).to.be.a('string');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"message_id\": {{core_message_id}}\n}",
+          "options": { "raw": { "language": "json" } }
+        },
+        "url": {
+          "raw": "{{base_url}}/commands/respond",
+          "host": ["{{base_url}}"],
+          "path": ["commands", "respond"]
+        }
+      }
+    },
+    {
+      "name": "11 - Respond - No executions (empty response)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Response is empty string when no executions', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json.response).to.eql('');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"message_id\": 999999999\n}",
+          "options": { "raw": { "language": "json" } }
+        },
+        "url": {
+          "raw": "{{base_url}}/commands/respond",
+          "host": ["{{base_url}}"],
+          "path": ["commands", "respond"]
+        }
+      }
     }
   ]
 }

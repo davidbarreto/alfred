@@ -262,19 +262,21 @@
       }
     },
     {
-      "name": "10 - Messages - Create",
+      "name": "10 - Messages - Ingest",
       "event": [
         {
           "listen": "test",
           "script": {
             "exec": [
               "pm.test('Status is 201', () => pm.response.to.have.status(201));",
-              "pm.test('Response has expected shape', () => {",
+              "pm.test('Response has message_id and session_id', () => {",
               "    const json = pm.response.json();",
-              "    ['id', 'session_id', 'source', 'input', 'created_at'].forEach(f => pm.expect(json).to.have.property(f));",
-              "    pm.expect(json.source).to.eql('api');",
+              "    pm.expect(json).to.have.property('message_id');",
+              "    pm.expect(json).to.have.property('session_id');",
+              "    pm.expect(json.message_id).to.be.a('number');",
               "});",
-              "pm.environment.set('core_message_id', pm.response.json().id);"
+              "pm.environment.set('core_message_id', pm.response.json().message_id);",
+              "pm.environment.set('core_session_id', pm.response.json().session_id);"
             ],
             "type": "text/javascript"
           }
@@ -290,7 +292,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"session_id\": {{core_session_id}},\n  \"source\": \"api\",\n  \"input\": \"What are my tasks for today?\",\n  \"response\": null\n}"
+          "raw": "{\n  \"text\": \"What are my tasks for today?\",\n  \"source\": \"telegram\",\n  \"external_id\": \"postman_test_chat\"\n}"
         },
         "url": {
           "raw": "{{base_url}}/core/messages/",
@@ -385,7 +387,8 @@
               "pm.test('Returned message matches ID', () => {",
               "    const json = pm.response.json();",
               "    pm.expect(String(json.id)).to.eql(String(pm.environment.get('core_message_id')));",
-              "    pm.expect(json.input).to.eql('What are my tasks for today?');",
+              "    pm.expect(json.content).to.eql('What are my tasks for today?');",
+              "    pm.expect(json.role).to.eql('user');",
               "});"
             ],
             "type": "text/javascript"
@@ -1549,14 +1552,14 @@
       }
     },
     {
-      "name": "70 - Chats - Basic reply (no session)",
+      "name": "70 - Chats - Reply using session from step 10",
       "event": [
         {
           "listen": "test",
           "script": {
             "exec": [
               "pm.test('Status is 200', () => pm.response.to.have.status(200));",
-              "pm.test('Response has text', () => {",
+              "pm.test('Response has non-empty text', () => {",
               "    const json = pm.response.json();",
               "    pm.expect(json).to.have.property('response');",
               "    pm.expect(json.response).to.be.a('string').and.not.empty;",
@@ -1576,7 +1579,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"text\": \"Hello Alfred, what can you help me with?\",\n  \"source\": \"api\"\n}"
+          "raw": "{\n  \"session_id\": {{core_session_id}}\n}"
         },
         "url": {
           "raw": "{{base_url}}/core/chats/",
@@ -1592,14 +1595,14 @@
       }
     },
     {
-      "name": "71 - Chats - With session (persists message)",
+      "name": "71 - Chats - With detected intents hint",
       "event": [
         {
           "listen": "test",
           "script": {
             "exec": [
               "pm.test('Status is 200', () => pm.response.to.have.status(200));",
-              "pm.test('Response has text', () => {",
+              "pm.test('Response has non-empty text', () => {",
               "    const json = pm.response.json();",
               "    pm.expect(json).to.have.property('response');",
               "    pm.expect(json.response).to.be.a('string').and.not.empty;",
@@ -1619,7 +1622,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"text\": \"Remind me what tasks I have today\",\n  \"session_id\": \"{{core_session_id}}\",\n  \"source\": \"telegram\",\n  \"executed_commands\": [\n    {\n      \"type\": \"task\",\n      \"command\": \"list\",\n      \"arguments\": {},\n      \"result\": \"You have 2 tasks: Buy milk (due today), Call dentist (due tomorrow)\"\n    }\n  ]\n}"
+          "raw": "{\n  \"session_id\": {{core_session_id}},\n  \"detected_intents\": [\"task.list\"]\n}"
         },
         "url": {
           "raw": "{{base_url}}/core/chats/",
@@ -1635,7 +1638,7 @@
       }
     },
     {
-      "name": "72 - Chats - Missing text (validation error)",
+      "name": "72 - Chats - Missing session_id (validation error)",
       "event": [
         {
           "listen": "test",

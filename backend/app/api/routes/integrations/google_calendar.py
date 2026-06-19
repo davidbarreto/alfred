@@ -9,12 +9,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.auth import require_auth
 from app.config import get_settings
 from app.db.session import get_session
-from app.integrations.oauth_tokens.repository import upsert_oauth_token
+from app.integrations.oauth_tokens.repository import get_oauth_token, upsert_oauth_token
 
 router = APIRouter(
     prefix="/integration/google-calendar",
     tags=["integrations"],
-    dependencies=[Depends(require_auth)],
 )
 
 _AUTHORIZE_URL = "https://accounts.google.com/o/oauth2/auth"
@@ -22,7 +21,13 @@ _TOKEN_URL = "https://oauth2.googleapis.com/token"
 _SCOPES = ["https://www.googleapis.com/auth/calendar"]
 
 
-@router.get("/oauth/url")
+@router.get("/status", dependencies=[Depends(require_auth)])
+async def get_status(session: AsyncSession = Depends(get_session)) -> dict[str, bool]:
+    token = await get_oauth_token(session, "google_calendar")
+    return {"authorized": token is not None}
+
+
+@router.get("/oauth/url", dependencies=[Depends(require_auth)])
 async def get_oauth_url() -> dict[str, str]:
     s = get_settings()
     params = {

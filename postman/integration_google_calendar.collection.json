@@ -1,0 +1,107 @@
+{
+  "info": {
+    "name": "Alfred - Google Calendar OAuth",
+    "_postman_id": "alfred-google-calendar-oauth-v1",
+    "description": "OAuth flow for Google Calendar. Run 01 to get the authorization URL, open it in a browser, authorize, and Google will call the callback automatically.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{api_token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "01 - Status",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Response has authorized field', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json).to.have.property('authorized');",
+              "    console.log('Google Calendar authorized:', json.authorized);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/integration/google-calendar/status",
+          "host": ["{{base_url}}"],
+          "path": ["integration", "google-calendar", "status"]
+        }
+      }
+    },
+    {
+      "name": "02 - Get Authorization URL",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Response contains url', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json).to.have.property('url');",
+              "    pm.expect(json.url).to.include('accounts.google.com');",
+              "    console.log('Open this URL in a browser to authorize:', json.url);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/integration/google-calendar/oauth/url",
+          "host": ["{{base_url}}"],
+          "path": ["integration", "google-calendar", "oauth", "url"]
+        }
+      }
+    },
+    {
+      "name": "03 - OAuth Callback (manual test)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Authorization successful', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json.status).to.eql('ok');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/integration/google-calendar/oauth/callback?code=PASTE_CODE_HERE",
+          "host": ["{{base_url}}"],
+          "path": ["integration", "google-calendar", "oauth", "callback"],
+          "query": [
+            { "key": "code", "value": "PASTE_CODE_HERE" }
+          ]
+        }
+      }
+    }
+  ]
+}

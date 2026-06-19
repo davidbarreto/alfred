@@ -21,21 +21,23 @@ from app.dependencies import (
     CalendarEventServiceDep,
     CommandExecutionServiceDep,
     DbSessionDep,
+    ExtractionLlmProviderDep,
     LlmProviderDep,
     NoteServiceDep,
     RecurringTransactionServiceDep,
     TaskServiceDep,
     TransactionServiceDep,
 )
+from app.assistant.commands.formatter import format_result_message
 from app.features.core.command_executions.schemas import CommandExecutionCreate, CommandExecutionUpdate
 
 router = APIRouter(prefix="/commands", tags=["commands"], dependencies=[Depends(require_auth)])
 
 
 @router.post("/resolve", response_model=CommandResolveResponse)
-async def resolve_command(request: CommandResolveRequest, session: DbSessionDep, llm_provider: LlmProviderDep):
+async def resolve_command(request: CommandResolveRequest, session: DbSessionDep, llm_provider: LlmProviderDep, extraction_llm_provider: ExtractionLlmProviderDep):
     logger.info("POST /commands/resolve text=%r command=%s", request.text[:80], request.command)
-    return await resolve(request.text, command=request.command, args=request.args, session=session, llm_provider=llm_provider)
+    return await resolve(request.text, command=request.command, args=request.args, session=session, llm_provider=llm_provider, extraction_llm_provider=extraction_llm_provider)
 
 
 @router.post("/execute", response_model=CommandExecuteResponse)
@@ -107,4 +109,5 @@ async def execute_command(
         command=request.command,
         status="ok",
         result=result,
+        message=format_result_message(request.type, request.command, result),
     )

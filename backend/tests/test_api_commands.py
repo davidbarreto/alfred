@@ -11,7 +11,7 @@ AUTH = {"Authorization": "Bearer test-api-token"}
 def client():
     from app.main import app
     from app.db.session import get_session
-    from app.dependencies import get_llm_provider
+    from app.dependencies import get_llm_provider, get_extraction_llm_provider
     from app.shared.llm import LlmResponse
 
     mock_session = AsyncMock()
@@ -22,6 +22,7 @@ def client():
 
     app.dependency_overrides[get_session] = lambda: mock_session
     app.dependency_overrides[get_llm_provider] = lambda: mock_llm
+    app.dependency_overrides[get_extraction_llm_provider] = lambda: mock_llm
     yield TestClient(app)
     app.dependency_overrides.clear()
 

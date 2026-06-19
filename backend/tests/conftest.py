@@ -15,6 +15,8 @@ os.environ.setdefault("GOOGLE_CALENDAR_OAUTH_REDIRECT_URI", "http://localhost:80
 os.environ.setdefault("GOOGLE_CALENDAR_ID", "primary")
 
 os.environ.setdefault("EMBEDDING_MODEL", "all-MiniLM-L6-v2")
+os.environ.setdefault("LLM_CHAT_MODEL", "gemini-2.0-flash")
+os.environ.setdefault("LLM_EXTRACTION_MODEL", "gemini-2.0-flash-lite")
 
 import pytest
 from fastapi.testclient import TestClient

@@ -29,7 +29,8 @@ class Settings(BaseSettings):
 
     # LLM (argument extraction via Gemini free tier)
     google_api_key: str | None = Field(default=None, validation_alias="GOOGLE_API_KEY")
-    llm_model: str = Field(default="gemini-2.0-flash", validation_alias="LLM_MODEL")
+    llm_chat_model: str = Field(default="gemini-2.0-flash", validation_alias="LLM_CHAT_MODEL")
+    llm_extraction_model: str = Field(default="gemini-2.0-flash-lite", validation_alias="LLM_EXTRACTION_MODEL")
     intent_threshold: float = Field(default=0.75, validation_alias="INTENT_THRESHOLD")
 
 @lru_cache()

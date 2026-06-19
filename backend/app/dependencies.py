@@ -104,7 +104,14 @@ def get_llm_provider() -> GoogleLlmProvider:
     s = get_settings()
     if not s.google_api_key:
         raise RuntimeError("GOOGLE_API_KEY is not set")
-    return GoogleLlmProvider(api_key=s.google_api_key, model_name=s.llm_model)
+    return GoogleLlmProvider(api_key=s.google_api_key, model_name=s.llm_chat_model)
+
+@lru_cache
+def get_extraction_llm_provider() -> GoogleLlmProvider:
+    s = get_settings()
+    if not s.google_api_key:
+        raise RuntimeError("GOOGLE_API_KEY is not set")
+    return GoogleLlmProvider(api_key=s.google_api_key, model_name=s.llm_extraction_model)
 
 def get_embedding_service(session: AsyncSession = Depends(get_session)) -> EmbeddingService:
     return EmbeddingService(session, get_embedding_provider())
@@ -138,3 +145,4 @@ WorkingMemoryServiceDep = Annotated[WorkingMemoryService, Depends(get_working_me
 EmbeddingServiceDep = Annotated[EmbeddingService, Depends(get_embedding_service)]
 ChatServiceDep = Annotated[ChatService, Depends(get_chat_service)]
 LlmProviderDep = Annotated[GoogleLlmProvider, Depends(get_llm_provider)]
+ExtractionLlmProviderDep = Annotated[GoogleLlmProvider, Depends(get_extraction_llm_provider)]

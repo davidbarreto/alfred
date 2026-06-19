@@ -35,6 +35,7 @@ class CommandExecuteResponse(BaseModel):
     command: str
     status: str
     result: Any = None
+    message: str | None = None
 
 class CommandResolveResponse(BaseModel):
     status: str

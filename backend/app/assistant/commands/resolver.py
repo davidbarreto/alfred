@@ -200,6 +200,7 @@ async def resolve(
     args: str | None = None,
     session: AsyncSession | None = None,
     llm_provider: LlmProvider | None = None,
+    extraction_llm_provider: LlmProvider | None = None,
 ) -> CommandResolveResponse:
     """
     Structured command resolver.
@@ -246,7 +247,7 @@ async def resolve(
             "Resolve: intent=%s confidence=%.4f >= threshold=%.4f, extracting args",
             intent_result.intent, intent_result.confidence, threshold,
         )
-        extracted = await extract_args(intent_result.intent, text, llm_provider=llm_provider, session=session)
+        extracted = await extract_args(intent_result.intent, text, llm_provider=extraction_llm_provider or llm_provider, session=session)
         detail = CommandDetail(
             type=cmd_type,
             command=cmd_action,

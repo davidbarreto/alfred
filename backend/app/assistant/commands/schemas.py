@@ -57,3 +57,4 @@ class CommandDetectIntentRequest(BaseModel):
 class CommandDetectIntentResponse(BaseModel):
     intent: str
     confidence: float
+    command_type: str | None = None

@@ -28,7 +28,7 @@ def client():
 
 
 class TestDetectCommandIntent:
-    def test_returns_intent_and_confidence(self, client):
+    def test_returns_intent_confidence_and_command_type(self, client):
         result = IntentResult(intent="task.list", confidence=0.91)
         with patch("app.api.routes.commands.detect_intent", new=AsyncMock(return_value=result)):
             response = client.post("/commands/intents", json={"text": "what are my tasks?"}, headers=AUTH)
@@ -36,13 +36,22 @@ class TestDetectCommandIntent:
         data = response.json()
         assert data["intent"] == "task.list"
         assert data["confidence"] == 0.91
+        assert data["command_type"] == "read"
 
-    def test_returns_unknown_for_conversational_text(self, client):
+    def test_write_intent_returns_write_type(self, client):
+        result = IntentResult(intent="task.add", confidence=0.88)
+        with patch("app.api.routes.commands.detect_intent", new=AsyncMock(return_value=result)):
+            response = client.post("/commands/intents", json={"text": "add a task"}, headers=AUTH)
+        assert response.json()["command_type"] == "write"
+
+    def test_unknown_intent_has_null_command_type(self, client):
         result = IntentResult(intent="unknown", confidence=0.2)
         with patch("app.api.routes.commands.detect_intent", new=AsyncMock(return_value=result)):
             response = client.post("/commands/intents", json={"text": "tell me a joke"}, headers=AUTH)
         assert response.status_code == 200
-        assert response.json()["intent"] == "unknown"
+        data = response.json()
+        assert data["intent"] == "unknown"
+        assert data["command_type"] is None
 
     def test_requires_auth(self, client):
         response = client.post("/commands/intents", json={"text": "test"})

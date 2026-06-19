@@ -2,7 +2,7 @@ import pytest
 from datetime import datetime, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from app.assistant.intents.intent_service import IntentResult, detect_intent
+from app.assistant.intents.intent_service import IntentResult, detect_intent, get_command_type
 
 
 def _make_embedding(source_id: int = 2):
@@ -90,3 +90,23 @@ class TestDetectIntent:
 
         assert isinstance(result, IntentResult)
         assert result.intent == "unknown"
+
+
+class TestGetCommandType:
+    def test_read_intents_return_read(self):
+        for intent in ("task.list", "note.list", "note.search", "event.list",
+                       "finance.transaction_list", "finance.spending_report",
+                       "finance.spending_average", "finance.spending_top",
+                       "finance.budget_list", "finance.budget_remaining",
+                       "finance.balance_forecast"):
+            assert get_command_type(intent) == "read", intent
+
+    def test_write_intents_return_write(self):
+        for intent in ("task.add", "task.update", "task.complete", "task.delete",
+                       "note.add", "note.update", "note.delete",
+                       "event.add", "event.update", "event.delete",
+                       "finance.transaction_add", "finance.budget_add"):
+            assert get_command_type(intent) == "write", intent
+
+    def test_unknown_returns_none(self):
+        assert get_command_type("unknown") is None

@@ -18,7 +18,7 @@ from app.assistant.commands.schemas import (
     CommandResolveRequest,
     CommandResolveResponse,
 )
-from app.assistant.intents.intent_service import detect_intent
+from app.assistant.intents.intent_service import detect_intent, get_command_type
 from app.api.auth import require_auth
 from app.dependencies import (
     AccountServiceDep,
@@ -45,7 +45,11 @@ async def detect_command_intent(
 ) -> CommandDetectIntentResponse:
     logger.info("POST /commands/intents text=%r", request.text[:80])
     result = await detect_intent(request.text, session)
-    return CommandDetectIntentResponse(intent=result.intent, confidence=result.confidence)
+    return CommandDetectIntentResponse(
+        intent=result.intent,
+        confidence=result.confidence,
+        command_type=get_command_type(result.intent),
+    )
 
 
 @router.post("/resolve", response_model=CommandResolveResponse)

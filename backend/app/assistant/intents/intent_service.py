@@ -14,6 +14,26 @@ from app.integrations.sentence_transformers.provider import (
 
 logger = logging.getLogger(__name__)
 
+_READ_INTENTS: frozenset[str] = frozenset({
+    "task.list",
+    "note.list",
+    "note.search",
+    "event.list",
+    "finance.transaction_list",
+    "finance.spending_report",
+    "finance.spending_average",
+    "finance.spending_top",
+    "finance.budget_list",
+    "finance.budget_remaining",
+    "finance.balance_forecast",
+})
+
+
+def get_command_type(intent: str) -> Literal["read", "write"] | None:
+    if intent == "unknown":
+        return None
+    return "read" if intent in _READ_INTENTS else "write"
+
 
 class IntentResult(BaseModel):
     intent: str

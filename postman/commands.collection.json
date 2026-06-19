@@ -51,15 +51,18 @@
           "script": {
             "exec": [
               "pm.test('Status is 200', () => pm.response.to.have.status(200));",
-              "pm.test('Response has intent and confidence', () => {",
+              "pm.test('Response has intent, confidence and command_type', () => {",
               "    const json = pm.response.json();",
               "    pm.expect(json).to.have.property('intent');",
               "    pm.expect(json).to.have.property('confidence');",
+              "    pm.expect(json).to.have.property('command_type');",
               "    pm.expect(json.intent).to.be.a('string').and.not.empty;",
               "    pm.expect(json.confidence).to.be.a('number').and.within(0, 1);",
               "});",
-              "pm.test('Intent is task.list', () => {",
-              "    pm.expect(pm.response.json().intent).to.eql('task.list');",
+              "pm.test('Intent is task.list with read type', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json.intent).to.eql('task.list');",
+              "    pm.expect(json.command_type).to.eql('read');",
               "});"
             ],
             "type": "text/javascript"
@@ -89,8 +92,10 @@
           "script": {
             "exec": [
               "pm.test('Status is 200', () => pm.response.to.have.status(200));",
-              "pm.test('Returns unknown for conversational text', () => {",
-              "    pm.expect(pm.response.json().intent).to.eql('unknown');",
+              "pm.test('Returns unknown with null command_type for conversational text', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json.intent).to.eql('unknown');",
+              "    pm.expect(json.command_type).to.be.null;",
               "});"
             ],
             "type": "text/javascript"

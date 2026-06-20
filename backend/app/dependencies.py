@@ -106,7 +106,7 @@ def get_llm_provider() -> GoogleLlmProvider:
     s = get_settings()
     if not s.google_api_key:
         raise RuntimeError("GOOGLE_API_KEY is not set")
-    return GoogleLlmProvider(api_key=s.google_api_key, model_name=s.llm_chat_model)
+    return GoogleLlmProvider(api_key=s.google_api_key, model_name=s.llm_chat_model, temperature=s.llm_chat_temperature)
 
 @lru_cache
 def get_extraction_llm_provider() -> GoogleLlmProvider:

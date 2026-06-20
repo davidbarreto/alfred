@@ -16,9 +16,10 @@ logger = logging.getLogger(__name__)
 class GoogleLlmProvider:
     """LlmProvider implementation backed by Google Gemini via pydantic-ai."""
 
-    def __init__(self, api_key: str, model_name: str) -> None:
+    def __init__(self, api_key: str, model_name: str, temperature: float = 1.0) -> None:
         self._api_key = api_key
         self._model_name = model_name
+        self._temperature = temperature
 
     @property
     def provider(self) -> str:
@@ -40,15 +41,33 @@ class GoogleLlmProvider:
         )
         agent = Agent(google_model, output_type=str, system_prompt=system or "")
 
-        history = []
+        # Merge consecutive same-role messages to preserve the strict
+        # user/assistant alternation that Gemini requires. Two back-to-back
+        # user turns (e.g. unanswered message + retry) cause Gemini to ignore
+        # the system prompt and fall back to its default identity.
+        sanitized: list[dict[str, str]] = []
         for msg in messages[:-1]:
+            if sanitized and sanitized[-1]["role"] == msg["role"]:
+                sanitized[-1] = {
+                    "role": msg["role"],
+                    "content": sanitized[-1]["content"] + "\n" + msg["content"],
+                }
+            else:
+                sanitized.append(msg)
+
+        history = []
+        for msg in sanitized:
             if msg["role"] == "user":
                 history.append(ModelRequest(parts=[UserPromptPart(content=msg["content"])]))
             else:
                 history.append(ModelResponse(parts=[TextPart(content=msg["content"])]))
 
         t0 = time.monotonic()
-        result = await agent.run(messages[-1]["content"], message_history=history)
+        result = await agent.run(
+            messages[-1]["content"],
+            message_history=history,
+            model_settings={"temperature": self._temperature},
+        )
         latency_ms = int((time.monotonic() - t0) * 1000)
         usage = result.usage()
         logger.info(

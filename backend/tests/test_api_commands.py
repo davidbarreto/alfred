@@ -28,7 +28,7 @@ def client():
 
 
 class TestDetectCommandIntent:
-    def test_returns_intent_confidence_and_command_type(self, client):
+    def test_returns_intent_confidence_command_type_and_detected_intents(self, client):
         result = IntentResult(intent="task.list", confidence=0.91)
         with patch("app.api.routes.commands.detect_intent", new=AsyncMock(return_value=result)):
             response = client.post("/commands/intents", json={"text": "what are my tasks?"}, headers=AUTH)
@@ -37,14 +37,17 @@ class TestDetectCommandIntent:
         assert data["intent"] == "task.list"
         assert data["confidence"] == 0.91
         assert data["command_type"] == "read"
+        assert data["detected_intents"] == ["task.list"]
 
-    def test_write_intent_returns_write_type(self, client):
+    def test_write_intent_returns_write_type_and_detected_intents(self, client):
         result = IntentResult(intent="task.add", confidence=0.88)
         with patch("app.api.routes.commands.detect_intent", new=AsyncMock(return_value=result)):
             response = client.post("/commands/intents", json={"text": "add a task"}, headers=AUTH)
-        assert response.json()["command_type"] == "write"
+        data = response.json()
+        assert data["command_type"] == "write"
+        assert data["detected_intents"] == ["task.add"]
 
-    def test_unknown_intent_has_null_command_type(self, client):
+    def test_unknown_intent_has_null_command_type_and_null_detected_intents(self, client):
         result = IntentResult(intent="unknown", confidence=0.2)
         with patch("app.api.routes.commands.detect_intent", new=AsyncMock(return_value=result)):
             response = client.post("/commands/intents", json={"text": "tell me a joke"}, headers=AUTH)
@@ -52,6 +55,7 @@ class TestDetectCommandIntent:
         data = response.json()
         assert data["intent"] == "unknown"
         assert data["command_type"] is None
+        assert data["detected_intents"] is None
 
     def test_requires_auth(self, client):
         response = client.post("/commands/intents", json={"text": "test"})

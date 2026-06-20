@@ -58,3 +58,4 @@ class CommandDetectIntentResponse(BaseModel):
     intent: str
     confidence: float
     command_type: str | None = None
+    detected_intents: list[str] | None = None

@@ -45,10 +45,12 @@ async def detect_command_intent(
 ) -> CommandDetectIntentResponse:
     logger.info("POST /commands/intents text=%r", request.text[:80])
     result = await detect_intent(request.text, session)
+    detected_intents = [result.intent] if result.intent != "unknown" else None
     return CommandDetectIntentResponse(
         intent=result.intent,
         confidence=result.confidence,
         command_type=get_command_type(result.intent),
+        detected_intents=detected_intents,
     )
 
 

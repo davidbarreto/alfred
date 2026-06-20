@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Optional
+from typing import Any, Optional
 
 from sqlalchemy import DateTime, ForeignKey, Integer, String, Text, func
 from sqlalchemy.dialects.postgresql import JSONB
@@ -21,6 +21,7 @@ class CommandExecution(Base):
     command_name: Mapped[str] = mapped_column(String(100), nullable=False, index=True)
     entities: Mapped[Optional[dict]] = mapped_column(JSONB, nullable=True)
     status: Mapped[str] = mapped_column(String(20), nullable=False, default="pending")
+    result: Mapped[Optional[Any]] = mapped_column(JSONB, nullable=True)
     error: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     entity_type: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
     entity_id: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)

@@ -105,6 +105,7 @@ async def execute_command(
             execution.id,
             CommandExecutionUpdate(
                 status="success",
+                result=result,
                 entity_type=request.type,
                 entity_id=entity_id,
                 executed_at=datetime.now(timezone.utc),
@@ -137,8 +138,22 @@ async def execute_command(
 _RESPOND_SYSTEM = (
     "You are Alfred, a helpful personal AI assistant. "
     "Inform the user about the result of the operations below in 1-2 sentences, "
-    "natural and friendly tone. Plain text only, no markdown."
+    "natural and friendly tone. Plain text only, no markdown. "
+    "If a result is an empty list, say so clearly (e.g. 'You have no tasks right now' or 'Your calendar is clear'). "
+    "If a result contains items, summarize them briefly without listing every detail."
 )
+
+
+def _format_result(result: Any) -> str:
+    if result is None:
+        return "(no data)"
+    if isinstance(result, list):
+        if not result:
+            return "(empty — no items found)"
+        return f"({len(result)} item(s)): {result[:3]!r}{'...' if len(result) > 3 else ''}"
+    if isinstance(result, dict):
+        return repr(result)
+    return str(result)
 
 
 @router.post("/respond", response_model=CommandRespondResponse)
@@ -158,7 +173,7 @@ async def respond_to_commands(
     lines = []
     for ex in executions:
         if ex.status == "success":
-            lines.append(f"- {ex.command_name}: completed successfully")
+            lines.append(f"- {ex.command_name}: success. Result: {_format_result(ex.result)}")
         else:
             lines.append(f"- {ex.command_name}: failed — {ex.error or 'unknown error'}")
 

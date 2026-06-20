@@ -15,6 +15,7 @@ class CommandExecutionCreate(BaseModel):
 
 class CommandExecutionUpdate(BaseModel):
     status: Optional[CommandStatus] = None
+    result: Optional[Any] = None
     error: Optional[str] = None
     entity_type: Optional[str] = None
     entity_id: Optional[int] = None
@@ -29,6 +30,7 @@ class CommandExecutionRead(BaseModel):
     command_name: str
     entities: Optional[dict[str, Any]] = None
     status: str
+    result: Optional[Any] = None
     error: Optional[str] = None
     entity_type: Optional[str] = None
     entity_id: Optional[int] = None

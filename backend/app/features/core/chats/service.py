@@ -49,6 +49,13 @@ _FOCUS_INSTRUCTIONS = (
     "wait until David explicitly asks you to."
 )
 
+_LANGUAGE_INSTRUCTIONS = (
+    "## Language\n"
+    "Always reply in English by default. "
+    "Switch to Portuguese only if David's current message is written in Portuguese. "
+    "You may use occasional Portuguese words or expressions naturally, but the reply must be in English unless David is writing in Portuguese."
+)
+
 
 def _build_system_prompt(
     memories: list[EmbeddingSearchResult],
@@ -74,6 +81,7 @@ def _build_system_prompt(
         _load_persona(),
         f"## Current date and time\nNow is {now}.",
         _FORMATTING_INSTRUCTIONS,
+        _LANGUAGE_INSTRUCTIONS,
         _FOCUS_INSTRUCTIONS,
     ]
 

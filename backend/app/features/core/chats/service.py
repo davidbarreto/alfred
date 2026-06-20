@@ -149,7 +149,14 @@ class ChatService:
         messages = history + [{"role": "user", "content": current_message.content}]
 
         t0 = time.monotonic()
-        llm_response = await self._llm_provider.complete(messages, system=system_prompt)
+        try:
+            llm_response = await self._llm_provider.complete(messages, system=system_prompt)
+        except Exception as exc:
+            logger.error("Chat: LLM call failed session_id=%s error=%s", request.session_id, exc)
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="AI service temporarily unavailable. Please try again in a moment.",
+            ) from exc
         latency_ms = int((time.monotonic() - t0) * 1000)
 
         response_text = _strip_markdown(llm_response.text)

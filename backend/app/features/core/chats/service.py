@@ -56,10 +56,11 @@ def _build_system_prompt(
         parts.append(
             f"## Parallel command pipeline\n"
             f"The system is already handling these commands automatically: {intent_list}.\n"
-            f"Your ONLY job here is to reply with ONE short sentence acknowledging the request "
+            f"For those commands: acknowledge in one short sentence only "
             f"(e.g. 'On it!' or 'Got it, I will get that added.'). "
-            f"Do NOT generate any content, description, template, or details related to the command. "
-            f"Do NOT say the task is done — a separate message will follow with the actual result."
+            f"Do NOT generate content, descriptions, templates, or details for them — "
+            f"a separate message will follow with the actual result. "
+            f"If the message contains other conversational parts unrelated to those commands, respond to those normally."
         )
 
     parts += [

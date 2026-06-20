@@ -42,6 +42,13 @@ _FORMATTING_INSTRUCTIONS = (
     "Use line breaks and simple punctuation for structure instead."
 )
 
+_FOCUS_INSTRUCTIONS = (
+    "## Focus\n"
+    "Respond only to David's current message. "
+    "Do not proactively resume, continue, or elaborate on tasks mentioned in previous messages — "
+    "wait until David explicitly asks you to."
+)
+
 
 def _build_system_prompt(
     memories: list[EmbeddingSearchResult],
@@ -67,6 +74,7 @@ def _build_system_prompt(
         _load_persona(),
         f"## Current date and time\nNow is {now}.",
         _FORMATTING_INSTRUCTIONS,
+        _FOCUS_INSTRUCTIONS,
     ]
 
     if recent_summaries:

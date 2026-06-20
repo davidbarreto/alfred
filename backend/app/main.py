@@ -11,7 +11,9 @@ except ValueError:
 
 logging.basicConfig(level=numeric_level, force=True)
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
 from typing import AsyncGenerator
 
 from app.api.routes.monitoring.monitors import router as monitors_router
@@ -84,6 +86,18 @@ app.include_router(core_memories_router)
 app.include_router(core_working_memory_router)
 app.include_router(core_embeddings_router)
 app.include_router(core_chats_router)
+
+@app.exception_handler(RequestValidationError)
+async def _validation_error_handler(request: Request, exc: RequestValidationError) -> JSONResponse:
+    logger.warning(
+        "Request validation error %s %s body=%s errors=%s",
+        request.method,
+        request.url.path,
+        await request.body(),
+        exc.errors(),
+    )
+    return JSONResponse(status_code=422, content={"detail": exc.errors()})
+
 
 @app.get("/health")
 async def health():

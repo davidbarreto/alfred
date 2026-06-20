@@ -63,8 +63,13 @@ async def get_google_calendar_client(session: AsyncSession = Depends(get_session
     )
 
 async def get_calendar_event_service(session: AsyncSession = Depends(get_session)) -> CalendarEventService:
-    client = await get_google_calendar_client(session)
-    provider = GoogleCalendarProvider(client, get_settings().google_calendar_id, entity_type="calendar_event")
+    try:
+        client = await get_google_calendar_client(session)
+        provider: GoogleCalendarProvider | None = GoogleCalendarProvider(
+            client, get_settings().google_calendar_id, entity_type="calendar_event"
+        )
+    except HTTPException:
+        provider = None
     return CalendarEventService(provider, session)
 
 def get_account_service(session: AsyncSession = Depends(get_session)) -> AccountService:

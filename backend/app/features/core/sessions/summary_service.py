@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 import logging
+import time
 from datetime import datetime
 
 from app.db.session import async_session
 from app.features.core.messages.schemas import MessageFilters
 from app.features.core.messages.service import MessageService
 from app.features.core.sessions.repository import SessionRepository
+from app.integrations.llm_calls.repository import create_llm_call
 from app.shared.llm import LlmProvider
 
 logger = logging.getLogger(__name__)
@@ -58,11 +60,23 @@ class SessionSummaryService:
                 f"{'User' if m.role == 'user' else 'Alfred'}: {m.content}"
                 for m in messages
             )
-            llm_response = await self._llm_provider.complete(
-                [{"role": "user", "content": _SUMMARY_PROMPT.format(messages=formatted)}]
-            )
+            prompt_messages = [{"role": "user", "content": _SUMMARY_PROMPT.format(messages=formatted)}]
+            t0 = time.monotonic()
+            llm_response = await self._llm_provider.complete(prompt_messages)
+            latency_ms = int((time.monotonic() - t0) * 1000)
             summary = llm_response.text.strip()
             await repo.update_summary(previous.id, summary)
+            await create_llm_call(
+                session,
+                provider=self._llm_provider.provider,
+                model=self._llm_provider.model,
+                feature="session_summary",
+                prompt=prompt_messages,
+                response=summary,
+                tokens_input=llm_response.tokens_input,
+                tokens_output=llm_response.tokens_output,
+                latency_ms=latency_ms,
+            )
             logger.info("Session %d summarised (%d messages)", previous.id, len(messages))
 
     async def get_recent_summaries(

@@ -1,4 +1,5 @@
 import logging
+import time
 from datetime import datetime, timezone
 from typing import Any
 
@@ -35,6 +36,7 @@ from app.dependencies import (
     TransactionServiceDep,
 )
 from app.features.core.command_executions.schemas import CommandExecutionCreate, CommandExecutionFilters, CommandExecutionUpdate
+from app.integrations.llm_calls.repository import create_llm_call
 
 router = APIRouter(prefix="/commands", tags=["commands"], dependencies=[Depends(require_auth)])
 
@@ -159,6 +161,7 @@ def _format_result(result: Any) -> str:
 @router.post("/respond", response_model=CommandRespondResponse)
 async def respond_to_commands(
     request: CommandRespondRequest,
+    session: DbSessionDep,
     cmd_execution_service: CommandExecutionServiceDep,
     llm_provider: ExtractionLlmProviderDep,
 ) -> CommandRespondResponse:
@@ -178,8 +181,20 @@ async def respond_to_commands(
             lines.append(f"- {ex.command_name}: failed — {ex.error or 'unknown error'}")
 
     summary = "\n".join(lines)
-    llm_response = await llm_provider.complete(
-        [{"role": "user", "content": f"Commands executed:\n{summary}"}],
-        system=_RESPOND_SYSTEM,
+    prompt_messages = [{"role": "user", "content": f"Commands executed:\n{summary}"}]
+    t0 = time.monotonic()
+    llm_response = await llm_provider.complete(prompt_messages, system=_RESPOND_SYSTEM)
+    latency_ms = int((time.monotonic() - t0) * 1000)
+
+    await create_llm_call(
+        session,
+        provider=llm_provider.provider,
+        model=llm_provider.model,
+        feature="command_respond",
+        prompt=[{"role": "system", "content": _RESPOND_SYSTEM}] + prompt_messages,
+        response=llm_response.text,
+        tokens_input=llm_response.tokens_input,
+        tokens_output=llm_response.tokens_output,
+        latency_ms=latency_ms,
     )
     return CommandRespondResponse(response=llm_response.text.strip())

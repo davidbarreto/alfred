@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
+import time
 from typing import Any
 
 from app.db.session import async_session
@@ -9,6 +10,7 @@ from app.features.core.embeddings.schemas import EmbeddingCreate, EmbeddingSearc
 from app.features.core.embeddings.service import EmbeddingService
 from app.features.core.memories.schemas import MemoryCreate, MemoryUpdate
 from app.features.core.memories.service import MemoryService
+from app.integrations.llm_calls.repository import create_llm_call
 from app.shared.embedding import EmbeddingProvider
 from app.shared.llm import LlmProvider
 
@@ -49,9 +51,10 @@ class MemoryExtractionService:
 
     async def _do_extract(self, user_message: str, message_id: int) -> None:
         prompt = _EXTRACTION_PROMPT.format(message=user_message)
-        llm_response = await self._llm_provider.complete(
-            [{"role": "user", "content": prompt}]
-        )
+        messages = [{"role": "user", "content": prompt}]
+        t0 = time.monotonic()
+        llm_response = await self._llm_provider.complete(messages)
+        latency_ms = int((time.monotonic() - t0) * 1000)
         raw = llm_response.text.strip()
         if raw.startswith("```"):
             raw = raw.split("\n", 1)[-1].rsplit("```", 1)[0].strip()
@@ -71,6 +74,17 @@ class MemoryExtractionService:
         logger.info("Memory extraction: %d candidates for message_id=%d", len(candidates), message_id)
 
         async with async_session() as session:
+            await create_llm_call(
+                session,
+                provider=self._llm_provider.provider,
+                model=self._llm_provider.model,
+                feature="memory_extraction",
+                prompt=messages,
+                response=llm_response.text,
+                tokens_input=llm_response.tokens_input,
+                tokens_output=llm_response.tokens_output,
+                latency_ms=latency_ms,
+            )
             memory_service = MemoryService(session)
             embedding_service = EmbeddingService(session, self._embedding_provider)
             for candidate in candidates:

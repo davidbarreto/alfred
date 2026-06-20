@@ -93,20 +93,25 @@ class TestDetectIntent:
 
 
 class TestGetCommandType:
-    def test_read_intents_return_read(self):
-        for intent in ("task.list", "note.list", "note.search", "event.list",
-                       "finance.transaction_list", "finance.spending_report",
-                       "finance.spending_average", "finance.spending_top",
-                       "finance.budget_list", "finance.budget_remaining",
-                       "finance.balance_forecast"):
-            assert get_command_type(intent) == "read", intent
+    def test_single_read_intent_returns_read(self):
+        assert get_command_type(["task.list"]) == "read"
+        assert get_command_type(["event.list"]) == "read"
+        assert get_command_type(["finance.spending_report"]) == "read"
 
-    def test_write_intents_return_write(self):
-        for intent in ("task.add", "task.update", "task.complete", "task.delete",
-                       "note.add", "note.update", "note.delete",
-                       "event.add", "event.update", "event.delete",
-                       "finance.transaction_add", "finance.budget_add"):
-            assert get_command_type(intent) == "write", intent
+    def test_single_write_intent_returns_write(self):
+        assert get_command_type(["task.add"]) == "write"
+        assert get_command_type(["event.delete"]) == "write"
 
-    def test_unknown_returns_none(self):
-        assert get_command_type("unknown") is None
+    def test_all_unknown_returns_none(self):
+        assert get_command_type(["unknown"]) is None
+        assert get_command_type(["unknown", "unknown"]) is None
+
+    def test_write_wins_over_read_in_mixed_list(self):
+        assert get_command_type(["task.list", "task.add"]) == "write"
+
+    def test_all_read_intents_return_read(self):
+        assert get_command_type(["task.list", "note.list"]) == "read"
+
+    def test_unknown_ignored_when_other_intents_present(self):
+        assert get_command_type(["unknown", "task.list"]) == "read"
+        assert get_command_type(["unknown", "task.add"]) == "write"

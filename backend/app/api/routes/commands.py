@@ -49,7 +49,7 @@ async def detect_command_intent(
     return CommandDetectIntentResponse(
         intent=result.intent,
         confidence=result.confidence,
-        command_type=get_command_type(result.intent),
+        command_type=get_command_type([result.intent]),
         detected_intents=detected_intents,
     )
 

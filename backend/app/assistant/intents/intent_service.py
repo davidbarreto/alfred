@@ -29,10 +29,11 @@ _READ_INTENTS: frozenset[str] = frozenset({
 })
 
 
-def get_command_type(intent: str) -> Literal["read", "write"] | None:
-    if intent == "unknown":
+def get_command_type(intents: list[str]) -> Literal["read", "write"] | None:
+    known = [i for i in intents if i != "unknown"]
+    if not known:
         return None
-    return "read" if intent in _READ_INTENTS else "write"
+    return "write" if any(i not in _READ_INTENTS for i in known) else "read"
 
 
 class IntentResult(BaseModel):

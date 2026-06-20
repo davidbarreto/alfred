@@ -49,7 +49,20 @@ def _build_system_prompt(
     recent_summaries: list[tuple[datetime, str]] | None = None,
 ) -> str:
     now = datetime.now(tz=timezone.utc).strftime("%A, %B %d, %Y at %H:%M UTC")
-    parts = [
+    parts = []
+
+    if detected_intents:
+        intent_list = ", ".join(detected_intents)
+        parts.append(
+            f"## Parallel command pipeline\n"
+            f"The system is already handling these commands automatically: {intent_list}.\n"
+            f"Your ONLY job here is to reply with ONE short sentence acknowledging the request "
+            f"(e.g. 'On it!' or 'Got it, I will get that added.'). "
+            f"Do NOT generate any content, description, template, or details related to the command. "
+            f"Do NOT say the task is done — a separate message will follow with the actual result."
+        )
+
+    parts += [
         _load_persona(),
         f"## Current date and time\nNow is {now}.",
         _FORMATTING_INSTRUCTIONS,
@@ -65,17 +78,6 @@ def _build_system_prompt(
     if memories:
         lines = "\n".join(f"- [{m.source_type}] {m.content}" for m in memories)
         parts.append(f"## Relevant context from memory\n{lines}")
-
-    if detected_intents:
-        intent_list = ", ".join(detected_intents)
-        parts.append(
-            f"## Parallel command pipeline\n"
-            f"The system is already handling these commands automatically: {intent_list}.\n"
-            f"Your ONLY job here is to reply with ONE short sentence acknowledging the request "
-            f"(e.g. 'On it!' or 'Got it, I will get that added.'). "
-            f"Do NOT generate any content, description, template, or details related to the command. "
-            f"Do NOT say the task is done — a separate message will follow with the actual result."
-        )
 
     return "\n\n".join(parts)
 

@@ -214,6 +214,10 @@ class TestBuildSystemPrompt:
         prompt = _build_system_prompt(memories, recent_summaries=summaries)
         assert prompt.index("Recent conversations") < prompt.index("Relevant context from memory")
 
+    def test_intent_section_appears_before_persona(self):
+        prompt = _build_system_prompt([], detected_intents=["event.add"])
+        assert prompt.index("Parallel command pipeline") < prompt.index("Alfred")
+
 
 class TestChatServiceMemoryExtraction:
     async def test_schedules_extraction_after_chat(self):

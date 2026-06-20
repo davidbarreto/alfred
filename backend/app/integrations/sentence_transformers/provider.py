@@ -22,7 +22,7 @@ class SentenceTransformerEmbeddingProvider:
     @cached_property
     def _model(self) -> SentenceTransformer:
         logger.info("Loading SentenceTransformer model: %s", self._model_name)
-        return SentenceTransformer(self._model_name)
+        return SentenceTransformer(self._model_name, local_files_only=True)
 
     async def embed(self, text: str) -> list[float]:
         logger.debug("SentenceTransformer: embedding text len=%d", len(text))

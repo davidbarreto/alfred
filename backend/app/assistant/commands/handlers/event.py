@@ -1,5 +1,5 @@
 import logging
-from datetime import timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 from fastapi import HTTPException, status
@@ -34,7 +34,19 @@ async def handle_event(command: str, arguments: dict[str, Any], service: Calenda
         return result.model_dump()
 
     if command == "list":
-        filters = EventFilters(limit=int(arguments.get("limit", 100)))
+        date_range = arguments.get("date_range")
+        start_from: datetime | None = None
+        start_to: datetime | None = None
+        if isinstance(date_range, dict):
+            start_from = parse_dt(date_range.get("start"))
+            start_to = parse_dt(date_range.get("end"))
+        if start_from is None:
+            start_from = datetime.now(tz=timezone.utc)
+        filters = EventFilters(
+            limit=int(arguments.get("limit", 100)),
+            start_from=start_from,
+            start_to=start_to,
+        )
         results = await service.get_events(filters)
         return [r.model_dump() for r in results]
 

@@ -57,6 +57,16 @@ class TestDetectCommandIntent:
         assert data["command_type"] is None
         assert data["detected_intents"] is None
 
+    def test_low_confidence_returns_unknown(self, client):
+        result = IntentResult(intent="task.add", confidence=0.3)
+        with patch("app.api.routes.commands.detect_intent", new=AsyncMock(return_value=result)):
+            response = client.post("/commands/intents", json={"text": "maybe add something"}, headers=AUTH)
+        data = response.json()
+        assert data["intent"] == "unknown"
+        assert data["confidence"] == 0.3
+        assert data["command_type"] is None
+        assert data["detected_intents"] is None
+
     def test_requires_auth(self, client):
         response = client.post("/commands/intents", json={"text": "test"})
         assert response.status_code == 403

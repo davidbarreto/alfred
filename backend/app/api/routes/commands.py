@@ -19,6 +19,7 @@ from app.assistant.commands.schemas import (
     CommandResolveResponse,
 )
 from app.assistant.intents.intent_service import detect_intent, get_command_type
+from app.config import get_settings
 from app.api.auth import require_auth
 from app.dependencies import (
     AccountServiceDep,
@@ -45,11 +46,13 @@ async def detect_command_intent(
 ) -> CommandDetectIntentResponse:
     logger.info("POST /commands/intents text=%r", request.text[:80])
     result = await detect_intent(request.text, session)
-    detected_intents = [result.intent] if result.intent != "unknown" else None
+    below_threshold = result.confidence < get_settings().intent_threshold
+    effective_intent = "unknown" if below_threshold else result.intent
+    detected_intents = [effective_intent] if effective_intent != "unknown" else None
     return CommandDetectIntentResponse(
-        intent=result.intent,
+        intent=effective_intent,
         confidence=result.confidence,
-        command_type=get_command_type([result.intent]),
+        command_type=get_command_type([effective_intent]),
         detected_intents=detected_intents,
     )
 

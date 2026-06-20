@@ -50,7 +50,6 @@ async def detect_command_intent(
     effective_intent = "unknown" if below_threshold else result.intent
     detected_intents = [effective_intent] if effective_intent != "unknown" else None
     return CommandDetectIntentResponse(
-        intent=effective_intent,
         confidence=result.confidence,
         command_type=get_command_type([effective_intent]),
         detected_intents=detected_intents,

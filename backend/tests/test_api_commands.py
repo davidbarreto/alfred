@@ -28,13 +28,13 @@ def client():
 
 
 class TestDetectCommandIntent:
-    def test_returns_intent_confidence_command_type_and_detected_intents(self, client):
+    def test_returns_confidence_command_type_and_detected_intents(self, client):
         result = IntentResult(intent="task.list", confidence=0.91)
         with patch("app.api.routes.commands.detect_intent", new=AsyncMock(return_value=result)):
             response = client.post("/commands/intents", json={"text": "what are my tasks?"}, headers=AUTH)
         assert response.status_code == 200
         data = response.json()
-        assert data["intent"] == "task.list"
+        assert "intent" not in data
         assert data["confidence"] == 0.91
         assert data["command_type"] == "read"
         assert data["detected_intents"] == ["task.list"]
@@ -53,16 +53,15 @@ class TestDetectCommandIntent:
             response = client.post("/commands/intents", json={"text": "tell me a joke"}, headers=AUTH)
         assert response.status_code == 200
         data = response.json()
-        assert data["intent"] == "unknown"
+        assert "intent" not in data
         assert data["command_type"] is None
         assert data["detected_intents"] is None
 
-    def test_low_confidence_returns_unknown(self, client):
+    def test_low_confidence_returns_null_command_type(self, client):
         result = IntentResult(intent="task.add", confidence=0.3)
         with patch("app.api.routes.commands.detect_intent", new=AsyncMock(return_value=result)):
             response = client.post("/commands/intents", json={"text": "maybe add something"}, headers=AUTH)
         data = response.json()
-        assert data["intent"] == "unknown"
         assert data["confidence"] == 0.3
         assert data["command_type"] is None
         assert data["detected_intents"] is None

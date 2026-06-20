@@ -70,9 +70,11 @@ def _build_system_prompt(
         intent_list = ", ".join(detected_intents)
         parts.append(
             f"## Parallel command pipeline\n"
-            f"The following commands are being processed in parallel: {intent_list}.\n"
-            f"Acknowledge what you are doing naturally. Do not confirm completion — "
-            f"a separate message will follow with the results."
+            f"The system is already handling these commands automatically: {intent_list}.\n"
+            f"Your ONLY job here is to reply with ONE short sentence acknowledging the request "
+            f"(e.g. 'On it!' or 'Got it, I will get that added.'). "
+            f"Do NOT generate any content, description, template, or details related to the command. "
+            f"Do NOT say the task is done — a separate message will follow with the actual result."
         )
 
     return "\n\n".join(parts)

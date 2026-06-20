@@ -33,11 +33,16 @@ class GoogleLlmProvider:
     ) -> LlmResponse:
         logger.debug("GoogleLLM: calling model=%s messages=%d", self._model_name, len(messages))
 
-        # Merge consecutive same-role messages — Gemini requires strict
-        # user/model alternation; two back-to-back user turns cause it to
-        # ignore the system prompt and fall back to its default identity.
+        # Sanitize history (all but the current message) to enforce strict
+        # user/model alternation that Gemini requires. Consecutive same-role
+        # messages are merged. If history ends on a user message (orphaned
+        # because /chats was skipped for a read command), a placeholder
+        # assistant turn bridges the gap so the current message starts clean.
+        history = messages[:-1]
+        current = messages[-1]
+
         sanitized: list[dict[str, str]] = []
-        for msg in messages:
+        for msg in history:
             if sanitized and sanitized[-1]["role"] == msg["role"]:
                 sanitized[-1] = {
                     "role": msg["role"],
@@ -46,6 +51,9 @@ class GoogleLlmProvider:
             else:
                 sanitized.append(msg)
 
+        if sanitized and sanitized[-1]["role"] == "user":
+            sanitized.append({"role": "assistant", "content": "(handled)"})
+
         contents = [
             types.Content(
                 role="model" if msg["role"] == "assistant" else "user",
@@ -53,6 +61,7 @@ class GoogleLlmProvider:
             )
             for msg in sanitized
         ]
+        contents.append(types.Content(role="user", parts=[types.Part(text=current["content"])]))
 
         config = types.GenerateContentConfig(
             system_instruction=system,

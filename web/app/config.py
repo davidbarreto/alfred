@@ -5,10 +5,10 @@ from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
     backend_url: str = Field(default="http://api:8000", validation_alias="BACKEND_URL")
+    # Browser-accessible backend URL — used only in the chat page JS for the SSE call.
+    # Differs from BACKEND_URL when running in Docker (internal vs host-visible address).
+    public_backend_url: str = Field(default="http://localhost:8000", validation_alias="PUBLIC_BACKEND_URL")
     alfred_api_token: str = Field(validation_alias="ALFRED_API_TOKEN")
-    # Exposed to the chat page JS so the browser can open the SSE stream
-    # directly to the backend. Same value as ALFRED_API_TOKEN — acceptable
-    # for a personal, single-user portal running on a private server.
     web_port: int = Field(default=8080, validation_alias="WEB_PORT")
 
 

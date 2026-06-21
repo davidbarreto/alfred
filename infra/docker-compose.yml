@@ -48,6 +48,7 @@ services:
       - LLM_CHAT_MODEL=${LLM_CHAT_MODEL}
       - LLM_EXTRACTION_MODEL=${LLM_EXTRACTION_MODEL}
       - INTENT_THRESHOLD=${INTENT_THRESHOLD}
+      - CORS_ORIGINS=${CORS_ORIGINS}
 
   web:
     build: ../web
@@ -58,6 +59,7 @@ services:
     restart: unless-stopped
     environment:
       - BACKEND_URL=http://api:8000
+      - PUBLIC_BACKEND_URL=${PUBLIC_BACKEND_URL}
       - ALFRED_API_TOKEN=${ALFRED_API_TOKEN}
       - WEB_PORT=8080
 

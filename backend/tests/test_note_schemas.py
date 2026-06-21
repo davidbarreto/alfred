@@ -46,20 +46,23 @@ class TestNoteUpdate:
         assert "title" not in dumped
 
 
+_TS = "2026-06-21T10:00:00"
+
+
 class TestNoteRead:
     def test_from_dict(self):
-        note = NoteRead(id=1, title="Test", content="", tags=[])
+        note = NoteRead(id=1, title="Test", content="", tags=[], created_at=_TS, updated_at=_TS)
         assert note.id == 1
 
     def test_coerce_tags_from_strings(self):
-        note = NoteRead(id=1, title="T", content="", tags=["work", "personal"])
+        note = NoteRead(id=1, title="T", content="", tags=["work", "personal"], created_at=_TS, updated_at=_TS)
         assert note.tags == ["work", "personal"]
 
     def test_coerce_tags_from_orm_objects(self):
         class FakeTag:
             name = "work"
 
-        note = NoteRead(id=2, title="T", content="", tags=[FakeTag()])
+        note = NoteRead(id=2, title="T", content="", tags=[FakeTag()], created_at=_TS, updated_at=_TS)
         assert note.tags == ["work"]
 
     def test_coerce_tags_mixed(self):
@@ -67,7 +70,7 @@ class TestNoteRead:
             def __init__(self, name):
                 self.name = name
 
-        note = NoteRead(id=3, title="T", content="", tags=[FakeTag("work"), "personal"])
+        note = NoteRead(id=3, title="T", content="", tags=[FakeTag("work"), "personal"], created_at=_TS, updated_at=_TS)
         assert note.tags == ["work", "personal"]
 
     def test_from_attributes_enabled(self):

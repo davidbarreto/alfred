@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import Annotated, Any, Optional, List
 from pydantic import BaseModel, field_validator
 from fastapi import Query
@@ -21,6 +22,8 @@ class NoteUpdate(BaseModel):
 
 class NoteRead(NoteBase):
     id: int
+    created_at: datetime
+    updated_at: datetime
 
     model_config = {"from_attributes": True}
 

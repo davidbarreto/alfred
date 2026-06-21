@@ -1,13 +1,16 @@
 import pytest
+from datetime import datetime
 from fastapi.testclient import TestClient
 from unittest.mock import AsyncMock
 from app.features.organizer.notes.schemas import NoteRead
 
 AUTH = {"Authorization": "Bearer test-api-token"}
 
+_TS = datetime(2026, 6, 21, 10, 0)
+
 
 def _note_read(**kwargs):
-    defaults = dict(id=1, title="Test Note", content="Some content", tags=[])
+    defaults = dict(id=1, title="Test Note", content="Some content", tags=[], created_at=_TS, updated_at=_TS)
     defaults.update(kwargs)
     return NoteRead(**defaults)
 

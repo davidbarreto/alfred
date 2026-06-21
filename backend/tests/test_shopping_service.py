@@ -38,6 +38,7 @@ def _make_shopping_orm(**kwargs):
     item.url = kwargs.get("url", None)
     item.notes = kwargs.get("notes", None)
     item.status = kwargs.get("status", "pending")
+    item.source = kwargs.get("source", None)
     item.last_bought_at = kwargs.get("last_bought_at", None)
     item.created_at = kwargs.get("created_at", _NOW)
     item.updated_at = kwargs.get("updated_at", _NOW)

@@ -46,8 +46,7 @@ async def dashboard(request: Request):
     except httpx.HTTPError:
         errors.append("spending")
 
-    return templates.TemplateResponse("dashboard.html", {
-        "request": request,
+    return templates.TemplateResponse(request, "dashboard.html", {
         "tasks": tasks or [],
         "shopping_items": shopping_items or [],
         "events": events or [],

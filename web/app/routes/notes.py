@@ -25,8 +25,7 @@ async def notes_page(request: Request):
         q_lower = q.lower()
         notes = [n for n in notes if q_lower in n.get("title", "").lower() or q_lower in n.get("content", "").lower()]
 
-    return templates.TemplateResponse("notes.html", {
-        "request": request,
+    return templates.TemplateResponse(request, "notes.html", {
         "notes": notes,
         "query": q,
         "active_tags": tags_raw,
@@ -47,4 +46,4 @@ async def notes_grid_fragment(request: Request):
         q_lower = q.lower()
         notes = [n for n in notes if q_lower in n.get("title", "").lower() or q_lower in n.get("content", "").lower()]
 
-    return templates.TemplateResponse("_notes_grid.html", {"request": request, "notes": notes})
+    return templates.TemplateResponse(request, "_notes_grid.html", {"notes": notes})

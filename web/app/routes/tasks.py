@@ -48,8 +48,7 @@ async def tasks_page(request: Request):
     except httpx.HTTPError:
         tasks = []
 
-    return templates.TemplateResponse("tasks.html", {
-        "request": request,
+    return templates.TemplateResponse(request, "tasks.html", {
         "tasks": tasks,
         "active_filter": active_filter,
         "filters": _FILTER_DEFS,
@@ -68,8 +67,7 @@ async def tasks_list_fragment(request: Request):
     except httpx.HTTPError:
         tasks = []
 
-    return templates.TemplateResponse("_tasks_list.html", {
-        "request": request,
+    return templates.TemplateResponse(request, "_tasks_list.html", {
         "tasks": tasks,
         "today": date.today().isoformat(),
         "tomorrow": (date.today() + timedelta(days=1)).isoformat(),
@@ -83,8 +81,7 @@ async def mark_task_done(task_id: int, request: Request):
     except httpx.HTTPError:
         task = {"id": task_id, "title": "—", "status": "DONE", "priority": "LOW",
                 "urgency": "NORMAL", "deadline": None, "tags": []}
-    return templates.TemplateResponse("_task_row.html", {
-        "request": request,
+    return templates.TemplateResponse(request, "_task_row.html", {
         "task": task,
         "today": date.today().isoformat(),
         "tomorrow": (date.today() + timedelta(days=1)).isoformat(),

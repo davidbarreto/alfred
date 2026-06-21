@@ -22,8 +22,7 @@ async def shopping_page(request: Request):
     except httpx.HTTPError:
         items = []
 
-    return templates.TemplateResponse("shopping.html", {
-        "request": request,
+    return templates.TemplateResponse(request, "shopping.html", {
         "items": items,
         "active_status": status,
         "active_category": category,
@@ -41,8 +40,7 @@ async def shopping_list_fragment(request: Request):
     except httpx.HTTPError:
         items = []
 
-    return templates.TemplateResponse("_shopping_list.html", {
-        "request": request,
+    return templates.TemplateResponse(request, "_shopping_list.html", {
         "items": items,
         "categories": _CATEGORIES,
     })
@@ -65,7 +63,7 @@ async def add_shopping_item(
     except httpx.HTTPError:
         return HTMLResponse("", status_code=422)
 
-    return templates.TemplateResponse("_shopping_item.html", {"request": request, "item": item})
+    return templates.TemplateResponse(request, "_shopping_item.html", {"item": item})
 
 
 @router.post("/{item_id}/bought", response_class=HTMLResponse)
@@ -74,4 +72,4 @@ async def mark_bought(item_id: int, request: Request):
         item = await api.post(f"/organizer/shopping/{item_id}/bought")
     except httpx.HTTPError:
         return HTMLResponse("", status_code=422)
-    return templates.TemplateResponse("_shopping_item.html", {"request": request, "item": item})
+    return templates.TemplateResponse(request, "_shopping_item.html", {"item": item})

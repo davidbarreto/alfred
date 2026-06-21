@@ -51,8 +51,7 @@ async def calendar_page(request: Request):
     next_month = month + 1 if month < 12 else 1
     next_year = year if month < 12 else year + 1
 
-    return templates.TemplateResponse("calendar.html", {
-        "request": request,
+    return templates.TemplateResponse(request, "calendar.html", {
         "events": events,
         "events_by_date": events_by_date,
         "weeks": weeks,

@@ -44,8 +44,7 @@ async def finance_page(request: Request):
     total_spent_budget = sum(float(b["spent"]) for b in budgets) if budgets else None
     total_remaining = (total_budget - total_spent_budget) if total_budget is not None else None
 
-    return templates.TemplateResponse("finance.html", {
-        "request": request,
+    return templates.TemplateResponse(request, "finance.html", {
         "spending": spending,
         "category_items": category_items,
         "max_total": max_total,

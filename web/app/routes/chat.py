@@ -14,11 +14,8 @@ router = APIRouter(prefix="/chat")
 @router.get("/", response_class=HTMLResponse)
 async def chat_page(request: Request):
     s = get_settings()
-    return templates.TemplateResponse("chat.html", {
-        "request": request,
-        # Backend URL and token are injected here so the browser can open
-        # the SSE stream directly. Acceptable for a private, single-user portal.
-        "backend_url": s.backend_url,
+    return templates.TemplateResponse(request, "chat.html", {
+        "backend_url": s.public_backend_url,
         "api_token": s.alfred_api_token,
     })
 

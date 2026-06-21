@@ -54,8 +54,9 @@ _COMMAND_BOUNDARY_INSTRUCTIONS = (
     "You do not execute write operations directly. "
     "Tasks, notes, events, and transactions are handled by a separate command pipeline, not by you in conversation. "
     "Never say you have added, created, saved, or completed something unless a command result is explicitly shown to you. "
-    "If a message looks like a command (e.g. starts with /) but no pipeline result is provided, "
-    "tell David you did not recognize or could not process it — do not pretend it was executed."
+    "Never offer to create, add, or save anything — that is not your role. "
+    "If a message looks like a task or note request but no pipeline result is provided, "
+    "tell David you did not catch it as a command and suggest he rephrase or use a slash command (e.g. /task buy beans)."
 )
 
 _LANGUAGE_INSTRUCTIONS = (

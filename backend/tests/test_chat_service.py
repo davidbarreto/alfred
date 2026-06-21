@@ -197,6 +197,15 @@ class TestBuildSystemPrompt:
         prompt = _build_system_prompt([])
         assert "Parallel command pipeline" not in prompt
 
+    def test_command_boundary_included_when_no_intents(self):
+        prompt = _build_system_prompt([])
+        assert "Never offer to create" in prompt
+        assert "slash command" in prompt
+
+    def test_command_boundary_excluded_when_intents_present(self):
+        prompt = _build_system_prompt([], detected_intents=["task.add"])
+        assert "Never offer to create" not in prompt
+
     def test_includes_recent_session_summaries(self):
         summaries = [(_fixed_now(), "User discussed event scheduling.")]
         prompt = _build_system_prompt([], recent_summaries=summaries)

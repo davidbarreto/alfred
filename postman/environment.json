@@ -97,6 +97,36 @@
       "value": "",
       "type": "default",
       "enabled": true
+    },
+    {
+      "key": "shopping_item_id",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "shopping_item_id2",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "wishlist_item_id",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "promoted_shopping_id",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "recurrence_item_id",
+      "value": "",
+      "type": "default",
+      "enabled": true
     }
   ],
   "_postman_variable_scope": "environment"

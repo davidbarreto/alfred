@@ -1,0 +1,754 @@
+{
+  "info": {
+    "name": "Alfred - Shopping API",
+    "_postman_id": "alfred-shopping-v1",
+    "description": "Run in order: Shopping Items (Create → List → Get → Update → Mark Bought → Mark Skipped → Delete) → Wishlist (Create → List → Get → Update → Promote → Cleanup) → Recurrence (Create → List → Get → Update → Deactivate → Delete)",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{api_token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "Shopping Items",
+      "item": [
+        {
+          "name": "01 - Create Shopping Item",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+                  "pm.test('Response has expected fields', () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.have.property('id');",
+                  "    pm.expect(json.name).to.eql('Beans');",
+                  "    pm.expect(json.category).to.eql('grocery');",
+                  "    pm.expect(json.priority).to.eql('need');",
+                  "    pm.expect(json.status).to.eql('pending');",
+                  "    pm.expect(json.store).to.eql('Pingo Doce');",
+                  "    pm.environment.set('shopping_item_id', json.id);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Beans\",\n  \"category\": \"grocery\",\n  \"priority\": \"need\",\n  \"quantity\": 2,\n  \"unit\": \"cans\",\n  \"store\": \"Pingo Doce\",\n  \"notes\": \"Red kidney beans\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/organizer/shopping/",
+              "host": ["{{base_url}}"],
+              "path": ["organizer", "shopping", ""]
+            }
+          }
+        },
+        {
+          "name": "02 - List Shopping Items (pending)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Response is a non-empty array', () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.be.an('array');",
+                  "    pm.expect(json.length).to.be.at.least(1);",
+                  "});",
+                  "pm.test('All items are pending', () => {",
+                  "    pm.response.json().forEach(i => pm.expect(i.status).to.eql('pending'));",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/organizer/shopping/?status=pending",
+              "host": ["{{base_url}}"],
+              "path": ["organizer", "shopping", ""],
+              "query": [{ "key": "status", "value": "pending" }]
+            }
+          }
+        },
+        {
+          "name": "03 - List Shopping Items (filter by category)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('All items are grocery', () => {",
+                  "    pm.response.json().forEach(i => pm.expect(i.category).to.eql('grocery'));",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/organizer/shopping/?category=grocery",
+              "host": ["{{base_url}}"],
+              "path": ["organizer", "shopping", ""],
+              "query": [{ "key": "category", "value": "grocery" }]
+            }
+          }
+        },
+        {
+          "name": "04 - Get Shopping Item",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Response matches created item', () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(String(json.id)).to.eql(String(pm.environment.get('shopping_item_id')));",
+                  "    pm.expect(json.name).to.eql('Beans');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/organizer/shopping/{{shopping_item_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["organizer", "shopping", "{{shopping_item_id}}"]
+            }
+          }
+        },
+        {
+          "name": "05 - Update Shopping Item",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Priority was updated', () => {",
+                  "    pm.expect(pm.response.json().priority).to.eql('want');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"priority\": \"want\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/organizer/shopping/{{shopping_item_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["organizer", "shopping", "{{shopping_item_id}}"]
+            }
+          }
+        },
+        {
+          "name": "06 - Mark Shopping Item as Bought",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Status is bought and last_bought_at is set', () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.status).to.eql('bought');",
+                  "    pm.expect(json.last_bought_at).to.not.be.null;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/organizer/shopping/{{shopping_item_id}}/bought",
+              "host": ["{{base_url}}"],
+              "path": ["organizer", "shopping", "{{shopping_item_id}}", "bought"]
+            }
+          }
+        },
+        {
+          "name": "07 - List Shopping Items (bought history)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('All items are bought', () => {",
+                  "    pm.response.json().forEach(i => pm.expect(i.status).to.eql('bought'));",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/organizer/shopping/?status=bought",
+              "host": ["{{base_url}}"],
+              "path": ["organizer", "shopping", ""],
+              "query": [{ "key": "status", "value": "bought" }]
+            }
+          }
+        },
+        {
+          "name": "08 - Create Shopping Item (for skipped test)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+                  "pm.environment.set('shopping_item_id2', pm.response.json().id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Fancy cheese\",\n  \"category\": \"grocery\",\n  \"priority\": \"want\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/organizer/shopping/",
+              "host": ["{{base_url}}"],
+              "path": ["organizer", "shopping", ""]
+            }
+          }
+        },
+        {
+          "name": "09 - Mark Shopping Item as Skipped",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Status is skipped', () => {",
+                  "    pm.expect(pm.response.json().status).to.eql('skipped');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/organizer/shopping/{{shopping_item_id2}}/skipped",
+              "host": ["{{base_url}}"],
+              "path": ["organizer", "shopping", "{{shopping_item_id2}}", "skipped"]
+            }
+          }
+        },
+        {
+          "name": "10 - Get Non-existent Shopping Item (404)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 404', () => pm.response.to.have.status(404));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/organizer/shopping/999999",
+              "host": ["{{base_url}}"],
+              "path": ["organizer", "shopping", "999999"]
+            }
+          }
+        },
+        {
+          "name": "11 - Delete Shopping Items (cleanup)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 204', () => pm.response.to.have.status(204));",
+                  "pm.environment.unset('shopping_item_id');",
+                  "pm.environment.unset('shopping_item_id2');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/organizer/shopping/{{shopping_item_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["organizer", "shopping", "{{shopping_item_id}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Wishlist",
+      "item": [
+        {
+          "name": "12 - Create Wishlist Item",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+                  "pm.test('Response has expected fields', () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.have.property('id');",
+                  "    pm.expect(json.name).to.eql('Sony WH-1000XM5');",
+                  "    pm.expect(json.category).to.eql('electronics');",
+                  "    pm.environment.set('wishlist_item_id', json.id);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Sony WH-1000XM5\",\n  \"category\": \"electronics\",\n  \"estimated_price\": 350,\n  \"brand\": \"Sony\",\n  \"notes\": \"Noise-cancelling headphones\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/organizer/wishlist/",
+              "host": ["{{base_url}}"],
+              "path": ["organizer", "wishlist", ""]
+            }
+          }
+        },
+        {
+          "name": "13 - List Wishlist Items",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Response is a non-empty array', () => {",
+                  "    pm.expect(pm.response.json()).to.be.an('array').with.lengthOf.at.least(1);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/organizer/wishlist/",
+              "host": ["{{base_url}}"],
+              "path": ["organizer", "wishlist", ""]
+            }
+          }
+        },
+        {
+          "name": "14 - Get Wishlist Item",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Name matches', () => {",
+                  "    pm.expect(pm.response.json().name).to.eql('Sony WH-1000XM5');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/organizer/wishlist/{{wishlist_item_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["organizer", "wishlist", "{{wishlist_item_id}}"]
+            }
+          }
+        },
+        {
+          "name": "15 - Update Wishlist Item",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Notes were updated', () => {",
+                  "    pm.expect(pm.response.json().notes).to.eql('Great reviews, wait for sale');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"notes\": \"Great reviews, wait for sale\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/organizer/wishlist/{{wishlist_item_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["organizer", "wishlist", "{{wishlist_item_id}}"]
+            }
+          }
+        },
+        {
+          "name": "16 - Promote Wishlist Item to Shopping List",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Promoted item is on shopping list with correct fields', () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.name).to.eql('Sony WH-1000XM5');",
+                  "    pm.expect(json.category).to.eql('electronics');",
+                  "    pm.expect(json.priority).to.eql('want');",
+                  "    pm.expect(json.status).to.eql('pending');",
+                  "    pm.environment.set('promoted_shopping_id', json.id);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"priority\": \"want\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/organizer/wishlist/{{wishlist_item_id}}/promote",
+              "host": ["{{base_url}}"],
+              "path": ["organizer", "wishlist", "{{wishlist_item_id}}", "promote"]
+            }
+          }
+        },
+        {
+          "name": "17 - Verify Wishlist Item Was Deleted After Promote (404)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 404 — wishlist item no longer exists', () => pm.response.to.have.status(404));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/organizer/wishlist/{{wishlist_item_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["organizer", "wishlist", "{{wishlist_item_id}}"]
+            }
+          }
+        },
+        {
+          "name": "18 - Delete Promoted Shopping Item (cleanup)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 204', () => pm.response.to.have.status(204));",
+                  "pm.environment.unset('wishlist_item_id');",
+                  "pm.environment.unset('promoted_shopping_id');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/organizer/shopping/{{promoted_shopping_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["organizer", "shopping", "{{promoted_shopping_id}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Recurrence",
+      "item": [
+        {
+          "name": "19 - Create Recurrence Item",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+                  "pm.test('Response has expected fields', () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.have.property('id');",
+                  "    pm.expect(json.name).to.eql('Milk');",
+                  "    pm.expect(json.recurrence_days).to.eql(7);",
+                  "    pm.expect(json.active).to.be.true;",
+                  "    pm.environment.set('recurrence_item_id', json.id);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Milk\",\n  \"category\": \"grocery\",\n  \"recurrence_days\": 7\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/organizer/recurrence/",
+              "host": ["{{base_url}}"],
+              "path": ["organizer", "recurrence", ""]
+            }
+          }
+        },
+        {
+          "name": "20 - List Recurrence Items (active only)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('All items are active', () => {",
+                  "    pm.response.json().forEach(i => pm.expect(i.active).to.be.true);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/organizer/recurrence/?active_only=true",
+              "host": ["{{base_url}}"],
+              "path": ["organizer", "recurrence", ""],
+              "query": [{ "key": "active_only", "value": "true" }]
+            }
+          }
+        },
+        {
+          "name": "21 - Get Recurrence Item",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Name matches', () => {",
+                  "    pm.expect(pm.response.json().name).to.eql('Milk');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/organizer/recurrence/{{recurrence_item_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["organizer", "recurrence", "{{recurrence_item_id}}"]
+            }
+          }
+        },
+        {
+          "name": "22 - Update Recurrence Item",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Recurrence days were updated', () => {",
+                  "    pm.expect(pm.response.json().recurrence_days).to.eql(14);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"recurrence_days\": 14\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/organizer/recurrence/{{recurrence_item_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["organizer", "recurrence", "{{recurrence_item_id}}"]
+            }
+          }
+        },
+        {
+          "name": "23 - Deactivate Recurrence Item",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Item is now inactive', () => {",
+                  "    pm.expect(pm.response.json().active).to.be.false;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"active\": false\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/organizer/recurrence/{{recurrence_item_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["organizer", "recurrence", "{{recurrence_item_id}}"]
+            }
+          }
+        },
+        {
+          "name": "24 - List Recurrence Items (include inactive)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Contains at least one inactive item', () => {",
+                  "    const inactive = pm.response.json().filter(i => !i.active);",
+                  "    pm.expect(inactive.length).to.be.at.least(1);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/organizer/recurrence/?active_only=false",
+              "host": ["{{base_url}}"],
+              "path": ["organizer", "recurrence", ""],
+              "query": [{ "key": "active_only", "value": "false" }]
+            }
+          }
+        },
+        {
+          "name": "25 - Delete Recurrence Item (cleanup)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 204', () => pm.response.to.have.status(204));",
+                  "pm.environment.unset('recurrence_item_id');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/organizer/recurrence/{{recurrence_item_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["organizer", "recurrence", "{{recurrence_item_id}}"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+from typing import AsyncGenerator
 
 from google import genai
 from google.genai import types
@@ -26,18 +27,13 @@ class GoogleLlmProvider:
     def model(self) -> str:
         return self._model_name
 
-    async def complete(
+    def _build_contents(
         self,
         messages: list[dict[str, str]],
-        system: str | None = None,
-    ) -> LlmResponse:
-        logger.debug("GoogleLLM: calling model=%s messages=%d", self._model_name, len(messages))
-
-        # Sanitize history (all but the current message) to enforce strict
-        # user/model alternation that Gemini requires. Consecutive same-role
-        # messages are merged. If history ends on a user message (orphaned
-        # because /chats was skipped for a read command), a placeholder
-        # assistant turn bridges the gap so the current message starts clean.
+    ) -> list[types.Content]:
+        # Sanitize history to enforce strict user/model alternation that
+        # Gemini requires. Consecutive same-role messages are merged. If
+        # history ends on a user message, a placeholder bridges the gap.
         history = messages[:-1]
         current = messages[-1]
 
@@ -62,7 +58,15 @@ class GoogleLlmProvider:
             for msg in sanitized
         ]
         contents.append(types.Content(role="user", parts=[types.Part(text=current["content"])]))
+        return contents
 
+    async def complete(
+        self,
+        messages: list[dict[str, str]],
+        system: str | None = None,
+    ) -> LlmResponse:
+        logger.debug("GoogleLLM: calling model=%s messages=%d", self._model_name, len(messages))
+        contents = self._build_contents(messages)
         config = types.GenerateContentConfig(
             system_instruction=system,
             temperature=self._temperature,
@@ -80,3 +84,22 @@ class GoogleLlmProvider:
             tokens_input=usage.prompt_token_count if usage else None,
             tokens_output=usage.candidates_token_count if usage else None,
         )
+
+    async def stream(
+        self,
+        messages: list[dict[str, str]],
+        system: str | None = None,
+    ) -> AsyncGenerator[str, None]:
+        logger.debug("GoogleLLM: streaming model=%s messages=%d", self._model_name, len(messages))
+        contents = self._build_contents(messages)
+        config = types.GenerateContentConfig(
+            system_instruction=system,
+            temperature=self._temperature,
+        )
+        async for chunk in await self._client.aio.models.generate_content_stream(
+            model=self._model_name,
+            contents=contents,
+            config=config,
+        ):
+            if chunk.text:
+                yield chunk.text

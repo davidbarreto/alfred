@@ -6,6 +6,7 @@ import pathlib
 import re
 import time
 from datetime import datetime, timezone
+from typing import AsyncGenerator
 
 from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -224,3 +225,69 @@ class ChatService:
         )
 
         return response_text
+
+    async def stream_chat(self, request: ChatRequest) -> AsyncGenerator[str, None]:
+        logger.info("StreamChat: session_id=%s", request.session_id)
+        messages = await self._message_service.list(
+            MessageFilters(session_id=request.session_id, limit=_HISTORY_LIMIT + 1)
+        )
+        if not messages:
+            yield f"[error: No messages found in session. Call POST /core/messages first.]"
+            return
+
+        current_message = messages[-1]
+        history = _to_message_dicts(messages[:-1])
+
+        memories = await self._embedding_service.search(
+            EmbeddingSearchRequest(
+                query=current_message.content,
+                source_types=["memory", "note", "task"],
+                limit=_MEMORY_LIMIT,
+                threshold=_MEMORY_THRESHOLD,
+            )
+        )
+        recent_summaries = await self._session_summary_service.get_recent_summaries(request.session_id)
+        system_prompt = _build_system_prompt(memories, request.detected_intents, recent_summaries)
+        messages_list = history + [{"role": "user", "content": current_message.content}]
+
+        t0 = time.monotonic()
+        raw_text = ""
+        try:
+            async for chunk in self._llm_provider.stream(messages_list, system=system_prompt):
+                raw_text += chunk
+                yield chunk
+        except Exception as exc:
+            logger.error("StreamChat: LLM stream failed session_id=%s error=%s", request.session_id, exc)
+            yield "[error: AI service temporarily unavailable.]"
+            return
+
+        latency_ms = int((time.monotonic() - t0) * 1000)
+        response_text = _strip_markdown(raw_text)
+
+        logger.info(
+            "StreamChat: done session_id=%s latency_ms=%d",
+            request.session_id, latency_ms,
+        )
+
+        await create_llm_call(
+            self._session,
+            provider=self._llm_provider.provider,
+            model=self._llm_provider.model,
+            feature="chat_stream",
+            prompt=[{"role": "system", "content": system_prompt}] + messages_list,
+            response=response_text,
+            tokens_input=None,
+            tokens_output=None,
+            latency_ms=latency_ms,
+        )
+
+        await self._message_service.create(
+            MessageCreate(session_id=request.session_id, role="assistant", content=response_text)
+        )
+
+        asyncio.create_task(
+            self._memory_extraction_service.extract_and_save(
+                user_message=current_message.content,
+                message_id=current_message.id,
+            )
+        )

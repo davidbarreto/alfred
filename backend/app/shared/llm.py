@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Protocol, runtime_checkable
+from typing import AsyncGenerator, Protocol, runtime_checkable
 
 
 @dataclass
@@ -36,3 +36,9 @@ class LlmProvider(Protocol):
         messages: list[dict[str, str]],
         system: str | None = None,
     ) -> LlmResponse: ...
+
+    def stream(
+        self,
+        messages: list[dict[str, str]],
+        system: str | None = None,
+    ) -> AsyncGenerator[str, None]: ...

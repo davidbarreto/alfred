@@ -1,67 +1,138 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="night">
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>{% block title %}Alfred{% endblock %} — Alfred Portal</title>
+
+  <!-- Tabler icons webfont (outline, stroke-1.5) -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3/dist/tabler-icons.min.css" />
+  <!-- DaisyUI 4 component structure -->
   <link href="https://cdn.jsdelivr.net/npm/daisyui@4/dist/full.min.css" rel="stylesheet" />
+  <!-- Tailwind CDN with custom semantic colors -->
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            surface: '#FAFAF9',
+            sidebar: '#F5F4F0',
+            accent:  { DEFAULT: '#378ADD', light: '#E6F1FB', dark: '#0C447C' },
+            danger:  { DEFAULT: '#E24B4A', light: '#FCEBEB' },
+            warn:    { DEFAULT: '#BA7517', light: '#FAEEDA' },
+            ok:      { DEFAULT: '#639922', light: '#EAF3DE' },
+          }
+        }
+      }
+    }
+  </script>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/htmx.org@2/dist/htmx.min.js"></script>
+
   <style>
-    .sidebar-link { @apply flex items-center gap-3 px-4 py-2 rounded-lg text-base-content/70 hover:bg-base-300 hover:text-base-content transition-colors; }
-    .sidebar-link.active { @apply bg-primary/20 text-primary font-medium; }
+    /*
+     * DaisyUI 4 uses oklch variables in the format "L% C H" (no function wrapper).
+     * Override :root so all DaisyUI components pick up our neutral palette.
+     */
+    :root {
+      --b1:  100% 0 0;          /* white — card/input surfaces */
+      --b2:  98.2% 0.002 90;    /* #FAFAF9 — page background */
+      --b3:  96.1% 0.004 80;    /* #F5F4F0 — sidebar / muted areas */
+      --bc:  15% 0 0;           /* near-black — body text */
+      --p:   58% 0.14 236;      /* #378ADD — accent blue (active/selected only) */
+      --pc:  100% 0 0;          /* white text on blue */
+      --s:   58% 0.14 236;
+      --sc:  100% 0 0;
+      --a:   58% 0.14 236;
+      --ac:  100% 0 0;
+      --n:   18% 0 0;           /* neutral dark */
+      --nc:  100% 0 0;
+      --in:  58% 0.14 236;      /* info = blue */
+      --inc: 100% 0 0;
+      --su:  59% 0.16 135;      /* success = #639922 green */
+      --suc: 100% 0 0;
+      --wa:  60% 0.15 65;       /* warning = #BA7517 amber */
+      --wac: 100% 0 0;
+      --er:  55% 0.2 27;        /* error = #E24B4A red */
+      --erc: 100% 0 0;
+      --rounded-box: 0.5rem;
+      --rounded-btn: 0.375rem;
+      --rounded-badge: 1rem;
+      --border-btn: 1px;
+    }
+
+    /* Sidebar nav links */
+    .nav-link {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.375rem 0.625rem;
+      border-radius: 0.375rem;
+      font-size: 0.8125rem;
+      color: #4B5563;
+      text-decoration: none;
+      transition: background 0.1s, color 0.1s;
+    }
+    .nav-link:hover { background: #ECEAE4; color: #111827; }
+    .nav-link.active { background: #E6F1FB; color: #0C447C; font-weight: 500; }
+    .nav-link .ti { font-size: 1rem; width: 1.125rem; text-align: center; flex-shrink: 0; }
+
+    /* Global card: thin border, no shadow */
+    .card { box-shadow: none !important; border: 1px solid #E5E7EB; }
+    /* Inputs: minimal ring */
+    .input, .select, .textarea {
+      border-color: #E5E7EB;
+      background-color: #fff;
+    }
+    .input:focus, .select:focus { outline: none; border-color: #378ADD; box-shadow: 0 0 0 2px #E6F1FB; }
   </style>
 </head>
-<body class="flex h-screen bg-base-200 overflow-hidden">
+<body class="bg-[#FAFAF9] text-gray-900 antialiased">
 
-  <!-- Sidebar -->
-  <aside class="w-56 flex-shrink-0 bg-base-100 border-r border-base-300 flex flex-col py-6 px-3 gap-1">
-    <div class="px-4 mb-6">
-      <span class="text-xl font-bold tracking-tight text-primary">Alfred</span>
-    </div>
+  <div class="flex min-h-screen">
 
-    <a href="/" class="sidebar-link {% if active_page == 'dashboard' %}active{% endif %}">
-      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
-      Dashboard
-    </a>
+    <!-- Sidebar -->
+    <aside class="w-[200px] shrink-0 bg-[#F5F4F0] border-r border-gray-200 flex flex-col py-5 px-2">
 
-    <a href="/tasks" class="sidebar-link {% if active_page == 'tasks' %}active{% endif %}">
-      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
-      Tasks
-    </a>
+      <div class="px-3 mb-5">
+        <span class="text-sm font-semibold text-gray-900 tracking-tight">Alfred</span>
+      </div>
 
-    <a href="/shopping" class="sidebar-link {% if active_page == 'shopping' %}active{% endif %}">
-      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
-      Shopping
-    </a>
+      <nav class="flex flex-col gap-0.5 flex-1">
+        <a href="/" class="nav-link {% if active_page == 'dashboard' %}active{% endif %}">
+          <i class="ti ti-layout-dashboard"></i>Dashboard
+        </a>
+        <a href="/tasks" class="nav-link {% if active_page == 'tasks' %}active{% endif %}">
+          <i class="ti ti-checklist"></i>Tasks
+        </a>
+        <a href="/shopping" class="nav-link {% if active_page == 'shopping' %}active{% endif %}">
+          <i class="ti ti-shopping-cart"></i>Shopping
+        </a>
+        <a href="/calendar" class="nav-link {% if active_page == 'calendar' %}active{% endif %}">
+          <i class="ti ti-calendar"></i>Calendar
+        </a>
+        <a href="/notes" class="nav-link {% if active_page == 'notes' %}active{% endif %}">
+          <i class="ti ti-notes"></i>Notes
+        </a>
+        <a href="/finance" class="nav-link {% if active_page == 'finance' %}active{% endif %}">
+          <i class="ti ti-wallet"></i>Finance
+        </a>
+      </nav>
 
-    <a href="/calendar" class="sidebar-link {% if active_page == 'calendar' %}active{% endif %}">
-      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-      Calendar
-    </a>
+      <div class="border-t border-gray-200 pt-2 mt-auto">
+        <a href="/chat" class="nav-link {% if active_page == 'chat' %}active{% endif %}">
+          <i class="ti ti-message-circle-2"></i>Chat
+        </a>
+      </div>
 
-    <a href="/notes" class="sidebar-link {% if active_page == 'notes' %}active{% endif %}">
-      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
-      Notes
-    </a>
+    </aside>
 
-    <a href="/finance" class="sidebar-link {% if active_page == 'finance' %}active{% endif %}">
-      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-      Finance
-    </a>
+    <!-- Main content -->
+    <main class="flex-1 overflow-y-auto min-w-0">
+      {% block content %}{% endblock %}
+    </main>
 
-    <div class="flex-1"></div>
-
-    <a href="/chat" class="sidebar-link {% if active_page == 'chat' %}active{% endif %}">
-      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
-      Chat
-    </a>
-  </aside>
-
-  <!-- Main content -->
-  <main class="flex-1 overflow-y-auto">
-    {% block content %}{% endblock %}
-  </main>
+  </div>
 
 </body>
 </html>

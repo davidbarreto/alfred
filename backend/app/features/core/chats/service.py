@@ -92,8 +92,10 @@ def _build_system_prompt(
         _FORMATTING_INSTRUCTIONS,
         _LANGUAGE_INSTRUCTIONS,
         _FOCUS_INSTRUCTIONS,
-        _COMMAND_BOUNDARY_INSTRUCTIONS,
     ]
+
+    if not detected_intents:
+        parts.append(_COMMAND_BOUNDARY_INSTRUCTIONS)
 
     if recent_summaries:
         lines = "\n".join(

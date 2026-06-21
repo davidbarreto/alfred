@@ -17,9 +17,8 @@
         placeholder="Message Alfred…"
         class="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#378ADD] bg-white disabled:bg-gray-50 disabled:text-gray-400"
         autocomplete="off"
-        disabled
       />
-      <button type="submit" class="btn btn-sm btn-primary" id="send-btn" disabled>Send</button>
+      <button type="submit" class="btn btn-sm btn-primary" id="send-btn">Send</button>
     </form>
     <div id="chat-status" class="text-xs text-gray-400 mt-1"></div>
   </div>
@@ -29,8 +28,7 @@
 const BACKEND_URL = {{ backend_url | tojson }};
 const API_TOKEN  = {{ api_token | tojson }};
 
-let sessionId = null;
-let streaming  = false;
+let streaming = false;
 
 const messagesEl = document.getElementById("messages");
 const inputEl    = document.getElementById("chat-input");
@@ -40,9 +38,7 @@ const formEl     = document.getElementById("chat-form");
 
 function appendMessage(role, text) {
   const div = document.createElement("div");
-  div.className = role === "user"
-    ? "chat chat-end"
-    : "chat chat-start";
+  div.className = role === "user" ? "chat chat-end" : "chat chat-start";
   div.innerHTML = `
     <div class="chat-header text-xs text-gray-400 mb-1">${role === "user" ? "You" : "Alfred"}</div>
     <div class="chat-bubble ${role === "user" ? "chat-bubble-neutral" : "chat-bubble-primary"} whitespace-pre-wrap text-sm"></div>
@@ -53,18 +49,9 @@ function appendMessage(role, text) {
   return div.querySelector(".chat-bubble");
 }
 
-async function initSession() {
-  statusEl.textContent = "Starting session…";
-  const resp = await fetch("/chat/session", { method: "POST" });
-  sessionId = await resp.text();
-  inputEl.disabled = false;
-  sendBtn.disabled = false;
-  statusEl.textContent = "";
-}
-
 formEl.addEventListener("submit", async (e) => {
   e.preventDefault();
-  if (streaming || !sessionId) return;
+  if (streaming) return;
 
   const text = inputEl.value.trim();
   if (!text) return;
@@ -76,13 +63,21 @@ formEl.addEventListener("submit", async (e) => {
 
   appendMessage("user", text);
 
-  // Send user message through web server (keeps API token server-side)
+  // POST message server-side (keeps API token out of the browser)
   const formData = new FormData();
-  formData.set("session_id", sessionId);
   formData.set("message", text);
-  await fetch("/chat/message", { method: "POST", body: formData });
+  const msgResp = await fetch("/chat/message", { method: "POST", body: formData });
+  if (!msgResp.ok) {
+    appendMessage("assistant", "[Error sending message]");
+    streaming = false;
+    inputEl.disabled = false;
+    sendBtn.disabled = false;
+    statusEl.textContent = "";
+    return;
+  }
+  const { session_id: sessionId } = await msgResp.json();
 
-  // Stream response directly from backend SSE endpoint
+  // Open SSE stream with the session_id returned by the ingest endpoint
   const bubble = appendMessage("assistant", "");
   const url = `${BACKEND_URL}/core/chats/stream?session_id=${sessionId}&token=${API_TOKEN}`;
 
@@ -128,7 +123,5 @@ formEl.addEventListener("submit", async (e) => {
   inputEl.focus();
   statusEl.textContent = "";
 });
-
-initSession();
 </script>
 {% endblock %}

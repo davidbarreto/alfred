@@ -52,6 +52,8 @@ async def handle_shopping(cmd_type: str, command: str, arguments: dict[str, Any]
         if command == "complete":
             item = await _resolve_shopping_item(arguments, service)
             result = await service.mark_bought(item.id)
+            if result is None:
+                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Shopping item {item.id} not found")
             return result.model_dump()
 
         if command == "delete":
@@ -71,7 +73,7 @@ async def handle_shopping(cmd_type: str, command: str, arguments: dict[str, Any]
             if "status" in arguments:
                 fields["status"] = arguments["status"]
             if "quantity" in arguments:
-                fields["quantity"] = float(arguments["quantity"]) if arguments["quantity"] else None
+                fields["quantity"] = Decimal(str(arguments["quantity"])) if arguments["quantity"] else None
             result = await service.update_item(item_id, ShoppingItemUpdate(**fields))
             if result is None:
                 raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Shopping item {item_id} not found")
@@ -107,6 +109,8 @@ async def handle_shopping(cmd_type: str, command: str, arguments: dict[str, Any]
             wish = await _resolve_wishlist_item(arguments, service)
             priority = arguments.get("priority", "want")
             result = await service.promote_wish(wish.id, priority=priority)
+            if result is None:
+                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Wishlist item {wish.id} not found")
             return result.model_dump()
 
     raise HTTPException(

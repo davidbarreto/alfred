@@ -56,11 +56,11 @@ async def create_note(
     request: Request,
     title: Annotated[str, Form()],
     content: Annotated[str, Form()] = "",
-    tags_raw: Annotated[str, Form(alias="tags")] = "",
+    tags: Annotated[str, Form()] = "",
 ):
-    tags = [t.strip() for t in tags_raw.split(",") if t.strip()]
+    tag_list = [t.strip() for t in tags.split(",") if t.strip()]
     try:
-        await api.post("/organizer/notes", json={"title": title, "content": content, "tags": tags})
+        await api.post("/organizer/notes", json={"title": title, "content": content, "tags": tag_list})
     except httpx.HTTPError:
         return HTMLResponse('<p class="text-[#E24B4A] text-sm">Failed to create note.</p>', status_code=422)
 

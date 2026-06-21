@@ -30,20 +30,14 @@
 <dialog id="new-note-modal" class="modal">
   <div class="modal-box bg-white rounded-xl border border-gray-200 shadow-lg max-w-md w-full p-6">
     <h3 class="text-sm font-semibold text-gray-900 mb-4">New note</h3>
-    <form
-      hx-post="/notes/"
-      hx-target="#notes-grid"
-      hx-swap="innerHTML"
-      hx-on::after-request="if(event.detail.successful){ document.getElementById('new-note-modal').close(); this.reset(); }"
-      class="flex flex-col gap-3"
-    >
+    <form id="new-note-form" onsubmit="submitNewNote(event)" class="flex flex-col gap-3">
       <div>
         <label class="text-xs text-gray-500 mb-1 block">Title <span class="text-[#E24B4A]">*</span></label>
         <input
+          id="note-title"
           name="title"
           type="text"
           required
-          autofocus
           placeholder="Note title"
           class="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white w-full focus:outline-none focus:ring-1 focus:ring-[#378ADD]"
         />
@@ -51,6 +45,7 @@
       <div>
         <label class="text-xs text-gray-500 mb-1 block">Content</label>
         <textarea
+          id="note-content"
           name="content"
           rows="4"
           placeholder="Write something…"
@@ -60,16 +55,18 @@
       <div>
         <label class="text-xs text-gray-500 mb-1 block">Tags <span class="text-gray-300">(comma-separated)</span></label>
         <input
+          id="note-tags"
           name="tags"
           type="text"
           placeholder="work, ideas, personal"
           class="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white w-full focus:outline-none focus:ring-1 focus:ring-[#378ADD]"
         />
       </div>
+      <p id="note-error" class="text-xs text-[#E24B4A] hidden"></p>
       <div class="flex justify-end gap-2 mt-1">
         <button type="button" onclick="document.getElementById('new-note-modal').close()"
                 class="btn btn-sm btn-ghost text-gray-500">Cancel</button>
-        <button type="submit" class="btn btn-sm btn-primary">Save note</button>
+        <button type="submit" id="note-submit-btn" class="btn btn-sm btn-primary">Save note</button>
       </div>
     </form>
   </div>
@@ -88,7 +85,38 @@ function filterNotes(q) {
 }
 
 function openNewNote() {
+  document.getElementById("note-error").classList.add("hidden");
+  document.getElementById("new-note-form").reset();
   document.getElementById("new-note-modal").showModal();
+  setTimeout(() => document.getElementById("note-title").focus(), 50);
+}
+
+async function submitNewNote(e) {
+  e.preventDefault();
+  const btn = document.getElementById("note-submit-btn");
+  const errEl = document.getElementById("note-error");
+  btn.disabled = true;
+  btn.textContent = "Saving…";
+  errEl.classList.add("hidden");
+
+  const body = new FormData(e.target);
+  try {
+    const res = await fetch("/notes/", { method: "POST", body });
+    if (!res.ok) {
+      const txt = await res.text();
+      throw new Error(txt || `Error ${res.status}`);
+    }
+    const html = await res.text();
+    document.getElementById("notes-grid").innerHTML = html;
+    document.getElementById("new-note-modal").close();
+    document.getElementById("new-note-form").reset();
+  } catch (err) {
+    errEl.textContent = err.message || "Failed to save note.";
+    errEl.classList.remove("hidden");
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Save note";
+  }
 }
 </script>
 {% endblock %}

@@ -6,6 +6,12 @@
 <div class="p-6 space-y-4">
   <h1 class="text-base font-semibold text-gray-900">Tasks</h1>
 
+  {% if api_error %}
+  <div class="rounded-lg bg-[#FCEBEB] border border-[#E24B4A]/20 px-4 py-2.5 text-sm text-[#E24B4A]">
+    <strong>Backend error:</strong> {{ api_error }}
+  </div>
+  {% endif %}
+
   <!-- Filter pills — full navigation so active state re-renders server-side -->
   <div class="flex flex-wrap gap-1.5 border-b border-gray-200 pb-4">
     {% for key, defn in filters.items() %}

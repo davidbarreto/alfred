@@ -43,10 +43,15 @@ async def tasks_page(request: Request):
     active_filter = request.query_params.get("filter", "all")
     params = _build_params(active_filter)
 
+    api_error: str | None = None
     try:
         tasks = await api.get("/organizer/tasks", params=params)
-    except httpx.HTTPError:
+    except httpx.HTTPStatusError as e:
         tasks = []
+        api_error = f"API error {e.response.status_code}: {e.response.text[:200]}"
+    except httpx.HTTPError as e:
+        tasks = []
+        api_error = f"Cannot reach backend: {e}"
 
     return templates.TemplateResponse(request, "tasks.html", {
         "tasks": tasks,
@@ -54,6 +59,7 @@ async def tasks_page(request: Request):
         "filters": _FILTER_DEFS,
         "today": date.today().isoformat(),
         "tomorrow": (date.today() + timedelta(days=1)).isoformat(),
+        "api_error": api_error,
     })
 
 

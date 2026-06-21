@@ -58,6 +58,7 @@
               "    const cmd = json.commands[0];",
               "    pm.expect(cmd.type).to.eql('task');",
               "    pm.expect(cmd.command).to.eql('add');",
+              "    pm.expect(cmd.intent).to.eql('task.add');",
               "    pm.expect(cmd.source).to.eql('deterministic');",
               "    pm.expect(cmd.confidence).to.eql(1.0);",
               "    pm.expect(cmd.args).to.have.property('title');",

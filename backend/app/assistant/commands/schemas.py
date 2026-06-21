@@ -1,5 +1,5 @@
 from typing import Any, List, NamedTuple, Dict
-from pydantic import BaseModel
+from pydantic import BaseModel, model_validator
 
 class CommandMetadata(NamedTuple):
     type: str
@@ -12,9 +12,16 @@ class CommandMetadata(NamedTuple):
 class CommandDetail(BaseModel):
     type: str
     command: str
+    intent: str = ""
     confidence: float
     source: str
     args: dict[str, Any]
+
+    @model_validator(mode="after")
+    def _set_intent(self) -> "CommandDetail":
+        if not self.intent:
+            self.intent = f"{self.type}.{self.command}"
+        return self
 
 
 class CommandDetectRequest(BaseModel):

@@ -21,7 +21,6 @@ async def dashboard(request: Request):
     try:
         tasks = await api.get("/organizer/tasks", params={
             "status": "TODO",
-            "deadline_to": today_end,
             "limit": 8,
         })
     except httpx.HTTPError:

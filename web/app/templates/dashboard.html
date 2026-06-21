@@ -10,7 +10,7 @@
   <div class="grid grid-cols-4 gap-3">
     <div class="card bg-white">
       <div class="card-body p-4">
-        <p class="text-xs text-gray-400 uppercase tracking-wide">Tasks today</p>
+        <p class="text-xs text-gray-400 uppercase tracking-wide">Active tasks</p>
         <p class="text-2xl font-semibold text-[#378ADD] mt-1">{{ tasks | length }}</p>
       </div>
     </div>
@@ -42,8 +42,8 @@
     <div class="card bg-white">
       <div class="card-body p-4">
         <div class="flex items-center justify-between mb-3">
-          <h2 class="text-sm font-medium text-gray-900">Tasks due today</h2>
-          <a href="/tasks?filter=today" class="text-xs text-[#378ADD] hover:underline">View all →</a>
+          <h2 class="text-sm font-medium text-gray-900">Active tasks</h2>
+          <a href="/tasks" class="text-xs text-[#378ADD] hover:underline">View all →</a>
         </div>
         {% if tasks %}
         <ul class="space-y-2">

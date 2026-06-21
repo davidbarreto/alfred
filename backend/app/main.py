@@ -13,6 +13,7 @@ logging.basicConfig(level=numeric_level, force=True)
 
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from typing import AsyncGenerator
 
@@ -38,7 +39,7 @@ from app.api.routes.core.command_executions import router as core_command_execut
 from app.api.routes.core.memories import router as core_memories_router
 from app.api.routes.core.working_memory import router as core_working_memory_router
 from app.api.routes.core.embeddings import router as core_embeddings_router
-from app.api.routes.core.chats import router as core_chats_router
+from app.api.routes.core.chats import router as core_chats_router, stream_router as core_chats_stream_router
 from app.config import get_settings
 
 settings = get_settings()
@@ -65,6 +66,16 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
 
 
 app = FastAPI(title="Alfred Backend", version="0.1.0", lifespan=lifespan)
+
+_cors_origins = [o.strip() for o in settings.cors_origins.split(",") if o.strip()]
+if _cors_origins:
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=_cors_origins,
+        allow_methods=["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
+        allow_headers=["Authorization", "Content-Type"],
+    )
+
 app.include_router(monitors_router)
 app.include_router(alerts_router)
 app.include_router(executions_router)
@@ -90,6 +101,7 @@ app.include_router(core_memories_router)
 app.include_router(core_working_memory_router)
 app.include_router(core_embeddings_router)
 app.include_router(core_chats_router)
+app.include_router(core_chats_stream_router)
 
 @app.exception_handler(RequestValidationError)
 async def _validation_error_handler(request: Request, exc: RequestValidationError) -> JSONResponse:

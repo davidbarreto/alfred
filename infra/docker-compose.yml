@@ -49,6 +49,18 @@ services:
       - LLM_EXTRACTION_MODEL=${LLM_EXTRACTION_MODEL}
       - INTENT_THRESHOLD=${INTENT_THRESHOLD}
 
+  web:
+    build: ../web
+    ports:
+      - "${WEB_PORT:-8080}:8080"
+    depends_on:
+      - api
+    restart: unless-stopped
+    environment:
+      - BACKEND_URL=http://api:8000
+      - ALFRED_API_TOKEN=${ALFRED_API_TOKEN}
+      - WEB_PORT=8080
+
   n8n:
     image: n8nio/n8n:latest
     container_name: n8n

@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="night">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{% block title %}Alfred{% endblock %} — Alfred Portal</title>
+  <link href="https://cdn.jsdelivr.net/npm/daisyui@4/dist/full.min.css" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/htmx.org@2/dist/htmx.min.js"></script>
+  <style>
+    .sidebar-link { @apply flex items-center gap-3 px-4 py-2 rounded-lg text-base-content/70 hover:bg-base-300 hover:text-base-content transition-colors; }
+    .sidebar-link.active { @apply bg-primary/20 text-primary font-medium; }
+  </style>
+</head>
+<body class="flex h-screen bg-base-200 overflow-hidden">
+
+  <!-- Sidebar -->
+  <aside class="w-56 flex-shrink-0 bg-base-100 border-r border-base-300 flex flex-col py-6 px-3 gap-1">
+    <div class="px-4 mb-6">
+      <span class="text-xl font-bold tracking-tight text-primary">Alfred</span>
+    </div>
+
+    <a href="/" class="sidebar-link {% if active_page == 'dashboard' %}active{% endif %}">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+      Dashboard
+    </a>
+
+    <a href="/tasks" class="sidebar-link {% if active_page == 'tasks' %}active{% endif %}">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
+      Tasks
+    </a>
+
+    <a href="/shopping" class="sidebar-link {% if active_page == 'shopping' %}active{% endif %}">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+      Shopping
+    </a>
+
+    <a href="/calendar" class="sidebar-link {% if active_page == 'calendar' %}active{% endif %}">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+      Calendar
+    </a>
+
+    <a href="/notes" class="sidebar-link {% if active_page == 'notes' %}active{% endif %}">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+      Notes
+    </a>
+
+    <a href="/finance" class="sidebar-link {% if active_page == 'finance' %}active{% endif %}">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+      Finance
+    </a>
+
+    <div class="flex-1"></div>
+
+    <a href="/chat" class="sidebar-link {% if active_page == 'chat' %}active{% endif %}">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
+      Chat
+    </a>
+  </aside>
+
+  <!-- Main content -->
+  <main class="flex-1 overflow-y-auto">
+    {% block content %}{% endblock %}
+  </main>
+
+</body>
+</html>

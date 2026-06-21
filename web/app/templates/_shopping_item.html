@@ -1,0 +1,27 @@
+{% set is_bought = item.status == "bought" %}
+<li class="flex items-center gap-3 py-2 px-3 rounded-lg hover:bg-base-200" id="item-{{ item.id }}">
+  <input
+    type="checkbox"
+    class="checkbox checkbox-sm flex-shrink-0"
+    {% if is_bought %}checked disabled{% endif %}
+    hx-post="/shopping/{{ item.id }}/bought"
+    hx-target="#item-{{ item.id }}"
+    hx-swap="outerHTML"
+  />
+  <span class="flex-1 text-sm min-w-0">
+    <span class="{% if is_bought %}line-through text-base-content/40{% endif %}">{{ item.name }}</span>
+    {% if item.quantity %}
+    <span class="text-xs text-base-content/40 ml-1">× {{ item.quantity }}{{ item.unit or "" }}</span>
+    {% endif %}
+    {% if item.brand %}
+    <span class="text-xs text-base-content/40 ml-1">({{ item.brand }})</span>
+    {% endif %}
+  </span>
+  {% if item.estimated_price %}
+  <span class="text-xs text-base-content/50 flex-shrink-0">€{{ item.estimated_price }}</span>
+  {% endif %}
+  <!-- Source tag -->
+  {% if item.source %}
+  <span class="badge badge-ghost badge-xs flex-shrink-0">{{ item.source }}</span>
+  {% endif %}
+</li>

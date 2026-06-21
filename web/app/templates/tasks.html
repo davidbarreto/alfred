@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% set active_page = "tasks" %}
+{% block title %}Tasks{% endblock %}
+
+{% block content %}
+<div class="p-6 space-y-4">
+  <h1 class="text-xl font-bold">Tasks</h1>
+
+  <!-- Filter pills -->
+  <div class="flex flex-wrap gap-2 border-b border-base-300 pb-4">
+    {% for key, defn in filters.items() %}
+    <a
+      href="/tasks?filter={{ key }}"
+      hx-get="/tasks/list?filter={{ key }}"
+      hx-target="#task-list"
+      hx-push-url="/tasks?filter={{ key }}"
+      class="btn btn-sm {% if active_filter == key %}btn-primary{% else %}btn-ghost{% endif %}"
+    >{{ defn.label }}</a>
+    {% endfor %}
+  </div>
+
+  <!-- Task list -->
+  <div id="task-list">
+    {% include "_tasks_list.html" %}
+  </div>
+</div>
+{% endblock %}

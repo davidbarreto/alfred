@@ -1,0 +1,136 @@
+{% extends "base.html" %}
+{% set active_page = "dashboard" %}
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="p-6 space-y-6">
+  <h1 class="text-xl font-bold">Good day</h1>
+
+  <!-- 4 metric cards -->
+  <div class="grid grid-cols-4 gap-4">
+    <div class="card bg-base-100 shadow-sm">
+      <div class="card-body p-4">
+        <p class="text-xs text-base-content/50 uppercase tracking-wide">Tasks today</p>
+        <p class="text-3xl font-bold text-primary mt-1">{{ tasks | length }}</p>
+      </div>
+    </div>
+    <div class="card bg-base-100 shadow-sm">
+      <div class="card-body p-4">
+        <p class="text-xs text-base-content/50 uppercase tracking-wide">Shopping items</p>
+        <p class="text-3xl font-bold text-secondary mt-1">{{ shopping_items | length }}</p>
+      </div>
+    </div>
+    <div class="card bg-base-100 shadow-sm">
+      <div class="card-body p-4">
+        <p class="text-xs text-base-content/50 uppercase tracking-wide">Events today</p>
+        <p class="text-3xl font-bold text-accent mt-1">{{ events | length }}</p>
+      </div>
+    </div>
+    <div class="card bg-base-100 shadow-sm">
+      <div class="card-body p-4">
+        <p class="text-xs text-base-content/50 uppercase tracking-wide">Monthly spend</p>
+        <p class="text-3xl font-bold mt-1">
+          {% if spending %}€{{ "%.0f"|format(spending.total | float) }}{% else %}—{% endif %}
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2-column row: tasks left, shopping right -->
+  <div class="grid grid-cols-2 gap-4">
+
+    <div class="card bg-base-100 shadow-sm">
+      <div class="card-body p-4">
+        <div class="flex items-center justify-between mb-3">
+          <h2 class="font-semibold text-sm">Tasks due today</h2>
+          <a href="/tasks?filter=today" class="text-xs text-primary hover:underline">View all →</a>
+        </div>
+        {% if tasks %}
+        <ul class="space-y-2">
+          {% for task in tasks %}
+          <li class="flex items-center gap-2 text-sm min-w-0">
+            <span class="w-2 h-2 rounded-full flex-shrink-0
+              {% if task.urgency == 'URGENT' %}bg-error
+              {% elif task.priority == 'HIGH' %}bg-warning
+              {% else %}bg-base-content/20{% endif %}"></span>
+            <span class="flex-1 truncate">{{ task.title }}</span>
+            {% if task.tags %}
+            <span class="badge badge-ghost badge-xs flex-shrink-0">{{ task.tags[0] }}</span>
+            {% endif %}
+          </li>
+          {% endfor %}
+        </ul>
+        {% else %}
+        <p class="text-sm text-base-content/40 py-2">Nothing due today.</p>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="card bg-base-100 shadow-sm">
+      <div class="card-body p-4">
+        <div class="flex items-center justify-between mb-3">
+          <h2 class="font-semibold text-sm">Shopping</h2>
+          <a href="/shopping" class="text-xs text-primary hover:underline">View all →</a>
+        </div>
+        {% if shopping_items %}
+        <ul class="space-y-2">
+          {% for item in shopping_items %}
+          <li class="flex items-center gap-2 text-sm min-w-0">
+            <span class="badge badge-xs flex-shrink-0
+              {% if item.priority == 'need' %}badge-error{% else %}badge-warning{% endif %}">
+              {{ item.priority }}
+            </span>
+            <span class="flex-1 truncate">{{ item.name }}</span>
+            <span class="text-xs text-base-content/40 flex-shrink-0">{{ item.category }}</span>
+          </li>
+          {% endfor %}
+        </ul>
+        {% else %}
+        <p class="text-sm text-base-content/40 py-2">Shopping list is empty.</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Today's events strip (horizontal compact cards) -->
+  <div>
+    <div class="flex items-center justify-between mb-3">
+      <h2 class="font-semibold text-sm">Today's events</h2>
+      <a href="/calendar" class="text-xs text-primary hover:underline">Calendar →</a>
+    </div>
+    {% if events %}
+    <div class="flex gap-3 overflow-x-auto pb-1">
+      {% for ev in events %}
+      <div class="card bg-base-100 shadow-sm flex-shrink-0 w-52">
+        <div class="card-body p-3">
+          <p class="text-xs text-base-content/50">{{ ev.start_datetime[11:16] }}{% if not ev.all_day %} – {{ ev.end_datetime[11:16] }}{% endif %}</p>
+          <p class="text-sm font-medium mt-0.5 leading-snug">{{ ev.title }}</p>
+          {% if ev.location %}
+          <p class="text-xs text-base-content/40 mt-1 truncate">📍 {{ ev.location }}</p>
+          {% endif %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="card bg-base-100 shadow-sm">
+      <div class="card-body p-4">
+        <p class="text-sm text-base-content/40">No events today.</p>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Chat panel -->
+  <div class="card bg-base-100 shadow-sm">
+    <div class="card-body p-4 flex flex-row items-center justify-between">
+      <div>
+        <p class="font-semibold text-sm">Chat with Alfred</p>
+        <p class="text-xs text-base-content/40 mt-0.5">Ask anything or give instructions</p>
+      </div>
+      <a href="/chat" class="btn btn-primary btn-sm">Open chat →</a>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

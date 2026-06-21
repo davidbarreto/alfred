@@ -1,0 +1,41 @@
+{% if notes %}
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+  {% for note in notes %}
+  <div
+    class="card bg-base-100 shadow-sm hover:shadow-md transition-shadow cursor-pointer"
+    data-note="{{ note.title }} {{ note.content }}"
+  >
+    <div class="card-body p-4 gap-1">
+      <!-- Category tag (first tag) -->
+      {% if note.tags %}
+      <span class="badge badge-ghost badge-xs self-start mb-1">{{ note.tags[0] }}</span>
+      {% endif %}
+      <!-- Title -->
+      <h3 class="font-semibold text-sm truncate">{{ note.title }}</h3>
+      <!-- 2-line preview -->
+      <p class="text-xs text-base-content/50 line-clamp-2 mt-0.5">{{ note.content }}</p>
+      <!-- Updated time -->
+      <div class="text-xs text-base-content/30 mt-2">
+        {% if note.updated_at %}updated {{ note.updated_at | timeago }}{% endif %}
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+  <!-- New note placeholder -->
+  <div class="card border-2 border-dashed border-base-300 hover:border-primary/50 transition-colors cursor-pointer">
+    <div class="card-body p-4 flex items-center justify-center text-base-content/30 hover:text-primary/60 transition-colors">
+      <span class="text-2xl mb-1">+</span>
+      <span class="text-xs">New note</span>
+    </div>
+  </div>
+</div>
+{% else %}
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+  <div class="card border-2 border-dashed border-base-300 hover:border-primary/50 transition-colors cursor-pointer col-span-1">
+    <div class="card-body p-4 flex items-center justify-center text-base-content/30 hover:text-primary/60 transition-colors min-h-28">
+      <span class="text-2xl mb-1">+</span>
+      <span class="text-xs">New note</span>
+    </div>
+  </div>
+</div>
+{% endif %}

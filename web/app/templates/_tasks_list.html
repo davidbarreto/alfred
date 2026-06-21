@@ -1,0 +1,9 @@
+{% if tasks %}
+<ul class="space-y-0.5">
+  {% for task in tasks %}
+  {% include "_task_row.html" %}
+  {% endfor %}
+</ul>
+{% else %}
+<div class="py-12 text-center text-sm text-base-content/40">No tasks match this filter.</div>
+{% endif %}

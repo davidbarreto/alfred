@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% set active_page = "notes" %}
+{% block title %}Notes{% endblock %}
+
+{% block content %}
+<div class="p-6 space-y-4">
+
+  <div class="flex items-center justify-between">
+    <h1 class="text-xl font-bold">Notes</h1>
+  </div>
+
+  <!-- Client-side search -->
+  <input
+    id="notes-search"
+    type="text"
+    placeholder="Search notes…"
+    class="input input-bordered input-sm w-full max-w-sm"
+    oninput="filterNotes(this.value)"
+  />
+
+  <!-- 3-col card grid -->
+  <div id="notes-grid">
+    {% include "_notes_grid.html" %}
+  </div>
+</div>
+
+<script>
+function filterNotes(q) {
+  q = q.toLowerCase();
+  document.querySelectorAll("#notes-grid [data-note]").forEach(card => {
+    const text = card.dataset.note.toLowerCase();
+    card.style.display = text.includes(q) ? "" : "none";
+  });
+}
+</script>
+{% endblock %}

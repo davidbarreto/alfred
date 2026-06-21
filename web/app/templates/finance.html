@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+{% set active_page = "finance" %}
+{% block title %}Finance{% endblock %}
+
+{% block content %}
+<div class="p-6 space-y-6">
+
+  <div class="flex items-center gap-4 flex-wrap">
+    <h1 class="text-xl font-bold">Finance</h1>
+    <div class="flex gap-2 flex-wrap">
+      {% for p, label in [("this month", "This month"), ("last month", "Last month"), ("this year", "This year")] %}
+      <a
+        href="/finance?period={{ p }}"
+        class="btn btn-sm {% if period == p %}btn-primary{% else %}btn-ghost{% endif %}"
+      >{{ label }}</a>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- 3 summary cards: Spent / Remaining / Top category -->
+  <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+    <!-- Spent -->
+    <div class="card bg-base-100 shadow-sm">
+      <div class="card-body p-4">
+        <div class="text-xs text-base-content/50 uppercase tracking-wide">Spent</div>
+        <div class="text-2xl font-bold text-error mt-1">
+          {% if spending %}€{{ "%.2f"|format(spending.total | float) }}{% else %}—{% endif %}
+        </div>
+        {% if spending %}
+        <div class="text-xs text-base-content/40 mt-1">{{ spending.transaction_count }} transactions</div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Remaining -->
+    <div class="card bg-base-100 shadow-sm">
+      <div class="card-body p-4">
+        <div class="text-xs text-base-content/50 uppercase tracking-wide">Remaining</div>
+        <div class="text-2xl font-bold mt-1 {% if total_remaining is not none and total_remaining | float < 0 %}text-error{% else %}text-success{% endif %}">
+          {% if total_remaining is not none %}€{{ "%.2f"|format(total_remaining | float) }}{% else %}—{% endif %}
+        </div>
+        {% if budgets %}
+        <div class="text-xs text-base-content/40 mt-1">across {{ budgets | length }} budget{{ "s" if budgets | length != 1 }}</div>
+        {% else %}
+        <div class="text-xs text-base-content/40 mt-1">no budgets configured</div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Top category -->
+    <div class="card bg-base-100 shadow-sm">
+      <div class="card-body p-4">
+        <div class="text-xs text-base-content/50 uppercase tracking-wide">Top Category</div>
+        {% if top_category %}
+        <div class="text-2xl font-bold mt-1 truncate">{{ top_category.category_name or "Uncategorized" }}</div>
+        <div class="text-xs text-base-content/40 mt-1">€{{ "%.2f"|format(top_category.total | float) }}</div>
+        {% else %}
+        <div class="text-2xl font-bold mt-1">—</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Spending by category: horizontal progress bars with label+amount above -->
+  {% if category_items %}
+  <div class="card bg-base-100 shadow-sm">
+    <div class="card-body p-4">
+      <h2 class="font-semibold text-sm mb-4">By Category</h2>
+      <div class="space-y-4">
+        {% for item in category_items %}
+        <div>
+          <div class="flex justify-between text-xs mb-1">
+            <span class="font-medium">{{ item.category_name or "Uncategorized" }}</span>
+            <span class="text-base-content/60">€{{ "%.2f"|format(item.total | float) }}
+              <span class="text-base-content/30 ml-1">({{ item.transaction_count }})</span>
+            </span>
+          </div>
+          <progress
+            class="progress progress-primary h-2 w-full"
+            value="{{ item.total | float }}"
+            max="{{ max_total }}"
+          ></progress>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Recent transactions: icon + merchant + date + amount -->
+  <div class="card bg-base-100 shadow-sm">
+    <div class="card-body p-4">
+      <h2 class="font-semibold text-sm mb-3">Recent Transactions</h2>
+      {% if transactions %}
+      <ul class="space-y-0">
+        {% for txn in transactions %}
+        <li class="flex items-center gap-3 py-2.5 border-b border-base-300 last:border-0">
+          <!-- Icon placeholder: first letter of merchant or category -->
+          <div class="w-8 h-8 rounded-full bg-base-300 flex items-center justify-center flex-shrink-0">
+            <span class="text-xs font-bold text-base-content/60">
+              {{ (txn.merchant or txn.description or "?")[0] | upper }}
+            </span>
+          </div>
+          <div class="flex-1 min-w-0">
+            <div class="text-sm font-medium truncate">{{ txn.merchant or txn.description or "—" }}</div>
+            <div class="text-xs text-base-content/40">{{ txn.date[:10] }}</div>
+          </div>
+          <span class="text-sm font-semibold text-error flex-shrink-0">
+            -€{{ "%.2f"|format(txn.amount | float) }}
+          </span>
+        </li>
+        {% endfor %}
+      </ul>
+      {% else %}
+      <p class="text-sm text-base-content/40 py-6 text-center">No transactions for this period.</p>
+      {% endif %}
+    </div>
+  </div>
+
+</div>
+{% endblock %}

@@ -1,0 +1,134 @@
+{% extends "base.html" %}
+{% set active_page = "chat" %}
+{% block title %}Chat{% endblock %}
+
+{% block content %}
+<div class="flex flex-col h-full" id="chat-root">
+
+  <!-- Message history -->
+  <div class="flex-1 overflow-y-auto p-6 space-y-4" id="messages"></div>
+
+  <!-- Input bar -->
+  <div class="border-t border-base-300 p-4 bg-base-100">
+    <form id="chat-form" class="flex gap-2">
+      <input
+        id="chat-input"
+        type="text"
+        placeholder="Message Alfred…"
+        class="input input-bordered flex-1"
+        autocomplete="off"
+        disabled
+      />
+      <button type="submit" class="btn btn-primary" id="send-btn" disabled>Send</button>
+    </form>
+    <div id="chat-status" class="text-xs text-base-content/40 mt-1"></div>
+  </div>
+</div>
+
+<script>
+const BACKEND_URL = {{ backend_url | tojson }};
+const API_TOKEN  = {{ api_token | tojson }};
+
+let sessionId = null;
+let streaming  = false;
+
+const messagesEl = document.getElementById("messages");
+const inputEl    = document.getElementById("chat-input");
+const sendBtn    = document.getElementById("send-btn");
+const statusEl   = document.getElementById("chat-status");
+const formEl     = document.getElementById("chat-form");
+
+function appendMessage(role, text) {
+  const div = document.createElement("div");
+  div.className = role === "user"
+    ? "chat chat-end"
+    : "chat chat-start";
+  div.innerHTML = `
+    <div class="chat-header text-xs text-base-content/40 mb-1">${role === "user" ? "You" : "Alfred"}</div>
+    <div class="chat-bubble ${role === "user" ? "chat-bubble-primary" : "chat-bubble-neutral"} whitespace-pre-wrap"></div>
+  `;
+  div.querySelector(".chat-bubble").textContent = text;
+  messagesEl.appendChild(div);
+  messagesEl.scrollTop = messagesEl.scrollHeight;
+  return div.querySelector(".chat-bubble");
+}
+
+async function initSession() {
+  statusEl.textContent = "Starting session…";
+  const resp = await fetch("/chat/session", { method: "POST" });
+  sessionId = await resp.text();
+  inputEl.disabled = false;
+  sendBtn.disabled = false;
+  statusEl.textContent = "";
+}
+
+formEl.addEventListener("submit", async (e) => {
+  e.preventDefault();
+  if (streaming || !sessionId) return;
+
+  const text = inputEl.value.trim();
+  if (!text) return;
+  inputEl.value = "";
+  inputEl.disabled = true;
+  sendBtn.disabled = true;
+  streaming = true;
+  statusEl.textContent = "Alfred is thinking…";
+
+  appendMessage("user", text);
+
+  // Send user message through web server (keeps API token server-side)
+  const formData = new FormData();
+  formData.set("session_id", sessionId);
+  formData.set("message", text);
+  await fetch("/chat/message", { method: "POST", body: formData });
+
+  // Stream response directly from backend SSE endpoint
+  const bubble = appendMessage("assistant", "");
+  const url = `${BACKEND_URL}/core/chats/stream?session_id=${sessionId}&token=${API_TOKEN}`;
+
+  try {
+    const resp = await fetch(url, {
+      headers: { "Accept": "text/event-stream" },
+    });
+    const reader = resp.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split("\n");
+      buffer = lines.pop();
+
+      for (const line of lines) {
+        if (!line.startsWith("data: ")) continue;
+        const payload = line.slice(6).trim();
+        if (payload === "[DONE]") break;
+        try {
+          const parsed = JSON.parse(payload);
+          if (parsed.chunk) {
+            bubble.textContent += parsed.chunk;
+            messagesEl.scrollTop = messagesEl.scrollHeight;
+          }
+          if (parsed.error) {
+            bubble.textContent = "[Error: " + parsed.error + "]";
+            bubble.classList.add("chat-bubble-error");
+          }
+        } catch (_) {}
+      }
+    }
+  } catch (err) {
+    bubble.textContent = "[Connection error]";
+  }
+
+  streaming = false;
+  inputEl.disabled = false;
+  sendBtn.disabled = false;
+  inputEl.focus();
+  statusEl.textContent = "";
+});
+
+initSession();
+</script>
+{% endblock %}

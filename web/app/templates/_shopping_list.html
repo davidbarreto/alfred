@@ -1,0 +1,22 @@
+{% set grouped = {} %}
+{% for item in items %}
+  {% if item.category not in grouped %}{% set _ = grouped.update({item.category: []}) %}{% endif %}
+  {% set _ = grouped[item.category].append(item) %}
+{% endfor %}
+
+{% if items %}
+  {% for cat, cat_items in grouped.items() %}
+  <div class="mb-5">
+    <h3 class="text-xs text-base-content/50 uppercase tracking-widest font-semibold px-3 mb-1 mt-2">
+      {{ cat }}
+    </h3>
+    <ul class="space-y-0.5">
+      {% for item in cat_items %}
+      {% include "_shopping_item.html" %}
+      {% endfor %}
+    </ul>
+  </div>
+  {% endfor %}
+{% else %}
+  <div class="py-12 text-center text-sm text-base-content/40">No items.</div>
+{% endif %}

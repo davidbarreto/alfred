@@ -62,6 +62,8 @@ services:
       - PUBLIC_BACKEND_URL=${PUBLIC_BACKEND_URL}
       - ALFRED_API_TOKEN=${ALFRED_API_TOKEN}
       - WEB_PORT=8080
+      - WEB_PASSWORD=${WEB_PASSWORD}
+      - SESSION_SECRET_KEY=${SESSION_SECRET_KEY}
 
   n8n:
     image: n8nio/n8n:latest

@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Alfred — Sign in</title>
+  <link href="https://cdn.jsdelivr.net/npm/daisyui@4/dist/full.min.css" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    :root {
+      --b1: 100% 0 0; --b2: 98.2% 0.002 90; --bc: 15% 0 0;
+      --p: 58% 0.14 236; --pc: 100% 0 0;
+      --er: 55% 0.2 27; --erc: 100% 0 0;
+      --rounded-btn: 0.375rem;
+    }
+  </style>
+</head>
+<body class="min-h-screen bg-[#FAFAF9] flex items-center justify-center">
+
+  <div class="w-full max-w-sm px-4">
+    <div class="text-center mb-8">
+      <span class="text-xl font-semibold text-gray-900 tracking-tight">Alfred</span>
+      <p class="text-sm text-gray-400 mt-1">Your personal assistant</p>
+    </div>
+
+    <div class="bg-white border border-gray-200 rounded-xl p-8 shadow-sm">
+
+      {% if error %}
+      <div class="mb-4 rounded-lg bg-[#FCEBEB] border border-[#E24B4A]/20 px-4 py-2.5 text-sm text-[#E24B4A]">
+        {{ error }}
+      </div>
+      {% endif %}
+
+      <form method="post" action="/login" class="space-y-4">
+        <div>
+          <label class="block text-xs text-gray-500 mb-1.5">Password</label>
+          <input
+            type="password"
+            name="password"
+            autofocus
+            required
+            placeholder="Enter your password"
+            class="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-[#378ADD]/30 focus:border-[#378ADD] transition"
+          />
+        </div>
+        <button
+          type="submit"
+          class="w-full btn btn-primary btn-sm h-10 text-sm font-medium"
+        >Sign in</button>
+      </form>
+
+    </div>
+  </div>
+
+</body>
+</html>

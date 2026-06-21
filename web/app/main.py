@@ -1,18 +1,37 @@
 import logging
 from pathlib import Path
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
+from starlette.middleware.sessions import SessionMiddleware
 
-from app.routes import dashboard, tasks, shopping, calendar, notes, finance, chat, insights
+from app.config import get_settings
+from app.routes import auth, dashboard, tasks, shopping, calendar, notes, finance, chat, insights
 
 logging.basicConfig(level=logging.INFO)
 
 app = FastAPI(title="Alfred Portal", docs_url=None, redoc_url=None)
 
+s = get_settings()
+app.add_middleware(SessionMiddleware, secret_key=s.session_secret_key, https_only=False)
+
 _static = Path(__file__).parent / "static"
 app.mount("/static", StaticFiles(directory=str(_static)), name="static")
 
+_PUBLIC_PATHS = {"/login", "/logout"}
+
+
+@app.middleware("http")
+async def require_login(request: Request, call_next):
+    if request.url.path in _PUBLIC_PATHS or request.url.path.startswith("/static"):
+        return await call_next(request)
+    if not request.session.get("authenticated"):
+        return RedirectResponse(f"/login?next={request.url.path}", status_code=302)
+    return await call_next(request)
+
+
+app.include_router(auth.router)
 app.include_router(dashboard.router)
 app.include_router(tasks.router)
 app.include_router(shopping.router)

@@ -10,6 +10,8 @@ class Settings(BaseSettings):
     public_backend_url: str = Field(default="http://localhost:8000", validation_alias="PUBLIC_BACKEND_URL")
     alfred_api_token: str = Field(validation_alias="ALFRED_API_TOKEN")
     web_port: int = Field(default=8080, validation_alias="WEB_PORT")
+    web_password: str = Field(validation_alias="WEB_PASSWORD")
+    session_secret_key: str = Field(validation_alias="SESSION_SECRET_KEY")
 
 
 @lru_cache

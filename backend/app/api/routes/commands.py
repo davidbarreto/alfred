@@ -8,18 +8,19 @@ from fastapi import APIRouter, Depends
 logger = logging.getLogger(__name__)
 
 from app.assistant.commands.executor import execute
-from app.assistant.commands.resolver import resolve
+from app.assistant.commands.resolver import detect_commands
 from app.assistant.commands.schemas import (
-    CommandDetectIntentRequest,
-    CommandDetectIntentResponse,
+    CommandDetectRequest,
+    CommandDetectResponse,
     CommandExecuteRequest,
     CommandExecuteResponse,
+    CommandExtractRequest,
+    CommandExtractResponse,
     CommandRespondRequest,
     CommandRespondResponse,
-    CommandResolveRequest,
-    CommandResolveResponse,
 )
-from app.assistant.intents.intent_service import detect_intent, get_command_type
+from app.assistant.intents.extraction_service import extract_args
+from app.assistant.intents.intent_service import get_operation_type
 from app.config import get_settings
 from app.api.auth import require_auth
 from app.dependencies import (
@@ -29,7 +30,6 @@ from app.dependencies import (
     CommandExecutionServiceDep,
     DbSessionDep,
     ExtractionLlmProviderDep,
-    LlmProviderDep,
     NoteServiceDep,
     RecurringTransactionServiceDep,
     TaskServiceDep,
@@ -41,27 +41,35 @@ from app.integrations.llm_calls.repository import create_llm_call
 router = APIRouter(prefix="/commands", tags=["commands"], dependencies=[Depends(require_auth)])
 
 
-@router.post("/intents", response_model=CommandDetectIntentResponse)
-async def detect_command_intent(
-    request: CommandDetectIntentRequest,
+@router.post("/detect", response_model=CommandDetectResponse)
+async def detect_command(
+    request: CommandDetectRequest,
     session: DbSessionDep,
-) -> CommandDetectIntentResponse:
-    logger.info("POST /commands/intents text=%r", request.text[:80])
-    result = await detect_intent(request.text, session)
-    below_threshold = result.confidence < get_settings().intent_threshold
-    effective_intent = "unknown" if below_threshold else result.intent
-    detected_intents = [effective_intent] if effective_intent != "unknown" else None
-    return CommandDetectIntentResponse(
-        confidence=result.confidence,
-        command_type=get_command_type([effective_intent]),
-        detected_intents=detected_intents,
+) -> CommandDetectResponse:
+    logger.info("POST /commands/detect text=%r command=%s", request.text[:80], request.command)
+    commands = await detect_commands(
+        request.text,
+        command=request.command,
+        args=request.args,
+        session=session,
+    )
+    intents = [f"{c.type}.{c.command}" for c in commands]
+    return CommandDetectResponse(
+        operation_type=get_operation_type(intents) if intents else None,
+        commands=commands,
+        raw_text=request.text,
     )
 
 
-@router.post("/resolve", response_model=CommandResolveResponse)
-async def resolve_command(request: CommandResolveRequest, session: DbSessionDep, llm_provider: LlmProviderDep, extraction_llm_provider: ExtractionLlmProviderDep):
-    logger.info("POST /commands/resolve text=%r command=%s", request.text[:80], request.command)
-    return await resolve(request.text, command=request.command, args=request.args, session=session, llm_provider=llm_provider, extraction_llm_provider=extraction_llm_provider)
+@router.post("/extract", response_model=CommandExtractResponse)
+async def extract_command_args(
+    request: CommandExtractRequest,
+    session: DbSessionDep,
+    llm_provider: ExtractionLlmProviderDep,
+) -> CommandExtractResponse:
+    logger.info("POST /commands/extract intent=%s text=%r", request.intent, request.text[:80])
+    args = await extract_args(request.intent, request.text, llm_provider=llm_provider, session=session)
+    return CommandExtractResponse(intent=request.intent, args=args)
 
 
 @router.post("/execute", response_model=CommandExecuteResponse)

@@ -7,11 +7,9 @@ from typing import List, Dict, Any, Tuple
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.assistant.commands.registry import COMMAND_REGISTRY
-from app.assistant.commands.schemas import CommandDetail, CommandResolveResponse
+from app.assistant.commands.schemas import CommandDetail
 from app.assistant.intents.intent_service import detect_intent
-from app.assistant.intents.extraction_service import extract_args
 from app.config import get_settings
-from app.shared.llm import LlmProvider
 from app.nlp.normalizer import normalize_date, normalize_priority, clean_text
 from app.nlp.extractor import extract_entities, extract_finance_entities
 
@@ -194,30 +192,29 @@ def _resolve_fragment(cmd_alias: str, remaining_tokens: List[str]) -> CommandDet
     )
 
 
-async def resolve(
+async def detect_commands(
     text: str,
     command: str | None = None,
     args: str | None = None,
     session: AsyncSession | None = None,
-    llm_provider: LlmProvider | None = None,
-    extraction_llm_provider: LlmProvider | None = None,
-) -> CommandResolveResponse:
+) -> list[CommandDetail]:
     """
-    Structured command resolver.
+    Detect and parse commands without LLM arg extraction.
 
-    1. Tries deterministic (slash-command) parsing first.
-    2. Falls back to intent detection + argument extraction when no slash commands
-       are found and a DB session is available.
+    With command/args hint: deterministic parse of a pre-extracted command (e.g. Telegram entity).
+    Without hint: tries deterministic slash-command parsing across all fragments, then falls back
+    to intent detection if no slash commands are found.
+    For NL intent commands, returns CommandDetail with args={} — caller must call extract_args separately.
     """
     if command:
-        logger.debug("Resolve: explicit command=%s args=%r", command, args)
+        logger.debug("detect_commands: hint command=%s args=%r", command, args)
         tokens = _parse_tokens(args or "")
         cmd = _resolve_fragment(command.lower(), tokens)
         if not cmd:
-            logger.info("Resolve: explicit command=%s not parsed (missing required args or unknown)", command)
-            return CommandResolveResponse(status="not_parsed", commands=[], raw_text=text)
-        logger.info("Resolve: explicit command=%s parsed source=deterministic", command)
-        return CommandResolveResponse(status="ok", commands=[cmd], raw_text=text)
+            logger.info("detect_commands: hint command=%s not parsed (missing required args or unknown)", command)
+            return []
+        logger.info("detect_commands: hint command=%s parsed source=deterministic", command)
+        return [cmd]
 
     fragments = _split_command_fragments(text)
     commands = []
@@ -230,42 +227,32 @@ async def resolve(
             commands.append(cmd)
 
     if commands:
-        logger.info("Resolve: %d deterministic command(s) parsed from text", len(commands))
-        return CommandResolveResponse(status="ok", commands=commands, raw_text=text)
+        logger.info("detect_commands: %d deterministic command(s) parsed from text", len(commands))
+        return commands
 
-    if session is None or llm_provider is None or not text.strip():
-        logger.debug("Resolve: no slash commands found and no session/provider available, returning not_parsed")
-        return CommandResolveResponse(status="not_parsed", commands=[], raw_text=text)
+    if session is None or not text.strip():
+        return []
 
-    logger.debug("Resolve: no slash commands, falling back to intent detection text=%r", text[:100])
+    logger.debug("detect_commands: no slash commands, falling back to intent detection text=%r", text[:100])
     intent_result = await detect_intent(text, session)
     threshold = get_settings().intent_threshold
     cmd_type, cmd_action = _split_intent(intent_result.intent)
 
     if intent_result.intent != "unknown" and intent_result.confidence >= threshold:
         logger.info(
-            "Resolve: intent=%s confidence=%.4f >= threshold=%.4f, extracting args",
+            "detect_commands: intent=%s confidence=%.4f >= threshold=%.4f",
             intent_result.intent, intent_result.confidence, threshold,
         )
-        extracted = await extract_args(intent_result.intent, text, llm_provider=extraction_llm_provider or llm_provider, session=session)
-        detail = CommandDetail(
+        return [CommandDetail(
             type=cmd_type,
             command=cmd_action,
             confidence=intent_result.confidence,
             source="intent_detection",
-            args=extracted,
-        )
-    else:
-        logger.info(
-            "Resolve: intent=%s confidence=%.4f below threshold=%.4f or unknown, command unresolved",
-            intent_result.intent, intent_result.confidence, threshold,
-        )
-        detail = CommandDetail(
-            type=cmd_type,
-            command=cmd_action,
-            confidence=intent_result.confidence,
-            source="unknown",
             args={},
-        )
+        )]
 
-    return CommandResolveResponse(status="ok", commands=[detail], raw_text=text)
+    logger.info(
+        "detect_commands: intent=%s confidence=%.4f below threshold=%.4f or unknown, no command",
+        intent_result.intent, intent_result.confidence, threshold,
+    )
+    return []

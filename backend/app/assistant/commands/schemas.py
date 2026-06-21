@@ -16,10 +16,27 @@ class CommandDetail(BaseModel):
     source: str
     args: dict[str, Any]
 
-class CommandResolveRequest(BaseModel):
+
+class CommandDetectRequest(BaseModel):
     text: str
     command: str | None = None
     args: str | None = None
+
+
+class CommandDetectResponse(BaseModel):
+    operation_type: str | None = None
+    commands: List[CommandDetail]
+    raw_text: str
+
+
+class CommandExtractRequest(BaseModel):
+    text: str
+    intent: str
+
+
+class CommandExtractResponse(BaseModel):
+    intent: str
+    args: dict[str, Any]
 
 
 class CommandExecuteRequest(BaseModel):
@@ -36,11 +53,6 @@ class CommandExecuteResponse(BaseModel):
     status: str
     result: Any = None
 
-class CommandResolveResponse(BaseModel):
-    status: str
-    commands: List[CommandDetail]
-    raw_text: str
-
 
 class CommandRespondRequest(BaseModel):
     message_id: int
@@ -48,13 +60,3 @@ class CommandRespondRequest(BaseModel):
 
 class CommandRespondResponse(BaseModel):
     response: str
-
-
-class CommandDetectIntentRequest(BaseModel):
-    text: str
-
-
-class CommandDetectIntentResponse(BaseModel):
-    confidence: float
-    command_type: str | None = None
-    detected_intents: list[str] | None = None

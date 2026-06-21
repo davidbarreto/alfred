@@ -2,7 +2,7 @@ import pytest
 from datetime import datetime, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from app.assistant.intents.intent_service import IntentResult, detect_intent, get_command_type
+from app.assistant.intents.intent_service import IntentResult, detect_intent, get_operation_type
 
 
 def _make_embedding(source_id: int = 2):
@@ -92,26 +92,26 @@ class TestDetectIntent:
         assert result.intent == "unknown"
 
 
-class TestGetCommandType:
+class TestGetOperationType:
     def test_single_read_intent_returns_read(self):
-        assert get_command_type(["task.list"]) == "read"
-        assert get_command_type(["event.list"]) == "read"
-        assert get_command_type(["finance.spending_report"]) == "read"
+        assert get_operation_type(["task.list"]) == "read"
+        assert get_operation_type(["event.list"]) == "read"
+        assert get_operation_type(["finance.spending_report"]) == "read"
 
     def test_single_write_intent_returns_write(self):
-        assert get_command_type(["task.add"]) == "write"
-        assert get_command_type(["event.delete"]) == "write"
+        assert get_operation_type(["task.add"]) == "write"
+        assert get_operation_type(["event.delete"]) == "write"
 
     def test_all_unknown_returns_none(self):
-        assert get_command_type(["unknown"]) is None
-        assert get_command_type(["unknown", "unknown"]) is None
+        assert get_operation_type(["unknown"]) is None
+        assert get_operation_type(["unknown", "unknown"]) is None
 
     def test_write_wins_over_read_in_mixed_list(self):
-        assert get_command_type(["task.list", "task.add"]) == "write"
+        assert get_operation_type(["task.list", "task.add"]) == "write"
 
     def test_all_read_intents_return_read(self):
-        assert get_command_type(["task.list", "note.list"]) == "read"
+        assert get_operation_type(["task.list", "note.list"]) == "read"
 
     def test_unknown_ignored_when_other_intents_present(self):
-        assert get_command_type(["unknown", "task.list"]) == "read"
-        assert get_command_type(["unknown", "task.add"]) == "write"
+        assert get_operation_type(["unknown", "task.list"]) == "read"
+        assert get_operation_type(["unknown", "task.add"]) == "write"

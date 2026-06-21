@@ -3,8 +3,6 @@ from datetime import datetime
 from freezegun import freeze_time
 from unittest.mock import AsyncMock, patch
 
-from unittest.mock import MagicMock
-
 from app.assistant.commands.resolver import (
     _split_command_fragments,
     _parse_tokens,
@@ -12,17 +10,10 @@ from app.assistant.commands.resolver import (
     _enrich_arguments,
     _enrich_finance,
     _normalize_date,
-    resolve,
+    detect_commands,
 )
 from app.assistant.intents.intent_service import IntentResult
-from app.shared.llm import LlmResponse
 
-
-def _make_llm_provider() -> MagicMock:
-    provider = MagicMock()
-    provider.provider = "google"
-    provider.model = "gemini-2.0-flash"
-    return provider
 
 FIXED_NOW = datetime(2024, 5, 20)  # Monday
 
@@ -269,58 +260,46 @@ class TestNormalizeDateHelper:
             assert result is None
 
 
-# ── resolve — edge cases not covered in test_command_service.py ──────────────
+# ── detect_commands — edge cases not covered in test_command_service.py ──────
 
-class TestResolveEdgeCases:
+class TestDetectCommandsEdgeCases:
     @freeze_time(FIXED_NOW)
     async def test_event_add(self):
-        response = await resolve("/event Meeting with team on Friday")
-        assert response.status == "ok"
-        cmd = response.commands[0]
-        assert cmd.type == "event"
-        assert cmd.command == "add"
+        commands = await detect_commands("/event Meeting with team on Friday")
+        assert len(commands) == 1
+        assert commands[0].type == "event"
+        assert commands[0].command == "add"
 
     async def test_help_command(self):
         # /help requires_args=True but no validation path skips it — check registry
-        response = await resolve("/help me please")
-        assert response.status == "ok"
-        assert response.commands[0].type == "help"
+        commands = await detect_commands("/help me please")
+        assert commands[0].type == "help"
 
     async def test_note_search(self):
-        response = await resolve("/ns kubernetes notes")
-        assert response.status == "ok"
-        assert response.commands[0].command == "search"
-        assert response.commands[0].args["query"] == "kubernetes notes"
+        commands = await detect_commands("/ns kubernetes notes")
+        assert commands[0].command == "search"
+        assert commands[0].args["query"] == "kubernetes notes"
 
     async def test_note_list(self):
-        response = await resolve("/nl")
-        assert response.status == "ok"
-        assert response.commands[0].command == "list"
+        commands = await detect_commands("/nl")
+        assert commands[0].command == "list"
 
     async def test_task_list_with_unexpected_positional_arg(self):
-        # /tasklist has no arg_keys, so extra positional args go to _raw_args
-        # then _enrich_arguments converts _raw_args to task
-        response = await resolve("/tasklist unexpected-arg")
-        assert response.status == "ok"
+        commands = await detect_commands("/tasklist unexpected-arg")
+        assert len(commands) == 1
 
     async def test_task_complete_via_td_alias(self):
-        response = await resolve("/td 99")
-        assert response.status == "ok"
-        assert response.commands[0].command == "complete"
-        assert response.commands[0].args["id"] == "99"
+        commands = await detect_commands("/td 99")
+        assert commands[0].command == "complete"
+        assert commands[0].args["id"] == "99"
 
     async def test_source_field(self):
-        response = await resolve("/taskadd Test task")
-        assert response.commands[0].source == "deterministic"
+        commands = await detect_commands("/taskadd Test task")
+        assert commands[0].source == "deterministic"
 
     async def test_confidence_field(self):
-        response = await resolve("/taskadd Test task")
-        assert response.commands[0].confidence == 1.0
-
-    async def test_raw_text_preserved(self):
-        text = "/taskadd Buy milk"
-        response = await resolve(text)
-        assert response.raw_text == text
+        commands = await detect_commands("/taskadd Test task")
+        assert commands[0].confidence == 1.0
 
 
 # ── _enrich_finance ───────────────────────────────────────────────────────────
@@ -383,248 +362,196 @@ class TestEnrichFinance:
         assert result.get("priority") == "HIGH"
 
 
-# ── resolve — finance commands ────────────────────────────────────────────────
+# ── detect_commands — finance commands ───────────────────────────────────────
 
-class TestResolveFinanceCommands:
+class TestDetectCommandsFinance:
 
     async def test_expense_alias_sets_implicit_type(self):
-        response = await resolve("/expense coffee")
-        assert response.status == "ok"
-        cmd = response.commands[0]
+        commands = await detect_commands("/expense coffee")
+        cmd = commands[0]
         assert cmd.type == "finance"
         assert cmd.command == "transaction_add"
         assert cmd.args["type"] == "expense"
 
     async def test_income_alias_sets_implicit_type(self):
-        response = await resolve("/income salary")
-        assert response.status == "ok"
-        assert response.commands[0].args["type"] == "income"
+        commands = await detect_commands("/income salary")
+        assert commands[0].args["type"] == "income"
 
     async def test_exp_short_alias(self):
-        response = await resolve("/exp groceries")
-        assert response.status == "ok"
-        assert response.commands[0].command == "transaction_add"
-        assert response.commands[0].args["type"] == "expense"
+        commands = await detect_commands("/exp groceries")
+        assert commands[0].command == "transaction_add"
+        assert commands[0].args["type"] == "expense"
 
     async def test_inc_short_alias(self):
-        response = await resolve("/inc salary")
-        assert response.status == "ok"
-        assert response.commands[0].args["type"] == "income"
+        commands = await detect_commands("/inc salary")
+        assert commands[0].args["type"] == "income"
 
     async def test_explicit_type_flag_overrides_implicit(self):
-        response = await resolve("/expense refund --type income")
-        assert response.status == "ok"
-        assert response.commands[0].args["type"] == "income"
+        commands = await detect_commands("/expense refund --type income")
+        assert commands[0].args["type"] == "income"
 
     async def test_transaction_add_with_flags(self):
-        response = await resolve("/tra coffee -a 4.50 -m Starbucks")
-        assert response.status == "ok"
-        cmd = response.commands[0]
+        commands = await detect_commands("/tra coffee -a 4.50 -m Starbucks")
+        cmd = commands[0]
         assert cmd.command == "transaction_add"
         assert cmd.args["amount"] == "4.50"
         assert cmd.args["merchant"] == "Starbucks"
         assert cmd.args["description"] == "coffee"
 
     async def test_transaction_list(self):
-        response = await resolve("/transactions")
-        assert response.status == "ok"
-        assert response.commands[0].command == "transaction_list"
-        assert response.commands[0].type == "finance"
+        commands = await detect_commands("/transactions")
+        assert commands[0].command == "transaction_list"
+        assert commands[0].type == "finance"
 
     async def test_transaction_list_with_filters(self):
-        response = await resolve('/trl -tp expense --period "this month"')
-        assert response.status == "ok"
-        cmd = response.commands[0]
+        commands = await detect_commands('/trl -tp expense --period "this month"')
+        cmd = commands[0]
         assert cmd.command == "transaction_list"
         assert cmd.args["type"] == "expense"
         assert cmd.args["period"] == "this month"
 
     async def test_transaction_delete(self):
-        response = await resolve("/trd 42")
-        assert response.status == "ok"
-        cmd = response.commands[0]
+        commands = await detect_commands("/trd 42")
+        cmd = commands[0]
         assert cmd.command == "transaction_delete"
         assert cmd.args["id"] == "42"
 
     async def test_transaction_update(self):
-        response = await resolve("/tru 10 -a 99.00 -m Supermarket")
-        assert response.status == "ok"
-        cmd = response.commands[0]
+        commands = await detect_commands("/tru 10 -a 99.00 -m Supermarket")
+        cmd = commands[0]
         assert cmd.command == "transaction_update"
         assert cmd.args["id"] == "10"
         assert cmd.args["amount"] == "99.00"
         assert cmd.args["merchant"] == "Supermarket"
 
     async def test_spending_report_with_period(self):
-        response = await resolve("/sr this month")
-        assert response.status == "ok"
-        cmd = response.commands[0]
+        commands = await detect_commands("/sr this month")
+        cmd = commands[0]
         assert cmd.command == "spending_report"
         assert cmd.args["period"] == "this month"
 
     async def test_spending_report_alias_spent(self):
-        response = await resolve("/spent last month")
-        assert response.status == "ok"
-        assert response.commands[0].command == "spending_report"
+        commands = await detect_commands("/spent last month")
+        assert commands[0].command == "spending_report"
 
     async def test_spending_average_alias(self):
-        response = await resolve("/sav last month")
-        assert response.status == "ok"
-        assert response.commands[0].command == "spending_average"
-        assert response.commands[0].args["period"] == "last month"
+        commands = await detect_commands("/sav last month")
+        assert commands[0].command == "spending_average"
+        assert commands[0].args["period"] == "last month"
 
     async def test_spending_top_with_period(self):
-        response = await resolve("/stp this week")
-        assert response.status == "ok"
-        cmd = response.commands[0]
+        commands = await detect_commands("/stp this week")
+        cmd = commands[0]
         assert cmd.command == "spending_top"
         assert cmd.args["period"] == "this week"
 
     async def test_budget_add_with_flags(self):
-        response = await resolve("/budget Monthly food -a 300 --period monthly")
-        assert response.status == "ok"
-        cmd = response.commands[0]
+        commands = await detect_commands("/budget Monthly food -a 300 --period monthly")
+        cmd = commands[0]
         assert cmd.command == "budget_add"
         assert cmd.args["name"] == "Monthly food"
         assert cmd.args["amount"] == "300"
         assert cmd.args["period"] == "monthly"
 
     async def test_budget_list(self):
-        response = await resolve("/budgets")
-        assert response.status == "ok"
-        assert response.commands[0].command == "budget_list"
+        commands = await detect_commands("/budgets")
+        assert commands[0].command == "budget_list"
 
     async def test_budget_list_short_alias(self):
-        response = await resolve("/bl")
-        assert response.status == "ok"
-        assert response.commands[0].command == "budget_list"
+        commands = await detect_commands("/bl")
+        assert commands[0].command == "budget_list"
 
     async def test_budget_remaining_with_period(self):
-        response = await resolve("/br this month")
-        assert response.status == "ok"
-        cmd = response.commands[0]
+        commands = await detect_commands("/br this month")
+        cmd = commands[0]
         assert cmd.command == "budget_remaining"
         assert cmd.args["period"] == "this month"
 
     async def test_balance_forecast(self):
-        response = await resolve("/forecast this month")
-        assert response.status == "ok"
-        cmd = response.commands[0]
+        commands = await detect_commands("/forecast this month")
+        cmd = commands[0]
         assert cmd.command == "balance_forecast"
         assert cmd.args["period"] == "this month"
 
     async def test_balance_forecast_short_alias(self):
-        response = await resolve("/bfc")
-        assert response.status == "ok"
-        assert response.commands[0].command == "balance_forecast"
+        commands = await detect_commands("/bfc")
+        assert commands[0].command == "balance_forecast"
 
     @freeze_time(FIXED_NOW)
     async def test_date_flag_normalized(self):
-        response = await resolve("/tra coffee --date yesterday")
-        assert response.status == "ok"
-        assert response.commands[0].args["date"] == "2024-05-19"
+        commands = await detect_commands("/tra coffee --date yesterday")
+        assert commands[0].args["date"] == "2024-05-19"
 
     @freeze_time(FIXED_NOW)
     async def test_from_to_date_flags_normalized(self):
-        response = await resolve("/trl --from yesterday --to today")
-        assert response.status == "ok"
-        cmd = response.commands[0]
+        commands = await detect_commands("/trl --from yesterday --to today")
+        cmd = commands[0]
         assert cmd.args["from_date"] == "2024-05-19"
         assert cmd.args["to_date"] == "2024-05-20"
 
     async def test_nlp_enriches_description_with_amount_and_merchant(self):
-        response = await resolve("/expense spent €50 at Supermarket")
-        cmd = response.commands[0]
+        commands = await detect_commands("/expense spent €50 at Supermarket")
+        cmd = commands[0]
         assert cmd.args.get("amount") == 50.0
         assert cmd.args.get("currency") == "EUR"
         assert cmd.args.get("merchant") == "Supermarket"
         assert cmd.args["type"] == "expense"
 
     async def test_finance_enrichment_does_not_extract_priority(self):
-        # _enrich_finance runs extract_finance_entities, not extract_entities,
-        # so priority keywords in description never produce a priority field.
-        response = await resolve("/expense critical coffee urgent")
-        cmd = response.commands[0]
-        assert "priority" not in cmd.args
+        commands = await detect_commands("/expense critical coffee urgent")
+        assert "priority" not in commands[0].args
 
     async def test_finance_enrichment_does_not_extract_deadline(self):
-        response = await resolve("/expense coffee")
-        assert "deadline" not in response.commands[0].args
+        commands = await detect_commands("/expense coffee")
+        assert "deadline" not in commands[0].args
 
 
-# ── resolve — intent detection fallback ──────────────────────────────────────
+# ── detect_commands — intent detection fallback ───────────────────────────────
 
-class TestResolveWithIntent:
+class TestDetectCommandsWithIntent:
 
-    async def test_no_session_returns_not_parsed_for_natural_language(self):
-        response = await resolve("Buy milk tomorrow")
-        assert response.status == "not_parsed"
-        assert response.commands == []
+    async def test_no_session_returns_empty_for_natural_language(self):
+        commands = await detect_commands("Buy milk tomorrow")
+        assert commands == []
 
-    async def test_no_llm_provider_returns_not_parsed(self):
-        response = await resolve("Buy milk tomorrow", session=AsyncMock())
-        assert response.status == "not_parsed"
-
-    async def test_empty_text_returns_not_parsed_even_with_session(self):
-        response = await resolve("   ", session=AsyncMock(), llm_provider=_make_llm_provider())
-        assert response.status == "not_parsed"
+    async def test_empty_text_returns_empty(self):
+        commands = await detect_commands("   ", session=AsyncMock())
+        assert commands == []
 
     async def test_slash_command_uses_deterministic_path_ignores_session(self):
-        response = await resolve("/taskadd Buy milk", session=AsyncMock())
-        assert response.commands[0].source == "deterministic"
-        assert response.commands[0].confidence == 1.0
+        commands = await detect_commands("/taskadd Buy milk", session=AsyncMock())
+        assert commands[0].source == "deterministic"
+        assert commands[0].confidence == 1.0
 
-    async def test_intent_above_threshold_returns_intent_detection(self):
+    async def test_intent_above_threshold_returns_intent_detection_with_empty_args(self):
         mock_session = AsyncMock()
         intent_result = IntentResult(intent="task.add", confidence=0.85)
-        extracted = {"title": "Buy milk", "due_date": None, "priority": None}
 
-        with patch("app.assistant.commands.resolver.detect_intent", new=AsyncMock(return_value=intent_result)), \
-             patch("app.assistant.commands.resolver.extract_args", new=AsyncMock(return_value=extracted)):
-            response = await resolve("Buy milk tomorrow", session=mock_session, llm_provider=_make_llm_provider())
+        with patch("app.assistant.commands.resolver.detect_intent", new=AsyncMock(return_value=intent_result)):
+            commands = await detect_commands("Buy milk tomorrow", session=mock_session)
 
-        assert response.status == "ok"
-        cmd = response.commands[0]
+        assert len(commands) == 1
+        cmd = commands[0]
         assert cmd.source == "intent_detection"
         assert cmd.type == "task"
         assert cmd.command == "add"
         assert cmd.confidence == 0.85
-        assert cmd.args == extracted
+        assert cmd.args == {}
 
-    async def test_intent_below_threshold_returns_unknown_source(self):
+    async def test_intent_below_threshold_returns_empty(self):
         mock_session = AsyncMock()
         intent_result = IntentResult(intent="task.add", confidence=0.5)
 
         with patch("app.assistant.commands.resolver.detect_intent", new=AsyncMock(return_value=intent_result)):
-            response = await resolve("ambiguous text", session=mock_session, llm_provider=_make_llm_provider())
+            commands = await detect_commands("ambiguous text", session=mock_session)
 
-        assert response.status == "ok"
-        cmd = response.commands[0]
-        assert cmd.source == "unknown"
-        assert cmd.type == "task"
-        assert cmd.command == "add"
-        assert cmd.confidence == 0.5
-        assert cmd.args == {}
+        assert commands == []
 
-    async def test_unknown_intent_returns_unknown_type_and_command(self):
+    async def test_unknown_intent_returns_empty(self):
         mock_session = AsyncMock()
         intent_result = IntentResult(intent="unknown", confidence=0.55)
 
         with patch("app.assistant.commands.resolver.detect_intent", new=AsyncMock(return_value=intent_result)):
-            response = await resolve("some random text", session=mock_session, llm_provider=_make_llm_provider())
+            commands = await detect_commands("some random text", session=mock_session)
 
-        cmd = response.commands[0]
-        assert cmd.type == "unknown"
-        assert cmd.command == "unknown"
-        assert cmd.source == "unknown"
-
-    async def test_extract_args_not_called_below_threshold(self):
-        mock_session = AsyncMock()
-        intent_result = IntentResult(intent="task.add", confidence=0.5)
-        mock_extract = AsyncMock()
-
-        with patch("app.assistant.commands.resolver.detect_intent", new=AsyncMock(return_value=intent_result)), \
-             patch("app.assistant.commands.resolver.extract_args", new=mock_extract):
-            await resolve("ambiguous", session=mock_session, llm_provider=_make_llm_provider())
-
-        mock_extract.assert_not_called()
+        assert commands == []

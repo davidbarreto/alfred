@@ -29,7 +29,7 @@ _READ_INTENTS: frozenset[str] = frozenset({
 })
 
 
-def get_command_type(intents: list[str]) -> Literal["read", "write"] | None:
+def get_operation_type(intents: list[str]) -> Literal["read", "write"] | None:
     known = [i for i in intents if i != "unknown"]
     if not known:
         return None

@@ -64,11 +64,7 @@
       {% endif %}
 
       <!-- Priority (always shown) -->
-      {% if task.urgency == 'URGENT' %}
-      <span class="flex items-center gap-1 text-[#E24B4A] font-medium">
-        <i class="ti ti-alert-triangle" style="font-size:0.8rem"></i>Urgent
-      </span>
-      {% elif task.priority == 'HIGH' %}
+      {% if task.priority == 'HIGH' %}
       <span class="flex items-center gap-1 text-[#BA7517]">
         <i class="ti ti-arrow-up" style="font-size:0.8rem"></i>High
       </span>
@@ -79,6 +75,17 @@
       {% else %}
       <span class="flex items-center gap-1 text-gray-300">
         <i class="ti ti-arrow-down" style="font-size:0.8rem"></i>Low
+      </span>
+      {% endif %}
+
+      <!-- Urgency (always shown) -->
+      {% if task.urgency == 'URGENT' %}
+      <span class="flex items-center gap-1 text-[#E24B4A] font-medium">
+        <i class="ti ti-alert-triangle" style="font-size:0.8rem"></i>Urgent
+      </span>
+      {% else %}
+      <span class="flex items-center gap-1 text-gray-300">
+        <i class="ti ti-clock" style="font-size:0.8rem"></i>Normal
       </span>
       {% endif %}
 

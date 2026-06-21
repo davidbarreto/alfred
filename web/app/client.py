@@ -14,36 +14,35 @@ def _headers() -> dict[str, str]:
     return {"Authorization": f"Bearer {get_settings().alfred_api_token}"}
 
 
-def _base() -> str:
-    return get_settings().backend_url.rstrip("/")
+def _url(path: str) -> str:
+    base = get_settings().backend_url.rstrip("/")
+    if not path.endswith("/"):
+        path = path + "/"
+    return f"{base}{path}"
 
 
 async def get(path: str, params: dict[str, Any] | None = None) -> Any:
-    url = f"{_base()}{path}"
     async with httpx.AsyncClient(follow_redirects=True) as client:
-        resp = await client.get(url, headers=_headers(), params=params, timeout=10.0)
+        resp = await client.get(_url(path), headers=_headers(), params=params, timeout=10.0)
         resp.raise_for_status()
         return resp.json()
 
 
 async def post(path: str, json: Any = None) -> Any:
-    url = f"{_base()}{path}"
     async with httpx.AsyncClient(follow_redirects=True) as client:
-        resp = await client.post(url, headers=_headers(), json=json, timeout=10.0)
+        resp = await client.post(_url(path), headers=_headers(), json=json, timeout=10.0)
         resp.raise_for_status()
         return resp.json()
 
 
 async def patch(path: str, json: Any = None) -> Any:
-    url = f"{_base()}{path}"
     async with httpx.AsyncClient(follow_redirects=True) as client:
-        resp = await client.patch(url, headers=_headers(), json=json, timeout=10.0)
+        resp = await client.patch(_url(path), headers=_headers(), json=json, timeout=10.0)
         resp.raise_for_status()
         return resp.json()
 
 
 async def delete(path: str) -> None:
-    url = f"{_base()}{path}"
     async with httpx.AsyncClient(follow_redirects=True) as client:
-        resp = await client.delete(url, headers=_headers(), timeout=10.0)
+        resp = await client.delete(_url(path), headers=_headers(), timeout=10.0)
         resp.raise_for_status()

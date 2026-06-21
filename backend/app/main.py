@@ -26,6 +26,7 @@ from app.api.routes.commands import router as commands_router
 from app.api.routes.organizer.tasks import router as tasks_router
 from app.api.routes.organizer.notes import router as notes_router
 from app.api.routes.organizer.calendar_events import router as calendar_events_router
+from app.api.routes.organizer.shopping import shopping_router, wishlist_router, recurrence_router
 from app.api.routes.finance.accounts import router as finance_accounts_router
 from app.api.routes.finance.categories import router as finance_categories_router
 from app.api.routes.finance.transactions import router as finance_transactions_router
@@ -74,6 +75,9 @@ app.include_router(commands_router)
 app.include_router(tasks_router)
 app.include_router(notes_router)
 app.include_router(calendar_events_router)
+app.include_router(shopping_router)
+app.include_router(wishlist_router)
+app.include_router(recurrence_router)
 app.include_router(finance_accounts_router)
 app.include_router(finance_categories_router)
 app.include_router(finance_transactions_router)

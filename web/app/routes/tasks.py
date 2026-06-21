@@ -92,3 +92,17 @@ async def mark_task_done(task_id: int, request: Request):
         "today": date.today().isoformat(),
         "tomorrow": (date.today() + timedelta(days=1)).isoformat(),
     })
+
+
+@router.patch("/{task_id}/doing", response_class=HTMLResponse)
+async def mark_task_doing(task_id: int, request: Request):
+    try:
+        task = await api.patch(f"/organizer/tasks/{task_id}", json={"status": "DOING"})
+    except httpx.HTTPError:
+        task = {"id": task_id, "title": "—", "status": "DOING", "priority": "LOW",
+                "urgency": "NORMAL", "deadline": None, "tags": []}
+    return templates.TemplateResponse(request, "_task_row.html", {
+        "task": task,
+        "today": date.today().isoformat(),
+        "tomorrow": (date.today() + timedelta(days=1)).isoformat(),
+    })

@@ -1,9 +1,9 @@
 {% if tasks %}
-<ul class="space-y-0.5">
+<div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
   {% for task in tasks %}
   {% include "_task_row.html" %}
   {% endfor %}
-</ul>
+</div>
 {% else %}
-<div class="py-12 text-center text-sm text-gray-400">No tasks match this filter.</div>
+<div class="py-16 text-center text-sm text-gray-400">No tasks match this filter.</div>
 {% endif %}

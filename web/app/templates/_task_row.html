@@ -1,79 +1,125 @@
 {% set deadline = task.deadline[:10] if task.deadline else "" %}
 {% set is_done = task.status == "DONE" %}
-<li class="flex items-center gap-3 py-2 px-3 rounded-lg hover:bg-gray-50 group" id="task-{{ task.id }}">
+{% set is_doing = task.status == "DOING" %}
 
-  <!-- Checkbox -->
-  <input
-    type="checkbox"
-    class="checkbox checkbox-sm flex-shrink-0"
-    {% if is_done %}checked disabled{% endif %}
-    hx-post="/tasks/{{ task.id }}/done"
-    hx-target="#task-{{ task.id }}"
-    hx-swap="outerHTML"
-  />
-
-  <!-- Urgency dot -->
-  <span class="w-1.5 h-1.5 rounded-full flex-shrink-0
-    {% if task.urgency == 'URGENT' %}bg-[#E24B4A]
-    {% elif task.priority == 'HIGH' %}bg-[#BA7517]
-    {% else %}bg-gray-300{% endif %}"></span>
-
-  <!-- Task title -->
-  <span class="flex-1 text-sm min-w-0 truncate {% if is_done %}line-through text-gray-300{% else %}text-gray-800{% endif %}">
-    {{ task.title }}
-  </span>
-
-  <!-- Category tag (first tag) -->
-  {% if task.tags %}
-  <span class="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-500 flex-shrink-0">{{ task.tags[0] }}</span>
-  {% endif %}
-
-  <!-- Due-date badge -->
-  {% if deadline %}
-    {% if deadline == today %}
-    <span class="text-[10px] px-1.5 py-0.5 rounded bg-[#FCEBEB] text-[#E24B4A] flex-shrink-0 font-medium">Today</span>
-    {% elif deadline == tomorrow %}
-    <span class="text-[10px] px-1.5 py-0.5 rounded bg-[#FAEEDA] text-[#BA7517] flex-shrink-0">Tomorrow</span>
-    {% else %}
-    <span class="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-500 flex-shrink-0">{{ deadline }}</span>
-    {% endif %}
-  {% endif %}
-
-  <!-- Recurrence badge -->
-  {% if task.recurrence_rule %}
+{% if task.recurrence_rule %}
   {% set rr = task.recurrence_rule %}
   {% if "FREQ=DAILY" in rr %}{% set freq_label = "daily" %}
   {% elif "FREQ=WEEKLY" in rr %}{% set freq_label = "weekly" %}
   {% elif "FREQ=MONTHLY" in rr %}{% set freq_label = "monthly" %}
   {% elif "FREQ=YEARLY" in rr %}{% set freq_label = "yearly" %}
   {% else %}{% set freq_label = "recurring" %}{% endif %}
-  <span class="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-400 flex-shrink-0 flex items-center gap-0.5">
-    <i class="ti ti-repeat" style="font-size:0.65rem"></i>{{ freq_label }}
-  </span>
-  {% endif %}
+{% endif %}
 
-  <!-- Overflow menu -->
-  <div class="dropdown dropdown-end opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
-    <label tabindex="0" class="cursor-pointer w-6 h-6 flex items-center justify-center rounded hover:bg-gray-100 text-gray-400">⋯</label>
-    <ul tabindex="0" class="dropdown-content bg-white border border-gray-200 rounded-lg shadow-sm z-10 w-32 p-1 text-sm">
-      <li>
-        <button
-          class="w-full text-left px-3 py-1.5 rounded hover:bg-gray-50 text-gray-700"
-          hx-patch="/tasks/{{ task.id }}/doing"
-          hx-target="#task-{{ task.id }}"
-          hx-swap="outerHTML"
-        >In progress</button>
-      </li>
-      <li>
-        <button
-          class="w-full text-left px-3 py-1.5 rounded hover:bg-[#FCEBEB] text-[#E24B4A]"
-          hx-delete="/tasks/{{ task.id }}"
-          hx-target="#task-{{ task.id }}"
-          hx-swap="outerHTML"
-          hx-confirm="Delete this task?"
-        >Delete</button>
-      </li>
-    </ul>
+<div class="bg-white border border-gray-200 rounded-lg overflow-hidden hover:border-gray-300 transition-colors group relative"
+     id="task-{{ task.id }}">
+
+  <!-- Priority accent strip on left edge -->
+  <div class="absolute left-0 top-0 bottom-0 w-[3px]
+    {% if task.urgency == 'URGENT' %}bg-[#E24B4A]
+    {% elif task.priority == 'HIGH' %}bg-[#BA7517]
+    {% else %}bg-transparent{% endif %}"></div>
+
+  <div class="p-4 pl-5">
+
+    <!-- Checkbox + title -->
+    <div class="flex items-start gap-2.5 mb-2.5">
+      <input
+        type="checkbox"
+        class="checkbox checkbox-sm mt-0.5 flex-shrink-0"
+        {% if is_done %}checked disabled{% endif %}
+        hx-post="/tasks/{{ task.id }}/done"
+        hx-target="#task-{{ task.id }}"
+        hx-swap="outerHTML"
+      />
+      <span class="flex-1 text-sm font-medium leading-snug
+        {% if is_done %}line-through text-gray-300{% else %}text-gray-900{% endif %}">
+        {{ task.title }}
+      </span>
+    </div>
+
+    <!-- Metadata row (only rendered when there's something to show) -->
+    {% if deadline or task.recurrence_rule or task.urgency == 'URGENT' or task.priority == 'HIGH' or is_doing %}
+    <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs mb-3 pl-[26px]">
+
+      {% if deadline %}
+        {% if deadline < today %}
+        <span class="flex items-center gap-1 text-[#E24B4A]">
+          <i class="ti ti-calendar-x" style="font-size:0.8rem"></i>{{ deadline }} — overdue
+        </span>
+        {% elif deadline == today %}
+        <span class="flex items-center gap-1 text-[#E24B4A] font-medium">
+          <i class="ti ti-calendar-event" style="font-size:0.8rem"></i>Today
+        </span>
+        {% elif deadline == tomorrow %}
+        <span class="flex items-center gap-1 text-[#BA7517]">
+          <i class="ti ti-calendar" style="font-size:0.8rem"></i>Tomorrow
+        </span>
+        {% else %}
+        <span class="flex items-center gap-1 text-gray-400">
+          <i class="ti ti-calendar" style="font-size:0.8rem"></i>{{ deadline }}
+        </span>
+        {% endif %}
+      {% endif %}
+
+      {% if task.recurrence_rule %}
+      <span class="flex items-center gap-1 text-gray-400">
+        <i class="ti ti-repeat" style="font-size:0.8rem"></i>{{ freq_label }}
+      </span>
+      {% endif %}
+
+      {% if task.urgency == 'URGENT' %}
+      <span class="flex items-center gap-1 text-[#E24B4A]">
+        <i class="ti ti-alert-triangle" style="font-size:0.8rem"></i>Urgent
+      </span>
+      {% elif task.priority == 'HIGH' %}
+      <span class="flex items-center gap-1 text-[#BA7517]">
+        <i class="ti ti-arrow-up" style="font-size:0.8rem"></i>High priority
+      </span>
+      {% endif %}
+
+      {% if is_doing %}
+      <span class="flex items-center gap-1 text-[#378ADD]">
+        <i class="ti ti-player-play" style="font-size:0.8rem"></i>In progress
+      </span>
+      {% endif %}
+
+    </div>
+    {% endif %}
+
+    <!-- Tags + overflow menu -->
+    <div class="flex items-center justify-between pl-[26px]">
+      <div class="flex flex-wrap gap-1">
+        {% for tag in task.tags %}
+        <span class="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-500">{{ tag }}</span>
+        {% endfor %}
+      </div>
+
+      <div class="dropdown dropdown-end opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 ml-2">
+        <label tabindex="0"
+               class="cursor-pointer w-6 h-6 flex items-center justify-center rounded hover:bg-gray-100 text-gray-400 text-lg leading-none">⋯</label>
+        <ul tabindex="0"
+            class="dropdown-content bg-white border border-gray-200 rounded-lg shadow-sm z-10 w-36 p-1 text-sm">
+          <li>
+            <button
+              class="w-full text-left px-3 py-1.5 rounded hover:bg-gray-50 text-gray-700"
+              hx-patch="/tasks/{{ task.id }}/doing"
+              hx-target="#task-{{ task.id }}"
+              hx-swap="outerHTML"
+            >In progress</button>
+          </li>
+          <li>
+            <button
+              class="w-full text-left px-3 py-1.5 rounded hover:bg-[#FCEBEB] text-[#E24B4A]"
+              hx-delete="/tasks/{{ task.id }}"
+              hx-target="#task-{{ task.id }}"
+              hx-swap="outerHTML"
+              hx-confirm="Delete this task?"
+            >Delete</button>
+          </li>
+        </ul>
+      </div>
+    </div>
+
   </div>
-
-</li>
+</div>

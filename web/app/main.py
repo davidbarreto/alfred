@@ -4,6 +4,7 @@ from pathlib import Path
 from fastapi import FastAPI, Request
 from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
+from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.middleware.sessions import SessionMiddleware
 
 from app.config import get_settings
@@ -13,23 +14,26 @@ logging.basicConfig(level=logging.INFO)
 
 app = FastAPI(title="Alfred Portal", docs_url=None, redoc_url=None)
 
+_PUBLIC_PATHS = {"/login", "/logout"}
+
+
+class AuthMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        if request.url.path in _PUBLIC_PATHS or request.url.path.startswith("/static"):
+            return await call_next(request)
+        if not request.session.get("authenticated"):
+            return RedirectResponse(f"/login?next={request.url.path}", status_code=302)
+        return await call_next(request)
+
+
 s = get_settings()
+# add_middleware is LIFO: last added = outermost = runs first.
+# SessionMiddleware must be outermost so request.session is ready for AuthMiddleware.
+app.add_middleware(AuthMiddleware)
 app.add_middleware(SessionMiddleware, secret_key=s.session_secret_key, https_only=False)
 
 _static = Path(__file__).parent / "static"
 app.mount("/static", StaticFiles(directory=str(_static)), name="static")
-
-_PUBLIC_PATHS = {"/login", "/logout"}
-
-
-@app.middleware("http")
-async def require_login(request: Request, call_next):
-    if request.url.path in _PUBLIC_PATHS or request.url.path.startswith("/static"):
-        return await call_next(request)
-    if not request.session.get("authenticated"):
-        return RedirectResponse(f"/login?next={request.url.path}", status_code=302)
-    return await call_next(request)
-
 
 app.include_router(auth.router)
 app.include_router(dashboard.router)

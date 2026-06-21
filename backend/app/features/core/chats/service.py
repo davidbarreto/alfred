@@ -49,6 +49,15 @@ _FOCUS_INSTRUCTIONS = (
     "wait until David explicitly asks you to."
 )
 
+_COMMAND_BOUNDARY_INSTRUCTIONS = (
+    "## Commands\n"
+    "You do not execute write operations directly. "
+    "Tasks, notes, events, and transactions are handled by a separate command pipeline, not by you in conversation. "
+    "Never say you have added, created, saved, or completed something unless a command result is explicitly shown to you. "
+    "If a message looks like a command (e.g. starts with /) but no pipeline result is provided, "
+    "tell David you did not recognize or could not process it — do not pretend it was executed."
+)
+
 _LANGUAGE_INSTRUCTIONS = (
     "## Language\n"
     "Always reply in English by default. "
@@ -83,6 +92,7 @@ def _build_system_prompt(
         _FORMATTING_INSTRUCTIONS,
         _LANGUAGE_INSTRUCTIONS,
         _FOCUS_INSTRUCTIONS,
+        _COMMAND_BOUNDARY_INSTRUCTIONS,
     ]
 
     if recent_summaries:

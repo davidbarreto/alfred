@@ -3,12 +3,12 @@ from __future__ import annotations
 import json
 import logging
 import time
-from typing import Any
+from typing import Any, cast, get_args
 
 from app.db.session import async_session
 from app.features.core.embeddings.schemas import EmbeddingCreate, EmbeddingSearchRequest
 from app.features.core.embeddings.service import EmbeddingService
-from app.features.core.memories.schemas import MemoryCreate, MemoryUpdate
+from app.features.core.memories.schemas import MemoryCategory, MemoryCreate, MemoryUpdate
 from app.features.core.memories.service import MemoryService
 from app.integrations.llm_calls.repository import create_llm_call
 from app.shared.embedding import EmbeddingProvider
@@ -18,6 +18,7 @@ logger = logging.getLogger(__name__)
 
 _DEDUP_THRESHOLD = 0.85
 _IMPORTANCE_BUMP = 0.1
+_VALID_CATEGORIES: frozenset[str] = frozenset(get_args(MemoryCategory))
 
 _EXTRACTION_PROMPT = """\
 You are a memory extractor for a personal AI assistant.
@@ -98,7 +99,8 @@ class MemoryExtractionService:
         embedding_service: EmbeddingService,
     ) -> None:
         content = str(candidate.get("content", "")).strip()
-        category = str(candidate.get("category", "fact"))
+        raw_category = str(candidate.get("category", "fact"))
+        category = cast(MemoryCategory, raw_category if raw_category in _VALID_CATEGORIES else "fact")
         importance = min(1.0, max(0.0, float(candidate.get("importance", 0.5))))
         confidence = min(1.0, max(0.0, float(candidate.get("confidence", 1.0))))
 

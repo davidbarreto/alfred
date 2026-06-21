@@ -53,6 +53,17 @@ SPENDING_TOP_FLAGS = {**FLAG_CATEGORY, **FLAG_PERIOD, **FLAG_FROM_DATE, **FLAG_T
 BUDGET_REMAINING_FLAGS = {**FLAG_CATEGORY, **FLAG_PERIOD}
 BALANCE_FORECAST_FLAGS = {**FLAG_PERIOD, **FLAG_FROM_DATE, **FLAG_TO_DATE, **FLAG_ACCOUNT}
 
+# --- Shopping Flag Constants ---
+FLAG_STORE = {"-st": "store", "--store": "store"}
+FLAG_QUANTITY = {"-q": "quantity", "--quantity": "quantity"}
+FLAG_UNIT = {"-u": "unit", "--unit": "unit"}
+
+SHOPPING_ADD_FLAGS = {**FLAG_CATEGORY, **FLAG_PRIORITY, **FLAG_QUANTITY, **FLAG_UNIT, **FLAG_STORE, **FLAG_NOTES}
+SHOPPING_LIST_FLAGS = {**FLAG_STATUS, **FLAG_CATEGORY, **FLAG_PRIORITY, **FLAG_LIMIT}
+SHOPPING_UPDATE_FLAGS = {**FLAG_TITLE, **FLAG_CATEGORY, **FLAG_PRIORITY, **FLAG_QUANTITY, **FLAG_STATUS}
+WISHLIST_ADD_FLAGS = {**FLAG_CATEGORY, **FLAG_NOTES}
+WISHLIST_LIST_FLAGS = {**FLAG_CATEGORY, **FLAG_LIMIT}
+
 COMMAND_DEFINITIONS = {
     "task": {
         "add": {
@@ -137,6 +148,60 @@ COMMAND_DEFINITIONS = {
             "requires_args": True,
             "arg_keys": ["id"]
         }
+    },
+    "shopping": {
+        "add": {
+            "aliases": ["/shop", "/sa", "/shopping", "/buy"],
+            "flags": SHOPPING_ADD_FLAGS,
+            "requires_args": True,
+            "arg_keys": ["name"],
+        },
+        "list": {
+            "aliases": ["/shoplist", "/sl", "/shoppinglist"],
+            "flags": SHOPPING_LIST_FLAGS,
+        },
+        "complete": {
+            "aliases": ["/bought", "/shopbought", "/sb"],
+            "flags": {},
+            "requires_args": True,
+            "arg_keys": ["name"],
+        },
+        "delete": {
+            "aliases": ["/shopdelete", "/shoprm", "/sdrm"],
+            "flags": {},
+            "requires_args": True,
+            "arg_keys": ["name"],
+        },
+        "update": {
+            "aliases": ["/shopupdate", "/su", "/shopupd"],
+            "flags": SHOPPING_UPDATE_FLAGS,
+            "requires_args": True,
+            "arg_keys": ["id"],
+        },
+    },
+    "wishlist": {
+        "add": {
+            "aliases": ["/wish", "/wa", "/wishadd"],
+            "flags": WISHLIST_ADD_FLAGS,
+            "requires_args": True,
+            "arg_keys": ["name"],
+        },
+        "list": {
+            "aliases": ["/wishlist", "/wl"],
+            "flags": WISHLIST_LIST_FLAGS,
+        },
+        "delete": {
+            "aliases": ["/wishrm", "/wd", "/wishdelete"],
+            "flags": {},
+            "requires_args": True,
+            "arg_keys": ["name"],
+        },
+        "promote": {
+            "aliases": ["/promote", "/wp", "/wishpromote"],
+            "flags": {**FLAG_PRIORITY},
+            "requires_args": True,
+            "arg_keys": ["name"],
+        },
     },
     "help": {
         "help": {

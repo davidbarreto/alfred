@@ -6,6 +6,7 @@ from fastapi import HTTPException, status
 from app.assistant.commands.handlers.event import handle_event
 from app.assistant.commands.handlers.finance import handle_finance
 from app.assistant.commands.handlers.note import handle_note
+from app.assistant.commands.handlers.shopping import handle_shopping
 from app.assistant.commands.handlers.task import handle_task
 from app.features.finance.accounts.service import AccountService
 from app.features.finance.budgets.service import BudgetService
@@ -13,6 +14,7 @@ from app.features.finance.recurring_transactions.service import RecurringTransac
 from app.features.finance.transactions.service import TransactionService
 from app.features.organizer.calendar_events.service import CalendarEventService
 from app.features.organizer.notes.service import NoteService
+from app.features.organizer.shopping.service import ShoppingService
 from app.features.organizer.tasks.service import TaskService
 
 logger = logging.getLogger(__name__)
@@ -29,6 +31,7 @@ async def execute(
     account_service: AccountService,
     budget_service: BudgetService,
     recurring_service: RecurringTransactionService,
+    shopping_service: ShoppingService | None = None,
 ) -> Any:
     logger.info("Execute: %s.%s args_keys=%s", cmd_type, command, list(arguments.keys()))
 
@@ -50,6 +53,14 @@ async def execute(
             budget_service=budget_service,
             recurring_service=recurring_service,
         )
+
+    if cmd_type in ("shopping", "wishlist"):
+        if shopping_service is None:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Shopping service not available",
+            )
+        return await handle_shopping(cmd_type, command, arguments, shopping_service)
 
     logger.error("Execute: unknown command type=%s command=%s", cmd_type, command)
     raise HTTPException(

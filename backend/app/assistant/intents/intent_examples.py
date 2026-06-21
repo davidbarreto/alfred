@@ -217,6 +217,54 @@ INTENT_EXAMPLES: list[IntentExample] = [
     IntentExample(id=139, text="How much money will I have left next month?", intent="finance.balance_forecast"),
     IntentExample(id=140, text="Give me a financial projection for the rest of the year", intent="finance.balance_forecast"),
 
+    # --- shopping.add ---
+    IntentExample(id=173, text="Add milk to my shopping list", intent="shopping.add"),
+    IntentExample(id=174, text="Put bread on the shopping list", intent="shopping.add"),
+    IntentExample(id=175, text="Add 2 bottles of olive oil to groceries", intent="shopping.add"),
+    IntentExample(id=176, text="I want to buy detergent", intent="shopping.add"),
+    IntentExample(id=177, text="I need to get shampoo at the pharmacy", intent="shopping.add"),
+
+    # --- shopping.list ---
+    IntentExample(id=178, text="Show my shopping list", intent="shopping.list"),
+    IntentExample(id=179, text="What do I need to buy?", intent="shopping.list"),
+    IntentExample(id=180, text="What's on my grocery list?", intent="shopping.list"),
+
+    # --- shopping.complete ---
+    IntentExample(id=181, text="I bought milk", intent="shopping.complete"),
+    IntentExample(id=182, text="Mark eggs as bought", intent="shopping.complete"),
+    IntentExample(id=183, text="I got the bread from the supermarket", intent="shopping.complete"),
+
+    # --- shopping.delete ---
+    IntentExample(id=184, text="Remove milk from my shopping list", intent="shopping.delete"),
+    IntentExample(id=185, text="Delete eggs from the shopping list", intent="shopping.delete"),
+    IntentExample(id=186, text="Take shampoo off the shopping list", intent="shopping.delete"),
+
+    # --- shopping.update ---
+    IntentExample(id=187, text="Change the quantity of eggs to 6", intent="shopping.update"),
+    IntentExample(id=188, text="Update the milk item to need priority", intent="shopping.update"),
+    IntentExample(id=189, text="Change eggs from want to need on my list", intent="shopping.update"),
+
+    # --- wishlist.add ---
+    IntentExample(id=190, text="Add Sony headphones to my wishlist", intent="wishlist.add"),
+    IntentExample(id=191, text="I'd love to get a new guitar someday", intent="wishlist.add"),
+    IntentExample(id=192, text="Put the new iPhone on my wishlist", intent="wishlist.add"),
+    IntentExample(id=193, text="Add a standing desk to my wish list", intent="wishlist.add"),
+
+    # --- wishlist.list ---
+    IntentExample(id=194, text="Show my wishlist", intent="wishlist.list"),
+    IntentExample(id=195, text="What's on my wish list?", intent="wishlist.list"),
+    IntentExample(id=196, text="List everything on my wishlist", intent="wishlist.list"),
+
+    # --- wishlist.delete ---
+    IntentExample(id=197, text="Remove the headphones from my wishlist", intent="wishlist.delete"),
+    IntentExample(id=198, text="Delete the guitar from my wish list", intent="wishlist.delete"),
+    IntentExample(id=199, text="Take the iPhone off my wishlist", intent="wishlist.delete"),
+
+    # --- wishlist.promote ---
+    IntentExample(id=200, text="I want to actually buy the headphones now", intent="wishlist.promote"),
+    IntentExample(id=201, text="Move the guitar from my wishlist to the shopping list", intent="wishlist.promote"),
+    IntentExample(id=202, text="Promote the standing desk from wishlist to shopping", intent="wishlist.promote"),
+
     # --- unknown ---
     IntentExample(id=141, text="What's the weather like today?", intent="unknown"),
     IntentExample(id=142, text="Tell me a joke", intent="unknown"),

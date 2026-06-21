@@ -42,12 +42,55 @@ class CreateEventArgs(BaseModel):
     recurrence: str | None = Field(default=None, description="Recurrence rule, e.g. 'weekly', 'daily', 'every Monday'")
 
 
+class AddShoppingItemArgs(BaseModel):
+    name: str = Field(description="Name of the item to buy")
+    category: Literal["grocery", "pharmacy", "electronics", "online", "home", "clothes", "books", "other"] | None = Field(default=None)
+    priority: Literal["need", "want"] | None = Field(default=None)
+    quantity: str | None = Field(default=None, description="Quantity, e.g. '2' or '500g'")
+    unit: str | None = Field(default=None, description="Unit of measure, e.g. 'kg', 'bottles', 'packs'")
+    store: str | None = Field(default=None, description="Store name if mentioned, e.g. 'Pingo Doce'")
+
+
+class ListShoppingItemsArgs(BaseModel):
+    category: Literal["grocery", "pharmacy", "electronics", "online", "home", "clothes", "books", "other", "all"] | None = Field(default=None)
+    status: Literal["pending", "bought", "skipped", "all"] | None = Field(default=None)
+
+
+class CompleteShoppingItemArgs(BaseModel):
+    id: int | None = Field(default=None, description="ID of the shopping item if specified")
+    name: str | None = Field(default=None, description="Name of the item if no ID given, e.g. 'milk'")
+
+
+class DeleteShoppingItemArgs(BaseModel):
+    id: int | None = Field(default=None, description="ID of the shopping item if specified")
+    name: str | None = Field(default=None, description="Name of the item if no ID given")
+
+
+class AddWishlistItemArgs(BaseModel):
+    name: str = Field(description="Name of the item to add to the wishlist")
+    category: Literal["grocery", "pharmacy", "electronics", "online", "home", "clothes", "books", "other"] | None = Field(default=None)
+    estimated_price: str | None = Field(default=None, description="Estimated price if mentioned, e.g. '150'")
+    url: str | None = Field(default=None)
+
+
+class PromoteWishlistItemArgs(BaseModel):
+    id: int | None = Field(default=None, description="ID of the wishlist item if specified")
+    name: str | None = Field(default=None, description="Name of the item if no ID given")
+    priority: Literal["need", "want"] | None = Field(default=None)
+
+
 _INTENT_SCHEMAS: dict[str, type[BaseModel]] = {
     "task.add": CreateTaskArgs,
     "task.list": GetTasksArgs,
     "note.add": CreateNoteArgs,
     "event.add": CreateEventArgs,
     "event.list": GetCalendarArgs,
+    "shopping.add": AddShoppingItemArgs,
+    "shopping.list": ListShoppingItemsArgs,
+    "shopping.complete": CompleteShoppingItemArgs,
+    "shopping.delete": DeleteShoppingItemArgs,
+    "wishlist.add": AddWishlistItemArgs,
+    "wishlist.promote": PromoteWishlistItemArgs,
 }
 
 _INTENTS_WITH_DATES = {"task.add", "event.add", "event.list"}

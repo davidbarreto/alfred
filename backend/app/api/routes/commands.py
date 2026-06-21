@@ -32,6 +32,7 @@ from app.dependencies import (
     ExtractionLlmProviderDep,
     NoteServiceDep,
     RecurringTransactionServiceDep,
+    ShoppingServiceDep,
     TaskServiceDep,
     TransactionServiceDep,
 )
@@ -83,6 +84,7 @@ async def execute_command(
     account_service: AccountServiceDep,
     budget_service: BudgetServiceDep,
     recurring_service: RecurringTransactionServiceDep,
+    shopping_service: ShoppingServiceDep,
 ):
     logger.info("POST /commands/execute %s.%s", request.type, request.command)
     execution = await cmd_execution_service.create(
@@ -105,6 +107,7 @@ async def execute_command(
             account_service=account_service,
             budget_service=budget_service,
             recurring_service=recurring_service,
+            shopping_service=shopping_service,
         )
         entity_id = result.get("id") if isinstance(result, dict) else None
         logger.info(

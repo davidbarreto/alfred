@@ -24,6 +24,15 @@ _KNOWN_INTENTS = {
     "finance.budget_list",
     "finance.budget_remaining",
     "finance.balance_forecast",
+    "shopping.add",
+    "shopping.list",
+    "shopping.complete",
+    "shopping.delete",
+    "shopping.update",
+    "wishlist.add",
+    "wishlist.list",
+    "wishlist.delete",
+    "wishlist.promote",
     "unknown",
 }
 

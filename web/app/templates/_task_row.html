@@ -18,7 +18,8 @@
   <div class="absolute left-0 top-0 bottom-0 w-[3px]
     {% if task.urgency == 'URGENT' %}bg-[#E24B4A]
     {% elif task.priority == 'HIGH' %}bg-[#BA7517]
-    {% else %}bg-transparent{% endif %}"></div>
+    {% elif task.priority == 'MEDIUM' %}bg-[#378ADD]
+    {% else %}bg-gray-200{% endif %}"></div>
 
   <div class="p-4 pl-5">
 
@@ -38,10 +39,10 @@
       </span>
     </div>
 
-    <!-- Metadata row (only rendered when there's something to show) -->
-    {% if deadline or task.recurrence_rule or task.urgency == 'URGENT' or task.priority == 'HIGH' or is_doing %}
+    <!-- Metadata row — always rendered -->
     <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs mb-3 pl-[26px]">
 
+      <!-- Due date -->
       {% if deadline %}
         {% if deadline < today %}
         <span class="flex items-center gap-1 text-[#E24B4A]">
@@ -62,22 +63,33 @@
         {% endif %}
       {% endif %}
 
+      <!-- Priority (always shown) -->
+      {% if task.urgency == 'URGENT' %}
+      <span class="flex items-center gap-1 text-[#E24B4A] font-medium">
+        <i class="ti ti-alert-triangle" style="font-size:0.8rem"></i>Urgent
+      </span>
+      {% elif task.priority == 'HIGH' %}
+      <span class="flex items-center gap-1 text-[#BA7517]">
+        <i class="ti ti-arrow-up" style="font-size:0.8rem"></i>High
+      </span>
+      {% elif task.priority == 'MEDIUM' %}
+      <span class="flex items-center gap-1 text-[#378ADD]">
+        <i class="ti ti-arrow-right" style="font-size:0.8rem"></i>Medium
+      </span>
+      {% else %}
+      <span class="flex items-center gap-1 text-gray-300">
+        <i class="ti ti-arrow-down" style="font-size:0.8rem"></i>Low
+      </span>
+      {% endif %}
+
+      <!-- Recurrence -->
       {% if task.recurrence_rule %}
       <span class="flex items-center gap-1 text-gray-400">
         <i class="ti ti-repeat" style="font-size:0.8rem"></i>{{ freq_label }}
       </span>
       {% endif %}
 
-      {% if task.urgency == 'URGENT' %}
-      <span class="flex items-center gap-1 text-[#E24B4A]">
-        <i class="ti ti-alert-triangle" style="font-size:0.8rem"></i>Urgent
-      </span>
-      {% elif task.priority == 'HIGH' %}
-      <span class="flex items-center gap-1 text-[#BA7517]">
-        <i class="ti ti-arrow-up" style="font-size:0.8rem"></i>High priority
-      </span>
-      {% endif %}
-
+      <!-- In-progress status -->
       {% if is_doing %}
       <span class="flex items-center gap-1 text-[#378ADD]">
         <i class="ti ti-player-play" style="font-size:0.8rem"></i>In progress
@@ -85,7 +97,6 @@
       {% endif %}
 
     </div>
-    {% endif %}
 
     <!-- Tags + overflow menu -->
     <div class="flex items-center justify-between pl-[26px]">

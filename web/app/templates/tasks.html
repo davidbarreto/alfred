@@ -4,17 +4,18 @@
 
 {% block content %}
 <div class="p-6 space-y-4">
-  <h1 class="text-xl font-bold">Tasks</h1>
+  <h1 class="text-base font-semibold text-gray-900">Tasks</h1>
 
   <!-- Filter pills -->
-  <div class="flex flex-wrap gap-2 border-b border-base-300 pb-4">
+  <div class="flex flex-wrap gap-1.5 border-b border-gray-200 pb-4">
     {% for key, defn in filters.items() %}
     <a
       href="/tasks?filter={{ key }}"
       hx-get="/tasks/list?filter={{ key }}"
       hx-target="#task-list"
       hx-push-url="/tasks?filter={{ key }}"
-      class="btn btn-sm {% if active_filter == key %}btn-primary{% else %}btn-ghost{% endif %}"
+      class="px-3 py-1 rounded-full text-xs font-medium transition-colors
+        {% if active_filter == key %}bg-[#E6F1FB] text-[#0C447C]{% else %}text-gray-500 hover:bg-gray-100 hover:text-gray-700{% endif %}"
     >{{ defn.label }}</a>
     {% endfor %}
   </div>

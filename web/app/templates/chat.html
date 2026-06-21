@@ -9,19 +9,19 @@
   <div class="flex-1 overflow-y-auto p-6 space-y-4" id="messages"></div>
 
   <!-- Input bar -->
-  <div class="border-t border-base-300 p-4 bg-base-100">
+  <div class="border-t border-gray-200 p-4 bg-white">
     <form id="chat-form" class="flex gap-2">
       <input
         id="chat-input"
         type="text"
         placeholder="Message Alfred…"
-        class="input input-bordered flex-1"
+        class="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-[#378ADD] bg-white disabled:bg-gray-50 disabled:text-gray-400"
         autocomplete="off"
         disabled
       />
-      <button type="submit" class="btn btn-primary" id="send-btn" disabled>Send</button>
+      <button type="submit" class="btn btn-sm btn-primary" id="send-btn" disabled>Send</button>
     </form>
-    <div id="chat-status" class="text-xs text-base-content/40 mt-1"></div>
+    <div id="chat-status" class="text-xs text-gray-400 mt-1"></div>
   </div>
 </div>
 
@@ -44,8 +44,8 @@ function appendMessage(role, text) {
     ? "chat chat-end"
     : "chat chat-start";
   div.innerHTML = `
-    <div class="chat-header text-xs text-base-content/40 mb-1">${role === "user" ? "You" : "Alfred"}</div>
-    <div class="chat-bubble ${role === "user" ? "chat-bubble-primary" : "chat-bubble-neutral"} whitespace-pre-wrap"></div>
+    <div class="chat-header text-xs text-gray-400 mb-1">${role === "user" ? "You" : "Alfred"}</div>
+    <div class="chat-bubble ${role === "user" ? "chat-bubble-neutral" : "chat-bubble-primary"} whitespace-pre-wrap text-sm"></div>
   `;
   div.querySelector(".chat-bubble").textContent = text;
   messagesEl.appendChild(div);

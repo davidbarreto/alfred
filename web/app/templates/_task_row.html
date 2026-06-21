@@ -1,6 +1,6 @@
 {% set deadline = task.deadline[:10] if task.deadline else "" %}
 {% set is_done = task.status == "DONE" %}
-<li class="flex items-center gap-3 py-2 px-3 rounded-lg hover:bg-base-200 group" id="task-{{ task.id }}">
+<li class="flex items-center gap-3 py-2 px-3 rounded-lg hover:bg-gray-50 group" id="task-{{ task.id }}">
 
   <!-- Checkbox -->
   <input
@@ -13,38 +13,39 @@
   />
 
   <!-- Urgency dot -->
-  <span class="w-2 h-2 rounded-full flex-shrink-0
-    {% if task.urgency == 'URGENT' %}bg-error
-    {% elif task.priority == 'HIGH' %}bg-warning
-    {% else %}bg-base-content/20{% endif %}"></span>
+  <span class="w-1.5 h-1.5 rounded-full flex-shrink-0
+    {% if task.urgency == 'URGENT' %}bg-[#E24B4A]
+    {% elif task.priority == 'HIGH' %}bg-[#BA7517]
+    {% else %}bg-gray-300{% endif %}"></span>
 
   <!-- Task title -->
-  <span class="flex-1 text-sm min-w-0 truncate {% if is_done %}line-through text-base-content/40{% endif %}">
+  <span class="flex-1 text-sm min-w-0 truncate {% if is_done %}line-through text-gray-300{% else %}text-gray-800{% endif %}">
     {{ task.title }}
   </span>
 
   <!-- Category tag (first tag) -->
   {% if task.tags %}
-  <span class="badge badge-ghost badge-xs flex-shrink-0">{{ task.tags[0] }}</span>
+  <span class="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-500 flex-shrink-0">{{ task.tags[0] }}</span>
   {% endif %}
 
   <!-- Due-date badge -->
   {% if deadline %}
     {% if deadline == today %}
-    <span class="badge badge-error badge-xs flex-shrink-0">Today</span>
+    <span class="text-[10px] px-1.5 py-0.5 rounded bg-[#FCEBEB] text-[#E24B4A] flex-shrink-0 font-medium">Today</span>
     {% elif deadline == tomorrow %}
-    <span class="badge badge-warning badge-xs flex-shrink-0">Tomorrow</span>
+    <span class="text-[10px] px-1.5 py-0.5 rounded bg-[#FAEEDA] text-[#BA7517] flex-shrink-0">Tomorrow</span>
     {% else %}
-    <span class="badge badge-ghost badge-xs flex-shrink-0">{{ deadline }}</span>
+    <span class="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-500 flex-shrink-0">{{ deadline }}</span>
     {% endif %}
   {% endif %}
 
   <!-- Overflow menu -->
   <div class="dropdown dropdown-end opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
-    <label tabindex="0" class="btn btn-ghost btn-xs p-0 w-6 h-6">⋯</label>
-    <ul tabindex="0" class="dropdown-content menu menu-xs bg-base-100 rounded-box shadow z-10 w-28 p-1">
+    <label tabindex="0" class="cursor-pointer w-6 h-6 flex items-center justify-center rounded hover:bg-gray-100 text-gray-400">⋯</label>
+    <ul tabindex="0" class="dropdown-content bg-white border border-gray-200 rounded-lg shadow-sm z-10 w-32 p-1 text-sm">
       <li>
         <button
+          class="w-full text-left px-3 py-1.5 rounded hover:bg-gray-50 text-gray-700"
           hx-patch="/tasks/{{ task.id }}/doing"
           hx-target="#task-{{ task.id }}"
           hx-swap="outerHTML"
@@ -52,6 +53,7 @@
       </li>
       <li>
         <button
+          class="w-full text-left px-3 py-1.5 rounded hover:bg-[#FCEBEB] text-[#E24B4A]"
           hx-delete="/tasks/{{ task.id }}"
           hx-target="#task-{{ task.id }}"
           hx-swap="outerHTML"

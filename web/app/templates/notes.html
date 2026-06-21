@@ -6,19 +6,17 @@
 <div class="p-6 space-y-4">
 
   <div class="flex items-center justify-between">
-    <h1 class="text-xl font-bold">Notes</h1>
+    <h1 class="text-base font-semibold text-gray-900">Notes</h1>
   </div>
 
-  <!-- Client-side search -->
   <input
     id="notes-search"
     type="text"
     placeholder="Search notes…"
-    class="input input-bordered input-sm w-full max-w-sm"
+    class="border border-gray-200 rounded-lg px-3 py-1.5 text-sm bg-white w-full max-w-sm focus:outline-none focus:ring-1 focus:ring-[#378ADD]"
     oninput="filterNotes(this.value)"
   />
 
-  <!-- 3-col card grid -->
   <div id="notes-grid">
     {% include "_notes_grid.html" %}
   </div>

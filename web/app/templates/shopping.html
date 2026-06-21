@@ -5,14 +5,13 @@
 {% block content %}
 <div class="p-6 space-y-4">
 
-  <!-- Header row -->
+  <!-- Header -->
   <div class="flex items-center justify-between">
-    <h1 class="text-xl font-bold">Shopping List</h1>
+    <h1 class="text-base font-semibold text-gray-900">Shopping List</h1>
     <button
-      class="btn btn-ghost btn-sm text-base-content/50"
+      class="text-xs text-gray-400 hover:text-gray-600 px-2 py-1 rounded hover:bg-gray-100"
       hx-get="/shopping/list?status=pending&category={{ active_category }}"
       hx-target="#shopping-list"
-      title="Clear checked items from view"
     >Clear checked</button>
   </div>
 
@@ -28,39 +27,41 @@
       name="name"
       type="text"
       placeholder="Add item…"
-      class="input input-bordered input-sm flex-1"
+      class="input input-sm flex-1 border border-gray-200 bg-white rounded-lg px-3 text-sm"
       required
     />
-    <select name="category" class="select select-bordered select-sm">
+    <select name="category" class="select select-sm border border-gray-200 bg-white rounded-lg text-sm px-2">
       {% for cat in categories %}
       <option value="{{ cat }}">{{ cat }}</option>
       {% endfor %}
     </select>
-    <select name="priority" class="select select-bordered select-sm">
+    <select name="priority" class="select select-sm border border-gray-200 bg-white rounded-lg text-sm px-2">
       <option value="need">Need</option>
       <option value="want">Want</option>
     </select>
-    <button class="btn btn-primary btn-sm">Add</button>
+    <button class="btn btn-sm btn-primary">Add</button>
   </form>
 
   <!-- Filter pills: status -->
-  <div class="flex gap-2 flex-wrap items-center">
+  <div class="flex gap-1.5 flex-wrap items-center">
     {% for value, label in [("pending", "Pending"), ("bought", "Bought"), ("all", "All")] %}
     <a
       href="/shopping?status={{ value }}&category={{ active_category }}"
-      class="btn btn-sm {% if active_status == value %}btn-primary{% else %}btn-ghost{% endif %}"
+      class="px-3 py-1 rounded-full text-xs font-medium transition-colors
+        {% if active_status == value %}bg-[#E6F1FB] text-[#0C447C]{% else %}text-gray-500 hover:bg-gray-100{% endif %}"
     >{{ label }}</a>
     {% endfor %}
-    <div class="w-px h-5 bg-base-300 mx-1"></div>
+    <div class="w-px h-4 bg-gray-200 mx-1"></div>
     {% for cat in ["all"] + categories %}
     <a
       href="/shopping?status={{ active_status }}&category={{ cat }}"
-      class="btn btn-xs {% if active_category == cat %}btn-secondary{% else %}btn-ghost{% endif %}"
+      class="px-2.5 py-0.5 rounded-full text-xs transition-colors
+        {% if active_category == cat %}bg-gray-200 text-gray-700 font-medium{% else %}text-gray-400 hover:bg-gray-100{% endif %}"
     >{{ cat }}</a>
     {% endfor %}
   </div>
 
-  <!-- Items grouped by category -->
+  <!-- Items -->
   <div id="shopping-list">
     {% include "_shopping_list.html" %}
   </div>

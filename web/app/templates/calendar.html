@@ -5,20 +5,20 @@
 {% block content %}
 <div class="p-6 space-y-6">
 
-  <!-- Month navigation: prev / Today / next -->
-  <div class="flex items-center gap-3">
-    <a href="/calendar?year={{ prev_year }}&month={{ prev_month }}" class="btn btn-ghost btn-sm btn-square">‹</a>
-    <a href="/calendar" class="btn btn-ghost btn-sm">Today</a>
-    <a href="/calendar?year={{ next_year }}&month={{ next_month }}" class="btn btn-ghost btn-sm btn-square">›</a>
-    <h1 class="text-xl font-bold ml-2">{{ month_name }}</h1>
+  <!-- Month navigation -->
+  <div class="flex items-center gap-2">
+    <a href="/calendar?year={{ prev_year }}&month={{ prev_month }}" class="w-7 h-7 flex items-center justify-center rounded hover:bg-gray-100 text-gray-500">‹</a>
+    <a href="/calendar" class="px-3 py-1 rounded text-xs text-gray-500 hover:bg-gray-100">Today</a>
+    <a href="/calendar?year={{ next_year }}&month={{ next_month }}" class="w-7 h-7 flex items-center justify-center rounded hover:bg-gray-100 text-gray-500">›</a>
+    <h1 class="text-base font-semibold text-gray-900 ml-1">{{ month_name }}</h1>
   </div>
 
   <!-- 7-column month grid -->
-  <div class="card bg-base-100 shadow-sm overflow-hidden">
+  <div class="bg-white border border-gray-200 rounded-lg overflow-hidden">
     <!-- Day-of-week headers -->
-    <div class="grid grid-cols-7 border-b border-base-300">
+    <div class="grid grid-cols-7 border-b border-gray-200">
       {% for name in ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"] %}
-      <div class="py-2 text-center text-xs font-semibold text-base-content/50">{{ name }}</div>
+      <div class="py-2 text-center text-[10px] font-semibold text-gray-400 uppercase tracking-wide">{{ name }}</div>
       {% endfor %}
     </div>
     <!-- Day cells -->
@@ -26,21 +26,21 @@
       {% for week in weeks %}
         {% for day in week %}
         {% set day_str = "%d-%02d-%02d"|format(year, month, day) if day else "" %}
-        <div class="min-h-20 border-b border-r border-base-300 p-1
-          {% if day == 0 %}bg-base-200/40{% endif %}
-          {% if day_str == today %}bg-primary/10{% endif %}">
+        <div class="min-h-[80px] border-b border-r border-gray-100 p-1
+          {% if day == 0 %}bg-gray-50/60{% endif %}
+          {% if day_str == today %}bg-[#E6F1FB]/40{% endif %}">
           {% if day %}
-          <div class="text-xs font-semibold mb-1 w-6 h-6 flex items-center justify-center rounded-full
-            {% if day_str == today %}bg-primary text-primary-content{% else %}text-base-content/60{% endif %}">
+          <div class="text-xs font-medium mb-1 w-5 h-5 flex items-center justify-center rounded-full
+            {% if day_str == today %}bg-[#378ADD] text-white{% else %}text-gray-400{% endif %}">
             {{ day }}
           </div>
           {% for ev in events_by_date.get(day_str, [])[:3] %}
-          <div class="text-xs rounded px-1 py-0.5 mb-0.5 truncate bg-primary/15 text-primary leading-tight">
+          <div class="text-[10px] rounded px-1 py-0.5 mb-0.5 truncate bg-[#E6F1FB] text-[#0C447C] leading-tight">
             {{ ev.start_datetime[11:16] }} {{ ev.title }}
           </div>
           {% endfor %}
           {% if events_by_date.get(day_str, []) | length > 3 %}
-          <div class="text-xs text-base-content/40 px-1">+{{ events_by_date[day_str]|length - 3 }} more</div>
+          <div class="text-[10px] text-gray-400 px-1">+{{ events_by_date[day_str]|length - 3 }} more</div>
           {% endif %}
           {% endif %}
         </div>
@@ -50,32 +50,32 @@
   </div>
 
   <!-- Upcoming events list -->
-  <div class="card bg-base-100 shadow-sm">
-    <div class="card-body p-4">
-      <h2 class="font-semibold text-sm mb-3">Upcoming</h2>
+  <div class="bg-white border border-gray-200 rounded-lg">
+    <div class="p-4">
+      <h2 class="text-sm font-medium text-gray-900 mb-3">Upcoming</h2>
       {% set upcoming = events | selectattr("start_datetime", "ge", today) | list | sort(attribute="start_datetime") %}
       {% if upcoming %}
-      <ul class="space-y-0">
+      <ul>
         {% for ev in upcoming[:8] %}
-        <li class="flex gap-4 py-2.5 border-b border-base-300 last:border-0 items-start">
-          <span class="w-2 h-2 rounded-full bg-primary mt-1.5 flex-shrink-0"></span>
+        <li class="flex gap-4 py-2.5 border-b border-gray-100 last:border-0 items-start">
+          <span class="w-1.5 h-1.5 rounded-full bg-[#378ADD] mt-2 flex-shrink-0"></span>
           <div class="flex-1 min-w-0">
             <div class="flex items-baseline gap-2">
-              <span class="text-xs text-base-content/50 flex-shrink-0">{{ ev.start_datetime[:10] }} {{ ev.start_datetime[11:16] }}</span>
-              <span class="text-sm font-medium truncate">{{ ev.title }}</span>
+              <span class="text-xs text-gray-400 flex-shrink-0">{{ ev.start_datetime[:10] }} {{ ev.start_datetime[11:16] }}</span>
+              <span class="text-sm text-gray-800 truncate">{{ ev.title }}</span>
             </div>
             {% if ev.location %}
-            <div class="text-xs text-base-content/40 mt-0.5 truncate">{{ ev.location }}</div>
+            <div class="text-xs text-gray-400 mt-0.5 truncate">{{ ev.location }}</div>
             {% endif %}
           </div>
           {% for tag in ev.tags[:2] %}
-          <span class="badge badge-ghost badge-xs flex-shrink-0">{{ tag }}</span>
+          <span class="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-400 flex-shrink-0">{{ tag }}</span>
           {% endfor %}
         </li>
         {% endfor %}
       </ul>
       {% else %}
-      <p class="text-sm text-base-content/40">No upcoming events this month.</p>
+      <p class="text-sm text-gray-400">No upcoming events this month.</p>
       {% endif %}
     </div>
   </div>

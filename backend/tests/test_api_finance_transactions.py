@@ -6,7 +6,9 @@ from unittest.mock import AsyncMock
 from app.features.finance.accounts.schemas import AccountRead
 from app.features.finance.transactions.schemas import (
     BalanceForecastResponse,
+    CategorySpendingItem,
     SpendingAverageResponse,
+    SpendingByCategoryResponse,
     SpendingReportResponse,
     SpendingTopResponse,
     TransactionRead,
@@ -57,6 +59,19 @@ def mock_txn_service():
         from_date=date(2026, 6, 1), to_date=date(2026, 6, 30), top_n=5,
     )
     svc.balance_forecast.return_value = (Decimal("0"), Decimal("0"), date(2026, 6, 30))
+    svc.spending_by_category.return_value = SpendingByCategoryResponse(
+        items=[
+            CategorySpendingItem(
+                category_id=1,
+                category_name="Groceries",
+                total=Decimal("150.00"),
+                transaction_count=3,
+            )
+        ],
+        from_date=date(2026, 6, 1),
+        to_date=date(2026, 6, 30),
+        currency="EUR",
+    )
     return svc
 
 
@@ -209,6 +224,33 @@ class TestSpendingTop:
 
     def test_requires_auth(self, client):
         assert client.get("/finance/transactions/top").status_code == 403
+
+
+class TestSpendingByCategory:
+    def test_returns_200_with_items(self, client):
+        response = client.get("/finance/transactions/by-category", headers=AUTH)
+        assert response.status_code == 200
+        data = response.json()
+        assert "items" in data
+        assert "from_date" in data
+        assert "currency" in data
+        assert data["items"][0]["category_name"] == "Groceries"
+
+    def test_items_have_required_fields(self, client):
+        response = client.get("/finance/transactions/by-category", headers=AUTH)
+        item = response.json()["items"][0]
+        assert "category_id" in item
+        assert "category_name" in item
+        assert "total" in item
+        assert "transaction_count" in item
+
+    def test_period_filter_forwarded(self, client, mock_txn_service):
+        client.get("/finance/transactions/by-category?period=this+month", headers=AUTH)
+        filters = mock_txn_service.spending_by_category.call_args[0][0]
+        assert filters.period == "this month"
+
+    def test_requires_auth(self, client):
+        assert client.get("/finance/transactions/by-category").status_code == 403
 
 
 class TestBalanceForecast:

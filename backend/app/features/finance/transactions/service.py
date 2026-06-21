@@ -6,7 +6,9 @@ from app.features.finance.transactions.repository import TransactionRepository
 from app.features.finance.transactions.schemas import (
     AnalyticsFilters,
     BalanceForecastResponse,
+    CategorySpendingItem,
     SpendingAverageResponse,
+    SpendingByCategoryResponse,
     SpendingReportResponse,
     SpendingTopResponse,
     TransactionCreate,
@@ -77,6 +79,29 @@ class TransactionService:
             days=days,
             from_date=from_date,
             to_date=to_date,
+        )
+
+    async def spending_by_category(self, filters: AnalyticsFilters) -> SpendingByCategoryResponse:
+        from_date, to_date = resolve_period(filters.period, filters.from_date, filters.to_date)
+        rows = await self._repo.get_spending_by_category(
+            from_date=from_date,
+            to_date=to_date,
+            account_id=filters.account_id,
+        )
+        items = [
+            CategorySpendingItem(
+                category_id=row[0],
+                category_name=row[1],
+                total=row[2],
+                transaction_count=row[3],
+            )
+            for row in rows
+        ]
+        return SpendingByCategoryResponse(
+            items=items,
+            from_date=from_date,
+            to_date=to_date,
+            currency="EUR",
         )
 
     async def spending_top(self, filters: AnalyticsFilters) -> SpendingTopResponse:

@@ -124,6 +124,20 @@ class SpendingReportResponse(BaseModel):
     transaction_count: int
 
 
+class CategorySpendingItem(BaseModel):
+    category_id: int | None
+    category_name: str | None
+    total: Decimal
+    transaction_count: int
+
+
+class SpendingByCategoryResponse(BaseModel):
+    items: list[CategorySpendingItem]
+    from_date: date
+    to_date: date
+    currency: str
+
+
 class SpendingAverageResponse(BaseModel):
     average_per_day: Decimal
     total: Decimal

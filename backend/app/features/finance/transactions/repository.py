@@ -119,6 +119,38 @@ class TransactionRepository:
         result = await self._session.execute(query)
         return list(result.scalars().all())
 
+    async def get_spending_by_category(
+        self,
+        from_date: date,
+        to_date: date,
+        account_id: int | None = None,
+    ) -> list[tuple[int | None, str | None, Decimal, int]]:
+        from app.features.finance.categories.tables import Category
+
+        query = (
+            select(
+                Transaction.category_id,
+                Category.name,
+                func.coalesce(func.sum(Transaction.amount), 0),
+                func.count(Transaction.id),
+            )
+            .outerjoin(Category, Transaction.category_id == Category.id)
+            .where(
+                Transaction.type == "expense",
+                Transaction.date >= from_date,
+                Transaction.date <= to_date,
+            )
+            .group_by(Transaction.category_id, Category.name)
+            .order_by(func.sum(Transaction.amount).desc())
+        )
+        if account_id is not None:
+            query = query.where(Transaction.account_id == account_id)
+        result = await self._session.execute(query)
+        return [
+            (row[0], row[1], Decimal(str(row[2])), row[3])
+            for row in result.all()
+        ]
+
     async def get_category_spent(
         self,
         category_id: int,

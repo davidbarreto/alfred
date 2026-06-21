@@ -11,6 +11,7 @@ from app.features.finance.transactions.schemas import (
     AnalyticsFilters,
     BalanceForecastResponse,
     SpendingAverageResponse,
+    SpendingByCategoryResponse,
     SpendingReportResponse,
     SpendingTopResponse,
     TransactionCreate,
@@ -32,6 +33,13 @@ async def list_transactions(
     service: TransactionServiceDep, filters: TransactionFilters = Depends()
 ):
     return await service.list(filters)
+
+
+@router.get("/by-category", response_model=SpendingByCategoryResponse)
+async def spending_by_category(
+    service: TransactionServiceDep, filters: AnalyticsFilters = Depends()
+):
+    return await service.spending_by_category(filters)
 
 
 @router.get("/report", response_model=SpendingReportResponse)

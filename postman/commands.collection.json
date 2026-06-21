@@ -2,7 +2,7 @@
   "info": {
     "name": "Alfred - Commands API",
     "_postman_id": "alfred-commands-v1",
-    "description": "Test suite for the Commands API — resolves natural language text into structured commands.",
+    "description": "Test suite for the Commands API. Flow: /commands/detect → /commands/extract (NL only) → /commands/execute → /commands/respond.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -44,25 +44,23 @@
       }
     },
     {
-      "name": "02 - Detect Intent (task.list)",
+      "name": "02 - Detect: slash command (write)",
       "event": [
         {
           "listen": "test",
           "script": {
             "exec": [
               "pm.test('Status is 200', () => pm.response.to.have.status(200));",
-              "pm.test('Response has intent, confidence and command_type', () => {",
+              "pm.test('Slash command detected deterministically', () => {",
               "    const json = pm.response.json();",
-              "    pm.expect(json).to.have.property('intent');",
-              "    pm.expect(json).to.have.property('confidence');",
-              "    pm.expect(json).to.have.property('command_type');",
-              "    pm.expect(json.intent).to.be.a('string').and.not.empty;",
-              "    pm.expect(json.confidence).to.be.a('number').and.within(0, 1);",
-              "});",
-              "pm.test('Intent is task.list with read type', () => {",
-              "    const json = pm.response.json();",
-              "    pm.expect(json.intent).to.eql('task.list');",
-              "    pm.expect(json.command_type).to.eql('read');",
+              "    pm.expect(json.operation_type).to.eql('write');",
+              "    pm.expect(json.commands).to.be.an('array').with.lengthOf(1);",
+              "    const cmd = json.commands[0];",
+              "    pm.expect(cmd.type).to.eql('task');",
+              "    pm.expect(cmd.command).to.eql('add');",
+              "    pm.expect(cmd.source).to.eql('deterministic');",
+              "    pm.expect(cmd.confidence).to.eql(1.0);",
+              "    pm.expect(cmd.args).to.have.property('title');",
               "});"
             ],
             "type": "text/javascript"
@@ -74,28 +72,134 @@
         "header": [{ "key": "Content-Type", "value": "application/json" }],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"text\": \"What are my pending tasks?\"\n}",
+          "raw": "{\n  \"text\": \"/taskadd Buy groceries\"\n}",
           "options": { "raw": { "language": "json" } }
         },
         "url": {
-          "raw": "{{base_url}}/commands/intents",
+          "raw": "{{base_url}}/commands/detect",
           "host": ["{{base_url}}"],
-          "path": ["commands", "intents"]
+          "path": ["commands", "detect"]
         }
       }
     },
     {
-      "name": "03 - Detect Intent (unknown)",
+      "name": "03 - Detect: slash command (read)",
       "event": [
         {
           "listen": "test",
           "script": {
             "exec": [
               "pm.test('Status is 200', () => pm.response.to.have.status(200));",
-              "pm.test('Returns unknown with null command_type for conversational text', () => {",
+              "pm.test('Read command detected with operation_type=read', () => {",
               "    const json = pm.response.json();",
-              "    pm.expect(json.intent).to.eql('unknown');",
-              "    pm.expect(json.command_type).to.be.null;",
+              "    pm.expect(json.operation_type).to.eql('read');",
+              "    pm.expect(json.commands[0].command).to.eql('list');",
+              "    pm.expect(json.commands[0].source).to.eql('deterministic');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"text\": \"/tasklist\"\n}",
+          "options": { "raw": { "language": "json" } }
+        },
+        "url": {
+          "raw": "{{base_url}}/commands/detect",
+          "host": ["{{base_url}}"],
+          "path": ["commands", "detect"]
+        }
+      }
+    },
+    {
+      "name": "04 - Detect: multiple slash commands",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Both commands detected', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json.commands).to.have.lengthOf(2);",
+              "    pm.expect(json.operation_type).to.eql('write');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"text\": \"/taskadd Buy milk /tasklist\"\n}",
+          "options": { "raw": { "language": "json" } }
+        },
+        "url": {
+          "raw": "{{base_url}}/commands/detect",
+          "host": ["{{base_url}}"],
+          "path": ["commands", "detect"]
+        }
+      }
+    },
+    {
+      "name": "05 - Detect: with Telegram command hint",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Hint path resolves only the hinted command', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json.commands).to.have.lengthOf(1);",
+              "    const cmd = json.commands[0];",
+              "    pm.expect(cmd.type).to.eql('task');",
+              "    pm.expect(cmd.args.title).to.eql('buy chocolate');",
+              "});",
+              "pm.test('Raw text is the original full message', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json.raw_text).to.eql('/taskadd buy chocolate /noteadd chocolate is good');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"text\": \"/taskadd buy chocolate /noteadd chocolate is good\",\n  \"command\": \"/taskadd\",\n  \"args\": \"buy chocolate\"\n}",
+          "options": { "raw": { "language": "json" } }
+        },
+        "url": {
+          "raw": "{{base_url}}/commands/detect",
+          "host": ["{{base_url}}"],
+          "path": ["commands", "detect"]
+        }
+      }
+    },
+    {
+      "name": "06 - Detect: conversational text (no command)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('No commands detected for conversational text', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json.operation_type).to.be.null;",
+              "    pm.expect(json.commands).to.be.an('array').that.is.empty;",
               "});"
             ],
             "type": "text/javascript"
@@ -111,36 +215,25 @@
           "options": { "raw": { "language": "json" } }
         },
         "url": {
-          "raw": "{{base_url}}/commands/intents",
+          "raw": "{{base_url}}/commands/detect",
           "host": ["{{base_url}}"],
-          "path": ["commands", "intents"]
+          "path": ["commands", "detect"]
         }
       }
     },
     {
-      "name": "04 - Resolve Task Command",
+      "name": "07 - Extract: args for NL intent (task.add)",
       "event": [
         {
           "listen": "test",
           "script": {
             "exec": [
               "pm.test('Status is 200', () => pm.response.to.have.status(200));",
-              "pm.test('Response has status and commands', () => {",
+              "pm.test('Extract returns intent and structured args', () => {",
               "    const json = pm.response.json();",
-              "    pm.expect(json).to.have.property('status');",
-              "    pm.expect(json).to.have.property('commands');",
-              "    pm.expect(json).to.have.property('raw_text');",
-              "    pm.expect(json.commands).to.be.an('array');",
-              "});",
-              "pm.test('Command was parsed', () => {",
-              "    const json = pm.response.json();",
-              "    pm.expect(json.status).to.eql('ok');",
-              "    pm.expect(json.commands.length).to.be.at.least(1);",
-              "    const cmd = json.commands[0];",
-              "    pm.expect(cmd).to.have.property('type');",
-              "    pm.expect(cmd).to.have.property('command');",
-              "    pm.expect(cmd).to.have.property('confidence');",
-              "    pm.expect(cmd).to.have.property('args');",
+              "    pm.expect(json.intent).to.eql('task.add');",
+              "    pm.expect(json.args).to.be.an('object');",
+              "    pm.expect(json.args).to.have.property('title');",
               "});"
             ],
             "type": "text/javascript"
@@ -149,35 +242,31 @@
       ],
       "request": {
         "method": "POST",
-        "header": [
-          { "key": "Content-Type", "value": "application/json" }
-        ],
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"text\": \"/task add Buy groceries priority:high\"\n}",
+          "raw": "{\n  \"text\": \"I need to buy groceries tomorrow\",\n  \"intent\": \"task.add\"\n}",
           "options": { "raw": { "language": "json" } }
         },
         "url": {
-          "raw": "{{base_url}}/commands/resolve",
+          "raw": "{{base_url}}/commands/extract",
           "host": ["{{base_url}}"],
-          "path": ["commands", "resolve"]
+          "path": ["commands", "extract"]
         }
       }
     },
     {
-      "name": "05 - Resolve Note Command",
+      "name": "08 - Extract: args for NL intent (event.add)",
       "event": [
         {
           "listen": "test",
           "script": {
             "exec": [
               "pm.test('Status is 200', () => pm.response.to.have.status(200));",
-              "pm.test('Response has status and commands', () => {",
+              "pm.test('Extract returns event args with title', () => {",
               "    const json = pm.response.json();",
-              "    pm.expect(json).to.have.property('status');",
-              "    pm.expect(json).to.have.property('commands');",
-              "    pm.expect(json).to.have.property('raw_text');",
-              "    pm.expect(json.commands).to.be.an('array');",
+              "    pm.expect(json.intent).to.eql('event.add');",
+              "    pm.expect(json.args).to.have.property('title');",
               "});"
             ],
             "type": "text/javascript"
@@ -186,141 +275,21 @@
       ],
       "request": {
         "method": "POST",
-        "header": [
-          { "key": "Content-Type", "value": "application/json" }
-        ],
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"text\": \"/note add Meeting notes from standup: discussed roadmap and Q3 priorities\"\n}",
+          "raw": "{\n  \"text\": \"Schedule a team meeting next Monday at 10am\",\n  \"intent\": \"event.add\"\n}",
           "options": { "raw": { "language": "json" } }
         },
         "url": {
-          "raw": "{{base_url}}/commands/resolve",
+          "raw": "{{base_url}}/commands/extract",
           "host": ["{{base_url}}"],
-          "path": ["commands", "resolve"]
+          "path": ["commands", "extract"]
         }
       }
     },
     {
-      "name": "06 - Resolve With Command Hint (Single Command)",
-      "event": [
-        {
-          "listen": "test",
-          "script": {
-            "exec": [
-              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
-              "pm.test('Exactly one command resolved from hint', () => {",
-              "    const json = pm.response.json();",
-              "    pm.expect(json.status).to.eql('ok');",
-              "    pm.expect(json.commands).to.have.lengthOf(1);",
-              "    const cmd = json.commands[0];",
-              "    pm.expect(cmd.type).to.eql('task');",
-              "    pm.expect(cmd.command).to.eql('add');",
-              "    pm.expect(cmd.args.task).to.eql('buy chocolate');",
-              "});",
-              "pm.test('Raw text is original full message', () => {",
-              "    const json = pm.response.json();",
-              "    pm.expect(json.raw_text).to.eql('/taskadd buy chocolate /noteadd chocolate is good');",
-              "});"
-            ],
-            "type": "text/javascript"
-          }
-        }
-      ],
-      "request": {
-        "method": "POST",
-        "header": [
-          { "key": "Content-Type", "value": "application/json" }
-        ],
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"text\": \"/taskadd buy chocolate /noteadd chocolate is good\",\n  \"command\": \"/taskadd\",\n  \"args\": \"buy chocolate\"\n}",
-          "options": { "raw": { "language": "json" } }
-        },
-        "url": {
-          "raw": "{{base_url}}/commands/resolve",
-          "host": ["{{base_url}}"],
-          "path": ["commands", "resolve"]
-        }
-      }
-    },
-    {
-      "name": "07 - Resolve With Command Hint (Note, With Flags)",
-      "event": [
-        {
-          "listen": "test",
-          "script": {
-            "exec": [
-              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
-              "pm.test('Note command resolved with tag', () => {",
-              "    const json = pm.response.json();",
-              "    pm.expect(json.status).to.eql('ok');",
-              "    pm.expect(json.commands).to.have.lengthOf(1);",
-              "    const cmd = json.commands[0];",
-              "    pm.expect(cmd.type).to.eql('note');",
-              "    pm.expect(cmd.command).to.eql('add');",
-              "    pm.expect(cmd.args).to.have.property('tags');",
-              "});"
-            ],
-            "type": "text/javascript"
-          }
-        }
-      ],
-      "request": {
-        "method": "POST",
-        "header": [
-          { "key": "Content-Type", "value": "application/json" }
-        ],
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"text\": \"/noteadd chocolate is good -t food\",\n  \"command\": \"/noteadd\",\n  \"args\": \"chocolate is good -t food\"\n}",
-          "options": { "raw": { "language": "json" } }
-        },
-        "url": {
-          "raw": "{{base_url}}/commands/resolve",
-          "host": ["{{base_url}}"],
-          "path": ["commands", "resolve"]
-        }
-      }
-    },
-    {
-      "name": "08 - Resolve Unparseable Text",
-      "event": [
-        {
-          "listen": "test",
-          "script": {
-            "exec": [
-              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
-              "pm.test('Status is not_parsed for plain text', () => {",
-              "    const json = pm.response.json();",
-              "    pm.expect(json).to.have.property('status');",
-              "    pm.expect(json).to.have.property('raw_text');",
-              "    pm.expect(json.raw_text).to.eql('hello world');",
-              "});"
-            ],
-            "type": "text/javascript"
-          }
-        }
-      ],
-      "request": {
-        "method": "POST",
-        "header": [
-          { "key": "Content-Type", "value": "application/json" }
-        ],
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"text\": \"hello world\"\n}",
-          "options": { "raw": { "language": "json" } }
-        },
-        "url": {
-          "raw": "{{base_url}}/commands/resolve",
-          "host": ["{{base_url}}"],
-          "path": ["commands", "resolve"]
-        }
-      }
-    },
-    {
-      "name": "09 - Execute Task Add",
+      "name": "09 - Execute: task add",
       "event": [
         {
           "listen": "test",
@@ -344,7 +313,7 @@
         "header": [{ "key": "Content-Type", "value": "application/json" }],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"type\": \"task\",\n  \"command\": \"add\",\n  \"args\": {\n    \"task\": \"Buy groceries\",\n    \"priority\": \"HIGH\",\n    \"deadline\": \"2026-06-20\"\n  }\n}",
+          "raw": "{\n  \"message_id\": {{core_message_id}},\n  \"type\": \"task\",\n  \"command\": \"add\",\n  \"args\": {\n    \"title\": \"Buy groceries\",\n    \"priority\": \"HIGH\",\n    \"deadline\": \"2026-06-20\"\n  }\n}",
           "options": { "raw": { "language": "json" } }
         },
         "url": {
@@ -355,7 +324,7 @@
       }
     },
     {
-      "name": "10 - Execute Note Add",
+      "name": "10 - Execute: note add",
       "event": [
         {
           "listen": "test",
@@ -378,7 +347,7 @@
         "header": [{ "key": "Content-Type", "value": "application/json" }],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"type\": \"note\",\n  \"command\": \"add\",\n  \"args\": {\n    \"content\": \"My girlfriend likes oat milk\",\n    \"tags\": \"personal\"\n  }\n}",
+          "raw": "{\n  \"message_id\": {{core_message_id}},\n  \"type\": \"note\",\n  \"command\": \"add\",\n  \"args\": {\n    \"content\": \"My girlfriend likes oat milk\",\n    \"tags\": \"personal\"\n  }\n}",
           "options": { "raw": { "language": "json" } }
         },
         "url": {
@@ -389,7 +358,7 @@
       }
     },
     {
-      "name": "11 - Execute Task List",
+      "name": "11 - Execute: task list",
       "event": [
         {
           "listen": "test",
@@ -411,7 +380,7 @@
         "header": [{ "key": "Content-Type", "value": "application/json" }],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"type\": \"task\",\n  \"command\": \"list\",\n  \"args\": {\n    \"status\": \"TODO\",\n    \"priority\": \"HIGH\"\n  }\n}",
+          "raw": "{\n  \"message_id\": {{core_message_id}},\n  \"type\": \"task\",\n  \"command\": \"list\",\n  \"args\": {\n    \"status\": \"TODO\",\n    \"priority\": \"HIGH\"\n  }\n}",
           "options": { "raw": { "language": "json" } }
         },
         "url": {
@@ -422,7 +391,7 @@
       }
     },
     {
-      "name": "12 - Respond to Command Results",
+      "name": "12 - Respond to command results",
       "event": [
         {
           "listen": "test",
@@ -455,7 +424,7 @@
       }
     },
     {
-      "name": "13 - Respond - No executions (empty response)",
+      "name": "13 - Respond: no executions (empty response)",
       "event": [
         {
           "listen": "test",

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+from decimal import Decimal
 from typing import Any
 
 from fastapi import HTTPException, status
@@ -29,10 +30,10 @@ async def handle_shopping(cmd_type: str, command: str, arguments: dict[str, Any]
                 name=arguments.get("name", ""),
                 category=arguments.get("category", "other"),
                 priority=arguments.get("priority", "need"),
-                quantity=float(quantity) if quantity else None,
+                quantity=Decimal(str(quantity)) if quantity else None,
                 unit=arguments.get("unit"),
                 store=arguments.get("store"),
-                estimated_price=float(estimated_price_raw) if estimated_price_raw else None,
+                estimated_price=Decimal(str(estimated_price_raw)) if estimated_price_raw else None,
                 notes=arguments.get("notes"),
             )
             result = await service.create_item(payload)
@@ -82,7 +83,7 @@ async def handle_shopping(cmd_type: str, command: str, arguments: dict[str, Any]
             payload = WishlistItemCreate(
                 name=arguments.get("name", ""),
                 category=arguments.get("category", "other"),
-                estimated_price=float(estimated_price_raw) if estimated_price_raw else None,
+                estimated_price=Decimal(str(estimated_price_raw)) if estimated_price_raw else None,
                 url=arguments.get("url"),
                 notes=arguments.get("notes"),
             )

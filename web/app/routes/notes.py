@@ -1,5 +1,7 @@
+from typing import Annotated
+
 import httpx
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Form, Request
 from fastapi.responses import HTMLResponse
 
 import app.client as api
@@ -46,4 +48,25 @@ async def notes_grid_fragment(request: Request):
         q_lower = q.lower()
         notes = [n for n in notes if q_lower in n.get("title", "").lower() or q_lower in n.get("content", "").lower()]
 
+    return templates.TemplateResponse(request, "_notes_grid.html", {"notes": notes})
+
+
+@router.post("/", response_class=HTMLResponse)
+async def create_note(
+    request: Request,
+    title: Annotated[str, Form()],
+    content: Annotated[str, Form()] = "",
+    tags_raw: Annotated[str, Form(alias="tags")] = "",
+):
+    tags = [t.strip() for t in tags_raw.split(",") if t.strip()]
+    try:
+        await api.post("/organizer/notes", json={"title": title, "content": content, "tags": tags})
+    except httpx.HTTPError:
+        return HTMLResponse('<p class="text-[#E24B4A] text-sm">Failed to create note.</p>', status_code=422)
+
+    notes = []
+    try:
+        notes = await api.get("/organizer/notes", params={"limit": 100})
+    except httpx.HTTPError:
+        pass
     return templates.TemplateResponse(request, "_notes_grid.html", {"notes": notes})

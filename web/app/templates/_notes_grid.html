@@ -18,7 +18,7 @@
   </div>
   {% endfor %}
   <!-- New note placeholder -->
-  <div class="border border-dashed border-gray-200 rounded-lg hover:border-[#378ADD]/40 transition-colors cursor-pointer min-h-[100px]">
+  <div onclick="openNewNote()" class="border border-dashed border-gray-200 rounded-lg hover:border-[#378ADD]/40 transition-colors cursor-pointer min-h-[100px]">
     <div class="h-full flex flex-col items-center justify-center text-gray-300 hover:text-[#378ADD]/50 transition-colors p-4">
       <i class="ti ti-plus text-xl mb-1"></i>
       <span class="text-xs">New note</span>
@@ -27,7 +27,7 @@
 </div>
 {% else %}
 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-  <div class="border border-dashed border-gray-200 rounded-lg hover:border-[#378ADD]/40 transition-colors cursor-pointer min-h-[120px]">
+  <div onclick="openNewNote()" class="border border-dashed border-gray-200 rounded-lg hover:border-[#378ADD]/40 transition-colors cursor-pointer min-h-[120px]">
     <div class="h-full flex flex-col items-center justify-center text-gray-300 hover:text-[#378ADD]/50 transition-colors p-4">
       <i class="ti ti-plus text-xl mb-1"></i>
       <span class="text-xs">New note</span>

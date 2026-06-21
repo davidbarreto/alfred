@@ -7,6 +7,10 @@
 
   <div class="flex items-center justify-between">
     <h1 class="text-base font-semibold text-gray-900">Notes</h1>
+    <button onclick="document.getElementById('new-note-modal').showModal()"
+            class="btn btn-sm btn-primary gap-1">
+      <i class="ti ti-plus text-sm"></i>New note
+    </button>
   </div>
 
   <input
@@ -22,6 +26,58 @@
   </div>
 </div>
 
+<!-- New Note Modal -->
+<dialog id="new-note-modal" class="modal">
+  <div class="modal-box bg-white rounded-xl border border-gray-200 shadow-lg max-w-md w-full p-6">
+    <h3 class="text-sm font-semibold text-gray-900 mb-4">New note</h3>
+    <form
+      hx-post="/notes/"
+      hx-target="#notes-grid"
+      hx-swap="innerHTML"
+      hx-on::after-request="if(event.detail.successful){ document.getElementById('new-note-modal').close(); this.reset(); }"
+      class="flex flex-col gap-3"
+    >
+      <div>
+        <label class="text-xs text-gray-500 mb-1 block">Title <span class="text-[#E24B4A]">*</span></label>
+        <input
+          name="title"
+          type="text"
+          required
+          autofocus
+          placeholder="Note title"
+          class="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white w-full focus:outline-none focus:ring-1 focus:ring-[#378ADD]"
+        />
+      </div>
+      <div>
+        <label class="text-xs text-gray-500 mb-1 block">Content</label>
+        <textarea
+          name="content"
+          rows="4"
+          placeholder="Write something…"
+          class="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white w-full resize-none focus:outline-none focus:ring-1 focus:ring-[#378ADD]"
+        ></textarea>
+      </div>
+      <div>
+        <label class="text-xs text-gray-500 mb-1 block">Tags <span class="text-gray-300">(comma-separated)</span></label>
+        <input
+          name="tags"
+          type="text"
+          placeholder="work, ideas, personal"
+          class="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white w-full focus:outline-none focus:ring-1 focus:ring-[#378ADD]"
+        />
+      </div>
+      <div class="flex justify-end gap-2 mt-1">
+        <button type="button" onclick="document.getElementById('new-note-modal').close()"
+                class="btn btn-sm btn-ghost text-gray-500">Cancel</button>
+        <button type="submit" class="btn btn-sm btn-primary">Save note</button>
+      </div>
+    </form>
+  </div>
+  <form method="dialog" class="modal-backdrop">
+    <button>close</button>
+  </form>
+</dialog>
+
 <script>
 function filterNotes(q) {
   q = q.toLowerCase();
@@ -29,6 +85,10 @@ function filterNotes(q) {
     const text = card.dataset.note.toLowerCase();
     card.style.display = text.includes(q) ? "" : "none";
   });
+}
+
+function openNewNote() {
+  document.getElementById("new-note-modal").showModal();
 }
 </script>
 {% endblock %}

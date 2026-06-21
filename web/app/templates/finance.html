@@ -18,7 +18,7 @@
     </div>
   </div>
 
-  <!-- 3 summary cards: Spent / Remaining / Top category -->
+  <!-- 3 summary cards -->
   <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
     <div class="bg-white border border-gray-200 rounded-lg p-4">
       <div class="text-[10px] text-gray-400 uppercase tracking-wide">Spent</div>
@@ -53,10 +53,41 @@
     </div>
   </div>
 
-  <!-- Spending by category: label+amount above each bar -->
+  <!-- Charts row: category donut + spending over time -->
+  {% if category_chart or time_spending %}
+  <div class="grid grid-cols-3 gap-4">
+
+    {% if category_chart %}
+    <div class="bg-white border border-gray-200 rounded-lg p-4">
+      <h2 class="text-sm font-medium text-gray-900 mb-3">By category</h2>
+      <canvas id="chart-category" height="220"></canvas>
+    </div>
+    {% endif %}
+
+    {% if time_spending %}
+    <div class="bg-white border border-gray-200 rounded-lg p-4 {% if category_chart %}col-span-2{% else %}col-span-3{% endif %}">
+      <h2 class="text-sm font-medium text-gray-900 mb-3">
+        Spending over time <span class="text-xs font-normal text-gray-400">({{ time_label | lower }})</span>
+      </h2>
+      <canvas id="chart-time" height="220"></canvas>
+    </div>
+    {% endif %}
+
+  </div>
+  {% endif %}
+
+  <!-- Budget utilization -->
+  {% if budget_chart %}
+  <div class="bg-white border border-gray-200 rounded-lg p-4">
+    <h2 class="text-sm font-medium text-gray-900 mb-3">Budget utilization</h2>
+    <canvas id="chart-budget" height="80"></canvas>
+  </div>
+  {% endif %}
+
+  <!-- Category breakdown with progress bars -->
   {% if category_items %}
   <div class="bg-white border border-gray-200 rounded-lg p-4">
-    <h2 class="text-sm font-medium text-gray-900 mb-4">By Category</h2>
+    <h2 class="text-sm font-medium text-gray-900 mb-4">Category breakdown</h2>
     <div class="space-y-4">
       {% for item in category_items %}
       <div>
@@ -104,4 +135,105 @@
   </div>
 
 </div>
+
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+<script>
+const PALETTE = ["#378ADD","#BA7517","#639922","#E24B4A","#6366F1","#EC4899","#14B8A6","#F97316","#8B5CF6","#06B6D4"];
+
+{% if category_chart %}
+(function() {
+  const data = {{ category_chart | tojson }};
+  new Chart(document.getElementById("chart-category"), {
+    type: "doughnut",
+    data: {
+      labels: Object.keys(data),
+      datasets: [{
+        data: Object.values(data),
+        backgroundColor: PALETTE.slice(0, Object.keys(data).length),
+        borderWidth: 0
+      }]
+    },
+    options: {
+      plugins: {
+        legend: { position: "bottom", labels: { boxWidth: 10, font: { size: 11 } } },
+        tooltip: {
+          callbacks: {
+            label: ctx => ` €${ctx.parsed.toFixed(2)}`
+          }
+        }
+      },
+      cutout: "60%"
+    }
+  });
+})();
+{% endif %}
+
+{% if time_spending %}
+(function() {
+  const data = {{ time_spending | tojson }};
+  new Chart(document.getElementById("chart-time"), {
+    type: "bar",
+    data: {
+      labels: Object.keys(data),
+      datasets: [{
+        data: Object.values(data),
+        backgroundColor: "#378ADD",
+        borderRadius: 3,
+        borderSkipped: false
+      }]
+    },
+    options: {
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: { label: ctx => ` €${ctx.parsed.y.toFixed(2)}` }
+        }
+      },
+      scales: {
+        x: { grid: { display: false }, ticks: { font: { size: 10 } } },
+        y: {
+          grid: { color: "#F3F4F6" },
+          ticks: { font: { size: 10 }, callback: v => "€" + v }
+        }
+      }
+    }
+  });
+})();
+{% endif %}
+
+{% if budget_chart %}
+(function() {
+  const data = {{ budget_chart | tojson }};
+  const labels = Object.keys(data);
+  const spent  = labels.map(k => data[k].spent);
+  const budget = labels.map(k => data[k].budget);
+  new Chart(document.getElementById("chart-budget"), {
+    type: "bar",
+    data: {
+      labels,
+      datasets: [
+        { label: "Spent",  data: spent,  backgroundColor: "#E24B4A", borderRadius: 3, borderSkipped: false },
+        { label: "Budget", data: budget, backgroundColor: "#E5E7EB", borderRadius: 3, borderSkipped: false }
+      ]
+    },
+    options: {
+      plugins: {
+        legend: { position: "bottom", labels: { boxWidth: 10, font: { size: 11 } } },
+        tooltip: {
+          callbacks: { label: ctx => ` ${ctx.dataset.label}: €${ctx.parsed.y.toFixed(2)}` }
+        }
+      },
+      scales: {
+        x: { grid: { display: false }, ticks: { font: { size: 10 } } },
+        y: {
+          grid: { color: "#F3F4F6" },
+          ticks: { font: { size: 10 }, callback: v => "€" + v }
+        }
+      }
+    }
+  });
+})();
+{% endif %}
+</script>
 {% endblock %}

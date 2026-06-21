@@ -1,3 +1,5 @@
+from collections import defaultdict
+
 import httpx
 from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse
@@ -12,7 +14,7 @@ router = APIRouter(prefix="/finance")
 async def finance_page(request: Request):
     period = request.query_params.get("period", "this month")
 
-    spending, by_category, transactions, budgets = None, None, [], []
+    spending, by_category, transactions, budgets, all_txns = None, None, [], [], []
     errors = []
 
     try:
@@ -35,6 +37,11 @@ async def finance_page(request: Request):
     except httpx.HTTPError:
         errors.append("budgets")
 
+    try:
+        all_txns = await api.get("/finance/transactions", params={"type": "expense", "limit": 500, "period": period})
+    except httpx.HTTPError:
+        pass
+
     category_items = (by_category or {}).get("items", [])
     max_total = max((float(i["total"]) for i in category_items), default=1) or 1
     top_category = category_items[0] if category_items else None
@@ -43,6 +50,29 @@ async def finance_page(request: Request):
     total_budget = sum(float(b["budget_amount"]) for b in budgets) if budgets else None
     total_spent_budget = sum(float(b["spent"]) for b in budgets) if budgets else None
     total_remaining = (total_budget - total_spent_budget) if total_budget is not None else None
+
+    # Spending over time: group by day (month view) or month (year view)
+    time_spending: dict[str, float] = defaultdict(float)
+    for txn in all_txns:
+        key = txn["date"][:7] if period == "this year" else txn["date"][:10]
+        time_spending[key] += float(txn["amount"])
+    time_spending_sorted = dict(sorted(time_spending.items()))
+
+    # Category chart data
+    category_chart = {
+        (i["category_name"] or "Uncategorized"): float(i["total"])
+        for i in category_items
+    }
+
+    # Budget utilization chart data
+    budget_chart = {
+        b["category_name"]: {
+            "spent": float(b["spent"]),
+            "budget": float(b["budget_amount"]),
+        }
+        for b in (budgets or [])
+        if b.get("category_name")
+    }
 
     return templates.TemplateResponse(request, "finance.html", {
         "spending": spending,
@@ -54,4 +84,8 @@ async def finance_page(request: Request):
         "total_remaining": total_remaining,
         "period": period,
         "errors": errors,
+        "time_spending": time_spending_sorted,
+        "category_chart": category_chart,
+        "budget_chart": budget_chart,
+        "time_label": "Month" if period == "this year" else "Day",
     })

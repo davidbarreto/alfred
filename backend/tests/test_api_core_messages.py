@@ -132,6 +132,12 @@ class TestListMessages:
         assert response.status_code == 200
         assert isinstance(response.json(), list)
 
+    def test_passes_source_and_external_id_filters(self, client, mock_message_service):
+        client.get("/core/messages/?source=web&external_id=portal", headers=AUTH)
+        filters = mock_message_service.list.call_args[0][0]
+        assert filters.source == "web"
+        assert filters.external_id == "portal"
+
     def test_requires_auth(self, client):
         assert client.get("/core/messages/").status_code == 403
 

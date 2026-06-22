@@ -13,27 +13,16 @@ router = APIRouter(prefix="/chat")
 _HISTORY_LIMIT = 50
 
 
-async def _load_portal_history() -> tuple[int | None, list[dict]]:
-    """Return (session_id, messages) for the active web/portal session, or (None, [])."""
-    try:
-        sessions = await api.get("/core/sessions/", params={"active_only": True})
-        session = next(
-            (s for s in sessions if s.get("source") == "web" and s.get("external_id") == "portal"),
-            None,
-        )
-        if not session:
-            return None, []
-        session_id = session["id"]
-        messages = await api.get("/core/messages/", params={"session_id": session_id, "limit": _HISTORY_LIMIT})
-        return session_id, messages
-    except httpx.HTTPError:
-        return None, []
-
-
 @router.get("/", response_class=HTMLResponse)
 async def chat_page(request: Request):
     s = get_settings()
-    _, messages = await _load_portal_history()
+    try:
+        messages = await api.get(
+            "/core/messages/",
+            params={"source": "web", "external_id": "portal", "limit": _HISTORY_LIMIT},
+        )
+    except httpx.HTTPError:
+        messages = []
     return templates.TemplateResponse(request, "chat.html", {
         "backend_url": s.public_backend_url,
         "api_token": s.alfred_api_token,

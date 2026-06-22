@@ -3,6 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.features.core.messages.schemas import MessageCreate, MessageFilters
 from app.features.core.messages.tables import Message
+from app.features.core.sessions.tables import Session
 
 
 class MessageRepository:
@@ -15,6 +16,12 @@ class MessageRepository:
 
     async def list(self, filters: MessageFilters) -> list[Message]:
         query = select(Message)
+        if filters.source is not None or filters.external_id is not None:
+            query = query.join(Session, Message.session_id == Session.id)
+            if filters.source is not None:
+                query = query.where(Session.source == filters.source)
+            if filters.external_id is not None:
+                query = query.where(Session.external_id == filters.external_id)
         if filters.session_id is not None:
             query = query.where(Message.session_id == filters.session_id)
         if filters.role is not None:

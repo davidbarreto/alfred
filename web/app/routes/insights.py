@@ -15,10 +15,10 @@ async def insights_page(request: Request):
     memories, llm_calls, provider_calls, cmd_executions = [], [], [], []
 
     for path, params, target in [
-        ("/core/memories", {"limit": 200}, "memories"),
-        ("/integration/llm-calls", {"limit": 200}, "llm_calls"),
-        ("/integration/provider-calls", {"limit": 200}, "provider_calls"),
-        ("/core/command-executions", {"limit": 200}, "cmd_executions"),
+        ("/core/memories/", {"limit": 200}, "memories"),
+        ("/integration/llm-calls/", {"limit": 200}, "llm_calls"),
+        ("/integration/provider-calls/", {"limit": 200}, "provider_calls"),
+        ("/core/command-executions/", {"limit": 200}, "cmd_executions"),
     ]:
         try:
             result = await api.get(path, params=params)

@@ -27,7 +27,7 @@ async def send_message(
 ):
     """Ingests the user message and returns the session_id for the SSE call."""
     try:
-        result = await api.post("/core/messages", json={
+        result = await api.post("/core/messages/", json={
             "text": message,
             "source": "web",
             "external_id": "portal",

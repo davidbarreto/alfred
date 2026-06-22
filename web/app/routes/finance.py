@@ -18,27 +18,27 @@ async def finance_page(request: Request):
     errors = []
 
     try:
-        spending = await api.get("/finance/transactions/report", params={"period": period})
+        spending = await api.get("/finance/transactions/report/", params={"period": period})
     except httpx.HTTPError:
         errors.append("spending")
 
     try:
-        by_category = await api.get("/finance/transactions/by-category", params={"period": period})
+        by_category = await api.get("/finance/transactions/by-category/", params={"period": period})
     except httpx.HTTPError:
         errors.append("by_category")
 
     try:
-        transactions = await api.get("/finance/transactions", params={"type": "expense", "limit": 15, "period": period})
+        transactions = await api.get("/finance/transactions/", params={"type": "expense", "limit": 15, "period": period})
     except httpx.HTTPError:
         errors.append("transactions")
 
     try:
-        budgets = await api.get("/finance/budgets/remaining", params={"period": "monthly"})
+        budgets = await api.get("/finance/budgets/remaining/", params={"period": "monthly"})
     except httpx.HTTPError:
         errors.append("budgets")
 
     try:
-        all_txns = await api.get("/finance/transactions", params={"type": "expense", "limit": 500, "period": period})
+        all_txns = await api.get("/finance/transactions/", params={"type": "expense", "limit": 500, "period": period})
     except httpx.HTTPError:
         pass
 

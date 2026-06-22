@@ -45,7 +45,7 @@ async def tasks_page(request: Request):
 
     api_error: str | None = None
     try:
-        tasks = await api.get("/organizer/tasks", params=params)
+        tasks = await api.get("/organizer/tasks/", params=params)
     except httpx.HTTPStatusError as e:
         tasks = []
         api_error = f"API error {e.response.status_code}: {e.response.text[:200]}"
@@ -69,7 +69,7 @@ async def tasks_list_fragment(request: Request):
     params = _build_params(active_filter)
 
     try:
-        tasks = await api.get("/organizer/tasks", params=params)
+        tasks = await api.get("/organizer/tasks/", params=params)
     except httpx.HTTPError:
         tasks = []
 
@@ -83,7 +83,7 @@ async def tasks_list_fragment(request: Request):
 @router.post("/{task_id}/done", response_class=HTMLResponse)
 async def mark_task_done(task_id: int, request: Request):
     try:
-        task = await api.patch(f"/organizer/tasks/{task_id}", json={"status": "DONE"})
+        task = await api.patch(f"/organizer/tasks/{task_id}/", json={"status": "DONE"})
         await api.log_command("task.done", {"task_id": task_id}, "task", task_id)
     except httpx.HTTPError:
         task = {"id": task_id, "title": "—", "status": "DONE", "priority": "LOW",
@@ -98,7 +98,7 @@ async def mark_task_done(task_id: int, request: Request):
 @router.patch("/{task_id}/doing", response_class=HTMLResponse)
 async def mark_task_doing(task_id: int, request: Request):
     try:
-        task = await api.patch(f"/organizer/tasks/{task_id}", json={"status": "DOING"})
+        task = await api.patch(f"/organizer/tasks/{task_id}/", json={"status": "DOING"})
         await api.log_command("task.doing", {"task_id": task_id}, "task", task_id)
     except httpx.HTTPError:
         task = {"id": task_id, "title": "—", "status": "DOING", "priority": "LOW",

@@ -29,7 +29,7 @@ async def calendar_page(request: Request):
     start, end = _month_range(year, month)
 
     try:
-        events = await api.get("/organizer/calendar-events", params={
+        events = await api.get("/organizer/calendar-events/", params={
             "start_from": start,
             "start_to": end,
             "limit": 200,

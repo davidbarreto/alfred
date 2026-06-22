@@ -56,13 +56,13 @@ async def log_command(
 ) -> None:
     """Log a web portal action as a command execution (fire-and-forget)."""
     try:
-        result = await post("/core/command-executions", json={
+        result = await post("/core/command-executions/", json={
             "command_name": command_name,
             "entities": entities or {},
             "status": "success",
         })
         if entity_type or entity_id:
-            await patch(f"/core/command-executions/{result['id']}", json={
+            await patch(f"/core/command-executions/{result['id']}/", json={
                 "entity_type": entity_type,
                 "entity_id": entity_id,
             })

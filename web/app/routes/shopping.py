@@ -18,7 +18,7 @@ async def shopping_page(request: Request):
     category = request.query_params.get("category", "all")
 
     try:
-        items = await api.get("/organizer/shopping", params={"status": status, "category": category, "limit": 100})
+        items = await api.get("/organizer/shopping/", params={"status": status, "category": category, "limit": 100})
     except httpx.HTTPError:
         items = []
 
@@ -36,7 +36,7 @@ async def shopping_list_fragment(request: Request):
     category = request.query_params.get("category", "all")
 
     try:
-        items = await api.get("/organizer/shopping", params={"status": status, "category": category, "limit": 100})
+        items = await api.get("/organizer/shopping/", params={"status": status, "category": category, "limit": 100})
     except httpx.HTTPError:
         items = []
 
@@ -54,7 +54,7 @@ async def add_shopping_item(
     priority: Annotated[str, Form()] = "need",
 ):
     try:
-        item = await api.post("/organizer/shopping", json={
+        item = await api.post("/organizer/shopping/", json={
             "name": name,
             "category": category,
             "priority": priority,
@@ -70,7 +70,7 @@ async def add_shopping_item(
 @router.post("/{item_id}/bought", response_class=HTMLResponse)
 async def mark_bought(item_id: int, request: Request):
     try:
-        item = await api.post(f"/organizer/shopping/{item_id}/bought")
+        item = await api.post(f"/organizer/shopping/{item_id}/bought/")
     except httpx.HTTPError:
         return HTMLResponse("", status_code=422)
     return templates.TemplateResponse(request, "_shopping_item.html", {"item": item})

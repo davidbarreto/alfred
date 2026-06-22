@@ -6,12 +6,18 @@
 <div class="flex flex-col h-full" id="chat-root">
 
   <!-- Message history -->
-  <div class="flex-1 overflow-y-auto p-6 space-y-4" id="messages">
+  <div class="flex-1 overflow-y-auto px-6 py-6 space-y-6" id="messages">
     {% for msg in initial_messages %}
-    <div class="chat {{ 'chat-end' if msg.role == 'user' else 'chat-start' }}">
-      <div class="chat-header text-xs text-gray-400 mb-1">{{ "You" if msg.role == "user" else "Alfred" }}</div>
-      <div class="chat-bubble {{ 'chat-bubble-neutral' if msg.role == 'user' else 'chat-bubble-primary' }} whitespace-pre-wrap text-sm">{{ msg.content }}</div>
-    </div>
+      {% if msg.role == "user" %}
+      <div class="flex justify-end">
+        <div class="bg-gray-100 rounded-2xl px-4 py-2.5 text-sm text-gray-800 max-w-[80%] whitespace-pre-wrap">{{ msg.content }}</div>
+      </div>
+      {% else %}
+      <div class="flex flex-col gap-1 max-w-[85%]">
+        <span class="text-xs font-medium text-gray-400">Alfred</span>
+        <div class="text-sm text-gray-800 whitespace-pre-wrap leading-relaxed">{{ msg.content }}</div>
+      </div>
+      {% endif %}
     {% endfor %}
   </div>
 
@@ -38,25 +44,37 @@ const API_TOKEN  = {{ api_token | tojson }};
 let streaming = false;
 
 const messagesEl = document.getElementById("messages");
-
-// Scroll to bottom to show the most recent messages
 messagesEl.scrollTop = messagesEl.scrollHeight;
-const inputEl    = document.getElementById("chat-input");
-const sendBtn    = document.getElementById("send-btn");
-const statusEl   = document.getElementById("chat-status");
-const formEl     = document.getElementById("chat-form");
 
-function appendMessage(role, text) {
-  const div = document.createElement("div");
-  div.className = role === "user" ? "chat chat-end" : "chat chat-start";
-  div.innerHTML = `
-    <div class="chat-header text-xs text-gray-400 mb-1">${role === "user" ? "You" : "Alfred"}</div>
-    <div class="chat-bubble ${role === "user" ? "chat-bubble-neutral" : "chat-bubble-primary"} whitespace-pre-wrap text-sm"></div>
-  `;
-  div.querySelector(".chat-bubble").textContent = text;
-  messagesEl.appendChild(div);
+const inputEl  = document.getElementById("chat-input");
+const sendBtn  = document.getElementById("send-btn");
+const statusEl = document.getElementById("chat-status");
+const formEl   = document.getElementById("chat-form");
+
+function appendUserMessage(text) {
+  const wrapper = document.createElement("div");
+  wrapper.className = "flex justify-end";
+  const bubble = document.createElement("div");
+  bubble.className = "bg-gray-100 rounded-2xl px-4 py-2.5 text-sm text-gray-800 max-w-[80%] whitespace-pre-wrap";
+  bubble.textContent = text;
+  wrapper.appendChild(bubble);
+  messagesEl.appendChild(wrapper);
   messagesEl.scrollTop = messagesEl.scrollHeight;
-  return div.querySelector(".chat-bubble");
+}
+
+function appendAssistantMessage() {
+  const wrapper = document.createElement("div");
+  wrapper.className = "flex flex-col gap-1 max-w-[85%]";
+  const label = document.createElement("span");
+  label.className = "text-xs font-medium text-gray-400";
+  label.textContent = "Alfred";
+  const text = document.createElement("div");
+  text.className = "text-sm text-gray-800 whitespace-pre-wrap leading-relaxed";
+  wrapper.appendChild(label);
+  wrapper.appendChild(text);
+  messagesEl.appendChild(wrapper);
+  messagesEl.scrollTop = messagesEl.scrollHeight;
+  return text;
 }
 
 formEl.addEventListener("submit", async (e) => {
@@ -71,14 +89,13 @@ formEl.addEventListener("submit", async (e) => {
   streaming = true;
   statusEl.textContent = "Alfred is thinking…";
 
-  appendMessage("user", text);
+  appendUserMessage(text);
 
-  // POST message server-side (keeps API token out of the browser)
   const formData = new FormData();
   formData.set("message", text);
   const msgResp = await fetch("/chat/message", { method: "POST", body: formData });
   if (!msgResp.ok) {
-    appendMessage("assistant", "[Error sending message]");
+    appendAssistantMessage().textContent = "Error sending message.";
     streaming = false;
     inputEl.disabled = false;
     sendBtn.disabled = false;
@@ -87,14 +104,11 @@ formEl.addEventListener("submit", async (e) => {
   }
   const { session_id: sessionId } = await msgResp.json();
 
-  // Open SSE stream with the session_id returned by the ingest endpoint
-  const bubble = appendMessage("assistant", "");
+  const textEl = appendAssistantMessage();
   const url = `${BACKEND_URL}/core/chats/stream?session_id=${sessionId}&token=${API_TOKEN}`;
 
   try {
-    const resp = await fetch(url, {
-      headers: { "Accept": "text/event-stream" },
-    });
+    const resp = await fetch(url, { headers: { "Accept": "text/event-stream" } });
     const reader = resp.body.getReader();
     const decoder = new TextDecoder();
     let buffer = "";
@@ -113,18 +127,19 @@ formEl.addEventListener("submit", async (e) => {
         try {
           const parsed = JSON.parse(payload);
           if (parsed.chunk) {
-            bubble.textContent += parsed.chunk;
+            textEl.textContent += parsed.chunk;
             messagesEl.scrollTop = messagesEl.scrollHeight;
           }
           if (parsed.error) {
-            bubble.textContent = "[Error: " + parsed.error + "]";
-            bubble.classList.add("chat-bubble-error");
+            textEl.textContent = "Error: " + parsed.error;
+            textEl.classList.add("text-red-500");
           }
         } catch (_) {}
       }
     }
-  } catch (err) {
-    bubble.textContent = "[Connection error]";
+  } catch (_) {
+    textEl.textContent = "Connection error.";
+    textEl.classList.add("text-red-500");
   }
 
   streaming = false;

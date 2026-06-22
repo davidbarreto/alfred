@@ -15,8 +15,8 @@ class CommandExecution(Base):
     __table_args__ = {"schema": "core"}
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
-    message_id: Mapped[int] = mapped_column(
-        Integer, ForeignKey("core.messages.id", ondelete="CASCADE"), nullable=False, index=True
+    message_id: Mapped[Optional[int]] = mapped_column(
+        Integer, ForeignKey("core.messages.id", ondelete="CASCADE"), nullable=True, index=True
     )
     command_name: Mapped[str] = mapped_column(String(100), nullable=False, index=True)
     entities: Mapped[Optional[dict]] = mapped_column(JSONB, nullable=True)

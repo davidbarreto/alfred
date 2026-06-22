@@ -7,7 +7,7 @@ CommandStatus = Literal["pending", "success", "error"]
 
 
 class CommandExecutionCreate(BaseModel):
-    message_id: int
+    message_id: Optional[int] = None
     command_name: str
     entities: Optional[dict[str, Any]] = None
     status: CommandStatus = "pending"
@@ -26,7 +26,7 @@ class CommandExecutionRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
-    message_id: int
+    message_id: Optional[int] = None
     command_name: str
     entities: Optional[dict[str, Any]] = None
     status: str

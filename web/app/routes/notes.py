@@ -60,9 +60,11 @@ async def create_note(
 ):
     tag_list = [t.strip() for t in tags.split(",") if t.strip()]
     try:
-        await api.post("/organizer/notes", json={"title": title, "content": content, "tags": tag_list})
+        note = await api.post("/organizer/notes", json={"title": title, "content": content, "tags": tag_list})
     except httpx.HTTPError:
         return HTMLResponse('<p class="text-[#E24B4A] text-sm">Failed to create note.</p>', status_code=422)
+
+    await api.log_command("note.add", {"title": title, "tags": tag_list}, "note", note.get("id"))
 
     notes = []
     try:

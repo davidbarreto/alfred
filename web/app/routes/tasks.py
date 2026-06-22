@@ -84,6 +84,7 @@ async def tasks_list_fragment(request: Request):
 async def mark_task_done(task_id: int, request: Request):
     try:
         task = await api.patch(f"/organizer/tasks/{task_id}", json={"status": "DONE"})
+        await api.log_command("task.done", {"task_id": task_id}, "task", task_id)
     except httpx.HTTPError:
         task = {"id": task_id, "title": "—", "status": "DONE", "priority": "LOW",
                 "urgency": "NORMAL", "deadline": None, "tags": []}
@@ -98,6 +99,7 @@ async def mark_task_done(task_id: int, request: Request):
 async def mark_task_doing(task_id: int, request: Request):
     try:
         task = await api.patch(f"/organizer/tasks/{task_id}", json={"status": "DOING"})
+        await api.log_command("task.doing", {"task_id": task_id}, "task", task_id)
     except httpx.HTTPError:
         task = {"id": task_id, "title": "—", "status": "DOING", "priority": "LOW",
                 "urgency": "NORMAL", "deadline": None, "tags": []}

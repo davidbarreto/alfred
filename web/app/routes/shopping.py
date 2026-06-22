@@ -63,6 +63,7 @@ async def add_shopping_item(
     except httpx.HTTPError:
         return HTMLResponse("", status_code=422)
 
+    await api.log_command("shopping.add", {"name": name, "category": category, "priority": priority}, "shopping_item", item.get("id"))
     return templates.TemplateResponse(request, "_shopping_item.html", {"item": item})
 
 

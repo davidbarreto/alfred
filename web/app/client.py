@@ -46,3 +46,25 @@ async def delete(path: str) -> None:
     async with httpx.AsyncClient(follow_redirects=True) as client:
         resp = await client.delete(_url(path), headers=_headers(), timeout=10.0)
         resp.raise_for_status()
+
+
+async def log_command(
+    command_name: str,
+    entities: dict | None = None,
+    entity_type: str | None = None,
+    entity_id: int | None = None,
+) -> None:
+    """Log a web portal action as a command execution (fire-and-forget)."""
+    try:
+        result = await post("/core/command-executions", json={
+            "command_name": command_name,
+            "entities": entities or {},
+            "status": "success",
+        })
+        if entity_type or entity_id:
+            await patch(f"/core/command-executions/{result['id']}", json={
+                "entity_type": entity_type,
+                "entity_id": entity_id,
+            })
+    except httpx.HTTPError:
+        pass

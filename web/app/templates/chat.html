@@ -6,7 +6,14 @@
 <div class="flex flex-col h-full" id="chat-root">
 
   <!-- Message history -->
-  <div class="flex-1 overflow-y-auto p-6 space-y-4" id="messages"></div>
+  <div class="flex-1 overflow-y-auto p-6 space-y-4" id="messages">
+    {% for msg in initial_messages %}
+    <div class="chat {{ 'chat-end' if msg.role == 'user' else 'chat-start' }}">
+      <div class="chat-header text-xs text-gray-400 mb-1">{{ "You" if msg.role == "user" else "Alfred" }}</div>
+      <div class="chat-bubble {{ 'chat-bubble-neutral' if msg.role == 'user' else 'chat-bubble-primary' }} whitespace-pre-wrap text-sm">{{ msg.content }}</div>
+    </div>
+    {% endfor %}
+  </div>
 
   <!-- Input bar -->
   <div class="border-t border-gray-200 p-4 bg-white">
@@ -31,6 +38,9 @@ const API_TOKEN  = {{ api_token | tojson }};
 let streaming = false;
 
 const messagesEl = document.getElementById("messages");
+
+// Scroll to bottom to show the most recent messages
+messagesEl.scrollTop = messagesEl.scrollHeight;
 const inputEl    = document.getElementById("chat-input");
 const sendBtn    = document.getElementById("send-btn");
 const statusEl   = document.getElementById("chat-status");

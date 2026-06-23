@@ -13,7 +13,7 @@ from app.shared.llm import LlmProvider
 
 logger = logging.getLogger(__name__)
 
-_SUMMARY_LIMIT = 3
+_SUMMARY_LIMIT = 5
 
 _SUMMARY_PROMPT = """\
 Summarise this conversation in 3-5 sentences for an AI assistant's long-term memory.

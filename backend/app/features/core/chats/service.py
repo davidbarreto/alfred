@@ -19,6 +19,7 @@ from app.features.core.embeddings.service import EmbeddingService
 from app.features.core.memories.extraction_service import MemoryExtractionService
 from app.features.core.messages.schemas import MessageCreate, MessageFilters, MessageRead
 from app.features.core.messages.service import MessageService
+from app.features.core.sessions.repository import SessionRepository
 from app.features.core.sessions.summary_service import SessionSummaryService
 from app.integrations.llm_calls.repository import create_llm_call
 from app.shared.llm import LlmProvider, StreamMeta
@@ -152,11 +153,19 @@ class ChatService:
         self._memory_extraction_service = memory_extraction_service
         self._session_summary_service = session_summary_service
 
+    async def _fetch_history(self, session_id: int) -> list[MessageRead]:
+        session = await SessionRepository(self._session).get(session_id)
+        if session and session.source and session.external_id:
+            return await self._message_service.list(
+                MessageFilters(source=session.source, external_id=session.external_id, limit=_HISTORY_LIMIT + 1)
+            )
+        return await self._message_service.list(
+            MessageFilters(session_id=session_id, limit=_HISTORY_LIMIT + 1)
+        )
+
     async def chat(self, request: ChatRequest) -> str:
         logger.info("Chat: session_id=%s", request.session_id)
-        messages = await self._message_service.list(
-            MessageFilters(session_id=request.session_id, limit=_HISTORY_LIMIT + 1)
-        )
+        messages = await self._fetch_history(request.session_id)
         if not messages:
             raise HTTPException(
                 status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
@@ -229,9 +238,7 @@ class ChatService:
 
     async def stream_chat(self, request: ChatRequest) -> AsyncGenerator[str, None]:
         logger.info("StreamChat: session_id=%s", request.session_id)
-        messages = await self._message_service.list(
-            MessageFilters(session_id=request.session_id, limit=_HISTORY_LIMIT + 1)
-        )
+        messages = await self._fetch_history(request.session_id)
         if not messages:
             yield f"[error: No messages found in session. Call POST /core/messages first.]"
             return

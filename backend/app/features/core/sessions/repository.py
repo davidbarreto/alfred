@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.features.core.sessions.schemas import SessionCreate, SessionFilters
 from app.features.core.sessions.tables import Session
 
-_SESSION_EXPIRY_HOURS = 1
+_SESSION_EXPIRY_HOURS = 4
 
 
 class SessionRepository:

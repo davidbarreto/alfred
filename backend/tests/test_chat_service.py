@@ -13,6 +13,7 @@ from app.features.core.chats.service import (
 )
 from app.features.core.embeddings.schemas import EmbeddingSearchResult
 from app.features.core.messages.schemas import MessageRead
+from app.features.core.sessions.tables import Session
 from app.shared.llm import LlmResponse
 
 
@@ -45,6 +46,21 @@ def _make_llm_provider(text: str = "ok") -> MagicMock:
     provider.model = "gemini-2.0-flash"
     provider.complete = AsyncMock(return_value=LlmResponse(text=text, tokens_input=10, tokens_output=5))
     return provider
+
+
+def _make_session_row(source: str = "telegram", external_id: str = "user_123") -> Session:
+    s = Session()
+    s.id = 1
+    s.source = source
+    s.external_id = external_id
+    return s
+
+
+@pytest.fixture(autouse=True)
+def mock_session_repository():
+    with patch("app.features.core.chats.service.SessionRepository") as mock_repo_cls:
+        mock_repo_cls.return_value.get = AsyncMock(return_value=_make_session_row())
+        yield mock_repo_cls
 
 
 def _make_service(llm_text: str = "ok") -> tuple[ChatService, MagicMock, AsyncMock, AsyncMock, MagicMock]:
@@ -95,10 +111,26 @@ class TestChatServiceResponse:
 
 
 class TestChatServiceHistory:
-    async def test_retrieves_history_for_session(self):
+    async def test_retrieves_history_cross_session_when_source_known(self):
         service, _, _, message_service, _ = _make_service()
         message_service.list.return_value = [_make_message("hi")]
-        await service.chat(ChatRequest(session_id=42))
+        with patch("app.features.core.chats.service.SessionRepository") as mock_repo_cls:
+            mock_repo_cls.return_value.get = AsyncMock(return_value=_make_session_row("telegram", "u42"))
+            await service.chat(ChatRequest(session_id=42))
+        filters = message_service.list.call_args[0][0]
+        assert filters.source == "telegram"
+        assert filters.external_id == "u42"
+        assert filters.session_id is None
+
+    async def test_falls_back_to_session_id_when_source_unknown(self):
+        service, _, _, message_service, _ = _make_service()
+        message_service.list.return_value = [_make_message("hi")]
+        session_row = _make_session_row()
+        session_row.source = None
+        session_row.external_id = None
+        with patch("app.features.core.chats.service.SessionRepository") as mock_repo_cls:
+            mock_repo_cls.return_value.get = AsyncMock(return_value=session_row)
+            await service.chat(ChatRequest(session_id=42))
         filters = message_service.list.call_args[0][0]
         assert filters.session_id == 42
 
@@ -106,18 +138,20 @@ class TestChatServiceHistory:
         service, llm_provider, _, message_service, _ = _make_service()
         msgs = [_make_message("previous"), _make_message("current")]
         message_service.list.return_value = msgs
-        await service.chat(ChatRequest(session_id=1))
+        with patch("app.features.core.chats.service.SessionRepository") as mock_repo_cls:
+            mock_repo_cls.return_value.get = AsyncMock(return_value=_make_session_row())
+            await service.chat(ChatRequest(session_id=1))
         messages = llm_provider.complete.call_args[0][0]
-        # history is all but last; last is current → only "previous" + "current" in messages
         assert messages[-1]["content"] == "current"
         assert len([m for m in messages if m["content"] == "previous"]) == 1
 
     async def test_requests_history_limit_plus_one_from_repository(self):
         service, _, _, message_service, _ = _make_service()
         message_service.list.return_value = [_make_message("hi")]
-        await service.chat(ChatRequest(session_id=1))
+        with patch("app.features.core.chats.service.SessionRepository") as mock_repo_cls:
+            mock_repo_cls.return_value.get = AsyncMock(return_value=_make_session_row())
+            await service.chat(ChatRequest(session_id=1))
         filters = message_service.list.call_args[0][0]
-        # service delegates limiting to the repository: _HISTORY_LIMIT history + 1 current
         assert filters.limit == 11
 
 

@@ -6,12 +6,24 @@
 <div class="p-6 space-y-6">
 
   <!-- Month navigation -->
-  <div class="flex items-center gap-2">
-    <a href="/calendar?year={{ prev_year }}&month={{ prev_month }}" class="w-7 h-7 flex items-center justify-center rounded hover:bg-gray-100 text-gray-500">‹</a>
-    <a href="/calendar" class="px-3 py-1 rounded text-xs text-gray-500 hover:bg-gray-100">Today</a>
-    <a href="/calendar?year={{ next_year }}&month={{ next_month }}" class="w-7 h-7 flex items-center justify-center rounded hover:bg-gray-100 text-gray-500">›</a>
-    <h1 class="text-base font-semibold text-gray-900 ml-1">{{ month_name }}</h1>
+  <div class="flex items-center justify-between">
+    <div class="flex items-center gap-2">
+      <a href="/calendar?year={{ prev_year }}&month={{ prev_month }}" class="w-7 h-7 flex items-center justify-center rounded hover:bg-gray-100 text-gray-500">‹</a>
+      <a href="/calendar" class="px-3 py-1 rounded text-xs text-gray-500 hover:bg-gray-100">Today</a>
+      <a href="/calendar?year={{ next_year }}&month={{ next_month }}" class="w-7 h-7 flex items-center justify-center rounded hover:bg-gray-100 text-gray-500">›</a>
+      <h1 class="text-base font-semibold text-gray-900 ml-1">{{ month_name }}</h1>
+    </div>
+    <button onclick="openNewEvent()"
+            class="btn btn-sm btn-primary gap-1">
+      <i class="ti ti-plus text-sm"></i>New event
+    </button>
   </div>
+
+  {% if api_error %}
+  <div class="rounded-lg bg-[#FCEBEB] border border-[#E24B4A]/20 px-4 py-2.5 text-sm text-[#E24B4A]">
+    <strong>Backend error:</strong> {{ api_error }}
+  </div>
+  {% endif %}
 
   <!-- 7-column month grid -->
   <div class="bg-white border border-gray-200 rounded-lg overflow-hidden">
@@ -78,7 +90,113 @@
       <p class="text-sm text-gray-400">No upcoming events this month.</p>
       {% endif %}
     </div>
+    <div class="border-t border-gray-100 px-4 py-2">
+      <button onclick="openNewEvent()"
+              class="flex items-center gap-1.5 text-xs text-gray-400 hover:text-[#378ADD] transition-colors py-1">
+        <i class="ti ti-plus text-sm"></i>New event
+      </button>
+    </div>
   </div>
 
 </div>
+
+<!-- New Event Modal -->
+<dialog id="new-event-modal" class="modal">
+  <div class="modal-box bg-white rounded-xl border border-gray-200 shadow-lg max-w-md w-full p-6">
+    <h3 class="text-sm font-semibold text-gray-900 mb-4">New event</h3>
+    <form id="new-event-form" onsubmit="submitNewEvent(event)" class="flex flex-col gap-3">
+      <div>
+        <label class="text-xs text-gray-500 mb-1 block">Title <span class="text-[#E24B4A]">*</span></label>
+        <input
+          id="event-title"
+          name="title"
+          type="text"
+          required
+          placeholder="Event title"
+          class="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white w-full focus:outline-none focus:ring-1 focus:ring-[#378ADD]"
+        />
+      </div>
+      <div>
+        <label class="text-xs text-gray-500 mb-1 block">Date <span class="text-[#E24B4A]">*</span></label>
+        <input
+          name="start_date"
+          type="date"
+          required
+          class="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white w-full focus:outline-none focus:ring-1 focus:ring-[#378ADD]"
+        />
+      </div>
+      <div class="flex items-center gap-2">
+        <input id="event-all-day" name="all_day" type="checkbox" value="1" class="checkbox checkbox-sm"
+               onchange="document.getElementById('event-time-row').classList.toggle('hidden', this.checked)"/>
+        <label for="event-all-day" class="text-xs text-gray-500">All day</label>
+      </div>
+      <div id="event-time-row" class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="text-xs text-gray-500 mb-1 block">Start time</label>
+          <input name="start_time" type="time" value="09:00"
+                 class="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white w-full focus:outline-none focus:ring-1 focus:ring-[#378ADD]"/>
+        </div>
+        <div>
+          <label class="text-xs text-gray-500 mb-1 block">End time</label>
+          <input name="end_time" type="time" value="10:00"
+                 class="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white w-full focus:outline-none focus:ring-1 focus:ring-[#378ADD]"/>
+        </div>
+      </div>
+      <div>
+        <label class="text-xs text-gray-500 mb-1 block">Location</label>
+        <input
+          name="location"
+          type="text"
+          placeholder="Optional"
+          class="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white w-full focus:outline-none focus:ring-1 focus:ring-[#378ADD]"
+        />
+      </div>
+      <p id="event-error" class="text-xs text-[#E24B4A] hidden"></p>
+      <div class="flex justify-end gap-2 mt-1">
+        <button type="button" onclick="document.getElementById('new-event-modal').close()"
+                class="btn btn-sm btn-ghost text-gray-500">Cancel</button>
+        <button type="submit" id="event-submit-btn" class="btn btn-sm btn-primary">Save event</button>
+      </div>
+    </form>
+  </div>
+  <form method="dialog" class="modal-backdrop">
+    <button>close</button>
+  </form>
+</dialog>
+
+<script>
+function openNewEvent() {
+  document.getElementById("event-error").classList.add("hidden");
+  document.getElementById("new-event-form").reset();
+  document.getElementById("event-time-row").classList.remove("hidden");
+  document.getElementById("new-event-modal").showModal();
+  setTimeout(() => document.getElementById("event-title").focus(), 50);
+}
+
+async function submitNewEvent(e) {
+  e.preventDefault();
+  const btn = document.getElementById("event-submit-btn");
+  const errEl = document.getElementById("event-error");
+  btn.disabled = true;
+  btn.textContent = "Saving…";
+  errEl.classList.add("hidden");
+
+  const body = new FormData(e.target);
+  try {
+    const res = await fetch("/calendar/", { method: "POST", body });
+    if (!res.ok) {
+      const txt = await res.text();
+      throw new Error(txt || `Error ${res.status}`);
+    }
+    document.getElementById("new-event-modal").close();
+    window.location.reload();
+  } catch (err) {
+    errEl.textContent = err.message || "Failed to save event.";
+    errEl.classList.remove("hidden");
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Save event";
+  }
+}
+</script>
 {% endblock %}

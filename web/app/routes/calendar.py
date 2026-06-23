@@ -1,8 +1,9 @@
 import calendar as cal_lib
 from datetime import date, datetime, timezone
+from typing import Annotated
 
 import httpx
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Form, Request
 from fastapi.responses import HTMLResponse
 
 import app.client as api
@@ -28,14 +29,19 @@ async def calendar_page(request: Request):
     month = int(request.query_params.get("month", today.month))
     start, end = _month_range(year, month)
 
+    api_error: str | None = None
     try:
         events = await api.get("/organizer/calendar-events/", params={
             "start_from": start,
             "start_to": end,
             "limit": 200,
         })
-    except httpx.HTTPError:
+    except httpx.HTTPStatusError as e:
         events = []
+        api_error = f"API error {e.response.status_code}: {e.response.text[:200]}"
+    except httpx.HTTPError as e:
+        events = []
+        api_error = f"Cannot reach backend: {e}"
 
     weeks = cal_lib.monthcalendar(year, month)
     month_name = date(year, month, 1).strftime("%B %Y")
@@ -52,6 +58,7 @@ async def calendar_page(request: Request):
     next_year = year if month < 12 else year + 1
 
     return templates.TemplateResponse(request, "calendar.html", {
+        "api_error": api_error,
         "events": events,
         "events_by_date": events_by_date,
         "weeks": weeks,
@@ -64,3 +71,37 @@ async def calendar_page(request: Request):
         "next_year": next_year,
         "next_month": next_month,
     })
+
+
+@router.post("/", response_class=HTMLResponse)
+async def create_event(
+    request: Request,
+    title: Annotated[str, Form()],
+    start_date: Annotated[str, Form()],
+    start_time: Annotated[str, Form()] = "09:00",
+    end_time: Annotated[str, Form()] = "10:00",
+    location: Annotated[str, Form()] = "",
+    all_day: Annotated[str, Form()] = "",
+):
+    is_all_day = bool(all_day)
+    if is_all_day:
+        start_iso = f"{start_date}T00:00:00Z"
+        end_iso = f"{start_date}T23:59:59Z"
+    else:
+        start_iso = f"{start_date}T{start_time}:00Z"
+        end_iso = f"{start_date}T{end_time}:00Z"
+
+    payload = {
+        "title": title,
+        "start_datetime": start_iso,
+        "end_datetime": end_iso,
+        "all_day": is_all_day,
+        "location": location or None,
+    }
+    try:
+        event = await api.post("/organizer/calendar-events/", json=payload)
+    except httpx.HTTPError:
+        return HTMLResponse('<p class="text-[#E24B4A] text-sm">Failed to create event.</p>', status_code=422)
+
+    await api.log_command("event.add", {"title": title}, "event", event.get("id"))
+    return HTMLResponse("", status_code=204)

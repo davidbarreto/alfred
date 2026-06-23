@@ -1,5 +1,5 @@
 import calendar as cal_lib
-from datetime import date, datetime, timezone
+from datetime import date, datetime
 from typing import Annotated
 
 import httpx
@@ -17,8 +17,8 @@ def _month_range(year: int, month: int) -> tuple[str, str]:
     last_day = cal_lib.monthrange(year, month)[1]
     last = date(year, month, last_day)
     return (
-        datetime(first.year, first.month, first.day, tzinfo=timezone.utc).isoformat(),
-        datetime(last.year, last.month, last.day, 23, 59, 59, tzinfo=timezone.utc).isoformat(),
+        datetime(first.year, first.month, first.day).isoformat(),
+        datetime(last.year, last.month, last.day, 23, 59, 59).isoformat(),
     )
 
 
@@ -85,11 +85,11 @@ async def create_event(
 ):
     is_all_day = bool(all_day)
     if is_all_day:
-        start_iso = f"{start_date}T00:00:00Z"
-        end_iso = f"{start_date}T23:59:59Z"
+        start_iso = f"{start_date}T00:00:00"
+        end_iso = f"{start_date}T23:59:59"
     else:
-        start_iso = f"{start_date}T{start_time}:00Z"
-        end_iso = f"{start_date}T{end_time}:00Z"
+        start_iso = f"{start_date}T{start_time}:00"
+        end_iso = f"{start_date}T{end_time}:00"
 
     payload = {
         "title": title,

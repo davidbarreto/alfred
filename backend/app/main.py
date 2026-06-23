@@ -40,6 +40,7 @@ from app.api.routes.core.memories import router as core_memories_router
 from app.api.routes.core.working_memory import router as core_working_memory_router
 from app.api.routes.core.embeddings import router as core_embeddings_router
 from app.api.routes.core.chats import router as core_chats_router, stream_router as core_chats_stream_router
+from app.api.routes.briefing import router as briefing_router
 from app.config import get_settings
 
 settings = get_settings()
@@ -102,6 +103,7 @@ app.include_router(core_working_memory_router)
 app.include_router(core_embeddings_router)
 app.include_router(core_chats_router)
 app.include_router(core_chats_stream_router)
+app.include_router(briefing_router)
 
 @app.exception_handler(RequestValidationError)
 async def _validation_error_handler(request: Request, exc: RequestValidationError) -> JSONResponse:

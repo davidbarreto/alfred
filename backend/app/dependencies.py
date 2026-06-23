@@ -25,8 +25,12 @@ from app.features.core.embeddings.service import EmbeddingService
 from app.features.core.chats.service import ChatService
 from app.features.core.memories.extraction_service import MemoryExtractionService
 from app.features.core.sessions.summary_service import SessionSummaryService
+from app.features.briefing.summary_service import BriefingSummaryService
+from app.features.briefing.formatter_service import BriefingFormatterService
+from app.features.briefing.weather_client import WeatherClient
 from app.integrations.sentence_transformers.provider import SentenceTransformerEmbeddingProvider
 from app.integrations.google.llm_provider import GoogleLlmProvider
+from app.shared.llm import LlmProvider
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.session import get_session
 
@@ -111,14 +115,14 @@ def get_embedding_provider() -> SentenceTransformerEmbeddingProvider:
     return SentenceTransformerEmbeddingProvider(get_settings().embedding_model)
 
 @lru_cache
-def get_llm_provider() -> GoogleLlmProvider:
+def get_llm_provider() -> LlmProvider:
     s = get_settings()
     if not s.google_api_key:
         raise RuntimeError("GOOGLE_API_KEY is not set")
     return GoogleLlmProvider(api_key=s.google_api_key, model_name=s.llm_chat_model, temperature=s.llm_chat_temperature)
 
 @lru_cache
-def get_extraction_llm_provider() -> GoogleLlmProvider:
+def get_extraction_llm_provider() -> LlmProvider:
     s = get_settings()
     if not s.google_api_key:
         raise RuntimeError("GOOGLE_API_KEY is not set")
@@ -148,6 +152,16 @@ def get_chat_service(session: AsyncSession = Depends(get_session)) -> ChatServic
         session_summary_service=get_session_summary_service(),
     )
 
+@lru_cache
+def get_weather_client() -> WeatherClient:
+    return WeatherClient()
+
+def get_briefing_summary_service(session: AsyncSession = Depends(get_session)) -> BriefingSummaryService:
+    return BriefingSummaryService(session=session, weather_client=get_weather_client())
+
+def get_briefing_formatter_service(session: AsyncSession = Depends(get_session)) -> BriefingFormatterService:
+    return BriefingFormatterService(llm_provider=get_llm_provider(), session=session)
+
 # Dependencies shortcuts
 # DB
 DbSessionDep = Annotated[AsyncSession, Depends(get_session)]
@@ -170,5 +184,7 @@ WorkingMemoryServiceDep = Annotated[WorkingMemoryService, Depends(get_working_me
 EmbeddingServiceDep = Annotated[EmbeddingService, Depends(get_embedding_service)]
 ChatServiceDep = Annotated[ChatService, Depends(get_chat_service)]
 SessionSummaryServiceDep = Annotated[SessionSummaryService, Depends(get_session_summary_service)]
-LlmProviderDep = Annotated[GoogleLlmProvider, Depends(get_llm_provider)]
-ExtractionLlmProviderDep = Annotated[GoogleLlmProvider, Depends(get_extraction_llm_provider)]
+LlmProviderDep = Annotated[LlmProvider, Depends(get_llm_provider)]
+ExtractionLlmProviderDep = Annotated[LlmProvider, Depends(get_extraction_llm_provider)]
+BriefingSummaryServiceDep = Annotated[BriefingSummaryService, Depends(get_briefing_summary_service)]
+BriefingFormatterServiceDep = Annotated[BriefingFormatterService, Depends(get_briefing_formatter_service)]

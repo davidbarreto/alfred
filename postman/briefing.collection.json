@@ -1,0 +1,121 @@
+{
+  "info": {
+    "name": "Alfred - Briefing API",
+    "_postman_id": "alfred-briefing-v1",
+    "description": "Morning briefing endpoints. Run: Health Check → Morning Briefing JSON → Morning Briefing Formatted",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{api_token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "01 - Health Check",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Status is ok', () => {",
+              "    pm.expect(pm.response.json().status).to.eql('ok');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "auth": { "type": "noauth" },
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/health",
+          "host": ["{{base_url}}"],
+          "path": ["health"]
+        }
+      }
+    },
+    {
+      "name": "02 - Morning Briefing (JSON)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Has date field', () => {",
+              "    pm.expect(pm.response.json()).to.have.property('date');",
+              "});",
+              "pm.test('Has tasks array', () => {",
+              "    pm.expect(pm.response.json().tasks).to.be.an('array');",
+              "});",
+              "pm.test('Has events array', () => {",
+              "    pm.expect(pm.response.json().events).to.be.an('array');",
+              "});",
+              "pm.test('Has weather object', () => {",
+              "    const weather = pm.response.json().weather;",
+              "    pm.expect(weather).to.have.property('temperature_max_c');",
+              "    pm.expect(weather).to.have.property('temperature_min_c');",
+              "    pm.expect(weather).to.have.property('description');",
+              "    pm.expect(weather.advice).to.be.an('array');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/briefing/morning",
+          "host": ["{{base_url}}"],
+          "path": ["briefing", "morning"]
+        }
+      }
+    },
+    {
+      "name": "03 - Morning Briefing (Formatted Text)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Has date field', () => {",
+              "    pm.expect(pm.response.json()).to.have.property('date');",
+              "});",
+              "pm.test('Has text field', () => {",
+              "    pm.expect(pm.response.json()).to.have.property('text');",
+              "    pm.expect(pm.response.json().text).to.be.a('string');",
+              "    pm.expect(pm.response.json().text.length).to.be.above(0);",
+              "});",
+              "pm.test('Text has no markdown asterisks', () => {",
+              "    pm.expect(pm.response.json().text).to.not.include('**');",
+              "    pm.expect(pm.response.json().text).to.not.include('__');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/briefing/morning/formatted",
+          "host": ["{{base_url}}"],
+          "path": ["briefing", "morning", "formatted"]
+        }
+      }
+    }
+  ]
+}

@@ -1,4 +1,5 @@
-from sqlalchemy import delete, select
+from datetime import datetime, timezone
+from sqlalchemy import select, update
 from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -16,12 +17,14 @@ class NoteRepository:
 
     async def get_note(self, note_id: int) -> Note | None:
         result = await self._session.execute(
-            select(Note).options(selectinload(Note.tags)).where(Note.id == note_id)
+            select(Note)
+            .options(selectinload(Note.tags))
+            .where(Note.id == note_id, Note.deleted_at.is_(None))
         )
         return result.scalars().first()
 
     async def get_notes(self, note_filter: NoteFilters) -> list[Note]:
-        query = select(Note).options(selectinload(Note.tags))
+        query = select(Note).options(selectinload(Note.tags)).where(Note.deleted_at.is_(None))
         if note_filter.tags:
             query = query.where(Note.tags.any(Tag.name.in_(note_filter.tags)))
         query = query.limit(note_filter.limit)
@@ -69,9 +72,10 @@ class NoteRepository:
         )
         return result.scalars().one()
 
-    async def delete_note(self, note_id: int):
-        note = await self.get_note(note_id)
-        if note is None:
-            return None
-        await self._session.execute(delete(Note).where(Note.id == note_id))
+    async def delete_note(self, note_id: int) -> None:
+        await self._session.execute(
+            update(Note)
+            .where(Note.id == note_id)
+            .values(deleted_at=datetime.now(timezone.utc))
+        )
         await self._session.commit()

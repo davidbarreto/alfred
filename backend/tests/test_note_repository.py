@@ -186,15 +186,15 @@ class TestDeleteNote:
 
         session.commit.assert_called_once()
 
-    async def test_delete_not_found(self):
+    async def test_delete_issues_update_unconditionally(self):
         session = _make_session()
-        session.execute.return_value = _scalar_first(None)
+        session.execute.return_value = MagicMock()
 
         repo = NoteRepository(session)
-        result = await repo.delete_note(999)
+        await repo.delete_note(999)
 
-        assert result is None
-        session.commit.assert_not_called()
+        session.execute.assert_called_once()
+        session.commit.assert_called_once()
 
 
 class TestResolveTags:

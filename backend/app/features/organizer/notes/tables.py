@@ -1,7 +1,7 @@
 from datetime import datetime
 from sqlalchemy import DateTime, Integer, String, Text, UniqueConstraint, func
 from sqlalchemy.orm import relationship, Mapped, mapped_column
-from typing import List
+from typing import List, Optional
 
 from app.features.organizer.tags.tables import Tag
 from app.db.base import Base
@@ -23,6 +23,10 @@ class Note(Base):
     )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
+    )
+
+    deleted_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True), nullable=True
     )
 
     tags: Mapped[List["Tag"]] = relationship(

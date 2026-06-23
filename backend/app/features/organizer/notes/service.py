@@ -40,7 +40,7 @@ class NoteService:
         note_orm = await self._repo.update_note(note_id, note_update)
         return NoteRead.model_validate(note_orm)
 
-    async def delete_note(self, note_id: int):
+    async def delete_note(self, note_id: int) -> None:
         note = await self._repo.get_note(note_id)
         if note:
             await self._provider.delete(note.provider_id, self._session)

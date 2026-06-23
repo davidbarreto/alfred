@@ -9,7 +9,7 @@ def _make_task_read(**kwargs):
     defaults = dict(
         id=1, title="Test Task", status="TODO",
         priority="LOW", urgency="NORMAL", tags=[],
-        deadline=None, recurrence_rule=None,
+        deadline=None, recurrence_rule=None, is_done_today=False,
     )
     defaults.update(kwargs)
     return TaskRead(**defaults)

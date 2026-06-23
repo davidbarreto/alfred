@@ -1,7 +1,7 @@
 import pytest
 from fastapi.testclient import TestClient
 from unittest.mock import AsyncMock
-from app.features.organizer.tasks.schemas import TaskRead
+from app.features.organizer.tasks.schemas import TaskCompletionRead, TaskRead
 
 AUTH = {"Authorization": "Bearer test-api-token"}
 
@@ -9,7 +9,7 @@ AUTH = {"Authorization": "Bearer test-api-token"}
 def _task_read(**kwargs):
     defaults = dict(
         id=1, title="Test Task", status="TODO",
-        priority="LOW", urgency="NORMAL", tags=[]
+        priority="LOW", urgency="NORMAL", tags=[], is_done_today=False
     )
     defaults.update(kwargs)
     return TaskRead(**defaults)
@@ -22,6 +22,7 @@ def mock_service():
     svc.get_tasks.return_value = [_task_read()]
     svc.create_task.return_value = _task_read(id=2, title="New Task")
     svc.update_task.return_value = _task_read(status="DONE")
+    svc.complete_task.return_value = _task_read(status="DONE", is_done_today=True)
     svc.delete_task.return_value = None
     return svc
 
@@ -152,3 +153,35 @@ class TestDeleteTask:
     def test_service_called_with_correct_id(self, client, mock_service):
         client.delete("/organizer/tasks/42", headers=AUTH)
         mock_service.delete_task.assert_called_once_with(42)
+
+
+class TestCompleteTask:
+    def test_non_recurring_returns_task_read(self, client, mock_service):
+        mock_service.complete_task.return_value = _task_read(status="DONE", is_done_today=True)
+        response = client.post("/organizer/tasks/1/complete", headers=AUTH)
+        assert response.status_code == 200
+        data = response.json()
+        assert data["status"] == "DONE"
+        assert data["is_done_today"] is True
+
+    def test_recurring_returns_task_read_with_is_done_today(self, client, mock_service):
+        from datetime import date, datetime, timezone
+        completion = TaskCompletionRead(
+            id=1, task_id=1,
+            occurrence_date=date.today(),
+            completed_at=datetime.now(timezone.utc),
+        )
+        mock_service.complete_task.return_value = completion
+        mock_service.get_task.return_value = _task_read(recurrence_rule="FREQ=DAILY")
+        response = client.post("/organizer/tasks/1/complete", headers=AUTH)
+        assert response.status_code == 200
+        assert response.json()["is_done_today"] is True
+
+    def test_not_found_returns_404(self, client, mock_service):
+        mock_service.complete_task.return_value = None
+        response = client.post("/organizer/tasks/999/complete", headers=AUTH)
+        assert response.status_code == 404
+
+    def test_requires_auth(self, client):
+        response = client.post("/organizer/tasks/1/complete")
+        assert response.status_code == 403

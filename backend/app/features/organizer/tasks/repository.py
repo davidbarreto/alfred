@@ -86,6 +86,17 @@ class TaskRepository:
         )
         await self._session.commit()
 
+    async def get_completed_task_ids_for_date(self, task_ids: list[int], for_date: date) -> set[int]:
+        if not task_ids:
+            return set()
+        result = await self._session.execute(
+            select(TaskCompletion.task_id).where(
+                TaskCompletion.task_id.in_(task_ids),
+                TaskCompletion.occurrence_date == for_date,
+            )
+        )
+        return set(result.scalars().all())
+
     async def get_completion(self, task_id: int, occurrence_date: date) -> TaskCompletion | None:
         result = await self._session.execute(
             select(TaskCompletion).where(

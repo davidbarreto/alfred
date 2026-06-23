@@ -1,5 +1,6 @@
-from fastapi import APIRouter, Depends, HTTPException, Response, status
-from app.features.organizer.tasks.schemas import TaskRead, TaskCreate, TaskUpdate, TaskFilters
+from datetime import date
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
+from app.features.organizer.tasks.schemas import TaskCompletionRead, TaskRead, TaskCreate, TaskUpdate, TaskFilters
 from app.api.auth import require_auth
 from app.dependencies import TaskServiceDep
 
@@ -32,3 +33,21 @@ async def get_task(task_id: int, service: TaskServiceDep):
     if task_read is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found")
     return task_read
+
+
+@router.post("/{task_id}/complete", response_model=TaskRead)
+async def complete_task(
+    task_id: int,
+    service: TaskServiceDep,
+    occurrence_date: date | None = Query(None),
+):
+    result = await service.complete_task(task_id, occurrence_date)
+    if result is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found")
+    if isinstance(result, TaskCompletionRead):
+        task_read = await service.get_task(task_id)
+        if task_read is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found")
+        task_read.is_done_today = True
+        return task_read
+    return result

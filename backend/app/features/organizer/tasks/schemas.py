@@ -36,6 +36,7 @@ class TaskUpdate(BaseModel):
 
 class TaskRead(TaskBase):
     id: int
+    is_done_today: bool = False
 
     model_config = {"from_attributes": True}
 

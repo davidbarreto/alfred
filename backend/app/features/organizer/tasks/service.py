@@ -1,5 +1,5 @@
 import logging
-from datetime import date
+from datetime import date, datetime, timezone
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -28,11 +28,22 @@ class TaskService:
         task_orm = await self._repo.get_task(task_id)
         if task_orm is None:
             return None
-        return TaskRead.model_validate(task_orm)
+        task_read = TaskRead.model_validate(task_orm)
+        if task_orm.recurrence_rule is not None:
+            completed = await self._repo.get_completed_task_ids_for_date([task_id], date.today())
+            task_read.is_done_today = task_id in completed
+        return task_read
 
     async def get_tasks(self, filters: TaskFilters) -> list[TaskRead]:
         tasks_orm = await self._repo.get_tasks(filters)
-        return [TaskRead.model_validate(task_orm) for task_orm in tasks_orm]
+        task_reads = [TaskRead.model_validate(t) for t in tasks_orm]
+        recurring_ids = [t.id for t in task_reads if t.recurrence_rule is not None]
+        if recurring_ids:
+            completed_today = await self._repo.get_completed_task_ids_for_date(recurring_ids, date.today())
+            for task in task_reads:
+                if task.id in completed_today:
+                    task.is_done_today = True
+        return task_reads
 
     async def create_task(self, task_create: TaskCreate) -> TaskRead:
         task_record = await self._provider.create(task_create.model_dump(), self._session)
@@ -64,7 +75,9 @@ class TaskService:
         if task.recurrence_rule is None:
             task_orm = await self._repo.update_task(task_id, TaskUpdate(status="DONE"))
             logger.info("Task completed (non-recurring): id=%d", task_id)
-            return TaskRead.model_validate(task_orm)
+            result = TaskRead.model_validate(task_orm)
+            result.is_done_today = True
+            return result
 
         occ_date = occurrence_date or date.today()
         existing = await self._repo.get_completion(task_id, occ_date)

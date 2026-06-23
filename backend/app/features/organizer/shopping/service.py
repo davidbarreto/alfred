@@ -120,7 +120,7 @@ class ShoppingService:
                 notes=wish.notes,
             )
         )
-        await self._wishlist.delete(item_id)
+        await self._wishlist.promote(item_id)
         logger.info("Wishlist item promoted: wish_id=%d → shopping_id=%d", item_id, shopping_item.id)
         return ShoppingItemRead.model_validate(shopping_item)
 

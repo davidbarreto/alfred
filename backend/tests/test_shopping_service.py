@@ -183,7 +183,7 @@ class TestCreateWish:
 
 
 class TestPromoteWish:
-    async def test_creates_shopping_item_and_deletes_wish(self, service):
+    async def test_creates_shopping_item_and_promotes_wish(self, service):
         wish = _make_wishlist_orm(id=5, name="Headphones", category="electronics", estimated_price=Decimal("150"))
         service._wishlist.get.return_value = wish
         service._shopping.create.return_value = _make_shopping_orm(id=10, name="Headphones", priority="want")
@@ -193,7 +193,7 @@ class TestPromoteWish:
         assert isinstance(result, ShoppingItemRead)
         assert result.name == "Headphones"
         service._shopping.create.assert_called_once()
-        service._wishlist.delete.assert_called_once_with(5)
+        service._wishlist.promote.assert_called_once_with(5)
 
     async def test_returns_none_when_wish_not_found(self, service):
         service._wishlist.get.return_value = None

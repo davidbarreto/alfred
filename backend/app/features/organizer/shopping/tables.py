@@ -28,6 +28,7 @@ class ShoppingItem(Base):
     status: Mapped[str] = mapped_column(String(20), nullable=False, default="pending")
     source: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
     last_bought_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    deleted_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
@@ -47,6 +48,8 @@ class WishlistItem(Base):
     brand: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     url: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    deleted_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    promoted_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )

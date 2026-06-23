@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
-from sqlalchemy import delete, select, update
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.features.organizer.shopping.schemas import (
@@ -24,12 +24,12 @@ class ShoppingRepository:
 
     async def get(self, item_id: int) -> ShoppingItem | None:
         result = await self._session.execute(
-            select(ShoppingItem).where(ShoppingItem.id == item_id)
+            select(ShoppingItem).where(ShoppingItem.id == item_id, ShoppingItem.deleted_at.is_(None))
         )
         return result.scalars().first()
 
     async def list(self, filters: ShoppingItemFilters) -> list[ShoppingItem]:
-        query = select(ShoppingItem)
+        query = select(ShoppingItem).where(ShoppingItem.deleted_at.is_(None))
         if filters.status != "all":
             query = query.where(ShoppingItem.status == filters.status)
         if filters.category != "all":
@@ -60,7 +60,10 @@ class ShoppingRepository:
         return await self.get(item_id)
 
     async def delete(self, item_id: int) -> None:
-        await self._session.execute(delete(ShoppingItem).where(ShoppingItem.id == item_id))
+        now = datetime.now(timezone.utc)
+        await self._session.execute(
+            update(ShoppingItem).where(ShoppingItem.id == item_id).values(deleted_at=now, updated_at=now)
+        )
         await self._session.commit()
 
     async def mark_bought(self, item_id: int) -> ShoppingItem | None:
@@ -95,7 +98,10 @@ class WishlistRepository:
         return result.scalars().first()
 
     async def list(self, filters: WishlistItemFilters) -> list[WishlistItem]:
-        query = select(WishlistItem)
+        query = select(WishlistItem).where(
+            WishlistItem.deleted_at.is_(None),
+            WishlistItem.promoted_at.is_(None),
+        )
         if filters.category != "all":
             query = query.where(WishlistItem.category == filters.category)
         query = query.order_by(WishlistItem.created_at.asc()).limit(filters.limit)
@@ -122,8 +128,19 @@ class WishlistRepository:
         return await self.get(item_id)
 
     async def delete(self, item_id: int) -> None:
-        await self._session.execute(delete(WishlistItem).where(WishlistItem.id == item_id))
+        now = datetime.now(timezone.utc)
+        await self._session.execute(
+            update(WishlistItem).where(WishlistItem.id == item_id).values(deleted_at=now, updated_at=now)
+        )
         await self._session.commit()
+
+    async def promote(self, item_id: int) -> WishlistItem | None:
+        now = datetime.now(timezone.utc)
+        await self._session.execute(
+            update(WishlistItem).where(WishlistItem.id == item_id).values(promoted_at=now, updated_at=now)
+        )
+        await self._session.commit()
+        return await self.get(item_id)
 
 
 class RecurrenceRepository:

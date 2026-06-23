@@ -1,5 +1,5 @@
 from datetime import date, timedelta
-from typing import Annotated
+from typing import Annotated, Optional
 
 import httpx
 from fastapi import APIRouter, Form, Request
@@ -80,14 +80,48 @@ async def tasks_list_fragment(request: Request):
     })
 
 
+@router.post("/", response_class=HTMLResponse)
+async def create_task(
+    request: Request,
+    title: Annotated[str, Form()],
+    priority: Annotated[str, Form()] = "LOW",
+    urgency: Annotated[str, Form()] = "NORMAL",
+    deadline: Annotated[Optional[str], Form()] = None,
+    tags: Annotated[str, Form()] = "",
+):
+    tag_list = [t.strip() for t in tags.split(",") if t.strip()]
+    payload: dict = {"title": title, "priority": priority, "urgency": urgency, "tags": tag_list}
+    if deadline:
+        payload["deadline"] = deadline
+    try:
+        task = await api.post("/organizer/tasks/", json=payload)
+    except httpx.HTTPError:
+        return HTMLResponse('<p class="text-[#E24B4A] text-sm">Failed to create task.</p>', status_code=422)
+
+    await api.log_command("task.add", {"title": title}, "task", task.get("id"))
+
+    active_filter = request.query_params.get("filter", "all")
+    params = _build_params(active_filter)
+    tasks = []
+    try:
+        tasks = await api.get("/organizer/tasks/", params=params)
+    except httpx.HTTPError:
+        pass
+    return templates.TemplateResponse(request, "_tasks_list.html", {
+        "tasks": tasks,
+        "today": date.today().isoformat(),
+        "tomorrow": (date.today() + timedelta(days=1)).isoformat(),
+    })
+
+
 @router.post("/{task_id}/done", response_class=HTMLResponse)
 async def mark_task_done(task_id: int, request: Request):
     try:
-        task = await api.patch(f"/organizer/tasks/{task_id}/", json={"status": "DONE"})
+        task = await api.post(f"/organizer/tasks/{task_id}/complete")
         await api.log_command("task.done", {"task_id": task_id}, "task", task_id)
     except httpx.HTTPError:
         task = {"id": task_id, "title": "—", "status": "DONE", "priority": "LOW",
-                "urgency": "NORMAL", "deadline": None, "tags": []}
+                "urgency": "NORMAL", "deadline": None, "tags": [], "is_done_today": True}
     return templates.TemplateResponse(request, "_task_row.html", {
         "task": task,
         "today": date.today().isoformat(),

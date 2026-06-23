@@ -1,5 +1,6 @@
 {% set deadline = task.deadline[:10] if task.deadline else "" %}
 {% set is_done = task.status == "DONE" %}
+{% set is_done_today = task.is_done_today and task.status != "DONE" %}
 {% set is_doing = task.status == "DOING" %}
 
 {% if task.recurrence_rule %}
@@ -28,13 +29,15 @@
       <input
         type="checkbox"
         class="checkbox checkbox-sm mt-0.5 flex-shrink-0"
-        {% if is_done %}checked disabled{% endif %}
+        {% if is_done or is_done_today %}checked disabled{% endif %}
         hx-post="/tasks/{{ task.id }}/done"
         hx-target="#task-{{ task.id }}"
         hx-swap="outerHTML"
       />
       <span class="flex-1 text-sm font-medium leading-snug
-        {% if is_done %}line-through text-gray-300{% else %}text-gray-900{% endif %}">
+        {% if is_done %}line-through text-gray-300
+        {% elif is_done_today %}text-gray-400
+        {% else %}text-gray-900{% endif %}">
         {{ task.title }}
       </span>
     </div>
@@ -93,6 +96,13 @@
       {% if task.recurrence_rule %}
       <span class="flex items-center gap-1 text-gray-400">
         <i class="ti ti-repeat" style="font-size:0.8rem"></i>{{ freq_label }}
+      </span>
+      {% endif %}
+
+      <!-- Done today (recurring only) -->
+      {% if is_done_today %}
+      <span class="flex items-center gap-1 text-emerald-500 font-medium">
+        <i class="ti ti-check" style="font-size:0.8rem"></i>Done today
       </span>
       {% endif %}
 

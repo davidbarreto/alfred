@@ -4,7 +4,13 @@
 
 {% block content %}
 <div class="p-6 space-y-4">
-  <h1 class="text-base font-semibold text-gray-900">Tasks</h1>
+  <div class="flex items-center justify-between">
+    <h1 class="text-base font-semibold text-gray-900">Tasks</h1>
+    <button onclick="openNewTask()"
+            class="btn btn-sm btn-primary gap-1">
+      <i class="ti ti-plus text-sm"></i>New task
+    </button>
+  </div>
 
   {% if api_error %}
   <div class="rounded-lg bg-[#FCEBEB] border border-[#E24B4A]/20 px-4 py-2.5 text-sm text-[#E24B4A]">
@@ -28,4 +34,104 @@
     {% include "_tasks_list.html" %}
   </div>
 </div>
+
+<!-- New Task Modal -->
+<dialog id="new-task-modal" class="modal">
+  <div class="modal-box bg-white rounded-xl border border-gray-200 shadow-lg max-w-md w-full p-6">
+    <h3 class="text-sm font-semibold text-gray-900 mb-4">New task</h3>
+    <form id="new-task-form" onsubmit="submitNewTask(event)" class="flex flex-col gap-3">
+      <div>
+        <label class="text-xs text-gray-500 mb-1 block">Title <span class="text-[#E24B4A]">*</span></label>
+        <input
+          id="task-title"
+          name="title"
+          type="text"
+          required
+          placeholder="Task title"
+          class="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white w-full focus:outline-none focus:ring-1 focus:ring-[#378ADD]"
+        />
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="text-xs text-gray-500 mb-1 block">Priority</label>
+          <select name="priority" class="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white w-full focus:outline-none focus:ring-1 focus:ring-[#378ADD]">
+            <option value="LOW">Low</option>
+            <option value="MEDIUM">Medium</option>
+            <option value="HIGH">High</option>
+          </select>
+        </div>
+        <div>
+          <label class="text-xs text-gray-500 mb-1 block">Urgency</label>
+          <select name="urgency" class="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white w-full focus:outline-none focus:ring-1 focus:ring-[#378ADD]">
+            <option value="NORMAL">Normal</option>
+            <option value="URGENT">Urgent</option>
+          </select>
+        </div>
+      </div>
+      <div>
+        <label class="text-xs text-gray-500 mb-1 block">Due date</label>
+        <input
+          name="deadline"
+          type="date"
+          class="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white w-full focus:outline-none focus:ring-1 focus:ring-[#378ADD]"
+        />
+      </div>
+      <div>
+        <label class="text-xs text-gray-500 mb-1 block">Tags <span class="text-gray-300">(comma-separated)</span></label>
+        <input
+          name="tags"
+          type="text"
+          placeholder="work, personal"
+          class="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white w-full focus:outline-none focus:ring-1 focus:ring-[#378ADD]"
+        />
+      </div>
+      <p id="task-error" class="text-xs text-[#E24B4A] hidden"></p>
+      <div class="flex justify-end gap-2 mt-1">
+        <button type="button" onclick="document.getElementById('new-task-modal').close()"
+                class="btn btn-sm btn-ghost text-gray-500">Cancel</button>
+        <button type="submit" id="task-submit-btn" class="btn btn-sm btn-primary">Save task</button>
+      </div>
+    </form>
+  </div>
+  <form method="dialog" class="modal-backdrop">
+    <button>close</button>
+  </form>
+</dialog>
+
+<script>
+function openNewTask() {
+  document.getElementById("task-error").classList.add("hidden");
+  document.getElementById("new-task-form").reset();
+  document.getElementById("new-task-modal").showModal();
+  setTimeout(() => document.getElementById("task-title").focus(), 50);
+}
+
+async function submitNewTask(e) {
+  e.preventDefault();
+  const btn = document.getElementById("task-submit-btn");
+  const errEl = document.getElementById("task-error");
+  btn.disabled = true;
+  btn.textContent = "Saving…";
+  errEl.classList.add("hidden");
+
+  const data = new FormData(e.target);
+  try {
+    const res = await fetch("/tasks/", { method: "POST", body: data });
+    if (!res.ok) {
+      const txt = await res.text();
+      throw new Error(txt || `Error ${res.status}`);
+    }
+    const html = await res.text();
+    document.getElementById("task-list").innerHTML = html;
+    document.getElementById("new-task-modal").close();
+    document.getElementById("new-task-form").reset();
+  } catch (err) {
+    errEl.textContent = err.message || "Failed to save task.";
+    errEl.classList.remove("hidden");
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Save task";
+  }
+}
+</script>
 {% endblock %}

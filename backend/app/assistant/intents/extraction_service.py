@@ -9,6 +9,7 @@ from typing import Literal
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.assistant.prompts import DATE_CONTEXT_TEMPLATE, INTENT_EXTRACTION_PROMPT_TEMPLATE
 from app.integrations.llm_calls.repository import create_llm_call
 from app.shared.llm import LlmProvider
 
@@ -95,13 +96,6 @@ _INTENT_SCHEMAS: dict[str, type[BaseModel]] = {
 
 _INTENTS_WITH_DATES = {"task.add", "event.add", "event.list"}
 
-_DATE_CONTEXT = "The current date and time is {now}. Use it to resolve relative date expressions like 'next Sunday' or 'tomorrow'. "
-
-_SYSTEM_PROMPT_TEMPLATE = (
-    "Extract the requested structured fields from the user message. "
-    "{date_context}"
-    "Return ONLY a valid JSON object matching this schema — no explanation or commentary:\n{schema}"
-)
 
 
 async def extract_args(
@@ -118,8 +112,8 @@ async def extract_args(
     date_context = ""
     if intent in _INTENTS_WITH_DATES:
         now = datetime.now(tz=timezone.utc).strftime("%A, %B %d, %Y at %H:%M UTC")
-        date_context = _DATE_CONTEXT.format(now=now)
-    system_prompt = _SYSTEM_PROMPT_TEMPLATE.format(date_context=date_context, schema=schema_str)
+        date_context = DATE_CONTEXT_TEMPLATE.format(now=now)
+    system_prompt = INTENT_EXTRACTION_PROMPT_TEMPLATE.format(date_context=date_context, schema=schema_str)
     messages = [{"role": "user", "content": text}]
 
     try:

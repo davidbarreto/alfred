@@ -14,6 +14,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 logger = logging.getLogger(__name__)
 
 from app.features.core.chats.schemas import ChatRequest
+from app.features.core.prompts import (
+    CHAT_COMMAND_BOUNDARY_INSTRUCTIONS,
+    CHAT_FOCUS_INSTRUCTIONS,
+    CHAT_FORMATTING_INSTRUCTIONS,
+    CHAT_LANGUAGE_INSTRUCTIONS,
+)
 from app.features.core.embeddings.schemas import EmbeddingSearchRequest, EmbeddingSearchResult
 from app.features.core.embeddings.service import EmbeddingService
 from app.features.core.memories.extraction_service import MemoryExtractionService
@@ -36,37 +42,6 @@ def _load_persona() -> str:
     except FileNotFoundError:
         return "You are Alfred, a helpful personal AI assistant."
 
-
-_FORMATTING_INSTRUCTIONS = (
-    "## Output format\n"
-    "Messages are delivered through Telegram. "
-    "Use only plain text — no markdown, no asterisks for bold, no underscores for italic, no backtick code blocks. "
-    "Use line breaks and simple punctuation for structure instead."
-)
-
-_FOCUS_INSTRUCTIONS = (
-    "## Focus\n"
-    "Respond only to David's current message. "
-    "Do not proactively resume, continue, or elaborate on tasks mentioned in previous messages — "
-    "wait until David explicitly asks you to."
-)
-
-_COMMAND_BOUNDARY_INSTRUCTIONS = (
-    "## Commands\n"
-    "You do not execute write operations directly. "
-    "Tasks, notes, events, and transactions are handled by a separate command pipeline, not by you in conversation. "
-    "Never say you have added, created, saved, or completed something unless a command result is explicitly shown to you. "
-    "Never offer to create, add, or save anything — that is not your role. "
-    "If a message looks like a task or note request but no pipeline result is provided, "
-    "tell David you did not catch it as a command and suggest he rephrase or use a slash command (e.g. /task buy beans)."
-)
-
-_LANGUAGE_INSTRUCTIONS = (
-    "## Language\n"
-    "Always reply in English by default. "
-    "Switch to Portuguese only if David's current message is written in Portuguese. "
-    "You may use occasional Portuguese words or expressions naturally, but the reply must be in English unless David is writing in Portuguese."
-)
 
 
 def _build_system_prompt(
@@ -92,13 +67,13 @@ def _build_system_prompt(
     parts += [
         _load_persona(),
         f"## Current date and time\nNow is {now}.",
-        _FORMATTING_INSTRUCTIONS,
-        _LANGUAGE_INSTRUCTIONS,
-        _FOCUS_INSTRUCTIONS,
+        CHAT_FORMATTING_INSTRUCTIONS,
+        CHAT_LANGUAGE_INSTRUCTIONS,
+        CHAT_FOCUS_INSTRUCTIONS,
     ]
 
     if not detected_intents:
-        parts.append(_COMMAND_BOUNDARY_INSTRUCTIONS)
+        parts.append(CHAT_COMMAND_BOUNDARY_INSTRUCTIONS)
 
     if recent_summaries:
         lines = "\n".join(

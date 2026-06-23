@@ -8,21 +8,13 @@ from app.db.session import async_session
 from app.features.core.messages.schemas import MessageFilters
 from app.features.core.messages.service import MessageService
 from app.features.core.sessions.repository import SessionRepository
+from app.features.core.prompts import SESSION_SUMMARY_PROMPT
 from app.integrations.llm_calls.repository import create_llm_call
 from app.shared.llm import LlmProvider
 
 logger = logging.getLogger(__name__)
 
 _SUMMARY_LIMIT = 5
-
-_SUMMARY_PROMPT = """\
-Summarise this conversation in 3-5 sentences for an AI assistant's long-term memory.
-Include: main topics discussed, decisions or actions taken, important facts the user shared, \
-and any open questions or follow-ups.
-Be concise — this will be injected into future conversation prompts.
-
-Conversation:
-{messages}"""
 
 
 class SessionSummaryService:
@@ -60,7 +52,7 @@ class SessionSummaryService:
                 f"{'User' if m.role == 'user' else 'Alfred'}: {m.content}"
                 for m in messages
             )
-            prompt_messages = [{"role": "user", "content": _SUMMARY_PROMPT.format(messages=formatted)}]
+            prompt_messages = [{"role": "user", "content": SESSION_SUMMARY_PROMPT.format(messages=formatted)}]
             t0 = time.monotonic()
             llm_response = await self._llm_provider.complete(prompt_messages)
             latency_ms = int((time.monotonic() - t0) * 1000)

@@ -10,6 +10,7 @@ from app.features.core.embeddings.schemas import EmbeddingCreate, EmbeddingSearc
 from app.features.core.embeddings.service import EmbeddingService
 from app.features.core.memories.schemas import MemoryCategory, MemoryCreate, MemoryUpdate
 from app.features.core.memories.service import MemoryService
+from app.features.core.prompts import MEMORY_EXTRACTION_PROMPT
 from app.integrations.llm_calls.repository import create_llm_call
 from app.shared.embedding import EmbeddingProvider
 from app.shared.llm import LlmProvider
@@ -19,24 +20,6 @@ logger = logging.getLogger(__name__)
 _DEDUP_THRESHOLD = 0.85
 _IMPORTANCE_BUMP = 0.1
 _VALID_CATEGORIES: frozenset[str] = frozenset(get_args(MemoryCategory))
-
-_EXTRACTION_PROMPT = """\
-You are a memory extractor for a personal AI assistant.
-Analyze the user message and extract personal facts, preferences, habits, goals, \
-relationships, or skills worth remembering long-term.
-
-Rules:
-- Only extract information specifically about the user, not generic questions or commands
-- Skip vague or one-off statements unlikely to be useful later
-- Confidence: lower if information is implied rather than stated directly
-- Importance: how useful this will be in future conversations
-
-Return ONLY a valid JSON array with no explanation or markdown:
-[{{"category": "fact|preference|habit|goal|relationship|skill", "content": "...", "importance": 0.0-1.0, "confidence": 0.0-1.0}}]
-
-Return [] if nothing is worth remembering.
-
-User message: {message}"""
 
 
 class MemoryExtractionService:
@@ -51,7 +34,7 @@ class MemoryExtractionService:
             logger.exception("Memory extraction failed for message_id=%d", message_id)
 
     async def _do_extract(self, user_message: str, message_id: int) -> None:
-        prompt = _EXTRACTION_PROMPT.format(message=user_message)
+        prompt = MEMORY_EXTRACTION_PROMPT.format(message=user_message)
         messages = [{"role": "user", "content": prompt}]
         t0 = time.monotonic()
         llm_response = await self._llm_provider.complete(messages)

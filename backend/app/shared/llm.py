@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import AsyncGenerator, Protocol, runtime_checkable
 
 
@@ -9,6 +9,18 @@ class LlmResponse:
     text: str
     tokens_input: int | None
     tokens_output: int | None
+    finish_reason: str | None = None
+
+
+@dataclass
+class StreamMeta:
+    """Mutable container passed into stream() so callers can read finish_reason after iteration."""
+    finish_reason: str | None = None
+    truncated: bool = field(default=False, init=False)
+
+    def set_finish_reason(self, reason: str | None) -> None:
+        self.finish_reason = reason
+        self.truncated = bool(reason and reason != "STOP")
 
 
 @runtime_checkable
@@ -41,4 +53,5 @@ class LlmProvider(Protocol):
         self,
         messages: list[dict[str, str]],
         system: str | None = None,
+        meta: StreamMeta | None = None,
     ) -> AsyncGenerator[str, None]: ...

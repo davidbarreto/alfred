@@ -21,7 +21,7 @@ from app.features.core.messages.schemas import MessageCreate, MessageFilters, Me
 from app.features.core.messages.service import MessageService
 from app.features.core.sessions.summary_service import SessionSummaryService
 from app.integrations.llm_calls.repository import create_llm_call
-from app.shared.llm import LlmProvider
+from app.shared.llm import LlmProvider, StreamMeta
 
 _PERSONA_PATH = pathlib.Path(__file__).parents[3] / "assistant" / "persona.md"
 _HISTORY_LIMIT = 10
@@ -211,6 +211,7 @@ class ChatService:
             tokens_input=llm_response.tokens_input,
             tokens_output=llm_response.tokens_output,
             latency_ms=latency_ms,
+            finish_reason=llm_response.finish_reason,
         )
 
         await self._message_service.create(
@@ -252,8 +253,9 @@ class ChatService:
 
         t0 = time.monotonic()
         raw_text = ""
+        meta = StreamMeta()
         try:
-            async for chunk in self._llm_provider.stream(messages_list, system=system_prompt):
+            async for chunk in self._llm_provider.stream(messages_list, system=system_prompt, meta=meta):
                 raw_text += chunk
                 yield chunk
         except Exception as exc:
@@ -261,12 +263,21 @@ class ChatService:
             yield "[error: AI service temporarily unavailable.]"
             return
 
+        if meta.truncated:
+            logger.warning(
+                "StreamChat: truncated response session_id=%s finish_reason=%s",
+                request.session_id, meta.finish_reason,
+            )
+            notice = "\n\n[My response was cut short. Ask me to continue!]"
+            raw_text += notice
+            yield notice
+
         latency_ms = int((time.monotonic() - t0) * 1000)
         response_text = _strip_markdown(raw_text)
 
         logger.info(
-            "StreamChat: done session_id=%s latency_ms=%d",
-            request.session_id, latency_ms,
+            "StreamChat: done session_id=%s latency_ms=%d finish_reason=%s",
+            request.session_id, latency_ms, meta.finish_reason,
         )
 
         await create_llm_call(
@@ -279,6 +290,7 @@ class ChatService:
             tokens_input=None,
             tokens_output=None,
             latency_ms=latency_ms,
+            finish_reason=meta.finish_reason,
         )
 
         await self._message_service.create(

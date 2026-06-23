@@ -19,6 +19,7 @@ async def create_llm_call(
     tokens_input: int | None,
     tokens_output: int | None,
     latency_ms: int | None,
+    finish_reason: str | None = None,
 ) -> LlmCall:
     call = LlmCall(
         provider=provider,
@@ -29,6 +30,7 @@ async def create_llm_call(
         tokens_input=tokens_input,
         tokens_output=tokens_output,
         latency_ms=latency_ms,
+        finish_reason=finish_reason,
     )
     session.add(call)
     return call

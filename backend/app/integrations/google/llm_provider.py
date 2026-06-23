@@ -6,7 +6,7 @@ from typing import AsyncGenerator
 from google import genai
 from google.genai import types
 
-from app.shared.llm import LlmResponse
+from app.shared.llm import LlmResponse, StreamMeta
 
 logger = logging.getLogger(__name__)
 
@@ -79,16 +79,21 @@ class GoogleLlmProvider:
         )
 
         usage = response.usage_metadata
+        finish_reason: str | None = None
+        if response.candidates:
+            finish_reason = str(response.candidates[0].finish_reason.name)
         return LlmResponse(
             text=response.text or "",
             tokens_input=usage.prompt_token_count if usage else None,
             tokens_output=usage.candidates_token_count if usage else None,
+            finish_reason=finish_reason,
         )
 
     async def stream(
         self,
         messages: list[dict[str, str]],
         system: str | None = None,
+        meta: StreamMeta | None = None,
     ) -> AsyncGenerator[str, None]:
         logger.debug("GoogleLLM: streaming model=%s messages=%d", self._model_name, len(messages))
         contents = self._build_contents(messages)
@@ -96,6 +101,7 @@ class GoogleLlmProvider:
             system_instruction=system,
             temperature=self._temperature,
         )
+        finish_reason: str | None = None
         async for chunk in await self._client.aio.models.generate_content_stream(
             model=self._model_name,
             contents=contents,
@@ -103,3 +109,7 @@ class GoogleLlmProvider:
         ):
             if chunk.text:
                 yield chunk.text
+            if chunk.candidates and chunk.candidates[0].finish_reason:
+                finish_reason = chunk.candidates[0].finish_reason.name
+        if meta is not None:
+            meta.set_finish_reason(finish_reason)

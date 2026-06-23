@@ -23,6 +23,7 @@ class LlmCall(Base):
     tokens_input: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     tokens_output: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     latency_ms: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    finish_reason: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )

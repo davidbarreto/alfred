@@ -1,12 +1,14 @@
-from sqlalchemy import delete, select, update
+from datetime import date, datetime, timezone
+from sqlalchemy import select, update
 from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.features.organizer.tags.tables import Tag
-from app.features.organizer.tasks.tables import Task
+from app.features.organizer.tasks.tables import Task, TaskCompletion
 from app.features.organizer.tasks.schemas import TaskCreate, TaskUpdate, TaskFilters
 
 _TASK_EXCLUDE = {"tags"}
+
 
 class TaskRepository:
 
@@ -15,12 +17,14 @@ class TaskRepository:
 
     async def get_task(self, task_id: int) -> Task | None:
         result = await self._session.execute(
-            select(Task).options(selectinload(Task.tags)).where(Task.id == task_id)
+            select(Task)
+            .options(selectinload(Task.tags))
+            .where(Task.id == task_id, Task.deleted_at.is_(None))
         )
         return result.scalars().first()
 
     async def get_tasks(self, task_filter: TaskFilters) -> list[Task]:
-        query = select(Task).options(selectinload(Task.tags))
+        query = select(Task).options(selectinload(Task.tags)).where(Task.deleted_at.is_(None))
         if task_filter.status != "ALL":
             query = query.where(Task.status == task_filter.status)
         if task_filter.priority != "ALL":
@@ -60,11 +64,7 @@ class TaskRepository:
         )
         return result.scalars().one()
 
-    async def update_task(
-        self,
-        task_id: int,
-        task_update: TaskUpdate,
-    ) -> Task | None:
+    async def update_task(self, task_id: int, task_update: TaskUpdate) -> Task | None:
         task = await self.get_task(task_id)
         if task is None:
             return None
@@ -78,10 +78,26 @@ class TaskRepository:
         )
         return result.scalars().one()
 
-    async def delete_monitor(self, task_id: int):
-        task = await self.get_task(task_id)
-        if task is None:
-            return None
-
-        await self._session.execute(delete(Task).where(Task.id == task_id))
+    async def delete_task(self, task_id: int) -> None:
+        await self._session.execute(
+            update(Task)
+            .where(Task.id == task_id)
+            .values(deleted_at=datetime.now(timezone.utc))
+        )
         await self._session.commit()
+
+    async def get_completion(self, task_id: int, occurrence_date: date) -> TaskCompletion | None:
+        result = await self._session.execute(
+            select(TaskCompletion).where(
+                TaskCompletion.task_id == task_id,
+                TaskCompletion.occurrence_date == occurrence_date,
+            )
+        )
+        return result.scalars().first()
+
+    async def complete_occurrence(self, task_id: int, occurrence_date: date) -> TaskCompletion:
+        completion = TaskCompletion(task_id=task_id, occurrence_date=occurrence_date)
+        self._session.add(completion)
+        await self._session.commit()
+        await self._session.refresh(completion)
+        return completion

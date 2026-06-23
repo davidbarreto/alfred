@@ -31,9 +31,12 @@ FLAG_TOP_N = {"-n": "top_n", "--top": "top_n"}
 FLAG_RECURRENCE_RULE = {"-r": "recurrence_rule", "--recurrence": "recurrence_rule"}
 
 # --- Action-Specific Flag Compositions ---
+FLAG_OCCURRENCE_DATE = {"-d": "occurrence_date", "--date": "occurrence_date"}
+
 TASK_ADD_FLAGS = {**FLAG_DUE, **FLAG_PRIORITY, **FLAG_TAGS, **FLAG_RECURRENCE}
 TASK_LIST_FLAGS = {**FLAG_STATUS, **FLAG_DUE, **FLAG_PRIORITY, **FLAG_TAGS, **FLAG_LIMIT}
 TASK_UPDATE_FLAGS = {**FLAG_STATUS, **FLAG_DUE, **FLAG_PRIORITY, **FLAG_TITLE}
+TASK_COMPLETE_FLAGS = {**FLAG_OCCURRENCE_DATE}
 
 NOTE_ADD_FLAGS = {**FLAG_TAGS, **FLAG_LINKS, **FLAG_TITLE, **FLAG_CONTENT}
 
@@ -84,6 +87,12 @@ COMMAND_DEFINITIONS = {
         },
         "complete": {
             "aliases": ["/taskdone", "/td", "/done"],
+            "flags": TASK_COMPLETE_FLAGS,
+            "requires_args": True,
+            "arg_keys": ["id"]
+        },
+        "cancel": {
+            "aliases": ["/taskcancel", "/tcancel", "/tc"],
             "flags": {},
             "requires_args": True,
             "arg_keys": ["id"]

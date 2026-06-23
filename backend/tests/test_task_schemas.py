@@ -37,6 +37,10 @@ class TestTaskCreate:
         assert task.urgency == "URGENT"
         assert task.tags == ["work", "urgent"]
 
+    def test_cancelled_status_valid(self):
+        task = TaskCreate(title="Dropped", status="CANCELLED")
+        assert task.status == "CANCELLED"
+
 
 class TestTaskUpdate:
     def test_all_fields_optional(self):

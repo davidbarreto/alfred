@@ -116,7 +116,7 @@ class TestExecuteRoute:
     def test_task_complete(self, client):
         from app.main import app
         mock_svc = AsyncMock()
-        mock_svc.update_task.return_value = _task_read_mock(id=42, status="DONE")
+        mock_svc.complete_task.return_value = _task_read_mock(id=42, status="DONE")
         _override_services(app, task_svc=mock_svc)
         try:
             response = client.post(
@@ -168,7 +168,7 @@ class TestExecuteRoute:
     def test_task_not_found_returns_404(self, client):
         from app.main import app
         mock_svc = AsyncMock()
-        mock_svc.update_task.return_value = None
+        mock_svc.complete_task.return_value = None
         _override_services(app, task_svc=mock_svc)
         try:
             response = client.post(

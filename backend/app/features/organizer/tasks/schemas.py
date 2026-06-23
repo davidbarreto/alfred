@@ -1,15 +1,15 @@
-from datetime import datetime
+from datetime import date, datetime
 from typing import Annotated, Any, Literal, Optional, List
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, field_validator
 from typing import Literal, TypeAlias
 from fastapi import Query
 
-TaskStatus: TypeAlias = Literal["TODO", "DOING", "DONE"]
+TaskStatus: TypeAlias = Literal["TODO", "DOING", "DONE", "CANCELLED"]
 TaskPriority: TypeAlias = Literal["LOW", "MEDIUM", "HIGH"]
 TaskUrgency: TypeAlias = Literal["NORMAL", "URGENT"]
 
 # Types for Filter
-TaskStatusFilter: TypeAlias = Literal["TODO", "DOING", "DONE", "ALL"]
+TaskStatusFilter: TypeAlias = Literal["TODO", "DOING", "DONE", "CANCELLED", "ALL"]
 TaskPriorityFilter: TypeAlias = Literal["LOW", "MEDIUM", "HIGH", "ALL"]
 TaskUrgencyFilter: TypeAlias = Literal["NORMAL", "URGENT", "ALL"]
 
@@ -73,3 +73,12 @@ class TaskFilters:
             f"tags={self.tags!r}, deadline_from={self.deadline_from!r}, "
             f"deadline_to={self.deadline_to!r})"
         )
+
+
+class TaskCompletionRead(BaseModel):
+    id: int
+    task_id: int
+    occurrence_date: date
+    completed_at: datetime
+
+    model_config = {"from_attributes": True}

@@ -1,13 +1,31 @@
 import logging
+from datetime import date
 from typing import Any, cast
 
 from fastapi import HTTPException, status
 
 from app.assistant.commands.handlers._utils import parse_dt, parse_tags
-from app.features.organizer.tasks.schemas import TaskCreate, TaskFilters, TaskPriorityFilter, TaskStatusFilter, TaskUpdate
+from app.features.organizer.tasks.schemas import (
+    TaskCompletionRead,
+    TaskCreate,
+    TaskFilters,
+    TaskPriorityFilter,
+    TaskRead,
+    TaskStatusFilter,
+    TaskUpdate,
+)
 from app.features.organizer.tasks.service import TaskService
 
 logger = logging.getLogger(__name__)
+
+
+def _parse_occurrence_date(raw: Any) -> date | None:
+    if raw is None:
+        return None
+    if isinstance(raw, date):
+        return raw
+    dt = parse_dt(str(raw))
+    return dt.date() if dt is not None else None
 
 
 async def handle_task(command: str, arguments: dict[str, Any], service: TaskService) -> Any:
@@ -56,7 +74,20 @@ async def handle_task(command: str, arguments: dict[str, Any], service: TaskServ
 
     if command == "complete":
         task_id = int(arguments["id"])
-        result = await service.update_task(task_id, TaskUpdate(status="DONE"))
+        occurrence_date = _parse_occurrence_date(arguments.get("occurrence_date"))
+        result = await service.complete_task(task_id, occurrence_date)
+        if result is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Task {task_id} not found")
+        if isinstance(result, TaskCompletionRead):
+            return {"success": True, "occurrence_date": str(result.occurrence_date), "task_id": task_id}
+        return result.model_dump()
+
+    if command == "cancel":
+        task_id = int(arguments["id"])
+        try:
+            result = await service.cancel_task(task_id)
+        except ValueError as exc:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
         if result is None:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Task {task_id} not found")
         return result.model_dump()

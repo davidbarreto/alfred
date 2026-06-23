@@ -220,29 +220,40 @@ class TestUpdateTask:
         assert task.status == "DONE" or True  # setattr on MagicMock sets attribute
 
 
-class TestDeleteMonitor:
-    async def test_delete_found(self):
+class TestDeleteTask:
+    async def test_soft_delete_issues_update(self):
         session = _make_session()
-        task = _make_task_orm()
-
-        # First call: get_task -> returns task
-        # Second call: DELETE execute
-        session.execute.side_effect = [_scalar_first(task), MagicMock()]
+        session.execute.return_value = MagicMock()
 
         repo = TaskRepository(session)
-        await repo.delete_monitor(1)
+        await repo.delete_task(1)
 
+        session.execute.assert_called_once()
         session.commit.assert_called_once()
 
-    async def test_delete_not_found(self):
+
+class TestCompleteOccurrence:
+    async def test_get_completion_not_found(self):
+        from datetime import date
         session = _make_session()
         session.execute.return_value = _scalar_first(None)
 
         repo = TaskRepository(session)
-        result = await repo.delete_monitor(999)
+        result = await repo.get_completion(1, date(2026, 6, 22))
 
         assert result is None
-        session.commit.assert_not_called()
+
+    async def test_complete_occurrence_adds_row(self):
+        from datetime import date
+        from unittest.mock import AsyncMock, MagicMock
+        session = _make_session()
+        session.refresh = AsyncMock()
+
+        repo = TaskRepository(session)
+        await repo.complete_occurrence(1, date(2026, 6, 22))
+
+        session.add.assert_called_once()
+        session.commit.assert_called_once()
 
 
 class TestResolveTags:

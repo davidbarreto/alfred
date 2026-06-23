@@ -5,8 +5,10 @@ import pytest
 
 from app.features.briefing.formatter_service import BriefingFormatterService, _build_context
 from app.features.briefing.schemas import (
+    BirthdayItem,
     EventBriefItem,
     FormattedBriefing,
+    HolidayItem,
     MorningBriefing,
     TaskBriefItem,
     WeatherForecast,
@@ -19,6 +21,8 @@ def _make_briefing(**kwargs) -> MorningBriefing:
         date=date(2026, 6, 23),
         tasks=[],
         events=[],
+        holidays=[],
+        birthdays=[],
         weather=WeatherForecast(
             temperature_max_c=22.0,
             temperature_min_c=15.0,
@@ -114,6 +118,43 @@ class TestBuildContext:
         )
         context = _build_context(briefing)
         assert "All day" in context
+
+    def test_includes_holiday(self):
+        briefing = _make_briefing(
+            holidays=[HolidayItem(name="National Day", local_name="Dia Nacional", country="PT")]
+        )
+        context = _build_context(briefing)
+        assert "Dia Nacional" in context
+        assert "PT" in context
+
+    def test_no_holidays_section_when_empty(self):
+        briefing = _make_briefing(holidays=[])
+        context = _build_context(briefing)
+        assert "Holidays today" not in context
+
+    def test_birthday_today(self):
+        briefing = _make_briefing(
+            birthdays=[BirthdayItem(name="Alice", days_until=0, date=date(2026, 6, 23))]
+        )
+        context = _build_context(briefing)
+        assert "Alice" in context
+        assert "today!" in context
+
+    def test_birthday_tomorrow(self):
+        briefing = _make_briefing(
+            birthdays=[BirthdayItem(name="Bob", days_until=1, date=date(2026, 6, 24))]
+        )
+        context = _build_context(briefing)
+        assert "Bob" in context
+        assert "tomorrow" in context
+
+    def test_birthday_in_n_days(self):
+        briefing = _make_briefing(
+            birthdays=[BirthdayItem(name="Carol", days_until=5, date=date(2026, 6, 28))]
+        )
+        context = _build_context(briefing)
+        assert "Carol" in context
+        assert "in 5 days" in context
 
 
 class TestBriefingFormatterService:

@@ -35,11 +35,25 @@ class EventBriefItem(BaseModel):
     all_day: bool
 
 
+class HolidayItem(BaseModel):
+    name: str
+    local_name: str
+    country: str
+
+
+class BirthdayItem(BaseModel):
+    name: str
+    days_until: int
+    date: date
+
+
 class MorningBriefing(BaseModel):
     date: date
     tasks: list[TaskBriefItem]
     events: list[EventBriefItem]
     weather: WeatherForecast
+    holidays: list[HolidayItem]
+    birthdays: list[BirthdayItem]
 
 
 class FormattedBriefing(BaseModel):

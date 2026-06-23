@@ -28,6 +28,9 @@ from app.features.core.sessions.summary_service import SessionSummaryService
 from app.features.briefing.summary_service import BriefingSummaryService
 from app.features.briefing.formatter_service import BriefingFormatterService
 from app.features.briefing.weather_client import WeatherClient
+from app.features.briefing.holiday_client import NagerDateHolidayClient
+from app.features.organizer.contacts.service import ContactService
+from app.integrations.google_contacts.client import GoogleContactsClient
 from app.integrations.sentence_transformers.provider import SentenceTransformerEmbeddingProvider
 from app.integrations.google.llm_provider import GoogleLlmProvider
 from app.shared.llm import LlmProvider
@@ -156,8 +159,35 @@ def get_chat_service(session: AsyncSession = Depends(get_session)) -> ChatServic
 def get_weather_client() -> WeatherClient:
     return WeatherClient()
 
-def get_briefing_summary_service(session: AsyncSession = Depends(get_session)) -> BriefingSummaryService:
-    return BriefingSummaryService(session=session, weather_client=get_weather_client())
+@lru_cache
+def get_holiday_client() -> NagerDateHolidayClient:
+    return NagerDateHolidayClient()
+
+async def get_google_contacts_client(session: AsyncSession = Depends(get_session)) -> GoogleContactsClient | None:
+    s = get_settings()
+    token = await get_oauth_token(session, "google_contacts")
+    if not token:
+        return None
+    return GoogleContactsClient(
+        client_id=s.google_calendar_client_id,
+        client_secret=s.google_calendar_client_secret,
+        refresh_token=token.refresh_token,
+    )
+
+async def get_contact_service(session: AsyncSession = Depends(get_session)) -> ContactService | None:
+    client = await get_google_contacts_client(session)
+    if not client:
+        return None
+    return ContactService(client=client, session=session)
+
+async def get_briefing_summary_service(session: AsyncSession = Depends(get_session)) -> BriefingSummaryService:
+    contact_service = await get_contact_service(session)
+    return BriefingSummaryService(
+        session=session,
+        weather_client=get_weather_client(),
+        holiday_client=get_holiday_client(),
+        contact_service=contact_service,
+    )
 
 def get_briefing_formatter_service(session: AsyncSession = Depends(get_session)) -> BriefingFormatterService:
     return BriefingFormatterService(llm_provider=get_llm_provider(), session=session)
@@ -186,5 +216,6 @@ ChatServiceDep = Annotated[ChatService, Depends(get_chat_service)]
 SessionSummaryServiceDep = Annotated[SessionSummaryService, Depends(get_session_summary_service)]
 LlmProviderDep = Annotated[LlmProvider, Depends(get_llm_provider)]
 ExtractionLlmProviderDep = Annotated[LlmProvider, Depends(get_extraction_llm_provider)]
+ContactServiceDep = Annotated[ContactService | None, Depends(get_contact_service)]
 BriefingSummaryServiceDep = Annotated[BriefingSummaryService, Depends(get_briefing_summary_service)]
 BriefingFormatterServiceDep = Annotated[BriefingFormatterService, Depends(get_briefing_formatter_service)]

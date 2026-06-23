@@ -6,12 +6,14 @@ from zoneinfo import ZoneInfo
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.features.briefing.schemas import EventBriefItem, MorningBriefing, TaskBriefItem
-from app.shared.weather import WeatherProvider
+from app.features.briefing.schemas import BirthdayItem, EventBriefItem, HolidayItem, MorningBriefing, TaskBriefItem
 from app.features.organizer.calendar_events.repository import CalendarEventRepository
 from app.features.organizer.calendar_events.schemas import EventFilters
+from app.features.organizer.contacts.service import ContactService
 from app.features.organizer.tasks.repository import TaskRepository
 from app.features.organizer.tasks.schemas import TaskFilters
+from app.shared.holiday import HolidayProvider
+from app.shared.weather import WeatherProvider
 
 logger = logging.getLogger(__name__)
 
@@ -21,20 +23,39 @@ _PRIORITY_ORDER = {"HIGH": 0, "MEDIUM": 1, "LOW": 2}
 
 
 class BriefingSummaryService:
-    def __init__(self, session: AsyncSession, weather_client: WeatherProvider) -> None:
+    def __init__(
+        self,
+        session: AsyncSession,
+        weather_client: WeatherProvider,
+        holiday_client: HolidayProvider,
+        contact_service: ContactService | None,
+    ) -> None:
         self._session = session
         self._weather_client = weather_client
+        self._holiday_client = holiday_client
+        self._contact_service = contact_service
 
     async def build(self) -> MorningBriefing:
         today = datetime.now(_PORTO_TZ).date()
         today_start = datetime.combine(today, time.min)
         today_end = datetime.combine(today, time.max)
 
-        tasks = await self._fetch_tasks(today_start, today_end)
-        events = await self._fetch_events(today_start, today_end)
-        weather = await self._weather_client.get_daily_forecast(today)
+        tasks, events, weather, holidays, birthdays = await _gather(
+            self._fetch_tasks(today_start, today_end),
+            self._fetch_events(today_start, today_end),
+            self._weather_client.get_daily_forecast(today),
+            self._holiday_client.get_holidays(today),
+            self._fetch_birthdays(today),
+        )
 
-        return MorningBriefing(date=today, tasks=tasks, events=events, weather=weather)
+        return MorningBriefing(
+            date=today,
+            tasks=tasks,
+            events=events,
+            weather=weather,
+            holidays=holidays,
+            birthdays=birthdays,
+        )
 
     async def _fetch_tasks(self, today_start: datetime, today_end: datetime) -> list[TaskBriefItem]:
         repo = TaskRepository(self._session)
@@ -89,3 +110,14 @@ class BriefingSummaryService:
 
         items.sort(key=lambda e: (e.all_day, e.start_time))
         return items
+
+    async def _fetch_birthdays(self, today: date) -> list[BirthdayItem]:
+        if self._contact_service is None:
+            return []
+        raw = await self._contact_service.get_upcoming_birthdays(today)
+        return [BirthdayItem(name=r["name"], days_until=r["days_until"], date=r["date"]) for r in raw]
+
+
+async def _gather(*coros):
+    import asyncio
+    return await asyncio.gather(*coros)

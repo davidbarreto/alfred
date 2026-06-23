@@ -3,7 +3,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from app.features.briefing.schemas import WeatherForecast
+from app.features.briefing.schemas import HolidayItem, WeatherForecast
 from app.features.briefing.summary_service import BriefingSummaryService
 
 
@@ -77,8 +77,20 @@ def mock_weather_client():
 
 
 @pytest.fixture
-def service(mock_session, mock_weather_client):
-    return BriefingSummaryService(session=mock_session, weather_client=mock_weather_client)
+def mock_holiday_client():
+    client = AsyncMock()
+    client.get_holidays.return_value = []
+    return client
+
+
+@pytest.fixture
+def service(mock_session, mock_weather_client, mock_holiday_client):
+    return BriefingSummaryService(
+        session=mock_session,
+        weather_client=mock_weather_client,
+        holiday_client=mock_holiday_client,
+        contact_service=None,
+    )
 
 
 class TestBuild:
@@ -96,6 +108,8 @@ class TestBuild:
         assert result.tasks == []
         assert result.events == []
         assert result.weather == _make_weather()
+        assert result.holidays == []
+        assert result.birthdays == []
         assert isinstance(result.date, date)
 
     @pytest.mark.asyncio
@@ -205,3 +219,60 @@ class TestBuild:
             result = await service.build()
 
         assert result.tasks[0].tags == ["work", "urgent"]
+
+    @pytest.mark.asyncio
+    async def test_includes_holidays_from_client(self, mock_session, mock_weather_client, mock_holiday_client):
+        holiday = HolidayItem(name="National Day", local_name="Dia Nacional", country="PT")
+        mock_holiday_client.get_holidays.return_value = [holiday]
+        svc = BriefingSummaryService(
+            session=mock_session,
+            weather_client=mock_weather_client,
+            holiday_client=mock_holiday_client,
+            contact_service=None,
+        )
+        with (
+            patch("app.features.briefing.summary_service.TaskRepository") as MockTaskRepo,
+            patch("app.features.briefing.summary_service.CalendarEventRepository") as MockEventRepo,
+        ):
+            MockTaskRepo.return_value.get_tasks = AsyncMock(return_value=[])
+            MockEventRepo.return_value.get_events = AsyncMock(return_value=[])
+            result = await svc.build()
+
+        assert len(result.holidays) == 1
+        assert result.holidays[0].country == "PT"
+
+    @pytest.mark.asyncio
+    async def test_birthdays_empty_when_no_contact_service(self, service):
+        with (
+            patch("app.features.briefing.summary_service.TaskRepository") as MockTaskRepo,
+            patch("app.features.briefing.summary_service.CalendarEventRepository") as MockEventRepo,
+        ):
+            MockTaskRepo.return_value.get_tasks = AsyncMock(return_value=[])
+            MockEventRepo.return_value.get_events = AsyncMock(return_value=[])
+            result = await service.build()
+
+        assert result.birthdays == []
+
+    @pytest.mark.asyncio
+    async def test_birthdays_from_contact_service(self, mock_session, mock_weather_client, mock_holiday_client):
+        mock_contact_service = AsyncMock()
+        mock_contact_service.get_upcoming_birthdays.return_value = [
+            {"name": "Alice", "days_until": 3, "date": date(2026, 6, 26)},
+        ]
+        svc = BriefingSummaryService(
+            session=mock_session,
+            weather_client=mock_weather_client,
+            holiday_client=mock_holiday_client,
+            contact_service=mock_contact_service,
+        )
+        with (
+            patch("app.features.briefing.summary_service.TaskRepository") as MockTaskRepo,
+            patch("app.features.briefing.summary_service.CalendarEventRepository") as MockEventRepo,
+        ):
+            MockTaskRepo.return_value.get_tasks = AsyncMock(return_value=[])
+            MockEventRepo.return_value.get_events = AsyncMock(return_value=[])
+            result = await svc.build()
+
+        assert len(result.birthdays) == 1
+        assert result.birthdays[0].name == "Alice"
+        assert result.birthdays[0].days_until == 3

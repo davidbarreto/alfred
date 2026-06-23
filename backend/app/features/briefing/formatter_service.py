@@ -48,6 +48,23 @@ def _build_context(briefing: MorningBriefing) -> str:
     if w.advice:
         lines.append(f"  Advice: {', '.join(w.advice)}")
 
+    if briefing.holidays:
+        lines.append("")
+        lines.append("Holidays today:")
+        for h in briefing.holidays:
+            lines.append(f"  {h.local_name} ({h.country})")
+
+    if briefing.birthdays:
+        lines.append("")
+        lines.append("Birthdays:")
+        for b in briefing.birthdays:
+            if b.days_until == 0:
+                lines.append(f"  {b.name} — today!")
+            elif b.days_until == 1:
+                lines.append(f"  {b.name} — tomorrow ({b.date.strftime('%d %b')})")
+            else:
+                lines.append(f"  {b.name} — in {b.days_until} days ({b.date.strftime('%d %b')})")
+
     return "\n".join(lines)
 
 

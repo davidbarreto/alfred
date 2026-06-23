@@ -22,6 +22,10 @@ class Settings(BaseSettings):
     google_calendar_client_secret: str = Field(validation_alias="GOOGLE_CALENDAR_CLIENT_SECRET")
     google_calendar_oauth_redirect_uri: str = Field(validation_alias="GOOGLE_CALENDAR_OAUTH_REDIRECT_URI")
     google_calendar_id: str = Field(default="primary", validation_alias="GOOGLE_CALENDAR_ID")
+    google_contacts_oauth_redirect_uri: str = Field(
+        default="http://localhost:8000/integration/google-contacts/oauth/callback",
+        validation_alias="GOOGLE_CONTACTS_OAUTH_REDIRECT_URI",
+    )
 
     # Embeddings
     embedding_model: str = Field(default="all-MiniLM-L6-v2", validation_alias="EMBEDDING_MODEL")

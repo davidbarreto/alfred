@@ -23,6 +23,7 @@ from app.api.routes.monitoring.executions import router as executions_router
 from app.api.routes.integrations.provider_calls import router as provider_calls_router
 from app.api.routes.integrations.llm_calls import router as llm_calls_router
 from app.api.routes.integrations.google_calendar import router as google_calendar_oauth_router
+from app.api.routes.integrations.google_contacts import router as google_contacts_router
 from app.api.routes.commands import router as commands_router
 from app.api.routes.organizer.tasks import router as tasks_router
 from app.api.routes.organizer.notes import router as notes_router
@@ -83,6 +84,7 @@ app.include_router(executions_router)
 app.include_router(provider_calls_router)
 app.include_router(llm_calls_router)
 app.include_router(google_calendar_oauth_router)
+app.include_router(google_contacts_router)
 app.include_router(commands_router)
 app.include_router(tasks_router)
 app.include_router(notes_router)

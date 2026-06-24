@@ -25,6 +25,8 @@ services:
       db:
         condition: service_healthy
     restart: unless-stopped
+    volumes:
+      - ${HF_CACHE_DIR:-./docker_volumes/hf_cache}:/root/.cache/huggingface
     environment:
       - ENV=${ENV}
       - LOG_LEVEL=${LOG_LEVEL}

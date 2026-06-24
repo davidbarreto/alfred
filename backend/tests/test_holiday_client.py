@@ -3,37 +3,41 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from app.features.briefing.holiday_client import NagerDateHolidayClient
+from app.features.briefing.holiday_client import GooglePublicHolidayClient
 
 
-def _make_response(entries: list[dict], status_code: int = 200) -> MagicMock:
+def _make_response(items: list[dict], status_code: int = 200) -> MagicMock:
     resp = MagicMock()
     resp.status_code = status_code
     resp.is_error = status_code >= 400
-    resp.json.return_value = entries
+    resp.json.return_value = {"items": items}
     resp.raise_for_status = MagicMock(
         side_effect=Exception("HTTP error") if status_code >= 400 else None
     )
     return resp
 
 
-class TestNagerDateHolidayClient:
-    @pytest.mark.asyncio
-    async def test_returns_matching_holidays(self):
-        target = date(2026, 6, 10)
-        pt_holidays = [
-            {"date": "2026-06-10", "name": "Portugal Day", "localName": "Dia de Portugal", "countryCode": "PT"},
-            {"date": "2026-06-15", "name": "Other Day", "localName": "Outro Dia", "countryCode": "PT"},
-        ]
-        br_holidays = [
-            {"date": "2026-06-10", "name": "Corpus Christi", "localName": "Corpus Christi", "countryCode": "BR"},
-        ]
+def _make_item(summary: str) -> dict:
+    return {"summary": summary, "start": {"date": "2026-06-24"}}
 
-        responses = {"PT": _make_response(pt_holidays), "BR": _make_response(br_holidays)}
+
+class TestGooglePublicHolidayClient:
+    @pytest.mark.asyncio
+    async def test_returns_holidays_for_each_calendar(self):
+        responses = {
+            "pt.portuguese%23holiday%40group.v.calendar.google.com": _make_response(
+                [_make_item("São João do Porto")]
+            ),
+            "en.brazilian%23holiday%40group.v.calendar.google.com": _make_response(
+                [_make_item("Corpus Christi")]
+            ),
+        }
 
         async def fake_get(url, params=None):
-            country = url.split("/")[-1]
-            return responses[country]
+            for key, resp in responses.items():
+                if key in url or key.replace("%23", "#").replace("%40", "@") in url:
+                    return resp
+            return _make_response([])
 
         with patch("app.features.briefing.holiday_client.httpx.AsyncClient") as MockClient:
             mock_http = AsyncMock()
@@ -42,21 +46,17 @@ class TestNagerDateHolidayClient:
             mock_http.get = AsyncMock(side_effect=fake_get)
             MockClient.return_value = mock_http
 
-            client = NagerDateHolidayClient()
-            result = await client.get_holidays(target)
+            client = GooglePublicHolidayClient(api_key="test-key")
+            result = await client.get_holidays(date(2026, 6, 24))
 
         assert len(result) == 2
         countries = {h.country for h in result}
         assert countries == {"PT", "BR"}
 
     @pytest.mark.asyncio
-    async def test_returns_empty_when_no_match(self):
-        pt_holidays = [
-            {"date": "2026-06-15", "name": "Other", "localName": "Outro", "countryCode": "PT"},
-        ]
-
+    async def test_returns_empty_when_no_events(self):
         async def fake_get(url, params=None):
-            return _make_response(pt_holidays)
+            return _make_response([])
 
         with patch("app.features.briefing.holiday_client.httpx.AsyncClient") as MockClient:
             mock_http = AsyncMock()
@@ -65,20 +65,21 @@ class TestNagerDateHolidayClient:
             mock_http.get = AsyncMock(side_effect=fake_get)
             MockClient.return_value = mock_http
 
-            client = NagerDateHolidayClient()
+            client = GooglePublicHolidayClient(api_key="test-key")
             result = await client.get_holidays(date(2026, 6, 10))
 
         assert result == []
 
     @pytest.mark.asyncio
-    async def test_logs_warning_on_http_error_and_continues(self):
+    async def test_logs_warning_on_error_and_continues(self):
+        call_count = 0
+
         async def fake_get(url, params=None):
-            country = url.split("/")[-1]
-            if country == "PT":
+            nonlocal call_count
+            call_count += 1
+            if call_count == 1:
                 raise Exception("Network error")
-            return _make_response([
-                {"date": "2026-06-10", "name": "Holiday", "localName": "Feriado", "countryCode": "BR"}
-            ])
+            return _make_response([_make_item("Corpus Christi")])
 
         with patch("app.features.briefing.holiday_client.httpx.AsyncClient") as MockClient:
             mock_http = AsyncMock()
@@ -87,8 +88,30 @@ class TestNagerDateHolidayClient:
             mock_http.get = AsyncMock(side_effect=fake_get)
             MockClient.return_value = mock_http
 
-            client = NagerDateHolidayClient()
-            result = await client.get_holidays(date(2026, 6, 10))
+            client = GooglePublicHolidayClient(api_key="test-key")
+            result = await client.get_holidays(date(2026, 6, 24))
 
         assert len(result) == 1
         assert result[0].country == "BR"
+
+    @pytest.mark.asyncio
+    async def test_passes_correct_time_window(self):
+        captured_params: list[dict] = []
+
+        async def fake_get(url, params=None):
+            captured_params.append(params or {})
+            return _make_response([])
+
+        with patch("app.features.briefing.holiday_client.httpx.AsyncClient") as MockClient:
+            mock_http = AsyncMock()
+            mock_http.__aenter__ = AsyncMock(return_value=mock_http)
+            mock_http.__aexit__ = AsyncMock(return_value=None)
+            mock_http.get = AsyncMock(side_effect=fake_get)
+            MockClient.return_value = mock_http
+
+            client = GooglePublicHolidayClient(api_key="test-key")
+            await client.get_holidays(date(2026, 6, 24))
+
+        assert captured_params[0]["timeMin"] == "2026-06-24T00:00:00Z"
+        assert captured_params[0]["timeMax"] == "2026-06-25T00:00:00Z"
+        assert captured_params[0]["singleEvents"] == "true"

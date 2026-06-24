@@ -28,7 +28,7 @@ from app.features.core.sessions.summary_service import SessionSummaryService
 from app.features.briefing.summary_service import BriefingSummaryService
 from app.features.briefing.formatter_service import BriefingFormatterService
 from app.features.briefing.weather_client import WeatherClient
-from app.features.briefing.holiday_client import NagerDateHolidayClient
+from app.features.briefing.holiday_client import GooglePublicHolidayClient
 from app.features.organizer.contacts.service import ContactService
 from app.integrations.google_contacts.client import GoogleContactsClient
 from app.integrations.sentence_transformers.provider import SentenceTransformerEmbeddingProvider
@@ -159,9 +159,11 @@ def get_chat_service(session: AsyncSession = Depends(get_session)) -> ChatServic
 def get_weather_client() -> WeatherClient:
     return WeatherClient()
 
-@lru_cache
-def get_holiday_client() -> NagerDateHolidayClient:
-    return NagerDateHolidayClient()
+def get_holiday_client() -> GooglePublicHolidayClient:
+    s = get_settings()
+    if not s.google_api_key:
+        raise RuntimeError("GOOGLE_API_KEY is not set")
+    return GooglePublicHolidayClient(api_key=s.google_api_key)
 
 async def get_google_contacts_client(session: AsyncSession = Depends(get_session)) -> GoogleContactsClient | None:
     s = get_settings()

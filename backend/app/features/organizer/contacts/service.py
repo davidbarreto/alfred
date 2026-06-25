@@ -138,7 +138,11 @@ def _to_row(raw: dict) -> dict:
     name = names[0].get("displayName", "") if names else ""
     email = emails[0].get("value") if emails else None
     phone = phones[0].get("value") if phones else None
-    birthday = _parse_birthday(birthdays[0].get("date") if birthdays else None)
+    if birthdays:
+        bd_obj = birthdays[0]
+        birthday = _parse_birthday(bd_obj.get("date"), bd_obj.get("text"))
+    else:
+        birthday = None
 
     return {
         "provider_id": raw["resourceName"],
@@ -149,18 +153,44 @@ def _to_row(raw: dict) -> dict:
     }
 
 
-def _parse_birthday(bd: dict | None) -> date | None:
-    if not bd:
-        return None
-    month = bd.get("month")
-    day = bd.get("day")
-    if not month or not day:
-        return None
-    year = bd.get("year") or _PLACEHOLDER_YEAR
-    try:
-        return date(year, month, day)
-    except ValueError:
-        return None
+_BIRTHDAY_TEXT_FORMATS = [
+    ("%B %d, %Y", True),
+    ("%b %d, %Y", True),
+    ("%Y-%m-%d", True),
+    ("%m/%d/%Y", True),
+    ("%d/%m/%Y", True),
+    ("%B %d", False),
+    ("%b %d", False),
+    ("%m/%d", False),
+]
+
+
+def _parse_birthday_text(text: str) -> date | None:
+    from datetime import datetime as _dt
+    for fmt, has_year in _BIRTHDAY_TEXT_FORMATS:
+        try:
+            d = _dt.strptime(text.strip(), fmt)
+            year = d.year if has_year else _PLACEHOLDER_YEAR
+            return date(year, d.month, d.day)
+        except ValueError:
+            continue
+    logger.warning("Could not parse birthday text %r", text)
+    return None
+
+
+def _parse_birthday(bd: dict | None, text: str | None = None) -> date | None:
+    if bd:
+        month = bd.get("month")
+        day = bd.get("day")
+        if month and day:
+            year = bd.get("year") or _PLACEHOLDER_YEAR
+            try:
+                return date(year, month, day)
+            except ValueError:
+                pass
+    if text:
+        return _parse_birthday_text(text)
+    return None
 
 
 def _next_birthday(birthday: date, today: date) -> date:

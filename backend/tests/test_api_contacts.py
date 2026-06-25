@@ -77,12 +77,29 @@ class TestGetContacts:
         filters = mock_service.get_contacts.call_args[0][0]
         assert filters.limit == 25
 
+    def test_letter_filter_passed_to_service(self, client, mock_service):
+        client.get("/organizer/contacts/?letter=A", headers=AUTH)
+        filters = mock_service.get_contacts.call_args[0][0]
+        assert filters.letter == "A"
+
+    def test_letter_filter_uppercased(self, client, mock_service):
+        client.get("/organizer/contacts/?letter=a", headers=AUTH)
+        filters = mock_service.get_contacts.call_args[0][0]
+        assert filters.letter == "A"
+
+    def test_offset_filter_passed_to_service(self, client, mock_service):
+        client.get("/organizer/contacts/?offset=50", headers=AUTH)
+        filters = mock_service.get_contacts.call_args[0][0]
+        assert filters.offset == 50
+
     def test_default_filters(self, client, mock_service):
         client.get("/organizer/contacts/", headers=AUTH)
         filters = mock_service.get_contacts.call_args[0][0]
         assert filters.limit == 100
+        assert filters.offset == 0
         assert filters.name is None
         assert filters.email is None
+        assert filters.letter is None
         assert filters.has_birthday is None
 
 

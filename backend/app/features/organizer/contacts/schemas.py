@@ -35,11 +35,15 @@ class ContactFilters:
     def __init__(
         self,
         limit: int = Query(100, ge=1, le=1000),
+        offset: int = Query(0, ge=0),
         name: str | None = Query(None, description="Case-insensitive substring match on name"),
         email: str | None = Query(None, description="Case-insensitive substring match on email"),
+        letter: str | None = Query(None, max_length=1, description="Filter by first letter of name"),
         has_birthday: bool | None = Query(None, description="Filter to contacts with (true) or without (false) a birthday"),
     ) -> None:
         self.limit = limit
+        self.offset = offset
         self.name = name
         self.email = email
+        self.letter = letter.upper() if isinstance(letter, str) and letter else None
         self.has_birthday = has_birthday

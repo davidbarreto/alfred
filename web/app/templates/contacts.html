@@ -18,7 +18,7 @@
   </div>
   {% endif %}
 
-  <!-- Filters -->
+  <!-- Text filters -->
   <div class="flex flex-wrap items-center gap-2">
     <input
       id="filter-name"
@@ -39,16 +39,27 @@
     <select
       id="filter-birthday"
       class="border border-gray-200 rounded-lg px-3 py-1.5 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-[#378ADD]"
-      onchange="applyFilters()"
+      onchange="_resetPage(); applyFilters()"
     >
       <option value="" {% if not query_has_birthday %}selected{% endif %}>All contacts</option>
       <option value="true" {% if query_has_birthday == 'true' %}selected{% endif %}>With birthday</option>
       <option value="false" {% if query_has_birthday == 'false' %}selected{% endif %}>Without birthday</option>
     </select>
-    <span id="contact-count" class="text-xs text-gray-400 ml-auto">{{ contacts | length }} contact{{ 's' if contacts | length != 1 }}</span>
   </div>
 
-  <!-- Contacts table -->
+  <!-- A–Z letter filter -->
+  <div class="flex flex-wrap gap-1" id="letter-filter">
+    {% for l in ['A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z'] %}
+    <button
+      class="letter-chip w-7 h-7 text-xs font-mono rounded border transition-colors
+        {% if query_letter == l %}bg-[#378ADD] text-white border-[#378ADD]{% else %}bg-white text-gray-500 border-gray-200 hover:bg-gray-50{% endif %}"
+      data-letter="{{ l }}"
+      onclick="setLetter('{{ l }}')"
+    >{{ l }}</button>
+    {% endfor %}
+  </div>
+
+  <!-- Contacts table + pagination -->
   <div class="card bg-white">
     <div class="card-body p-4">
       <div id="contacts-table">
@@ -114,10 +125,44 @@
 
 <script>
 let _filterTimer = null;
+let _activeLetter = '{{ query_letter }}';
+let _currentOffset = {{ query_offset }};
+const _pageSize = {{ page_size }};
+
+function _resetPage() {
+  _currentOffset = 0;
+}
+
+function _updateLetterChips() {
+  document.querySelectorAll(".letter-chip").forEach(el => {
+    const active = el.dataset.letter === _activeLetter;
+    el.classList.toggle("bg-[#378ADD]", active);
+    el.classList.toggle("text-white", active);
+    el.classList.toggle("border-[#378ADD]", active);
+    el.classList.toggle("text-gray-500", !active);
+    el.classList.toggle("bg-white", !active);
+    el.classList.toggle("border-gray-200", !active);
+  });
+}
 
 function scheduleFilter() {
+  _activeLetter = '';
+  _resetPage();
+  _updateLetterChips();
   clearTimeout(_filterTimer);
   _filterTimer = setTimeout(applyFilters, 350);
+}
+
+function setLetter(l) {
+  _activeLetter = (_activeLetter === l) ? '' : l;
+  _resetPage();
+  _updateLetterChips();
+  applyFilters();
+}
+
+function changePage(delta) {
+  _currentOffset = Math.max(0, _currentOffset + delta * _pageSize);
+  applyFilters();
 }
 
 function applyFilters() {
@@ -129,6 +174,8 @@ function applyFilters() {
   if (name) params.set("name", name);
   if (email) params.set("email", email);
   if (birthday) params.set("has_birthday", birthday);
+  if (_activeLetter) params.set("letter", _activeLetter);
+  params.set("offset", _currentOffset);
 
   htmx.ajax("GET", "/contacts/table?" + params.toString(), {
     target: "#contacts-table",
@@ -159,6 +206,9 @@ async function submitNewContact(e) {
     document.getElementById("contacts-table").innerHTML = html;
     document.getElementById("new-contact-modal").close();
     document.getElementById("new-contact-form").reset();
+    _currentOffset = 0;
+    _activeLetter = '';
+    _updateLetterChips();
   } catch (err) {
     errEl.textContent = err.message || "Failed to save contact.";
     errEl.classList.remove("hidden");

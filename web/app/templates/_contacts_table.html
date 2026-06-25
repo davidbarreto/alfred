@@ -37,3 +37,18 @@
 {% else %}
 <p class="text-sm text-gray-400 py-4">No contacts found.</p>
 {% endif %}
+
+{% if has_prev or has_next %}
+<div class="flex items-center justify-between mt-4 pt-3 border-t border-gray-100">
+  <button
+    onclick="changePage(-1)"
+    {% if not has_prev %}disabled{% endif %}
+    class="btn btn-sm btn-ghost text-gray-500 gap-1 {% if not has_prev %}opacity-30 pointer-events-none{% endif %}"
+  ><i class="ti ti-chevron-left text-xs"></i>Prev</button>
+  <button
+    onclick="changePage(1)"
+    {% if not has_next %}disabled{% endif %}
+    class="btn btn-sm btn-ghost text-gray-500 gap-1 {% if not has_next %}opacity-30 pointer-events-none{% endif %}"
+  >Next<i class="ti ti-chevron-right text-xs"></i></button>
+</div>
+{% endif %}

@@ -9,36 +9,63 @@ from app.templates_config import templates
 
 router = APIRouter(prefix="/contacts")
 
+_PAGE_SIZE = 50
 
-@router.get("/", response_class=HTMLResponse)
-async def contacts_page(request: Request):
-    name = request.query_params.get("name", "").strip()
-    email = request.query_params.get("email", "").strip()
-    has_birthday = request.query_params.get("has_birthday", "")
 
-    params: dict = {"limit": 200}
+def _build_params(
+    name: str,
+    email: str,
+    has_birthday: str,
+    letter: str,
+    offset: int,
+) -> dict:
+    params: dict = {"limit": _PAGE_SIZE + 1, "offset": offset}
     if name:
         params["name"] = name
     if email:
         params["email"] = email
     if has_birthday in ("true", "false"):
         params["has_birthday"] = has_birthday
+    if letter and len(letter) == 1:
+        params["letter"] = letter
+    return params
+
+
+def _pagination(contacts: list, offset: int) -> tuple[list, bool, bool]:
+    has_next = len(contacts) > _PAGE_SIZE
+    return contacts[:_PAGE_SIZE], has_next, offset > 0
+
+
+@router.get("/", response_class=HTMLResponse)
+async def contacts_page(request: Request):
+    name = request.query_params.get("name", "").strip()
+    email = request.query_params.get("email", "").strip()
+    has_birthday = request.query_params.get("has_birthday", "")
+    letter = request.query_params.get("letter", "").strip().upper()
+    offset = max(0, int(request.query_params.get("offset", "0")))
 
     api_error: str | None = None
     try:
-        contacts = await api.get("/organizer/contacts/", params=params)
+        raw = await api.get("/organizer/contacts/", params=_build_params(name, email, has_birthday, letter, offset))
     except httpx.HTTPStatusError as e:
-        contacts = []
+        raw = []
         api_error = f"API error {e.response.status_code}"
     except httpx.HTTPError:
-        contacts = []
+        raw = []
         api_error = "Cannot reach backend"
+
+    contacts, has_next, has_prev = _pagination(raw, offset)
 
     return templates.TemplateResponse(request, "contacts.html", {
         "contacts": contacts,
+        "has_next": has_next,
+        "has_prev": has_prev,
         "query_name": name,
         "query_email": email,
         "query_has_birthday": has_birthday,
+        "query_letter": letter,
+        "query_offset": offset,
+        "page_size": _PAGE_SIZE,
         "api_error": api_error,
     })
 
@@ -48,21 +75,21 @@ async def contacts_table_fragment(request: Request):
     name = request.query_params.get("name", "").strip()
     email = request.query_params.get("email", "").strip()
     has_birthday = request.query_params.get("has_birthday", "")
-
-    params: dict = {"limit": 200}
-    if name:
-        params["name"] = name
-    if email:
-        params["email"] = email
-    if has_birthday in ("true", "false"):
-        params["has_birthday"] = has_birthday
+    letter = request.query_params.get("letter", "").strip().upper()
+    offset = max(0, int(request.query_params.get("offset", "0")))
 
     try:
-        contacts = await api.get("/organizer/contacts/", params=params)
+        raw = await api.get("/organizer/contacts/", params=_build_params(name, email, has_birthday, letter, offset))
     except httpx.HTTPError:
-        contacts = []
+        raw = []
 
-    return templates.TemplateResponse(request, "_contacts_table.html", {"contacts": contacts})
+    contacts, has_next, has_prev = _pagination(raw, offset)
+
+    return templates.TemplateResponse(request, "_contacts_table.html", {
+        "contacts": contacts,
+        "has_next": has_next,
+        "has_prev": has_prev,
+    })
 
 
 @router.post("/", response_class=HTMLResponse)
@@ -87,23 +114,37 @@ async def create_contact(
         return HTMLResponse('<p class="text-[#E24B4A] text-sm">Failed to create contact.</p>', status_code=422)
 
     try:
-        contacts = await api.get("/organizer/contacts/", params={"limit": 200})
+        raw = await api.get("/organizer/contacts/", params={"limit": _PAGE_SIZE + 1, "offset": 0})
     except httpx.HTTPError:
-        contacts = []
+        raw = []
 
-    return templates.TemplateResponse(request, "_contacts_table.html", {"contacts": contacts})
+    contacts, has_next, has_prev = _pagination(raw, 0)
+    return templates.TemplateResponse(request, "_contacts_table.html", {
+        "contacts": contacts,
+        "has_next": has_next,
+        "has_prev": has_prev,
+    })
 
 
 @router.delete("/{contact_id}", response_class=HTMLResponse)
 async def delete_contact(contact_id: int, request: Request):
+    offset = max(0, int(request.query_params.get("offset", "0")))
+    letter = request.query_params.get("letter", "").strip().upper()
+    has_birthday = request.query_params.get("has_birthday", "")
+
     try:
         await api.delete(f"/organizer/contacts/{contact_id}")
     except httpx.HTTPError:
         pass
 
     try:
-        contacts = await api.get("/organizer/contacts/", params={"limit": 200})
+        raw = await api.get("/organizer/contacts/", params=_build_params("", "", has_birthday, letter, offset))
     except httpx.HTTPError:
-        contacts = []
+        raw = []
 
-    return templates.TemplateResponse(request, "_contacts_table.html", {"contacts": contacts})
+    contacts, has_next, has_prev = _pagination(raw, offset)
+    return templates.TemplateResponse(request, "_contacts_table.html", {
+        "contacts": contacts,
+        "has_next": has_next,
+        "has_prev": has_prev,
+    })

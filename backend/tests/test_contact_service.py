@@ -8,6 +8,7 @@ from app.features.organizer.contacts.service import (
     _has_useful_data,
     _next_birthday,
     _parse_birthday,
+    _parse_birthday_text,
     _to_row,
 )
 from app.features.organizer.contacts.schemas import ContactCreate, ContactFilters, ContactRead, ContactUpdate
@@ -49,7 +50,7 @@ class TestToRow:
         assert row["phone"] is None
         assert row["birthday"] is None
 
-    def test_birthday_parsed(self):
+    def test_birthday_parsed_from_date(self):
         raw = {
             "resourceName": "people/c789",
             "names": [{"displayName": "Carol"}],
@@ -57,6 +58,17 @@ class TestToRow:
         }
         row = _to_row(raw)
         assert row["birthday"] == date(1990, 3, 15)
+
+    def test_birthday_parsed_from_text_fallback(self):
+        raw = {
+            "resourceName": "people/c999",
+            "names": [{"displayName": "Dave"}],
+            "birthdays": [{"text": "March 15"}],
+        }
+        row = _to_row(raw)
+        assert row["birthday"] is not None
+        assert row["birthday"].month == 3
+        assert row["birthday"].day == 15
 
 
 class TestParseBirthday:
@@ -75,6 +87,47 @@ class TestParseBirthday:
 
     def test_none_input_returns_none(self):
         assert _parse_birthday(None) is None
+
+    def test_text_fallback_when_no_date(self):
+        result = _parse_birthday(None, "June 23, 1990")
+        assert result == date(1990, 6, 23)
+
+    def test_text_fallback_no_year(self):
+        result = _parse_birthday(None, "June 23")
+        assert result is not None
+        assert result.month == 6
+        assert result.day == 23
+
+    def test_date_takes_priority_over_text(self):
+        result = _parse_birthday({"year": 1990, "month": 6, "day": 23}, "March 15")
+        assert result == date(1990, 6, 23)
+
+    def test_unparseable_text_returns_none(self):
+        result = _parse_birthday(None, "sometime in summer")
+        assert result is None
+
+
+class TestParseBirthdayText:
+    def test_long_month_with_year(self):
+        assert _parse_birthday_text("June 15, 1990") == date(1990, 6, 15)
+
+    def test_short_month_with_year(self):
+        assert _parse_birthday_text("Jun 15, 1990") == date(1990, 6, 15)
+
+    def test_iso_format(self):
+        assert _parse_birthday_text("1990-06-15") == date(1990, 6, 15)
+
+    def test_us_slash_format(self):
+        assert _parse_birthday_text("06/15/1990") == date(1990, 6, 15)
+
+    def test_long_month_no_year(self):
+        result = _parse_birthday_text("June 15")
+        assert result is not None
+        assert result.month == 6
+        assert result.day == 15
+
+    def test_unrecognised_format_returns_none(self):
+        assert _parse_birthday_text("not a date") is None
 
 
 class TestNextBirthday:

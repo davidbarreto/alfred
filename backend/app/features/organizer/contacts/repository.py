@@ -27,11 +27,13 @@ class ContactRepository:
             stmt = stmt.where(Contact.name.ilike(f"%{filters.name}%"))
         if filters.email is not None:
             stmt = stmt.where(Contact.email.ilike(f"%{filters.email}%"))
+        if filters.letter is not None:
+            stmt = stmt.where(Contact.name.ilike(f"{filters.letter}%"))
         if filters.has_birthday is True:
             stmt = stmt.where(Contact.birthday.is_not(None))
         elif filters.has_birthday is False:
             stmt = stmt.where(Contact.birthday.is_(None))
-        stmt = stmt.order_by(Contact.name).limit(filters.limit)
+        stmt = stmt.order_by(Contact.name).offset(filters.offset).limit(filters.limit)
         result = await self._session.execute(stmt)
         return list(result.scalars().all())
 

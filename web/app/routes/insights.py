@@ -79,10 +79,14 @@ async def insights_page(request: Request):
     week_start = (today - timedelta(days=today.weekday())).isoformat()
     cutoff_30d = (today - timedelta(days=30)).isoformat()
 
-    completions_by_date: Counter = Counter(c["occurrence_date"] for c in task_history)
+    # Only count completions for tasks that still exist (not deleted)
+    active_task_ids = {t["id"] for t in all_tasks}
+    active_history = [c for c in task_history if c["task_id"] in active_task_ids]
+
+    completions_by_date: Counter = Counter(c["occurrence_date"] for c in active_history)
     completions_30d_by_task: dict[int, int] = defaultdict(int)
     done_this_week = 0
-    for c in task_history:
+    for c in active_history:
         if c["occurrence_date"] >= cutoff_30d:
             completions_30d_by_task[c["task_id"]] += 1
         if c["occurrence_date"] >= week_start:

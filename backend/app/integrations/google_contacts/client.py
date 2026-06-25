@@ -54,6 +54,38 @@ class GoogleContactsClient:
             self._raise(resp)
             return resp.json()
 
+    async def _post(self, url: str, body: dict, params: dict | None = None) -> dict:
+        headers = await self._headers()
+        async with httpx.AsyncClient() as http:
+            resp = await http.post(url, headers=headers, json=body, params=params or {})
+            if resp.status_code == 401:
+                self._access_token = await self._refresh_access_token()
+                headers = {"Authorization": f"Bearer {self._access_token}"}
+                resp = await http.post(url, headers=headers, json=body, params=params or {})
+            self._raise(resp)
+            return resp.json()
+
+    async def _patch(self, url: str, body: dict, params: dict | None = None) -> dict:
+        headers = await self._headers()
+        async with httpx.AsyncClient() as http:
+            resp = await http.patch(url, headers=headers, json=body, params=params or {})
+            if resp.status_code == 401:
+                self._access_token = await self._refresh_access_token()
+                headers = {"Authorization": f"Bearer {self._access_token}"}
+                resp = await http.patch(url, headers=headers, json=body, params=params or {})
+            self._raise(resp)
+            return resp.json()
+
+    async def _delete(self, url: str) -> None:
+        headers = await self._headers()
+        async with httpx.AsyncClient() as http:
+            resp = await http.delete(url, headers=headers)
+            if resp.status_code == 401:
+                self._access_token = await self._refresh_access_token()
+                headers = {"Authorization": f"Bearer {self._access_token}"}
+                resp = await http.delete(url, headers=headers)
+            self._raise(resp)
+
     async def list_connections(self) -> list[dict]:
         connections: list[dict] = []
         page_token: str | None = None
@@ -75,3 +107,26 @@ class GoogleContactsClient:
 
         logger.info("Fetched %d contacts from Google", len(connections))
         return connections
+
+    async def get_contact(self, resource_name: str) -> dict:
+        return await self._get(
+            f"{_BASE_URL}/{resource_name}",
+            params={"personFields": _PERSON_FIELDS},
+        )
+
+    async def create_contact(self, person: dict) -> dict:
+        return await self._post(
+            f"{_BASE_URL}/people:createContact",
+            body=person,
+            params={"personFields": _PERSON_FIELDS},
+        )
+
+    async def update_contact(self, resource_name: str, person: dict, update_fields: str) -> dict:
+        return await self._patch(
+            f"{_BASE_URL}/{resource_name}:updateContact",
+            body=person,
+            params={"updatePersonFields": update_fields, "personFields": _PERSON_FIELDS},
+        )
+
+    async def delete_contact(self, resource_name: str) -> None:
+        await self._delete(f"{_BASE_URL}/{resource_name}:deleteContact")

@@ -1,9 +1,10 @@
 # Alfred — Personal AI Assistant
 
 ## Project Overview
-Alfred is a self-hosted personal AI assistant with two main components:
+Alfred is a self-hosted personal AI assistant with three main components:
 1. **Python backend API** — FastAPI, SQLAlchemy (2.0+ style), Alembic, Pydantic v2
-2. **n8n workflows** — Telegram bot as primary interface, sub-workflow architecture
+2. **Web portal** — FastAPI + Jinja2 + Tailwind/DaisyUI + HTMX; browser UI for viewing data and chatting
+3. **n8n workflows** — Telegram bot as primary interface, sub-workflow architecture
 
 The stack runs on a Contabo VPS via Docker Compose, with nginx as reverse proxy.
 Domains: `dbflabs.com` (Alfred stack), `davidbf.com` (personal site).
@@ -13,23 +14,73 @@ Domains: `dbflabs.com` (Alfred stack), `davidbf.com` (personal site).
 ## Repository Structure
 
 alfred/
-├── app/
-│   ├── api/                   # Routes and API configurations, auth, etc
-│   ├── assistant/             # Commands parsing, intents recognition
-│   ├── db/                    # DB session
-│   ├── features/              # Features
-│       └── core/              # Command history, memories, facts, sessions, etc
-│       ├── organizer/         # Tasks, notes, event-calendar, etc
-│       ├── monitoring/          # Module for monitoring sites and APIs (webscraping, API monitoring)
-│       ├── finance/           # Personal finance tracking
-│   └── integrations           # Implementation of integrations, Notion, Google Calendar, etc
-│   └── nlp                    # NLP functions
-│   └── shared                 # General classes shared between all modules. E.g. Storage Provider
-├── alembic/
-│   └── versions/
-├── tests/             # Unit tests
-├── infra/             # docker-compose.yml, .env, scripts to reset databases
-├── postman/           # Postman collections
+├── backend/
+│   ├── app/
+│   │   ├── api/
+│   │   │   └── routes/
+│   │   │       ├── briefing.py
+│   │   │       ├── commands.py
+│   │   │       ├── core/          # chats, sessions, messages, memories, embeddings, working_memory
+│   │   │       ├── finance/       # accounts, budgets, categories, transactions, recurring_transactions
+│   │   │       ├── integrations/  # google_calendar, google_contacts (OAuth + sync), llm_calls, provider_calls
+│   │   │       ├── monitoring/    # monitors, alerts, executions
+│   │   │       └── organizer/     # tasks, notes, calendar_events, contacts, shopping
+│   │   ├── assistant/
+│   │   │   ├── commands/          # registry, resolver, executor, per-domain handlers
+│   │   │   └── intents/           # intent service, extraction service, examples
+│   │   ├── db/                    # Base, session
+│   │   ├── dependencies.py        # All FastAPI Depends() factories and type aliases
+│   │   ├── features/
+│   │   │   ├── briefing/          # Morning briefing: weather, tasks, events, birthdays, holidays; LLM formatter
+│   │   │   ├── core/
+│   │   │   │   ├── chats/
+│   │   │   │   ├── command_executions/
+│   │   │   │   ├── embeddings/
+│   │   │   │   ├── memories/      # Polymorphic; type discriminator column
+│   │   │   │   ├── messages/
+│   │   │   │   ├── sessions/
+│   │   │   │   └── working_memory/
+│   │   │   ├── finance/
+│   │   │   │   ├── accounts/
+│   │   │   │   ├── budgets/
+│   │   │   │   ├── categories/
+│   │   │   │   ├── recurring_transactions/
+│   │   │   │   └── transactions/
+│   │   │   ├── monitoring/        # Monitors, alerts, executions (flat, not sub-modules)
+│   │   │   └── organizer/
+│   │   │       ├── calendar_events/
+│   │   │       ├── contacts/      # Write-through cache against Google Contacts (full CRUD)
+│   │   │       ├── notes/
+│   │   │       ├── shopping/      # Shopping list + wishlist + recurrence
+│   │   │       ├── tags/          # Shared M2M tag tables for tasks/notes/events
+│   │   │       └── tasks/
+│   │   ├── integrations/
+│   │   │   ├── google/            # Google LLM provider (Gemini)
+│   │   │   ├── google_calendar/   # Client + StorageProvider
+│   │   │   ├── google_contacts/   # Client + StorageProvider (write-through CRUD)
+│   │   │   ├── http/              # Shared HTTP pagination helpers
+│   │   │   ├── llm_calls/         # LLM call logging (tables, repo, schemas)
+│   │   │   ├── notion/            # Client + StorageProvider
+│   │   │   ├── oauth_tokens/      # Generic OAuth refresh token store
+│   │   │   ├── openai/            # OpenAI LLM provider
+│   │   │   ├── provider_calls/    # Integration sync log (tables, repo, schemas)
+│   │   │   └── sentence_transformers/  # Local embedding provider
+│   │   ├── nlp/                   # Text extraction, normalisation, patterns
+│   │   └── shared/                # Protocols: StorageProvider, LlmProvider, EmbeddingProvider; domain helpers
+│   ├── alembic/
+│   │   └── versions/
+│   └── tests/                     # All unit tests (flat, mirrors source: test_<module>.py)
+├── web/
+│   └── app/
+│       ├── client.py              # Thin HTTP client wrapping the backend API
+│       ├── config.py
+│       ├── main.py                # FastAPI app, auth middleware, router registration
+│       ├── routes/                # dashboard, tasks, notes, contacts, calendar, shopping,
+│       │                          #   finance, insights, briefing, chat, auth
+│       └── templates/             # Jinja2 + Tailwind/DaisyUI; partials prefixed with _
+├── n8n/
+├── infra/                         # docker-compose.yml, .env, postgres-init scripts
+├── postman/                       # One collection per feature/integration
 └── CLAUDE.md
 
 ---
@@ -88,7 +139,7 @@ alfred/
 - Unit tests mock DB and external services; no real I/O
 - Use `pytest` with fixtures for DB sessions and app client
 - Don't ignore warnings. Solve them whenever possible
-- Test file mirrors source structure: `tests/unit/organizer/test_task_service.py` → `app/organizer/services/task_service.py`
+- Test file mirrors source structure: `tests/test_task_service.py` → `app/features/organizer/tasks/service.py`
 - Aim for behaviour coverage, not line coverage — test contracts, not internals
 
 ### Commits
@@ -106,7 +157,9 @@ alfred/
 ---
 
 ## External Integrations
-- **Notion** — write-through cache; Alfred DB is the read layer, Notion is synced async
-- **Google Calendar** — same write-through pattern as Notion
+- **Notion** — write-through cache; Alfred DB is the read layer, Notion is the external store (tasks, notes)
+- **Google Calendar** — write-through cache via `StorageProvider`; OAuth token stored in `oauth_tokens` table
+- **Google Contacts** — write-through cache via `StorageProvider`; full CRUD scope (`contacts`); also supports one-way sync via `/integration/google-contacts/sync`
+- **Google (Gemini)** — LLM provider for chat, memory extraction, briefing formatting, session summaries
+- **Open-Meteo** — weather data for morning briefing (no API key required)
 - **Telegram** — input only via n8n; never call Telegram API directly from FastAPI
-- **Open-Meteo** — weather data for morning briefing workflow (no API key required)

@@ -10,6 +10,7 @@ from app.features.organizer.contacts.service import (
     _parse_birthday,
     _to_row,
 )
+from app.features.organizer.contacts.schemas import ContactCreate, ContactFilters, ContactRead, ContactUpdate
 
 
 class TestHasUsefulData:
@@ -102,9 +103,25 @@ class TestNextBirthday:
         assert result == date(2027, 3, 1)
 
 
+def _make_contact_orm(id=1, provider_id="people/c1", name="Alice", email="alice@example.com", phone=None, birthday=None):
+    c = MagicMock()
+    c.id = id
+    c.provider_id = provider_id
+    c.name = name
+    c.email = email
+    c.phone = phone
+    c.birthday = birthday
+    c.model_fields = {}
+    return c
+
+
 class TestContactService:
     @pytest.fixture
     def mock_client(self):
+        return AsyncMock()
+
+    @pytest.fixture
+    def mock_provider(self):
         return AsyncMock()
 
     @pytest.fixture
@@ -113,7 +130,11 @@ class TestContactService:
 
     @pytest.fixture
     def service(self, mock_client, mock_session):
-        return ContactService(client=mock_client, session=mock_session)
+        return ContactService(session=mock_session, client=mock_client)
+
+    @pytest.fixture
+    def service_with_provider(self, mock_client, mock_provider, mock_session):
+        return ContactService(session=mock_session, client=mock_client, provider=mock_provider)
 
     @pytest.mark.asyncio
     async def test_sync_returns_count(self, service, mock_client):
@@ -145,6 +166,14 @@ class TestContactService:
         assert len(call_args) == 1
         assert call_args[0]["provider_id"] == "people/c1"
         assert count == 1
+
+    @pytest.mark.asyncio
+    async def test_sync_raises_503_when_client_is_none(self, mock_session):
+        from fastapi import HTTPException
+        svc = ContactService(session=mock_session)
+        with pytest.raises(HTTPException) as exc_info:
+            await svc.sync()
+        assert exc_info.value.status_code == 503
 
     @pytest.mark.asyncio
     async def test_get_upcoming_birthdays_within_window(self, service):
@@ -196,3 +225,126 @@ class TestContactService:
 
         assert result[0]["name"] == "Bob"
         assert result[1]["name"] == "Alice"
+
+    @pytest.mark.asyncio
+    async def test_get_contact_returns_read(self, service):
+        orm = _make_contact_orm()
+        with __import__("unittest.mock", fromlist=["patch"]).patch(
+            "app.features.organizer.contacts.service.ContactRepository"
+        ) as MockRepo:
+            MockRepo.return_value.get_contact = AsyncMock(return_value=orm)
+            result = await service.get_contact(1)
+        assert isinstance(result, ContactRead)
+        assert result.name == "Alice"
+
+    @pytest.mark.asyncio
+    async def test_get_contact_returns_none_when_missing(self, service):
+        with __import__("unittest.mock", fromlist=["patch"]).patch(
+            "app.features.organizer.contacts.service.ContactRepository"
+        ) as MockRepo:
+            MockRepo.return_value.get_contact = AsyncMock(return_value=None)
+            result = await service.get_contact(999)
+        assert result is None
+
+    @pytest.mark.asyncio
+    async def test_get_contacts_returns_list(self, service):
+        orm = _make_contact_orm()
+        with __import__("unittest.mock", fromlist=["patch"]).patch(
+            "app.features.organizer.contacts.service.ContactRepository"
+        ) as MockRepo:
+            MockRepo.return_value.get_contacts = AsyncMock(return_value=[orm])
+            filters = ContactFilters()
+            result = await service.get_contacts(filters)
+        assert len(result) == 1
+        assert result[0].name == "Alice"
+
+    @pytest.mark.asyncio
+    async def test_create_contact_raises_503_without_provider(self, service):
+        from fastapi import HTTPException
+        with pytest.raises(HTTPException) as exc_info:
+            await service.create_contact(ContactCreate(name="New Person"))
+        assert exc_info.value.status_code == 503
+
+    @pytest.mark.asyncio
+    async def test_create_contact_write_through(self, service_with_provider, mock_provider):
+        mock_provider.create = AsyncMock(return_value={"id": "people/cnew"})
+        orm = _make_contact_orm(id=5, provider_id="people/cnew", name="New Person")
+        with __import__("unittest.mock", fromlist=["patch"]).patch(
+            "app.features.organizer.contacts.service.ContactRepository"
+        ) as MockRepo:
+            MockRepo.return_value.create_contact = AsyncMock(return_value=orm)
+            result = await service_with_provider.create_contact(ContactCreate(name="New Person"))
+
+        mock_provider.create.assert_called_once()
+        assert result.provider_id == "people/cnew"
+
+    @pytest.mark.asyncio
+    async def test_update_contact_returns_none_when_missing(self, service_with_provider):
+        with __import__("unittest.mock", fromlist=["patch"]).patch(
+            "app.features.organizer.contacts.service.ContactRepository"
+        ) as MockRepo:
+            MockRepo.return_value.get_contact = AsyncMock(return_value=None)
+            result = await service_with_provider.update_contact(999, ContactUpdate(name="X"))
+        assert result is None
+
+    @pytest.mark.asyncio
+    async def test_update_contact_raises_503_without_provider(self, service):
+        from fastapi import HTTPException
+        orm = _make_contact_orm()
+        with __import__("unittest.mock", fromlist=["patch"]).patch(
+            "app.features.organizer.contacts.service.ContactRepository"
+        ) as MockRepo:
+            MockRepo.return_value.get_contact = AsyncMock(return_value=orm)
+            with pytest.raises(HTTPException) as exc_info:
+                await service.update_contact(1, ContactUpdate(name="Updated"))
+        assert exc_info.value.status_code == 503
+
+    @pytest.mark.asyncio
+    async def test_update_contact_write_through(self, service_with_provider, mock_provider):
+        orm = _make_contact_orm()
+        updated_orm = _make_contact_orm(name="Updated Alice")
+        mock_provider.update = AsyncMock(return_value={"id": "people/c1"})
+        with __import__("unittest.mock", fromlist=["patch"]).patch(
+            "app.features.organizer.contacts.service.ContactRepository"
+        ) as MockRepo:
+            MockRepo.return_value.get_contact = AsyncMock(return_value=orm)
+            MockRepo.return_value.update_contact = AsyncMock(return_value=updated_orm)
+            result = await service_with_provider.update_contact(1, ContactUpdate(name="Updated Alice"))
+
+        mock_provider.update.assert_called_once()
+        assert result.name == "Updated Alice"
+
+    @pytest.mark.asyncio
+    async def test_delete_contact_raises_503_without_provider(self, service):
+        from fastapi import HTTPException
+        orm = _make_contact_orm()
+        with __import__("unittest.mock", fromlist=["patch"]).patch(
+            "app.features.organizer.contacts.service.ContactRepository"
+        ) as MockRepo:
+            MockRepo.return_value.get_contact = AsyncMock(return_value=orm)
+            with pytest.raises(HTTPException) as exc_info:
+                await service.delete_contact(1)
+        assert exc_info.value.status_code == 503
+
+    @pytest.mark.asyncio
+    async def test_delete_contact_noop_when_missing(self, service_with_provider):
+        with __import__("unittest.mock", fromlist=["patch"]).patch(
+            "app.features.organizer.contacts.service.ContactRepository"
+        ) as MockRepo:
+            MockRepo.return_value.get_contact = AsyncMock(return_value=None)
+            await service_with_provider.delete_contact(999)
+            MockRepo.return_value.delete_contact.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_delete_contact_write_through(self, service_with_provider, mock_provider):
+        orm = _make_contact_orm()
+        mock_provider.delete = AsyncMock()
+        with __import__("unittest.mock", fromlist=["patch"]).patch(
+            "app.features.organizer.contacts.service.ContactRepository"
+        ) as MockRepo:
+            MockRepo.return_value.get_contact = AsyncMock(return_value=orm)
+            MockRepo.return_value.delete_contact = AsyncMock()
+            await service_with_provider.delete_contact(1)
+
+        mock_provider.delete.assert_called_once()
+        assert mock_provider.delete.call_args[0][0] == "people/c1"

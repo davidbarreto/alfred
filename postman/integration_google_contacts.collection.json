@@ -2,7 +2,7 @@
   "info": {
     "name": "Alfred - Google Contacts OAuth",
     "_postman_id": "alfred-google-contacts-oauth-v1",
-    "description": "OAuth flow and sync for Google Contacts. Run 01 to check status, 02 to get the authorization URL (open in a browser), then 04 to sync contacts.",
+    "description": "OAuth flow and sync for Google Contacts. Run 01 to check status, 02 to get the authorization URL (open in a browser), then 04 to sync contacts.\n\nNOTE: The OAuth scope is now 'contacts' (full access) instead of 'contacts.readonly'. If you previously authorized with readonly scope, you must re-authorize by hitting 02 again and consenting to the new scope.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {

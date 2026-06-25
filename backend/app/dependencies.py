@@ -31,6 +31,7 @@ from app.features.briefing.weather_client import WeatherClient
 from app.features.briefing.holiday_client import GooglePublicHolidayClient
 from app.features.organizer.contacts.service import ContactService
 from app.integrations.google_contacts.client import GoogleContactsClient
+from app.integrations.google_contacts.provider import GoogleContactsProvider
 from app.integrations.sentence_transformers.provider import SentenceTransformerEmbeddingProvider
 from app.integrations.google.llm_provider import GoogleLlmProvider
 from app.shared.llm import LlmProvider
@@ -180,7 +181,13 @@ async def get_contact_service(session: AsyncSession = Depends(get_session)) -> C
     client = await get_google_contacts_client(session)
     if not client:
         return None
-    return ContactService(client=client, session=session)
+    provider = GoogleContactsProvider(client, entity_type="contact")
+    return ContactService(session=session, client=client, provider=provider)
+
+async def get_contacts_crud_service(session: AsyncSession = Depends(get_session)) -> ContactService:
+    client = await get_google_contacts_client(session)
+    provider = GoogleContactsProvider(client, entity_type="contact") if client else None
+    return ContactService(session=session, client=client, provider=provider)
 
 async def get_briefing_summary_service(session: AsyncSession = Depends(get_session)) -> BriefingSummaryService:
     contact_service = await get_contact_service(session)
@@ -219,5 +226,6 @@ SessionSummaryServiceDep = Annotated[SessionSummaryService, Depends(get_session_
 LlmProviderDep = Annotated[LlmProvider, Depends(get_llm_provider)]
 ExtractionLlmProviderDep = Annotated[LlmProvider, Depends(get_extraction_llm_provider)]
 ContactServiceDep = Annotated[ContactService | None, Depends(get_contact_service)]
+ContactsCRUDServiceDep = Annotated[ContactService, Depends(get_contacts_crud_service)]
 BriefingSummaryServiceDep = Annotated[BriefingSummaryService, Depends(get_briefing_summary_service)]
 BriefingFormatterServiceDep = Annotated[BriefingFormatterService, Depends(get_briefing_formatter_service)]

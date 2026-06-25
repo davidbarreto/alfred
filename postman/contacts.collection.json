@@ -1,0 +1,288 @@
+{
+  "info": {
+    "name": "Alfred - Contacts API",
+    "_postman_id": "alfred-contacts-v1",
+    "description": "CRUD for contacts with Google write-through cache. Run in order: List → Create → Get → Filter → Update → Delete. Requires Google Contacts re-authorized with full contacts scope (not readonly).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{api_token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "01 - List Contacts",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Response is an array', () => {",
+              "    pm.expect(pm.response.json()).to.be.an('array');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/organizer/contacts/?limit=100",
+          "host": ["{{base_url}}"],
+          "path": ["organizer", "contacts", ""],
+          "query": [
+            { "key": "limit", "value": "100" }
+          ]
+        }
+      }
+    },
+    {
+      "name": "02 - Create Contact",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+              "pm.test('Response has id and saves it', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json).to.have.property('id');",
+              "    pm.expect(json.name).to.eql('Jane Doe');",
+              "    pm.expect(json.email).to.eql('jane.doe@example.com');",
+              "    pm.environment.set('contact_id', json.id);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Jane Doe\",\n  \"email\": \"jane.doe@example.com\",\n  \"phone\": \"+351900000001\",\n  \"birthday\": \"1990-06-15\"\n}",
+          "options": { "raw": { "language": "json" } }
+        },
+        "url": {
+          "raw": "{{base_url}}/organizer/contacts/",
+          "host": ["{{base_url}}"],
+          "path": ["organizer", "contacts", ""]
+        }
+      }
+    },
+    {
+      "name": "03 - Get Contact",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Response matches created contact', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(String(json.id)).to.eql(String(pm.environment.get('contact_id')));",
+              "    pm.expect(json.name).to.eql('Jane Doe');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/organizer/contacts/{{contact_id}}",
+          "host": ["{{base_url}}"],
+          "path": ["organizer", "contacts", "{{contact_id}}"]
+        }
+      }
+    },
+    {
+      "name": "04 - List Contacts (Filter by name)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Response is an array', () => {",
+              "    pm.expect(pm.response.json()).to.be.an('array');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/organizer/contacts/?name=Jane&limit=50",
+          "host": ["{{base_url}}"],
+          "path": ["organizer", "contacts", ""],
+          "query": [
+            { "key": "name", "value": "Jane" },
+            { "key": "limit", "value": "50" }
+          ]
+        }
+      }
+    },
+    {
+      "name": "05 - List Contacts (Filter by email)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Response is an array', () => {",
+              "    pm.expect(pm.response.json()).to.be.an('array');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/organizer/contacts/?email=example.com",
+          "host": ["{{base_url}}"],
+          "path": ["organizer", "contacts", ""],
+          "query": [
+            { "key": "email", "value": "example.com" }
+          ]
+        }
+      }
+    },
+    {
+      "name": "06 - List Contacts (has_birthday=true)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('All contacts have a birthday', () => {",
+              "    pm.response.json().forEach(c => {",
+              "        pm.expect(c.birthday).to.not.be.null;",
+              "    });",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/organizer/contacts/?has_birthday=true",
+          "host": ["{{base_url}}"],
+          "path": ["organizer", "contacts", ""],
+          "query": [
+            { "key": "has_birthday", "value": "true" }
+          ]
+        }
+      }
+    },
+    {
+      "name": "07 - Update Contact",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Phone was updated', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json.phone).to.eql('+351900000099');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "PATCH",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"phone\": \"+351900000099\"\n}",
+          "options": { "raw": { "language": "json" } }
+        },
+        "url": {
+          "raw": "{{base_url}}/organizer/contacts/{{contact_id}}",
+          "host": ["{{base_url}}"],
+          "path": ["organizer", "contacts", "{{contact_id}}"]
+        }
+      }
+    },
+    {
+      "name": "08 - Get Contact Not Found",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 404', () => pm.response.to.have.status(404));",
+              "pm.test('Returns not found detail', () => {",
+              "    pm.expect(pm.response.json().detail).to.eql('Contact not found');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/organizer/contacts/999999",
+          "host": ["{{base_url}}"],
+          "path": ["organizer", "contacts", "999999"]
+        }
+      }
+    },
+    {
+      "name": "09 - Delete Contact",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 204', () => pm.response.to.have.status(204));",
+              "pm.environment.unset('contact_id');"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/organizer/contacts/{{contact_id}}",
+          "host": ["{{base_url}}"],
+          "path": ["organizer", "contacts", "{{contact_id}}"]
+        }
+      }
+    }
+  ]
+}

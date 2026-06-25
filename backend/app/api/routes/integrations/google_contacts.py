@@ -19,7 +19,7 @@ router = APIRouter(
 
 _AUTHORIZE_URL = "https://accounts.google.com/o/oauth2/auth"
 _TOKEN_URL = "https://oauth2.googleapis.com/token"
-_SCOPES = ["https://www.googleapis.com/auth/contacts.readonly"]
+_SCOPES = ["https://www.googleapis.com/auth/contacts"]
 
 
 @router.get("/status", dependencies=[Depends(require_auth)])

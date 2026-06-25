@@ -3,30 +3,109 @@ from __future__ import annotations
 import logging
 from datetime import date, timedelta
 
+from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.features.organizer.contacts.repository import ContactRepository
-from app.features.organizer.contacts.tables import Contact
+from app.features.organizer.contacts.schemas import (
+    ContactCreate,
+    ContactFilters,
+    ContactRead,
+    ContactUpdate,
+)
 from app.integrations.google_contacts.client import GoogleContactsClient
+from app.shared.storage import StorageProvider
 
 logger = logging.getLogger(__name__)
 
 _BIRTHDAY_LOOKAHEAD_DAYS = 14
 _PLACEHOLDER_YEAR = 2000
+_NO_WRITE_ACCESS_DETAIL = (
+    "Google Contacts write access not authorized. "
+    "Re-authorize via GET /integration/google-contacts/oauth/url (full contacts scope required)."
+)
 
 
 class ContactService:
-    def __init__(self, client: GoogleContactsClient, session: AsyncSession) -> None:
+    def __init__(
+        self,
+        session: AsyncSession,
+        client: GoogleContactsClient | None = None,
+        provider: StorageProvider | None = None,
+    ) -> None:
         self._client = client
         self._session = session
+        self._provider = provider
 
     async def sync(self) -> int:
+        if self._client is None:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Google Contacts not authorized.",
+            )
         raw = await self._client.list_connections()
         rows = [_to_row(c) for c in raw if _has_useful_data(c)]
         repo = ContactRepository(self._session)
         count = await repo.upsert(rows)
         logger.info("Synced %d contacts from Google", count)
         return count
+
+    async def get_contact(self, contact_id: int) -> ContactRead | None:
+        repo = ContactRepository(self._session)
+        contact = await repo.get_contact(contact_id)
+        if contact is None:
+            return None
+        return ContactRead.model_validate(contact)
+
+    async def get_contacts(self, filters: ContactFilters) -> list[ContactRead]:
+        repo = ContactRepository(self._session)
+        contacts = await repo.get_contacts(filters)
+        return [ContactRead.model_validate(c) for c in contacts]
+
+    async def create_contact(self, contact_create: ContactCreate) -> ContactRead:
+        if self._provider is None:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail=_NO_WRITE_ACCESS_DETAIL,
+            )
+        record = await self._provider.create(contact_create.model_dump(), self._session)
+        repo = ContactRepository(self._session)
+        contact = await repo.create_contact(contact_create, record["id"])
+        logger.info("Contact created: id=%d name=%r", contact.id, contact_create.name)
+        return ContactRead.model_validate(contact)
+
+    async def update_contact(self, contact_id: int, contact_update: ContactUpdate) -> ContactRead | None:
+        repo = ContactRepository(self._session)
+        contact = await repo.get_contact(contact_id)
+        if contact is None:
+            return None
+        if self._provider is None:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail=_NO_WRITE_ACCESS_DETAIL,
+            )
+        await self._provider.update(
+            contact.provider_id,
+            contact_update.model_dump(exclude_unset=True),
+            self._session,
+        )
+        updated = await repo.update_contact(contact_id, contact_update)
+        logger.info("Contact updated: id=%d", contact_id)
+        return ContactRead.model_validate(updated)
+
+    async def delete_contact(self, contact_id: int) -> None:
+        repo = ContactRepository(self._session)
+        contact = await repo.get_contact(contact_id)
+        if contact is None:
+            return
+        if self._provider is None:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail=_NO_WRITE_ACCESS_DETAIL,
+            )
+        await self._provider.delete(contact.provider_id, self._session)
+        await repo.delete_contact(contact_id)
+        logger.info("Contact deleted: id=%d", contact_id)
 
     async def get_upcoming_birthdays(self, today: date) -> list[dict]:
         repo = ContactRepository(self._session)

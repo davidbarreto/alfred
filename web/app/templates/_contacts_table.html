@@ -1,0 +1,39 @@
+{% if contacts %}
+<table class="w-full text-sm">
+  <thead>
+    <tr class="border-b border-gray-100 text-xs text-gray-400 uppercase tracking-wide">
+      <th class="text-left pb-2 font-medium">Name</th>
+      <th class="text-left pb-2 font-medium">Email</th>
+      <th class="text-left pb-2 font-medium">Phone</th>
+      <th class="text-left pb-2 font-medium">Birthday</th>
+      <th class="pb-2"></th>
+    </tr>
+  </thead>
+  <tbody class="divide-y divide-gray-50">
+    {% for c in contacts %}
+    <tr class="hover:bg-gray-50 group" id="contact-row-{{ c.id }}">
+      <td class="py-2.5 pr-4 font-medium text-gray-900">{{ c.name }}</td>
+      <td class="py-2.5 pr-4 text-gray-500">{{ c.email or "—" }}</td>
+      <td class="py-2.5 pr-4 text-gray-500">{{ c.phone or "—" }}</td>
+      <td class="py-2.5 pr-4 text-gray-500">
+        {% if c.birthday %}{{ c.birthday }}{% else %}—{% endif %}
+      </td>
+      <td class="py-2.5 text-right">
+        <button
+          hx-delete="/contacts/{{ c.id }}"
+          hx-target="#contacts-table"
+          hx-swap="innerHTML"
+          hx-confirm="Delete {{ c.name }}? This also removes them from Google Contacts."
+          class="opacity-0 group-hover:opacity-100 text-gray-300 hover:text-[#E24B4A] transition-opacity"
+          title="Delete contact"
+        >
+          <i class="ti ti-trash text-sm"></i>
+        </button>
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p class="text-sm text-gray-400 py-4">No contacts found.</p>
+{% endif %}

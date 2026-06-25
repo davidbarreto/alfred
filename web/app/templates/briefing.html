@@ -1,0 +1,213 @@
+{% extends "base.html" %}
+{% set active_page = "briefing" %}
+{% block title %}Morning Briefing{% endblock %}
+
+{% block content %}
+<div class="p-6 space-y-5">
+
+  <div class="flex items-center justify-between">
+    <div>
+      <h1 class="text-base font-semibold text-gray-900">Morning Briefing</h1>
+      {% if briefing %}<p class="text-xs text-gray-400 mt-0.5">{{ briefing.date }}</p>{% endif %}
+    </div>
+    <button
+      hx-get="/briefing/formatted"
+      hx-target="#formatted-section"
+      hx-swap="innerHTML"
+      hx-indicator="#formatted-spinner"
+      class="btn btn-sm btn-primary gap-1"
+    >
+      <i class="ti ti-sparkles text-sm"></i>Generate summary
+    </button>
+  </div>
+
+  {% if api_error %}
+  <div class="rounded-lg bg-[#FCEBEB] border border-[#E24B4A]/20 px-4 py-2.5 text-sm text-[#E24B4A]">
+    <strong>Error:</strong> {{ api_error }}
+  </div>
+  {% endif %}
+
+  {% if briefing %}
+
+  <!-- AI summary placeholder -->
+  <div class="card bg-white">
+    <div class="card-body p-4">
+      <div class="flex items-center justify-between mb-3">
+        <h2 class="text-sm font-medium text-gray-900">AI Summary</h2>
+        <span id="formatted-spinner" class="htmx-indicator text-xs text-gray-400">Generating…</span>
+      </div>
+      <div id="formatted-section">
+        <p class="text-sm text-gray-400">Click "Generate summary" to get an AI-written briefing.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Weather -->
+  <div class="card bg-white">
+    <div class="card-body p-4">
+      <h2 class="text-sm font-medium text-gray-900 mb-3">
+        <i class="ti ti-cloud mr-1"></i>Weather
+      </h2>
+      {% set w = briefing.weather %}
+      <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <div>
+          <p class="text-xs text-gray-400">High / Low</p>
+          <p class="text-sm font-medium text-gray-900 mt-0.5">{{ w.temperature_max_c | round(1) }}° / {{ w.temperature_min_c | round(1) }}°</p>
+        </div>
+        <div>
+          <p class="text-xs text-gray-400">Feels like</p>
+          <p class="text-sm font-medium text-gray-900 mt-0.5">{{ w.feels_like_max_c | round(1) }}°</p>
+        </div>
+        <div>
+          <p class="text-xs text-gray-400">Rain chance</p>
+          <p class="text-sm font-medium text-gray-900 mt-0.5">{{ w.precipitation_probability }}%</p>
+        </div>
+        <div>
+          <p class="text-xs text-gray-400">Wind</p>
+          <p class="text-sm font-medium text-gray-900 mt-0.5">{{ w.wind_speed_max_kmh | round(0) | int }} km/h</p>
+        </div>
+      </div>
+      <p class="text-sm text-gray-600 mt-3">{{ w.description }}</p>
+      {% if w.advice %}
+      <ul class="mt-2 space-y-1">
+        {% for tip in w.advice %}
+        <li class="text-xs text-gray-500 flex items-start gap-1.5">
+          <i class="ti ti-point-filled text-gray-300 mt-0.5 flex-shrink-0"></i>{{ tip }}
+        </li>
+        {% endfor %}
+      </ul>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Tasks + Events row -->
+  <div class="grid grid-cols-2 gap-4">
+
+    <!-- Tasks -->
+    <div class="card bg-white">
+      <div class="card-body p-4">
+        <div class="flex items-center justify-between mb-3">
+          <h2 class="text-sm font-medium text-gray-900"><i class="ti ti-checklist mr-1"></i>Priority tasks</h2>
+          <a href="/tasks" class="text-xs text-[#378ADD] hover:underline">View all →</a>
+        </div>
+        {% if briefing.tasks %}
+        <ul class="space-y-2">
+          {% for t in briefing.tasks %}
+          <li class="flex items-start gap-2 text-sm min-w-0">
+            <span class="w-1.5 h-1.5 rounded-full mt-1.5 flex-shrink-0
+              {% if t.urgency == 'URGENT' %}bg-[#E24B4A]
+              {% elif t.priority == 'HIGH' %}bg-[#BA7517]
+              {% else %}bg-gray-300{% endif %}"></span>
+            <div class="min-w-0">
+              <p class="truncate text-gray-700">{{ t.title }}</p>
+              {% if t.is_overdue %}
+              <p class="text-xs text-[#E24B4A]">Overdue</p>
+              {% elif t.deadline %}
+              <p class="text-xs text-gray-400">Due {{ t.deadline[:10] }}</p>
+              {% endif %}
+            </div>
+          </li>
+          {% endfor %}
+        </ul>
+        {% else %}
+        <p class="text-sm text-gray-400">No priority tasks.</p>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Events -->
+    <div class="card bg-white">
+      <div class="card-body p-4">
+        <div class="flex items-center justify-between mb-3">
+          <h2 class="text-sm font-medium text-gray-900"><i class="ti ti-calendar mr-1"></i>Today's events</h2>
+          <a href="/calendar" class="text-xs text-[#378ADD] hover:underline">Calendar →</a>
+        </div>
+        {% if briefing.events %}
+        <ul class="space-y-2">
+          {% for ev in briefing.events %}
+          <li class="text-sm min-w-0">
+            <div class="flex items-baseline gap-2">
+              <span class="text-xs text-gray-400 flex-shrink-0">
+                {% if ev.all_day %}All day{% else %}{{ ev.start_time[:5] }}{% endif %}
+              </span>
+              <span class="truncate text-gray-700">{{ ev.title }}</span>
+            </div>
+            {% if ev.location %}
+            <p class="text-xs text-gray-400 ml-9 truncate">{{ ev.location }}</p>
+            {% endif %}
+          </li>
+          {% endfor %}
+        </ul>
+        {% else %}
+        <p class="text-sm text-gray-400">No events today.</p>
+        {% endif %}
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Birthdays + Holidays row -->
+  {% if briefing.birthdays or briefing.holidays %}
+  <div class="grid grid-cols-2 gap-4">
+
+    <!-- Birthdays -->
+    <div class="card bg-white">
+      <div class="card-body p-4">
+        <h2 class="text-sm font-medium text-gray-900 mb-3"><i class="ti ti-cake mr-1"></i>Upcoming birthdays</h2>
+        {% if briefing.birthdays %}
+        <ul class="space-y-2">
+          {% for b in briefing.birthdays %}
+          <li class="flex items-center gap-3 text-sm">
+            <span class="text-lg">🎂</span>
+            <div>
+              <p class="text-gray-700 font-medium">{{ b.name }}</p>
+              <p class="text-xs text-gray-400">
+                {{ b.date }}
+                {% if b.days_until == 0 %}· <span class="text-[#639922] font-medium">Today!</span>
+                {% elif b.days_until == 1 %}· <span class="text-[#BA7517]">Tomorrow</span>
+                {% else %}· in {{ b.days_until }} days{% endif %}
+              </p>
+            </div>
+          </li>
+          {% endfor %}
+        </ul>
+        {% else %}
+        <p class="text-sm text-gray-400">No birthdays in the next 14 days.</p>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Holidays -->
+    <div class="card bg-white">
+      <div class="card-body p-4">
+        <h2 class="text-sm font-medium text-gray-900 mb-3"><i class="ti ti-flag mr-1"></i>Holidays</h2>
+        {% if briefing.holidays %}
+        <ul class="space-y-2">
+          {% for h in briefing.holidays %}
+          <li class="text-sm">
+            <p class="text-gray-700">{{ h.local_name }}</p>
+            {% if h.local_name != h.name %}
+            <p class="text-xs text-gray-400">{{ h.name }}</p>
+            {% endif %}
+          </li>
+          {% endfor %}
+        </ul>
+        {% else %}
+        <p class="text-sm text-gray-400">No holidays today.</p>
+        {% endif %}
+      </div>
+    </div>
+
+  </div>
+  {% endif %}
+
+  {% elif not api_error %}
+  <div class="card bg-white">
+    <div class="card-body p-4">
+      <p class="text-sm text-gray-400">No briefing data available.</p>
+    </div>
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}

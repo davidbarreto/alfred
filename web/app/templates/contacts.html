@@ -39,7 +39,7 @@
     <select
       id="filter-birthday"
       class="border border-gray-200 rounded-lg px-3 py-1.5 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-[#378ADD]"
-      onchange="_resetPage(); applyFilters()"
+      onchange="_resetPage(); _updateLetterChips(); applyFilters()"
     >
       <option value="" {% if not query_has_birthday %}selected{% endif %}>All contacts</option>
       <option value="true" {% if query_has_birthday == 'true' %}selected{% endif %}>With birthday</option>
@@ -48,7 +48,7 @@
   </div>
 
   <!-- A–Z letter filter -->
-  <div class="flex flex-wrap gap-1" id="letter-filter">
+  <div class="flex flex-wrap items-center gap-1" id="letter-filter">
     {% for l in ['A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z'] %}
     <button
       class="letter-chip w-7 h-7 text-xs font-mono rounded border transition-colors
@@ -57,6 +57,7 @@
       onclick="setLetter('{{ l }}')"
     >{{ l }}</button>
     {% endfor %}
+    <span id="letter-filter-hint" class="hidden text-xs text-gray-400 ml-1">clear filters to browse by letter</span>
   </div>
 
   <!-- Contacts table + pagination -->
@@ -133,15 +134,31 @@ function _resetPage() {
   _currentOffset = 0;
 }
 
+function _hasTextFilters() {
+  return !!(
+    document.getElementById("filter-name").value.trim() ||
+    document.getElementById("filter-email").value.trim() ||
+    document.getElementById("filter-birthday").value
+  );
+}
+
 function _updateLetterChips() {
+  const disabled = _hasTextFilters();
+  document.getElementById("letter-filter-hint").classList.toggle("hidden", !disabled);
   document.querySelectorAll(".letter-chip").forEach(el => {
-    const active = el.dataset.letter === _activeLetter;
-    el.classList.toggle("bg-[#378ADD]", active);
-    el.classList.toggle("text-white", active);
-    el.classList.toggle("border-[#378ADD]", active);
-    el.classList.toggle("text-gray-500", !active);
-    el.classList.toggle("bg-white", !active);
-    el.classList.toggle("border-gray-200", !active);
+    el.disabled = disabled;
+    if (disabled) {
+      el.className = "letter-chip w-7 h-7 text-xs font-mono rounded border transition-colors bg-white text-gray-300 border-gray-100 cursor-not-allowed";
+    } else {
+      const active = el.dataset.letter === _activeLetter;
+      el.classList.toggle("bg-[#378ADD]", active);
+      el.classList.toggle("text-white", active);
+      el.classList.toggle("border-[#378ADD]", active);
+      el.classList.toggle("text-gray-500", !active);
+      el.classList.toggle("bg-white", !active);
+      el.classList.toggle("border-gray-200", !active);
+      el.classList.remove("cursor-not-allowed");
+    }
   });
 }
 
@@ -217,5 +234,7 @@ async function submitNewContact(e) {
     btn.textContent = "Save contact";
   }
 }
+
+_updateLetterChips();
 </script>
 {% endblock %}

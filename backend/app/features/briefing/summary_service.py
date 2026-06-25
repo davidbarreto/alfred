@@ -6,7 +6,11 @@ from zoneinfo import ZoneInfo
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.features.briefing.schemas import BirthdayItem, EventBriefItem, HolidayItem, MorningBriefing, TaskBriefItem
+from app.features.briefing.schemas import BirthdayItem, EventBriefItem, HolidayItem, LanguageBriefItem, MorningBriefing, TaskBriefItem
+from app.features.language.chunks.repository import ChunkRepository
+from app.features.language.sessions.repository import SessionRepository as LanguageSessionRepository
+from app.features.language.tracks.repository import TrackRepository as LanguageTrackRepository
+from app.features.language.tracks.schemas import TrackFilters as LanguageTrackFilters
 from app.features.organizer.calendar_events.repository import CalendarEventRepository
 from app.features.organizer.calendar_events.schemas import EventFilters
 from app.features.organizer.contacts.service import ContactService
@@ -43,12 +47,13 @@ class BriefingSummaryService:
 
         holiday_window_end = today + timedelta(days=_HOLIDAY_LOOKAHEAD_DAYS)
 
-        tasks, events, weather, holidays, birthdays = await _gather(
+        tasks, events, weather, holidays, birthdays, language = await _gather(
             self._fetch_tasks(today_start, today_end),
             self._fetch_events(today_start, today_end),
             self._weather_client.get_daily_forecast(today),
             self._holiday_client.get_holidays(today, holiday_window_end),
             self._fetch_birthdays(today),
+            self._fetch_language(),
         )
 
         return MorningBriefing(
@@ -58,6 +63,7 @@ class BriefingSummaryService:
             weather=weather,
             holidays=holidays,
             birthdays=birthdays,
+            language=language,
         )
 
     async def _fetch_tasks(self, today_start: datetime, today_end: datetime) -> list[TaskBriefItem]:
@@ -112,6 +118,28 @@ class BriefingSummaryService:
             )
 
         items.sort(key=lambda e: (e.all_day, e.start_time))
+        return items
+
+    async def _fetch_language(self) -> list[LanguageBriefItem]:
+        track_repo = LanguageTrackRepository(self._session)
+        chunk_repo = ChunkRepository(self._session)
+        session_repo = LanguageSessionRepository(self._session)
+
+        tracks = await track_repo.get_tracks(LanguageTrackFilters(active_only=True))
+        items = []
+        for track in tracks:
+            due_count = await chunk_repo.count_due_for_track(track.id)
+            completed_today = await session_repo.count_srs_reviews_today(track.id)
+            quota_met = completed_today >= track.daily_quota
+            items.append(LanguageBriefItem(
+                track_id=track.id,
+                code=track.code,
+                name=track.name,
+                due_count=due_count,
+                completed_today=completed_today,
+                daily_quota=track.daily_quota,
+                quota_met=quota_met,
+            ))
         return items
 
     async def _fetch_birthdays(self, today: date) -> list[BirthdayItem]:

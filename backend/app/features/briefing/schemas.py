@@ -49,6 +49,16 @@ class BirthdayItem(BaseModel):
     date: date
 
 
+class LanguageBriefItem(BaseModel):
+    track_id: int
+    code: str
+    name: str
+    due_count: int
+    completed_today: int
+    daily_quota: int
+    quota_met: bool
+
+
 class MorningBriefing(BaseModel):
     date: date
     tasks: list[TaskBriefItem]
@@ -56,6 +66,7 @@ class MorningBriefing(BaseModel):
     weather: WeatherForecast
     holidays: list[HolidayItem]
     birthdays: list[BirthdayItem]
+    language: list[LanguageBriefItem] = []
 
 
 class FormattedBriefing(BaseModel):

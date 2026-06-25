@@ -70,6 +70,21 @@ def _build_context(briefing: MorningBriefing) -> str:
             else:
                 lines.append(f"  {b.name} — in {b.days_until} days ({b.date.strftime('%d %b')})")
 
+    active_language = [t for t in briefing.language if t.due_count > 0 or t.completed_today > 0]
+    if active_language:
+        lines.append("")
+        lines.append("Language practice:")
+        for lang in active_language:
+            if lang.quota_met:
+                lines.append(f"  {lang.name}: quota met ({lang.completed_today}/{lang.daily_quota} reviews done)")
+            elif lang.completed_today > 0:
+                lines.append(
+                    f"  {lang.name}: {lang.completed_today}/{lang.daily_quota} done, "
+                    f"{lang.due_count} still due"
+                )
+            else:
+                lines.append(f"  {lang.name}: {lang.due_count} reviews due")
+
     return "\n".join(lines)
 
 

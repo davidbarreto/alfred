@@ -9,6 +9,7 @@ from app.features.briefing.schemas import (
     EventBriefItem,
     FormattedBriefing,
     HolidayItem,
+    LanguageBriefItem,
     MorningBriefing,
     TaskBriefItem,
     WeatherForecast,
@@ -148,6 +149,42 @@ class TestBuildContext:
         briefing = _make_briefing(holidays=[])
         context = _build_context(briefing)
         assert "Upcoming holidays" not in context
+
+    def test_no_language_section_when_empty(self):
+        briefing = _make_briefing(language=[])
+        context = _build_context(briefing)
+        assert "Language practice" not in context
+
+    def test_language_due_count_in_context(self):
+        lang = LanguageBriefItem(
+            track_id=1, code="pt", name="Portuguese",
+            due_count=7, completed_today=0, daily_quota=10, quota_met=False,
+        )
+        briefing = _make_briefing(language=[lang])
+        context = _build_context(briefing)
+        assert "Language practice" in context
+        assert "Portuguese" in context
+        assert "7 reviews due" in context
+
+    def test_language_partial_progress_in_context(self):
+        lang = LanguageBriefItem(
+            track_id=1, code="pt", name="Portuguese",
+            due_count=5, completed_today=3, daily_quota=10, quota_met=False,
+        )
+        briefing = _make_briefing(language=[lang])
+        context = _build_context(briefing)
+        assert "3/10 done" in context
+        assert "5 still due" in context
+
+    def test_language_quota_met_in_context(self):
+        lang = LanguageBriefItem(
+            track_id=1, code="pt", name="Portuguese",
+            due_count=0, completed_today=10, daily_quota=10, quota_met=True,
+        )
+        briefing = _make_briefing(language=[lang])
+        context = _build_context(briefing)
+        assert "quota met" in context
+        assert "10/10" in context
 
     def test_birthday_today(self):
         briefing = _make_briefing(

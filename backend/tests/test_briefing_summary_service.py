@@ -93,7 +93,28 @@ def service(mock_session, mock_weather_client, mock_holiday_client):
     )
 
 
+def _make_track_orm(id=1, code="pt", name="Portuguese", daily_quota=10):
+    t = MagicMock()
+    t.id = id
+    t.code = code
+    t.name = name
+    t.daily_quota = daily_quota
+    return t
+
+
 class TestBuild:
+    @pytest.fixture(autouse=True)
+    def _patch_language_repos(self):
+        with (
+            patch("app.features.briefing.summary_service.LanguageTrackRepository") as MockTrackRepo,
+            patch("app.features.briefing.summary_service.ChunkRepository") as MockChunkRepo,
+            patch("app.features.briefing.summary_service.LanguageSessionRepository") as MockSessionRepo,
+        ):
+            MockTrackRepo.return_value.get_tracks = AsyncMock(return_value=[])
+            MockChunkRepo.return_value.count_due_for_track = AsyncMock(return_value=0)
+            MockSessionRepo.return_value.count_srs_reviews_today = AsyncMock(return_value=0)
+            yield MockTrackRepo, MockChunkRepo, MockSessionRepo
+
     @pytest.mark.asyncio
     async def test_returns_morning_briefing(self, service):
         with (
@@ -276,3 +297,88 @@ class TestBuild:
         assert len(result.birthdays) == 1
         assert result.birthdays[0].name == "Alice"
         assert result.birthdays[0].days_until == 3
+
+
+class TestLanguageBriefing:
+    @pytest.fixture(autouse=True)
+    def _patch_base_repos(self):
+        with (
+            patch("app.features.briefing.summary_service.TaskRepository") as MockTaskRepo,
+            patch("app.features.briefing.summary_service.CalendarEventRepository") as MockEventRepo,
+        ):
+            MockTaskRepo.return_value.get_tasks = AsyncMock(return_value=[])
+            MockEventRepo.return_value.get_events = AsyncMock(return_value=[])
+            yield
+
+    @pytest.mark.asyncio
+    async def test_language_empty_when_no_active_tracks(self, service):
+        with (
+            patch("app.features.briefing.summary_service.LanguageTrackRepository") as MockTrackRepo,
+            patch("app.features.briefing.summary_service.ChunkRepository"),
+            patch("app.features.briefing.summary_service.LanguageSessionRepository"),
+        ):
+            MockTrackRepo.return_value.get_tracks = AsyncMock(return_value=[])
+            result = await service.build()
+
+        assert result.language == []
+
+    @pytest.mark.asyncio
+    async def test_language_includes_due_count_per_track(self, service):
+        track = _make_track_orm(id=1, code="pt", name="Portuguese", daily_quota=10)
+        with (
+            patch("app.features.briefing.summary_service.LanguageTrackRepository") as MockTrackRepo,
+            patch("app.features.briefing.summary_service.ChunkRepository") as MockChunkRepo,
+            patch("app.features.briefing.summary_service.LanguageSessionRepository") as MockSessionRepo,
+        ):
+            MockTrackRepo.return_value.get_tracks = AsyncMock(return_value=[track])
+            MockChunkRepo.return_value.count_due_for_track = AsyncMock(return_value=7)
+            MockSessionRepo.return_value.count_srs_reviews_today = AsyncMock(return_value=0)
+            result = await service.build()
+
+        assert len(result.language) == 1
+        item = result.language[0]
+        assert item.code == "pt"
+        assert item.name == "Portuguese"
+        assert item.due_count == 7
+        assert item.completed_today == 0
+        assert item.daily_quota == 10
+        assert item.quota_met is False
+
+    @pytest.mark.asyncio
+    async def test_language_quota_met_when_completed_equals_quota(self, service):
+        track = _make_track_orm(id=1, code="es", name="Spanish", daily_quota=5)
+        with (
+            patch("app.features.briefing.summary_service.LanguageTrackRepository") as MockTrackRepo,
+            patch("app.features.briefing.summary_service.ChunkRepository") as MockChunkRepo,
+            patch("app.features.briefing.summary_service.LanguageSessionRepository") as MockSessionRepo,
+        ):
+            MockTrackRepo.return_value.get_tracks = AsyncMock(return_value=[track])
+            MockChunkRepo.return_value.count_due_for_track = AsyncMock(return_value=0)
+            MockSessionRepo.return_value.count_srs_reviews_today = AsyncMock(return_value=5)
+            result = await service.build()
+
+        assert result.language[0].quota_met is True
+        assert result.language[0].completed_today == 5
+
+    @pytest.mark.asyncio
+    async def test_language_multiple_tracks(self, service):
+        tracks = [
+            _make_track_orm(id=1, code="pt", name="Portuguese", daily_quota=10),
+            _make_track_orm(id=2, code="es", name="Spanish", daily_quota=5),
+        ]
+        with (
+            patch("app.features.briefing.summary_service.LanguageTrackRepository") as MockTrackRepo,
+            patch("app.features.briefing.summary_service.ChunkRepository") as MockChunkRepo,
+            patch("app.features.briefing.summary_service.LanguageSessionRepository") as MockSessionRepo,
+        ):
+            MockTrackRepo.return_value.get_tracks = AsyncMock(return_value=tracks)
+            MockChunkRepo.return_value.count_due_for_track = AsyncMock(side_effect=[3, 8])
+            MockSessionRepo.return_value.count_srs_reviews_today = AsyncMock(side_effect=[2, 0])
+            result = await service.build()
+
+        assert len(result.language) == 2
+        assert result.language[0].code == "pt"
+        assert result.language[0].due_count == 3
+        assert result.language[0].completed_today == 2
+        assert result.language[1].code == "es"
+        assert result.language[1].due_count == 8

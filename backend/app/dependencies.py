@@ -29,6 +29,10 @@ from app.features.briefing.summary_service import BriefingSummaryService
 from app.features.briefing.formatter_service import BriefingFormatterService
 from app.features.briefing.weather_client import WeatherClient
 from app.features.briefing.holiday_client import GooglePublicHolidayClient
+from app.features.language.tracks.service import TrackService
+from app.features.language.grammar_scope.service import GrammarScopeService
+from app.features.language.chunks.service import ChunkService as LanguageChunkService
+from app.features.language.sessions.service import SessionService as LanguageSessionService
 from app.features.organizer.contacts.service import ContactService
 from app.integrations.google_contacts.client import GoogleContactsClient
 from app.integrations.google_contacts.provider import GoogleContactsProvider
@@ -201,6 +205,18 @@ async def get_briefing_summary_service(session: AsyncSession = Depends(get_sessi
 def get_briefing_formatter_service(session: AsyncSession = Depends(get_session)) -> BriefingFormatterService:
     return BriefingFormatterService(llm_provider=get_llm_provider(), session=session)
 
+def get_track_service(session: AsyncSession = Depends(get_session)) -> TrackService:
+    return TrackService(session)
+
+def get_grammar_scope_service(session: AsyncSession = Depends(get_session)) -> GrammarScopeService:
+    return GrammarScopeService(session)
+
+def get_language_chunk_service(session: AsyncSession = Depends(get_session)) -> LanguageChunkService:
+    return LanguageChunkService(session)
+
+def get_language_session_service(session: AsyncSession = Depends(get_session)) -> LanguageSessionService:
+    return LanguageSessionService(session)
+
 # Dependencies shortcuts
 # DB
 DbSessionDep = Annotated[AsyncSession, Depends(get_session)]
@@ -229,3 +245,7 @@ ContactServiceDep = Annotated[ContactService | None, Depends(get_contact_service
 ContactsCRUDServiceDep = Annotated[ContactService, Depends(get_contacts_crud_service)]
 BriefingSummaryServiceDep = Annotated[BriefingSummaryService, Depends(get_briefing_summary_service)]
 BriefingFormatterServiceDep = Annotated[BriefingFormatterService, Depends(get_briefing_formatter_service)]
+TrackServiceDep = Annotated[TrackService, Depends(get_track_service)]
+GrammarScopeServiceDep = Annotated[GrammarScopeService, Depends(get_grammar_scope_service)]
+ChunkServiceDep = Annotated[LanguageChunkService, Depends(get_language_chunk_service)]
+LanguageSessionServiceDep = Annotated[LanguageSessionService, Depends(get_language_session_service)]

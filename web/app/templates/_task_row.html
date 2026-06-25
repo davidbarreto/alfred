@@ -148,6 +148,7 @@
                 class="w-6 h-6 flex items-center justify-center rounded hover:bg-gray-100 text-gray-400 text-lg leading-none select-none">⋯</button>
         <ul id="task-menu-{{ task.id }}"
             class="hidden absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-md z-50 w-40 p-1 text-sm">
+          {% if not task.recurrence_rule %}
           <li>
             <button
               class="w-full text-left px-3 py-1.5 rounded hover:bg-gray-50 text-gray-700"
@@ -157,6 +158,7 @@
               onclick="_taskMenuClose()"
             >In progress</button>
           </li>
+          {% endif %}
           {% if task.recurrence_rule %}
           <li>
             <button

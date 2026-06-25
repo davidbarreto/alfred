@@ -1,0 +1,207 @@
+{% extends "base.html" %}
+{% set active_page = "languages" %}
+{% block title %}{{ chunk.text }}{% endblock %}
+
+{% block content %}
+<div class="p-6 space-y-6">
+
+  <!-- Breadcrumb -->
+  <div class="flex items-center gap-2 text-xs text-gray-400">
+    <a href="/languages" class="hover:text-gray-600">Languages</a>
+    <i class="ti ti-chevron-right text-gray-300"></i>
+    <a href="/languages/{{ track.code }}" class="hover:text-gray-600">{{ flag }} {{ track.name }}</a>
+    <i class="ti ti-chevron-right text-gray-300"></i>
+    <a href="/languages/{{ track.code }}/chunks" class="hover:text-gray-600">Chunks</a>
+    <i class="ti ti-chevron-right text-gray-300"></i>
+    <span class="text-gray-700 font-medium truncate max-w-[120px]">{{ chunk.text }}</span>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+    <!-- Chunk info -->
+    <div class="lg:col-span-2 space-y-4">
+
+      <div class="card bg-white">
+        <div class="card-body p-5 space-y-4">
+          <div class="flex items-start justify-between gap-3">
+            <div>
+              <h1 class="text-lg font-semibold text-gray-900">{{ chunk.text }}</h1>
+              <p class="text-sm text-gray-500 mt-0.5">{{ chunk.translation }}</p>
+            </div>
+            <div class="flex flex-col items-end gap-1.5 shrink-0">
+              {% set type_color = {
+                'word': 'bg-gray-100 text-gray-600',
+                'collocation': 'bg-blue-50 text-blue-600',
+                'verb_form': 'bg-purple-50 text-purple-600',
+                'sentence_pattern': 'bg-green-50 text-green-600'
+              } %}
+              <span class="px-2 py-0.5 rounded text-xs {{ type_color.get(chunk.chunk_type, 'bg-gray-100 text-gray-600') }}">
+                {{ chunk.chunk_type | replace('_', ' ') | title }}
+              </span>
+              {% if chunk.is_leech %}
+              <span class="px-2 py-0.5 rounded text-xs bg-red-50 text-red-600">⚠ Leech</span>
+              {% endif %}
+            </div>
+          </div>
+
+          {% if chunk.example_sentence %}
+          <div class="bg-gray-50 rounded-lg p-3">
+            <p class="text-xs text-gray-400 uppercase tracking-wide mb-1.5">Example</p>
+            <p class="text-sm text-gray-800 italic">{{ chunk.example_sentence }}</p>
+            <p class="text-xs text-gray-500 mt-0.5">{{ chunk.example_translation }}</p>
+          </div>
+          {% endif %}
+
+          <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs">
+            {% if chunk.cefr_level %}
+            <div>
+              <p class="text-gray-400">CEFR level</p>
+              <p class="font-medium text-gray-700">{{ chunk.cefr_level }}</p>
+            </div>
+            {% endif %}
+            {% if chunk.frequency_rank %}
+            <div>
+              <p class="text-gray-400">Frequency rank</p>
+              <p class="font-medium text-gray-700">#{{ chunk.frequency_rank }}</p>
+            </div>
+            {% endif %}
+            <div>
+              <p class="text-gray-400">Source</p>
+              <p class="font-medium text-gray-700">{{ chunk.source_label }}</p>
+            </div>
+            <div>
+              <p class="text-gray-400">Status</p>
+              {% set st_color = {'active': 'text-green-600', 'pending_triage': 'text-amber-600', 'suspended': 'text-gray-400'} %}
+              <p class="font-medium {{ st_color.get(chunk.status, 'text-gray-600') }}">{{ chunk.status | replace('_', ' ') | title }}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Audio evolution (shadowing history) -->
+      {% if shadowing_sessions %}
+      <div class="card bg-white">
+        <div class="card-body p-0">
+          <div class="px-4 py-3 border-b border-gray-100">
+            <p class="text-xs font-medium text-gray-700">Shadowing history</p>
+            <p class="text-xs text-gray-400">{{ shadowing_sessions | length }} session{{ 's' if shadowing_sessions | length != 1 }}</p>
+          </div>
+          <div class="divide-y divide-gray-50">
+            {% for session in shadowing_sessions %}
+            <div class="flex items-center justify-between px-4 py-3">
+              <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center shrink-0">
+                  <i class="ti ti-microphone text-purple-600 text-sm"></i>
+                </div>
+                <div>
+                  <p class="text-xs text-gray-600">{{ session.created_at[:10] }}</p>
+                  {% if session.gemini_feedback_json %}
+                  <p class="text-xs text-gray-400 truncate max-w-[200px]">
+                    {{ session.gemini_feedback_json | tojson | truncate(60) }}
+                  </p>
+                  {% endif %}
+                </div>
+              </div>
+              <div class="flex items-center gap-3">
+                {% if session.quality_score is not none %}
+                <div class="text-center">
+                  <p class="text-sm font-semibold {% if session.quality_score >= 3.5 %}text-green-600{% elif session.quality_score >= 2.5 %}text-gray-700{% else %}text-red-600{% endif %}">
+                    {{ "%.1f" | format(session.quality_score) }}
+                  </p>
+                  <p class="text-[10px] text-gray-400">score</p>
+                </div>
+                {% endif %}
+                {% if session.audio_ref %}
+                <a href="/static/audio/{{ session.audio_ref }}"
+                   target="_blank"
+                   class="btn btn-xs btn-ghost text-purple-600">
+                  <i class="ti ti-player-play text-sm"></i>
+                </a>
+                {% endif %}
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+      {% endif %}
+
+    </div>
+
+    <!-- FSRS state panel -->
+    <div class="space-y-4">
+
+      <div class="card bg-white">
+        <div class="card-body p-4 space-y-3">
+          <p class="text-xs font-medium text-gray-700">FSRS state</p>
+
+          <div class="space-y-2.5 text-xs">
+            <div class="flex justify-between">
+              <span class="text-gray-400">State</span>
+              <span class="font-medium text-gray-700 capitalize">{{ chunk.state }}</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-gray-400">Stability</span>
+              <span class="font-medium text-gray-700">{{ "%.2f" | format(chunk.stability) }} days</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-gray-400">Difficulty</span>
+              <span class="font-medium {{ chunk.ease_color }}">{{ "%.2f" | format(chunk.difficulty) }}</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-gray-400">Due</span>
+              <span class="font-medium text-gray-700">{{ chunk.due_at[:10] }}</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-gray-400">Repetitions</span>
+              <span class="font-medium text-gray-700">{{ chunk.repetitions }}</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-gray-400">Lapses</span>
+              <span class="font-medium {% if chunk.lapses > 0 %}text-amber-600{% else %}text-gray-700{% endif %}">{{ chunk.lapses }}</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="text-gray-400">Consec. failures</span>
+              <span class="font-medium {% if chunk.consecutive_failures >= 4 %}text-red-600{% elif chunk.consecutive_failures > 0 %}text-amber-600{% else %}text-gray-700{% endif %}">
+                {{ chunk.consecutive_failures }}
+              </span>
+            </div>
+            {% if chunk.last_review_at %}
+            <div class="flex justify-between">
+              <span class="text-gray-400">Last review</span>
+              <span class="font-medium text-gray-700">{{ chunk.last_review_at[:10] }}</span>
+            </div>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+
+      <!-- SRS review history -->
+      {% if srs_sessions %}
+      <div class="card bg-white">
+        <div class="card-body p-0">
+          <div class="px-4 py-3 border-b border-gray-100">
+            <p class="text-xs font-medium text-gray-700">Review history</p>
+          </div>
+          <div class="divide-y divide-gray-50 max-h-[280px] overflow-y-auto">
+            {% for session in srs_sessions %}
+            <div class="flex items-center justify-between px-4 py-2.5">
+              <span class="text-xs text-gray-500">{{ session.created_at[:10] }}</span>
+              {% if session.quality_score is not none %}
+              <span class="text-xs font-medium {% if session.quality_score >= 3.5 %}text-green-600{% elif session.quality_score >= 2.5 %}text-gray-600{% else %}text-red-600{% endif %}">
+                {{ "%.1f" | format(session.quality_score) }}
+              </span>
+              {% else %}
+              <span class="text-xs text-gray-300">—</span>
+              {% endif %}
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+      {% endif %}
+
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+{% set active_page = "languages" %}
+{% block title %}Triage Queue{% endblock %}
+
+{% block content %}
+<div class="p-6 space-y-5">
+
+  <!-- Breadcrumb -->
+  <div class="flex items-center gap-2 text-xs text-gray-400">
+    <a href="/languages" class="hover:text-gray-600">Languages</a>
+    <i class="ti ti-chevron-right text-gray-300"></i>
+    <span class="text-gray-700 font-medium">Triage</span>
+  </div>
+
+  <div class="flex items-center justify-between">
+    <div>
+      <h1 class="text-base font-semibold text-gray-900">Triage queue</h1>
+      <p class="text-xs text-gray-400 mt-0.5">{{ total }} chunks waiting for approval</p>
+    </div>
+  </div>
+
+  <!-- Language filter tabs -->
+  {% if tracks %}
+  <div class="flex flex-wrap gap-1.5">
+    <a href="/languages/triage"
+       class="px-3 py-1 rounded-full text-xs font-medium transition-colors
+         {% if not active_code %}bg-[#E6F1FB] text-[#0C447C]{% else %}text-gray-500 hover:bg-gray-100{% endif %}">
+      All ({{ total }})
+    </a>
+    {% for track in tracks %}
+    {% if counts_by_lang.get(track.code, 0) > 0 %}
+    <a href="/languages/triage?lang={{ track.code }}"
+       class="px-3 py-1 rounded-full text-xs font-medium transition-colors
+         {% if active_code == track.code %}bg-[#E6F1FB] text-[#0C447C]{% else %}text-gray-500 hover:bg-gray-100{% endif %}">
+      {{ track.code | upper }} ({{ counts_by_lang.get(track.code, 0) }})
+    </a>
+    {% endif %}
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {% if not chunks %}
+  <div class="card bg-white p-8 text-center">
+    <i class="ti ti-circle-check text-3xl text-green-400 mb-2"></i>
+    <p class="text-sm text-gray-500">All clear — no chunks waiting for review.</p>
+  </div>
+  {% else %}
+
+  <div class="card bg-white overflow-hidden" id="triage-list">
+    <div class="divide-y divide-gray-50">
+      {% for chunk in chunks %}
+      <div id="triage-item-{{ chunk.id }}" class="flex items-start gap-4 px-4 py-4 hover:bg-gray-50/50 transition-colors">
+
+        <!-- Language badge -->
+        <div class="shrink-0 pt-0.5">
+          <span class="text-lg leading-none">{{ chunk.flag }}</span>
+        </div>
+
+        <!-- Chunk content -->
+        <div class="flex-1 min-w-0">
+          <div class="flex items-start justify-between gap-2">
+            <div class="min-w-0">
+              <p class="text-sm font-medium text-gray-900">{{ chunk.text }}</p>
+              <p class="text-xs text-gray-500 mt-0.5">{{ chunk.translation }}</p>
+            </div>
+            <div class="flex items-center gap-2 shrink-0">
+              {% set type_color = {
+                'word': 'bg-gray-100 text-gray-600',
+                'collocation': 'bg-blue-50 text-blue-600',
+                'verb_form': 'bg-purple-50 text-purple-600',
+                'sentence_pattern': 'bg-green-50 text-green-600'
+              } %}
+              <span class="px-2 py-0.5 rounded text-xs {{ type_color.get(chunk.chunk_type, 'bg-gray-100 text-gray-600') }}">
+                {{ chunk.chunk_type | replace('_', ' ') }}
+              </span>
+            </div>
+          </div>
+
+          {% if chunk.example_sentence %}
+          <p class="text-xs text-gray-400 mt-1.5 italic">"{{ chunk.example_sentence }}"</p>
+          {% endif %}
+
+          <div class="flex items-center gap-3 mt-2 text-xs text-gray-400">
+            <span>{{ chunk.source_label }}</span>
+            {% if chunk.frequency_rank %}<span>Rank #{{ chunk.frequency_rank }}</span>{% endif %}
+            {% if chunk.cefr_level %}<span>{{ chunk.cefr_level }}</span>{% endif %}
+          </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="flex items-center gap-2 shrink-0">
+          <button
+            class="btn btn-sm btn-ghost text-green-600 hover:bg-green-50 text-xs"
+            hx-post="/languages/triage/{{ chunk.id }}/approve"
+            hx-target="#triage-item-{{ chunk.id }}"
+            hx-swap="outerHTML"
+            title="Approve">
+            <i class="ti ti-check text-sm"></i>Approve
+          </button>
+          <button
+            class="btn btn-sm btn-ghost text-red-500 hover:bg-red-50 text-xs"
+            hx-post="/languages/triage/{{ chunk.id }}/reject"
+            hx-target="#triage-item-{{ chunk.id }}"
+            hx-swap="outerHTML"
+            title="Reject">
+            <i class="ti ti-x text-sm"></i>Reject
+          </button>
+        </div>
+
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  {% endif %}
+</div>
+{% endblock %}

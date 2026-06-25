@@ -1,0 +1,185 @@
+{% extends "base.html" %}
+{% set active_page = "languages" %}
+{% block title %}{{ track.name }}{% endblock %}
+
+{% block content %}
+<div class="p-6 space-y-6">
+
+  <!-- Breadcrumb -->
+  <div class="flex items-center gap-2 text-xs text-gray-400">
+    <a href="/languages" class="hover:text-gray-600">Languages</a>
+    <i class="ti ti-chevron-right text-gray-300"></i>
+    <span class="text-gray-700 font-medium">{{ flag }} {{ track.name }}</span>
+  </div>
+
+  <!-- Header + actions -->
+  <div class="flex items-center justify-between">
+    <div class="flex items-center gap-3">
+      <span class="text-3xl leading-none">{{ flag }}</span>
+      <div>
+        <h1 class="text-base font-semibold text-gray-900">{{ track.name }}</h1>
+        <p class="text-xs text-gray-400">{{ track.code | upper }} · {{ track.review_mode | replace('_', ' ') | title }}</p>
+      </div>
+      <span class="px-2 py-0.5 rounded-full text-xs font-medium {{ level_color }}">{{ track.level }}</span>
+    </div>
+    <div class="flex items-center gap-2">
+      <a href="/languages/{{ track.code }}/chunks?status=pending_triage"
+         class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-amber-50 border border-amber-200 text-xs font-medium text-amber-700 hover:bg-amber-100 transition-colors">
+        <i class="ti ti-inbox text-sm"></i>Triage
+      </a>
+      <a href="/languages/{{ track.code }}/chunks"
+         class="btn btn-sm btn-primary text-xs">
+        <i class="ti ti-cards text-sm"></i>Chunks
+      </a>
+    </div>
+  </div>
+
+  <!-- Stats strip -->
+  <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+    <div class="card bg-white"><div class="card-body p-4">
+      <p class="text-xs text-gray-400 uppercase tracking-wide">Active chunks</p>
+      <p class="text-2xl font-semibold text-gray-900 mt-1">{{ chunk_counts.active }}</p>
+    </div></div>
+    <div class="card bg-white"><div class="card-body p-4">
+      <p class="text-xs text-gray-400 uppercase tracking-wide">Pending triage</p>
+      <p class="text-2xl font-semibold {% if chunk_counts.pending_triage > 0 %}text-amber-600{% else %}text-gray-900{% endif %} mt-1">
+        {{ chunk_counts.pending_triage }}
+      </p>
+    </div></div>
+    <div class="card bg-white"><div class="card-body p-4">
+      <p class="text-xs text-gray-400 uppercase tracking-wide">Retention (all-time)</p>
+      <p class="text-2xl font-semibold mt-1 {% if retention %}{% if retention >= 80 %}text-green-600{% elif retention >= 60 %}text-amber-600{% else %}text-red-600{% endif %}{% else %}text-gray-300{% endif %}">
+        {% if retention %}{{ retention }}%{% else %}—{% endif %}
+      </p>
+    </div></div>
+    <div class="card bg-white"><div class="card-body p-4">
+      <p class="text-xs text-gray-400 uppercase tracking-wide">Daily quota</p>
+      <p class="text-2xl font-semibold text-gray-900 mt-1">{{ track.daily_quota }}</p>
+    </div></div>
+  </div>
+
+  <!-- Daily progress -->
+  <div class="card bg-white"><div class="card-body p-4">
+    <div class="flex items-center justify-between mb-2">
+      <p class="text-xs font-medium text-gray-600">Today's progress</p>
+      <p class="text-xs {% if progress.quota_met %}text-green-600 font-medium{% else %}text-gray-400{% endif %}">
+        {{ progress.completed_today }} / {{ progress.daily_quota }} reviews
+        {% if progress.quota_met %} · ✓ Quota met{% endif %}
+      </p>
+    </div>
+    <div class="w-full bg-gray-100 rounded-full h-2">
+      {% set pct = [((progress.completed_today / progress.daily_quota) * 100) | int, 100] | min if progress.daily_quota > 0 else 0 %}
+      <div class="h-2 rounded-full {% if progress.quota_met %}bg-green-500{% else %}bg-[#378ADD]{% endif %}"
+           style="width: {{ pct }}%"></div>
+    </div>
+    {% if due_batch.total_due > 0 %}
+    <p class="text-xs text-gray-400 mt-1.5">{{ due_batch.total_due }} chunks due now</p>
+    {% endif %}
+  </div></div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+    <!-- Grammar scope -->
+    <div class="card bg-white">
+      <div class="card-body p-0">
+        <div class="flex items-center justify-between px-4 py-3 border-b border-gray-100">
+          <p class="text-xs font-medium text-gray-700">Grammar scope</p>
+          <span class="text-xs text-gray-400">{{ scopes | length }} entries</span>
+        </div>
+        {% if scopes %}
+        <div class="divide-y divide-gray-50">
+          {% for scope in scopes %}
+          <div class="flex items-center justify-between px-4 py-2.5 hover:bg-gray-50/50 transition-colors"
+               id="scope-row-{{ scope.id }}">
+            <div class="min-w-0">
+              <p class="text-sm text-gray-800 truncate">{{ scope.value }}</p>
+              <p class="text-xs text-gray-400">{{ scope.category }} · priority {{ scope.priority }}</p>
+            </div>
+            <div class="flex items-center gap-2 ml-3">
+              {% set status_style = {
+                'active': 'bg-green-100 text-green-700',
+                'deferred': 'bg-gray-100 text-gray-500',
+                'mastered': 'bg-blue-100 text-blue-700'
+              } %}
+              <select
+                class="text-xs border border-gray-200 rounded-md px-2 py-1 bg-white focus:outline-none focus:ring-1 focus:ring-[#378ADD]"
+                onchange="updateScopeStatus({{ scope.id }}, this.value)">
+                {% for s in ['active', 'deferred', 'mastered'] %}
+                <option value="{{ s }}" {% if scope.status == s %}selected{% endif %}>{{ s | title }}</option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+        {% else %}
+        <p class="px-4 py-6 text-sm text-gray-400 text-center">No grammar scope entries yet.</p>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Recent sessions -->
+    <div class="card bg-white">
+      <div class="card-body p-0">
+        <div class="flex items-center justify-between px-4 py-3 border-b border-gray-100">
+          <p class="text-xs font-medium text-gray-700">Recent sessions</p>
+          <a href="/languages/{{ track.code }}/chunks" class="text-xs text-[#378ADD] hover:underline">View chunks</a>
+        </div>
+        {% if recent_sessions %}
+        <div class="divide-y divide-gray-50">
+          {% for session in recent_sessions %}
+          {% set type_style = {
+            'srs_review': 'bg-blue-50 text-blue-600',
+            'shadowing': 'bg-purple-50 text-purple-600',
+            'conversation': 'bg-green-50 text-green-600',
+            'correction': 'bg-amber-50 text-amber-600'
+          } %}
+          <div class="flex items-center justify-between px-4 py-2.5">
+            <div class="flex items-center gap-2.5 min-w-0">
+              <span class="px-1.5 py-0.5 rounded text-xs {{ type_style.get(session.session_type, 'bg-gray-100 text-gray-500') }}">
+                {{ session.session_type | replace('_', ' ') }}
+              </span>
+              {% if session.chunk_id %}
+              <a href="/languages/{{ track.code }}/chunks/{{ session.chunk_id }}"
+                 class="text-xs text-gray-600 hover:text-gray-900 truncate">
+                chunk #{{ session.chunk_id }}
+              </a>
+              {% else %}
+              <span class="text-xs text-gray-400">free session</span>
+              {% endif %}
+            </div>
+            <div class="flex items-center gap-2 text-xs text-gray-400 ml-2 shrink-0">
+              {% if session.quality_score is not none %}
+              <span class="font-medium {% if session.quality_score >= 3.5 %}text-green-600{% elif session.quality_score >= 2.5 %}text-gray-600{% else %}text-red-500{% endif %}">
+                {{ "%.1f" | format(session.quality_score) }}
+              </span>
+              {% endif %}
+              <span>{{ session.created_at[:10] }}</span>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+        {% else %}
+        <p class="px-4 py-6 text-sm text-gray-400 text-center">No sessions yet.</p>
+        {% endif %}
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
+<script>
+async function updateScopeStatus(scopeId, status) {
+  try {
+    await fetch(`/languages/grammar-scope/${scopeId}/status`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status })
+    });
+  } catch (e) {
+    console.error('Failed to update scope:', e);
+  }
+}
+</script>
+{% endblock %}

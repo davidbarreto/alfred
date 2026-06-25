@@ -1,0 +1,150 @@
+{% extends "base.html" %}
+{% set active_page = "languages" %}
+{% block title %}{{ track.name }} — Chunks{% endblock %}
+
+{% block content %}
+<div class="p-6 space-y-5">
+
+  <!-- Breadcrumb -->
+  <div class="flex items-center gap-2 text-xs text-gray-400">
+    <a href="/languages" class="hover:text-gray-600">Languages</a>
+    <i class="ti ti-chevron-right text-gray-300"></i>
+    <a href="/languages/{{ track.code }}" class="hover:text-gray-600">{{ flag }} {{ track.name }}</a>
+    <i class="ti ti-chevron-right text-gray-300"></i>
+    <span class="text-gray-700 font-medium">Chunks</span>
+  </div>
+
+  <div class="flex items-center justify-between">
+    <h1 class="text-base font-semibold text-gray-900">{{ flag }} {{ track.name }} — Chunks</h1>
+    <p class="text-xs text-gray-400">{{ chunks | length }} shown</p>
+  </div>
+
+  <!-- Filters -->
+  <form method="get" class="flex flex-wrap items-center gap-2">
+    <!-- Status -->
+    <div class="flex rounded-lg border border-gray-200 bg-white overflow-hidden text-xs">
+      {% for s, label in [('active','Active'), ('pending_triage','Triage'), ('suspended','Suspended'), ('ALL','All')] %}
+      <a href="?status={{ s }}{% if active_type %}&type={{ active_type }}{% endif %}{% if leech_only %}&leech=1{% endif %}{% if due_only %}&due=1{% endif %}"
+         class="px-3 py-1.5 {% if active_status == s %}bg-[#E6F1FB] text-[#0C447C] font-medium{% else %}text-gray-500 hover:bg-gray-50{% endif %}">
+        {{ label }}
+      </a>
+      {% endfor %}
+    </div>
+
+    <!-- Type -->
+    <select name="type" onchange="this.form.submit()"
+            class="border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-[#378ADD]">
+      <option value="" {% if not active_type %}selected{% endif %}>All types</option>
+      {% for t in ['word', 'collocation', 'verb_form', 'sentence_pattern'] %}
+      <option value="{{ t }}" {% if active_type == t %}selected{% endif %}>{{ t | replace('_', ' ') | title }}</option>
+      {% endfor %}
+    </select>
+    <input type="hidden" name="status" value="{{ active_status }}">
+
+    <label class="flex items-center gap-1.5 text-xs text-gray-500 cursor-pointer">
+      <input type="checkbox" name="leech" value="1" {% if leech_only %}checked{% endif %}
+             onchange="this.form.submit()" class="checkbox checkbox-xs">
+      Leeches only
+    </label>
+    <label class="flex items-center gap-1.5 text-xs text-gray-500 cursor-pointer">
+      <input type="checkbox" name="due" value="1" {% if due_only %}checked{% endif %}
+             onchange="this.form.submit()" class="checkbox checkbox-xs">
+      Due only
+    </label>
+  </form>
+
+  <!-- Table -->
+  <div class="card bg-white overflow-hidden">
+    {% if chunks %}
+    <table class="w-full text-sm">
+      <thead class="border-b border-gray-100">
+        <tr class="text-xs text-gray-400 uppercase tracking-wide">
+          <th class="text-left px-4 py-2.5 font-medium">Text / Translation</th>
+          <th class="text-left px-4 py-2.5 font-medium hidden sm:table-cell">Type</th>
+          <th class="text-left px-4 py-2.5 font-medium hidden md:table-cell">CEFR</th>
+          <th class="text-left px-4 py-2.5 font-medium hidden lg:table-cell">Difficulty</th>
+          <th class="text-left px-4 py-2.5 font-medium hidden lg:table-cell">Due</th>
+          <th class="text-left px-4 py-2.5 font-medium">Status</th>
+          <th class="px-4 py-2.5"></th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-gray-50">
+        {% for chunk in chunks %}
+        <tr class="hover:bg-gray-50/60 transition-colors cursor-pointer" onclick="toggleExpand({{ chunk.id }})">
+          <td class="px-4 py-3">
+            <div class="flex items-center gap-2">
+              {% if chunk.is_leech %}
+              <span class="text-red-400 text-xs" title="Leech">⚠</span>
+              {% endif %}
+              <div class="min-w-0">
+                <p class="font-medium text-gray-900 truncate max-w-[200px]">{{ chunk.text }}</p>
+                <p class="text-xs text-gray-400 truncate max-w-[200px]">{{ chunk.translation }}</p>
+              </div>
+            </div>
+          </td>
+          <td class="px-4 py-3 hidden sm:table-cell">
+            <span class="text-xs text-gray-500">{{ chunk.chunk_type | replace('_', ' ') }}</span>
+          </td>
+          <td class="px-4 py-3 hidden md:table-cell">
+            <span class="text-xs text-gray-400">{{ chunk.cefr_level or '—' }}</span>
+          </td>
+          <td class="px-4 py-3 hidden lg:table-cell">
+            <span class="text-xs font-medium {{ chunk.ease_color }}">{{ "%.1f" | format(chunk.difficulty) }}</span>
+          </td>
+          <td class="px-4 py-3 hidden lg:table-cell">
+            <span class="text-xs text-gray-400">{{ chunk.due_at[:10] }}</span>
+          </td>
+          <td class="px-4 py-3">
+            {% set st_color = {'active': 'text-green-600', 'pending_triage': 'text-amber-600', 'suspended': 'text-gray-400'} %}
+            <span class="text-xs {{ st_color.get(chunk.status, 'text-gray-500') }}">{{ chunk.status | replace('_', ' ') }}</span>
+          </td>
+          <td class="px-4 py-3">
+            <a href="/languages/{{ track.code }}/chunks/{{ chunk.id }}"
+               onclick="event.stopPropagation()"
+               class="text-xs text-[#378ADD] hover:underline">Detail</a>
+          </td>
+        </tr>
+        <!-- Inline expand row -->
+        <tr id="expand-{{ chunk.id }}" class="hidden bg-gray-50/80">
+          <td colspan="7" class="px-6 py-4">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+              {% if chunk.example_sentence %}
+              <div>
+                <p class="text-gray-400 uppercase tracking-wide mb-1">Example</p>
+                <p class="text-gray-800">{{ chunk.example_sentence }}</p>
+                <p class="text-gray-400 mt-0.5">{{ chunk.example_translation }}</p>
+              </div>
+              {% endif %}
+              <div class="space-y-1">
+                <p class="text-gray-400 uppercase tracking-wide mb-1">FSRS state</p>
+                <div class="grid grid-cols-2 gap-x-4 gap-y-0.5 text-gray-600">
+                  <span>State: <strong>{{ chunk.state }}</strong></span>
+                  <span>Repetitions: <strong>{{ chunk.repetitions }}</strong></span>
+                  <span>Lapses: <strong>{{ chunk.lapses }}</strong></span>
+                  <span>Failures: <strong>{{ chunk.consecutive_failures }}</strong></span>
+                  <span>Source: <strong>{{ chunk.frequency_source or '—' }}</strong></span>
+                  {% if chunk.frequency_rank %}<span>Rank: <strong>#{{ chunk.frequency_rank }}</strong></span>{% endif %}
+                </div>
+              </div>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="p-8 text-center">
+      <p class="text-sm text-gray-400">No chunks match the current filters.</p>
+    </div>
+    {% endif %}
+  </div>
+
+</div>
+
+<script>
+function toggleExpand(chunkId) {
+  const row = document.getElementById('expand-' + chunkId);
+  row.classList.toggle('hidden');
+}
+</script>
+{% endblock %}

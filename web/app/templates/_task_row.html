@@ -99,6 +99,14 @@
       </span>
       {% endif %}
 
+      <!-- Missed occurrences -->
+      {% if task.missed_count %}
+      <span class="flex items-center gap-1 text-[#E24B4A] font-medium">
+        <i class="ti ti-alert-circle" style="font-size:0.8rem"></i>
+        {{ task.missed_count }} missed
+      </span>
+      {% endif %}
+
       <!-- Streak -->
       {% if task.streak and task.streak > 0 %}
       <span class="flex items-center gap-1 text-orange-500 font-medium">

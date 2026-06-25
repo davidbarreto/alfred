@@ -1,7 +1,7 @@
 import pytest
 from datetime import date, timedelta
 from unittest.mock import AsyncMock, MagicMock
-from app.features.organizer.tasks.service import TaskService, _compute_streak
+from app.features.organizer.tasks.service import TaskService, _compute_streak, _missed_count, _parse_byday
 from app.features.organizer.tasks.schemas import TaskCompletionRead, TaskCreate, TaskUpdate, TaskFilters, TaskRead
 
 
@@ -322,3 +322,94 @@ class TestComputeStreak:
         today = date(2025, 6, 10)
         dates = [date(2025, 1, 1), date(2024, 6, 15)]
         assert _compute_streak(dates, "FREQ=UNKNOWN", today) == 2
+
+
+class TestParseByday:
+    def test_single_day(self):
+        assert _parse_byday("FREQ=WEEKLY;BYDAY=MO") == [0]
+
+    def test_multiple_days(self):
+        assert _parse_byday("FREQ=WEEKLY;BYDAY=MO,WE,FR") == [0, 2, 4]
+
+    def test_no_byday_returns_none(self):
+        assert _parse_byday("FREQ=WEEKLY") is None
+
+    def test_daily_no_byday_returns_none(self):
+        assert _parse_byday("FREQ=DAILY") is None
+
+    def test_case_insensitive(self):
+        assert _parse_byday("FREQ=WEEKLY;BYDAY=mo,WE") == [0, 2]
+
+
+class TestMissedCount:
+    # today = Friday 2025-06-06 (weekday 4)
+    # week_start = Monday 2025-06-02
+    _FRI = date(2025, 6, 6)   # Friday
+    _MON = date(2025, 6, 2)
+    _TUE = date(2025, 6, 3)
+    _WED = date(2025, 6, 4)
+    _THU = date(2025, 6, 5)
+
+    # --- WEEKLY with BYDAY ---
+
+    def test_weekly_byday_all_missed(self):
+        # MO, WE scheduled; today=Fri; neither done → 2 missed
+        assert _missed_count("FREQ=WEEKLY;BYDAY=MO,WE", [], self._FRI) == 2
+
+    def test_weekly_byday_one_done(self):
+        # MO done, WE missed → 1 missed
+        assert _missed_count("FREQ=WEEKLY;BYDAY=MO,WE", [self._MON], self._FRI) == 1
+
+    def test_weekly_byday_all_done(self):
+        assert _missed_count("FREQ=WEEKLY;BYDAY=MO,WE", [self._MON, self._WED], self._FRI) == 0
+
+    def test_weekly_byday_today_scheduled_not_counted(self):
+        # FRI is in BYDAY but today hasn't ended → not counted as missed
+        assert _missed_count("FREQ=WEEKLY;BYDAY=MO,FR", [self._MON], self._FRI) == 0
+
+    def test_weekly_byday_future_day_not_counted(self):
+        # Today is Tuesday; WE/FR are future → only MO matters
+        tue = date(2025, 6, 3)
+        assert _missed_count("FREQ=WEEKLY;BYDAY=MO,WE,FR", [], tue) == 1
+
+    def test_weekly_byday_today_is_monday_nothing_missed_yet(self):
+        assert _missed_count("FREQ=WEEKLY;BYDAY=MO,WE,FR", [], self._MON) == 0
+
+    # --- WEEKLY without BYDAY ---
+
+    def test_weekly_no_byday_friday_not_done(self):
+        assert _missed_count("FREQ=WEEKLY", [], self._FRI) == 1
+
+    def test_weekly_no_byday_friday_done_earlier(self):
+        assert _missed_count("FREQ=WEEKLY", [self._MON], self._FRI) == 0
+
+    def test_weekly_no_byday_thursday_not_done(self):
+        # Thursday (weekday 3) is below the threshold of 4 → not yet late
+        assert _missed_count("FREQ=WEEKLY", [], self._THU) == 0
+
+    def test_weekly_no_byday_early_week_not_late(self):
+        assert _missed_count("FREQ=WEEKLY", [], self._WED) == 0
+
+    # --- MONTHLY ---
+
+    def test_monthly_late_in_month_not_done(self):
+        late = date(2025, 6, 25)
+        assert _missed_count("FREQ=MONTHLY", [], late) == 1
+
+    def test_monthly_late_in_month_done(self):
+        late = date(2025, 6, 25)
+        assert _missed_count("FREQ=MONTHLY", [date(2025, 6, 10)], late) == 0
+
+    def test_monthly_early_in_month_not_late(self):
+        early = date(2025, 6, 10)
+        assert _missed_count("FREQ=MONTHLY", [], early) == 0
+
+    # --- DAILY ---
+
+    def test_daily_always_zero(self):
+        assert _missed_count("FREQ=DAILY", [], self._FRI) == 0
+
+    # --- Unknown ---
+
+    def test_unknown_rule_returns_zero(self):
+        assert _missed_count("FREQ=UNKNOWN", [], self._FRI) == 0

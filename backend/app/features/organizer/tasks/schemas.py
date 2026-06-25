@@ -39,6 +39,7 @@ class TaskRead(TaskBase):
     is_done_today: bool = False
     streak: int | None = None
     total_completions: int | None = None
+    missed_count: int | None = None
 
     model_config = {"from_attributes": True}
 

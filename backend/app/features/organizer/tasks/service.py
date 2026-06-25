@@ -83,6 +83,50 @@ def _compute_streak(dates: list[date], rule: str, today: date) -> int:
         return len(sorted_dates)
 
 
+_BYDAY_MAP = {"MO": 0, "TU": 1, "WE": 2, "TH": 3, "FR": 4, "SA": 5, "SU": 6}
+
+
+def _parse_byday(rule: str) -> list[int] | None:
+    for part in rule.split(";"):
+        if part.startswith("BYDAY="):
+            days = [d.strip().upper() for d in part[len("BYDAY="):].split(",")]
+            result = [_BYDAY_MAP[d] for d in days if d in _BYDAY_MAP]
+            return result if result else None
+    return None
+
+
+def _missed_count(rule: str, completions: list[date], today: date) -> int:
+    completion_set = set(completions)
+
+    if "FREQ=DAILY" in rule:
+        # Unchecked checkbox already communicates "not done today"
+        return 0
+
+    elif "FREQ=WEEKLY" in rule:
+        week_start = today - timedelta(days=today.weekday())  # Monday of this week
+        byday = _parse_byday(rule)
+        if byday:
+            return sum(
+                1
+                for day_num in byday
+                if (scheduled := week_start + timedelta(days=day_num)) < today
+                and scheduled not in completion_set
+            )
+        else:
+            # No BYDAY: late from Friday (weekday 4) if nothing done this week
+            if today.weekday() >= 4:
+                return 0 if any(week_start <= d < today for d in completion_set) else 1
+            return 0
+
+    elif "FREQ=MONTHLY" in rule:
+        if today.day >= 25:
+            month_start = today.replace(day=1)
+            return 0 if any(month_start <= d < today for d in completion_set) else 1
+        return 0
+
+    return 0
+
+
 class TaskService:
 
     def __init__(self, provider: StorageProvider, session: AsyncSession) -> None:
@@ -103,6 +147,7 @@ class TaskService:
             dates = completions_map.get(task_id, [])
             task_read.total_completions = len(dates)
             task_read.streak = _compute_streak(dates, task_orm.recurrence_rule, today)
+            task_read.missed_count = _missed_count(task_orm.recurrence_rule, dates, today)
         return task_read
 
     async def get_tasks(self, filters: TaskFilters) -> list[TaskRead]:
@@ -121,6 +166,7 @@ class TaskService:
                 dates = completions_map.get(task.id, [])
                 task.total_completions = len(dates)
                 task.streak = _compute_streak(dates, recurring_orm[task.id].recurrence_rule, today)
+                task.missed_count = _missed_count(recurring_orm[task.id].recurrence_rule, dates, today)
         return task_reads
 
     async def create_task(self, task_create: TaskCreate) -> TaskRead:

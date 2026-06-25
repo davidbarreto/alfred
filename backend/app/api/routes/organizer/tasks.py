@@ -35,6 +35,14 @@ async def get_task(task_id: int, service: TaskServiceDep):
     return task_read
 
 
+@router.get("/{task_id}/completions", response_model=list[TaskCompletionRead])
+async def get_task_completions(task_id: int, service: TaskServiceDep):
+    result = await service.get_task_completions(task_id)
+    if result is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found")
+    return result
+
+
 @router.post("/{task_id}/complete", response_model=TaskRead)
 async def complete_task(
     task_id: int,

@@ -1,9 +1,9 @@
 from datetime import date, timedelta
-from typing import Annotated, Optional
 
 import httpx
 from fastapi import APIRouter, Form, Request
 from fastapi.responses import HTMLResponse
+from typing import Annotated, Optional
 
 import app.client as api
 from app.templates_config import templates
@@ -28,9 +28,11 @@ def _build_params(active_filter: str) -> dict:
     if active_filter == "today":
         params["deadline_from"] = today.isoformat()
         params["deadline_to"] = today.isoformat()
+        params["include_recurring"] = "true"
     elif active_filter == "this_week":
         params["deadline_from"] = today.isoformat()
         params["deadline_to"] = (today + timedelta(days=6)).isoformat()
+        params["include_recurring"] = "true"
 
     if "tags" in defn:
         params["tags"] = defn["tags"]
@@ -141,4 +143,25 @@ async def mark_task_doing(task_id: int, request: Request):
         "task": task,
         "today": date.today().isoformat(),
         "tomorrow": (date.today() + timedelta(days=1)).isoformat(),
+    })
+
+
+@router.get("/{task_id}/history", response_class=HTMLResponse)
+async def task_history(task_id: int, request: Request):
+    try:
+        task = await api.get(f"/organizer/tasks/{task_id}")
+        raw_completions = await api.get(f"/organizer/tasks/{task_id}/completions")
+    except httpx.HTTPError:
+        return HTMLResponse('<p class="text-sm text-gray-400 p-4">Could not load history.</p>')
+
+    completions = [
+        {
+            "date": c["occurrence_date"],
+            "day": date.fromisoformat(c["occurrence_date"]).strftime("%a"),
+        }
+        for c in raw_completions
+    ]
+    return templates.TemplateResponse(request, "_task_history.html", {
+        "task": task,
+        "completions": completions,
     })

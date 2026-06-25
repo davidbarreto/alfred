@@ -37,6 +37,8 @@ class TaskUpdate(BaseModel):
 class TaskRead(TaskBase):
     id: int
     is_done_today: bool = False
+    streak: int | None = None
+    total_completions: int | None = None
 
     model_config = {"from_attributes": True}
 
@@ -44,7 +46,7 @@ class TaskRead(TaskBase):
     @classmethod
     def coerce_tags(cls, v: Any) -> list[str]:
         return [item.name if hasattr(item, "name") else item for item in v]
-    
+
 class TaskFilters:
     def __init__(
         self,
@@ -55,6 +57,7 @@ class TaskFilters:
         tags: Annotated[Optional[List[str]], Query()] = None,
         deadline_from: Annotated[Optional[datetime], Query()] = None,
         deadline_to: Annotated[Optional[datetime], Query()] = None,
+        include_recurring: Annotated[bool, Query()] = False,
     ) -> None:
         self.limit = limit
         self.status = status
@@ -63,6 +66,7 @@ class TaskFilters:
         self.tags = tags
         self.deadline_from = deadline_from
         self.deadline_to = deadline_to
+        self.include_recurring = include_recurring
 
     def __eq__(self, other: object) -> bool:
         return isinstance(other, TaskFilters) and vars(self) == vars(other)
@@ -72,7 +76,7 @@ class TaskFilters:
             f"TaskFilters(limit={self.limit}, status={self.status!r}, "
             f"priority={self.priority!r}, urgency={self.urgency!r}, "
             f"tags={self.tags!r}, deadline_from={self.deadline_from!r}, "
-            f"deadline_to={self.deadline_to!r})"
+            f"deadline_to={self.deadline_to!r}, include_recurring={self.include_recurring!r})"
         )
 
 

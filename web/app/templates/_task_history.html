@@ -1,0 +1,51 @@
+{% set rule = task.recurrence_rule or "" %}
+{% if "FREQ=DAILY" in rule %}{% set freq_unit = "day" %}
+{% elif "FREQ=WEEKLY" in rule %}{% set freq_unit = "week" %}
+{% elif "FREQ=MONTHLY" in rule %}{% set freq_unit = "month" %}
+{% else %}{% set freq_unit = "time" %}{% endif %}
+
+<div class="flex items-center justify-between mb-4">
+  <h3 class="text-sm font-semibold text-gray-900 truncate pr-4">{{ task.title }}</h3>
+  <button onclick="document.getElementById('task-history-modal').close()"
+          class="text-gray-400 hover:text-gray-600 flex-shrink-0">
+    <i class="ti ti-x" style="font-size:1rem"></i>
+  </button>
+</div>
+
+<!-- Stats row -->
+<div class="flex gap-4 mb-5">
+  {% if task.streak and task.streak > 0 %}
+  <div class="flex-1 bg-orange-50 rounded-lg p-3 text-center">
+    <div class="flex items-center justify-center gap-1 text-orange-500 mb-0.5">
+      <i class="ti ti-flame text-base"></i>
+      <span class="text-xl font-bold">{{ task.streak }}</span>
+    </div>
+    <p class="text-[10px] text-orange-400 uppercase tracking-wide">{{ freq_unit }} streak</p>
+  </div>
+  {% endif %}
+  {% if task.total_completions %}
+  <div class="flex-1 bg-gray-50 rounded-lg p-3 text-center">
+    <div class="flex items-center justify-center gap-1 text-gray-600 mb-0.5">
+      <i class="ti ti-check-circle text-base"></i>
+      <span class="text-xl font-bold">{{ task.total_completions }}</span>
+    </div>
+    <p class="text-[10px] text-gray-400 uppercase tracking-wide">total done</p>
+  </div>
+  {% endif %}
+</div>
+
+<!-- Completion list -->
+{% if completions %}
+<p class="text-[10px] text-gray-400 uppercase tracking-wide mb-2">History</p>
+<ul class="space-y-1 max-h-64 overflow-y-auto">
+  {% for c in completions %}
+  <li class="flex items-center gap-2 text-sm text-gray-600 py-1 border-b border-gray-50 last:border-0">
+    <i class="ti ti-calendar-check text-emerald-400" style="font-size:0.85rem"></i>
+    <span class="font-mono text-xs text-gray-500 w-24 flex-shrink-0">{{ c.date }}</span>
+    <span class="text-xs text-gray-400">{{ c.day }}</span>
+  </li>
+  {% endfor %}
+</ul>
+{% else %}
+<p class="text-sm text-gray-400 text-center py-4">No completions yet.</p>
+{% endif %}

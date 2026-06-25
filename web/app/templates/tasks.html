@@ -98,6 +98,16 @@
   </form>
 </dialog>
 
+<!-- Task history modal -->
+<dialog id="task-history-modal" class="modal">
+  <div class="modal-box bg-white rounded-xl border border-gray-200 shadow-lg max-w-sm w-full p-6">
+    <div id="task-history-content">
+      <p class="text-sm text-gray-400">Loading…</p>
+    </div>
+  </div>
+  <form method="dialog" class="modal-backdrop"><button>close</button></form>
+</dialog>
+
 <script>
 function openNewTask() {
   document.getElementById("task-error").classList.add("hidden");

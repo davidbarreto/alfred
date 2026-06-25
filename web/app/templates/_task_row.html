@@ -99,6 +99,20 @@
       </span>
       {% endif %}
 
+      <!-- Streak -->
+      {% if task.streak and task.streak > 0 %}
+      <span class="flex items-center gap-1 text-orange-500 font-medium">
+        <i class="ti ti-flame" style="font-size:0.8rem"></i>{{ task.streak }}
+      </span>
+      {% endif %}
+
+      <!-- Total completions -->
+      {% if task.total_completions and task.total_completions > 0 %}
+      <span class="flex items-center gap-1 text-gray-400">
+        <i class="ti ti-check-circle" style="font-size:0.8rem"></i>{{ task.total_completions }}×
+      </span>
+      {% endif %}
+
       <!-- Done today (recurring only) -->
       {% if is_done_today %}
       <span class="flex items-center gap-1 text-emerald-500 font-medium">
@@ -136,6 +150,17 @@
               hx-swap="outerHTML"
             >In progress</button>
           </li>
+          {% if task.recurrence_rule %}
+          <li>
+            <button
+              class="w-full text-left px-3 py-1.5 rounded hover:bg-gray-50 text-gray-700"
+              hx-get="/tasks/{{ task.id }}/history"
+              hx-target="#task-history-content"
+              hx-swap="innerHTML"
+              hx-on::after-request="document.getElementById('task-history-modal').showModal()"
+            >History</button>
+          </li>
+          {% endif %}
           <li>
             <button
               class="w-full text-left px-3 py-1.5 rounded hover:bg-[#FCEBEB] text-[#E24B4A]"

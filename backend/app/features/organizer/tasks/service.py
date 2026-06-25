@@ -1,5 +1,5 @@
 import logging
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -17,6 +17,72 @@ from app.features.organizer.tasks.repository import TaskRepository
 logger = logging.getLogger(__name__)
 
 
+def _compute_streak(dates: list[date], rule: str, today: date) -> int:
+    if not dates:
+        return 0
+    sorted_dates = sorted(set(dates), reverse=True)
+
+    if "FREQ=DAILY" in rule:
+        if sorted_dates[0] < today - timedelta(days=1):
+            return 0
+        streak = 0
+        expected = sorted_dates[0]
+        for d in sorted_dates:
+            if d == expected:
+                streak += 1
+                expected -= timedelta(days=1)
+            else:
+                break
+        return streak
+
+    elif "FREQ=WEEKLY" in rule:
+        def _iso_week(d: date) -> tuple[int, int]:
+            iso = d.isocalendar()
+            return (iso[0], iso[1])
+
+        weeks = sorted(set(_iso_week(d) for d in sorted_dates), reverse=True)
+        if not weeks:
+            return 0
+        last_week = _iso_week(today - timedelta(weeks=1))
+        if weeks[0] < last_week:
+            return 0
+        streak = 0
+        yr, wk = weeks[0]
+        for w_yr, w_wk in weeks:
+            if (w_yr, w_wk) == (yr, wk):
+                streak += 1
+                prev = date.fromisocalendar(yr, wk, 1) - timedelta(weeks=1)
+                yr, wk = _iso_week(prev)
+            else:
+                break
+        return streak
+
+    elif "FREQ=MONTHLY" in rule:
+        def _month_key(d: date) -> tuple[int, int]:
+            return (d.year, d.month)
+
+        months = sorted(set(_month_key(d) for d in sorted_dates), reverse=True)
+        if not months:
+            return 0
+        first_of_month = today.replace(day=1)
+        last_month = _month_key(first_of_month - timedelta(days=1))
+        if months[0] < last_month:
+            return 0
+        streak = 0
+        yr, mo = months[0]
+        for m_yr, m_mo in months:
+            if (m_yr, m_mo) == (yr, mo):
+                streak += 1
+                prev = date(yr, mo, 1) - timedelta(days=1)
+                yr, mo = prev.year, prev.month
+            else:
+                break
+        return streak
+
+    else:
+        return len(sorted_dates)
+
+
 class TaskService:
 
     def __init__(self, provider: StorageProvider, session: AsyncSession) -> None:
@@ -30,8 +96,13 @@ class TaskService:
             return None
         task_read = TaskRead.model_validate(task_orm)
         if task_orm.recurrence_rule is not None:
-            completed = await self._repo.get_completed_task_ids_for_date([task_id], date.today())
+            today = date.today()
+            completed = await self._repo.get_completed_task_ids_for_date([task_id], today)
             task_read.is_done_today = task_id in completed
+            completions_map = await self._repo.get_completions_by_task([task_id])
+            dates = completions_map.get(task_id, [])
+            task_read.total_completions = len(dates)
+            task_read.streak = _compute_streak(dates, task_orm.recurrence_rule, today)
         return task_read
 
     async def get_tasks(self, filters: TaskFilters) -> list[TaskRead]:
@@ -39,10 +110,17 @@ class TaskService:
         task_reads = [TaskRead.model_validate(t) for t in tasks_orm]
         recurring_ids = [t.id for t in task_reads if t.recurrence_rule is not None]
         if recurring_ids:
-            completed_today = await self._repo.get_completed_task_ids_for_date(recurring_ids, date.today())
+            today = date.today()
+            completed_today = await self._repo.get_completed_task_ids_for_date(recurring_ids, today)
+            completions_map = await self._repo.get_completions_by_task(recurring_ids)
+            recurring_orm = {t.id: t for t in tasks_orm if t.recurrence_rule is not None}
             for task in task_reads:
-                if task.id in completed_today:
-                    task.is_done_today = True
+                if task.recurrence_rule is None:
+                    continue
+                task.is_done_today = task.id in completed_today
+                dates = completions_map.get(task.id, [])
+                task.total_completions = len(dates)
+                task.streak = _compute_streak(dates, recurring_orm[task.id].recurrence_rule, today)
         return task_reads
 
     async def create_task(self, task_create: TaskCreate) -> TaskRead:
@@ -87,6 +165,13 @@ class TaskService:
         completion = await self._repo.complete_occurrence(task_id, occ_date)
         logger.info("Task occurrence completed: id=%d occurrence_date=%s", task_id, occ_date)
         return TaskCompletionRead.model_validate(completion)
+
+    async def get_task_completions(self, task_id: int) -> list[TaskCompletionRead] | None:
+        task = await self._repo.get_task(task_id)
+        if task is None:
+            return None
+        completions = await self._repo.get_task_completions(task_id)
+        return [TaskCompletionRead.model_validate(c) for c in completions]
 
     async def cancel_task(self, task_id: int) -> TaskRead | None:
         task = await self._repo.get_task(task_id)

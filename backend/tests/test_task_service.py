@@ -1,7 +1,7 @@
 import pytest
-from datetime import date
+from datetime import date, timedelta
 from unittest.mock import AsyncMock, MagicMock
-from app.features.organizer.tasks.service import TaskService
+from app.features.organizer.tasks.service import TaskService, _compute_streak
 from app.features.organizer.tasks.schemas import TaskCompletionRead, TaskCreate, TaskUpdate, TaskFilters, TaskRead
 
 
@@ -234,3 +234,91 @@ class TestCancelTask:
         service._repo.get_task.return_value = None
         result = await service.cancel_task(999)
         assert result is None
+
+
+class TestComputeStreak:
+    def test_empty_dates_returns_zero(self):
+        assert _compute_streak([], "FREQ=DAILY", date.today()) == 0
+
+    # --- DAILY ---
+
+    def test_daily_single_today(self):
+        today = date(2025, 6, 10)
+        assert _compute_streak([today], "FREQ=DAILY", today) == 1
+
+    def test_daily_consecutive_days(self):
+        today = date(2025, 6, 10)
+        dates = [today - timedelta(days=i) for i in range(5)]
+        assert _compute_streak(dates, "FREQ=DAILY", today) == 5
+
+    def test_daily_streak_counts_if_not_yet_done_today(self):
+        today = date(2025, 6, 10)
+        yesterday = today - timedelta(days=1)
+        dates = [yesterday - timedelta(days=i) for i in range(3)]
+        assert _compute_streak(dates, "FREQ=DAILY", today) == 3
+
+    def test_daily_streak_broken_if_gap(self):
+        today = date(2025, 6, 10)
+        dates = [today, today - timedelta(days=2)]  # missed yesterday
+        assert _compute_streak(dates, "FREQ=DAILY", today) == 1
+
+    def test_daily_streak_zero_if_last_completion_too_old(self):
+        today = date(2025, 6, 10)
+        assert _compute_streak([today - timedelta(days=2)], "FREQ=DAILY", today) == 0
+
+    def test_daily_deduplicates_same_date(self):
+        today = date(2025, 6, 10)
+        dates = [today, today, today - timedelta(days=1)]
+        assert _compute_streak(dates, "FREQ=DAILY", today) == 2
+
+    # --- WEEKLY ---
+
+    def test_weekly_single_this_week(self):
+        today = date(2025, 6, 10)  # Tuesday
+        assert _compute_streak([today], "FREQ=WEEKLY", today) == 1
+
+    def test_weekly_consecutive_weeks(self):
+        today = date(2025, 6, 10)
+        dates = [today - timedelta(weeks=i) for i in range(4)]
+        assert _compute_streak(dates, "FREQ=WEEKLY", today) == 4
+
+    def test_weekly_streak_zero_if_skipped_week(self):
+        today = date(2025, 6, 10)
+        dates = [today, today - timedelta(weeks=2)]  # skipped a week
+        assert _compute_streak(dates, "FREQ=WEEKLY", today) == 1
+
+    def test_weekly_streak_zero_if_too_old(self):
+        today = date(2025, 6, 10)
+        assert _compute_streak([today - timedelta(weeks=2)], "FREQ=WEEKLY", today) == 0
+
+    # --- MONTHLY ---
+
+    def test_monthly_single_this_month(self):
+        today = date(2025, 6, 10)
+        assert _compute_streak([today], "FREQ=MONTHLY", today) == 1
+
+    def test_monthly_consecutive_months(self):
+        today = date(2025, 6, 10)
+        dates = [date(2025, 6, 5), date(2025, 5, 3), date(2025, 4, 20), date(2025, 3, 1)]
+        assert _compute_streak(dates, "FREQ=MONTHLY", today) == 4
+
+    def test_monthly_streak_zero_if_skipped_month(self):
+        today = date(2025, 6, 10)
+        dates = [date(2025, 6, 5), date(2025, 4, 3)]  # skipped May
+        assert _compute_streak(dates, "FREQ=MONTHLY", today) == 1
+
+    def test_monthly_streak_zero_if_too_old(self):
+        today = date(2025, 6, 10)
+        assert _compute_streak([date(2025, 4, 1)], "FREQ=MONTHLY", today) == 0
+
+    # --- YEARLY / fallback ---
+
+    def test_yearly_returns_total_count(self):
+        today = date(2025, 6, 10)
+        dates = [date(2025, 1, 1), date(2024, 1, 1), date(2023, 1, 1)]
+        assert _compute_streak(dates, "FREQ=YEARLY", today) == 3
+
+    def test_unknown_rule_returns_total_count(self):
+        today = date(2025, 6, 10)
+        dates = [date(2025, 1, 1), date(2024, 6, 15)]
+        assert _compute_streak(dates, "FREQ=UNKNOWN", today) == 2

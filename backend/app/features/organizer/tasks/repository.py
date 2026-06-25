@@ -1,5 +1,5 @@
 from datetime import date, datetime, timezone
-from sqlalchemy import select, update
+from sqlalchemy import and_, or_, select, update
 from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -31,10 +31,18 @@ class TaskRepository:
             query = query.where(Task.priority == task_filter.priority)
         if task_filter.urgency != "ALL":
             query = query.where(Task.urgency == task_filter.urgency)
-        if task_filter.deadline_from is not None:
-            query = query.where(Task.deadline >= task_filter.deadline_from)
-        if task_filter.deadline_to is not None:
-            query = query.where(Task.deadline <= task_filter.deadline_to)
+        has_deadline_filter = task_filter.deadline_from is not None or task_filter.deadline_to is not None
+        if has_deadline_filter:
+            deadline_clauses = []
+            if task_filter.deadline_from is not None:
+                deadline_clauses.append(Task.deadline >= task_filter.deadline_from)
+            if task_filter.deadline_to is not None:
+                deadline_clauses.append(Task.deadline <= task_filter.deadline_to)
+            deadline_cond = and_(*deadline_clauses)
+            if task_filter.include_recurring:
+                query = query.where(or_(deadline_cond, Task.recurrence_rule.is_not(None)))
+            else:
+                query = query.where(deadline_cond)
         if task_filter.tags:
             query = query.where(Task.tags.any(Tag.name.in_(task_filter.tags)))
         query = query.limit(task_filter.limit)
@@ -105,6 +113,27 @@ class TaskRepository:
             )
         )
         return result.scalars().first()
+
+    async def get_completions_by_task(self, task_ids: list[int]) -> dict[int, list[date]]:
+        if not task_ids:
+            return {}
+        result = await self._session.execute(
+            select(TaskCompletion.task_id, TaskCompletion.occurrence_date)
+            .where(TaskCompletion.task_id.in_(task_ids))
+            .order_by(TaskCompletion.occurrence_date.desc())
+        )
+        completions: dict[int, list[date]] = {tid: [] for tid in task_ids}
+        for task_id, occ_date in result.all():
+            completions[task_id].append(occ_date)
+        return completions
+
+    async def get_task_completions(self, task_id: int) -> list[TaskCompletion]:
+        result = await self._session.execute(
+            select(TaskCompletion)
+            .where(TaskCompletion.task_id == task_id)
+            .order_by(TaskCompletion.occurrence_date.desc())
+        )
+        return list(result.scalars().all())
 
     async def complete_occurrence(self, task_id: int, occurrence_date: date) -> TaskCompletion:
         completion = TaskCompletion(task_id=task_id, occurrence_date=occurrence_date)

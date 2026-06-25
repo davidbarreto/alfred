@@ -180,20 +180,27 @@
     <!-- Holidays -->
     <div class="card bg-white">
       <div class="card-body p-4">
-        <h2 class="text-sm font-medium text-gray-900 mb-3"><i class="ti ti-flag mr-1"></i>Holidays</h2>
+        <h2 class="text-sm font-medium text-gray-900 mb-3"><i class="ti ti-flag mr-1"></i>Upcoming holidays</h2>
         {% if briefing.holidays %}
         <ul class="space-y-2">
           {% for h in briefing.holidays %}
-          <li class="text-sm">
-            <p class="text-gray-700">{{ h.local_name }}</p>
-            {% if h.local_name != h.name %}
-            <p class="text-xs text-gray-400">{{ h.name }}</p>
-            {% endif %}
+          <li class="text-sm flex items-center justify-between">
+            <div>
+              <p class="text-gray-700">{{ h.local_name }}</p>
+              {% if h.local_name != h.name %}
+              <p class="text-xs text-gray-400">{{ h.name }}</p>
+              {% endif %}
+            </div>
+            <span class="text-xs text-gray-400 ml-3 shrink-0">
+              {% if h.days_until == 0 %}<span class="text-[#639922] font-medium">Today!</span>
+              {% elif h.days_until == 1 %}<span class="text-[#BA7517]">Tomorrow</span>
+              {% else %}in {{ h.days_until }} days{% endif %}
+            </span>
           </li>
           {% endfor %}
         </ul>
         {% else %}
-        <p class="text-sm text-gray-400">No holidays today.</p>
+        <p class="text-sm text-gray-400">No upcoming holidays.</p>
         {% endif %}
       </div>
     </div>

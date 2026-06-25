@@ -27,6 +27,14 @@ async def get_tasks(service: TaskServiceDep, filters: TaskFilters = Depends()):
     return await service.get_tasks(filters)
 
 
+@router.get("/history", response_model=list[TaskCompletionRead])
+async def get_completions_history(
+    service: TaskServiceDep,
+    days: int = Query(90, ge=1, le=365),
+):
+    return await service.get_completions_history(days)
+
+
 @router.get("/{task_id}", response_model=TaskRead)
 async def get_task(task_id: int, service: TaskServiceDep):
     task_read = await service.get_task(task_id)

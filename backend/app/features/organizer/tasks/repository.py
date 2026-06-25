@@ -114,6 +114,14 @@ class TaskRepository:
         )
         return result.scalars().first()
 
+    async def get_all_completions_since(self, since: date) -> list[TaskCompletion]:
+        result = await self._session.execute(
+            select(TaskCompletion)
+            .where(TaskCompletion.occurrence_date >= since)
+            .order_by(TaskCompletion.occurrence_date.asc())
+        )
+        return list(result.scalars().all())
+
     async def get_completions_by_task(self, task_ids: list[int]) -> dict[int, list[date]]:
         if not task_ids:
             return {}

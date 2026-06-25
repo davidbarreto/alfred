@@ -212,6 +212,11 @@ class TaskService:
         logger.info("Task occurrence completed: id=%d occurrence_date=%s", task_id, occ_date)
         return TaskCompletionRead.model_validate(completion)
 
+    async def get_completions_history(self, days: int) -> list[TaskCompletionRead]:
+        since = date.today() - timedelta(days=days)
+        completions = await self._repo.get_all_completions_since(since)
+        return [TaskCompletionRead.model_validate(c) for c in completions]
+
     async def get_task_completions(self, task_id: int) -> list[TaskCompletionRead] | None:
         task = await self._repo.get_task(task_id)
         if task is None:

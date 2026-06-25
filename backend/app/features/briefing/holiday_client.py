@@ -20,9 +20,9 @@ class GooglePublicHolidayClient:
     def __init__(self, api_key: str) -> None:
         self._api_key = api_key
 
-    async def get_holidays(self, for_date: date) -> list[HolidayItem]:
-        time_min = f"{for_date.isoformat()}T00:00:00Z"
-        time_max = f"{(for_date + timedelta(days=1)).isoformat()}T00:00:00Z"
+    async def get_holidays(self, from_date: date, to_date: date) -> list[HolidayItem]:
+        time_min = f"{from_date.isoformat()}T00:00:00Z"
+        time_max = f"{(to_date + timedelta(days=1)).isoformat()}T00:00:00Z"
         results: list[HolidayItem] = []
 
         async with httpx.AsyncClient(timeout=10.0) as http:
@@ -41,8 +41,14 @@ class GooglePublicHolidayClient:
                     resp.raise_for_status()
                     for item in resp.json().get("items", []):
                         name = item.get("summary", "")
-                        results.append(HolidayItem(name=name, local_name=name, country=country))
+                        event_date_str = item.get("start", {}).get("date", "")
+                        if not event_date_str:
+                            continue
+                        event_date = date.fromisoformat(event_date_str)
+                        days_until = (event_date - from_date).days
+                        results.append(HolidayItem(name=name, local_name=name, country=country, days_until=days_until, date=event_date))
                 except Exception:
                     logger.warning("Failed to fetch holidays for %s", country, exc_info=True)
 
+        results.sort(key=lambda h: (h.days_until, h.country))
         return results

@@ -50,9 +50,14 @@ def _build_context(briefing: MorningBriefing) -> str:
 
     if briefing.holidays:
         lines.append("")
-        lines.append("Holidays today:")
+        lines.append("Upcoming holidays:")
         for h in briefing.holidays:
-            lines.append(f"  {h.local_name} ({h.country})")
+            if h.days_until == 0:
+                lines.append(f"  {h.local_name} ({h.country}) — today!")
+            elif h.days_until == 1:
+                lines.append(f"  {h.local_name} ({h.country}) — tomorrow ({h.date.strftime('%d %b')})")
+            else:
+                lines.append(f"  {h.local_name} ({h.country}) — in {h.days_until} days ({h.date.strftime('%d %b')})")
 
     if briefing.birthdays:
         lines.append("")

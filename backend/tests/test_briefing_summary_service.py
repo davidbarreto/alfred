@@ -222,7 +222,7 @@ class TestBuild:
 
     @pytest.mark.asyncio
     async def test_includes_holidays_from_client(self, mock_session, mock_weather_client, mock_holiday_client):
-        holiday = HolidayItem(name="National Day", local_name="Dia Nacional", country="PT")
+        holiday = HolidayItem(name="National Day", local_name="Dia Nacional", country="PT", days_until=0, date=date(2026, 6, 25))
         mock_holiday_client.get_holidays.return_value = [holiday]
         svc = BriefingSummaryService(
             session=mock_session,

@@ -119,18 +119,35 @@ class TestBuildContext:
         context = _build_context(briefing)
         assert "All day" in context
 
-    def test_includes_holiday(self):
+    def test_includes_holiday_today(self):
         briefing = _make_briefing(
-            holidays=[HolidayItem(name="National Day", local_name="Dia Nacional", country="PT")]
+            holidays=[HolidayItem(name="National Day", local_name="Dia Nacional", country="PT", days_until=0, date=date(2026, 6, 23))]
         )
         context = _build_context(briefing)
         assert "Dia Nacional" in context
         assert "PT" in context
+        assert "today!" in context
+
+    def test_includes_holiday_tomorrow(self):
+        briefing = _make_briefing(
+            holidays=[HolidayItem(name="National Day", local_name="Dia Nacional", country="PT", days_until=1, date=date(2026, 6, 24))]
+        )
+        context = _build_context(briefing)
+        assert "Dia Nacional" in context
+        assert "tomorrow" in context
+
+    def test_includes_holiday_in_future(self):
+        briefing = _make_briefing(
+            holidays=[HolidayItem(name="National Day", local_name="Dia Nacional", country="PT", days_until=5, date=date(2026, 6, 28))]
+        )
+        context = _build_context(briefing)
+        assert "Dia Nacional" in context
+        assert "in 5 days" in context
 
     def test_no_holidays_section_when_empty(self):
         briefing = _make_briefing(holidays=[])
         context = _build_context(briefing)
-        assert "Holidays today" not in context
+        assert "Upcoming holidays" not in context
 
     def test_birthday_today(self):
         briefing = _make_briefing(

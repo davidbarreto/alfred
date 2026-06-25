@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from datetime import date, datetime, time
+from datetime import date, datetime, time, timedelta
 from zoneinfo import ZoneInfo
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -20,6 +20,7 @@ logger = logging.getLogger(__name__)
 _PORTO_TZ = ZoneInfo("Europe/Lisbon")
 _ACTIVE_STATUSES = {"TODO", "DOING"}
 _PRIORITY_ORDER = {"HIGH": 0, "MEDIUM": 1, "LOW": 2}
+_HOLIDAY_LOOKAHEAD_DAYS = 7
 
 
 class BriefingSummaryService:
@@ -40,11 +41,13 @@ class BriefingSummaryService:
         today_start = datetime.combine(today, time.min)
         today_end = datetime.combine(today, time.max)
 
+        holiday_window_end = today + timedelta(days=_HOLIDAY_LOOKAHEAD_DAYS)
+
         tasks, events, weather, holidays, birthdays = await _gather(
             self._fetch_tasks(today_start, today_end),
             self._fetch_events(today_start, today_end),
             self._weather_client.get_daily_forecast(today),
-            self._holiday_client.get_holidays(today),
+            self._holiday_client.get_holidays(today, holiday_window_end),
             self._fetch_birthdays(today),
         )
 

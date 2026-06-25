@@ -39,6 +39,8 @@ class HolidayItem(BaseModel):
     name: str
     local_name: str
     country: str
+    days_until: int
+    date: date
 
 
 class BirthdayItem(BaseModel):

@@ -112,6 +112,83 @@ alfred/
 
 ---
 
+## Module & File Conventions
+
+### Backend feature module layout
+
+Every domain feature lives under `app/features/<domain>/<feature>/` and follows this file structure:
+
+| File | Purpose |
+|---|---|
+| `tables.py` | SQLAlchemy ORM models (table definitions only; no business logic) |
+| `schemas.py` | Pydantic models: `<Entity>Create`, `<Entity>Update`, `<Entity>Read`, `<Entity>Filters` |
+| `repository.py` | A single `<Entity>Repository` class; all DB queries live here; no business logic |
+| `service.py` | A single `<Entity>Service` class; orchestrates repo + provider calls; no raw DB access |
+| `prompts.py` | Static strings used as LLM system prompts or prompt templates |
+| `recurrence.py` | Example of a pure utility module — shared domain logic with no DB/IO dependencies |
+
+When a feature needs multiple services (e.g. briefing), use descriptive prefixes: `summary_service.py`, `formatter_service.py`.
+
+### Pydantic schema naming
+
+- `<Entity>Create` — POST request body; all required fields
+- `<Entity>Update` — PATCH request body; all fields `Optional`, `exclude_unset=True` in callers
+- `<Entity>Read` — response model; returned by routes; `model_config = {"from_attributes": True}`
+- `<Entity>Filters` — query-parameter class; plain `__init__` (not `BaseModel`), uses `Annotated[X, Query()]`; used via `Depends()` in routes
+
+### Repository conventions
+
+- One class per file: `class <Entity>Repository`
+- Constructor takes only `session: AsyncSession`
+- Method names: `get_<entity>`, `get_<entities>`, `create_<entity>`, `update_<entity>`, `delete_<entity>`; domain-specific names allowed (e.g. `complete_occurrence`)
+- All queries use SQLAlchemy 2.0 style: `select()`, `session.execute()`, `scalars()`
+
+### Service conventions
+
+- One class per file: `class <Entity>Service`
+- Constructor takes `provider: StorageProvider, session: AsyncSession` (or just `session` if no external provider)
+- Delegates all DB access to `self._repo`; never calls `session.execute()` directly
+- Private helper functions at module level are prefixed with `_`; shared helpers go in a dedicated utility module
+
+### API route conventions
+
+- Thin handlers only: validate input → call service → return schema
+- `router = APIRouter(prefix="/...", tags=[...], dependencies=[Depends(require_auth)])`
+- All routes return typed Pydantic `response_model`; never return bare `dict`
+- Place static path routes (e.g. `/history`) **before** parameterised routes (e.g. `/{id}`) to avoid routing conflicts
+- All `Depends()` factories are declared in `app/dependencies.py` as `Annotated` type aliases (e.g. `TaskServiceDep`)
+
+### Integration module layout
+
+External provider integrations live under `app/integrations/<provider>/`:
+
+| File | Purpose |
+|---|---|
+| `client.py` | Raw HTTP/SDK client; wraps the external API; no business logic |
+| `storage_provider.py` | Implements the `StorageProvider` protocol for write-through cache |
+| `tables.py` / `schemas.py` / `repository.py` | Only present when the integration persists its own data |
+
+### Web portal conventions
+
+| File / path | Purpose |
+|---|---|
+| `web/app/routes/<page>.py` | Route handlers; thin — fetch from backend API, pass to template |
+| `web/app/templates/<page>.html` | Full-page Jinja2 templates; always extend `base.html` |
+| `web/app/templates/_<partial>.html` | HTMX partial templates; prefixed with `_`; never extend `base.html` |
+| `web/app/client.py` | Thin async HTTP wrapper around the backend API (`api.get()`, `api.post()`, …) |
+
+HTMX actions target the smallest possible DOM element. Full-page navigation uses standard `<a href>`. Form submissions use `fetch()` + manual DOM update (not `hx-post`) when the response replaces a larger container.
+
+### Test file naming
+
+Mirror the source path, prefixed with `test_`:
+- `tests/test_task_service.py` ← `app/features/organizer/tasks/service.py`
+- `tests/test_api_contacts.py` ← `app/api/routes/organizer/contacts.py`
+
+One test class per logical group of behaviour (`TestComputeStreak`, `TestMissedCount`, …). Mock all DB and external I/O; use `AsyncMock` for async repo methods.
+
+---
+
 ## Coding Guidelines
 
 ### General

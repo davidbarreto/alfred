@@ -59,7 +59,7 @@ class BriefingSummaryService:
 
     async def _fetch_tasks(self, today_start: datetime, today_end: datetime) -> list[TaskBriefItem]:
         repo = TaskRepository(self._session)
-        task_filter = TaskFilters(deadline_to=today_end, limit=100)
+        task_filter = TaskFilters(deadline_to=today_end, include_recurring=True, limit=100)
         raw_tasks = await repo.get_tasks(task_filter)
 
         items = []

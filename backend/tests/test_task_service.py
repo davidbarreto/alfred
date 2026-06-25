@@ -1,7 +1,8 @@
 import pytest
 from datetime import date, timedelta
 from unittest.mock import AsyncMock, MagicMock
-from app.features.organizer.tasks.service import TaskService, _compute_streak, _missed_count, _parse_byday
+from app.features.organizer.tasks.service import TaskService, _compute_streak, _missed_count
+from app.features.organizer.tasks.recurrence import compute_streak, missed_count, parse_byday as _parse_byday
 from app.features.organizer.tasks.schemas import TaskCompletionRead, TaskCreate, TaskUpdate, TaskFilters, TaskRead
 
 

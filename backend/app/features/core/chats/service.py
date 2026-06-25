@@ -13,6 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 logger = logging.getLogger(__name__)
 
+from app.features.core.chats.context import build_daily_context
 from app.features.core.chats.schemas import ChatRequest
 from app.features.core.prompts import (
     CHAT_COMMAND_BOUNDARY_INSTRUCTIONS,
@@ -48,6 +49,7 @@ def _build_system_prompt(
     memories: list[EmbeddingSearchResult],
     detected_intents: list[str] | None = None,
     recent_summaries: list[tuple[datetime, str]] | None = None,
+    daily_context: str = "",
 ) -> str:
     now = datetime.now(tz=timezone.utc).strftime("%A, %B %d, %Y at %H:%M UTC")
     parts = []
@@ -74,6 +76,9 @@ def _build_system_prompt(
 
     if not detected_intents:
         parts.append(CHAT_COMMAND_BOUNDARY_INSTRUCTIONS)
+
+    if daily_context:
+        parts.append(daily_context)
 
     if recent_summaries:
         lines = "\n".join(
@@ -164,7 +169,8 @@ class ChatService:
         recent_summaries = await self._session_summary_service.get_recent_summaries(request.session_id)
         logger.debug("Chat: %d recent session summaries loaded", len(recent_summaries))
 
-        system_prompt = _build_system_prompt(memories, request.detected_intents, recent_summaries)
+        daily_context = await build_daily_context(self._session)
+        system_prompt = _build_system_prompt(memories, request.detected_intents, recent_summaries, daily_context)
         messages = history + [{"role": "user", "content": current_message.content}]
 
         t0 = time.monotonic()
@@ -230,7 +236,8 @@ class ChatService:
             )
         )
         recent_summaries = await self._session_summary_service.get_recent_summaries(request.session_id)
-        system_prompt = _build_system_prompt(memories, request.detected_intents, recent_summaries)
+        daily_context = await build_daily_context(self._session)
+        system_prompt = _build_system_prompt(memories, request.detected_intents, recent_summaries, daily_context)
         messages_list = history + [{"role": "user", "content": current_message.content}]
 
         t0 = time.monotonic()

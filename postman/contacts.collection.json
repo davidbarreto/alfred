@@ -2,7 +2,7 @@
   "info": {
     "name": "Alfred - Contacts API",
     "_postman_id": "alfred-contacts-v1",
-    "description": "CRUD for contacts with Google write-through cache. Run in order: List → Create → Get → Filter → Update → Delete. Requires Google Contacts re-authorized with full contacts scope (not readonly).",
+    "description": "CRUD for contacts with Google write-through cache. Run in order: List → Create → Get → Filter by name → Filter by email → Filter by birthday → Filter by letter → Paginate → Update → Delete. Requires Google Contacts re-authorized with full contacts scope (not readonly).",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -201,7 +201,69 @@
       }
     },
     {
-      "name": "07 - Update Contact",
+      "name": "07 - List Contacts (Filter by letter)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('All contacts start with the given letter', () => {",
+              "    pm.response.json().forEach(c => {",
+              "        pm.expect(c.name.toUpperCase()).to.match(/^J/);",
+              "    });",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/organizer/contacts/?letter=J&limit=50",
+          "host": ["{{base_url}}"],
+          "path": ["organizer", "contacts", ""],
+          "query": [
+            { "key": "letter", "value": "J" },
+            { "key": "limit", "value": "50" }
+          ]
+        }
+      }
+    },
+    {
+      "name": "08 - List Contacts (Pagination with offset)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Response is an array', () => {",
+              "    pm.expect(pm.response.json()).to.be.an('array');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/organizer/contacts/?limit=50&offset=50",
+          "host": ["{{base_url}}"],
+          "path": ["organizer", "contacts", ""],
+          "query": [
+            { "key": "limit", "value": "50" },
+            { "key": "offset", "value": "50" }
+          ]
+        }
+      }
+    },
+    {
+      "name": "09 - Update Contact",
       "event": [
         {
           "listen": "test",
@@ -235,7 +297,7 @@
       }
     },
     {
-      "name": "08 - Get Contact Not Found",
+      "name": "10 - Get Contact Not Found",
       "event": [
         {
           "listen": "test",
@@ -261,7 +323,7 @@
       }
     },
     {
-      "name": "09 - Delete Contact",
+      "name": "11 - Delete Contact",
       "event": [
         {
           "listen": "test",

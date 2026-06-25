@@ -2,7 +2,7 @@
   "info": {
     "name": "Alfred - Tasks API",
     "_postman_id": "alfred-tasks-v1",
-    "description": "Run in order: Health Check \u2192 Create \u2192 List \u2192 Get \u2192 Update Title \u2192 Mark Done \u2192 Filter by Status \u2192 Filter by Tags \u2192 Delete",
+    "description": "Run in order: Health Check → Create → List → List (include_recurring) → Get → Update → Complete (Recurring) → List Completions → Complete Again (idempotent) → Filter by Status → Filter by Tags → Delete",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -40,17 +40,13 @@
         "header": [],
         "url": {
           "raw": "{{base_url}}/health",
-          "host": [
-            "{{base_url}}"
-          ],
-          "path": [
-            "health"
-          ]
+          "host": ["{{base_url}}"],
+          "path": ["health"]
         }
       }
     },
     {
-      "name": "02 - Create Task",
+      "name": "02 - Create Task (Recurring Weekly)",
       "event": [
         {
           "listen": "test",
@@ -65,6 +61,8 @@
               "    pm.expect(json.priority).to.eql('MEDIUM');",
               "    pm.expect(json.urgency).to.eql('NORMAL');",
               "    pm.expect(json.recurrence_rule).to.eql('RRULE:FREQ=WEEKLY;BYDAY=MO');",
+              "    pm.expect(json.streak).to.be.null;",
+              "    pm.expect(json.total_completions).to.be.null;",
               "    pm.environment.set('task_id', json.id);",
               "});"
             ],
@@ -91,25 +89,20 @@
         },
         "url": {
           "raw": "{{base_url}}/organizer/tasks",
-          "host": [
-            "{{base_url}}"
-          ],
-          "path": [
-            "organizer",
-            "tasks"
-          ]
+          "host": ["{{base_url}}"],
+          "path": ["organizer", "tasks"]
         }
       }
     },
     {
-      "name": "03 - List Tasks",
+      "name": "03 - List Tasks (All)",
       "event": [
         {
           "listen": "test",
           "script": {
             "exec": [
               "pm.test('Status is 200', () => pm.response.to.have.status(200));",
-              "pm.test('Response is an array', () => {",
+              "pm.test('Response is an array with at least one task', () => {",
               "    const json = pm.response.json();",
               "    pm.expect(json).to.be.an('array');",
               "    pm.expect(json.length).to.be.at.least(1);",
@@ -124,24 +117,52 @@
         "header": [],
         "url": {
           "raw": "{{base_url}}/organizer/tasks?limit=100",
-          "host": [
-            "{{base_url}}"
-          ],
-          "path": [
-            "organizer",
-            "tasks"
-          ],
+          "host": ["{{base_url}}"],
+          "path": ["organizer", "tasks"],
           "query": [
-            {
-              "key": "limit",
-              "value": "100"
-            }
+            { "key": "limit", "value": "100" }
           ]
         }
       }
     },
     {
-      "name": "04 - Get Task",
+      "name": "04 - List Tasks (include_recurring with deadline filter)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Response includes recurring tasks regardless of deadline', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json).to.be.an('array');",
+              "    const hasRecurring = json.some(t => t.recurrence_rule !== null);",
+              "    pm.expect(hasRecurring).to.be.true;",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/organizer/tasks?status=TODO&include_recurring=true&deadline_from=2025-01-01&deadline_to=2025-01-01&limit=100",
+          "host": ["{{base_url}}"],
+          "path": ["organizer", "tasks"],
+          "query": [
+            { "key": "status", "value": "TODO" },
+            { "key": "include_recurring", "value": "true" },
+            { "key": "deadline_from", "value": "2025-01-01" },
+            { "key": "deadline_to", "value": "2025-01-01" },
+            { "key": "limit", "value": "100" }
+          ]
+        }
+      }
+    },
+    {
+      "name": "05 - Get Task",
       "event": [
         {
           "listen": "test",
@@ -153,6 +174,9 @@
               "    pm.expect(String(json.id)).to.eql(String(pm.environment.get('task_id')));",
               "    pm.expect(json.title).to.eql('Buy groceries');",
               "    pm.expect(json.status).to.eql('TODO');",
+              "    pm.expect(json).to.have.property('streak');",
+              "    pm.expect(json).to.have.property('total_completions');",
+              "    pm.expect(json).to.have.property('is_done_today');",
               "});"
             ],
             "type": "text/javascript"
@@ -164,19 +188,13 @@
         "header": [],
         "url": {
           "raw": "{{base_url}}/organizer/tasks/{{task_id}}",
-          "host": [
-            "{{base_url}}"
-          ],
-          "path": [
-            "organizer",
-            "tasks",
-            "{{task_id}}"
-          ]
+          "host": ["{{base_url}}"],
+          "path": ["organizer", "tasks", "{{task_id}}"]
         }
       }
     },
     {
-      "name": "05 - Update Task (Title & Priority)",
+      "name": "06 - Update Task (Title & Priority)",
       "event": [
         {
           "listen": "test",
@@ -212,27 +230,24 @@
         },
         "url": {
           "raw": "{{base_url}}/organizer/tasks/{{task_id}}",
-          "host": [
-            "{{base_url}}"
-          ],
-          "path": [
-            "organizer",
-            "tasks",
-            "{{task_id}}"
-          ]
+          "host": ["{{base_url}}"],
+          "path": ["organizer", "tasks", "{{task_id}}"]
         }
       }
     },
     {
-      "name": "06 - Update Task (Mark as DONE)",
+      "name": "07 - Complete Task (Recurring)",
       "event": [
         {
           "listen": "test",
           "script": {
             "exec": [
               "pm.test('Status is 200', () => pm.response.to.have.status(200));",
-              "pm.test('Status is now DONE', () => {",
-              "    pm.expect(pm.response.json().status).to.eql('DONE');",
+              "pm.test('Recurring task stays TODO but is_done_today is true', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json.status).to.eql('TODO');",
+              "    pm.expect(json.is_done_today).to.be.true;",
+              "    pm.expect(json.total_completions).to.be.at.least(1);",
               "});"
             ],
             "type": "text/javascript"
@@ -240,47 +255,33 @@
         }
       ],
       "request": {
-        "method": "PATCH",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json"
-          }
-        ],
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"status\": \"DONE\"\n}",
-          "options": {
-            "raw": {
-              "language": "json"
-            }
-          }
-        },
+        "method": "POST",
+        "header": [],
         "url": {
-          "raw": "{{base_url}}/organizer/tasks/{{task_id}}",
-          "host": [
-            "{{base_url}}"
-          ],
-          "path": [
-            "organizer",
-            "tasks",
-            "{{task_id}}"
-          ]
+          "raw": "{{base_url}}/organizer/tasks/{{task_id}}/complete",
+          "host": ["{{base_url}}"],
+          "path": ["organizer", "tasks", "{{task_id}}", "complete"]
         }
       }
     },
     {
-      "name": "07 - List Tasks (Filter by Status DONE)",
+      "name": "08 - List Task Completions",
       "event": [
         {
           "listen": "test",
           "script": {
             "exec": [
               "pm.test('Status is 200', () => pm.response.to.have.status(200));",
-              "pm.test('All returned tasks have status DONE', () => {",
+              "pm.test('Returns array of completion records', () => {",
               "    const json = pm.response.json();",
               "    pm.expect(json).to.be.an('array');",
-              "    json.forEach(task => pm.expect(task.status).to.eql('DONE'));",
+              "    pm.expect(json.length).to.be.at.least(1);",
+              "    const c = json[0];",
+              "    pm.expect(c).to.have.property('id');",
+              "    pm.expect(c).to.have.property('task_id');",
+              "    pm.expect(c).to.have.property('occurrence_date');",
+              "    pm.expect(c).to.have.property('completed_at');",
+              "    pm.expect(String(c.task_id)).to.eql(String(pm.environment.get('task_id')));",
               "});"
             ],
             "type": "text/javascript"
@@ -291,29 +292,77 @@
         "method": "GET",
         "header": [],
         "url": {
-          "raw": "{{base_url}}/organizer/tasks?status=DONE&limit=100",
-          "host": [
-            "{{base_url}}"
-          ],
-          "path": [
-            "organizer",
-            "tasks"
-          ],
+          "raw": "{{base_url}}/organizer/tasks/{{task_id}}/completions",
+          "host": ["{{base_url}}"],
+          "path": ["organizer", "tasks", "{{task_id}}", "completions"]
+        }
+      }
+    },
+    {
+      "name": "09 - Complete Task Again (idempotent)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Still done today, no duplicate completion created', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json.is_done_today).to.be.true;",
+              "    pm.expect(json.total_completions).to.eql(1);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/organizer/tasks/{{task_id}}/complete",
+          "host": ["{{base_url}}"],
+          "path": ["organizer", "tasks", "{{task_id}}", "complete"]
+        }
+      }
+    },
+    {
+      "name": "10 - List Tasks (Filter by Status TODO — recurring still active)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Recurring task still appears as TODO after completion', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json).to.be.an('array');",
+              "    const task = json.find(t => String(t.id) === String(pm.environment.get('task_id')));",
+              "    pm.expect(task).to.not.be.undefined;",
+              "    pm.expect(task.status).to.eql('TODO');",
+              "    pm.expect(task.is_done_today).to.be.true;",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/organizer/tasks?status=TODO&limit=100",
+          "host": ["{{base_url}}"],
+          "path": ["organizer", "tasks"],
           "query": [
-            {
-              "key": "status",
-              "value": "DONE"
-            },
-            {
-              "key": "limit",
-              "value": "100"
-            }
+            { "key": "status", "value": "TODO" },
+            { "key": "limit", "value": "100" }
           ]
         }
       }
     },
     {
-      "name": "08 - List Tasks (Filter by Tags)",
+      "name": "11 - List Tasks (Filter by Tags)",
       "event": [
         {
           "listen": "test",
@@ -333,32 +382,18 @@
         "header": [],
         "url": {
           "raw": "{{base_url}}/organizer/tasks?tags=personal&tags=errands&limit=100",
-          "host": [
-            "{{base_url}}"
-          ],
-          "path": [
-            "organizer",
-            "tasks"
-          ],
+          "host": ["{{base_url}}"],
+          "path": ["organizer", "tasks"],
           "query": [
-            {
-              "key": "tags",
-              "value": "personal"
-            },
-            {
-              "key": "tags",
-              "value": "errands"
-            },
-            {
-              "key": "limit",
-              "value": "100"
-            }
+            { "key": "tags", "value": "personal" },
+            { "key": "tags", "value": "errands" },
+            { "key": "limit", "value": "100" }
           ]
         }
       }
     },
     {
-      "name": "09 - Delete Task",
+      "name": "12 - Delete Task",
       "event": [
         {
           "listen": "test",
@@ -376,14 +411,8 @@
         "header": [],
         "url": {
           "raw": "{{base_url}}/organizer/tasks/{{task_id}}",
-          "host": [
-            "{{base_url}}"
-          ],
-          "path": [
-            "organizer",
-            "tasks",
-            "{{task_id}}"
-          ]
+          "host": ["{{base_url}}"],
+          "path": ["organizer", "tasks", "{{task_id}}"]
         }
       }
     }

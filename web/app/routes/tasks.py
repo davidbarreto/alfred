@@ -90,11 +90,14 @@ async def create_task(
     urgency: Annotated[str, Form()] = "NORMAL",
     deadline: Annotated[Optional[str], Form()] = None,
     tags: Annotated[str, Form()] = "",
+    recurrence_rule: Annotated[Optional[str], Form()] = None,
 ):
     tag_list = [t.strip() for t in tags.split(",") if t.strip()]
     payload: dict = {"title": title, "priority": priority, "urgency": urgency, "tags": tag_list}
     if deadline:
         payload["deadline"] = deadline
+    if recurrence_rule:
+        payload["recurrence_rule"] = recurrence_rule
     try:
         task = await api.post("/organizer/tasks/", json=payload)
     except httpx.HTTPError:

@@ -77,6 +77,34 @@
         />
       </div>
       <div>
+        <label class="text-xs text-gray-500 mb-2 block">Recurrence</label>
+        <div class="flex flex-wrap gap-1.5" id="recurrence-chips">
+          {% for chip in [
+            {"label": "None",    "value": ""},
+            {"label": "Daily",   "value": "FREQ=DAILY"},
+            {"label": "Weekly",  "value": "FREQ=WEEKLY"},
+            {"label": "Monthly", "value": "FREQ=MONTHLY"},
+            {"label": "Yearly",  "value": "FREQ=YEARLY"},
+            {"label": "Custom…", "value": "__custom__"}
+          ] %}
+          <button type="button"
+            class="recurrence-chip px-2.5 py-1 text-xs rounded-full border transition-colors
+              {% if chip.value == '' %}border-[#378ADD] bg-[#E6F1FB] text-[#378ADD]{% else %}border-gray-200 bg-white text-gray-500 hover:bg-gray-50{% endif %}"
+            data-value="{{ chip.value }}"
+            onclick="_setRecurrenceChip('{{ chip.value }}')"
+          >{{ chip.label }}</button>
+          {% endfor %}
+        </div>
+        <input
+          type="text"
+          id="task-recurrence-custom"
+          placeholder="e.g. FREQ=WEEKLY;BYDAY=MO,WE,FR"
+          class="mt-2 hidden border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white w-full focus:outline-none focus:ring-1 focus:ring-[#378ADD]"
+          oninput="document.getElementById('task-recurrence-value').value = this.value.trim()"
+        />
+        <input type="hidden" name="recurrence_rule" id="task-recurrence-value" />
+      </div>
+      <div>
         <label class="text-xs text-gray-500 mb-1 block">Tags <span class="text-gray-300">(comma-separated)</span></label>
         <input
           name="tags"
@@ -109,9 +137,33 @@
 </dialog>
 
 <script>
+function _setRecurrenceChip(value) {
+  document.querySelectorAll(".recurrence-chip").forEach(el => {
+    const active = el.dataset.value === value;
+    el.className = [
+      "recurrence-chip px-2.5 py-1 text-xs rounded-full border transition-colors",
+      active
+        ? "border-[#378ADD] bg-[#E6F1FB] text-[#378ADD]"
+        : "border-gray-200 bg-white text-gray-500 hover:bg-gray-50",
+    ].join(" ");
+  });
+  const customInput = document.getElementById("task-recurrence-custom");
+  const valueInput  = document.getElementById("task-recurrence-value");
+  if (value === "__custom__") {
+    customInput.classList.remove("hidden");
+    valueInput.value = customInput.value.trim();
+    customInput.focus();
+  } else {
+    customInput.classList.add("hidden");
+    valueInput.value = value;
+  }
+}
+
 function openNewTask() {
   document.getElementById("task-error").classList.add("hidden");
   document.getElementById("new-task-form").reset();
+  document.getElementById("task-recurrence-custom").value = "";
+  _setRecurrenceChip("");
   document.getElementById("new-task-modal").showModal();
   setTimeout(() => document.getElementById("task-title").focus(), 50);
 }

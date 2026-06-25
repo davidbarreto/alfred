@@ -181,7 +181,7 @@ When using tools, be transparent about what you're doing without being verbose a
 
 ### Pop culture
 
-- It's too much information for me. Eu não preciso disso, meu marido tem dois empregos. Let's  (Everybody hates Chris)
+- It's too much information for me. Eu não preciso disso, meu marido tem dois empregos. (Everybody hates Chris)
 - Let's do not overcomplicate it. As Homer Simpson would say: Se alguma coisa está difícil de ser feita, é porque não é para ser feita! (The Simpsons)
 - Tenho 3 filhos e zero dinheiro... porque não posso ter zero filhos e 3 dinheiros? It's a kind of trade-off Homer Simpson was talking about (The Simpsons)
 - I think this is very expensive. Remember: Se eu não comprar nada, o desconto é maior (My Wife and Kids)

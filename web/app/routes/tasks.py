@@ -14,6 +14,7 @@ _FILTER_DEFS = {
     "all":       {"label": "All",       "status": "ALL"},
     "today":     {"label": "Today",     "status": "TODO"},
     "this_week": {"label": "This week", "status": "TODO"},
+    "habits":    {"label": "Habits",    "status": "ALL"},
     "work":      {"label": "Work",      "status": "ALL", "tags": ["work"]},
     "personal":  {"label": "Personal",  "status": "ALL", "tags": ["personal"]},
     "completed": {"label": "Completed", "status": "DONE"},
@@ -23,7 +24,7 @@ _FILTER_DEFS = {
 def _build_params(active_filter: str) -> dict:
     today = date.today()
     defn = _FILTER_DEFS.get(active_filter, _FILTER_DEFS["all"])
-    params: dict = {"status": defn["status"], "limit": 100}
+    params: dict = {"status": defn["status"], "limit": 200}
 
     if active_filter == "today":
         params["deadline_from"] = today.isoformat()
@@ -33,6 +34,9 @@ def _build_params(active_filter: str) -> dict:
         params["deadline_from"] = today.isoformat()
         params["deadline_to"] = (today + timedelta(days=6)).isoformat()
         params["include_recurring"] = "true"
+    elif active_filter == "habits":
+        # Fetch all; filter recurring-only in the route handler
+        params["limit"] = 200
 
     if "tags" in defn:
         params["tags"] = defn["tags"]
@@ -48,6 +52,8 @@ async def tasks_page(request: Request):
     api_error: str | None = None
     try:
         tasks = await api.get("/organizer/tasks/", params=params)
+        if active_filter == "habits":
+            tasks = [t for t in tasks if t.get("recurrence_rule")]
     except httpx.HTTPStatusError as e:
         tasks = []
         api_error = f"API error {e.response.status_code}: {e.response.text[:200]}"
@@ -72,6 +78,8 @@ async def tasks_list_fragment(request: Request):
 
     try:
         tasks = await api.get("/organizer/tasks/", params=params)
+        if active_filter == "habits":
+            tasks = [t for t in tasks if t.get("recurrence_rule")]
     except httpx.HTTPError:
         tasks = []
 

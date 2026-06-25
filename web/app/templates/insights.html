@@ -33,26 +33,26 @@
 
     <!-- Stat cards -->
     <div class="grid grid-cols-4 gap-3 mb-4">
-      <div class="card bg-white"><div class="card-body p-4">
+      <a href="/tasks?filter=habits" class="card bg-white hover:shadow-sm transition-shadow"><div class="card-body p-4">
         <p class="text-xs text-gray-400 uppercase tracking-wide">Active habits</p>
         <p class="text-2xl font-semibold text-gray-900 mt-1">{{ active_habits }}</p>
-      </div></div>
-      <div class="card bg-white"><div class="card-body p-4">
+      </div></a>
+      <a href="/tasks?filter=this_week" class="card bg-white hover:shadow-sm transition-shadow"><div class="card-body p-4">
         <p class="text-xs text-gray-400 uppercase tracking-wide">Done this week</p>
         <p class="text-2xl font-semibold text-[#378ADD] mt-1">{{ done_this_week }}</p>
-      </div></div>
-      <div class="card bg-white"><div class="card-body p-4">
+      </div></a>
+      <a href="#habits-table" class="card bg-white hover:shadow-sm transition-shadow"><div class="card-body p-4">
         <p class="text-xs text-gray-400 uppercase tracking-wide">Best streak</p>
         <p class="text-2xl font-semibold text-orange-500 mt-1">
           {% if best_streak %}🔥 {{ best_streak }}{% else %}—{% endif %}
         </p>
-      </div></div>
-      <div class="card bg-white"><div class="card-body p-4">
+      </div></a>
+      <a href="/tasks?filter=habits" class="card bg-white hover:shadow-sm transition-shadow"><div class="card-body p-4">
         <p class="text-xs text-gray-400 uppercase tracking-wide">Need attention</p>
         <p class="text-2xl font-semibold mt-1 {% if needs_attention %}text-[#E24B4A]{% else %}text-gray-900{% endif %}">
           {{ needs_attention }}
         </p>
-      </div></div>
+      </div></a>
     </div>
 
     <!-- 90-day completion heatmap -->
@@ -97,7 +97,7 @@
 
     <!-- Habits table -->
     {% if recurring_tasks %}
-    <div class="card bg-white"><div class="card-body p-0">
+    <div id="habits-table" class="card bg-white"><div class="card-body p-0">
       <table class="w-full text-sm">
         <thead>
           <tr class="border-b border-gray-100 text-xs text-gray-400 uppercase tracking-wide">
@@ -128,7 +128,9 @@
           {% endif %}
 
           <tr class="hover:bg-gray-50">
-            <td class="px-4 py-2.5 font-medium text-gray-800">{{ t.title }}</td>
+            <td class="px-4 py-2.5 font-medium text-gray-800">
+              <a href="/tasks?filter=habits" class="hover:text-[#378ADD] transition-colors">{{ t.title }}</a>
+            </td>
             <td class="px-4 py-2.5 text-gray-500 text-xs">{{ freq }}</td>
             <td class="px-4 py-2.5 text-center">
               {% if streak > 0 %}

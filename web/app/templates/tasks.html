@@ -137,6 +137,18 @@
 </dialog>
 
 <script>
+function _taskMenuClose() {
+  document.querySelectorAll('[id^="task-menu-"]').forEach(m => m.classList.add('hidden'));
+}
+function _taskMenuToggle(e, taskId) {
+  e.stopPropagation();
+  const menu = document.getElementById('task-menu-' + taskId);
+  const wasHidden = menu.classList.contains('hidden');
+  _taskMenuClose();
+  if (wasHidden) menu.classList.remove('hidden');
+}
+document.addEventListener('click', _taskMenuClose);
+
 function _setRecurrenceChip(value) {
   document.querySelectorAll(".recurrence-chip").forEach(el => {
     const active = el.dataset.value === value;

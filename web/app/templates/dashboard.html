@@ -8,32 +8,32 @@
 
   <!-- 4 metric cards -->
   <div class="grid grid-cols-4 gap-3">
-    <div class="card bg-white">
+    <a href="/tasks" class="card bg-white hover:shadow-sm transition-shadow">
       <div class="card-body p-4">
         <p class="text-xs text-gray-400 uppercase tracking-wide">Active tasks</p>
         <p class="text-2xl font-semibold text-[#378ADD] mt-1">{{ tasks | length }}</p>
       </div>
-    </div>
-    <div class="card bg-white">
+    </a>
+    <a href="/shopping" class="card bg-white hover:shadow-sm transition-shadow">
       <div class="card-body p-4">
         <p class="text-xs text-gray-400 uppercase tracking-wide">Shopping items</p>
         <p class="text-2xl font-semibold text-gray-900 mt-1">{{ shopping_items | length }}</p>
       </div>
-    </div>
-    <div class="card bg-white">
+    </a>
+    <a href="/calendar" class="card bg-white hover:shadow-sm transition-shadow">
       <div class="card-body p-4">
         <p class="text-xs text-gray-400 uppercase tracking-wide">Events today</p>
         <p class="text-2xl font-semibold text-gray-900 mt-1">{{ events | length }}</p>
       </div>
-    </div>
-    <div class="card bg-white">
+    </a>
+    <a href="/finance" class="card bg-white hover:shadow-sm transition-shadow">
       <div class="card-body p-4">
         <p class="text-xs text-gray-400 uppercase tracking-wide">Monthly spend</p>
         <p class="text-2xl font-semibold text-gray-900 mt-1">
           {% if spending %}€{{ "%.0f"|format(spending.total | float) }}{% else %}—{% endif %}
         </p>
       </div>
-    </div>
+    </a>
   </div>
 
   <!-- 2-column row: tasks left, shopping right -->

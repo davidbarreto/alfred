@@ -12,15 +12,12 @@
   {% else %}{% set freq_label = "recurring" %}{% endif %}
 {% endif %}
 
-<div class="bg-white border border-gray-200 rounded-lg overflow-hidden hover:border-gray-300 transition-colors group relative"
+<div class="bg-white border border-gray-200 border-l-[3px] rounded-lg hover:border-gray-300 transition-colors group relative
+  {% if task.urgency == 'URGENT' %}border-l-[#E24B4A] hover:border-l-[#E24B4A]
+  {% elif task.priority == 'HIGH' %}border-l-[#BA7517] hover:border-l-[#BA7517]
+  {% elif task.priority == 'MEDIUM' %}border-l-[#378ADD] hover:border-l-[#378ADD]
+  {% else %}border-l-gray-200 hover:border-l-gray-300{% endif %}"
      id="task-{{ task.id }}">
-
-  <!-- Priority accent strip on left edge -->
-  <div class="absolute left-0 top-0 bottom-0 w-[3px]
-    {% if task.urgency == 'URGENT' %}bg-[#E24B4A]
-    {% elif task.priority == 'HIGH' %}bg-[#BA7517]
-    {% elif task.priority == 'MEDIUM' %}bg-[#378ADD]
-    {% else %}bg-gray-200{% endif %}"></div>
 
   <div class="p-4 pl-5">
 
@@ -145,17 +142,19 @@
         {% endfor %}
       </div>
 
-      <div class="dropdown dropdown-end opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 ml-2">
-        <label tabindex="0"
-               class="cursor-pointer w-6 h-6 flex items-center justify-center rounded hover:bg-gray-100 text-gray-400 text-lg leading-none">⋯</label>
-        <ul tabindex="0"
-            class="dropdown-content bg-white border border-gray-200 rounded-lg shadow-sm z-10 w-36 p-1 text-sm">
+      <div class="relative opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 ml-2">
+        <button type="button"
+                onclick="_taskMenuToggle(event, {{ task.id }})"
+                class="w-6 h-6 flex items-center justify-center rounded hover:bg-gray-100 text-gray-400 text-lg leading-none select-none">⋯</button>
+        <ul id="task-menu-{{ task.id }}"
+            class="hidden absolute right-0 top-full mt-1 bg-white border border-gray-200 rounded-lg shadow-md z-50 w-40 p-1 text-sm">
           <li>
             <button
               class="w-full text-left px-3 py-1.5 rounded hover:bg-gray-50 text-gray-700"
               hx-patch="/tasks/{{ task.id }}/doing"
               hx-target="#task-{{ task.id }}"
               hx-swap="outerHTML"
+              onclick="_taskMenuClose()"
             >In progress</button>
           </li>
           {% if task.recurrence_rule %}
@@ -166,6 +165,7 @@
               hx-target="#task-history-content"
               hx-swap="innerHTML"
               hx-on::after-request="document.getElementById('task-history-modal').showModal()"
+              onclick="_taskMenuClose()"
             >History</button>
           </li>
           {% endif %}
@@ -176,6 +176,7 @@
               hx-target="#task-{{ task.id }}"
               hx-swap="outerHTML"
               hx-confirm="Delete this task?"
+              onclick="_taskMenuClose()"
             >Delete</button>
           </li>
         </ul>

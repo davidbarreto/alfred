@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 import pathlib
 import re
@@ -30,6 +31,9 @@ from app.features.core.sessions.repository import SessionRepository
 from app.features.core.sessions.summary_service import SessionSummaryService
 from app.features.core.working_memory.schemas import WorkingMemoryFilters, WorkingMemoryRead
 from app.features.core.working_memory.service import WorkingMemoryService
+from app.features.language.sessions.repository import SessionRepository as LanguageSessionRepository
+from app.features.language.sessions.schemas import SessionFilters as LanguageSessionFilters
+from app.features.language.sessions.tables import LearningSession
 from app.integrations.llm_calls.repository import create_llm_call
 from app.shared.llm import LlmProvider, StreamMeta
 
@@ -53,6 +57,7 @@ def _build_system_prompt(
     recent_summaries: list[tuple[datetime, str]] | None = None,
     daily_context: str = "",
     working_memories: list[WorkingMemoryRead] | None = None,
+    language_session: LearningSession | None = None,
 ) -> str:
     now = datetime.now(tz=timezone.utc).strftime("%A, %B %d, %Y at %H:%M UTC")
     parts = []
@@ -94,11 +99,26 @@ def _build_system_prompt(
         lines = "\n".join(f"- {wm.key}: {wm.value}" for wm in working_memories)
         section = f"## Active context\n{lines}"
         if any(wm.key == "language:pending_practice" for wm in working_memories):
-            section += (
-                "\n\nThe user just submitted a language practice attempt. "
-                "Their message is a transcription of what they said. "
-                "Respond briefly as an encouraging coach."
-            )
+            if language_session and language_session.quality_score is not None:
+                fb = language_session.gemini_feedback_json or {}
+                score_line = f"Score: {language_session.quality_score:.0f}/100"
+                detail_lines = [score_line]
+                if fb.get("summary"):
+                    detail_lines.append(f"Summary: {fb['summary']}")
+                if fb.get("strengths"):
+                    detail_lines.append(f"Strengths: {'; '.join(fb['strengths'])}")
+                if fb.get("issues"):
+                    detail_lines.append(f"Issues: {'; '.join(fb['issues'])}")
+                if fb.get("tip"):
+                    detail_lines.append(f"Tip: {fb['tip']}")
+                section += "\n\n## Practice result\n" + "\n".join(detail_lines)
+                section += "\n\nRespond as an encouraging coach. Keep it brief (2–3 sentences)."
+            else:
+                section += (
+                    "\n\nThe user just submitted a language practice attempt. "
+                    "Their message is a transcription of what they said. "
+                    "Respond briefly as an encouraging coach."
+                )
         parts.append(section)
 
     if memories:
@@ -174,9 +194,25 @@ class ChatService:
         working_memories = await self._working_memory_service.list(WorkingMemoryFilters(active_only=True))
         logger.debug("Chat: %d active working memory entries loaded", len(working_memories))
 
+        language_session: LearningSession | None = None
         if any(wm.key == "language:pending_practice" for wm in working_memories):
             logger.debug("Chat: language practice mode — skipping embeddings, summaries, daily context")
             memories, recent_summaries, daily_context = [], [], ""
+            practice_wm = next(wm for wm in working_memories if wm.key == "language:pending_practice")
+            try:
+                chunk_id = json.loads(practice_wm.value).get("chunk_id")
+                if chunk_id:
+                    lang_sessions = await LanguageSessionRepository(self._session).get_sessions(
+                        LanguageSessionFilters(chunk_id=chunk_id, session_type="shadowing", limit=1)
+                    )
+                    language_session = lang_sessions[0] if lang_sessions else None
+                    if language_session:
+                        logger.debug(
+                            "Chat: practice session loaded: id=%d score=%s",
+                            language_session.id, language_session.quality_score,
+                        )
+            except (json.JSONDecodeError, KeyError):
+                logger.warning("Chat: failed to parse practice WM value=%r", practice_wm.value)
         else:
             memories = await self._embedding_service.search(
                 EmbeddingSearchRequest(
@@ -191,7 +227,7 @@ class ChatService:
             logger.debug("Chat: %d recent session summaries loaded", len(recent_summaries))
             daily_context = await build_daily_context(self._session)
 
-        system_prompt = _build_system_prompt(memories, request.detected_intents, recent_summaries, daily_context, working_memories)
+        system_prompt = _build_system_prompt(memories, request.detected_intents, recent_summaries, daily_context, working_memories, language_session)
         messages = history + [{"role": "user", "content": current_message.content}]
 
         t0 = time.monotonic()
@@ -250,8 +286,19 @@ class ChatService:
 
         working_memories = await self._working_memory_service.list(WorkingMemoryFilters(active_only=True))
 
+        language_session: LearningSession | None = None
         if any(wm.key == "language:pending_practice" for wm in working_memories):
             memories, recent_summaries, daily_context = [], [], ""
+            practice_wm = next(wm for wm in working_memories if wm.key == "language:pending_practice")
+            try:
+                chunk_id = json.loads(practice_wm.value).get("chunk_id")
+                if chunk_id:
+                    lang_sessions = await LanguageSessionRepository(self._session).get_sessions(
+                        LanguageSessionFilters(chunk_id=chunk_id, session_type="shadowing", limit=1)
+                    )
+                    language_session = lang_sessions[0] if lang_sessions else None
+            except (json.JSONDecodeError, KeyError):
+                logger.warning("StreamChat: failed to parse practice WM value=%r", practice_wm.value)
         else:
             memories = await self._embedding_service.search(
                 EmbeddingSearchRequest(
@@ -264,7 +311,7 @@ class ChatService:
             recent_summaries = await self._session_summary_service.get_recent_summaries(request.session_id)
             daily_context = await build_daily_context(self._session)
 
-        system_prompt = _build_system_prompt(memories, request.detected_intents, recent_summaries, daily_context, working_memories)
+        system_prompt = _build_system_prompt(memories, request.detected_intents, recent_summaries, daily_context, working_memories, language_session)
         messages_list = history + [{"role": "user", "content": current_message.content}]
 
         t0 = time.monotonic()

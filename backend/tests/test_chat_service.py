@@ -15,6 +15,7 @@ from app.features.core.embeddings.schemas import EmbeddingSearchResult
 from app.features.core.messages.schemas import MessageRead
 from app.features.core.sessions.tables import Session
 from app.features.core.working_memory.schemas import WorkingMemoryRead
+from app.features.language.sessions.tables import LearningSession
 from app.shared.llm import LlmResponse
 
 
@@ -62,6 +63,38 @@ def mock_session_repository():
     with patch("app.features.core.chats.service.SessionRepository") as mock_repo_cls:
         mock_repo_cls.return_value.get = AsyncMock(return_value=_make_session_row())
         yield mock_repo_cls
+
+
+@pytest.fixture(autouse=True)
+def mock_language_session_repository():
+    with patch("app.features.core.chats.service.LanguageSessionRepository") as mock_cls:
+        mock_cls.return_value.get_sessions = AsyncMock(return_value=[])
+        yield mock_cls
+
+
+def _make_language_session(
+    chunk_id: int = 42,
+    quality_score: float | None = 85.0,
+    feedback: dict | None = None,
+) -> LearningSession:
+    ls = LearningSession()
+    ls.id = 1
+    ls.track_id = 3
+    ls.chunk_id = chunk_id
+    ls.session_type = "shadowing"
+    ls.feeds_srs = quality_score is not None
+    ls.audio_ref = None
+    ls.quality_score = quality_score
+    ls.gemini_feedback_json = feedback or {
+        "score": quality_score,
+        "summary": "Good overall effort.",
+        "strengths": ["clear vowels"],
+        "issues": ["'r' sound unclear"],
+        "tip": "Relax your tongue for the 'r'.",
+    }
+    ls.transcript_or_notes = None
+    ls.created_at = datetime(2026, 1, 1, tzinfo=timezone.utc)
+    return ls
 
 
 def _make_wm(key: str = "travel_context", value: str = "Belgium trip") -> WorkingMemoryRead:
@@ -289,7 +322,7 @@ class TestBuildSystemPromptWorkingMemory:
         prompt = _build_system_prompt([])
         assert "Active context" not in prompt
 
-    def test_includes_practice_hint_for_language_practice(self):
+    def test_includes_practice_hint_for_language_practice_without_session(self):
         wm = _make_wm("language:pending_practice", '{"chunk_id": 1, "text": "fazer questão de"}')
         prompt = _build_system_prompt([], working_memories=[wm])
         assert "language practice" in prompt.lower()
@@ -299,6 +332,30 @@ class TestBuildSystemPromptWorkingMemory:
         wm = _make_wm("travel_context", "Belgium trip")
         prompt = _build_system_prompt([], working_memories=[wm])
         assert "coach" not in prompt.lower()
+
+    def test_includes_grade_when_language_session_provided(self):
+        wm = _make_wm("language:pending_practice", '{"chunk_id": 42}')
+        session = _make_language_session(quality_score=87.0)
+        prompt = _build_system_prompt([], working_memories=[wm], language_session=session)
+        assert "87/100" in prompt
+        assert "Practice result" in prompt
+        assert "clear vowels" in prompt
+        assert "'r' sound unclear" in prompt
+        assert "Relax your tongue" in prompt
+        assert "coach" in prompt.lower()
+
+    def test_falls_back_to_generic_hint_when_session_has_no_score(self):
+        wm = _make_wm("language:pending_practice", '{"chunk_id": 42}')
+        session = _make_language_session(quality_score=None)
+        prompt = _build_system_prompt([], working_memories=[wm], language_session=session)
+        assert "Practice result" not in prompt
+        assert "language practice" in prompt.lower()
+
+    def test_falls_back_to_generic_hint_when_no_session(self):
+        wm = _make_wm("language:pending_practice", '{"chunk_id": 42}')
+        prompt = _build_system_prompt([], working_memories=[wm], language_session=None)
+        assert "Practice result" not in prompt
+        assert "language practice" in prompt.lower()
 
     def test_active_context_appears_before_memories(self):
         wm = _make_wm("travel_context", "Belgium trip")
@@ -347,6 +404,52 @@ class TestChatServiceWorkingMemory:
         message_service.list.return_value = [_make_message("hi")]
         await service.chat(ChatRequest(session_id=1))
         embedding_service.search.assert_called_once()
+
+
+class TestChatServiceLanguagePracticeGrade:
+    async def test_queries_language_session_for_chunk_in_wm(self, mock_language_session_repository):
+        service, _, _, message_service, _ = _make_service()
+        service._working_memory_service.list.return_value = [
+            _make_wm("language:pending_practice", '{"chunk_id": 42, "track_id": 3}')
+        ]
+        message_service.list.return_value = [_make_message("a chuva caiu")]
+        await service.chat(ChatRequest(session_id=1))
+        mock_language_session_repository.return_value.get_sessions.assert_called_once()
+        filters = mock_language_session_repository.return_value.get_sessions.call_args[0][0]
+        assert filters.chunk_id == 42
+        assert filters.session_type == "shadowing"
+        assert filters.limit == 1
+
+    async def test_grade_appears_in_system_prompt_when_session_found(self, mock_language_session_repository, mock_session_repository):
+        mock_language_session_repository.return_value.get_sessions = AsyncMock(
+            return_value=[_make_language_session(quality_score=87.0)]
+        )
+        service, llm_provider, _, message_service, _ = _make_service()
+        service._working_memory_service.list.return_value = [
+            _make_wm("language:pending_practice", '{"chunk_id": 42, "track_id": 3}')
+        ]
+        message_service.list.return_value = [_make_message("a chuva caiu")]
+        with patch("app.features.core.chats.service.SessionRepository", mock_session_repository):
+            await service.chat(ChatRequest(session_id=1))
+        system_prompt = llm_provider.complete.call_args[1]["system"]
+        assert "87/100" in system_prompt
+        assert "Practice result" in system_prompt
+
+    async def test_graceful_when_wm_value_is_invalid_json(self, mock_language_session_repository):
+        service, _, _, message_service, _ = _make_service()
+        service._working_memory_service.list.return_value = [
+            _make_wm("language:pending_practice", "not-json")
+        ]
+        message_service.list.return_value = [_make_message("olá")]
+        await service.chat(ChatRequest(session_id=1))
+        mock_language_session_repository.return_value.get_sessions.assert_not_called()
+
+    async def test_no_session_lookup_when_not_practice_mode(self, mock_language_session_repository):
+        service, _, _, message_service, _ = _make_service()
+        service._working_memory_service.list.return_value = [_make_wm("travel_context", "Belgium")]
+        message_service.list.return_value = [_make_message("hi")]
+        await service.chat(ChatRequest(session_id=1))
+        mock_language_session_repository.return_value.get_sessions.assert_not_called()
 
 
 class TestChatServiceMemoryExtraction:

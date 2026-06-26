@@ -1,10 +1,13 @@
 from datetime import datetime
-from sqlalchemy import DateTime, Integer, String, Text, UniqueConstraint, func
-from sqlalchemy.orm import relationship, Mapped, mapped_column
-from typing import List, Optional
+from typing import TYPE_CHECKING, List, Optional
 
-from app.features.organizer.tags.tables import Tag
+from sqlalchemy import DateTime, Integer, String, Text, UniqueConstraint, func
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+
 from app.db.base import Base
+
+if TYPE_CHECKING:
+    from app.features.organizer.tags.tables import Tag
 
 
 class Note(Base):

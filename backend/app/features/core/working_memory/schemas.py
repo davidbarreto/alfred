@@ -25,5 +25,6 @@ class WorkingMemoryRead(BaseModel):
 
 
 class WorkingMemoryFilters(BaseModel):
+    key: Optional[str] = None
     session_id: Optional[int] = None
     active_only: bool = True

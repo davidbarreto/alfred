@@ -158,6 +158,7 @@ def get_chat_service(session: AsyncSession = Depends(get_session)) -> ChatServic
         message_service=MessageService(session),
         memory_extraction_service=get_memory_extraction_service(),
         session_summary_service=get_session_summary_service(),
+        working_memory_service=WorkingMemoryService(session),
     )
 
 @lru_cache

@@ -22,6 +22,10 @@ import pytest
 from fastapi.testclient import TestClient
 from unittest.mock import AsyncMock
 
+# Pre-load all ORM models so SQLAlchemy's mapper can resolve cross-module
+# string references (e.g. Tag.notes → "Note") before any test instantiates a model.
+from app.main import app as _app  # noqa: F401
+
 TEST_TOKEN = "test-api-token"
 AUTH_HEADERS = {"Authorization": f"Bearer {TEST_TOKEN}"}
 

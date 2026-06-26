@@ -57,6 +57,13 @@ class TestList:
         await service.list(filters)
         service._repo.list.assert_called_once_with(filters)
 
+    async def test_passes_key_filter_to_repo(self, service):
+        service._repo.list.return_value = [_make_wm_orm(key="language:pending_practice")]
+        filters = WorkingMemoryFilters(key="language:pending_practice")
+        result = await service.list(filters)
+        service._repo.list.assert_called_once_with(filters)
+        assert result[0].key == "language:pending_practice"
+
     async def test_empty_list(self, service):
         service._repo.list.return_value = []
         assert await service.list(WorkingMemoryFilters()) == []

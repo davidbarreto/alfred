@@ -28,6 +28,8 @@ from app.features.core.messages.schemas import MessageCreate, MessageFilters, Me
 from app.features.core.messages.service import MessageService
 from app.features.core.sessions.repository import SessionRepository
 from app.features.core.sessions.summary_service import SessionSummaryService
+from app.features.core.working_memory.schemas import WorkingMemoryFilters, WorkingMemoryRead
+from app.features.core.working_memory.service import WorkingMemoryService
 from app.integrations.llm_calls.repository import create_llm_call
 from app.shared.llm import LlmProvider, StreamMeta
 
@@ -50,6 +52,7 @@ def _build_system_prompt(
     detected_intents: list[str] | None = None,
     recent_summaries: list[tuple[datetime, str]] | None = None,
     daily_context: str = "",
+    working_memories: list[WorkingMemoryRead] | None = None,
 ) -> str:
     now = datetime.now(tz=timezone.utc).strftime("%A, %B %d, %Y at %H:%M UTC")
     parts = []
@@ -86,6 +89,17 @@ def _build_system_prompt(
             for ts, summary in recent_summaries
         )
         parts.append(f"## Recent conversations\n{lines}")
+
+    if working_memories:
+        lines = "\n".join(f"- {wm.key}: {wm.value}" for wm in working_memories)
+        section = f"## Active context\n{lines}"
+        if any(wm.key == "language:pending_practice" for wm in working_memories):
+            section += (
+                "\n\nThe user just submitted a language practice attempt. "
+                "Their message is a transcription of what they said. "
+                "Respond briefly as an encouraging coach."
+            )
+        parts.append(section)
 
     if memories:
         lines = "\n".join(f"- [{m.source_type}] {m.content}" for m in memories)
@@ -125,6 +139,7 @@ class ChatService:
         message_service: MessageService,
         memory_extraction_service: MemoryExtractionService,
         session_summary_service: SessionSummaryService,
+        working_memory_service: WorkingMemoryService,
     ) -> None:
         self._session = session
         self._llm_provider = llm_provider
@@ -132,6 +147,7 @@ class ChatService:
         self._message_service = message_service
         self._memory_extraction_service = memory_extraction_service
         self._session_summary_service = session_summary_service
+        self._working_memory_service = working_memory_service
 
     async def _fetch_history(self, session_id: int) -> list[MessageRead]:
         session = await SessionRepository(self._session).get(session_id)
@@ -155,22 +171,27 @@ class ChatService:
         current_message = messages[-1]
         history = _to_message_dicts(messages[:-1])
 
-        logger.debug("Chat: %d history messages, searching memory for context", len(history))
-        memories = await self._embedding_service.search(
-            EmbeddingSearchRequest(
-                query=current_message.content,
-                source_types=["memory", "note", "task"],
-                limit=_MEMORY_LIMIT,
-                threshold=_MEMORY_THRESHOLD,
+        working_memories = await self._working_memory_service.list(WorkingMemoryFilters(active_only=True))
+        logger.debug("Chat: %d active working memory entries loaded", len(working_memories))
+
+        if any(wm.key == "language:pending_practice" for wm in working_memories):
+            logger.debug("Chat: language practice mode — skipping embeddings, summaries, daily context")
+            memories, recent_summaries, daily_context = [], [], ""
+        else:
+            memories = await self._embedding_service.search(
+                EmbeddingSearchRequest(
+                    query=current_message.content,
+                    source_types=["memory", "note", "task"],
+                    limit=_MEMORY_LIMIT,
+                    threshold=_MEMORY_THRESHOLD,
+                )
             )
-        )
-        logger.debug("Chat: %d memory items retrieved", len(memories))
+            logger.debug("Chat: %d memory items retrieved", len(memories))
+            recent_summaries = await self._session_summary_service.get_recent_summaries(request.session_id)
+            logger.debug("Chat: %d recent session summaries loaded", len(recent_summaries))
+            daily_context = await build_daily_context(self._session)
 
-        recent_summaries = await self._session_summary_service.get_recent_summaries(request.session_id)
-        logger.debug("Chat: %d recent session summaries loaded", len(recent_summaries))
-
-        daily_context = await build_daily_context(self._session)
-        system_prompt = _build_system_prompt(memories, request.detected_intents, recent_summaries, daily_context)
+        system_prompt = _build_system_prompt(memories, request.detected_intents, recent_summaries, daily_context, working_memories)
         messages = history + [{"role": "user", "content": current_message.content}]
 
         t0 = time.monotonic()
@@ -227,17 +248,23 @@ class ChatService:
         current_message = messages[-1]
         history = _to_message_dicts(messages[:-1])
 
-        memories = await self._embedding_service.search(
-            EmbeddingSearchRequest(
-                query=current_message.content,
-                source_types=["memory", "note", "task"],
-                limit=_MEMORY_LIMIT,
-                threshold=_MEMORY_THRESHOLD,
+        working_memories = await self._working_memory_service.list(WorkingMemoryFilters(active_only=True))
+
+        if any(wm.key == "language:pending_practice" for wm in working_memories):
+            memories, recent_summaries, daily_context = [], [], ""
+        else:
+            memories = await self._embedding_service.search(
+                EmbeddingSearchRequest(
+                    query=current_message.content,
+                    source_types=["memory", "note", "task"],
+                    limit=_MEMORY_LIMIT,
+                    threshold=_MEMORY_THRESHOLD,
+                )
             )
-        )
-        recent_summaries = await self._session_summary_service.get_recent_summaries(request.session_id)
-        daily_context = await build_daily_context(self._session)
-        system_prompt = _build_system_prompt(memories, request.detected_intents, recent_summaries, daily_context)
+            recent_summaries = await self._session_summary_service.get_recent_summaries(request.session_id)
+            daily_context = await build_daily_context(self._session)
+
+        system_prompt = _build_system_prompt(memories, request.detected_intents, recent_summaries, daily_context, working_memories)
         messages_list = history + [{"role": "user", "content": current_message.content}]
 
         t0 = time.monotonic()

@@ -14,6 +14,7 @@ from app.features.core.chats.service import (
 from app.features.core.embeddings.schemas import EmbeddingSearchResult
 from app.features.core.messages.schemas import MessageRead
 from app.features.core.sessions.tables import Session
+from app.features.core.working_memory.schemas import WorkingMemoryRead
 from app.shared.llm import LlmResponse
 
 
@@ -63,6 +64,13 @@ def mock_session_repository():
         yield mock_repo_cls
 
 
+def _make_wm(key: str = "travel_context", value: str = "Belgium trip") -> WorkingMemoryRead:
+    return WorkingMemoryRead(
+        id=1, key=key, value=value, importance=None,
+        expires_at=None, session_id=None, created_at=datetime(2024, 1, 1),
+    )
+
+
 def _make_service(llm_text: str = "ok") -> tuple[ChatService, MagicMock, AsyncMock, AsyncMock, MagicMock]:
     session = AsyncMock()
     session.add = MagicMock()
@@ -76,6 +84,8 @@ def _make_service(llm_text: str = "ok") -> tuple[ChatService, MagicMock, AsyncMo
     memory_extraction_service.extract_and_save = AsyncMock()
     session_summary_service = MagicMock()
     session_summary_service.get_recent_summaries = AsyncMock(return_value=[])
+    working_memory_service = AsyncMock()
+    working_memory_service.list = AsyncMock(return_value=[])
     service = ChatService(
         session=session,
         llm_provider=llm_provider,
@@ -83,6 +93,7 @@ def _make_service(llm_text: str = "ok") -> tuple[ChatService, MagicMock, AsyncMo
         message_service=message_service,
         memory_extraction_service=memory_extraction_service,
         session_summary_service=session_summary_service,
+        working_memory_service=working_memory_service,
     )
     return service, llm_provider, embedding_service, message_service, memory_extraction_service
 
@@ -260,6 +271,82 @@ class TestBuildSystemPrompt:
     def test_intent_section_appears_before_persona(self):
         prompt = _build_system_prompt([], detected_intents=["event.add"])
         assert prompt.index("Parallel command pipeline") < prompt.index("Alfred")
+
+
+class TestBuildSystemPromptWorkingMemory:
+    def test_includes_working_memory_entries(self):
+        wm = _make_wm("travel_context", "Belgium next week")
+        prompt = _build_system_prompt([], working_memories=[wm])
+        assert "Active context" in prompt
+        assert "travel_context" in prompt
+        assert "Belgium next week" in prompt
+
+    def test_no_active_context_section_when_empty(self):
+        prompt = _build_system_prompt([], working_memories=[])
+        assert "Active context" not in prompt
+
+    def test_no_active_context_section_when_none(self):
+        prompt = _build_system_prompt([])
+        assert "Active context" not in prompt
+
+    def test_includes_practice_hint_for_language_practice(self):
+        wm = _make_wm("language:pending_practice", '{"chunk_id": 1, "text": "fazer questão de"}')
+        prompt = _build_system_prompt([], working_memories=[wm])
+        assert "language practice" in prompt.lower()
+        assert "coach" in prompt.lower()
+
+    def test_no_practice_hint_for_non_practice_key(self):
+        wm = _make_wm("travel_context", "Belgium trip")
+        prompt = _build_system_prompt([], working_memories=[wm])
+        assert "coach" not in prompt.lower()
+
+    def test_active_context_appears_before_memories(self):
+        wm = _make_wm("travel_context", "Belgium trip")
+        mem = _make_embedding_result("memory", "Likes coffee")
+        prompt = _build_system_prompt([mem], working_memories=[wm])
+        assert prompt.index("Active context") < prompt.index("Relevant context from memory")
+
+
+class TestChatServiceWorkingMemory:
+    async def test_fetches_active_working_memories_on_chat(self):
+        service, _, _, message_service, _ = _make_service()
+        message_service.list.return_value = [_make_message("hi")]
+        await service.chat(ChatRequest(session_id=1))
+        service._working_memory_service.list.assert_called_once()
+
+    async def test_working_memory_appears_in_system_prompt(self):
+        service, llm_provider, _, message_service, _ = _make_service()
+        service._working_memory_service.list.return_value = [_make_wm("travel_context", "Belgium trip")]
+        message_service.list.return_value = [_make_message("hi")]
+        await service.chat(ChatRequest(session_id=1))
+        system_prompt = llm_provider.complete.call_args[1]["system"]
+        assert "travel_context" in system_prompt
+        assert "Belgium trip" in system_prompt
+
+    async def test_skips_embedding_search_in_language_practice_mode(self):
+        service, _, embedding_service, message_service, _ = _make_service()
+        service._working_memory_service.list.return_value = [
+            _make_wm("language:pending_practice", '{"chunk_id": 1, "text": "olá"}')
+        ]
+        message_service.list.return_value = [_make_message("olá")]
+        await service.chat(ChatRequest(session_id=1))
+        embedding_service.search.assert_not_called()
+
+    async def test_skips_session_summaries_in_language_practice_mode(self):
+        service, _, _, message_service, _ = _make_service()
+        service._working_memory_service.list.return_value = [
+            _make_wm("language:pending_practice", '{"chunk_id": 1, "text": "olá"}')
+        ]
+        message_service.list.return_value = [_make_message("olá")]
+        await service.chat(ChatRequest(session_id=1))
+        service._session_summary_service.get_recent_summaries.assert_not_called()
+
+    async def test_runs_full_pipeline_when_no_practice_mode(self):
+        service, _, embedding_service, message_service, _ = _make_service()
+        service._working_memory_service.list.return_value = [_make_wm("travel_context", "Belgium")]
+        message_service.list.return_value = [_make_message("hi")]
+        await service.chat(ChatRequest(session_id=1))
+        embedding_service.search.assert_called_once()
 
 
 class TestChatServiceMemoryExtraction:

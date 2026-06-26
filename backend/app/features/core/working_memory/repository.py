@@ -24,6 +24,8 @@ class WorkingMemoryRepository:
             query = query.where(
                 (WorkingMemory.expires_at.is_(None)) | (WorkingMemory.expires_at > now)
             )
+        if filters.key is not None:
+            query = query.where(WorkingMemory.key == filters.key)
         if filters.session_id is not None:
             query = query.where(WorkingMemory.session_id == filters.session_id)
         query = query.order_by(WorkingMemory.created_at.desc())

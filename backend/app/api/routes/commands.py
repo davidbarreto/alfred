@@ -27,6 +27,7 @@ from app.dependencies import (
     AccountServiceDep,
     BudgetServiceDep,
     CalendarEventServiceDep,
+    ChunkServiceDep,
     CommandExecutionServiceDep,
     DbSessionDep,
     ExtractionLlmProviderDep,
@@ -34,7 +35,9 @@ from app.dependencies import (
     RecurringTransactionServiceDep,
     ShoppingServiceDep,
     TaskServiceDep,
+    TrackServiceDep,
     TransactionServiceDep,
+    WorkingMemoryServiceDep,
 )
 from app.features.core.command_executions.schemas import CommandExecutionCreate, CommandExecutionFilters, CommandExecutionUpdate
 from app.integrations.llm_calls.repository import create_llm_call
@@ -85,6 +88,9 @@ async def execute_command(
     budget_service: BudgetServiceDep,
     recurring_service: RecurringTransactionServiceDep,
     shopping_service: ShoppingServiceDep,
+    track_service: TrackServiceDep,
+    chunk_service: ChunkServiceDep,
+    working_memory_service: WorkingMemoryServiceDep,
 ):
     logger.info("POST /commands/execute %s.%s", request.type, request.command)
     execution = await cmd_execution_service.create(
@@ -108,6 +114,9 @@ async def execute_command(
             budget_service=budget_service,
             recurring_service=recurring_service,
             shopping_service=shopping_service,
+            track_service=track_service,
+            chunk_service=chunk_service,
+            working_memory_service=working_memory_service,
         )
         entity_id = result.get("id") if isinstance(result, dict) else None
         logger.info(

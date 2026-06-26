@@ -212,6 +212,14 @@ COMMAND_DEFINITIONS = {
             "arg_keys": ["name"],
         },
     },
+    "language": {
+        "practice": {
+            "aliases": ["/practice", "/pr"],
+            "flags": {},
+            "requires_args": True,
+            "arg_keys": ["language_code"],
+        }
+    },
     "help": {
         "help": {
             "aliases": ["/help", "/h", "/?"],

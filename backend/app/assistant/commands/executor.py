@@ -5,13 +5,17 @@ from fastapi import HTTPException, status
 
 from app.assistant.commands.handlers.event import handle_event
 from app.assistant.commands.handlers.finance import handle_finance
+from app.assistant.commands.handlers.language import handle_language
 from app.assistant.commands.handlers.note import handle_note
 from app.assistant.commands.handlers.shopping import handle_shopping
 from app.assistant.commands.handlers.task import handle_task
+from app.features.core.working_memory.service import WorkingMemoryService
 from app.features.finance.accounts.service import AccountService
 from app.features.finance.budgets.service import BudgetService
 from app.features.finance.recurring_transactions.service import RecurringTransactionService
 from app.features.finance.transactions.service import TransactionService
+from app.features.language.chunks.service import ChunkService
+from app.features.language.tracks.service import TrackService
 from app.features.organizer.calendar_events.service import CalendarEventService
 from app.features.organizer.notes.service import NoteService
 from app.features.organizer.shopping.service import ShoppingService
@@ -32,6 +36,9 @@ async def execute(
     budget_service: BudgetService,
     recurring_service: RecurringTransactionService,
     shopping_service: ShoppingService | None = None,
+    track_service: TrackService | None = None,
+    chunk_service: ChunkService | None = None,
+    working_memory_service: WorkingMemoryService | None = None,
 ) -> Any:
     logger.info("Execute: %s.%s args_keys=%s", cmd_type, command, list(arguments.keys()))
 
@@ -61,6 +68,14 @@ async def execute(
                 detail="Shopping service not available",
             )
         return await handle_shopping(cmd_type, command, arguments, shopping_service)
+
+    if cmd_type == "language":
+        if track_service is None or chunk_service is None or working_memory_service is None:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Language service not available",
+            )
+        return await handle_language(command, arguments, track_service, chunk_service, working_memory_service)
 
     logger.error("Execute: unknown command type=%s command=%s", cmd_type, command)
     raise HTTPException(

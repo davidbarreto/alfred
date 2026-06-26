@@ -34,6 +34,11 @@ from app.features.finance.budgets.tables import Budget
 from app.features.finance.categories.tables import Category
 from app.features.finance.recurring_transactions.tables import RecurringTransaction
 from app.features.finance.transactions.tables import Transaction
+from app.features.language.chunks.tables import Chunk
+from app.features.language.grammar_scope.tables import GrammarScope
+from app.features.language.sessions.tables import LearningSession
+from app.features.language.chunks.tables import Chunk
+from app.features.language.tracks.tables import Track
 from app.features.core.sessions.tables import Session
 from app.features.core.messages.tables import Message
 from app.features.core.command_executions.tables import CommandExecution

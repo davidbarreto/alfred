@@ -63,6 +63,13 @@ class TestGetTracks:
         result = await service.get_tracks(TrackFilters())
         assert result == []
 
+    async def test_passes_code_filter_to_repo(self, service):
+        service._repo.get_tracks.return_value = [_make_track_orm(id=1, code="en")]
+        filters = TrackFilters(code="en")
+        result = await service.get_tracks(filters)
+        service._repo.get_tracks.assert_called_once_with(filters)
+        assert result[0].code == "en"
+
 
 class TestCreateTrack:
     async def test_creates_and_returns_track_read(self, service):

@@ -42,5 +42,7 @@ class TrackFilters:
     def __init__(
         self,
         active_only: Annotated[bool, Query()] = True,
+        code: Annotated[str | None, Query()] = None,
     ) -> None:
         self.active_only = active_only
+        self.code = code

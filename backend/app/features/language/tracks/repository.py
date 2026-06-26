@@ -22,6 +22,8 @@ class TrackRepository:
         query = select(Track)
         if filters.active_only:
             query = query.where(Track.active.is_(True))
+        if filters.code is not None:
+            query = query.where(Track.code == filters.code)
         query = query.order_by(Track.code)
         result = await self._session.execute(query)
         return list(result.scalars().all())

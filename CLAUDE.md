@@ -23,6 +23,7 @@ alfred/
 │   │   │       ├── core/          # chats, sessions, messages, memories, embeddings, working_memory
 │   │   │       ├── finance/       # accounts, budgets, categories, transactions, recurring_transactions
 │   │   │       ├── integrations/  # google_calendar, google_contacts (OAuth + sync), llm_calls, provider_calls
+│   │   │       ├── language/      # tracks, grammar_scope, chunks, sessions
 │   │   │       ├── monitoring/    # monitors, alerts, executions
 │   │   │       └── organizer/     # tasks, notes, calendar_events, contacts, shopping
 │   │   ├── assistant/
@@ -31,7 +32,7 @@ alfred/
 │   │   ├── db/                    # Base, session
 │   │   ├── dependencies.py        # All FastAPI Depends() factories and type aliases
 │   │   ├── features/
-│   │   │   ├── briefing/          # Morning briefing: weather, tasks, events, birthdays, holidays; LLM formatter
+│   │   │   ├── briefing/          # Morning briefing: weather, tasks, events, birthdays, holidays, language SRS; LLM formatter
 │   │   │   ├── core/
 │   │   │   │   ├── chats/
 │   │   │   │   ├── command_executions/
@@ -46,6 +47,12 @@ alfred/
 │   │   │   │   ├── categories/
 │   │   │   │   ├── recurring_transactions/
 │   │   │   │   └── transactions/
+│   │   │   ├── language/
+│   │   │   │   ├── srs.py         # FSRS-5 algorithm (CardState, next_card_state, is_leech)
+│   │   │   │   ├── chunks/        # Vocabulary chunks; FSRS state fields; Pareto-weighted batch
+│   │   │   │   ├── grammar_scope/ # Per-track grammar curriculum (active/deferred/mastered)
+│   │   │   │   ├── sessions/      # Learning sessions; feeds_srs flag; daily progress
+│   │   │   │   └── tracks/        # Language tracks (code, CEFR level, daily_quota, review_mode)
 │   │   │   ├── monitoring/        # Monitors, alerts, executions (flat, not sub-modules)
 │   │   │   └── organizer/
 │   │   │       ├── calendar_events/
@@ -76,7 +83,7 @@ alfred/
 │       ├── config.py
 │       ├── main.py                # FastAPI app, auth middleware, router registration
 │       ├── routes/                # dashboard, tasks, notes, contacts, calendar, shopping,
-│       │                          #   finance, insights, briefing, chat, auth
+│       │                          #   finance, insights, briefing, chat, auth, language
 │       └── templates/             # Jinja2 + Tailwind/DaisyUI; partials prefixed with _
 ├── n8n/
 ├── infra/                         # docker-compose.yml, .env, postgres-init scripts
@@ -97,7 +104,7 @@ alfred/
 - **Single responsibility** — split files when a module grows beyond one clear concern
 
 ### Database (PostgreSQL + pgvector)
-- Four schemas: `core`, `organizer`, `monitoring`, `finance`
+- Five schemas: `core`, `organizer`, `monitoring`, `finance`, `language`
 - Write-through cache pattern for external integrations (Notion, Google Calendar)
 - Embeddings stored in a generic `core.embeddings` table with `source_id` foreign keys; treat as a derived index, not source of truth
 - `core.memories` is polymorphic with a `type` discriminator column
@@ -237,6 +244,6 @@ One test class per logical group of behaviour (`TestComputeStreak`, `TestMissedC
 - **Notion** — write-through cache; Alfred DB is the read layer, Notion is the external store (tasks, notes)
 - **Google Calendar** — write-through cache via `StorageProvider`; OAuth token stored in `oauth_tokens` table
 - **Google Contacts** — write-through cache via `StorageProvider`; full CRUD scope (`contacts`); also supports one-way sync via `/integration/google-contacts/sync`
-- **Google (Gemini)** — LLM provider for chat, memory extraction, briefing formatting, session summaries
+- **Google (Gemini)** — LLM provider for chat, memory extraction, briefing formatting, session summaries, and language pronunciation analysis (`gemini-2.5-flash` for audio)
 - **Open-Meteo** — weather data for morning briefing (no API key required)
 - **Telegram** — input only via n8n; never call Telegram API directly from FastAPI

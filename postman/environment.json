@@ -127,6 +127,30 @@
       "value": "",
       "type": "default",
       "enabled": true
+    },
+    {
+      "key": "language_track_id",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "language_scope_id",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "language_chunk_id",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "language_session_id",
+      "value": "",
+      "type": "default",
+      "enabled": true
     }
   ],
   "_postman_variable_scope": "environment"

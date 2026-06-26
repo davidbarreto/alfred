@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import logging
+
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.features.core.embeddings.repository import EmbeddingRepository
@@ -10,6 +12,8 @@ from app.features.core.embeddings.schemas import (
     EmbeddingSearchResult,
 )
 from app.shared.embedding import EmbeddingProvider
+
+logger = logging.getLogger(__name__)
 
 
 class EmbeddingService:
@@ -27,6 +31,7 @@ class EmbeddingService:
             model=self._provider.model,
             dimensions=self._provider.dimensions,
         )
+        logger.debug("Embedding upserted: source_type=%s source_id=%d model=%s", data.source_type, data.source_id, self._provider.model)
         return EmbeddingRead.model_validate(obj)
 
     async def search(self, request: EmbeddingSearchRequest) -> list[EmbeddingSearchResult]:
@@ -37,13 +42,18 @@ class EmbeddingService:
             limit=request.limit,
             threshold=request.threshold,
         )
-        return [
+        results = [
             EmbeddingSearchResult(
                 **EmbeddingRead.model_validate(obj).model_dump(),
                 similarity=round(similarity, 4),
             )
             for obj, similarity in rows
         ]
+        logger.debug("Embedding search: source_types=%s limit=%d threshold=%s results=%d", request.source_types, request.limit, request.threshold, len(results))
+        return results
 
     async def delete(self, embedding_id: int) -> bool:
-        return await self._repo.delete(embedding_id)
+        deleted = await self._repo.delete(embedding_id)
+        if deleted:
+            logger.info("Embedding deleted: id=%d", embedding_id)
+        return deleted

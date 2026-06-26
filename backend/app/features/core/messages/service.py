@@ -1,7 +1,11 @@
+import logging
+
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.features.core.messages.repository import MessageRepository
 from app.features.core.messages.schemas import MessageCreate, MessageFilters, MessageRead
+
+logger = logging.getLogger(__name__)
 
 
 class MessageService:
@@ -18,4 +22,5 @@ class MessageService:
 
     async def create(self, data: MessageCreate) -> MessageRead:
         obj = await self._repo.create(data)
+        logger.debug("Message created: id=%d session_id=%d role=%s", obj.id, data.session_id, data.role)
         return MessageRead.model_validate(obj)

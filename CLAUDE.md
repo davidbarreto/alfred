@@ -219,6 +219,46 @@ One test class per logical group of behaviour (`TestComputeStreak`, `TestMissedC
 - Alembic migrations must be reversible (`downgrade` implemented)
 - After schema changes, verify all affected modules still align
 
+### Logging
+
+Every module that performs business logic, external I/O, or mutation must have a module-level logger:
+
+```python
+import logging
+logger = logging.getLogger(__name__)
+```
+
+**What to log and at which level:**
+
+| Level | When to use |
+|---|---|
+| `ERROR` | Unrecoverable failures: LLM call failed, external API error, unexpected exception |
+| `WARNING` | Unexpected conditions that are handled: auth rejection, OAuth not configured, truncated LLM response |
+| `INFO` | Successful mutations (create / update / delete / complete) and high-level operation results |
+| `DEBUG` | Read operations, "not found" on expected paths, item counts, internal flow details |
+
+**Log format — always use `%s` style, never f-strings:**
+
+```python
+logger.info("Task created: id=%d title=%r", task.id, task.title)
+logger.info("Task updated: id=%d fields=%s", task_id, list(data.model_dump(exclude_unset=True).keys()))
+logger.debug("Task update: id=%d not found", task_id)
+logger.error("LLM call failed: session_id=%s error=%s", session_id, exc)
+logger.warning("Auth failed: invalid token")
+```
+
+**Where logs belong:**
+- **Service layer** — primary logging location; log after every mutation and on significant errors
+- **Integration clients** — log external call failures and notable responses (latency, token counts)
+- **Auth middleware** — log rejected requests at WARNING
+- **Routes** — do NOT add request-level logging; uvicorn.access already covers it; only log if a route contains logic not delegated to a service
+- **Repositories** — do NOT log; DB queries are too granular; log at the service layer instead
+
+**Log content rules:**
+- Always include the entity ID and 1–2 key identifying fields (name, title, source)
+- For updates, log the changed field names, not values (values may be sensitive)
+- Never log passwords, tokens, raw user messages, or financial amounts at INFO or above
+
 ### Testing
 - Unit tests mock DB and external services; no real I/O
 - Use `pytest` with fixtures for DB sessions and app client

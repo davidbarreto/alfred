@@ -1,3 +1,5 @@
+import logging
+
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.features.finance.recurring_transactions.repository import RecurringTransactionRepository
@@ -7,6 +9,8 @@ from app.features.finance.recurring_transactions.schemas import (
     RecurringTransactionRead,
     RecurringTransactionUpdate,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class RecurringTransactionService:
@@ -26,6 +30,7 @@ class RecurringTransactionService:
 
     async def create(self, data: RecurringTransactionCreate) -> RecurringTransactionRead:
         rt = await self._repo.create(data)
+        logger.info("RecurringTransaction created: id=%d name=%r rule=%s", rt.id, data.name, data.recurrence_rule)
         return RecurringTransactionRead.model_validate(rt)
 
     async def update(
@@ -33,8 +38,15 @@ class RecurringTransactionService:
     ) -> RecurringTransactionRead | None:
         rt = await self._repo.update(recurring_id, data)
         if rt is None:
+            logger.debug("RecurringTransaction update: id=%d not found", recurring_id)
             return None
+        logger.info("RecurringTransaction updated: id=%d fields=%s", recurring_id, list(data.model_dump(exclude_unset=True).keys()))
         return RecurringTransactionRead.model_validate(rt)
 
     async def delete(self, recurring_id: int) -> bool:
-        return await self._repo.delete(recurring_id)
+        deleted = await self._repo.delete(recurring_id)
+        if deleted:
+            logger.info("RecurringTransaction deleted: id=%d", recurring_id)
+        else:
+            logger.debug("RecurringTransaction delete: id=%d not found", recurring_id)
+        return deleted

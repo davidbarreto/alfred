@@ -1,6 +1,9 @@
+import logging
 from datetime import date, timedelta
 from decimal import Decimal
 from sqlalchemy.ext.asyncio import AsyncSession
+
+logger = logging.getLogger(__name__)
 
 from app.features.finance.transactions.repository import TransactionRepository
 from app.features.finance.transactions.schemas import (
@@ -36,16 +39,24 @@ class TransactionService:
 
     async def create(self, data: TransactionCreate) -> TransactionRead:
         txn = await self._repo.create(data)
+        logger.info("Transaction created: id=%d amount=%s merchant=%r", txn.id, data.amount, data.merchant)
         return TransactionRead.model_validate(txn)
 
     async def update(self, transaction_id: int, data: TransactionUpdate) -> TransactionRead | None:
         txn = await self._repo.update(transaction_id, data)
         if txn is None:
+            logger.debug("Transaction update: id=%d not found", transaction_id)
             return None
+        logger.info("Transaction updated: id=%d fields=%s", transaction_id, list(data.model_dump(exclude_unset=True).keys()))
         return TransactionRead.model_validate(txn)
 
     async def delete(self, transaction_id: int) -> bool:
-        return await self._repo.delete(transaction_id)
+        deleted = await self._repo.delete(transaction_id)
+        if deleted:
+            logger.info("Transaction deleted: id=%d", transaction_id)
+        else:
+            logger.debug("Transaction delete: id=%d not found", transaction_id)
+        return deleted
 
     async def spending_report(self, filters: AnalyticsFilters) -> SpendingReportResponse:
         from_date, to_date = resolve_period(filters.period, filters.from_date, filters.to_date)

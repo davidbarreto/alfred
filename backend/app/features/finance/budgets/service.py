@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from datetime import date, timedelta
 from decimal import Decimal
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -14,6 +15,8 @@ from app.features.finance.budgets.schemas import (
 )
 from app.features.finance.transactions.repository import TransactionRepository
 from app.features.finance.transactions.schemas import resolve_period
+
+logger = logging.getLogger(__name__)
 
 
 def _budget_date_range(budget) -> tuple[date, date]:
@@ -42,16 +45,24 @@ class BudgetService:
 
     async def create(self, data: BudgetCreate) -> BudgetRead:
         budget = await self._repo.create(data)
+        logger.info("Budget created: id=%d name=%r amount=%s period=%s", budget.id, data.name, data.amount, data.period)
         return BudgetRead.model_validate(budget)
 
     async def update(self, budget_id: int, data: BudgetUpdate) -> BudgetRead | None:
         budget = await self._repo.update(budget_id, data)
         if budget is None:
+            logger.debug("Budget update: id=%d not found", budget_id)
             return None
+        logger.info("Budget updated: id=%d fields=%s", budget_id, list(data.model_dump(exclude_unset=True).keys()))
         return BudgetRead.model_validate(budget)
 
     async def delete(self, budget_id: int) -> bool:
-        return await self._repo.delete(budget_id)
+        deleted = await self._repo.delete(budget_id)
+        if deleted:
+            logger.info("Budget deleted: id=%d", budget_id)
+        else:
+            logger.debug("Budget delete: id=%d not found", budget_id)
+        return deleted
 
     async def remaining(
         self,

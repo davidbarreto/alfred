@@ -1,0 +1,353 @@
+# Vocabulary seed for en. Hand-crafted C1 entries.
+# seed_language_chunks.py loads this on startup (idempotent).
+en:
+- type: word
+  text: albeit
+  translation: although; even though (formal/literary)
+  example: The plan was ambitious, albeit risky.
+  example_translation: O plano era ambicioso, embora arriscado.
+  cefr_level: C1
+  frequency_rank: 1
+- type: word
+  text: conjecture
+  translation: opinion or conclusion based on incomplete information; speculation
+  example: At that stage it was pure conjecture.
+  example_translation: Nessa fase era pura especulação.
+  cefr_level: C1
+  frequency_rank: 2
+- type: word
+  text: discern
+  translation: to perceive or recognise (something subtle or not immediately obvious)
+  example: She could discern a hint of sarcasm in his tone.
+  example_translation: Ela conseguia perceber uma pitada de sarcasmo no tom dele.
+  cefr_level: C1
+  frequency_rank: 3
+- type: word
+  text: eloquent
+  translation: fluent and persuasive in speech or writing
+  example: He gave an eloquent speech at the ceremony.
+  example_translation: Ele fez um discurso eloquente na cerimônia.
+  cefr_level: C1
+  frequency_rank: 4
+- type: word
+  text: feasible
+  translation: possible and practical to achieve
+  example: Is it feasible to complete this by Friday?
+  example_translation: É viável terminar isso até sexta-feira?
+  cefr_level: C1
+  frequency_rank: 5
+- type: word
+  text: hitherto
+  translation: until now; until this point in time (formal)
+  example: This was a hitherto unknown species of insect.
+  example_translation: Era uma espécie de inseto até então desconhecida.
+  cefr_level: C1
+  frequency_rank: 6
+- type: word
+  text: implausible
+  translation: not seeming reasonable or probable
+  example: The alibi seemed highly implausible to the detective.
+  example_translation: O álibi parecia muito implausível para o detetive.
+  cefr_level: C1
+  frequency_rank: 7
+- type: word
+  text: juxtapose
+  translation: to place two things together in order to highlight their contrast
+  example: The exhibition juxtaposes traditional and modern art.
+  example_translation: A exposição coloca em contraste a arte tradicional e a moderna.
+  cefr_level: C1
+  frequency_rank: 8
+- type: word
+  text: lucid
+  translation: clear and easy to understand; mentally alert
+  example: Despite his age, he remained lucid and articulate.
+  example_translation: Apesar da idade, ele permanecia lúcido e articulado.
+  cefr_level: C1
+  frequency_rank: 9
+- type: word
+  text: mundane
+  translation: lacking interest or excitement; ordinary
+  example: She found the mundane tasks of office life tedious.
+  example_translation: Ela achava as tarefas mundanas da vida de escritório entediantes.
+  cefr_level: C1
+  frequency_rank: 10
+- type: word
+  text: nuance
+  translation: a subtle difference in meaning, expression, or sound
+  example: The translator had to capture every nuance of the original text.
+  example_translation: O tradutor teve de capturar cada nuance do texto original.
+  cefr_level: C1
+  frequency_rank: 11
+- type: word
+  text: oblivious
+  translation: not aware of or concerned about what is happening around one
+  example: He was completely oblivious to the tension in the room.
+  example_translation: Ele era completamente alheio à tensão na sala.
+  cefr_level: C1
+  frequency_rank: 12
+- type: word
+  text: paramount
+  translation: more important than anything else; supreme
+  example: Safety is of paramount importance on a construction site.
+  example_translation: A segurança é de suma importância num canteiro de obras.
+  cefr_level: C1
+  frequency_rank: 13
+- type: word
+  text: reconcile
+  translation: to make two opposing things consistent; to restore a friendly relationship
+  example: It was hard to reconcile his words with his actions.
+  example_translation: Era difícil conciliar suas palavras com suas ações.
+  cefr_level: C1
+  frequency_rank: 14
+- type: word
+  text: rhetoric
+  translation: persuasive language; language that sounds impressive but lacks substance
+  example: The politician's rhetoric failed to convince the voters.
+  example_translation: A retórica do político não conseguiu convencer os eleitores.
+  cefr_level: C1
+  frequency_rank: 15
+- type: word
+  text: scrutinize
+  translation: to examine or inspect closely and thoroughly
+  example: The committee will scrutinize every detail of the proposal.
+  example_translation: O comitê examinará cada detalhe da proposta minuciosamente.
+  cefr_level: C1
+  frequency_rank: 16
+- type: word
+  text: tenacious
+  translation: very determined; refusing to give up or let go
+  example: She was a tenacious negotiator who never backed down.
+  example_translation: Ela era uma negociadora tenaz que nunca recuava.
+  cefr_level: C1
+  frequency_rank: 17
+- type: word
+  text: undermine
+  translation: to weaken or damage something gradually and secretly
+  example: Constant criticism can undermine a person's confidence.
+  example_translation: A crítica constante pode minar a confiança de uma pessoa.
+  cefr_level: C1
+  frequency_rank: 18
+- type: word
+  text: viable
+  translation: capable of working successfully; feasible
+  example: Electric vehicles are now a viable alternative to petrol cars.
+  example_translation: Os veículos elétricos são agora uma alternativa viável aos carros a gasolina.
+  cefr_level: C1
+  frequency_rank: 19
+- type: word
+  text: wary
+  translation: feeling cautious about possible dangers or problems
+  example: Be wary of anyone who promises instant results.
+  example_translation: Desconfie de qualquer pessoa que prometa resultados imediatos.
+  cefr_level: C1
+  frequency_rank: 20
+- type: word
+  text: ambiguous
+  translation: open to more than one interpretation; not having one obvious meaning
+  example: The contract contained several ambiguous clauses.
+  example_translation: O contrato continha várias cláusulas ambíguas.
+  cefr_level: C1
+  frequency_rank: 21
+- type: word
+  text: benevolent
+  translation: well meaning and kindly; generous
+  example: The benevolent founder donated his entire fortune to charity.
+  example_translation: O fundador benevolente doou toda a sua fortuna a instituições de caridade.
+  cefr_level: C1
+  frequency_rank: 22
+- type: word
+  text: coherent
+  translation: logical and consistent; easy to understand
+  example: The argument was coherent and well-supported by evidence.
+  example_translation: O argumento era coerente e bem sustentado por evidências.
+  cefr_level: C1
+  frequency_rank: 23
+- type: word
+  text: disparity
+  translation: a great difference or inequality between things
+  example: The disparity in income between the two regions is striking.
+  example_translation: A disparidade de renda entre as duas regiões é marcante.
+  cefr_level: C1
+  frequency_rank: 24
+- type: word
+  text: erode
+  translation: to gradually reduce or destroy the strength or effect of something
+  example: Public trust in the institution had slowly eroded over time.
+  example_translation: A confiança pública na instituição tinha sido lentamente corroída ao longo do tempo.
+  cefr_level: C1
+  frequency_rank: 25
+- type: word
+  text: forthcoming
+  translation: about to happen or appear; willing to give information
+  example: He was not very forthcoming about the details of the deal.
+  example_translation: Ele não foi muito aberto sobre os detalhes do negócio.
+  cefr_level: C1
+  frequency_rank: 26
+- type: word
+  text: hypothetical
+  translation: based on a hypothesis; supposed or imagined
+  example: Let's consider a hypothetical scenario where the project fails.
+  example_translation: Vamos considerar um cenário hipotético em que o projeto fracassa.
+  cefr_level: C1
+  frequency_rank: 27
+- type: collocation
+  text: draw a distinction
+  translation: to make a clear difference between two things
+  example: It is important to draw a distinction between fact and opinion.
+  example_translation: É importante fazer uma distinção entre fato e opinião.
+  cefr_level: C1
+  frequency_rank: 28
+- type: collocation
+  text: come to terms with
+  translation: to accept a difficult or unpleasant situation
+  example: It took him years to come to terms with his diagnosis.
+  example_translation: Levou anos para ele aceitar seu diagnóstico.
+  cefr_level: C1
+  frequency_rank: 29
+- type: collocation
+  text: bear in mind
+  translation: to remember and consider a fact when making a decision
+  example: Bear in mind that prices may change without notice.
+  example_translation: Tenha em mente que os preços podem mudar sem aviso prévio.
+  cefr_level: C1
+  frequency_rank: 30
+- type: collocation
+  text: at the expense of
+  translation: by sacrificing or causing harm to something else
+  example: She pursued her career at the expense of her personal life.
+  example_translation: Ela perseguiu sua carreira à custa de sua vida pessoal.
+  cefr_level: C1
+  frequency_rank: 31
+- type: collocation
+  text: shed light on
+  translation: to help explain or clarify something
+  example: New evidence has shed light on the cause of the accident.
+  example_translation: Novas evidências esclareceram a causa do acidente.
+  cefr_level: C1
+  frequency_rank: 32
+- type: collocation
+  text: take precedence over
+  translation: to be more important than something else; to come first
+  example: Safety concerns must take precedence over cost savings.
+  example_translation: As preocupações com segurança devem ter precedência sobre a economia de custos.
+  cefr_level: C1
+  frequency_rank: 33
+- type: collocation
+  text: give rise to
+  translation: to cause or produce something, often a problem
+  example: The policy changes gave rise to widespread protests.
+  example_translation: As mudanças de política deram origem a protestos generalizados.
+  cefr_level: C1
+  frequency_rank: 34
+- type: collocation
+  text: fall short of
+  translation: to fail to reach a required level or standard
+  example: The results fell short of expectations.
+  example_translation: Os resultados ficaram aquém das expectativas.
+  cefr_level: C1
+  frequency_rank: 35
+- type: collocation
+  text: in the wake of
+  translation: after and as a result of a significant event
+  example: In the wake of the scandal, several officials resigned.
+  example_translation: Na esteira do escândalo, vários funcionários renunciaram.
+  cefr_level: C1
+  frequency_rank: 36
+- type: collocation
+  text: run counter to
+  translation: to contradict or be opposed to something
+  example: This decision runs counter to everything we stand for.
+  example_translation: Esta decisão vai contra tudo aquilo em que acreditamos.
+  cefr_level: C1
+  frequency_rank: 37
+- type: verb_form
+  text: should have done
+  translation: used to express regret or criticism about a past action
+  example: I should have checked the contract more carefully.
+  example_translation: Eu deveria ter verificado o contrato com mais cuidado.
+  cefr_level: C1
+  frequency_rank: 38
+- type: verb_form
+  text: be bound to
+  translation: to be certain or inevitable
+  example: There are bound to be some teething problems at first.
+  example_translation: É inevitável que haja alguns problemas iniciais no começo.
+  cefr_level: C1
+  frequency_rank: 39
+- type: verb_form
+  text: be prone to
+  translation: to have a tendency towards something, usually negative
+  example: She is prone to exaggerating when she is nervous.
+  example_translation: Ela tende a exagerar quando está nervosa.
+  cefr_level: C1
+  frequency_rank: 40
+- type: verb_form
+  text: be said to
+  translation: reportedly; it is claimed or believed that
+  example: The new treatment is said to have no serious side effects.
+  example_translation: Diz-se que o novo tratamento não tem efeitos colaterais graves.
+  cefr_level: C1
+  frequency_rank: 41
+- type: verb_form
+  text: tend to
+  translation: to have a regular habit or inclination
+  example: Introverts tend to prefer working alone.
+  example_translation: Os introvertidos tendem a preferir trabalhar sozinhos.
+  cefr_level: C1
+  frequency_rank: 42
+- type: verb_form
+  text: be worth doing
+  translation: to deserve the time and effort required
+  example: It is worth reading the fine print before you sign anything.
+  example_translation: Vale a pena ler as letras miúdas antes de assinar qualquer coisa.
+  cefr_level: C1
+  frequency_rank: 43
+- type: verb_form
+  text: let alone
+  translation: used to emphasise that something more extreme is even less likely
+  example: He cannot afford a holiday, let alone a new car.
+  example_translation: Ele não pode pagar por férias, muito menos por um carro novo.
+  cefr_level: C1
+  frequency_rank: 44
+- type: sentence_pattern
+  text: Not only ... but also ...
+  translation: double emphasis structure; used to add a stronger or surprising second point
+  example: Not only did she finish first, but she also set a new record.
+  example_translation: Ela não só terminou em primeiro, como também estabeleceu um novo recorde.
+  cefr_level: C1
+  frequency_rank: 45
+- type: sentence_pattern
+  text: No sooner had ... than ...
+  translation: immediately after; used to show two events in very quick succession
+  example: No sooner had I sat down than the phone rang.
+  example_translation: Mal me sentei e o telefone tocou.
+  cefr_level: C1
+  frequency_rank: 46
+- type: sentence_pattern
+  text: Were it not for ...
+  translation: formal conditional without 'if'; if it were not for
+  example: Were it not for your help, I would have failed the exam.
+  example_translation: Se não fosse pela sua ajuda, eu teria reprovado no exame.
+  cefr_level: C1
+  frequency_rank: 47
+- type: sentence_pattern
+  text: It is worth noting that ...
+  translation: used to draw attention to an important point (formal/academic)
+  example: It is worth noting that these figures are preliminary estimates.
+  example_translation: Vale notar que esses números são estimativas preliminares.
+  cefr_level: C1
+  frequency_rank: 48
+- type: sentence_pattern
+  text: Having said that, ...
+  translation: used to introduce a contrasting point after what was just stated
+  example: The film was long; having said that, every scene had a purpose.
+  example_translation: O filme era longo; dito isso, cada cena tinha um propósito.
+  cefr_level: C1
+  frequency_rank: 49
+- type: sentence_pattern
+  text: The extent to which ...
+  translation: used to express degree or how much something applies (formal/academic)
+  example: The extent to which this policy affects us remains to be seen.
+  example_translation: Em que medida esta política nos afeta ainda está por ser visto.
+  cefr_level: C1
+  frequency_rank: 50

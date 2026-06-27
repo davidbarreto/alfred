@@ -1,0 +1,63 @@
+# Grammar scope curriculum for it (Italian, A2 learner).
+# Status defaults to "deferred" — activate topics you are currently studying via the portal.
+it:
+- category: tense
+  value: present tense
+  priority: 1
+  status: deferred
+- category: tense
+  value: passato prossimo (avere)
+  priority: 2
+  status: deferred
+- category: tense
+  value: passato prossimo (essere)
+  priority: 3
+  status: deferred
+- category: tense
+  value: imperfetto
+  priority: 4
+  status: deferred
+- category: tense
+  value: futuro semplice
+  priority: 5
+  status: deferred
+- category: mood
+  value: imperative
+  priority: 6
+  status: deferred
+- category: verb_construction
+  value: modal verbs (potere, dovere, volere)
+  priority: 7
+  status: deferred
+- category: verb_construction
+  value: piacere construction
+  priority: 8
+  status: deferred
+- category: pronouns
+  value: direct object pronouns
+  priority: 9
+  status: deferred
+- category: pronouns
+  value: indirect object pronouns
+  priority: 10
+  status: deferred
+- category: pronouns
+  value: reflexive pronouns
+  priority: 11
+  status: deferred
+- category: articles
+  value: partitive article
+  priority: 12
+  status: deferred
+- category: negation
+  value: negation
+  priority: 13
+  status: deferred
+- category: questions
+  value: question formation
+  priority: 14
+  status: deferred
+- category: prepositions
+  value: prepositions (di, a, da, in, con, su)
+  priority: 15
+  status: deferred

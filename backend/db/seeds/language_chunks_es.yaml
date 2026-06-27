@@ -1,0 +1,353 @@
+# Vocabulary seed for es. Hand-crafted B1 entries.
+# seed_language_chunks.py loads this on startup (idempotent).
+es:
+- type: word
+  text: sin embargo
+  translation: however / nevertheless / yet
+  example: Estudié mucho; sin embargo, suspendí el examen.
+  example_translation: I studied a lot; however, I failed the exam.
+  cefr_level: B1
+  frequency_rank: 1
+- type: word
+  text: aunque
+  translation: although / even though / even if
+  example: Aunque llueva, iré al trabajo.
+  example_translation: Even if it rains, I will go to work.
+  cefr_level: B1
+  frequency_rank: 2
+- type: word
+  text: además
+  translation: furthermore / besides / in addition
+  example: Es barato y, además, muy cómodo.
+  example_translation: It's cheap and, moreover, very comfortable.
+  cefr_level: B1
+  frequency_rank: 3
+- type: word
+  text: por lo tanto
+  translation: therefore / so / consequently
+  example: Llegó tarde; por lo tanto, perdió la reunión.
+  example_translation: He arrived late; therefore, he missed the meeting.
+  cefr_level: B1
+  frequency_rank: 4
+- type: word
+  text: mientras tanto
+  translation: meanwhile / in the meantime
+  example: Cocino yo; mientras tanto, tú pones la mesa.
+  example_translation: I'll cook; meanwhile, you set the table.
+  cefr_level: B1
+  frequency_rank: 5
+- type: word
+  text: de hecho
+  translation: in fact / actually / as a matter of fact
+  example: De hecho, nunca he estado en París.
+  example_translation: In fact, I've never been to Paris.
+  cefr_level: B1
+  frequency_rank: 6
+- type: word
+  text: en cambio
+  translation: on the other hand / instead / whereas
+  example: A mí me gusta el frío; ella, en cambio, prefiere el calor.
+  example_translation: I like the cold; she, on the other hand, prefers the heat.
+  cefr_level: B1
+  frequency_rank: 7
+- type: word
+  text: a pesar de
+  translation: despite / in spite of
+  example: A pesar del cansancio, siguió trabajando.
+  example_translation: Despite the tiredness, she kept working.
+  cefr_level: B1
+  frequency_rank: 8
+- type: word
+  text: lograr
+  translation: to achieve / to manage to do / to succeed in
+  example: Por fin logró encontrar el trabajo que quería.
+  example_translation: She finally managed to find the job she wanted.
+  cefr_level: B1
+  frequency_rank: 9
+- type: word
+  text: resultar
+  translation: to turn out / to prove to be / to result in
+  example: Resultó ser más difícil de lo esperado.
+  example_translation: It turned out to be harder than expected.
+  cefr_level: B1
+  frequency_rank: 10
+- type: word
+  text: sin duda
+  translation: without doubt / undoubtedly / certainly
+  example: Sin duda, es el mejor restaurante de la ciudad.
+  example_translation: Without doubt, it's the best restaurant in the city.
+  cefr_level: B1
+  frequency_rank: 11
+- type: word
+  text: de vez en cuando
+  translation: from time to time / occasionally / every now and then
+  example: De vez en cuando me gusta leer poesía.
+  example_translation: From time to time I like to read poetry.
+  cefr_level: B1
+  frequency_rank: 12
+- type: word
+  text: a lo largo de
+  translation: throughout / over the course of / along
+  example: A lo largo de su carrera, ganó varios premios importantes.
+  example_translation: Throughout her career, she won several important awards.
+  cefr_level: B1
+  frequency_rank: 13
+- type: word
+  text: a partir de
+  translation: from / starting from / as of
+  example: A partir de mañana, empieza el nuevo curso.
+  example_translation: Starting from tomorrow, the new course begins.
+  cefr_level: B1
+  frequency_rank: 14
+- type: word
+  text: en cuanto a
+  translation: as for / regarding / when it comes to
+  example: En cuanto a los precios, aún no hemos decidido.
+  example_translation: As for the prices, we haven't decided yet.
+  cefr_level: B1
+  frequency_rank: 15
+- type: word
+  text: en principio
+  translation: in principle / in theory / initially
+  example: En principio estoy de acuerdo, pero necesito más información.
+  example_translation: In principle I agree, but I need more information.
+  cefr_level: B1
+  frequency_rank: 16
+- type: word
+  text: por otro lado
+  translation: on the other hand
+  example: El proyecto es caro; por otro lado, es muy necesario.
+  example_translation: The project is expensive; on the other hand, it is very necessary.
+  cefr_level: B1
+  frequency_rank: 17
+- type: word
+  text: quedarse
+  translation: to stay / to remain / to become (with adjectives)
+  example: Me quedé en casa todo el fin de semana.
+  example_translation: I stayed home all weekend.
+  cefr_level: B1
+  frequency_rank: 18
+- type: word
+  text: volver a + infinitivo
+  translation: to do something again
+  example: Nunca volveré a cometer ese mismo error.
+  example_translation: I will never make that same mistake again.
+  cefr_level: B1
+  frequency_rank: 19
+- type: word
+  text: dejar de + infinitivo
+  translation: to stop doing something
+  example: Dejé de fumar hace exactamente dos años.
+  example_translation: I stopped smoking exactly two years ago.
+  cefr_level: B1
+  frequency_rank: 20
+- type: word
+  text: ponerse a + infinitivo
+  translation: to start doing something (suddenly or unexpectedly)
+  example: Se puso a llorar sin ninguna razón aparente.
+  example_translation: She suddenly started crying for no apparent reason.
+  cefr_level: B1
+  frequency_rank: 21
+- type: word
+  text: seguir + gerundio
+  translation: to keep doing / to continue doing
+  example: Siguió hablando a pesar del ruido.
+  example_translation: He kept talking despite the noise.
+  cefr_level: B1
+  frequency_rank: 22
+- type: word
+  text: acabar de + infinitivo
+  translation: to have just done something
+  example: Acabo de llegar a casa, dame un momento.
+  example_translation: I've just arrived home, give me a moment.
+  cefr_level: B1
+  frequency_rank: 23
+- type: word
+  text: echar de menos
+  translation: to miss (someone or something)
+  example: Echo mucho de menos a mi familia cuando estoy lejos.
+  example_translation: I really miss my family when I'm far away.
+  cefr_level: B1
+  frequency_rank: 24
+- type: word
+  text: darse cuenta de
+  translation: to realise / to notice / to become aware of
+  example: Me di cuenta de que había olvidado las llaves en casa.
+  example_translation: I realised I had left my keys at home.
+  cefr_level: B1
+  frequency_rank: 25
+- type: word
+  text: a tiempo
+  translation: on time / in time
+  example: Llegamos justo a tiempo para el último vuelo.
+  example_translation: We arrived just in time for the last flight.
+  cefr_level: B1
+  frequency_rank: 26
+- type: word
+  text: hacer falta
+  translation: to be necessary / to be needed
+  example: Hace falta más tiempo para terminar este proyecto.
+  example_translation: More time is needed to finish this project.
+  cefr_level: B1
+  frequency_rank: 27
+- type: collocation
+  text: tener en cuenta
+  translation: to take into account / to keep in mind / to consider
+  example: Hay que tener en cuenta todos los factores antes de decidir.
+  example_translation: We need to take all factors into account before deciding.
+  cefr_level: B1
+  frequency_rank: 28
+- type: collocation
+  text: llevar a cabo
+  translation: to carry out / to implement / to accomplish
+  example: El gobierno llevó a cabo una reforma importante del sistema.
+  example_translation: The government carried out an important reform of the system.
+  cefr_level: B1
+  frequency_rank: 29
+- type: collocation
+  text: estar de acuerdo
+  translation: to agree / to be in agreement
+  example: No estoy de acuerdo con esa decisión en absoluto.
+  example_translation: I do not agree with that decision at all.
+  cefr_level: B1
+  frequency_rank: 30
+- type: collocation
+  text: tomar una decisión
+  translation: to make a decision
+  example: Hay que tomar una decisión antes del viernes.
+  example_translation: We need to make a decision before Friday.
+  cefr_level: B1
+  frequency_rank: 31
+- type: collocation
+  text: ponerse en contacto
+  translation: to get in touch / to contact
+  example: Por favor, póngase en contacto con nosotros lo antes posible.
+  example_translation: Please get in touch with us as soon as possible.
+  cefr_level: B1
+  frequency_rank: 32
+- type: collocation
+  text: hacerse cargo de
+  translation: to take charge of / to take responsibility for
+  example: Ella se hizo cargo de la situación de inmediato.
+  example_translation: She took charge of the situation immediately.
+  cefr_level: B1
+  frequency_rank: 33
+- type: collocation
+  text: dar por sentado
+  translation: to take for granted
+  example: No des por sentado que siempre estaré aquí para ayudarte.
+  example_translation: Don't take it for granted that I'll always be here to help you.
+  cefr_level: B1
+  frequency_rank: 34
+- type: collocation
+  text: sacar provecho de
+  translation: to make the most of / to take advantage of
+  example: Deberíamos sacar provecho de esta oportunidad única.
+  example_translation: We should make the most of this unique opportunity.
+  cefr_level: B1
+  frequency_rank: 35
+- type: collocation
+  text: perder el tiempo
+  translation: to waste time
+  example: No pierdas el tiempo con esas tonterías.
+  example_translation: Don't waste your time with that nonsense.
+  cefr_level: B1
+  frequency_rank: 36
+- type: collocation
+  text: llevar + gerundio (duración)
+  translation: to have been doing something for a period of time
+  example: ¡Llevas dos horas hablando por teléfono!
+  example_translation: You've been on the phone for two hours!
+  cefr_level: B1
+  frequency_rank: 37
+- type: verb_form
+  text: Espero que tengas
+  translation: I hope you have... (present subjunctive after esperar que)
+  example: Espero que tengas un viaje tranquilo y seguro.
+  example_translation: I hope you have a calm and safe journey.
+  cefr_level: B1
+  frequency_rank: 38
+- type: verb_form
+  text: Ojalá pudiera
+  translation: I wish I could... (imperfect subjunctive after ojalá)
+  example: Ojalá pudiera acompañarte, pero tengo demasiado trabajo.
+  example_translation: I wish I could go with you, but I have too much work.
+  cefr_level: B1
+  frequency_rank: 39
+- type: verb_form
+  text: ¿Qué habrías hecho?
+  translation: What would you have done? (conditional perfect)
+  example: En mi lugar, ¿qué habrías hecho tú?
+  example_translation: In my place, what would you have done?
+  cefr_level: B1
+  frequency_rank: 40
+- type: verb_form
+  text: Se dice que
+  translation: It is said that... / They say that... (passive with se)
+  example: Se dice que este restaurante es el mejor de la ciudad.
+  example_translation: It is said that this restaurant is the best in the city.
+  cefr_level: B1
+  frequency_rank: 41
+- type: verb_form
+  text: Se lo expliqué
+  translation: I explained it to him/her (combined direct and indirect object pronouns)
+  example: No entendía la situación, así que se lo expliqué con calma.
+  example_translation: He didn't understand the situation, so I explained it to him calmly.
+  cefr_level: B1
+  frequency_rank: 42
+- type: verb_form
+  text: Si lo hubiera sabido
+  translation: If I had known... (pluperfect subjunctive in third conditional)
+  example: Si lo hubiera sabido antes, no habría venido.
+  example_translation: If I had known earlier, I wouldn't have come.
+  cefr_level: B1
+  frequency_rank: 43
+- type: verb_form
+  text: Para que lo entiendas
+  translation: So that you understand (purpose clause with present subjunctive)
+  example: Te lo explico despacio para que lo entiendas mejor.
+  example_translation: I'll explain it slowly so that you understand it better.
+  cefr_level: B1
+  frequency_rank: 44
+- type: verb_form
+  text: Aunque sea difícil
+  translation: Even though / even if it is difficult (concessive subjunctive)
+  example: Aunque sea difícil, no voy a rendirme.
+  example_translation: Even if it is difficult, I'm not going to give up.
+  cefr_level: B1
+  frequency_rank: 45
+- type: sentence_pattern
+  text: Cuanto más ..., más ...
+  translation: The more ..., the more ... (proportional comparison)
+  example: Cuanto más estudias, más aprendes.
+  example_translation: The more you study, the more you learn.
+  cefr_level: B1
+  frequency_rank: 46
+- type: sentence_pattern
+  text: No solo ..., sino también ...
+  translation: Not only ..., but also ... (additive emphasis)
+  example: No solo habla español, sino también portugués e italiano.
+  example_translation: She not only speaks Spanish, but also Portuguese and Italian.
+  cefr_level: B1
+  frequency_rank: 47
+- type: sentence_pattern
+  text: Por mucho que + subjuntivo
+  translation: No matter how much... (concessive clause)
+  example: Por mucho que lo intente, no consigo entenderlo.
+  example_translation: No matter how much I try, I can't manage to understand it.
+  cefr_level: B1
+  frequency_rank: 48
+- type: sentence_pattern
+  text: Lo que más me gusta es ...
+  translation: What I like most is ... (nominalized relative clause)
+  example: Lo que más me gusta de España es la gastronomía.
+  example_translation: What I like most about Spain is the cuisine.
+  cefr_level: B1
+  frequency_rank: 49
+- type: sentence_pattern
+  text: Hace ... que + presente
+  translation: I have been ... for ... (duration up to the present)
+  example: Hace tres años que vivo en esta ciudad.
+  example_translation: I have been living in this city for three years.
+  cefr_level: B1
+  frequency_rank: 50

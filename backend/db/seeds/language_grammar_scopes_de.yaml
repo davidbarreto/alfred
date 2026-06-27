@@ -1,0 +1,63 @@
+# Grammar scope curriculum for de (German, A2 learner).
+# Status defaults to "deferred" — activate topics you are currently studying via the portal.
+de:
+- category: case
+  value: nominative case
+  priority: 1
+  status: deferred
+- category: case
+  value: accusative case
+  priority: 2
+  status: deferred
+- category: case
+  value: dative case
+  priority: 3
+  status: deferred
+- category: articles
+  value: definite and indefinite articles
+  priority: 4
+  status: deferred
+- category: verb_construction
+  value: modal verbs
+  priority: 5
+  status: deferred
+- category: tense
+  value: Perfekt with haben
+  priority: 6
+  status: deferred
+- category: tense
+  value: Perfekt with sein
+  priority: 7
+  status: deferred
+- category: tense
+  value: Präteritum (sein, haben, modals)
+  priority: 8
+  status: deferred
+- category: mood
+  value: Konjunktiv II
+  priority: 9
+  status: deferred
+- category: prepositions
+  value: prepositions with accusative
+  priority: 10
+  status: deferred
+- category: prepositions
+  value: prepositions with dative
+  priority: 11
+  status: deferred
+- category: verb_construction
+  value: separable verbs
+  priority: 12
+  status: deferred
+- category: word_order
+  value: word order (main and subordinate clauses)
+  priority: 13
+  status: deferred
+- category: mood
+  value: imperative
+  priority: 14
+  status: deferred
+- category: negation
+  value: negation (nicht, kein)
+  priority: 15
+  status: deferred

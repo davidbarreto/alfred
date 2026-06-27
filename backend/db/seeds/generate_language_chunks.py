@@ -29,6 +29,7 @@ TRACKS = [
     {"code": "es", "name": "Spanish",  "level": "A2", "challenge": "B1"},
     {"code": "it", "name": "Italian",  "level": "A1", "challenge": "A2"},
     {"code": "en", "name": "English",  "level": "B2", "challenge": "C1"},
+    {"code": "de", "name": "German",   "level": "A2", "challenge": "B1"},
 ]
 
 # (cefr_level, target_count) per track level

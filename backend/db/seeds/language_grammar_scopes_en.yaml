@@ -1,0 +1,51 @@
+# Grammar scope curriculum for en (English, C1 learner).
+# Status defaults to "deferred" — activate topics you are currently studying via the portal.
+en:
+- category: conditionals
+  value: third and mixed conditionals
+  priority: 1
+  status: deferred
+- category: modals
+  value: modal perfects
+  priority: 2
+  status: deferred
+- category: passive
+  value: advanced passive structures
+  priority: 3
+  status: deferred
+- category: inversion
+  value: emphatic inversion
+  priority: 4
+  status: deferred
+- category: clauses
+  value: cleft sentences
+  priority: 5
+  status: deferred
+- category: clauses
+  value: non-defining relative clauses
+  priority: 6
+  status: deferred
+- category: discourse
+  value: discourse markers
+  priority: 7
+  status: deferred
+- category: discourse
+  value: hedging language
+  priority: 8
+  status: deferred
+- category: reported_speech
+  value: complex reported speech
+  priority: 9
+  status: deferred
+- category: verb_patterns
+  value: complex verb patterns
+  priority: 10
+  status: deferred
+- category: nominalization
+  value: nominalization
+  priority: 11
+  status: deferred
+- category: style
+  value: register and formality
+  priority: 12
+  status: deferred

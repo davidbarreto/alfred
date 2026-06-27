@@ -1,0 +1,63 @@
+# Grammar scope curriculum for es (Spanish, B1 learner).
+# Status defaults to "deferred" — activate topics you are currently studying via the portal.
+es:
+- category: mood
+  value: present subjunctive
+  priority: 1
+  status: deferred
+- category: mood
+  value: imperfect subjunctive
+  priority: 2
+  status: deferred
+- category: tense
+  value: conditional
+  priority: 3
+  status: deferred
+- category: tense
+  value: conditional perfect
+  priority: 4
+  status: deferred
+- category: tense
+  value: preterite
+  priority: 5
+  status: deferred
+- category: tense
+  value: imperfect
+  priority: 6
+  status: deferred
+- category: tense
+  value: present perfect
+  priority: 7
+  status: deferred
+- category: tense
+  value: pluperfect
+  priority: 8
+  status: deferred
+- category: tense
+  value: future tense
+  priority: 9
+  status: deferred
+- category: verbs
+  value: ser vs estar
+  priority: 10
+  status: deferred
+- category: pronouns
+  value: combined object pronouns
+  priority: 11
+  status: deferred
+- category: passive
+  value: passive with se
+  priority: 12
+  status: deferred
+- category: verb_construction
+  value: verbal periphrases
+  priority: 13
+  status: deferred
+- category: clauses
+  value: relative clauses
+  priority: 14
+  status: deferred
+- category: discourse
+  value: connectors and discourse markers
+  priority: 15
+  status: deferred

@@ -1,0 +1,353 @@
+# Vocabulary seed for de. Hand-crafted A2 entries.
+# seed_language_chunks.py loads this on startup (idempotent).
+de:
+- type: word
+  text: natürlich
+  translation: of course / naturally
+  example: Natürlich helfe ich dir gerne!
+  example_translation: Of course I'll be happy to help you!
+  cefr_level: A2
+  frequency_rank: 1
+- type: word
+  text: eigentlich
+  translation: actually / in fact / really
+  example: Eigentlich wollte ich früher kommen.
+  example_translation: I actually wanted to come earlier.
+  cefr_level: A2
+  frequency_rank: 2
+- type: word
+  text: leider
+  translation: unfortunately
+  example: Leider kann ich heute nicht kommen.
+  example_translation: Unfortunately I can't come today.
+  cefr_level: A2
+  frequency_rank: 3
+- type: word
+  text: trotzdem
+  translation: nevertheless / anyway / still
+  example: Es regnet, aber wir gehen trotzdem spazieren.
+  example_translation: It's raining, but we're going for a walk anyway.
+  cefr_level: A2
+  frequency_rank: 4
+- type: word
+  text: vielleicht
+  translation: perhaps / maybe / possibly
+  example: Vielleicht komme ich morgen Abend vorbei.
+  example_translation: Perhaps I'll come by tomorrow evening.
+  cefr_level: A2
+  frequency_rank: 5
+- type: word
+  text: ungefähr
+  translation: approximately / about / around
+  example: Das kostet ungefähr zwanzig Euro.
+  example_translation: That costs approximately twenty euros.
+  cefr_level: A2
+  frequency_rank: 6
+- type: word
+  text: manchmal
+  translation: sometimes
+  example: Manchmal esse ich in der Kantine zu Mittag.
+  example_translation: Sometimes I eat lunch in the canteen.
+  cefr_level: A2
+  frequency_rank: 7
+- type: word
+  text: meistens
+  translation: mostly / usually / most of the time
+  example: Ich fahre meistens mit dem Fahrrad zur Arbeit.
+  example_translation: I usually cycle to work.
+  cefr_level: A2
+  frequency_rank: 8
+- type: word
+  text: sofort
+  translation: immediately / right away / at once
+  example: Ich komme sofort, warte kurz!
+  example_translation: I'll be right there, wait a moment!
+  cefr_level: A2
+  frequency_rank: 9
+- type: word
+  text: bald
+  translation: soon
+  example: Bis bald, wir sehen uns nächste Woche!
+  example_translation: See you soon, we'll meet next week!
+  cefr_level: A2
+  frequency_rank: 10
+- type: word
+  text: schon
+  translation: already / yet (in questions) / indeed (emphasis)
+  example: Hast du schon zu Abend gegessen?
+  example_translation: Have you already had dinner?
+  cefr_level: A2
+  frequency_rank: 11
+- type: word
+  text: noch
+  translation: still / yet / another / more
+  example: Ich bin noch nicht fertig mit der Arbeit.
+  example_translation: I'm not finished with work yet.
+  cefr_level: A2
+  frequency_rank: 12
+- type: word
+  text: nur
+  translation: only / just / merely
+  example: Ich habe nur fünf Minuten Zeit.
+  example_translation: I only have five minutes.
+  cefr_level: A2
+  frequency_rank: 13
+- type: word
+  text: doch
+  translation: yes (contradicting a negative) / after all / but / however
+  example: "Kommst du nicht? — Doch, ich komme!"
+  example_translation: "Aren't you coming? — Yes, I am coming!"
+  cefr_level: A2
+  frequency_rank: 14
+- type: word
+  text: endlich
+  translation: finally / at last
+  example: Endlich haben wir eine Lösung gefunden!
+  example_translation: We've finally found a solution!
+  cefr_level: A2
+  frequency_rank: 15
+- type: word
+  text: wieder
+  translation: again / back
+  example: Er ist wieder zu Hause angekommen.
+  example_translation: He has arrived home again.
+  cefr_level: A2
+  frequency_rank: 16
+- type: word
+  text: zusammen
+  translation: together
+  example: Lass uns zusammen frühstücken.
+  example_translation: Let's have breakfast together.
+  cefr_level: A2
+  frequency_rank: 17
+- type: word
+  text: deshalb
+  translation: therefore / that's why / for that reason
+  example: Er war krank, deshalb kam er nicht zur Arbeit.
+  example_translation: He was ill, that's why he didn't come to work.
+  cefr_level: A2
+  frequency_rank: 18
+- type: word
+  text: obwohl
+  translation: although / even though
+  example: Obwohl es spät war, blieb er noch lange auf.
+  example_translation: Although it was late, he stayed up for a long time.
+  cefr_level: A2
+  frequency_rank: 19
+- type: word
+  text: weil
+  translation: because (subordinating conjunction — verb goes to end)
+  example: Ich bin müde, weil ich schlecht geschlafen habe.
+  example_translation: I'm tired because I slept badly.
+  cefr_level: A2
+  frequency_rank: 20
+- type: word
+  text: wenn
+  translation: if / when / whenever (for conditions and recurring events)
+  example: Wenn du Hunger hast, mache ich gerne etwas zu essen.
+  example_translation: If you're hungry, I'll be happy to make something to eat.
+  cefr_level: A2
+  frequency_rank: 21
+- type: word
+  text: dass
+  translation: that (subordinating conjunction — verb goes to end)
+  example: Ich glaube, dass er morgen kommt.
+  example_translation: I think that he is coming tomorrow.
+  cefr_level: A2
+  frequency_rank: 22
+- type: word
+  text: außerdem
+  translation: besides / moreover / in addition
+  example: Es ist schön hier und außerdem sehr ruhig.
+  example_translation: It's nice here and moreover very quiet.
+  cefr_level: A2
+  frequency_rank: 23
+- type: word
+  text: danach
+  translation: afterwards / after that / then
+  example: Wir essen zuerst und gehen danach ins Kino.
+  example_translation: We'll eat first and go to the cinema afterwards.
+  cefr_level: A2
+  frequency_rank: 24
+- type: word
+  text: zuerst
+  translation: first / at first / to begin with
+  example: Zuerst war ich überrascht, aber dann war ich erleichtert.
+  example_translation: At first I was surprised, but then I was relieved.
+  cefr_level: A2
+  frequency_rank: 25
+- type: word
+  text: übrigens
+  translation: by the way / incidentally
+  example: Übrigens, kennst du schon die neuen Kollegen?
+  example_translation: By the way, have you already met the new colleagues?
+  cefr_level: A2
+  frequency_rank: 26
+- type: word
+  text: jedoch
+  translation: however / yet / but (formal)
+  example: Das Angebot war gut; wir haben es jedoch abgelehnt.
+  example_translation: The offer was good; however, we declined it.
+  cefr_level: A2
+  frequency_rank: 27
+- type: collocation
+  text: Es tut mir leid.
+  translation: I'm sorry. / I'm sorry to hear that.
+  example: Es tut mir wirklich leid, das zu hören.
+  example_translation: I'm really sorry to hear that.
+  cefr_level: A2
+  frequency_rank: 28
+- type: collocation
+  text: Ich hätte gern...
+  translation: I would like... (polite request using Konjunktiv II)
+  example: Ich hätte gern einen Kaffee und ein Stück Kuchen, bitte.
+  example_translation: I would like a coffee and a piece of cake, please.
+  cefr_level: A2
+  frequency_rank: 29
+- type: collocation
+  text: Auf jeden Fall
+  translation: definitely / by all means / in any case
+  example: Auf jeden Fall komme ich zur Party am Samstag.
+  example_translation: I'll definitely come to the party on Saturday.
+  cefr_level: A2
+  frequency_rank: 30
+- type: collocation
+  text: Im Moment
+  translation: at the moment / right now / currently
+  example: Im Moment bin ich leider sehr beschäftigt.
+  example_translation: I'm very busy at the moment, unfortunately.
+  cefr_level: A2
+  frequency_rank: 31
+- type: collocation
+  text: zum Beispiel
+  translation: for example / for instance
+  example: Ich treibe gern Sport, zum Beispiel Schwimmen und Radfahren.
+  example_translation: I like doing sport, for example swimming and cycling.
+  cefr_level: A2
+  frequency_rank: 32
+- type: collocation
+  text: mit dem Zug fahren
+  translation: to travel by train
+  example: Ich fahre lieber mit dem Zug als mit dem Auto.
+  example_translation: I prefer travelling by train rather than by car.
+  cefr_level: A2
+  frequency_rank: 33
+- type: collocation
+  text: einen Termin machen
+  translation: to make an appointment
+  example: Ich möchte gern einen Termin beim Zahnarzt machen.
+  example_translation: I would like to make an appointment with the dentist.
+  cefr_level: A2
+  frequency_rank: 34
+- type: collocation
+  text: Keine Ahnung.
+  translation: No idea. / I have no idea.
+  example: Keine Ahnung, wo ich meine Schlüssel gelassen habe.
+  example_translation: No idea where I left my keys.
+  cefr_level: A2
+  frequency_rank: 35
+- type: collocation
+  text: Wie lange dauert es?
+  translation: How long does it take? / How long does it last?
+  example: Wie lange dauert die Fahrt mit dem Zug bis zum Flughafen?
+  example_translation: How long does the train journey to the airport take?
+  cefr_level: A2
+  frequency_rank: 36
+- type: collocation
+  text: auf der einen Seite ... auf der anderen Seite
+  translation: on the one hand ... on the other hand
+  example: Auf der einen Seite ist es teuer, auf der anderen sehr praktisch.
+  example_translation: On the one hand it's expensive, on the other very practical.
+  cefr_level: A2
+  frequency_rank: 37
+- type: verb_form
+  text: Ich habe gegessen
+  translation: I ate / I have eaten (Perfekt with haben)
+  example: Ich habe heute noch nichts gegessen.
+  example_translation: I haven't eaten anything yet today.
+  cefr_level: A2
+  frequency_rank: 38
+- type: verb_form
+  text: Ich bin gefahren
+  translation: I drove / I have driven (Perfekt with sein)
+  example: Ich bin gestern mit dem Zug nach München gefahren.
+  example_translation: I went to Munich by train yesterday.
+  cefr_level: A2
+  frequency_rank: 39
+- type: verb_form
+  text: Ich muss gehen
+  translation: I have to go / I must go (müssen + infinitive)
+  example: Es tut mir leid, aber ich muss jetzt wirklich gehen.
+  example_translation: I'm sorry, but I really have to go now.
+  cefr_level: A2
+  frequency_rank: 40
+- type: verb_form
+  text: Ich kann ein bisschen Deutsch sprechen
+  translation: I can speak a little German (können + infinitive)
+  example: Ich kann ein bisschen Deutsch sprechen, aber noch nicht sehr gut.
+  example_translation: I can speak a little German, but not very well yet.
+  cefr_level: A2
+  frequency_rank: 41
+- type: verb_form
+  text: Ich würde gern...
+  translation: I would like to... (Konjunktiv II: polite wish or suggestion)
+  example: Ich würde gern mehr Zeit haben, um zu reisen.
+  example_translation: I would like to have more time to travel.
+  cefr_level: A2
+  frequency_rank: 42
+- type: verb_form
+  text: Darf ich...?
+  translation: May I...? / Am I allowed to...? (dürfen for permission)
+  example: Darf ich kurz fragen, wo die Toilette ist?
+  example_translation: May I ask where the toilet is?
+  cefr_level: A2
+  frequency_rank: 43
+- type: verb_form
+  text: Mach das Licht aus!
+  translation: Turn the light off! (separable verb: ausmachen — imperative)
+  example: Mach bitte das Licht aus, wenn du das Zimmer verlässt.
+  example_translation: Please turn the light off when you leave the room.
+  cefr_level: A2
+  frequency_rank: 44
+- type: verb_form
+  text: Ich war sehr müde
+  translation: I was very tired (Präteritum of sein)
+  example: Gestern war ich so müde, dass ich um neun Uhr eingeschlafen bin.
+  example_translation: Yesterday I was so tired that I fell asleep at nine o'clock.
+  cefr_level: A2
+  frequency_rank: 45
+- type: sentence_pattern
+  text: Ich weiß nicht, ob ...
+  translation: I don't know if / whether ... (indirect question — verb to end)
+  example: Ich weiß nicht, ob er heute noch ins Büro kommt.
+  example_translation: I don't know whether he is still coming to the office today.
+  cefr_level: A2
+  frequency_rank: 46
+- type: sentence_pattern
+  text: Je mehr ..., desto besser
+  translation: The more ..., the better (comparative correlation)
+  example: Je mehr du übst, desto besser wird dein Deutsch.
+  example_translation: The more you practise, the better your German will become.
+  cefr_level: A2
+  frequency_rank: 47
+- type: sentence_pattern
+  text: Nachdem ich ... hatte, ...
+  translation: After I had ... (temporal clause with pluperfect — verb to end)
+  example: Nachdem ich gegessen hatte, machte ich einen kurzen Spaziergang.
+  example_translation: After I had eaten, I went for a short walk.
+  cefr_level: A2
+  frequency_rank: 48
+- type: sentence_pattern
+  text: Wären Sie so freundlich, ... zu + Infinitiv?
+  translation: Would you be so kind as to ...? (very polite Konjunktiv II request)
+  example: Wären Sie so freundlich, das Formular auszufüllen?
+  example_translation: Would you be so kind as to fill in the form?
+  cefr_level: A2
+  frequency_rank: 49
+- type: sentence_pattern
+  text: Statt ... zu + Infinitiv
+  translation: Instead of ... (doing something) — infinitive clause with statt
+  example: Statt fernzusehen, lese ich abends lieber ein gutes Buch.
+  example_translation: Instead of watching TV, I prefer to read a good book in the evenings.
+  cefr_level: A2
+  frequency_rank: 50

@@ -1,0 +1,353 @@
+# Vocabulary seed for it. Hand-crafted A2 entries.
+# seed_language_chunks.py loads this on startup (idempotent).
+it:
+- type: word
+  text: sempre
+  translation: always
+  example: Mangio sempre la colazione prima di uscire.
+  example_translation: I always eat breakfast before going out.
+  cefr_level: A2
+  frequency_rank: 1
+- type: word
+  text: ancora
+  translation: still / yet / again
+  example: Non ho ancora finito i compiti.
+  example_translation: I haven't finished my homework yet.
+  cefr_level: A2
+  frequency_rank: 2
+- type: word
+  text: finalmente
+  translation: finally / at last
+  example: Finalmente sei arrivato, ti aspettavo!
+  example_translation: You've finally arrived, I was waiting for you!
+  cefr_level: A2
+  frequency_rank: 3
+- type: word
+  text: purtroppo
+  translation: unfortunately
+  example: Purtroppo non posso venire alla festa.
+  example_translation: Unfortunately I can't come to the party.
+  cefr_level: A2
+  frequency_rank: 4
+- type: word
+  text: subito
+  translation: immediately / right away
+  example: Vengo subito, aspetta un momento.
+  example_translation: I'll be right there, wait a moment.
+  cefr_level: A2
+  frequency_rank: 5
+- type: word
+  text: già
+  translation: already
+  example: Ho già mangiato, grazie.
+  example_translation: I've already eaten, thank you.
+  cefr_level: A2
+  frequency_rank: 6
+- type: word
+  text: presto
+  translation: soon / early / quickly
+  example: Ci vediamo presto!
+  example_translation: See you soon!
+  cefr_level: A2
+  frequency_rank: 7
+- type: word
+  text: tardi
+  translation: late
+  example: Mi dispiace, sono arrivato tardi.
+  example_translation: I'm sorry, I arrived late.
+  cefr_level: A2
+  frequency_rank: 8
+- type: word
+  text: insieme
+  translation: together
+  example: Usciamo insieme stasera?
+  example_translation: Shall we go out together tonight?
+  cefr_level: A2
+  frequency_rank: 9
+- type: word
+  text: comunque
+  translation: anyway / however / in any case
+  example: Comunque, devo andare adesso.
+  example_translation: Anyway, I have to go now.
+  cefr_level: A2
+  frequency_rank: 10
+- type: word
+  text: forse
+  translation: perhaps / maybe
+  example: Forse domani pioverà.
+  example_translation: Maybe it will rain tomorrow.
+  cefr_level: A2
+  frequency_rank: 11
+- type: word
+  text: però
+  translation: but / however
+  example: Mi piace questo posto, però è troppo caro.
+  example_translation: I like this place, but it's too expensive.
+  cefr_level: A2
+  frequency_rank: 12
+- type: word
+  text: anche
+  translation: also / too / even
+  example: Anche tu sei invitato alla cena.
+  example_translation: You are also invited to the dinner.
+  cefr_level: A2
+  frequency_rank: 13
+- type: word
+  text: solo
+  translation: only / just
+  example: Ho solo cinque euro in tasca.
+  example_translation: I only have five euros in my pocket.
+  cefr_level: A2
+  frequency_rank: 14
+- type: word
+  text: spesso
+  translation: often
+  example: Vado spesso al cinema il weekend.
+  example_translation: I often go to the cinema at the weekend.
+  cefr_level: A2
+  frequency_rank: 15
+- type: word
+  text: tanto
+  translation: so much / a lot / many
+  example: Ho tanto lavoro da fare questa settimana.
+  example_translation: I have so much work to do this week.
+  cefr_level: A2
+  frequency_rank: 16
+- type: word
+  text: poco
+  translation: a little / few / not much
+  example: Ho dormito poco stanotte.
+  example_translation: I slept little last night.
+  cefr_level: A2
+  frequency_rank: 17
+- type: word
+  text: troppo
+  translation: too / too much / too many
+  example: Questo caffè è troppo forte per me.
+  example_translation: This coffee is too strong for me.
+  cefr_level: A2
+  frequency_rank: 18
+- type: word
+  text: abbastanza
+  translation: enough / quite / rather
+  example: Hai dormito abbastanza stanotte?
+  example_translation: Did you sleep enough last night?
+  cefr_level: A2
+  frequency_rank: 19
+- type: word
+  text: davvero
+  translation: really / truly / indeed
+  example: Sei davvero bravissimo in cucina!
+  example_translation: You are really very good at cooking!
+  cefr_level: A2
+  frequency_rank: 20
+- type: word
+  text: quasi
+  translation: almost / nearly
+  example: Sono quasi pronto, aspettami.
+  example_translation: I'm almost ready, wait for me.
+  cefr_level: A2
+  frequency_rank: 21
+- type: word
+  text: ieri
+  translation: yesterday
+  example: Ieri sono andato al mercato con mia madre.
+  example_translation: Yesterday I went to the market with my mother.
+  cefr_level: A2
+  frequency_rank: 22
+- type: word
+  text: domani
+  translation: tomorrow
+  example: Ci vediamo domani mattina alle nove.
+  example_translation: See you tomorrow morning at nine.
+  cefr_level: A2
+  frequency_rank: 23
+- type: word
+  text: settimana
+  translation: week
+  example: La prossima settimana ho un esame importante.
+  example_translation: Next week I have an important exam.
+  cefr_level: A2
+  frequency_rank: 24
+- type: word
+  text: stagione
+  translation: season
+  example: Qual è la tua stagione preferita dell'anno?
+  example_translation: What is your favourite season of the year?
+  cefr_level: A2
+  frequency_rank: 25
+- type: word
+  text: scorso
+  translation: last (as in last week, last year)
+  example: L'anno scorso sono stato a Roma.
+  example_translation: Last year I was in Rome.
+  cefr_level: A2
+  frequency_rank: 26
+- type: word
+  text: prossimo
+  translation: next / nearest
+  example: Il prossimo autobus arriva tra dieci minuti.
+  example_translation: The next bus arrives in ten minutes.
+  cefr_level: A2
+  frequency_rank: 27
+- type: collocation
+  text: fare una passeggiata
+  translation: to go for a walk
+  example: Andiamo a fare una passeggiata nel parco?
+  example_translation: Shall we go for a walk in the park?
+  cefr_level: A2
+  frequency_rank: 28
+- type: collocation
+  text: fare la spesa
+  translation: to do the grocery shopping
+  example: Devo fare la spesa prima di tornare a casa.
+  example_translation: I need to do the shopping before going home.
+  cefr_level: A2
+  frequency_rank: 29
+- type: collocation
+  text: avere voglia di
+  translation: to feel like (doing something); to want
+  example: Ho voglia di mangiare una pizza stasera.
+  example_translation: I feel like eating a pizza tonight.
+  cefr_level: A2
+  frequency_rank: 30
+- type: collocation
+  text: avere fretta
+  translation: to be in a hurry
+  example: Scusa, ho fretta — devo correre!
+  example_translation: Sorry, I'm in a hurry — I have to run!
+  cefr_level: A2
+  frequency_rank: 31
+- type: collocation
+  text: di solito
+  translation: usually / as a rule
+  example: Di solito mi alzo alle sette di mattina.
+  example_translation: I usually get up at seven in the morning.
+  cefr_level: A2
+  frequency_rank: 32
+- type: collocation
+  text: per esempio
+  translation: for example
+  example: Mi piacciono molti sport, per esempio il nuoto e il tennis.
+  example_translation: I like many sports, for example swimming and tennis.
+  cefr_level: A2
+  frequency_rank: 33
+- type: collocation
+  text: in ritardo
+  translation: late / behind schedule
+  example: Il treno è in ritardo di venti minuti.
+  example_translation: The train is twenty minutes late.
+  cefr_level: A2
+  frequency_rank: 34
+- type: collocation
+  text: avere bisogno di
+  translation: to need (something or someone)
+  example: Ho bisogno di un medico subito.
+  example_translation: I need a doctor immediately.
+  cefr_level: A2
+  frequency_rank: 35
+- type: collocation
+  text: a volte
+  translation: sometimes / at times
+  example: A volte non capisco tutto quello che dicono.
+  example_translation: Sometimes I don't understand everything they say.
+  cefr_level: A2
+  frequency_rank: 36
+- type: collocation
+  text: il fine settimana
+  translation: the weekend
+  example: Cosa fai questo fine settimana?
+  example_translation: What are you doing this weekend?
+  cefr_level: A2
+  frequency_rank: 37
+- type: verb_form
+  text: Ho mangiato
+  translation: I ate / I have eaten (passato prossimo with avere)
+  example: Ho mangiato una pizza deliziosa ieri sera.
+  example_translation: I ate a delicious pizza last night.
+  cefr_level: A2
+  frequency_rank: 38
+- type: verb_form
+  text: Sono andato / Sono andata
+  translation: I went / I have gone (passato prossimo with essere)
+  example: Sono andato al supermercato stamattina presto.
+  example_translation: I went to the supermarket early this morning.
+  cefr_level: A2
+  frequency_rank: 39
+- type: verb_form
+  text: Stavo dormendo
+  translation: I was sleeping (imperfetto progressivo: stare + gerund)
+  example: Stavo dormendo quando ha suonato il telefono.
+  example_translation: I was sleeping when the phone rang.
+  cefr_level: A2
+  frequency_rank: 40
+- type: verb_form
+  text: Devo andare
+  translation: I have to go (dovere + infinitive)
+  example: Mi dispiace, devo andare adesso.
+  example_translation: I'm sorry, I have to go now.
+  cefr_level: A2
+  frequency_rank: 41
+- type: verb_form
+  text: Posso aiutarti?
+  translation: Can I help you? (potere + infinitive)
+  example: Posso aiutarti con i bagagli?
+  example_translation: Can I help you with the luggage?
+  cefr_level: A2
+  frequency_rank: 42
+- type: verb_form
+  text: Mi piace
+  translation: I like it (piacere with singular subject)
+  example: Mi piace molto la musica classica.
+  example_translation: I really like classical music.
+  cefr_level: A2
+  frequency_rank: 43
+- type: verb_form
+  text: Mi piacciono
+  translation: I like them (piacere with plural subject)
+  example: Mi piacciono i film d'azione e di avventura.
+  example_translation: I like action and adventure films.
+  cefr_level: A2
+  frequency_rank: 44
+- type: verb_form
+  text: Mi chiamo
+  translation: My name is (chiamarsi — reflexive)
+  example: Mi chiamo Luca. E tu, come ti chiami?
+  example_translation: My name is Luca. And you, what's your name?
+  cefr_level: A2
+  frequency_rank: 45
+- type: sentence_pattern
+  text: Hai voglia di...?
+  translation: Do you feel like...? / Would you like to...?
+  example: Hai voglia di uscire a prendere un caffè?
+  example_translation: Do you feel like going out for a coffee?
+  cefr_level: A2
+  frequency_rank: 46
+- type: sentence_pattern
+  text: Non riesco a + infinito
+  translation: I can't manage to... / I'm unable to...
+  example: Non riesco a capire questa parola, puoi spiegarmela?
+  example_translation: I can't manage to understand this word, can you explain it to me?
+  cefr_level: A2
+  frequency_rank: 47
+- type: sentence_pattern
+  text: Quanto tempo ci vuole?
+  translation: How long does it take?
+  example: Quanto tempo ci vuole per arrivare al centro?
+  example_translation: How long does it take to get to the city centre?
+  cefr_level: A2
+  frequency_rank: 48
+- type: sentence_pattern
+  text: Ci vuole / Ci vogliono
+  translation: It takes / They are needed (impersonal expression of time or necessity)
+  example: Ci vogliono due ore per andare da Roma a Napoli in treno.
+  example_translation: It takes two hours to go from Rome to Naples by train.
+  cefr_level: A2
+  frequency_rank: 49
+- type: sentence_pattern
+  text: Spero che + congiuntivo
+  translation: I hope that... (followed by subjunctive)
+  example: Spero che tu stia bene e che tutto vada bene.
+  example_translation: I hope you are well and that everything is going well.
+  cefr_level: A2
+  frequency_rank: 50

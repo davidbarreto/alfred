@@ -64,7 +64,7 @@ class SessionService:
             session_type="shadowing",
             feeds_srs=feeds_srs,
             audio_ref=audio_ref,
-            gemini_feedback_json=data.gemini_feedback_json,
+            ai_feedback_json=data.ai_feedback_json,
             quality_score=data.quality_score,
             transcript_or_notes=data.transcript_or_notes,
         )
@@ -85,7 +85,7 @@ class SessionService:
             session_type=data.session_type,
             feeds_srs=feeds_srs,
             audio_ref=data.audio_ref,
-            gemini_feedback_json=data.gemini_feedback_json,
+            ai_feedback_json=data.ai_feedback_json,
             quality_score=data.quality_score,
             transcript_or_notes=data.transcript_or_notes,
         )
@@ -96,8 +96,8 @@ class SessionService:
 
     async def get_daily_progress(self, track_id: int | None = None) -> list[DailyProgressRead]:
         """Return today's SRS completion progress per active track."""
-        from app.features.language.tracks.schemas import TrackFilters as TF
-        tracks = await self._track_repo.get_tracks(type("F", (), {"active_only": True})())
+        from app.features.language.tracks.schemas import TrackFilters
+        tracks = await self._track_repo.get_tracks(TrackFilters(active_only=True))
         if track_id is not None:
             tracks = [t for t in tracks if t.id == track_id]
 

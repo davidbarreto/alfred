@@ -37,7 +37,7 @@ class SessionRepository:
         session_type: str,
         feeds_srs: bool,
         audio_ref: str | None = None,
-        gemini_feedback_json: dict | None = None,
+        ai_feedback_json: dict | None = None,
         quality_score: float | None = None,
         transcript_or_notes: str | None = None,
     ) -> LearningSession:
@@ -47,7 +47,7 @@ class SessionRepository:
             session_type=session_type,
             feeds_srs=feeds_srs,
             audio_ref=audio_ref,
-            gemini_feedback_json=gemini_feedback_json,
+            ai_feedback_json=ai_feedback_json,
             quality_score=quality_score,
             transcript_or_notes=transcript_or_notes,
         )

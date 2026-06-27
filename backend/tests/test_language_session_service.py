@@ -19,7 +19,7 @@ def _make_session_orm(**kwargs):
     orm.session_type = kwargs.get("session_type", "srs_review")
     orm.feeds_srs = kwargs.get("feeds_srs", True)
     orm.audio_ref = kwargs.get("audio_ref", None)
-    orm.gemini_feedback_json = kwargs.get("gemini_feedback_json", None)
+    orm.ai_feedback_json = kwargs.get("ai_feedback_json", None)
     orm.quality_score = kwargs.get("quality_score", 3.5)
     orm.transcript_or_notes = kwargs.get("transcript_or_notes", None)
     orm.created_at = kwargs.get("created_at", datetime(2026, 6, 25, tzinfo=timezone.utc))

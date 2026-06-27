@@ -22,7 +22,7 @@ class LearningSession(Base):
     session_type: Mapped[str] = mapped_column(String(20), nullable=False)
     feeds_srs: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     audio_ref: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
-    gemini_feedback_json: Mapped[Optional[dict]] = mapped_column(JSONB, nullable=True)
+    ai_feedback_json: Mapped[Optional[dict]] = mapped_column(JSONB, nullable=True)
     quality_score: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
     transcript_or_notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(

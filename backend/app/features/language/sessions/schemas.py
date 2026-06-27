@@ -12,7 +12,7 @@ class SessionCreate(BaseModel):
     chunk_id: int | None = None
     session_type: SessionType
     audio_ref: str | None = None
-    gemini_feedback_json: dict[str, Any] | None = None
+    ai_feedback_json: dict[str, Any] | None = None
     quality_score: float | None = None
     transcript_or_notes: str | None = None
 
@@ -34,7 +34,7 @@ class ShadowingSessionCreate(BaseModel):
     track_id: int
     chunk_id: int | None = None
     quality_score: float | None = None
-    gemini_feedback_json: dict[str, Any] | None = None
+    ai_feedback_json: dict[str, Any] | None = None
     transcript_or_notes: str | None = None
 
 
@@ -45,7 +45,7 @@ class SessionRead(BaseModel):
     session_type: str
     feeds_srs: bool
     audio_ref: str | None
-    gemini_feedback_json: dict[str, Any] | None
+    ai_feedback_json: dict[str, Any] | None
     quality_score: float | None
     transcript_or_notes: str | None
     created_at: datetime

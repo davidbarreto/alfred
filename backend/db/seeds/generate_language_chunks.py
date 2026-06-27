@@ -61,6 +61,13 @@ def _load_existing(code: str) -> tuple[list[dict], set[str], list[str]]:
     return entries, seen, recent
 
 
+def _quoted_str_representer(dumper: yaml.Dumper, value: str) -> yaml.ScalarNode:
+    # Plain scalars containing ': ' are ambiguous in YAML (looks like a mapping).
+    # Force single-quoted style for those strings so the file always round-trips.
+    style = "'" if ": " in value else None
+    return dumper.represent_scalar("tag:yaml.org,2002:str", value, style=style)
+
+
 def _save(code: str, entries: list[dict]) -> None:
     path = _yaml_path(code)
     header = (
@@ -68,8 +75,10 @@ def _save(code: str, entries: list[dict]) -> None:
         f"# Re-run generate_language_chunks.py to append more entries.\n"
         f"# seed_language_chunks.py loads this on startup (idempotent).\n"
     )
+    dumper = yaml.SafeDumper
+    dumper.add_representer(str, _quoted_str_representer)
     path.write_text(
-        header + yaml.dump({code: entries}, allow_unicode=True, default_flow_style=False, sort_keys=False)
+        header + yaml.dump({code: entries}, allow_unicode=True, default_flow_style=False, sort_keys=False, Dumper=dumper)
     )
 
 

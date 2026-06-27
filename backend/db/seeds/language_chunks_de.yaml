@@ -290,7 +290,7 @@ de:
   frequency_rank: 41
 - type: verb_form
   text: Ich würde gern...
-  translation: I would like to... (Konjunktiv II: polite wish or suggestion)
+  translation: 'I would like to... (Konjunktiv II: polite wish or suggestion)'
   example: Ich würde gern mehr Zeit haben, um zu reisen.
   example_translation: I would like to have more time to travel.
   cefr_level: A2
@@ -304,7 +304,7 @@ de:
   frequency_rank: 43
 - type: verb_form
   text: Mach das Licht aus!
-  translation: Turn the light off! (separable verb: ausmachen — imperative)
+  translation: 'Turn the light off! (separable verb: ausmachen — imperative)'
   example: Mach bitte das Licht aus, wenn du das Zimmer verlässt.
   example_translation: Please turn the light off when you leave the room.
   cefr_level: A2

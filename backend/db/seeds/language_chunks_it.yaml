@@ -276,7 +276,7 @@ it:
   frequency_rank: 39
 - type: verb_form
   text: Stavo dormendo
-  translation: I was sleeping (imperfetto progressivo: stare + gerund)
+  translation: 'I was sleeping (imperfetto progressivo: stare + gerund)'
   example: Stavo dormendo quando ha suonato il telefono.
   example_translation: I was sleeping when the phone rang.
   cefr_level: A2

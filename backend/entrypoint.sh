@@ -13,6 +13,9 @@ python db/seeds/seed_intents.py
 echo "Seeding language tracks..."
 python db/seeds/seed_language_tracks.py
 
+echo "Seeding grammar scopes..."
+python db/seeds/seed_grammar_scopes.py
+
 echo "Seeding language chunks..."
 python db/seeds/seed_language_chunks.py
 

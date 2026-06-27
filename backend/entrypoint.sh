@@ -10,6 +10,9 @@ python -c "from sentence_transformers import SentenceTransformer; SentenceTransf
 echo "Seeding intent examples..."
 python db/seeds/seed_intents.py
 
+echo "Seeding language tracks..."
+python db/seeds/seed_language_tracks.py
+
 echo "Seeding language chunks..."
 python db/seeds/seed_language_chunks.py
 

@@ -1,3 +1,4 @@
+import json
 from collections import Counter, defaultdict
 from datetime import date, timedelta
 
@@ -25,6 +26,8 @@ _SOURCE_LABEL = {
     "llm_suggested": "AI suggested",
     "reading": "Reading",
 }
+
+_CHUNK_PAGE_SIZE = 50
 
 
 def _flag(code: str) -> str:
@@ -78,6 +81,133 @@ def _build_heatmap(sessions: list, today: date) -> list:
     return weeks
 
 
+def _compute_streaks(all_sessions: list, today: date) -> dict:
+    srs_days: set[date] = {
+        date.fromisoformat(s["created_at"][:10])
+        for s in all_sessions if s.get("feeds_srs")
+    }
+    if not srs_days:
+        return {"current": 0, "longest": 0}
+    longest = _longest_streak(srs_days)
+    yesterday = today - timedelta(days=1)
+    anchor = today if today in srs_days else (yesterday if yesterday in srs_days else None)
+    if anchor is None:
+        return {"current": 0, "longest": longest}
+    current = 0
+    d = anchor
+    while d in srs_days:
+        current += 1
+        d -= timedelta(days=1)
+    return {"current": current, "longest": longest}
+
+
+def _longest_streak(srs_days: set[date]) -> int:
+    if not srs_days:
+        return 0
+    sorted_days = sorted(srs_days)
+    longest = current = 1
+    for i in range(1, len(sorted_days)):
+        if (sorted_days[i] - sorted_days[i - 1]).days == 1:
+            current += 1
+            longest = max(longest, current)
+        else:
+            current = 1
+    return longest
+
+
+def _weekly_stats(all_sessions: list, today: date, n_weeks: int = 8) -> list[dict]:
+    """Per-week retention rate and average Gemini score, oldest first."""
+    result = []
+    for w in range(n_weeks - 1, -1, -1):
+        week_start = today - timedelta(weeks=w, days=today.weekday())
+        week_end = week_start + timedelta(days=6)
+
+        week_srs = [
+            s for s in all_sessions
+            if s.get("feeds_srs") and s.get("quality_score") is not None
+            and week_start <= date.fromisoformat(s["created_at"][:10]) <= week_end
+        ]
+        week_shadow = [
+            s for s in all_sessions
+            if s.get("session_type") == "shadowing" and s.get("quality_score") is not None
+            and week_start <= date.fromisoformat(s["created_at"][:10]) <= week_end
+        ]
+
+        retention = (
+            round(sum(1 for s in week_srs if s["quality_score"] >= 2.5) / len(week_srs) * 100)
+            if week_srs else None
+        )
+        gemini_avg = (
+            round(sum(s["quality_score"] for s in week_shadow) / len(week_shadow), 2)
+            if week_shadow else None
+        )
+
+        result.append({
+            "label": week_start.strftime("%b %d"),
+            "retention": retention,
+            "gemini_avg": gemini_avg,
+            "srs_count": len(week_srs),
+            "shadow_count": len(week_shadow),
+        })
+    return result
+
+
+def _daily_reviews(all_sessions: list, today: date, n_days: int = 14) -> list[dict]:
+    result = []
+    for d in range(n_days - 1, -1, -1):
+        day = today - timedelta(days=d)
+        iso = day.isoformat()
+        count = sum(1 for s in all_sessions if s.get("feeds_srs") and s["created_at"][:10] == iso)
+        result.append({"label": day.strftime("%b %d"), "count": count})
+    return result
+
+
+def _ease_distribution(all_chunks: list) -> list[dict]:
+    buckets = [
+        {"label": "Very Easy", "range": "<2.5", "count": 0, "color": "#22c55e"},
+        {"label": "Easy",      "range": "2.5–3.5", "count": 0, "color": "#86efac"},
+        {"label": "Medium",    "range": "3.5–5.0", "count": 0, "color": "#fbbf24"},
+        {"label": "Hard",      "range": "5.0–6.5", "count": 0, "color": "#f97316"},
+        {"label": "Very Hard", "range": ">6.5",  "count": 0, "color": "#ef4444"},
+    ]
+    for c in all_chunks:
+        d = c.get("difficulty", 5.0)
+        if d < 2.5:
+            buckets[0]["count"] += 1
+        elif d < 3.5:
+            buckets[1]["count"] += 1
+        elif d < 5.0:
+            buckets[2]["count"] += 1
+        elif d < 6.5:
+            buckets[3]["count"] += 1
+        else:
+            buckets[4]["count"] += 1
+    return buckets
+
+
+def _interval_distribution(all_chunks: list) -> list[dict]:
+    buckets = [
+        {"label": "New",    "range": "<1d",    "count": 0},
+        {"label": "Short",  "range": "1–7d",   "count": 0},
+        {"label": "Medium", "range": "7–30d",  "count": 0},
+        {"label": "Long",   "range": "30–90d", "count": 0},
+        {"label": "Mature", "range": ">90d",   "count": 0},
+    ]
+    for c in all_chunks:
+        s = c.get("stability", 0.0)
+        if s < 1:
+            buckets[0]["count"] += 1
+        elif s < 7:
+            buckets[1]["count"] += 1
+        elif s < 30:
+            buckets[2]["count"] += 1
+        elif s < 90:
+            buckets[3]["count"] += 1
+        else:
+            buckets[4]["count"] += 1
+    return buckets
+
+
 async def _safe_get(path: str, params: dict | None = None) -> list | dict:
     try:
         return await api.get(path, params=params or {})
@@ -95,10 +225,10 @@ async def hub(request: Request):
 
     triage_counts: dict[int, int] = {}
     for track in tracks:
-        chunks = await _safe_get("/language/chunks/", {
-            "track_id": track["id"], "status": "pending_triage", "limit": 1
+        result = await _safe_get("/language/chunks/count", {
+            "track_id": track["id"], "status": "pending_triage"
         })
-        triage_counts[track["id"]] = len(chunks)
+        triage_counts[track["id"]] = result.get("count", 0) if isinstance(result, dict) else 0
 
     total_triage = sum(triage_counts.values())
 
@@ -187,28 +317,25 @@ async def insights_page(request: Request):
     today = date.today()
 
     track_stats = []
-    all_sessions = []
+    all_sessions: list = []
+    all_active_chunks: list = []
+
     for track in tracks:
         sessions = await _safe_get("/language/sessions/", {
             "track_id": track["id"], "limit": 500
         })
         all_sessions.extend(sessions)
 
-        chunks_active = await _safe_get("/language/chunks/", {
-            "track_id": track["id"], "status": "active", "limit": 1
+        active_chunks = await _safe_get("/language/chunks/", {
+            "track_id": track["id"], "status": "active", "limit": 500
         })
+        all_active_chunks.extend(active_chunks)
+
         chunks_leech = await _safe_get("/language/chunks/", {
             "track_id": track["id"], "is_leech": "true", "limit": 200
         })
 
         retention = _retention_rate(sessions)
-
-        sessions_by_week: Counter = Counter()
-        for s in sessions:
-            if s.get("feeds_srs"):
-                d = date.fromisoformat(s["created_at"][:10])
-                week_start = d - timedelta(days=d.weekday())
-                sessions_by_week[week_start.isoformat()] += 1
 
         track_stats.append({
             "id": track["id"],
@@ -220,7 +347,7 @@ async def insights_page(request: Request):
             "active": track["active"],
             "retention": retention,
             "leech_count": len(chunks_leech),
-            "sessions_by_week": dict(sessions_by_week),
+            "active_count": len(active_chunks),
         })
 
     heatmap = _build_heatmap(all_sessions, today)
@@ -229,12 +356,23 @@ async def insights_page(request: Request):
     total_sessions = len(all_sessions)
     total_srs = sum(1 for s in all_sessions if s.get("feeds_srs"))
 
+    streaks = _compute_streaks(all_sessions, today)
+    weekly_stats = _weekly_stats(all_sessions, today)
+    daily_reviews = _daily_reviews(all_sessions, today)
+    ease_dist = _ease_distribution(all_active_chunks)
+    interval_dist = _interval_distribution(all_active_chunks)
+
     return templates.TemplateResponse(request, "language_insights.html", {
         "track_stats": track_stats,
         "heatmap_weeks": heatmap,
         "type_counts": dict(type_counts),
         "total_sessions": total_sessions,
         "total_srs": total_srs,
+        "streaks": streaks,
+        "weekly_stats_json": json.dumps(weekly_stats),
+        "daily_reviews_json": json.dumps(daily_reviews),
+        "ease_dist_json": json.dumps(ease_dist),
+        "interval_dist_json": json.dumps(interval_dist),
     })
 
 
@@ -274,22 +412,32 @@ async def chunk_browser(code: str, request: Request):
         return HTMLResponse("<p>Track not found.</p>", status_code=404)
 
     qp = request.query_params
-    params: dict = {"track_id": track["id"], "limit": 100}
     active_status = qp.get("status", "active")
     active_type = qp.get("type", "")
     leech_only = qp.get("leech") == "1"
     due_only = qp.get("due") == "1"
+    page = max(1, int(qp.get("page", "1")))
 
+    filter_params: dict = {"track_id": track["id"]}
     if active_status != "ALL":
-        params["status"] = active_status
+        filter_params["status"] = active_status
     if active_type:
-        params["chunk_type"] = active_type
+        filter_params["chunk_type"] = active_type
     if leech_only:
-        params["is_leech"] = "true"
+        filter_params["is_leech"] = "true"
     if due_only:
-        params["due_only"] = "true"
+        filter_params["due_only"] = "true"
 
-    chunks = await _safe_get("/language/chunks/", params)
+    count_result = await _safe_get("/language/chunks/count", filter_params)
+    total_count = count_result.get("count", 0) if isinstance(count_result, dict) else 0
+    total_pages = max(1, (total_count + _CHUNK_PAGE_SIZE - 1) // _CHUNK_PAGE_SIZE)
+    page = min(page, total_pages)
+
+    chunks = await _safe_get("/language/chunks/", {
+        **filter_params,
+        "limit": _CHUNK_PAGE_SIZE,
+        "offset": (page - 1) * _CHUNK_PAGE_SIZE,
+    })
     for c in chunks:
         c["ease_color"] = _ease_color(c.get("difficulty", 5.0))
 
@@ -301,6 +449,10 @@ async def chunk_browser(code: str, request: Request):
         "active_type": active_type,
         "leech_only": leech_only,
         "due_only": due_only,
+        "page": page,
+        "total_pages": total_pages,
+        "total_count": total_count,
+        "page_size": _CHUNK_PAGE_SIZE,
     })
 
 
@@ -347,8 +499,8 @@ async def _fetch_track_data(track_id: int):
 async def _count_chunks_by_status(track_id: int) -> dict:
     counts = {}
     for status in ("active", "pending_triage", "suspended"):
-        chunks = await _safe_get("/language/chunks/", {
-            "track_id": track_id, "status": status, "limit": 1
+        result = await _safe_get("/language/chunks/count", {
+            "track_id": track_id, "status": status
         })
-        counts[status] = len(chunks)
+        counts[status] = result.get("count", 0) if isinstance(result, dict) else 0
     return counts

@@ -28,9 +28,24 @@ class ChunkRepository:
             query = query.where(Chunk.is_leech == filters.is_leech)
         if filters.due_only:
             query = query.where(Chunk.due_at <= func.now())
-        query = query.order_by(Chunk.due_at.asc()).limit(filters.limit)
+        query = query.order_by(Chunk.due_at.asc()).offset(filters.offset).limit(filters.limit)
         result = await self._session.execute(query)
         return list(result.scalars().all())
+
+    async def count_chunks(self, filters: ChunkFilters) -> int:
+        query = select(func.count(Chunk.id))
+        if filters.track_id is not None:
+            query = query.where(Chunk.track_id == filters.track_id)
+        if filters.status != "ALL":
+            query = query.where(Chunk.status == filters.status)
+        if filters.chunk_type is not None:
+            query = query.where(Chunk.chunk_type == filters.chunk_type)
+        if filters.is_leech is not None:
+            query = query.where(Chunk.is_leech == filters.is_leech)
+        if filters.due_only:
+            query = query.where(Chunk.due_at <= func.now())
+        result = await self._session.execute(query)
+        return result.scalar_one()
 
     async def get_due_chunks_for_track(self, track_id: int, limit: int) -> list[Chunk]:
         """Return active due chunks ordered by Pareto priority (NULL rank first, then ASC)."""

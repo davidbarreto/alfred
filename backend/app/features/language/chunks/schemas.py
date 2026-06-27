@@ -73,6 +73,7 @@ class ChunkFilters:
         is_leech: Annotated[bool | None, Query()] = None,
         due_only: Annotated[bool, Query()] = False,
         limit: Annotated[int, Query(ge=1, le=500)] = 100,
+        offset: Annotated[int, Query(ge=0)] = 0,
     ) -> None:
         self.track_id = track_id
         self.status = status
@@ -80,6 +81,11 @@ class ChunkFilters:
         self.is_leech = is_leech
         self.due_only = due_only
         self.limit = limit
+        self.offset = offset
+
+
+class ChunkCountRead(BaseModel):
+    count: int
 
 
 class DailyBatchRead(BaseModel):

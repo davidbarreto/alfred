@@ -129,6 +129,21 @@ class TestApplySrsReview:
         assert update_kwargs["is_leech"] is True
 
 
+class TestCountChunks:
+    async def test_returns_count_from_repo(self, service):
+        service._repo.count_chunks.return_value = 42
+        filters = ChunkFilters(track_id=1, status="active")
+        result = await service.count_chunks(filters)
+        service._repo.count_chunks.assert_called_once_with(filters)
+        assert result == 42
+
+    async def test_returns_zero_when_no_chunks(self, service):
+        service._repo.count_chunks.return_value = 0
+        filters = ChunkFilters(track_id=99, status="active")
+        result = await service.count_chunks(filters)
+        assert result == 0
+
+
 class TestGetDailyBatch:
     async def test_returns_batch_per_active_track(self, service):
         service._track_repo.get_tracks.return_value = [

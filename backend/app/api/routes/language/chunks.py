@@ -3,6 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException, Response, status
 from app.api.auth import require_auth
 from app.dependencies import ChunkServiceDep
 from app.features.language.chunks.schemas import (
+    ChunkCountRead,
     ChunkCreate,
     ChunkFilters,
     ChunkRead,
@@ -29,6 +30,12 @@ async def create_chunk(request: ChunkCreate, service: ChunkServiceDep):
 @router.get("/", response_model=list[ChunkRead])
 async def get_chunks(service: ChunkServiceDep, filters: ChunkFilters = Depends()):
     return await service.get_chunks(filters)
+
+
+@router.get("/count", response_model=ChunkCountRead)
+async def count_chunks(service: ChunkServiceDep, filters: ChunkFilters = Depends()):
+    count = await service.count_chunks(filters)
+    return ChunkCountRead(count=count)
 
 
 @router.get("/{chunk_id}", response_model=ChunkRead)

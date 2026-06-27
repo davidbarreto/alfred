@@ -16,12 +16,16 @@
 
   <div class="flex items-center justify-between">
     <h1 class="text-base font-semibold text-gray-900">{{ flag }} {{ track.name }} — Chunks</h1>
-    <p class="text-xs text-gray-400">{{ chunks | length }} shown</p>
+    <p class="text-xs text-gray-400">
+      {% set from = (page - 1) * page_size + 1 %}
+      {% set to = [page * page_size, total_count] | min %}
+      {% if total_count > 0 %}{{ from }}–{{ to }} of {{ total_count }}{% else %}0 chunks{% endif %}
+    </p>
   </div>
 
   <!-- Filters -->
   <form method="get" class="flex flex-wrap items-center gap-2">
-    <!-- Status -->
+    <!-- Status tabs -->
     <div class="flex rounded-lg border border-gray-200 bg-white overflow-hidden text-xs">
       {% for s, label in [('active','Active'), ('pending_triage','Triage'), ('suspended','Suspended'), ('ALL','All')] %}
       <a href="?status={{ s }}{% if active_type %}&type={{ active_type }}{% endif %}{% if leech_only %}&leech=1{% endif %}{% if due_only %}&due=1{% endif %}"
@@ -138,6 +142,61 @@
     </div>
     {% endif %}
   </div>
+
+  <!-- Pagination -->
+  {% if total_pages > 1 %}
+  {% macro page_url(p) %}?status={{ active_status }}{% if active_type %}&type={{ active_type }}{% endif %}{% if leech_only %}&leech=1{% endif %}{% if due_only %}&due=1{% endif %}&page={{ p }}{% endmacro %}
+  <div class="flex items-center justify-center gap-1">
+    <!-- Previous -->
+    {% if page > 1 %}
+    <a href="{{ page_url(page - 1) }}"
+       class="px-3 py-1.5 rounded-lg border border-gray-200 text-xs text-gray-600 hover:bg-gray-50">
+      <i class="ti ti-chevron-left"></i>
+    </a>
+    {% else %}
+    <span class="px-3 py-1.5 rounded-lg border border-gray-100 text-xs text-gray-300 cursor-default">
+      <i class="ti ti-chevron-left"></i>
+    </span>
+    {% endif %}
+
+    <!-- Page numbers (show up to 7 around current) -->
+    {% set ns = namespace(start=1, end=total_pages) %}
+    {% if total_pages > 7 %}
+      {% set ns.start = [page - 3, 1] | max %}
+      {% set ns.end = [ns.start + 6, total_pages] | min %}
+      {% set ns.start = [ns.end - 6, 1] | max %}
+    {% endif %}
+
+    {% if ns.start > 1 %}
+    <a href="{{ page_url(1) }}" class="px-3 py-1.5 rounded-lg border border-gray-200 text-xs text-gray-600 hover:bg-gray-50">1</a>
+    {% if ns.start > 2 %}<span class="text-xs text-gray-400 px-1">…</span>{% endif %}
+    {% endif %}
+
+    {% for p in range(ns.start, ns.end + 1) %}
+    <a href="{{ page_url(p) }}"
+       class="px-3 py-1.5 rounded-lg border text-xs {% if p == page %}bg-[#E6F1FB] border-[#378ADD] text-[#0C447C] font-medium{% else %}border-gray-200 text-gray-600 hover:bg-gray-50{% endif %}">
+      {{ p }}
+    </a>
+    {% endfor %}
+
+    {% if ns.end < total_pages %}
+    {% if ns.end < total_pages - 1 %}<span class="text-xs text-gray-400 px-1">…</span>{% endif %}
+    <a href="{{ page_url(total_pages) }}" class="px-3 py-1.5 rounded-lg border border-gray-200 text-xs text-gray-600 hover:bg-gray-50">{{ total_pages }}</a>
+    {% endif %}
+
+    <!-- Next -->
+    {% if page < total_pages %}
+    <a href="{{ page_url(page + 1) }}"
+       class="px-3 py-1.5 rounded-lg border border-gray-200 text-xs text-gray-600 hover:bg-gray-50">
+      <i class="ti ti-chevron-right"></i>
+    </a>
+    {% else %}
+    <span class="px-3 py-1.5 rounded-lg border border-gray-100 text-xs text-gray-300 cursor-default">
+      <i class="ti ti-chevron-right"></i>
+    </span>
+    {% endif %}
+  </div>
+  {% endif %}
 
 </div>
 

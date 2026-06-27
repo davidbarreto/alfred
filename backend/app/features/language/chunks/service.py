@@ -32,6 +32,9 @@ class ChunkService:
         chunks = await self._repo.get_chunks(filters)
         return [ChunkRead.model_validate(c) for c in chunks]
 
+    async def count_chunks(self, filters: ChunkFilters) -> int:
+        return await self._repo.count_chunks(filters)
+
     async def create_chunk(self, data: ChunkCreate) -> ChunkRead:
         orm = await self._repo.create_chunk(data)
         logger.info("Chunk created: id=%d track_id=%d type=%r", orm.id, orm.track_id, orm.chunk_type)

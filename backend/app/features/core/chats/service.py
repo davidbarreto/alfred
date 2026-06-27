@@ -265,6 +265,11 @@ class ChatService:
             MessageCreate(session_id=request.session_id, role="assistant", content=response_text)
         )
 
+        for wm in working_memories:
+            if wm.key == "language:pending_practice":
+                await self._working_memory_service.delete(wm.id)
+                logger.info("Chat: cleared language practice WM id=%d", wm.id)
+
         asyncio.create_task(
             self._memory_extraction_service.extract_and_save(
                 user_message=current_message.content,
@@ -359,6 +364,11 @@ class ChatService:
         await self._message_service.create(
             MessageCreate(session_id=request.session_id, role="assistant", content=response_text)
         )
+
+        for wm in working_memories:
+            if wm.key == "language:pending_practice":
+                await self._working_memory_service.delete(wm.id)
+                logger.info("StreamChat: cleared language practice WM id=%d", wm.id)
 
         asyncio.create_task(
             self._memory_extraction_service.extract_and_save(

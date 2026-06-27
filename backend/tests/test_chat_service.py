@@ -405,6 +405,23 @@ class TestChatServiceWorkingMemory:
         await service.chat(ChatRequest(session_id=1))
         embedding_service.search.assert_called_once()
 
+    async def test_deletes_practice_wm_after_chat(self):
+        service, _, _, message_service, _ = _make_service()
+        wm = _make_wm("language:pending_practice", '{"chunk_id": 42}')
+        wm = WorkingMemoryRead(id=99, key=wm.key, value=wm.value, importance=None,
+                               expires_at=None, session_id=None, created_at=wm.created_at)
+        service._working_memory_service.list.return_value = [wm]
+        message_service.list.return_value = [_make_message("a chuva caiu")]
+        await service.chat(ChatRequest(session_id=1))
+        service._working_memory_service.delete.assert_called_once_with(99)
+
+    async def test_does_not_delete_non_practice_wm(self):
+        service, _, _, message_service, _ = _make_service()
+        service._working_memory_service.list.return_value = [_make_wm("travel_context", "Belgium")]
+        message_service.list.return_value = [_make_message("hi")]
+        await service.chat(ChatRequest(session_id=1))
+        service._working_memory_service.delete.assert_not_called()
+
 
 class TestChatServiceLanguagePracticeGrade:
     async def test_queries_language_session_for_chunk_in_wm(self, mock_language_session_repository):

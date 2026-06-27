@@ -98,26 +98,40 @@ def _build_system_prompt(
     if working_memories:
         lines = "\n".join(f"- {wm.key}: {wm.value}" for wm in working_memories)
         section = f"## Active context\n{lines}"
-        if any(wm.key == "language:pending_practice" for wm in working_memories):
-            if language_session and language_session.quality_score is not None:
-                fb = language_session.gemini_feedback_json or {}
-                score_line = f"Score: {language_session.quality_score:.0f}/100"
-                detail_lines = [score_line]
-                if fb.get("summary"):
-                    detail_lines.append(f"Summary: {fb['summary']}")
-                if fb.get("strengths"):
-                    detail_lines.append(f"Strengths: {'; '.join(fb['strengths'])}")
-                if fb.get("issues"):
-                    detail_lines.append(f"Issues: {'; '.join(fb['issues'])}")
-                if fb.get("tip"):
-                    detail_lines.append(f"Tip: {fb['tip']}")
-                section += "\n\n## Practice result\n" + "\n".join(detail_lines)
-                section += "\n\nRespond as an encouraging coach. Keep it brief (2–3 sentences)."
-            else:
+        pending_wm = next((wm for wm in working_memories if wm.key == "language:pending"), None)
+        if pending_wm:
+            try:
+                pending_data = json.loads(pending_wm.value)
+                mode = pending_data.get("mode", "practice")
+            except (json.JSONDecodeError, AttributeError):
+                mode = "practice"
+
+            if mode == "practice":
+                if language_session and language_session.quality_score is not None:
+                    fb = language_session.ai_feedback_json or {}
+                    score_line = f"Score: {language_session.quality_score:.0f}/100"
+                    detail_lines = [score_line]
+                    if fb.get("summary"):
+                        detail_lines.append(f"Summary: {fb['summary']}")
+                    if fb.get("strengths"):
+                        detail_lines.append(f"Strengths: {'; '.join(fb['strengths'])}")
+                    if fb.get("issues"):
+                        detail_lines.append(f"Issues: {'; '.join(fb['issues'])}")
+                    if fb.get("tip"):
+                        detail_lines.append(f"Tip: {fb['tip']}")
+                    section += "\n\n## Practice result\n" + "\n".join(detail_lines)
+                    section += "\n\nRespond as an encouraging coach. Keep it brief (2–3 sentences)."
+                else:
+                    section += (
+                        "\n\nThe user just submitted a language practice attempt. "
+                        "Their message is a transcription of what they said. "
+                        "Respond briefly as an encouraging coach."
+                    )
+            elif mode == "review":
                 section += (
-                    "\n\nThe user just submitted a language practice attempt. "
-                    "Their message is a transcription of what they said. "
-                    "Respond briefly as an encouraging coach."
+                    "\n\nThe user is doing a vocabulary review. "
+                    "The word was shown to them and they are responding with whether they know it. "
+                    "Acknowledge their response briefly and encourage them to keep going."
                 )
         parts.append(section)
 
@@ -195,24 +209,26 @@ class ChatService:
         logger.debug("Chat: %d active working memory entries loaded", len(working_memories))
 
         language_session: LearningSession | None = None
-        if any(wm.key == "language:pending_practice" for wm in working_memories):
-            logger.debug("Chat: language practice mode — skipping embeddings, summaries, daily context")
+        pending_wm = next((wm for wm in working_memories if wm.key == "language:pending"), None)
+        if pending_wm:
+            logger.debug("Chat: language pending mode — skipping embeddings, summaries, daily context")
             memories, recent_summaries, daily_context = [], [], ""
-            practice_wm = next(wm for wm in working_memories if wm.key == "language:pending_practice")
             try:
-                chunk_id = json.loads(practice_wm.value).get("chunk_id")
-                if chunk_id:
-                    lang_sessions = await LanguageSessionRepository(self._session).get_sessions(
-                        LanguageSessionFilters(chunk_id=chunk_id, session_type="shadowing", limit=1)
-                    )
-                    language_session = lang_sessions[0] if lang_sessions else None
-                    if language_session:
-                        logger.debug(
-                            "Chat: practice session loaded: id=%d score=%s",
-                            language_session.id, language_session.quality_score,
+                pending_data = json.loads(pending_wm.value)
+                if pending_data.get("mode") == "practice":
+                    chunk_id = pending_data.get("chunk_id")
+                    if chunk_id:
+                        lang_sessions = await LanguageSessionRepository(self._session).get_sessions(
+                            LanguageSessionFilters(chunk_id=chunk_id, session_type="shadowing", limit=1)
                         )
+                        language_session = lang_sessions[0] if lang_sessions else None
+                        if language_session:
+                            logger.debug(
+                                "Chat: practice session loaded: id=%d score=%s",
+                                language_session.id, language_session.quality_score,
+                            )
             except (json.JSONDecodeError, KeyError):
-                logger.warning("Chat: failed to parse practice WM value=%r", practice_wm.value)
+                logger.warning("Chat: failed to parse pending WM value=%r", pending_wm.value)
         else:
             memories = await self._embedding_service.search(
                 EmbeddingSearchRequest(
@@ -266,9 +282,9 @@ class ChatService:
         )
 
         for wm in working_memories:
-            if wm.key == "language:pending_practice":
+            if wm.key == "language:pending":
                 await self._working_memory_service.delete(wm.id)
-                logger.info("Chat: cleared language practice WM id=%d", wm.id)
+                logger.info("Chat: cleared language pending WM id=%d", wm.id)
 
         asyncio.create_task(
             self._memory_extraction_service.extract_and_save(
@@ -292,18 +308,20 @@ class ChatService:
         working_memories = await self._working_memory_service.list(WorkingMemoryFilters(active_only=True))
 
         language_session: LearningSession | None = None
-        if any(wm.key == "language:pending_practice" for wm in working_memories):
+        pending_wm = next((wm for wm in working_memories if wm.key == "language:pending"), None)
+        if pending_wm:
             memories, recent_summaries, daily_context = [], [], ""
-            practice_wm = next(wm for wm in working_memories if wm.key == "language:pending_practice")
             try:
-                chunk_id = json.loads(practice_wm.value).get("chunk_id")
-                if chunk_id:
-                    lang_sessions = await LanguageSessionRepository(self._session).get_sessions(
-                        LanguageSessionFilters(chunk_id=chunk_id, session_type="shadowing", limit=1)
-                    )
-                    language_session = lang_sessions[0] if lang_sessions else None
+                pending_data = json.loads(pending_wm.value)
+                if pending_data.get("mode") == "practice":
+                    chunk_id = pending_data.get("chunk_id")
+                    if chunk_id:
+                        lang_sessions = await LanguageSessionRepository(self._session).get_sessions(
+                            LanguageSessionFilters(chunk_id=chunk_id, session_type="shadowing", limit=1)
+                        )
+                        language_session = lang_sessions[0] if lang_sessions else None
             except (json.JSONDecodeError, KeyError):
-                logger.warning("StreamChat: failed to parse practice WM value=%r", practice_wm.value)
+                logger.warning("StreamChat: failed to parse pending WM value=%r", pending_wm.value)
         else:
             memories = await self._embedding_service.search(
                 EmbeddingSearchRequest(
@@ -366,9 +384,9 @@ class ChatService:
         )
 
         for wm in working_memories:
-            if wm.key == "language:pending_practice":
+            if wm.key == "language:pending":
                 await self._working_memory_service.delete(wm.id)
-                logger.info("StreamChat: cleared language practice WM id=%d", wm.id)
+                logger.info("StreamChat: cleared language pending WM id=%d", wm.id)
 
         asyncio.create_task(
             self._memory_extraction_service.extract_and_save(

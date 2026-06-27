@@ -85,7 +85,7 @@ def _make_language_session(
     ls.feeds_srs = quality_score is not None
     ls.audio_ref = None
     ls.quality_score = quality_score
-    ls.gemini_feedback_json = feedback or {
+    ls.ai_feedback_json = feedback or {
         "score": quality_score,
         "summary": "Good overall effort.",
         "strengths": ["clear vowels"],
@@ -323,7 +323,7 @@ class TestBuildSystemPromptWorkingMemory:
         assert "Active context" not in prompt
 
     def test_includes_practice_hint_for_language_practice_without_session(self):
-        wm = _make_wm("language:pending_practice", '{"chunk_id": 1, "text": "fazer questão de"}')
+        wm = _make_wm("language:pending", '{"mode": "practice", "chunk_id": 1, "text": "fazer questão de"}')
         prompt = _build_system_prompt([], working_memories=[wm])
         assert "language practice" in prompt.lower()
         assert "coach" in prompt.lower()
@@ -333,8 +333,13 @@ class TestBuildSystemPromptWorkingMemory:
         prompt = _build_system_prompt([], working_memories=[wm])
         assert "coach" not in prompt.lower()
 
+    def test_includes_review_hint_for_language_review(self):
+        wm = _make_wm("language:pending", '{"mode": "review", "chunk_id": 1, "text": "bonjour"}')
+        prompt = _build_system_prompt([], working_memories=[wm])
+        assert "vocabulary review" in prompt.lower()
+
     def test_includes_grade_when_language_session_provided(self):
-        wm = _make_wm("language:pending_practice", '{"chunk_id": 42}')
+        wm = _make_wm("language:pending", '{"mode": "practice", "chunk_id": 42}')
         session = _make_language_session(quality_score=87.0)
         prompt = _build_system_prompt([], working_memories=[wm], language_session=session)
         assert "87/100" in prompt
@@ -345,14 +350,14 @@ class TestBuildSystemPromptWorkingMemory:
         assert "coach" in prompt.lower()
 
     def test_falls_back_to_generic_hint_when_session_has_no_score(self):
-        wm = _make_wm("language:pending_practice", '{"chunk_id": 42}')
+        wm = _make_wm("language:pending", '{"mode": "practice", "chunk_id": 42}')
         session = _make_language_session(quality_score=None)
         prompt = _build_system_prompt([], working_memories=[wm], language_session=session)
         assert "Practice result" not in prompt
         assert "language practice" in prompt.lower()
 
     def test_falls_back_to_generic_hint_when_no_session(self):
-        wm = _make_wm("language:pending_practice", '{"chunk_id": 42}')
+        wm = _make_wm("language:pending", '{"mode": "practice", "chunk_id": 42}')
         prompt = _build_system_prompt([], working_memories=[wm], language_session=None)
         assert "Practice result" not in prompt
         assert "language practice" in prompt.lower()
@@ -383,7 +388,7 @@ class TestChatServiceWorkingMemory:
     async def test_skips_embedding_search_in_language_practice_mode(self):
         service, _, embedding_service, message_service, _ = _make_service()
         service._working_memory_service.list.return_value = [
-            _make_wm("language:pending_practice", '{"chunk_id": 1, "text": "olá"}')
+            _make_wm("language:pending", '{"chunk_id": 1, "text": "olá"}')
         ]
         message_service.list.return_value = [_make_message("olá")]
         await service.chat(ChatRequest(session_id=1))
@@ -392,7 +397,7 @@ class TestChatServiceWorkingMemory:
     async def test_skips_session_summaries_in_language_practice_mode(self):
         service, _, _, message_service, _ = _make_service()
         service._working_memory_service.list.return_value = [
-            _make_wm("language:pending_practice", '{"chunk_id": 1, "text": "olá"}')
+            _make_wm("language:pending", '{"chunk_id": 1, "text": "olá"}')
         ]
         message_service.list.return_value = [_make_message("olá")]
         await service.chat(ChatRequest(session_id=1))
@@ -407,7 +412,7 @@ class TestChatServiceWorkingMemory:
 
     async def test_deletes_practice_wm_after_chat(self):
         service, _, _, message_service, _ = _make_service()
-        wm = _make_wm("language:pending_practice", '{"chunk_id": 42}')
+        wm = _make_wm("language:pending", '{"chunk_id": 42}')
         wm = WorkingMemoryRead(id=99, key=wm.key, value=wm.value, importance=None,
                                expires_at=None, session_id=None, created_at=wm.created_at)
         service._working_memory_service.list.return_value = [wm]
@@ -427,7 +432,7 @@ class TestChatServiceLanguagePracticeGrade:
     async def test_queries_language_session_for_chunk_in_wm(self, mock_language_session_repository):
         service, _, _, message_service, _ = _make_service()
         service._working_memory_service.list.return_value = [
-            _make_wm("language:pending_practice", '{"chunk_id": 42, "track_id": 3}')
+            _make_wm("language:pending", '{"mode": "practice", "chunk_id": 42, "track_id": 3}')
         ]
         message_service.list.return_value = [_make_message("a chuva caiu")]
         await service.chat(ChatRequest(session_id=1))
@@ -443,7 +448,7 @@ class TestChatServiceLanguagePracticeGrade:
         )
         service, llm_provider, _, message_service, _ = _make_service()
         service._working_memory_service.list.return_value = [
-            _make_wm("language:pending_practice", '{"chunk_id": 42, "track_id": 3}')
+            _make_wm("language:pending", '{"mode": "practice", "chunk_id": 42, "track_id": 3}')
         ]
         message_service.list.return_value = [_make_message("a chuva caiu")]
         with patch("app.features.core.chats.service.SessionRepository", mock_session_repository):
@@ -455,7 +460,7 @@ class TestChatServiceLanguagePracticeGrade:
     async def test_graceful_when_wm_value_is_invalid_json(self, mock_language_session_repository):
         service, _, _, message_service, _ = _make_service()
         service._working_memory_service.list.return_value = [
-            _make_wm("language:pending_practice", "not-json")
+            _make_wm("language:pending", "not-json")
         ]
         message_service.list.return_value = [_make_message("olá")]
         await service.chat(ChatRequest(session_id=1))

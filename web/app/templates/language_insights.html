@@ -15,7 +15,7 @@
   <h1 class="text-base font-semibold text-gray-900">Language Insights</h1>
 
   <!-- Overview cards -->
-  <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+  <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
     <div class="card bg-white"><div class="card-body p-4">
       <p class="text-xs text-gray-400 uppercase tracking-wide">Total sessions</p>
       <p class="text-2xl font-semibold text-gray-900 mt-1">{{ total_sessions }}</p>
@@ -25,8 +25,20 @@
       <p class="text-2xl font-semibold text-[#378ADD] mt-1">{{ total_srs }}</p>
     </div></div>
     <div class="card bg-white"><div class="card-body p-4">
-      <p class="text-xs text-gray-400 uppercase tracking-wide">Active languages</p>
-      <p class="text-2xl font-semibold text-gray-900 mt-1">{{ track_stats | selectattr('active') | list | length }}</p>
+      <p class="text-xs text-gray-400 uppercase tracking-wide">Current streak</p>
+      <div class="flex items-baseline gap-1 mt-1">
+        <p class="text-2xl font-semibold {% if streaks.current > 0 %}text-amber-500{% else %}text-gray-400{% endif %}">
+          {{ streaks.current }}
+        </p>
+        <p class="text-xs text-gray-400">days</p>
+      </div>
+    </div></div>
+    <div class="card bg-white"><div class="card-body p-4">
+      <p class="text-xs text-gray-400 uppercase tracking-wide">Longest streak</p>
+      <div class="flex items-baseline gap-1 mt-1">
+        <p class="text-2xl font-semibold text-gray-700">{{ streaks.longest }}</p>
+        <p class="text-xs text-gray-400">days</p>
+      </div>
     </div></div>
   </div>
 
@@ -45,9 +57,12 @@
                 <span class="px-1.5 py-0.5 rounded text-xs {{ track.level_color }}">{{ track.level }}</span>
               </div>
             </div>
-            {% if track.leech_count > 0 %}
-            <span class="text-xs text-red-500">⚠ {{ track.leech_count }} leeches</span>
-            {% endif %}
+            <div class="text-right">
+              {% if track.leech_count > 0 %}
+              <p class="text-xs text-red-500">⚠ {{ track.leech_count }} leeches</p>
+              {% endif %}
+              <p class="text-xs text-gray-400 mt-0.5">{{ track.active_count }} active</p>
+            </div>
           </div>
           {% if track.retention is not none %}
           <div>
@@ -70,6 +85,58 @@
       {% endfor %}
     </div>
   </section>
+
+  <!-- Daily reviews (14-day bar chart) -->
+  <section>
+    <h2 class="text-sm font-medium text-gray-900 mb-3">Daily reviews — last 14 days</h2>
+    <div class="card bg-white"><div class="card-body p-4">
+      <div style="height: 180px;">
+        <canvas id="dailyReviewsChart"></canvas>
+      </div>
+    </div></div>
+  </section>
+
+  <!-- Weekly trends: retention + Gemini score -->
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+    <section>
+      <h2 class="text-sm font-medium text-gray-900 mb-3">Weekly retention rate</h2>
+      <div class="card bg-white"><div class="card-body p-4">
+        <div style="height: 180px;">
+          <canvas id="retentionTrendChart"></canvas>
+        </div>
+      </div></div>
+    </section>
+
+    <section>
+      <h2 class="text-sm font-medium text-gray-900 mb-3">Gemini score trend (shadowing)</h2>
+      <div class="card bg-white"><div class="card-body p-4">
+        <div style="height: 180px;">
+          <canvas id="geminiTrendChart"></canvas>
+        </div>
+      </div></div>
+    </section>
+  </div>
+
+  <!-- Deck composition: ease + interval distributions -->
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+    <section>
+      <h2 class="text-sm font-medium text-gray-900 mb-3">Ease factor distribution</h2>
+      <div class="card bg-white"><div class="card-body p-4">
+        <div style="height: 180px;">
+          <canvas id="easeDistChart"></canvas>
+        </div>
+      </div></div>
+    </section>
+
+    <section>
+      <h2 class="text-sm font-medium text-gray-900 mb-3">Interval distribution</h2>
+      <div class="card bg-white"><div class="card-body p-4">
+        <div style="height: 180px;">
+          <canvas id="intervalDistChart"></canvas>
+        </div>
+      </div></div>
+    </section>
+  </div>
 
   <!-- Session type breakdown -->
   {% if type_counts %}
@@ -140,4 +207,163 @@
   </section>
 
 </div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+<script>
+(function () {
+  Chart.defaults.font.size = 11;
+  Chart.defaults.color = '#9CA3AF';
+
+  const daily = {{ daily_reviews_json | safe }};
+  const weekly = {{ weekly_stats_json | safe }};
+  const ease = {{ ease_dist_json | safe }};
+  const interval = {{ interval_dist_json | safe }};
+
+  const commonOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+  };
+
+  // ── Daily reviews bar chart ───────────────────────────────────────────────
+  new Chart(document.getElementById('dailyReviewsChart'), {
+    type: 'bar',
+    data: {
+      labels: daily.map(d => d.label),
+      datasets: [{
+        data: daily.map(d => d.count),
+        backgroundColor: '#378ADD',
+        borderRadius: 3,
+        borderSkipped: false,
+      }],
+    },
+    options: {
+      ...commonOptions,
+      scales: {
+        x: { grid: { display: false }, ticks: { maxRotation: 45 } },
+        y: { beginAtZero: true, grid: { color: '#F3F4F6' }, ticks: { precision: 0 } },
+      },
+    },
+  });
+
+  // ── Weekly retention line chart ───────────────────────────────────────────
+  new Chart(document.getElementById('retentionTrendChart'), {
+    type: 'line',
+    data: {
+      labels: weekly.map(w => w.label),
+      datasets: [{
+        data: weekly.map(w => w.retention),
+        borderColor: '#22c55e',
+        backgroundColor: 'rgba(34,197,94,0.08)',
+        fill: true,
+        tension: 0.3,
+        pointRadius: 3,
+        pointBackgroundColor: '#22c55e',
+        spanGaps: false,
+      }],
+    },
+    options: {
+      ...commonOptions,
+      scales: {
+        x: { grid: { display: false } },
+        y: {
+          beginAtZero: true,
+          max: 100,
+          grid: { color: '#F3F4F6' },
+          ticks: { callback: v => v + '%' },
+        },
+      },
+      plugins: {
+        ...commonOptions.plugins,
+        tooltip: { callbacks: { label: ctx => (ctx.raw !== null ? ctx.raw + '%' : 'No data') } },
+      },
+    },
+  });
+
+  // ── Gemini score trend line chart ─────────────────────────────────────────
+  new Chart(document.getElementById('geminiTrendChart'), {
+    type: 'line',
+    data: {
+      labels: weekly.map(w => w.label),
+      datasets: [{
+        data: weekly.map(w => w.gemini_avg),
+        borderColor: '#a855f7',
+        backgroundColor: 'rgba(168,85,247,0.08)',
+        fill: true,
+        tension: 0.3,
+        pointRadius: 3,
+        pointBackgroundColor: '#a855f7',
+        spanGaps: false,
+      }],
+    },
+    options: {
+      ...commonOptions,
+      scales: {
+        x: { grid: { display: false } },
+        y: {
+          beginAtZero: true,
+          max: 5,
+          grid: { color: '#F3F4F6' },
+          ticks: { stepSize: 1 },
+        },
+      },
+      plugins: {
+        ...commonOptions.plugins,
+        tooltip: { callbacks: { label: ctx => (ctx.raw !== null ? 'Avg: ' + ctx.raw : 'No data') } },
+      },
+    },
+  });
+
+  // ── Ease distribution horizontal bar ─────────────────────────────────────
+  new Chart(document.getElementById('easeDistChart'), {
+    type: 'bar',
+    data: {
+      labels: ease.map(e => e.label),
+      datasets: [{
+        data: ease.map(e => e.count),
+        backgroundColor: ease.map(e => e.color),
+        borderRadius: 3,
+        borderSkipped: false,
+      }],
+    },
+    options: {
+      ...commonOptions,
+      indexAxis: 'y',
+      scales: {
+        x: { beginAtZero: true, grid: { color: '#F3F4F6' }, ticks: { precision: 0 } },
+        y: { grid: { display: false } },
+      },
+      plugins: {
+        ...commonOptions.plugins,
+        tooltip: { callbacks: { label: ctx => ctx.raw + ' chunks (' + ease[ctx.dataIndex].range + ')' } },
+      },
+    },
+  });
+
+  // ── Interval distribution bar chart ──────────────────────────────────────
+  new Chart(document.getElementById('intervalDistChart'), {
+    type: 'bar',
+    data: {
+      labels: interval.map(b => b.label + '\n' + b.range),
+      datasets: [{
+        data: interval.map(b => b.count),
+        backgroundColor: ['#BFDBFE', '#93C5FD', '#60A5FA', '#3B82F6', '#1D4ED8'],
+        borderRadius: 3,
+        borderSkipped: false,
+      }],
+    },
+    options: {
+      ...commonOptions,
+      scales: {
+        x: { grid: { display: false } },
+        y: { beginAtZero: true, grid: { color: '#F3F4F6' }, ticks: { precision: 0 } },
+      },
+      plugins: {
+        ...commonOptions.plugins,
+        tooltip: { callbacks: { label: ctx => ctx.raw + ' chunks (' + interval[ctx.dataIndex].range + ')' } },
+      },
+    },
+  });
+})();
+</script>
 {% endblock %}

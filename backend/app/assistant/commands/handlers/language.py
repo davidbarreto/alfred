@@ -61,7 +61,13 @@ async def _handle_practice(
 
     wm = await working_memory_service.create(WorkingMemoryCreate(
         key="language:pending_practice",
-        value=json.dumps({"chunk_id": chunk.id, "track_id": track.id, "language_name": track.name}),
+        value=json.dumps({
+            "chunk_id": chunk.id,
+            "track_id": track.id,
+            "language_name": track.name,
+            "text": chunk.text,
+            "translation": chunk.translation,
+        }),
         importance=1.0,
     ))
     logger.info(
@@ -73,6 +79,7 @@ async def _handle_practice(
         "wm_id": wm.id,
         "chunk_id": chunk.id,
         "track_id": track.id,
+        "language_name": track.name,
         "text": chunk.text,
         "translation": chunk.translation,
     }

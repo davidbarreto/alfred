@@ -94,6 +94,7 @@ class TestHandleLanguagePractice:
         assert result["chunk_id"] == 42
         assert result["track_id"] == 3
         assert result["wm_id"] == 7
+        assert result["language_name"] == "English"
         assert result["text"] == "The rain fell all night long"
         assert result["translation"] == "A chuva caiu durante a noite toda"
 
@@ -107,6 +108,8 @@ class TestHandleLanguagePractice:
         assert payload["chunk_id"] == 42
         assert payload["track_id"] == 3
         assert payload["language_name"] == "English"
+        assert payload["text"] == "The rain fell all night long"
+        assert payload["translation"] == "A chuva caiu durante a noite toda"
 
     async def test_clears_existing_practice_wm_before_creating_new(self):
         old_wm = _make_wm_read(id=5, chunk_id=10)

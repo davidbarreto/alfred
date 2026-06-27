@@ -148,7 +148,11 @@
               {% if session.chunk_id %}
               <a href="/languages/{{ track.code }}/chunks/{{ session.chunk_id }}"
                  class="text-xs text-gray-600 hover:text-gray-900 truncate">
-                chunk #{{ session.chunk_id }}
+                {% if session.chunk_text %}
+                  {{ session.chunk_text[:50] }}{% if session.chunk_text|length > 50 %}…{% endif %}
+                {% else %}
+                  chunk #{{ session.chunk_id }}
+                {% endif %}
               </a>
               {% else %}
               <span class="text-xs text-gray-400">free session</span>

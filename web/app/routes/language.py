@@ -1,3 +1,4 @@
+import asyncio
 import json
 from collections import Counter, defaultdict
 from datetime import date, timedelta
@@ -431,12 +432,15 @@ async def track_detail(code: str, request: Request):
 
     retention = _retention_rate(sessions)
 
+    recent_sessions = sessions[:10]
+    await _enrich_with_chunk_text(recent_sessions)
+
     return templates.TemplateResponse(request, "language_track.html", {
         "track": track,
         "flag": _flag(track["code"]),
         "level_color": _level_color(track["level"]),
         "scopes": scopes,
-        "recent_sessions": sessions[:10],
+        "recent_sessions": recent_sessions,
         "due_batch": due_batch,
         "chunk_counts": chunk_counts,
         "progress": prog,
@@ -534,6 +538,21 @@ async def _fetch_track_data(track_id: int):
     daily_batch = await _safe_get("/language/chunks/daily-batch", {"track_id": track_id})
     due_batch = daily_batch[0] if daily_batch else {"chunks": [], "total_due": 0}
     return scopes, sessions, due_batch
+
+
+async def _enrich_with_chunk_text(sessions: list) -> None:
+    chunk_ids = list({s["chunk_id"] for s in sessions if s.get("chunk_id")})
+    if not chunk_ids:
+        return
+    results = await asyncio.gather(*[_safe_get(f"/language/chunks/{cid}") for cid in chunk_ids])
+    chunk_text_map = {
+        c["id"]: c.get("text", "")
+        for c in results
+        if isinstance(c, dict) and c.get("id")
+    }
+    for session in sessions:
+        if session.get("chunk_id"):
+            session["chunk_text"] = chunk_text_map.get(session["chunk_id"])
 
 
 async def _count_chunks_by_status(track_id: int) -> dict:

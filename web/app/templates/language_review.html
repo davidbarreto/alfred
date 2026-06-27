@@ -60,8 +60,8 @@
       </div>
     </div>
 
-    <!-- Score buttons (hidden until flipped) -->
-    <div id="score-buttons" class="hidden grid grid-cols-4 gap-2 mt-4">
+    <!-- Score buttons -->
+    <div id="score-buttons" class="grid grid-cols-4 gap-2 mt-4">
       <button onclick="submitScore(1)"
         class="btn btn-sm bg-red-50 border border-red-200 text-red-600 hover:bg-red-100 flex flex-col gap-0.5 h-auto py-2">
         <span class="font-semibold text-sm">Again</span>
@@ -127,7 +127,7 @@ function showCard(i) {
   document.getElementById("interval-good").textContent = _fmtInterval(c.stability * 1.2);
   document.getElementById("interval-easy").textContent = _fmtInterval(c.stability * 2.5);
 
-  document.getElementById("score-buttons").classList.add("hidden");
+  document.querySelectorAll("#score-buttons button").forEach(b => b.disabled = false);
   document.getElementById("card-scene").style.cursor = "pointer";
 }
 
@@ -135,7 +135,6 @@ function flipCard() {
   if (flipped) return;
   flipped = true;
   document.getElementById("card-inner").style.transform = "rotateY(180deg)";
-  document.getElementById("score-buttons").classList.remove("hidden");
   document.getElementById("card-scene").style.cursor = "default";
 }
 
@@ -163,7 +162,7 @@ function updateProgress() {
 
 function showCompletion() {
   document.getElementById("card-scene").classList.add("hidden");
-  document.getElementById("score-buttons").classList.add("hidden");
+  document.getElementById("score-buttons").style.display = "none";
   document.getElementById("completion").classList.remove("hidden");
   document.getElementById("completion-stats").textContent =
     `Reviewed ${reviewed} card${reviewed !== 1 ? "s" : ""} this session.`;

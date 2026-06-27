@@ -106,6 +106,7 @@ class TestHandleLanguagePractice:
         payload = json.loads(created.value)
         assert payload["chunk_id"] == 42
         assert payload["track_id"] == 3
+        assert payload["language_name"] == "English"
 
     async def test_clears_existing_practice_wm_before_creating_new(self):
         old_wm = _make_wm_read(id=5, chunk_id=10)

@@ -97,6 +97,7 @@ class TestGetOperationType:
         assert get_operation_type(["task.list"]) == "read"
         assert get_operation_type(["event.list"]) == "read"
         assert get_operation_type(["finance.spending_report"]) == "read"
+        assert get_operation_type(["language.practice"]) == "read"
 
     def test_single_write_intent_returns_write(self):
         assert get_operation_type(["task.add"]) == "write"

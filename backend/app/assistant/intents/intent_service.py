@@ -28,6 +28,7 @@ _READ_INTENTS: frozenset[str] = frozenset({
     "finance.balance_forecast",
     "shopping.list",
     "wishlist.list",
+    "language.practice",
 })
 
 

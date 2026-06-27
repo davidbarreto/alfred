@@ -27,8 +27,14 @@
          class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-amber-50 border border-amber-200 text-xs font-medium text-amber-700 hover:bg-amber-100 transition-colors">
         <i class="ti ti-inbox text-sm"></i>Triage
       </a>
-      <a href="/languages/{{ track.code }}/chunks"
+      {% if progress.completed_today < progress.daily_quota %}
+      <a href="/languages/{{ track.code }}/review"
          class="btn btn-sm btn-primary text-xs">
+        <i class="ti ti-brain text-sm"></i>Review
+      </a>
+      {% endif %}
+      <a href="/languages/{{ track.code }}/chunks"
+         class="btn btn-sm bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 text-xs">
         <i class="ti ti-cards text-sm"></i>Chunks
       </a>
     </div>

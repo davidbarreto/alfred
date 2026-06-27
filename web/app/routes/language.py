@@ -163,22 +163,24 @@ def _daily_reviews(all_sessions: list, today: date, n_days: int = 14) -> list[di
 
 
 def _ease_distribution(all_chunks: list) -> list[dict]:
+    # FSRS difficulty is 1–10; default for new cards is 5.0 (medium).
+    # Buckets are centered so that the unreviewed default lands in "Medium".
     buckets = [
         {"label": "Very Easy", "range": "<2.5", "count": 0, "color": "#22c55e"},
-        {"label": "Easy",      "range": "2.5–3.5", "count": 0, "color": "#86efac"},
-        {"label": "Medium",    "range": "3.5–5.0", "count": 0, "color": "#fbbf24"},
-        {"label": "Hard",      "range": "5.0–6.5", "count": 0, "color": "#f97316"},
-        {"label": "Very Hard", "range": ">6.5",  "count": 0, "color": "#ef4444"},
+        {"label": "Easy",      "range": "2.5–4.0", "count": 0, "color": "#86efac"},
+        {"label": "Medium",    "range": "4.0–6.0", "count": 0, "color": "#fbbf24"},
+        {"label": "Hard",      "range": "6.0–8.0", "count": 0, "color": "#f97316"},
+        {"label": "Very Hard", "range": ">8.0",    "count": 0, "color": "#ef4444"},
     ]
     for c in all_chunks:
         d = c.get("difficulty", 5.0)
         if d < 2.5:
             buckets[0]["count"] += 1
-        elif d < 3.5:
+        elif d < 4.0:
             buckets[1]["count"] += 1
-        elif d < 5.0:
+        elif d < 6.0:
             buckets[2]["count"] += 1
-        elif d < 6.5:
+        elif d < 8.0:
             buckets[3]["count"] += 1
         else:
             buckets[4]["count"] += 1
@@ -374,6 +376,44 @@ async def insights_page(request: Request):
         "ease_dist_json": json.dumps(ease_dist),
         "interval_dist_json": json.dumps(interval_dist),
     })
+
+
+@router.get("/{code}/review", response_class=HTMLResponse)
+async def review_session(code: str, request: Request):
+    tracks = await _safe_get("/language/tracks/", {"active_only": "false"})
+    track = next((t for t in tracks if t["code"] == code), None)
+    if not track:
+        return HTMLResponse("<p>Track not found.</p>", status_code=404)
+
+    daily_batch = await _safe_get("/language/chunks/daily-batch", {"track_id": track["id"]})
+    due_batch = daily_batch[0] if daily_batch else {"chunks": [], "total_due": 0}
+    chunks = due_batch.get("chunks", [])
+
+    progress = await _safe_get("/language/sessions/daily-progress", {"track_id": track["id"]})
+    prog = progress[0] if progress else {"completed_today": 0, "quota_met": False, "daily_quota": track["daily_quota"]}
+
+    return templates.TemplateResponse(request, "language_review.html", {
+        "track": track,
+        "flag": _flag(track["code"]),
+        "chunks_json": json.dumps(chunks),
+        "total_due": due_batch.get("total_due", 0),
+        "completed_today": prog["completed_today"],
+        "daily_quota": prog["daily_quota"],
+    })
+
+
+@router.post("/{code}/review/score")
+async def score_review(code: str, request: Request):
+    body = await request.json()
+    try:
+        await api.post("/language/sessions/srs-review", json={
+            "track_id": body["track_id"],
+            "chunk_id": body["chunk_id"],
+            "quality_score": body["quality_score"],
+        })
+    except httpx.HTTPError:
+        pass
+    return {}
 
 
 @router.get("/{code}", response_class=HTMLResponse)

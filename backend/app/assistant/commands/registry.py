@@ -218,6 +218,12 @@ COMMAND_DEFINITIONS = {
             "flags": {},
             "requires_args": True,
             "arg_keys": ["language_code"],
+        },
+        "review": {
+            "aliases": ["/review", "/rv"],
+            "flags": {},
+            "requires_args": True,
+            "arg_keys": ["language_code"],
         }
     },
     "help": {

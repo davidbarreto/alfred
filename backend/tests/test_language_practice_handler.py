@@ -1,7 +1,7 @@
 import json
 import pytest
 from datetime import datetime, timezone
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock
 
 from fastapi import HTTPException
 
@@ -53,11 +53,11 @@ def _make_chunk(**kwargs) -> ChunkRead:
     )
 
 
-def _make_wm_read(id: int = 7, chunk_id: int = 42, track_id: int = 3) -> WorkingMemoryRead:
+def _make_wm_read(id: int = 7, chunk_id: int = 42, track_id: int = 3, mode: str = "practice") -> WorkingMemoryRead:
     return WorkingMemoryRead(
         id=id,
-        key="language:pending_practice",
-        value=json.dumps({"chunk_id": chunk_id, "track_id": track_id}),
+        key="language:pending",
+        value=json.dumps({"mode": mode, "chunk_id": chunk_id, "track_id": track_id}),
         importance=1.0,
         expires_at=None,
         session_id=None,
@@ -65,12 +65,7 @@ def _make_wm_read(id: int = 7, chunk_id: int = 42, track_id: int = 3) -> Working
     )
 
 
-def _make_services(
-    tracks=None,
-    batches=None,
-    existing_wm=None,
-    created_wm=None,
-):
+def _make_services(tracks=None, batches=None, existing_wm=None, created_wm=None):
     track_service = AsyncMock()
     track_service.get_tracks = AsyncMock(return_value=tracks if tracks is not None else [_make_track()])
 
@@ -97,21 +92,23 @@ class TestHandleLanguagePractice:
         assert result["language_name"] == "English"
         assert result["text"] == "The rain fell all night long"
         assert result["translation"] == "A chuva caiu durante a noite toda"
+        assert result["mode"] == "practice"
 
     async def test_creates_wm_with_correct_key_and_value(self):
         track_svc, chunk_svc, wm_svc = _make_services()
         await handle_language("practice", {"language_code": "en"}, track_svc, chunk_svc, wm_svc)
         wm_svc.create.assert_called_once()
         created = wm_svc.create.call_args[0][0]
-        assert created.key == "language:pending_practice"
+        assert created.key == "language:pending"
         payload = json.loads(created.value)
+        assert payload["mode"] == "practice"
         assert payload["chunk_id"] == 42
         assert payload["track_id"] == 3
         assert payload["language_name"] == "English"
         assert payload["text"] == "The rain fell all night long"
         assert payload["translation"] == "A chuva caiu durante a noite toda"
 
-    async def test_clears_existing_practice_wm_before_creating_new(self):
+    async def test_clears_existing_pending_wm_before_creating_new(self):
         old_wm = _make_wm_read(id=5, chunk_id=10)
         track_svc, chunk_svc, wm_svc = _make_services(existing_wm=[old_wm])
         await handle_language("practice", {"language_code": "en"}, track_svc, chunk_svc, wm_svc)
@@ -157,7 +154,57 @@ class TestHandleLanguagePractice:
         assert exc_info.value.status_code == 400
 
 
-class TestPracticeCommandRegistry:
+class TestHandleLanguageReview:
+    async def test_returns_chunk_and_wm_ids(self):
+        track_svc, chunk_svc, wm_svc = _make_services(created_wm=_make_wm_read(mode="review"))
+        result = await handle_language("review", {"language_code": "en"}, track_svc, chunk_svc, wm_svc)
+        assert result["chunk_id"] == 42
+        assert result["track_id"] == 3
+        assert result["wm_id"] == 7
+        assert result["language_name"] == "English"
+        assert result["text"] == "The rain fell all night long"
+        assert result["translation"] == "A chuva caiu durante a noite toda"
+        assert result["mode"] == "review"
+
+    async def test_creates_wm_with_correct_key_and_mode(self):
+        track_svc, chunk_svc, wm_svc = _make_services()
+        await handle_language("review", {"language_code": "en"}, track_svc, chunk_svc, wm_svc)
+        wm_svc.create.assert_called_once()
+        created = wm_svc.create.call_args[0][0]
+        assert created.key == "language:pending"
+        payload = json.loads(created.value)
+        assert payload["mode"] == "review"
+        assert payload["chunk_id"] == 42
+        assert payload["track_id"] == 3
+
+    async def test_clears_existing_pending_wm_before_creating_new(self):
+        old_wm = _make_wm_read(id=5, chunk_id=10, mode="practice")
+        track_svc, chunk_svc, wm_svc = _make_services(existing_wm=[old_wm])
+        await handle_language("review", {"language_code": "en"}, track_svc, chunk_svc, wm_svc)
+        wm_svc.delete.assert_called_once_with(5)
+        wm_svc.create.assert_called_once()
+
+    async def test_raises_404_when_track_not_found(self):
+        track_svc, chunk_svc, wm_svc = _make_services(tracks=[])
+        with pytest.raises(HTTPException) as exc_info:
+            await handle_language("review", {"language_code": "xx"}, track_svc, chunk_svc, wm_svc)
+        assert exc_info.value.status_code == 404
+
+    async def test_raises_404_when_no_due_chunks(self):
+        empty_batch = DailyBatchRead(track_id=3, track_code="en", chunks=[], total_due=0)
+        track_svc, chunk_svc, wm_svc = _make_services(batches=[empty_batch])
+        with pytest.raises(HTTPException) as exc_info:
+            await handle_language("review", {"language_code": "en"}, track_svc, chunk_svc, wm_svc)
+        assert exc_info.value.status_code == 404
+
+    async def test_raises_400_when_language_code_missing(self):
+        track_svc, chunk_svc, wm_svc = _make_services()
+        with pytest.raises(HTTPException) as exc_info:
+            await handle_language("review", {}, track_svc, chunk_svc, wm_svc)
+        assert exc_info.value.status_code == 400
+
+
+class TestLanguageCommandRegistry:
     async def test_detect_practice_command(self):
         from app.assistant.commands.resolver import detect_commands
         commands = await detect_commands("/practice en")
@@ -173,7 +220,27 @@ class TestPracticeCommandRegistry:
         assert commands[0].command == "practice"
         assert commands[0].args["language_code"] == "pt"
 
+    async def test_detect_review_command(self):
+        from app.assistant.commands.resolver import detect_commands
+        commands = await detect_commands("/review fr")
+        assert len(commands) == 1
+        assert commands[0].type == "language"
+        assert commands[0].command == "review"
+        assert commands[0].args["language_code"] == "fr"
+
+    async def test_detect_review_alias(self):
+        from app.assistant.commands.resolver import detect_commands
+        commands = await detect_commands("/rv es")
+        assert len(commands) == 1
+        assert commands[0].command == "review"
+        assert commands[0].args["language_code"] == "es"
+
     async def test_practice_requires_language_arg(self):
         from app.assistant.commands.resolver import detect_commands
         commands = await detect_commands("/practice")
+        assert commands == []
+
+    async def test_review_requires_language_arg(self):
+        from app.assistant.commands.resolver import detect_commands
+        commands = await detect_commands("/review")
         assert commands == []

@@ -12,6 +12,8 @@ from app.features.language.tracks.service import TrackService
 
 logger = logging.getLogger(__name__)
 
+_WM_KEY = "language:pending"
+
 
 async def handle_language(
     command: str,
@@ -24,20 +26,17 @@ async def handle_language(
 
     if command == "practice":
         return await _handle_practice(arguments, track_service, chunk_service, working_memory_service)
+    if command == "review":
+        return await _handle_review(arguments, track_service, chunk_service, working_memory_service)
 
     raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Unknown language command: {command}")
 
 
-async def _handle_practice(
-    arguments: dict[str, Any],
+async def _resolve_track_and_chunk(
+    language_code: str,
     track_service: TrackService,
     chunk_service: ChunkService,
-    working_memory_service: WorkingMemoryService,
-) -> dict[str, Any]:
-    language_code = str(arguments.get("language_code", "")).strip().lower()
-    if not language_code:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Language code is required")
-
+) -> tuple:
     tracks = await track_service.get_tracks(TrackFilters(code=language_code, active_only=True))
     if not tracks:
         raise HTTPException(
@@ -53,15 +52,33 @@ async def _handle_practice(
             detail=f"No chunks due for practice in track: {language_code!r}",
         )
     chunk = batches[0].chunks[0]
+    return track, chunk
 
-    existing = await working_memory_service.list(WorkingMemoryFilters(key="language:pending_practice", active_only=True))
+
+async def _clear_pending(working_memory_service: WorkingMemoryService) -> None:
+    existing = await working_memory_service.list(WorkingMemoryFilters(key=_WM_KEY, active_only=True))
     for item in existing:
         await working_memory_service.delete(item.id)
-        logger.debug("handle_language: cleared stale practice WM id=%d", item.id)
+        logger.debug("handle_language: cleared stale pending WM id=%d", item.id)
+
+
+async def _handle_practice(
+    arguments: dict[str, Any],
+    track_service: TrackService,
+    chunk_service: ChunkService,
+    working_memory_service: WorkingMemoryService,
+) -> dict[str, Any]:
+    language_code = str(arguments.get("language_code", "")).strip().lower()
+    if not language_code:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Language code is required")
+
+    track, chunk = await _resolve_track_and_chunk(language_code, track_service, chunk_service)
+    await _clear_pending(working_memory_service)
 
     wm = await working_memory_service.create(WorkingMemoryCreate(
-        key="language:pending_practice",
+        key=_WM_KEY,
         value=json.dumps({
+            "mode": "practice",
             "chunk_id": chunk.id,
             "track_id": track.id,
             "language_name": track.name,
@@ -76,6 +93,48 @@ async def _handle_practice(
     )
 
     return {
+        "mode": "practice",
+        "wm_id": wm.id,
+        "chunk_id": chunk.id,
+        "track_id": track.id,
+        "language_name": track.name,
+        "text": chunk.text,
+        "translation": chunk.translation,
+    }
+
+
+async def _handle_review(
+    arguments: dict[str, Any],
+    track_service: TrackService,
+    chunk_service: ChunkService,
+    working_memory_service: WorkingMemoryService,
+) -> dict[str, Any]:
+    language_code = str(arguments.get("language_code", "")).strip().lower()
+    if not language_code:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Language code is required")
+
+    track, chunk = await _resolve_track_and_chunk(language_code, track_service, chunk_service)
+    await _clear_pending(working_memory_service)
+
+    wm = await working_memory_service.create(WorkingMemoryCreate(
+        key=_WM_KEY,
+        value=json.dumps({
+            "mode": "review",
+            "chunk_id": chunk.id,
+            "track_id": track.id,
+            "language_name": track.name,
+            "text": chunk.text,
+            "translation": chunk.translation,
+        }),
+        importance=1.0,
+    ))
+    logger.info(
+        "handle_language: review started track=%s chunk_id=%d wm_id=%d",
+        language_code, chunk.id, wm.id,
+    )
+
+    return {
+        "mode": "review",
         "wm_id": wm.id,
         "chunk_id": chunk.id,
         "track_id": track.id,

@@ -1,0 +1,3077 @@
+# Vocabulary seed for ru. Auto-generated — edit freely.
+# Re-run generate_language_chunks.py to append more entries.
+# seed_language_chunks.py loads this on startup (idempotent).
+ru:
+- type: word
+  text: Здравствуйте
+  translation: Hello (formal)
+  example: Здравствуйте, как дела?
+  example_translation: Hello, how are you?
+  cefr_level: A1
+  frequency_rank: 1
+- type: word
+  text: Привет
+  translation: Hi (informal)
+  example: Привет, Антон!
+  example_translation: Hi, Anton!
+  cefr_level: A1
+  frequency_rank: 2
+- type: word
+  text: До свидания
+  translation: Goodbye
+  example: До свидания, до завтра!
+  example_translation: Goodbye, see you tomorrow!
+  cefr_level: A1
+  frequency_rank: 3
+- type: word
+  text: Пожалуйста
+  translation: Please / You're welcome
+  example: Дайте, пожалуйста, воду.
+  example_translation: Give me water, please.
+  cefr_level: A1
+  frequency_rank: 4
+- type: word
+  text: Спасибо
+  translation: Thank you
+  example: Спасибо за помощь!
+  example_translation: Thank you for your help!
+  cefr_level: A1
+  frequency_rank: 5
+- type: word
+  text: Да
+  translation: 'Yes'
+  example: Да, я понимаю.
+  example_translation: Yes, I understand.
+  cefr_level: A1
+  frequency_rank: 6
+- type: word
+  text: Нет
+  translation: 'No'
+  example: Нет, я не хочу.
+  example_translation: No, I don't want.
+  cefr_level: A1
+  frequency_rank: 7
+- type: word
+  text: Я
+  translation: I
+  example: Я студент.
+  example_translation: I am a student.
+  cefr_level: A1
+  frequency_rank: 8
+- type: word
+  text: Ты
+  translation: You (informal singular)
+  example: Ты говоришь по-русски?
+  example_translation: Do you speak Russian?
+  cefr_level: A1
+  frequency_rank: 9
+- type: word
+  text: Он
+  translation: He
+  example: Он врач.
+  example_translation: He is a doctor.
+  cefr_level: A1
+  frequency_rank: 10
+- type: word
+  text: Она
+  translation: She
+  example: Она здесь.
+  example_translation: She is here.
+  cefr_level: A1
+  frequency_rank: 11
+- type: word
+  text: Мы
+  translation: We
+  example: Мы друзья.
+  example_translation: We are friends.
+  cefr_level: A1
+  frequency_rank: 12
+- type: word
+  text: Вы
+  translation: You (formal singular / plural)
+  example: Вы говорите по-английски?
+  example_translation: Do you speak English?
+  cefr_level: A1
+  frequency_rank: 13
+- type: word
+  text: Они
+  translation: They
+  example: Они читают.
+  example_translation: They are reading.
+  cefr_level: A1
+  frequency_rank: 14
+- type: word
+  text: Как
+  translation: How / What
+  example: Как вас зовут?
+  example_translation: What is your name? (formal)
+  cefr_level: A1
+  frequency_rank: 15
+- type: word
+  text: Где
+  translation: Where
+  example: Где метро?
+  example_translation: Where is the metro?
+  cefr_level: A1
+  frequency_rank: 16
+- type: word
+  text: Что
+  translation: What
+  example: Что это?
+  example_translation: What is this?
+  cefr_level: A1
+  frequency_rank: 17
+- type: word
+  text: Это
+  translation: This / It is
+  example: Это моя книга.
+  example_translation: This is my book.
+  cefr_level: A1
+  frequency_rank: 18
+- type: word
+  text: Дом
+  translation: House / Home
+  example: Это мой дом.
+  example_translation: This is my home.
+  cefr_level: A1
+  frequency_rank: 19
+- type: word
+  text: Город
+  translation: City
+  example: Я живу в этом городе.
+  example_translation: I live in this city.
+  cefr_level: A1
+  frequency_rank: 20
+- type: word
+  text: Магазин
+  translation: Shop
+  example: Я иду в магазин.
+  example_translation: I am going to the shop.
+  cefr_level: A1
+  frequency_rank: 21
+- type: word
+  text: Стол
+  translation: Table
+  example: Книга на столе.
+  example_translation: The book is on the table.
+  cefr_level: A1
+  frequency_rank: 22
+- type: word
+  text: Книга
+  translation: Book
+  example: Это интересная книга.
+  example_translation: This is an interesting book.
+  cefr_level: A1
+  frequency_rank: 23
+- type: word
+  text: Вода
+  translation: Water
+  example: Дайте, пожалуйста, воду.
+  example_translation: Give me water, please.
+  cefr_level: A1
+  frequency_rank: 24
+- type: word
+  text: Чай
+  translation: Tea
+  example: Я пью чай утром.
+  example_translation: I drink tea in the morning.
+  cefr_level: A1
+  frequency_rank: 25
+- type: word
+  text: Кофе
+  translation: Coffee
+  example: Хотите кофе?
+  example_translation: Do you want coffee?
+  cefr_level: A1
+  frequency_rank: 26
+- type: word
+  text: Хорошо
+  translation: Good / Well
+  example: Всё хорошо.
+  example_translation: Everything is good.
+  cefr_level: A1
+  frequency_rank: 27
+- type: word
+  text: Плохо
+  translation: Bad / Poorly
+  example: Это очень плохо.
+  example_translation: This is very bad.
+  cefr_level: A1
+  frequency_rank: 28
+- type: collocation
+  text: Как дела?
+  translation: How are you?
+  example: Привет! Как дела?
+  example_translation: Hi! How are you?
+  cefr_level: A1
+  frequency_rank: 29
+- type: collocation
+  text: Меня зовут...
+  translation: My name is...
+  example: Меня зовут Анна.
+  example_translation: My name is Anna.
+  cefr_level: A1
+  frequency_rank: 30
+- type: collocation
+  text: Очень приятно
+  translation: Nice to meet you
+  example: Очень приятно познакомиться.
+  example_translation: Nice to meet you.
+  cefr_level: A1
+  frequency_rank: 31
+- type: collocation
+  text: Доброе утро
+  translation: Good morning
+  example: Доброе утро, коллеги!
+  example_translation: Good morning, colleagues!
+  cefr_level: A1
+  frequency_rank: 32
+- type: collocation
+  text: Добрый день
+  translation: Good afternoon
+  example: Добрый день, как пройти к метро?
+  example_translation: Good afternoon, how to get to the metro?
+  cefr_level: A1
+  frequency_rank: 33
+- type: collocation
+  text: Добрый вечер
+  translation: Good evening
+  example: Добрый вечер всем!
+  example_translation: Good evening everyone!
+  cefr_level: A1
+  frequency_rank: 34
+- type: collocation
+  text: Извините
+  translation: Excuse me / Sorry
+  example: Извините, где туалет?
+  example_translation: Excuse me, where is the toilet?
+  cefr_level: A1
+  frequency_rank: 35
+- type: collocation
+  text: Сколько стоит?
+  translation: How much does it cost?
+  example: Сколько стоит эта книга?
+  example_translation: How much does this book cost?
+  cefr_level: A1
+  frequency_rank: 36
+- type: collocation
+  text: Где находится...?
+  translation: Where is... located?
+  example: Где находится банк?
+  example_translation: Where is the bank located?
+  cefr_level: A1
+  frequency_rank: 37
+- type: collocation
+  text: До завтра
+  translation: See you tomorrow
+  example: Пока, до завтра!
+  example_translation: Bye, see you tomorrow!
+  cefr_level: A1
+  frequency_rank: 38
+- type: verb_form
+  text: Я говорю
+  translation: I speak
+  example: Я говорю по-русски.
+  example_translation: I speak Russian.
+  cefr_level: A1
+  frequency_rank: 39
+- type: verb_form
+  text: Я понимаю
+  translation: I understand
+  example: Я понимаю немного.
+  example_translation: I understand a little.
+  cefr_level: A1
+  frequency_rank: 40
+- type: verb_form
+  text: Я знаю
+  translation: I know
+  example: Я знаю этот город.
+  example_translation: I know this city.
+  cefr_level: A1
+  frequency_rank: 41
+- type: verb_form
+  text: Я хочу
+  translation: I want
+  example: Я хочу пить.
+  example_translation: I want to drink (I'm thirsty).
+  cefr_level: A1
+  frequency_rank: 42
+- type: verb_form
+  text: Я живу
+  translation: I live
+  example: Я живу в Москве.
+  example_translation: I live in Moscow.
+  cefr_level: A1
+  frequency_rank: 43
+- type: verb_form
+  text: Я работаю
+  translation: I work
+  example: Я работаю в офисе.
+  example_translation: I work in an office.
+  cefr_level: A1
+  frequency_rank: 44
+- type: verb_form
+  text: У меня есть
+  translation: I have
+  example: У меня есть машина.
+  example_translation: I have a car.
+  cefr_level: A1
+  frequency_rank: 45
+- type: sentence_pattern
+  text: Я из [страны].
+  translation: I am from [country].
+  example: Я из России.
+  example_translation: I am from Russia.
+  cefr_level: A1
+  frequency_rank: 46
+- type: sentence_pattern
+  text: Это [существительное].
+  translation: This is a [noun].
+  example: Это ручка.
+  example_translation: This is a pen.
+  cefr_level: A1
+  frequency_rank: 47
+- type: sentence_pattern
+  text: У меня нет [существительного].
+  translation: I don't have a [noun].
+  example: У меня нет времени.
+  example_translation: I don't have time.
+  cefr_level: A1
+  frequency_rank: 48
+- type: sentence_pattern
+  text: Мне нравится [что-то].
+  translation: I like [something].
+  example: Мне нравится этот фильм.
+  example_translation: I like this film.
+  cefr_level: A1
+  frequency_rank: 49
+- type: sentence_pattern
+  text: Можно [инфинитив]?
+  translation: May I [verb]?
+  example: Можно войти?
+  example_translation: May I come in?
+  cefr_level: A1
+  frequency_rank: 50
+- type: word
+  text: Утро
+  translation: Morning
+  example: Доброе утро!
+  example_translation: Good morning!
+  cefr_level: A1
+  frequency_rank: 51
+- type: word
+  text: День
+  translation: Day
+  example: Сегодня хороший день.
+  example_translation: Today is a good day.
+  cefr_level: A1
+  frequency_rank: 52
+- type: word
+  text: Вечер
+  translation: Evening
+  example: Мы встретимся вечером.
+  example_translation: We will meet in the evening.
+  cefr_level: A1
+  frequency_rank: 53
+- type: word
+  text: Ночь
+  translation: Night
+  example: Спокойной ночи!
+  example_translation: Good night!
+  cefr_level: A1
+  frequency_rank: 54
+- type: word
+  text: Время
+  translation: Time
+  example: Сколько времени?
+  example_translation: What time is it?
+  cefr_level: A1
+  frequency_rank: 55
+- type: word
+  text: Семья
+  translation: Family
+  example: Моя семья большая.
+  example_translation: My family is big.
+  cefr_level: A1
+  frequency_rank: 56
+- type: word
+  text: Мама
+  translation: Mom
+  example: Моя мама очень добрая.
+  example_translation: My mom is very kind.
+  cefr_level: A1
+  frequency_rank: 57
+- type: word
+  text: Папа
+  translation: Dad
+  example: Мой папа работает.
+  example_translation: My dad works.
+  cefr_level: A1
+  frequency_rank: 58
+- type: word
+  text: Брат
+  translation: Brother
+  example: У меня есть брат.
+  example_translation: I have a brother.
+  cefr_level: A1
+  frequency_rank: 59
+- type: word
+  text: Сестра
+  translation: Sister
+  example: Это моя сестра.
+  example_translation: This is my sister.
+  cefr_level: A1
+  frequency_rank: 60
+- type: word
+  text: Друг
+  translation: Friend (masculine)
+  example: Он мой друг.
+  example_translation: He is my friend.
+  cefr_level: A1
+  frequency_rank: 61
+- type: word
+  text: Подруга
+  translation: Friend (feminine)
+  example: Она моя подруга.
+  example_translation: She is my friend.
+  cefr_level: A1
+  frequency_rank: 62
+- type: word
+  text: Еда
+  translation: Food
+  example: Эта еда вкусная.
+  example_translation: This food is tasty.
+  cefr_level: A1
+  frequency_rank: 63
+- type: word
+  text: Хлеб
+  translation: Bread
+  example: Я ем хлеб.
+  example_translation: I eat bread.
+  cefr_level: A1
+  frequency_rank: 64
+- type: word
+  text: Молоко
+  translation: Milk
+  example: Он пьёт молоко.
+  example_translation: He drinks milk.
+  cefr_level: A1
+  frequency_rank: 65
+- type: word
+  text: Сок
+  translation: Juice
+  example: Я хочу яблочный сок.
+  example_translation: I want apple juice.
+  cefr_level: A1
+  frequency_rank: 66
+- type: word
+  text: Фрукт
+  translation: Fruit
+  example: Мой любимый фрукт – банан.
+  example_translation: My favorite fruit is a banana.
+  cefr_level: A1
+  frequency_rank: 67
+- type: word
+  text: Овощ
+  translation: Vegetable
+  example: Я люблю овощи.
+  example_translation: I love vegetables.
+  cefr_level: A1
+  frequency_rank: 68
+- type: word
+  text: Ресторан
+  translation: Restaurant
+  example: Где здесь хороший ресторан?
+  example_translation: Where is a good restaurant here?
+  cefr_level: A1
+  frequency_rank: 69
+- type: word
+  text: Кафе
+  translation: Cafe
+  example: Давай пойдём в кафе.
+  example_translation: Let's go to a cafe.
+  cefr_level: A1
+  frequency_rank: 70
+- type: word
+  text: Улица
+  translation: Street
+  example: Эта улица длинная.
+  example_translation: This street is long.
+  cefr_level: A1
+  frequency_rank: 71
+- type: word
+  text: Музей
+  translation: Museum
+  example: Мы идём в музей.
+  example_translation: We are going to the museum.
+  cefr_level: A1
+  frequency_rank: 72
+- type: word
+  text: Парк
+  translation: Park
+  example: Я гуляю в парке.
+  example_translation: I walk in the park.
+  cefr_level: A1
+  frequency_rank: 73
+- type: word
+  text: Школа
+  translation: School
+  example: Моя дочь ходит в школу.
+  example_translation: My daughter goes to school.
+  cefr_level: A1
+  frequency_rank: 74
+- type: word
+  text: Университет
+  translation: University
+  example: Он учится в университете.
+  example_translation: He studies at the university.
+  cefr_level: A1
+  frequency_rank: 75
+- type: word
+  text: Работа
+  translation: Work / Job
+  example: У меня новая работа.
+  example_translation: I have a new job.
+  cefr_level: A1
+  frequency_rank: 76
+- type: word
+  text: Деньги
+  translation: Money
+  example: У меня нет денег.
+  example_translation: I don't have money.
+  cefr_level: A1
+  frequency_rank: 77
+- type: collocation
+  text: Доброй ночи
+  translation: Good night
+  example: Доброй ночи, спи хорошо!
+  example_translation: Good night, sleep well!
+  cefr_level: A1
+  frequency_rank: 78
+- type: collocation
+  text: Как вас зовут?
+  translation: What is your name? (formal)
+  example: Как вас зовут? Меня зовут Анна.
+  example_translation: What is your name? My name is Anna.
+  cefr_level: A1
+  frequency_rank: 79
+- type: collocation
+  text: Мой друг
+  translation: My friend (masculine)
+  example: Это мой друг Иван.
+  example_translation: This is my friend Ivan.
+  cefr_level: A1
+  frequency_rank: 80
+- type: collocation
+  text: Моя семья
+  translation: My family
+  example: Моя семья живёт в России.
+  example_translation: My family lives in Russia.
+  cefr_level: A1
+  frequency_rank: 81
+- type: collocation
+  text: Большое спасибо
+  translation: Thank you very much
+  example: Большое спасибо за помощь!
+  example_translation: Thank you very much for your help!
+  cefr_level: A1
+  frequency_rank: 82
+- type: collocation
+  text: Извините, пожалуйста
+  translation: Excuse me, please / I'm sorry, please
+  example: Извините, пожалуйста, вы говорите по-русски?
+  example_translation: Excuse me, please, do you speak Russian?
+  cefr_level: A1
+  frequency_rank: 83
+- type: collocation
+  text: Где ты живешь?
+  translation: Where do you live? (informal)
+  example: Где ты живешь? Я живу в Москве.
+  example_translation: Where do you live? I live in Moscow.
+  cefr_level: A1
+  frequency_rank: 84
+- type: collocation
+  text: Я понимаю по-русски
+  translation: I understand Russian
+  example: Я понимаю по-русски немного.
+  example_translation: I understand Russian a little.
+  cefr_level: A1
+  frequency_rank: 85
+- type: collocation
+  text: Говорить по-английски
+  translation: To speak English
+  example: Вы говорите по-английски?
+  example_translation: Do you speak English?
+  cefr_level: A1
+  frequency_rank: 86
+- type: collocation
+  text: Сколько времени?
+  translation: What time is it?
+  example: Извините, сколько времени?
+  example_translation: Excuse me, what time is it?
+  cefr_level: A1
+  frequency_rank: 87
+- type: verb_form
+  text: Я ем
+  translation: I eat
+  example: Я ем яблоко.
+  example_translation: I am eating an apple.
+  cefr_level: A1
+  frequency_rank: 88
+- type: verb_form
+  text: Он пьёт
+  translation: He drinks
+  example: Он пьёт воду.
+  example_translation: He drinks water.
+  cefr_level: A1
+  frequency_rank: 89
+- type: verb_form
+  text: Мы читаем
+  translation: We read
+  example: Мы читаем интересную книгу.
+  example_translation: We are reading an interesting book.
+  cefr_level: A1
+  frequency_rank: 90
+- type: verb_form
+  text: Они спят
+  translation: They sleep
+  example: Дети спят в комнате.
+  example_translation: The children are sleeping in the room.
+  cefr_level: A1
+  frequency_rank: 91
+- type: verb_form
+  text: Вы хотите
+  translation: You want (formal/plural)
+  example: Вы хотите кофе?
+  example_translation: Do you want coffee?
+  cefr_level: A1
+  frequency_rank: 92
+- type: verb_form
+  text: Она любит
+  translation: She loves/likes
+  example: Она любит музыку.
+  example_translation: She loves music.
+  cefr_level: A1
+  frequency_rank: 93
+- type: verb_form
+  text: Я слушаю
+  translation: I listen
+  example: Я слушаю радио.
+  example_translation: I listen to the radio.
+  cefr_level: A1
+  frequency_rank: 94
+- type: verb_form
+  text: Мы видим
+  translation: We see
+  example: Мы видим большой дом.
+  example_translation: We see a big house.
+  cefr_level: A1
+  frequency_rank: 95
+- type: sentence_pattern
+  text: У меня нет времени.
+  translation: I don't have time.
+  example: Извините, у меня нет времени.
+  example_translation: Sorry, I don't have time.
+  cefr_level: A1
+  frequency_rank: 96
+- type: sentence_pattern
+  text: Я учу русский язык.
+  translation: I am learning Russian.
+  example: Я учу русский язык каждый день.
+  example_translation: I learn Russian every day.
+  cefr_level: A1
+  frequency_rank: 97
+- type: sentence_pattern
+  text: Как дела у тебя?
+  translation: How are you? (informal)
+  example: Привет, как дела у тебя?
+  example_translation: Hi, how are you?
+  cefr_level: A1
+  frequency_rank: 98
+- type: sentence_pattern
+  text: Можно войти?
+  translation: May I come in?
+  example: Дверь открыта, можно войти.
+  example_translation: The door is open, you may come in.
+  cefr_level: A1
+  frequency_rank: 99
+- type: sentence_pattern
+  text: Я иду в [место].
+  translation: I am going to [place].
+  example: Я иду в парк.
+  example_translation: I am going to the park.
+  cefr_level: A1
+  frequency_rank: 100
+- type: word
+  text: Доктор
+  translation: Doctor
+  example: Моя мама - доктор.
+  example_translation: My mom is a doctor.
+  cefr_level: A1
+  frequency_rank: 101
+- type: word
+  text: Студент
+  translation: Student (male)
+  example: Он студент.
+  example_translation: He is a student.
+  cefr_level: A1
+  frequency_rank: 102
+- type: word
+  text: Студентка
+  translation: Student (female)
+  example: Она студентка.
+  example_translation: She is a student.
+  cefr_level: A1
+  frequency_rank: 103
+- type: word
+  text: Учитель
+  translation: Teacher (male)
+  example: Мой учитель очень хороший.
+  example_translation: My teacher is very good.
+  cefr_level: A1
+  frequency_rank: 104
+- type: word
+  text: Учительница
+  translation: Teacher (female)
+  example: Учительница объясняет урок.
+  example_translation: The teacher explains the lesson.
+  cefr_level: A1
+  frequency_rank: 105
+- type: word
+  text: Врач
+  translation: Doctor (general)
+  example: Я хочу стать врачом.
+  example_translation: I want to become a doctor.
+  cefr_level: A1
+  frequency_rank: 106
+- type: word
+  text: Урок
+  translation: Lesson
+  example: У меня урок русского языка.
+  example_translation: I have a Russian language lesson.
+  cefr_level: A1
+  frequency_rank: 107
+- type: word
+  text: Машина
+  translation: Car
+  example: Это моя машина.
+  example_translation: This is my car.
+  cefr_level: A1
+  frequency_rank: 108
+- type: word
+  text: Телефон
+  translation: Telephone
+  example: Где мой телефон?
+  example_translation: Where is my phone?
+  cefr_level: A1
+  frequency_rank: 109
+- type: word
+  text: Комната
+  translation: Room
+  example: Моя комната большая.
+  example_translation: My room is big.
+  cefr_level: A1
+  frequency_rank: 110
+- type: word
+  text: Кровать
+  translation: Bed
+  example: Я сплю на кровати.
+  example_translation: I sleep on the bed.
+  cefr_level: A1
+  frequency_rank: 111
+- type: word
+  text: Окно
+  translation: Window
+  example: Открой окно, пожалуйста.
+  example_translation: Open the window, please.
+  cefr_level: A1
+  frequency_rank: 112
+- type: word
+  text: Дверь
+  translation: Door
+  example: Закрой дверь.
+  example_translation: Close the door.
+  cefr_level: A1
+  frequency_rank: 113
+- type: word
+  text: Ручка
+  translation: Pen
+  example: Дайте мне ручку.
+  example_translation: Give me a pen.
+  cefr_level: A1
+  frequency_rank: 114
+- type: word
+  text: Карандаш
+  translation: Pencil
+  example: У меня есть карандаш.
+  example_translation: I have a pencil.
+  cefr_level: A1
+  frequency_rank: 115
+- type: word
+  text: Словарь
+  translation: Dictionary
+  example: Я использую словарь.
+  example_translation: I use a dictionary.
+  cefr_level: A1
+  frequency_rank: 116
+- type: word
+  text: Ключ
+  translation: Key
+  example: Где мой ключ?
+  example_translation: Where is my key?
+  cefr_level: A1
+  frequency_rank: 117
+- type: word
+  text: Кошка
+  translation: Cat
+  example: У меня есть кошка.
+  example_translation: I have a cat.
+  cefr_level: A1
+  frequency_rank: 118
+- type: word
+  text: Собака
+  translation: Dog
+  example: Собака громко лает.
+  example_translation: The dog barks loudly.
+  cefr_level: A1
+  frequency_rank: 119
+- type: word
+  text: Здесь
+  translation: Here
+  example: Я здесь.
+  example_translation: I am here.
+  cefr_level: A1
+  frequency_rank: 120
+- type: word
+  text: Там
+  translation: There
+  example: Мой друг там.
+  example_translation: My friend is there.
+  cefr_level: A1
+  frequency_rank: 121
+- type: word
+  text: Очень
+  translation: Very
+  example: Она очень красивая.
+  example_translation: She is very beautiful.
+  cefr_level: A1
+  frequency_rank: 122
+- type: word
+  text: Новый
+  translation: New
+  example: Это новый дом.
+  example_translation: This is a new house.
+  cefr_level: A1
+  frequency_rank: 123
+- type: word
+  text: Старый
+  translation: Old
+  example: Моя машина старая.
+  example_translation: My car is old.
+  cefr_level: A1
+  frequency_rank: 124
+- type: word
+  text: Большой
+  translation: Big
+  example: У него большой стол.
+  example_translation: He has a big table.
+  cefr_level: A1
+  frequency_rank: 125
+- type: word
+  text: Маленький
+  translation: Small
+  example: У меня маленькая собака.
+  example_translation: I have a small dog.
+  cefr_level: A1
+  frequency_rank: 126
+- type: word
+  text: Красивый
+  translation: Beautiful
+  example: Этот город очень красивый.
+  example_translation: This city is very beautiful.
+  cefr_level: A1
+  frequency_rank: 127
+- type: word
+  text: Интересный
+  translation: Interesting
+  example: Это интересная книга.
+  example_translation: This is an interesting book.
+  cefr_level: A1
+  frequency_rank: 128
+- type: collocation
+  text: Как тебя зовут?
+  translation: What is your name? (informal)
+  example: Привет! Как тебя зовут?
+  example_translation: Hi! What is your name?
+  cefr_level: A1
+  frequency_rank: 129
+- type: collocation
+  text: Повторите, пожалуйста.
+  translation: Repeat, please.
+  example: Повторите, пожалуйста, еще раз.
+  example_translation: Repeat once more, please.
+  cefr_level: A1
+  frequency_rank: 130
+- type: collocation
+  text: Говорить по-русски.
+  translation: To speak Russian.
+  example: Я немного говорю по-русски.
+  example_translation: I speak a little Russian.
+  cefr_level: A1
+  frequency_rank: 131
+- type: collocation
+  text: Я не понимаю.
+  translation: I don't understand.
+  example: Извините, я не понимаю.
+  example_translation: Sorry, I don't understand.
+  cefr_level: A1
+  frequency_rank: 132
+- type: collocation
+  text: Как пройти к...?
+  translation: How to get to...?
+  example: Как пройти к музею?
+  example_translation: How do I get to the museum?
+  cefr_level: A1
+  frequency_rank: 133
+- type: collocation
+  text: Где туалет?
+  translation: Where is the toilet?
+  example: Извините, где туалет?
+  example_translation: Excuse me, where is the toilet?
+  cefr_level: A1
+  frequency_rank: 134
+- type: collocation
+  text: Счастливого пути!
+  translation: Have a good trip!
+  example: До свидания! Счастливого пути!
+  example_translation: Goodbye! Have a good trip!
+  cefr_level: A1
+  frequency_rank: 135
+- type: collocation
+  text: Приятного аппетита!
+  translation: Enjoy your meal!
+  example: Вот ваш обед. Приятного аппетита!
+  example_translation: Here is your lunch. Enjoy your meal!
+  cefr_level: A1
+  frequency_rank: 136
+- type: collocation
+  text: Сколько лет тебе?
+  translation: How old are you? (informal)
+  example: Сколько лет тебе? Мне двадцать.
+  example_translation: How old are you? I am twenty.
+  cefr_level: A1
+  frequency_rank: 137
+- type: collocation
+  text: Красное вино
+  translation: Red wine
+  example: Я хочу красное вино.
+  example_translation: I want red wine.
+  cefr_level: A1
+  frequency_rank: 138
+- type: verb_form
+  text: Я читаю
+  translation: I read
+  example: Я читаю газету каждое утро.
+  example_translation: I read the newspaper every morning.
+  cefr_level: A1
+  frequency_rank: 139
+- type: verb_form
+  text: Писать
+  translation: To write
+  example: Я люблю писать письма.
+  example_translation: I like to write letters.
+  cefr_level: A1
+  frequency_rank: 140
+- type: verb_form
+  text: Он говорит
+  translation: He speaks
+  example: Он говорит по-испански.
+  example_translation: He speaks Spanish.
+  cefr_level: A1
+  frequency_rank: 141
+- type: verb_form
+  text: Она делает
+  translation: She does/makes
+  example: Она делает домашнее задание.
+  example_translation: She does her homework.
+  cefr_level: A1
+  frequency_rank: 142
+- type: verb_form
+  text: Мы идём
+  translation: We go/walk
+  example: Мы идём в парк.
+  example_translation: We are going to the park.
+  cefr_level: A1
+  frequency_rank: 143
+- type: verb_form
+  text: Вы понимаете?
+  translation: Do you understand? (formal/plural)
+  example: Вы понимаете русский язык?
+  example_translation: Do you understand Russian?
+  cefr_level: A1
+  frequency_rank: 144
+- type: verb_form
+  text: Они учат
+  translation: They learn/study
+  example: Они учат новые слова.
+  example_translation: They are learning new words.
+  cefr_level: A1
+  frequency_rank: 145
+- type: sentence_pattern
+  text: Мне нужна [существительное].
+  translation: I need [noun].
+  example: Мне нужна ручка.
+  example_translation: I need a pen.
+  cefr_level: A1
+  frequency_rank: 146
+- type: sentence_pattern
+  text: '[Существительное] находится здесь/там.'
+  translation: '[Noun] is located here/there.'
+  example: Магазин находится там.
+  example_translation: The shop is located there.
+  cefr_level: A1
+  frequency_rank: 147
+- type: sentence_pattern
+  text: Я люблю [что-то].
+  translation: I love/like [something].
+  example: Я люблю читать книги.
+  example_translation: I love to read books.
+  cefr_level: A1
+  frequency_rank: 148
+- type: sentence_pattern
+  text: Вы говорите по-русски?
+  translation: Do you speak Russian? (formal/plural)
+  example: Извините, вы говорите по-русски?
+  example_translation: Excuse me, do you speak Russian?
+  cefr_level: A1
+  frequency_rank: 149
+- type: sentence_pattern
+  text: Какой это цвет?
+  translation: What color is this?
+  example: Какой это цвет? Это синий.
+  example_translation: What color is this? It's blue.
+  cefr_level: A1
+  frequency_rank: 150
+- type: word
+  text: Кто
+  translation: Who
+  example: Кто это?
+  example_translation: Who is this?
+  cefr_level: A1
+  frequency_rank: 151
+- type: word
+  text: Когда
+  translation: When
+  example: Когда мы встретимся?
+  example_translation: When will we meet?
+  cefr_level: A1
+  frequency_rank: 152
+- type: word
+  text: Куда
+  translation: Where to
+  example: Куда ты идёшь?
+  example_translation: Where are you going?
+  cefr_level: A1
+  frequency_rank: 153
+- type: word
+  text: Откуда
+  translation: Where from
+  example: Откуда он?
+  example_translation: Where is he from?
+  cefr_level: A1
+  frequency_rank: 154
+- type: word
+  text: Почему
+  translation: Why
+  example: Почему ты здесь?
+  example_translation: Why are you here?
+  cefr_level: A1
+  frequency_rank: 155
+- type: word
+  text: Сегодня
+  translation: Today
+  example: Что ты делаешь сегодня?
+  example_translation: What are you doing today?
+  cefr_level: A1
+  frequency_rank: 156
+- type: word
+  text: Завтра
+  translation: Tomorrow
+  example: Мы поедем завтра.
+  example_translation: We will go tomorrow.
+  cefr_level: A1
+  frequency_rank: 157
+- type: word
+  text: Вчера
+  translation: Yesterday
+  example: Вчера был хороший день.
+  example_translation: Yesterday was a good day.
+  cefr_level: A1
+  frequency_rank: 158
+- type: word
+  text: Неделя
+  translation: Week
+  example: На следующей неделе я еду в Москву.
+  example_translation: Next week I'm going to Moscow.
+  cefr_level: A1
+  frequency_rank: 159
+- type: word
+  text: Месяц
+  translation: Month
+  example: Один месяц назад.
+  example_translation: One month ago.
+  cefr_level: A1
+  frequency_rank: 160
+- type: word
+  text: Год
+  translation: Year
+  example: Этот год очень интересный.
+  example_translation: This year is very interesting.
+  cefr_level: A1
+  frequency_rank: 161
+- type: word
+  text: Один
+  translation: One
+  example: У меня есть один брат.
+  example_translation: I have one brother.
+  cefr_level: A1
+  frequency_rank: 162
+- type: word
+  text: Два
+  translation: Two
+  example: Дайте мне два яблока.
+  example_translation: Give me two apples.
+  cefr_level: A1
+  frequency_rank: 163
+- type: word
+  text: Три
+  translation: Three
+  example: У нас три книги.
+  example_translation: We have three books.
+  cefr_level: A1
+  frequency_rank: 164
+- type: word
+  text: Четыре
+  translation: Four
+  example: Он живёт в доме номер четыре.
+  example_translation: He lives in house number four.
+  cefr_level: A1
+  frequency_rank: 165
+- type: word
+  text: Пять
+  translation: Five
+  example: Я работаю пять дней в неделю.
+  example_translation: I work five days a week.
+  cefr_level: A1
+  frequency_rank: 166
+- type: word
+  text: Белый
+  translation: White
+  example: Мне нравится белый цвет.
+  example_translation: I like white color.
+  cefr_level: A1
+  frequency_rank: 167
+- type: word
+  text: Чёрный
+  translation: Black
+  example: У неё чёрная кошка.
+  example_translation: She has a black cat.
+  cefr_level: A1
+  frequency_rank: 168
+- type: word
+  text: Синий
+  translation: Blue
+  example: Моя машина синяя.
+  example_translation: My car is blue.
+  cefr_level: A1
+  frequency_rank: 169
+- type: word
+  text: Зелёный
+  translation: Green
+  example: Люблю зелёный чай.
+  example_translation: I love green tea.
+  cefr_level: A1
+  frequency_rank: 170
+- type: word
+  text: Мясо
+  translation: Meat
+  example: Я не ем мясо.
+  example_translation: I don't eat meat.
+  cefr_level: A1
+  frequency_rank: 171
+- type: word
+  text: Рыба
+  translation: Fish
+  example: Сегодня на ужин рыба.
+  example_translation: Today for dinner is fish.
+  cefr_level: A1
+  frequency_rank: 172
+- type: word
+  text: Обед
+  translation: Lunch
+  example: Давай пообедаем вместе.
+  example_translation: Let's have lunch together.
+  cefr_level: A1
+  frequency_rank: 173
+- type: word
+  text: Завтрак
+  translation: Breakfast
+  example: Я ем кашу на завтрак.
+  example_translation: I eat porridge for breakfast.
+  cefr_level: A1
+  frequency_rank: 174
+- type: word
+  text: Отель
+  translation: Hotel
+  example: Мы остановились в хорошем отеле.
+  example_translation: We stayed in a good hotel.
+  cefr_level: A1
+  frequency_rank: 175
+- type: word
+  text: Билет
+  translation: Ticket
+  example: Мне нужен билет в кино.
+  example_translation: I need a movie ticket.
+  cefr_level: A1
+  frequency_rank: 176
+- type: word
+  text: Горячий
+  translation: Hot
+  example: Чай очень горячий.
+  example_translation: The tea is very hot.
+  cefr_level: A1
+  frequency_rank: 177
+- type: collocation
+  text: Очень хорошо
+  translation: Very good
+  example: Это очень хорошо!
+  example_translation: This is very good!
+  cefr_level: A1
+  frequency_rank: 178
+- type: collocation
+  text: Как долго?
+  translation: How long?
+  example: Как долго вы здесь живёте?
+  example_translation: How long have you lived here?
+  cefr_level: A1
+  frequency_rank: 179
+- type: collocation
+  text: Приятного дня!
+  translation: Have a nice day!
+  example: До свидания! Приятного дня!
+  example_translation: Goodbye! Have a nice day!
+  cefr_level: A1
+  frequency_rank: 180
+- type: collocation
+  text: С днём рождения!
+  translation: Happy birthday!
+  example: С днём рождения, мама!
+  example_translation: Happy birthday, Mom!
+  cefr_level: A1
+  frequency_rank: 181
+- type: collocation
+  text: Где ты работаешь?
+  translation: Where do you work?
+  example: Я работаю в школе. А где ты работаешь?
+  example_translation: I work in a school. And where do you work?
+  cefr_level: A1
+  frequency_rank: 182
+- type: collocation
+  text: Что это?
+  translation: What is this?
+  example: Что это на столе?
+  example_translation: What is this on the table?
+  cefr_level: A1
+  frequency_rank: 183
+- type: collocation
+  text: Я не знаю
+  translation: I don't know
+  example: Извините, я не знаю.
+  example_translation: Sorry, I don't know.
+  cefr_level: A1
+  frequency_rank: 184
+- type: collocation
+  text: Помогите мне!
+  translation: Help me!
+  example: Помогите мне, пожалуйста!
+  example_translation: Help me, please!
+  cefr_level: A1
+  frequency_rank: 185
+- type: collocation
+  text: Сколько тебе лет?
+  translation: How old are you?
+  example: Сколько тебе лет? Мне двадцать лет.
+  example_translation: How old are you? I am twenty years old.
+  cefr_level: A1
+  frequency_rank: 186
+- type: collocation
+  text: До скорой встречи!
+  translation: See you soon!
+  example: Пока! До скорой встречи!
+  example_translation: Bye! See you soon!
+  cefr_level: A1
+  frequency_rank: 187
+- type: verb_form
+  text: Жить
+  translation: To live
+  example: Я хочу жить в России.
+  example_translation: I want to live in Russia.
+  cefr_level: A1
+  frequency_rank: 188
+- type: verb_form
+  text: Пить
+  translation: To drink
+  example: Я люблю пить чай.
+  example_translation: I like to drink tea.
+  cefr_level: A1
+  frequency_rank: 189
+- type: verb_form
+  text: Идти
+  translation: To go (on foot)
+  example: Мне нужно идти домой.
+  example_translation: I need to go home.
+  cefr_level: A1
+  frequency_rank: 190
+- type: verb_form
+  text: Смотреть
+  translation: To watch/look
+  example: Давай смотреть фильм.
+  example_translation: Let's watch a movie.
+  cefr_level: A1
+  frequency_rank: 191
+- type: verb_form
+  text: Делать
+  translation: To do/make
+  example: Что ты любишь делать?
+  example_translation: What do you like to do?
+  cefr_level: A1
+  frequency_rank: 192
+- type: verb_form
+  text: Понимать
+  translation: To understand
+  example: Я начинаю понимать русский язык.
+  example_translation: I'm starting to understand Russian.
+  cefr_level: A1
+  frequency_rank: 193
+- type: verb_form
+  text: Знать
+  translation: To know
+  example: Я хочу знать больше.
+  example_translation: I want to know more.
+  cefr_level: A1
+  frequency_rank: 194
+- type: verb_form
+  text: Ходить
+  translation: To go (habitually/multi-directional)
+  example: Мы часто ходим в парк.
+  example_translation: We often go to the park.
+  cefr_level: A1
+  frequency_rank: 195
+- type: sentence_pattern
+  text: Мне нужно [инфинитив].
+  translation: I need to [verb].
+  example: Мне нужно работать.
+  example_translation: I need to work.
+  cefr_level: A1
+  frequency_rank: 196
+- type: sentence_pattern
+  text: Откуда вы?
+  translation: Where are you from?
+  example: Откуда вы? Я из Англии.
+  example_translation: Where are you from? I am from England.
+  cefr_level: A1
+  frequency_rank: 197
+- type: sentence_pattern
+  text: Дайте, пожалуйста, [существительное]!
+  translation: Give me [noun], please!
+  example: Дайте, пожалуйста, воду!
+  example_translation: Give me water, please!
+  cefr_level: A1
+  frequency_rank: 198
+- type: sentence_pattern
+  text: У меня болит [часть тела].
+  translation: My [body part] hurts.
+  example: У меня болит голова.
+  example_translation: My head hurts.
+  cefr_level: A1
+  frequency_rank: 199
+- type: sentence_pattern
+  text: Как доехать до [место]?
+  translation: How to get to [place] (by transport)?
+  example: Как доехать до центра?
+  example_translation: How to get to the center (by transport)?
+  cefr_level: A1
+  frequency_rank: 200
+- type: word
+  text: Понедельник
+  translation: Monday
+  example: В понедельник у меня встреча.
+  example_translation: On Monday I have a meeting.
+  cefr_level: A1
+  frequency_rank: 201
+- type: word
+  text: Вторник
+  translation: Tuesday
+  example: Во вторник я отдыхаю.
+  example_translation: On Tuesday I rest.
+  cefr_level: A1
+  frequency_rank: 202
+- type: word
+  text: Среда
+  translation: Wednesday
+  example: В среду у нас встреча.
+  example_translation: On Wednesday we have a meeting.
+  cefr_level: A1
+  frequency_rank: 203
+- type: word
+  text: Четверг
+  translation: Thursday
+  example: Ты свободен в четверг?
+  example_translation: Are you free on Thursday?
+  cefr_level: A1
+  frequency_rank: 204
+- type: word
+  text: Пятница
+  translation: Friday
+  example: Я жду пятницу.
+  example_translation: I wait for Friday.
+  cefr_level: A1
+  frequency_rank: 205
+- type: word
+  text: Суббота
+  translation: Saturday
+  example: В субботу я отдыхаю.
+  example_translation: On Saturday I rest.
+  cefr_level: A1
+  frequency_rank: 206
+- type: word
+  text: Воскресенье
+  translation: Sunday
+  example: Мы едем отдыхать в воскресенье.
+  example_translation: We go to relax on Sunday.
+  cefr_level: A1
+  frequency_rank: 207
+- type: word
+  text: Завтракать
+  translation: to have breakfast
+  example: Я обычно завтракаю рано.
+  example_translation: I usually have breakfast early.
+  cefr_level: A1
+  frequency_rank: 208
+- type: word
+  text: Обедать
+  translation: to have lunch
+  example: Давайте обедать вместе!
+  example_translation: Let's have lunch together!
+  cefr_level: A1
+  frequency_rank: 209
+- type: word
+  text: Ужинать
+  translation: to have dinner
+  example: Мы ужинаем в семь часов.
+  example_translation: We have dinner at seven o'clock.
+  cefr_level: A1
+  frequency_rank: 210
+- type: word
+  text: Учить
+  translation: to learn, to teach
+  example: Надо учить русский язык.
+  example_translation: One must learn Russian.
+  cefr_level: A1
+  frequency_rank: 211
+- type: word
+  text: Слушать
+  translation: to listen
+  example: Давай слушать музыку!
+  example_translation: Let's listen to music!
+  cefr_level: A1
+  frequency_rank: 212
+- type: word
+  text: Читать
+  translation: to read
+  example: Он часто читает.
+  example_translation: He often reads.
+  cefr_level: A1
+  frequency_rank: 213
+- type: word
+  text: Ехать
+  translation: to go (by vehicle)
+  example: Мы едем в Москву.
+  example_translation: We are going to Moscow.
+  cefr_level: A1
+  frequency_rank: 214
+- type: word
+  text: Сладкий
+  translation: sweet
+  example: Торт сладкий.
+  example_translation: The cake is sweet.
+  cefr_level: A1
+  frequency_rank: 215
+- type: word
+  text: Холодный
+  translation: cold
+  example: Погода холодная.
+  example_translation: The weather is cold.
+  cefr_level: A1
+  frequency_rank: 216
+- type: word
+  text: Тёплый
+  translation: warm
+  example: Одежда тёплая.
+  example_translation: The clothes are warm.
+  cefr_level: A1
+  frequency_rank: 217
+- type: word
+  text: Вкусно
+  translation: tasty, delicious (adverb)
+  example: Вкусно пахнет.
+  example_translation: It smells tasty.
+  cefr_level: A1
+  frequency_rank: 218
+- type: word
+  text: Дорого
+  translation: expensive (adverb)
+  example: Эта сумка дорогая.
+  example_translation: This bag is expensive.
+  cefr_level: A1
+  frequency_rank: 219
+- type: word
+  text: Дёшево
+  translation: cheap (adverb)
+  example: Продукты дёшево.
+  example_translation: Groceries are cheap.
+  cefr_level: A1
+  frequency_rank: 220
+- type: word
+  text: Центр
+  translation: center, downtown
+  example: Мы едем в центр.
+  example_translation: We are going to the center.
+  cefr_level: A1
+  frequency_rank: 221
+- type: word
+  text: Библиотека
+  translation: library
+  example: Библиотека открыта.
+  example_translation: The library is open.
+  cefr_level: A1
+  frequency_rank: 222
+- type: word
+  text: Вокзал
+  translation: train station
+  example: Поезд отправляется с вокзала.
+  example_translation: The train departs from the station.
+  cefr_level: A1
+  frequency_rank: 223
+- type: word
+  text: Аэропорт
+  translation: airport
+  example: Я еду в аэропорт.
+  example_translation: I am going to the airport.
+  cefr_level: A1
+  frequency_rank: 224
+- type: word
+  text: Банк
+  translation: bank
+  example: Банк работает до шести.
+  example_translation: The bank is open until six.
+  cefr_level: A1
+  frequency_rank: 225
+- type: word
+  text: Цвет
+  translation: color
+  example: Цвет неба голубой.
+  example_translation: The color of the sky is blue.
+  cefr_level: A1
+  frequency_rank: 226
+- type: word
+  text: Много
+  translation: many, much
+  example: Много вопросов.
+  example_translation: Many questions.
+  cefr_level: A1
+  frequency_rank: 227
+- type: collocation
+  text: Говорить по-немецки
+  translation: to speak German
+  example: Он может говорить по-немецки.
+  example_translation: He can speak German.
+  cefr_level: A1
+  frequency_rank: 228
+- type: collocation
+  text: Пойти в кино
+  translation: to go to the cinema
+  example: Давай пойдём в кино!
+  example_translation: Let's go to the cinema!
+  cefr_level: A1
+  frequency_rank: 229
+- type: collocation
+  text: Хорошего дня!
+  translation: Have a good day!
+  example: Хорошего дня всем!
+  example_translation: Have a good day everyone!
+  cefr_level: A1
+  frequency_rank: 230
+- type: collocation
+  text: С добрым утром!
+  translation: Good morning!
+  example: С добрым утром, мир!
+  example_translation: Good morning, world!
+  cefr_level: A1
+  frequency_rank: 231
+- type: collocation
+  text: Говорить на русском языке
+  translation: to speak in Russian language
+  example: Вы можете говорить на русском языке?
+  example_translation: Can you speak in Russian?
+  cefr_level: A1
+  frequency_rank: 232
+- type: collocation
+  text: Изучать языки
+  translation: to learn languages
+  example: Многие люди изучают языки.
+  example_translation: Many people learn languages.
+  cefr_level: A1
+  frequency_rank: 233
+- type: collocation
+  text: Пить чай
+  translation: to drink tea
+  example: Мы будем пить чай.
+  example_translation: We will drink tea.
+  cefr_level: A1
+  frequency_rank: 234
+- type: collocation
+  text: Есть хлеб
+  translation: to eat bread
+  example: Вы едите хлеб?
+  example_translation: Do you eat bread?
+  cefr_level: A1
+  frequency_rank: 235
+- type: collocation
+  text: Идти пешком
+  translation: to go on foot
+  example: Мы можем идти пешком.
+  example_translation: We can go on foot.
+  cefr_level: A1
+  frequency_rank: 236
+- type: collocation
+  text: Работать в офисе
+  translation: to work in an office
+  example: Легко работать в офисе.
+  example_translation: It's easy to work in an office.
+  cefr_level: A1
+  frequency_rank: 237
+- type: verb_form
+  text: Я завтракаю
+  translation: I have breakfast
+  example: Я завтракаю каждый день в восемь.
+  example_translation: I have breakfast every day at eight.
+  cefr_level: A1
+  frequency_rank: 238
+- type: verb_form
+  text: Он обедает
+  translation: He has lunch
+  example: Он обедает быстро.
+  example_translation: He eats lunch quickly.
+  cefr_level: A1
+  frequency_rank: 239
+- type: verb_form
+  text: Она ужинает
+  translation: She has dinner
+  example: Она ужинает поздно.
+  example_translation: She eats dinner late.
+  cefr_level: A1
+  frequency_rank: 240
+- type: verb_form
+  text: Ты учишь
+  translation: You (informal) learn/teach
+  example: Ты учишь русский?
+  example_translation: Are you learning Russian?
+  cefr_level: A1
+  frequency_rank: 241
+- type: verb_form
+  text: Мы слушаем
+  translation: We listen
+  example: Мы слушаем радио.
+  example_translation: We listen to the radio.
+  cefr_level: A1
+  frequency_rank: 242
+- type: verb_form
+  text: Вы читаете
+  translation: You (formal/plural) read
+  example: Вы читаете газету?
+  example_translation: Are you reading a newspaper?
+  cefr_level: A1
+  frequency_rank: 243
+- type: verb_form
+  text: Они едут
+  translation: They go (by vehicle)
+  example: Они едут быстро.
+  example_translation: They are going fast.
+  cefr_level: A1
+  frequency_rank: 244
+- type: verb_form
+  text: Я покупаю
+  translation: I buy
+  example: Я покупаю продукты.
+  example_translation: I buy groceries.
+  cefr_level: A1
+  frequency_rank: 245
+- type: sentence_pattern
+  text: Мне холодно.
+  translation: I am cold.
+  example: Зимой часто холодно.
+  example_translation: In winter it is often cold.
+  cefr_level: A1
+  frequency_rank: 246
+- type: sentence_pattern
+  text: Моё имя [имя].
+  translation: My name is [name].
+  example: Моё имя Анна.
+  example_translation: My name is Anna.
+  cefr_level: A1
+  frequency_rank: 247
+- type: sentence_pattern
+  text: Что вы делаете?
+  translation: What are you doing?
+  example: Скажите, что вы делаете?
+  example_translation: Tell me, what are you doing?
+  cefr_level: A1
+  frequency_rank: 248
+- type: sentence_pattern
+  text: Сколько вам лет?
+  translation: How old are you? (formal/plural)
+  example: Могу спросить, сколько вам лет?
+  example_translation: May I ask, how old are you?
+  cefr_level: A1
+  frequency_rank: 249
+- type: sentence_pattern
+  text: Вы любите [существительное]?
+  translation: Do you like [noun]?
+  example: Вы любите спорт?
+  example_translation: Do you like sport?
+  cefr_level: A1
+  frequency_rank: 250
+- type: word
+  text: Шесть
+  translation: Six
+  example: Шесть яблок.
+  example_translation: Six apples.
+  cefr_level: A1
+  frequency_rank: 251
+- type: word
+  text: Семь
+  translation: Seven
+  example: Семь дней в неделе.
+  example_translation: Seven days in a week.
+  cefr_level: A1
+  frequency_rank: 252
+- type: word
+  text: Восемь
+  translation: Eight
+  example: Восемь часов.
+  example_translation: Eight o'clock.
+  cefr_level: A1
+  frequency_rank: 253
+- type: word
+  text: Девять
+  translation: Nine
+  example: Девять книг.
+  example_translation: Nine books.
+  cefr_level: A1
+  frequency_rank: 254
+- type: word
+  text: Десять
+  translation: Ten
+  example: Десять минут.
+  example_translation: Ten minutes.
+  cefr_level: A1
+  frequency_rank: 255
+- type: word
+  text: Минута
+  translation: Minute
+  example: Одна минута.
+  example_translation: One minute.
+  cefr_level: A1
+  frequency_rank: 256
+- type: word
+  text: Час
+  translation: Hour
+  example: Два часа.
+  example_translation: Two hours.
+  cefr_level: A1
+  frequency_rank: 257
+- type: word
+  text: Или
+  translation: Or
+  example: Чай или кофе?
+  example_translation: Tea or coffee?
+  cefr_level: A1
+  frequency_rank: 258
+- type: word
+  text: И
+  translation: And
+  example: Я и ты.
+  example_translation: Me and you.
+  cefr_level: A1
+  frequency_rank: 259
+- type: word
+  text: Но
+  translation: But
+  example: Он хочет, но не может.
+  example_translation: He wants, but he can't.
+  cefr_level: A1
+  frequency_rank: 260
+- type: word
+  text: Квартира
+  translation: Apartment
+  example: Моя квартира большая.
+  example_translation: My apartment is big.
+  cefr_level: A1
+  frequency_rank: 261
+- type: word
+  text: Стул
+  translation: Chair
+  example: Где стул?
+  example_translation: Where is the chair?
+  cefr_level: A1
+  frequency_rank: 262
+- type: word
+  text: Компьютер
+  translation: Computer
+  example: У меня новый компьютер.
+  example_translation: I have a new computer.
+  cefr_level: A1
+  frequency_rank: 263
+- type: word
+  text: Ужин
+  translation: Dinner
+  example: Ужин готов.
+  example_translation: Dinner is ready.
+  cefr_level: A1
+  frequency_rank: 264
+- type: word
+  text: Автобус
+  translation: Bus
+  example: Я еду на автобусе.
+  example_translation: I go by bus.
+  cefr_level: A1
+  frequency_rank: 265
+- type: word
+  text: Поезд
+  translation: Train
+  example: Поезд опаздывает.
+  example_translation: The train is late.
+  cefr_level: A1
+  frequency_rank: 266
+- type: word
+  text: Самолет
+  translation: Plane
+  example: Самолет летит высоко.
+  example_translation: The plane flies high.
+  cefr_level: A1
+  frequency_rank: 267
+- type: word
+  text: Метро
+  translation: Metro / Subway
+  example: Где станция метро?
+  example_translation: Where is the metro station?
+  cefr_level: A1
+  frequency_rank: 268
+- type: word
+  text: Красный
+  translation: Red
+  example: Это красное яблоко.
+  example_translation: This is a red apple.
+  cefr_level: A1
+  frequency_rank: 269
+- type: word
+  text: Жёлтый
+  translation: Yellow
+  example: Жёлтый цветок.
+  example_translation: A yellow flower.
+  cefr_level: A1
+  frequency_rank: 270
+- type: word
+  text: Серый
+  translation: Grey
+  example: Серая кошка.
+  example_translation: A grey cat.
+  cefr_level: A1
+  frequency_rank: 271
+- type: word
+  text: Коричневый
+  translation: Brown
+  example: Коричневый стол.
+  example_translation: A brown table.
+  cefr_level: A1
+  frequency_rank: 272
+- type: word
+  text: Оранжевый
+  translation: Orange
+  example: Оранжевый апельсин.
+  example_translation: An orange orange.
+  cefr_level: A1
+  frequency_rank: 273
+- type: word
+  text: Розовый
+  translation: Pink
+  example: Розовое платье.
+  example_translation: A pink dress.
+  cefr_level: A1
+  frequency_rank: 274
+- type: word
+  text: Фиолетовый
+  translation: Purple
+  example: Фиолетовые цветы.
+  example_translation: Purple flowers.
+  cefr_level: A1
+  frequency_rank: 275
+- type: word
+  text: Вкусный
+  translation: Tasty
+  example: Этот суп очень вкусный.
+  example_translation: This soup is very tasty.
+  cefr_level: A1
+  frequency_rank: 276
+- type: word
+  text: Язык
+  translation: Language
+  example: Русский язык интересный.
+  example_translation: Russian language is interesting.
+  cefr_level: A1
+  frequency_rank: 277
+- type: word
+  text: Страна
+  translation: Country
+  example: Моя страна большая.
+  example_translation: My country is big.
+  cefr_level: A1
+  frequency_rank: 278
+- type: collocation
+  text: Хочу пить
+  translation: I want to drink / I'm thirsty
+  example: Я хочу пить воду.
+  example_translation: I want to drink water.
+  cefr_level: A1
+  frequency_rank: 279
+- type: collocation
+  text: Хорошее настроение
+  translation: Good mood
+  example: У меня хорошее настроение.
+  example_translation: I am in a good mood.
+  cefr_level: A1
+  frequency_rank: 280
+- type: collocation
+  text: Свежий воздух
+  translation: Fresh air
+  example: Мне нужен свежий воздух.
+  example_translation: I need fresh air.
+  cefr_level: A1
+  frequency_rank: 281
+- type: collocation
+  text: Домашнее задание
+  translation: Homework
+  example: У меня много домашнего задания.
+  example_translation: I have a lot of homework.
+  cefr_level: A1
+  frequency_rank: 282
+- type: collocation
+  text: Гулять в парке
+  translation: To walk in the park
+  example: Мы гуляем в парке.
+  example_translation: We walk in the park.
+  cefr_level: A1
+  frequency_rank: 283
+- type: collocation
+  text: Ждать автобус
+  translation: To wait for the bus
+  example: Я жду автобус.
+  example_translation: I am waiting for the bus.
+  cefr_level: A1
+  frequency_rank: 284
+- type: collocation
+  text: Играть в футбол
+  translation: To play football
+  example: Мы играем в футбол.
+  example_translation: We play football.
+  cefr_level: A1
+  frequency_rank: 285
+- type: collocation
+  text: Кушать суп
+  translation: To eat soup
+  example: Я кушаю суп на обед.
+  example_translation: I eat soup for lunch.
+  cefr_level: A1
+  frequency_rank: 286
+- type: collocation
+  text: Смотреть фильм
+  translation: To watch a movie
+  example: Я люблю смотреть фильмы.
+  example_translation: I like to watch movies.
+  cefr_level: A1
+  frequency_rank: 287
+- type: collocation
+  text: Читать газету
+  translation: To read a newspaper
+  example: Папа читает газету.
+  example_translation: Dad reads a newspaper.
+  cefr_level: A1
+  frequency_rank: 288
+- type: verb_form
+  text: Я вижу
+  translation: I see
+  example: Я вижу свой дом.
+  example_translation: I see my house.
+  cefr_level: A1
+  frequency_rank: 289
+- type: verb_form
+  text: Ты любишь
+  translation: You like/love (informal singular)
+  example: Ты любишь этот город?
+  example_translation: Do you like this city?
+  cefr_level: A1
+  frequency_rank: 290
+- type: verb_form
+  text: Он ждёт
+  translation: He waits
+  example: Он ждёт поезд.
+  example_translation: He waits for the train.
+  cefr_level: A1
+  frequency_rank: 291
+- type: verb_form
+  text: Мы берём
+  translation: We take
+  example: Мы берём книги.
+  example_translation: We take books.
+  cefr_level: A1
+  frequency_rank: 292
+- type: verb_form
+  text: Вы даёте
+  translation: You give (formal / plural)
+  example: Вы даёте мне совет?
+  example_translation: Are you giving me advice?
+  cefr_level: A1
+  frequency_rank: 293
+- type: verb_form
+  text: Я путешествую
+  translation: I travel
+  example: Я путешествую каждый год.
+  example_translation: I travel every year.
+  cefr_level: A1
+  frequency_rank: 294
+- type: verb_form
+  text: Они плавают
+  translation: They swim
+  example: Они плавают в бассейне.
+  example_translation: They swim in the pool.
+  cefr_level: A1
+  frequency_rank: 295
+- type: sentence_pattern
+  text: Который час?
+  translation: What time is it?
+  example: Который час сейчас?
+  example_translation: What time is it now?
+  cefr_level: A1
+  frequency_rank: 296
+- type: sentence_pattern
+  text: Что ты делаешь?
+  translation: What are you doing?
+  example: Что ты делаешь сегодня?
+  example_translation: What are you doing today?
+  cefr_level: A1
+  frequency_rank: 297
+- type: sentence_pattern
+  text: Какая погода?
+  translation: What's the weather like?
+  example: Какая сегодня погода?
+  example_translation: What is the weather like today?
+  cefr_level: A1
+  frequency_rank: 298
+- type: sentence_pattern
+  text: Я из [город].
+  translation: I am from [city].
+  example: Я из Москвы.
+  example_translation: I am from Moscow.
+  cefr_level: A1
+  frequency_rank: 299
+- type: sentence_pattern
+  text: Я устал.
+  translation: I am tired. (masculine)
+  example: Я устал после работы.
+  example_translation: I am tired after work.
+  cefr_level: A1
+  frequency_rank: 300
+- type: word
+  text: Имя
+  translation: Name
+  example: Узнайте имя.
+  example_translation: Learn the name.
+  cefr_level: A1
+  frequency_rank: 301
+- type: word
+  text: Фамилия
+  translation: Surname
+  example: Его фамилия Иванов.
+  example_translation: His surname is Ivanov.
+  cefr_level: A1
+  frequency_rank: 302
+- type: word
+  text: Профессия
+  translation: Profession
+  example: Изучите профессию.
+  example_translation: Study the profession.
+  cefr_level: A1
+  frequency_rank: 303
+- type: word
+  text: Гостиница
+  translation: Hotel
+  example: Гостиница близко.
+  example_translation: The hotel is close.
+  cefr_level: A1
+  frequency_rank: 304
+- type: word
+  text: Площадь
+  translation: Square
+  example: Площадь свободна.
+  example_translation: The square is free.
+  cefr_level: A1
+  frequency_rank: 305
+- type: word
+  text: Туалет
+  translation: Toilet
+  example: Туалет внутри.
+  example_translation: The toilet is inside.
+  cefr_level: A1
+  frequency_rank: 306
+- type: word
+  text: Пиво
+  translation: Beer
+  example: Купите пиво.
+  example_translation: Buy beer.
+  cefr_level: A1
+  frequency_rank: 307
+- type: word
+  text: Сахар
+  translation: Sugar
+  example: Добавьте сахар.
+  example_translation: Add sugar.
+  cefr_level: A1
+  frequency_rank: 308
+- type: word
+  text: Соль
+  translation: Salt
+  example: Нужна соль.
+  example_translation: Salt is needed.
+  cefr_level: A1
+  frequency_rank: 309
+- type: word
+  text: Сыр
+  translation: Cheese
+  example: Этот сыр свежий.
+  example_translation: This cheese is fresh.
+  cefr_level: A1
+  frequency_rank: 310
+- type: word
+  text: Яблоко
+  translation: Apple
+  example: Ешьте яблоко.
+  example_translation: Eat an apple.
+  cefr_level: A1
+  frequency_rank: 311
+- type: word
+  text: Мороженое
+  translation: Ice cream
+  example: Мороженое тает.
+  example_translation: Ice cream melts.
+  cefr_level: A1
+  frequency_rank: 312
+- type: word
+  text: Суп
+  translation: Soup
+  example: Суп готов.
+  example_translation: Soup is ready.
+  cefr_level: A1
+  frequency_rank: 313
+- type: word
+  text: Секунда
+  translation: Second
+  example: Подождите секунду.
+  example_translation: Wait a second.
+  cefr_level: A1
+  frequency_rank: 314
+- type: word
+  text: Тетрадь
+  translation: Notebook
+  example: Тетрадь чистая.
+  example_translation: The notebook is clean.
+  cefr_level: A1
+  frequency_rank: 315
+- type: word
+  text: Сумка
+  translation: Bag
+  example: Сумка тяжёлая.
+  example_translation: The bag is heavy.
+  cefr_level: A1
+  frequency_rank: 316
+- type: word
+  text: Одежда
+  translation: Clothes
+  example: Одежда чистая.
+  example_translation: Clothes are clean.
+  cefr_level: A1
+  frequency_rank: 317
+- type: word
+  text: Часы
+  translation: Watch/Clock
+  example: Часы идут.
+  example_translation: The clock is ticking.
+  cefr_level: A1
+  frequency_rank: 318
+- type: word
+  text: Быстрый
+  translation: Fast
+  example: Быстрый бегун.
+  example_translation: A fast runner.
+  cefr_level: A1
+  frequency_rank: 319
+- type: word
+  text: Медленный
+  translation: Slow
+  example: Медленный интернет.
+  example_translation: Slow internet.
+  cefr_level: A1
+  frequency_rank: 320
+- type: word
+  text: Громкий
+  translation: Loud
+  example: Громкий звук.
+  example_translation: Loud sound.
+  cefr_level: A1
+  frequency_rank: 321
+- type: word
+  text: Тихий
+  translation: Quiet
+  example: Тихий голос.
+  example_translation: Quiet voice.
+  cefr_level: A1
+  frequency_rank: 322
+- type: word
+  text: Чистый
+  translation: Clean
+  example: Чистый воздух.
+  example_translation: Clean air.
+  cefr_level: A1
+  frequency_rank: 323
+- type: word
+  text: Грязный
+  translation: Dirty
+  example: Грязный пол.
+  example_translation: Dirty floor.
+  cefr_level: A1
+  frequency_rank: 324
+- type: word
+  text: Свободный
+  translation: Free/Available
+  example: Свободный доступ.
+  example_translation: Free access.
+  cefr_level: A1
+  frequency_rank: 325
+- type: word
+  text: Занятый
+  translation: Busy
+  example: Занятый человек.
+  example_translation: Busy person.
+  cefr_level: A1
+  frequency_rank: 326
+- type: word
+  text: Открытый
+  translation: Open
+  example: Открытый взгляд.
+  example_translation: Open gaze.
+  cefr_level: A1
+  frequency_rank: 327
+- type: word
+  text: Закрытый
+  translation: Closed
+  example: Закрытый клуб.
+  example_translation: Closed club.
+  cefr_level: A1
+  frequency_rank: 328
+- type: collocation
+  text: Пока!
+  translation: Bye!
+  example: Пока! До встречи!
+  example_translation: Bye! See you!
+  cefr_level: A1
+  frequency_rank: 329
+- type: collocation
+  text: До встречи!
+  translation: See you!
+  example: До встречи вечером.
+  example_translation: See you in the evening.
+  cefr_level: A1
+  frequency_rank: 330
+- type: collocation
+  text: Приятного вечера!
+  translation: Have a nice evening!
+  example: Приятного вечера! Отдыхайте спокойно.
+  example_translation: Have a nice evening! Rest peacefully.
+  cefr_level: A1
+  frequency_rank: 331
+- type: collocation
+  text: Счастливого дня!
+  translation: Have a happy day!
+  example: Счастливого дня всем!
+  example_translation: Have a happy day everyone!
+  cefr_level: A1
+  frequency_rank: 332
+- type: collocation
+  text: Можно спросить?
+  translation: May I ask?
+  example: Прошу, можно спросить?
+  example_translation: Please, may I ask?
+  cefr_level: A1
+  frequency_rank: 333
+- type: collocation
+  text: Как проехать?
+  translation: How to get there (by transport)?
+  example: Как проехать к реке?
+  example_translation: How to get to the river?
+  cefr_level: A1
+  frequency_rank: 334
+- type: collocation
+  text: Хочу есть.
+  translation: I want to eat.
+  example: Хочу есть сейчас.
+  example_translation: I want to eat now.
+  cefr_level: A1
+  frequency_rank: 335
+- type: collocation
+  text: Что делать?
+  translation: What to do?
+  example: Что делать дальше?
+  example_translation: What to do next?
+  cefr_level: A1
+  frequency_rank: 336
+- type: collocation
+  text: Без проблем.
+  translation: No problem.
+  example: Сделаю без проблем.
+  example_translation: I'll do it without a problem.
+  cefr_level: A1
+  frequency_rank: 337
+- type: collocation
+  text: Немного говорю.
+  translation: I speak a little.
+  example: Немного говорю по-испански.
+  example_translation: I speak a little Spanish.
+  cefr_level: A1
+  frequency_rank: 338
+- type: verb_form
+  text: Сказать
+  translation: To say (perfective)
+  example: Позвольте сказать.
+  example_translation: Allow me to say.
+  cefr_level: A1
+  frequency_rank: 339
+- type: verb_form
+  text: Показать
+  translation: To show (perfective)
+  example: Покажите дорогу.
+  example_translation: Show the way.
+  cefr_level: A1
+  frequency_rank: 340
+- type: verb_form
+  text: Спрашивать
+  translation: To ask (imperfective)
+  example: Не стесняйтесь спрашивать.
+  example_translation: Don't hesitate to ask.
+  cefr_level: A1
+  frequency_rank: 341
+- type: verb_form
+  text: Отвечать
+  translation: To answer (imperfective)
+  example: Отвечайте громко.
+  example_translation: Answer loudly.
+  cefr_level: A1
+  frequency_rank: 342
+- type: verb_form
+  text: Видеть
+  translation: To see (imperfective)
+  example: Хочу видеть.
+  example_translation: I want to see.
+  cefr_level: A1
+  frequency_rank: 343
+- type: verb_form
+  text: Дать
+  translation: To give (perfective)
+  example: Дать совет.
+  example_translation: To give advice.
+  cefr_level: A1
+  frequency_rank: 344
+- type: verb_form
+  text: Брать
+  translation: To take (imperfective)
+  example: Брать зонт.
+  example_translation: To take an umbrella.
+  cefr_level: A1
+  frequency_rank: 345
+- type: verb_form
+  text: Покупать
+  translation: To buy (imperfective)
+  example: Покупать продукты.
+  example_translation: To buy groceries.
+  cefr_level: A1
+  frequency_rank: 346
+- type: sentence_pattern
+  text: Мне жарко.
+  translation: I am hot.
+  example: Мне жарко сейчас.
+  example_translation: I am hot now.
+  cefr_level: A1
+  frequency_rank: 347
+- type: sentence_pattern
+  text: Хочу спать.
+  translation: I want to sleep.
+  example: Хочу спать долго.
+  example_translation: I want to sleep for a long time.
+  cefr_level: A1
+  frequency_rank: 348
+- type: sentence_pattern
+  text: '[Существительное] лежит.'
+  translation: '[Noun] is lying.'
+  example: Тетрадь лежит тут.
+  example_translation: The notebook is lying here.
+  cefr_level: A1
+  frequency_rank: 349
+- type: sentence_pattern
+  text: Могу [инфинитив].
+  translation: I can [verb].
+  example: Могу помочь вам.
+  example_translation: I can help you.
+  cefr_level: A1
+  frequency_rank: 350
+- type: word
+  text: Скучный
+  translation: Boring
+  example: Этот фильм скучный.
+  example_translation: This film is boring.
+  cefr_level: A1
+  frequency_rank: 356
+- type: word
+  text: Добрый
+  translation: Kind / Good
+  example: Он очень добрый человек.
+  example_translation: He is a very kind person.
+  cefr_level: A1
+  frequency_rank: 357
+- type: word
+  text: Злой
+  translation: Evil / Angry
+  example: Не будь злым.
+  example_translation: Don't be angry.
+  cefr_level: A1
+  frequency_rank: 358
+- type: word
+  text: Счастливый
+  translation: Happy
+  example: Я счастливый человек.
+  example_translation: I am a happy person.
+  cefr_level: A1
+  frequency_rank: 359
+- type: word
+  text: Грустный
+  translation: Sad
+  example: Почему ты грустный?
+  example_translation: Why are you sad?
+  cefr_level: A1
+  frequency_rank: 360
+- type: word
+  text: Твой
+  translation: Your (singular, informal)
+  example: Это твой дом?
+  example_translation: Is this your house?
+  cefr_level: A1
+  frequency_rank: 361
+- type: word
+  text: Его
+  translation: His / Its
+  example: Это его машина.
+  example_translation: This is his car.
+  cefr_level: A1
+  frequency_rank: 362
+- type: word
+  text: Её
+  translation: Her / Its
+  example: Это её сумка.
+  example_translation: This is her bag.
+  cefr_level: A1
+  frequency_rank: 363
+- type: word
+  text: Наш
+  translation: Our
+  example: Это наш город.
+  example_translation: This is our city.
+  cefr_level: A1
+  frequency_rank: 364
+- type: word
+  text: Ваш
+  translation: Your (formal, plural)
+  example: Где ваш паспорт?
+  example_translation: Where is your passport?
+  cefr_level: A1
+  frequency_rank: 365
+- type: word
+  text: Их
+  translation: Their
+  example: Это их дети.
+  example_translation: These are their children.
+  cefr_level: A1
+  frequency_rank: 366
+- type: word
+  text: Для
+  translation: For
+  example: Это для тебя.
+  example_translation: This is for you.
+  cefr_level: A1
+  frequency_rank: 367
+- type: word
+  text: С
+  translation: With
+  example: Я пью чай с сахаром.
+  example_translation: I drink tea with sugar.
+  cefr_level: A1
+  frequency_rank: 368
+- type: word
+  text: В
+  translation: In / Into
+  example: Он живёт в Москве.
+  example_translation: He lives in Moscow.
+  cefr_level: A1
+  frequency_rank: 369
+- type: word
+  text: На
+  translation: On / At
+  example: Книга лежит на столе.
+  example_translation: The book is on the table.
+  cefr_level: A1
+  frequency_rank: 370
+- type: word
+  text: После
+  translation: After
+  example: После работы я иду домой.
+  example_translation: After work, I go home.
+  cefr_level: A1
+  frequency_rank: 371
+- type: word
+  text: Перед
+  translation: Before / In front of
+  example: Перед домом есть парк.
+  example_translation: There is a park in front of the house.
+  cefr_level: A1
+  frequency_rank: 372
+- type: word
+  text: Родители
+  translation: Parents
+  example: Мои родители живут далеко.
+  example_translation: My parents live far away.
+  cefr_level: A1
+  frequency_rank: 373
+- type: word
+  text: Дети
+  translation: Children
+  example: У неё двое детей.
+  example_translation: She has two children.
+  cefr_level: A1
+  frequency_rank: 374
+- type: word
+  text: Сын
+  translation: Son
+  example: Мой сын учится в школе.
+  example_translation: My son studies at school.
+  cefr_level: A1
+  frequency_rank: 375
+- type: word
+  text: Дочь
+  translation: Daughter
+  example: У меня есть дочь.
+  example_translation: I have a daughter.
+  cefr_level: A1
+  frequency_rank: 376
+- type: word
+  text: Муж
+  translation: Husband
+  example: Мой муж работает.
+  example_translation: My husband works.
+  cefr_level: A1
+  frequency_rank: 377
+- type: word
+  text: Жена
+  translation: Wife
+  example: Его жена очень красивая.
+  example_translation: His wife is very beautiful.
+  cefr_level: A1
+  frequency_rank: 378
+- type: collocation
+  text: Слушать музыку
+  translation: To listen to music
+  example: Я люблю слушать музыку.
+  example_translation: I like to listen to music.
+  cefr_level: A1
+  frequency_rank: 379
+- type: collocation
+  text: Пойти в магазин
+  translation: To go to the shop
+  example: Давай пойдём в магазин.
+  example_translation: Let's go to the shop.
+  cefr_level: A1
+  frequency_rank: 380
+- type: collocation
+  text: Играть в игры
+  translation: To play games
+  example: Дети любят играть в игры.
+  example_translation: Children like to play games.
+  cefr_level: A1
+  frequency_rank: 381
+- type: collocation
+  text: Поехать в отпуск
+  translation: To go on vacation
+  example: Мы хотим поехать в отпуск.
+  example_translation: We want to go on vacation.
+  cefr_level: A1
+  frequency_rank: 382
+- type: collocation
+  text: Задавать вопрос
+  translation: To ask a question
+  example: Можно задавать вопрос?
+  example_translation: May I ask a question?
+  cefr_level: A1
+  frequency_rank: 383
+- type: collocation
+  text: Искать работу
+  translation: To look for a job
+  example: Он ищет новую работу.
+  example_translation: He is looking for a new job.
+  cefr_level: A1
+  frequency_rank: 384
+- type: collocation
+  text: Вставать рано
+  translation: To wake up early
+  example: Я не люблю вставать рано.
+  example_translation: I don't like to wake up early.
+  cefr_level: A1
+  frequency_rank: 385
+- type: collocation
+  text: Ложиться спать
+  translation: To go to bed
+  example: Пора ложиться спать.
+  example_translation: It's time to go to bed.
+  cefr_level: A1
+  frequency_rank: 386
+- type: collocation
+  text: Слушать радио
+  translation: To listen to the radio
+  example: Она часто слушает радио.
+  example_translation: She often listens to the radio.
+  cefr_level: A1
+  frequency_rank: 387
+- type: collocation
+  text: Помогать другу
+  translation: To help a friend
+  example: Я всегда помогаю другу.
+  example_translation: I always help my friend.
+  cefr_level: A1
+  frequency_rank: 388
+- type: verb_form
+  text: Мочь
+  translation: To be able to (infinitive)
+  example: Я могу говорить по-русски.
+  example_translation: I can speak Russian.
+  cefr_level: A1
+  frequency_rank: 389
+- type: verb_form
+  text: Надо
+  translation: It is necessary / One must
+  example: Надо идти домой.
+  example_translation: It is necessary to go home.
+  cefr_level: A1
+  frequency_rank: 390
+- type: verb_form
+  text: Хочу
+  translation: I want
+  example: Я хочу пить.
+  example_translation: I want to drink.
+  cefr_level: A1
+  frequency_rank: 391
+- type: verb_form
+  text: Иду
+  translation: I go / am going (on foot)
+  example: Я иду в парк.
+  example_translation: I am going to the park.
+  cefr_level: A1
+  frequency_rank: 392
+- type: verb_form
+  text: Еду
+  translation: I go / am going (by transport)
+  example: Я еду на автобусе.
+  example_translation: I am going by bus.
+  cefr_level: A1
+  frequency_rank: 393
+- type: verb_form
+  text: Дай
+  translation: Give! (informal, singular imperative)
+  example: Дай мне ручку, пожалуйста.
+  example_translation: Give me a pen, please.
+  cefr_level: A1
+  frequency_rank: 394
+- type: verb_form
+  text: Скажи
+  translation: Say! / Tell! (informal, singular imperative)
+  example: Скажи мне, где ты живёшь.
+  example_translation: Tell me where you live.
+  cefr_level: A1
+  frequency_rank: 395
+- type: sentence_pattern
+  text: Я говорю по-русски.
+  translation: I speak Russian.
+  example: Я говорю по-русски немного.
+  example_translation: I speak a little Russian.
+  cefr_level: A1
+  frequency_rank: 397
+- type: sentence_pattern
+  text: Я не говорю по-английски.
+  translation: I don't speak English.
+  example: К сожалению, я не говорю по-английски.
+  example_translation: Unfortunately, I don't speak English.
+  cefr_level: A1
+  frequency_rank: 398
+- type: sentence_pattern
+  text: Кто это?
+  translation: Who is this?
+  example: Кто это в комнате?
+  example_translation: Who is this in the room?
+  cefr_level: A1
+  frequency_rank: 400
+- type: word
+  text: Зонт
+  translation: Umbrella
+  example: У меня новый зонт.
+  example_translation: I have a new umbrella.
+  cefr_level: A1
+  frequency_rank: 394
+- type: word
+  text: Очки
+  translation: Glasses
+  example: Мои очки на столе.
+  example_translation: My glasses are on the table.
+  cefr_level: A1
+  frequency_rank: 396
+- type: word
+  text: Кресло
+  translation: Armchair
+  example: Это удобное кресло.
+  example_translation: This is a comfortable armchair.
+  cefr_level: A1
+  frequency_rank: 397
+- type: word
+  text: Диван
+  translation: Sofa
+  example: Мы сидим на диване.
+  example_translation: We are sitting on the sofa.
+  cefr_level: A1
+  frequency_rank: 398
+- type: word
+  text: Ванная
+  translation: Bathroom
+  example: Ванная комната большая.
+  example_translation: The bathroom is big.
+  cefr_level: A1
+  frequency_rank: 399
+- type: word
+  text: Кухня
+  translation: Kitchen
+  example: Я готовлю на кухне.
+  example_translation: I cook in the kitchen.
+  cefr_level: A1
+  frequency_rank: 400
+- type: word
+  text: Спальня
+  translation: Bedroom
+  example: Моя спальня очень светлая.
+  example_translation: My bedroom is very bright.
+  cefr_level: A1
+  frequency_rank: 401
+- type: word
+  text: Гостиная
+  translation: Living room
+  example: Мы смотрим телевизор в гостиной.
+  example_translation: We watch TV in the living room.
+  cefr_level: A1
+  frequency_rank: 402
+- type: word
+  text: Утром
+  translation: In the morning
+  example: Я пью кофе утром.
+  example_translation: I drink coffee in the morning.
+  cefr_level: A1
+  frequency_rank: 403
+- type: word
+  text: Вечером
+  translation: In the evening
+  example: Мы гуляем вечером.
+  example_translation: We walk in the evening.
+  cefr_level: A1
+  frequency_rank: 404
+- type: word
+  text: Днём
+  translation: In the afternoon / during the day
+  example: Она работает днём.
+  example_translation: She works during the day.
+  cefr_level: A1
+  frequency_rank: 405
+- type: word
+  text: Ночью
+  translation: At night
+  example: Ночью очень тихо.
+  example_translation: It's very quiet at night.
+  cefr_level: A1
+  frequency_rank: 406
+- type: word
+  text: Жарко
+  translation: Hot (adv.)
+  example: На улице жарко.
+  example_translation: It's hot outside.
+  cefr_level: A1
+  frequency_rank: 409
+- type: word
+  text: Голодный
+  translation: Hungry (adj.)
+  example: Я голодный, давай поедим.
+  example_translation: I am hungry, let's eat.
+  cefr_level: A1
+  frequency_rank: 410
+- type: word
+  text: Жажда
+  translation: Thirst
+  example: У меня жажда, хочу пить.
+  example_translation: I'm thirsty, I want to drink.
+  cefr_level: A1
+  frequency_rank: 411
+- type: word
+  text: Слово
+  translation: Word
+  example: Это новое слово для меня.
+  example_translation: This is a new word for me.
+  cefr_level: A1
+  frequency_rank: 412
+- type: word
+  text: Буква
+  translation: Letter (alphabet)
+  example: Какая это буква?
+  example_translation: What letter is this?
+  cefr_level: A1
+  frequency_rank: 413
+- type: word
+  text: Цифра
+  translation: Digit / Number
+  example: Моя любимая цифра — семь.
+  example_translation: My favorite number is seven.
+  cefr_level: A1
+  frequency_rank: 414
+- type: word
+  text: Звонить
+  translation: To call (by phone)
+  example: Я хочу звонить маме.
+  example_translation: I want to call my mom.
+  cefr_level: A1
+  frequency_rank: 415
+- type: word
+  text: Забыть
+  translation: To forget (perfective)
+  example: Я забыл свой ключ.
+  example_translation: I forgot my key.
+  cefr_level: A1
+  frequency_rank: 416
+- type: word
+  text: Помнить
+  translation: To remember (imperfective)
+  example: Я хорошо помню это.
+  example_translation: I remember this well.
+  cefr_level: A1
+  frequency_rank: 417
+- type: word
+  text: Уметь
+  translation: To be able to / To know how to
+  example: Я умею плавать.
+  example_translation: I can swim.
+  cefr_level: A1
+  frequency_rank: 418
+- type: word
+  text: Нравиться
+  translation: To like / To be pleasing
+  example: Мне нравится этот фильм.
+  example_translation: I like this movie.
+  cefr_level: A1
+  frequency_rank: 419
+- type: collocation
+  text: Читать журнал
+  translation: To read a magazine
+  example: Я люблю читать журнал по утрам.
+  example_translation: I like to read a magazine in the mornings.
+  cefr_level: A1
+  frequency_rank: 421
+- type: collocation
+  text: Ждать такси
+  translation: To wait for a taxi
+  example: Мы ждём такси у входа.
+  example_translation: We are waiting for a taxi at the entrance.
+  cefr_level: A1
+  frequency_rank: 422
+- type: collocation
+  text: Плавать в бассейне
+  translation: To swim in a pool
+  example: Дети любят плавать в бассейне.
+  example_translation: Children love to swim in the pool.
+  cefr_level: A1
+  frequency_rank: 423
+- type: collocation
+  text: Просыпаться рано
+  translation: To wake up early
+  example: Я стараюсь просыпаться рано.
+  example_translation: I try to wake up early.
+  cefr_level: A1
+  frequency_rank: 424
+- type: collocation
+  text: Готовить ужин
+  translation: To cook dinner
+  example: Она любит готовить ужин для семьи.
+  example_translation: She loves to cook dinner for the family.
+  cefr_level: A1
+  frequency_rank: 425
+- type: collocation
+  text: Купить продукты
+  translation: To buy groceries
+  example: Мне нужно купить продукты в магазине.
+  example_translation: I need to buy groceries at the store.
+  cefr_level: A1
+  frequency_rank: 426
+- type: collocation
+  text: Отдыхать в отпуске
+  translation: To rest on vacation
+  example: Мы хотим отдыхать в отпуске на море.
+  example_translation: We want to rest on vacation by the sea.
+  cefr_level: A1
+  frequency_rank: 427
+- type: collocation
+  text: Думать о будущем
+  translation: To think about the future
+  example: Важно думать о будущем.
+  example_translation: It's important to think about the future.
+  cefr_level: A1
+  frequency_rank: 428
+- type: collocation
+  text: Давать советы
+  translation: To give advice
+  example: Он всегда даёт хорошие советы.
+  example_translation: He always gives good advice.
+  cefr_level: A1
+  frequency_rank: 429
+- type: collocation
+  text: Повторять слова
+  translation: To repeat words
+  example: Я должен повторять слова каждый день.
+  example_translation: I must repeat words every day.
+  cefr_level: A1
+  frequency_rank: 430
+- type: verb_form
+  text: Я звоню
+  translation: I call
+  example: Я звоню своей подруге.
+  example_translation: I am calling my friend (female).
+  cefr_level: A1
+  frequency_rank: 431
+- type: verb_form
+  text: Ты умеешь
+  translation: You (informal) can / know how to
+  example: Ты умеешь готовить?
+  example_translation: Can you (informal) cook?
+  cefr_level: A1
+  frequency_rank: 432
+- type: verb_form
+  text: Оно нравится
+  translation: It is liked / It pleases
+  example: Это платье мне нравится.
+  example_translation: I like this dress (lit. This dress pleases me).
+  cefr_level: A1
+  frequency_rank: 433
+- type: verb_form
+  text: Мы продаём
+  translation: We sell
+  example: Мы продаём старые книги.
+  example_translation: We are selling old books.
+  cefr_level: A1
+  frequency_rank: 434
+- type: verb_form
+  text: Вы просыпаетесь
+  translation: You (formal/plural) wake up
+  example: Во сколько вы просыпаетесь?
+  example_translation: What time do you (formal/plural) wake up?
+  cefr_level: A1
+  frequency_rank: 435
+- type: verb_form
+  text: Они одеваются
+  translation: They get dressed
+  example: Дети быстро одеваются.
+  example_translation: The children get dressed quickly.
+  cefr_level: A1
+  frequency_rank: 436
+- type: verb_form
+  text: Я учусь
+  translation: I study (at an institution)
+  example: Я учусь в университете.
+  example_translation: I study at the university.
+  cefr_level: A1
+  frequency_rank: 437
+- type: verb_form
+  text: Ты думаешь
+  translation: You (informal) think
+  example: Что ты думаешь об этом?
+  example_translation: What do you (informal) think about this?
+  cefr_level: A1
+  frequency_rank: 438
+- type: sentence_pattern
+  text: У меня есть [существительное].
+  translation: I have [noun].
+  example: У меня есть собака.
+  example_translation: I have a dog.
+  cefr_level: A1
+  frequency_rank: 439
+- type: sentence_pattern
+  text: Я люблю [инфинитив].
+  translation: I love [infinitive].
+  example: Я люблю путешествовать.
+  example_translation: I love to travel.
+  cefr_level: A1
+  frequency_rank: 440
+- type: sentence_pattern
+  text: Где [существительное]?
+  translation: Where is [noun]?
+  example: Где мой телефон?
+  example_translation: Where is my phone?
+  cefr_level: A1
+  frequency_rank: 441
+- type: sentence_pattern
+  text: Можно [инфинитив] здесь?
+  translation: Is it allowed to [infinitive verb] here?
+  example: Можно курить здесь?
+  example_translation: Is it allowed to smoke here?
+  cefr_level: A1
+  frequency_rank: 442
+- type: sentence_pattern
+  text: Я не говорю по-русски.
+  translation: I don't speak Russian.
+  example: Извините, я не говорю по-русски.
+  example_translation: Excuse me, I don't speak Russian.
+  cefr_level: A1
+  frequency_rank: 443

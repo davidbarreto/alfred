@@ -10,5 +10,8 @@ python -c "from sentence_transformers import SentenceTransformer; SentenceTransf
 echo "Seeding intent examples..."
 python db/seeds/seed_intents.py
 
+echo "Seeding language chunks..."
+python db/seeds/seed_language_chunks.py
+
 echo "Starting server..."
 exec uvicorn app.main:app --host 0.0.0.0 --port 8000

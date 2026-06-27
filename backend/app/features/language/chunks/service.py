@@ -12,6 +12,7 @@ from app.features.language.chunks.schemas import (
     DailyBatchRead,
 )
 from app.features.language.tracks.repository import TrackRepository
+from app.features.language.tracks.schemas import TrackFilters
 from app.features.language.srs import CardState, State, next_card_state, quality_to_rating, is_leech
 
 logger = logging.getLogger(__name__)
@@ -98,7 +99,7 @@ class ChunkService:
     async def get_daily_batch(self, track_id: int | None = None) -> list[DailyBatchRead]:
         """Return today's review batches per active track, Pareto-weighted."""
         tracks_query = await self._track_repo.get_tracks(
-            type("F", (), {"active_only": True})()
+            TrackFilters(active_only=True)
         )
         if track_id is not None:
             tracks_query = [t for t in tracks_query if t.id == track_id]

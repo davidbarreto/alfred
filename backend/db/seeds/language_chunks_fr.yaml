@@ -1,0 +1,2797 @@
+# Vocabulary seed for fr. Auto-generated — edit freely.
+# Re-run generate_language_chunks.py to append more entries.
+# seed_language_chunks.py loads this on startup (idempotent).
+fr:
+- type: word
+  text: Bonjour
+  translation: Hello / Good day
+  example: Bonjour, comment allez-vous ?
+  example_translation: Hello, how are you?
+  cefr_level: A1
+  frequency_rank: 1
+- type: word
+  text: Merci
+  translation: Thank you
+  example: Merci beaucoup pour votre aide.
+  example_translation: Thank you very much for your help.
+  cefr_level: A1
+  frequency_rank: 2
+- type: word
+  text: Oui
+  translation: 'Yes'
+  example: Oui, je suis d'accord.
+  example_translation: Yes, I agree.
+  cefr_level: A1
+  frequency_rank: 3
+- type: word
+  text: Non
+  translation: 'No'
+  example: Non, je ne peux pas venir.
+  example_translation: No, I cannot come.
+  cefr_level: A1
+  frequency_rank: 4
+- type: word
+  text: S'il vous plaît
+  translation: Please (formal)
+  example: Un café, s'il vous plaît.
+  example_translation: A coffee, please.
+  cefr_level: A1
+  frequency_rank: 5
+- type: word
+  text: Au revoir
+  translation: Goodbye
+  example: Au revoir et à demain !
+  example_translation: Goodbye and see you tomorrow!
+  cefr_level: A1
+  frequency_rank: 6
+- type: word
+  text: Madame
+  translation: Madam / Mrs.
+  example: Bonjour Madame Dubois.
+  example_translation: Hello Mrs. Dubois.
+  cefr_level: A1
+  frequency_rank: 7
+- type: word
+  text: Monsieur
+  translation: Sir / Mr.
+  example: Excusez-moi Monsieur.
+  example_translation: Excuse me Sir.
+  cefr_level: A1
+  frequency_rank: 8
+- type: word
+  text: Fille
+  translation: Girl / Daughter
+  example: Elle a une petite fille.
+  example_translation: She has a little girl.
+  cefr_level: A1
+  frequency_rank: 9
+- type: word
+  text: Garçon
+  translation: Boy / Son / Waiter
+  example: C'est un gentil garçon.
+  example_translation: He is a nice boy.
+  cefr_level: A1
+  frequency_rank: 10
+- type: word
+  text: Eau
+  translation: Water
+  example: Je voudrais de l'eau, s'il vous plaît.
+  example_translation: I would like some water, please.
+  cefr_level: A1
+  frequency_rank: 11
+- type: word
+  text: Pain
+  translation: Bread
+  example: J'achète du pain à la boulangerie.
+  example_translation: I buy bread at the bakery.
+  cefr_level: A1
+  frequency_rank: 12
+- type: word
+  text: Café
+  translation: Coffee
+  example: Je bois un café le matin.
+  example_translation: I drink a coffee in the morning.
+  cefr_level: A1
+  frequency_rank: 13
+- type: word
+  text: Maison
+  translation: House / Home
+  example: Ma maison est grande.
+  example_translation: My house is big.
+  cefr_level: A1
+  frequency_rank: 14
+- type: word
+  text: Ville
+  translation: City / Town
+  example: J'habite dans une grande ville.
+  example_translation: I live in a big city.
+  cefr_level: A1
+  frequency_rank: 15
+- type: word
+  text: Rue
+  translation: Street
+  example: La boulangerie est dans cette rue.
+  example_translation: The bakery is on this street.
+  cefr_level: A1
+  frequency_rank: 16
+- type: word
+  text: Voiture
+  translation: Car
+  example: J'ai une nouvelle voiture.
+  example_translation: I have a new car.
+  cefr_level: A1
+  frequency_rank: 17
+- type: word
+  text: Livre
+  translation: Book
+  example: Je lis un bon livre.
+  example_translation: I am reading a good book.
+  cefr_level: A1
+  frequency_rank: 18
+- type: word
+  text: Jour
+  translation: Day
+  example: Passez une bonne journée !
+  example_translation: Have a good day!
+  cefr_level: A1
+  frequency_rank: 19
+- type: word
+  text: Nuit
+  translation: Night
+  example: Bonne nuit, dors bien.
+  example_translation: Good night, sleep well.
+  cefr_level: A1
+  frequency_rank: 20
+- type: word
+  text: Matin
+  translation: Morning
+  example: Je me lève tôt le matin.
+  example_translation: I wake up early in the morning.
+  cefr_level: A1
+  frequency_rank: 21
+- type: word
+  text: Soir
+  translation: Evening
+  example: Nous dînons le soir.
+  example_translation: We have dinner in the evening.
+  cefr_level: A1
+  frequency_rank: 22
+- type: word
+  text: Aujourd'hui
+  translation: Today
+  example: Aujourd'hui, il fait beau.
+  example_translation: Today, the weather is nice.
+  cefr_level: A1
+  frequency_rank: 23
+- type: word
+  text: Demain
+  translation: Tomorrow
+  example: Je travaille demain.
+  example_translation: I work tomorrow.
+  cefr_level: A1
+  frequency_rank: 24
+- type: word
+  text: Hier
+  translation: Yesterday
+  example: Hier, j'ai vu un film.
+  example_translation: Yesterday, I watched a movie.
+  cefr_level: A1
+  frequency_rank: 25
+- type: word
+  text: Grand
+  translation: Big / Tall
+  example: Paris est une grande ville.
+  example_translation: Paris is a big city.
+  cefr_level: A1
+  frequency_rank: 26
+- type: word
+  text: Petit
+  translation: Small / Little
+  example: J'ai un petit chien.
+  example_translation: I have a small dog.
+  cefr_level: A1
+  frequency_rank: 27
+- type: collocation
+  text: Bonne journée
+  translation: Have a good day
+  example: Je pars, bonne journée !
+  example_translation: I'm leaving, have a good day!
+  cefr_level: A1
+  frequency_rank: 28
+- type: collocation
+  text: Bonne soirée
+  translation: Have a good evening
+  example: Passez une bonne soirée !
+  example_translation: Have a good evening!
+  cefr_level: A1
+  frequency_rank: 29
+- type: collocation
+  text: Prendre un café
+  translation: To have a coffee
+  example: On va prendre un café ?
+  example_translation: Shall we have a coffee?
+  cefr_level: A1
+  frequency_rank: 30
+- type: collocation
+  text: Faire les courses
+  translation: To do the shopping (groceries)
+  example: Je dois faire les courses cet après-midi.
+  example_translation: I need to do the grocery shopping this afternoon.
+  cefr_level: A1
+  frequency_rank: 31
+- type: collocation
+  text: Parler français
+  translation: To speak French
+  example: J'apprends à parler français.
+  example_translation: I am learning to speak French.
+  cefr_level: A1
+  frequency_rank: 32
+- type: collocation
+  text: Habiter à
+  translation: To live in/at
+  example: J'habite à Paris.
+  example_translation: I live in Paris.
+  cefr_level: A1
+  frequency_rank: 33
+- type: collocation
+  text: Avoir faim
+  translation: To be hungry
+  example: J'ai faim, je veux manger.
+  example_translation: I am hungry, I want to eat.
+  cefr_level: A1
+  frequency_rank: 34
+- type: collocation
+  text: Avoir soif
+  translation: To be thirsty
+  example: Il fait chaud, j'ai soif.
+  example_translation: It's hot, I'm thirsty.
+  cefr_level: A1
+  frequency_rank: 35
+- type: collocation
+  text: Faire du sport
+  translation: To do sports
+  example: Tu fais du sport ?
+  example_translation: Do you do sports?
+  cefr_level: A1
+  frequency_rank: 36
+- type: collocation
+  text: Lire un livre
+  translation: To read a book
+  example: J'aime lire un livre avant de dormir.
+  example_translation: I like to read a book before sleeping.
+  cefr_level: A1
+  frequency_rank: 37
+- type: verb_form
+  text: Je suis
+  translation: I am
+  example: Je suis étudiant.
+  example_translation: I am a student.
+  cefr_level: A1
+  frequency_rank: 38
+- type: verb_form
+  text: Tu es
+  translation: You are (singular, informal)
+  example: Tu es français ?
+  example_translation: Are you French?
+  cefr_level: A1
+  frequency_rank: 39
+- type: verb_form
+  text: Il est
+  translation: He is
+  example: Il est mon ami.
+  example_translation: He is my friend.
+  cefr_level: A1
+  frequency_rank: 40
+- type: verb_form
+  text: J'ai
+  translation: I have
+  example: J'ai vingt ans.
+  example_translation: I am twenty years old.
+  cefr_level: A1
+  frequency_rank: 41
+- type: verb_form
+  text: Tu as
+  translation: You have (singular, informal)
+  example: Tu as un stylo ?
+  example_translation: Do you have a pen?
+  cefr_level: A1
+  frequency_rank: 42
+- type: verb_form
+  text: Il a
+  translation: He has
+  example: Il a un chien.
+  example_translation: He has a dog.
+  cefr_level: A1
+  frequency_rank: 43
+- type: verb_form
+  text: Je parle
+  translation: I speak
+  example: Je parle un peu français.
+  example_translation: I speak a little French.
+  cefr_level: A1
+  frequency_rank: 44
+- type: verb_form
+  text: Je mange
+  translation: I eat
+  example: Je mange une pomme.
+  example_translation: I eat an apple.
+  cefr_level: A1
+  frequency_rank: 45
+- type: sentence_pattern
+  text: Comment ça va ?
+  translation: How are you? / How is it going?
+  example: Salut ! Comment ça va ?
+  example_translation: Hi! How are you?
+  cefr_level: A1
+  frequency_rank: 46
+- type: sentence_pattern
+  text: Je voudrais...
+  translation: I would like...
+  example: Je voudrais une baguette, s'il vous plaît.
+  example_translation: I would like a baguette, please.
+  cefr_level: A1
+  frequency_rank: 47
+- type: sentence_pattern
+  text: C'est...
+  translation: It is... / This is...
+  example: C'est ma sœur.
+  example_translation: This is my sister.
+  cefr_level: A1
+  frequency_rank: 48
+- type: sentence_pattern
+  text: Où est...?
+  translation: Where is...?
+  example: Où est la gare, s'il vous plaît ?
+  example_translation: Where is the train station, please?
+  cefr_level: A1
+  frequency_rank: 49
+- type: sentence_pattern
+  text: Il y a...
+  translation: There is / There are
+  example: Il y a un parc près d'ici.
+  example_translation: There is a park nearby.
+  cefr_level: A1
+  frequency_rank: 50
+- type: word
+  text: Chien
+  translation: Dog
+  example: Mon chien est petit.
+  example_translation: My dog is small.
+  cefr_level: A1
+  frequency_rank: 51
+- type: word
+  text: Chat
+  translation: Cat
+  example: J'ai un chat noir.
+  example_translation: I have a black cat.
+  cefr_level: A1
+  frequency_rank: 52
+- type: word
+  text: Mère
+  translation: Mother
+  example: Ma mère est gentille.
+  example_translation: My mother is kind.
+  cefr_level: A1
+  frequency_rank: 53
+- type: word
+  text: Père
+  translation: Father
+  example: Son père travaille beaucoup.
+  example_translation: His father works a lot.
+  cefr_level: A1
+  frequency_rank: 54
+- type: word
+  text: Famille
+  translation: Family
+  example: J'aime ma famille.
+  example_translation: I love my family.
+  cefr_level: A1
+  frequency_rank: 55
+- type: word
+  text: Ami(e)
+  translation: Friend
+  example: Il est mon ami.
+  example_translation: He is my friend.
+  cefr_level: A1
+  frequency_rank: 56
+- type: word
+  text: École
+  translation: School
+  example: Les enfants vont à l'école.
+  example_translation: The children go to school.
+  cefr_level: A1
+  frequency_rank: 57
+- type: word
+  text: Travail
+  translation: Work / Job
+  example: Mon travail est intéressant.
+  example_translation: My job is interesting.
+  cefr_level: A1
+  frequency_rank: 58
+- type: word
+  text: Manger
+  translation: To eat
+  example: Je veux manger une pomme.
+  example_translation: I want to eat an apple.
+  cefr_level: A1
+  frequency_rank: 59
+- type: word
+  text: Boire
+  translation: To drink
+  example: Tu dois boire de l'eau.
+  example_translation: You must drink water.
+  cefr_level: A1
+  frequency_rank: 60
+- type: word
+  text: Pomme
+  translation: Apple
+  example: J'achète une pomme rouge.
+  example_translation: I buy a red apple.
+  cefr_level: A1
+  frequency_rank: 61
+- type: word
+  text: Fromage
+  translation: Cheese
+  example: J'aime le fromage français.
+  example_translation: I like French cheese.
+  cefr_level: A1
+  frequency_rank: 62
+- type: word
+  text: Lait
+  translation: Milk
+  example: Je bois du lait le matin.
+  example_translation: I drink milk in the morning.
+  cefr_level: A1
+  frequency_rank: 63
+- type: word
+  text: Déjeuner
+  translation: Lunch
+  example: Nous prenons le déjeuner à midi.
+  example_translation: We have lunch at noon.
+  cefr_level: A1
+  frequency_rank: 64
+- type: word
+  text: Couleur
+  translation: Color
+  example: Quelle est ta couleur préférée ?
+  example_translation: What is your favorite color?
+  cefr_level: A1
+  frequency_rank: 65
+- type: word
+  text: Rouge
+  translation: Red
+  example: Sa voiture est rouge.
+  example_translation: His car is red.
+  cefr_level: A1
+  frequency_rank: 66
+- type: word
+  text: Bleu
+  translation: Blue
+  example: Le ciel est bleu.
+  example_translation: The sky is blue.
+  cefr_level: A1
+  frequency_rank: 67
+- type: word
+  text: Heure
+  translation: Hour / Time
+  example: Il est une heure.
+  example_translation: It is one o'clock.
+  cefr_level: A1
+  frequency_rank: 68
+- type: word
+  text: Semaine
+  translation: Week
+  example: Nous partons la semaine prochaine.
+  example_translation: We leave next week.
+  cefr_level: A1
+  frequency_rank: 69
+- type: word
+  text: Année
+  translation: Year
+  example: Bonne année !
+  example_translation: Happy New Year!
+  cefr_level: A1
+  frequency_rank: 70
+- type: word
+  text: Pays
+  translation: Country
+  example: Quel est ton pays d'origine ?
+  example_translation: What is your home country?
+  cefr_level: A1
+  frequency_rank: 71
+- type: word
+  text: Moi
+  translation: Me / I (stressed pronoun)
+  example: C'est moi.
+  example_translation: It's me.
+  cefr_level: A1
+  frequency_rank: 72
+- type: word
+  text: Nous
+  translation: We / Us
+  example: Nous aimons voyager.
+  example_translation: We like to travel.
+  cefr_level: A1
+  frequency_rank: 73
+- type: word
+  text: Avec
+  translation: With
+  example: Je suis avec mes amis.
+  example_translation: I am with my friends.
+  cefr_level: A1
+  frequency_rank: 74
+- type: word
+  text: Et
+  translation: And
+  example: J'ai un frère et une sœur.
+  example_translation: I have a brother and a sister.
+  cefr_level: A1
+  frequency_rank: 75
+- type: word
+  text: Un
+  translation: One / A / An
+  example: J'ai un frère.
+  example_translation: I have one brother.
+  cefr_level: A1
+  frequency_rank: 76
+- type: word
+  text: Deux
+  translation: Two
+  example: Il y a deux chats.
+  example_translation: There are two cats.
+  cefr_level: A1
+  frequency_rank: 77
+- type: word
+  text: Maintenant
+  translation: Now
+  example: Je dois partir maintenant.
+  example_translation: I have to leave now.
+  cefr_level: A1
+  frequency_rank: 78
+- type: collocation
+  text: Faire attention
+  translation: To pay attention / To be careful
+  example: Fais attention à la route.
+  example_translation: Pay attention to the road.
+  cefr_level: A1
+  frequency_rank: 79
+- type: collocation
+  text: Parler anglais
+  translation: To speak English
+  example: Je parle un peu anglais.
+  example_translation: I speak a little English.
+  cefr_level: A1
+  frequency_rank: 80
+- type: collocation
+  text: Écouter de la musique
+  translation: To listen to music
+  example: J'aime écouter de la musique.
+  example_translation: I like to listen to music.
+  cefr_level: A1
+  frequency_rank: 81
+- type: collocation
+  text: Regarder la télévision
+  translation: To watch television
+  example: Nous regardons la télévision le soir.
+  example_translation: We watch television in the evening.
+  cefr_level: A1
+  frequency_rank: 82
+- type: collocation
+  text: Faire ses devoirs
+  translation: To do one's homework
+  example: L'enfant fait ses devoirs.
+  example_translation: The child does his homework.
+  cefr_level: A1
+  frequency_rank: 83
+- type: collocation
+  text: Prendre le bus
+  translation: To take the bus
+  example: Je prends le bus pour aller au travail.
+  example_translation: I take the bus to go to work.
+  cefr_level: A1
+  frequency_rank: 84
+- type: collocation
+  text: Avoir un rendez-vous
+  translation: To have an appointment
+  example: J'ai un rendez-vous chez le médecin.
+  example_translation: I have an appointment at the doctor's.
+  cefr_level: A1
+  frequency_rank: 85
+- type: collocation
+  text: Faire la cuisine
+  translation: To cook
+  example: J'aime faire la cuisine.
+  example_translation: I like to cook.
+  cefr_level: A1
+  frequency_rank: 86
+- type: collocation
+  text: Aller au marché
+  translation: To go to the market
+  example: Elle va au marché le samedi.
+  example_translation: She goes to the market on Saturday.
+  cefr_level: A1
+  frequency_rank: 87
+- type: collocation
+  text: Poser une question
+  translation: To ask a question
+  example: Je veux poser une question.
+  example_translation: I want to ask a question.
+  cefr_level: A1
+  frequency_rank: 88
+- type: verb_form
+  text: Je vais
+  translation: I go / I am going
+  example: Je vais à Paris.
+  example_translation: I am going to Paris.
+  cefr_level: A1
+  frequency_rank: 89
+- type: verb_form
+  text: Tu vas
+  translation: You go / You are going (informal singular)
+  example: Où vas-tu ?
+  example_translation: Where are you going?
+  cefr_level: A1
+  frequency_rank: 90
+- type: verb_form
+  text: Il/Elle va
+  translation: He/She goes / He/She is going
+  example: Il va bien.
+  example_translation: He is doing well.
+  cefr_level: A1
+  frequency_rank: 91
+- type: verb_form
+  text: Nous allons
+  translation: We go / We are going
+  example: Nous allons au cinéma.
+  example_translation: We are going to the cinema.
+  cefr_level: A1
+  frequency_rank: 92
+- type: verb_form
+  text: Je fais
+  translation: I do / I make
+  example: Je fais un gâteau.
+  example_translation: I am making a cake.
+  cefr_level: A1
+  frequency_rank: 93
+- type: verb_form
+  text: Je veux
+  translation: I want
+  example: Je veux une tasse de thé.
+  example_translation: I want a cup of tea.
+  cefr_level: A1
+  frequency_rank: 94
+- type: verb_form
+  text: Je peux
+  translation: I can
+  example: Je peux vous aider.
+  example_translation: I can help you.
+  cefr_level: A1
+  frequency_rank: 95
+- type: sentence_pattern
+  text: Qu'est-ce que c'est ?
+  translation: What is it?
+  example: Qu'est-ce que c'est, ce bruit ?
+  example_translation: What is that noise?
+  cefr_level: A1
+  frequency_rank: 96
+- type: sentence_pattern
+  text: Comment vous appelez-vous ?
+  translation: What is your name? (formal/plural)
+  example: Bonjour, comment vous appelez-vous ?
+  example_translation: Hello, what is your name?
+  cefr_level: A1
+  frequency_rank: 97
+- type: sentence_pattern
+  text: J'habite à...
+  translation: I live in...
+  example: J'habite à Lyon.
+  example_translation: I live in Lyon.
+  cefr_level: A1
+  frequency_rank: 98
+- type: sentence_pattern
+  text: Je suis de...
+  translation: I am from...
+  example: Je suis de France.
+  example_translation: I am from France.
+  cefr_level: A1
+  frequency_rank: 99
+- type: sentence_pattern
+  text: Ça coûte combien ?
+  translation: How much does it cost?
+  example: Ce livre, ça coûte combien ?
+  example_translation: This book, how much does it cost?
+  cefr_level: A1
+  frequency_rank: 100
+- type: word
+  text: Salut
+  translation: Hi / Hello / Bye
+  example: Salut, comment ça va ?
+  example_translation: Hi, how are you?
+  cefr_level: A1
+  frequency_rank: 101
+- type: word
+  text: Enchanté(e)
+  translation: Nice to meet you
+  example: Enchanté, je m'appelle Marie.
+  example_translation: Nice to meet you, my name is Marie.
+  cefr_level: A1
+  frequency_rank: 102
+- type: word
+  text: Pardon
+  translation: Excuse me / Sorry
+  example: Pardon, je n'ai pas compris.
+  example_translation: Sorry, I didn't understand.
+  cefr_level: A1
+  frequency_rank: 103
+- type: word
+  text: Excusez-moi
+  translation: Excuse me (formal)
+  example: Excusez-moi, où sont les toilettes ?
+  example_translation: Excuse me, where are the toilets?
+  cefr_level: A1
+  frequency_rank: 104
+- type: word
+  text: Zéro
+  translation: Zero
+  example: Il y a zéro pomme sur la table.
+  example_translation: There are zero apples on the table.
+  cefr_level: A1
+  frequency_rank: 105
+- type: word
+  text: Trois
+  translation: Three
+  example: J'ai trois frères.
+  example_translation: I have three brothers.
+  cefr_level: A1
+  frequency_rank: 106
+- type: word
+  text: Quatre
+  translation: Four
+  example: Nous avons quatre chaises.
+  example_translation: We have four chairs.
+  cefr_level: A1
+  frequency_rank: 107
+- type: word
+  text: Cinq
+  translation: Five
+  example: Le bus arrive dans cinq minutes.
+  example_translation: The bus arrives in five minutes.
+  cefr_level: A1
+  frequency_rank: 108
+- type: word
+  text: Dix
+  translation: Ten
+  example: J'ai dix euros.
+  example_translation: I have ten euros.
+  cefr_level: A1
+  frequency_rank: 109
+- type: word
+  text: Lundi
+  translation: Monday
+  example: Le magasin est fermé le lundi.
+  example_translation: The shop is closed on Monday.
+  cefr_level: A1
+  frequency_rank: 110
+- type: word
+  text: Mardi
+  translation: Tuesday
+  example: Je travaille mardi.
+  example_translation: I work on Tuesday.
+  cefr_level: A1
+  frequency_rank: 111
+- type: word
+  text: Mercredi
+  translation: Wednesday
+  example: Les enfants vont à l'école le mercredi.
+  example_translation: Children go to school on Wednesday.
+  cefr_level: A1
+  frequency_rank: 112
+- type: word
+  text: Dimanche
+  translation: Sunday
+  example: Nous déjeunons en famille le dimanche.
+  example_translation: We have lunch with family on Sunday.
+  cefr_level: A1
+  frequency_rank: 113
+- type: word
+  text: Homme
+  translation: Man
+  example: C'est un homme très gentil.
+  example_translation: He is a very kind man.
+  cefr_level: A1
+  frequency_rank: 114
+- type: word
+  text: Femme
+  translation: Woman
+  example: Elle est une femme élégante.
+  example_translation: She is an elegant woman.
+  cefr_level: A1
+  frequency_rank: 115
+- type: word
+  text: Enfant
+  translation: Child
+  example: L'enfant joue dans le jardin.
+  example_translation: The child plays in the garden.
+  cefr_level: A1
+  frequency_rank: 116
+- type: word
+  text: Stylo
+  translation: Pen
+  example: J'ai besoin d'un stylo pour écrire.
+  example_translation: I need a pen to write.
+  cefr_level: A1
+  frequency_rank: 117
+- type: word
+  text: Table
+  translation: Table
+  example: Mets les assiettes sur la table.
+  example_translation: Put the plates on the table.
+  cefr_level: A1
+  frequency_rank: 118
+- type: word
+  text: Chaise
+  translation: Chair
+  example: Assieds-toi sur cette chaise.
+  example_translation: Sit on this chair.
+  cefr_level: A1
+  frequency_rank: 119
+- type: word
+  text: Clé
+  translation: Key
+  example: Où est ma clé de voiture ?
+  example_translation: Where is my car key?
+  cefr_level: A1
+  frequency_rank: 120
+- type: word
+  text: Argent
+  translation: Money / Silver
+  example: J'ai de l'argent dans mon portefeuille.
+  example_translation: I have money in my wallet.
+  cefr_level: A1
+  frequency_rank: 121
+- type: word
+  text: Hôtel
+  translation: Hotel
+  example: Nous dormons à l'hôtel ce soir.
+  example_translation: We are sleeping at the hotel tonight.
+  cefr_level: A1
+  frequency_rank: 122
+- type: word
+  text: Restaurant
+  translation: Restaurant
+  example: Allons manger au restaurant.
+  example_translation: Let's go eat at the restaurant.
+  cefr_level: A1
+  frequency_rank: 123
+- type: word
+  text: Thé
+  translation: Tea
+  example: Je prends un thé le matin.
+  example_translation: I have tea in the morning.
+  cefr_level: A1
+  frequency_rank: 124
+- type: word
+  text: Jus
+  translation: Juice
+  example: Veux-tu un jus d'orange ?
+  example_translation: Do you want an orange juice?
+  cefr_level: A1
+  frequency_rank: 125
+- type: word
+  text: Fruit
+  translation: Fruit
+  example: J'aime manger des fruits frais.
+  example_translation: I like to eat fresh fruit.
+  cefr_level: A1
+  frequency_rank: 126
+- type: word
+  text: Légume
+  translation: Vegetable
+  example: Les légumes sont bons pour la santé.
+  example_translation: Vegetables are good for health.
+  cefr_level: A1
+  frequency_rank: 127
+- type: word
+  text: Ici
+  translation: Here
+  example: Viens ici, s'il te plaît.
+  example_translation: Come here, please.
+  cefr_level: A1
+  frequency_rank: 128
+- type: collocation
+  text: Avoir chaud
+  translation: To be hot (feeling hot)
+  example: J'ai chaud, ouvre la fenêtre.
+  example_translation: I'm hot, open the window.
+  cefr_level: A1
+  frequency_rank: 129
+- type: collocation
+  text: Avoir froid
+  translation: To be cold (feeling cold)
+  example: Il a froid, il met un pull.
+  example_translation: He's cold, he puts on a sweater.
+  cefr_level: A1
+  frequency_rank: 130
+- type: collocation
+  text: Avoir sommeil
+  translation: To be sleepy
+  example: Il est tard, j'ai sommeil.
+  example_translation: It's late, I'm sleepy.
+  cefr_level: A1
+  frequency_rank: 131
+- type: collocation
+  text: Avoir peur
+  translation: To be scared
+  example: N'aie pas peur, je suis là.
+  example_translation: Don't be scared, I'm here.
+  cefr_level: A1
+  frequency_rank: 132
+- type: collocation
+  text: Faire du vélo
+  translation: To cycle / To ride a bike
+  example: Nous aimons faire du vélo le week-end.
+  example_translation: We like to cycle on weekends.
+  cefr_level: A1
+  frequency_rank: 133
+- type: collocation
+  text: Faire du shopping
+  translation: To go shopping
+  example: Je vais faire du shopping cet après-midi.
+  example_translation: I'm going shopping this afternoon.
+  cefr_level: A1
+  frequency_rank: 134
+- type: collocation
+  text: Prendre le petit-déjeuner
+  translation: To have breakfast
+  example: Je prends le petit-déjeuner à 7h.
+  example_translation: I have breakfast at 7 AM.
+  cefr_level: A1
+  frequency_rank: 135
+- type: collocation
+  text: Aller au lit
+  translation: To go to bed
+  example: Je suis fatigué, je vais aller au lit.
+  example_translation: I am tired, I'm going to go to bed.
+  cefr_level: A1
+  frequency_rank: 136
+- type: collocation
+  text: Se lever
+  translation: To get up
+  example: Je me lève tôt tous les jours.
+  example_translation: I get up early every day.
+  cefr_level: A1
+  frequency_rank: 137
+- type: collocation
+  text: S'appeler
+  translation: To be called / To be named
+  example: Comment vous appelez-vous ?
+  example_translation: What is your name? (formal)
+  cefr_level: A1
+  frequency_rank: 138
+- type: verb_form
+  text: Je regarde
+  translation: I watch / I look at
+  example: Je regarde un film.
+  example_translation: I am watching a movie.
+  cefr_level: A1
+  frequency_rank: 139
+- type: verb_form
+  text: J'aime
+  translation: I like / I love
+  example: J'aime le chocolat.
+  example_translation: I like chocolate.
+  cefr_level: A1
+  frequency_rank: 140
+- type: verb_form
+  text: Je déteste
+  translation: I hate
+  example: Je déteste le froid.
+  example_translation: I hate the cold.
+  cefr_level: A1
+  frequency_rank: 141
+- type: verb_form
+  text: Je travaille
+  translation: I work
+  example: Je travaille à Paris.
+  example_translation: I work in Paris.
+  cefr_level: A1
+  frequency_rank: 142
+- type: verb_form
+  text: J'étudie
+  translation: I study
+  example: J'étudie le français.
+  example_translation: I study French.
+  cefr_level: A1
+  frequency_rank: 143
+- type: verb_form
+  text: J'achète
+  translation: I buy
+  example: J'achète du pain tous les jours.
+  example_translation: I buy bread every day.
+  cefr_level: A1
+  frequency_rank: 144
+- type: verb_form
+  text: Je viens
+  translation: I come
+  example: Je viens de France.
+  example_translation: I come from France.
+  cefr_level: A1
+  frequency_rank: 145
+- type: sentence_pattern
+  text: Est-ce que... ?
+  translation: Is it that...? (Question marker)
+  example: Est-ce que tu parles anglais ?
+  example_translation: Do you speak English?
+  cefr_level: A1
+  frequency_rank: 146
+- type: sentence_pattern
+  text: Comment allez-vous ?
+  translation: How are you? (formal)
+  example: Bonjour, comment allez-vous ?
+  example_translation: Hello, how are you?
+  cefr_level: A1
+  frequency_rank: 147
+- type: sentence_pattern
+  text: Quel âge avez-vous ?
+  translation: How old are you? (formal)
+  example: Quel âge avez-vous, Madame ?
+  example_translation: How old are you, Madam?
+  cefr_level: A1
+  frequency_rank: 148
+- type: sentence_pattern
+  text: Je m'appelle...
+  translation: My name is...
+  example: Bonjour, je m'appelle Paul.
+  example_translation: Hello, my name is Paul.
+  cefr_level: A1
+  frequency_rank: 149
+- type: sentence_pattern
+  text: C'est combien ?
+  translation: How much is it?
+  example: Ce livre, c'est combien ?
+  example_translation: This book, how much is it?
+  cefr_level: A1
+  frequency_rank: 150
+- type: word
+  text: Vous
+  translation: You (plural/formal)
+  example: Vous parlez français ?
+  example_translation: Do you speak French?
+  cefr_level: A1
+  frequency_rank: 151
+- type: word
+  text: Ils
+  translation: They (masculine)
+  example: Ils sont mes amis.
+  example_translation: They are my friends.
+  cefr_level: A1
+  frequency_rank: 152
+- type: word
+  text: Elles
+  translation: They (feminine)
+  example: Elles mangent une pomme.
+  example_translation: They are eating an apple.
+  cefr_level: A1
+  frequency_rank: 153
+- type: word
+  text: Six
+  translation: Six
+  example: J'ai six stylos.
+  example_translation: I have six pens.
+  cefr_level: A1
+  frequency_rank: 154
+- type: word
+  text: Sept
+  translation: Seven
+  example: Il a sept ans.
+  example_translation: He is seven years old.
+  cefr_level: A1
+  frequency_rank: 155
+- type: word
+  text: Huit
+  translation: Eight
+  example: Nous avons huit livres.
+  example_translation: We have eight books.
+  cefr_level: A1
+  frequency_rank: 156
+- type: word
+  text: Neuf
+  translation: Nine
+  example: Elle a neuf chats.
+  example_translation: She has nine cats.
+  cefr_level: A1
+  frequency_rank: 157
+- type: word
+  text: Mois
+  translation: Month
+  example: Il y a douze mois dans une année.
+  example_translation: There are twelve months in a year.
+  cefr_level: A1
+  frequency_rank: 158
+- type: word
+  text: Jeudi
+  translation: Thursday
+  example: Aujourd'hui, c'est jeudi.
+  example_translation: Today is Thursday.
+  cefr_level: A1
+  frequency_rank: 159
+- type: word
+  text: Vendredi
+  translation: Friday
+  example: Je travaille jusqu'à vendredi.
+  example_translation: I work until Friday.
+  cefr_level: A1
+  frequency_rank: 160
+- type: word
+  text: Samedi
+  translation: Saturday
+  example: Nous allons au marché samedi.
+  example_translation: We are going to the market on Saturday.
+  cefr_level: A1
+  frequency_rank: 161
+- type: word
+  text: Minute
+  translation: Minute
+  example: Attendez une minute, s'il vous plaît.
+  example_translation: Wait one minute, please.
+  cefr_level: A1
+  frequency_rank: 162
+- type: word
+  text: Téléphone
+  translation: Telephone
+  example: Mon téléphone est sur la table.
+  example_translation: My phone is on the table.
+  cefr_level: A1
+  frequency_rank: 163
+- type: word
+  text: Ordinateur
+  translation: Computer
+  example: J'utilise mon ordinateur pour travailler.
+  example_translation: I use my computer for work.
+  cefr_level: A1
+  frequency_rank: 164
+- type: word
+  text: Sac
+  translation: Bag
+  example: Où est mon sac ?
+  example_translation: Where is my bag?
+  cefr_level: A1
+  frequency_rank: 165
+- type: word
+  text: Fenêtre
+  translation: Window
+  example: La fenêtre est ouverte.
+  example_translation: The window is open.
+  cefr_level: A1
+  frequency_rank: 166
+- type: word
+  text: Dîner
+  translation: Dinner (meal)
+  example: Nous mangeons le dîner à sept heures.
+  example_translation: We eat dinner at seven o'clock.
+  cefr_level: A1
+  frequency_rank: 167
+- type: word
+  text: Goûter
+  translation: Snack (noun)
+  example: Les enfants prennent un goûter l'après-midi.
+  example_translation: The children have a snack in the afternoon.
+  cefr_level: A1
+  frequency_rank: 168
+- type: word
+  text: Beau
+  translation: Beautiful (masculine)
+  example: C'est un beau jour.
+  example_translation: It's a beautiful day.
+  cefr_level: A1
+  frequency_rank: 169
+- type: word
+  text: Belle
+  translation: Beautiful (feminine)
+  example: Elle est très belle.
+  example_translation: She is very beautiful.
+  cefr_level: A1
+  frequency_rank: 170
+- type: word
+  text: Bon
+  translation: Good (masculine)
+  example: Ce livre est bon.
+  example_translation: This book is good.
+  cefr_level: A1
+  frequency_rank: 171
+- type: word
+  text: Bonne
+  translation: Good (feminine)
+  example: J'ai une bonne idée.
+  example_translation: I have a good idea.
+  cefr_level: A1
+  frequency_rank: 172
+- type: word
+  text: Content(e)
+  translation: Happy, pleased
+  example: Je suis content de te voir.
+  example_translation: I am happy to see you.
+  cefr_level: A1
+  frequency_rank: 173
+- type: word
+  text: Fatigué(e)
+  translation: Tired
+  example: Je suis fatiguée après le travail.
+  example_translation: I am tired after work.
+  cefr_level: A1
+  frequency_rank: 174
+- type: word
+  text: Jeune
+  translation: Young
+  example: Elle est très jeune.
+  example_translation: She is very young.
+  cefr_level: A1
+  frequency_rank: 175
+- type: word
+  text: Gentil(le)
+  translation: Kind, nice
+  example: Il est très gentil.
+  example_translation: He is very kind.
+  cefr_level: A1
+  frequency_rank: 176
+- type: word
+  text: Adresse
+  translation: Address
+  example: Quelle est votre adresse ?
+  example_translation: What is your address?
+  cefr_level: A1
+  frequency_rank: 177
+- type: word
+  text: Métro
+  translation: Subway, metro
+  example: Je prends le métro pour aller au travail.
+  example_translation: I take the subway to go to work.
+  cefr_level: A1
+  frequency_rank: 178
+- type: collocation
+  text: De rien
+  translation: You're welcome
+  example: Merci pour le cadeau. - De rien !
+  example_translation: Thanks for the gift. - You're welcome!
+  cefr_level: A1
+  frequency_rank: 179
+- type: collocation
+  text: À bientôt
+  translation: See you soon
+  example: Au revoir, à bientôt !
+  example_translation: Goodbye, see you soon!
+  cefr_level: A1
+  frequency_rank: 180
+- type: collocation
+  text: Bonne nuit
+  translation: Good night
+  example: Je vais dormir. Bonne nuit !
+  example_translation: I'm going to sleep. Good night!
+  cefr_level: A1
+  frequency_rank: 181
+- type: collocation
+  text: La gare
+  translation: The train station
+  example: Je vais à la gare.
+  example_translation: I am going to the train station.
+  cefr_level: A1
+  frequency_rank: 182
+- type: collocation
+  text: La poste
+  translation: The post office
+  example: Où est la poste ?
+  example_translation: Where is the post office?
+  cefr_level: A1
+  frequency_rank: 183
+- type: collocation
+  text: Le supermarché
+  translation: The supermarket
+  example: Je vais au supermarché pour acheter des fruits.
+  example_translation: I'm going to the supermarket to buy some fruit.
+  cefr_level: A1
+  frequency_rank: 184
+- type: collocation
+  text: À gauche
+  translation: To the left
+  example: Tournez à gauche après la boulangerie.
+  example_translation: Turn left after the bakery.
+  cefr_level: A1
+  frequency_rank: 185
+- type: collocation
+  text: À droite
+  translation: To the right
+  example: Le restaurant est à droite.
+  example_translation: The restaurant is on the right.
+  cefr_level: A1
+  frequency_rank: 186
+- type: collocation
+  text: Tout droit
+  translation: Straight ahead
+  example: Allez tout droit, c'est la rue principale.
+  example_translation: Go straight ahead, it's the main street.
+  cefr_level: A1
+  frequency_rank: 187
+- type: collocation
+  text: Faire la fête
+  translation: To party
+  example: Nous allons faire la fête ce soir.
+  example_translation: We are going to party tonight.
+  cefr_level: A1
+  frequency_rank: 188
+- type: verb_form
+  text: Nous sommes
+  translation: We are
+  example: Nous sommes français.
+  example_translation: We are French.
+  cefr_level: A1
+  frequency_rank: 189
+- type: verb_form
+  text: Vous êtes
+  translation: You are (plural/formal)
+  example: Vous êtes d'où ?
+  example_translation: Where are you from?
+  cefr_level: A1
+  frequency_rank: 190
+- type: verb_form
+  text: Ils sont
+  translation: They are (masculine)
+  example: Ils sont dans le jardin.
+  example_translation: They are in the garden.
+  cefr_level: A1
+  frequency_rank: 191
+- type: verb_form
+  text: Nous avons
+  translation: We have
+  example: Nous avons un chat et un chien.
+  example_translation: We have a cat and a dog.
+  cefr_level: A1
+  frequency_rank: 192
+- type: verb_form
+  text: Vous avez
+  translation: You have (plural/formal)
+  example: Vous avez des questions ?
+  example_translation: Do you have any questions?
+  cefr_level: A1
+  frequency_rank: 193
+- type: verb_form
+  text: Ils ont
+  translation: They have
+  example: Ils ont beaucoup de travail.
+  example_translation: They have a lot of work.
+  cefr_level: A1
+  frequency_rank: 194
+- type: verb_form
+  text: Il faut
+  translation: It is necessary, one must
+  example: Il faut partir maintenant.
+  example_translation: It is necessary to leave now.
+  cefr_level: A1
+  frequency_rank: 195
+- type: sentence_pattern
+  text: Quand...?
+  translation: When...?
+  example: Quand est votre anniversaire ?
+  example_translation: When is your birthday?
+  cefr_level: A1
+  frequency_rank: 196
+- type: sentence_pattern
+  text: Pourquoi...?
+  translation: Why...?
+  example: Pourquoi êtes-vous triste ?
+  example_translation: Why are you sad?
+  cefr_level: A1
+  frequency_rank: 197
+- type: sentence_pattern
+  text: Quel/Quelle...?
+  translation: Which/What...?
+  example: Quelle couleur préférez-vous ?
+  example_translation: Which color do you prefer?
+  cefr_level: A1
+  frequency_rank: 198
+- type: sentence_pattern
+  text: C'est + adjective
+  translation: It's + adjective
+  example: C'est difficile.
+  example_translation: It's difficult.
+  cefr_level: A1
+  frequency_rank: 199
+- type: sentence_pattern
+  text: J'aimerais + verb (infinitive)
+  translation: I would like to + verb
+  example: J'aimerais visiter Paris.
+  example_translation: I would like to visit Paris.
+  cefr_level: A1
+  frequency_rank: 200
+- type: word
+  text: Midi
+  translation: Noon
+  example: On mange à midi.
+  example_translation: We eat at noon.
+  cefr_level: A1
+  frequency_rank: 201
+- type: word
+  text: Minuit
+  translation: Midnight
+  example: Le magasin ferme à minuit.
+  example_translation: The store closes at midnight.
+  cefr_level: A1
+  frequency_rank: 202
+- type: word
+  text: Professeur
+  translation: Teacher
+  example: Mon professeur est très gentil.
+  example_translation: My teacher is very kind.
+  cefr_level: A1
+  frequency_rank: 203
+- type: word
+  text: Étudiant(e)
+  translation: Student
+  example: Je suis un étudiant français.
+  example_translation: I am a French student.
+  cefr_level: A1
+  frequency_rank: 204
+- type: word
+  text: Docteur
+  translation: Doctor
+  example: Le docteur est au travail.
+  example_translation: The doctor is at work.
+  cefr_level: A1
+  frequency_rank: 205
+- type: word
+  text: Hôpital
+  translation: Hospital
+  example: L'hôpital est loin d'ici.
+  example_translation: The hospital is far from here.
+  cefr_level: A1
+  frequency_rank: 206
+- type: word
+  text: Boulangerie
+  translation: Bakery
+  example: J'achète du pain à la boulangerie.
+  example_translation: I buy bread at the bakery.
+  cefr_level: A1
+  frequency_rank: 207
+- type: word
+  text: Pharmacie
+  translation: Pharmacy
+  example: La pharmacie est ouverte.
+  example_translation: The pharmacy is open.
+  cefr_level: A1
+  frequency_rank: 208
+- type: word
+  text: Bus
+  translation: Bus
+  example: Je prends le bus tous les jours.
+  example_translation: I take the bus every day.
+  cefr_level: A1
+  frequency_rank: 209
+- type: word
+  text: Train
+  translation: Train
+  example: Le train arrive à l'heure.
+  example_translation: The train arrives on time.
+  cefr_level: A1
+  frequency_rank: 210
+- type: word
+  text: Avion
+  translation: Plane
+  example: Nous voyageons en avion.
+  example_translation: We travel by plane.
+  cefr_level: A1
+  frequency_rank: 211
+- type: word
+  text: Billet
+  translation: Ticket (for travel/event)
+  example: J'ai un billet pour le concert.
+  example_translation: I have a ticket for the concert.
+  cefr_level: A1
+  frequency_rank: 212
+- type: word
+  text: Passeport
+  translation: Passport
+  example: Où est mon passeport ?
+  example_translation: Where is my passport?
+  cefr_level: A1
+  frequency_rank: 213
+- type: word
+  text: Téléphone portable
+  translation: Mobile phone
+  example: Mon téléphone portable est neuf.
+  example_translation: My mobile phone is new.
+  cefr_level: A1
+  frequency_rank: 214
+- type: word
+  text: Cahier
+  translation: Notebook
+  example: J'ai un nouveau cahier bleu.
+  example_translation: I have a new blue notebook.
+  cefr_level: A1
+  frequency_rank: 215
+- type: word
+  text: Sac à dos
+  translation: Backpack
+  example: Mon sac à dos est lourd.
+  example_translation: My backpack is heavy.
+  cefr_level: A1
+  frequency_rank: 216
+- type: word
+  text: Vêtements
+  translation: Clothes
+  example: J'achète de nouveaux vêtements.
+  example_translation: I am buying new clothes.
+  cefr_level: A1
+  frequency_rank: 217
+- type: word
+  text: Chaussures
+  translation: Shoes
+  example: J'ai de belles chaussures.
+  example_translation: I have nice shoes.
+  cefr_level: A1
+  frequency_rank: 218
+- type: word
+  text: Vert
+  translation: Green
+  example: J'aime la couleur verte.
+  example_translation: I like the color green.
+  cefr_level: A1
+  frequency_rank: 219
+- type: word
+  text: Jaune
+  translation: Yellow
+  example: Le soleil est jaune.
+  example_translation: The sun is yellow.
+  cefr_level: A1
+  frequency_rank: 220
+- type: word
+  text: Noir
+  translation: Black
+  example: Mon chat est noir.
+  example_translation: My cat is black.
+  cefr_level: A1
+  frequency_rank: 221
+- type: word
+  text: Riz
+  translation: Rice
+  example: Je mange du riz avec du poisson.
+  example_translation: I eat rice with fish.
+  cefr_level: A1
+  frequency_rank: 222
+- type: word
+  text: Pâtes
+  translation: Pasta
+  example: Nous mangeons des pâtes ce soir.
+  example_translation: We are eating pasta tonight.
+  cefr_level: A1
+  frequency_rank: 223
+- type: word
+  text: Beurre
+  translation: Butter
+  example: Je mets du beurre sur mon pain.
+  example_translation: I put butter on my bread.
+  cefr_level: A1
+  frequency_rank: 224
+- type: word
+  text: Œuf
+  translation: Egg
+  example: Je mange un œuf au petit-déjeuner.
+  example_translation: I eat an egg for breakfast.
+  cefr_level: A1
+  frequency_rank: 225
+- type: word
+  text: Plage
+  translation: Beach
+  example: Nous allons à la plage.
+  example_translation: We are going to the beach.
+  cefr_level: A1
+  frequency_rank: 226
+- type: word
+  text: Parc
+  translation: Park
+  example: Les enfants jouent dans le parc.
+  example_translation: The children are playing in the park.
+  cefr_level: A1
+  frequency_rank: 227
+- type: word
+  text: Météo
+  translation: Weather
+  example: La météo est bonne aujourd'hui.
+  example_translation: The weather is good today.
+  cefr_level: A1
+  frequency_rank: 228
+- type: collocation
+  text: Bon après-midi
+  translation: Good afternoon
+  example: Bon après-midi à tous !
+  example_translation: Good afternoon everyone!
+  cefr_level: A1
+  frequency_rank: 229
+- type: collocation
+  text: Avec plaisir
+  translation: With pleasure / My pleasure
+  example: Merci pour l'aide. – Avec plaisir !
+  example_translation: Thanks for the help. – My pleasure!
+  cefr_level: A1
+  frequency_rank: 230
+- type: collocation
+  text: Il fait beau
+  translation: The weather is nice / It's sunny
+  example: Il fait beau aujourd'hui, allons dehors.
+  example_translation: The weather is nice today, let's go outside.
+  cefr_level: A1
+  frequency_rank: 231
+- type: collocation
+  text: Il fait froid
+  translation: It's cold (weather)
+  example: Il fait froid en hiver.
+  example_translation: It's cold in winter.
+  cefr_level: A1
+  frequency_rank: 232
+- type: collocation
+  text: Il fait chaud
+  translation: It's hot (weather)
+  example: Il fait chaud en été.
+  example_translation: It's hot in summer.
+  cefr_level: A1
+  frequency_rank: 233
+- type: collocation
+  text: Avoir besoin de
+  translation: To need
+  example: J'ai besoin d'eau.
+  example_translation: I need water.
+  cefr_level: A1
+  frequency_rank: 234
+- type: collocation
+  text: Pas cher
+  translation: Not expensive / Cheap
+  example: Ce livre est pas cher.
+  example_translation: This book is cheap.
+  cefr_level: A1
+  frequency_rank: 235
+- type: collocation
+  text: À demain
+  translation: See you tomorrow
+  example: Je dois partir, à demain !
+  example_translation: I have to leave, see you tomorrow!
+  cefr_level: A1
+  frequency_rank: 236
+- type: collocation
+  text: Bonne chance
+  translation: Good luck
+  example: Bonne chance pour ton examen !
+  example_translation: Good luck with your exam!
+  cefr_level: A1
+  frequency_rank: 237
+- type: collocation
+  text: Prendre un taxi
+  translation: To take a taxi
+  example: Nous devons prendre un taxi.
+  example_translation: We have to take a taxi.
+  cefr_level: A1
+  frequency_rank: 238
+- type: verb_form
+  text: Je dors
+  translation: I sleep
+  example: Je dors bien la nuit.
+  example_translation: I sleep well at night.
+  cefr_level: A1
+  frequency_rank: 239
+- type: verb_form
+  text: Tu lis
+  translation: You read (informal singular)
+  example: Tu lis un journal ?
+  example_translation: Are you reading a newspaper?
+  cefr_level: A1
+  frequency_rank: 240
+- type: verb_form
+  text: Il voit
+  translation: He sees
+  example: Il voit un film au cinéma.
+  example_translation: He sees a movie at the cinema.
+  cefr_level: A1
+  frequency_rank: 241
+- type: verb_form
+  text: Elle attend
+  translation: She waits
+  example: Elle attend le bus.
+  example_translation: She is waiting for the bus.
+  cefr_level: A1
+  frequency_rank: 242
+- type: verb_form
+  text: Nous habitons
+  translation: We live
+  example: Nous habitons à Paris.
+  example_translation: We live in Paris.
+  cefr_level: A1
+  frequency_rank: 243
+- type: verb_form
+  text: Vous comprenez
+  translation: You understand (formal / plural)
+  example: Vous comprenez l'anglais ?
+  example_translation: Do you understand English?
+  cefr_level: A1
+  frequency_rank: 244
+- type: verb_form
+  text: Ils disent
+  translation: They say (masc. / mixed)
+  example: Ils disent bonjour.
+  example_translation: They say hello.
+  cefr_level: A1
+  frequency_rank: 245
+- type: verb_form
+  text: Elles écrivent
+  translation: They write (fem.)
+  example: Elles écrivent une lettre.
+  example_translation: They are writing a letter.
+  cefr_level: A1
+  frequency_rank: 246
+- type: sentence_pattern
+  text: Comment est...?
+  translation: What is... like?
+  example: Comment est votre ville ?
+  example_translation: What is your city like?
+  cefr_level: A1
+  frequency_rank: 247
+- type: sentence_pattern
+  text: Je cherche + noun.
+  translation: I am looking for + noun.
+  example: Je cherche la gare.
+  example_translation: I am looking for the train station.
+  cefr_level: A1
+  frequency_rank: 248
+- type: sentence_pattern
+  text: Je ne sais pas.
+  translation: I don't know.
+  example: Je ne sais pas la réponse.
+  example_translation: I don't know the answer.
+  cefr_level: A1
+  frequency_rank: 249
+- type: sentence_pattern
+  text: Où sont les toilettes ?
+  translation: Where are the toilets?
+  example: Excusez-moi, où sont les toilettes ?
+  example_translation: Excuse me, where are the toilets?
+  cefr_level: A1
+  frequency_rank: 250
+- type: word
+  text: Bonsoir
+  translation: Good evening
+  example: Bonsoir, comment allez-vous ?
+  example_translation: Good evening, how are you?
+  cefr_level: A1
+  frequency_rank: 251
+- type: word
+  text: Mademoiselle
+  translation: Miss
+  example: Excusez-moi, Mademoiselle.
+  example_translation: Excuse me, Miss.
+  cefr_level: A1
+  frequency_rank: 252
+- type: word
+  text: Désolé(e)
+  translation: Sorry
+  example: Je suis désolé(e) pour le retard.
+  example_translation: I am sorry for the delay.
+  cefr_level: A1
+  frequency_rank: 253
+- type: word
+  text: S'il te plaît
+  translation: Please (informal)
+  example: Donne-moi ton livre, s'il te plaît.
+  example_translation: Give me your book, please.
+  cefr_level: A1
+  frequency_rank: 254
+- type: word
+  text: Peut-être
+  translation: Maybe
+  example: Peut-être que je viendrai demain.
+  example_translation: Maybe I will come tomorrow.
+  cefr_level: A1
+  frequency_rank: 255
+- type: word
+  text: Là
+  translation: There
+  example: Mon sac est là, sur la table.
+  example_translation: My bag is there, on the table.
+  cefr_level: A1
+  frequency_rank: 256
+- type: word
+  text: Après
+  translation: After
+  example: Je vais travailler après le déjeuner.
+  example_translation: I will work after lunch.
+  cefr_level: A1
+  frequency_rank: 257
+- type: word
+  text: Toujours
+  translation: Always
+  example: Elle est toujours en retard.
+  example_translation: She is always late.
+  cefr_level: A1
+  frequency_rank: 258
+- type: word
+  text: Jamais
+  translation: Never
+  example: Je ne mange jamais de viande.
+  example_translation: I never eat meat.
+  cefr_level: A1
+  frequency_rank: 259
+- type: word
+  text: Souvent
+  translation: Often
+  example: Nous allons souvent au parc.
+  example_translation: We often go to the park.
+  cefr_level: A1
+  frequency_rank: 260
+- type: word
+  text: Très
+  translation: Very
+  example: C'est très bon !
+  example_translation: It's very good!
+  cefr_level: A1
+  frequency_rank: 261
+- type: word
+  text: Beaucoup
+  translation: A lot, much
+  example: J'aime beaucoup lire.
+  example_translation: I like reading a lot.
+  cefr_level: A1
+  frequency_rank: 262
+- type: word
+  text: Un peu
+  translation: A little
+  example: Je parle un peu français.
+  example_translation: I speak a little French.
+  cefr_level: A1
+  frequency_rank: 263
+- type: word
+  text: Nouveau/Nouvelle
+  translation: New
+  example: J'ai une nouvelle voiture.
+  example_translation: I have a new car.
+  cefr_level: A1
+  frequency_rank: 264
+- type: word
+  text: Vieux/Vieille
+  translation: Old
+  example: Il habite dans une vieille maison.
+  example_translation: He lives in an old house.
+  cefr_level: A1
+  frequency_rank: 265
+- type: word
+  text: Facile
+  translation: Easy
+  example: Cette leçon est facile.
+  example_translation: This lesson is easy.
+  cefr_level: A1
+  frequency_rank: 266
+- type: word
+  text: Difficile
+  translation: Difficult
+  example: C'est un exercice difficile.
+  example_translation: It's a difficult exercise.
+  cefr_level: A1
+  frequency_rank: 267
+- type: word
+  text: Mauvais(e)
+  translation: Bad
+  example: J'ai eu une mauvaise journée.
+  example_translation: I had a bad day.
+  cefr_level: A1
+  frequency_rank: 268
+- type: word
+  text: Frais/Fraîche
+  translation: Fresh/Cool
+  example: J'aime l'eau fraîche.
+  example_translation: I like fresh water.
+  cefr_level: A1
+  frequency_rank: 269
+- type: word
+  text: Blanc
+  translation: White
+  example: J'ai un chat blanc.
+  example_translation: I have a white cat.
+  cefr_level: A1
+  frequency_rank: 270
+- type: word
+  text: Marron
+  translation: Brown
+  example: Ses yeux sont marron.
+  example_translation: Her eyes are brown.
+  cefr_level: A1
+  frequency_rank: 271
+- type: word
+  text: Gris
+  translation: Grey
+  example: Le ciel est gris aujourd'hui.
+  example_translation: The sky is grey today.
+  cefr_level: A1
+  frequency_rank: 272
+- type: word
+  text: Cuisine
+  translation: Kitchen
+  example: La cuisine est grande et moderne.
+  example_translation: The kitchen is big and modern.
+  cefr_level: A1
+  frequency_rank: 273
+- type: word
+  text: Salle de bain
+  translation: Bathroom
+  example: Il y a une salle de bain à l'étage.
+  example_translation: There is a bathroom upstairs.
+  cefr_level: A1
+  frequency_rank: 274
+- type: word
+  text: Lit
+  translation: Bed
+  example: Je suis fatigué, je vais au lit.
+  example_translation: I'm tired, I'm going to bed.
+  cefr_level: A1
+  frequency_rank: 275
+- type: word
+  text: Journal
+  translation: Newspaper
+  example: Je lis le journal le matin.
+  example_translation: I read the newspaper in the morning.
+  cefr_level: A1
+  frequency_rank: 276
+- type: word
+  text: Vélo
+  translation: Bicycle
+  example: J'aime faire du vélo le week-end.
+  example_translation: I like to ride my bike on weekends.
+  cefr_level: A1
+  frequency_rank: 277
+- type: word
+  text: Monnaie
+  translation: Change, currency
+  example: Avez-vous de la monnaie pour le bus ?
+  example_translation: Do you have any change for the bus?
+  cefr_level: A1
+  frequency_rank: 278
+- type: collocation
+  text: Faire une promenade
+  translation: To go for a walk
+  example: Nous allons faire une promenade au parc.
+  example_translation: We are going to go for a walk in the park.
+  cefr_level: A1
+  frequency_rank: 279
+- type: collocation
+  text: Prendre un verre
+  translation: To have a drink
+  example: On va prendre un verre après le travail ?
+  example_translation: Shall we have a drink after work?
+  cefr_level: A1
+  frequency_rank: 280
+- type: collocation
+  text: Parler une langue
+  translation: To speak a language
+  example: Je veux apprendre à parler une nouvelle langue.
+  example_translation: I want to learn to speak a new language.
+  cefr_level: A1
+  frequency_rank: 281
+- type: collocation
+  text: Écouter la radio
+  translation: To listen to the radio
+  example: J'écoute la radio tous les matins.
+  example_translation: I listen to the radio every morning.
+  cefr_level: A1
+  frequency_rank: 282
+- type: collocation
+  text: Regarder un film
+  translation: To watch a movie
+  example: Ce soir, on va regarder un film.
+  example_translation: Tonight, we are going to watch a movie.
+  cefr_level: A1
+  frequency_rank: 283
+- type: collocation
+  text: Aller au cinéma
+  translation: To go to the cinema
+  example: Tu veux aller au cinéma ce week-end ?
+  example_translation: Do you want to go to the cinema this weekend?
+  cefr_level: A1
+  frequency_rank: 284
+- type: collocation
+  text: Avoir de la chance
+  translation: To be lucky
+  example: Tu as de la chance d'avoir de si bons amis.
+  example_translation: You are lucky to have such good friends.
+  cefr_level: A1
+  frequency_rank: 285
+- type: collocation
+  text: Demander son chemin
+  translation: To ask for directions
+  example: Je dois demander mon chemin pour aller à la gare.
+  example_translation: I need to ask for directions to go to the station.
+  cefr_level: A1
+  frequency_rank: 286
+- type: collocation
+  text: Faire des photos
+  translation: To take photos
+  example: J'aime faire des photos de mes voyages.
+  example_translation: I like to take photos of my trips.
+  cefr_level: A1
+  frequency_rank: 287
+- type: collocation
+  text: Rendre visite à
+  translation: To visit (a person)
+  example: Je vais rendre visite à ma grand-mère dimanche.
+  example_translation: I'm going to visit my grandmother on Sunday.
+  cefr_level: A1
+  frequency_rank: 288
+- type: verb_form
+  text: Il habite
+  translation: He lives
+  example: Il habite à Paris depuis deux ans.
+  example_translation: He has lived in Paris for two years.
+  cefr_level: A1
+  frequency_rank: 289
+- type: verb_form
+  text: Je comprends
+  translation: I understand
+  example: Je comprends un peu l'espagnol.
+  example_translation: I understand a little Spanish.
+  cefr_level: A1
+  frequency_rank: 290
+- type: verb_form
+  text: Tu dis
+  translation: You say (informal)
+  example: Que dis-tu ?
+  example_translation: What are you saying?
+  cefr_level: A1
+  frequency_rank: 291
+- type: verb_form
+  text: Nous écrivons
+  translation: We write
+  example: Nous écrivons une lettre à nos parents.
+  example_translation: We are writing a letter to our parents.
+  cefr_level: A1
+  frequency_rank: 292
+- type: verb_form
+  text: Il lit
+  translation: He reads
+  example: Il lit un livre chaque soir.
+  example_translation: He reads a book every evening.
+  cefr_level: A1
+  frequency_rank: 293
+- type: verb_form
+  text: Je vois
+  translation: I see
+  example: Je vois mon ami au café.
+  example_translation: I see my friend at the cafe.
+  cefr_level: A1
+  frequency_rank: 294
+- type: verb_form
+  text: Nous pouvons
+  translation: We can
+  example: Nous pouvons vous aider.
+  example_translation: We can help you.
+  cefr_level: A1
+  frequency_rank: 295
+- type: sentence_pattern
+  text: J'ai envie de + noun/infinitive
+  translation: I feel like/I want to
+  example: J'ai envie d'une glace. J'ai envie de voyager.
+  example_translation: I feel like an ice cream. I want to travel.
+  cefr_level: A1
+  frequency_rank: 296
+- type: sentence_pattern
+  text: Quel est votre nom ?
+  translation: What is your name? (formal)
+  example: Quel est votre nom, s'il vous plaît ?
+  example_translation: What is your name, please?
+  cefr_level: A1
+  frequency_rank: 297
+- type: sentence_pattern
+  text: Où habitez-vous ?
+  translation: Where do you live? (formal)
+  example: Où habitez-vous à Paris ?
+  example_translation: Where do you live in Paris?
+  cefr_level: A1
+  frequency_rank: 298
+- type: sentence_pattern
+  text: J'aime bien + noun/infinitive
+  translation: I quite like/I like to
+  example: J'aime bien le thé. J'aime bien nager.
+  example_translation: I quite like tea. I like to swim.
+  cefr_level: A1
+  frequency_rank: 299
+- type: sentence_pattern
+  text: Pouvez-vous répéter ?
+  translation: Can you repeat? (formal)
+  example: Pouvez-vous répéter, s'il vous plaît ? Je n'ai pas compris.
+  example_translation: Can you repeat, please? I didn't understand.
+  cefr_level: A1
+  frequency_rank: 300
+- type: word
+  text: Chocolat
+  translation: Chocolate
+  example: J'aime le chocolat noir.
+  example_translation: I like dark chocolate.
+  cefr_level: A1
+  frequency_rank: 301
+- type: word
+  text: Sucre
+  translation: Sugar
+  example: Vous voulez du sucre dans votre café ?
+  example_translation: Do you want sugar in your coffee?
+  cefr_level: A1
+  frequency_rank: 302
+- type: word
+  text: Sel
+  translation: Salt
+  example: Passe-moi le sel, s'il te plaît.
+  example_translation: Pass me the salt, please.
+  cefr_level: A1
+  frequency_rank: 303
+- type: word
+  text: Poivre
+  translation: Pepper
+  example: Il y a du poivre sur la table.
+  example_translation: There is pepper on the table.
+  cefr_level: A1
+  frequency_rank: 304
+- type: word
+  text: Jupe
+  translation: Skirt
+  example: Elle porte une jolie jupe.
+  example_translation: She is wearing a pretty skirt.
+  cefr_level: A1
+  frequency_rank: 305
+- type: word
+  text: Pantalon
+  translation: Trousers / Pants
+  example: J'ai acheté un nouveau pantalon.
+  example_translation: I bought new trousers.
+  cefr_level: A1
+  frequency_rank: 306
+- type: word
+  text: Chemise
+  translation: Shirt
+  example: Il met une chemise bleue.
+  example_translation: He puts on a blue shirt.
+  cefr_level: A1
+  frequency_rank: 307
+- type: word
+  text: Robe
+  translation: Dress
+  example: Cette robe est très élégante.
+  example_translation: This dress is very elegant.
+  cefr_level: A1
+  frequency_rank: 308
+- type: word
+  text: Chapeau
+  translation: Hat
+  example: Elle a un grand chapeau de soleil.
+  example_translation: She has a big sun hat.
+  cefr_level: A1
+  frequency_rank: 309
+- type: word
+  text: Magasin
+  translation: Shop / Store
+  example: Il y a un nouveau magasin ici.
+  example_translation: There is a new shop here.
+  cefr_level: A1
+  frequency_rank: 310
+- type: word
+  text: Musée
+  translation: Museum
+  example: Nous visitons le musée demain.
+  example_translation: We are visiting the museum tomorrow.
+  cefr_level: A1
+  frequency_rank: 311
+- type: word
+  text: Banque
+  translation: Bank
+  example: La banque est ouverte le samedi.
+  example_translation: The bank is open on Saturday.
+  cefr_level: A1
+  frequency_rank: 312
+- type: word
+  text: Piscine
+  translation: Swimming pool
+  example: J'aime nager à la piscine.
+  example_translation: I like to swim at the swimming pool.
+  cefr_level: A1
+  frequency_rank: 313
+- type: word
+  text: Aéroport
+  translation: Airport
+  example: Nous allons à l'aéroport.
+  example_translation: We are going to the airport.
+  cefr_level: A1
+  frequency_rank: 314
+- type: word
+  text: Bateau
+  translation: Boat
+  example: Il prend le bateau pour l'île.
+  example_translation: He takes the boat to the island.
+  cefr_level: A1
+  frequency_rank: 315
+- type: word
+  text: Moto
+  translation: Motorbike
+  example: Mon frère a une nouvelle moto.
+  example_translation: My brother has a new motorbike.
+  cefr_level: A1
+  frequency_rank: 316
+- type: word
+  text: Pied
+  translation: Foot
+  example: J'ai mal au pied.
+  example_translation: My foot hurts.
+  cefr_level: A1
+  frequency_rank: 317
+- type: word
+  text: Main
+  translation: Hand
+  example: Donne-moi ta main.
+  example_translation: Give me your hand.
+  cefr_level: A1
+  frequency_rank: 318
+- type: word
+  text: Tête
+  translation: Head
+  example: Il a une casquette sur la tête.
+  example_translation: He has a cap on his head.
+  cefr_level: A1
+  frequency_rank: 319
+- type: word
+  text: Cheveux
+  translation: Hair
+  example: Elle a de longs cheveux blonds.
+  example_translation: She has long blonde hair.
+  cefr_level: A1
+  frequency_rank: 320
+- type: word
+  text: Bouche
+  translation: Mouth
+  example: Ouvre la bouche !
+  example_translation: Open your mouth!
+  cefr_level: A1
+  frequency_rank: 321
+- type: word
+  text: Nez
+  translation: Nose
+  example: Il a un petit nez.
+  example_translation: He has a small nose.
+  cefr_level: A1
+  frequency_rank: 322
+- type: word
+  text: Sœur
+  translation: Sister
+  example: J'ai une sœur et un frère.
+  example_translation: I have a sister and a brother.
+  cefr_level: A1
+  frequency_rank: 323
+- type: word
+  text: Frère
+  translation: Brother
+  example: Mon frère est plus grand que moi.
+  example_translation: My brother is taller than me.
+  cefr_level: A1
+  frequency_rank: 324
+- type: word
+  text: Nom
+  translation: Last name / Name
+  example: Quel est votre nom de famille ?
+  example_translation: What is your last name?
+  cefr_level: A1
+  frequency_rank: 325
+- type: word
+  text: Prénom
+  translation: First name
+  example: Mon prénom est Marie.
+  example_translation: My first name is Marie.
+  cefr_level: A1
+  frequency_rank: 326
+- type: word
+  text: Nationalité
+  translation: Nationality
+  example: Quelle est votre nationalité ?
+  example_translation: What is your nationality?
+  cefr_level: A1
+  frequency_rank: 327
+- type: word
+  text: Profession
+  translation: Profession / Job
+  example: Quelle est votre profession ?
+  example_translation: What is your profession?
+  cefr_level: A1
+  frequency_rank: 328
+- type: collocation
+  text: Être en retard
+  translation: To be late
+  example: Je suis en retard pour le travail.
+  example_translation: I am late for work.
+  cefr_level: A1
+  frequency_rank: 329
+- type: collocation
+  text: Être à l'heure
+  translation: To be on time
+  example: Il est toujours à l'heure pour les rendez-vous.
+  example_translation: He is always on time for appointments.
+  cefr_level: A1
+  frequency_rank: 330
+- type: collocation
+  text: Faire la lessive
+  translation: To do the laundry
+  example: Je dois faire la lessive ce soir.
+  example_translation: I have to do the laundry tonight.
+  cefr_level: A1
+  frequency_rank: 331
+- type: collocation
+  text: Faire le ménage
+  translation: To do the housework
+  example: Elle fait le ménage tous les samedis.
+  example_translation: She does the housework every Saturday.
+  cefr_level: A1
+  frequency_rank: 332
+- type: collocation
+  text: Payer par carte
+  translation: To pay by card
+  example: Vous pouvez payer par carte ici.
+  example_translation: You can pay by card here.
+  cefr_level: A1
+  frequency_rank: 333
+- type: collocation
+  text: Payer en espèces
+  translation: To pay in cash
+  example: Je préfère payer en espèces.
+  example_translation: I prefer to pay in cash.
+  cefr_level: A1
+  frequency_rank: 334
+- type: collocation
+  text: Prendre un repas
+  translation: To have a meal
+  example: Nous prenons un repas au restaurant.
+  example_translation: We are having a meal at the restaurant.
+  cefr_level: A1
+  frequency_rank: 335
+- type: collocation
+  text: Venir de
+  translation: To come from
+  example: Je viens de France.
+  example_translation: I come from France.
+  cefr_level: A1
+  frequency_rank: 336
+- type: collocation
+  text: Demander l'addition
+  translation: To ask for the bill
+  example: Pouvez-vous demander l'addition, s'il vous plaît ?
+  example_translation: Can you ask for the bill, please?
+  cefr_level: A1
+  frequency_rank: 337
+- type: collocation
+  text: Jouer au football
+  translation: To play football (soccer)
+  example: Les enfants aiment jouer au football.
+  example_translation: The children like to play football.
+  cefr_level: A1
+  frequency_rank: 338
+- type: verb_form
+  text: Il pleut
+  translation: It's raining
+  example: Il pleut beaucoup aujourd'hui.
+  example_translation: It's raining a lot today.
+  cefr_level: A1
+  frequency_rank: 339
+- type: verb_form
+  text: Il neige
+  translation: It's snowing
+  example: En hiver, il neige souvent.
+  example_translation: In winter, it often snows.
+  cefr_level: A1
+  frequency_rank: 340
+- type: verb_form
+  text: Je dis
+  translation: I say / I tell
+  example: Je dis bonjour à tout le monde.
+  example_translation: I say hello to everyone.
+  cefr_level: A1
+  frequency_rank: 341
+- type: verb_form
+  text: Tu écoutes
+  translation: You listen
+  example: Tu écoutes de la musique classique ?
+  example_translation: Do you listen to classical music?
+  cefr_level: A1
+  frequency_rank: 342
+- type: verb_form
+  text: Nous faisons
+  translation: We do / We make
+  example: Nous faisons nos devoirs ensemble.
+  example_translation: We do our homework together.
+  cefr_level: A1
+  frequency_rank: 343
+- type: verb_form
+  text: Vous prenez
+  translation: You take / You have (a drink/meal)
+  example: Vous prenez un café ou un thé ?
+  example_translation: Are you having a coffee or a tea?
+  cefr_level: A1
+  frequency_rank: 344
+- type: verb_form
+  text: Elles vont
+  translation: They (fem.) go
+  example: Elles vont au parc après l'école.
+  example_translation: They go to the park after school.
+  cefr_level: A1
+  frequency_rank: 345
+- type: sentence_pattern
+  text: Puis-je vous aider ?
+  translation: Can I help you?
+  example: Bonjour, puis-je vous aider ?
+  example_translation: Hello, can I help you?
+  cefr_level: A1
+  frequency_rank: 346
+- type: sentence_pattern
+  text: Je dois + infinitif.
+  translation: I must / I have to + verb.
+  example: Je dois travailler demain.
+  example_translation: I have to work tomorrow.
+  cefr_level: A1
+  frequency_rank: 347
+- type: sentence_pattern
+  text: Qu'est-ce que vous voulez ?
+  translation: What do you want?
+  example: Qu'est-ce que vous voulez manger ?
+  example_translation: What do you want to eat?
+  cefr_level: A1
+  frequency_rank: 348
+- type: sentence_pattern
+  text: J'adore + nom/infinitif.
+  translation: I love + noun/to verb.
+  example: J'adore les voyages et la musique.
+  example_translation: I love travel and music.
+  cefr_level: A1
+  frequency_rank: 349
+- type: sentence_pattern
+  text: Comment dit-on (mot) en français ?
+  translation: How do you say (word) in French?
+  example: Comment dit-on 'hello' en français ?
+  example_translation: How do you say 'hello' in French?
+  cefr_level: A1
+  frequency_rank: 350
+- type: word
+  text: Vingt
+  translation: Twenty
+  example: Elle a vingt ans.
+  example_translation: She is twenty years old.
+  cefr_level: A1
+  frequency_rank: 353
+- type: word
+  text: Janvier
+  translation: January
+  example: Mon anniversaire est en janvier.
+  example_translation: My birthday is in January.
+  cefr_level: A1
+  frequency_rank: 354
+- type: word
+  text: Orange
+  translation: Orange
+  example: J'aime la couleur orange.
+  example_translation: I like the color orange.
+  cefr_level: A1
+  frequency_rank: 356
+- type: word
+  text: Rose
+  translation: Pink
+  example: Elle porte une robe rose.
+  example_translation: She is wearing a pink dress.
+  cefr_level: A1
+  frequency_rank: 357
+- type: word
+  text: Violet
+  translation: Purple
+  example: Les fleurs sont violettes.
+  example_translation: The flowers are purple.
+  cefr_level: A1
+  frequency_rank: 358
+- type: word
+  text: Céréales
+  translation: Cereal
+  example: Je mange des céréales le matin.
+  example_translation: I eat cereal in the morning.
+  cefr_level: A1
+  frequency_rank: 359
+- type: word
+  text: Viande
+  translation: Meat
+  example: Je ne mange pas de viande.
+  example_translation: I don't eat meat.
+  cefr_level: A1
+  frequency_rank: 361
+- type: word
+  text: Poisson
+  translation: Fish
+  example: Le poisson est bon pour la santé.
+  example_translation: Fish is good for health.
+  cefr_level: A1
+  frequency_rank: 362
+- type: word
+  text: Appartement
+  translation: Apartment
+  example: J'habite dans un grand appartement.
+  example_translation: I live in a large apartment.
+  cefr_level: A1
+  frequency_rank: 364
+- type: word
+  text: Université
+  translation: University
+  example: Il étudie à l'université.
+  example_translation: He studies at the university.
+  cefr_level: A1
+  frequency_rank: 366
+- type: word
+  text: Bureau
+  translation: Office / Desk
+  example: Je travaille dans un bureau.
+  example_translation: I work in an office.
+  cefr_level: A1
+  frequency_rank: 367
+- type: word
+  text: Bibliothèque
+  translation: Library
+  example: J'aime lire à la bibliothèque.
+  example_translation: I like to read at the library.
+  cefr_level: A1
+  frequency_rank: 368
+- type: word
+  text: Église
+  translation: Church
+  example: L'église est très ancienne.
+  example_translation: The church is very old.
+  cefr_level: A1
+  frequency_rank: 369
+- type: word
+  text: Voisin(e)
+  translation: Neighbor
+  example: Mon voisin est très gentil.
+  example_translation: My neighbor is very kind.
+  cefr_level: A1
+  frequency_rank: 372
+- type: word
+  text: Triste
+  translation: Sad
+  example: Elle est triste aujourd'hui.
+  example_translation: She is sad today.
+  cefr_level: A1
+  frequency_rank: 373
+- type: word
+  text: Heureux/Heureuse
+  translation: Happy
+  example: Je suis très heureux de te voir.
+  example_translation: I am very happy to see you.
+  cefr_level: A1
+  frequency_rank: 374
+- type: word
+  text: Malade
+  translation: Sick
+  example: Je ne peux pas travailler, je suis malade.
+  example_translation: I can't work, I am sick.
+  cefr_level: A1
+  frequency_rank: 375
+- type: word
+  text: Propre
+  translation: Clean
+  example: La chambre est propre.
+  example_translation: The room is clean.
+  cefr_level: A1
+  frequency_rank: 377
+- type: word
+  text: Sale
+  translation: Dirty
+  example: Mes chaussures sont sales.
+  example_translation: My shoes are dirty.
+  cefr_level: A1
+  frequency_rank: 378
+- type: collocation
+  text: Faire une sieste
+  translation: To take a nap
+  example: Je fais une sieste l'après-midi.
+  example_translation: I take a nap in the afternoon.
+  cefr_level: A1
+  frequency_rank: 380
+- type: collocation
+  text: Ouvrir la bouteille
+  translation: To open the bottle
+  example: Pouvez-vous ouvrir la bouteille, s'il vous plaît ?
+  example_translation: Can you open the bottle, please?
+  cefr_level: A1
+  frequency_rank: 381
+- type: collocation
+  text: Fermer la porte
+  translation: To close the door
+  example: N'oublie pas de fermer la porte.
+  example_translation: Don't forget to close the door.
+  cefr_level: A1
+  frequency_rank: 382
+- type: collocation
+  text: Chercher son chemin
+  translation: To look for one's way
+  example: Nous cherchons notre chemin dans la ville.
+  example_translation: We are looking for our way in the city.
+  cefr_level: A1
+  frequency_rank: 383
+- type: collocation
+  text: Mettre la table
+  translation: To set the table
+  example: Il faut mettre la table pour le dîner.
+  example_translation: We need to set the table for dinner.
+  cefr_level: A1
+  frequency_rank: 384
+- type: collocation
+  text: Nettoyer la chambre
+  translation: To clean the room
+  example: Je dois nettoyer ma chambre.
+  example_translation: I have to clean my room.
+  cefr_level: A1
+  frequency_rank: 385
+- type: collocation
+  text: Préparer un repas
+  translation: To prepare a meal
+  example: Elle aime préparer des repas pour sa famille.
+  example_translation: She likes to prepare meals for her family.
+  cefr_level: A1
+  frequency_rank: 386
+- type: collocation
+  text: Avoir un problème
+  translation: To have a problem
+  example: J'ai un problème avec mon ordinateur.
+  example_translation: I have a problem with my computer.
+  cefr_level: A1
+  frequency_rank: 387
+- type: collocation
+  text: Raconter une histoire
+  translation: To tell a story
+  example: Les enfants aiment raconter des histoires.
+  example_translation: Children like to tell stories.
+  cefr_level: A1
+  frequency_rank: 388
+- type: verb_form
+  text: Tu parles
+  translation: You speak (singular informal)
+  example: Tu parles bien français.
+  example_translation: You speak French well.
+  cefr_level: A1
+  frequency_rank: 391
+- type: verb_form
+  text: Tu manges
+  translation: You eat (singular informal)
+  example: Qu'est-ce que tu manges ?
+  example_translation: What are you eating?
+  cefr_level: A1
+  frequency_rank: 392
+- type: verb_form
+  text: Vous faites
+  translation: You do/make (plural/formal)
+  example: Que faites-vous ce week-end ?
+  example_translation: What are you doing this weekend?
+  cefr_level: A1
+  frequency_rank: 393
+- type: verb_form
+  text: Vous buvez
+  translation: You drink (plural/formal)
+  example: Que buvez-vous ?
+  example_translation: What are you drinking?
+  cefr_level: A1
+  frequency_rank: 394
+- type: verb_form
+  text: Ils aiment
+  translation: They like/love (masculine/mixed)
+  example: Ils aiment voyager.
+  example_translation: They like to travel.
+  cefr_level: A1
+  frequency_rank: 395
+- type: sentence_pattern
+  text: Quel temps fait-il ?
+  translation: What's the weather like?
+  example: Quel temps fait-il aujourd'hui à Paris ?
+  example_translation: What's the weather like in Paris today?
+  cefr_level: A1
+  frequency_rank: 396
+- type: sentence_pattern
+  text: Qu'est-ce que tu fais ?
+  translation: What are you doing?
+  example: Qu'est-ce que tu fais après le travail ?
+  example_translation: What are you doing after work?
+  cefr_level: A1
+  frequency_rank: 397
+- type: sentence_pattern
+  text: Je ne suis pas...
+  translation: I am not...
+  example: Je ne suis pas français, je suis espagnol.
+  example_translation: I am not French, I am Spanish.
+  cefr_level: A1
+  frequency_rank: 398
+- type: sentence_pattern
+  text: C'est pour...
+  translation: It's for...
+  example: Ce cadeau, c'est pour toi.
+  example_translation: This gift is for you.
+  cefr_level: A1
+  frequency_rank: 399
+- type: sentence_pattern
+  text: À quelle heure...?
+  translation: At what time...?
+  example: À quelle heure est le rendez-vous ?
+  example_translation: At what time is the appointment?
+  cefr_level: A1
+  frequency_rank: 400
+- type: word
+  text: Chiffre
+  translation: Number (digit)
+  example: Quel est votre chiffre préféré ?
+  example_translation: What is your favorite number?
+  cefr_level: A1
+  frequency_rank: 389
+- type: word
+  text: Gauche
+  translation: Left
+  example: Tournez à gauche ici.
+  example_translation: Turn left here.
+  cefr_level: A1
+  frequency_rank: 391
+- type: word
+  text: Droite
+  translation: Right
+  example: Le supermarché est sur votre droite.
+  example_translation: The supermarket is on your right.
+  cefr_level: A1
+  frequency_rank: 392
+- type: word
+  text: Temps
+  translation: Time; weather
+  example: J'ai le temps de lire un livre.
+  example_translation: I have time to read a book.
+  cefr_level: A1
+  frequency_rank: 393
+- type: collocation
+  text: Parler de
+  translation: To talk about
+  example: Nous parlons de nos vacances.
+  example_translation: We are talking about our holidays.
+  cefr_level: A1
+  frequency_rank: 396
+- type: collocation
+  text: Aller à l'école
+  translation: To go to school
+  example: Les enfants vont à l'école le matin.
+  example_translation: Children go to school in the morning.
+  cefr_level: A1
+  frequency_rank: 397
+- type: verb_form
+  text: Je donne
+  translation: I give
+  example: Je donne un cadeau à mon ami.
+  example_translation: I give a gift to my friend.
+  cefr_level: A1
+  frequency_rank: 398
+- type: verb_form
+  text: Tu apprends
+  translation: You learn (informal singular)
+  example: Qu'est-ce que tu apprends à l'école ?
+  example_translation: What are you learning at school?
+  cefr_level: A1
+  frequency_rank: 399
+- type: sentence_pattern
+  text: Combien de + nom ?
+  translation: How many/much + noun?
+  example: Combien de frères et sœurs as-tu ?
+  example_translation: How many brothers and sisters do you have?
+  cefr_level: A1
+  frequency_rank: 400
+- type: verb_form
+  text: Donner
+  translation: To give
+  example: Je dois donner ce livre à Paul.
+  example_translation: I have to give this book to Paul.
+  cefr_level: A1
+  frequency_rank: 400
+- type: word
+  text: Acheter
+  translation: To buy
+  example: Je voudrais acheter une baguette.
+  example_translation: I would like to buy a baguette.
+  cefr_level: A1
+  frequency_rank: 400

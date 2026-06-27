@@ -1,0 +1,22 @@
+{% if transactions %}
+<ul>
+  {% for txn in transactions %}
+  <li class="flex items-center gap-3 py-2.5 border-b border-gray-100 last:border-0">
+    <div class="w-7 h-7 rounded-full bg-gray-100 flex items-center justify-center flex-shrink-0">
+      <span class="text-xs font-medium text-gray-500">
+        {{ (txn.merchant or txn.description or "?")[0] | upper }}
+      </span>
+    </div>
+    <div class="flex-1 min-w-0">
+      <div class="text-sm text-gray-800 truncate">{{ txn.merchant or txn.description or "—" }}</div>
+      <div class="text-xs text-gray-400">{{ txn.date[:10] }}</div>
+    </div>
+    <span class="text-sm font-medium {% if txn.type == 'income' %}text-[#639922]{% else %}text-[#E24B4A]{% endif %} flex-shrink-0">
+      {% if txn.type == 'income' %}+{% else %}-{% endif %}€{{ "%.2f"|format(txn.amount | float) }}
+    </span>
+  </li>
+  {% endfor %}
+</ul>
+{% else %}
+<p class="text-sm text-gray-400 py-6 text-center">No transactions for this period.</p>
+{% endif %}

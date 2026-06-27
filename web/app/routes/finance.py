@@ -1,7 +1,8 @@
 from collections import defaultdict
+from typing import Annotated, Optional
 
 import httpx
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Form, Request
 from fastapi.responses import HTMLResponse
 
 import app.client as api
@@ -15,7 +16,17 @@ async def finance_page(request: Request):
     period = request.query_params.get("period", "this month")
 
     spending, by_category, transactions, budgets, all_txns = None, None, [], [], []
-    errors = []
+    accounts, categories, errors = [], [], []
+
+    try:
+        accounts = await api.get("/finance/accounts/", params={"is_active": "true"})
+    except httpx.HTTPError:
+        pass
+
+    try:
+        categories = await api.get("/finance/categories/")
+    except httpx.HTTPError:
+        pass
 
     try:
         spending = await api.get("/finance/transactions/report/", params={"period": period})
@@ -88,4 +99,45 @@ async def finance_page(request: Request):
         "category_chart": category_chart,
         "budget_chart": budget_chart,
         "time_label": "Month" if period == "this year" else "Day",
+        "accounts": accounts,
+        "categories": categories,
     })
+
+
+@router.post("/transactions", response_class=HTMLResponse)
+async def create_transaction(
+    request: Request,
+    amount: Annotated[str, Form()],
+    date: Annotated[str, Form()],
+    type: Annotated[str, Form()],
+    account_id: Annotated[str, Form()],
+    category_id: Annotated[Optional[str], Form()] = None,
+    merchant: Annotated[Optional[str], Form()] = None,
+    description: Annotated[Optional[str], Form()] = None,
+):
+    period = request.query_params.get("period", "this month")
+    payload: dict = {
+        "amount": amount,
+        "date": f"{date}T00:00:00",
+        "type": type,
+        "account_id": int(account_id),
+    }
+    if category_id:
+        payload["category_id"] = int(category_id)
+    if merchant:
+        payload["merchant"] = merchant
+    if description:
+        payload["description"] = description
+
+    try:
+        await api.post("/finance/transactions/", json=payload)
+    except httpx.HTTPError:
+        return HTMLResponse('<p class="text-[#E24B4A] text-sm px-1">Failed to create transaction.</p>', status_code=422)
+
+    transactions = []
+    try:
+        transactions = await api.get("/finance/transactions/", params={"limit": 15, "period": period})
+    except httpx.HTTPError:
+        pass
+
+    return templates.TemplateResponse(request, "_finance_transactions.html", {"transactions": transactions})

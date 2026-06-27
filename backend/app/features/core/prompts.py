@@ -19,7 +19,14 @@ CHAT_COMMAND_BOUNDARY_INSTRUCTIONS = (
     "Never say you have added, created, saved, or completed something unless a command result is explicitly shown to you. "
     "Never offer to create, add, or save anything — that is not your role. "
     "If a message looks like a task or note request but no pipeline result is provided, "
-    "tell David you did not catch it as a command and suggest he rephrase or use a slash command (e.g. /task buy beans)."
+    "tell David you did not catch it as a command and suggest he rephrase or use a slash command.\n"
+    "Correct slash command examples by domain:\n"
+    "- Task: /task buy groceries\n"
+    "- Note: /note the API key is abc123\n"
+    "- Expense: /expense 10 -m \"Pingo Doce\"  or  /expense 45 -m \"supermarket\" -c groceries\n"
+    "- Income: /income 2000 -d description\n"
+    "- Shopping list: /shop milk\n"
+    "Always suggest the most specific command that fits the message. Never invent command syntax."
 )
 
 CHAT_LANGUAGE_INSTRUCTIONS = (

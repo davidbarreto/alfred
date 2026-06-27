@@ -161,6 +161,14 @@ INTENT_EXAMPLES: list[IntentExample] = [
     IntentExample(id=94,  text="Add transaction: lunch 12.50 euros", intent="finance.transaction_add"),
     IntentExample(id=95,  text="Just paid 60 for a taxi ride", intent="finance.transaction_add"),
     IntentExample(id=96,  text="Bought new headphones for 150 euros", intent="finance.transaction_add"),
+    IntentExample(id=208, text="I spent 10 euros at Pingo Doce today", intent="finance.transaction_add"),
+    IntentExample(id=209, text="Paid 25 euros at Lidl yesterday", intent="finance.transaction_add"),
+    IntentExample(id=210, text="I bought groceries at the supermarket, spent 40 euros", intent="finance.transaction_add"),
+    IntentExample(id=211, text="Spent 8 euros on lunch at the bakery", intent="finance.transaction_add"),
+    IntentExample(id=212, text="I paid 15 euros at the pharmacy today", intent="finance.transaction_add"),
+    IntentExample(id=213, text="Just spent 30 euros at Continente", intent="finance.transaction_add"),
+    IntentExample(id=214, text="I paid for groceries at the store, 22 euros", intent="finance.transaction_add"),
+    IntentExample(id=215, text="I spent 5 euros on coffee this morning", intent="finance.transaction_add"),
 
     # --- finance.transaction_list ---
     IntentExample(id=97,  text="Show my recent transactions", intent="finance.transaction_list"),

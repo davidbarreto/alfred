@@ -9,6 +9,7 @@ ru:
   example_translation: Hello, how are you?
   cefr_level: A1
   frequency_rank: 1
+  grammar_scope: null
 - type: word
   text: Привет
   translation: Hi (informal)
@@ -16,6 +17,7 @@ ru:
   example_translation: Hi, Anton!
   cefr_level: A1
   frequency_rank: 2
+  grammar_scope: null
 - type: word
   text: До свидания
   translation: Goodbye
@@ -23,6 +25,7 @@ ru:
   example_translation: Goodbye, see you tomorrow!
   cefr_level: A1
   frequency_rank: 3
+  grammar_scope: null
 - type: word
   text: Пожалуйста
   translation: Please / You're welcome
@@ -30,6 +33,7 @@ ru:
   example_translation: Give me water, please.
   cefr_level: A1
   frequency_rank: 4
+  grammar_scope: null
 - type: word
   text: Спасибо
   translation: Thank you
@@ -37,6 +41,7 @@ ru:
   example_translation: Thank you for your help!
   cefr_level: A1
   frequency_rank: 5
+  grammar_scope: null
 - type: word
   text: Да
   translation: 'Yes'
@@ -44,6 +49,7 @@ ru:
   example_translation: Yes, I understand.
   cefr_level: A1
   frequency_rank: 6
+  grammar_scope: null
 - type: word
   text: Нет
   translation: 'No'
@@ -51,6 +57,7 @@ ru:
   example_translation: No, I don't want.
   cefr_level: A1
   frequency_rank: 7
+  grammar_scope: null
 - type: word
   text: Я
   translation: I
@@ -58,6 +65,7 @@ ru:
   example_translation: I am a student.
   cefr_level: A1
   frequency_rank: 8
+  grammar_scope: null
 - type: word
   text: Ты
   translation: You (informal singular)
@@ -65,6 +73,7 @@ ru:
   example_translation: Do you speak Russian?
   cefr_level: A1
   frequency_rank: 9
+  grammar_scope: null
 - type: word
   text: Он
   translation: He
@@ -72,6 +81,7 @@ ru:
   example_translation: He is a doctor.
   cefr_level: A1
   frequency_rank: 10
+  grammar_scope: null
 - type: word
   text: Она
   translation: She
@@ -79,6 +89,7 @@ ru:
   example_translation: She is here.
   cefr_level: A1
   frequency_rank: 11
+  grammar_scope: null
 - type: word
   text: Мы
   translation: We
@@ -86,6 +97,7 @@ ru:
   example_translation: We are friends.
   cefr_level: A1
   frequency_rank: 12
+  grammar_scope: null
 - type: word
   text: Вы
   translation: You (formal singular / plural)
@@ -93,6 +105,7 @@ ru:
   example_translation: Do you speak English?
   cefr_level: A1
   frequency_rank: 13
+  grammar_scope: null
 - type: word
   text: Они
   translation: They
@@ -100,6 +113,7 @@ ru:
   example_translation: They are reading.
   cefr_level: A1
   frequency_rank: 14
+  grammar_scope: null
 - type: word
   text: Как
   translation: How / What
@@ -107,6 +121,7 @@ ru:
   example_translation: What is your name? (formal)
   cefr_level: A1
   frequency_rank: 15
+  grammar_scope: null
 - type: word
   text: Где
   translation: Where
@@ -114,6 +129,7 @@ ru:
   example_translation: Where is the metro?
   cefr_level: A1
   frequency_rank: 16
+  grammar_scope: null
 - type: word
   text: Что
   translation: What
@@ -121,6 +137,7 @@ ru:
   example_translation: What is this?
   cefr_level: A1
   frequency_rank: 17
+  grammar_scope: null
 - type: word
   text: Это
   translation: This / It is
@@ -128,6 +145,7 @@ ru:
   example_translation: This is my book.
   cefr_level: A1
   frequency_rank: 18
+  grammar_scope: null
 - type: word
   text: Дом
   translation: House / Home
@@ -135,6 +153,7 @@ ru:
   example_translation: This is my home.
   cefr_level: A1
   frequency_rank: 19
+  grammar_scope: null
 - type: word
   text: Город
   translation: City
@@ -142,6 +161,7 @@ ru:
   example_translation: I live in this city.
   cefr_level: A1
   frequency_rank: 20
+  grammar_scope: null
 - type: word
   text: Магазин
   translation: Shop
@@ -149,6 +169,7 @@ ru:
   example_translation: I am going to the shop.
   cefr_level: A1
   frequency_rank: 21
+  grammar_scope: null
 - type: word
   text: Стол
   translation: Table
@@ -156,6 +177,7 @@ ru:
   example_translation: The book is on the table.
   cefr_level: A1
   frequency_rank: 22
+  grammar_scope: null
 - type: word
   text: Книга
   translation: Book
@@ -163,6 +185,7 @@ ru:
   example_translation: This is an interesting book.
   cefr_level: A1
   frequency_rank: 23
+  grammar_scope: null
 - type: word
   text: Вода
   translation: Water
@@ -170,6 +193,7 @@ ru:
   example_translation: Give me water, please.
   cefr_level: A1
   frequency_rank: 24
+  grammar_scope: null
 - type: word
   text: Чай
   translation: Tea
@@ -177,6 +201,7 @@ ru:
   example_translation: I drink tea in the morning.
   cefr_level: A1
   frequency_rank: 25
+  grammar_scope: null
 - type: word
   text: Кофе
   translation: Coffee
@@ -184,6 +209,7 @@ ru:
   example_translation: Do you want coffee?
   cefr_level: A1
   frequency_rank: 26
+  grammar_scope: null
 - type: word
   text: Хорошо
   translation: Good / Well
@@ -191,6 +217,7 @@ ru:
   example_translation: Everything is good.
   cefr_level: A1
   frequency_rank: 27
+  grammar_scope: null
 - type: word
   text: Плохо
   translation: Bad / Poorly
@@ -198,6 +225,7 @@ ru:
   example_translation: This is very bad.
   cefr_level: A1
   frequency_rank: 28
+  grammar_scope: null
 - type: collocation
   text: Как дела?
   translation: How are you?
@@ -205,6 +233,7 @@ ru:
   example_translation: Hi! How are you?
   cefr_level: A1
   frequency_rank: 29
+  grammar_scope: question formation
 - type: collocation
   text: Меня зовут...
   translation: My name is...
@@ -212,6 +241,7 @@ ru:
   example_translation: My name is Anna.
   cefr_level: A1
   frequency_rank: 30
+  grammar_scope: accusative case
 - type: collocation
   text: Очень приятно
   translation: Nice to meet you
@@ -219,6 +249,7 @@ ru:
   example_translation: Nice to meet you.
   cefr_level: A1
   frequency_rank: 31
+  grammar_scope: null
 - type: collocation
   text: Доброе утро
   translation: Good morning
@@ -226,6 +257,7 @@ ru:
   example_translation: Good morning, colleagues!
   cefr_level: A1
   frequency_rank: 32
+  grammar_scope: null
 - type: collocation
   text: Добрый день
   translation: Good afternoon
@@ -233,6 +265,7 @@ ru:
   example_translation: Good afternoon, how to get to the metro?
   cefr_level: A1
   frequency_rank: 33
+  grammar_scope: null
 - type: collocation
   text: Добрый вечер
   translation: Good evening
@@ -240,6 +273,7 @@ ru:
   example_translation: Good evening everyone!
   cefr_level: A1
   frequency_rank: 34
+  grammar_scope: null
 - type: collocation
   text: Извините
   translation: Excuse me / Sorry
@@ -247,6 +281,7 @@ ru:
   example_translation: Excuse me, where is the toilet?
   cefr_level: A1
   frequency_rank: 35
+  grammar_scope: null
 - type: collocation
   text: Сколько стоит?
   translation: How much does it cost?
@@ -254,6 +289,7 @@ ru:
   example_translation: How much does this book cost?
   cefr_level: A1
   frequency_rank: 36
+  grammar_scope: numbers and quantities
 - type: collocation
   text: Где находится...?
   translation: Where is... located?
@@ -261,6 +297,7 @@ ru:
   example_translation: Where is the bank located?
   cefr_level: A1
   frequency_rank: 37
+  grammar_scope: question formation
 - type: collocation
   text: До завтра
   translation: See you tomorrow
@@ -268,6 +305,7 @@ ru:
   example_translation: Bye, see you tomorrow!
   cefr_level: A1
   frequency_rank: 38
+  grammar_scope: null
 - type: verb_form
   text: Я говорю
   translation: I speak
@@ -275,6 +313,7 @@ ru:
   example_translation: I speak Russian.
   cefr_level: A1
   frequency_rank: 39
+  grammar_scope: present tense
 - type: verb_form
   text: Я понимаю
   translation: I understand
@@ -282,6 +321,7 @@ ru:
   example_translation: I understand a little.
   cefr_level: A1
   frequency_rank: 40
+  grammar_scope: present tense
 - type: verb_form
   text: Я знаю
   translation: I know
@@ -289,6 +329,7 @@ ru:
   example_translation: I know this city.
   cefr_level: A1
   frequency_rank: 41
+  grammar_scope: present tense
 - type: verb_form
   text: Я хочу
   translation: I want
@@ -296,6 +337,7 @@ ru:
   example_translation: I want to drink (I'm thirsty).
   cefr_level: A1
   frequency_rank: 42
+  grammar_scope: present tense
 - type: verb_form
   text: Я живу
   translation: I live
@@ -303,6 +345,7 @@ ru:
   example_translation: I live in Moscow.
   cefr_level: A1
   frequency_rank: 43
+  grammar_scope: present tense
 - type: verb_form
   text: Я работаю
   translation: I work
@@ -310,6 +353,7 @@ ru:
   example_translation: I work in an office.
   cefr_level: A1
   frequency_rank: 44
+  grammar_scope: present tense
 - type: verb_form
   text: У меня есть
   translation: I have
@@ -317,6 +361,7 @@ ru:
   example_translation: I have a car.
   cefr_level: A1
   frequency_rank: 45
+  grammar_scope: genitive case
 - type: sentence_pattern
   text: Я из [страны].
   translation: I am from [country].
@@ -324,6 +369,7 @@ ru:
   example_translation: I am from Russia.
   cefr_level: A1
   frequency_rank: 46
+  grammar_scope: genitive case
 - type: sentence_pattern
   text: Это [существительное].
   translation: This is a [noun].
@@ -331,6 +377,7 @@ ru:
   example_translation: This is a pen.
   cefr_level: A1
   frequency_rank: 47
+  grammar_scope: nominative case
 - type: sentence_pattern
   text: У меня нет [существительного].
   translation: I don't have a [noun].
@@ -338,6 +385,7 @@ ru:
   example_translation: I don't have time.
   cefr_level: A1
   frequency_rank: 48
+  grammar_scope: genitive case
 - type: sentence_pattern
   text: Мне нравится [что-то].
   translation: I like [something].
@@ -345,6 +393,7 @@ ru:
   example_translation: I like this film.
   cefr_level: A1
   frequency_rank: 49
+  grammar_scope: dative case
 - type: sentence_pattern
   text: Можно [инфинитив]?
   translation: May I [verb]?
@@ -352,6 +401,7 @@ ru:
   example_translation: May I come in?
   cefr_level: A1
   frequency_rank: 50
+  grammar_scope: question formation
 - type: word
   text: Утро
   translation: Morning
@@ -359,6 +409,7 @@ ru:
   example_translation: Good morning!
   cefr_level: A1
   frequency_rank: 51
+  grammar_scope: null
 - type: word
   text: День
   translation: Day
@@ -366,6 +417,7 @@ ru:
   example_translation: Today is a good day.
   cefr_level: A1
   frequency_rank: 52
+  grammar_scope: null
 - type: word
   text: Вечер
   translation: Evening
@@ -373,6 +425,7 @@ ru:
   example_translation: We will meet in the evening.
   cefr_level: A1
   frequency_rank: 53
+  grammar_scope: null
 - type: word
   text: Ночь
   translation: Night
@@ -380,6 +433,7 @@ ru:
   example_translation: Good night!
   cefr_level: A1
   frequency_rank: 54
+  grammar_scope: null
 - type: word
   text: Время
   translation: Time
@@ -387,6 +441,7 @@ ru:
   example_translation: What time is it?
   cefr_level: A1
   frequency_rank: 55
+  grammar_scope: null
 - type: word
   text: Семья
   translation: Family
@@ -394,6 +449,7 @@ ru:
   example_translation: My family is big.
   cefr_level: A1
   frequency_rank: 56
+  grammar_scope: null
 - type: word
   text: Мама
   translation: Mom
@@ -401,6 +457,7 @@ ru:
   example_translation: My mom is very kind.
   cefr_level: A1
   frequency_rank: 57
+  grammar_scope: null
 - type: word
   text: Папа
   translation: Dad
@@ -408,6 +465,7 @@ ru:
   example_translation: My dad works.
   cefr_level: A1
   frequency_rank: 58
+  grammar_scope: null
 - type: word
   text: Брат
   translation: Brother
@@ -415,6 +473,7 @@ ru:
   example_translation: I have a brother.
   cefr_level: A1
   frequency_rank: 59
+  grammar_scope: null
 - type: word
   text: Сестра
   translation: Sister
@@ -422,6 +481,7 @@ ru:
   example_translation: This is my sister.
   cefr_level: A1
   frequency_rank: 60
+  grammar_scope: null
 - type: word
   text: Друг
   translation: Friend (masculine)
@@ -429,6 +489,7 @@ ru:
   example_translation: He is my friend.
   cefr_level: A1
   frequency_rank: 61
+  grammar_scope: null
 - type: word
   text: Подруга
   translation: Friend (feminine)
@@ -436,6 +497,7 @@ ru:
   example_translation: She is my friend.
   cefr_level: A1
   frequency_rank: 62
+  grammar_scope: null
 - type: word
   text: Еда
   translation: Food
@@ -443,6 +505,7 @@ ru:
   example_translation: This food is tasty.
   cefr_level: A1
   frequency_rank: 63
+  grammar_scope: null
 - type: word
   text: Хлеб
   translation: Bread
@@ -450,6 +513,7 @@ ru:
   example_translation: I eat bread.
   cefr_level: A1
   frequency_rank: 64
+  grammar_scope: null
 - type: word
   text: Молоко
   translation: Milk
@@ -457,6 +521,7 @@ ru:
   example_translation: He drinks milk.
   cefr_level: A1
   frequency_rank: 65
+  grammar_scope: null
 - type: word
   text: Сок
   translation: Juice
@@ -464,6 +529,7 @@ ru:
   example_translation: I want apple juice.
   cefr_level: A1
   frequency_rank: 66
+  grammar_scope: null
 - type: word
   text: Фрукт
   translation: Fruit
@@ -471,6 +537,7 @@ ru:
   example_translation: My favorite fruit is a banana.
   cefr_level: A1
   frequency_rank: 67
+  grammar_scope: null
 - type: word
   text: Овощ
   translation: Vegetable
@@ -478,6 +545,7 @@ ru:
   example_translation: I love vegetables.
   cefr_level: A1
   frequency_rank: 68
+  grammar_scope: null
 - type: word
   text: Ресторан
   translation: Restaurant
@@ -485,6 +553,7 @@ ru:
   example_translation: Where is a good restaurant here?
   cefr_level: A1
   frequency_rank: 69
+  grammar_scope: null
 - type: word
   text: Кафе
   translation: Cafe
@@ -492,6 +561,7 @@ ru:
   example_translation: Let's go to a cafe.
   cefr_level: A1
   frequency_rank: 70
+  grammar_scope: null
 - type: word
   text: Улица
   translation: Street
@@ -499,6 +569,7 @@ ru:
   example_translation: This street is long.
   cefr_level: A1
   frequency_rank: 71
+  grammar_scope: null
 - type: word
   text: Музей
   translation: Museum
@@ -506,6 +577,7 @@ ru:
   example_translation: We are going to the museum.
   cefr_level: A1
   frequency_rank: 72
+  grammar_scope: null
 - type: word
   text: Парк
   translation: Park
@@ -513,6 +585,7 @@ ru:
   example_translation: I walk in the park.
   cefr_level: A1
   frequency_rank: 73
+  grammar_scope: null
 - type: word
   text: Школа
   translation: School
@@ -520,6 +593,7 @@ ru:
   example_translation: My daughter goes to school.
   cefr_level: A1
   frequency_rank: 74
+  grammar_scope: null
 - type: word
   text: Университет
   translation: University
@@ -527,6 +601,7 @@ ru:
   example_translation: He studies at the university.
   cefr_level: A1
   frequency_rank: 75
+  grammar_scope: null
 - type: word
   text: Работа
   translation: Work / Job
@@ -534,6 +609,7 @@ ru:
   example_translation: I have a new job.
   cefr_level: A1
   frequency_rank: 76
+  grammar_scope: null
 - type: word
   text: Деньги
   translation: Money
@@ -541,6 +617,7 @@ ru:
   example_translation: I don't have money.
   cefr_level: A1
   frequency_rank: 77
+  grammar_scope: null
 - type: collocation
   text: Доброй ночи
   translation: Good night
@@ -548,6 +625,7 @@ ru:
   example_translation: Good night, sleep well!
   cefr_level: A1
   frequency_rank: 78
+  grammar_scope: genitive case
 - type: collocation
   text: Как вас зовут?
   translation: What is your name? (formal)
@@ -555,6 +633,7 @@ ru:
   example_translation: What is your name? My name is Anna.
   cefr_level: A1
   frequency_rank: 79
+  grammar_scope: question formation
 - type: collocation
   text: Мой друг
   translation: My friend (masculine)
@@ -562,6 +641,7 @@ ru:
   example_translation: This is my friend Ivan.
   cefr_level: A1
   frequency_rank: 80
+  grammar_scope: possessive pronouns
 - type: collocation
   text: Моя семья
   translation: My family
@@ -569,6 +649,7 @@ ru:
   example_translation: My family lives in Russia.
   cefr_level: A1
   frequency_rank: 81
+  grammar_scope: possessive pronouns
 - type: collocation
   text: Большое спасибо
   translation: Thank you very much
@@ -576,6 +657,7 @@ ru:
   example_translation: Thank you very much for your help!
   cefr_level: A1
   frequency_rank: 82
+  grammar_scope: null
 - type: collocation
   text: Извините, пожалуйста
   translation: Excuse me, please / I'm sorry, please
@@ -583,6 +665,7 @@ ru:
   example_translation: Excuse me, please, do you speak Russian?
   cefr_level: A1
   frequency_rank: 83
+  grammar_scope: null
 - type: collocation
   text: Где ты живешь?
   translation: Where do you live? (informal)
@@ -590,6 +673,7 @@ ru:
   example_translation: Where do you live? I live in Moscow.
   cefr_level: A1
   frequency_rank: 84
+  grammar_scope: question formation
 - type: collocation
   text: Я понимаю по-русски
   translation: I understand Russian
@@ -597,6 +681,7 @@ ru:
   example_translation: I understand Russian a little.
   cefr_level: A1
   frequency_rank: 85
+  grammar_scope: present tense
 - type: collocation
   text: Говорить по-английски
   translation: To speak English
@@ -604,6 +689,7 @@ ru:
   example_translation: Do you speak English?
   cefr_level: A1
   frequency_rank: 86
+  grammar_scope: null
 - type: collocation
   text: Сколько времени?
   translation: What time is it?
@@ -611,6 +697,7 @@ ru:
   example_translation: Excuse me, what time is it?
   cefr_level: A1
   frequency_rank: 87
+  grammar_scope: numbers and quantities
 - type: verb_form
   text: Я ем
   translation: I eat
@@ -618,6 +705,7 @@ ru:
   example_translation: I am eating an apple.
   cefr_level: A1
   frequency_rank: 88
+  grammar_scope: present tense
 - type: verb_form
   text: Он пьёт
   translation: He drinks
@@ -625,6 +713,7 @@ ru:
   example_translation: He drinks water.
   cefr_level: A1
   frequency_rank: 89
+  grammar_scope: present tense
 - type: verb_form
   text: Мы читаем
   translation: We read
@@ -632,6 +721,7 @@ ru:
   example_translation: We are reading an interesting book.
   cefr_level: A1
   frequency_rank: 90
+  grammar_scope: present tense
 - type: verb_form
   text: Они спят
   translation: They sleep
@@ -639,6 +729,7 @@ ru:
   example_translation: The children are sleeping in the room.
   cefr_level: A1
   frequency_rank: 91
+  grammar_scope: present tense
 - type: verb_form
   text: Вы хотите
   translation: You want (formal/plural)
@@ -646,6 +737,7 @@ ru:
   example_translation: Do you want coffee?
   cefr_level: A1
   frequency_rank: 92
+  grammar_scope: present tense
 - type: verb_form
   text: Она любит
   translation: She loves/likes
@@ -653,6 +745,7 @@ ru:
   example_translation: She loves music.
   cefr_level: A1
   frequency_rank: 93
+  grammar_scope: present tense
 - type: verb_form
   text: Я слушаю
   translation: I listen
@@ -660,6 +753,7 @@ ru:
   example_translation: I listen to the radio.
   cefr_level: A1
   frequency_rank: 94
+  grammar_scope: present tense
 - type: verb_form
   text: Мы видим
   translation: We see
@@ -667,6 +761,7 @@ ru:
   example_translation: We see a big house.
   cefr_level: A1
   frequency_rank: 95
+  grammar_scope: present tense
 - type: sentence_pattern
   text: У меня нет времени.
   translation: I don't have time.
@@ -674,6 +769,7 @@ ru:
   example_translation: Sorry, I don't have time.
   cefr_level: A1
   frequency_rank: 96
+  grammar_scope: genitive case
 - type: sentence_pattern
   text: Я учу русский язык.
   translation: I am learning Russian.
@@ -681,6 +777,7 @@ ru:
   example_translation: I learn Russian every day.
   cefr_level: A1
   frequency_rank: 97
+  grammar_scope: accusative case
 - type: sentence_pattern
   text: Как дела у тебя?
   translation: How are you? (informal)
@@ -688,6 +785,7 @@ ru:
   example_translation: Hi, how are you?
   cefr_level: A1
   frequency_rank: 98
+  grammar_scope: question formation
 - type: sentence_pattern
   text: Можно войти?
   translation: May I come in?
@@ -695,6 +793,7 @@ ru:
   example_translation: The door is open, you may come in.
   cefr_level: A1
   frequency_rank: 99
+  grammar_scope: question formation
 - type: sentence_pattern
   text: Я иду в [место].
   translation: I am going to [place].
@@ -702,6 +801,7 @@ ru:
   example_translation: I am going to the park.
   cefr_level: A1
   frequency_rank: 100
+  grammar_scope: accusative case
 - type: word
   text: Доктор
   translation: Doctor
@@ -709,6 +809,7 @@ ru:
   example_translation: My mom is a doctor.
   cefr_level: A1
   frequency_rank: 101
+  grammar_scope: null
 - type: word
   text: Студент
   translation: Student (male)
@@ -716,6 +817,7 @@ ru:
   example_translation: He is a student.
   cefr_level: A1
   frequency_rank: 102
+  grammar_scope: null
 - type: word
   text: Студентка
   translation: Student (female)
@@ -723,6 +825,7 @@ ru:
   example_translation: She is a student.
   cefr_level: A1
   frequency_rank: 103
+  grammar_scope: null
 - type: word
   text: Учитель
   translation: Teacher (male)
@@ -730,6 +833,7 @@ ru:
   example_translation: My teacher is very good.
   cefr_level: A1
   frequency_rank: 104
+  grammar_scope: null
 - type: word
   text: Учительница
   translation: Teacher (female)
@@ -737,6 +841,7 @@ ru:
   example_translation: The teacher explains the lesson.
   cefr_level: A1
   frequency_rank: 105
+  grammar_scope: null
 - type: word
   text: Врач
   translation: Doctor (general)
@@ -744,6 +849,7 @@ ru:
   example_translation: I want to become a doctor.
   cefr_level: A1
   frequency_rank: 106
+  grammar_scope: null
 - type: word
   text: Урок
   translation: Lesson
@@ -751,6 +857,7 @@ ru:
   example_translation: I have a Russian language lesson.
   cefr_level: A1
   frequency_rank: 107
+  grammar_scope: null
 - type: word
   text: Машина
   translation: Car
@@ -758,6 +865,7 @@ ru:
   example_translation: This is my car.
   cefr_level: A1
   frequency_rank: 108
+  grammar_scope: null
 - type: word
   text: Телефон
   translation: Telephone
@@ -765,6 +873,7 @@ ru:
   example_translation: Where is my phone?
   cefr_level: A1
   frequency_rank: 109
+  grammar_scope: null
 - type: word
   text: Комната
   translation: Room
@@ -772,6 +881,7 @@ ru:
   example_translation: My room is big.
   cefr_level: A1
   frequency_rank: 110
+  grammar_scope: null
 - type: word
   text: Кровать
   translation: Bed
@@ -779,6 +889,7 @@ ru:
   example_translation: I sleep on the bed.
   cefr_level: A1
   frequency_rank: 111
+  grammar_scope: null
 - type: word
   text: Окно
   translation: Window
@@ -786,6 +897,7 @@ ru:
   example_translation: Open the window, please.
   cefr_level: A1
   frequency_rank: 112
+  grammar_scope: null
 - type: word
   text: Дверь
   translation: Door
@@ -793,6 +905,7 @@ ru:
   example_translation: Close the door.
   cefr_level: A1
   frequency_rank: 113
+  grammar_scope: null
 - type: word
   text: Ручка
   translation: Pen
@@ -800,6 +913,7 @@ ru:
   example_translation: Give me a pen.
   cefr_level: A1
   frequency_rank: 114
+  grammar_scope: null
 - type: word
   text: Карандаш
   translation: Pencil
@@ -807,6 +921,7 @@ ru:
   example_translation: I have a pencil.
   cefr_level: A1
   frequency_rank: 115
+  grammar_scope: null
 - type: word
   text: Словарь
   translation: Dictionary
@@ -814,6 +929,7 @@ ru:
   example_translation: I use a dictionary.
   cefr_level: A1
   frequency_rank: 116
+  grammar_scope: null
 - type: word
   text: Ключ
   translation: Key
@@ -821,6 +937,7 @@ ru:
   example_translation: Where is my key?
   cefr_level: A1
   frequency_rank: 117
+  grammar_scope: null
 - type: word
   text: Кошка
   translation: Cat
@@ -828,6 +945,7 @@ ru:
   example_translation: I have a cat.
   cefr_level: A1
   frequency_rank: 118
+  grammar_scope: null
 - type: word
   text: Собака
   translation: Dog
@@ -835,6 +953,7 @@ ru:
   example_translation: The dog barks loudly.
   cefr_level: A1
   frequency_rank: 119
+  grammar_scope: null
 - type: word
   text: Здесь
   translation: Here
@@ -842,6 +961,7 @@ ru:
   example_translation: I am here.
   cefr_level: A1
   frequency_rank: 120
+  grammar_scope: null
 - type: word
   text: Там
   translation: There
@@ -849,6 +969,7 @@ ru:
   example_translation: My friend is there.
   cefr_level: A1
   frequency_rank: 121
+  grammar_scope: null
 - type: word
   text: Очень
   translation: Very
@@ -856,6 +977,7 @@ ru:
   example_translation: She is very beautiful.
   cefr_level: A1
   frequency_rank: 122
+  grammar_scope: null
 - type: word
   text: Новый
   translation: New
@@ -863,6 +985,7 @@ ru:
   example_translation: This is a new house.
   cefr_level: A1
   frequency_rank: 123
+  grammar_scope: null
 - type: word
   text: Старый
   translation: Old
@@ -870,6 +993,7 @@ ru:
   example_translation: My car is old.
   cefr_level: A1
   frequency_rank: 124
+  grammar_scope: null
 - type: word
   text: Большой
   translation: Big
@@ -877,6 +1001,7 @@ ru:
   example_translation: He has a big table.
   cefr_level: A1
   frequency_rank: 125
+  grammar_scope: null
 - type: word
   text: Маленький
   translation: Small
@@ -884,6 +1009,7 @@ ru:
   example_translation: I have a small dog.
   cefr_level: A1
   frequency_rank: 126
+  grammar_scope: null
 - type: word
   text: Красивый
   translation: Beautiful
@@ -891,6 +1017,7 @@ ru:
   example_translation: This city is very beautiful.
   cefr_level: A1
   frequency_rank: 127
+  grammar_scope: null
 - type: word
   text: Интересный
   translation: Interesting
@@ -898,6 +1025,7 @@ ru:
   example_translation: This is an interesting book.
   cefr_level: A1
   frequency_rank: 128
+  grammar_scope: null
 - type: collocation
   text: Как тебя зовут?
   translation: What is your name? (informal)
@@ -905,6 +1033,7 @@ ru:
   example_translation: Hi! What is your name?
   cefr_level: A1
   frequency_rank: 129
+  grammar_scope: question formation
 - type: collocation
   text: Повторите, пожалуйста.
   translation: Repeat, please.
@@ -912,6 +1041,7 @@ ru:
   example_translation: Repeat once more, please.
   cefr_level: A1
   frequency_rank: 130
+  grammar_scope: null
 - type: collocation
   text: Говорить по-русски.
   translation: To speak Russian.
@@ -919,6 +1049,7 @@ ru:
   example_translation: I speak a little Russian.
   cefr_level: A1
   frequency_rank: 131
+  grammar_scope: null
 - type: collocation
   text: Я не понимаю.
   translation: I don't understand.
@@ -926,6 +1057,7 @@ ru:
   example_translation: Sorry, I don't understand.
   cefr_level: A1
   frequency_rank: 132
+  grammar_scope: negation
 - type: collocation
   text: Как пройти к...?
   translation: How to get to...?
@@ -933,6 +1065,7 @@ ru:
   example_translation: How do I get to the museum?
   cefr_level: A1
   frequency_rank: 133
+  grammar_scope: question formation
 - type: collocation
   text: Где туалет?
   translation: Where is the toilet?
@@ -940,6 +1073,7 @@ ru:
   example_translation: Excuse me, where is the toilet?
   cefr_level: A1
   frequency_rank: 134
+  grammar_scope: question formation
 - type: collocation
   text: Счастливого пути!
   translation: Have a good trip!
@@ -947,6 +1081,7 @@ ru:
   example_translation: Goodbye! Have a good trip!
   cefr_level: A1
   frequency_rank: 135
+  grammar_scope: genitive case
 - type: collocation
   text: Приятного аппетита!
   translation: Enjoy your meal!
@@ -954,6 +1089,7 @@ ru:
   example_translation: Here is your lunch. Enjoy your meal!
   cefr_level: A1
   frequency_rank: 136
+  grammar_scope: genitive case
 - type: collocation
   text: Сколько лет тебе?
   translation: How old are you? (informal)
@@ -961,6 +1097,7 @@ ru:
   example_translation: How old are you? I am twenty.
   cefr_level: A1
   frequency_rank: 137
+  grammar_scope: numbers and quantities
 - type: collocation
   text: Красное вино
   translation: Red wine
@@ -968,6 +1105,7 @@ ru:
   example_translation: I want red wine.
   cefr_level: A1
   frequency_rank: 138
+  grammar_scope: null
 - type: verb_form
   text: Я читаю
   translation: I read
@@ -975,6 +1113,7 @@ ru:
   example_translation: I read the newspaper every morning.
   cefr_level: A1
   frequency_rank: 139
+  grammar_scope: present tense
 - type: verb_form
   text: Писать
   translation: To write
@@ -982,6 +1121,7 @@ ru:
   example_translation: I like to write letters.
   cefr_level: A1
   frequency_rank: 140
+  grammar_scope: verb aspects
 - type: verb_form
   text: Он говорит
   translation: He speaks
@@ -989,6 +1129,7 @@ ru:
   example_translation: He speaks Spanish.
   cefr_level: A1
   frequency_rank: 141
+  grammar_scope: present tense
 - type: verb_form
   text: Она делает
   translation: She does/makes
@@ -996,6 +1137,7 @@ ru:
   example_translation: She does her homework.
   cefr_level: A1
   frequency_rank: 142
+  grammar_scope: present tense
 - type: verb_form
   text: Мы идём
   translation: We go/walk
@@ -1003,6 +1145,7 @@ ru:
   example_translation: We are going to the park.
   cefr_level: A1
   frequency_rank: 143
+  grammar_scope: present tense
 - type: verb_form
   text: Вы понимаете?
   translation: Do you understand? (formal/plural)
@@ -1010,6 +1153,7 @@ ru:
   example_translation: Do you understand Russian?
   cefr_level: A1
   frequency_rank: 144
+  grammar_scope: present tense
 - type: verb_form
   text: Они учат
   translation: They learn/study
@@ -1017,6 +1161,7 @@ ru:
   example_translation: They are learning new words.
   cefr_level: A1
   frequency_rank: 145
+  grammar_scope: present tense
 - type: sentence_pattern
   text: Мне нужна [существительное].
   translation: I need [noun].
@@ -1024,6 +1169,7 @@ ru:
   example_translation: I need a pen.
   cefr_level: A1
   frequency_rank: 146
+  grammar_scope: dative case
 - type: sentence_pattern
   text: '[Существительное] находится здесь/там.'
   translation: '[Noun] is located here/there.'
@@ -1031,6 +1177,7 @@ ru:
   example_translation: The shop is located there.
   cefr_level: A1
   frequency_rank: 147
+  grammar_scope: nominative case
 - type: sentence_pattern
   text: Я люблю [что-то].
   translation: I love/like [something].
@@ -1038,6 +1185,7 @@ ru:
   example_translation: I love to read books.
   cefr_level: A1
   frequency_rank: 148
+  grammar_scope: accusative case
 - type: sentence_pattern
   text: Вы говорите по-русски?
   translation: Do you speak Russian? (formal/plural)
@@ -1045,6 +1193,7 @@ ru:
   example_translation: Excuse me, do you speak Russian?
   cefr_level: A1
   frequency_rank: 149
+  grammar_scope: question formation
 - type: sentence_pattern
   text: Какой это цвет?
   translation: What color is this?
@@ -1052,6 +1201,7 @@ ru:
   example_translation: What color is this? It's blue.
   cefr_level: A1
   frequency_rank: 150
+  grammar_scope: question formation
 - type: word
   text: Кто
   translation: Who
@@ -1059,6 +1209,7 @@ ru:
   example_translation: Who is this?
   cefr_level: A1
   frequency_rank: 151
+  grammar_scope: null
 - type: word
   text: Когда
   translation: When
@@ -1066,6 +1217,7 @@ ru:
   example_translation: When will we meet?
   cefr_level: A1
   frequency_rank: 152
+  grammar_scope: null
 - type: word
   text: Куда
   translation: Where to
@@ -1073,6 +1225,7 @@ ru:
   example_translation: Where are you going?
   cefr_level: A1
   frequency_rank: 153
+  grammar_scope: null
 - type: word
   text: Откуда
   translation: Where from
@@ -1080,6 +1233,7 @@ ru:
   example_translation: Where is he from?
   cefr_level: A1
   frequency_rank: 154
+  grammar_scope: null
 - type: word
   text: Почему
   translation: Why
@@ -1087,6 +1241,7 @@ ru:
   example_translation: Why are you here?
   cefr_level: A1
   frequency_rank: 155
+  grammar_scope: null
 - type: word
   text: Сегодня
   translation: Today
@@ -1094,6 +1249,7 @@ ru:
   example_translation: What are you doing today?
   cefr_level: A1
   frequency_rank: 156
+  grammar_scope: null
 - type: word
   text: Завтра
   translation: Tomorrow
@@ -1101,6 +1257,7 @@ ru:
   example_translation: We will go tomorrow.
   cefr_level: A1
   frequency_rank: 157
+  grammar_scope: null
 - type: word
   text: Вчера
   translation: Yesterday
@@ -1108,6 +1265,7 @@ ru:
   example_translation: Yesterday was a good day.
   cefr_level: A1
   frequency_rank: 158
+  grammar_scope: null
 - type: word
   text: Неделя
   translation: Week
@@ -1115,6 +1273,7 @@ ru:
   example_translation: Next week I'm going to Moscow.
   cefr_level: A1
   frequency_rank: 159
+  grammar_scope: null
 - type: word
   text: Месяц
   translation: Month
@@ -1122,6 +1281,7 @@ ru:
   example_translation: One month ago.
   cefr_level: A1
   frequency_rank: 160
+  grammar_scope: null
 - type: word
   text: Год
   translation: Year
@@ -1129,6 +1289,7 @@ ru:
   example_translation: This year is very interesting.
   cefr_level: A1
   frequency_rank: 161
+  grammar_scope: null
 - type: word
   text: Один
   translation: One
@@ -1136,6 +1297,7 @@ ru:
   example_translation: I have one brother.
   cefr_level: A1
   frequency_rank: 162
+  grammar_scope: null
 - type: word
   text: Два
   translation: Two
@@ -1143,6 +1305,7 @@ ru:
   example_translation: Give me two apples.
   cefr_level: A1
   frequency_rank: 163
+  grammar_scope: null
 - type: word
   text: Три
   translation: Three
@@ -1150,6 +1313,7 @@ ru:
   example_translation: We have three books.
   cefr_level: A1
   frequency_rank: 164
+  grammar_scope: null
 - type: word
   text: Четыре
   translation: Four
@@ -1157,6 +1321,7 @@ ru:
   example_translation: He lives in house number four.
   cefr_level: A1
   frequency_rank: 165
+  grammar_scope: null
 - type: word
   text: Пять
   translation: Five
@@ -1164,6 +1329,7 @@ ru:
   example_translation: I work five days a week.
   cefr_level: A1
   frequency_rank: 166
+  grammar_scope: null
 - type: word
   text: Белый
   translation: White
@@ -1171,6 +1337,7 @@ ru:
   example_translation: I like white color.
   cefr_level: A1
   frequency_rank: 167
+  grammar_scope: null
 - type: word
   text: Чёрный
   translation: Black
@@ -1178,6 +1345,7 @@ ru:
   example_translation: She has a black cat.
   cefr_level: A1
   frequency_rank: 168
+  grammar_scope: null
 - type: word
   text: Синий
   translation: Blue
@@ -1185,6 +1353,7 @@ ru:
   example_translation: My car is blue.
   cefr_level: A1
   frequency_rank: 169
+  grammar_scope: null
 - type: word
   text: Зелёный
   translation: Green
@@ -1192,6 +1361,7 @@ ru:
   example_translation: I love green tea.
   cefr_level: A1
   frequency_rank: 170
+  grammar_scope: null
 - type: word
   text: Мясо
   translation: Meat
@@ -1199,6 +1369,7 @@ ru:
   example_translation: I don't eat meat.
   cefr_level: A1
   frequency_rank: 171
+  grammar_scope: null
 - type: word
   text: Рыба
   translation: Fish
@@ -1206,6 +1377,7 @@ ru:
   example_translation: Today for dinner is fish.
   cefr_level: A1
   frequency_rank: 172
+  grammar_scope: null
 - type: word
   text: Обед
   translation: Lunch
@@ -1213,6 +1385,7 @@ ru:
   example_translation: Let's have lunch together.
   cefr_level: A1
   frequency_rank: 173
+  grammar_scope: null
 - type: word
   text: Завтрак
   translation: Breakfast
@@ -1220,6 +1393,7 @@ ru:
   example_translation: I eat porridge for breakfast.
   cefr_level: A1
   frequency_rank: 174
+  grammar_scope: null
 - type: word
   text: Отель
   translation: Hotel
@@ -1227,6 +1401,7 @@ ru:
   example_translation: We stayed in a good hotel.
   cefr_level: A1
   frequency_rank: 175
+  grammar_scope: null
 - type: word
   text: Билет
   translation: Ticket
@@ -1234,6 +1409,7 @@ ru:
   example_translation: I need a movie ticket.
   cefr_level: A1
   frequency_rank: 176
+  grammar_scope: null
 - type: word
   text: Горячий
   translation: Hot
@@ -1241,6 +1417,7 @@ ru:
   example_translation: The tea is very hot.
   cefr_level: A1
   frequency_rank: 177
+  grammar_scope: null
 - type: collocation
   text: Очень хорошо
   translation: Very good
@@ -1248,6 +1425,7 @@ ru:
   example_translation: This is very good!
   cefr_level: A1
   frequency_rank: 178
+  grammar_scope: null
 - type: collocation
   text: Как долго?
   translation: How long?
@@ -1255,6 +1433,7 @@ ru:
   example_translation: How long have you lived here?
   cefr_level: A1
   frequency_rank: 179
+  grammar_scope: question formation
 - type: collocation
   text: Приятного дня!
   translation: Have a nice day!
@@ -1262,6 +1441,7 @@ ru:
   example_translation: Goodbye! Have a nice day!
   cefr_level: A1
   frequency_rank: 180
+  grammar_scope: genitive case
 - type: collocation
   text: С днём рождения!
   translation: Happy birthday!
@@ -1269,6 +1449,7 @@ ru:
   example_translation: Happy birthday, Mom!
   cefr_level: A1
   frequency_rank: 181
+  grammar_scope: instrumental case
 - type: collocation
   text: Где ты работаешь?
   translation: Where do you work?
@@ -1276,6 +1457,7 @@ ru:
   example_translation: I work in a school. And where do you work?
   cefr_level: A1
   frequency_rank: 182
+  grammar_scope: question formation
 - type: collocation
   text: Что это?
   translation: What is this?
@@ -1283,6 +1465,7 @@ ru:
   example_translation: What is this on the table?
   cefr_level: A1
   frequency_rank: 183
+  grammar_scope: question formation
 - type: collocation
   text: Я не знаю
   translation: I don't know
@@ -1290,6 +1473,7 @@ ru:
   example_translation: Sorry, I don't know.
   cefr_level: A1
   frequency_rank: 184
+  grammar_scope: negation
 - type: collocation
   text: Помогите мне!
   translation: Help me!
@@ -1297,6 +1481,7 @@ ru:
   example_translation: Help me, please!
   cefr_level: A1
   frequency_rank: 185
+  grammar_scope: dative case
 - type: collocation
   text: Сколько тебе лет?
   translation: How old are you?
@@ -1304,6 +1489,7 @@ ru:
   example_translation: How old are you? I am twenty years old.
   cefr_level: A1
   frequency_rank: 186
+  grammar_scope: numbers and quantities
 - type: collocation
   text: До скорой встречи!
   translation: See you soon!
@@ -1311,6 +1497,7 @@ ru:
   example_translation: Bye! See you soon!
   cefr_level: A1
   frequency_rank: 187
+  grammar_scope: genitive case
 - type: verb_form
   text: Жить
   translation: To live
@@ -1318,6 +1505,7 @@ ru:
   example_translation: I want to live in Russia.
   cefr_level: A1
   frequency_rank: 188
+  grammar_scope: verb aspects
 - type: verb_form
   text: Пить
   translation: To drink
@@ -1325,6 +1513,7 @@ ru:
   example_translation: I like to drink tea.
   cefr_level: A1
   frequency_rank: 189
+  grammar_scope: verb aspects
 - type: verb_form
   text: Идти
   translation: To go (on foot)
@@ -1332,6 +1521,7 @@ ru:
   example_translation: I need to go home.
   cefr_level: A1
   frequency_rank: 190
+  grammar_scope: verb aspects
 - type: verb_form
   text: Смотреть
   translation: To watch/look
@@ -1339,6 +1529,7 @@ ru:
   example_translation: Let's watch a movie.
   cefr_level: A1
   frequency_rank: 191
+  grammar_scope: verb aspects
 - type: verb_form
   text: Делать
   translation: To do/make
@@ -1346,6 +1537,7 @@ ru:
   example_translation: What do you like to do?
   cefr_level: A1
   frequency_rank: 192
+  grammar_scope: verb aspects
 - type: verb_form
   text: Понимать
   translation: To understand
@@ -1353,6 +1545,7 @@ ru:
   example_translation: I'm starting to understand Russian.
   cefr_level: A1
   frequency_rank: 193
+  grammar_scope: verb aspects
 - type: verb_form
   text: Знать
   translation: To know
@@ -1360,6 +1553,7 @@ ru:
   example_translation: I want to know more.
   cefr_level: A1
   frequency_rank: 194
+  grammar_scope: verb aspects
 - type: verb_form
   text: Ходить
   translation: To go (habitually/multi-directional)
@@ -1367,6 +1561,7 @@ ru:
   example_translation: We often go to the park.
   cefr_level: A1
   frequency_rank: 195
+  grammar_scope: verb aspects
 - type: sentence_pattern
   text: Мне нужно [инфинитив].
   translation: I need to [verb].
@@ -1374,6 +1569,7 @@ ru:
   example_translation: I need to work.
   cefr_level: A1
   frequency_rank: 196
+  grammar_scope: dative case
 - type: sentence_pattern
   text: Откуда вы?
   translation: Where are you from?
@@ -1381,6 +1577,7 @@ ru:
   example_translation: Where are you from? I am from England.
   cefr_level: A1
   frequency_rank: 197
+  grammar_scope: question formation
 - type: sentence_pattern
   text: Дайте, пожалуйста, [существительное]!
   translation: Give me [noun], please!
@@ -1388,6 +1585,7 @@ ru:
   example_translation: Give me water, please!
   cefr_level: A1
   frequency_rank: 198
+  grammar_scope: accusative case
 - type: sentence_pattern
   text: У меня болит [часть тела].
   translation: My [body part] hurts.
@@ -1395,6 +1593,7 @@ ru:
   example_translation: My head hurts.
   cefr_level: A1
   frequency_rank: 199
+  grammar_scope: genitive case
 - type: sentence_pattern
   text: Как доехать до [место]?
   translation: How to get to [place] (by transport)?
@@ -1402,6 +1601,7 @@ ru:
   example_translation: How to get to the center (by transport)?
   cefr_level: A1
   frequency_rank: 200
+  grammar_scope: question formation
 - type: word
   text: Понедельник
   translation: Monday
@@ -1409,6 +1609,7 @@ ru:
   example_translation: On Monday I have a meeting.
   cefr_level: A1
   frequency_rank: 201
+  grammar_scope: null
 - type: word
   text: Вторник
   translation: Tuesday
@@ -1416,6 +1617,7 @@ ru:
   example_translation: On Tuesday I rest.
   cefr_level: A1
   frequency_rank: 202
+  grammar_scope: null
 - type: word
   text: Среда
   translation: Wednesday
@@ -1423,6 +1625,7 @@ ru:
   example_translation: On Wednesday we have a meeting.
   cefr_level: A1
   frequency_rank: 203
+  grammar_scope: null
 - type: word
   text: Четверг
   translation: Thursday
@@ -1430,6 +1633,7 @@ ru:
   example_translation: Are you free on Thursday?
   cefr_level: A1
   frequency_rank: 204
+  grammar_scope: null
 - type: word
   text: Пятница
   translation: Friday
@@ -1437,6 +1641,7 @@ ru:
   example_translation: I wait for Friday.
   cefr_level: A1
   frequency_rank: 205
+  grammar_scope: null
 - type: word
   text: Суббота
   translation: Saturday
@@ -1444,6 +1649,7 @@ ru:
   example_translation: On Saturday I rest.
   cefr_level: A1
   frequency_rank: 206
+  grammar_scope: null
 - type: word
   text: Воскресенье
   translation: Sunday
@@ -1451,6 +1657,7 @@ ru:
   example_translation: We go to relax on Sunday.
   cefr_level: A1
   frequency_rank: 207
+  grammar_scope: null
 - type: word
   text: Завтракать
   translation: to have breakfast
@@ -1458,6 +1665,7 @@ ru:
   example_translation: I usually have breakfast early.
   cefr_level: A1
   frequency_rank: 208
+  grammar_scope: null
 - type: word
   text: Обедать
   translation: to have lunch
@@ -1465,6 +1673,7 @@ ru:
   example_translation: Let's have lunch together!
   cefr_level: A1
   frequency_rank: 209
+  grammar_scope: null
 - type: word
   text: Ужинать
   translation: to have dinner
@@ -1472,6 +1681,7 @@ ru:
   example_translation: We have dinner at seven o'clock.
   cefr_level: A1
   frequency_rank: 210
+  grammar_scope: null
 - type: word
   text: Учить
   translation: to learn, to teach
@@ -1479,6 +1689,7 @@ ru:
   example_translation: One must learn Russian.
   cefr_level: A1
   frequency_rank: 211
+  grammar_scope: null
 - type: word
   text: Слушать
   translation: to listen
@@ -1486,6 +1697,7 @@ ru:
   example_translation: Let's listen to music!
   cefr_level: A1
   frequency_rank: 212
+  grammar_scope: null
 - type: word
   text: Читать
   translation: to read
@@ -1493,6 +1705,7 @@ ru:
   example_translation: He often reads.
   cefr_level: A1
   frequency_rank: 213
+  grammar_scope: null
 - type: word
   text: Ехать
   translation: to go (by vehicle)
@@ -1500,6 +1713,7 @@ ru:
   example_translation: We are going to Moscow.
   cefr_level: A1
   frequency_rank: 214
+  grammar_scope: null
 - type: word
   text: Сладкий
   translation: sweet
@@ -1507,6 +1721,7 @@ ru:
   example_translation: The cake is sweet.
   cefr_level: A1
   frequency_rank: 215
+  grammar_scope: null
 - type: word
   text: Холодный
   translation: cold
@@ -1514,6 +1729,7 @@ ru:
   example_translation: The weather is cold.
   cefr_level: A1
   frequency_rank: 216
+  grammar_scope: null
 - type: word
   text: Тёплый
   translation: warm
@@ -1521,6 +1737,7 @@ ru:
   example_translation: The clothes are warm.
   cefr_level: A1
   frequency_rank: 217
+  grammar_scope: null
 - type: word
   text: Вкусно
   translation: tasty, delicious (adverb)
@@ -1528,6 +1745,7 @@ ru:
   example_translation: It smells tasty.
   cefr_level: A1
   frequency_rank: 218
+  grammar_scope: null
 - type: word
   text: Дорого
   translation: expensive (adverb)
@@ -1535,6 +1753,7 @@ ru:
   example_translation: This bag is expensive.
   cefr_level: A1
   frequency_rank: 219
+  grammar_scope: null
 - type: word
   text: Дёшево
   translation: cheap (adverb)
@@ -1542,6 +1761,7 @@ ru:
   example_translation: Groceries are cheap.
   cefr_level: A1
   frequency_rank: 220
+  grammar_scope: null
 - type: word
   text: Центр
   translation: center, downtown
@@ -1549,6 +1769,7 @@ ru:
   example_translation: We are going to the center.
   cefr_level: A1
   frequency_rank: 221
+  grammar_scope: null
 - type: word
   text: Библиотека
   translation: library
@@ -1556,6 +1777,7 @@ ru:
   example_translation: The library is open.
   cefr_level: A1
   frequency_rank: 222
+  grammar_scope: null
 - type: word
   text: Вокзал
   translation: train station
@@ -1563,6 +1785,7 @@ ru:
   example_translation: The train departs from the station.
   cefr_level: A1
   frequency_rank: 223
+  grammar_scope: null
 - type: word
   text: Аэропорт
   translation: airport
@@ -1570,6 +1793,7 @@ ru:
   example_translation: I am going to the airport.
   cefr_level: A1
   frequency_rank: 224
+  grammar_scope: null
 - type: word
   text: Банк
   translation: bank
@@ -1577,6 +1801,7 @@ ru:
   example_translation: The bank is open until six.
   cefr_level: A1
   frequency_rank: 225
+  grammar_scope: null
 - type: word
   text: Цвет
   translation: color
@@ -1584,6 +1809,7 @@ ru:
   example_translation: The color of the sky is blue.
   cefr_level: A1
   frequency_rank: 226
+  grammar_scope: null
 - type: word
   text: Много
   translation: many, much
@@ -1591,6 +1817,7 @@ ru:
   example_translation: Many questions.
   cefr_level: A1
   frequency_rank: 227
+  grammar_scope: null
 - type: collocation
   text: Говорить по-немецки
   translation: to speak German
@@ -1598,6 +1825,7 @@ ru:
   example_translation: He can speak German.
   cefr_level: A1
   frequency_rank: 228
+  grammar_scope: null
 - type: collocation
   text: Пойти в кино
   translation: to go to the cinema
@@ -1605,6 +1833,7 @@ ru:
   example_translation: Let's go to the cinema!
   cefr_level: A1
   frequency_rank: 229
+  grammar_scope: accusative case
 - type: collocation
   text: Хорошего дня!
   translation: Have a good day!
@@ -1612,6 +1841,7 @@ ru:
   example_translation: Have a good day everyone!
   cefr_level: A1
   frequency_rank: 230
+  grammar_scope: genitive case
 - type: collocation
   text: С добрым утром!
   translation: Good morning!
@@ -1619,6 +1849,7 @@ ru:
   example_translation: Good morning, world!
   cefr_level: A1
   frequency_rank: 231
+  grammar_scope: instrumental case
 - type: collocation
   text: Говорить на русском языке
   translation: to speak in Russian language
@@ -1626,6 +1857,7 @@ ru:
   example_translation: Can you speak in Russian?
   cefr_level: A1
   frequency_rank: 232
+  grammar_scope: prepositional case
 - type: collocation
   text: Изучать языки
   translation: to learn languages
@@ -1633,6 +1865,7 @@ ru:
   example_translation: Many people learn languages.
   cefr_level: A1
   frequency_rank: 233
+  grammar_scope: accusative case
 - type: collocation
   text: Пить чай
   translation: to drink tea
@@ -1640,6 +1873,7 @@ ru:
   example_translation: We will drink tea.
   cefr_level: A1
   frequency_rank: 234
+  grammar_scope: accusative case
 - type: collocation
   text: Есть хлеб
   translation: to eat bread
@@ -1647,6 +1881,7 @@ ru:
   example_translation: Do you eat bread?
   cefr_level: A1
   frequency_rank: 235
+  grammar_scope: accusative case
 - type: collocation
   text: Идти пешком
   translation: to go on foot
@@ -1654,6 +1889,7 @@ ru:
   example_translation: We can go on foot.
   cefr_level: A1
   frequency_rank: 236
+  grammar_scope: null
 - type: collocation
   text: Работать в офисе
   translation: to work in an office
@@ -1661,6 +1897,7 @@ ru:
   example_translation: It's easy to work in an office.
   cefr_level: A1
   frequency_rank: 237
+  grammar_scope: prepositional case
 - type: verb_form
   text: Я завтракаю
   translation: I have breakfast
@@ -1668,6 +1905,7 @@ ru:
   example_translation: I have breakfast every day at eight.
   cefr_level: A1
   frequency_rank: 238
+  grammar_scope: present tense
 - type: verb_form
   text: Он обедает
   translation: He has lunch
@@ -1675,6 +1913,7 @@ ru:
   example_translation: He eats lunch quickly.
   cefr_level: A1
   frequency_rank: 239
+  grammar_scope: present tense
 - type: verb_form
   text: Она ужинает
   translation: She has dinner
@@ -1682,6 +1921,7 @@ ru:
   example_translation: She eats dinner late.
   cefr_level: A1
   frequency_rank: 240
+  grammar_scope: present tense
 - type: verb_form
   text: Ты учишь
   translation: You (informal) learn/teach
@@ -1689,6 +1929,7 @@ ru:
   example_translation: Are you learning Russian?
   cefr_level: A1
   frequency_rank: 241
+  grammar_scope: present tense
 - type: verb_form
   text: Мы слушаем
   translation: We listen
@@ -1696,6 +1937,7 @@ ru:
   example_translation: We listen to the radio.
   cefr_level: A1
   frequency_rank: 242
+  grammar_scope: present tense
 - type: verb_form
   text: Вы читаете
   translation: You (formal/plural) read
@@ -1703,6 +1945,7 @@ ru:
   example_translation: Are you reading a newspaper?
   cefr_level: A1
   frequency_rank: 243
+  grammar_scope: present tense
 - type: verb_form
   text: Они едут
   translation: They go (by vehicle)
@@ -1710,6 +1953,7 @@ ru:
   example_translation: They are going fast.
   cefr_level: A1
   frequency_rank: 244
+  grammar_scope: present tense
 - type: verb_form
   text: Я покупаю
   translation: I buy
@@ -1717,6 +1961,7 @@ ru:
   example_translation: I buy groceries.
   cefr_level: A1
   frequency_rank: 245
+  grammar_scope: present tense
 - type: sentence_pattern
   text: Мне холодно.
   translation: I am cold.
@@ -1724,6 +1969,7 @@ ru:
   example_translation: In winter it is often cold.
   cefr_level: A1
   frequency_rank: 246
+  grammar_scope: dative case
 - type: sentence_pattern
   text: Моё имя [имя].
   translation: My name is [name].
@@ -1731,6 +1977,7 @@ ru:
   example_translation: My name is Anna.
   cefr_level: A1
   frequency_rank: 247
+  grammar_scope: possessive pronouns
 - type: sentence_pattern
   text: Что вы делаете?
   translation: What are you doing?
@@ -1738,6 +1985,7 @@ ru:
   example_translation: Tell me, what are you doing?
   cefr_level: A1
   frequency_rank: 248
+  grammar_scope: question formation
 - type: sentence_pattern
   text: Сколько вам лет?
   translation: How old are you? (formal/plural)
@@ -1745,6 +1993,7 @@ ru:
   example_translation: May I ask, how old are you?
   cefr_level: A1
   frequency_rank: 249
+  grammar_scope: numbers and quantities
 - type: sentence_pattern
   text: Вы любите [существительное]?
   translation: Do you like [noun]?
@@ -1752,6 +2001,7 @@ ru:
   example_translation: Do you like sport?
   cefr_level: A1
   frequency_rank: 250
+  grammar_scope: question formation
 - type: word
   text: Шесть
   translation: Six
@@ -1759,6 +2009,7 @@ ru:
   example_translation: Six apples.
   cefr_level: A1
   frequency_rank: 251
+  grammar_scope: null
 - type: word
   text: Семь
   translation: Seven
@@ -1766,6 +2017,7 @@ ru:
   example_translation: Seven days in a week.
   cefr_level: A1
   frequency_rank: 252
+  grammar_scope: null
 - type: word
   text: Восемь
   translation: Eight
@@ -1773,6 +2025,7 @@ ru:
   example_translation: Eight o'clock.
   cefr_level: A1
   frequency_rank: 253
+  grammar_scope: null
 - type: word
   text: Девять
   translation: Nine
@@ -1780,6 +2033,7 @@ ru:
   example_translation: Nine books.
   cefr_level: A1
   frequency_rank: 254
+  grammar_scope: null
 - type: word
   text: Десять
   translation: Ten
@@ -1787,6 +2041,7 @@ ru:
   example_translation: Ten minutes.
   cefr_level: A1
   frequency_rank: 255
+  grammar_scope: null
 - type: word
   text: Минута
   translation: Minute
@@ -1794,6 +2049,7 @@ ru:
   example_translation: One minute.
   cefr_level: A1
   frequency_rank: 256
+  grammar_scope: null
 - type: word
   text: Час
   translation: Hour
@@ -1801,6 +2057,7 @@ ru:
   example_translation: Two hours.
   cefr_level: A1
   frequency_rank: 257
+  grammar_scope: null
 - type: word
   text: Или
   translation: Or
@@ -1808,6 +2065,7 @@ ru:
   example_translation: Tea or coffee?
   cefr_level: A1
   frequency_rank: 258
+  grammar_scope: null
 - type: word
   text: И
   translation: And
@@ -1815,6 +2073,7 @@ ru:
   example_translation: Me and you.
   cefr_level: A1
   frequency_rank: 259
+  grammar_scope: null
 - type: word
   text: Но
   translation: But
@@ -1822,6 +2081,7 @@ ru:
   example_translation: He wants, but he can't.
   cefr_level: A1
   frequency_rank: 260
+  grammar_scope: null
 - type: word
   text: Квартира
   translation: Apartment
@@ -1829,6 +2089,7 @@ ru:
   example_translation: My apartment is big.
   cefr_level: A1
   frequency_rank: 261
+  grammar_scope: null
 - type: word
   text: Стул
   translation: Chair
@@ -1836,6 +2097,7 @@ ru:
   example_translation: Where is the chair?
   cefr_level: A1
   frequency_rank: 262
+  grammar_scope: null
 - type: word
   text: Компьютер
   translation: Computer
@@ -1843,6 +2105,7 @@ ru:
   example_translation: I have a new computer.
   cefr_level: A1
   frequency_rank: 263
+  grammar_scope: null
 - type: word
   text: Ужин
   translation: Dinner
@@ -1850,6 +2113,7 @@ ru:
   example_translation: Dinner is ready.
   cefr_level: A1
   frequency_rank: 264
+  grammar_scope: null
 - type: word
   text: Автобус
   translation: Bus
@@ -1857,6 +2121,7 @@ ru:
   example_translation: I go by bus.
   cefr_level: A1
   frequency_rank: 265
+  grammar_scope: null
 - type: word
   text: Поезд
   translation: Train
@@ -1864,6 +2129,7 @@ ru:
   example_translation: The train is late.
   cefr_level: A1
   frequency_rank: 266
+  grammar_scope: null
 - type: word
   text: Самолет
   translation: Plane
@@ -1871,6 +2137,7 @@ ru:
   example_translation: The plane flies high.
   cefr_level: A1
   frequency_rank: 267
+  grammar_scope: null
 - type: word
   text: Метро
   translation: Metro / Subway
@@ -1878,6 +2145,7 @@ ru:
   example_translation: Where is the metro station?
   cefr_level: A1
   frequency_rank: 268
+  grammar_scope: null
 - type: word
   text: Красный
   translation: Red
@@ -1885,6 +2153,7 @@ ru:
   example_translation: This is a red apple.
   cefr_level: A1
   frequency_rank: 269
+  grammar_scope: null
 - type: word
   text: Жёлтый
   translation: Yellow
@@ -1892,6 +2161,7 @@ ru:
   example_translation: A yellow flower.
   cefr_level: A1
   frequency_rank: 270
+  grammar_scope: null
 - type: word
   text: Серый
   translation: Grey
@@ -1899,6 +2169,7 @@ ru:
   example_translation: A grey cat.
   cefr_level: A1
   frequency_rank: 271
+  grammar_scope: null
 - type: word
   text: Коричневый
   translation: Brown
@@ -1906,6 +2177,7 @@ ru:
   example_translation: A brown table.
   cefr_level: A1
   frequency_rank: 272
+  grammar_scope: null
 - type: word
   text: Оранжевый
   translation: Orange
@@ -1913,6 +2185,7 @@ ru:
   example_translation: An orange orange.
   cefr_level: A1
   frequency_rank: 273
+  grammar_scope: null
 - type: word
   text: Розовый
   translation: Pink
@@ -1920,6 +2193,7 @@ ru:
   example_translation: A pink dress.
   cefr_level: A1
   frequency_rank: 274
+  grammar_scope: null
 - type: word
   text: Фиолетовый
   translation: Purple
@@ -1927,6 +2201,7 @@ ru:
   example_translation: Purple flowers.
   cefr_level: A1
   frequency_rank: 275
+  grammar_scope: null
 - type: word
   text: Вкусный
   translation: Tasty
@@ -1934,6 +2209,7 @@ ru:
   example_translation: This soup is very tasty.
   cefr_level: A1
   frequency_rank: 276
+  grammar_scope: null
 - type: word
   text: Язык
   translation: Language
@@ -1941,6 +2217,7 @@ ru:
   example_translation: Russian language is interesting.
   cefr_level: A1
   frequency_rank: 277
+  grammar_scope: null
 - type: word
   text: Страна
   translation: Country
@@ -1948,6 +2225,7 @@ ru:
   example_translation: My country is big.
   cefr_level: A1
   frequency_rank: 278
+  grammar_scope: null
 - type: collocation
   text: Хочу пить
   translation: I want to drink / I'm thirsty
@@ -1955,6 +2233,7 @@ ru:
   example_translation: I want to drink water.
   cefr_level: A1
   frequency_rank: 279
+  grammar_scope: present tense
 - type: collocation
   text: Хорошее настроение
   translation: Good mood
@@ -1962,6 +2241,7 @@ ru:
   example_translation: I am in a good mood.
   cefr_level: A1
   frequency_rank: 280
+  grammar_scope: null
 - type: collocation
   text: Свежий воздух
   translation: Fresh air
@@ -1969,6 +2249,7 @@ ru:
   example_translation: I need fresh air.
   cefr_level: A1
   frequency_rank: 281
+  grammar_scope: null
 - type: collocation
   text: Домашнее задание
   translation: Homework
@@ -1976,6 +2257,7 @@ ru:
   example_translation: I have a lot of homework.
   cefr_level: A1
   frequency_rank: 282
+  grammar_scope: null
 - type: collocation
   text: Гулять в парке
   translation: To walk in the park
@@ -1983,6 +2265,7 @@ ru:
   example_translation: We walk in the park.
   cefr_level: A1
   frequency_rank: 283
+  grammar_scope: prepositional case
 - type: collocation
   text: Ждать автобус
   translation: To wait for the bus
@@ -1990,6 +2273,7 @@ ru:
   example_translation: I am waiting for the bus.
   cefr_level: A1
   frequency_rank: 284
+  grammar_scope: accusative case
 - type: collocation
   text: Играть в футбол
   translation: To play football
@@ -1997,6 +2281,7 @@ ru:
   example_translation: We play football.
   cefr_level: A1
   frequency_rank: 285
+  grammar_scope: accusative case
 - type: collocation
   text: Кушать суп
   translation: To eat soup
@@ -2004,6 +2289,7 @@ ru:
   example_translation: I eat soup for lunch.
   cefr_level: A1
   frequency_rank: 286
+  grammar_scope: accusative case
 - type: collocation
   text: Смотреть фильм
   translation: To watch a movie
@@ -2011,6 +2297,7 @@ ru:
   example_translation: I like to watch movies.
   cefr_level: A1
   frequency_rank: 287
+  grammar_scope: accusative case
 - type: collocation
   text: Читать газету
   translation: To read a newspaper
@@ -2018,6 +2305,7 @@ ru:
   example_translation: Dad reads a newspaper.
   cefr_level: A1
   frequency_rank: 288
+  grammar_scope: accusative case
 - type: verb_form
   text: Я вижу
   translation: I see
@@ -2025,6 +2313,7 @@ ru:
   example_translation: I see my house.
   cefr_level: A1
   frequency_rank: 289
+  grammar_scope: present tense
 - type: verb_form
   text: Ты любишь
   translation: You like/love (informal singular)
@@ -2032,6 +2321,7 @@ ru:
   example_translation: Do you like this city?
   cefr_level: A1
   frequency_rank: 290
+  grammar_scope: present tense
 - type: verb_form
   text: Он ждёт
   translation: He waits
@@ -2039,6 +2329,7 @@ ru:
   example_translation: He waits for the train.
   cefr_level: A1
   frequency_rank: 291
+  grammar_scope: present tense
 - type: verb_form
   text: Мы берём
   translation: We take
@@ -2046,6 +2337,7 @@ ru:
   example_translation: We take books.
   cefr_level: A1
   frequency_rank: 292
+  grammar_scope: present tense
 - type: verb_form
   text: Вы даёте
   translation: You give (formal / plural)
@@ -2053,6 +2345,7 @@ ru:
   example_translation: Are you giving me advice?
   cefr_level: A1
   frequency_rank: 293
+  grammar_scope: present tense
 - type: verb_form
   text: Я путешествую
   translation: I travel
@@ -2060,6 +2353,7 @@ ru:
   example_translation: I travel every year.
   cefr_level: A1
   frequency_rank: 294
+  grammar_scope: present tense
 - type: verb_form
   text: Они плавают
   translation: They swim
@@ -2067,6 +2361,7 @@ ru:
   example_translation: They swim in the pool.
   cefr_level: A1
   frequency_rank: 295
+  grammar_scope: present tense
 - type: sentence_pattern
   text: Который час?
   translation: What time is it?
@@ -2074,6 +2369,7 @@ ru:
   example_translation: What time is it now?
   cefr_level: A1
   frequency_rank: 296
+  grammar_scope: question formation
 - type: sentence_pattern
   text: Что ты делаешь?
   translation: What are you doing?
@@ -2081,6 +2377,7 @@ ru:
   example_translation: What are you doing today?
   cefr_level: A1
   frequency_rank: 297
+  grammar_scope: question formation
 - type: sentence_pattern
   text: Какая погода?
   translation: What's the weather like?
@@ -2088,6 +2385,7 @@ ru:
   example_translation: What is the weather like today?
   cefr_level: A1
   frequency_rank: 298
+  grammar_scope: question formation
 - type: sentence_pattern
   text: Я из [город].
   translation: I am from [city].
@@ -2095,6 +2393,7 @@ ru:
   example_translation: I am from Moscow.
   cefr_level: A1
   frequency_rank: 299
+  grammar_scope: genitive case
 - type: sentence_pattern
   text: Я устал.
   translation: I am tired. (masculine)
@@ -2102,6 +2401,7 @@ ru:
   example_translation: I am tired after work.
   cefr_level: A1
   frequency_rank: 300
+  grammar_scope: past tense
 - type: word
   text: Имя
   translation: Name
@@ -2109,6 +2409,7 @@ ru:
   example_translation: Learn the name.
   cefr_level: A1
   frequency_rank: 301
+  grammar_scope: null
 - type: word
   text: Фамилия
   translation: Surname
@@ -2116,6 +2417,7 @@ ru:
   example_translation: His surname is Ivanov.
   cefr_level: A1
   frequency_rank: 302
+  grammar_scope: null
 - type: word
   text: Профессия
   translation: Profession
@@ -2123,6 +2425,7 @@ ru:
   example_translation: Study the profession.
   cefr_level: A1
   frequency_rank: 303
+  grammar_scope: null
 - type: word
   text: Гостиница
   translation: Hotel
@@ -2130,6 +2433,7 @@ ru:
   example_translation: The hotel is close.
   cefr_level: A1
   frequency_rank: 304
+  grammar_scope: null
 - type: word
   text: Площадь
   translation: Square
@@ -2137,6 +2441,7 @@ ru:
   example_translation: The square is free.
   cefr_level: A1
   frequency_rank: 305
+  grammar_scope: null
 - type: word
   text: Туалет
   translation: Toilet
@@ -2144,6 +2449,7 @@ ru:
   example_translation: The toilet is inside.
   cefr_level: A1
   frequency_rank: 306
+  grammar_scope: null
 - type: word
   text: Пиво
   translation: Beer
@@ -2151,6 +2457,7 @@ ru:
   example_translation: Buy beer.
   cefr_level: A1
   frequency_rank: 307
+  grammar_scope: null
 - type: word
   text: Сахар
   translation: Sugar
@@ -2158,6 +2465,7 @@ ru:
   example_translation: Add sugar.
   cefr_level: A1
   frequency_rank: 308
+  grammar_scope: null
 - type: word
   text: Соль
   translation: Salt
@@ -2165,6 +2473,7 @@ ru:
   example_translation: Salt is needed.
   cefr_level: A1
   frequency_rank: 309
+  grammar_scope: null
 - type: word
   text: Сыр
   translation: Cheese
@@ -2172,6 +2481,7 @@ ru:
   example_translation: This cheese is fresh.
   cefr_level: A1
   frequency_rank: 310
+  grammar_scope: null
 - type: word
   text: Яблоко
   translation: Apple
@@ -2179,6 +2489,7 @@ ru:
   example_translation: Eat an apple.
   cefr_level: A1
   frequency_rank: 311
+  grammar_scope: null
 - type: word
   text: Мороженое
   translation: Ice cream
@@ -2186,6 +2497,7 @@ ru:
   example_translation: Ice cream melts.
   cefr_level: A1
   frequency_rank: 312
+  grammar_scope: null
 - type: word
   text: Суп
   translation: Soup
@@ -2193,6 +2505,7 @@ ru:
   example_translation: Soup is ready.
   cefr_level: A1
   frequency_rank: 313
+  grammar_scope: null
 - type: word
   text: Секунда
   translation: Second
@@ -2200,6 +2513,7 @@ ru:
   example_translation: Wait a second.
   cefr_level: A1
   frequency_rank: 314
+  grammar_scope: null
 - type: word
   text: Тетрадь
   translation: Notebook
@@ -2207,6 +2521,7 @@ ru:
   example_translation: The notebook is clean.
   cefr_level: A1
   frequency_rank: 315
+  grammar_scope: null
 - type: word
   text: Сумка
   translation: Bag
@@ -2214,6 +2529,7 @@ ru:
   example_translation: The bag is heavy.
   cefr_level: A1
   frequency_rank: 316
+  grammar_scope: null
 - type: word
   text: Одежда
   translation: Clothes
@@ -2221,6 +2537,7 @@ ru:
   example_translation: Clothes are clean.
   cefr_level: A1
   frequency_rank: 317
+  grammar_scope: null
 - type: word
   text: Часы
   translation: Watch/Clock
@@ -2228,6 +2545,7 @@ ru:
   example_translation: The clock is ticking.
   cefr_level: A1
   frequency_rank: 318
+  grammar_scope: null
 - type: word
   text: Быстрый
   translation: Fast
@@ -2235,6 +2553,7 @@ ru:
   example_translation: A fast runner.
   cefr_level: A1
   frequency_rank: 319
+  grammar_scope: null
 - type: word
   text: Медленный
   translation: Slow
@@ -2242,6 +2561,7 @@ ru:
   example_translation: Slow internet.
   cefr_level: A1
   frequency_rank: 320
+  grammar_scope: null
 - type: word
   text: Громкий
   translation: Loud
@@ -2249,6 +2569,7 @@ ru:
   example_translation: Loud sound.
   cefr_level: A1
   frequency_rank: 321
+  grammar_scope: null
 - type: word
   text: Тихий
   translation: Quiet
@@ -2256,6 +2577,7 @@ ru:
   example_translation: Quiet voice.
   cefr_level: A1
   frequency_rank: 322
+  grammar_scope: null
 - type: word
   text: Чистый
   translation: Clean
@@ -2263,6 +2585,7 @@ ru:
   example_translation: Clean air.
   cefr_level: A1
   frequency_rank: 323
+  grammar_scope: null
 - type: word
   text: Грязный
   translation: Dirty
@@ -2270,6 +2593,7 @@ ru:
   example_translation: Dirty floor.
   cefr_level: A1
   frequency_rank: 324
+  grammar_scope: null
 - type: word
   text: Свободный
   translation: Free/Available
@@ -2277,6 +2601,7 @@ ru:
   example_translation: Free access.
   cefr_level: A1
   frequency_rank: 325
+  grammar_scope: null
 - type: word
   text: Занятый
   translation: Busy
@@ -2284,6 +2609,7 @@ ru:
   example_translation: Busy person.
   cefr_level: A1
   frequency_rank: 326
+  grammar_scope: null
 - type: word
   text: Открытый
   translation: Open
@@ -2291,6 +2617,7 @@ ru:
   example_translation: Open gaze.
   cefr_level: A1
   frequency_rank: 327
+  grammar_scope: null
 - type: word
   text: Закрытый
   translation: Closed
@@ -2298,6 +2625,7 @@ ru:
   example_translation: Closed club.
   cefr_level: A1
   frequency_rank: 328
+  grammar_scope: null
 - type: collocation
   text: Пока!
   translation: Bye!
@@ -2305,6 +2633,7 @@ ru:
   example_translation: Bye! See you!
   cefr_level: A1
   frequency_rank: 329
+  grammar_scope: null
 - type: collocation
   text: До встречи!
   translation: See you!
@@ -2312,6 +2641,7 @@ ru:
   example_translation: See you in the evening.
   cefr_level: A1
   frequency_rank: 330
+  grammar_scope: genitive case
 - type: collocation
   text: Приятного вечера!
   translation: Have a nice evening!
@@ -2319,6 +2649,7 @@ ru:
   example_translation: Have a nice evening! Rest peacefully.
   cefr_level: A1
   frequency_rank: 331
+  grammar_scope: genitive case
 - type: collocation
   text: Счастливого дня!
   translation: Have a happy day!
@@ -2326,6 +2657,7 @@ ru:
   example_translation: Have a happy day everyone!
   cefr_level: A1
   frequency_rank: 332
+  grammar_scope: genitive case
 - type: collocation
   text: Можно спросить?
   translation: May I ask?
@@ -2333,6 +2665,7 @@ ru:
   example_translation: Please, may I ask?
   cefr_level: A1
   frequency_rank: 333
+  grammar_scope: question formation
 - type: collocation
   text: Как проехать?
   translation: How to get there (by transport)?
@@ -2340,6 +2673,7 @@ ru:
   example_translation: How to get to the river?
   cefr_level: A1
   frequency_rank: 334
+  grammar_scope: question formation
 - type: collocation
   text: Хочу есть.
   translation: I want to eat.
@@ -2347,6 +2681,7 @@ ru:
   example_translation: I want to eat now.
   cefr_level: A1
   frequency_rank: 335
+  grammar_scope: present tense
 - type: collocation
   text: Что делать?
   translation: What to do?
@@ -2354,6 +2689,7 @@ ru:
   example_translation: What to do next?
   cefr_level: A1
   frequency_rank: 336
+  grammar_scope: question formation
 - type: collocation
   text: Без проблем.
   translation: No problem.
@@ -2361,6 +2697,7 @@ ru:
   example_translation: I'll do it without a problem.
   cefr_level: A1
   frequency_rank: 337
+  grammar_scope: genitive case
 - type: collocation
   text: Немного говорю.
   translation: I speak a little.
@@ -2368,6 +2705,7 @@ ru:
   example_translation: I speak a little Spanish.
   cefr_level: A1
   frequency_rank: 338
+  grammar_scope: numbers and quantities
 - type: verb_form
   text: Сказать
   translation: To say (perfective)
@@ -2375,6 +2713,7 @@ ru:
   example_translation: Allow me to say.
   cefr_level: A1
   frequency_rank: 339
+  grammar_scope: verb aspects
 - type: verb_form
   text: Показать
   translation: To show (perfective)
@@ -2382,6 +2721,7 @@ ru:
   example_translation: Show the way.
   cefr_level: A1
   frequency_rank: 340
+  grammar_scope: verb aspects
 - type: verb_form
   text: Спрашивать
   translation: To ask (imperfective)
@@ -2389,6 +2729,7 @@ ru:
   example_translation: Don't hesitate to ask.
   cefr_level: A1
   frequency_rank: 341
+  grammar_scope: verb aspects
 - type: verb_form
   text: Отвечать
   translation: To answer (imperfective)
@@ -2396,6 +2737,7 @@ ru:
   example_translation: Answer loudly.
   cefr_level: A1
   frequency_rank: 342
+  grammar_scope: verb aspects
 - type: verb_form
   text: Видеть
   translation: To see (imperfective)
@@ -2403,6 +2745,7 @@ ru:
   example_translation: I want to see.
   cefr_level: A1
   frequency_rank: 343
+  grammar_scope: verb aspects
 - type: verb_form
   text: Дать
   translation: To give (perfective)
@@ -2410,6 +2753,7 @@ ru:
   example_translation: To give advice.
   cefr_level: A1
   frequency_rank: 344
+  grammar_scope: verb aspects
 - type: verb_form
   text: Брать
   translation: To take (imperfective)
@@ -2417,6 +2761,7 @@ ru:
   example_translation: To take an umbrella.
   cefr_level: A1
   frequency_rank: 345
+  grammar_scope: verb aspects
 - type: verb_form
   text: Покупать
   translation: To buy (imperfective)
@@ -2424,6 +2769,7 @@ ru:
   example_translation: To buy groceries.
   cefr_level: A1
   frequency_rank: 346
+  grammar_scope: verb aspects
 - type: sentence_pattern
   text: Мне жарко.
   translation: I am hot.
@@ -2431,6 +2777,7 @@ ru:
   example_translation: I am hot now.
   cefr_level: A1
   frequency_rank: 347
+  grammar_scope: dative case
 - type: sentence_pattern
   text: Хочу спать.
   translation: I want to sleep.
@@ -2438,6 +2785,7 @@ ru:
   example_translation: I want to sleep for a long time.
   cefr_level: A1
   frequency_rank: 348
+  grammar_scope: present tense
 - type: sentence_pattern
   text: '[Существительное] лежит.'
   translation: '[Noun] is lying.'
@@ -2445,6 +2793,7 @@ ru:
   example_translation: The notebook is lying here.
   cefr_level: A1
   frequency_rank: 349
+  grammar_scope: nominative case
 - type: sentence_pattern
   text: Могу [инфинитив].
   translation: I can [verb].
@@ -2452,6 +2801,7 @@ ru:
   example_translation: I can help you.
   cefr_level: A1
   frequency_rank: 350
+  grammar_scope: present tense
 - type: word
   text: Скучный
   translation: Boring
@@ -2459,6 +2809,7 @@ ru:
   example_translation: This film is boring.
   cefr_level: A1
   frequency_rank: 356
+  grammar_scope: null
 - type: word
   text: Добрый
   translation: Kind / Good
@@ -2466,6 +2817,7 @@ ru:
   example_translation: He is a very kind person.
   cefr_level: A1
   frequency_rank: 357
+  grammar_scope: null
 - type: word
   text: Злой
   translation: Evil / Angry
@@ -2473,6 +2825,7 @@ ru:
   example_translation: Don't be angry.
   cefr_level: A1
   frequency_rank: 358
+  grammar_scope: null
 - type: word
   text: Счастливый
   translation: Happy
@@ -2480,6 +2833,7 @@ ru:
   example_translation: I am a happy person.
   cefr_level: A1
   frequency_rank: 359
+  grammar_scope: null
 - type: word
   text: Грустный
   translation: Sad
@@ -2487,6 +2841,7 @@ ru:
   example_translation: Why are you sad?
   cefr_level: A1
   frequency_rank: 360
+  grammar_scope: null
 - type: word
   text: Твой
   translation: Your (singular, informal)
@@ -2494,6 +2849,7 @@ ru:
   example_translation: Is this your house?
   cefr_level: A1
   frequency_rank: 361
+  grammar_scope: null
 - type: word
   text: Его
   translation: His / Its
@@ -2501,6 +2857,7 @@ ru:
   example_translation: This is his car.
   cefr_level: A1
   frequency_rank: 362
+  grammar_scope: null
 - type: word
   text: Её
   translation: Her / Its
@@ -2508,6 +2865,7 @@ ru:
   example_translation: This is her bag.
   cefr_level: A1
   frequency_rank: 363
+  grammar_scope: null
 - type: word
   text: Наш
   translation: Our
@@ -2515,6 +2873,7 @@ ru:
   example_translation: This is our city.
   cefr_level: A1
   frequency_rank: 364
+  grammar_scope: null
 - type: word
   text: Ваш
   translation: Your (formal, plural)
@@ -2522,6 +2881,7 @@ ru:
   example_translation: Where is your passport?
   cefr_level: A1
   frequency_rank: 365
+  grammar_scope: null
 - type: word
   text: Их
   translation: Their
@@ -2529,6 +2889,7 @@ ru:
   example_translation: These are their children.
   cefr_level: A1
   frequency_rank: 366
+  grammar_scope: null
 - type: word
   text: Для
   translation: For
@@ -2536,6 +2897,7 @@ ru:
   example_translation: This is for you.
   cefr_level: A1
   frequency_rank: 367
+  grammar_scope: null
 - type: word
   text: С
   translation: With
@@ -2543,6 +2905,7 @@ ru:
   example_translation: I drink tea with sugar.
   cefr_level: A1
   frequency_rank: 368
+  grammar_scope: null
 - type: word
   text: В
   translation: In / Into
@@ -2550,6 +2913,7 @@ ru:
   example_translation: He lives in Moscow.
   cefr_level: A1
   frequency_rank: 369
+  grammar_scope: null
 - type: word
   text: На
   translation: On / At
@@ -2557,6 +2921,7 @@ ru:
   example_translation: The book is on the table.
   cefr_level: A1
   frequency_rank: 370
+  grammar_scope: null
 - type: word
   text: После
   translation: After
@@ -2564,6 +2929,7 @@ ru:
   example_translation: After work, I go home.
   cefr_level: A1
   frequency_rank: 371
+  grammar_scope: null
 - type: word
   text: Перед
   translation: Before / In front of
@@ -2571,6 +2937,7 @@ ru:
   example_translation: There is a park in front of the house.
   cefr_level: A1
   frequency_rank: 372
+  grammar_scope: null
 - type: word
   text: Родители
   translation: Parents
@@ -2578,6 +2945,7 @@ ru:
   example_translation: My parents live far away.
   cefr_level: A1
   frequency_rank: 373
+  grammar_scope: null
 - type: word
   text: Дети
   translation: Children
@@ -2585,6 +2953,7 @@ ru:
   example_translation: She has two children.
   cefr_level: A1
   frequency_rank: 374
+  grammar_scope: null
 - type: word
   text: Сын
   translation: Son
@@ -2592,6 +2961,7 @@ ru:
   example_translation: My son studies at school.
   cefr_level: A1
   frequency_rank: 375
+  grammar_scope: null
 - type: word
   text: Дочь
   translation: Daughter
@@ -2599,6 +2969,7 @@ ru:
   example_translation: I have a daughter.
   cefr_level: A1
   frequency_rank: 376
+  grammar_scope: null
 - type: word
   text: Муж
   translation: Husband
@@ -2606,6 +2977,7 @@ ru:
   example_translation: My husband works.
   cefr_level: A1
   frequency_rank: 377
+  grammar_scope: null
 - type: word
   text: Жена
   translation: Wife
@@ -2613,6 +2985,7 @@ ru:
   example_translation: His wife is very beautiful.
   cefr_level: A1
   frequency_rank: 378
+  grammar_scope: null
 - type: collocation
   text: Слушать музыку
   translation: To listen to music
@@ -2620,6 +2993,7 @@ ru:
   example_translation: I like to listen to music.
   cefr_level: A1
   frequency_rank: 379
+  grammar_scope: accusative case
 - type: collocation
   text: Пойти в магазин
   translation: To go to the shop
@@ -2627,6 +3001,7 @@ ru:
   example_translation: Let's go to the shop.
   cefr_level: A1
   frequency_rank: 380
+  grammar_scope: accusative case
 - type: collocation
   text: Играть в игры
   translation: To play games
@@ -2634,6 +3009,7 @@ ru:
   example_translation: Children like to play games.
   cefr_level: A1
   frequency_rank: 381
+  grammar_scope: accusative case
 - type: collocation
   text: Поехать в отпуск
   translation: To go on vacation
@@ -2641,6 +3017,7 @@ ru:
   example_translation: We want to go on vacation.
   cefr_level: A1
   frequency_rank: 382
+  grammar_scope: accusative case
 - type: collocation
   text: Задавать вопрос
   translation: To ask a question
@@ -2648,6 +3025,7 @@ ru:
   example_translation: May I ask a question?
   cefr_level: A1
   frequency_rank: 383
+  grammar_scope: accusative case
 - type: collocation
   text: Искать работу
   translation: To look for a job
@@ -2655,6 +3033,7 @@ ru:
   example_translation: He is looking for a new job.
   cefr_level: A1
   frequency_rank: 384
+  grammar_scope: accusative case
 - type: collocation
   text: Вставать рано
   translation: To wake up early
@@ -2662,6 +3041,7 @@ ru:
   example_translation: I don't like to wake up early.
   cefr_level: A1
   frequency_rank: 385
+  grammar_scope: verb aspects
 - type: collocation
   text: Ложиться спать
   translation: To go to bed
@@ -2669,6 +3049,7 @@ ru:
   example_translation: It's time to go to bed.
   cefr_level: A1
   frequency_rank: 386
+  grammar_scope: verb aspects
 - type: collocation
   text: Слушать радио
   translation: To listen to the radio
@@ -2676,6 +3057,7 @@ ru:
   example_translation: She often listens to the radio.
   cefr_level: A1
   frequency_rank: 387
+  grammar_scope: accusative case
 - type: collocation
   text: Помогать другу
   translation: To help a friend
@@ -2683,6 +3065,7 @@ ru:
   example_translation: I always help my friend.
   cefr_level: A1
   frequency_rank: 388
+  grammar_scope: dative case
 - type: verb_form
   text: Мочь
   translation: To be able to (infinitive)
@@ -2690,6 +3073,7 @@ ru:
   example_translation: I can speak Russian.
   cefr_level: A1
   frequency_rank: 389
+  grammar_scope: null
 - type: verb_form
   text: Надо
   translation: It is necessary / One must
@@ -2697,6 +3081,7 @@ ru:
   example_translation: It is necessary to go home.
   cefr_level: A1
   frequency_rank: 390
+  grammar_scope: null
 - type: verb_form
   text: Хочу
   translation: I want
@@ -2704,6 +3089,7 @@ ru:
   example_translation: I want to drink.
   cefr_level: A1
   frequency_rank: 391
+  grammar_scope: present tense
 - type: verb_form
   text: Иду
   translation: I go / am going (on foot)
@@ -2711,6 +3097,7 @@ ru:
   example_translation: I am going to the park.
   cefr_level: A1
   frequency_rank: 392
+  grammar_scope: present tense
 - type: verb_form
   text: Еду
   translation: I go / am going (by transport)
@@ -2718,6 +3105,7 @@ ru:
   example_translation: I am going by bus.
   cefr_level: A1
   frequency_rank: 393
+  grammar_scope: present tense
 - type: verb_form
   text: Дай
   translation: Give! (informal, singular imperative)
@@ -2725,6 +3113,7 @@ ru:
   example_translation: Give me a pen, please.
   cefr_level: A1
   frequency_rank: 394
+  grammar_scope: null
 - type: verb_form
   text: Скажи
   translation: Say! / Tell! (informal, singular imperative)
@@ -2732,6 +3121,7 @@ ru:
   example_translation: Tell me where you live.
   cefr_level: A1
   frequency_rank: 395
+  grammar_scope: null
 - type: sentence_pattern
   text: Я говорю по-русски.
   translation: I speak Russian.
@@ -2739,6 +3129,7 @@ ru:
   example_translation: I speak a little Russian.
   cefr_level: A1
   frequency_rank: 397
+  grammar_scope: personal pronouns
 - type: sentence_pattern
   text: Я не говорю по-английски.
   translation: I don't speak English.
@@ -2746,6 +3137,7 @@ ru:
   example_translation: Unfortunately, I don't speak English.
   cefr_level: A1
   frequency_rank: 398
+  grammar_scope: negation
 - type: sentence_pattern
   text: Кто это?
   translation: Who is this?
@@ -2753,6 +3145,7 @@ ru:
   example_translation: Who is this in the room?
   cefr_level: A1
   frequency_rank: 400
+  grammar_scope: question formation
 - type: word
   text: Зонт
   translation: Umbrella
@@ -2760,6 +3153,7 @@ ru:
   example_translation: I have a new umbrella.
   cefr_level: A1
   frequency_rank: 394
+  grammar_scope: null
 - type: word
   text: Очки
   translation: Glasses
@@ -2767,6 +3161,7 @@ ru:
   example_translation: My glasses are on the table.
   cefr_level: A1
   frequency_rank: 396
+  grammar_scope: null
 - type: word
   text: Кресло
   translation: Armchair
@@ -2774,6 +3169,7 @@ ru:
   example_translation: This is a comfortable armchair.
   cefr_level: A1
   frequency_rank: 397
+  grammar_scope: null
 - type: word
   text: Диван
   translation: Sofa
@@ -2781,6 +3177,7 @@ ru:
   example_translation: We are sitting on the sofa.
   cefr_level: A1
   frequency_rank: 398
+  grammar_scope: null
 - type: word
   text: Ванная
   translation: Bathroom
@@ -2788,6 +3185,7 @@ ru:
   example_translation: The bathroom is big.
   cefr_level: A1
   frequency_rank: 399
+  grammar_scope: null
 - type: word
   text: Кухня
   translation: Kitchen
@@ -2795,6 +3193,7 @@ ru:
   example_translation: I cook in the kitchen.
   cefr_level: A1
   frequency_rank: 400
+  grammar_scope: null
 - type: word
   text: Спальня
   translation: Bedroom
@@ -2802,6 +3201,7 @@ ru:
   example_translation: My bedroom is very bright.
   cefr_level: A1
   frequency_rank: 401
+  grammar_scope: null
 - type: word
   text: Гостиная
   translation: Living room
@@ -2809,6 +3209,7 @@ ru:
   example_translation: We watch TV in the living room.
   cefr_level: A1
   frequency_rank: 402
+  grammar_scope: null
 - type: word
   text: Утром
   translation: In the morning
@@ -2816,6 +3217,7 @@ ru:
   example_translation: I drink coffee in the morning.
   cefr_level: A1
   frequency_rank: 403
+  grammar_scope: null
 - type: word
   text: Вечером
   translation: In the evening
@@ -2823,6 +3225,7 @@ ru:
   example_translation: We walk in the evening.
   cefr_level: A1
   frequency_rank: 404
+  grammar_scope: null
 - type: word
   text: Днём
   translation: In the afternoon / during the day
@@ -2830,6 +3233,7 @@ ru:
   example_translation: She works during the day.
   cefr_level: A1
   frequency_rank: 405
+  grammar_scope: null
 - type: word
   text: Ночью
   translation: At night
@@ -2837,6 +3241,7 @@ ru:
   example_translation: It's very quiet at night.
   cefr_level: A1
   frequency_rank: 406
+  grammar_scope: null
 - type: word
   text: Жарко
   translation: Hot (adv.)
@@ -2844,6 +3249,7 @@ ru:
   example_translation: It's hot outside.
   cefr_level: A1
   frequency_rank: 409
+  grammar_scope: null
 - type: word
   text: Голодный
   translation: Hungry (adj.)
@@ -2851,6 +3257,7 @@ ru:
   example_translation: I am hungry, let's eat.
   cefr_level: A1
   frequency_rank: 410
+  grammar_scope: null
 - type: word
   text: Жажда
   translation: Thirst
@@ -2858,6 +3265,7 @@ ru:
   example_translation: I'm thirsty, I want to drink.
   cefr_level: A1
   frequency_rank: 411
+  grammar_scope: null
 - type: word
   text: Слово
   translation: Word
@@ -2865,6 +3273,7 @@ ru:
   example_translation: This is a new word for me.
   cefr_level: A1
   frequency_rank: 412
+  grammar_scope: null
 - type: word
   text: Буква
   translation: Letter (alphabet)
@@ -2872,6 +3281,7 @@ ru:
   example_translation: What letter is this?
   cefr_level: A1
   frequency_rank: 413
+  grammar_scope: null
 - type: word
   text: Цифра
   translation: Digit / Number
@@ -2879,6 +3289,7 @@ ru:
   example_translation: My favorite number is seven.
   cefr_level: A1
   frequency_rank: 414
+  grammar_scope: null
 - type: word
   text: Звонить
   translation: To call (by phone)
@@ -2886,6 +3297,7 @@ ru:
   example_translation: I want to call my mom.
   cefr_level: A1
   frequency_rank: 415
+  grammar_scope: null
 - type: word
   text: Забыть
   translation: To forget (perfective)
@@ -2893,6 +3305,7 @@ ru:
   example_translation: I forgot my key.
   cefr_level: A1
   frequency_rank: 416
+  grammar_scope: null
 - type: word
   text: Помнить
   translation: To remember (imperfective)
@@ -2900,6 +3313,7 @@ ru:
   example_translation: I remember this well.
   cefr_level: A1
   frequency_rank: 417
+  grammar_scope: null
 - type: word
   text: Уметь
   translation: To be able to / To know how to
@@ -2907,6 +3321,7 @@ ru:
   example_translation: I can swim.
   cefr_level: A1
   frequency_rank: 418
+  grammar_scope: null
 - type: word
   text: Нравиться
   translation: To like / To be pleasing
@@ -2914,6 +3329,7 @@ ru:
   example_translation: I like this movie.
   cefr_level: A1
   frequency_rank: 419
+  grammar_scope: null
 - type: collocation
   text: Читать журнал
   translation: To read a magazine
@@ -2921,6 +3337,7 @@ ru:
   example_translation: I like to read a magazine in the mornings.
   cefr_level: A1
   frequency_rank: 421
+  grammar_scope: accusative case
 - type: collocation
   text: Ждать такси
   translation: To wait for a taxi
@@ -2928,6 +3345,7 @@ ru:
   example_translation: We are waiting for a taxi at the entrance.
   cefr_level: A1
   frequency_rank: 422
+  grammar_scope: accusative case
 - type: collocation
   text: Плавать в бассейне
   translation: To swim in a pool
@@ -2935,6 +3353,7 @@ ru:
   example_translation: Children love to swim in the pool.
   cefr_level: A1
   frequency_rank: 423
+  grammar_scope: prepositional case
 - type: collocation
   text: Просыпаться рано
   translation: To wake up early
@@ -2942,6 +3361,7 @@ ru:
   example_translation: I try to wake up early.
   cefr_level: A1
   frequency_rank: 424
+  grammar_scope: verb aspects
 - type: collocation
   text: Готовить ужин
   translation: To cook dinner
@@ -2949,6 +3369,7 @@ ru:
   example_translation: She loves to cook dinner for the family.
   cefr_level: A1
   frequency_rank: 425
+  grammar_scope: accusative case
 - type: collocation
   text: Купить продукты
   translation: To buy groceries
@@ -2956,6 +3377,7 @@ ru:
   example_translation: I need to buy groceries at the store.
   cefr_level: A1
   frequency_rank: 426
+  grammar_scope: accusative case
 - type: collocation
   text: Отдыхать в отпуске
   translation: To rest on vacation
@@ -2963,6 +3385,7 @@ ru:
   example_translation: We want to rest on vacation by the sea.
   cefr_level: A1
   frequency_rank: 427
+  grammar_scope: prepositional case
 - type: collocation
   text: Думать о будущем
   translation: To think about the future
@@ -2970,6 +3393,7 @@ ru:
   example_translation: It's important to think about the future.
   cefr_level: A1
   frequency_rank: 428
+  grammar_scope: prepositional case
 - type: collocation
   text: Давать советы
   translation: To give advice
@@ -2977,6 +3401,7 @@ ru:
   example_translation: He always gives good advice.
   cefr_level: A1
   frequency_rank: 429
+  grammar_scope: accusative case
 - type: collocation
   text: Повторять слова
   translation: To repeat words
@@ -2984,6 +3409,7 @@ ru:
   example_translation: I must repeat words every day.
   cefr_level: A1
   frequency_rank: 430
+  grammar_scope: accusative case
 - type: verb_form
   text: Я звоню
   translation: I call
@@ -2991,6 +3417,7 @@ ru:
   example_translation: I am calling my friend (female).
   cefr_level: A1
   frequency_rank: 431
+  grammar_scope: present tense
 - type: verb_form
   text: Ты умеешь
   translation: You (informal) can / know how to
@@ -2998,6 +3425,7 @@ ru:
   example_translation: Can you (informal) cook?
   cefr_level: A1
   frequency_rank: 432
+  grammar_scope: present tense
 - type: verb_form
   text: Оно нравится
   translation: It is liked / It pleases
@@ -3005,6 +3433,7 @@ ru:
   example_translation: I like this dress (lit. This dress pleases me).
   cefr_level: A1
   frequency_rank: 433
+  grammar_scope: present tense
 - type: verb_form
   text: Мы продаём
   translation: We sell
@@ -3012,6 +3441,7 @@ ru:
   example_translation: We are selling old books.
   cefr_level: A1
   frequency_rank: 434
+  grammar_scope: present tense
 - type: verb_form
   text: Вы просыпаетесь
   translation: You (formal/plural) wake up
@@ -3019,6 +3449,7 @@ ru:
   example_translation: What time do you (formal/plural) wake up?
   cefr_level: A1
   frequency_rank: 435
+  grammar_scope: present tense
 - type: verb_form
   text: Они одеваются
   translation: They get dressed
@@ -3026,6 +3457,7 @@ ru:
   example_translation: The children get dressed quickly.
   cefr_level: A1
   frequency_rank: 436
+  grammar_scope: present tense
 - type: verb_form
   text: Я учусь
   translation: I study (at an institution)
@@ -3033,6 +3465,7 @@ ru:
   example_translation: I study at the university.
   cefr_level: A1
   frequency_rank: 437
+  grammar_scope: present tense
 - type: verb_form
   text: Ты думаешь
   translation: You (informal) think
@@ -3040,6 +3473,7 @@ ru:
   example_translation: What do you (informal) think about this?
   cefr_level: A1
   frequency_rank: 438
+  grammar_scope: present tense
 - type: sentence_pattern
   text: У меня есть [существительное].
   translation: I have [noun].
@@ -3047,6 +3481,7 @@ ru:
   example_translation: I have a dog.
   cefr_level: A1
   frequency_rank: 439
+  grammar_scope: genitive case
 - type: sentence_pattern
   text: Я люблю [инфинитив].
   translation: I love [infinitive].
@@ -3054,6 +3489,7 @@ ru:
   example_translation: I love to travel.
   cefr_level: A1
   frequency_rank: 440
+  grammar_scope: present tense
 - type: sentence_pattern
   text: Где [существительное]?
   translation: Where is [noun]?
@@ -3061,6 +3497,7 @@ ru:
   example_translation: Where is my phone?
   cefr_level: A1
   frequency_rank: 441
+  grammar_scope: question formation
 - type: sentence_pattern
   text: Можно [инфинитив] здесь?
   translation: Is it allowed to [infinitive verb] here?
@@ -3068,6 +3505,7 @@ ru:
   example_translation: Is it allowed to smoke here?
   cefr_level: A1
   frequency_rank: 442
+  grammar_scope: question formation
 - type: sentence_pattern
   text: Я не говорю по-русски.
   translation: I don't speak Russian.
@@ -3075,3 +3513,4 @@ ru:
   example_translation: Excuse me, I don't speak Russian.
   cefr_level: A1
   frequency_rank: 443
+  grammar_scope: negation

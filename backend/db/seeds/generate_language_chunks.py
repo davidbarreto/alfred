@@ -47,14 +47,17 @@ def _yaml_path(code: str) -> Path:
     return SEEDS_DIR / f"language_chunks_{code}.yaml"
 
 
-def _load_existing(code: str) -> tuple[list[dict], set[str]]:
+def _load_existing(code: str) -> tuple[list[dict], set[str], list[str]]:
     path = _yaml_path(code)
     if not path.exists():
-        return [], set()
+        return [], set(), []
     data = yaml.safe_load(path.read_text()) or {}
     entries: list[dict] = data.get(code, [])
     seen = {str(e["text"]) for e in entries if e.get("text")}
-    return entries, seen
+    # Keep only the most recent texts for dedup hints — 30 is enough to avoid
+    # repeating recent entries without bloating every prompt with hundreds of tokens.
+    recent = [str(e["text"]) for e in entries[-30:] if e.get("text")]
+    return entries, seen, recent
 
 
 def _save(code: str, entries: list[dict]) -> None:
@@ -75,27 +78,15 @@ async def _generate_batch(
     cefr_level: str,
     count: int,
     seen_texts: set[str],
+    recent_texts: list[str],
     freq_start: int,
 ) -> list[dict]:
-    # Pass a sample of seen texts so Gemini avoids duplicates.
-    seen_sample = sorted(seen_texts)[:300]
+    prompt = f"""Generate {count} {lang_name} vocabulary entries for CEFR {cefr_level}, frequency ranks {freq_start}–{freq_start + count - 1}.
 
-    prompt = f"""Generate exactly {count} {lang_name} vocabulary entries for CEFR level {cefr_level}.
-
-Return a JSON array. Each object must have these fields:
-- "type": one of "word", "collocation", "verb_form", "sentence_pattern"
-- "text": the word or phrase in {lang_name}
-- "translation": clear English meaning (always a string, even if the answer is "yes" or "no")
-- "example": short natural example sentence in {lang_name}
-- "example_translation": English translation of the example
-- "cefr_level": exactly "{cefr_level}"
-
-Rules:
-- Mix types roughly: 55% word, 20% collocation, 15% verb_form, 10% sentence_pattern
-- Prioritise high-frequency, practical vocabulary for that CEFR level
-- Include a spread across topics: greetings, time, places, emotions, work, food, travel, etc.
-- Do NOT repeat any of these already-generated texts: {json.dumps(seen_sample)}
-- Return ONLY the JSON array, no markdown fences, no extra text"""
+JSON array, each item: type (word/collocation/verb_form/sentence_pattern), text, translation (string), example, example_translation, cefr_level.
+Mix: 55% word, 20% collocation, 15% verb_form, 10% sentence_pattern. High-frequency practical vocabulary across topics.
+Do NOT repeat: {json.dumps(recent_texts)}
+Return ONLY the JSON array."""
 
     response = await client.aio.models.generate_content(
         model=MODEL,
@@ -105,7 +96,6 @@ Rules:
             response_mime_type="application/json",
         ),
     )
-
     raw = (response.text or "").strip()
     data = json.loads(raw)
 
@@ -132,7 +122,7 @@ async def _generate_track(client: genai.Client, track: dict) -> None:
     name = track["name"]
     level = track["level"]
 
-    all_entries, seen_texts = _load_existing(code)
+    all_entries, seen_texts, _ = _load_existing(code)
     freq_counter = len(all_entries) + 1
 
     plan = LEVEL_PLAN.get(level, [("A1", 850), (track["challenge"], 150)])
@@ -158,11 +148,12 @@ async def _generate_track(client: genai.Client, track: dict) -> None:
             batch_size = min(BATCH_SIZE, remaining)
             batch_num += 1
             attempt = 0
+            recent_texts = [e["text"] for e in all_entries[-30:] if e.get("text")]
             while attempt < 3:
                 attempt += 1
                 try:
                     batch = await _generate_batch(
-                        client, name, cefr_level, batch_size, seen_texts, freq_counter
+                        client, name, cefr_level, batch_size, seen_texts, recent_texts, freq_counter
                     )
                     all_entries.extend(batch)
                     freq_counter += len(batch)

@@ -1,0 +1,64 @@
+# Grammar scope curriculum for ru (Russian, A1 learner).
+# Status defaults to "deferred" — activate topics you are currently studying via the portal.
+# Priority controls display order (lower = more fundamental).
+ru:
+- category: case
+  value: nominative case
+  priority: 1
+  status: deferred
+- category: case
+  value: accusative case
+  priority: 2
+  status: deferred
+- category: case
+  value: genitive case
+  priority: 3
+  status: deferred
+- category: case
+  value: dative case
+  priority: 4
+  status: deferred
+- category: case
+  value: instrumental case
+  priority: 5
+  status: deferred
+- category: case
+  value: prepositional case
+  priority: 6
+  status: deferred
+- category: tense
+  value: present tense
+  priority: 7
+  status: deferred
+- category: tense
+  value: past tense
+  priority: 8
+  status: deferred
+- category: tense
+  value: future tense
+  priority: 9
+  status: deferred
+- category: aspect
+  value: verb aspects
+  priority: 10
+  status: deferred
+- category: pronouns
+  value: personal pronouns
+  priority: 11
+  status: deferred
+- category: pronouns
+  value: possessive pronouns
+  priority: 12
+  status: deferred
+- category: negation
+  value: negation
+  priority: 13
+  status: deferred
+- category: questions
+  value: question formation
+  priority: 14
+  status: deferred
+- category: numbers
+  value: numbers and quantities
+  priority: 15
+  status: deferred

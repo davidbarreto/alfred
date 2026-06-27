@@ -1,0 +1,80 @@
+# Grammar scope curriculum for fr (French, A2 learner).
+# Status defaults to "deferred" — activate topics you are currently studying via the portal.
+# Priority controls display order (lower = more fundamental).
+fr:
+- category: tense
+  value: present tense
+  priority: 1
+  status: deferred
+- category: tense
+  value: passé composé
+  priority: 2
+  status: deferred
+- category: tense
+  value: imparfait
+  priority: 3
+  status: deferred
+- category: tense
+  value: near future (futur proche)
+  priority: 4
+  status: deferred
+- category: tense
+  value: future simple
+  priority: 5
+  status: deferred
+- category: tense
+  value: present conditional
+  priority: 6
+  status: deferred
+- category: mood
+  value: imperative
+  priority: 7
+  status: deferred
+- category: negation
+  value: negation
+  priority: 8
+  status: deferred
+- category: pronouns
+  value: direct object pronouns
+  priority: 9
+  status: deferred
+- category: pronouns
+  value: indirect object pronouns
+  priority: 10
+  status: deferred
+- category: pronouns
+  value: reflexive pronouns
+  priority: 11
+  status: deferred
+- category: pronouns
+  value: relative pronouns
+  priority: 12
+  status: deferred
+- category: agreement
+  value: adjective agreement
+  priority: 13
+  status: deferred
+- category: articles
+  value: partitive article
+  priority: 14
+  status: deferred
+- category: questions
+  value: question formation
+  priority: 15
+  status: deferred
+- category: prepositions
+  value: prepositions
+  priority: 16
+  status: deferred
+- category: comparison
+  value: comparatives and superlatives
+  priority: 17
+  status: deferred
+- category: verb_construction
+  value: verb + infinitive
+  priority: 18
+  status: deferred
+- category: verb_construction
+  value: reflexive verbs
+  priority: 19
+  status: deferred

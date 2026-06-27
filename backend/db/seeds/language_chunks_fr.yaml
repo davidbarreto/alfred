@@ -9,6 +9,7 @@ fr:
   example_translation: Hello, how are you?
   cefr_level: A1
   frequency_rank: 1
+  grammar_scope: null
 - type: word
   text: Merci
   translation: Thank you
@@ -16,6 +17,7 @@ fr:
   example_translation: Thank you very much for your help.
   cefr_level: A1
   frequency_rank: 2
+  grammar_scope: null
 - type: word
   text: Oui
   translation: 'Yes'
@@ -23,6 +25,7 @@ fr:
   example_translation: Yes, I agree.
   cefr_level: A1
   frequency_rank: 3
+  grammar_scope: null
 - type: word
   text: Non
   translation: 'No'
@@ -30,6 +33,7 @@ fr:
   example_translation: No, I cannot come.
   cefr_level: A1
   frequency_rank: 4
+  grammar_scope: null
 - type: word
   text: S'il vous plaît
   translation: Please (formal)
@@ -37,6 +41,7 @@ fr:
   example_translation: A coffee, please.
   cefr_level: A1
   frequency_rank: 5
+  grammar_scope: null
 - type: word
   text: Au revoir
   translation: Goodbye
@@ -44,6 +49,7 @@ fr:
   example_translation: Goodbye and see you tomorrow!
   cefr_level: A1
   frequency_rank: 6
+  grammar_scope: null
 - type: word
   text: Madame
   translation: Madam / Mrs.
@@ -51,6 +57,7 @@ fr:
   example_translation: Hello Mrs. Dubois.
   cefr_level: A1
   frequency_rank: 7
+  grammar_scope: null
 - type: word
   text: Monsieur
   translation: Sir / Mr.
@@ -58,6 +65,7 @@ fr:
   example_translation: Excuse me Sir.
   cefr_level: A1
   frequency_rank: 8
+  grammar_scope: null
 - type: word
   text: Fille
   translation: Girl / Daughter
@@ -65,6 +73,7 @@ fr:
   example_translation: She has a little girl.
   cefr_level: A1
   frequency_rank: 9
+  grammar_scope: null
 - type: word
   text: Garçon
   translation: Boy / Son / Waiter
@@ -72,6 +81,7 @@ fr:
   example_translation: He is a nice boy.
   cefr_level: A1
   frequency_rank: 10
+  grammar_scope: null
 - type: word
   text: Eau
   translation: Water
@@ -79,6 +89,7 @@ fr:
   example_translation: I would like some water, please.
   cefr_level: A1
   frequency_rank: 11
+  grammar_scope: null
 - type: word
   text: Pain
   translation: Bread
@@ -86,6 +97,7 @@ fr:
   example_translation: I buy bread at the bakery.
   cefr_level: A1
   frequency_rank: 12
+  grammar_scope: null
 - type: word
   text: Café
   translation: Coffee
@@ -93,6 +105,7 @@ fr:
   example_translation: I drink a coffee in the morning.
   cefr_level: A1
   frequency_rank: 13
+  grammar_scope: null
 - type: word
   text: Maison
   translation: House / Home
@@ -100,6 +113,7 @@ fr:
   example_translation: My house is big.
   cefr_level: A1
   frequency_rank: 14
+  grammar_scope: null
 - type: word
   text: Ville
   translation: City / Town
@@ -107,6 +121,7 @@ fr:
   example_translation: I live in a big city.
   cefr_level: A1
   frequency_rank: 15
+  grammar_scope: null
 - type: word
   text: Rue
   translation: Street
@@ -114,6 +129,7 @@ fr:
   example_translation: The bakery is on this street.
   cefr_level: A1
   frequency_rank: 16
+  grammar_scope: null
 - type: word
   text: Voiture
   translation: Car
@@ -121,6 +137,7 @@ fr:
   example_translation: I have a new car.
   cefr_level: A1
   frequency_rank: 17
+  grammar_scope: null
 - type: word
   text: Livre
   translation: Book
@@ -128,6 +145,7 @@ fr:
   example_translation: I am reading a good book.
   cefr_level: A1
   frequency_rank: 18
+  grammar_scope: null
 - type: word
   text: Jour
   translation: Day
@@ -135,6 +153,7 @@ fr:
   example_translation: Have a good day!
   cefr_level: A1
   frequency_rank: 19
+  grammar_scope: null
 - type: word
   text: Nuit
   translation: Night
@@ -142,6 +161,7 @@ fr:
   example_translation: Good night, sleep well.
   cefr_level: A1
   frequency_rank: 20
+  grammar_scope: null
 - type: word
   text: Matin
   translation: Morning
@@ -149,6 +169,7 @@ fr:
   example_translation: I wake up early in the morning.
   cefr_level: A1
   frequency_rank: 21
+  grammar_scope: null
 - type: word
   text: Soir
   translation: Evening
@@ -156,6 +177,7 @@ fr:
   example_translation: We have dinner in the evening.
   cefr_level: A1
   frequency_rank: 22
+  grammar_scope: null
 - type: word
   text: Aujourd'hui
   translation: Today
@@ -163,6 +185,7 @@ fr:
   example_translation: Today, the weather is nice.
   cefr_level: A1
   frequency_rank: 23
+  grammar_scope: null
 - type: word
   text: Demain
   translation: Tomorrow
@@ -170,6 +193,7 @@ fr:
   example_translation: I work tomorrow.
   cefr_level: A1
   frequency_rank: 24
+  grammar_scope: null
 - type: word
   text: Hier
   translation: Yesterday
@@ -177,6 +201,7 @@ fr:
   example_translation: Yesterday, I watched a movie.
   cefr_level: A1
   frequency_rank: 25
+  grammar_scope: null
 - type: word
   text: Grand
   translation: Big / Tall
@@ -184,6 +209,7 @@ fr:
   example_translation: Paris is a big city.
   cefr_level: A1
   frequency_rank: 26
+  grammar_scope: null
 - type: word
   text: Petit
   translation: Small / Little
@@ -191,6 +217,7 @@ fr:
   example_translation: I have a small dog.
   cefr_level: A1
   frequency_rank: 27
+  grammar_scope: null
 - type: collocation
   text: Bonne journée
   translation: Have a good day
@@ -198,6 +225,7 @@ fr:
   example_translation: I'm leaving, have a good day!
   cefr_level: A1
   frequency_rank: 28
+  grammar_scope: adjective agreement
 - type: collocation
   text: Bonne soirée
   translation: Have a good evening
@@ -205,6 +233,7 @@ fr:
   example_translation: Have a good evening!
   cefr_level: A1
   frequency_rank: 29
+  grammar_scope: adjective agreement
 - type: collocation
   text: Prendre un café
   translation: To have a coffee
@@ -212,6 +241,7 @@ fr:
   example_translation: Shall we have a coffee?
   cefr_level: A1
   frequency_rank: 30
+  grammar_scope: null
 - type: collocation
   text: Faire les courses
   translation: To do the shopping (groceries)
@@ -219,6 +249,7 @@ fr:
   example_translation: I need to do the grocery shopping this afternoon.
   cefr_level: A1
   frequency_rank: 31
+  grammar_scope: null
 - type: collocation
   text: Parler français
   translation: To speak French
@@ -226,6 +257,7 @@ fr:
   example_translation: I am learning to speak French.
   cefr_level: A1
   frequency_rank: 32
+  grammar_scope: null
 - type: collocation
   text: Habiter à
   translation: To live in/at
@@ -233,6 +265,7 @@ fr:
   example_translation: I live in Paris.
   cefr_level: A1
   frequency_rank: 33
+  grammar_scope: prepositions
 - type: collocation
   text: Avoir faim
   translation: To be hungry
@@ -240,6 +273,7 @@ fr:
   example_translation: I am hungry, I want to eat.
   cefr_level: A1
   frequency_rank: 34
+  grammar_scope: null
 - type: collocation
   text: Avoir soif
   translation: To be thirsty
@@ -247,6 +281,7 @@ fr:
   example_translation: It's hot, I'm thirsty.
   cefr_level: A1
   frequency_rank: 35
+  grammar_scope: null
 - type: collocation
   text: Faire du sport
   translation: To do sports
@@ -254,6 +289,7 @@ fr:
   example_translation: Do you do sports?
   cefr_level: A1
   frequency_rank: 36
+  grammar_scope: partitive article
 - type: collocation
   text: Lire un livre
   translation: To read a book
@@ -261,6 +297,7 @@ fr:
   example_translation: I like to read a book before sleeping.
   cefr_level: A1
   frequency_rank: 37
+  grammar_scope: null
 - type: verb_form
   text: Je suis
   translation: I am
@@ -268,6 +305,7 @@ fr:
   example_translation: I am a student.
   cefr_level: A1
   frequency_rank: 38
+  grammar_scope: present tense
 - type: verb_form
   text: Tu es
   translation: You are (singular, informal)
@@ -275,6 +313,7 @@ fr:
   example_translation: Are you French?
   cefr_level: A1
   frequency_rank: 39
+  grammar_scope: present tense
 - type: verb_form
   text: Il est
   translation: He is
@@ -282,6 +321,7 @@ fr:
   example_translation: He is my friend.
   cefr_level: A1
   frequency_rank: 40
+  grammar_scope: present tense
 - type: verb_form
   text: J'ai
   translation: I have
@@ -289,6 +329,7 @@ fr:
   example_translation: I am twenty years old.
   cefr_level: A1
   frequency_rank: 41
+  grammar_scope: present tense
 - type: verb_form
   text: Tu as
   translation: You have (singular, informal)
@@ -296,6 +337,7 @@ fr:
   example_translation: Do you have a pen?
   cefr_level: A1
   frequency_rank: 42
+  grammar_scope: present tense
 - type: verb_form
   text: Il a
   translation: He has
@@ -303,6 +345,7 @@ fr:
   example_translation: He has a dog.
   cefr_level: A1
   frequency_rank: 43
+  grammar_scope: present tense
 - type: verb_form
   text: Je parle
   translation: I speak
@@ -310,6 +353,7 @@ fr:
   example_translation: I speak a little French.
   cefr_level: A1
   frequency_rank: 44
+  grammar_scope: present tense
 - type: verb_form
   text: Je mange
   translation: I eat
@@ -317,6 +361,7 @@ fr:
   example_translation: I eat an apple.
   cefr_level: A1
   frequency_rank: 45
+  grammar_scope: present tense
 - type: sentence_pattern
   text: Comment ça va ?
   translation: How are you? / How is it going?
@@ -324,6 +369,7 @@ fr:
   example_translation: Hi! How are you?
   cefr_level: A1
   frequency_rank: 46
+  grammar_scope: question formation
 - type: sentence_pattern
   text: Je voudrais...
   translation: I would like...
@@ -331,6 +377,7 @@ fr:
   example_translation: I would like a baguette, please.
   cefr_level: A1
   frequency_rank: 47
+  grammar_scope: present conditional
 - type: sentence_pattern
   text: C'est...
   translation: It is... / This is...
@@ -338,6 +385,7 @@ fr:
   example_translation: This is my sister.
   cefr_level: A1
   frequency_rank: 48
+  grammar_scope: present tense
 - type: sentence_pattern
   text: Où est...?
   translation: Where is...?
@@ -345,6 +393,7 @@ fr:
   example_translation: Where is the train station, please?
   cefr_level: A1
   frequency_rank: 49
+  grammar_scope: question formation
 - type: sentence_pattern
   text: Il y a...
   translation: There is / There are
@@ -352,6 +401,7 @@ fr:
   example_translation: There is a park nearby.
   cefr_level: A1
   frequency_rank: 50
+  grammar_scope: present tense
 - type: word
   text: Chien
   translation: Dog
@@ -359,6 +409,7 @@ fr:
   example_translation: My dog is small.
   cefr_level: A1
   frequency_rank: 51
+  grammar_scope: null
 - type: word
   text: Chat
   translation: Cat
@@ -366,6 +417,7 @@ fr:
   example_translation: I have a black cat.
   cefr_level: A1
   frequency_rank: 52
+  grammar_scope: null
 - type: word
   text: Mère
   translation: Mother
@@ -373,6 +425,7 @@ fr:
   example_translation: My mother is kind.
   cefr_level: A1
   frequency_rank: 53
+  grammar_scope: null
 - type: word
   text: Père
   translation: Father
@@ -380,6 +433,7 @@ fr:
   example_translation: His father works a lot.
   cefr_level: A1
   frequency_rank: 54
+  grammar_scope: null
 - type: word
   text: Famille
   translation: Family
@@ -387,6 +441,7 @@ fr:
   example_translation: I love my family.
   cefr_level: A1
   frequency_rank: 55
+  grammar_scope: null
 - type: word
   text: Ami(e)
   translation: Friend
@@ -394,6 +449,7 @@ fr:
   example_translation: He is my friend.
   cefr_level: A1
   frequency_rank: 56
+  grammar_scope: null
 - type: word
   text: École
   translation: School
@@ -401,6 +457,7 @@ fr:
   example_translation: The children go to school.
   cefr_level: A1
   frequency_rank: 57
+  grammar_scope: null
 - type: word
   text: Travail
   translation: Work / Job
@@ -408,6 +465,7 @@ fr:
   example_translation: My job is interesting.
   cefr_level: A1
   frequency_rank: 58
+  grammar_scope: null
 - type: word
   text: Manger
   translation: To eat
@@ -415,6 +473,7 @@ fr:
   example_translation: I want to eat an apple.
   cefr_level: A1
   frequency_rank: 59
+  grammar_scope: null
 - type: word
   text: Boire
   translation: To drink
@@ -422,6 +481,7 @@ fr:
   example_translation: You must drink water.
   cefr_level: A1
   frequency_rank: 60
+  grammar_scope: null
 - type: word
   text: Pomme
   translation: Apple
@@ -429,6 +489,7 @@ fr:
   example_translation: I buy a red apple.
   cefr_level: A1
   frequency_rank: 61
+  grammar_scope: null
 - type: word
   text: Fromage
   translation: Cheese
@@ -436,6 +497,7 @@ fr:
   example_translation: I like French cheese.
   cefr_level: A1
   frequency_rank: 62
+  grammar_scope: null
 - type: word
   text: Lait
   translation: Milk
@@ -443,6 +505,7 @@ fr:
   example_translation: I drink milk in the morning.
   cefr_level: A1
   frequency_rank: 63
+  grammar_scope: null
 - type: word
   text: Déjeuner
   translation: Lunch
@@ -450,6 +513,7 @@ fr:
   example_translation: We have lunch at noon.
   cefr_level: A1
   frequency_rank: 64
+  grammar_scope: null
 - type: word
   text: Couleur
   translation: Color
@@ -457,6 +521,7 @@ fr:
   example_translation: What is your favorite color?
   cefr_level: A1
   frequency_rank: 65
+  grammar_scope: null
 - type: word
   text: Rouge
   translation: Red
@@ -464,6 +529,7 @@ fr:
   example_translation: His car is red.
   cefr_level: A1
   frequency_rank: 66
+  grammar_scope: null
 - type: word
   text: Bleu
   translation: Blue
@@ -471,6 +537,7 @@ fr:
   example_translation: The sky is blue.
   cefr_level: A1
   frequency_rank: 67
+  grammar_scope: null
 - type: word
   text: Heure
   translation: Hour / Time
@@ -478,6 +545,7 @@ fr:
   example_translation: It is one o'clock.
   cefr_level: A1
   frequency_rank: 68
+  grammar_scope: null
 - type: word
   text: Semaine
   translation: Week
@@ -485,6 +553,7 @@ fr:
   example_translation: We leave next week.
   cefr_level: A1
   frequency_rank: 69
+  grammar_scope: null
 - type: word
   text: Année
   translation: Year
@@ -492,6 +561,7 @@ fr:
   example_translation: Happy New Year!
   cefr_level: A1
   frequency_rank: 70
+  grammar_scope: null
 - type: word
   text: Pays
   translation: Country
@@ -499,6 +569,7 @@ fr:
   example_translation: What is your home country?
   cefr_level: A1
   frequency_rank: 71
+  grammar_scope: null
 - type: word
   text: Moi
   translation: Me / I (stressed pronoun)
@@ -506,6 +577,7 @@ fr:
   example_translation: It's me.
   cefr_level: A1
   frequency_rank: 72
+  grammar_scope: null
 - type: word
   text: Nous
   translation: We / Us
@@ -513,6 +585,7 @@ fr:
   example_translation: We like to travel.
   cefr_level: A1
   frequency_rank: 73
+  grammar_scope: null
 - type: word
   text: Avec
   translation: With
@@ -520,6 +593,7 @@ fr:
   example_translation: I am with my friends.
   cefr_level: A1
   frequency_rank: 74
+  grammar_scope: null
 - type: word
   text: Et
   translation: And
@@ -527,6 +601,7 @@ fr:
   example_translation: I have a brother and a sister.
   cefr_level: A1
   frequency_rank: 75
+  grammar_scope: null
 - type: word
   text: Un
   translation: One / A / An
@@ -534,6 +609,7 @@ fr:
   example_translation: I have one brother.
   cefr_level: A1
   frequency_rank: 76
+  grammar_scope: null
 - type: word
   text: Deux
   translation: Two
@@ -541,6 +617,7 @@ fr:
   example_translation: There are two cats.
   cefr_level: A1
   frequency_rank: 77
+  grammar_scope: null
 - type: word
   text: Maintenant
   translation: Now
@@ -548,6 +625,7 @@ fr:
   example_translation: I have to leave now.
   cefr_level: A1
   frequency_rank: 78
+  grammar_scope: null
 - type: collocation
   text: Faire attention
   translation: To pay attention / To be careful
@@ -555,6 +633,7 @@ fr:
   example_translation: Pay attention to the road.
   cefr_level: A1
   frequency_rank: 79
+  grammar_scope: null
 - type: collocation
   text: Parler anglais
   translation: To speak English
@@ -562,6 +641,7 @@ fr:
   example_translation: I speak a little English.
   cefr_level: A1
   frequency_rank: 80
+  grammar_scope: null
 - type: collocation
   text: Écouter de la musique
   translation: To listen to music
@@ -569,6 +649,7 @@ fr:
   example_translation: I like to listen to music.
   cefr_level: A1
   frequency_rank: 81
+  grammar_scope: partitive article
 - type: collocation
   text: Regarder la télévision
   translation: To watch television
@@ -576,6 +657,7 @@ fr:
   example_translation: We watch television in the evening.
   cefr_level: A1
   frequency_rank: 82
+  grammar_scope: null
 - type: collocation
   text: Faire ses devoirs
   translation: To do one's homework
@@ -583,6 +665,7 @@ fr:
   example_translation: The child does his homework.
   cefr_level: A1
   frequency_rank: 83
+  grammar_scope: null
 - type: collocation
   text: Prendre le bus
   translation: To take the bus
@@ -590,6 +673,7 @@ fr:
   example_translation: I take the bus to go to work.
   cefr_level: A1
   frequency_rank: 84
+  grammar_scope: null
 - type: collocation
   text: Avoir un rendez-vous
   translation: To have an appointment
@@ -597,6 +681,7 @@ fr:
   example_translation: I have an appointment at the doctor's.
   cefr_level: A1
   frequency_rank: 85
+  grammar_scope: null
 - type: collocation
   text: Faire la cuisine
   translation: To cook
@@ -604,6 +689,7 @@ fr:
   example_translation: I like to cook.
   cefr_level: A1
   frequency_rank: 86
+  grammar_scope: null
 - type: collocation
   text: Aller au marché
   translation: To go to the market
@@ -611,6 +697,7 @@ fr:
   example_translation: She goes to the market on Saturday.
   cefr_level: A1
   frequency_rank: 87
+  grammar_scope: prepositions
 - type: collocation
   text: Poser une question
   translation: To ask a question
@@ -618,6 +705,7 @@ fr:
   example_translation: I want to ask a question.
   cefr_level: A1
   frequency_rank: 88
+  grammar_scope: null
 - type: verb_form
   text: Je vais
   translation: I go / I am going
@@ -625,6 +713,7 @@ fr:
   example_translation: I am going to Paris.
   cefr_level: A1
   frequency_rank: 89
+  grammar_scope: present tense
 - type: verb_form
   text: Tu vas
   translation: You go / You are going (informal singular)
@@ -632,6 +721,7 @@ fr:
   example_translation: Where are you going?
   cefr_level: A1
   frequency_rank: 90
+  grammar_scope: present tense
 - type: verb_form
   text: Il/Elle va
   translation: He/She goes / He/She is going
@@ -639,6 +729,7 @@ fr:
   example_translation: He is doing well.
   cefr_level: A1
   frequency_rank: 91
+  grammar_scope: present tense
 - type: verb_form
   text: Nous allons
   translation: We go / We are going
@@ -646,6 +737,7 @@ fr:
   example_translation: We are going to the cinema.
   cefr_level: A1
   frequency_rank: 92
+  grammar_scope: present tense
 - type: verb_form
   text: Je fais
   translation: I do / I make
@@ -653,6 +745,7 @@ fr:
   example_translation: I am making a cake.
   cefr_level: A1
   frequency_rank: 93
+  grammar_scope: present tense
 - type: verb_form
   text: Je veux
   translation: I want
@@ -660,6 +753,7 @@ fr:
   example_translation: I want a cup of tea.
   cefr_level: A1
   frequency_rank: 94
+  grammar_scope: present tense
 - type: verb_form
   text: Je peux
   translation: I can
@@ -667,6 +761,7 @@ fr:
   example_translation: I can help you.
   cefr_level: A1
   frequency_rank: 95
+  grammar_scope: present tense
 - type: sentence_pattern
   text: Qu'est-ce que c'est ?
   translation: What is it?
@@ -674,6 +769,7 @@ fr:
   example_translation: What is that noise?
   cefr_level: A1
   frequency_rank: 96
+  grammar_scope: question formation
 - type: sentence_pattern
   text: Comment vous appelez-vous ?
   translation: What is your name? (formal/plural)
@@ -681,6 +777,7 @@ fr:
   example_translation: Hello, what is your name?
   cefr_level: A1
   frequency_rank: 97
+  grammar_scope: question formation
 - type: sentence_pattern
   text: J'habite à...
   translation: I live in...
@@ -688,6 +785,7 @@ fr:
   example_translation: I live in Lyon.
   cefr_level: A1
   frequency_rank: 98
+  grammar_scope: prepositions
 - type: sentence_pattern
   text: Je suis de...
   translation: I am from...
@@ -695,6 +793,7 @@ fr:
   example_translation: I am from France.
   cefr_level: A1
   frequency_rank: 99
+  grammar_scope: prepositions
 - type: sentence_pattern
   text: Ça coûte combien ?
   translation: How much does it cost?
@@ -702,6 +801,7 @@ fr:
   example_translation: This book, how much does it cost?
   cefr_level: A1
   frequency_rank: 100
+  grammar_scope: question formation
 - type: word
   text: Salut
   translation: Hi / Hello / Bye
@@ -709,6 +809,7 @@ fr:
   example_translation: Hi, how are you?
   cefr_level: A1
   frequency_rank: 101
+  grammar_scope: null
 - type: word
   text: Enchanté(e)
   translation: Nice to meet you
@@ -716,6 +817,7 @@ fr:
   example_translation: Nice to meet you, my name is Marie.
   cefr_level: A1
   frequency_rank: 102
+  grammar_scope: null
 - type: word
   text: Pardon
   translation: Excuse me / Sorry
@@ -723,6 +825,7 @@ fr:
   example_translation: Sorry, I didn't understand.
   cefr_level: A1
   frequency_rank: 103
+  grammar_scope: null
 - type: word
   text: Excusez-moi
   translation: Excuse me (formal)
@@ -730,6 +833,7 @@ fr:
   example_translation: Excuse me, where are the toilets?
   cefr_level: A1
   frequency_rank: 104
+  grammar_scope: null
 - type: word
   text: Zéro
   translation: Zero
@@ -737,6 +841,7 @@ fr:
   example_translation: There are zero apples on the table.
   cefr_level: A1
   frequency_rank: 105
+  grammar_scope: null
 - type: word
   text: Trois
   translation: Three
@@ -744,6 +849,7 @@ fr:
   example_translation: I have three brothers.
   cefr_level: A1
   frequency_rank: 106
+  grammar_scope: null
 - type: word
   text: Quatre
   translation: Four
@@ -751,6 +857,7 @@ fr:
   example_translation: We have four chairs.
   cefr_level: A1
   frequency_rank: 107
+  grammar_scope: null
 - type: word
   text: Cinq
   translation: Five
@@ -758,6 +865,7 @@ fr:
   example_translation: The bus arrives in five minutes.
   cefr_level: A1
   frequency_rank: 108
+  grammar_scope: null
 - type: word
   text: Dix
   translation: Ten
@@ -765,6 +873,7 @@ fr:
   example_translation: I have ten euros.
   cefr_level: A1
   frequency_rank: 109
+  grammar_scope: null
 - type: word
   text: Lundi
   translation: Monday
@@ -772,6 +881,7 @@ fr:
   example_translation: The shop is closed on Monday.
   cefr_level: A1
   frequency_rank: 110
+  grammar_scope: null
 - type: word
   text: Mardi
   translation: Tuesday
@@ -779,6 +889,7 @@ fr:
   example_translation: I work on Tuesday.
   cefr_level: A1
   frequency_rank: 111
+  grammar_scope: null
 - type: word
   text: Mercredi
   translation: Wednesday
@@ -786,6 +897,7 @@ fr:
   example_translation: Children go to school on Wednesday.
   cefr_level: A1
   frequency_rank: 112
+  grammar_scope: null
 - type: word
   text: Dimanche
   translation: Sunday
@@ -793,6 +905,7 @@ fr:
   example_translation: We have lunch with family on Sunday.
   cefr_level: A1
   frequency_rank: 113
+  grammar_scope: null
 - type: word
   text: Homme
   translation: Man
@@ -800,6 +913,7 @@ fr:
   example_translation: He is a very kind man.
   cefr_level: A1
   frequency_rank: 114
+  grammar_scope: null
 - type: word
   text: Femme
   translation: Woman
@@ -807,6 +921,7 @@ fr:
   example_translation: She is an elegant woman.
   cefr_level: A1
   frequency_rank: 115
+  grammar_scope: null
 - type: word
   text: Enfant
   translation: Child
@@ -814,6 +929,7 @@ fr:
   example_translation: The child plays in the garden.
   cefr_level: A1
   frequency_rank: 116
+  grammar_scope: null
 - type: word
   text: Stylo
   translation: Pen
@@ -821,6 +937,7 @@ fr:
   example_translation: I need a pen to write.
   cefr_level: A1
   frequency_rank: 117
+  grammar_scope: null
 - type: word
   text: Table
   translation: Table
@@ -828,6 +945,7 @@ fr:
   example_translation: Put the plates on the table.
   cefr_level: A1
   frequency_rank: 118
+  grammar_scope: null
 - type: word
   text: Chaise
   translation: Chair
@@ -835,6 +953,7 @@ fr:
   example_translation: Sit on this chair.
   cefr_level: A1
   frequency_rank: 119
+  grammar_scope: null
 - type: word
   text: Clé
   translation: Key
@@ -842,6 +961,7 @@ fr:
   example_translation: Where is my car key?
   cefr_level: A1
   frequency_rank: 120
+  grammar_scope: null
 - type: word
   text: Argent
   translation: Money / Silver
@@ -849,6 +969,7 @@ fr:
   example_translation: I have money in my wallet.
   cefr_level: A1
   frequency_rank: 121
+  grammar_scope: null
 - type: word
   text: Hôtel
   translation: Hotel
@@ -856,6 +977,7 @@ fr:
   example_translation: We are sleeping at the hotel tonight.
   cefr_level: A1
   frequency_rank: 122
+  grammar_scope: null
 - type: word
   text: Restaurant
   translation: Restaurant
@@ -863,6 +985,7 @@ fr:
   example_translation: Let's go eat at the restaurant.
   cefr_level: A1
   frequency_rank: 123
+  grammar_scope: null
 - type: word
   text: Thé
   translation: Tea
@@ -870,6 +993,7 @@ fr:
   example_translation: I have tea in the morning.
   cefr_level: A1
   frequency_rank: 124
+  grammar_scope: null
 - type: word
   text: Jus
   translation: Juice
@@ -877,6 +1001,7 @@ fr:
   example_translation: Do you want an orange juice?
   cefr_level: A1
   frequency_rank: 125
+  grammar_scope: null
 - type: word
   text: Fruit
   translation: Fruit
@@ -884,6 +1009,7 @@ fr:
   example_translation: I like to eat fresh fruit.
   cefr_level: A1
   frequency_rank: 126
+  grammar_scope: null
 - type: word
   text: Légume
   translation: Vegetable
@@ -891,6 +1017,7 @@ fr:
   example_translation: Vegetables are good for health.
   cefr_level: A1
   frequency_rank: 127
+  grammar_scope: null
 - type: word
   text: Ici
   translation: Here
@@ -898,6 +1025,7 @@ fr:
   example_translation: Come here, please.
   cefr_level: A1
   frequency_rank: 128
+  grammar_scope: null
 - type: collocation
   text: Avoir chaud
   translation: To be hot (feeling hot)
@@ -905,6 +1033,7 @@ fr:
   example_translation: I'm hot, open the window.
   cefr_level: A1
   frequency_rank: 129
+  grammar_scope: null
 - type: collocation
   text: Avoir froid
   translation: To be cold (feeling cold)
@@ -912,6 +1041,7 @@ fr:
   example_translation: He's cold, he puts on a sweater.
   cefr_level: A1
   frequency_rank: 130
+  grammar_scope: null
 - type: collocation
   text: Avoir sommeil
   translation: To be sleepy
@@ -919,6 +1049,7 @@ fr:
   example_translation: It's late, I'm sleepy.
   cefr_level: A1
   frequency_rank: 131
+  grammar_scope: null
 - type: collocation
   text: Avoir peur
   translation: To be scared
@@ -926,6 +1057,7 @@ fr:
   example_translation: Don't be scared, I'm here.
   cefr_level: A1
   frequency_rank: 132
+  grammar_scope: null
 - type: collocation
   text: Faire du vélo
   translation: To cycle / To ride a bike
@@ -933,6 +1065,7 @@ fr:
   example_translation: We like to cycle on weekends.
   cefr_level: A1
   frequency_rank: 133
+  grammar_scope: partitive article
 - type: collocation
   text: Faire du shopping
   translation: To go shopping
@@ -940,6 +1073,7 @@ fr:
   example_translation: I'm going shopping this afternoon.
   cefr_level: A1
   frequency_rank: 134
+  grammar_scope: partitive article
 - type: collocation
   text: Prendre le petit-déjeuner
   translation: To have breakfast
@@ -947,6 +1081,7 @@ fr:
   example_translation: I have breakfast at 7 AM.
   cefr_level: A1
   frequency_rank: 135
+  grammar_scope: null
 - type: collocation
   text: Aller au lit
   translation: To go to bed
@@ -954,6 +1089,7 @@ fr:
   example_translation: I am tired, I'm going to go to bed.
   cefr_level: A1
   frequency_rank: 136
+  grammar_scope: prepositions
 - type: collocation
   text: Se lever
   translation: To get up
@@ -961,6 +1097,7 @@ fr:
   example_translation: I get up early every day.
   cefr_level: A1
   frequency_rank: 137
+  grammar_scope: reflexive verbs
 - type: collocation
   text: S'appeler
   translation: To be called / To be named
@@ -968,6 +1105,7 @@ fr:
   example_translation: What is your name? (formal)
   cefr_level: A1
   frequency_rank: 138
+  grammar_scope: reflexive verbs
 - type: verb_form
   text: Je regarde
   translation: I watch / I look at
@@ -975,6 +1113,7 @@ fr:
   example_translation: I am watching a movie.
   cefr_level: A1
   frequency_rank: 139
+  grammar_scope: present tense
 - type: verb_form
   text: J'aime
   translation: I like / I love
@@ -982,6 +1121,7 @@ fr:
   example_translation: I like chocolate.
   cefr_level: A1
   frequency_rank: 140
+  grammar_scope: present tense
 - type: verb_form
   text: Je déteste
   translation: I hate
@@ -989,6 +1129,7 @@ fr:
   example_translation: I hate the cold.
   cefr_level: A1
   frequency_rank: 141
+  grammar_scope: present tense
 - type: verb_form
   text: Je travaille
   translation: I work
@@ -996,6 +1137,7 @@ fr:
   example_translation: I work in Paris.
   cefr_level: A1
   frequency_rank: 142
+  grammar_scope: present tense
 - type: verb_form
   text: J'étudie
   translation: I study
@@ -1003,6 +1145,7 @@ fr:
   example_translation: I study French.
   cefr_level: A1
   frequency_rank: 143
+  grammar_scope: present tense
 - type: verb_form
   text: J'achète
   translation: I buy
@@ -1010,6 +1153,7 @@ fr:
   example_translation: I buy bread every day.
   cefr_level: A1
   frequency_rank: 144
+  grammar_scope: present tense
 - type: verb_form
   text: Je viens
   translation: I come
@@ -1017,6 +1161,7 @@ fr:
   example_translation: I come from France.
   cefr_level: A1
   frequency_rank: 145
+  grammar_scope: present tense
 - type: sentence_pattern
   text: Est-ce que... ?
   translation: Is it that...? (Question marker)
@@ -1024,6 +1169,7 @@ fr:
   example_translation: Do you speak English?
   cefr_level: A1
   frequency_rank: 146
+  grammar_scope: question formation
 - type: sentence_pattern
   text: Comment allez-vous ?
   translation: How are you? (formal)
@@ -1031,6 +1177,7 @@ fr:
   example_translation: Hello, how are you?
   cefr_level: A1
   frequency_rank: 147
+  grammar_scope: question formation
 - type: sentence_pattern
   text: Quel âge avez-vous ?
   translation: How old are you? (formal)
@@ -1038,6 +1185,7 @@ fr:
   example_translation: How old are you, Madam?
   cefr_level: A1
   frequency_rank: 148
+  grammar_scope: question formation
 - type: sentence_pattern
   text: Je m'appelle...
   translation: My name is...
@@ -1045,6 +1193,7 @@ fr:
   example_translation: Hello, my name is Paul.
   cefr_level: A1
   frequency_rank: 149
+  grammar_scope: reflexive verbs
 - type: sentence_pattern
   text: C'est combien ?
   translation: How much is it?
@@ -1052,6 +1201,7 @@ fr:
   example_translation: This book, how much is it?
   cefr_level: A1
   frequency_rank: 150
+  grammar_scope: question formation
 - type: word
   text: Vous
   translation: You (plural/formal)
@@ -1059,6 +1209,7 @@ fr:
   example_translation: Do you speak French?
   cefr_level: A1
   frequency_rank: 151
+  grammar_scope: null
 - type: word
   text: Ils
   translation: They (masculine)
@@ -1066,6 +1217,7 @@ fr:
   example_translation: They are my friends.
   cefr_level: A1
   frequency_rank: 152
+  grammar_scope: null
 - type: word
   text: Elles
   translation: They (feminine)
@@ -1073,6 +1225,7 @@ fr:
   example_translation: They are eating an apple.
   cefr_level: A1
   frequency_rank: 153
+  grammar_scope: null
 - type: word
   text: Six
   translation: Six
@@ -1080,6 +1233,7 @@ fr:
   example_translation: I have six pens.
   cefr_level: A1
   frequency_rank: 154
+  grammar_scope: null
 - type: word
   text: Sept
   translation: Seven
@@ -1087,6 +1241,7 @@ fr:
   example_translation: He is seven years old.
   cefr_level: A1
   frequency_rank: 155
+  grammar_scope: null
 - type: word
   text: Huit
   translation: Eight
@@ -1094,6 +1249,7 @@ fr:
   example_translation: We have eight books.
   cefr_level: A1
   frequency_rank: 156
+  grammar_scope: null
 - type: word
   text: Neuf
   translation: Nine
@@ -1101,6 +1257,7 @@ fr:
   example_translation: She has nine cats.
   cefr_level: A1
   frequency_rank: 157
+  grammar_scope: null
 - type: word
   text: Mois
   translation: Month
@@ -1108,6 +1265,7 @@ fr:
   example_translation: There are twelve months in a year.
   cefr_level: A1
   frequency_rank: 158
+  grammar_scope: null
 - type: word
   text: Jeudi
   translation: Thursday
@@ -1115,6 +1273,7 @@ fr:
   example_translation: Today is Thursday.
   cefr_level: A1
   frequency_rank: 159
+  grammar_scope: null
 - type: word
   text: Vendredi
   translation: Friday
@@ -1122,6 +1281,7 @@ fr:
   example_translation: I work until Friday.
   cefr_level: A1
   frequency_rank: 160
+  grammar_scope: null
 - type: word
   text: Samedi
   translation: Saturday
@@ -1129,6 +1289,7 @@ fr:
   example_translation: We are going to the market on Saturday.
   cefr_level: A1
   frequency_rank: 161
+  grammar_scope: null
 - type: word
   text: Minute
   translation: Minute
@@ -1136,6 +1297,7 @@ fr:
   example_translation: Wait one minute, please.
   cefr_level: A1
   frequency_rank: 162
+  grammar_scope: null
 - type: word
   text: Téléphone
   translation: Telephone
@@ -1143,6 +1305,7 @@ fr:
   example_translation: My phone is on the table.
   cefr_level: A1
   frequency_rank: 163
+  grammar_scope: null
 - type: word
   text: Ordinateur
   translation: Computer
@@ -1150,6 +1313,7 @@ fr:
   example_translation: I use my computer for work.
   cefr_level: A1
   frequency_rank: 164
+  grammar_scope: null
 - type: word
   text: Sac
   translation: Bag
@@ -1157,6 +1321,7 @@ fr:
   example_translation: Where is my bag?
   cefr_level: A1
   frequency_rank: 165
+  grammar_scope: null
 - type: word
   text: Fenêtre
   translation: Window
@@ -1164,6 +1329,7 @@ fr:
   example_translation: The window is open.
   cefr_level: A1
   frequency_rank: 166
+  grammar_scope: null
 - type: word
   text: Dîner
   translation: Dinner (meal)
@@ -1171,6 +1337,7 @@ fr:
   example_translation: We eat dinner at seven o'clock.
   cefr_level: A1
   frequency_rank: 167
+  grammar_scope: null
 - type: word
   text: Goûter
   translation: Snack (noun)
@@ -1178,6 +1345,7 @@ fr:
   example_translation: The children have a snack in the afternoon.
   cefr_level: A1
   frequency_rank: 168
+  grammar_scope: null
 - type: word
   text: Beau
   translation: Beautiful (masculine)
@@ -1185,6 +1353,7 @@ fr:
   example_translation: It's a beautiful day.
   cefr_level: A1
   frequency_rank: 169
+  grammar_scope: null
 - type: word
   text: Belle
   translation: Beautiful (feminine)
@@ -1192,6 +1361,7 @@ fr:
   example_translation: She is very beautiful.
   cefr_level: A1
   frequency_rank: 170
+  grammar_scope: null
 - type: word
   text: Bon
   translation: Good (masculine)
@@ -1199,6 +1369,7 @@ fr:
   example_translation: This book is good.
   cefr_level: A1
   frequency_rank: 171
+  grammar_scope: null
 - type: word
   text: Bonne
   translation: Good (feminine)
@@ -1206,6 +1377,7 @@ fr:
   example_translation: I have a good idea.
   cefr_level: A1
   frequency_rank: 172
+  grammar_scope: null
 - type: word
   text: Content(e)
   translation: Happy, pleased
@@ -1213,6 +1385,7 @@ fr:
   example_translation: I am happy to see you.
   cefr_level: A1
   frequency_rank: 173
+  grammar_scope: null
 - type: word
   text: Fatigué(e)
   translation: Tired
@@ -1220,6 +1393,7 @@ fr:
   example_translation: I am tired after work.
   cefr_level: A1
   frequency_rank: 174
+  grammar_scope: null
 - type: word
   text: Jeune
   translation: Young
@@ -1227,6 +1401,7 @@ fr:
   example_translation: She is very young.
   cefr_level: A1
   frequency_rank: 175
+  grammar_scope: null
 - type: word
   text: Gentil(le)
   translation: Kind, nice
@@ -1234,6 +1409,7 @@ fr:
   example_translation: He is very kind.
   cefr_level: A1
   frequency_rank: 176
+  grammar_scope: null
 - type: word
   text: Adresse
   translation: Address
@@ -1241,6 +1417,7 @@ fr:
   example_translation: What is your address?
   cefr_level: A1
   frequency_rank: 177
+  grammar_scope: null
 - type: word
   text: Métro
   translation: Subway, metro
@@ -1248,6 +1425,7 @@ fr:
   example_translation: I take the subway to go to work.
   cefr_level: A1
   frequency_rank: 178
+  grammar_scope: null
 - type: collocation
   text: De rien
   translation: You're welcome
@@ -1255,6 +1433,7 @@ fr:
   example_translation: Thanks for the gift. - You're welcome!
   cefr_level: A1
   frequency_rank: 179
+  grammar_scope: prepositions
 - type: collocation
   text: À bientôt
   translation: See you soon
@@ -1262,6 +1441,7 @@ fr:
   example_translation: Goodbye, see you soon!
   cefr_level: A1
   frequency_rank: 180
+  grammar_scope: prepositions
 - type: collocation
   text: Bonne nuit
   translation: Good night
@@ -1269,6 +1449,7 @@ fr:
   example_translation: I'm going to sleep. Good night!
   cefr_level: A1
   frequency_rank: 181
+  grammar_scope: adjective agreement
 - type: collocation
   text: La gare
   translation: The train station
@@ -1276,6 +1457,7 @@ fr:
   example_translation: I am going to the train station.
   cefr_level: A1
   frequency_rank: 182
+  grammar_scope: null
 - type: collocation
   text: La poste
   translation: The post office
@@ -1283,6 +1465,7 @@ fr:
   example_translation: Where is the post office?
   cefr_level: A1
   frequency_rank: 183
+  grammar_scope: null
 - type: collocation
   text: Le supermarché
   translation: The supermarket
@@ -1290,6 +1473,7 @@ fr:
   example_translation: I'm going to the supermarket to buy some fruit.
   cefr_level: A1
   frequency_rank: 184
+  grammar_scope: null
 - type: collocation
   text: À gauche
   translation: To the left
@@ -1297,6 +1481,7 @@ fr:
   example_translation: Turn left after the bakery.
   cefr_level: A1
   frequency_rank: 185
+  grammar_scope: prepositions
 - type: collocation
   text: À droite
   translation: To the right
@@ -1304,6 +1489,7 @@ fr:
   example_translation: The restaurant is on the right.
   cefr_level: A1
   frequency_rank: 186
+  grammar_scope: prepositions
 - type: collocation
   text: Tout droit
   translation: Straight ahead
@@ -1311,6 +1497,7 @@ fr:
   example_translation: Go straight ahead, it's the main street.
   cefr_level: A1
   frequency_rank: 187
+  grammar_scope: null
 - type: collocation
   text: Faire la fête
   translation: To party
@@ -1318,6 +1505,7 @@ fr:
   example_translation: We are going to party tonight.
   cefr_level: A1
   frequency_rank: 188
+  grammar_scope: null
 - type: verb_form
   text: Nous sommes
   translation: We are
@@ -1325,6 +1513,7 @@ fr:
   example_translation: We are French.
   cefr_level: A1
   frequency_rank: 189
+  grammar_scope: present tense
 - type: verb_form
   text: Vous êtes
   translation: You are (plural/formal)
@@ -1332,6 +1521,7 @@ fr:
   example_translation: Where are you from?
   cefr_level: A1
   frequency_rank: 190
+  grammar_scope: present tense
 - type: verb_form
   text: Ils sont
   translation: They are (masculine)
@@ -1339,6 +1529,7 @@ fr:
   example_translation: They are in the garden.
   cefr_level: A1
   frequency_rank: 191
+  grammar_scope: present tense
 - type: verb_form
   text: Nous avons
   translation: We have
@@ -1346,6 +1537,7 @@ fr:
   example_translation: We have a cat and a dog.
   cefr_level: A1
   frequency_rank: 192
+  grammar_scope: present tense
 - type: verb_form
   text: Vous avez
   translation: You have (plural/formal)
@@ -1353,6 +1545,7 @@ fr:
   example_translation: Do you have any questions?
   cefr_level: A1
   frequency_rank: 193
+  grammar_scope: present tense
 - type: verb_form
   text: Ils ont
   translation: They have
@@ -1360,6 +1553,7 @@ fr:
   example_translation: They have a lot of work.
   cefr_level: A1
   frequency_rank: 194
+  grammar_scope: present tense
 - type: verb_form
   text: Il faut
   translation: It is necessary, one must
@@ -1367,6 +1561,7 @@ fr:
   example_translation: It is necessary to leave now.
   cefr_level: A1
   frequency_rank: 195
+  grammar_scope: present tense
 - type: sentence_pattern
   text: Quand...?
   translation: When...?
@@ -1374,6 +1569,7 @@ fr:
   example_translation: When is your birthday?
   cefr_level: A1
   frequency_rank: 196
+  grammar_scope: question formation
 - type: sentence_pattern
   text: Pourquoi...?
   translation: Why...?
@@ -1381,6 +1577,7 @@ fr:
   example_translation: Why are you sad?
   cefr_level: A1
   frequency_rank: 197
+  grammar_scope: question formation
 - type: sentence_pattern
   text: Quel/Quelle...?
   translation: Which/What...?
@@ -1388,6 +1585,7 @@ fr:
   example_translation: Which color do you prefer?
   cefr_level: A1
   frequency_rank: 198
+  grammar_scope: question formation
 - type: sentence_pattern
   text: C'est + adjective
   translation: It's + adjective
@@ -1395,6 +1593,7 @@ fr:
   example_translation: It's difficult.
   cefr_level: A1
   frequency_rank: 199
+  grammar_scope: adjective agreement
 - type: sentence_pattern
   text: J'aimerais + verb (infinitive)
   translation: I would like to + verb
@@ -1402,6 +1601,7 @@ fr:
   example_translation: I would like to visit Paris.
   cefr_level: A1
   frequency_rank: 200
+  grammar_scope: present conditional
 - type: word
   text: Midi
   translation: Noon
@@ -1409,6 +1609,7 @@ fr:
   example_translation: We eat at noon.
   cefr_level: A1
   frequency_rank: 201
+  grammar_scope: null
 - type: word
   text: Minuit
   translation: Midnight
@@ -1416,6 +1617,7 @@ fr:
   example_translation: The store closes at midnight.
   cefr_level: A1
   frequency_rank: 202
+  grammar_scope: null
 - type: word
   text: Professeur
   translation: Teacher
@@ -1423,6 +1625,7 @@ fr:
   example_translation: My teacher is very kind.
   cefr_level: A1
   frequency_rank: 203
+  grammar_scope: null
 - type: word
   text: Étudiant(e)
   translation: Student
@@ -1430,6 +1633,7 @@ fr:
   example_translation: I am a French student.
   cefr_level: A1
   frequency_rank: 204
+  grammar_scope: null
 - type: word
   text: Docteur
   translation: Doctor
@@ -1437,6 +1641,7 @@ fr:
   example_translation: The doctor is at work.
   cefr_level: A1
   frequency_rank: 205
+  grammar_scope: null
 - type: word
   text: Hôpital
   translation: Hospital
@@ -1444,6 +1649,7 @@ fr:
   example_translation: The hospital is far from here.
   cefr_level: A1
   frequency_rank: 206
+  grammar_scope: null
 - type: word
   text: Boulangerie
   translation: Bakery
@@ -1451,6 +1657,7 @@ fr:
   example_translation: I buy bread at the bakery.
   cefr_level: A1
   frequency_rank: 207
+  grammar_scope: null
 - type: word
   text: Pharmacie
   translation: Pharmacy
@@ -1458,6 +1665,7 @@ fr:
   example_translation: The pharmacy is open.
   cefr_level: A1
   frequency_rank: 208
+  grammar_scope: null
 - type: word
   text: Bus
   translation: Bus
@@ -1465,6 +1673,7 @@ fr:
   example_translation: I take the bus every day.
   cefr_level: A1
   frequency_rank: 209
+  grammar_scope: null
 - type: word
   text: Train
   translation: Train
@@ -1472,6 +1681,7 @@ fr:
   example_translation: The train arrives on time.
   cefr_level: A1
   frequency_rank: 210
+  grammar_scope: null
 - type: word
   text: Avion
   translation: Plane
@@ -1479,6 +1689,7 @@ fr:
   example_translation: We travel by plane.
   cefr_level: A1
   frequency_rank: 211
+  grammar_scope: null
 - type: word
   text: Billet
   translation: Ticket (for travel/event)
@@ -1486,6 +1697,7 @@ fr:
   example_translation: I have a ticket for the concert.
   cefr_level: A1
   frequency_rank: 212
+  grammar_scope: null
 - type: word
   text: Passeport
   translation: Passport
@@ -1493,6 +1705,7 @@ fr:
   example_translation: Where is my passport?
   cefr_level: A1
   frequency_rank: 213
+  grammar_scope: null
 - type: word
   text: Téléphone portable
   translation: Mobile phone
@@ -1500,6 +1713,7 @@ fr:
   example_translation: My mobile phone is new.
   cefr_level: A1
   frequency_rank: 214
+  grammar_scope: null
 - type: word
   text: Cahier
   translation: Notebook
@@ -1507,6 +1721,7 @@ fr:
   example_translation: I have a new blue notebook.
   cefr_level: A1
   frequency_rank: 215
+  grammar_scope: null
 - type: word
   text: Sac à dos
   translation: Backpack
@@ -1514,6 +1729,7 @@ fr:
   example_translation: My backpack is heavy.
   cefr_level: A1
   frequency_rank: 216
+  grammar_scope: null
 - type: word
   text: Vêtements
   translation: Clothes
@@ -1521,6 +1737,7 @@ fr:
   example_translation: I am buying new clothes.
   cefr_level: A1
   frequency_rank: 217
+  grammar_scope: null
 - type: word
   text: Chaussures
   translation: Shoes
@@ -1528,6 +1745,7 @@ fr:
   example_translation: I have nice shoes.
   cefr_level: A1
   frequency_rank: 218
+  grammar_scope: null
 - type: word
   text: Vert
   translation: Green
@@ -1535,6 +1753,7 @@ fr:
   example_translation: I like the color green.
   cefr_level: A1
   frequency_rank: 219
+  grammar_scope: null
 - type: word
   text: Jaune
   translation: Yellow
@@ -1542,6 +1761,7 @@ fr:
   example_translation: The sun is yellow.
   cefr_level: A1
   frequency_rank: 220
+  grammar_scope: null
 - type: word
   text: Noir
   translation: Black
@@ -1549,6 +1769,7 @@ fr:
   example_translation: My cat is black.
   cefr_level: A1
   frequency_rank: 221
+  grammar_scope: null
 - type: word
   text: Riz
   translation: Rice
@@ -1556,6 +1777,7 @@ fr:
   example_translation: I eat rice with fish.
   cefr_level: A1
   frequency_rank: 222
+  grammar_scope: null
 - type: word
   text: Pâtes
   translation: Pasta
@@ -1563,6 +1785,7 @@ fr:
   example_translation: We are eating pasta tonight.
   cefr_level: A1
   frequency_rank: 223
+  grammar_scope: null
 - type: word
   text: Beurre
   translation: Butter
@@ -1570,6 +1793,7 @@ fr:
   example_translation: I put butter on my bread.
   cefr_level: A1
   frequency_rank: 224
+  grammar_scope: null
 - type: word
   text: Œuf
   translation: Egg
@@ -1577,6 +1801,7 @@ fr:
   example_translation: I eat an egg for breakfast.
   cefr_level: A1
   frequency_rank: 225
+  grammar_scope: null
 - type: word
   text: Plage
   translation: Beach
@@ -1584,6 +1809,7 @@ fr:
   example_translation: We are going to the beach.
   cefr_level: A1
   frequency_rank: 226
+  grammar_scope: null
 - type: word
   text: Parc
   translation: Park
@@ -1591,6 +1817,7 @@ fr:
   example_translation: The children are playing in the park.
   cefr_level: A1
   frequency_rank: 227
+  grammar_scope: null
 - type: word
   text: Météo
   translation: Weather
@@ -1598,6 +1825,7 @@ fr:
   example_translation: The weather is good today.
   cefr_level: A1
   frequency_rank: 228
+  grammar_scope: null
 - type: collocation
   text: Bon après-midi
   translation: Good afternoon
@@ -1605,6 +1833,7 @@ fr:
   example_translation: Good afternoon everyone!
   cefr_level: A1
   frequency_rank: 229
+  grammar_scope: null
 - type: collocation
   text: Avec plaisir
   translation: With pleasure / My pleasure
@@ -1612,6 +1841,7 @@ fr:
   example_translation: Thanks for the help. – My pleasure!
   cefr_level: A1
   frequency_rank: 230
+  grammar_scope: prepositions
 - type: collocation
   text: Il fait beau
   translation: The weather is nice / It's sunny
@@ -1619,6 +1849,7 @@ fr:
   example_translation: The weather is nice today, let's go outside.
   cefr_level: A1
   frequency_rank: 231
+  grammar_scope: null
 - type: collocation
   text: Il fait froid
   translation: It's cold (weather)
@@ -1626,6 +1857,7 @@ fr:
   example_translation: It's cold in winter.
   cefr_level: A1
   frequency_rank: 232
+  grammar_scope: null
 - type: collocation
   text: Il fait chaud
   translation: It's hot (weather)
@@ -1633,6 +1865,7 @@ fr:
   example_translation: It's hot in summer.
   cefr_level: A1
   frequency_rank: 233
+  grammar_scope: null
 - type: collocation
   text: Avoir besoin de
   translation: To need
@@ -1640,6 +1873,7 @@ fr:
   example_translation: I need water.
   cefr_level: A1
   frequency_rank: 234
+  grammar_scope: prepositions
 - type: collocation
   text: Pas cher
   translation: Not expensive / Cheap
@@ -1647,6 +1881,7 @@ fr:
   example_translation: This book is cheap.
   cefr_level: A1
   frequency_rank: 235
+  grammar_scope: negation
 - type: collocation
   text: À demain
   translation: See you tomorrow
@@ -1654,6 +1889,7 @@ fr:
   example_translation: I have to leave, see you tomorrow!
   cefr_level: A1
   frequency_rank: 236
+  grammar_scope: prepositions
 - type: collocation
   text: Bonne chance
   translation: Good luck
@@ -1661,6 +1897,7 @@ fr:
   example_translation: Good luck with your exam!
   cefr_level: A1
   frequency_rank: 237
+  grammar_scope: adjective agreement
 - type: collocation
   text: Prendre un taxi
   translation: To take a taxi
@@ -1668,6 +1905,7 @@ fr:
   example_translation: We have to take a taxi.
   cefr_level: A1
   frequency_rank: 238
+  grammar_scope: null
 - type: verb_form
   text: Je dors
   translation: I sleep
@@ -1675,6 +1913,7 @@ fr:
   example_translation: I sleep well at night.
   cefr_level: A1
   frequency_rank: 239
+  grammar_scope: present tense
 - type: verb_form
   text: Tu lis
   translation: You read (informal singular)
@@ -1682,6 +1921,7 @@ fr:
   example_translation: Are you reading a newspaper?
   cefr_level: A1
   frequency_rank: 240
+  grammar_scope: present tense
 - type: verb_form
   text: Il voit
   translation: He sees
@@ -1689,6 +1929,7 @@ fr:
   example_translation: He sees a movie at the cinema.
   cefr_level: A1
   frequency_rank: 241
+  grammar_scope: present tense
 - type: verb_form
   text: Elle attend
   translation: She waits
@@ -1696,6 +1937,7 @@ fr:
   example_translation: She is waiting for the bus.
   cefr_level: A1
   frequency_rank: 242
+  grammar_scope: present tense
 - type: verb_form
   text: Nous habitons
   translation: We live
@@ -1703,6 +1945,7 @@ fr:
   example_translation: We live in Paris.
   cefr_level: A1
   frequency_rank: 243
+  grammar_scope: present tense
 - type: verb_form
   text: Vous comprenez
   translation: You understand (formal / plural)
@@ -1710,6 +1953,7 @@ fr:
   example_translation: Do you understand English?
   cefr_level: A1
   frequency_rank: 244
+  grammar_scope: present tense
 - type: verb_form
   text: Ils disent
   translation: They say (masc. / mixed)
@@ -1717,6 +1961,7 @@ fr:
   example_translation: They say hello.
   cefr_level: A1
   frequency_rank: 245
+  grammar_scope: present tense
 - type: verb_form
   text: Elles écrivent
   translation: They write (fem.)
@@ -1724,6 +1969,7 @@ fr:
   example_translation: They are writing a letter.
   cefr_level: A1
   frequency_rank: 246
+  grammar_scope: present tense
 - type: sentence_pattern
   text: Comment est...?
   translation: What is... like?
@@ -1731,6 +1977,7 @@ fr:
   example_translation: What is your city like?
   cefr_level: A1
   frequency_rank: 247
+  grammar_scope: question formation
 - type: sentence_pattern
   text: Je cherche + noun.
   translation: I am looking for + noun.
@@ -1738,6 +1985,7 @@ fr:
   example_translation: I am looking for the train station.
   cefr_level: A1
   frequency_rank: 248
+  grammar_scope: present tense
 - type: sentence_pattern
   text: Je ne sais pas.
   translation: I don't know.
@@ -1745,6 +1993,7 @@ fr:
   example_translation: I don't know the answer.
   cefr_level: A1
   frequency_rank: 249
+  grammar_scope: negation
 - type: sentence_pattern
   text: Où sont les toilettes ?
   translation: Where are the toilets?
@@ -1752,6 +2001,7 @@ fr:
   example_translation: Excuse me, where are the toilets?
   cefr_level: A1
   frequency_rank: 250
+  grammar_scope: question formation
 - type: word
   text: Bonsoir
   translation: Good evening
@@ -1759,6 +2009,7 @@ fr:
   example_translation: Good evening, how are you?
   cefr_level: A1
   frequency_rank: 251
+  grammar_scope: null
 - type: word
   text: Mademoiselle
   translation: Miss
@@ -1766,6 +2017,7 @@ fr:
   example_translation: Excuse me, Miss.
   cefr_level: A1
   frequency_rank: 252
+  grammar_scope: null
 - type: word
   text: Désolé(e)
   translation: Sorry
@@ -1773,6 +2025,7 @@ fr:
   example_translation: I am sorry for the delay.
   cefr_level: A1
   frequency_rank: 253
+  grammar_scope: null
 - type: word
   text: S'il te plaît
   translation: Please (informal)
@@ -1780,6 +2033,7 @@ fr:
   example_translation: Give me your book, please.
   cefr_level: A1
   frequency_rank: 254
+  grammar_scope: null
 - type: word
   text: Peut-être
   translation: Maybe
@@ -1787,6 +2041,7 @@ fr:
   example_translation: Maybe I will come tomorrow.
   cefr_level: A1
   frequency_rank: 255
+  grammar_scope: null
 - type: word
   text: Là
   translation: There
@@ -1794,6 +2049,7 @@ fr:
   example_translation: My bag is there, on the table.
   cefr_level: A1
   frequency_rank: 256
+  grammar_scope: null
 - type: word
   text: Après
   translation: After
@@ -1801,6 +2057,7 @@ fr:
   example_translation: I will work after lunch.
   cefr_level: A1
   frequency_rank: 257
+  grammar_scope: null
 - type: word
   text: Toujours
   translation: Always
@@ -1808,6 +2065,7 @@ fr:
   example_translation: She is always late.
   cefr_level: A1
   frequency_rank: 258
+  grammar_scope: null
 - type: word
   text: Jamais
   translation: Never
@@ -1815,6 +2073,7 @@ fr:
   example_translation: I never eat meat.
   cefr_level: A1
   frequency_rank: 259
+  grammar_scope: null
 - type: word
   text: Souvent
   translation: Often
@@ -1822,6 +2081,7 @@ fr:
   example_translation: We often go to the park.
   cefr_level: A1
   frequency_rank: 260
+  grammar_scope: null
 - type: word
   text: Très
   translation: Very
@@ -1829,6 +2089,7 @@ fr:
   example_translation: It's very good!
   cefr_level: A1
   frequency_rank: 261
+  grammar_scope: null
 - type: word
   text: Beaucoup
   translation: A lot, much
@@ -1836,6 +2097,7 @@ fr:
   example_translation: I like reading a lot.
   cefr_level: A1
   frequency_rank: 262
+  grammar_scope: null
 - type: word
   text: Un peu
   translation: A little
@@ -1843,6 +2105,7 @@ fr:
   example_translation: I speak a little French.
   cefr_level: A1
   frequency_rank: 263
+  grammar_scope: null
 - type: word
   text: Nouveau/Nouvelle
   translation: New
@@ -1850,6 +2113,7 @@ fr:
   example_translation: I have a new car.
   cefr_level: A1
   frequency_rank: 264
+  grammar_scope: null
 - type: word
   text: Vieux/Vieille
   translation: Old
@@ -1857,6 +2121,7 @@ fr:
   example_translation: He lives in an old house.
   cefr_level: A1
   frequency_rank: 265
+  grammar_scope: null
 - type: word
   text: Facile
   translation: Easy
@@ -1864,6 +2129,7 @@ fr:
   example_translation: This lesson is easy.
   cefr_level: A1
   frequency_rank: 266
+  grammar_scope: null
 - type: word
   text: Difficile
   translation: Difficult
@@ -1871,6 +2137,7 @@ fr:
   example_translation: It's a difficult exercise.
   cefr_level: A1
   frequency_rank: 267
+  grammar_scope: null
 - type: word
   text: Mauvais(e)
   translation: Bad
@@ -1878,6 +2145,7 @@ fr:
   example_translation: I had a bad day.
   cefr_level: A1
   frequency_rank: 268
+  grammar_scope: null
 - type: word
   text: Frais/Fraîche
   translation: Fresh/Cool
@@ -1885,6 +2153,7 @@ fr:
   example_translation: I like fresh water.
   cefr_level: A1
   frequency_rank: 269
+  grammar_scope: null
 - type: word
   text: Blanc
   translation: White
@@ -1892,6 +2161,7 @@ fr:
   example_translation: I have a white cat.
   cefr_level: A1
   frequency_rank: 270
+  grammar_scope: null
 - type: word
   text: Marron
   translation: Brown
@@ -1899,6 +2169,7 @@ fr:
   example_translation: Her eyes are brown.
   cefr_level: A1
   frequency_rank: 271
+  grammar_scope: null
 - type: word
   text: Gris
   translation: Grey
@@ -1906,6 +2177,7 @@ fr:
   example_translation: The sky is grey today.
   cefr_level: A1
   frequency_rank: 272
+  grammar_scope: null
 - type: word
   text: Cuisine
   translation: Kitchen
@@ -1913,6 +2185,7 @@ fr:
   example_translation: The kitchen is big and modern.
   cefr_level: A1
   frequency_rank: 273
+  grammar_scope: null
 - type: word
   text: Salle de bain
   translation: Bathroom
@@ -1920,6 +2193,7 @@ fr:
   example_translation: There is a bathroom upstairs.
   cefr_level: A1
   frequency_rank: 274
+  grammar_scope: null
 - type: word
   text: Lit
   translation: Bed
@@ -1927,6 +2201,7 @@ fr:
   example_translation: I'm tired, I'm going to bed.
   cefr_level: A1
   frequency_rank: 275
+  grammar_scope: null
 - type: word
   text: Journal
   translation: Newspaper
@@ -1934,6 +2209,7 @@ fr:
   example_translation: I read the newspaper in the morning.
   cefr_level: A1
   frequency_rank: 276
+  grammar_scope: null
 - type: word
   text: Vélo
   translation: Bicycle
@@ -1941,6 +2217,7 @@ fr:
   example_translation: I like to ride my bike on weekends.
   cefr_level: A1
   frequency_rank: 277
+  grammar_scope: null
 - type: word
   text: Monnaie
   translation: Change, currency
@@ -1948,6 +2225,7 @@ fr:
   example_translation: Do you have any change for the bus?
   cefr_level: A1
   frequency_rank: 278
+  grammar_scope: null
 - type: collocation
   text: Faire une promenade
   translation: To go for a walk
@@ -1955,6 +2233,7 @@ fr:
   example_translation: We are going to go for a walk in the park.
   cefr_level: A1
   frequency_rank: 279
+  grammar_scope: null
 - type: collocation
   text: Prendre un verre
   translation: To have a drink
@@ -1962,6 +2241,7 @@ fr:
   example_translation: Shall we have a drink after work?
   cefr_level: A1
   frequency_rank: 280
+  grammar_scope: null
 - type: collocation
   text: Parler une langue
   translation: To speak a language
@@ -1969,6 +2249,7 @@ fr:
   example_translation: I want to learn to speak a new language.
   cefr_level: A1
   frequency_rank: 281
+  grammar_scope: null
 - type: collocation
   text: Écouter la radio
   translation: To listen to the radio
@@ -1976,6 +2257,7 @@ fr:
   example_translation: I listen to the radio every morning.
   cefr_level: A1
   frequency_rank: 282
+  grammar_scope: null
 - type: collocation
   text: Regarder un film
   translation: To watch a movie
@@ -1983,6 +2265,7 @@ fr:
   example_translation: Tonight, we are going to watch a movie.
   cefr_level: A1
   frequency_rank: 283
+  grammar_scope: null
 - type: collocation
   text: Aller au cinéma
   translation: To go to the cinema
@@ -1990,6 +2273,7 @@ fr:
   example_translation: Do you want to go to the cinema this weekend?
   cefr_level: A1
   frequency_rank: 284
+  grammar_scope: null
 - type: collocation
   text: Avoir de la chance
   translation: To be lucky
@@ -1997,6 +2281,7 @@ fr:
   example_translation: You are lucky to have such good friends.
   cefr_level: A1
   frequency_rank: 285
+  grammar_scope: null
 - type: collocation
   text: Demander son chemin
   translation: To ask for directions
@@ -2004,6 +2289,7 @@ fr:
   example_translation: I need to ask for directions to go to the station.
   cefr_level: A1
   frequency_rank: 286
+  grammar_scope: null
 - type: collocation
   text: Faire des photos
   translation: To take photos
@@ -2011,6 +2297,7 @@ fr:
   example_translation: I like to take photos of my trips.
   cefr_level: A1
   frequency_rank: 287
+  grammar_scope: null
 - type: collocation
   text: Rendre visite à
   translation: To visit (a person)
@@ -2018,6 +2305,7 @@ fr:
   example_translation: I'm going to visit my grandmother on Sunday.
   cefr_level: A1
   frequency_rank: 288
+  grammar_scope: null
 - type: verb_form
   text: Il habite
   translation: He lives
@@ -2025,6 +2313,7 @@ fr:
   example_translation: He has lived in Paris for two years.
   cefr_level: A1
   frequency_rank: 289
+  grammar_scope: present tense
 - type: verb_form
   text: Je comprends
   translation: I understand
@@ -2032,6 +2321,7 @@ fr:
   example_translation: I understand a little Spanish.
   cefr_level: A1
   frequency_rank: 290
+  grammar_scope: present tense
 - type: verb_form
   text: Tu dis
   translation: You say (informal)
@@ -2039,6 +2329,7 @@ fr:
   example_translation: What are you saying?
   cefr_level: A1
   frequency_rank: 291
+  grammar_scope: present tense
 - type: verb_form
   text: Nous écrivons
   translation: We write
@@ -2046,6 +2337,7 @@ fr:
   example_translation: We are writing a letter to our parents.
   cefr_level: A1
   frequency_rank: 292
+  grammar_scope: present tense
 - type: verb_form
   text: Il lit
   translation: He reads
@@ -2053,6 +2345,7 @@ fr:
   example_translation: He reads a book every evening.
   cefr_level: A1
   frequency_rank: 293
+  grammar_scope: present tense
 - type: verb_form
   text: Je vois
   translation: I see
@@ -2060,6 +2353,7 @@ fr:
   example_translation: I see my friend at the cafe.
   cefr_level: A1
   frequency_rank: 294
+  grammar_scope: present tense
 - type: verb_form
   text: Nous pouvons
   translation: We can
@@ -2067,6 +2361,7 @@ fr:
   example_translation: We can help you.
   cefr_level: A1
   frequency_rank: 295
+  grammar_scope: present tense
 - type: sentence_pattern
   text: J'ai envie de + noun/infinitive
   translation: I feel like/I want to
@@ -2074,6 +2369,7 @@ fr:
   example_translation: I feel like an ice cream. I want to travel.
   cefr_level: A1
   frequency_rank: 296
+  grammar_scope: prepositions
 - type: sentence_pattern
   text: Quel est votre nom ?
   translation: What is your name? (formal)
@@ -2081,6 +2377,7 @@ fr:
   example_translation: What is your name, please?
   cefr_level: A1
   frequency_rank: 297
+  grammar_scope: question formation
 - type: sentence_pattern
   text: Où habitez-vous ?
   translation: Where do you live? (formal)
@@ -2088,6 +2385,7 @@ fr:
   example_translation: Where do you live in Paris?
   cefr_level: A1
   frequency_rank: 298
+  grammar_scope: question formation
 - type: sentence_pattern
   text: J'aime bien + noun/infinitive
   translation: I quite like/I like to
@@ -2095,6 +2393,7 @@ fr:
   example_translation: I quite like tea. I like to swim.
   cefr_level: A1
   frequency_rank: 299
+  grammar_scope: verb + infinitive
 - type: sentence_pattern
   text: Pouvez-vous répéter ?
   translation: Can you repeat? (formal)
@@ -2102,6 +2401,7 @@ fr:
   example_translation: Can you repeat, please? I didn't understand.
   cefr_level: A1
   frequency_rank: 300
+  grammar_scope: question formation
 - type: word
   text: Chocolat
   translation: Chocolate
@@ -2109,6 +2409,7 @@ fr:
   example_translation: I like dark chocolate.
   cefr_level: A1
   frequency_rank: 301
+  grammar_scope: null
 - type: word
   text: Sucre
   translation: Sugar
@@ -2116,6 +2417,7 @@ fr:
   example_translation: Do you want sugar in your coffee?
   cefr_level: A1
   frequency_rank: 302
+  grammar_scope: null
 - type: word
   text: Sel
   translation: Salt
@@ -2123,6 +2425,7 @@ fr:
   example_translation: Pass me the salt, please.
   cefr_level: A1
   frequency_rank: 303
+  grammar_scope: null
 - type: word
   text: Poivre
   translation: Pepper
@@ -2130,6 +2433,7 @@ fr:
   example_translation: There is pepper on the table.
   cefr_level: A1
   frequency_rank: 304
+  grammar_scope: null
 - type: word
   text: Jupe
   translation: Skirt
@@ -2137,6 +2441,7 @@ fr:
   example_translation: She is wearing a pretty skirt.
   cefr_level: A1
   frequency_rank: 305
+  grammar_scope: null
 - type: word
   text: Pantalon
   translation: Trousers / Pants
@@ -2144,6 +2449,7 @@ fr:
   example_translation: I bought new trousers.
   cefr_level: A1
   frequency_rank: 306
+  grammar_scope: null
 - type: word
   text: Chemise
   translation: Shirt
@@ -2151,6 +2457,7 @@ fr:
   example_translation: He puts on a blue shirt.
   cefr_level: A1
   frequency_rank: 307
+  grammar_scope: null
 - type: word
   text: Robe
   translation: Dress
@@ -2158,6 +2465,7 @@ fr:
   example_translation: This dress is very elegant.
   cefr_level: A1
   frequency_rank: 308
+  grammar_scope: null
 - type: word
   text: Chapeau
   translation: Hat
@@ -2165,6 +2473,7 @@ fr:
   example_translation: She has a big sun hat.
   cefr_level: A1
   frequency_rank: 309
+  grammar_scope: null
 - type: word
   text: Magasin
   translation: Shop / Store
@@ -2172,6 +2481,7 @@ fr:
   example_translation: There is a new shop here.
   cefr_level: A1
   frequency_rank: 310
+  grammar_scope: null
 - type: word
   text: Musée
   translation: Museum
@@ -2179,6 +2489,7 @@ fr:
   example_translation: We are visiting the museum tomorrow.
   cefr_level: A1
   frequency_rank: 311
+  grammar_scope: null
 - type: word
   text: Banque
   translation: Bank
@@ -2186,6 +2497,7 @@ fr:
   example_translation: The bank is open on Saturday.
   cefr_level: A1
   frequency_rank: 312
+  grammar_scope: null
 - type: word
   text: Piscine
   translation: Swimming pool
@@ -2193,6 +2505,7 @@ fr:
   example_translation: I like to swim at the swimming pool.
   cefr_level: A1
   frequency_rank: 313
+  grammar_scope: null
 - type: word
   text: Aéroport
   translation: Airport
@@ -2200,6 +2513,7 @@ fr:
   example_translation: We are going to the airport.
   cefr_level: A1
   frequency_rank: 314
+  grammar_scope: null
 - type: word
   text: Bateau
   translation: Boat
@@ -2207,6 +2521,7 @@ fr:
   example_translation: He takes the boat to the island.
   cefr_level: A1
   frequency_rank: 315
+  grammar_scope: null
 - type: word
   text: Moto
   translation: Motorbike
@@ -2214,6 +2529,7 @@ fr:
   example_translation: My brother has a new motorbike.
   cefr_level: A1
   frequency_rank: 316
+  grammar_scope: null
 - type: word
   text: Pied
   translation: Foot
@@ -2221,6 +2537,7 @@ fr:
   example_translation: My foot hurts.
   cefr_level: A1
   frequency_rank: 317
+  grammar_scope: null
 - type: word
   text: Main
   translation: Hand
@@ -2228,6 +2545,7 @@ fr:
   example_translation: Give me your hand.
   cefr_level: A1
   frequency_rank: 318
+  grammar_scope: null
 - type: word
   text: Tête
   translation: Head
@@ -2235,6 +2553,7 @@ fr:
   example_translation: He has a cap on his head.
   cefr_level: A1
   frequency_rank: 319
+  grammar_scope: null
 - type: word
   text: Cheveux
   translation: Hair
@@ -2242,6 +2561,7 @@ fr:
   example_translation: She has long blonde hair.
   cefr_level: A1
   frequency_rank: 320
+  grammar_scope: null
 - type: word
   text: Bouche
   translation: Mouth
@@ -2249,6 +2569,7 @@ fr:
   example_translation: Open your mouth!
   cefr_level: A1
   frequency_rank: 321
+  grammar_scope: null
 - type: word
   text: Nez
   translation: Nose
@@ -2256,6 +2577,7 @@ fr:
   example_translation: He has a small nose.
   cefr_level: A1
   frequency_rank: 322
+  grammar_scope: null
 - type: word
   text: Sœur
   translation: Sister
@@ -2263,6 +2585,7 @@ fr:
   example_translation: I have a sister and a brother.
   cefr_level: A1
   frequency_rank: 323
+  grammar_scope: null
 - type: word
   text: Frère
   translation: Brother
@@ -2270,6 +2593,7 @@ fr:
   example_translation: My brother is taller than me.
   cefr_level: A1
   frequency_rank: 324
+  grammar_scope: null
 - type: word
   text: Nom
   translation: Last name / Name
@@ -2277,6 +2601,7 @@ fr:
   example_translation: What is your last name?
   cefr_level: A1
   frequency_rank: 325
+  grammar_scope: null
 - type: word
   text: Prénom
   translation: First name
@@ -2284,6 +2609,7 @@ fr:
   example_translation: My first name is Marie.
   cefr_level: A1
   frequency_rank: 326
+  grammar_scope: null
 - type: word
   text: Nationalité
   translation: Nationality
@@ -2291,6 +2617,7 @@ fr:
   example_translation: What is your nationality?
   cefr_level: A1
   frequency_rank: 327
+  grammar_scope: null
 - type: word
   text: Profession
   translation: Profession / Job
@@ -2298,6 +2625,7 @@ fr:
   example_translation: What is your profession?
   cefr_level: A1
   frequency_rank: 328
+  grammar_scope: null
 - type: collocation
   text: Être en retard
   translation: To be late
@@ -2305,6 +2633,7 @@ fr:
   example_translation: I am late for work.
   cefr_level: A1
   frequency_rank: 329
+  grammar_scope: null
 - type: collocation
   text: Être à l'heure
   translation: To be on time
@@ -2312,6 +2641,7 @@ fr:
   example_translation: He is always on time for appointments.
   cefr_level: A1
   frequency_rank: 330
+  grammar_scope: null
 - type: collocation
   text: Faire la lessive
   translation: To do the laundry
@@ -2319,6 +2649,7 @@ fr:
   example_translation: I have to do the laundry tonight.
   cefr_level: A1
   frequency_rank: 331
+  grammar_scope: null
 - type: collocation
   text: Faire le ménage
   translation: To do the housework
@@ -2326,6 +2657,7 @@ fr:
   example_translation: She does the housework every Saturday.
   cefr_level: A1
   frequency_rank: 332
+  grammar_scope: null
 - type: collocation
   text: Payer par carte
   translation: To pay by card
@@ -2333,6 +2665,7 @@ fr:
   example_translation: You can pay by card here.
   cefr_level: A1
   frequency_rank: 333
+  grammar_scope: null
 - type: collocation
   text: Payer en espèces
   translation: To pay in cash
@@ -2340,6 +2673,7 @@ fr:
   example_translation: I prefer to pay in cash.
   cefr_level: A1
   frequency_rank: 334
+  grammar_scope: null
 - type: collocation
   text: Prendre un repas
   translation: To have a meal
@@ -2347,6 +2681,7 @@ fr:
   example_translation: We are having a meal at the restaurant.
   cefr_level: A1
   frequency_rank: 335
+  grammar_scope: null
 - type: collocation
   text: Venir de
   translation: To come from
@@ -2354,6 +2689,7 @@ fr:
   example_translation: I come from France.
   cefr_level: A1
   frequency_rank: 336
+  grammar_scope: null
 - type: collocation
   text: Demander l'addition
   translation: To ask for the bill
@@ -2361,6 +2697,7 @@ fr:
   example_translation: Can you ask for the bill, please?
   cefr_level: A1
   frequency_rank: 337
+  grammar_scope: null
 - type: collocation
   text: Jouer au football
   translation: To play football (soccer)
@@ -2368,6 +2705,7 @@ fr:
   example_translation: The children like to play football.
   cefr_level: A1
   frequency_rank: 338
+  grammar_scope: null
 - type: verb_form
   text: Il pleut
   translation: It's raining
@@ -2375,6 +2713,7 @@ fr:
   example_translation: It's raining a lot today.
   cefr_level: A1
   frequency_rank: 339
+  grammar_scope: present tense
 - type: verb_form
   text: Il neige
   translation: It's snowing
@@ -2382,6 +2721,7 @@ fr:
   example_translation: In winter, it often snows.
   cefr_level: A1
   frequency_rank: 340
+  grammar_scope: present tense
 - type: verb_form
   text: Je dis
   translation: I say / I tell
@@ -2389,6 +2729,7 @@ fr:
   example_translation: I say hello to everyone.
   cefr_level: A1
   frequency_rank: 341
+  grammar_scope: present tense
 - type: verb_form
   text: Tu écoutes
   translation: You listen
@@ -2396,6 +2737,7 @@ fr:
   example_translation: Do you listen to classical music?
   cefr_level: A1
   frequency_rank: 342
+  grammar_scope: present tense
 - type: verb_form
   text: Nous faisons
   translation: We do / We make
@@ -2403,6 +2745,7 @@ fr:
   example_translation: We do our homework together.
   cefr_level: A1
   frequency_rank: 343
+  grammar_scope: present tense
 - type: verb_form
   text: Vous prenez
   translation: You take / You have (a drink/meal)
@@ -2410,6 +2753,7 @@ fr:
   example_translation: Are you having a coffee or a tea?
   cefr_level: A1
   frequency_rank: 344
+  grammar_scope: present tense
 - type: verb_form
   text: Elles vont
   translation: They (fem.) go
@@ -2417,6 +2761,7 @@ fr:
   example_translation: They go to the park after school.
   cefr_level: A1
   frequency_rank: 345
+  grammar_scope: present tense
 - type: sentence_pattern
   text: Puis-je vous aider ?
   translation: Can I help you?
@@ -2424,6 +2769,7 @@ fr:
   example_translation: Hello, can I help you?
   cefr_level: A1
   frequency_rank: 346
+  grammar_scope: null
 - type: sentence_pattern
   text: Je dois + infinitif.
   translation: I must / I have to + verb.
@@ -2431,6 +2777,7 @@ fr:
   example_translation: I have to work tomorrow.
   cefr_level: A1
   frequency_rank: 347
+  grammar_scope: null
 - type: sentence_pattern
   text: Qu'est-ce que vous voulez ?
   translation: What do you want?
@@ -2438,6 +2785,7 @@ fr:
   example_translation: What do you want to eat?
   cefr_level: A1
   frequency_rank: 348
+  grammar_scope: null
 - type: sentence_pattern
   text: J'adore + nom/infinitif.
   translation: I love + noun/to verb.
@@ -2445,6 +2793,7 @@ fr:
   example_translation: I love travel and music.
   cefr_level: A1
   frequency_rank: 349
+  grammar_scope: null
 - type: sentence_pattern
   text: Comment dit-on (mot) en français ?
   translation: How do you say (word) in French?
@@ -2452,6 +2801,7 @@ fr:
   example_translation: How do you say 'hello' in French?
   cefr_level: A1
   frequency_rank: 350
+  grammar_scope: null
 - type: word
   text: Vingt
   translation: Twenty
@@ -2459,6 +2809,7 @@ fr:
   example_translation: She is twenty years old.
   cefr_level: A1
   frequency_rank: 353
+  grammar_scope: null
 - type: word
   text: Janvier
   translation: January
@@ -2466,6 +2817,7 @@ fr:
   example_translation: My birthday is in January.
   cefr_level: A1
   frequency_rank: 354
+  grammar_scope: null
 - type: word
   text: Orange
   translation: Orange
@@ -2473,6 +2825,7 @@ fr:
   example_translation: I like the color orange.
   cefr_level: A1
   frequency_rank: 356
+  grammar_scope: null
 - type: word
   text: Rose
   translation: Pink
@@ -2480,6 +2833,7 @@ fr:
   example_translation: She is wearing a pink dress.
   cefr_level: A1
   frequency_rank: 357
+  grammar_scope: null
 - type: word
   text: Violet
   translation: Purple
@@ -2487,6 +2841,7 @@ fr:
   example_translation: The flowers are purple.
   cefr_level: A1
   frequency_rank: 358
+  grammar_scope: null
 - type: word
   text: Céréales
   translation: Cereal
@@ -2494,6 +2849,7 @@ fr:
   example_translation: I eat cereal in the morning.
   cefr_level: A1
   frequency_rank: 359
+  grammar_scope: null
 - type: word
   text: Viande
   translation: Meat
@@ -2501,6 +2857,7 @@ fr:
   example_translation: I don't eat meat.
   cefr_level: A1
   frequency_rank: 361
+  grammar_scope: null
 - type: word
   text: Poisson
   translation: Fish
@@ -2508,6 +2865,7 @@ fr:
   example_translation: Fish is good for health.
   cefr_level: A1
   frequency_rank: 362
+  grammar_scope: null
 - type: word
   text: Appartement
   translation: Apartment
@@ -2515,6 +2873,7 @@ fr:
   example_translation: I live in a large apartment.
   cefr_level: A1
   frequency_rank: 364
+  grammar_scope: null
 - type: word
   text: Université
   translation: University
@@ -2522,6 +2881,7 @@ fr:
   example_translation: He studies at the university.
   cefr_level: A1
   frequency_rank: 366
+  grammar_scope: null
 - type: word
   text: Bureau
   translation: Office / Desk
@@ -2529,6 +2889,7 @@ fr:
   example_translation: I work in an office.
   cefr_level: A1
   frequency_rank: 367
+  grammar_scope: null
 - type: word
   text: Bibliothèque
   translation: Library
@@ -2536,6 +2897,7 @@ fr:
   example_translation: I like to read at the library.
   cefr_level: A1
   frequency_rank: 368
+  grammar_scope: null
 - type: word
   text: Église
   translation: Church
@@ -2543,6 +2905,7 @@ fr:
   example_translation: The church is very old.
   cefr_level: A1
   frequency_rank: 369
+  grammar_scope: null
 - type: word
   text: Voisin(e)
   translation: Neighbor
@@ -2550,6 +2913,7 @@ fr:
   example_translation: My neighbor is very kind.
   cefr_level: A1
   frequency_rank: 372
+  grammar_scope: null
 - type: word
   text: Triste
   translation: Sad
@@ -2557,6 +2921,7 @@ fr:
   example_translation: She is sad today.
   cefr_level: A1
   frequency_rank: 373
+  grammar_scope: null
 - type: word
   text: Heureux/Heureuse
   translation: Happy
@@ -2564,6 +2929,7 @@ fr:
   example_translation: I am very happy to see you.
   cefr_level: A1
   frequency_rank: 374
+  grammar_scope: null
 - type: word
   text: Malade
   translation: Sick
@@ -2571,6 +2937,7 @@ fr:
   example_translation: I can't work, I am sick.
   cefr_level: A1
   frequency_rank: 375
+  grammar_scope: null
 - type: word
   text: Propre
   translation: Clean
@@ -2578,6 +2945,7 @@ fr:
   example_translation: The room is clean.
   cefr_level: A1
   frequency_rank: 377
+  grammar_scope: null
 - type: word
   text: Sale
   translation: Dirty
@@ -2585,6 +2953,7 @@ fr:
   example_translation: My shoes are dirty.
   cefr_level: A1
   frequency_rank: 378
+  grammar_scope: null
 - type: collocation
   text: Faire une sieste
   translation: To take a nap
@@ -2592,6 +2961,7 @@ fr:
   example_translation: I take a nap in the afternoon.
   cefr_level: A1
   frequency_rank: 380
+  grammar_scope: null
 - type: collocation
   text: Ouvrir la bouteille
   translation: To open the bottle
@@ -2599,6 +2969,7 @@ fr:
   example_translation: Can you open the bottle, please?
   cefr_level: A1
   frequency_rank: 381
+  grammar_scope: null
 - type: collocation
   text: Fermer la porte
   translation: To close the door
@@ -2606,6 +2977,7 @@ fr:
   example_translation: Don't forget to close the door.
   cefr_level: A1
   frequency_rank: 382
+  grammar_scope: null
 - type: collocation
   text: Chercher son chemin
   translation: To look for one's way
@@ -2613,6 +2985,7 @@ fr:
   example_translation: We are looking for our way in the city.
   cefr_level: A1
   frequency_rank: 383
+  grammar_scope: null
 - type: collocation
   text: Mettre la table
   translation: To set the table
@@ -2620,6 +2993,7 @@ fr:
   example_translation: We need to set the table for dinner.
   cefr_level: A1
   frequency_rank: 384
+  grammar_scope: null
 - type: collocation
   text: Nettoyer la chambre
   translation: To clean the room
@@ -2627,6 +3001,7 @@ fr:
   example_translation: I have to clean my room.
   cefr_level: A1
   frequency_rank: 385
+  grammar_scope: null
 - type: collocation
   text: Préparer un repas
   translation: To prepare a meal
@@ -2634,6 +3009,7 @@ fr:
   example_translation: She likes to prepare meals for her family.
   cefr_level: A1
   frequency_rank: 386
+  grammar_scope: null
 - type: collocation
   text: Avoir un problème
   translation: To have a problem
@@ -2641,6 +3017,7 @@ fr:
   example_translation: I have a problem with my computer.
   cefr_level: A1
   frequency_rank: 387
+  grammar_scope: null
 - type: collocation
   text: Raconter une histoire
   translation: To tell a story
@@ -2648,6 +3025,7 @@ fr:
   example_translation: Children like to tell stories.
   cefr_level: A1
   frequency_rank: 388
+  grammar_scope: null
 - type: verb_form
   text: Tu parles
   translation: You speak (singular informal)
@@ -2655,6 +3033,7 @@ fr:
   example_translation: You speak French well.
   cefr_level: A1
   frequency_rank: 391
+  grammar_scope: null
 - type: verb_form
   text: Tu manges
   translation: You eat (singular informal)
@@ -2662,6 +3041,7 @@ fr:
   example_translation: What are you eating?
   cefr_level: A1
   frequency_rank: 392
+  grammar_scope: null
 - type: verb_form
   text: Vous faites
   translation: You do/make (plural/formal)
@@ -2669,6 +3049,7 @@ fr:
   example_translation: What are you doing this weekend?
   cefr_level: A1
   frequency_rank: 393
+  grammar_scope: null
 - type: verb_form
   text: Vous buvez
   translation: You drink (plural/formal)
@@ -2676,6 +3057,7 @@ fr:
   example_translation: What are you drinking?
   cefr_level: A1
   frequency_rank: 394
+  grammar_scope: null
 - type: verb_form
   text: Ils aiment
   translation: They like/love (masculine/mixed)
@@ -2683,6 +3065,7 @@ fr:
   example_translation: They like to travel.
   cefr_level: A1
   frequency_rank: 395
+  grammar_scope: null
 - type: sentence_pattern
   text: Quel temps fait-il ?
   translation: What's the weather like?
@@ -2690,6 +3073,7 @@ fr:
   example_translation: What's the weather like in Paris today?
   cefr_level: A1
   frequency_rank: 396
+  grammar_scope: null
 - type: sentence_pattern
   text: Qu'est-ce que tu fais ?
   translation: What are you doing?
@@ -2697,6 +3081,7 @@ fr:
   example_translation: What are you doing after work?
   cefr_level: A1
   frequency_rank: 397
+  grammar_scope: null
 - type: sentence_pattern
   text: Je ne suis pas...
   translation: I am not...
@@ -2704,6 +3089,7 @@ fr:
   example_translation: I am not French, I am Spanish.
   cefr_level: A1
   frequency_rank: 398
+  grammar_scope: null
 - type: sentence_pattern
   text: C'est pour...
   translation: It's for...
@@ -2711,6 +3097,7 @@ fr:
   example_translation: This gift is for you.
   cefr_level: A1
   frequency_rank: 399
+  grammar_scope: null
 - type: sentence_pattern
   text: À quelle heure...?
   translation: At what time...?
@@ -2718,6 +3105,7 @@ fr:
   example_translation: At what time is the appointment?
   cefr_level: A1
   frequency_rank: 400
+  grammar_scope: null
 - type: word
   text: Chiffre
   translation: Number (digit)
@@ -2725,6 +3113,7 @@ fr:
   example_translation: What is your favorite number?
   cefr_level: A1
   frequency_rank: 389
+  grammar_scope: null
 - type: word
   text: Gauche
   translation: Left
@@ -2732,6 +3121,7 @@ fr:
   example_translation: Turn left here.
   cefr_level: A1
   frequency_rank: 391
+  grammar_scope: null
 - type: word
   text: Droite
   translation: Right
@@ -2739,6 +3129,7 @@ fr:
   example_translation: The supermarket is on your right.
   cefr_level: A1
   frequency_rank: 392
+  grammar_scope: null
 - type: word
   text: Temps
   translation: Time; weather
@@ -2746,6 +3137,7 @@ fr:
   example_translation: I have time to read a book.
   cefr_level: A1
   frequency_rank: 393
+  grammar_scope: null
 - type: collocation
   text: Parler de
   translation: To talk about
@@ -2753,6 +3145,7 @@ fr:
   example_translation: We are talking about our holidays.
   cefr_level: A1
   frequency_rank: 396
+  grammar_scope: null
 - type: collocation
   text: Aller à l'école
   translation: To go to school
@@ -2760,6 +3153,7 @@ fr:
   example_translation: Children go to school in the morning.
   cefr_level: A1
   frequency_rank: 397
+  grammar_scope: null
 - type: verb_form
   text: Je donne
   translation: I give
@@ -2767,6 +3161,7 @@ fr:
   example_translation: I give a gift to my friend.
   cefr_level: A1
   frequency_rank: 398
+  grammar_scope: null
 - type: verb_form
   text: Tu apprends
   translation: You learn (informal singular)
@@ -2774,6 +3169,7 @@ fr:
   example_translation: What are you learning at school?
   cefr_level: A1
   frequency_rank: 399
+  grammar_scope: null
 - type: sentence_pattern
   text: Combien de + nom ?
   translation: How many/much + noun?
@@ -2781,6 +3177,7 @@ fr:
   example_translation: How many brothers and sisters do you have?
   cefr_level: A1
   frequency_rank: 400
+  grammar_scope: null
 - type: verb_form
   text: Donner
   translation: To give
@@ -2788,6 +3185,7 @@ fr:
   example_translation: I have to give this book to Paul.
   cefr_level: A1
   frequency_rank: 400
+  grammar_scope: null
 - type: word
   text: Acheter
   translation: To buy
@@ -2795,3 +3193,4 @@ fr:
   example_translation: I would like to buy a baguette.
   cefr_level: A1
   frequency_rank: 400
+  grammar_scope: null

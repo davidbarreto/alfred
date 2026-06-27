@@ -29,6 +29,7 @@ _READ_INTENTS: frozenset[str] = frozenset({
     "shopping.list",
     "wishlist.list",
     "language.practice",
+    "language.review",
 })
 
 

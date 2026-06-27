@@ -79,6 +79,11 @@ INTENT_EXAMPLES: list[IntentExample] = [
     IntentExample(id=41, text="Add a note about the architecture decision we made", intent="note.add"),
     IntentExample(id=42, text="Keep note: the meeting is at 2pm next Thursday", intent="note.add"),
     IntentExample(id=43, text="I want to remember this: always use async sessions in SQLAlchemy", intent="note.add"),
+    IntentExample(id=203, text="Create a note to move all LLM calls from n8n to FastAPI", intent="note.add"),
+    IntentExample(id=204, text="Create a note about refactoring the auth middleware", intent="note.add"),
+    IntentExample(id=205, text="Make a note to review the deployment pipeline", intent="note.add"),
+    IntentExample(id=206, text="Make a note: switch the database to async connections", intent="note.add"),
+    IntentExample(id=207, text="Create a note to migrate the worker jobs to the new queue", intent="note.add"),
 
     # --- note.search ---
     IntentExample(id=44, text="Find my note about the API", intent="note.search"),

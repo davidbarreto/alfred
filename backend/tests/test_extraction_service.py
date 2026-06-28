@@ -3,6 +3,7 @@ import pytest
 from unittest.mock import AsyncMock, MagicMock
 
 from app.assistant.intents.extraction_service import (
+    AddTransactionArgs,
     CreateEventArgs,
     CreateTaskArgs,
     CreateNoteArgs,
@@ -150,3 +151,54 @@ class TestExtractArgsEventAdd:
         provider = _make_provider(fenced)
         result = await extract_args("event.add", "Create event next Sunday", llm_provider=provider)
         assert result["title"] == "Batizado Capoeira"
+
+
+class TestExtractArgsTransactionAdd:
+    async def test_transaction_add_extracts_all_fields(self):
+        payload = json.dumps({
+            "amount": "10",
+            "currency": "EUR",
+            "type": "expense",
+            "merchant": "Pingo Doce",
+            "description": None,
+            "date": "2026-06-28",
+            "account": None,
+        })
+        provider = _make_provider(payload)
+        result = await extract_args("finance.transaction_add", "I spent 10 euros in Pingo Doce today", llm_provider=provider)
+        assert result["amount"] == "10"
+        assert result["currency"] == "EUR"
+        assert result["type"] == "expense"
+        assert result["merchant"] == "Pingo Doce"
+        assert result["date"] == "2026-06-28"
+
+    async def test_transaction_add_optional_fields_default_to_none(self):
+        payload = json.dumps({"amount": "45"})
+        provider = _make_provider(payload)
+        result = await extract_args("finance.transaction_add", "spent 45 euros", llm_provider=provider)
+        assert result["merchant"] is None
+        assert result["description"] is None
+        assert result["date"] is None
+        assert result["account"] is None
+
+    async def test_transaction_add_includes_date_context_in_system_prompt(self):
+        payload = json.dumps({"amount": "10"})
+        provider = _make_provider(payload)
+        await extract_args("finance.transaction_add", "spent 10 euros today", llm_provider=provider)
+        system = provider.complete.call_args[1]["system"]
+        assert "current date" in system.lower()
+
+    async def test_transaction_add_income_type(self):
+        payload = json.dumps({
+            "amount": "3500",
+            "currency": "EUR",
+            "type": "income",
+            "merchant": None,
+            "description": "salary",
+            "date": None,
+            "account": None,
+        })
+        provider = _make_provider(payload)
+        result = await extract_args("finance.transaction_add", "I received my salary of 3500 euros", llm_provider=provider)
+        assert result["type"] == "income"
+        assert result["amount"] == "3500"

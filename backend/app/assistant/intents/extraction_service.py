@@ -80,6 +80,16 @@ class PromoteWishlistItemArgs(BaseModel):
     priority: Literal["need", "want"] | None = Field(default=None)
 
 
+class AddTransactionArgs(BaseModel):
+    amount: str = Field(description="Monetary amount as a number string, e.g. '10' or '45.50'")
+    currency: str | None = Field(default=None, description="Currency code, e.g. 'EUR', 'USD'. Default to EUR if not mentioned.")
+    type: Literal["expense", "income"] | None = Field(default=None, description="'expense' for spending/payments, 'income' for received money. Default to 'expense'.")
+    merchant: str | None = Field(default=None, description="Store or merchant name if mentioned, e.g. 'Pingo Doce', 'Netflix'")
+    description: str | None = Field(default=None, description="Short description of the transaction if mentioned beyond the merchant")
+    date: str | None = Field(default=None, description="Transaction date in ISO 8601 format (YYYY-MM-DD). Resolve relative expressions like 'today' or 'yesterday' using the current date provided.")
+    account: str | None = Field(default=None, description="Account name if explicitly mentioned, e.g. 'Revolut', 'checking account'")
+
+
 _INTENT_SCHEMAS: dict[str, type[BaseModel]] = {
     "task.add": CreateTaskArgs,
     "task.list": GetTasksArgs,
@@ -92,9 +102,10 @@ _INTENT_SCHEMAS: dict[str, type[BaseModel]] = {
     "shopping.delete": DeleteShoppingItemArgs,
     "wishlist.add": AddWishlistItemArgs,
     "wishlist.promote": PromoteWishlistItemArgs,
+    "finance.transaction_add": AddTransactionArgs,
 }
 
-_INTENTS_WITH_DATES = {"task.add", "event.add", "event.list"}
+_INTENTS_WITH_DATES = {"task.add", "event.add", "event.list", "finance.transaction_add"}
 
 
 
@@ -104,8 +115,10 @@ async def extract_args(
     llm_provider: LlmProvider,
     session: AsyncSession | None = None,
 ) -> dict:
+    logger.debug("extract_args: intent=%s text=%r", intent, text[:80])
     schema_cls = _INTENT_SCHEMAS.get(intent)
     if schema_cls is None:
+        logger.debug("extract_args: no schema for intent=%s, skipping", intent)
         return {}
 
     schema_str = json.dumps(schema_cls.model_json_schema(), indent=2)

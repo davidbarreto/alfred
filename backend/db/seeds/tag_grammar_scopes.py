@@ -154,7 +154,10 @@ async def _tag_language(client: genai.Client, code: str, force: bool, dry_run: b
         if e.get("type", "word") in _GRAMMAR_TYPES:
             classify_indices.append(i)
         else:
-            auto_null_indices.append(i)
+            # Never overwrite a real (non-null) grammar scope with auto-null,
+            # even when --force is set — word entries can carry manually-assigned scopes.
+            if e.get("grammar_scope") is None:
+                auto_null_indices.append(i)
 
     total_untagged = len(auto_null_indices) + len(classify_indices)
     print(f"  [{code}] {len(entries)} chunks, {total_untagged} to process "

@@ -231,3 +231,4 @@ __marimo__/
 docker_volumes
 n8n_export
 docs
+creds_export.json

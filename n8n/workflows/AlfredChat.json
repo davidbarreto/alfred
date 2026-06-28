@@ -4,15 +4,16 @@
         {
             "parameters": {
                 "updates": [
-                    "message"
+                    "message",
+                    "callback_query"
                 ],
                 "additionalFields": {}
             },
             "type": "n8n-nodes-base.telegramTrigger",
             "typeVersion": 1.2,
             "position": [
-                -352,
-                -32
+                -1248,
+                -16
             ],
             "id": "eecdedc8-6850-4969-b5ce-a8ad5de14f77",
             "name": "Message Trigger",
@@ -51,7 +52,7 @@
                                 "combinator": "and"
                             },
                             "renameOutput": true,
-                            "outputKey": "text"
+                            "outputKey": "Text"
                         },
                         {
                             "conditions": {
@@ -76,7 +77,32 @@
                                 "combinator": "and"
                             },
                             "renameOutput": true,
-                            "outputKey": "audio"
+                            "outputKey": "Audio"
+                        },
+                        {
+                            "conditions": {
+                                "options": {
+                                    "caseSensitive": true,
+                                    "leftValue": "",
+                                    "typeValidation": "strict",
+                                    "version": 3
+                                },
+                                "conditions": [
+                                    {
+                                        "id": "faadcef8-54bd-4d1f-b1a5-b698d7208203",
+                                        "leftValue": "={{ $json.callback_query }}",
+                                        "rightValue": "",
+                                        "operator": {
+                                            "type": "object",
+                                            "operation": "exists",
+                                            "singleValue": true
+                                        }
+                                    }
+                                ],
+                                "combinator": "and"
+                            },
+                            "renameOutput": true,
+                            "outputKey": "Callback"
                         }
                     ]
                 },
@@ -85,7 +111,7 @@
             "type": "n8n-nodes-base.switch",
             "typeVersion": 3.4,
             "position": [
-                -112,
+                -944,
                 -32
             ],
             "id": "204be188-40aa-4c35-9a9f-cc5d750d4bad",
@@ -94,14 +120,14 @@
         {
             "parameters": {
                 "resource": "file",
-                "fileId": "={{ $json.message.voice.file_id }}",
+                "fileId": "={{ $('Message Trigger').item.json.message.voice.file_id }}",
                 "additionalFields": {}
             },
             "type": "n8n-nodes-base.telegram",
             "typeVersion": 1.2,
             "position": [
-                144,
-                176
+                -288,
+                256
             ],
             "id": "be74792b-3557-49c3-95eb-f6f3ab2e5668",
             "name": "Get audio file",
@@ -128,8 +154,8 @@
             "type": "@n8n/n8n-nodes-langchain.googleGemini",
             "typeVersion": 1.2,
             "position": [
-                352,
-                176
+                112,
+                160
             ],
             "id": "22da5927-a78e-4adc-a39b-8f66a407313c",
             "name": "Transcribe a recording",
@@ -151,7 +177,7 @@
                     "parameters": [
                         {
                             "name": "external_id",
-                            "value": "={{ $('Message Trigger').item.json.message.chat.id.toString() }}"
+                            "value": "={{ $('Message Trigger').item.json.message?.chat?.id?.toString() || $('Message Trigger').item.json.callback_query?.message?.chat?.id?.toString() }}"
                         },
                         {
                             "name": "source",
@@ -172,7 +198,7 @@
             "type": "n8n-nodes-base.httpRequest",
             "typeVersion": 4.4,
             "position": [
-                960,
+                1168,
                 64
             ],
             "id": "d6b41211-3987-48c2-8c38-9f614b708ec3",
@@ -216,8 +242,8 @@
             "type": "n8n-nodes-base.httpRequest",
             "typeVersion": 4.4,
             "position": [
-                2320,
-                256
+                2528,
+                480
             ],
             "id": "d378ed48-d05b-4d49-9c1f-ebc8ad9e40d3",
             "name": "Execute Commands",
@@ -255,8 +281,8 @@
             "type": "n8n-nodes-base.httpRequest",
             "typeVersion": 4.4,
             "position": [
-                1856,
-                -96
+                2144,
+                -352
             ],
             "id": "b8f73a33-e1a3-469f-817a-39675e677197",
             "name": "Chat Alfred",
@@ -286,7 +312,7 @@
             "typeVersion": 3.4,
             "position": [
                 560,
-                176
+                160
             ],
             "id": "7f4bbcab-7aeb-48d3-91d6-1198d963d8e8",
             "name": "Define Message from Audio"
@@ -324,8 +350,8 @@
             "type": "n8n-nodes-base.aggregate",
             "typeVersion": 1,
             "position": [
-                752,
-                64
+                960,
+                160
             ],
             "id": "c4b99edc-f989-4389-9f7b-ed11906a1375",
             "name": "Aggregate Texts"
@@ -350,7 +376,7 @@
             "type": "n8n-nodes-base.httpRequest",
             "typeVersion": 4.4,
             "position": [
-                1168,
+                1376,
                 64
             ],
             "id": "1a95429b-63fc-4112-8edc-447ac11926d2",
@@ -361,6 +387,441 @@
                     "name": "Bearer Auth account"
                 }
             }
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "http://api:8000/commands/extract/",
+                "authentication": "genericCredentialType",
+                "genericAuthType": "httpBearerAuth",
+                "sendBody": true,
+                "bodyParameters": {
+                    "parameters": [
+                        {
+                            "name": "text",
+                            "value": "={{ $('Aggregate Texts').item.json.data[0].text }}"
+                        },
+                        {
+                            "name": "intent",
+                            "value": "={{ $json.intent }}"
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.4,
+            "position": [
+                2304,
+                -144
+            ],
+            "id": "77e4b3c5-2fd2-4d05-8361-b483ed405654",
+            "name": "Extract Args",
+            "credentials": {
+                "httpBearerAuth": {
+                    "id": "oj5Yf1MhLsryeSrX",
+                    "name": "Bearer Auth account"
+                }
+            },
+            "onError": "continueErrorOutput"
+        },
+        {
+            "parameters": {
+                "fieldToSplitOut": "commands",
+                "include": "allOtherFields",
+                "options": {}
+            },
+            "type": "n8n-nodes-base.splitOut",
+            "typeVersion": 1,
+            "position": [
+                1872,
+                240
+            ],
+            "id": "4e990c68-5b27-4c2f-8ca8-4a253c16add8",
+            "name": "Split Commands"
+        },
+        {
+            "parameters": {
+                "conditions": {
+                    "options": {
+                        "caseSensitive": true,
+                        "leftValue": "",
+                        "typeValidation": "strict",
+                        "version": 3
+                    },
+                    "conditions": [
+                        {
+                            "id": "1eb3432f-09ee-47cd-b3c2-b9f83ad5f0a5",
+                            "leftValue": "={{ $json.commands.source }}",
+                            "rightValue": "intent_detection",
+                            "operator": {
+                                "type": "string",
+                                "operation": "equals",
+                                "name": "filter.operator.equals"
+                            }
+                        }
+                    ],
+                    "combinator": "and"
+                },
+                "options": {}
+            },
+            "type": "n8n-nodes-base.if",
+            "typeVersion": 2.3,
+            "position": [
+                2128,
+                464
+            ],
+            "id": "9376d533-3151-44e7-8147-8c4da3914858",
+            "name": "Needs Args Extraction"
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "http://api:8000/commands/respond/",
+                "authentication": "genericCredentialType",
+                "genericAuthType": "httpBearerAuth",
+                "sendBody": true,
+                "bodyParameters": {
+                    "parameters": [
+                        {
+                            "name": "message_id",
+                            "value": "={{ $('Persist Message').item.json.message_id }}"
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.4,
+            "position": [
+                3056,
+                496
+            ],
+            "id": "d1d1105b-f174-4b94-b9ed-16a9099dc8de",
+            "name": "Acknowledge Commands",
+            "credentials": {
+                "httpBearerAuth": {
+                    "id": "oj5Yf1MhLsryeSrX",
+                    "name": "Bearer Auth account"
+                }
+            },
+            "onError": "continueErrorOutput"
+        },
+        {
+            "parameters": {
+                "assignments": {
+                    "assignments": [
+                        {
+                            "id": "6d491604-ce96-4b98-9e87-0fead14a40dc",
+                            "name": "detected_intents",
+                            "value": "={{ $json.commands.map(c => c.intent) }}",
+                            "type": "array"
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "type": "n8n-nodes-base.set",
+            "typeVersion": 3.4,
+            "position": [
+                1872,
+                -96
+            ],
+            "id": "d30fa5fd-c828-4d7f-9edc-7febda063f5f",
+            "name": "Set Intents"
+        },
+        {
+            "parameters": {
+                "chatId": "={{ $('Message Trigger').item.json.message?.chat?.id?.toString() || $('Message Trigger').item.json.callback_query?.message?.chat?.id?.toString() }}",
+                "text": "={{ $json.response }}",
+                "additionalFields": {
+                    "appendAttribution": false
+                }
+            },
+            "type": "n8n-nodes-base.telegram",
+            "typeVersion": 1.2,
+            "position": [
+                4544,
+                -352
+            ],
+            "id": "68ef2004-402b-4488-b37e-671774bbc569",
+            "name": "Send Message",
+            "webhookId": "e8403c62-a8ad-408d-a798-ff936317ee81",
+            "credentials": {
+                "telegramApi": {
+                    "id": "t63z4EHeYTEZtFAR",
+                    "name": "Telegram account"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "assignments": {
+                    "assignments": [
+                        {
+                            "id": "45bf2d9b-e45c-4b8b-a785-a279075c1a3a",
+                            "name": "response",
+                            "value": "There was a internal error. Try again later",
+                            "type": "string"
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "type": "n8n-nodes-base.set",
+            "typeVersion": 3.4,
+            "position": [
+                3824,
+                -128
+            ],
+            "id": "7447758d-38d4-4e0c-ad4c-7b9303f24767",
+            "name": "Set Error Message"
+        },
+        {
+            "parameters": {
+                "conditions": {
+                    "options": {
+                        "caseSensitive": true,
+                        "leftValue": "",
+                        "typeValidation": "strict",
+                        "version": 3
+                    },
+                    "conditions": [
+                        {
+                            "id": "d592d9b0-2d22-456b-b4a6-68171bb6c929",
+                            "leftValue": "={{ $json.response }}",
+                            "rightValue": "",
+                            "operator": {
+                                "type": "string",
+                                "operation": "notEmpty",
+                                "singleValue": true
+                            }
+                        }
+                    ],
+                    "combinator": "and"
+                },
+                "options": {}
+            },
+            "type": "n8n-nodes-base.if",
+            "typeVersion": 2.3,
+            "position": [
+                3424,
+                496
+            ],
+            "id": "6da0bf94-af9f-4660-94c1-a31c4ea342de",
+            "name": "Has response"
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent",
+                "authentication": "genericCredentialType",
+                "genericAuthType": "httpHeaderAuth",
+                "sendBody": true,
+                "specifyBody": "json",
+                "jsonBody": "={\n  \"contents\": [\n    {\n      \"parts\": [\n        {\n          \"text\": \"Say this script in a neutral {{ $json.result.language_name }} professional accent at a face pace enthusiastically: {{ $json.result.text }}\"\n        }\n      ]\n    }\n  ],\n  \"generationConfig\": {\n    \"responseModalities\": [\n      \"AUDIO\"\n    ],\n    \"speechConfig\": {\n      \"voiceConfig\": {\n        \"prebuiltVoiceConfig\": {\n          \"voiceName\": \"Umbriel\"\n        }\n      }\n    }\n  },\n  \"model\": \"gemini-2.5-flash-preview-tts\"\n}",
+                "options": {}
+            },
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.4,
+            "position": [
+                2944,
+                -16
+            ],
+            "id": "57ae4b78-473d-41cb-a6f2-468404f14f65",
+            "name": "Gemini TTS",
+            "credentials": {
+                "httpHeaderAuth": {
+                    "id": "wMtRWjmxcQWQrEqV",
+                    "name": "Header Auth account"
+                }
+            },
+            "onError": "continueRegularOutput"
+        },
+        {
+            "parameters": {
+                "jsCode": "const part = $input.first().json.candidates[0].content.parts[0];\nconst pcm = Buffer.from(part.inlineData.data, 'base64');\n\nconst sampleRate = 24000;\nconst numChannels = 1;\nconst bitsPerSample = 16;\nconst byteRate = sampleRate * numChannels * bitsPerSample / 8;\nconst blockAlign = numChannels * bitsPerSample / 8;\n\nconst header = Buffer.alloc(44);\nheader.write('RIFF', 0);\nheader.writeUInt32LE(36 + pcm.length, 4);\nheader.write('WAVE', 8);\nheader.write('fmt ', 12);\nheader.writeUInt32LE(16, 16);\nheader.writeUInt16LE(1, 20);               // PCM format\nheader.writeUInt16LE(numChannels, 22);\nheader.writeUInt32LE(sampleRate, 24);\nheader.writeUInt32LE(byteRate, 28);\nheader.writeUInt16LE(blockAlign, 32);\nheader.writeUInt16LE(bitsPerSample, 34);\nheader.write('data', 36);\nheader.writeUInt32LE(pcm.length, 40);\n\nconst wav = Buffer.concat([header, pcm]);\n\nconst uniqueFileName = `speech_${Date.now()}.wav`;\nconst binary = await this.helpers.prepareBinaryData(wav, uniqueFileName, 'audio/wav');\nreturn [{ json: {}, binary: { audio: binary } }];\n"
+            },
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                3136,
+                128
+            ],
+            "id": "5607251d-53b7-4a22-9156-3e502a1f6cfb",
+            "name": "Convert To Binary Data",
+            "onError": "continueErrorOutput"
+        },
+        {
+            "parameters": {
+                "conditions": {
+                    "options": {
+                        "caseSensitive": true,
+                        "leftValue": "",
+                        "typeValidation": "strict",
+                        "version": 3
+                    },
+                    "conditions": [
+                        {
+                            "id": "bb86ef42-c180-4066-834b-e29423222e07",
+                            "leftValue": "={{ $('Get Working Memory').item.json.key }}",
+                            "rightValue": "language:pending",
+                            "operator": {
+                                "type": "string",
+                                "operation": "equals"
+                            }
+                        },
+                        {
+                            "id": "c11a2b8d-6007-4de9-b4e8-58e10593581b",
+                            "leftValue": "={{ $('Get Working Memory').item.json.value.parseJson().mode }}",
+                            "rightValue": "practice",
+                            "operator": {
+                                "type": "string",
+                                "operation": "equals",
+                                "name": "filter.operator.equals"
+                            }
+                        }
+                    ],
+                    "combinator": "and"
+                },
+                "options": {}
+            },
+            "type": "n8n-nodes-base.if",
+            "typeVersion": 2.3,
+            "position": [
+                -128,
+                256
+            ],
+            "id": "97166e4e-dd05-45ae-ab1a-59f83f23c182",
+            "name": "Is Language Practice Active"
+        },
+        {
+            "parameters": {
+                "url": "http://api:8000/core/working-memory/",
+                "authentication": "genericCredentialType",
+                "genericAuthType": "httpBearerAuth",
+                "sendQuery": true,
+                "queryParameters": {
+                    "parameters": [
+                        {
+                            "name": "key",
+                            "value": "language:pending"
+                        },
+                        {
+                            "name": "active_only",
+                            "value": "true"
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.4,
+            "position": [
+                -448,
+                256
+            ],
+            "id": "5099f88f-890b-434e-8ce2-7f034af1222e",
+            "name": "Get Working Memory",
+            "alwaysOutputData": true,
+            "credentials": {
+                "httpBearerAuth": {
+                    "id": "oj5Yf1MhLsryeSrX",
+                    "name": "Bearer Auth account"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "resource": "audio",
+                "operation": "analyze",
+                "modelId": {
+                    "__rl": true,
+                    "value": "models/gemini-2.5-flash",
+                    "mode": "list",
+                    "cachedResultName": "models/gemini-2.5-flash"
+                },
+                "text": "=The student was shadowing: \"{{ $('Get Working Memory').item.json.value.parseJson().text }}\" in {{ $('Get Working Memory').item.json.value.parseJson().language_name }} (traslation: {{ $('Get Working Memory').item.json.value.parseJson().translation }})\n\n  1. Transcribe exactly what they said.\n  2. Evaluate their pronunciation against the target.\n  Respond ONLY with JSON (no markdown fences, even to format text as json):\n  {\n    \"transcription\": \"...\",\n    \"score\": 85,\n    \"summary\": \"...\",\n    \"strengths\": [\"...\"],\n    \"issues\": [\"...\"],\n    \"tip\": \"...\"\n  }",
+                "inputType": "binary",
+                "binaryPropertyName": "=data",
+                "options": {}
+            },
+            "type": "@n8n/n8n-nodes-langchain.googleGemini",
+            "typeVersion": 1.2,
+            "position": [
+                112,
+                368
+            ],
+            "id": "8b54f40a-01e6-4f58-a770-b77937bac3aa",
+            "name": "Analyze audio",
+            "credentials": {
+                "googlePalmApi": {
+                    "id": "aGj1lM58mJuDbCWB",
+                    "name": "Google Gemini(PaLM) Api account"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "http://api:8000/language/sessions/shadowing",
+                "authentication": "genericCredentialType",
+                "genericAuthType": "httpBearerAuth",
+                "sendBody": true,
+                "specifyBody": "json",
+                "jsonBody": "={{ $json }}",
+                "options": {}
+            },
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.4,
+            "position": [
+                416,
+                368
+            ],
+            "id": "693ca362-81ac-46bd-92b0-fc38a25ef74f",
+            "name": "Push Grade",
+            "credentials": {
+                "httpBearerAuth": {
+                    "id": "oj5Yf1MhLsryeSrX",
+                    "name": "Bearer Auth account"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "assignments": {
+                    "assignments": [
+                        {
+                            "id": "6df50a29-f49a-4128-807c-6841a2cbaab7",
+                            "name": "text",
+                            "value": "={{ $('Combine analysis + arguments').item.json.ai_feedback_json.transcription }}",
+                            "type": "string"
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "type": "n8n-nodes-base.set",
+            "typeVersion": 3.4,
+            "position": [
+                560,
+                368
+            ],
+            "id": "442e30aa-eee8-4107-8d66-e61804c5faa6",
+            "name": "Define Message from Practice"
+        },
+        {
+            "parameters": {
+                "jsCode": "const raw = $input.first().json.content.parts[0].text;\nconst cleaned = raw.replace(/^```json\\s*/, '').replace(/\\s*```$/, '').trim();\nconst analysisJson = JSON.parse(cleaned);\nconst wm = JSON.parse($('Get Working Memory').first().json.value);\n\nreturn [{\n  json: {\n    track_id: wm.track_id,\n    chunk_id: wm.chunk_id,\n    quality_score: analysisJson.score,\n    ai_feedback_json: analysisJson,\n    transcript_or_notes: analysisJson.transcription,\n  }\n}];\n"
+            },
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                256,
+                368
+            ],
+            "id": "3e5f4aca-83dc-4052-bc2d-be62ab740af6",
+            "name": "Combine analysis + arguments"
         },
         {
             "parameters": {
@@ -447,204 +908,95 @@
             "type": "n8n-nodes-base.switch",
             "typeVersion": 3.4,
             "position": [
-                1376,
+                1584,
                 48
             ],
             "id": "8272a74e-eafd-4dde-aa3f-cb2f123a14f3",
-            "name": "Switch"
+            "name": "Decide Response Flow"
         },
         {
             "parameters": {
-                "conditions": {
-                    "options": {
-                        "caseSensitive": true,
-                        "leftValue": "",
-                        "typeValidation": "strict",
-                        "version": 3
-                    },
-                    "conditions": [
+                "rules": {
+                    "values": [
                         {
-                            "id": "d592d9b0-2d22-456b-b4a6-68171bb6c929",
-                            "leftValue": "={{ $json.response }}",
-                            "rightValue": "",
-                            "operator": {
-                                "type": "string",
-                                "operation": "notEmpty",
-                                "singleValue": true
-                            }
-                        }
-                    ],
-                    "combinator": "and"
-                },
-                "options": {}
-            },
-            "type": "n8n-nodes-base.if",
-            "typeVersion": 2.3,
-            "position": [
-                2768,
-                256
-            ],
-            "id": "6da0bf94-af9f-4660-94c1-a31c4ea342de",
-            "name": "If"
-        },
-        {
-            "parameters": {
-                "method": "POST",
-                "url": "http://api:8000/commands/extract/",
-                "authentication": "genericCredentialType",
-                "genericAuthType": "httpBearerAuth",
-                "sendBody": true,
-                "bodyParameters": {
-                    "parameters": [
-                        {
-                            "name": "text",
-                            "value": "={{ $('Aggregate Texts').item.json.data[0].text }}"
+                            "conditions": {
+                                "options": {
+                                    "caseSensitive": true,
+                                    "leftValue": "",
+                                    "typeValidation": "strict",
+                                    "version": 3
+                                },
+                                "conditions": [
+                                    {
+                                        "leftValue": "={{ $json.command }}",
+                                        "rightValue": "practice",
+                                        "operator": {
+                                            "type": "string",
+                                            "operation": "equals"
+                                        },
+                                        "id": "c70eb344-9939-493c-80d2-c1563cfd9a4c"
+                                    }
+                                ],
+                                "combinator": "and"
+                            },
+                            "renameOutput": true,
+                            "outputKey": "Lang Practice"
                         },
                         {
-                            "name": "intent",
-                            "value": "={{ $json.intent }}"
+                            "conditions": {
+                                "options": {
+                                    "caseSensitive": true,
+                                    "leftValue": "",
+                                    "typeValidation": "strict",
+                                    "version": 3
+                                },
+                                "conditions": [
+                                    {
+                                        "id": "9f90e1dc-14cc-486b-92c9-ccc15542eba9",
+                                        "leftValue": "={{ $json.command }}",
+                                        "rightValue": "review",
+                                        "operator": {
+                                            "type": "string",
+                                            "operation": "equals",
+                                            "name": "filter.operator.equals"
+                                        }
+                                    }
+                                ],
+                                "combinator": "and"
+                            },
+                            "renameOutput": true,
+                            "outputKey": "Lang Review"
                         }
                     ]
                 },
-                "options": {}
-            },
-            "type": "n8n-nodes-base.httpRequest",
-            "typeVersion": 4.4,
-            "position": [
-                2064,
-                128
-            ],
-            "id": "77e4b3c5-2fd2-4d05-8361-b483ed405654",
-            "name": "Extract Args",
-            "credentials": {
-                "httpBearerAuth": {
-                    "id": "oj5Yf1MhLsryeSrX",
-                    "name": "Bearer Auth account"
+                "options": {
+                    "fallbackOutput": "extra"
                 }
             },
-            "onError": "continueErrorOutput"
-        },
-        {
-            "parameters": {
-                "fieldToSplitOut": "commands",
-                "include": "allOtherFields",
-                "options": {}
-            },
-            "type": "n8n-nodes-base.splitOut",
-            "typeVersion": 1,
-            "position": [
-                1664,
-                240
-            ],
-            "id": "4e990c68-5b27-4c2f-8ca8-4a253c16add8",
-            "name": "Split Commands"
-        },
-        {
-            "parameters": {
-                "conditions": {
-                    "options": {
-                        "caseSensitive": true,
-                        "leftValue": "",
-                        "typeValidation": "strict",
-                        "version": 3
-                    },
-                    "conditions": [
-                        {
-                            "id": "1eb3432f-09ee-47cd-b3c2-b9f83ad5f0a5",
-                            "leftValue": "={{ $json.commands.source }}",
-                            "rightValue": "intent_detection",
-                            "operator": {
-                                "type": "string",
-                                "operation": "equals",
-                                "name": "filter.operator.equals"
-                            }
-                        }
-                    ],
-                    "combinator": "and"
-                },
-                "options": {}
-            },
-            "type": "n8n-nodes-base.if",
-            "typeVersion": 2.3,
-            "position": [
-                1856,
-                240
-            ],
-            "id": "9376d533-3151-44e7-8147-8c4da3914858",
-            "name": "Needs Args Extraction"
-        },
-        {
-            "parameters": {
-                "method": "POST",
-                "url": "http://api:8000/commands/respond/",
-                "authentication": "genericCredentialType",
-                "genericAuthType": "httpBearerAuth",
-                "sendBody": true,
-                "bodyParameters": {
-                    "parameters": [
-                        {
-                            "name": "message_id",
-                            "value": "={{ $('Persist Message').item.json.message_id }}"
-                        }
-                    ]
-                },
-                "options": {}
-            },
-            "type": "n8n-nodes-base.httpRequest",
-            "typeVersion": 4.4,
-            "position": [
-                2592,
-                256
-            ],
-            "id": "d1d1105b-f174-4b94-b9ed-16a9099dc8de",
-            "name": "Acknowledge Commands",
-            "credentials": {
-                "httpBearerAuth": {
-                    "id": "oj5Yf1MhLsryeSrX",
-                    "name": "Bearer Auth account"
-                }
-            }
-        },
-        {
-            "parameters": {
-                "assignments": {
-                    "assignments": [
-                        {
-                            "id": "6d491604-ce96-4b98-9e87-0fead14a40dc",
-                            "name": "detected_intents",
-                            "value": "={{ $json.commands.map(c => c.intent) }}",
-                            "type": "array"
-                        }
-                    ]
-                },
-                "options": {}
-            },
-            "type": "n8n-nodes-base.set",
+            "type": "n8n-nodes-base.switch",
             "typeVersion": 3.4,
             "position": [
-                1664,
-                -96
+                2704,
+                192
             ],
-            "id": "d30fa5fd-c828-4d7f-9edc-7febda063f5f",
-            "name": "Set Intents"
+            "id": "668e3b7b-8953-41f0-917c-ec46cf359bcd",
+            "name": "Decide Lang Flow"
         },
         {
             "parameters": {
-                "chatId": "={{ $('Message Trigger').item.json.message.chat.id }}",
-                "text": "={{ $json.response }}",
-                "additionalFields": {
-                    "appendAttribution": false
-                }
+                "resource": "callback",
+                "queryId": "={{ $json.callback_query.id }}",
+                "additionalFields": {}
             },
             "type": "n8n-nodes-base.telegram",
             "typeVersion": 1.2,
             "position": [
-                3024,
-                -96
+                -656,
+                576
             ],
-            "id": "68ef2004-402b-4488-b37e-671774bbc569",
-            "name": "Send Message",
-            "webhookId": "e8403c62-a8ad-408d-a798-ff936317ee81",
+            "id": "ba7a7f85-0e78-4600-b227-6ad0ff350ccd",
+            "name": "Answer Query a callback",
+            "webhookId": "d9fcdd12-da3e-449d-9ab6-b0553a50b76f",
             "credentials": {
                 "telegramApi": {
                     "id": "t63z4EHeYTEZtFAR",
@@ -657,9 +1009,9 @@
                 "assignments": {
                     "assignments": [
                         {
-                            "id": "45bf2d9b-e45c-4b8b-a785-a279075c1a3a",
-                            "name": "response",
-                            "value": "There was a internal error. Try again later",
+                            "id": "4f2509e4-151b-4b05-a50b-7b462cd50953",
+                            "name": "text",
+                            "value": "={{ $('Message Trigger').item.json.callback_query.data.split(\";\")[0] }}",
                             "type": "string"
                         }
                     ]
@@ -669,11 +1021,148 @@
             "type": "n8n-nodes-base.set",
             "typeVersion": 3.4,
             "position": [
-                2320,
-                48
+                560,
+                576
             ],
-            "id": "7447758d-38d4-4e0c-ad4c-7b9303f24767",
-            "name": "Set Error Message"
+            "id": "2de5ba64-913e-4369-a3be-10e1227e968d",
+            "name": "Define Message from Callback"
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "http://api:8000/language/sessions/srs-review",
+                "authentication": "genericCredentialType",
+                "genericAuthType": "httpBearerAuth",
+                "sendBody": true,
+                "bodyParameters": {
+                    "parameters": [
+                        {
+                            "name": "track_id",
+                            "value": "={{ $('Message Trigger').item.json.callback_query.data.split(\";\")[1] }}"
+                        },
+                        {
+                            "name": "chunk_id",
+                            "value": "={{ $('Message Trigger').item.json.callback_query.data.split(\";\")[2] }}"
+                        },
+                        {
+                            "name": "quality_score",
+                            "value": "={{ $('Message Trigger').item.json.callback_query.data.split(\";\")[3] }}"
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.4,
+            "position": [
+                -480,
+                576
+            ],
+            "id": "a4709237-65e3-46a3-80b9-531daacdef4b",
+            "name": "Push SRS Review",
+            "credentials": {
+                "httpBearerAuth": {
+                    "id": "oj5Yf1MhLsryeSrX",
+                    "name": "Bearer Auth account"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "chatId": "={{ $('Message Trigger').item.json.message?.chat?.id?.toString() || $('Message Trigger').item.json.callback_query?.message?.chat?.id?.toString() }}",
+                "text": "=Do you know: \"{{ $json.result.text }}\"?",
+                "replyMarkup": "inlineKeyboard",
+                "inlineKeyboard": {
+                    "rows": [
+                        {
+                            "row": {
+                                "buttons": [
+                                    {
+                                        "text": "✅ I know",
+                                        "additionalFields": {
+                                            "callback_data": "=know;{{ $json.result.track_id }};{{ $json.result.chunk_id }};3"
+                                        }
+                                    },
+                                    {
+                                        "text": "❌ Don't know",
+                                        "additionalFields": {
+                                            "callback_data": "=dont_know;{{ $json.result.track_id }};{{ $json.result.chunk_id }};1"
+                                        }
+                                    }
+                                ]
+                            }
+                        }
+                    ]
+                },
+                "additionalFields": {
+                    "appendAttribution": false
+                }
+            },
+            "type": "n8n-nodes-base.telegram",
+            "typeVersion": 1.2,
+            "position": [
+                3136,
+                304
+            ],
+            "id": "0810454d-859b-4e81-8230-b5b6b23421c5",
+            "name": "Send Language Review",
+            "webhookId": "b3232535-b37f-4474-8545-32718403f9af",
+            "credentials": {
+                "telegramApi": {
+                    "id": "t63z4EHeYTEZtFAR",
+                    "name": "Telegram account"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "operation": "sendAudio",
+                "chatId": "={{ $('Message Trigger').item.json.message?.chat?.id?.toString() || $('Message Trigger').item.json.callback_query?.message?.chat?.id?.toString() }}\n",
+                "binaryData": true,
+                "binaryPropertyName": "=audio",
+                "additionalFields": {
+                    "caption": "=Shadow this: {{ $('Execute Commands').item.json.result.text }}"
+                }
+            },
+            "type": "n8n-nodes-base.telegram",
+            "typeVersion": 1.2,
+            "position": [
+                3328,
+                -32
+            ],
+            "id": "3bf63869-21e4-4916-aff7-bfc327892edc",
+            "name": "Send Language Practice Audio",
+            "webhookId": "e0631a47-b406-4117-93be-f7b23e81d2ef",
+            "credentials": {
+                "telegramApi": {
+                    "id": "t63z4EHeYTEZtFAR",
+                    "name": "Telegram account"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "chatId": "={{ $('Message Trigger').item.json.message.chat.id }}",
+                "text": "Listening to your audio... 🎧 Just a second!",
+                "additionalFields": {
+                    "appendAttribution": false
+                }
+            },
+            "type": "n8n-nodes-base.telegram",
+            "typeVersion": 1.2,
+            "position": [
+                -656,
+                256
+            ],
+            "id": "4f85f141-d528-4b8a-93b0-40b21d3d65f5",
+            "name": "Waiting Analyzing Msg",
+            "webhookId": "27a358c6-6086-4358-87bf-aa2940c651d6",
+            "credentials": {
+                "telegramApi": {
+                    "id": "t63z4EHeYTEZtFAR",
+                    "name": "Telegram account"
+                }
+            }
         }
     ],
     "pinData": {},
@@ -700,7 +1189,14 @@
                 ],
                 [
                     {
-                        "node": "Get audio file",
+                        "node": "Waiting Analyzing Msg",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "Answer Query a callback",
                         "type": "main",
                         "index": 0
                     }
@@ -711,7 +1207,7 @@
             "main": [
                 [
                     {
-                        "node": "Transcribe a recording",
+                        "node": "Is Language Practice Active",
                         "type": "main",
                         "index": 0
                     }
@@ -744,7 +1240,7 @@
             "main": [
                 [
                     {
-                        "node": "Acknowledge Commands",
+                        "node": "Decide Lang Flow",
                         "type": "main",
                         "index": 0
                     }
@@ -813,48 +1309,7 @@
             "main": [
                 [
                     {
-                        "node": "Switch",
-                        "type": "main",
-                        "index": 0
-                    }
-                ]
-            ]
-        },
-        "Switch": {
-            "main": [
-                [
-                    {
-                        "node": "Set Intents",
-                        "type": "main",
-                        "index": 0
-                    }
-                ],
-                [
-                    {
-                        "node": "Split Commands",
-                        "type": "main",
-                        "index": 0
-                    },
-                    {
-                        "node": "Set Intents",
-                        "type": "main",
-                        "index": 0
-                    }
-                ],
-                [
-                    {
-                        "node": "Split Commands",
-                        "type": "main",
-                        "index": 0
-                    }
-                ]
-            ]
-        },
-        "If": {
-            "main": [
-                [
-                    {
-                        "node": "Send Message",
+                        "node": "Decide Response Flow",
                         "type": "main",
                         "index": 0
                     }
@@ -912,7 +1367,14 @@
             "main": [
                 [
                     {
-                        "node": "If",
+                        "node": "Has response",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "Set Error Message",
                         "type": "main",
                         "index": 0
                     }
@@ -940,14 +1402,233 @@
                     }
                 ]
             ]
+        },
+        "Has response": {
+            "main": [
+                [
+                    {
+                        "node": "Send Message",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "Set Error Message",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Gemini TTS": {
+            "main": [
+                [
+                    {
+                        "node": "Convert To Binary Data",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Convert To Binary Data": {
+            "main": [
+                [
+                    {
+                        "node": "Send Language Practice Audio",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "Set Error Message",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Is Language Practice Active": {
+            "main": [
+                [
+                    {
+                        "node": "Analyze audio",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "Transcribe a recording",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Get Working Memory": {
+            "main": [
+                [
+                    {
+                        "node": "Get audio file",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Analyze audio": {
+            "main": [
+                [
+                    {
+                        "node": "Combine analysis + arguments",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Push Grade": {
+            "main": [
+                [
+                    {
+                        "node": "Define Message from Practice",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Define Message from Practice": {
+            "main": [
+                [
+                    {
+                        "node": "Aggregate Texts",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Combine analysis + arguments": {
+            "main": [
+                [
+                    {
+                        "node": "Push Grade",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Decide Response Flow": {
+            "main": [
+                [
+                    {
+                        "node": "Set Intents",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "Split Commands",
+                        "type": "main",
+                        "index": 0
+                    },
+                    {
+                        "node": "Set Intents",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "Split Commands",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Decide Lang Flow": {
+            "main": [
+                [
+                    {
+                        "node": "Gemini TTS",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "Send Language Review",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "Acknowledge Commands",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Answer Query a callback": {
+            "main": [
+                [
+                    {
+                        "node": "Push SRS Review",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Push SRS Review": {
+            "main": [
+                [
+                    {
+                        "node": "Define Message from Callback",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Define Message from Callback": {
+            "main": [
+                [
+                    {
+                        "node": "Aggregate Texts",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Waiting Analyzing Msg": {
+            "main": [
+                [
+                    {
+                        "node": "Get Working Memory",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
         }
     },
-    "active": false,
+    "active": true,
     "settings": {
         "executionOrder": "v1",
         "binaryMode": "separate"
     },
-    "versionId": "b16b1c74-388d-4f4f-9e71-204385f6e655",
+    "versionId": "6a68b8d8-a104-4b19-a9d3-bc89e798e3f5",
     "meta": {
         "templateCredsSetupCompleted": true,
         "instanceId": "11c561d281784ecfcc254c9443353f5b31f3500fed0bdb0da25174650cb582d5"

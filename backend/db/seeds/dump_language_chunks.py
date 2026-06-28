@@ -19,9 +19,11 @@ import yaml
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from sqlalchemy import select
+from sqlalchemy.orm import selectinload
 
 from app.db.session import async_session
 from app.features.language.chunks.tables import Chunk
+from app.features.language.grammar_scope.tables import GrammarScope
 from app.features.language.tracks.tables import Track
 
 SEEDS_DIR = Path(__file__).parent
@@ -39,6 +41,7 @@ async def _dump(codes: list[str]) -> None:
             chunks_result = await session.execute(
                 select(Chunk)
                 .where(Chunk.track_id == track.id)
+                .options(selectinload(Chunk.grammar_scope))
                 .order_by(Chunk.frequency_rank.asc().nulls_last(), Chunk.created_at.asc())
             )
             chunks = chunks_result.scalars().all()
@@ -58,6 +61,7 @@ async def _dump(codes: list[str]) -> None:
                     entry["cefr_level"] = c.cefr_level
                 if c.frequency_rank is not None:
                     entry["frequency_rank"] = c.frequency_rank
+                entry["grammar_scope"] = c.grammar_scope.value if c.grammar_scope else None
                 entries.append(entry)
 
             out_path = SEEDS_DIR / f"language_chunks_{code}.yaml"

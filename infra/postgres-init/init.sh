@@ -18,9 +18,8 @@ psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<-E
         END IF;
     END \$\$;
 
-    -- Create n8n database
-    CREATE DATABASE $N8N_DB_NAME;
-    GRANT ALL PRIVILEGES ON DATABASE $N8N_DB_NAME TO $N8N_DB_USER;
+    -- Create n8n database (owned by n8n user so it can run migrations)
+    CREATE DATABASE $N8N_DB_NAME OWNER $N8N_DB_USER;
 
     -- Grant permissions to the app user for the public schema
     GRANT CONNECT ON DATABASE $POSTGRES_DB TO $DB_USER;
@@ -31,7 +30,7 @@ EOSQL
 
 psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$N8N_DB_NAME" <<-EOSQL
     -- Grant schema permissions for n8n user
-    GRANT USAGE ON SCHEMA public TO $N8N_DB_USER;
+    GRANT ALL ON SCHEMA public TO $N8N_DB_USER;
     ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO $N8N_DB_USER;
     ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT USAGE, SELECT ON SEQUENCES TO $N8N_DB_USER;
 EOSQL

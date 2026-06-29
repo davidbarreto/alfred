@@ -1,0 +1,71 @@
+name: Deploy to VPS
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+
+      - name: Install dependencies
+        run: pip install -r backend/requirements.txt
+
+      - name: Run tests
+        run: python -m pytest tests/ -q
+        working-directory: backend
+
+  deploy:
+    name: Deploy
+    needs: test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_KEY }}
+          port: ${{ secrets.VPS_PORT || '22' }}
+          script_stop: true
+          script: |
+            set -euo pipefail
+            APP_DIR=/opt/stacks/alfred
+            COMPOSE="docker compose -f $APP_DIR/infra/docker-compose.yml"
+
+            echo "==> Pulling latest code..."
+            git -C "$APP_DIR" pull origin main
+
+            echo "==> Building services..."
+            $COMPOSE build api web
+
+            echo "==> Starting services..."
+            $COMPOSE up -d
+
+            echo "==> Waiting for API to be ready..."
+            for i in $(seq 1 30); do
+              if $COMPOSE exec -T api python -c "import sys; sys.exit(0)" 2>/dev/null; then
+                echo "API is ready"
+                break
+              fi
+              [ "$i" -eq 30 ] && echo "Error: API failed to start within 90s" && exit 1
+              sleep 3
+            done
+
+            echo "==> Running database migrations..."
+            $COMPOSE exec -T api alembic upgrade head
+
+            echo "==> Configuring n8n..."
+            bash "$APP_DIR/infra/scripts/setup_n8n.sh"

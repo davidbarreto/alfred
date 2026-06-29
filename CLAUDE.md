@@ -13,6 +13,7 @@ Domains: `dbflabs.com` (Alfred stack), `davidbf.com` (personal site).
 
 ## Repository Structure
 
+```text
 alfred/
 ├── backend/
 │   ├── app/
@@ -89,6 +90,7 @@ alfred/
 ├── infra/                         # docker-compose.yml, .env, postgres-init scripts
 ├── postman/                       # One collection per feature/integration
 └── CLAUDE.md
+```
 
 ---
 

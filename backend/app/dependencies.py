@@ -70,8 +70,8 @@ async def get_google_calendar_client(session: AsyncSession = Depends(get_session
             detail="Google Calendar not authorized. Open GET /integration/google-calendar/oauth/url to start the flow.",
         )
     return GoogleCalendarClient(
-        client_id=s.google_calendar_client_id,
-        client_secret=s.google_calendar_client_secret,
+        client_id=s.google_client_id,
+        client_secret=s.google_client_secret,
         refresh_token=token.refresh_token,
     )
 
@@ -177,8 +177,8 @@ async def get_google_contacts_client(session: AsyncSession = Depends(get_session
     if not token:
         return None
     return GoogleContactsClient(
-        client_id=s.google_calendar_client_id,
-        client_secret=s.google_calendar_client_secret,
+        client_id=s.google_client_id,
+        client_secret=s.google_client_secret,
         refresh_token=token.refresh_token,
     )
 

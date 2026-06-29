@@ -17,9 +17,9 @@ class Settings(BaseSettings):
     notion_tasks_database_id: str = Field(validation_alias="NOTION_TASKS_DATABASE_ID")
     notion_notes_database_id: str = Field(validation_alias="NOTION_NOTES_DATABASE_ID")
 
-    # Google Calendar
-    google_calendar_client_id: str = Field(validation_alias="GOOGLE_CALENDAR_CLIENT_ID")
-    google_calendar_client_secret: str = Field(validation_alias="GOOGLE_CALENDAR_CLIENT_SECRET")
+    # Google OAuth (shared client used by Calendar and Contacts)
+    google_client_id: str = Field(validation_alias="GOOGLE_CLIENT_ID")
+    google_client_secret: str = Field(validation_alias="GOOGLE_CLIENT_SECRET")
     google_calendar_oauth_redirect_uri: str = Field(validation_alias="GOOGLE_CALENDAR_OAUTH_REDIRECT_URI")
     google_calendar_id: str = Field(default="primary", validation_alias="GOOGLE_CALENDAR_ID")
     google_contacts_oauth_redirect_uri: str = Field(

@@ -32,7 +32,7 @@ async def get_status(session: AsyncSession = Depends(get_session)) -> dict[str, 
 async def get_oauth_url() -> dict[str, str]:
     s = get_settings()
     params = {
-        "client_id": s.google_calendar_client_id,
+        "client_id": s.google_client_id,
         "redirect_uri": s.google_contacts_oauth_redirect_uri,
         "response_type": "code",
         "scope": " ".join(_SCOPES),
@@ -53,8 +53,8 @@ async def oauth_callback(
             _TOKEN_URL,
             data={
                 "code": code,
-                "client_id": s.google_calendar_client_id,
-                "client_secret": s.google_calendar_client_secret,
+                "client_id": s.google_client_id,
+                "client_secret": s.google_client_secret,
                 "redirect_uri": s.google_contacts_oauth_redirect_uri,
                 "grant_type": "authorization_code",
             },

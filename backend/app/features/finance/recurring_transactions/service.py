@@ -30,7 +30,7 @@ class RecurringTransactionService:
 
     async def create(self, data: RecurringTransactionCreate) -> RecurringTransactionRead:
         rt = await self._repo.create(data)
-        logger.info("RecurringTransaction created: id=%d name=%r rule=%s", rt.id, data.name, data.recurrence_rule)
+        logger.info("RecurringTransaction created: id=%d merchant=%r rule=%s", rt.id, data.merchant, data.recurrence_rule)
         return RecurringTransactionRead.model_validate(rt)
 
     async def update(

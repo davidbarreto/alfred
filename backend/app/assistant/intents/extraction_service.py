@@ -95,7 +95,7 @@ class SearchTasksArgs(BaseModel):
 
 
 class WeatherArgs(BaseModel):
-    location: str = Field(description="City name or location, e.g. 'Paris', 'New York'. Default to the user's home city if not specified.")
+    location: str = Field(description="City name or location exactly as stated by the user, e.g. 'Paris', 'New York', 'Marseille, France', 'Rio de Janeiro'. Include country or state if the user mentioned it. Default to the user's home city if no location is mentioned.")
     date: str | None = Field(default=None, description="Date in ISO 8601 format (YYYY-MM-DD). Resolve relative expressions like 'today' or 'tomorrow' using the current date provided. Omit if not mentioned.")
 
 

@@ -5,65 +5,128 @@
 {% block content %}
 <div class="p-6 space-y-4">
 
-  <!-- Header -->
+  <!-- Header with tabs -->
   <div class="flex items-center justify-between">
-    <h1 class="text-base font-semibold text-gray-900">Shopping List</h1>
+    <div class="flex gap-1 border-b border-gray-100" id="shopping-tabs">
+      <button onclick="showShoppingTab('list')" id="stab-list"
+        class="px-3 py-1.5 text-xs font-medium border-b-2 border-[#378ADD] text-[#0C447C] transition-colors">
+        Shopping List
+      </button>
+      <button onclick="showShoppingTab('wishlist')" id="stab-wishlist"
+        class="px-3 py-1.5 text-xs font-medium text-gray-500 hover:text-gray-700 border-b-2 border-transparent transition-colors">
+        Wishlist <span class="ml-1 text-gray-300 font-normal">{{ wishlist | length }}</span>
+      </button>
+    </div>
     <button
       class="text-xs text-gray-400 hover:text-gray-600 px-2 py-1 rounded hover:bg-gray-100"
+      id="clear-checked-btn"
       hx-get="/shopping/list?status=pending&category={{ active_category }}"
       hx-target="#shopping-list"
     >Clear checked</button>
   </div>
 
-  <!-- Add item form -->
-  <form
-    hx-post="/shopping"
-    hx-target="#shopping-list"
-    hx-swap="beforeend"
-    class="flex gap-2"
-    hx-on::after-request="this.reset()"
-  >
-    <input
-      name="name"
-      type="text"
-      placeholder="Add item…"
-      class="input input-sm flex-1 border border-gray-200 bg-white rounded-lg px-3 text-sm"
-      required
-    />
-    <select name="category" class="select select-sm border border-gray-200 bg-white rounded-lg text-sm px-2">
-      {% for cat in categories %}
-      <option value="{{ cat }}">{{ cat }}</option>
+  <!-- Shopping list panel -->
+  <div id="panel-list">
+    <!-- Add item form -->
+    <form
+      hx-post="/shopping"
+      hx-target="#shopping-list"
+      hx-swap="beforeend"
+      class="flex gap-2"
+      hx-on::after-request="this.reset()"
+    >
+      <input
+        name="name"
+        type="text"
+        placeholder="Add item…"
+        class="input input-sm flex-1 border border-gray-200 bg-white rounded-lg px-3 text-sm"
+        required
+      />
+      <select name="category" class="select select-sm border border-gray-200 bg-white rounded-lg text-sm px-2">
+        {% for cat in categories %}
+        <option value="{{ cat }}">{{ cat }}</option>
+        {% endfor %}
+      </select>
+      <select name="priority" class="select select-sm border border-gray-200 bg-white rounded-lg text-sm px-2">
+        <option value="need">Need</option>
+        <option value="want">Want</option>
+      </select>
+      <button class="btn btn-sm btn-primary">Add</button>
+    </form>
+
+    <!-- Filter pills: status -->
+    <div class="flex gap-1.5 flex-wrap items-center">
+      {% for value, label in [("pending", "Pending"), ("bought", "Bought"), ("all", "All")] %}
+      <a
+        href="/shopping?status={{ value }}&category={{ active_category }}"
+        class="px-3 py-1 rounded-full text-xs font-medium transition-colors
+          {% if active_status == value %}bg-[#E6F1FB] text-[#0C447C]{% else %}text-gray-500 hover:bg-gray-100{% endif %}"
+      >{{ label }}</a>
       {% endfor %}
-    </select>
-    <select name="priority" class="select select-sm border border-gray-200 bg-white rounded-lg text-sm px-2">
-      <option value="need">Need</option>
-      <option value="want">Want</option>
-    </select>
-    <button class="btn btn-sm btn-primary">Add</button>
-  </form>
+      <div class="w-px h-4 bg-gray-200 mx-1"></div>
+      {% for cat in ["all"] + categories %}
+      <a
+        href="/shopping?status={{ active_status }}&category={{ cat }}"
+        class="px-2.5 py-0.5 rounded-full text-xs transition-colors
+          {% if active_category == cat %}bg-gray-200 text-gray-700 font-medium{% else %}text-gray-400 hover:bg-gray-100{% endif %}"
+      >{{ cat }}</a>
+      {% endfor %}
+    </div>
 
-  <!-- Filter pills: status -->
-  <div class="flex gap-1.5 flex-wrap items-center">
-    {% for value, label in [("pending", "Pending"), ("bought", "Bought"), ("all", "All")] %}
-    <a
-      href="/shopping?status={{ value }}&category={{ active_category }}"
-      class="px-3 py-1 rounded-full text-xs font-medium transition-colors
-        {% if active_status == value %}bg-[#E6F1FB] text-[#0C447C]{% else %}text-gray-500 hover:bg-gray-100{% endif %}"
-    >{{ label }}</a>
-    {% endfor %}
-    <div class="w-px h-4 bg-gray-200 mx-1"></div>
-    {% for cat in ["all"] + categories %}
-    <a
-      href="/shopping?status={{ active_status }}&category={{ cat }}"
-      class="px-2.5 py-0.5 rounded-full text-xs transition-colors
-        {% if active_category == cat %}bg-gray-200 text-gray-700 font-medium{% else %}text-gray-400 hover:bg-gray-100{% endif %}"
-    >{{ cat }}</a>
-    {% endfor %}
+    <!-- Items -->
+    <div id="shopping-list">
+      {% include "_shopping_list.html" %}
+    </div>
   </div>
 
-  <!-- Items -->
-  <div id="shopping-list">
-    {% include "_shopping_list.html" %}
+  <!-- Wishlist panel (hidden by default) -->
+  <div id="panel-wishlist" class="hidden space-y-3">
+    <!-- Add to wishlist form -->
+    <form class="flex gap-2" onsubmit="submitWishlistForm(event)">
+      <input name="name" required placeholder="Add to wishlist…"
+        class="input input-sm flex-1 border border-gray-200 bg-white rounded-lg px-3 text-sm" />
+      <input name="brand" placeholder="Brand"
+        class="input input-sm w-28 border border-gray-200 bg-white rounded-lg px-3 text-sm" />
+      <input name="estimated_price" type="number" step="0.01" min="0" placeholder="€"
+        class="input input-sm w-20 border border-gray-200 bg-white rounded-lg px-3 text-sm" />
+      <button type="submit" class="btn btn-sm btn-primary">Add</button>
+    </form>
+    <div id="wishlist-list">
+      {% include "_wishlist_list.html" %}
+    </div>
   </div>
+
+<script>
+function showShoppingTab(name) {
+  ['list', 'wishlist'].forEach(t => {
+    document.getElementById('panel-' + t).classList.toggle('hidden', t !== name);
+    const btn = document.getElementById('stab-' + t);
+    const active = t === name;
+    btn.classList.toggle('border-[#378ADD]', active);
+    btn.classList.toggle('text-[#0C447C]', active);
+    btn.classList.toggle('border-transparent', !active);
+    btn.classList.toggle('text-gray-500', !active);
+  });
+  document.getElementById('clear-checked-btn').classList.toggle('hidden', name !== 'list');
+}
+
+async function submitWishlistForm(e) {
+  e.preventDefault();
+  const form = e.target;
+  const btn = form.querySelector('[type="submit"]');
+  btn.disabled = true;
+  try {
+    const res = await fetch('/shopping/wishlist', { method: 'POST', body: new FormData(form) });
+    if (!res.ok) throw new Error(await res.text());
+    document.getElementById('wishlist-list').innerHTML = await res.text();
+    form.reset();
+    htmx.process(document.getElementById('wishlist-list'));
+  } catch (err) {
+    alert(err.message || 'Failed.');
+  } finally {
+    btn.disabled = false;
+  }
+}
+</script>
 </div>
 {% endblock %}

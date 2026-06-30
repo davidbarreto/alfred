@@ -17,7 +17,11 @@ async def handle_weather(command: str, arguments: dict[str, Any]) -> Any:
     if command != "current":
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Unknown weather command: {command}")
 
-    location = str(arguments.get("location", "")).strip() or "Porto"
+    extracted = str(arguments.get("location", "")).strip()
+    location_inferred = not extracted
+    if location_inferred:
+        logger.warning("handle_weather: location not extracted, falling back to Porto")
+    location = extracted or "Porto"
     date_arg = arguments.get("date")
     try:
         forecast_date = date.fromisoformat(date_arg) if date_arg else date.today()
@@ -32,5 +36,6 @@ async def handle_weather(command: str, arguments: dict[str, Any]) -> Any:
     return {
         "location": resolved_location,
         "date": forecast_date.isoformat(),
+        "location_inferred": location_inferred,
         **forecast.model_dump(),
     }

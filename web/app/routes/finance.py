@@ -3,7 +3,7 @@ from typing import Annotated, Optional
 
 import httpx
 from fastapi import APIRouter, Form, Request
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, Response
 
 import app.client as api
 from app.templates_config import templates
@@ -16,7 +16,7 @@ async def finance_page(request: Request):
     period = request.query_params.get("period", "this month")
 
     spending, by_category, transactions, budgets, all_txns = None, None, [], [], []
-    accounts, categories, errors = [], [], []
+    accounts, categories, recurring, all_budgets, errors = [], [], [], [], []
 
     try:
         accounts = await api.get("/finance/accounts/", params={"is_active": "true"})
@@ -50,6 +50,16 @@ async def finance_page(request: Request):
 
     try:
         all_txns = await api.get("/finance/transactions/", params={"type": "expense", "limit": 500, "period": period})
+    except httpx.HTTPError:
+        pass
+
+    try:
+        recurring = await api.get("/finance/recurring-transactions/")
+    except httpx.HTTPError:
+        pass
+
+    try:
+        all_budgets = await api.get("/finance/budgets/")
     except httpx.HTTPError:
         pass
 
@@ -101,6 +111,8 @@ async def finance_page(request: Request):
         "time_label": "Month" if period == "this year" else "Day",
         "accounts": accounts,
         "categories": categories,
+        "recurring": recurring,
+        "all_budgets": budgets,
     })
 
 
@@ -141,3 +153,217 @@ async def create_transaction(
         pass
 
     return templates.TemplateResponse(request, "_finance_transactions.html", {"transactions": transactions})
+
+
+@router.delete("/transactions/{transaction_id}", response_class=Response)
+async def delete_transaction(transaction_id: int, request: Request):
+    period = request.query_params.get("period", "this month")
+    try:
+        await api.delete(f"/finance/transactions/{transaction_id}")
+    except httpx.HTTPError:
+        return HTMLResponse('<p class="text-[#E24B4A] text-sm px-1">Failed to delete transaction.</p>', status_code=422)
+
+    transactions = []
+    try:
+        transactions = await api.get("/finance/transactions/", params={"limit": 15, "period": period})
+    except httpx.HTTPError:
+        pass
+    return templates.TemplateResponse(request, "_finance_transactions.html", {"transactions": transactions})
+
+
+# --- Accounts ---
+
+@router.post("/accounts", response_class=HTMLResponse)
+async def create_account(
+    request: Request,
+    name: Annotated[str, Form()],
+    type: Annotated[str, Form()],
+    currency: Annotated[str, Form()] = "EUR",
+    institution: Annotated[Optional[str], Form()] = None,
+):
+    payload: dict = {"name": name, "type": type, "currency": currency}
+    if institution:
+        payload["institution"] = institution
+    try:
+        await api.post("/finance/accounts/", json=payload)
+    except httpx.HTTPError:
+        return HTMLResponse('<p class="text-[#E24B4A] text-sm">Failed to create account.</p>', status_code=422)
+
+    accounts = []
+    try:
+        accounts = await api.get("/finance/accounts/")
+    except httpx.HTTPError:
+        pass
+    return templates.TemplateResponse(request, "_finance_accounts.html", {"accounts": accounts})
+
+
+@router.delete("/accounts/{account_id}", response_class=HTMLResponse)
+async def delete_account(account_id: int, request: Request):
+    try:
+        await api.delete(f"/finance/accounts/{account_id}")
+    except httpx.HTTPError:
+        return HTMLResponse('<p class="text-[#E24B4A] text-sm">Failed to delete account.</p>', status_code=422)
+
+    accounts = []
+    try:
+        accounts = await api.get("/finance/accounts/")
+    except httpx.HTTPError:
+        pass
+    return templates.TemplateResponse(request, "_finance_accounts.html", {"accounts": accounts})
+
+
+# --- Categories ---
+
+@router.post("/categories", response_class=HTMLResponse)
+async def create_category(
+    request: Request,
+    name: Annotated[str, Form()],
+):
+    try:
+        await api.post("/finance/categories/", json={"name": name})
+    except httpx.HTTPError:
+        return HTMLResponse('<p class="text-[#E24B4A] text-sm">Failed to create category.</p>', status_code=422)
+
+    categories = []
+    try:
+        categories = await api.get("/finance/categories/")
+    except httpx.HTTPError:
+        pass
+    return templates.TemplateResponse(request, "_finance_categories.html", {"categories": categories})
+
+
+@router.delete("/categories/{category_id}", response_class=HTMLResponse)
+async def delete_category(category_id: int, request: Request):
+    try:
+        await api.delete(f"/finance/categories/{category_id}")
+    except httpx.HTTPError:
+        return HTMLResponse('<p class="text-[#E24B4A] text-sm">Failed to delete category.</p>', status_code=422)
+
+    categories = []
+    try:
+        categories = await api.get("/finance/categories/")
+    except httpx.HTTPError:
+        pass
+    return templates.TemplateResponse(request, "_finance_categories.html", {"categories": categories})
+
+
+# --- Budgets ---
+
+@router.post("/budgets", response_class=HTMLResponse)
+async def create_budget(
+    request: Request,
+    name: Annotated[str, Form()],
+    amount: Annotated[str, Form()],
+    period: Annotated[str, Form()],
+    category_id: Annotated[Optional[str], Form()] = None,
+):
+    payload: dict = {"name": name, "amount": amount, "period": period}
+    if category_id:
+        payload["category_id"] = int(category_id)
+    try:
+        await api.post("/finance/budgets/", json=payload)
+    except httpx.HTTPError:
+        return HTMLResponse('<p class="text-[#E24B4A] text-sm">Failed to create budget.</p>', status_code=422)
+
+    budgets, categories = [], []
+    try:
+        budgets = await api.get("/finance/budgets/")
+    except httpx.HTTPError:
+        pass
+    try:
+        categories = await api.get("/finance/categories/")
+    except httpx.HTTPError:
+        pass
+    return templates.TemplateResponse(request, "_finance_budgets.html", {"budgets": budgets, "categories": categories})
+
+
+@router.delete("/budgets/{budget_id}", response_class=HTMLResponse)
+async def delete_budget(budget_id: int, request: Request):
+    try:
+        await api.delete(f"/finance/budgets/{budget_id}")
+    except httpx.HTTPError:
+        return HTMLResponse('<p class="text-[#E24B4A] text-sm">Failed to delete budget.</p>', status_code=422)
+
+    budgets, categories = [], []
+    try:
+        budgets = await api.get("/finance/budgets/")
+    except httpx.HTTPError:
+        pass
+    try:
+        categories = await api.get("/finance/categories/")
+    except httpx.HTTPError:
+        pass
+    return templates.TemplateResponse(request, "_finance_budgets.html", {"budgets": budgets, "categories": categories})
+
+
+# --- Recurring transactions ---
+
+@router.post("/recurring", response_class=HTMLResponse)
+async def create_recurring(
+    request: Request,
+    merchant: Annotated[str, Form()],
+    amount: Annotated[str, Form()],
+    type: Annotated[str, Form()],
+    account_id: Annotated[str, Form()],
+    recurrence_rule: Annotated[str, Form()],
+    category_id: Annotated[Optional[str], Form()] = None,
+    currency: Annotated[str, Form()] = "EUR",
+):
+    payload: dict = {
+        "merchant": merchant,
+        "amount": amount,
+        "type": type,
+        "account_id": int(account_id),
+        "recurrence_rule": recurrence_rule,
+        "currency": currency,
+    }
+    if category_id:
+        payload["category_id"] = int(category_id)
+    try:
+        await api.post("/finance/recurring-transactions/", json=payload)
+    except httpx.HTTPError:
+        return HTMLResponse('<p class="text-[#E24B4A] text-sm">Failed to create recurring transaction.</p>', status_code=422)
+
+    recurring, accounts, categories = [], [], []
+    try:
+        recurring = await api.get("/finance/recurring-transactions/")
+    except httpx.HTTPError:
+        pass
+    try:
+        accounts = await api.get("/finance/accounts/")
+    except httpx.HTTPError:
+        pass
+    try:
+        categories = await api.get("/finance/categories/")
+    except httpx.HTTPError:
+        pass
+    return templates.TemplateResponse(
+        request, "_finance_recurring.html",
+        {"recurring": recurring, "accounts": accounts, "categories": categories},
+    )
+
+
+@router.delete("/recurring/{recurring_id}", response_class=HTMLResponse)
+async def delete_recurring(recurring_id: int, request: Request):
+    try:
+        await api.delete(f"/finance/recurring-transactions/{recurring_id}")
+    except httpx.HTTPError:
+        return HTMLResponse('<p class="text-[#E24B4A] text-sm">Failed to delete recurring transaction.</p>', status_code=422)
+
+    recurring, accounts, categories = [], [], []
+    try:
+        recurring = await api.get("/finance/recurring-transactions/")
+    except httpx.HTTPError:
+        pass
+    try:
+        accounts = await api.get("/finance/accounts/")
+    except httpx.HTTPError:
+        pass
+    try:
+        categories = await api.get("/finance/categories/")
+    except httpx.HTTPError:
+        pass
+    return templates.TemplateResponse(
+        request, "_finance_recurring.html",
+        {"recurring": recurring, "accounts": accounts, "categories": categories},
+    )

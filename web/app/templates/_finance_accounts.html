@@ -1,0 +1,22 @@
+{% if accounts %}
+<ul class="divide-y divide-gray-100">
+  {% for acc in accounts %}
+  <li class="flex items-center justify-between py-2 text-sm" id="account-{{ acc.id }}">
+    <div>
+      <span class="font-medium text-gray-800">{{ acc.name }}</span>
+      <span class="ml-2 text-xs text-gray-400">{{ acc.type }} · {{ acc.currency }}</span>
+      {% if acc.institution %}<span class="ml-1 text-xs text-gray-400">· {{ acc.institution }}</span>{% endif %}
+    </div>
+    <button
+      class="text-gray-300 hover:text-[#E24B4A] transition-colors"
+      hx-delete="/finance/accounts/{{ acc.id }}"
+      hx-target="#accounts-list"
+      hx-confirm="Delete account '{{ acc.name }}'? This cannot be undone."
+      title="Delete"
+    ><i class="ti ti-trash text-base"></i></button>
+  </li>
+  {% endfor %}
+</ul>
+{% else %}
+<p class="text-sm text-gray-400 py-3 text-center">No accounts yet.</p>
+{% endif %}

@@ -22,7 +22,7 @@ class GrammarScopeRepository:
             query = query.where(GrammarScope.track_id == filters.track_id)
         if filters.status != "ALL":
             query = query.where(GrammarScope.status == filters.status)
-        query = query.order_by(GrammarScope.priority.asc(), GrammarScope.id.asc())
+        query = query.order_by(GrammarScope.priority.asc(), GrammarScope.id.asc()).limit(filters.limit).offset(filters.offset)
         result = await self._session.execute(query)
         return list(result.scalars().all())
 

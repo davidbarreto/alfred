@@ -60,11 +60,13 @@ class SessionFilters:
         chunk_id: Annotated[int | None, Query()] = None,
         session_type: Annotated[SessionType | None, Query()] = None,
         limit: Annotated[int, Query(ge=1, le=500)] = 50,
+        offset: Annotated[int, Query(ge=0)] = 0,
     ) -> None:
         self.track_id = track_id
         self.chunk_id = chunk_id
         self.session_type = session_type
         self.limit = limit
+        self.offset = offset
 
 
 class DailyProgressRead(BaseModel):

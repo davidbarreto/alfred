@@ -38,7 +38,7 @@ _AMOUNT_RE = re.compile(
     re.IGNORECASE,
 )
 _MERCHANT_RE = re.compile(
-    rf'\b(?:at|from)\s+([A-Za-z][a-zA-Z0-9]+(?:\s(?!{_DATE_WORDS_RE}\b)[A-Za-z][a-zA-Z0-9]+)?)\b',
+    rf'\b(?:at|from)\s+(?:the\s+|an?\s+)?([A-Za-z][a-zA-Z0-9]+(?:\s(?!{_DATE_WORDS_RE}\b)[A-Za-z][a-zA-Z0-9]+){{0,2}})\b',
     re.IGNORECASE,
 )
 _EXPENSE_INTENT_RE = re.compile(r'\b(?:spent|paid|bought|charged|cost|expensed)\b', re.IGNORECASE)

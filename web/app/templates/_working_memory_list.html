@@ -1,0 +1,61 @@
+{% set now_str = now.isoformat() if now else "" %}
+{% if working_memories %}
+<div class="divide-y divide-gray-100">
+  {% for wm in working_memories %}
+  {% set expired = wm.expires_at and wm.expires_at[:10] < now_str %}
+  <div class="flex items-start gap-3 py-3 group {% if expired %}opacity-40{% endif %}">
+    <div class="flex-1 min-w-0">
+      <div class="flex items-center gap-2 mb-0.5">
+        <span class="text-[10px] px-1.5 py-0.5 rounded font-medium
+          {% if wm.key.startswith('transient:') %}bg-amber-50 text-amber-700
+          {% elif wm.key.startswith('language:') %}bg-purple-50 text-purple-700
+          {% else %}bg-gray-100 text-gray-500{% endif %}">
+          {{ wm.key.split(':')[0] if ':' in wm.key else wm.key }}
+        </span>
+        {% if expired %}
+        <span class="text-[10px] text-gray-300">expired</span>
+        {% elif wm.expires_at %}
+        <span class="text-[10px] text-gray-400">expires {{ wm.expires_at[:10] }}</span>
+        {% endif %}
+      </div>
+      <p class="text-sm text-gray-700 leading-relaxed">{{ wm.value }}</p>
+    </div>
+    <button
+      class="text-gray-200 hover:text-[#E24B4A] opacity-0 group-hover:opacity-100 transition-all flex-shrink-0 mt-0.5"
+      hx-delete="/insights/working-memory/{{ wm.id }}"
+      hx-target="#working-memory-list"
+      hx-swap="innerHTML"
+      hx-confirm="Delete this working memory entry?"
+      title="Delete"
+    ><i class="ti ti-trash text-sm"></i></button>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<p class="text-sm text-gray-400 py-6 text-center">No working memory entries.</p>
+{% endif %}
+
+{% if wm_has_prev or wm_has_next %}
+<div class="flex justify-between items-center mt-4">
+  {% if wm_has_prev %}
+  <button
+    class="px-3 py-1.5 rounded text-xs font-medium text-gray-600 bg-white border border-gray-200 hover:border-gray-300"
+    hx-get="/insights/working-memory-section?offset={{ wm_offset - 20 }}"
+    hx-target="#working-memory-list"
+    hx-swap="innerHTML"
+  >← Prev</button>
+  {% else %}
+  <span></span>
+  {% endif %}
+  {% if wm_has_next %}
+  <button
+    class="px-3 py-1.5 rounded text-xs font-medium text-gray-600 bg-white border border-gray-200 hover:border-gray-300"
+    hx-get="/insights/working-memory-section?offset={{ wm_offset + 20 }}"
+    hx-target="#working-memory-list"
+    hx-swap="innerHTML"
+  >Next →</button>
+  {% else %}
+  <span></span>
+  {% endif %}
+</div>
+{% endif %}

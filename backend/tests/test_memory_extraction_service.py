@@ -192,3 +192,57 @@ class TestMemoryExtractionService:
                 await service.extract_and_save("I wake up at 6am", message_id=1)
 
         memory_service.create.assert_called_once()
+
+    async def test_transient_category_saved_to_working_memory(self):
+        candidates = [{"category": "transient", "content": "Spent 70 euros at the OMG Gym", "importance": 0.2, "confidence": 1.0}]
+        service, llm_provider, _ = _make_service()
+        llm_provider.complete.return_value = LlmResponse(text=json.dumps(candidates), tokens_input=10, tokens_output=5)
+
+        memory_service = AsyncMock()
+        embedding_service = AsyncMock()
+        wm_repo = AsyncMock()
+        wm_repo.create = AsyncMock(return_value=MagicMock(id=42))
+
+        with patch("app.features.core.memories.extraction_service.async_session") as mock_session_ctx:
+            mock_session = AsyncMock()
+            mock_session_ctx.return_value.__aenter__ = AsyncMock(return_value=mock_session)
+            mock_session_ctx.return_value.__aexit__ = AsyncMock(return_value=False)
+            with (
+                patch("app.features.core.memories.extraction_service.MemoryService", return_value=memory_service),
+                patch("app.features.core.memories.extraction_service.EmbeddingService", return_value=embedding_service),
+                patch("app.features.core.memories.extraction_service.WorkingMemoryRepository", return_value=wm_repo),
+            ):
+                await service.extract_and_save("I spent 70 euros at the OMG Gym today", message_id=10)
+
+        wm_repo.create.assert_called_once()
+        wm_create_arg = wm_repo.create.call_args[0][0]
+        assert wm_create_arg.key == "transient:10"
+        assert "OMG Gym" in wm_create_arg.value
+        assert wm_create_arg.expires_at is not None
+        memory_service.create.assert_not_called()
+        embedding_service.embed.assert_not_called()
+
+    async def test_transient_category_not_stored_as_long_term_memory(self):
+        candidates = [{"category": "transient", "content": "Bought coffee at Starbucks", "importance": 0.1, "confidence": 1.0}]
+        service, llm_provider, _ = _make_service()
+        llm_provider.complete.return_value = LlmResponse(text=json.dumps(candidates), tokens_input=10, tokens_output=5)
+
+        memory_service = AsyncMock()
+        embedding_service = AsyncMock()
+        wm_repo = AsyncMock()
+        wm_repo.create = AsyncMock(return_value=MagicMock(id=1))
+
+        with patch("app.features.core.memories.extraction_service.async_session") as mock_session_ctx:
+            mock_session = AsyncMock()
+            mock_session_ctx.return_value.__aenter__ = AsyncMock(return_value=mock_session)
+            mock_session_ctx.return_value.__aexit__ = AsyncMock(return_value=False)
+            with (
+                patch("app.features.core.memories.extraction_service.MemoryService", return_value=memory_service),
+                patch("app.features.core.memories.extraction_service.EmbeddingService", return_value=embedding_service),
+                patch("app.features.core.memories.extraction_service.WorkingMemoryRepository", return_value=wm_repo),
+            ):
+                await service.extract_and_save("Bought coffee at Starbucks", message_id=11)
+
+        memory_service.create.assert_not_called()
+        embedding_service.search.assert_not_called()
+        embedding_service.embed.assert_not_called()

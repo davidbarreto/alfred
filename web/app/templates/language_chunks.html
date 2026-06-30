@@ -28,7 +28,7 @@
     <!-- Status tabs -->
     <div class="flex rounded-lg border border-gray-200 bg-white overflow-hidden text-xs">
       {% for s, label in [('active','Active'), ('pending_triage','Triage'), ('suspended','Suspended'), ('ALL','All')] %}
-      <a href="?status={{ s }}{% if active_type %}&type={{ active_type }}{% endif %}{% if leech_only %}&leech=1{% endif %}{% if due_only %}&due=1{% endif %}"
+      <a href="?status={{ s }}{% if active_type %}&type={{ active_type }}{% endif %}{% if leech_only %}&leech=1{% endif %}{% if due_only %}&due=1{% endif %}{% if active_cefr %}&cefr={{ active_cefr }}{% endif %}{% if active_difficulty %}&difficulty={{ active_difficulty }}{% endif %}"
          class="px-3 py-1.5 {% if active_status == s %}bg-[#E6F1FB] text-[#0C447C] font-medium{% else %}text-gray-500 hover:bg-gray-50{% endif %}">
         {{ label }}
       </a>
@@ -43,6 +43,27 @@
       <option value="{{ t }}" {% if active_type == t %}selected{% endif %}>{{ t | replace('_', ' ') | title }}</option>
       {% endfor %}
     </select>
+
+    <!-- CEFR -->
+    <select name="cefr" onchange="this.form.submit()"
+            class="border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-[#378ADD]">
+      <option value="" {% if not active_cefr %}selected{% endif %}>All CEFR</option>
+      {% for lvl in ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'] %}
+      <option value="{{ lvl }}" {% if active_cefr == lvl %}selected{% endif %}>{{ lvl }}</option>
+      {% endfor %}
+    </select>
+
+    <!-- Difficulty -->
+    <select name="difficulty" onchange="this.form.submit()"
+            class="border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-[#378ADD]">
+      <option value="" {% if not active_difficulty %}selected{% endif %}>All difficulty</option>
+      <option value="very_easy" {% if active_difficulty == 'very_easy' %}selected{% endif %}>Very Easy (&lt;2.5)</option>
+      <option value="easy"      {% if active_difficulty == 'easy'      %}selected{% endif %}>Easy (2.5–4.0)</option>
+      <option value="medium"    {% if active_difficulty == 'medium'    %}selected{% endif %}>Medium (4.0–6.0)</option>
+      <option value="hard"      {% if active_difficulty == 'hard'      %}selected{% endif %}>Hard (6.0–8.0)</option>
+      <option value="very_hard" {% if active_difficulty == 'very_hard' %}selected{% endif %}>Very Hard (&gt;8.0)</option>
+    </select>
+
     <input type="hidden" name="status" value="{{ active_status }}">
 
     <label class="flex items-center gap-1.5 text-xs text-gray-500 cursor-pointer">
@@ -145,7 +166,7 @@
 
   <!-- Pagination -->
   {% if total_pages > 1 %}
-  {% macro page_url(p) %}?status={{ active_status }}{% if active_type %}&type={{ active_type }}{% endif %}{% if leech_only %}&leech=1{% endif %}{% if due_only %}&due=1{% endif %}&page={{ p }}{% endmacro %}
+  {% macro page_url(p) %}?status={{ active_status }}{% if active_type %}&type={{ active_type }}{% endif %}{% if leech_only %}&leech=1{% endif %}{% if due_only %}&due=1{% endif %}{% if active_cefr %}&cefr={{ active_cefr }}{% endif %}{% if active_difficulty %}&difficulty={{ active_difficulty }}{% endif %}&page={{ p }}{% endmacro %}
   <div class="flex items-center justify-center gap-1">
     <!-- Previous -->
     {% if page > 1 %}

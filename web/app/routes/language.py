@@ -29,6 +29,14 @@ _SOURCE_LABEL = {
 }
 
 _CHUNK_PAGE_SIZE = 50
+_GRAMMAR_PAGE_SIZE = 10
+_SESSIONS_PAGE_SIZE = 10
+
+
+def _pagination(items: list, offset: int, page_size: int) -> tuple[list, bool, bool]:
+    """Return (page_slice, has_next, has_prev) using the limit+1 trick."""
+    has_next = len(items) > page_size
+    return items[:page_size], has_next, offset > 0
 
 
 def _flag(code: str) -> str:
@@ -379,6 +387,53 @@ async def insights_page(request: Request):
     })
 
 
+@router.get("/{code}/grammar-section", response_class=HTMLResponse)
+async def grammar_section(code: str, request: Request):
+    tracks = await _safe_get("/language/tracks/", {"active_only": "false"})
+    track = next((t for t in tracks if t["code"] == code), None)
+    if not track:
+        return HTMLResponse("<p>Track not found.</p>", status_code=404)
+
+    offset = max(0, int(request.query_params.get("offset", "0")))
+    raw = await _safe_get("/language/grammar-scope/", {
+        "track_id": track["id"],
+        "limit": _GRAMMAR_PAGE_SIZE + 1,
+        "offset": offset,
+    })
+    scopes, scope_has_next, scope_has_prev = _pagination(raw, offset, _GRAMMAR_PAGE_SIZE)
+    return templates.TemplateResponse(request, "_language_grammar_scope.html", {
+        "track": track,
+        "scopes": scopes,
+        "scope_offset": offset,
+        "scope_has_next": scope_has_next,
+        "scope_has_prev": scope_has_prev,
+    })
+
+
+@router.get("/{code}/sessions-section", response_class=HTMLResponse)
+async def sessions_section(code: str, request: Request):
+    tracks = await _safe_get("/language/tracks/", {"active_only": "false"})
+    track = next((t for t in tracks if t["code"] == code), None)
+    if not track:
+        return HTMLResponse("<p>Track not found.</p>", status_code=404)
+
+    offset = max(0, int(request.query_params.get("offset", "0")))
+    raw = await _safe_get("/language/sessions/", {
+        "track_id": track["id"],
+        "limit": _SESSIONS_PAGE_SIZE + 1,
+        "offset": offset,
+    })
+    sessions, sessions_has_next, sessions_has_prev = _pagination(raw, offset, _SESSIONS_PAGE_SIZE)
+    await _enrich_with_chunk_text(sessions)
+    return templates.TemplateResponse(request, "_language_recent_sessions.html", {
+        "track": track,
+        "recent_sessions": sessions,
+        "sessions_offset": offset,
+        "sessions_has_next": sessions_has_next,
+        "sessions_has_prev": sessions_has_prev,
+    })
+
+
 @router.get("/{code}/review", response_class=HTMLResponse)
 async def review_session(code: str, request: Request):
     tracks = await _safe_get("/language/tracks/", {"active_only": "false"})
@@ -424,28 +479,45 @@ async def track_detail(code: str, request: Request):
     if not track:
         return HTMLResponse("<p>Track not found.</p>", status_code=404)
 
-    scopes, sessions, due_batch = await _fetch_track_data(track["id"])
+    scopes_all, sessions_all, due_batch = await _fetch_track_data(track["id"])
 
     chunk_counts = await _count_chunks_by_status(track["id"])
     progress = await _safe_get("/language/sessions/daily-progress", {"track_id": track["id"]})
     prog = progress[0] if progress else {"completed_today": 0, "quota_met": False, "daily_quota": track["daily_quota"]}
 
-    retention = _retention_rate(sessions)
+    retention = _retention_rate(sessions_all)
 
-    recent_sessions = sessions[:10]
-    await _enrich_with_chunk_text(recent_sessions)
+    scopes_page, scope_has_next, scope_has_prev = _pagination(scopes_all, 0, _GRAMMAR_PAGE_SIZE)
+    sessions_page, sessions_has_next, sessions_has_prev = _pagination(sessions_all, 0, _SESSIONS_PAGE_SIZE)
+    await _enrich_with_chunk_text(sessions_page)
 
     return templates.TemplateResponse(request, "language_track.html", {
         "track": track,
         "flag": _flag(track["code"]),
         "level_color": _level_color(track["level"]),
-        "scopes": scopes,
-        "recent_sessions": recent_sessions,
+        "scopes": scopes_page,
+        "scope_total": len(scopes_all),
+        "scope_offset": 0,
+        "scope_has_next": scope_has_next,
+        "scope_has_prev": False,
+        "recent_sessions": sessions_page,
+        "sessions_offset": 0,
+        "sessions_has_next": sessions_has_next,
+        "sessions_has_prev": False,
         "due_batch": due_batch,
         "chunk_counts": chunk_counts,
         "progress": prog,
         "retention": retention,
     })
+
+
+_DIFFICULTY_BUCKETS: dict[str, tuple[float, float]] = {
+    "very_easy": (0.0, 2.5),
+    "easy":      (2.5, 4.0),
+    "medium":    (4.0, 6.0),
+    "hard":      (6.0, 8.0),
+    "very_hard": (8.0, 10.0),
+}
 
 
 @router.get("/{code}/chunks", response_class=HTMLResponse)
@@ -460,6 +532,8 @@ async def chunk_browser(code: str, request: Request):
     active_type = qp.get("type", "")
     leech_only = qp.get("leech") == "1"
     due_only = qp.get("due") == "1"
+    active_cefr = qp.get("cefr", "").strip().upper()
+    active_difficulty = qp.get("difficulty", "").strip()
     page = max(1, int(qp.get("page", "1")))
 
     filter_params: dict = {"track_id": track["id"]}
@@ -471,6 +545,12 @@ async def chunk_browser(code: str, request: Request):
         filter_params["is_leech"] = "true"
     if due_only:
         filter_params["due_only"] = "true"
+    if active_cefr:
+        filter_params["cefr_level"] = active_cefr
+    if active_difficulty and active_difficulty in _DIFFICULTY_BUCKETS:
+        dmin, dmax = _DIFFICULTY_BUCKETS[active_difficulty]
+        filter_params["difficulty_min"] = dmin
+        filter_params["difficulty_max"] = dmax
 
     count_result = await _safe_get("/language/chunks/count", filter_params)
     total_count = count_result.get("count", 0) if isinstance(count_result, dict) else 0
@@ -493,6 +573,8 @@ async def chunk_browser(code: str, request: Request):
         "active_type": active_type,
         "leech_only": leech_only,
         "due_only": due_only,
+        "active_cefr": active_cefr,
+        "active_difficulty": active_difficulty,
         "page": page,
         "total_pages": total_pages,
         "total_count": total_count,
@@ -533,8 +615,8 @@ async def chunk_detail(code: str, chunk_id: int, request: Request):
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
 async def _fetch_track_data(track_id: int):
-    scopes = await _safe_get("/language/grammar-scope/", {"track_id": track_id})
-    sessions = await _safe_get("/language/sessions/", {"track_id": track_id, "limit": 50})
+    scopes = await _safe_get("/language/grammar-scope/", {"track_id": track_id, "limit": 500})
+    sessions = await _safe_get("/language/sessions/", {"track_id": track_id, "limit": _SESSIONS_PAGE_SIZE + 1})
     daily_batch = await _safe_get("/language/chunks/daily-batch", {"track_id": track_id})
     due_batch = daily_batch[0] if daily_batch else {"chunks": [], "total_due": 0}
     return scopes, sessions, due_batch

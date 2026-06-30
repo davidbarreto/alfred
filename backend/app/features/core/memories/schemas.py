@@ -3,7 +3,7 @@ from typing import Any, Literal, Optional
 
 from pydantic import BaseModel, ConfigDict, Field
 
-MemoryCategory = Literal["fact", "preference", "relationship", "skill", "episodic", "goal"]
+MemoryCategory = Literal["fact", "preference", "relationship", "skill", "episodic", "goal", "transient"]
 
 
 class MemoryCreate(BaseModel):
@@ -45,3 +45,5 @@ class MemoryRead(BaseModel):
 class MemoryFilters(BaseModel):
     category: Optional[str] = None
     active: Optional[bool] = None
+    limit: int = Field(default=100, ge=1, le=500)
+    offset: int = Field(default=0, ge=0)

@@ -16,8 +16,7 @@ class ChunkRepository:
         result = await self._session.execute(select(Chunk).where(Chunk.id == chunk_id))
         return result.scalars().first()
 
-    async def get_chunks(self, filters: ChunkFilters) -> list[Chunk]:
-        query = select(Chunk)
+    def _apply_filters(self, query, filters: ChunkFilters):
         if filters.track_id is not None:
             query = query.where(Chunk.track_id == filters.track_id)
         if filters.status != "ALL":
@@ -28,22 +27,22 @@ class ChunkRepository:
             query = query.where(Chunk.is_leech == filters.is_leech)
         if filters.due_only:
             query = query.where(Chunk.due_at <= func.now())
+        if filters.cefr_level is not None:
+            query = query.where(Chunk.cefr_level == filters.cefr_level)
+        if filters.difficulty_min is not None:
+            query = query.where(Chunk.difficulty >= filters.difficulty_min)
+        if filters.difficulty_max is not None:
+            query = query.where(Chunk.difficulty < filters.difficulty_max)
+        return query
+
+    async def get_chunks(self, filters: ChunkFilters) -> list[Chunk]:
+        query = self._apply_filters(select(Chunk), filters)
         query = query.order_by(Chunk.due_at.asc()).offset(filters.offset).limit(filters.limit)
         result = await self._session.execute(query)
         return list(result.scalars().all())
 
     async def count_chunks(self, filters: ChunkFilters) -> int:
-        query = select(func.count(Chunk.id))
-        if filters.track_id is not None:
-            query = query.where(Chunk.track_id == filters.track_id)
-        if filters.status != "ALL":
-            query = query.where(Chunk.status == filters.status)
-        if filters.chunk_type is not None:
-            query = query.where(Chunk.chunk_type == filters.chunk_type)
-        if filters.is_leech is not None:
-            query = query.where(Chunk.is_leech == filters.is_leech)
-        if filters.due_only:
-            query = query.where(Chunk.due_at <= func.now())
+        query = self._apply_filters(select(func.count(Chunk.id)), filters)
         result = await self._session.execute(query)
         return result.scalar_one()
 

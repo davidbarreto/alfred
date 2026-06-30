@@ -2,10 +2,10 @@
 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
   {% for note in notes %}
   <div
-    class="bg-white border border-gray-200 rounded-lg hover:border-gray-300 transition-colors cursor-pointer"
+    class="bg-white border border-gray-200 rounded-lg hover:border-gray-300 transition-colors group relative"
     data-note="{{ note.title }} {{ note.content }}"
   >
-    <div class="p-4 flex flex-col gap-1">
+    <div class="p-4 flex flex-col gap-1 cursor-pointer">
       {% if note.tags %}
       <span class="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-500 self-start mb-0.5">{{ note.tags[0] }}</span>
       {% endif %}
@@ -15,6 +15,13 @@
         {% if note.updated_at %}updated {{ note.updated_at | timeago }}{% endif %}
       </div>
     </div>
+    <button
+      class="absolute top-2 right-2 text-gray-200 hover:text-[#E24B4A] opacity-0 group-hover:opacity-100 transition-all"
+      hx-delete="/notes/{{ note.id }}"
+      hx-target="#notes-grid"
+      hx-confirm="Delete '{{ note.title }}'?"
+      title="Delete note"
+    ><i class="ti ti-trash text-sm"></i></button>
   </div>
   {% endfor %}
   <!-- New note placeholder -->

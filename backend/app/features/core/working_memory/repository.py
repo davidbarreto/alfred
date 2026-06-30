@@ -28,7 +28,7 @@ class WorkingMemoryRepository:
             query = query.where(WorkingMemory.key == filters.key)
         if filters.session_id is not None:
             query = query.where(WorkingMemory.session_id == filters.session_id)
-        query = query.order_by(WorkingMemory.created_at.desc())
+        query = query.order_by(WorkingMemory.created_at.desc()).limit(filters.limit).offset(filters.offset)
         result = await self._session.execute(query)
         return list(result.scalars().all())
 

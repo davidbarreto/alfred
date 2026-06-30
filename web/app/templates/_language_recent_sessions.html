@@ -1,0 +1,66 @@
+{% if recent_sessions %}
+<div class="divide-y divide-gray-50">
+  {% for session in recent_sessions %}
+  {% set type_style = {
+    'srs_review': 'bg-blue-50 text-blue-600',
+    'shadowing': 'bg-purple-50 text-purple-600',
+    'conversation': 'bg-green-50 text-green-600',
+    'correction': 'bg-amber-50 text-amber-600'
+  } %}
+  <div class="flex items-center justify-between px-4 py-2.5">
+    <div class="flex items-center gap-2.5 min-w-0">
+      <span class="px-1.5 py-0.5 rounded text-xs {{ type_style.get(session.session_type, 'bg-gray-100 text-gray-500') }}">
+        {{ session.session_type | replace('_', ' ') }}
+      </span>
+      {% if session.chunk_id %}
+      <a href="/languages/{{ track.code }}/chunks/{{ session.chunk_id }}"
+         class="text-xs text-gray-600 hover:text-gray-900 truncate">
+        {% if session.chunk_text %}
+          {{ session.chunk_text[:50] }}{% if session.chunk_text|length > 50 %}…{% endif %}
+        {% else %}
+          chunk #{{ session.chunk_id }}
+        {% endif %}
+      </a>
+      {% else %}
+      <span class="text-xs text-gray-400">free session</span>
+      {% endif %}
+    </div>
+    <div class="flex items-center gap-2 text-xs text-gray-400 ml-2 shrink-0">
+      {% if session.quality_score is not none %}
+      <span class="font-medium {% if session.quality_score >= 3.5 %}text-green-600{% elif session.quality_score >= 2.5 %}text-gray-600{% else %}text-red-500{% endif %}">
+        {{ "%.1f" | format(session.quality_score) }}
+      </span>
+      {% endif %}
+      <span>{{ session.created_at[:10] }}</span>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<p class="px-4 py-6 text-sm text-gray-400 text-center">No sessions yet.</p>
+{% endif %}
+
+{% if sessions_has_prev or sessions_has_next %}
+<div class="flex justify-between items-center px-4 py-2 border-t border-gray-50">
+  {% if sessions_has_prev %}
+  <button
+    class="px-3 py-1 rounded text-xs font-medium text-gray-600 bg-white border border-gray-200 hover:border-gray-300"
+    hx-get="/languages/{{ track.code }}/sessions-section?offset={{ sessions_offset - 10 }}"
+    hx-target="#recent-sessions-list"
+    hx-swap="innerHTML"
+  >← Prev</button>
+  {% else %}
+  <span></span>
+  {% endif %}
+  {% if sessions_has_next %}
+  <button
+    class="px-3 py-1 rounded text-xs font-medium text-gray-600 bg-white border border-gray-200 hover:border-gray-300"
+    hx-get="/languages/{{ track.code }}/sessions-section?offset={{ sessions_offset + 10 }}"
+    hx-target="#recent-sessions-list"
+    hx-swap="innerHTML"
+  >Next →</button>
+  {% else %}
+  <span></span>
+  {% endif %}
+</div>
+{% endif %}

@@ -100,8 +100,14 @@ async def create_event(
     }
     try:
         event = await api.post("/organizer/calendar-events/", json=payload)
+    except httpx.HTTPStatusError as e:
+        try:
+            detail = e.response.json().get("detail", "Failed to create event.")
+        except Exception:
+            detail = "Failed to create event."
+        return HTMLResponse(detail, status_code=422)
     except httpx.HTTPError:
-        return HTMLResponse('<p class="text-[#E24B4A] text-sm">Failed to create event.</p>', status_code=422)
+        return HTMLResponse("Failed to create event.", status_code=422)
 
     await api.log_command("event.add", {"title": title}, "event", event.get("id"))
     return HTMLResponse("", status_code=204)

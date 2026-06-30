@@ -1,0 +1,49 @@
+{% if scopes %}
+<div class="divide-y divide-gray-50">
+  {% for scope in scopes %}
+  <div class="flex items-center justify-between px-4 py-2.5 hover:bg-gray-50/50 transition-colors"
+       id="scope-row-{{ scope.id }}">
+    <div class="min-w-0">
+      <p class="text-sm text-gray-800 truncate">{{ scope.value }}</p>
+      <p class="text-xs text-gray-400">{{ scope.category }} · priority {{ scope.priority }}</p>
+    </div>
+    <div class="flex items-center gap-2 ml-3">
+      <select
+        class="text-xs border border-gray-200 rounded-md px-2 py-1 bg-white focus:outline-none focus:ring-1 focus:ring-[#378ADD]"
+        onchange="updateScopeStatus({{ scope.id }}, this.value)">
+        {% for s in ['active', 'deferred', 'mastered'] %}
+        <option value="{{ s }}" {% if scope.status == s %}selected{% endif %}>{{ s | title }}</option>
+        {% endfor %}
+      </select>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<p class="px-4 py-6 text-sm text-gray-400 text-center">No grammar scope entries yet.</p>
+{% endif %}
+
+{% if scope_has_prev or scope_has_next %}
+<div class="flex justify-between items-center px-4 py-2 border-t border-gray-50">
+  {% if scope_has_prev %}
+  <button
+    class="px-3 py-1 rounded text-xs font-medium text-gray-600 bg-white border border-gray-200 hover:border-gray-300"
+    hx-get="/languages/{{ track.code }}/grammar-section?offset={{ scope_offset - 10 }}"
+    hx-target="#grammar-scope-list"
+    hx-swap="innerHTML"
+  >← Prev</button>
+  {% else %}
+  <span></span>
+  {% endif %}
+  {% if scope_has_next %}
+  <button
+    class="px-3 py-1 rounded text-xs font-medium text-gray-600 bg-white border border-gray-200 hover:border-gray-300"
+    hx-get="/languages/{{ track.code }}/grammar-section?offset={{ scope_offset + 10 }}"
+    hx-target="#grammar-scope-list"
+    hx-swap="innerHTML"
+  >Next →</button>
+  {% else %}
+  <span></span>
+  {% endif %}
+</div>
+{% endif %}

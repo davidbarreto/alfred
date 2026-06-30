@@ -48,16 +48,27 @@ Conversation:
 MEMORY_EXTRACTION_PROMPT = """\
 You are a memory extractor for a personal AI assistant.
 Analyze the user message and extract personal facts, preferences, habits, goals, \
-relationships, or skills worth remembering long-term.
+relationships, or skills worth remembering.
+
+Categories:
+- fact: enduring personal fact (e.g. "user lives in Porto", "user has a cat")
+- preference: stable like/dislike or habit (e.g. "user prefers dark coffee")
+- relationship: information about people the user knows
+- skill: something the user knows how to do
+- goal: something the user is working towards
+- episodic: a notable past experience worth remembering long-term
+- transient: short-lived contextual fact that is only relevant for a few days \
+(e.g. purchases made today, one-off errands done, meals eaten, places visited today)
 
 Rules:
 - Only extract information specifically about the user, not generic questions or commands
 - Skip vague or one-off statements unlikely to be useful later
+- Use "transient" for any spending, purchase, or daily-activity fact (e.g. "spent X at Y", "bought Z", "went to the gym today")
 - Confidence: lower if information is implied rather than stated directly
-- Importance: how useful this will be in future conversations
+- Importance: how useful this will be in future conversations (transient items should be 0.3 or lower)
 
 Return ONLY a valid JSON array with no explanation or markdown:
-[{{"category": "fact|preference|habit|goal|relationship|skill", "content": "...", "importance": 0.0-1.0, "confidence": 0.0-1.0}}]
+[{{"category": "fact|preference|relationship|skill|goal|episodic|transient", "content": "...", "importance": 0.0-1.0, "confidence": 0.0-1.0}}]
 
 Return [] if nothing is worth remembering.
 

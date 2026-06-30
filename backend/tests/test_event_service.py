@@ -60,6 +60,7 @@ def service(mock_provider, mock_session):
     return svc
 
 
+
 class TestGetEvent:
     async def test_returns_event_read_when_found(self, service):
         service._repo.get_event.return_value = _make_event_orm()

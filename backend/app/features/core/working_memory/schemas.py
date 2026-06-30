@@ -28,3 +28,5 @@ class WorkingMemoryFilters(BaseModel):
     key: Optional[str] = None
     session_id: Optional[int] = None
     active_only: bool = True
+    limit: int = Field(default=100, ge=1, le=500)
+    offset: int = Field(default=0, ge=0)

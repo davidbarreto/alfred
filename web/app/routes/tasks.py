@@ -2,7 +2,7 @@ from datetime import date, timedelta
 
 import httpx
 from fastapi import APIRouter, Form, Request
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, Response
 from typing import Annotated, Optional
 
 import app.client as api
@@ -108,8 +108,15 @@ async def create_task(
         payload["recurrence_rule"] = recurrence_rule
     try:
         task = await api.post("/organizer/tasks/", json=payload)
+    except httpx.HTTPStatusError as exc:
+        detail = "Failed to save task."
+        try:
+            detail = exc.response.json().get("detail", detail)
+        except Exception:
+            pass
+        return Response(detail, status_code=422, media_type="text/plain")
     except httpx.HTTPError:
-        return HTMLResponse('<p class="text-[#E24B4A] text-sm">Failed to create task.</p>', status_code=422)
+        return Response("Failed to save task.", status_code=422, media_type="text/plain")
 
     await api.log_command("task.add", {"title": title}, "task", task.get("id"))
 

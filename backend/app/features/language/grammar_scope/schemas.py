@@ -40,6 +40,10 @@ class GrammarScopeFilters:
         self,
         track_id: Annotated[int | None, Query()] = None,
         status: Annotated[ScopeStatusFilter, Query()] = "ALL",
+        limit: Annotated[int, Query(ge=1, le=500)] = 100,
+        offset: Annotated[int, Query(ge=0)] = 0,
     ) -> None:
         self.track_id = track_id
         self.status = status
+        self.limit = limit
+        self.offset = offset

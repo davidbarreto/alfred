@@ -1,3 +1,5 @@
+from datetime import datetime, timezone
+
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -14,12 +16,15 @@ class MemoryRepository:
         return result.scalars().first()
 
     async def list(self, filters: MemoryFilters) -> list[Memory]:
-        query = select(Memory)
+        now = datetime.now(timezone.utc)
+        query = select(Memory).where(
+            (Memory.expires_at.is_(None)) | (Memory.expires_at > now)
+        )
         if filters.category is not None:
             query = query.where(Memory.category == filters.category)
         if filters.active is not None:
             query = query.where(Memory.active == filters.active)
-        query = query.order_by(Memory.created_at.desc())
+        query = query.order_by(Memory.created_at.desc()).limit(filters.limit).offset(filters.offset)
         result = await self._session.execute(query)
         return list(result.scalars().all())
 

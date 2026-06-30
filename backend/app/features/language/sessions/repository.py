@@ -26,7 +26,7 @@ class SessionRepository:
             query = query.where(LearningSession.chunk_id == filters.chunk_id)
         if filters.session_type is not None:
             query = query.where(LearningSession.session_type == filters.session_type)
-        query = query.order_by(LearningSession.created_at.desc()).limit(filters.limit)
+        query = query.order_by(LearningSession.created_at.desc()).limit(filters.limit).offset(filters.offset)
         result = await self._session.execute(query)
         return list(result.scalars().all())
 

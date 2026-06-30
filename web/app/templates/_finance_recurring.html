@@ -1,0 +1,29 @@
+{% if recurring %}
+<ul class="divide-y divide-gray-100">
+  {% for r in recurring %}
+  <li class="flex items-center justify-between py-2 text-sm" id="recurring-{{ r.id }}">
+    <div>
+      <span class="font-medium text-gray-800">{{ r.merchant or "—" }}</span>
+      <span class="ml-2 text-xs text-gray-400">{{ r.recurrence_rule.replace("FREQ=","").lower() }}</span>
+      {% if r.category_id %}
+        {% for cat in categories %}{% if cat.id == r.category_id %}<span class="ml-1 text-xs text-gray-400">· {{ cat.name }}</span>{% endif %}{% endfor %}
+      {% endif %}
+    </div>
+    <div class="flex items-center gap-3">
+      <span class="text-sm font-medium {% if r.type == 'income' %}text-[#639922]{% else %}text-[#E24B4A]{% endif %}">
+        {% if r.type == 'income' %}+{% else %}-{% endif %}€{{ "%.2f"|format(r.amount | float) }}
+      </span>
+      <button
+        class="text-gray-300 hover:text-[#E24B4A] transition-colors"
+        hx-delete="/finance/recurring/{{ r.id }}"
+        hx-target="#recurring-list"
+        hx-confirm="Delete recurring transaction '{{ r.merchant or r.id }}'?"
+        title="Delete"
+      ><i class="ti ti-trash text-base"></i></button>
+    </div>
+  </li>
+  {% endfor %}
+</ul>
+{% else %}
+<p class="text-sm text-gray-400 py-3 text-center">No recurring transactions yet.</p>
+{% endif %}

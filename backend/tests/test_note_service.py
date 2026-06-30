@@ -1,6 +1,6 @@
 import pytest
 from unittest.mock import AsyncMock, MagicMock
-from app.features.organizer.notes.service import NoteService
+from app.features.organizer.notes.service import NoteService, _note_embed_content
 from app.features.organizer.notes.schemas import NoteCreate, NoteUpdate, NoteFilters, NoteRead
 
 
@@ -31,8 +31,23 @@ def mock_session():
 
 
 @pytest.fixture
+def mock_embedding_service():
+    svc = AsyncMock()
+    svc.embed = AsyncMock()
+    svc.delete_by_source = AsyncMock()
+    return svc
+
+
+@pytest.fixture
 def service(mock_provider, mock_session):
     svc = NoteService(provider=mock_provider, session=mock_session)
+    svc._repo = AsyncMock()
+    return svc
+
+
+@pytest.fixture
+def service_with_embeddings(mock_provider, mock_session, mock_embedding_service):
+    svc = NoteService(provider=mock_provider, session=mock_session, embedding_service=mock_embedding_service)
     svc._repo = AsyncMock()
     return svc
 
@@ -156,3 +171,59 @@ class TestDeleteNote:
         await service.delete_note(1)
 
         mock_provider.delete.assert_called_once_with("provider-abc", service._session)
+
+
+class TestNoteEmbedContent:
+    def test_combines_title_and_content(self):
+        assert _note_embed_content("My Title", "Some body") == "My Title: Some body"
+
+    def test_uses_title_when_no_content(self):
+        assert _note_embed_content("My Title", None) == "My Title"
+
+    def test_uses_title_when_content_equals_title(self):
+        assert _note_embed_content("Same", "Same") == "Same"
+
+
+class TestNoteEmbedding:
+    async def test_embed_called_on_create(self, service_with_embeddings, mock_provider, mock_embedding_service):
+        mock_provider.create.return_value = {"id": "provider-1"}
+        service_with_embeddings._repo.create_note.return_value = _make_note_orm(id=5, title="T", content="C")
+
+        await service_with_embeddings.create_note(NoteCreate(title="T", content="C"))
+
+        mock_embedding_service.embed.assert_called_once()
+        call_arg = mock_embedding_service.embed.call_args[0][0]
+        assert call_arg.source_type == "note"
+        assert call_arg.source_id == 5
+
+    async def test_embed_not_called_without_embedding_service(self, service, mock_provider):
+        mock_provider.create.return_value = {"id": "provider-1"}
+        service._repo.create_note.return_value = _make_note_orm()
+
+        await service.create_note(NoteCreate(title="T"))
+
+        assert service._embedding_service is None
+
+    async def test_embed_called_on_update(self, service_with_embeddings, mock_embedding_service):
+        service_with_embeddings._repo.get_note.return_value = _make_note_orm()
+        service_with_embeddings._repo.update_note.return_value = _make_note_orm(title="New", content="Body")
+
+        await service_with_embeddings.update_note(1, NoteUpdate(title="New"))
+
+        mock_embedding_service.embed.assert_called_once()
+
+    async def test_delete_by_source_called_on_delete(self, service_with_embeddings, mock_provider, mock_embedding_service):
+        service_with_embeddings._repo.get_note.return_value = _make_note_orm(id=3)
+
+        await service_with_embeddings.delete_note(3)
+
+        mock_embedding_service.delete_by_source.assert_called_once_with("note", 3)
+
+    async def test_embed_failure_does_not_raise(self, service_with_embeddings, mock_provider, mock_embedding_service):
+        mock_provider.create.return_value = {"id": "provider-1"}
+        service_with_embeddings._repo.create_note.return_value = _make_note_orm()
+        mock_embedding_service.embed.side_effect = RuntimeError("embedding failed")
+
+        result = await service_with_embeddings.create_note(NoteCreate(title="T"))
+
+        assert isinstance(result, NoteRead)

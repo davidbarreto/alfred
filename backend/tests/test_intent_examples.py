@@ -33,6 +33,7 @@ _KNOWN_INTENTS = {
     "wishlist.list",
     "wishlist.delete",
     "wishlist.promote",
+    "recall.search",
     "unknown",
 }
 

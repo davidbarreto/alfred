@@ -278,6 +278,20 @@ INTENT_EXAMPLES: list[IntentExample] = [
     IntentExample(id=201, text="Move the guitar from my wishlist to the shopping list", intent="wishlist.promote"),
     IntentExample(id=202, text="Promote the standing desk from wishlist to shopping", intent="wishlist.promote"),
 
+    # --- recall.search ---
+    IntentExample(id=216, text="What did I say about the deployment?", intent="recall.search"),
+    IntentExample(id=217, text="Do you remember what I noted about the API migration?", intent="recall.search"),
+    IntentExample(id=218, text="What do I have about the budget meeting?", intent="recall.search"),
+    IntentExample(id=219, text="Check my notes on the authentication refactor", intent="recall.search"),
+    IntentExample(id=220, text="What did I tell you about the database setup?", intent="recall.search"),
+    IntentExample(id=221, text="Recall what I wrote about the Portugal trip", intent="recall.search"),
+    IntentExample(id=222, text="Find anything I have about the new onboarding flow", intent="recall.search"),
+    IntentExample(id=223, text="What have I noted about the freelance project?", intent="recall.search"),
+    IntentExample(id=224, text="Do I have anything saved about the gym routine?", intent="recall.search"),
+    IntentExample(id=225, text="What did I mention about the book recommendations?", intent="recall.search"),
+    IntentExample(id=226, text="Pull up what I know about the n8n workflows", intent="recall.search"),
+    IntentExample(id=227, text="Look up my notes on SQLAlchemy async sessions", intent="recall.search"),
+
     # --- unknown ---
     IntentExample(id=141, text="What's the weather like today?", intent="unknown"),
     IntentExample(id=142, text="Tell me a joke", intent="unknown"),

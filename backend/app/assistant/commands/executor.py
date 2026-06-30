@@ -7,8 +7,10 @@ from app.assistant.commands.handlers.event import handle_event
 from app.assistant.commands.handlers.finance import handle_finance
 from app.assistant.commands.handlers.language import handle_language
 from app.assistant.commands.handlers.note import handle_note
+from app.assistant.commands.handlers.recall import handle_recall
 from app.assistant.commands.handlers.shopping import handle_shopping
 from app.assistant.commands.handlers.task import handle_task
+from app.features.core.embeddings.service import EmbeddingService
 from app.features.core.working_memory.service import WorkingMemoryService
 from app.features.finance.accounts.service import AccountService
 from app.features.finance.budgets.service import BudgetService
@@ -39,6 +41,7 @@ async def execute(
     track_service: TrackService | None = None,
     chunk_service: ChunkService | None = None,
     working_memory_service: WorkingMemoryService | None = None,
+    embedding_service: EmbeddingService | None = None,
 ) -> Any:
     logger.info("Execute: %s.%s args_keys=%s", cmd_type, command, list(arguments.keys()))
 
@@ -76,6 +79,14 @@ async def execute(
                 detail="Language service not available",
             )
         return await handle_language(command, arguments, track_service, chunk_service, working_memory_service)
+
+    if cmd_type == "recall":
+        if embedding_service is None:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Recall service not available",
+            )
+        return await handle_recall(command, arguments, embedding_service)
 
     logger.error("Execute: unknown command type=%s command=%s", cmd_type, command)
     raise HTTPException(

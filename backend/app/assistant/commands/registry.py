@@ -226,6 +226,14 @@ COMMAND_DEFINITIONS = {
             "arg_keys": ["language_code"],
         }
     },
+    "recall": {
+        "search": {
+            "aliases": ["/recall", "/rc", "/remember"],
+            "flags": {},
+            "requires_args": True,
+            "arg_keys": ["query"],
+        }
+    },
     "help": {
         "help": {
             "aliases": ["/help", "/h", "/?"],

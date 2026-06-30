@@ -30,6 +30,7 @@ from app.dependencies import (
     ChunkServiceDep,
     CommandExecutionServiceDep,
     DbSessionDep,
+    EmbeddingServiceDep,
     ExtractionLlmProviderDep,
     NoteServiceDep,
     RecurringTransactionServiceDep,
@@ -91,6 +92,7 @@ async def execute_command(
     track_service: TrackServiceDep,
     chunk_service: ChunkServiceDep,
     working_memory_service: WorkingMemoryServiceDep,
+    embedding_service: EmbeddingServiceDep,
 ):
     logger.info("POST /commands/execute %s.%s", request.type, request.command)
     execution = await cmd_execution_service.create(
@@ -117,6 +119,7 @@ async def execute_command(
             track_service=track_service,
             chunk_service=chunk_service,
             working_memory_service=working_memory_service,
+            embedding_service=embedding_service,
         )
         entity_id = result.get("id") if isinstance(result, dict) else None
         logger.info(

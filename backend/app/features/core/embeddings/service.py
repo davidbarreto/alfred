@@ -57,3 +57,9 @@ class EmbeddingService:
         if deleted:
             logger.info("Embedding deleted: id=%d", embedding_id)
         return deleted
+
+    async def delete_by_source(self, source_type: str, source_id: int) -> bool:
+        existing = await self._repo.get_by_source(source_type, source_id)
+        if existing is None:
+            return False
+        return await self.delete(existing.id)

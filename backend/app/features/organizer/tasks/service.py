@@ -14,8 +14,12 @@ from app.features.organizer.tasks.schemas import (
 )
 from app.features.organizer.tasks.recurrence import compute_streak, missed_count
 from app.features.organizer.tasks.repository import TaskRepository
+from app.features.core.embeddings.schemas import EmbeddingCreate
+from app.features.core.embeddings.service import EmbeddingService
 
 logger = logging.getLogger(__name__)
+
+_SOURCE_TYPE = "task"
 
 
 def _compute_streak(dates: list[date], rule: str, today: date) -> int:
@@ -28,10 +32,16 @@ def _missed_count(rule: str, completions: list[date], today: date) -> int:
 
 class TaskService:
 
-    def __init__(self, provider: StorageProvider, session: AsyncSession) -> None:
+    def __init__(
+        self,
+        provider: StorageProvider,
+        session: AsyncSession,
+        embedding_service: EmbeddingService | None = None,
+    ) -> None:
         self._provider = provider
         self._session = session
         self._repo = TaskRepository(session)
+        self._embedding_service = embedding_service
 
     async def get_task(self, task_id: int) -> TaskRead | None:
         task_orm = await self._repo.get_task(task_id)
@@ -72,6 +82,13 @@ class TaskService:
         task_record = await self._provider.create(task_create.model_dump(), self._session)
         task_orm = await self._repo.create_task(task_create, task_record["id"])
         logger.info("Task created: id=%d title=%r", task_orm.id, task_create.title)
+        if self._embedding_service:
+            try:
+                await self._embedding_service.embed(
+                    EmbeddingCreate(source_type=_SOURCE_TYPE, source_id=task_orm.id, content=task_orm.title)
+                )
+            except Exception as exc:
+                logger.warning("Task embed failed: id=%d error=%s", task_orm.id, exc)
         return TaskRead.model_validate(task_orm)
 
     async def update_task(self, task_id: int, task_update: TaskUpdate) -> TaskRead | None:
@@ -86,6 +103,13 @@ class TaskService:
         )
         task_orm = await self._repo.update_task(task_id, task_update)
         logger.info("Task updated: id=%d fields=%s", task_id, list(task_update.model_dump(exclude_unset=True).keys()))
+        if self._embedding_service and task_update.title is not None:
+            try:
+                await self._embedding_service.embed(
+                    EmbeddingCreate(source_type=_SOURCE_TYPE, source_id=task_id, content=task_orm.title)
+                )
+            except Exception as exc:
+                logger.warning("Task embed failed on update: id=%d error=%s", task_id, exc)
         return TaskRead.model_validate(task_orm)
 
     async def complete_task(
@@ -144,3 +168,8 @@ class TaskService:
             await self._provider.delete(task.provider_id, self._session)
             await self._repo.delete_task(task_id)
             logger.info("Task deleted: id=%d", task_id)
+            if self._embedding_service:
+                try:
+                    await self._embedding_service.delete_by_source(_SOURCE_TYPE, task_id)
+                except Exception as exc:
+                    logger.warning("Task embedding delete failed: id=%d error=%s", task_id, exc)

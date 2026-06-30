@@ -56,10 +56,10 @@ def get_note_provider() -> NotionProvider:
     return NotionProvider(get_notion_client(), get_settings().notion_notes_database_id, content_field="content", entity_type="note")
 
 def get_task_service(session: AsyncSession = Depends(get_session)) -> TaskService:
-    return TaskService(get_task_provider(), session)
+    return TaskService(get_task_provider(), session, EmbeddingService(session, get_embedding_provider()))
 
 def get_note_service(session: AsyncSession = Depends(get_session)) -> NoteService:
-    return NoteService(get_note_provider(), session)
+    return NoteService(get_note_provider(), session, EmbeddingService(session, get_embedding_provider()))
 
 async def get_google_calendar_client(session: AsyncSession = Depends(get_session)) -> GoogleCalendarClient:
     s = get_settings()

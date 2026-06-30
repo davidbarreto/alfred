@@ -1552,6 +1552,47 @@
       }
     },
     {
+      "name": "65 - Embeddings - Backfill (embed all existing notes and tasks)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Response has expected shape', () => {",
+              "    const json = pm.response.json();",
+              "    ['notes_embedded', 'tasks_embedded', 'errors'].forEach(f => pm.expect(json).to.have.property(f));",
+              "});",
+              "pm.test('No errors during backfill', () => {",
+              "    pm.expect(pm.response.json().errors).to.eql(0);",
+              "});",
+              "pm.test('Counts are non-negative numbers', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json.notes_embedded).to.be.a('number').and.to.be.at.least(0);",
+              "    pm.expect(json.tasks_embedded).to.be.a('number').and.to.be.at.least(0);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/core/embeddings/backfill",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "core",
+            "embeddings",
+            "backfill"
+          ]
+        }
+      }
+    },
+    {
       "name": "70 - Chats - Reply using session from step 10",
       "event": [
         {

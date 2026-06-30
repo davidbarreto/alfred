@@ -17,8 +17,8 @@ def upgrade() -> None:
     op.execute(
         sa.text(
             """
-            INSERT INTO finance.accounts (name, type, currency, balance, is_active, created_at, updated_at)
-            SELECT 'Main Account', 'checking', 'EUR', 0, true, now(), now()
+            INSERT INTO finance.accounts (name, type, currency, balance, is_active)
+            SELECT 'Main Account', 'checking', 'EUR', 0, true
             WHERE NOT EXISTS (SELECT 1 FROM finance.accounts)
             """
         )

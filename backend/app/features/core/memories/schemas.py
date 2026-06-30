@@ -3,7 +3,7 @@ from typing import Any, Literal, Optional
 
 from pydantic import BaseModel, ConfigDict, Field
 
-MemoryCategory = Literal["fact", "preference", "relationship", "skill", "episodic", "goal", "transient"]
+MemoryCategory = Literal["fact", "preference", "relationship", "skill", "episodic", "goal"]
 
 
 class MemoryCreate(BaseModel):

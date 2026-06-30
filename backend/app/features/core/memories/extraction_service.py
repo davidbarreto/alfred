@@ -3,7 +3,6 @@ from __future__ import annotations
 import json
 import logging
 import time
-from datetime import datetime, timedelta, timezone
 from typing import Any, cast, get_args
 
 from app.db.session import async_session
@@ -12,8 +11,6 @@ from app.features.core.embeddings.service import EmbeddingService
 from app.features.core.memories.schemas import MemoryCategory, MemoryCreate, MemoryUpdate
 from app.features.core.memories.service import MemoryService
 from app.features.core.prompts import MEMORY_EXTRACTION_PROMPT
-from app.features.core.working_memory.repository import WorkingMemoryRepository
-from app.features.core.working_memory.schemas import WorkingMemoryCreate
 from app.integrations.llm_calls.repository import create_llm_call
 from app.shared.embedding import EmbeddingProvider
 from app.shared.llm import LlmProvider
@@ -23,7 +20,6 @@ logger = logging.getLogger(__name__)
 _DEDUP_THRESHOLD = 0.85
 _IMPORTANCE_BUMP = 0.1
 _VALID_CATEGORIES: frozenset[str] = frozenset(get_args(MemoryCategory))
-_TRANSIENT_TTL_DAYS = 3
 
 
 class MemoryExtractionService:
@@ -86,17 +82,21 @@ class MemoryExtractionService:
         embedding_service: EmbeddingService,
     ) -> None:
         content = str(candidate.get("content", "")).strip()
-        raw_category = str(candidate.get("category", "fact"))
-        category = cast(MemoryCategory, raw_category if raw_category in _VALID_CATEGORIES else "fact")
+        raw_category = str(candidate.get("category", ""))
         importance = min(1.0, max(0.0, float(candidate.get("importance", 0.5))))
         confidence = min(1.0, max(0.0, float(candidate.get("confidence", 1.0))))
 
         if not content:
             return
 
-        if category == "transient":
-            await self._save_transient(content, message_id)
+        if raw_category not in _VALID_CATEGORIES:
+            logger.debug(
+                "Memory extraction: skipping unknown category=%r for message_id=%d",
+                raw_category, message_id,
+            )
             return
+
+        category = cast(MemoryCategory, raw_category)
 
         similar = await embedding_service.search(
             EmbeddingSearchRequest(
@@ -129,16 +129,3 @@ class MemoryExtractionService:
             EmbeddingCreate(source_type="memory", source_id=memory.id, content=content)
         )
         logger.debug("Memory created: id=%d category=%s", memory.id, category)
-
-    async def _save_transient(self, content: str, message_id: int) -> None:
-        expires_at = datetime.now(timezone.utc) + timedelta(days=_TRANSIENT_TTL_DAYS)
-        async with async_session() as session:
-            repo = WorkingMemoryRepository(session)
-            wm = await repo.create(
-                WorkingMemoryCreate(
-                    key=f"transient:{message_id}",
-                    value=content,
-                    expires_at=expires_at,
-                )
-            )
-        logger.debug("Transient memory saved as working memory: id=%d expires_at=%s", wm.id, expires_at.date())

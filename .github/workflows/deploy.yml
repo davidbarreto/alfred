@@ -46,7 +46,11 @@ jobs:
             COMPOSE="docker compose -f $APP_DIR/infra/docker-compose.yml"
 
             echo "==> Pulling latest code..."
-            git -C "$APP_DIR" pull origin main
+            if [ -d "$APP_DIR/.git" ]; then
+              git -C "$APP_DIR" pull origin main
+            else
+              git clone "https://github.com/davidbarreto/alfred.git" "$APP_DIR"
+            fi
 
             echo "==> Building services..."
             $COMPOSE build api web

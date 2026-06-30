@@ -58,12 +58,13 @@ N8N_BASE_URL="http://localhost:${N8N_PORT}"
 # ---------------------------------------------------------------------------
 _wait_for_n8n() {
   echo -e "${BLUE}Waiting for n8n to be ready...${NC}"
-  for i in $(seq 1 60); do
+  local max=150
+  for i in $(seq 1 $max); do
     if curl -sf "${N8N_BASE_URL}/healthz" > /dev/null 2>&1; then
       echo -e "${GREEN}✓ n8n is ready${NC}"
       return 0
     fi
-    [ "$i" -eq 60 ] && echo -e "${RED}Error: n8n failed to start within 120s${NC}" && exit 1
+    [ "$i" -eq "$max" ] && echo -e "${RED}Error: n8n failed to start within $((max * 2))s${NC}" && exit 1
     sleep 2
   done
 }

@@ -14,17 +14,25 @@ from app.features.finance.budgets.schemas import (
     BudgetUpdate,
 )
 from app.features.finance.transactions.repository import TransactionRepository
-from app.features.finance.transactions.schemas import resolve_period
 
 logger = logging.getLogger(__name__)
 
 
 def _budget_date_range(budget) -> tuple[date, date]:
-    """Resolve the active date range for a budget based on its period."""
-    today = date.today()
     if budget.period == "custom" and budget.starts_at and budget.ends_at:
         return budget.starts_at.date(), budget.ends_at.date()
-    return resolve_period(budget.period, None, None)
+    today = date.today()
+    if budget.period == "weekly":
+        start = today - timedelta(days=today.weekday())
+        return start, start + timedelta(days=6)
+    if budget.period == "yearly":
+        return today.replace(month=1, day=1), today.replace(month=12, day=31)
+    start = today.replace(day=1)
+    if start.month == 12:
+        end = start.replace(year=start.year + 1, month=1, day=1) - timedelta(days=1)
+    else:
+        end = start.replace(month=start.month + 1, day=1) - timedelta(days=1)
+    return start, end
 
 
 class BudgetService:

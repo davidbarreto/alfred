@@ -22,7 +22,13 @@ class SentenceTransformerEmbeddingProvider:
     @cached_property
     def _model(self) -> SentenceTransformer:
         logger.info("Loading SentenceTransformer model: %s", self._model_name)
-        return SentenceTransformer(self._model_name, local_files_only=True)
+        # device_map=None prevents accelerate from using lazy meta-tensor loading,
+        # which causes NotImplementedError when SentenceTransformer calls self.to(device).
+        return SentenceTransformer(
+            self._model_name,
+            local_files_only=True,
+            model_kwargs={"device_map": None},
+        )
 
     async def embed(self, text: str) -> list[float]:
         logger.debug("SentenceTransformer: embedding text len=%d", len(text))

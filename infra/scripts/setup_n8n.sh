@@ -104,6 +104,10 @@ _setup_owner() {
         exit 1
       fi
       ;;
+    404)
+      # Newer n8n removes the /rest/owner/setup route once the instance is configured.
+      echo -e "${YELLOW}Owner user already configured, skipping${NC}"
+      ;;
     *)
       echo -e "${RED}Error: unexpected response from owner setup (HTTP $http_status):${NC}"
       echo "$body"

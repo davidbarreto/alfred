@@ -10,6 +10,7 @@ from app.features.briefing.schemas import WeatherForecast
 logger = logging.getLogger(__name__)
 
 _BASE_URL = "https://api.open-meteo.com/v1/forecast"
+_GEOCODING_URL = "https://geocoding-api.open-meteo.com/v1/search"
 _PORTO_LAT = 41.1579
 _PORTO_LON = -8.6291
 _TIMEZONE = "Europe/Lisbon"
@@ -63,12 +64,31 @@ def _build_advice(
 
 
 class WeatherClient:
+    async def get_forecast_for_city(self, city: str, for_date: date) -> tuple[WeatherForecast, str]:
+        """Geocode a city name and return its forecast alongside the resolved city name."""
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            geo = await client.get(_GEOCODING_URL, params={"name": city, "count": 1, "language": "en"})
+            geo.raise_for_status()
+        results = geo.json().get("results", [])
+        if not results:
+            raise ValueError(f"Location not found: {city!r}")
+        r = results[0]
+        resolved_name = r.get("name", city)
+        country = r.get("country_code", "")
+        label = f"{resolved_name}, {country}" if country else resolved_name
+        logger.debug("Geocoded %r → lat=%s lon=%s tz=%s", city, r["latitude"], r["longitude"], r.get("timezone"))
+        forecast = await self._fetch_forecast(r["latitude"], r["longitude"], r.get("timezone", "UTC"), for_date)
+        return forecast, label
+
     async def get_daily_forecast(self, for_date: date) -> WeatherForecast:
+        return await self._fetch_forecast(_PORTO_LAT, _PORTO_LON, _TIMEZONE, for_date)
+
+    async def _fetch_forecast(self, lat: float, lon: float, timezone: str, for_date: date) -> WeatherForecast:
         params = {
-            "latitude": _PORTO_LAT,
-            "longitude": _PORTO_LON,
+            "latitude": lat,
+            "longitude": lon,
             "daily": "temperature_2m_max,temperature_2m_min,apparent_temperature_max,precipitation_probability_max,windspeed_10m_max,weathercode",
-            "timezone": _TIMEZONE,
+            "timezone": timezone,
             "start_date": for_date.isoformat(),
             "end_date": for_date.isoformat(),
         }

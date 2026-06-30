@@ -1,10 +1,12 @@
 import logging
-from datetime import date
+from datetime import date, datetime, timezone
 from typing import Any, cast
 
 from fastapi import HTTPException, status
 
 from app.assistant.commands.handlers._utils import parse_dt, parse_tags
+from app.features.core.embeddings.schemas import EmbeddingSearchRequest
+from app.features.core.embeddings.service import EmbeddingService
 from app.features.organizer.tasks.schemas import (
     TaskCompletionRead,
     TaskCreate,
@@ -18,6 +20,8 @@ from app.features.organizer.tasks.service import TaskService
 
 logger = logging.getLogger(__name__)
 
+_PRIORITY_ORDER = {"HIGH": 0, "MEDIUM": 1, "LOW": 2}
+
 
 def _parse_occurrence_date(raw: Any) -> date | None:
     if raw is None:
@@ -28,7 +32,12 @@ def _parse_occurrence_date(raw: Any) -> date | None:
     return dt.date() if dt is not None else None
 
 
-async def handle_task(command: str, arguments: dict[str, Any], service: TaskService) -> Any:
+async def handle_task(
+    command: str,
+    arguments: dict[str, Any],
+    service: TaskService,
+    embedding_service: EmbeddingService | None = None,
+) -> Any:
     logger.debug("handle_task: command=%s args_keys=%s", command, list(arguments.keys()))
     if command == "add":
         payload = TaskCreate(
@@ -40,6 +49,41 @@ async def handle_task(command: str, arguments: dict[str, Any], service: TaskServ
         )
         result = await service.create_task(payload)
         return result.model_dump()
+
+    if command == "search":
+        query = str(arguments.get("query", "")).strip()
+        if not query:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Task search requires a query")
+        if embedding_service is None:
+            raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Embedding service not available")
+        results = await embedding_service.search(
+            EmbeddingSearchRequest(query=query, source_types=["task"], limit=10, threshold=0.4)
+        )
+        logger.debug("handle_task search: query=%r results=%d", query, len(results))
+        return [{"source_id": r.source_id, "content": r.content, "similarity": r.similarity} for r in results]
+
+    if command == "pending":
+        now = datetime.now(timezone.utc)
+        today = now.date()
+        filters = TaskFilters(status="ALL", limit=200)
+        all_tasks = await service.get_tasks(filters)
+        active = [t for t in all_tasks if t.status in ("TODO", "DOING")]
+        overdue = sorted(
+            [t for t in active if t.deadline and t.deadline.date() < today],
+            key=lambda t: (t.deadline, _PRIORITY_ORDER.get(t.priority, 99)),
+        )
+        due_today = sorted(
+            [t for t in active if t.deadline and t.deadline.date() == today],
+            key=lambda t: (_PRIORITY_ORDER.get(t.priority, 99), t.deadline),
+        )
+        logger.debug("handle_task pending: overdue=%d due_today=%d", len(overdue), len(due_today))
+        return {
+            "overdue": [t.model_dump() for t in overdue],
+            "due_today": [t.model_dump() for t in due_today],
+            "overdue_count": len(overdue),
+            "due_today_count": len(due_today),
+            "total": len(overdue) + len(due_today),
+        }
 
     if command == "list":
         raw_status = arguments.get("status", "ALL")

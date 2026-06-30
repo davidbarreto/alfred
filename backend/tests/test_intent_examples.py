@@ -34,6 +34,11 @@ _KNOWN_INTENTS = {
     "wishlist.delete",
     "wishlist.promote",
     "recall.search",
+    "task.search",
+    "task.pending",
+    "assistant.focus",
+    "weather.current",
+    "reminder.set",
     "unknown",
 }
 

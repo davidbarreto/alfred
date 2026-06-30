@@ -16,6 +16,8 @@ logger = logging.getLogger(__name__)
 
 _READ_INTENTS: frozenset[str] = frozenset({
     "task.list",
+    "task.search",
+    "task.pending",
     "note.list",
     "note.search",
     "event.list",
@@ -30,6 +32,9 @@ _READ_INTENTS: frozenset[str] = frozenset({
     "wishlist.list",
     "language.practice",
     "language.review",
+    "recall.search",
+    "assistant.focus",
+    "weather.current",
 })
 
 

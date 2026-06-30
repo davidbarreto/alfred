@@ -278,6 +278,49 @@ INTENT_EXAMPLES: list[IntentExample] = [
     IntentExample(id=201, text="Move the guitar from my wishlist to the shopping list", intent="wishlist.promote"),
     IntentExample(id=202, text="Promote the standing desk from wishlist to shopping", intent="wishlist.promote"),
 
+    # --- task.search ---
+    IntentExample(id=228, text="Do I have any tasks about the sprint?", intent="task.search"),
+    IntentExample(id=229, text="Find tasks related to the deployment", intent="task.search"),
+    IntentExample(id=230, text="Do I have anything to do about the API refactor?", intent="task.search"),
+    IntentExample(id=231, text="Search my tasks for anything about invoices", intent="task.search"),
+    IntentExample(id=232, text="Any tasks related to the client meeting?", intent="task.search"),
+    IntentExample(id=233, text="Look up tasks about onboarding", intent="task.search"),
+
+    # --- task.pending ---
+    IntentExample(id=234, text="What's pending?", intent="task.pending"),
+    IntentExample(id=235, text="What am I behind on?", intent="task.pending"),
+    IntentExample(id=236, text="What's overdue?", intent="task.pending"),
+    IntentExample(id=237, text="What do I still need to do today?", intent="task.pending"),
+    IntentExample(id=238, text="Show me what's due today or late", intent="task.pending"),
+    IntentExample(id=239, text="What tasks are past their deadline?", intent="task.pending"),
+    IntentExample(id=240, text="What haven't I done yet that was due?", intent="task.pending"),
+
+    # --- assistant.focus ---
+    IntentExample(id=241, text="What should I work on right now?", intent="assistant.focus"),
+    IntentExample(id=242, text="What's my next focus?", intent="assistant.focus"),
+    IntentExample(id=243, text="What should I tackle next?", intent="assistant.focus"),
+    IntentExample(id=244, text="Help me decide what to do now", intent="assistant.focus"),
+    IntentExample(id=245, text="What's the most important thing I should be doing?", intent="assistant.focus"),
+    IntentExample(id=246, text="Give me a focus suggestion", intent="assistant.focus"),
+
+    # --- weather.current ---
+    IntentExample(id=247, text="Check the weather for me today", intent="weather.current"),
+    IntentExample(id=248, text="How is the weather in Paris today?", intent="weather.current"),
+    IntentExample(id=249, text="Will it rain in Lisbon tomorrow?", intent="weather.current"),
+    IntentExample(id=250, text="What's the forecast for London?", intent="weather.current"),
+    IntentExample(id=251, text="Do I need an umbrella today?", intent="weather.current"),
+    IntentExample(id=252, text="How cold is it in Berlin right now?", intent="weather.current"),
+    IntentExample(id=253, text="What's the weather in New York this weekend?", intent="weather.current"),
+
+    # --- reminder.set ---
+    IntentExample(id=254, text="Remind me to take my pills in 30 minutes", intent="reminder.set"),
+    IntentExample(id=255, text="Set a reminder to call mom at 3pm", intent="reminder.set"),
+    IntentExample(id=256, text="Alert me about the standup in 2 hours", intent="reminder.set"),
+    IntentExample(id=257, text="Remind me to check the oven in 20 minutes", intent="reminder.set"),
+    IntentExample(id=258, text="Ping me about the client call at 15:00", intent="reminder.set"),
+    IntentExample(id=259, text="Set an alert for the meeting in 45 minutes", intent="reminder.set"),
+    IntentExample(id=260, text="Remind me about the invoice deadline at 5pm", intent="reminder.set"),
+
     # --- recall.search ---
     IntentExample(id=216, text="What did I say about the deployment?", intent="recall.search"),
     IntentExample(id=217, text="Do you remember what I noted about the API migration?", intent="recall.search"),
@@ -293,7 +336,7 @@ INTENT_EXAMPLES: list[IntentExample] = [
     IntentExample(id=227, text="Look up my notes on SQLAlchemy async sessions", intent="recall.search"),
 
     # --- unknown ---
-    IntentExample(id=141, text="What's the weather like today?", intent="unknown"),
+    IntentExample(id=141, text="What's the weather like today?", intent="weather.current"),
     IntentExample(id=142, text="Tell me a joke", intent="unknown"),
     IntentExample(id=143, text="How is the stock market doing?", intent="unknown"),
     IntentExample(id=144, text="What time is it in Tokyo?", intent="unknown"),

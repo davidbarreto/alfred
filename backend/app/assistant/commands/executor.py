@@ -3,13 +3,16 @@ from typing import Any
 
 from fastapi import HTTPException, status
 
+from app.assistant.commands.handlers.assistant import handle_assistant
 from app.assistant.commands.handlers.event import handle_event
 from app.assistant.commands.handlers.finance import handle_finance
 from app.assistant.commands.handlers.language import handle_language
 from app.assistant.commands.handlers.note import handle_note
 from app.assistant.commands.handlers.recall import handle_recall
+from app.assistant.commands.handlers.reminder import handle_reminder
 from app.assistant.commands.handlers.shopping import handle_shopping
 from app.assistant.commands.handlers.task import handle_task
+from app.assistant.commands.handlers.weather import handle_weather
 from app.features.core.embeddings.service import EmbeddingService
 from app.features.core.working_memory.service import WorkingMemoryService
 from app.features.finance.accounts.service import AccountService
@@ -46,7 +49,7 @@ async def execute(
     logger.info("Execute: %s.%s args_keys=%s", cmd_type, command, list(arguments.keys()))
 
     if cmd_type == "task":
-        return await handle_task(command, arguments, task_service)
+        return await handle_task(command, arguments, task_service, embedding_service=embedding_service)
 
     if cmd_type == "note":
         return await handle_note(command, arguments, note_service)
@@ -87,6 +90,15 @@ async def execute(
                 detail="Recall service not available",
             )
         return await handle_recall(command, arguments, embedding_service)
+
+    if cmd_type == "weather":
+        return await handle_weather(command, arguments)
+
+    if cmd_type == "assistant":
+        return await handle_assistant(command, arguments, task_service=task_service, event_service=event_service)
+
+    if cmd_type == "reminder":
+        return await handle_reminder(command, arguments, task_service=task_service)
 
     logger.error("Execute: unknown command type=%s command=%s", cmd_type, command)
     raise HTTPException(

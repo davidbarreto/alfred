@@ -162,10 +162,20 @@ async def execute_command(
 
 _RESPOND_SYSTEM = (
     "You are Alfred, a helpful personal AI assistant. "
-    "Inform the user about the result of the operations below in 1-2 sentences, "
-    "natural and friendly tone. Plain text only, no markdown. "
-    "If a result is an empty list, say so clearly (e.g. 'You have no tasks right now' or 'Your calendar is clear'). "
-    "If a result contains items, summarize them briefly without listing every detail."
+    "Respond to the user about the executed command results in a natural, friendly tone. "
+    "Plain text only, no markdown. "
+    "Follow these guidelines based on the command name:\n"
+    "- task.pending: Enumerate every overdue task first, then tasks due today, each with title, priority, and deadline. "
+    "If both lists are empty, say the user is all caught up.\n"
+    "- assistant.focus: Based on the tasks and today's events, recommend the single most important thing to focus on "
+    "right now. Be direct and actionable in 2-3 sentences.\n"
+    "- weather.current: Describe the conditions naturally and give practical advice (umbrella, coat, etc.).\n"
+    "- task.search / recall.search: List each matching item with its content and relevance.\n"
+    "- reminder.set: Confirm what was set and when, in one sentence.\n"
+    "- finance.spending_report / finance.spending_average / finance.spending_top: State the amount, period, and "
+    "any notable breakdown clearly.\n"
+    "- For create/update/delete operations, confirm in 1 sentence.\n"
+    "- If a result is empty, say so clearly (e.g. 'You have no tasks right now' or 'Your calendar is clear')."
 )
 
 
@@ -175,7 +185,9 @@ def _format_result(result: Any) -> str:
     if isinstance(result, list):
         if not result:
             return "(empty — no items found)"
-        return f"({len(result)} item(s)): {result[:3]!r}{'...' if len(result) > 3 else ''}"
+        display = result[:20]
+        suffix = f" ... ({len(result) - 20} more not shown)" if len(result) > 20 else ""
+        return f"({len(result)} item(s)): {display!r}{suffix}"
     if isinstance(result, dict):
         return repr(result)
     return str(result)

@@ -90,9 +90,24 @@ class AddTransactionArgs(BaseModel):
     account: str | None = Field(default=None, description="Account name if explicitly mentioned, e.g. 'Revolut', 'checking account'")
 
 
+class SearchTasksArgs(BaseModel):
+    query: str = Field(description="Search query to find relevant tasks")
+
+
+class WeatherArgs(BaseModel):
+    location: str = Field(description="City name or location, e.g. 'Paris', 'New York'. Default to the user's home city if not specified.")
+    date: str | None = Field(default=None, description="Date in ISO 8601 format (YYYY-MM-DD). Resolve relative expressions like 'today' or 'tomorrow' using the current date provided. Omit if not mentioned.")
+
+
+class ReminderArgs(BaseModel):
+    title: str = Field(description="What the user wants to be reminded about")
+    remind_at: str = Field(description="When to send the reminder, as ISO 8601 datetime (YYYY-MM-DDTHH:MM:SS). Resolve relative expressions like 'in 2 hours' or 'at 3pm' using the current date and time provided.")
+
+
 _INTENT_SCHEMAS: dict[str, type[BaseModel]] = {
     "task.add": CreateTaskArgs,
     "task.list": GetTasksArgs,
+    "task.search": SearchTasksArgs,
     "note.add": CreateNoteArgs,
     "event.add": CreateEventArgs,
     "event.list": GetCalendarArgs,
@@ -103,9 +118,11 @@ _INTENT_SCHEMAS: dict[str, type[BaseModel]] = {
     "wishlist.add": AddWishlistItemArgs,
     "wishlist.promote": PromoteWishlistItemArgs,
     "finance.transaction_add": AddTransactionArgs,
+    "weather.current": WeatherArgs,
+    "reminder.set": ReminderArgs,
 }
 
-_INTENTS_WITH_DATES = {"task.add", "event.add", "event.list", "finance.transaction_add"}
+_INTENTS_WITH_DATES = {"task.add", "event.add", "event.list", "finance.transaction_add", "weather.current", "reminder.set"}
 
 
 

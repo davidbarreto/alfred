@@ -79,6 +79,16 @@ COMMAND_DEFINITIONS = {
             "aliases": ["/tasklist", "/tl", "/list", "/tasks"],
             "flags": TASK_LIST_FLAGS
         },
+        "search": {
+            "aliases": ["/tasksearch", "/ts", "/taskfind"],
+            "flags": {},
+            "requires_args": True,
+            "arg_keys": ["query"]
+        },
+        "pending": {
+            "aliases": ["/pending", "/pd", "/overdue"],
+            "flags": {},
+        },
         "update": {
             "aliases": ["/taskupdate", "/tu", "/taskupd"],
             "flags": TASK_UPDATE_FLAGS,
@@ -232,6 +242,27 @@ COMMAND_DEFINITIONS = {
             "flags": {},
             "requires_args": True,
             "arg_keys": ["query"],
+        }
+    },
+    "weather": {
+        "current": {
+            "aliases": ["/weather", "/wx"],
+            "flags": {"-d": "date", "--date": "date"},
+            "arg_keys": ["location"]
+        }
+    },
+    "assistant": {
+        "focus": {
+            "aliases": ["/focus", "/next", "/whatnow"],
+            "flags": {},
+        }
+    },
+    "reminder": {
+        "set": {
+            "aliases": ["/remind", "/remindme"],
+            "flags": {**FLAG_DUE},
+            "requires_args": True,
+            "arg_keys": ["title"]
         }
     },
     "help": {

@@ -46,11 +46,12 @@ jobs:
             COMPOSE="docker compose -f $APP_DIR/infra/docker-compose.yml"
 
             echo "==> Pulling latest code..."
-            if [ -d "$APP_DIR/.git" ]; then
+            if git -C "$APP_DIR" remote get-url origin &>/dev/null; then
               git -C "$APP_DIR" pull origin main
             else
               git -C "$APP_DIR" init -b main
-              git -C "$APP_DIR" remote add origin "https://github.com/davidbarreto/alfred.git"
+              git -C "$APP_DIR" remote add origin "https://github.com/davidbarreto/alfred.git" 2>/dev/null \
+                || git -C "$APP_DIR" remote set-url origin "https://github.com/davidbarreto/alfred.git"
               git -C "$APP_DIR" fetch origin main
               git -C "$APP_DIR" reset --hard origin/main
             fi

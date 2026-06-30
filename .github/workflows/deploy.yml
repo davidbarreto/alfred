@@ -49,7 +49,7 @@ jobs:
             if [ -d "$APP_DIR/.git" ]; then
               git -C "$APP_DIR" pull origin main
             else
-              git -C "$APP_DIR" init
+              git -C "$APP_DIR" init -b main
               git -C "$APP_DIR" remote add origin "https://github.com/davidbarreto/alfred.git"
               git -C "$APP_DIR" fetch origin main
               git -C "$APP_DIR" reset --hard origin/main

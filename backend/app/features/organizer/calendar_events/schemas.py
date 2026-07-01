@@ -59,8 +59,8 @@ class EventFilters:
         tags: Annotated[Optional[List[str]], Query()] = None,
     ) -> None:
         self.limit = limit
-        self.start_from = start_from
-        self.start_to = start_to
+        self.start_from = start_from.replace(tzinfo=None) if start_from is not None else None
+        self.start_to = start_to.replace(tzinfo=None) if start_to is not None else None
         self.tags = tags
 
     def __eq__(self, other: object) -> bool:

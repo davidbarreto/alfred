@@ -209,12 +209,14 @@
           <option value="expense">Expense</option>
           <option value="income">Income</option>
         </select>
-        <select name="recurrence_rule" required class="border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-[#378ADD]">
+        <select name="recurrence_freq" required class="border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-[#378ADD]">
           <option value="FREQ=MONTHLY">Monthly</option>
+          <option value="FREQ=WEEKLY;INTERVAL=2">Biweekly</option>
           <option value="FREQ=WEEKLY">Weekly</option>
           <option value="FREQ=YEARLY">Yearly</option>
           <option value="FREQ=DAILY">Daily</option>
         </select>
+        <input name="stop_date" type="date" placeholder="Stop date (optional)" class="border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-[#378ADD]" />
         <select name="account_id" required class="border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-[#378ADD]">
           <option value="">— account —</option>
           {% for acc in accounts %}<option value="{{ acc.id }}">{{ acc.name }}</option>{% endfor %}
@@ -375,15 +377,10 @@ async function submitNewTxn(e) {
       const txt = await res.text();
       throw new Error(txt || `Error ${res.status}`);
     }
-    const html = await res.text();
-    document.getElementById("transaction-list").innerHTML = html;
-    document.getElementById("new-txn-modal").close();
-    document.getElementById("new-txn-form").reset();
-    document.querySelector('#new-txn-form [name="date"]').value = new Date().toISOString().slice(0, 10);
+    window.location.reload();
   } catch (err) {
     errEl.textContent = err.message || "Failed to save transaction.";
     errEl.classList.remove("hidden");
-  } finally {
     btn.disabled = false;
     btn.textContent = "Save";
   }

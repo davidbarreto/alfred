@@ -305,10 +305,14 @@ async def create_recurring(
     amount: Annotated[str, Form()],
     type: Annotated[str, Form()],
     account_id: Annotated[str, Form()],
-    recurrence_rule: Annotated[str, Form()],
+    recurrence_freq: Annotated[str, Form()],
     category_id: Annotated[Optional[str], Form()] = None,
     currency: Annotated[str, Form()] = "EUR",
+    stop_date: Annotated[Optional[str], Form()] = None,
 ):
+    recurrence_rule = recurrence_freq
+    if stop_date:
+        recurrence_rule += f";UNTIL={stop_date.replace('-', '')}"
     payload: dict = {
         "merchant": merchant,
         "amount": amount,

@@ -63,9 +63,7 @@ jobs:
             echo "==> Ensuring data directories have correct ownership..."
             source "$APP_DIR/infra/.env" 2>/dev/null || true
             mkdir -p "${DB_DATA_DIR:-/srv/data/alfred/postgres}"
-            chown -R 999:999 "${DB_DATA_DIR:-/srv/data/alfred/postgres}"
             mkdir -p "${N8N_DATA_DIR:-/srv/data/alfred/n8n}"
-            chown -R 1000:1000 "${N8N_DATA_DIR:-/srv/data/alfred/n8n}"
 
             echo "==> Starting services..."
             $COMPOSE up -d

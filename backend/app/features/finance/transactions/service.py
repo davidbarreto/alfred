@@ -161,7 +161,12 @@ class TransactionService:
         }
 
         for rt in recurring_transactions:
-            multiplier = Decimal(str(rule_multipliers.get(rt.recurrence_rule.lower(), 0)))
+            parts = {k: v for k, v in (p.split("=", 1) for p in rt.recurrence_rule.upper().split(";") if "=" in p)}
+            freq = parts.get("FREQ", rt.recurrence_rule.upper().split(";")[0]).lower()
+            interval = int(parts.get("INTERVAL", "1"))
+            if freq == "weekly" and interval == 2:
+                freq = "biweekly"
+            multiplier = Decimal(str(rule_multipliers.get(freq, 0)))
             projected_amount = rt.amount * multiplier
             if rt.type == "income":
                 projected_income += projected_amount

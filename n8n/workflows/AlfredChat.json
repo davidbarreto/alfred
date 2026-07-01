@@ -221,15 +221,15 @@
                     "parameters": [
                         {
                             "name": "type",
-                            "value": "={{ $json.commands.type }}"
+                            "value": "={{ $('Needs Args Extraction').item.json.commands.type }}"
                         },
                         {
                             "name": "command",
-                            "value": "={{ $json.commands.command }}"
+                            "value": "={{ $('Needs Args Extraction').item.json.commands.command }}"
                         },
                         {
                             "name": "args",
-                            "value": "={{ $json.commands.args }}"
+                            "value": "={{ $('Needs Args Extraction').item.json.commands.args }}"
                         },
                         {
                             "name": "message_id",
@@ -403,7 +403,7 @@
                         },
                         {
                             "name": "intent",
-                            "value": "={{ $json.intent }}"
+                            "value": "={{ $('Needs Args Extraction').item.json.commands.intent }}"
                         }
                     ]
                 },
@@ -1628,10 +1628,10 @@
         "executionOrder": "v1",
         "binaryMode": "separate"
     },
-    "versionId": "6a68b8d8-a104-4b19-a9d3-bc89e798e3f5",
+    "versionId": "bfbf7d5f-7d7e-485a-9a63-caef20799e8f",
     "meta": {
         "templateCredsSetupCompleted": true,
-        "instanceId": "11c561d281784ecfcc254c9443353f5b31f3500fed0bdb0da25174650cb582d5"
+        "instanceId": "f52042214d600e4191f93bbf9b3b1f0a3fdaa9d97cab502cf62b86cf3cf7b067"
     },
     "nodeGroups": [],
     "id": "g2K8nRWNOZk4RDzh",

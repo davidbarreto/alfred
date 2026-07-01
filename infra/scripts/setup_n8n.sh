@@ -64,7 +64,12 @@ _wait_for_n8n() {
       echo -e "${GREEN}✓ n8n is ready${NC}"
       return 0
     fi
-    [ "$i" -eq "$max" ] && echo -e "${RED}Error: n8n failed to start within $((max * 2))s${NC}" && exit 1
+    if [ "$i" -eq "$max" ]; then
+      echo -e "${RED}Error: n8n failed to start within $((max * 2))s${NC}"
+      echo -e "${RED}--- n8n container logs ---${NC}"
+      docker logs --tail 50 "$N8N_CONTAINER" 2>&1 || true
+      exit 1
+    fi
     sleep 2
   done
 }

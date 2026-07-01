@@ -19,7 +19,7 @@ async def notes_page(request: Request):
         params["tags"] = tags_raw
 
     try:
-        notes = await api.get("/organizer/notes/", params=params)
+        notes = await api.get("/organizer/notes", params=params)
     except httpx.HTTPError:
         notes = []
 
@@ -40,7 +40,7 @@ async def notes_grid_fragment(request: Request):
     params: dict = {"limit": 100}
 
     try:
-        notes = await api.get("/organizer/notes/", params=params)
+        notes = await api.get("/organizer/notes", params=params)
     except httpx.HTTPError:
         notes = []
 
@@ -60,7 +60,7 @@ async def create_note(
 ):
     tag_list = [t.strip() for t in tags.split(",") if t.strip()]
     try:
-        note = await api.post("/organizer/notes/", json={"title": title, "content": content, "tags": tag_list})
+        note = await api.post("/organizer/notes", json={"title": title, "content": content, "tags": tag_list})
     except httpx.HTTPStatusError as exc:
         detail = "Failed to save note."
         try:
@@ -75,7 +75,7 @@ async def create_note(
 
     notes = []
     try:
-        notes = await api.get("/organizer/notes/", params={"limit": 100})
+        notes = await api.get("/organizer/notes", params={"limit": 100})
     except httpx.HTTPError:
         pass
     return templates.TemplateResponse(request, "_notes_grid.html", {"notes": notes})
@@ -97,7 +97,7 @@ async def delete_note(note_id: int, request: Request):
 
     notes = []
     try:
-        notes = await api.get("/organizer/notes/", params={"limit": 100})
+        notes = await api.get("/organizer/notes", params={"limit": 100})
     except httpx.HTTPError:
         pass
     return templates.TemplateResponse(request, "_notes_grid.html", {"notes": notes})

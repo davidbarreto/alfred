@@ -31,7 +31,7 @@ async def calendar_page(request: Request):
 
     api_error: str | None = None
     try:
-        events = await api.get("/organizer/calendar-events/", params={
+        events = await api.get("/organizer/calendar-events", params={
             "start_from": start,
             "start_to": end,
             "limit": 200,
@@ -99,7 +99,7 @@ async def create_event(
         "location": location or None,
     }
     try:
-        event = await api.post("/organizer/calendar-events/", json=payload)
+        event = await api.post("/organizer/calendar-events", json=payload)
     except httpx.HTTPStatusError as e:
         try:
             detail = e.response.json().get("detail", "Failed to create event.")

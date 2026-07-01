@@ -46,7 +46,7 @@ async def contacts_page(request: Request):
 
     api_error: str | None = None
     try:
-        raw = await api.get("/organizer/contacts/", params=_build_params(name, email, has_birthday, letter, offset))
+        raw = await api.get("/organizer/contacts", params=_build_params(name, email, has_birthday, letter, offset))
     except httpx.HTTPStatusError as e:
         raw = []
         api_error = f"API error {e.response.status_code}"
@@ -79,7 +79,7 @@ async def contacts_table_fragment(request: Request):
     offset = max(0, int(request.query_params.get("offset", "0")))
 
     try:
-        raw = await api.get("/organizer/contacts/", params=_build_params(name, email, has_birthday, letter, offset))
+        raw = await api.get("/organizer/contacts", params=_build_params(name, email, has_birthday, letter, offset))
     except httpx.HTTPError:
         raw = []
 
@@ -109,12 +109,12 @@ async def create_contact(
         payload["birthday"] = birthday
 
     try:
-        await api.post("/organizer/contacts/", json=payload)
+        await api.post("/organizer/contacts", json=payload)
     except httpx.HTTPError:
         return HTMLResponse('<p class="text-[#E24B4A] text-sm">Failed to create contact.</p>', status_code=422)
 
     try:
-        raw = await api.get("/organizer/contacts/", params={"limit": _PAGE_SIZE + 1, "offset": 0})
+        raw = await api.get("/organizer/contacts", params={"limit": _PAGE_SIZE + 1, "offset": 0})
     except httpx.HTTPError:
         raw = []
 
@@ -138,7 +138,7 @@ async def delete_contact(contact_id: int, request: Request):
         pass
 
     try:
-        raw = await api.get("/organizer/contacts/", params=_build_params("", "", has_birthday, letter, offset))
+        raw = await api.get("/organizer/contacts", params=_build_params("", "", has_birthday, letter, offset))
     except httpx.HTTPError:
         raw = []
 

@@ -51,7 +51,7 @@ async def tasks_page(request: Request):
 
     api_error: str | None = None
     try:
-        tasks = await api.get("/organizer/tasks/", params=params)
+        tasks = await api.get("/organizer/tasks", params=params)
         if active_filter == "habits":
             tasks = [t for t in tasks if t.get("recurrence_rule")]
     except httpx.HTTPStatusError as e:
@@ -77,7 +77,7 @@ async def tasks_list_fragment(request: Request):
     params = _build_params(active_filter)
 
     try:
-        tasks = await api.get("/organizer/tasks/", params=params)
+        tasks = await api.get("/organizer/tasks", params=params)
         if active_filter == "habits":
             tasks = [t for t in tasks if t.get("recurrence_rule")]
     except httpx.HTTPError:
@@ -107,7 +107,7 @@ async def create_task(
     if recurrence_rule:
         payload["recurrence_rule"] = recurrence_rule
     try:
-        task = await api.post("/organizer/tasks/", json=payload)
+        task = await api.post("/organizer/tasks", json=payload)
     except httpx.HTTPStatusError as exc:
         detail = "Failed to save task."
         try:
@@ -124,7 +124,7 @@ async def create_task(
     params = _build_params(active_filter)
     tasks = []
     try:
-        tasks = await api.get("/organizer/tasks/", params=params)
+        tasks = await api.get("/organizer/tasks", params=params)
     except httpx.HTTPError:
         pass
     return templates.TemplateResponse(request, "_tasks_list.html", {
@@ -152,7 +152,7 @@ async def mark_task_done(task_id: int, request: Request):
 @router.patch("/{task_id}/doing", response_class=HTMLResponse)
 async def mark_task_doing(task_id: int, request: Request):
     try:
-        task = await api.patch(f"/organizer/tasks/{task_id}/", json={"status": "DOING"})
+        task = await api.patch(f"/organizer/tasks/{task_id}", json={"status": "DOING"})
         await api.log_command("task.doing", {"task_id": task_id}, "task", task_id)
     except httpx.HTTPError:
         task = {"id": task_id, "title": "—", "status": "DOING", "priority": "LOW",

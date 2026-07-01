@@ -169,7 +169,7 @@
         {
             "parameters": {
                 "method": "POST",
-                "url": "http://api:8000/core/messages/",
+                "url": "http://api:8000/core/messages",
                 "authentication": "predefinedCredentialType",
                 "nodeCredentialType": "httpBearerAuth",
                 "sendBody": true,
@@ -213,7 +213,7 @@
         {
             "parameters": {
                 "method": "POST",
-                "url": "http://api:8000/commands/execute/",
+                "url": "http://api:8000/commands/execute",
                 "authentication": "genericCredentialType",
                 "genericAuthType": "httpBearerAuth",
                 "sendBody": true,
@@ -260,7 +260,7 @@
         {
             "parameters": {
                 "method": "POST",
-                "url": "http://api:8000/core/chats/",
+                "url": "http://api:8000/core/chats",
                 "authentication": "genericCredentialType",
                 "genericAuthType": "httpBearerAuth",
                 "sendBody": true,
@@ -359,7 +359,7 @@
         {
             "parameters": {
                 "method": "POST",
-                "url": "http://api:8000/commands/detect/",
+                "url": "http://api:8000/commands/detect",
                 "authentication": "genericCredentialType",
                 "genericAuthType": "httpBearerAuth",
                 "sendBody": true,
@@ -391,7 +391,7 @@
         {
             "parameters": {
                 "method": "POST",
-                "url": "http://api:8000/commands/extract/",
+                "url": "http://api:8000/commands/extract",
                 "authentication": "genericCredentialType",
                 "genericAuthType": "httpBearerAuth",
                 "sendBody": true,
@@ -477,7 +477,7 @@
         {
             "parameters": {
                 "method": "POST",
-                "url": "http://api:8000/commands/respond/",
+                "url": "http://api:8000/commands/respond",
                 "authentication": "genericCredentialType",
                 "genericAuthType": "httpBearerAuth",
                 "sendBody": true,
@@ -698,7 +698,7 @@
         },
         {
             "parameters": {
-                "url": "http://api:8000/core/working-memory/",
+                "url": "http://api:8000/core/working-memory",
                 "authentication": "genericCredentialType",
                 "genericAuthType": "httpBearerAuth",
                 "sendQuery": true,

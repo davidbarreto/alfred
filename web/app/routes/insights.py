@@ -27,7 +27,7 @@ async def memories_section(request: Request):
     if category:
         params["category"] = category
     try:
-        raw = await api.get("/core/memories/", params=params)
+        raw = await api.get("/core/memories", params=params)
     except httpx.HTTPError:
         raw = []
     memories, memories_has_next, memories_has_prev = _pagination(raw, offset)
@@ -44,7 +44,7 @@ async def memories_section(request: Request):
 async def working_memory_section(request: Request):
     offset = max(0, int(request.query_params.get("offset", "0")))
     try:
-        raw = await api.get("/core/working-memory/", params={"active_only": "false", "limit": _PAGE_SIZE + 1, "offset": offset})
+        raw = await api.get("/core/working-memory", params={"active_only": "false", "limit": _PAGE_SIZE + 1, "offset": offset})
     except httpx.HTTPError:
         raw = []
     wm_sorted = sorted(raw, key=lambda w: (w.get("expires_at") or ""))
@@ -66,7 +66,7 @@ async def delete_working_memory(item_id: int, request: Request):
         return HTMLResponse('<p class="text-[#E24B4A] text-sm">Failed to delete entry.</p>', status_code=422)
 
     try:
-        raw = await api.get("/core/working-memory/", params={"active_only": "false", "limit": _PAGE_SIZE + 1, "offset": 0})
+        raw = await api.get("/core/working-memory", params={"active_only": "false", "limit": _PAGE_SIZE + 1, "offset": 0})
     except httpx.HTTPError:
         raw = []
 
@@ -126,8 +126,8 @@ async def insights_page(request: Request):
     all_tasks, task_history = [], []
 
     for path, params, target in [
-        ("/core/memories/", {"limit": 200}, "memories"),
-        ("/core/working-memory/", {"active_only": "false", "limit": 200}, "working_memories"),
+        ("/core/memories", {"limit": 200}, "memories"),
+        ("/core/working-memory", {"active_only": "false", "limit": 200}, "working_memories"),
         ("/integration/llm-calls/", {"limit": 200}, "llm_calls"),
         ("/integration/provider-calls/", {"limit": 200}, "provider_calls"),
         ("/core/command-executions/", {"limit": 200}, "cmd_executions"),

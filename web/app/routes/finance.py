@@ -19,47 +19,47 @@ async def finance_page(request: Request):
     accounts, categories, recurring, all_budgets, errors = [], [], [], [], []
 
     try:
-        accounts = await api.get("/finance/accounts/", params={"is_active": "true"})
+        accounts = await api.get("/finance/accounts", params={"is_active": "true"})
     except httpx.HTTPError:
         pass
 
     try:
-        categories = await api.get("/finance/categories/")
+        categories = await api.get("/finance/categories")
     except httpx.HTTPError:
         pass
 
     try:
-        spending = await api.get("/finance/transactions/report/", params={"period": period})
+        spending = await api.get("/finance/transactions/report", params={"period": period})
     except httpx.HTTPError:
         errors.append("spending")
 
     try:
-        by_category = await api.get("/finance/transactions/by-category/", params={"period": period})
+        by_category = await api.get("/finance/transactions/by-category", params={"period": period})
     except httpx.HTTPError:
         errors.append("by_category")
 
     try:
-        transactions = await api.get("/finance/transactions/", params={"type": "expense", "limit": 15, "period": period})
+        transactions = await api.get("/finance/transactions", params={"type": "expense", "limit": 15, "period": period})
     except httpx.HTTPError:
         errors.append("transactions")
 
     try:
-        budgets = await api.get("/finance/budgets/remaining/", params={"period": "monthly"})
+        budgets = await api.get("/finance/budgets/remaining", params={"period": "monthly"})
     except httpx.HTTPError:
         errors.append("budgets")
 
     try:
-        all_txns = await api.get("/finance/transactions/", params={"type": "expense", "limit": 500, "period": period})
+        all_txns = await api.get("/finance/transactions", params={"type": "expense", "limit": 500, "period": period})
     except httpx.HTTPError:
         pass
 
     try:
-        recurring = await api.get("/finance/recurring-transactions/")
+        recurring = await api.get("/finance/recurring-transactions")
     except httpx.HTTPError:
         pass
 
     try:
-        all_budgets = await api.get("/finance/budgets/")
+        all_budgets = await api.get("/finance/budgets")
     except httpx.HTTPError:
         pass
 
@@ -142,13 +142,13 @@ async def create_transaction(
         payload["description"] = description
 
     try:
-        await api.post("/finance/transactions/", json=payload)
+        await api.post("/finance/transactions", json=payload)
     except httpx.HTTPError:
         return HTMLResponse('<p class="text-[#E24B4A] text-sm px-1">Failed to create transaction.</p>', status_code=422)
 
     transactions = []
     try:
-        transactions = await api.get("/finance/transactions/", params={"limit": 15, "period": period})
+        transactions = await api.get("/finance/transactions", params={"limit": 15, "period": period})
     except httpx.HTTPError:
         pass
 
@@ -165,7 +165,7 @@ async def delete_transaction(transaction_id: int, request: Request):
 
     transactions = []
     try:
-        transactions = await api.get("/finance/transactions/", params={"limit": 15, "period": period})
+        transactions = await api.get("/finance/transactions", params={"limit": 15, "period": period})
     except httpx.HTTPError:
         pass
     return templates.TemplateResponse(request, "_finance_transactions.html", {"transactions": transactions})
@@ -185,13 +185,13 @@ async def create_account(
     if institution:
         payload["institution"] = institution
     try:
-        await api.post("/finance/accounts/", json=payload)
+        await api.post("/finance/accounts", json=payload)
     except httpx.HTTPError:
         return HTMLResponse('<p class="text-[#E24B4A] text-sm">Failed to create account.</p>', status_code=422)
 
     accounts = []
     try:
-        accounts = await api.get("/finance/accounts/")
+        accounts = await api.get("/finance/accounts")
     except httpx.HTTPError:
         pass
     return templates.TemplateResponse(request, "_finance_accounts.html", {"accounts": accounts})
@@ -206,7 +206,7 @@ async def delete_account(account_id: int, request: Request):
 
     accounts = []
     try:
-        accounts = await api.get("/finance/accounts/")
+        accounts = await api.get("/finance/accounts")
     except httpx.HTTPError:
         pass
     return templates.TemplateResponse(request, "_finance_accounts.html", {"accounts": accounts})
@@ -220,13 +220,13 @@ async def create_category(
     name: Annotated[str, Form()],
 ):
     try:
-        await api.post("/finance/categories/", json={"name": name})
+        await api.post("/finance/categories", json={"name": name})
     except httpx.HTTPError:
         return HTMLResponse('<p class="text-[#E24B4A] text-sm">Failed to create category.</p>', status_code=422)
 
     categories = []
     try:
-        categories = await api.get("/finance/categories/")
+        categories = await api.get("/finance/categories")
     except httpx.HTTPError:
         pass
     return templates.TemplateResponse(request, "_finance_categories.html", {"categories": categories})
@@ -241,7 +241,7 @@ async def delete_category(category_id: int, request: Request):
 
     categories = []
     try:
-        categories = await api.get("/finance/categories/")
+        categories = await api.get("/finance/categories")
     except httpx.HTTPError:
         pass
     return templates.TemplateResponse(request, "_finance_categories.html", {"categories": categories})
@@ -261,17 +261,17 @@ async def create_budget(
     if category_id:
         payload["category_id"] = int(category_id)
     try:
-        await api.post("/finance/budgets/", json=payload)
+        await api.post("/finance/budgets", json=payload)
     except httpx.HTTPError:
         return HTMLResponse('<p class="text-[#E24B4A] text-sm">Failed to create budget.</p>', status_code=422)
 
     budgets, categories = [], []
     try:
-        budgets = await api.get("/finance/budgets/")
+        budgets = await api.get("/finance/budgets")
     except httpx.HTTPError:
         pass
     try:
-        categories = await api.get("/finance/categories/")
+        categories = await api.get("/finance/categories")
     except httpx.HTTPError:
         pass
     return templates.TemplateResponse(request, "_finance_budgets.html", {"budgets": budgets, "categories": categories})
@@ -286,11 +286,11 @@ async def delete_budget(budget_id: int, request: Request):
 
     budgets, categories = [], []
     try:
-        budgets = await api.get("/finance/budgets/")
+        budgets = await api.get("/finance/budgets")
     except httpx.HTTPError:
         pass
     try:
-        categories = await api.get("/finance/categories/")
+        categories = await api.get("/finance/categories")
     except httpx.HTTPError:
         pass
     return templates.TemplateResponse(request, "_finance_budgets.html", {"budgets": budgets, "categories": categories})
@@ -324,21 +324,21 @@ async def create_recurring(
     if category_id:
         payload["category_id"] = int(category_id)
     try:
-        await api.post("/finance/recurring-transactions/", json=payload)
+        await api.post("/finance/recurring-transactions", json=payload)
     except httpx.HTTPError:
         return HTMLResponse('<p class="text-[#E24B4A] text-sm">Failed to create recurring transaction.</p>', status_code=422)
 
     recurring, accounts, categories = [], [], []
     try:
-        recurring = await api.get("/finance/recurring-transactions/")
+        recurring = await api.get("/finance/recurring-transactions")
     except httpx.HTTPError:
         pass
     try:
-        accounts = await api.get("/finance/accounts/")
+        accounts = await api.get("/finance/accounts")
     except httpx.HTTPError:
         pass
     try:
-        categories = await api.get("/finance/categories/")
+        categories = await api.get("/finance/categories")
     except httpx.HTTPError:
         pass
     return templates.TemplateResponse(
@@ -356,15 +356,15 @@ async def delete_recurring(recurring_id: int, request: Request):
 
     recurring, accounts, categories = [], [], []
     try:
-        recurring = await api.get("/finance/recurring-transactions/")
+        recurring = await api.get("/finance/recurring-transactions")
     except httpx.HTTPError:
         pass
     try:
-        accounts = await api.get("/finance/accounts/")
+        accounts = await api.get("/finance/accounts")
     except httpx.HTTPError:
         pass
     try:
-        categories = await api.get("/finance/categories/")
+        categories = await api.get("/finance/categories")
     except httpx.HTTPError:
         pass
     return templates.TemplateResponse(

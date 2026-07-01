@@ -19,12 +19,12 @@ async def shopping_page(request: Request):
 
     items, wishlist = [], []
     try:
-        items = await api.get("/organizer/shopping/", params={"status": status, "category": category, "limit": 100})
+        items = await api.get("/organizer/shopping", params={"status": status, "category": category, "limit": 100})
     except httpx.HTTPError:
         pass
 
     try:
-        wishlist = await api.get("/organizer/wishlist/", params={"limit": 100})
+        wishlist = await api.get("/organizer/wishlist", params={"limit": 100})
     except httpx.HTTPError:
         pass
 
@@ -43,7 +43,7 @@ async def shopping_list_fragment(request: Request):
     category = request.query_params.get("category", "all")
 
     try:
-        items = await api.get("/organizer/shopping/", params={"status": status, "category": category, "limit": 100})
+        items = await api.get("/organizer/shopping", params={"status": status, "category": category, "limit": 100})
     except httpx.HTTPError:
         items = []
 
@@ -61,7 +61,7 @@ async def add_shopping_item(
     priority: Annotated[str, Form()] = "need",
 ):
     try:
-        item = await api.post("/organizer/shopping/", json={
+        item = await api.post("/organizer/shopping", json={
             "name": name,
             "category": category,
             "priority": priority,
@@ -77,7 +77,7 @@ async def add_shopping_item(
 @router.post("/{item_id}/bought", response_class=HTMLResponse)
 async def mark_bought(item_id: int, request: Request):
     try:
-        item = await api.post(f"/organizer/shopping/{item_id}/bought/")
+        item = await api.post(f"/organizer/shopping/{item_id}/bought")
     except httpx.HTTPError:
         return HTMLResponse("", status_code=422)
     return templates.TemplateResponse(request, "_shopping_item.html", {"item": item})
@@ -88,7 +88,7 @@ async def mark_bought(item_id: int, request: Request):
 @router.get("/wishlist", response_class=HTMLResponse)
 async def wishlist_fragment(request: Request):
     try:
-        items = await api.get("/organizer/wishlist/", params={"limit": 100})
+        items = await api.get("/organizer/wishlist", params={"limit": 100})
     except httpx.HTTPError:
         items = []
     return templates.TemplateResponse(request, "_wishlist_list.html", {"items": items, "categories": _CATEGORIES})
@@ -108,13 +108,13 @@ async def add_wishlist_item(
     if brand:
         payload["brand"] = brand
     try:
-        await api.post("/organizer/wishlist/", json=payload)
+        await api.post("/organizer/wishlist", json=payload)
     except httpx.HTTPError:
         return HTMLResponse('<p class="text-[#E24B4A] text-sm px-1">Failed to add to wishlist.</p>', status_code=422)
 
     items = []
     try:
-        items = await api.get("/organizer/wishlist/", params={"limit": 100})
+        items = await api.get("/organizer/wishlist", params={"limit": 100})
     except httpx.HTTPError:
         pass
     return templates.TemplateResponse(request, "_wishlist_list.html", {"items": items, "categories": _CATEGORIES})
@@ -129,7 +129,7 @@ async def delete_wishlist_item(item_id: int, request: Request):
 
     items = []
     try:
-        items = await api.get("/organizer/wishlist/", params={"limit": 100})
+        items = await api.get("/organizer/wishlist", params={"limit": 100})
     except httpx.HTTPError:
         pass
     return templates.TemplateResponse(request, "_wishlist_list.html", {"items": items, "categories": _CATEGORIES})
@@ -138,13 +138,13 @@ async def delete_wishlist_item(item_id: int, request: Request):
 @router.post("/wishlist/{item_id}/promote", response_class=HTMLResponse)
 async def promote_wishlist_item(item_id: int, request: Request):
     try:
-        await api.post(f"/organizer/wishlist/{item_id}/promote/", json={"category": "other"})
+        await api.post(f"/organizer/wishlist/{item_id}/promote", json={"category": "other"})
     except httpx.HTTPError:
         return HTMLResponse('<p class="text-[#E24B4A] text-sm px-1">Failed to promote item.</p>', status_code=422)
 
     items = []
     try:
-        items = await api.get("/organizer/wishlist/", params={"limit": 100})
+        items = await api.get("/organizer/wishlist", params={"limit": 100})
     except httpx.HTTPError:
         pass
     return templates.TemplateResponse(request, "_wishlist_list.html", {"items": items, "categories": _CATEGORIES})

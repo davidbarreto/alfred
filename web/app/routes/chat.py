@@ -18,7 +18,7 @@ async def chat_page(request: Request):
     s = get_settings()
     try:
         messages = await api.get(
-            "/core/messages/",
+            "/core/messages",
             params={"source": "web", "external_id": "portal", "limit": _HISTORY_LIMIT},
         )
     except httpx.HTTPError:
@@ -37,7 +37,7 @@ async def send_message(
 ):
     """Ingests the user message and returns the session_id for the SSE call."""
     try:
-        result = await api.post("/core/messages/", json={
+        result = await api.post("/core/messages", json={
             "text": message,
             "source": "web",
             "external_id": "portal",

@@ -19,7 +19,7 @@ async def dashboard(request: Request):
     errors = []
 
     try:
-        tasks = await api.get("/organizer/tasks/", params={
+        tasks = await api.get("/organizer/tasks", params={
             "status": "TODO",
             "limit": 8,
         })
@@ -27,12 +27,12 @@ async def dashboard(request: Request):
         errors.append("tasks")
 
     try:
-        shopping_items = await api.get("/organizer/shopping/", params={"status": "pending", "limit": 8})
+        shopping_items = await api.get("/organizer/shopping", params={"status": "pending", "limit": 8})
     except httpx.HTTPError:
         errors.append("shopping")
 
     try:
-        events = await api.get("/organizer/calendar-events/", params={
+        events = await api.get("/organizer/calendar-events", params={
             "start_from": today_start,
             "start_to": today_end,
             "limit": 10,
@@ -41,7 +41,7 @@ async def dashboard(request: Request):
         errors.append("events")
 
     try:
-        spending = await api.get("/finance/transactions/report/", params={"period": "this month"})
+        spending = await api.get("/finance/transactions/report", params={"period": "this month"})
     except httpx.HTTPError:
         errors.append("spending")
 

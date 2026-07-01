@@ -23,7 +23,7 @@ services:
   api:
     build: ../backend
     ports:
-      - "${BACKEND_PORT}:8000"
+      - "127.0.0.1:${BACKEND_PORT}:8000"
     depends_on:
       db:
         condition: service_healthy
@@ -59,7 +59,7 @@ services:
   web:
     build: ../web
     ports:
-      - "${WEB_PORT:-8080}:8080"
+      - "127.0.0.1:${WEB_PORT:-8080}:8080"
     depends_on:
       - api
     restart: unless-stopped
@@ -75,7 +75,7 @@ services:
     image: n8nio/n8n:latest
     container_name: n8n
     ports:
-      - "${N8N_PORT}:5678"
+      - "127.0.0.1:${N8N_PORT}:5678"
     depends_on:
       db:
         condition: service_healthy

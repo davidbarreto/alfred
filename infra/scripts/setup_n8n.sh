@@ -223,7 +223,59 @@ _import_workflows() {
 }
 
 # ---------------------------------------------------------------------------
-# Step 4 — Activate all workflows
+# Step 4 — Publish all workflows (promote draft → live version)
+# ---------------------------------------------------------------------------
+_publish_workflows() {
+  echo -e "${BLUE}Publishing workflows...${NC}"
+
+  local cookie_jar
+  cookie_jar=$(mktemp)
+
+  local http_status
+  http_status=$(curl -s -o /dev/null -w "%{http_code}" \
+    -c "$cookie_jar" \
+    -X POST "${N8N_BASE_URL}/rest/login" \
+    -H "Content-Type: application/json" \
+    -d "{\"email\": \"${N8N_OWNER_EMAIL}\", \"password\": \"${N8N_OWNER_PASSWORD}\"}")
+
+  if [ "$http_status" != "200" ]; then
+    echo -e "${YELLOW}Warning: login failed (HTTP $http_status) — skipping workflow publish${NC}"
+    rm -f "$cookie_jar"
+    return
+  fi
+
+  local workflows
+  workflows=$(curl -s -b "$cookie_jar" "${N8N_BASE_URL}/rest/workflows")
+
+  local wf_ids
+  wf_ids=$(echo "$workflows" | python3 -c "
+import sys, json
+data = json.load(sys.stdin)
+for w in data.get('data', []):
+    print(str(w['id']) + ' ' + w.get('name', '(unnamed)'))
+")
+
+  local count=0
+  while IFS=' ' read -r wf_id wf_name; do
+    [ -z "$wf_id" ] && continue
+    local pub_status
+    pub_status=$(curl -s -o /dev/null -w "%{http_code}" \
+      -b "$cookie_jar" \
+      -X POST "${N8N_BASE_URL}/rest/workflows/${wf_id}/publish")
+    if [ "$pub_status" = "200" ]; then
+      echo "  → published: ${wf_name} (id=${wf_id})"
+      count=$((count + 1))
+    else
+      echo -e "  ${YELLOW}⚠ failed to publish: ${wf_name} (id=${wf_id}, HTTP $pub_status)${NC}"
+    fi
+  done <<< "$wf_ids"
+
+  rm -f "$cookie_jar"
+  echo -e "${GREEN}✓ Published ${count} workflow(s)${NC}"
+}
+
+# ---------------------------------------------------------------------------
+# Step 5 — Activate all workflows
 # ---------------------------------------------------------------------------
 _activate_workflows() {
   echo -e "${BLUE}Activating workflows...${NC}"
@@ -295,6 +347,7 @@ _wait_for_n8n
 _setup_owner
 _import_credentials
 _import_workflows
+_publish_workflows
 _activate_workflows
 
 echo ""

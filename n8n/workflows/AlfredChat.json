@@ -535,7 +535,8 @@
                 "chatId": "={{ $('Message Trigger').item.json.message?.chat?.id?.toString() || $('Message Trigger').item.json.callback_query?.message?.chat?.id?.toString() }}",
                 "text": "={{ $json.response }}",
                 "additionalFields": {
-                    "appendAttribution": false
+                    "appendAttribution": false,
+                    "parse_mode": "HTML"
                 }
             },
             "type": "n8n-nodes-base.telegram",

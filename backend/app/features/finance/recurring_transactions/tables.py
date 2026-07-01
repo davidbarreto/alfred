@@ -1,6 +1,7 @@
-from sqlalchemy import Boolean, Integer, ForeignKey, Numeric, String
+from sqlalchemy import Boolean, Date, Integer, ForeignKey, Numeric, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from typing import Optional, TYPE_CHECKING
+from datetime import date
 from decimal import Decimal
 
 from app.db.base import Base
@@ -27,6 +28,7 @@ class RecurringTransaction(Base):
     merchant: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     recurrence_rule: Mapped[str] = mapped_column(String(255), nullable=False)
     active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    last_occurrence_date: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
 
     account: Mapped["Account"] = relationship("Account", back_populates="recurring_transactions")
     category: Mapped[Optional["Category"]] = relationship("Category")

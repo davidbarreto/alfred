@@ -63,6 +63,18 @@ class TransactionRepository:
         await self._session.refresh(transaction)
         return transaction
 
+    async def add(self, data: TransactionCreate) -> Transaction:
+        """Add transaction to session without committing. Caller is responsible for commit."""
+        transaction = Transaction(**data.model_dump())
+        self._session.add(transaction)
+        return transaction
+
+    async def exists_by_dedup_hash(self, dedup_hash: str) -> bool:
+        result = await self._session.execute(
+            select(Transaction.id).where(Transaction.deduplication_hash == dedup_hash)
+        )
+        return result.scalar() is not None
+
     async def delete(self, transaction_id: int) -> bool:
         transaction = await self.get(transaction_id)
         if transaction is None:

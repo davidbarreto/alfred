@@ -3,6 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException, Response, status
 from app.api.auth import require_auth
 from app.dependencies import RecurringTransactionServiceDep
 from app.features.finance.recurring_transactions.schemas import (
+    ProcessResult,
     RecurringTransactionCreate,
     RecurringTransactionFilters,
     RecurringTransactionRead,
@@ -12,6 +13,11 @@ from app.features.finance.recurring_transactions.schemas import (
 router = APIRouter(
     prefix="/finance/recurring-transactions", tags=["finance"], dependencies=[Depends(require_auth)]
 )
+
+
+@router.post("/process", response_model=ProcessResult)
+async def process_recurring(service: RecurringTransactionServiceDep):
+    return await service.process()
 
 
 @router.post("/", response_model=RecurringTransactionRead, status_code=status.HTTP_201_CREATED)

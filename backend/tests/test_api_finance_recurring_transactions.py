@@ -2,7 +2,7 @@ import pytest
 from decimal import Decimal
 from fastapi.testclient import TestClient
 from unittest.mock import AsyncMock
-from app.features.finance.recurring_transactions.schemas import RecurringTransactionRead
+from app.features.finance.recurring_transactions.schemas import ProcessResult, RecurringTransactionRead
 
 AUTH = {"Authorization": "Bearer test-api-token"}
 
@@ -12,7 +12,8 @@ def _rt_read(**kwargs):
         id=1, account_id=1, category_id=None,
         type="expense", amount=Decimal("9.99"), currency="EUR",
         merchant="Streaming Service",
-        recurrence_rule="monthly", active=True,
+        recurrence_rule="FREQ=MONTHLY", active=True,
+        last_occurrence_date=None,
     )
     defaults.update(kwargs)
     return RecurringTransactionRead(**defaults)
@@ -133,3 +134,21 @@ class TestDeleteRecurring:
     def test_service_called_with_correct_id(self, client, mock_service):
         client.delete("/finance/recurring-transactions/3", headers=AUTH)
         mock_service.delete.assert_called_once_with(3)
+
+
+class TestProcessRecurring:
+    def test_returns_process_result(self, client, mock_service):
+        mock_service.process.return_value = ProcessResult(created=3, deactivated=1)
+        response = client.post("/finance/recurring-transactions/process", headers=AUTH)
+        assert response.status_code == 200
+        data = response.json()
+        assert data["created"] == 3
+        assert data["deactivated"] == 1
+
+    def test_calls_service_process(self, client, mock_service):
+        mock_service.process.return_value = ProcessResult(created=0, deactivated=0)
+        client.post("/finance/recurring-transactions/process", headers=AUTH)
+        mock_service.process.assert_called_once()
+
+    def test_requires_auth(self, client):
+        assert client.post("/finance/recurring-transactions/process").status_code == 403

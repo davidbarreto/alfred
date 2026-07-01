@@ -316,6 +316,16 @@ INTENT_EXAMPLES: list[IntentExample] = [
     IntentExample(id=251, text="Do I need an umbrella today?", intent="weather.current"),
     IntentExample(id=252, text="How cold is it in Berlin right now?", intent="weather.current"),
     IntentExample(id=253, text="What's the weather in New York this weekend?", intent="weather.current"),
+    IntentExample(id=266, text="What's the weather forecast for tomorrow in Porto?", intent="weather.current"),
+    IntentExample(id=267, text="How is the weather tomorrow in Porto?", intent="weather.current"),
+    IntentExample(id=268, text="What's the weather like tomorrow in Lisbon?", intent="weather.current"),
+    IntentExample(id=269, text="Will it be sunny tomorrow in Madrid?", intent="weather.current"),
+    IntentExample(id=270, text="What's the forecast for tomorrow in Rome?", intent="weather.current"),
+    IntentExample(id=271, text="Tell me the weather forecast for Porto tomorrow", intent="weather.current"),
+    IntentExample(id=272, text="Is it going to rain tomorrow in London?", intent="weather.current"),
+    IntentExample(id=273, text="What's the temperature tomorrow in Amsterdam?", intent="weather.current"),
+    IntentExample(id=274, text="How will the weather be tomorrow?", intent="weather.current"),
+    IntentExample(id=275, text="Give me the weather forecast for next week in Porto", intent="weather.current"),
 
     # --- reminder.set ---
     IntentExample(id=254, text="Remind me to take my pills in 30 minutes", intent="reminder.set"),

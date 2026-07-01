@@ -23,12 +23,12 @@ from app.features.finance.transactions.schemas import (
 router = APIRouter(prefix="/finance/transactions", tags=["finance"], dependencies=[Depends(require_auth)])
 
 
-@router.post("/", response_model=TransactionRead, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=TransactionRead, status_code=status.HTTP_201_CREATED)
 async def create_transaction(request: TransactionCreate, service: TransactionServiceDep):
     return await service.create(request)
 
 
-@router.get("/", response_model=list[TransactionRead])
+@router.get("", response_model=list[TransactionRead])
 async def list_transactions(
     service: TransactionServiceDep, filters: TransactionFilters = Depends()
 ):

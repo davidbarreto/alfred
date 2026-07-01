@@ -14,7 +14,7 @@ router = APIRouter(
 )
 
 
-@router.get("/", response_model=list[CommandExecutionRead])
+@router.get("", response_model=list[CommandExecutionRead])
 async def list_command_executions(
     service: CommandExecutionServiceDep, filters: CommandExecutionFilters = Depends()
 ):
@@ -29,7 +29,7 @@ async def get_command_execution(execution_id: int, service: CommandExecutionServ
     return obj
 
 
-@router.post("/", response_model=CommandExecutionRead, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=CommandExecutionRead, status_code=status.HTTP_201_CREATED)
 async def create_command_execution(data: CommandExecutionCreate, service: CommandExecutionServiceDep):
     return await service.create(data)
 

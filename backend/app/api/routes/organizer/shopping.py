@@ -27,12 +27,12 @@ recurrence_router = APIRouter(prefix="/organizer/recurrence", tags=["organizer"]
 
 # --- Shopping items ---
 
-@shopping_router.get("/", response_model=list[ShoppingItemRead])
+@shopping_router.get("", response_model=list[ShoppingItemRead])
 async def list_shopping_items(service: ShoppingServiceDep, filters: ShoppingItemFilters = Depends()):
     return await service.list_items(filters)
 
 
-@shopping_router.post("/", response_model=ShoppingItemRead, status_code=status.HTTP_201_CREATED)
+@shopping_router.post("", response_model=ShoppingItemRead, status_code=status.HTTP_201_CREATED)
 async def create_shopping_item(request: ShoppingItemCreate, service: ShoppingServiceDep):
     return await service.create_item(request)
 
@@ -77,12 +77,12 @@ async def mark_shopping_item_skipped(item_id: int, service: ShoppingServiceDep):
 
 # --- Wishlist items ---
 
-@wishlist_router.get("/", response_model=list[WishlistItemRead])
+@wishlist_router.get("", response_model=list[WishlistItemRead])
 async def list_wishlist_items(service: ShoppingServiceDep, filters: WishlistItemFilters = Depends()):
     return await service.list_wishes(filters)
 
 
-@wishlist_router.post("/", response_model=WishlistItemRead, status_code=status.HTTP_201_CREATED)
+@wishlist_router.post("", response_model=WishlistItemRead, status_code=status.HTTP_201_CREATED)
 async def create_wishlist_item(request: WishlistItemCreate, service: ShoppingServiceDep):
     return await service.create_wish(request)
 
@@ -123,12 +123,12 @@ async def promote_wishlist_item(item_id: int, request: _PromoteRequest, service:
 
 # --- Recurrence items ---
 
-@recurrence_router.get("/", response_model=list[RecurrenceItemRead])
+@recurrence_router.get("", response_model=list[RecurrenceItemRead])
 async def list_recurrence_items(service: ShoppingServiceDep, active_only: bool = True):
     return await service.list_recurrences(active_only=active_only)
 
 
-@recurrence_router.post("/", response_model=RecurrenceItemRead, status_code=status.HTTP_201_CREATED)
+@recurrence_router.post("", response_model=RecurrenceItemRead, status_code=status.HTTP_201_CREATED)
 async def create_recurrence_item(request: RecurrenceItemCreate, service: ShoppingServiceDep):
     return await service.create_recurrence(request)
 

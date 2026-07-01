@@ -18,7 +18,7 @@ router = APIRouter(
 )
 
 
-@router.get("/", response_model=list[ContactRead])
+@router.get("", response_model=list[ContactRead])
 async def get_contacts(
     service: ContactsCRUDServiceDep,
     filters: ContactFilters = Depends(),
@@ -34,7 +34,7 @@ async def get_contact(contact_id: int, service: ContactsCRUDServiceDep) -> Conta
     return contact
 
 
-@router.post("/", response_model=ContactRead, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=ContactRead, status_code=status.HTTP_201_CREATED)
 async def create_contact(request: ContactCreate, service: ContactsCRUDServiceDep) -> ContactRead:
     return await service.create_contact(request)
 

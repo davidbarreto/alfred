@@ -13,12 +13,12 @@ from app.features.finance.budgets.schemas import (
 router = APIRouter(prefix="/finance/budgets", tags=["finance"], dependencies=[Depends(require_auth)])
 
 
-@router.post("/", response_model=BudgetRead, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=BudgetRead, status_code=status.HTTP_201_CREATED)
 async def create_budget(request: BudgetCreate, service: BudgetServiceDep):
     return await service.create(request)
 
 
-@router.get("/", response_model=list[BudgetRead])
+@router.get("", response_model=list[BudgetRead])
 async def list_budgets(service: BudgetServiceDep, filters: BudgetFilters = Depends()):
     return await service.list(filters)
 

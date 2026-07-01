@@ -15,7 +15,7 @@ router = APIRouter(
 )
 
 
-@router.get("/", response_model=list[SyncLogRead])
+@router.get("", response_model=list[SyncLogRead])
 async def read_provider_calls(
     provider: str | None = Query(default=None),
     operation: str | None = Query(default=None),

@@ -13,7 +13,7 @@ from app.features.core.messages.schemas import (
 router = APIRouter(prefix="/core/messages", tags=["core"], dependencies=[Depends(require_auth)])
 
 
-@router.get("/", response_model=list[MessageRead])
+@router.get("", response_model=list[MessageRead])
 async def list_messages(service: MessageServiceDep, filters: MessageFilters = Depends()):
     return await service.list(filters)
 
@@ -26,7 +26,7 @@ async def get_message(message_id: int, service: MessageServiceDep):
     return obj
 
 
-@router.post("/", response_model=MessageIngestResponse, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=MessageIngestResponse, status_code=status.HTTP_201_CREATED)
 async def ingest_message(
     data: MessageIngestRequest,
     session_service: SessionServiceDep,

@@ -13,7 +13,7 @@ router = APIRouter(
 )
 
 
-@router.get("/", response_model=list[WorkingMemoryRead])
+@router.get("", response_model=list[WorkingMemoryRead])
 async def list_working_memory(
     service: WorkingMemoryServiceDep, filters: WorkingMemoryFilters = Depends()
 ):
@@ -28,7 +28,7 @@ async def get_working_memory_item(item_id: int, service: WorkingMemoryServiceDep
     return obj
 
 
-@router.post("/", response_model=WorkingMemoryRead, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=WorkingMemoryRead, status_code=status.HTTP_201_CREATED)
 async def create_working_memory_item(data: WorkingMemoryCreate, service: WorkingMemoryServiceDep):
     return await service.create(data)
 

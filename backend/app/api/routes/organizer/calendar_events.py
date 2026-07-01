@@ -6,12 +6,12 @@ from app.dependencies import CalendarEventServiceDep
 router = APIRouter(prefix="/organizer/calendar-events", tags=["organizer"], dependencies=[Depends(require_auth)])
 
 
-@router.post("/", response_model=EventRead, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=EventRead, status_code=status.HTTP_201_CREATED)
 async def add_event(request: EventCreate, service: CalendarEventServiceDep):
     return await service.create_event(request)
 
 
-@router.get("/", response_model=list[EventRead])
+@router.get("", response_model=list[EventRead])
 async def get_events(service: CalendarEventServiceDep, filters: EventFilters = Depends()):
     return await service.get_events(filters)
 

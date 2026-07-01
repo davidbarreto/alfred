@@ -15,7 +15,7 @@ router = APIRouter(
 )
 
 
-@router.get("/", response_model=list[LlmCallRead])
+@router.get("", response_model=list[LlmCallRead])
 async def read_llm_calls(
     provider: str | None = Query(default=None),
     model: str | None = Query(default=None),

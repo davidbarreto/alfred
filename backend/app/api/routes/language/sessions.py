@@ -32,12 +32,12 @@ async def record_shadowing(request: ShadowingSessionCreate, service: LanguageSes
     return await service.record_shadowing(request)
 
 
-@router.post("/", response_model=SessionRead, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=SessionRead, status_code=status.HTTP_201_CREATED)
 async def record_session(request: SessionCreate, service: LanguageSessionServiceDep):
     return await service.record_session(request)
 
 
-@router.get("/", response_model=list[SessionRead])
+@router.get("", response_model=list[SessionRead])
 async def get_sessions(service: LanguageSessionServiceDep, filters: SessionFilters = Depends()):
     return await service.get_sessions(filters)
 

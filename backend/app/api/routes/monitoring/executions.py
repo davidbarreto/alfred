@@ -9,7 +9,7 @@ from app.features.monitoring.schemas import ExecutionFilters, ExecutionRead
 router = APIRouter(prefix="/monitoring/executions", tags=["monitoring"], dependencies=[Depends(require_auth)])
 
 
-@router.get("/", response_model=list[ExecutionRead])
+@router.get("", response_model=list[ExecutionRead])
 async def list_executions(
     filters: ExecutionFilters = Depends(),
     session: AsyncSession = Depends(get_session),

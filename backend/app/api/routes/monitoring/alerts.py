@@ -10,7 +10,7 @@ from app.features.monitoring.schemas import AlertRead
 router = APIRouter(prefix="/monitoring/alerts", tags=["monitoring"], dependencies=[Depends(require_auth)])
 
 
-@router.get("/", response_model=list[AlertRead])
+@router.get("", response_model=list[AlertRead])
 async def list_alerts(
     status: Literal["pending", "done"] | None = Query(default=None),
     config_id: int | None = Query(default=None),

@@ -12,7 +12,7 @@ from app.features.core.memories.schemas import (
 router = APIRouter(prefix="/core/memories", tags=["core"], dependencies=[Depends(require_auth)])
 
 
-@router.get("/", response_model=list[MemoryRead])
+@router.get("", response_model=list[MemoryRead])
 async def list_memories(service: MemoryServiceDep, filters: MemoryFilters = Depends()):
     return await service.list(filters)
 
@@ -25,7 +25,7 @@ async def get_memory(memory_id: int, service: MemoryServiceDep):
     return obj
 
 
-@router.post("/", response_model=MemoryRead, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=MemoryRead, status_code=status.HTTP_201_CREATED)
 async def create_memory(data: MemoryCreate, service: MemoryServiceDep):
     return await service.create(data)
 

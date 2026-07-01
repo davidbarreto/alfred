@@ -6,7 +6,7 @@ from app.dependencies import TaskServiceDep
 
 router = APIRouter(prefix="/organizer/tasks", tags=["organizer"], dependencies=[Depends(require_auth)])
 
-@router.post("/", response_model=TaskRead, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=TaskRead, status_code=status.HTTP_201_CREATED)
 async def add_task(request: TaskCreate, service: TaskServiceDep):
     task_read = await service.create_task(request)
     return task_read
@@ -22,7 +22,7 @@ async def delete_task(task_id: int, service: TaskServiceDep):
     await service.delete_task(task_id)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
-@router.get("/", response_model=list[TaskRead])
+@router.get("", response_model=list[TaskRead])
 async def get_tasks(service: TaskServiceDep, filters: TaskFilters = Depends()):
     return await service.get_tasks(filters)
 

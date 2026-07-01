@@ -22,7 +22,7 @@ from app.features.monitoring.service import MonitorService
 router = APIRouter(prefix="/monitoring/configs", tags=["monitoring"], dependencies=[Depends(require_auth)])
 
 
-@router.get("/", response_model=list[MonitorRead])
+@router.get("", response_model=list[MonitorRead])
 async def read_monitors(
     skip: int = 0,
     limit: int = 100,
@@ -39,7 +39,7 @@ async def read_monitor(monitor_id: int, session: AsyncSession = Depends(get_sess
     return monitor
 
 
-@router.post("/", response_model=MonitorRead)
+@router.post("", response_model=MonitorRead)
 async def create_new_monitor(
     monitor_create: MonitorCreate,
     session: AsyncSession = Depends(get_session),

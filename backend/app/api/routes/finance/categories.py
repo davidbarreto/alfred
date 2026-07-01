@@ -7,12 +7,12 @@ from app.features.finance.categories.schemas import CategoryCreate, CategoryRead
 router = APIRouter(prefix="/finance/categories", tags=["finance"], dependencies=[Depends(require_auth)])
 
 
-@router.post("/", response_model=CategoryRead, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=CategoryRead, status_code=status.HTTP_201_CREATED)
 async def create_category(request: CategoryCreate, service: CategoryServiceDep):
     return await service.create(request)
 
 
-@router.get("/", response_model=list[CategoryRead])
+@router.get("", response_model=list[CategoryRead])
 async def list_categories(service: CategoryServiceDep):
     return await service.list()
 

@@ -22,12 +22,12 @@ async def get_daily_batch(
     return await service.get_daily_batch(track_id)
 
 
-@router.post("/", response_model=ChunkRead, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=ChunkRead, status_code=status.HTTP_201_CREATED)
 async def create_chunk(request: ChunkCreate, service: ChunkServiceDep):
     return await service.create_chunk(request)
 
 
-@router.get("/", response_model=list[ChunkRead])
+@router.get("", response_model=list[ChunkRead])
 async def get_chunks(service: ChunkServiceDep, filters: ChunkFilters = Depends()):
     return await service.get_chunks(filters)
 

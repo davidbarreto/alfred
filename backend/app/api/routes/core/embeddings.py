@@ -27,7 +27,7 @@ class BackfillResponse(BaseModel):
     errors: int
 
 
-@router.post("/", response_model=EmbeddingRead, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=EmbeddingRead, status_code=status.HTTP_201_CREATED)
 async def create_embedding(data: EmbeddingCreate, service: EmbeddingServiceDep):
     return await service.embed(data)
 

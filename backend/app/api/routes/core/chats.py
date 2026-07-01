@@ -19,7 +19,7 @@ router = APIRouter(
 stream_router = APIRouter(prefix="/core/chats", tags=["core", "chats"])
 
 
-@router.post("/", response_model=ChatResponse)
+@router.post("", response_model=ChatResponse)
 async def chat(
     request: ChatRequest,
     service: ChatServiceDep,

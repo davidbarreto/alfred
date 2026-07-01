@@ -7,12 +7,12 @@ from app.features.language.tracks.schemas import TrackCreate, TrackFilters, Trac
 router = APIRouter(prefix="/language/tracks", tags=["language"], dependencies=[Depends(require_auth)])
 
 
-@router.post("/", response_model=TrackRead, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=TrackRead, status_code=status.HTTP_201_CREATED)
 async def create_track(request: TrackCreate, service: TrackServiceDep):
     return await service.create_track(request)
 
 
-@router.get("/", response_model=list[TrackRead])
+@router.get("", response_model=list[TrackRead])
 async def get_tracks(service: TrackServiceDep, filters: TrackFilters = Depends()):
     return await service.get_tracks(filters)
 

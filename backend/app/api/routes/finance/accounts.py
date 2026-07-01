@@ -7,12 +7,12 @@ from app.features.finance.accounts.schemas import AccountCreate, AccountFilters,
 router = APIRouter(prefix="/finance/accounts", tags=["finance"], dependencies=[Depends(require_auth)])
 
 
-@router.post("/", response_model=AccountRead, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=AccountRead, status_code=status.HTTP_201_CREATED)
 async def create_account(request: AccountCreate, service: AccountServiceDep):
     return await service.create(request)
 
 
-@router.get("/", response_model=list[AccountRead])
+@router.get("", response_model=list[AccountRead])
 async def list_accounts(service: AccountServiceDep, filters: AccountFilters = Depends()):
     return await service.list(filters)
 

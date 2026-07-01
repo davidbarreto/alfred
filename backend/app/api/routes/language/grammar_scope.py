@@ -12,7 +12,7 @@ from app.features.language.grammar_scope.schemas import (
 router = APIRouter(prefix="/language/grammar-scope", tags=["language"], dependencies=[Depends(require_auth)])
 
 
-@router.post("/", response_model=GrammarScopeRead, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=GrammarScopeRead, status_code=status.HTTP_201_CREATED)
 async def create_scope(request: GrammarScopeCreate, service: GrammarScopeServiceDep):
     return await service.create_scope(request)
 
@@ -22,7 +22,7 @@ async def bulk_create_scopes(request: list[GrammarScopeCreate], service: Grammar
     return await service.bulk_create_scopes(request)
 
 
-@router.get("/", response_model=list[GrammarScopeRead])
+@router.get("", response_model=list[GrammarScopeRead])
 async def get_scopes(service: GrammarScopeServiceDep, filters: GrammarScopeFilters = Depends()):
     return await service.get_scopes(filters)
 

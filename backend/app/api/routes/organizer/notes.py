@@ -6,7 +6,7 @@ from app.dependencies import NoteServiceDep
 router = APIRouter(prefix="/organizer/notes", tags=["organizer"], dependencies=[Depends(require_auth)])
 
 
-@router.post("/", response_model=NoteRead, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=NoteRead, status_code=status.HTTP_201_CREATED)
 async def add_note(request: NoteCreate, service: NoteServiceDep):
     return await service.create_note(request)
 
@@ -25,7 +25,7 @@ async def delete_note(note_id: int, service: NoteServiceDep):
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
-@router.get("/", response_model=list[NoteRead])
+@router.get("", response_model=list[NoteRead])
 async def get_notes(service: NoteServiceDep, filters: NoteFilters = Depends()):
     return await service.get_notes(filters)
 

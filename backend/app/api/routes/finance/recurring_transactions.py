@@ -20,12 +20,12 @@ async def process_recurring(service: RecurringTransactionServiceDep):
     return await service.process()
 
 
-@router.post("/", response_model=RecurringTransactionRead, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=RecurringTransactionRead, status_code=status.HTTP_201_CREATED)
 async def create_recurring(request: RecurringTransactionCreate, service: RecurringTransactionServiceDep):
     return await service.create(request)
 
 
-@router.get("/", response_model=list[RecurringTransactionRead])
+@router.get("", response_model=list[RecurringTransactionRead])
 async def list_recurring(
     service: RecurringTransactionServiceDep, filters: RecurringTransactionFilters = Depends()
 ):

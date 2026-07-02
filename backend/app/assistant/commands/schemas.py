@@ -8,6 +8,7 @@ class CommandMetadata(NamedTuple):
     requires_args: bool = False
     arg_keys: List[str] = []
     implicit_flags: Dict[str, Any] = {}
+    description: str = ""
 
 class CommandDetail(BaseModel):
     type: str

@@ -1,0 +1,113 @@
+{
+  "info": {
+    "name": "Alfred - Telegram Integration",
+    "_postman_id": "alfred-telegram-v1",
+    "description": "Telegram bot setup: push current command registry to Telegram via setMyCommands so they appear as autocomplete suggestions in the bot chat.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{api_token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "01 - Health Check",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Status is ok', () => {",
+              "    pm.expect(pm.response.json().status).to.eql('ok');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "auth": { "type": "noauth" },
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/health",
+          "host": ["{{base_url}}"],
+          "path": ["health"]
+        }
+      }
+    },
+    {
+      "name": "02 - Set Telegram Bot Commands",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Response ok=true', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json.ok).to.be.true;",
+              "    pm.expect(json.commands_registered).to.be.above(0);",
+              "    pm.expect(json.commands).to.be.an('array').with.lengthOf(json.commands_registered);",
+              "});",
+              "pm.test('Each command has name and description', () => {",
+              "    pm.response.json().commands.forEach(cmd => {",
+              "        pm.expect(cmd.command).to.be.a('string').and.not.empty;",
+              "        pm.expect(cmd.description).to.be.a('string').and.not.empty;",
+              "    });",
+              "});",
+              "const json = pm.response.json();",
+              "console.log('Registered', json.commands_registered, 'commands with Telegram');",
+              "json.commands.forEach(c => console.log(' /', c.command, '-', c.description));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/integration/telegram/set-commands",
+          "host": ["{{base_url}}"],
+          "path": ["integration", "telegram", "set-commands"]
+        }
+      }
+    },
+    {
+      "name": "03 - Set Telegram Commands (token not configured → 503)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Returns 503 when token missing', () => {",
+              "    pm.expect([200, 503]).to.include(pm.response.code);",
+              "    if (pm.response.code === 503) {",
+              "        pm.expect(pm.response.json().detail).to.include('TELEGRAM_BOT_TOKEN');",
+              "    }",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/integration/telegram/set-commands",
+          "host": ["{{base_url}}"],
+          "path": ["integration", "telegram", "set-commands"]
+        }
+      }
+    }
+  ]
+}

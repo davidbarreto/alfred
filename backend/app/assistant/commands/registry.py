@@ -70,44 +70,52 @@ WISHLIST_LIST_FLAGS = {**FLAG_CATEGORY, **FLAG_LIMIT}
 COMMAND_DEFINITIONS = {
     "task": {
         "add": {
+            "description": "Create a new task with optional deadline, priority, tags, or recurrence",
             "aliases": ["/taskadd", "/t", "/ta", "/task"],
             "flags": TASK_ADD_FLAGS,
             "requires_args": True,
             "arg_keys": ["title"]
         },
         "list": {
+            "description": "List tasks with optional filters by status, priority, tags, or deadline",
             "aliases": ["/tasklist", "/tl", "/list", "/tasks"],
             "flags": TASK_LIST_FLAGS
         },
         "search": {
+            "description": "Search tasks by keyword",
             "aliases": ["/tasksearch", "/ts", "/taskfind"],
             "flags": {},
             "requires_args": True,
             "arg_keys": ["query"]
         },
         "pending": {
+            "description": "Show all overdue and today's pending tasks",
             "aliases": ["/pending", "/pd", "/overdue"],
             "flags": {},
         },
         "update": {
+            "description": "Update a task's title, status, priority, or deadline by ID",
             "aliases": ["/taskupdate", "/tu", "/taskupd"],
             "flags": TASK_UPDATE_FLAGS,
             "requires_args": True,
             "arg_keys": ["id"]
         },
         "complete": {
+            "description": "Mark a task as done by ID",
             "aliases": ["/taskdone", "/td", "/done"],
             "flags": TASK_COMPLETE_FLAGS,
             "requires_args": True,
             "arg_keys": ["id"]
         },
         "cancel": {
+            "description": "Cancel a task by ID",
             "aliases": ["/taskcancel", "/tcancel", "/tc"],
             "flags": {},
             "requires_args": True,
             "arg_keys": ["id"]
         },
         "delete": {
+            "description": "Delete a task permanently by ID",
             "aliases": ["/taskdelete", "/trm", "/taskrm"],
             "flags": {},
             "requires_args": True,
@@ -116,28 +124,33 @@ COMMAND_DEFINITIONS = {
     },
     "note": {
         "add": {
+            "description": "Save a new note with optional title, tags, or links",
             "aliases": ["/noteadd", "/n", "/na", "/note"],
             "flags": NOTE_ADD_FLAGS,
             "requires_args": True,
             "arg_keys": ["content"]
         },
         "search": {
+            "description": "Search notes by keyword",
             "aliases": ["/notesearch", "/ns", "/notefind"],
             "flags": {},
             "requires_args": True,
             "arg_keys": ["query"]
         },
         "list": {
+            "description": "List all saved notes",
             "aliases": ["/notelist", "/nl", "/notes"],
             "flags": {}
         },
         "update": {
+            "description": "Update a note's content by ID",
             "aliases": ["/noteupdate", "/nu", "/noteupd"],
             "flags": {},
             "requires_args": True,
             "arg_keys": ["id"]
         },
         "delete": {
+            "description": "Delete a note by ID",
             "aliases": ["/notedelete", "/nd", "/ndel", "/nrm", "/noterm"],
             "flags": {},
             "requires_args": True,
@@ -146,22 +159,26 @@ COMMAND_DEFINITIONS = {
     },
     "event": {
         "add": {
+            "description": "Add a calendar event with title, start, and optional end time or duration",
             "aliases": ["/eventadd", "/ea", "/event"],
             "flags": EVENT_ADD_FLAGS,
             "requires_args": True,
             "arg_keys": ["title"]
         },
         "list": {
+            "description": "List upcoming calendar events",
             "aliases": ["/eventlist", "/el", "/events"],
             "flags": {}
         },
         "update": {
+            "description": "Update a calendar event by ID",
             "aliases": ["/eventupdate", "/eu", "/eventupd", "/move"],
             "flags": {},
             "requires_args": True,
             "arg_keys": ["id"]
         },
         "delete": {
+            "description": "Delete a calendar event by ID",
             "aliases": ["/eventdelete", "/ed", "/edel", "/eventrm", "/cancel"],
             "flags": {},
             "requires_args": True,
@@ -170,28 +187,33 @@ COMMAND_DEFINITIONS = {
     },
     "shopping": {
         "add": {
+            "description": "Add an item to the shopping list",
             "aliases": ["/shop", "/sa", "/shopping", "/buy"],
             "flags": SHOPPING_ADD_FLAGS,
             "requires_args": True,
             "arg_keys": ["name"],
         },
         "list": {
+            "description": "List shopping items with optional filters by status, category, or priority",
             "aliases": ["/shoplist", "/sl", "/shoppinglist"],
             "flags": SHOPPING_LIST_FLAGS,
         },
         "complete": {
+            "description": "Mark a shopping item as bought",
             "aliases": ["/bought", "/shopbought", "/sb"],
             "flags": {},
             "requires_args": True,
             "arg_keys": ["name"],
         },
         "delete": {
+            "description": "Remove a shopping item",
             "aliases": ["/shopdelete", "/shoprm", "/sdrm"],
             "flags": {},
             "requires_args": True,
             "arg_keys": ["name"],
         },
         "update": {
+            "description": "Update a shopping item by ID",
             "aliases": ["/shopupdate", "/su", "/shopupd"],
             "flags": SHOPPING_UPDATE_FLAGS,
             "requires_args": True,
@@ -200,22 +222,26 @@ COMMAND_DEFINITIONS = {
     },
     "wishlist": {
         "add": {
+            "description": "Add an item to your wishlist",
             "aliases": ["/wish", "/wa", "/wishadd"],
             "flags": WISHLIST_ADD_FLAGS,
             "requires_args": True,
             "arg_keys": ["name"],
         },
         "list": {
+            "description": "List wishlist items",
             "aliases": ["/wishlist", "/wl"],
             "flags": WISHLIST_LIST_FLAGS,
         },
         "delete": {
+            "description": "Remove an item from the wishlist",
             "aliases": ["/wishrm", "/wd", "/wishdelete"],
             "flags": {},
             "requires_args": True,
             "arg_keys": ["name"],
         },
         "promote": {
+            "description": "Move a wishlist item to the shopping list",
             "aliases": ["/promote", "/wp", "/wishpromote"],
             "flags": {**FLAG_PRIORITY},
             "requires_args": True,
@@ -224,12 +250,14 @@ COMMAND_DEFINITIONS = {
     },
     "language": {
         "practice": {
+            "description": "Start a vocabulary practice session for a language",
             "aliases": ["/practice", "/pr"],
             "flags": {},
             "requires_args": True,
             "arg_keys": ["language_code"],
         },
         "review": {
+            "description": "Start an SRS review session for a language",
             "aliases": ["/review", "/rv"],
             "flags": {},
             "requires_args": True,
@@ -238,6 +266,7 @@ COMMAND_DEFINITIONS = {
     },
     "recall": {
         "search": {
+            "description": "Search your memories semantically by keyword",
             "aliases": ["/recall", "/rc", "/remember"],
             "flags": {},
             "requires_args": True,
@@ -246,6 +275,7 @@ COMMAND_DEFINITIONS = {
     },
     "weather": {
         "current": {
+            "description": "Get current weather for a location",
             "aliases": ["/weather", "/wx"],
             "flags": {"-d": "date", "--date": "date"},
             "arg_keys": ["location"]
@@ -253,12 +283,14 @@ COMMAND_DEFINITIONS = {
     },
     "assistant": {
         "focus": {
+            "description": "Get a recommendation on what to focus on right now",
             "aliases": ["/focus", "/next", "/whatnow"],
             "flags": {},
         }
     },
     "reminder": {
         "set": {
+            "description": "Set a reminder with a title and due time",
             "aliases": ["/remind", "/remindme"],
             "flags": {**FLAG_DUE},
             "requires_args": True,
@@ -267,14 +299,17 @@ COMMAND_DEFINITIONS = {
     },
     "help": {
         "help": {
+            "description": "Show available commands, or details about a specific command",
             "aliases": ["/help", "/h", "/?"],
             "flags": {},
-            "requires_args": True
+            "requires_args": False,
+            "arg_keys": ["query"]
         }
     },
     "finance": {
         # --- Transactions ---
         "transaction_add": {
+            "description": "Log a financial transaction with amount, category, and merchant",
             "aliases": ["/transactionadd", "/tra", "/transaction"],
             "flags": TXN_ADD_FLAGS,
             "requires_args": False,
@@ -283,6 +318,7 @@ COMMAND_DEFINITIONS = {
         # Convenience aliases that pre-set transaction type via implicit_flags.
         # Both resolve to action="transaction_add" at the service layer.
         "transaction_add_expense": {
+            "description": "Log an expense quickly",
             "action": "transaction_add",
             "aliases": ["/expense", "/exp"],
             "flags": TXN_ADD_FLAGS,
@@ -291,6 +327,7 @@ COMMAND_DEFINITIONS = {
             "implicit_flags": {"type": "expense"}
         },
         "transaction_add_income": {
+            "description": "Log income quickly",
             "action": "transaction_add",
             "aliases": ["/income", "/inc"],
             "flags": TXN_ADD_FLAGS,
@@ -299,16 +336,19 @@ COMMAND_DEFINITIONS = {
             "implicit_flags": {"type": "income"}
         },
         "transaction_list": {
+            "description": "List transactions with optional filters by category, merchant, type, or period",
             "aliases": ["/transactionlist", "/trl", "/transactions"],
             "flags": TXN_LIST_FLAGS
         },
         "transaction_update": {
+            "description": "Update a transaction by ID",
             "aliases": ["/transactionupdate", "/tru", "/transactionupd"],
             "flags": TXN_UPDATE_FLAGS,
             "requires_args": True,
             "arg_keys": ["id"]
         },
         "transaction_delete": {
+            "description": "Delete a transaction by ID",
             "aliases": ["/transactiondelete", "/trd", "/transactionrm"],
             "flags": {},
             "requires_args": True,
@@ -316,22 +356,26 @@ COMMAND_DEFINITIONS = {
         },
         # --- Budgets ---
         "budget_add": {
+            "description": "Create a budget for a category with an amount and period",
             "aliases": ["/budgetadd", "/ba", "/budget"],
             "flags": BUDGET_ADD_FLAGS,
             "requires_args": True,
             "arg_keys": ["name"]
         },
         "budget_list": {
+            "description": "List budgets with optional filters by category or period",
             "aliases": ["/budgetlist", "/bl", "/budgets"],
             "flags": BUDGET_LIST_FLAGS
         },
         "budget_update": {
+            "description": "Update a budget by ID",
             "aliases": ["/budgetupdate", "/bu", "/budgetupd"],
             "flags": BUDGET_UPDATE_FLAGS,
             "requires_args": True,
             "arg_keys": ["id"]
         },
         "budget_delete": {
+            "description": "Delete a budget by ID",
             "aliases": ["/budgetdelete", "/bd", "/budgetrm"],
             "flags": {},
             "requires_args": True,
@@ -341,27 +385,32 @@ COMMAND_DEFINITIONS = {
         # First positional arg is the period ("this month", "last week", "this year", etc.)
         # Falls back to current month at the service layer when omitted.
         "spending_report": {
+            "description": "Get a spending breakdown report for a period",
             "aliases": ["/spendingreport", "/sr", "/spent", "/spending"],
             "flags": SPENDING_REPORT_FLAGS,
             "arg_keys": ["period"]
         },
         "spending_average": {
+            "description": "Get average spending per period",
             "aliases": ["/spendingaverage", "/sav", "/avgspend"],
             "flags": SPENDING_AVERAGE_FLAGS,
             "arg_keys": ["period"]
         },
         "spending_top": {
+            "description": "Get top spending categories for a period",
             "aliases": ["/spendingtop", "/stp", "/topspend", "/top5"],
             "flags": SPENDING_TOP_FLAGS,
             "arg_keys": ["period"]
         },
         # --- Balance ---
         "budget_remaining": {
+            "description": "Check remaining budget for a category or period",
             "aliases": ["/budgetremaining", "/br", "/remaining", "/left"],
             "flags": BUDGET_REMAINING_FLAGS,
             "arg_keys": ["period"]
         },
         "balance_forecast": {
+            "description": "Forecast your balance for a future period",
             "aliases": ["/balanceforecast", "/bfc", "/forecast", "/predict"],
             "flags": BALANCE_FORECAST_FLAGS,
             "arg_keys": ["period"]
@@ -381,7 +430,8 @@ def _build_registry() -> Dict[str, CommandMetadata]:
                 flags=config.get("flags", {}),
                 requires_args=config.get("requires_args", False),
                 arg_keys=config.get("arg_keys", []),
-                implicit_flags=config.get("implicit_flags", {})
+                implicit_flags=config.get("implicit_flags", {}),
+                description=config.get("description", ""),
             )
             for alias in config["aliases"]:
                 registry[alias.lower()] = meta

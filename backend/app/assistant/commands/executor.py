@@ -6,6 +6,7 @@ from fastapi import HTTPException, status
 from app.assistant.commands.handlers.assistant import handle_assistant
 from app.assistant.commands.handlers.event import handle_event
 from app.assistant.commands.handlers.finance import handle_finance
+from app.assistant.commands.handlers.help import handle_help
 from app.assistant.commands.handlers.language import handle_language
 from app.assistant.commands.handlers.note import handle_note
 from app.assistant.commands.handlers.recall import handle_recall
@@ -99,6 +100,9 @@ async def execute(
 
     if cmd_type == "reminder":
         return await handle_reminder(command, arguments, task_service=task_service)
+
+    if cmd_type == "help":
+        return handle_help(arguments)
 
     logger.error("Execute: unknown command type=%s command=%s", cmd_type, command)
     raise HTTPException(

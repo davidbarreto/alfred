@@ -38,6 +38,9 @@ class Settings(BaseSettings):
     llm_extraction_model: str = Field(default="gemini-2.5-flash-lite", validation_alias="LLM_EXTRACTION_MODEL")
     intent_threshold: float = Field(default=0.75, validation_alias="INTENT_THRESHOLD")
 
+    # Telegram
+    telegram_bot_token: str | None = Field(default=None, validation_alias="TELEGRAM_BOT_TOKEN")
+
     # CORS — comma-separated list of allowed origins for browser clients
     # e.g. "http://localhost:8080,https://portal.dbflabs.com"
     cors_origins: str = Field(default="", validation_alias="CORS_ORIGINS")

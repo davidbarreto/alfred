@@ -177,7 +177,13 @@ _RESPOND_SYSTEM = (
     "- finance.spending_report / finance.spending_average / finance.spending_top: State the amount, period, and "
     "any notable breakdown clearly.\n"
     "- For create/update/delete operations, confirm in 1 sentence.\n"
-    "- If a result is empty, say so clearly (e.g. 'You have no tasks right now' or 'Your calendar is clear')."
+    "- If a result is empty, say so clearly (e.g. 'You have no tasks right now' or 'Your calendar is clear').\n"
+    "- help.help with type='summary': Give a friendly overview of available command groups. For each group list "
+    "its main commands with a one-line description. End with a hint that the user can type /help <command> for "
+    "details on any specific command.\n"
+    "- help.help with type='command': Describe the command naturally in one sentence, then list all its aliases "
+    "on one line, then explain each flag (key and short/long forms) with its purpose. Be concise but complete.\n"
+    "- help.help with type='not_found': Say you couldn't find that command and suggest typing /help for the full list."
 )
 
 

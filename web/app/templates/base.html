@@ -89,12 +89,23 @@
 </head>
 <body class="bg-[#FAFAF9] text-gray-900 antialiased">
 
-  <div class="flex h-screen">
+  <!-- Mobile top bar -->
+  <header class="md:hidden fixed top-0 left-0 right-0 z-40 flex items-center justify-between px-4 bg-[#F5F4F0] border-b border-gray-200 h-12">
+    <span class="text-sm font-semibold text-gray-900 tracking-tight">Alfred</span>
+    <button id="sidebar-toggle" class="p-1.5 rounded hover:bg-[#ECEAE4] text-gray-600" aria-label="Open menu">
+      <i class="ti ti-menu-2 text-xl leading-none"></i>
+    </button>
+  </header>
+
+  <!-- Sidebar backdrop (mobile only) -->
+  <div id="sidebar-backdrop" class="hidden fixed inset-0 bg-black/30 z-20 md:hidden"></div>
+
+  <div class="flex h-screen pt-12 md:pt-0">
 
     <!-- Sidebar -->
-    <aside class="w-[200px] shrink-0 bg-[#F5F4F0] border-r border-gray-200 flex flex-col py-5 px-2">
+    <aside id="sidebar" class="fixed md:static top-12 md:top-0 bottom-0 left-0 z-30 w-[200px] shrink-0 bg-[#F5F4F0] border-r border-gray-200 flex flex-col py-5 px-2 -translate-x-full md:translate-x-0 transition-transform duration-200 ease-in-out overflow-y-auto">
 
-      <div class="px-3 mb-5">
+      <div class="px-3 mb-5 hidden md:block">
         <span class="text-sm font-semibold text-gray-900 tracking-tight">Alfred</span>
       </div>
 
@@ -148,6 +159,34 @@
     </main>
 
   </div>
+
+  <script>
+    (function () {
+      var toggle = document.getElementById('sidebar-toggle');
+      var sidebar = document.getElementById('sidebar');
+      var backdrop = document.getElementById('sidebar-backdrop');
+
+      function openSidebar() {
+        sidebar.classList.remove('-translate-x-full');
+        backdrop.classList.remove('hidden');
+      }
+
+      function closeSidebar() {
+        sidebar.classList.add('-translate-x-full');
+        backdrop.classList.add('hidden');
+      }
+
+      toggle.addEventListener('click', function () {
+        if (sidebar.classList.contains('-translate-x-full')) {
+          openSidebar();
+        } else {
+          closeSidebar();
+        }
+      });
+
+      backdrop.addEventListener('click', closeSidebar);
+    })();
+  </script>
 
 </body>
 </html>

@@ -37,7 +37,7 @@ async def handle_shopping(cmd_type: str, command: str, arguments: dict[str, Any]
                 notes=arguments.get("notes"),
             )
             result = await service.create_item(payload)
-            return result.model_dump()
+            return result.model_dump(mode='json')
 
         if command == "list":
             filters = ShoppingItemFilters(
@@ -47,14 +47,14 @@ async def handle_shopping(cmd_type: str, command: str, arguments: dict[str, Any]
                 limit=int(arguments.get("limit", 100)),
             )
             results = await service.list_items(filters)
-            return [r.model_dump() for r in results]
+            return [r.model_dump(mode='json') for r in results]
 
         if command == "complete":
             item = await _resolve_shopping_item(arguments, service)
             result = await service.mark_bought(item.id)
             if result is None:
                 raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Shopping item {item.id} not found")
-            return result.model_dump()
+            return result.model_dump(mode='json')
 
         if command == "delete":
             item = await _resolve_shopping_item(arguments, service)
@@ -77,7 +77,7 @@ async def handle_shopping(cmd_type: str, command: str, arguments: dict[str, Any]
             result = await service.update_item(item_id, ShoppingItemUpdate(**fields))
             if result is None:
                 raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Shopping item {item_id} not found")
-            return result.model_dump()
+            return result.model_dump(mode='json')
 
     if cmd_type == "wishlist":
         if command == "add":
@@ -90,7 +90,7 @@ async def handle_shopping(cmd_type: str, command: str, arguments: dict[str, Any]
                 notes=arguments.get("notes"),
             )
             result = await service.create_wish(payload)
-            return result.model_dump()
+            return result.model_dump(mode='json')
 
         if command == "list":
             filters = WishlistItemFilters(
@@ -98,7 +98,7 @@ async def handle_shopping(cmd_type: str, command: str, arguments: dict[str, Any]
                 limit=int(arguments.get("limit", 100)),
             )
             results = await service.list_wishes(filters)
-            return [r.model_dump() for r in results]
+            return [r.model_dump(mode='json') for r in results]
 
         if command == "delete":
             wish = await _resolve_wishlist_item(arguments, service)
@@ -111,7 +111,7 @@ async def handle_shopping(cmd_type: str, command: str, arguments: dict[str, Any]
             result = await service.promote_wish(wish.id, priority=priority)
             if result is None:
                 raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Wishlist item {wish.id} not found")
-            return result.model_dump()
+            return result.model_dump(mode='json')
 
     raise HTTPException(
         status_code=status.HTTP_400_BAD_REQUEST,

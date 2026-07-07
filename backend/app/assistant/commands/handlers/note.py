@@ -34,7 +34,7 @@ async def handle_note(command: str, arguments: dict[str, Any], service: NoteServ
             tags=parse_tags(arguments.get("tags")),
         )
         result = await service.create_note(payload)
-        return result.model_dump()
+        return result.model_dump(mode='json')
 
     if command == "list":
         filters = NoteFilters(
@@ -42,7 +42,7 @@ async def handle_note(command: str, arguments: dict[str, Any], service: NoteServ
             tags=parse_tags(arguments.get("tags")) or None,
         )
         results = await service.get_notes(filters)
-        return [r.model_dump() for r in results]
+        return [r.model_dump(mode='json') for r in results]
 
     if command == "search":
         query = str(arguments.get("query", "")).lower()
@@ -51,7 +51,7 @@ async def handle_note(command: str, arguments: dict[str, Any], service: NoteServ
             n for n in all_notes
             if query in n.title.lower() or query in (n.content or "").lower()
         ]
-        return [n.model_dump() for n in filtered]
+        return [n.model_dump(mode='json') for n in filtered]
 
     if command == "update":
         note_id = int(arguments["id"])
@@ -65,7 +65,7 @@ async def handle_note(command: str, arguments: dict[str, Any], service: NoteServ
         result = await service.update_note(note_id, NoteUpdate(**update_fields))
         if result is None:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Note {note_id} not found")
-        return result.model_dump()
+        return result.model_dump(mode='json')
 
     if command == "delete":
         note_id = int(arguments["id"])

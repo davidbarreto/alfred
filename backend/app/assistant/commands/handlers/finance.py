@@ -75,7 +75,7 @@ async def handle_finance(
             merchant=arguments.get("merchant"),
         )
         result = await transaction_service.create(payload)
-        return result.model_dump()
+        return result.model_dump(mode='json')
 
     if command == "transaction_list":
         filters = TransactionFilters(
@@ -87,7 +87,7 @@ async def handle_finance(
             period=arguments.get("period"),
         )
         results = await transaction_service.list(filters)
-        return [r.model_dump() for r in results]
+        return [r.model_dump(mode='json') for r in results]
 
     if command == "transaction_update":
         txn_id = int(arguments["id"])
@@ -107,7 +107,7 @@ async def handle_finance(
         result = await transaction_service.update(txn_id, TransactionUpdate(**update_fields))
         if result is None:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Transaction {txn_id} not found")
-        return result.model_dump()
+        return result.model_dump(mode='json')
 
     if command == "transaction_delete":
         txn_id = int(arguments["id"])
@@ -127,12 +127,12 @@ async def handle_finance(
             ends_at=parse_dt(arguments.get("end")),
         )
         result = await budget_service.create(payload)
-        return result.model_dump()
+        return result.model_dump(mode='json')
 
     if command == "budget_list":
         filters = BudgetFilters(period=arguments.get("period"))
         results = await budget_service.list(filters)
-        return [r.model_dump() for r in results]
+        return [r.model_dump(mode='json') for r in results]
 
     if command == "budget_update":
         budget_id = int(arguments["id"])
@@ -148,7 +148,7 @@ async def handle_finance(
         result = await budget_service.update(budget_id, BudgetUpdate(**update_fields))
         if result is None:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Budget {budget_id} not found")
-        return result.model_dump()
+        return result.model_dump(mode='json')
 
     if command == "budget_delete":
         budget_id = int(arguments["id"])
@@ -162,7 +162,7 @@ async def handle_finance(
             period=arguments.get("period"),
             category_id=int(arguments["category"]) if arguments.get("category") else None,
         )
-        return [r.model_dump() for r in results]
+        return [r.model_dump(mode='json') for r in results]
 
     # --- Analytics ---
 
@@ -180,7 +180,7 @@ async def handle_finance(
             result = await transaction_service.spending_average(filters)
         else:
             result = await transaction_service.spending_top(filters)
-        return result.model_dump()
+        return result.model_dump(mode='json')
 
     if command == "balance_forecast":
         filters = AnalyticsFilters(period=arguments.get("period"))
@@ -198,6 +198,6 @@ async def handle_finance(
             projected_balance=(current_balance + projected_income - projected_expenses).quantize(Decimal("0.01")),
             currency="EUR",
             forecast_to=forecast_to,
-        ).model_dump()
+        ).model_dump(mode='json')
 
     raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Unknown finance command: {command}")

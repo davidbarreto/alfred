@@ -36,4 +36,4 @@ async def handle_reminder(command: str, arguments: dict[str, Any], task_service:
     )
     result = await task_service.create_task(payload)
     logger.info("Reminder created: id=%d title=%r remind_at=%s", result.id, result.title, remind_at.isoformat())
-    return {**result.model_dump(), "remind_at": remind_at.isoformat()}
+    return {**result.model_dump(mode='json'), "remind_at": remind_at.isoformat()}

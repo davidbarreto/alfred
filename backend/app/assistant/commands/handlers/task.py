@@ -48,7 +48,7 @@ async def handle_task(
             recurrence_rule=arguments.get("recurrence"),
         )
         result = await service.create_task(payload)
-        return result.model_dump()
+        return result.model_dump(mode='json')
 
     if command == "search":
         query = str(arguments.get("query", "")).strip()
@@ -78,8 +78,8 @@ async def handle_task(
         )
         logger.debug("handle_task pending: overdue=%d due_today=%d", len(overdue), len(due_today))
         return {
-            "overdue": [t.model_dump() for t in overdue],
-            "due_today": [t.model_dump() for t in due_today],
+            "overdue": [t.model_dump(mode='json') for t in overdue],
+            "due_today": [t.model_dump(mode='json') for t in due_today],
             "overdue_count": len(overdue),
             "due_today_count": len(due_today),
             "total": len(overdue) + len(due_today),
@@ -94,7 +94,7 @@ async def handle_task(
             limit=int(arguments.get("limit", 100)),
         )
         results = await service.get_tasks(filters)
-        return [r.model_dump() for r in results]
+        return [r.model_dump(mode='json') for r in results]
 
     if command == "update":
         task_id = int(arguments["id"])
@@ -114,7 +114,7 @@ async def handle_task(
         result = await service.update_task(task_id, TaskUpdate(**update_fields))
         if result is None:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Task {task_id} not found")
-        return result.model_dump()
+        return result.model_dump(mode='json')
 
     if command == "complete":
         task_id = int(arguments["id"])
@@ -124,7 +124,7 @@ async def handle_task(
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Task {task_id} not found")
         if isinstance(result, TaskCompletionRead):
             return {"success": True, "occurrence_date": str(result.occurrence_date), "task_id": task_id}
-        return result.model_dump()
+        return result.model_dump(mode='json')
 
     if command == "cancel":
         task_id = int(arguments["id"])
@@ -134,7 +134,7 @@ async def handle_task(
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
         if result is None:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Task {task_id} not found")
-        return result.model_dump()
+        return result.model_dump(mode='json')
 
     if command == "delete":
         task_id = int(arguments["id"])

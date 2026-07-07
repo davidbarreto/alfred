@@ -2,6 +2,13 @@ from sqlalchemy import delete, select
 from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 
+
+def _naive_utc(dt: object) -> object:
+    from datetime import datetime
+    if isinstance(dt, datetime) and dt.tzinfo is not None:
+        return dt.replace(tzinfo=None)
+    return dt
+
 from app.features.organizer.tags.tables import Tag
 from app.features.organizer.calendar_events.tables import CalendarEvent, CalendarEventInvitee
 from app.features.organizer.calendar_events.schemas import EventCreate, EventUpdate, EventFilters
@@ -27,9 +34,9 @@ class CalendarEventRepository:
             selectinload(CalendarEvent.tags), selectinload(CalendarEvent.invitees)
         )
         if event_filter.start_from is not None:
-            query = query.where(CalendarEvent.start_datetime >= event_filter.start_from)
+            query = query.where(CalendarEvent.start_datetime >= _naive_utc(event_filter.start_from))
         if event_filter.start_to is not None:
-            query = query.where(CalendarEvent.start_datetime <= event_filter.start_to)
+            query = query.where(CalendarEvent.start_datetime <= _naive_utc(event_filter.start_to))
         if event_filter.tags:
             query = query.where(CalendarEvent.tags.any(Tag.name.in_(event_filter.tags)))
         query = query.limit(event_filter.limit)

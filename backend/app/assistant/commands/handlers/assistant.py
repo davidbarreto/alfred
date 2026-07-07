@@ -43,8 +43,8 @@ async def handle_assistant(
 
     logger.debug("handle_assistant focus: active_tasks=%d events_today=%d", len(active), len(todays_events))
     return {
-        "tasks": [t.model_dump() for t in active[:15]],
-        "events_today": [e.model_dump() for e in todays_events],
+        "tasks": [t.model_dump(mode='json') for t in active[:15]],
+        "events_today": [e.model_dump(mode='json') for e in todays_events],
         "context": {
             "current_time": now.isoformat(),
             "task_count": len(active),

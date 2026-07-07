@@ -37,5 +37,5 @@ async def handle_weather(command: str, arguments: dict[str, Any]) -> Any:
         "location": resolved_location,
         "date": forecast_date.isoformat(),
         "location_inferred": location_inferred,
-        **forecast.model_dump(),
+        **forecast.model_dump(mode='json'),
     }

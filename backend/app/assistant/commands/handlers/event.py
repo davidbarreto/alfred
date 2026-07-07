@@ -31,7 +31,7 @@ async def handle_event(command: str, arguments: dict[str, Any], service: Calenda
             tags=parse_tags(arguments.get("tags")),
         )
         result = await service.create_event(payload)
-        return result.model_dump()
+        return result.model_dump(mode='json')
 
     if command == "list":
         date_range = arguments.get("date_range")
@@ -48,7 +48,7 @@ async def handle_event(command: str, arguments: dict[str, Any], service: Calenda
             start_to=start_to,
         )
         results = await service.get_events(filters)
-        return [r.model_dump() for r in results]
+        return [r.model_dump(mode='json') for r in results]
 
     if command == "update":
         event_id = int(arguments["id"])
@@ -68,7 +68,7 @@ async def handle_event(command: str, arguments: dict[str, Any], service: Calenda
         result = await service.update_event(event_id, EventUpdate(**update_fields))
         if result is None:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Event {event_id} not found")
-        return result.model_dump()
+        return result.model_dump(mode='json')
 
     if command == "delete":
         event_id = int(arguments["id"])

@@ -1,0 +1,46 @@
+name: Deploy Infra
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'infra/docker-compose.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-infra
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_KEY }}
+          port: ${{ secrets.VPS_PORT || '22' }}
+          command_timeout: 60m
+          script_stop: true
+          script: |
+            set -euo pipefail
+            APP_DIR=/opt/stacks/alfred
+            COMPOSE="docker compose -f $APP_DIR/infra/docker-compose.yml"
+
+            echo "==> Pulling latest code..."
+            if git -C "$APP_DIR" remote get-url origin &>/dev/null; then
+              git -C "$APP_DIR" pull origin main
+            else
+              git -C "$APP_DIR" init -b main
+              git -C "$APP_DIR" remote add origin "https://github.com/davidbarreto/alfred.git" 2>/dev/null \
+                || git -C "$APP_DIR" remote set-url origin "https://github.com/davidbarreto/alfred.git"
+              git -C "$APP_DIR" fetch origin main
+              git -C "$APP_DIR" reset --hard origin/main
+            fi
+
+            echo "==> Applying config changes and restarting affected services..."
+            $COMPOSE up -d

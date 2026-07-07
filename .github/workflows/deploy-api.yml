@@ -1,9 +1,15 @@
-name: Deploy to VPS
+name: Deploy API
 
 on:
   push:
     branches: [main]
+    paths:
+      - 'backend/**'
   workflow_dispatch:
+
+concurrency:
+  group: deploy-api
+  cancel-in-progress: false
 
 jobs:
   test:
@@ -57,16 +63,11 @@ jobs:
               git -C "$APP_DIR" reset --hard origin/main
             fi
 
-            echo "==> Building services..."
-            $COMPOSE build api web
+            echo "==> Building API..."
+            $COMPOSE build api
 
-            echo "==> Ensuring data directories have correct ownership..."
-            source "$APP_DIR/infra/.env" 2>/dev/null || true
-            mkdir -p "${DB_DATA_DIR:-/srv/data/alfred/postgres}"
-            mkdir -p "${N8N_DATA_DIR:-/srv/data/alfred/n8n}"
-
-            echo "==> Starting services..."
-            $COMPOSE up -d
+            echo "==> Restarting API..."
+            $COMPOSE up -d api
 
             echo "==> Waiting for API to be ready..."
             for i in $(seq 1 30); do
@@ -80,6 +81,3 @@ jobs:
 
             echo "==> Running database migrations..."
             $COMPOSE exec -T api alembic upgrade head
-
-            echo "==> Configuring n8n..."
-            bash "$APP_DIR/infra/scripts/setup_n8n.sh"

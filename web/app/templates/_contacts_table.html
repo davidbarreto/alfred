@@ -1,21 +1,25 @@
 {% if contacts %}
+<div class="overflow-x-auto">
 <table class="w-full text-sm">
   <thead>
     <tr class="border-b border-gray-100 text-xs text-gray-400 uppercase tracking-wide">
       <th class="text-left pb-2 font-medium">Name</th>
-      <th class="text-left pb-2 font-medium">Email</th>
-      <th class="text-left pb-2 font-medium">Phone</th>
-      <th class="text-left pb-2 font-medium">Birthday</th>
+      <th class="text-left pb-2 font-medium hidden sm:table-cell">Email</th>
+      <th class="text-left pb-2 font-medium hidden sm:table-cell">Phone</th>
+      <th class="text-left pb-2 font-medium hidden sm:table-cell">Birthday</th>
       <th class="pb-2"></th>
     </tr>
   </thead>
   <tbody class="divide-y divide-gray-50">
     {% for c in contacts %}
     <tr class="hover:bg-gray-50 group" id="contact-row-{{ c.id }}">
-      <td class="py-2.5 pr-4 font-medium text-gray-900">{{ c.name }}</td>
-      <td class="py-2.5 pr-4 text-gray-500">{{ c.email or "—" }}</td>
-      <td class="py-2.5 pr-4 text-gray-500">{{ c.phone or "—" }}</td>
-      <td class="py-2.5 pr-4 text-gray-500">
+      <td class="py-2.5 pr-4">
+        <p class="font-medium text-gray-900 truncate max-w-[160px] sm:max-w-none">{{ c.name }}</p>
+        <p class="text-xs text-gray-400 truncate max-w-[160px] sm:hidden">{{ c.email or c.phone or "—" }}</p>
+      </td>
+      <td class="py-2.5 pr-4 text-gray-500 hidden sm:table-cell truncate max-w-[220px]">{{ c.email or "—" }}</td>
+      <td class="py-2.5 pr-4 text-gray-500 hidden sm:table-cell">{{ c.phone or "—" }}</td>
+      <td class="py-2.5 pr-4 text-gray-500 hidden sm:table-cell">
         {% if c.birthday %}{{ c.birthday }}{% else %}—{% endif %}
       </td>
       <td class="py-2.5 text-right">
@@ -34,6 +38,7 @@
     {% endfor %}
   </tbody>
 </table>
+</div>
 {% else %}
 <p class="text-sm text-gray-400 py-4">No contacts found.</p>
 {% endif %}

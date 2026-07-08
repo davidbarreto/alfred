@@ -1,9 +1,10 @@
 from __future__ import annotations
 
-from sqlalchemy import select
+from sqlalchemy import and_, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.features.core.embeddings.tables import Embedding
+from app.features.core.memories.tables import Memory
 
 
 class EmbeddingRepository:
@@ -70,7 +71,21 @@ class EmbeddingRepository:
         )
         if source_types:
             query = query.where(Embedding.source_type.in_(source_types))
-        query = query.order_by(distance_col).limit(limit)
+        query = (
+            query
+            .outerjoin(Memory, and_(Embedding.source_type == "memory", Embedding.source_id == Memory.id))
+            .where(
+                or_(
+                    Embedding.source_type != "memory",
+                    and_(
+                        Memory.active.is_(True),
+                        or_(Memory.expires_at.is_(None), Memory.expires_at > func.now()),
+                    ),
+                )
+            )
+            .order_by(distance_col)
+            .limit(limit)
+        )
 
         result = await self._session.execute(query)
         return [(row.Embedding, row.similarity) for row in result]

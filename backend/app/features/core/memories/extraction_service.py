@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import logging
 import time
+from datetime import datetime, timedelta, timezone
 from typing import Any, cast, get_args
 
 from app.db.session import async_session
@@ -85,6 +86,7 @@ class MemoryExtractionService:
         raw_category = str(candidate.get("category", ""))
         importance = min(1.0, max(0.0, float(candidate.get("importance", 0.5))))
         confidence = min(1.0, max(0.0, float(candidate.get("confidence", 1.0))))
+        expires_days = candidate.get("expires_days")
 
         if not content:
             return
@@ -97,6 +99,13 @@ class MemoryExtractionService:
             return
 
         category = cast(MemoryCategory, raw_category)
+
+        expires_at: datetime | None = None
+        if expires_days is not None:
+            try:
+                expires_at = datetime.now(tz=timezone.utc) + timedelta(days=int(expires_days))
+            except (TypeError, ValueError):
+                logger.warning("Memory extraction: invalid expires_days=%r for message_id=%d", expires_days, message_id)
 
         similar = await embedding_service.search(
             EmbeddingSearchRequest(
@@ -112,7 +121,7 @@ class MemoryExtractionService:
             existing = await memory_service.get(existing_id)
             if existing:
                 new_importance = min(1.0, existing.importance + _IMPORTANCE_BUMP)
-                await memory_service.update(existing_id, MemoryUpdate(importance=new_importance))
+                await memory_service.update(existing_id, MemoryUpdate(importance=new_importance, expires_at=expires_at))
                 logger.debug("Memory importance bumped: id=%d importance=%.2f", existing_id, new_importance)
                 return
 
@@ -122,6 +131,7 @@ class MemoryExtractionService:
                 content=content,
                 importance=importance,
                 confidence=confidence,
+                expires_at=expires_at,
                 origin_message_id=message_id,
             )
         )

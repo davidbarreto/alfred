@@ -215,6 +215,80 @@ class TestMemoryExtractionService:
         embedding_service.search.assert_not_called()
         embedding_service.embed.assert_not_called()
 
+    async def test_creates_memory_with_expires_at_when_expires_days_set(self):
+        candidates = [{"category": "fact", "content": "Currently in Marseille", "importance": 0.5, "confidence": 0.9, "expires_days": 5}]
+        service, llm_provider, _ = _make_service()
+        llm_provider.complete.return_value = LlmResponse(text=json.dumps(candidates), tokens_input=10, tokens_output=5)
+
+        memory_service = AsyncMock()
+        memory_service.create = AsyncMock(return_value=_make_memory_read(10))
+        embedding_service = AsyncMock()
+        embedding_service.search = AsyncMock(return_value=[])
+        embedding_service.embed = AsyncMock()
+
+        with patch("app.features.core.memories.extraction_service.async_session") as mock_session_ctx:
+            mock_session = AsyncMock()
+            mock_session_ctx.return_value.__aenter__ = AsyncMock(return_value=mock_session)
+            mock_session_ctx.return_value.__aexit__ = AsyncMock(return_value=False)
+            with (
+                patch("app.features.core.memories.extraction_service.MemoryService", return_value=memory_service),
+                patch("app.features.core.memories.extraction_service.EmbeddingService", return_value=embedding_service),
+            ):
+                await service.extract_and_save("I am currently in Marseille", message_id=5)
+
+        created = memory_service.create.call_args[0][0]
+        assert created.expires_at is not None
+
+    async def test_creates_memory_without_expires_at_when_expires_days_null(self):
+        candidates = [{"category": "fact", "content": "User lives in Porto", "importance": 0.8, "confidence": 1.0, "expires_days": None}]
+        service, llm_provider, _ = _make_service()
+        llm_provider.complete.return_value = LlmResponse(text=json.dumps(candidates), tokens_input=10, tokens_output=5)
+
+        memory_service = AsyncMock()
+        memory_service.create = AsyncMock(return_value=_make_memory_read(11))
+        embedding_service = AsyncMock()
+        embedding_service.search = AsyncMock(return_value=[])
+        embedding_service.embed = AsyncMock()
+
+        with patch("app.features.core.memories.extraction_service.async_session") as mock_session_ctx:
+            mock_session = AsyncMock()
+            mock_session_ctx.return_value.__aenter__ = AsyncMock(return_value=mock_session)
+            mock_session_ctx.return_value.__aexit__ = AsyncMock(return_value=False)
+            with (
+                patch("app.features.core.memories.extraction_service.MemoryService", return_value=memory_service),
+                patch("app.features.core.memories.extraction_service.EmbeddingService", return_value=embedding_service),
+            ):
+                await service.extract_and_save("I live in Porto", message_id=6)
+
+        created = memory_service.create.call_args[0][0]
+        assert created.expires_at is None
+
+    async def test_bumps_importance_and_updates_expires_at_for_duplicate(self):
+        candidates = [{"category": "fact", "content": "Currently in Marseille", "importance": 0.5, "confidence": 0.9, "expires_days": 3}]
+        service, llm_provider, _ = _make_service()
+        llm_provider.complete.return_value = LlmResponse(text=json.dumps(candidates), tokens_input=10, tokens_output=5)
+
+        existing_memory = _make_memory_read(memory_id=7, importance=0.5)
+        memory_service = AsyncMock()
+        memory_service.get = AsyncMock(return_value=existing_memory)
+        memory_service.update = AsyncMock()
+        embedding_service = AsyncMock()
+        embedding_service.search = AsyncMock(return_value=[_make_embedding_result(source_id=7)])
+
+        with patch("app.features.core.memories.extraction_service.async_session") as mock_session_ctx:
+            mock_session = AsyncMock()
+            mock_session_ctx.return_value.__aenter__ = AsyncMock(return_value=mock_session)
+            mock_session_ctx.return_value.__aexit__ = AsyncMock(return_value=False)
+            with (
+                patch("app.features.core.memories.extraction_service.MemoryService", return_value=memory_service),
+                patch("app.features.core.memories.extraction_service.EmbeddingService", return_value=embedding_service),
+            ):
+                await service.extract_and_save("Still in Marseille", message_id=8)
+
+        update_arg = memory_service.update.call_args[0][1]
+        assert update_arg.importance == pytest.approx(0.6)
+        assert update_arg.expires_at is not None
+
     async def test_structured_domain_data_produces_no_memories(self):
         # LLM should return [] for structured domain data per the prompt rules,
         # but even if it hallucinates a known category the content would be domain data.

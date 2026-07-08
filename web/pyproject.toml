@@ -11,3 +11,9 @@ dependencies = [
     "pydantic-settings>=2.0",
     "itsdangerous>=2.1",
 ]
+
+[project.optional-dependencies]
+test = [
+    "pytest==8.3.5",
+    "pytest-asyncio==0.23.8",
+]

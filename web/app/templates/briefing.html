@@ -99,9 +99,11 @@
               {% elif t.priority == 'HIGH' %}bg-[#BA7517]
               {% else %}bg-gray-300{% endif %}"></span>
             <div class="min-w-0">
-              <p class="truncate text-gray-700">{{ t.title }}</p>
+              <p class="truncate text-gray-700 {% if not t.is_today and not t.is_overdue %}opacity-70{% endif %}">{{ t.title }}</p>
               {% if t.is_overdue %}
               <p class="text-xs text-[#E24B4A]">Overdue</p>
+              {% elif t.is_today %}
+              <p class="text-xs text-[#639922] font-medium">Due today</p>
               {% elif t.deadline %}
               <p class="text-xs text-gray-400">Due {{ t.deadline[:10] }}</p>
               {% endif %}
@@ -110,7 +112,7 @@
           {% endfor %}
         </ul>
         {% else %}
-        <p class="text-sm text-gray-400">No priority tasks.</p>
+        <p class="text-sm text-gray-400">No priority tasks in the next {{ briefing.lookahead_days }} days.</p>
         {% endif %}
       </div>
     </div>
@@ -119,7 +121,7 @@
     <div class="card bg-white">
       <div class="card-body p-4">
         <div class="flex items-center justify-between mb-3">
-          <h2 class="text-sm font-medium text-gray-900"><i class="ti ti-calendar mr-1"></i>Today's events</h2>
+          <h2 class="text-sm font-medium text-gray-900"><i class="ti ti-calendar mr-1"></i>Upcoming events</h2>
           <a href="/calendar" class="text-xs text-[#378ADD] hover:underline">Calendar →</a>
         </div>
         {% if briefing.events %}
@@ -127,10 +129,13 @@
           {% for ev in briefing.events %}
           <li class="text-sm min-w-0">
             <div class="flex items-baseline gap-2">
-              <span class="text-xs text-gray-400 flex-shrink-0">
-                {% if ev.all_day %}All day{% else %}{{ ev.start_time[:5] }}{% endif %}
+              <span class="text-xs flex-shrink-0 {% if ev.is_today %}text-[#639922] font-medium{% else %}text-gray-400{% endif %}">
+                {% if ev.is_today %}Today
+                {% elif ev.days_until == 1 %}Tomorrow
+                {% else %}{{ ev.date }}{% endif %}
+                · {% if ev.all_day %}All day{% else %}{{ ev.start_time[:5] }}{% endif %}
               </span>
-              <span class="truncate text-gray-700">{{ ev.title }}</span>
+              <span class="truncate {% if ev.is_today %}text-gray-700{% else %}text-gray-500{% endif %}">{{ ev.title }}</span>
             </div>
             {% if ev.location %}
             <p class="text-xs text-gray-400 ml-9 truncate">{{ ev.location }}</p>
@@ -139,7 +144,7 @@
           {% endfor %}
         </ul>
         {% else %}
-        <p class="text-sm text-gray-400">No events today.</p>
+        <p class="text-sm text-gray-400">No events in the next {{ briefing.lookahead_days }} days.</p>
         {% endif %}
       </div>
     </div>

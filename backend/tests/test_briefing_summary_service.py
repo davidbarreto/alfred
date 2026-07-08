@@ -177,6 +177,49 @@ class TestBuild:
         assert len(not_overdue) == 1
 
     @pytest.mark.asyncio
+    async def test_marks_today_tasks(self, service):
+        tasks = [
+            _make_task_orm(id=1, status="TODO", deadline=datetime(2026, 6, 23, 18, 0)),
+            _make_task_orm(id=2, status="TODO", deadline=datetime(2026, 6, 25)),
+        ]
+        with (
+            patch("app.features.briefing.summary_service.TaskRepository") as MockTaskRepo,
+            patch("app.features.briefing.summary_service.CalendarEventRepository") as MockEventRepo,
+            patch("app.features.briefing.summary_service.datetime") as mock_dt,
+        ):
+            mock_dt.now.return_value = MagicMock(date=lambda: date(2026, 6, 23))
+            mock_dt.combine = datetime.combine
+            mock_dt.max = datetime.max
+            MockTaskRepo.return_value.get_tasks = AsyncMock(return_value=tasks)
+            MockEventRepo.return_value.get_events = AsyncMock(return_value=[])
+
+            result = await service.build()
+
+        today_task = next(t for t in result.tasks if t.id == 1)
+        later_task = next(t for t in result.tasks if t.id == 2)
+        assert today_task.is_today is True
+        assert later_task.is_today is False
+
+    @pytest.mark.asyncio
+    async def test_includes_tasks_within_lookahead_window(self, service):
+        tasks = [_make_task_orm(id=1, status="TODO", deadline=datetime(2026, 6, 25))]
+        with (
+            patch("app.features.briefing.summary_service.TaskRepository") as MockTaskRepo,
+            patch("app.features.briefing.summary_service.CalendarEventRepository") as MockEventRepo,
+            patch("app.features.briefing.summary_service.datetime") as mock_dt,
+        ):
+            mock_dt.now.return_value = MagicMock(date=lambda: date(2026, 6, 23))
+            mock_dt.combine = datetime.combine
+            mock_dt.max = datetime.max
+            MockTaskRepo.return_value.get_tasks = AsyncMock(return_value=tasks)
+            MockEventRepo.return_value.get_events = AsyncMock(return_value=[])
+
+            result = await service.build()
+
+        assert MockTaskRepo.return_value.get_tasks.call_args[0][0].deadline_to == datetime(2026, 6, 25, 23, 59, 59, 999999)
+        assert len(result.tasks) == 1
+
+    @pytest.mark.asyncio
     async def test_sorts_tasks_overdue_first(self, service):
         tasks = [
             _make_task_orm(id=1, priority="LOW", deadline=datetime(2026, 6, 23), status="TODO"),
@@ -226,6 +269,33 @@ class TestBuild:
 
         assert result.events[0].start_time == "All day"
         assert result.events[0].end_time is None
+
+    @pytest.mark.asyncio
+    async def test_events_within_lookahead_marked_with_days_until(self, service):
+        events = [
+            _make_event_orm(id=1, title="Standup", start_datetime=datetime(2026, 6, 23, 9, 0), end_datetime=datetime(2026, 6, 23, 9, 30)),
+            _make_event_orm(id=2, title="Anniversary", start_datetime=datetime(2026, 6, 24, 0, 0), end_datetime=datetime(2026, 6, 24, 23, 59), all_day=True),
+        ]
+        with (
+            patch("app.features.briefing.summary_service.TaskRepository") as MockTaskRepo,
+            patch("app.features.briefing.summary_service.CalendarEventRepository") as MockEventRepo,
+            patch("app.features.briefing.summary_service.datetime") as mock_dt,
+        ):
+            mock_dt.now.return_value = MagicMock(date=lambda: date(2026, 6, 23))
+            mock_dt.combine = datetime.combine
+            mock_dt.max = datetime.max
+            MockTaskRepo.return_value.get_tasks = AsyncMock(return_value=[])
+            MockEventRepo.return_value.get_events = AsyncMock(return_value=events)
+
+            result = await service.build()
+
+        today_event = next(e for e in result.events if e.id == 1)
+        tomorrow_event = next(e for e in result.events if e.id == 2)
+        assert today_event.is_today is True
+        assert today_event.days_until == 0
+        assert tomorrow_event.is_today is False
+        assert tomorrow_event.days_until == 1
+        assert result.lookahead_days == 3
 
     @pytest.mark.asyncio
     async def test_task_tags_extracted(self, service):

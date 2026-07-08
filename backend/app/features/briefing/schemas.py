@@ -23,16 +23,20 @@ class TaskBriefItem(BaseModel):
     deadline: datetime | None
     tags: list[str]
     is_overdue: bool
+    is_today: bool
 
 
 class EventBriefItem(BaseModel):
     id: int
     title: str
+    date: date
     start_time: str
     end_time: str | None
     location: str | None
     description: str | None
     all_day: bool
+    is_today: bool
+    days_until: int
 
 
 class HolidayItem(BaseModel):
@@ -61,6 +65,7 @@ class LanguageBriefItem(BaseModel):
 
 class MorningBriefing(BaseModel):
     date: date
+    lookahead_days: int = 1
     tasks: list[TaskBriefItem]
     events: list[EventBriefItem]
     weather: WeatherForecast

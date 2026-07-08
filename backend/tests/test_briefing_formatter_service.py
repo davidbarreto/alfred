@@ -47,6 +47,7 @@ def _make_task_item(**kwargs) -> TaskBriefItem:
         deadline=datetime(2026, 6, 23, 23, 59),
         tags=[],
         is_overdue=False,
+        is_today=True,
     )
     defaults.update(kwargs)
     return TaskBriefItem(**defaults)
@@ -56,11 +57,14 @@ def _make_event_item(**kwargs) -> EventBriefItem:
     defaults = dict(
         id=1,
         title="Standup",
+        date=date(2026, 6, 23),
         start_time="09:00",
         end_time="09:30",
         location=None,
         description=None,
         all_day=False,
+        is_today=True,
+        days_until=0,
     )
     defaults.update(kwargs)
     return EventBriefItem(**defaults)

@@ -25,6 +25,7 @@ _PORTO_TZ = ZoneInfo("Europe/Lisbon")
 _ACTIVE_STATUSES = {"TODO", "DOING"}
 _PRIORITY_ORDER = {"HIGH": 0, "MEDIUM": 1, "LOW": 2}
 _HOLIDAY_LOOKAHEAD_DAYS = 7
+_LOOKAHEAD_DAYS = 3
 
 
 class BriefingSummaryService:
@@ -44,12 +45,13 @@ class BriefingSummaryService:
         today = datetime.now(_PORTO_TZ).date()
         today_start = datetime.combine(today, time.min)
         today_end = datetime.combine(today, time.max)
+        lookahead_end = datetime.combine(today + timedelta(days=_LOOKAHEAD_DAYS - 1), time.max)
 
         holiday_window_end = today + timedelta(days=_HOLIDAY_LOOKAHEAD_DAYS)
 
         tasks, events, weather, holidays, birthdays, language = await _gather(
-            self._fetch_tasks(today_start, today_end),
-            self._fetch_events(today_start, today_end),
+            self._fetch_tasks(today, today_start, today_end, lookahead_end),
+            self._fetch_events(today, today_start, lookahead_end),
             self._weather_client.get_daily_forecast(today),
             self._holiday_client.get_holidays(today, holiday_window_end),
             self._fetch_birthdays(today),
@@ -58,6 +60,7 @@ class BriefingSummaryService:
 
         return MorningBriefing(
             date=today,
+            lookahead_days=_LOOKAHEAD_DAYS,
             tasks=tasks,
             events=events,
             weather=weather,
@@ -66,9 +69,11 @@ class BriefingSummaryService:
             language=language,
         )
 
-    async def _fetch_tasks(self, today_start: datetime, today_end: datetime) -> list[TaskBriefItem]:
+    async def _fetch_tasks(
+        self, today: date, today_start: datetime, today_end: datetime, lookahead_end: datetime
+    ) -> list[TaskBriefItem]:
         repo = TaskRepository(self._session)
-        task_filter = TaskFilters(deadline_to=today_end, include_recurring=True, limit=100)
+        task_filter = TaskFilters(deadline_to=lookahead_end, include_recurring=True, limit=100)
         raw_tasks = await repo.get_tasks(task_filter)
 
         items = []
@@ -76,6 +81,7 @@ class BriefingSummaryService:
             if task.status not in _ACTIVE_STATUSES:
                 continue
             is_overdue = task.deadline is not None and task.deadline < today_start
+            is_today = task.deadline is not None and today_start <= task.deadline <= today_end
             items.append(
                 TaskBriefItem(
                     id=task.id,
@@ -85,19 +91,28 @@ class BriefingSummaryService:
                     deadline=task.deadline,
                     tags=[tag.name for tag in task.tags],
                     is_overdue=is_overdue,
+                    is_today=is_today,
                 )
             )
 
-        items.sort(key=lambda t: (not t.is_overdue, _PRIORITY_ORDER.get(t.priority, 99)))
+        items.sort(
+            key=lambda t: (
+                not t.is_overdue,
+                not t.is_today,
+                t.deadline or datetime.max,
+                _PRIORITY_ORDER.get(t.priority, 99),
+            )
+        )
         return items
 
-    async def _fetch_events(self, today_start: datetime, today_end: datetime) -> list[EventBriefItem]:
+    async def _fetch_events(self, today: date, today_start: datetime, lookahead_end: datetime) -> list[EventBriefItem]:
         repo = CalendarEventRepository(self._session)
-        event_filter = EventFilters(start_from=today_start, start_to=today_end)
+        event_filter = EventFilters(start_from=today_start, start_to=lookahead_end)
         raw_events = await repo.get_events(event_filter)
 
         items = []
         for event in raw_events:
+            event_date = event.start_datetime.date()
             if event.all_day:
                 start_time = "All day"
                 end_time = None
@@ -109,15 +124,18 @@ class BriefingSummaryService:
                 EventBriefItem(
                     id=event.id,
                     title=event.title,
+                    date=event_date,
                     start_time=start_time,
                     end_time=end_time,
                     location=event.location,
                     description=event.description,
                     all_day=event.all_day,
+                    is_today=event_date == today,
+                    days_until=(event_date - today).days,
                 )
             )
 
-        items.sort(key=lambda e: (e.all_day, e.start_time))
+        items.sort(key=lambda e: (not e.is_today, e.date, e.all_day, e.start_time))
         return items
 
     async def _fetch_language(self) -> list[LanguageBriefItem]:

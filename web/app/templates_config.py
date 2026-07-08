@@ -31,4 +31,19 @@ def _timeago(dt_str: str | None) -> str:
         return str(dt_str)[:10] if dt_str else ""
 
 
+def _compact_number(value: int | float | None) -> str:
+    if value is None:
+        return ""
+    n = float(value)
+    sign = "-" if n < 0 else ""
+    n = abs(n)
+    if n < 1000:
+        return f"{sign}{int(n)}"
+    for suffix, divisor in (("B", 1_000_000_000), ("M", 1_000_000), ("K", 1_000)):
+        if n >= divisor:
+            return f"{sign}{n / divisor:.1f}".rstrip("0").rstrip(".") + suffix
+    return f"{sign}{int(n)}"
+
+
 templates.env.filters["timeago"] = _timeago
+templates.env.filters["compact_number"] = _compact_number

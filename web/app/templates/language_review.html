@@ -132,10 +132,9 @@ function showCard(i) {
 }
 
 function flipCard() {
-  if (flipped) return;
-  flipped = true;
-  document.getElementById("card-inner").style.transform = "rotateY(180deg)";
-  document.getElementById("card-scene").style.cursor = "default";
+  flipped = !flipped;
+  document.getElementById("card-inner").style.transform = flipped ? "rotateY(180deg)" : "rotateY(0deg)";
+  document.getElementById("card-scene").style.cursor = flipped ? "default" : "pointer";
 }
 
 async function submitScore(score) {

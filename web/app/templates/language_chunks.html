@@ -90,7 +90,7 @@
           <th class="text-left px-4 py-2.5 font-medium hidden lg:table-cell">Difficulty</th>
           <th class="text-left px-4 py-2.5 font-medium hidden lg:table-cell">Due</th>
           <th class="text-left px-4 py-2.5 font-medium">Status</th>
-          <th class="px-4 py-2.5"></th>
+          <th class="px-4 py-2.5 hidden sm:table-cell"></th>
         </tr>
       </thead>
       <tbody class="divide-y divide-gray-50">
@@ -102,8 +102,8 @@
               <span class="text-red-400 text-xs" title="Leech">⚠</span>
               {% endif %}
               <div class="min-w-0">
-                <p class="font-medium text-gray-900 truncate max-w-[200px]">{{ chunk.text }}</p>
-                <p class="text-xs text-gray-400 truncate max-w-[200px]">{{ chunk.translation }}</p>
+                <p class="font-medium text-gray-900 truncate max-w-[140px] sm:max-w-[200px]">{{ chunk.text }}</p>
+                <p class="text-xs text-gray-400 truncate max-w-[140px] sm:max-w-[200px]">{{ chunk.translation }}</p>
               </div>
             </div>
           </td>
@@ -123,7 +123,7 @@
             {% set st_color = {'active': 'text-green-600', 'pending_triage': 'text-amber-600', 'suspended': 'text-gray-400'} %}
             <span class="text-xs {{ st_color.get(chunk.status, 'text-gray-500') }}">{{ chunk.status | replace('_', ' ') }}</span>
           </td>
-          <td class="px-4 py-3">
+          <td class="px-4 py-3 hidden sm:table-cell">
             <a href="/languages/{{ track.code }}/chunks/{{ chunk.id }}"
                onclick="event.stopPropagation()"
                class="text-xs text-[#378ADD] hover:underline">Detail</a>
@@ -152,6 +152,9 @@
                 </div>
               </div>
             </div>
+            <a href="/languages/{{ track.code }}/chunks/{{ chunk.id }}"
+               onclick="event.stopPropagation()"
+               class="sm:hidden inline-block mt-3 text-xs text-[#378ADD] hover:underline">View full details →</a>
           </td>
         </tr>
         {% endfor %}

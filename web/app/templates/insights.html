@@ -7,7 +7,7 @@
   <h1 class="text-base font-semibold text-gray-900">Insights</h1>
 
   <!-- ── Stat cards ─────────────────────────────────────────── -->
-  <div class="grid grid-cols-4 gap-3">
+  <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
     <div class="card bg-white"><div class="card-body p-4">
       <p class="text-xs text-gray-400 uppercase tracking-wide">Memories</p>
       <p class="text-2xl font-semibold text-[#378ADD] mt-1">{{ total_memories }}</p>
@@ -18,7 +18,10 @@
     </div></div>
     <div class="card bg-white"><div class="card-body p-4">
       <p class="text-xs text-gray-400 uppercase tracking-wide">Tokens used</p>
-      <p class="text-2xl font-semibold text-gray-900 mt-1">{{ "{:,}".format(total_tokens) }}</p>
+      <p class="text-2xl font-semibold text-gray-900 mt-1">
+        <span class="sm:hidden">{{ total_tokens | compact_number }}</span>
+        <span class="hidden sm:inline">{{ "{:,}".format(total_tokens) }}</span>
+      </p>
       {% if avg_latency_ms %}<p class="text-xs text-gray-400 mt-0.5">avg {{ avg_latency_ms }} ms</p>{% endif %}
     </div></div>
     <div class="card bg-white"><div class="card-body p-4">
@@ -32,7 +35,7 @@
     <h2 class="text-sm font-medium text-gray-900 mb-3">Tasks & Habits</h2>
 
     <!-- Stat cards -->
-    <div class="grid grid-cols-4 gap-3 mb-4">
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
       <a href="/tasks?filter=habits" class="card bg-white hover:shadow-sm transition-shadow"><div class="card-body p-4">
         <p class="text-xs text-gray-400 uppercase tracking-wide">Active habits</p>
         <p class="text-2xl font-semibold text-gray-900 mt-1">{{ active_habits }}</p>
@@ -176,32 +179,44 @@
   <!-- ── LLM Usage ──────────────────────────────────────────── -->
   <section>
     <h2 class="text-sm font-medium text-gray-900 mb-3">LLM Usage</h2>
-    <div class="grid grid-cols-3 gap-4">
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
 
       <!-- By model -->
-      <div class="card bg-white"><div class="card-body p-4">
-        <p class="text-xs text-gray-400 uppercase tracking-wide mb-3">By model</p>
+      <div class="card bg-white">
         {% if llm_by_model %}
-        <canvas id="chart-llm-model" height="180"></canvas>
+        <div class="card-body p-4 cursor-pointer relative group" onclick="openChartModal('llm-model')">
+          <i class="ti ti-arrows-maximize text-gray-300 group-hover:text-gray-500 absolute top-3 right-3 text-sm"></i>
+          <p class="text-xs text-gray-400 uppercase tracking-wide mb-3">By model</p>
+          <canvas id="chart-llm-model" height="180"></canvas>
+        </div>
         {% else %}
-        <p class="text-sm text-gray-300 py-6 text-center">No data</p>
+        <div class="card-body p-4">
+          <p class="text-xs text-gray-400 uppercase tracking-wide mb-3">By model</p>
+          <p class="text-sm text-gray-300 py-6 text-center">No data</p>
+        </div>
         {% endif %}
-      </div></div>
+      </div>
 
       <!-- By feature -->
-      <div class="card bg-white col-span-2"><div class="card-body p-4">
-        <p class="text-xs text-gray-400 uppercase tracking-wide mb-3">By feature</p>
+      <div class="card bg-white sm:col-span-2">
         {% if llm_by_feature %}
-        <canvas id="chart-llm-feature" height="180"></canvas>
+        <div class="card-body p-4 cursor-pointer relative group" onclick="openChartModal('llm-feature')">
+          <i class="ti ti-arrows-maximize text-gray-300 group-hover:text-gray-500 absolute top-3 right-3 text-sm"></i>
+          <p class="text-xs text-gray-400 uppercase tracking-wide mb-3">By feature</p>
+          <canvas id="chart-llm-feature" height="180"></canvas>
+        </div>
         {% else %}
-        <p class="text-sm text-gray-300 py-6 text-center">No data</p>
+        <div class="card-body p-4">
+          <p class="text-xs text-gray-400 uppercase tracking-wide mb-3">By feature</p>
+          <p class="text-sm text-gray-300 py-6 text-center">No data</p>
+        </div>
         {% endif %}
-      </div></div>
+      </div>
     </div>
 
     <!-- Recent LLM calls table -->
     {% if llm_calls %}
-    <div class="card bg-white mt-4"><div class="card-body p-0">
+    <div class="card bg-white mt-4"><div class="card-body p-0 overflow-x-auto">
       <table class="w-full text-sm">
         <thead>
           <tr class="border-b border-gray-100 text-xs text-gray-400 uppercase tracking-wide">
@@ -209,8 +224,8 @@
             <th class="text-left px-4 py-3 font-medium">Feature</th>
             <th class="text-right px-4 py-3 font-medium">Tokens in</th>
             <th class="text-right px-4 py-3 font-medium">Tokens out</th>
-            <th class="text-right px-4 py-3 font-medium">Latency</th>
-            <th class="text-right px-4 py-3 font-medium">When</th>
+            <th class="text-right px-4 py-3 font-medium hidden sm:table-cell">Latency</th>
+            <th class="text-right px-4 py-3 font-medium hidden sm:table-cell">When</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-gray-50">
@@ -222,10 +237,10 @@
             </td>
             <td class="px-4 py-2.5 text-right text-gray-500">{{ c.tokens_input or "—" }}</td>
             <td class="px-4 py-2.5 text-right text-gray-500">{{ c.tokens_output or "—" }}</td>
-            <td class="px-4 py-2.5 text-right text-gray-400">
+            <td class="px-4 py-2.5 text-right text-gray-400 hidden sm:table-cell">
               {% if c.latency_ms %}{{ c.latency_ms }} ms{% else %}—{% endif %}
             </td>
-            <td class="px-4 py-2.5 text-right text-gray-400 text-xs">{{ c.created_at[:16].replace("T", " ") }}</td>
+            <td class="px-4 py-2.5 text-right text-gray-400 text-xs hidden sm:table-cell">{{ c.created_at[:16].replace("T", " ") }}</td>
           </tr>
           {% endfor %}
         </tbody>
@@ -237,50 +252,68 @@
   <!-- ── Provider Calls ─────────────────────────────────────── -->
   <section>
     <h2 class="text-sm font-medium text-gray-900 mb-3">Provider Calls</h2>
-    <div class="grid grid-cols-3 gap-4">
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
 
       <!-- By provider -->
-      <div class="card bg-white"><div class="card-body p-4">
-        <p class="text-xs text-gray-400 uppercase tracking-wide mb-3">By provider</p>
+      <div class="card bg-white">
         {% if provider_by_name %}
-        <canvas id="chart-provider-name" height="180"></canvas>
+        <div class="card-body p-4 cursor-pointer relative group" onclick="openChartModal('provider-name')">
+          <i class="ti ti-arrows-maximize text-gray-300 group-hover:text-gray-500 absolute top-3 right-3 text-sm"></i>
+          <p class="text-xs text-gray-400 uppercase tracking-wide mb-3">By provider</p>
+          <canvas id="chart-provider-name" height="180"></canvas>
+        </div>
         {% else %}
-        <p class="text-sm text-gray-300 py-6 text-center">No data</p>
+        <div class="card-body p-4">
+          <p class="text-xs text-gray-400 uppercase tracking-wide mb-3">By provider</p>
+          <p class="text-sm text-gray-300 py-6 text-center">No data</p>
+        </div>
         {% endif %}
-      </div></div>
+      </div>
 
       <!-- By status -->
-      <div class="card bg-white"><div class="card-body p-4">
-        <p class="text-xs text-gray-400 uppercase tracking-wide mb-3">By status</p>
+      <div class="card bg-white">
         {% if provider_by_status %}
-        <canvas id="chart-provider-status" height="180"></canvas>
+        <div class="card-body p-4 cursor-pointer relative group" onclick="openChartModal('provider-status')">
+          <i class="ti ti-arrows-maximize text-gray-300 group-hover:text-gray-500 absolute top-3 right-3 text-sm"></i>
+          <p class="text-xs text-gray-400 uppercase tracking-wide mb-3">By status</p>
+          <canvas id="chart-provider-status" height="180"></canvas>
+        </div>
         {% else %}
-        <p class="text-sm text-gray-300 py-6 text-center">No data</p>
+        <div class="card-body p-4">
+          <p class="text-xs text-gray-400 uppercase tracking-wide mb-3">By status</p>
+          <p class="text-sm text-gray-300 py-6 text-center">No data</p>
+        </div>
         {% endif %}
-      </div></div>
+      </div>
 
       <!-- By command -->
-      <div class="card bg-white"><div class="card-body p-4">
-        <p class="text-xs text-gray-400 uppercase tracking-wide mb-3">Commands</p>
+      <div class="card bg-white">
         {% if cmd_by_name %}
-        <canvas id="chart-cmd-name" height="180"></canvas>
+        <div class="card-body p-4 cursor-pointer relative group" onclick="openChartModal('cmd-name')">
+          <i class="ti ti-arrows-maximize text-gray-300 group-hover:text-gray-500 absolute top-3 right-3 text-sm"></i>
+          <p class="text-xs text-gray-400 uppercase tracking-wide mb-3">Commands</p>
+          <canvas id="chart-cmd-name" height="180"></canvas>
+        </div>
         {% else %}
-        <p class="text-sm text-gray-300 py-6 text-center">No data</p>
+        <div class="card-body p-4">
+          <p class="text-xs text-gray-400 uppercase tracking-wide mb-3">Commands</p>
+          <p class="text-sm text-gray-300 py-6 text-center">No data</p>
+        </div>
         {% endif %}
-      </div></div>
+      </div>
     </div>
 
     <!-- Recent provider calls table -->
     {% if provider_calls %}
-    <div class="card bg-white mt-4"><div class="card-body p-0">
+    <div class="card bg-white mt-4"><div class="card-body p-0 overflow-x-auto">
       <table class="w-full text-sm">
         <thead>
           <tr class="border-b border-gray-100 text-xs text-gray-400 uppercase tracking-wide">
             <th class="text-left px-4 py-3 font-medium">Provider</th>
             <th class="text-left px-4 py-3 font-medium">Operation</th>
-            <th class="text-left px-4 py-3 font-medium">Entity</th>
+            <th class="text-left px-4 py-3 font-medium hidden sm:table-cell">Entity</th>
             <th class="text-left px-4 py-3 font-medium">Status</th>
-            <th class="text-right px-4 py-3 font-medium">When</th>
+            <th class="text-right px-4 py-3 font-medium hidden sm:table-cell">When</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-gray-50">
@@ -288,7 +321,7 @@
           <tr class="hover:bg-gray-50">
             <td class="px-4 py-2.5 text-gray-700 font-medium">{{ c.provider }}</td>
             <td class="px-4 py-2.5 text-gray-500">{{ c.operation }}</td>
-            <td class="px-4 py-2.5 text-gray-400">{{ c.entity_type }}</td>
+            <td class="px-4 py-2.5 text-gray-400 hidden sm:table-cell">{{ c.entity_type }}</td>
             <td class="px-4 py-2.5">
               {% if c.status == "success" %}
               <span class="text-[10px] px-1.5 py-0.5 rounded bg-[#EAF3DE] text-[#639922]">{{ c.status }}</span>
@@ -296,7 +329,7 @@
               <span class="text-[10px] px-1.5 py-0.5 rounded bg-[#FCEBEB] text-[#E24B4A]">{{ c.status }}</span>
               {% endif %}
             </td>
-            <td class="px-4 py-2.5 text-right text-gray-400 text-xs">{{ c.created_at[:16].replace("T", " ") }}</td>
+            <td class="px-4 py-2.5 text-right text-gray-400 text-xs hidden sm:table-cell">{{ c.created_at[:16].replace("T", " ") }}</td>
           </tr>
           {% endfor %}
         </tbody>
@@ -321,9 +354,9 @@
 
   <!-- ── Memories ───────────────────────────────────────────── -->
   <section>
-    <div class="flex items-center justify-between mb-3">
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-3">
       <h2 class="text-sm font-medium text-gray-900">Memories</h2>
-      <div class="flex gap-1.5" id="memory-filters">
+      <div class="flex flex-wrap gap-1.5" id="memory-filters">
         <button onclick="filterMemories(null)" class="mem-filter px-2.5 py-1 rounded-full text-xs font-medium bg-[#E6F1FB] text-[#0C447C]" data-cat="">All</button>
         {% for cat in memories_by_category %}
         <button onclick="filterMemories('{{ cat }}')" class="mem-filter px-2.5 py-1 rounded-full text-xs font-medium text-gray-500 hover:bg-gray-100" data-cat="{{ cat }}">
@@ -340,28 +373,85 @@
 
 </div>
 
+<!-- Chart expand modal -->
+<div id="chart-modal" class="hidden fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onclick="closeChartModal()">
+  <div class="bg-white rounded-lg p-6 w-full max-w-2xl" onclick="event.stopPropagation()">
+    <div class="flex items-center justify-between mb-4">
+      <h3 id="chart-modal-title" class="text-sm font-medium text-gray-900"></h3>
+      <button onclick="closeChartModal()" class="text-gray-400 hover:text-gray-600">
+        <i class="ti ti-x text-lg"></i>
+      </button>
+    </div>
+    <canvas id="chart-modal-canvas" height="320"></canvas>
+  </div>
+</div>
+
 <!-- Chart.js -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
 <script>
 const PALETTE = ["#378ADD","#BA7517","#639922","#E24B4A","#6366F1","#EC4899","#14B8A6","#F97316","#8B5CF6","#06B6D4"];
 const STATUS_COLORS = { success: "#639922", error: "#E24B4A", pending: "#BA7517" };
+const CHART_REGISTRY = {};
+let modalChart = null;
 
-function donut(id, data) {
+function registerChart(key, title, type, data, colors) {
+  CHART_REGISTRY[key] = { title, type, data, colors };
+}
+
+function openChartModal(key) {
+  const cfg = CHART_REGISTRY[key];
+  if (!cfg) return;
+  document.getElementById("chart-modal-title").textContent = cfg.title;
+  document.getElementById("chart-modal").classList.remove("hidden");
+  if (modalChart) modalChart.destroy();
+  const keys = Object.keys(cfg.data), vals = Object.values(cfg.data);
+  const isDonut = cfg.type === "doughnut";
+  modalChart = new Chart(document.getElementById("chart-modal-canvas"), {
+    type: cfg.type,
+    data: {
+      labels: keys,
+      datasets: [{
+        data: vals,
+        backgroundColor: cfg.colors,
+        borderWidth: isDonut ? 0 : undefined,
+        borderRadius: isDonut ? undefined : 4
+      }]
+    },
+    options: isDonut
+      ? { plugins: { legend: { position: "bottom", labels: { boxWidth: 10, font: { size: 12 } } } }, cutout: "65%" }
+      : {
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { grid: { display: false } },
+            y: { grid: { color: "#F3F4F6" }, ticks: { precision: 0 } }
+          }
+        }
+  });
+}
+
+function closeChartModal() {
+  document.getElementById("chart-modal").classList.add("hidden");
+  if (modalChart) { modalChart.destroy(); modalChart = null; }
+}
+
+function donut(id, data, key, title) {
   const keys = Object.keys(data), vals = Object.values(data);
+  const colors = PALETTE.slice(0, keys.length);
   new Chart(document.getElementById(id), {
     type: "doughnut",
     data: {
       labels: keys,
-      datasets: [{ data: vals, backgroundColor: PALETTE.slice(0, keys.length), borderWidth: 0 }]
+      datasets: [{ data: vals, backgroundColor: colors, borderWidth: 0 }]
     },
     options: {
       plugins: { legend: { position: "bottom", labels: { boxWidth: 10, font: { size: 11 } } } },
       cutout: "65%"
     }
   });
+  registerChart(key, title, "doughnut", data, colors);
 }
 
-function bar(id, data) {
+function bar(id, data, key, title) {
   const keys = Object.keys(data), vals = Object.values(data);
   new Chart(document.getElementById(id), {
     type: "bar",
@@ -377,11 +467,12 @@ function bar(id, data) {
       }
     }
   });
+  registerChart(key, title, "bar", data, "#378ADD");
 }
 
-{% if llm_by_model %}donut("chart-llm-model", {{ llm_by_model | tojson }});{% endif %}
-{% if llm_by_feature %}bar("chart-llm-feature", {{ llm_by_feature | tojson }});{% endif %}
-{% if provider_by_name %}donut("chart-provider-name", {{ provider_by_name | tojson }});{% endif %}
+{% if llm_by_model %}donut("chart-llm-model", {{ llm_by_model | tojson }}, "llm-model", "By model");{% endif %}
+{% if llm_by_feature %}bar("chart-llm-feature", {{ llm_by_feature | tojson }}, "llm-feature", "By feature");{% endif %}
+{% if provider_by_name %}donut("chart-provider-name", {{ provider_by_name | tojson }}, "provider-name", "By provider");{% endif %}
 {% if provider_by_status %}
   const statusData = {{ provider_by_status | tojson }};
   const statusColors = Object.keys(statusData).map(k => STATUS_COLORS[k] || "#9CA3AF");
@@ -396,8 +487,9 @@ function bar(id, data) {
       cutout: "65%"
     }
   });
+  registerChart("provider-status", "By status", "doughnut", statusData, statusColors);
 {% endif %}
-{% if cmd_by_name %}bar("chart-cmd-name", {{ cmd_by_name | tojson }});{% endif %}
+{% if cmd_by_name %}bar("chart-cmd-name", {{ cmd_by_name | tojson }}, "cmd-name", "Commands");{% endif %}
 
 // Memory category filter
 function filterMemories(cat) {

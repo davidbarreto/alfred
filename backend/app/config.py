@@ -41,6 +41,9 @@ class Settings(BaseSettings):
     # Telegram
     telegram_bot_token: str | None = Field(default=None, validation_alias="TELEGRAM_BOT_TOKEN")
 
+    # Audio storage — shadowing recordings + pronunciation TTS cache
+    audio_storage_dir: str = Field(default="/data/audio", validation_alias="AUDIO_STORAGE_DIR")
+
     # CORS — comma-separated list of allowed origins for browser clients
     # e.g. "http://localhost:8080,https://portal.dbflabs.com"
     cors_origins: str = Field(default="", validation_alias="CORS_ORIGINS")

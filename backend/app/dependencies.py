@@ -35,6 +35,7 @@ from app.features.language.chunks.service import ChunkService as LanguageChunkSe
 from app.features.language.chunks.pronunciation_service import PronunciationService
 from app.integrations.google_translate_tts.client import GoogleTranslateTtsClient
 from app.integrations.ffmpeg.client import FfmpegClient
+from app.integrations.file_storage.client import LocalFileStorage
 from app.features.language.sessions.service import SessionService as LanguageSessionService
 from app.features.organizer.contacts.service import ContactService
 from app.integrations.google_contacts.client import GoogleContactsClient
@@ -218,8 +219,11 @@ def get_grammar_scope_service(session: AsyncSession = Depends(get_session)) -> G
 def get_language_chunk_service(session: AsyncSession = Depends(get_session)) -> LanguageChunkService:
     return LanguageChunkService(session)
 
+def get_file_storage() -> LocalFileStorage:
+    return LocalFileStorage(get_settings().audio_storage_dir)
+
 def get_pronunciation_service() -> PronunciationService:
-    return PronunciationService(GoogleTranslateTtsClient(), FfmpegClient())
+    return PronunciationService(GoogleTranslateTtsClient(), FfmpegClient(), get_file_storage())
 
 def get_language_session_service(session: AsyncSession = Depends(get_session)) -> LanguageSessionService:
     return LanguageSessionService(session)
@@ -257,3 +261,4 @@ GrammarScopeServiceDep = Annotated[GrammarScopeService, Depends(get_grammar_scop
 ChunkServiceDep = Annotated[LanguageChunkService, Depends(get_language_chunk_service)]
 PronunciationServiceDep = Annotated[PronunciationService, Depends(get_pronunciation_service)]
 LanguageSessionServiceDep = Annotated[LanguageSessionService, Depends(get_language_session_service)]
+FileStorageDep = Annotated[LocalFileStorage, Depends(get_file_storage)]

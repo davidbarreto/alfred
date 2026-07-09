@@ -33,6 +33,17 @@ async def get_bytes(path: str, params: dict[str, Any] | None = None) -> tuple[by
         return resp.content, resp.headers.get("content-type", "application/octet-stream")
 
 
+async def post_multipart(
+    path: str,
+    data: dict[str, Any] | None = None,
+    files: dict[str, tuple[str, bytes, str]] | None = None,
+) -> Any:
+    async with httpx.AsyncClient(follow_redirects=True) as client:
+        resp = await client.post(_url(path), headers=_headers(), data=data, files=files, timeout=30.0)
+        resp.raise_for_status()
+        return resp.json()
+
+
 async def post(path: str, json: Any = None) -> Any:
     async with httpx.AsyncClient(follow_redirects=True) as client:
         resp = await client.post(_url(path), headers=_headers(), json=json, timeout=10.0)

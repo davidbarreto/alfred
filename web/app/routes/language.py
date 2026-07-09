@@ -5,7 +5,7 @@ from datetime import date, timedelta
 
 import httpx
 from fastapi import APIRouter, Request
-from fastapi.responses import HTMLResponse, Response
+from fastapi.responses import HTMLResponse, JSONResponse, Response
 
 import app.client as api
 from app.templates_config import templates
@@ -61,6 +61,40 @@ def _retention_rate(sessions: list) -> int | None:
         return None
     good = sum(1 for s in srs if s["quality_score"] >= 2.5)
     return round(good / len(srs) * 100)
+
+
+def _shadowing_score(session: dict) -> float | None:
+    feedback = session.get("ai_feedback_json") or {}
+    if "score" in feedback:
+        return feedback["score"]
+    if session.get("quality_score") is not None:
+        return session["quality_score"] * 25
+    return None
+
+
+def _build_shadowing_chart(shadowing_sessions: list) -> dict | None:
+    """Compact SVG line-chart geometry (oldest→newest) of scores; None if <2 scored attempts."""
+    attempts = list(reversed(shadowing_sessions))  # API returns newest-first
+    points = []
+    for s in attempts:
+        score = _shadowing_score(s)
+        if score is None:
+            continue
+        points.append({
+            "date": s["created_at"][:10],
+            "score": round(score),
+            "summary": (s.get("ai_feedback_json") or {}).get("summary") or "",
+        })
+    if len(points) < 2:
+        return None
+
+    width, height, pad = 280, 64, 8
+    n = len(points)
+    for i, p in enumerate(points):
+        p["x"] = round(pad + (i / (n - 1)) * (width - 2 * pad), 1)
+        p["y"] = round(pad + (1 - p["score"] / 100) * (height - 2 * pad), 1)
+    polyline = " ".join(f"{p['x']},{p['y']}" for p in points)
+    return {"width": width, "height": height, "points": points, "polyline": polyline}
 
 
 def _build_heatmap(sessions: list, today: date) -> list:
@@ -467,6 +501,39 @@ async def pronounce(code: str, text: str):
     return Response(content=audio, media_type=content_type)
 
 
+@router.get("/{code}/sessions/{session_id}/audio")
+async def session_audio(code: str, session_id: int):
+    try:
+        audio, content_type = await api.get_bytes(f"/language/sessions/{session_id}/audio")
+    except httpx.HTTPError:
+        return Response(status_code=502)
+    return Response(content=audio, media_type=content_type)
+
+
+@router.post("/{code}/chunks/{chunk_id}/shadow")
+async def submit_shadowing(code: str, chunk_id: int, request: Request):
+    tracks = await _safe_get("/language/tracks/", {"active_only": "false"})
+    track = next((t for t in tracks if t["code"] == code), None)
+    if not track:
+        return JSONResponse({"error": "Track not found."}, status_code=404)
+
+    form = await request.form()
+    upload = form.get("audio")
+    if upload is None:
+        return JSONResponse({"error": "No audio provided."}, status_code=400)
+    audio_bytes = await upload.read()
+
+    try:
+        result = await api.post_multipart(
+            "/language/sessions/shadowing/audio",
+            data={"track_id": track["id"], "chunk_id": chunk_id},
+            files={"audio": (upload.filename or "recording.webm", audio_bytes, upload.content_type or "audio/webm")},
+        )
+    except httpx.HTTPError:
+        return JSONResponse({"error": "Could not analyze recording."}, status_code=502)
+    return JSONResponse(result)
+
+
 @router.post("/{code}/review/score")
 async def score_review(code: str, request: Request):
     body = await request.json()
@@ -618,6 +685,7 @@ async def chunk_detail(code: str, chunk_id: int, request: Request):
         "chunk": chunk,
         "shadowing_sessions": shadowing,
         "srs_sessions": srs_reviews,
+        "shadowing_chart": _build_shadowing_chart(shadowing),
     })
 
 

@@ -78,6 +78,23 @@
         </div>
       </div>
 
+      <!-- Practice shadowing -->
+      <div class="card bg-white">
+        <div class="card-body p-4 space-y-3">
+          <div class="flex items-center justify-between">
+            <p class="text-xs font-medium text-gray-700">Practice shadowing</p>
+            <button type="button" onclick="playReference()" title="Reference pronunciation"
+              class="btn btn-xs btn-ghost text-gray-400 hover:text-accent">
+              <i class="ti ti-volume"></i> Hear it
+            </button>
+          </div>
+          <p id="shadow-status" class="text-xs text-gray-400">Record yourself saying "{{ chunk.text }}" and get instant feedback.</p>
+          <button type="button" id="record-btn" onclick="toggleRecording()" class="btn btn-sm btn-primary gap-1.5 w-fit">
+            <i class="ti ti-microphone"></i> Record
+          </button>
+        </div>
+      </div>
+
       <!-- Audio evolution (shadowing history) -->
       {% if shadowing_sessions %}
       <div class="card bg-white">
@@ -86,39 +103,71 @@
             <p class="text-xs font-medium text-gray-700">Shadowing history</p>
             <p class="text-xs text-gray-400">{{ shadowing_sessions | length }} session{{ 's' if shadowing_sessions | length != 1 }}</p>
           </div>
+
+          {% if shadowing_chart %}
+          <div class="px-4 py-3 border-b border-gray-100">
+            <p class="text-[10px] text-gray-400 uppercase tracking-wide mb-1.5">Score trend</p>
+            <div class="relative">
+              <svg viewBox="0 0 {{ shadowing_chart.width }} {{ shadowing_chart.height }}" class="w-full h-16" preserveAspectRatio="none">
+                <line x1="0" y1="{{ shadowing_chart.height - 8 }}" x2="{{ shadowing_chart.width }}" y2="{{ shadowing_chart.height - 8 }}"
+                  stroke="#e1e0d9" stroke-width="1" />
+                <polyline points="{{ shadowing_chart.polyline }}" fill="none" stroke="#378ADD" stroke-width="2"
+                  stroke-linecap="round" stroke-linejoin="round" />
+                {% for p in shadowing_chart.points %}
+                <circle class="shadow-chart-point" cx="{{ p.x }}" cy="{{ p.y }}" r="4" fill="#378ADD" stroke="white" stroke-width="2"
+                  data-date="{{ p.date }}" data-score="{{ p.score }}" data-summary="{{ p.summary | e }}" tabindex="0">
+                  <title>{{ p.date }} — {{ p.score }}{% if p.summary %}: {{ p.summary }}{% endif %}</title>
+                </circle>
+                {% endfor %}
+              </svg>
+              <div id="shadow-chart-tooltip" class="hidden absolute z-10 bg-gray-900 text-white text-[11px] rounded px-2 py-1 pointer-events-none max-w-[220px]"></div>
+            </div>
+          </div>
+          {% endif %}
+
           <div class="divide-y divide-gray-50">
             {% for session in shadowing_sessions %}
-            <div class="flex items-center justify-between px-4 py-3">
-              <div class="flex items-center gap-3">
-                <div class="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center shrink-0">
-                  <i class="ti ti-microphone text-purple-600 text-sm"></i>
-                </div>
-                <div>
+            {% set feedback = session.ai_feedback_json or {} %}
+            <div class="px-4 py-3 space-y-1.5">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                  <div class="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center shrink-0">
+                    <i class="ti ti-microphone text-purple-600 text-sm"></i>
+                  </div>
                   <p class="text-xs text-gray-600">{{ session.created_at[:10] }}</p>
-                  {% if session.gemini_feedback_json %}
-                  <p class="text-xs text-gray-400 truncate max-w-[200px]">
-                    {{ session.gemini_feedback_json | tojson | truncate(60) }}
-                  </p>
+                </div>
+                <div class="flex items-center gap-3">
+                  {% if feedback.score is defined and feedback.score is not none %}
+                  <div class="text-center">
+                    <p class="text-sm font-semibold {% if feedback.score >= 80 %}text-green-600{% elif feedback.score >= 55 %}text-gray-700{% else %}text-red-600{% endif %}">
+                      {{ feedback.score | round | int }}
+                    </p>
+                    <p class="text-[10px] text-gray-400">score</p>
+                  </div>
+                  {% elif session.quality_score is not none %}
+                  <div class="text-center">
+                    <p class="text-sm font-semibold text-gray-700">{{ "%.1f" | format(session.quality_score) }}</p>
+                    <p class="text-[10px] text-gray-400">score</p>
+                  </div>
+                  {% endif %}
+                  <button type="button" onclick="playReference()" title="Reference pronunciation"
+                    class="btn btn-xs btn-ghost text-gray-400 hover:text-accent">
+                    <i class="ti ti-volume text-sm"></i>
+                  </button>
+                  {% if session.audio_ref %}
+                  <button type="button" onclick="playRecording({{ session.id }})" title="Your recording"
+                    class="btn btn-xs btn-ghost text-purple-600">
+                    <i class="ti ti-player-play text-sm"></i>
+                  </button>
                   {% endif %}
                 </div>
               </div>
-              <div class="flex items-center gap-3">
-                {% if session.quality_score is not none %}
-                <div class="text-center">
-                  <p class="text-sm font-semibold {% if session.quality_score >= 3.5 %}text-green-600{% elif session.quality_score >= 2.5 %}text-gray-700{% else %}text-red-600{% endif %}">
-                    {{ "%.1f" | format(session.quality_score) }}
-                  </p>
-                  <p class="text-[10px] text-gray-400">score</p>
-                </div>
-                {% endif %}
-                {% if session.audio_ref %}
-                <a href="/static/audio/{{ session.audio_ref }}"
-                   target="_blank"
-                   class="btn btn-xs btn-ghost text-purple-600">
-                  <i class="ti ti-player-play text-sm"></i>
-                </a>
-                {% endif %}
-              </div>
+              {% if feedback.summary %}
+              <p class="text-xs text-gray-500 pl-11">{{ feedback.summary }}</p>
+              {% endif %}
+              {% if feedback.tip %}
+              <p class="text-xs text-gray-400 italic pl-11">Tip: {{ feedback.tip }}</p>
+              {% endif %}
             </div>
             {% endfor %}
           </div>
@@ -204,4 +253,102 @@
     </div>
   </div>
 </div>
+
+<script>
+const TRACK_CODE = "{{ track.code }}";
+const CHUNK_ID = {{ chunk.id }};
+const CHUNK_TEXT = {{ chunk.text | tojson }};
+
+let currentAudio = null;
+function _playAudio(url) {
+  if (currentAudio) currentAudio.pause();
+  currentAudio = new Audio(url);
+  currentAudio.play().catch(() => {});
+}
+function playReference() {
+  _playAudio(`/languages/${TRACK_CODE}/pronounce?text=${encodeURIComponent(CHUNK_TEXT)}`);
+}
+function playRecording(sessionId) {
+  _playAudio(`/languages/${TRACK_CODE}/sessions/${sessionId}/audio`);
+}
+
+// Score-trend chart tooltip
+document.querySelectorAll(".shadow-chart-point").forEach(function (point) {
+  const tooltip = document.getElementById("shadow-chart-tooltip");
+  function show() {
+    const date = point.dataset.date, score = point.dataset.score, summary = point.dataset.summary;
+    tooltip.textContent = summary ? `${date} — ${score}: ${summary}` : `${date} — ${score}`;
+    const svg = point.closest("svg");
+    const svgRect = svg.getBoundingClientRect();
+    const pt = svg.createSVGPoint();
+    pt.x = point.cx.baseVal.value;
+    pt.y = point.cy.baseVal.value;
+    const screenPt = pt.matrixTransform(svg.getScreenCTM());
+    tooltip.style.left = (screenPt.x - svgRect.left) + "px";
+    tooltip.style.top = (screenPt.y - svgRect.top - 28) + "px";
+    tooltip.classList.remove("hidden");
+  }
+  function hide() { tooltip.classList.add("hidden"); }
+  point.addEventListener("pointerenter", show);
+  point.addEventListener("focus", show);
+  point.addEventListener("pointerleave", hide);
+  point.addEventListener("blur", hide);
+});
+
+// Shadowing recording
+let mediaRecorder = null;
+let recordedChunks = [];
+
+async function toggleRecording() {
+  const btn = document.getElementById("record-btn");
+  const status = document.getElementById("shadow-status");
+  if (mediaRecorder && mediaRecorder.state === "recording") {
+    mediaRecorder.stop();
+    return;
+  }
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    recordedChunks = [];
+    mediaRecorder = new MediaRecorder(stream);
+    mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) recordedChunks.push(e.data); };
+    mediaRecorder.onstop = () => {
+      stream.getTracks().forEach((t) => t.stop());
+      uploadRecording();
+    };
+    mediaRecorder.start();
+    btn.innerHTML = '<i class="ti ti-player-stop"></i> Stop';
+    btn.classList.add("btn-error");
+    btn.classList.remove("btn-primary");
+    status.textContent = "Recording… tap stop when done.";
+  } catch (err) {
+    status.textContent = "Microphone access is required to practice shadowing.";
+  }
+}
+
+async function uploadRecording() {
+  const btn = document.getElementById("record-btn");
+  const status = document.getElementById("shadow-status");
+  btn.disabled = true;
+  btn.innerHTML = '<i class="ti ti-microphone"></i> Record';
+  btn.classList.remove("btn-error");
+  btn.classList.add("btn-primary");
+  status.textContent = "Analyzing your pronunciation…";
+
+  const blob = new Blob(recordedChunks, { type: mediaRecorder.mimeType || "audio/webm" });
+  const formData = new FormData();
+  formData.append("audio", blob, "recording.webm");
+
+  try {
+    const resp = await fetch(`/languages/${TRACK_CODE}/chunks/${CHUNK_ID}/shadow`, {
+      method: "POST",
+      body: formData,
+    });
+    if (!resp.ok) throw new Error("upload failed");
+    location.reload();
+  } catch (err) {
+    status.textContent = "Could not analyze recording. Please try again.";
+    btn.disabled = false;
+  }
+}
+</script>
 {% endblock %}

@@ -37,7 +37,7 @@ def mock_api(monkeypatch):
     """Patch app.client's HTTP verbs so route tests never hit the network."""
     import app.client as api
 
-    mocks = {name: AsyncMock() for name in ("get", "post", "patch", "delete", "get_bytes")}
+    mocks = {name: AsyncMock() for name in ("get", "post", "patch", "delete", "get_bytes", "post_multipart")}
     for name, mock in mocks.items():
         monkeypatch.setattr(api, name, mock)
     return mocks

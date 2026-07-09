@@ -26,6 +26,13 @@ async def get(path: str, params: dict[str, Any] | None = None) -> Any:
         return resp.json()
 
 
+async def get_bytes(path: str, params: dict[str, Any] | None = None) -> tuple[bytes, str]:
+    async with httpx.AsyncClient(follow_redirects=True) as client:
+        resp = await client.get(_url(path), headers=_headers(), params=params, timeout=10.0)
+        resp.raise_for_status()
+        return resp.content, resp.headers.get("content-type", "application/octet-stream")
+
+
 async def post(path: str, json: Any = None) -> Any:
     async with httpx.AsyncClient(follow_redirects=True) as client:
         resp = await client.post(_url(path), headers=_headers(), json=json, timeout=10.0)

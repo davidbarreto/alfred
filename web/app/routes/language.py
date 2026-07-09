@@ -5,7 +5,7 @@ from datetime import date, timedelta
 
 import httpx
 from fastapi import APIRouter, Request
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, Response
 
 import app.client as api
 from app.templates_config import templates
@@ -456,6 +456,15 @@ async def review_session(code: str, request: Request):
         "completed_today": prog["completed_today"],
         "daily_quota": prog["daily_quota"],
     })
+
+
+@router.get("/{code}/pronounce")
+async def pronounce(code: str, text: str):
+    try:
+        audio, content_type = await api.get_bytes("/language/chunks/pronunciation", {"text": text, "lang": code})
+    except httpx.HTTPError:
+        return Response(status_code=502)
+    return Response(content=audio, media_type=content_type)
 
 
 @router.post("/{code}/review/score")

@@ -45,7 +45,13 @@
         <div id="card-front" class="card bg-white w-full absolute inset-0 flex flex-col items-center justify-center p-8 gap-3"
              style="backface-visibility: hidden;">
           <span class="text-xs font-medium text-gray-400 uppercase tracking-widest" id="front-lang">{{ track.code | upper }}</span>
-          <p class="text-3xl font-semibold text-gray-900 text-center" id="front-text"></p>
+          <div class="flex items-center gap-2">
+            <p class="text-3xl font-semibold text-gray-900 text-center" id="front-text"></p>
+            <button type="button" id="pronounce-btn" onclick="event.stopPropagation(); playPronunciation();"
+              class="btn btn-sm btn-circle btn-ghost text-gray-400 hover:text-[#378ADD]" title="Play pronunciation">
+              <i class="ti ti-volume"></i>
+            </button>
+          </div>
           <p class="text-xs text-gray-400 mt-2">tap to reveal</p>
         </div>
 
@@ -129,6 +135,15 @@ function showCard(i) {
 
   document.querySelectorAll("#score-buttons button").forEach(b => b.disabled = false);
   document.getElementById("card-scene").style.cursor = "pointer";
+}
+
+let currentAudio = null;
+function playPronunciation() {
+  const c = chunks[idx];
+  if (!c) return;
+  if (currentAudio) currentAudio.pause();
+  currentAudio = new Audio(`/languages/${TRACK_CODE}/pronounce?text=${encodeURIComponent(c.text)}`);
+  currentAudio.play().catch(() => {});
 }
 
 function flipCard() {

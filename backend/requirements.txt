@@ -18,3 +18,4 @@ greenlet>=3.0.0
 pgvector==0.3.6
 sentence-transformers==3.4.1
 pydantic-ai-slim[google]==1.107.0
+python-multipart==0.0.20

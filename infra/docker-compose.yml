@@ -98,5 +98,6 @@ services:
       - DB_POSTGRESDB_DATABASE=${N8N_DB_NAME}
       - DB_POSTGRESDB_USER=${N8N_DB_USER}
       - DB_POSTGRESDB_PASSWORD=${N8N_DB_PASSWORD}
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
     volumes:
       - ${N8N_DATA_DIR}:/home/node/.n8n

@@ -1056,29 +1056,37 @@
         },
         {
             "parameters": {
-                "operation": "sendAudio",
-                "chatId": "={{ $('Message Trigger').item.json.message?.chat?.id?.toString() || $('Message Trigger').item.json.callback_query?.message?.chat?.id?.toString() }}\n",
-                "binaryData": true,
-                "binaryPropertyName": "=audio",
-                "additionalFields": {
-                    "caption": "=Shadow this: {{ $('Normalize Practice Prompt').item.json.shadow_text }}"
-                }
+                "method": "POST",
+                "url": "=https://api.telegram.org/bot{{ $env.TELEGRAM_BOT_TOKEN }}/sendVoice",
+                "sendBody": true,
+                "contentType": "multipart-form-data",
+                "bodyParameters": {
+                    "parameters": [
+                        {
+                            "name": "chat_id",
+                            "value": "={{ $('Message Trigger').item.json.message?.chat?.id?.toString() || $('Message Trigger').item.json.callback_query?.message?.chat?.id?.toString() }}"
+                        },
+                        {
+                            "name": "caption",
+                            "value": "=Shadow this: {{ $('Normalize Practice Prompt').item.json.shadow_text }}"
+                        },
+                        {
+                            "name": "voice",
+                            "parameterType": "formBinaryData",
+                            "inputDataFieldName": "audio"
+                        }
+                    ]
+                },
+                "options": {}
             },
-            "type": "n8n-nodes-base.telegram",
-            "typeVersion": 1.2,
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.4,
             "position": [
                 3328,
                 -32
             ],
             "id": "3bf63869-21e4-4916-aff7-bfc327892edc",
-            "name": "Send Language Practice Audio",
-            "webhookId": "e0631a47-b406-4117-93be-f7b23e81d2ef",
-            "credentials": {
-                "telegramApi": {
-                    "id": "t63z4EHeYTEZtFAR",
-                    "name": "Telegram account"
-                }
-            }
+            "name": "Send Language Practice Audio"
         },
         {
             "parameters": {

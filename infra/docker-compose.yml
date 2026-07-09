@@ -29,7 +29,8 @@ services:
         condition: service_healthy
     restart: unless-stopped
     volumes:
-      - ${HF_CACHE_DIR:-./docker_volumes/hf_cache}:/root/.cache/huggingface
+      - ${HF_CACHE_DIR}:/root/.cache/huggingface
+      - ${AUDIO_DATA_DIR}:/data/audio
     environment:
       - ENV=${ENV}
       - LOG_LEVEL=${LOG_LEVEL}
@@ -53,9 +54,11 @@ services:
       - EMBEDDING_MODEL=${EMBEDDING_MODEL}
       - LLM_CHAT_MODEL=${LLM_CHAT_MODEL}
       - LLM_EXTRACTION_MODEL=${LLM_EXTRACTION_MODEL}
+      - LLM_PRONUNCIATION_MODEL=${LLM_PRONUNCIATION_MODEL}
       - INTENT_THRESHOLD=${INTENT_THRESHOLD}
       - CORS_ORIGINS=${CORS_ORIGINS}
       - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      - AUDIO_STORAGE_DIR=${AUDIO_STORAGE_DIR}
 
   web:
     build: ../web

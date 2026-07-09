@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: deploy-api
+  group: deploy-alfred
   cancel-in-progress: false
 
 jobs:

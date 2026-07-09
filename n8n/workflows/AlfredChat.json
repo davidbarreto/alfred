@@ -141,18 +141,25 @@
         },
         {
             "parameters": {
-                "resource": "audio",
-                "modelId": {
-                    "__rl": true,
-                    "value": "models/gemini-2.5-flash",
-                    "mode": "list",
-                    "cachedResultName": "models/gemini-2.5-flash"
+                "method": "POST",
+                "url": "http://api:8000/core/transcription",
+                "authentication": "genericCredentialType",
+                "genericAuthType": "httpBearerAuth",
+                "sendBody": true,
+                "contentType": "multipart-form-data",
+                "bodyParameters": {
+                    "parameters": [
+                        {
+                            "name": "audio",
+                            "parameterType": "formBinaryData",
+                            "inputDataFieldName": "data"
+                        }
+                    ]
                 },
-                "inputType": "binary",
                 "options": {}
             },
-            "type": "@n8n/n8n-nodes-langchain.googleGemini",
-            "typeVersion": 1.2,
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.4,
             "position": [
                 112,
                 160
@@ -160,9 +167,9 @@
             "id": "22da5927-a78e-4adc-a39b-8f66a407313c",
             "name": "Transcribe a recording",
             "credentials": {
-                "googlePalmApi": {
-                    "id": "aGj1lM58mJuDbCWB",
-                    "name": "Google Gemini(PaLM) Api account"
+                "httpBearerAuth": {
+                    "id": "oj5Yf1MhLsryeSrX",
+                    "name": "Bearer Auth account"
                 }
             }
         },
@@ -301,7 +308,7 @@
                         {
                             "id": "6df19985-f8fd-401f-88b7-a0786c220894",
                             "name": "text",
-                            "value": "={{ $json.content.parts[0].text }}",
+                            "value": "={{ $json.text }}",
                             "type": "string"
                         }
                     ]

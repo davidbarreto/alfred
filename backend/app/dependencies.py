@@ -37,6 +37,8 @@ from app.integrations.google_translate_tts.client import GoogleTranslateTtsClien
 from app.integrations.ffmpeg.client import FfmpegClient
 from app.integrations.file_storage.client import LocalFileStorage
 from app.integrations.google.audio_analysis_provider import GoogleAudioAnalysisProvider
+from app.integrations.google.transcription_provider import GoogleTranscriptionProvider
+from app.features.core.transcription.service import TranscriptionService
 from app.features.language.chunks.repository import ChunkRepository as LanguageChunkRepository
 from app.features.language.tracks.repository import TrackRepository
 from app.features.language.sessions.service import SessionService as LanguageSessionService
@@ -239,6 +241,15 @@ def get_audio_analysis_provider() -> GoogleAudioAnalysisProvider:
         raise RuntimeError("GOOGLE_API_KEY is not set")
     return GoogleAudioAnalysisProvider(api_key=s.google_api_key, model_name=s.llm_pronunciation_model)
 
+def get_transcription_provider() -> GoogleTranscriptionProvider:
+    s = get_settings()
+    if not s.google_api_key:
+        raise RuntimeError("GOOGLE_API_KEY is not set")
+    return GoogleTranscriptionProvider(api_key=s.google_api_key, model_name=s.llm_transcription_model)
+
+def get_transcription_service(session: AsyncSession = Depends(get_session)) -> TranscriptionService:
+    return TranscriptionService(provider=get_transcription_provider(), session=session)
+
 def get_shadowing_service(session: AsyncSession = Depends(get_session)) -> ShadowingService:
     return ShadowingService(
         session=session,
@@ -285,3 +296,4 @@ PronunciationServiceDep = Annotated[PronunciationService, Depends(get_pronunciat
 LanguageSessionServiceDep = Annotated[LanguageSessionService, Depends(get_language_session_service)]
 FileStorageDep = Annotated[LocalFileStorage, Depends(get_file_storage)]
 ShadowingServiceDep = Annotated[ShadowingService, Depends(get_shadowing_service)]
+TranscriptionServiceDep = Annotated[TranscriptionService, Depends(get_transcription_service)]

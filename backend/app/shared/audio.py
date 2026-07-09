@@ -70,3 +70,28 @@ class AudioAnalysisProvider(Protocol):
         translation: str | None,
         language_name: str,
     ) -> PronunciationAnalysisResult: ...
+
+
+@dataclass
+class TranscriptionResult:
+    """Plain speech-to-text result plus the raw LLM call metadata, for llm_calls logging."""
+
+    text: str
+    tokens_input: int | None
+    tokens_output: int | None
+
+
+class TranscriptionProvider(Protocol):
+    """Async interface for plain speech-to-text transcription.
+
+    Swap the implementation (Google Gemini, …) without touching the
+    transcription service layer.
+    """
+
+    @property
+    def provider(self) -> str: ...
+
+    @property
+    def model(self) -> str: ...
+
+    async def transcribe(self, audio: bytes, mime_type: str) -> TranscriptionResult: ...

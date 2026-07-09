@@ -37,6 +37,7 @@ class Settings(BaseSettings):
     llm_chat_temperature: float = Field(default=0.35, validation_alias="LLM_CHAT_TEMPERATURE")
     llm_extraction_model: str = Field(default="gemini-2.5-flash-lite", validation_alias="LLM_EXTRACTION_MODEL")
     llm_pronunciation_model: str = Field(default="gemini-2.5-flash", validation_alias="LLM_PRONUNCIATION_MODEL")
+    llm_transcription_model: str = Field(default="gemini-2.5-flash", validation_alias="LLM_TRANSCRIPTION_MODEL")
     intent_threshold: float = Field(default=0.75, validation_alias="INTENT_THRESHOLD")
 
     # Telegram

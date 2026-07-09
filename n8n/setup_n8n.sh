@@ -12,8 +12,8 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-INFRA_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
-REPO_DIR="$(cd "$INFRA_DIR/.." && pwd)"
+REPO_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+INFRA_DIR="$REPO_DIR/infra"
 N8N_CONTAINER="n8n"
 CREDS_TEMPLATE_DIR="$REPO_DIR/n8n/credentials"
 WORKFLOWS_DIR="$REPO_DIR/n8n/workflows"

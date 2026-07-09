@@ -32,6 +32,9 @@ from app.features.briefing.holiday_client import GooglePublicHolidayClient
 from app.features.language.tracks.service import TrackService
 from app.features.language.grammar_scope.service import GrammarScopeService
 from app.features.language.chunks.service import ChunkService as LanguageChunkService
+from app.features.language.chunks.pronunciation_service import PronunciationService
+from app.integrations.google_translate_tts.client import GoogleTranslateTtsClient
+from app.integrations.ffmpeg.client import FfmpegClient
 from app.features.language.sessions.service import SessionService as LanguageSessionService
 from app.features.organizer.contacts.service import ContactService
 from app.integrations.google_contacts.client import GoogleContactsClient
@@ -215,6 +218,9 @@ def get_grammar_scope_service(session: AsyncSession = Depends(get_session)) -> G
 def get_language_chunk_service(session: AsyncSession = Depends(get_session)) -> LanguageChunkService:
     return LanguageChunkService(session)
 
+def get_pronunciation_service() -> PronunciationService:
+    return PronunciationService(GoogleTranslateTtsClient(), FfmpegClient())
+
 def get_language_session_service(session: AsyncSession = Depends(get_session)) -> LanguageSessionService:
     return LanguageSessionService(session)
 
@@ -249,4 +255,5 @@ BriefingFormatterServiceDep = Annotated[BriefingFormatterService, Depends(get_br
 TrackServiceDep = Annotated[TrackService, Depends(get_track_service)]
 GrammarScopeServiceDep = Annotated[GrammarScopeService, Depends(get_grammar_scope_service)]
 ChunkServiceDep = Annotated[LanguageChunkService, Depends(get_language_chunk_service)]
+PronunciationServiceDep = Annotated[PronunciationService, Depends(get_pronunciation_service)]
 LanguageSessionServiceDep = Annotated[LanguageSessionService, Depends(get_language_session_service)]

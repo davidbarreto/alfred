@@ -1,7 +1,9 @@
+from typing import Literal
+
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 
 from app.api.auth import require_auth
-from app.dependencies import ChunkServiceDep
+from app.dependencies import ChunkServiceDep, PronunciationServiceDep
 from app.features.language.chunks.schemas import (
     ChunkCountRead,
     ChunkCreate,
@@ -20,6 +22,17 @@ async def get_daily_batch(
     track_id: int | None = None,
 ):
     return await service.get_daily_batch(track_id)
+
+
+@router.get("/pronunciation")
+async def get_pronunciation(
+    text: str,
+    lang: str,
+    service: PronunciationServiceDep,
+    format: Literal["mp3", "ogg"] = "mp3",
+):
+    audio, content_type = await service.get_audio(text, lang, format)
+    return Response(content=audio, media_type=content_type)
 
 
 @router.post("", response_model=ChunkRead, status_code=status.HTTP_201_CREATED)

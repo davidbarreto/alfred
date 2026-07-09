@@ -2,7 +2,7 @@
   "info": {
     "name": "Alfred - Language API",
     "_postman_id": "alfred-language-v1",
-    "description": "Run in order: Health Check → Create Track → Create Grammar Scope → Bulk Create Scopes → Create Chunk → Approve Chunk → Get Daily Batch → Record SRS Review → Record Shadowing → Get Daily Progress → List Sessions → Cleanup",
+    "description": "Run in order: Health Check → Create Track → Create Grammar Scope → Bulk Create Scopes → Create Chunk → Approve Chunk → Get Daily Batch → Record SRS Review → Record Shadowing → Get Daily Progress → List Sessions → Get Pronunciation (mp3/ogg) → Cleanup",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -750,7 +750,74 @@
       }
     },
     {
-      "name": "24 - Delete Grammar Scope",
+      "name": "24 - Get Pronunciation (mp3)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Content-Type is audio/mpeg', () => {",
+              "    pm.expect(pm.response.headers.get('Content-Type')).to.eql('audio/mpeg');",
+              "});",
+              "pm.test('Returns non-empty audio body', () => {",
+              "    pm.expect(pm.response.stream.byteLength).to.be.above(0);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/language/chunks/pronunciation?text=bonjour&lang=fr",
+          "host": ["{{base_url}}"],
+          "path": ["language", "chunks", "pronunciation"],
+          "query": [
+            {"key": "text", "value": "bonjour"},
+            {"key": "lang", "value": "fr"}
+          ]
+        }
+      }
+    },
+    {
+      "name": "25 - Get Pronunciation (ogg, for Telegram voice notes)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Content-Type is audio/ogg', () => {",
+              "    pm.expect(pm.response.headers.get('Content-Type')).to.eql('audio/ogg');",
+              "});",
+              "pm.test('Returns non-empty audio body', () => {",
+              "    pm.expect(pm.response.stream.byteLength).to.be.above(0);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/language/chunks/pronunciation?text=bonjour&lang=fr&format=ogg",
+          "host": ["{{base_url}}"],
+          "path": ["language", "chunks", "pronunciation"],
+          "query": [
+            {"key": "text", "value": "bonjour"},
+            {"key": "lang", "value": "fr"},
+            {"key": "format", "value": "ogg"}
+          ]
+        }
+      }
+    },
+    {
+      "name": "26 - Delete Grammar Scope",
       "event": [
         {
           "listen": "test",
@@ -773,7 +840,7 @@
       }
     },
     {
-      "name": "25 - Delete Chunk",
+      "name": "27 - Delete Chunk",
       "event": [
         {
           "listen": "test",
@@ -796,7 +863,7 @@
       }
     },
     {
-      "name": "26 - Delete Track",
+      "name": "28 - Delete Track",
       "event": [
         {
           "listen": "test",

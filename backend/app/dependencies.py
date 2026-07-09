@@ -36,7 +36,11 @@ from app.features.language.chunks.pronunciation_service import PronunciationServ
 from app.integrations.google_translate_tts.client import GoogleTranslateTtsClient
 from app.integrations.ffmpeg.client import FfmpegClient
 from app.integrations.file_storage.client import LocalFileStorage
+from app.integrations.google.audio_analysis_provider import GoogleAudioAnalysisProvider
+from app.features.language.chunks.repository import ChunkRepository as LanguageChunkRepository
+from app.features.language.tracks.repository import TrackRepository
 from app.features.language.sessions.service import SessionService as LanguageSessionService
+from app.features.language.sessions.shadowing_service import ShadowingService
 from app.features.organizer.contacts.service import ContactService
 from app.integrations.google_contacts.client import GoogleContactsClient
 from app.integrations.google_contacts.provider import GoogleContactsProvider
@@ -228,6 +232,23 @@ def get_pronunciation_service() -> PronunciationService:
 def get_language_session_service(session: AsyncSession = Depends(get_session)) -> LanguageSessionService:
     return LanguageSessionService(session)
 
+def get_audio_analysis_provider() -> GoogleAudioAnalysisProvider:
+    s = get_settings()
+    if not s.google_api_key:
+        raise RuntimeError("GOOGLE_API_KEY is not set")
+    return GoogleAudioAnalysisProvider(api_key=s.google_api_key, model_name=s.llm_pronunciation_model)
+
+def get_shadowing_service(session: AsyncSession = Depends(get_session)) -> ShadowingService:
+    return ShadowingService(
+        session=session,
+        session_service=get_language_session_service(session),
+        chunk_repo=LanguageChunkRepository(session),
+        track_repo=TrackRepository(session),
+        audio_storage=get_file_storage(),
+        audio_converter=FfmpegClient(),
+        analysis_provider=get_audio_analysis_provider(),
+    )
+
 # Dependencies shortcuts
 # DB
 DbSessionDep = Annotated[AsyncSession, Depends(get_session)]
@@ -262,3 +283,4 @@ ChunkServiceDep = Annotated[LanguageChunkService, Depends(get_language_chunk_ser
 PronunciationServiceDep = Annotated[PronunciationService, Depends(get_pronunciation_service)]
 LanguageSessionServiceDep = Annotated[LanguageSessionService, Depends(get_language_session_service)]
 FileStorageDep = Annotated[LocalFileStorage, Depends(get_file_storage)]
+ShadowingServiceDep = Annotated[ShadowingService, Depends(get_shadowing_service)]

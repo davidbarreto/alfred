@@ -2,7 +2,7 @@
   "info": {
     "name": "Alfred - Language API",
     "_postman_id": "alfred-language-v1",
-    "description": "Run in order: Health Check → Create Track → Create Grammar Scope → Bulk Create Scopes → Create Chunk → Approve Chunk → Get Daily Batch → Record SRS Review → Record Shadowing → Get Daily Progress → List Sessions → Get Pronunciation (mp3/ogg) → Cleanup",
+    "description": "Run in order: Health Check → Create Track → Create Grammar Scope → Bulk Create Scopes → Create Chunk → Approve Chunk → Get Daily Batch → Record SRS Review → Record Shadowing → Get Daily Progress → List Sessions → Get Pronunciation (mp3/ogg) → Upload/Get Shadowing Audio → Cleanup",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -817,7 +817,74 @@
       }
     },
     {
-      "name": "26 - Delete Grammar Scope",
+      "name": "26 - Upload Shadowing Audio",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+              "pm.test('Session recorded as shadowing with audio_ref', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json).to.have.property('id');",
+              "    pm.expect(json.session_type).to.eql('shadowing');",
+              "    pm.expect(json.audio_ref).to.be.a('string').and.not.empty;",
+              "    pm.environment.set('language_shadowing_session_id', json.id);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "formdata",
+          "formdata": [
+            {"key": "track_id", "value": "{{language_track_id}}", "type": "text"},
+            {"key": "chunk_id", "value": "{{language_chunk_id}}", "type": "text"},
+            {"key": "audio", "type": "file", "src": "fixtures/sample_audio.ogg"}
+          ]
+        },
+        "url": {
+          "raw": "{{base_url}}/language/sessions/shadowing/audio",
+          "host": ["{{base_url}}"],
+          "path": ["language", "sessions", "shadowing", "audio"]
+        }
+      }
+    },
+    {
+      "name": "27 - Get Shadowing Audio",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Content-Type is audio/ogg', () => {",
+              "    pm.expect(pm.response.headers.get('Content-Type')).to.eql('audio/ogg');",
+              "});",
+              "pm.test('Returns non-empty audio body', () => {",
+              "    pm.expect(pm.response.stream.byteLength).to.be.above(0);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/language/sessions/{{language_shadowing_session_id}}/audio",
+          "host": ["{{base_url}}"],
+          "path": ["language", "sessions", "{{language_shadowing_session_id}}", "audio"]
+        }
+      }
+    },
+    {
+      "name": "28 - Delete Grammar Scope",
       "event": [
         {
           "listen": "test",
@@ -840,7 +907,7 @@
       }
     },
     {
-      "name": "27 - Delete Chunk",
+      "name": "29 - Delete Chunk",
       "event": [
         {
           "listen": "test",
@@ -863,7 +930,7 @@
       }
     },
     {
-      "name": "28 - Delete Track",
+      "name": "30 - Delete Track",
       "event": [
         {
           "listen": "test",

@@ -51,7 +51,7 @@ jobs:
           script: |
             set -euo pipefail
             APP_DIR=/opt/stacks/alfred
-            COMPOSE="docker compose -f $APP_DIR/infra/docker-compose.yml"
+            COMPOSE="docker compose -f $APP_DIR/infra/docker-compose.yml --project-directory $APP_DIR/infra"
 
             echo "==> Pulling latest code..."
             if git -C "$APP_DIR" remote get-url origin &>/dev/null; then

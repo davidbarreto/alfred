@@ -1,3 +1,4 @@
+import json
 import pytest
 from datetime import datetime, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -15,6 +16,7 @@ from app.features.core.embeddings.schemas import EmbeddingSearchResult
 from app.features.core.messages.schemas import MessageRead
 from app.features.core.sessions.tables import Session
 from app.features.core.working_memory.schemas import WorkingMemoryRead
+from app.features.language.chunks.schemas import ChunkRead, DailyBatchRead
 from app.features.language.sessions.tables import LearningSession
 from app.shared.llm import LlmResponse
 
@@ -104,6 +106,22 @@ def _make_wm(key: str = "travel_context", value: str = "Belgium trip") -> Workin
     )
 
 
+def _make_chunk(chunk_id: int, text: str = "next phrase", translation: str = "next translation") -> ChunkRead:
+    now = datetime(2026, 1, 1, tzinfo=timezone.utc)
+    return ChunkRead(
+        id=chunk_id, track_id=3, grammar_scope_id=None, chunk_type="word",
+        text=text, translation=translation, example_sentence=None, example_translation=None,
+        cefr_level=None, frequency_rank=None, frequency_source=None,
+        stability=1.0, difficulty=1.0, due_at=now, last_review_at=None,
+        repetitions=0, lapses=0, consecutive_failures=0, state="new", status="active",
+        is_leech=False, created_at=now, updated_at=now,
+    )
+
+
+def _make_batch(track_id: int, chunks: list[ChunkRead]) -> DailyBatchRead:
+    return DailyBatchRead(track_id=track_id, track_code="pt", chunks=chunks, total_due=len(chunks))
+
+
 def _make_service(llm_text: str = "ok") -> tuple[ChatService, MagicMock, AsyncMock, AsyncMock, MagicMock]:
     session = AsyncMock()
     session.add = MagicMock()
@@ -119,6 +137,8 @@ def _make_service(llm_text: str = "ok") -> tuple[ChatService, MagicMock, AsyncMo
     session_summary_service.get_recent_summaries = AsyncMock(return_value=[])
     working_memory_service = AsyncMock()
     working_memory_service.list = AsyncMock(return_value=[])
+    chunk_service = AsyncMock()
+    chunk_service.get_daily_batch = AsyncMock(return_value=[])
     service = ChatService(
         session=session,
         llm_provider=llm_provider,
@@ -127,6 +147,7 @@ def _make_service(llm_text: str = "ok") -> tuple[ChatService, MagicMock, AsyncMo
         memory_extraction_service=memory_extraction_service,
         session_summary_service=session_summary_service,
         working_memory_service=working_memory_service,
+        chunk_service=chunk_service,
     )
     return service, llm_provider, embedding_service, message_service, memory_extraction_service
 
@@ -135,8 +156,9 @@ class TestChatServiceResponse:
     async def test_returns_llm_response(self):
         service, _, _, message_service, _ = _make_service("Hello from Alfred!")
         message_service.list.return_value = [_make_message("Hello")]
-        result = await service.chat(ChatRequest(session_id=1))
+        result, next_practice = await service.chat(ChatRequest(session_id=1))
         assert result == "Hello from Alfred!"
+        assert next_practice is None
 
     async def test_uses_last_user_message_as_agent_input(self):
         service, llm_provider, _, message_service, _ = _make_service()
@@ -212,7 +234,7 @@ class TestChatServiceMemorySearch:
         service, _, embedding_service, message_service, _ = _make_service("ok")
         message_service.list.return_value = [_make_message("hi")]
         embedding_service.search = AsyncMock(return_value=[])
-        result = await service.chat(ChatRequest(session_id=1))
+        result, _ = await service.chat(ChatRequest(session_id=1))
         assert result == "ok"
 
 
@@ -472,6 +494,74 @@ class TestChatServiceLanguagePracticeGrade:
         message_service.list.return_value = [_make_message("hi")]
         await service.chat(ChatRequest(session_id=1))
         mock_language_session_repository.return_value.get_sessions.assert_not_called()
+
+
+class TestChatServiceLanguageLoop:
+    async def test_advances_to_next_chunk_when_remaining(self, mock_language_session_repository):
+        service, _, _, message_service, _ = _make_service()
+        wm = _make_wm("language:pending", json.dumps({
+            "mode": "practice", "chunk_id": 42, "track_id": 3, "track_code": "pt",
+            "language_name": "Portuguese", "text": "a chuva caiu", "translation": "it rained",
+            "remaining": 3,
+        }))
+        wm = WorkingMemoryRead(id=99, key=wm.key, value=wm.value, importance=None,
+                               expires_at=None, session_id=None, created_at=wm.created_at)
+        service._working_memory_service.list.return_value = [wm]
+        service._chunk_service.get_daily_batch.return_value = [
+            _make_batch(3, [_make_chunk(42), _make_chunk(43, text="outra frase", translation="another phrase")])
+        ]
+        message_service.list.return_value = [_make_message("a chuva caiu")]
+
+        _, next_practice = await service.chat(ChatRequest(session_id=1))
+
+        service._working_memory_service.delete.assert_called_once_with(99)
+        service._working_memory_service.create.assert_called_once()
+        created_value = json.loads(service._working_memory_service.create.call_args[0][0].value)
+        assert created_value["chunk_id"] == 43
+        assert created_value["remaining"] == 2
+        assert next_practice is not None
+        assert next_practice.chunk_id == 43
+        assert next_practice.remaining == 2
+        assert next_practice.mode == "practice"
+        assert next_practice.track_code == "pt"
+
+    async def test_ends_loop_when_remaining_exhausted(self, mock_language_session_repository):
+        service, _, _, message_service, _ = _make_service()
+        wm = _make_wm("language:pending", json.dumps({
+            "mode": "practice", "chunk_id": 42, "track_id": 3, "track_code": "pt",
+            "language_name": "Portuguese", "text": "a chuva caiu", "translation": "it rained",
+            "remaining": 1,
+        }))
+        wm = WorkingMemoryRead(id=99, key=wm.key, value=wm.value, importance=None,
+                               expires_at=None, session_id=None, created_at=wm.created_at)
+        service._working_memory_service.list.return_value = [wm]
+        message_service.list.return_value = [_make_message("a chuva caiu")]
+
+        _, next_practice = await service.chat(ChatRequest(session_id=1))
+
+        service._working_memory_service.delete.assert_called_once_with(99)
+        service._working_memory_service.create.assert_not_called()
+        service._chunk_service.get_daily_batch.assert_not_called()
+        assert next_practice is None
+
+    async def test_ends_loop_when_no_more_due_chunks(self, mock_language_session_repository):
+        service, _, _, message_service, _ = _make_service()
+        wm = _make_wm("language:pending", json.dumps({
+            "mode": "review", "chunk_id": 42, "track_id": 3, "track_code": "pt",
+            "language_name": "Portuguese", "text": "bonjour", "translation": "hello",
+            "remaining": 3,
+        }))
+        wm = WorkingMemoryRead(id=99, key=wm.key, value=wm.value, importance=None,
+                               expires_at=None, session_id=None, created_at=wm.created_at)
+        service._working_memory_service.list.return_value = [wm]
+        service._chunk_service.get_daily_batch.return_value = [_make_batch(3, [_make_chunk(42)])]
+        message_service.list.return_value = [_make_message("yes I know it")]
+
+        _, next_practice = await service.chat(ChatRequest(session_id=1))
+
+        service._working_memory_service.delete.assert_called_once_with(99)
+        service._working_memory_service.create.assert_not_called()
+        assert next_practice is None
 
 
 class TestChatServiceMemoryExtraction:

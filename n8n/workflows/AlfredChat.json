@@ -614,47 +614,6 @@
         },
         {
             "parameters": {
-                "method": "POST",
-                "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent",
-                "authentication": "genericCredentialType",
-                "genericAuthType": "httpHeaderAuth",
-                "sendBody": true,
-                "specifyBody": "json",
-                "jsonBody": "={\n  \"contents\": [\n    {\n      \"parts\": [\n        {\n          \"text\": \"Say this script in a neutral {{ $json.result.language_name }} professional accent at a face pace enthusiastically: {{ $json.result.text }}\"\n        }\n      ]\n    }\n  ],\n  \"generationConfig\": {\n    \"responseModalities\": [\n      \"AUDIO\"\n    ],\n    \"speechConfig\": {\n      \"voiceConfig\": {\n        \"prebuiltVoiceConfig\": {\n          \"voiceName\": \"Umbriel\"\n        }\n      }\n    }\n  },\n  \"model\": \"gemini-2.5-flash-preview-tts\"\n}",
-                "options": {}
-            },
-            "type": "n8n-nodes-base.httpRequest",
-            "typeVersion": 4.4,
-            "position": [
-                2944,
-                -16
-            ],
-            "id": "57ae4b78-473d-41cb-a6f2-468404f14f65",
-            "name": "Gemini TTS",
-            "credentials": {
-                "httpHeaderAuth": {
-                    "id": "wMtRWjmxcQWQrEqV",
-                    "name": "Header Auth account"
-                }
-            },
-            "onError": "continueRegularOutput"
-        },
-        {
-            "parameters": {
-                "jsCode": "const part = $input.first().json.candidates[0].content.parts[0];\nconst pcm = Buffer.from(part.inlineData.data, 'base64');\n\nconst sampleRate = 24000;\nconst numChannels = 1;\nconst bitsPerSample = 16;\nconst byteRate = sampleRate * numChannels * bitsPerSample / 8;\nconst blockAlign = numChannels * bitsPerSample / 8;\n\nconst header = Buffer.alloc(44);\nheader.write('RIFF', 0);\nheader.writeUInt32LE(36 + pcm.length, 4);\nheader.write('WAVE', 8);\nheader.write('fmt ', 12);\nheader.writeUInt32LE(16, 16);\nheader.writeUInt16LE(1, 20);               // PCM format\nheader.writeUInt16LE(numChannels, 22);\nheader.writeUInt32LE(sampleRate, 24);\nheader.writeUInt32LE(byteRate, 28);\nheader.writeUInt16LE(blockAlign, 32);\nheader.writeUInt16LE(bitsPerSample, 34);\nheader.write('data', 36);\nheader.writeUInt32LE(pcm.length, 40);\n\nconst wav = Buffer.concat([header, pcm]);\n\nconst uniqueFileName = `speech_${Date.now()}.wav`;\nconst binary = await this.helpers.prepareBinaryData(wav, uniqueFileName, 'audio/wav');\nreturn [{ json: {}, binary: { audio: binary } }];\n"
-            },
-            "type": "n8n-nodes-base.code",
-            "typeVersion": 2,
-            "position": [
-                3136,
-                128
-            ],
-            "id": "5607251d-53b7-4a22-9156-3e502a1f6cfb",
-            "name": "Convert To Binary Data",
-            "onError": "continueErrorOutput"
-        },
-        {
-            "parameters": {
                 "conditions": {
                     "options": {
                         "caseSensitive": true,
@@ -734,43 +693,29 @@
         },
         {
             "parameters": {
-                "resource": "audio",
-                "operation": "analyze",
-                "modelId": {
-                    "__rl": true,
-                    "value": "models/gemini-2.5-flash",
-                    "mode": "list",
-                    "cachedResultName": "models/gemini-2.5-flash"
-                },
-                "text": "=The student was shadowing: \"{{ $('Get Working Memory').item.json.value.parseJson().text }}\" in {{ $('Get Working Memory').item.json.value.parseJson().language_name }} (traslation: {{ $('Get Working Memory').item.json.value.parseJson().translation }})\n\n  1. Transcribe exactly what they said.\n  2. Evaluate their pronunciation against the target.\n  Respond ONLY with JSON (no markdown fences, even to format text as json):\n  {\n    \"transcription\": \"...\",\n    \"score\": 85,\n    \"summary\": \"...\",\n    \"strengths\": [\"...\"],\n    \"issues\": [\"...\"],\n    \"tip\": \"...\"\n  }",
-                "inputType": "binary",
-                "binaryPropertyName": "=data",
-                "options": {}
-            },
-            "type": "@n8n/n8n-nodes-langchain.googleGemini",
-            "typeVersion": 1.2,
-            "position": [
-                112,
-                368
-            ],
-            "id": "8b54f40a-01e6-4f58-a770-b77937bac3aa",
-            "name": "Analyze audio",
-            "credentials": {
-                "googlePalmApi": {
-                    "id": "aGj1lM58mJuDbCWB",
-                    "name": "Google Gemini(PaLM) Api account"
-                }
-            }
-        },
-        {
-            "parameters": {
                 "method": "POST",
-                "url": "http://api:8000/language/sessions/shadowing",
+                "url": "http://api:8000/language/sessions/shadowing/audio",
                 "authentication": "genericCredentialType",
                 "genericAuthType": "httpBearerAuth",
                 "sendBody": true,
-                "specifyBody": "json",
-                "jsonBody": "={{ $json }}",
+                "contentType": "multipart-form-data",
+                "bodyParameters": {
+                    "parameters": [
+                        {
+                            "name": "track_id",
+                            "value": "={{ $('Get Working Memory').item.json.value.parseJson().track_id }}"
+                        },
+                        {
+                            "name": "chunk_id",
+                            "value": "={{ $('Get Working Memory').item.json.value.parseJson().chunk_id }}"
+                        },
+                        {
+                            "name": "audio",
+                            "parameterType": "formBinaryData",
+                            "inputDataFieldName": "data"
+                        }
+                    ]
+                },
                 "options": {}
             },
             "type": "n8n-nodes-base.httpRequest",
@@ -780,7 +725,7 @@
                 368
             ],
             "id": "693ca362-81ac-46bd-92b0-fc38a25ef74f",
-            "name": "Push Grade",
+            "name": "Record Shadowing Audio",
             "credentials": {
                 "httpBearerAuth": {
                     "id": "oj5Yf1MhLsryeSrX",
@@ -795,7 +740,7 @@
                         {
                             "id": "6df50a29-f49a-4128-807c-6841a2cbaab7",
                             "name": "text",
-                            "value": "={{ $('Combine analysis + arguments').item.json.ai_feedback_json.transcription }}",
+                            "value": "={{ $json.ai_feedback_json.transcription }}",
                             "type": "string"
                         }
                     ]
@@ -810,19 +755,6 @@
             ],
             "id": "442e30aa-eee8-4107-8d66-e61804c5faa6",
             "name": "Define Message from Practice"
-        },
-        {
-            "parameters": {
-                "jsCode": "const raw = $input.first().json.content.parts[0].text;\nconst cleaned = raw.replace(/^```json\\s*/, '').replace(/\\s*```$/, '').trim();\nconst analysisJson = JSON.parse(cleaned);\nconst wm = JSON.parse($('Get Working Memory').first().json.value);\n\nreturn [{\n  json: {\n    track_id: wm.track_id,\n    chunk_id: wm.chunk_id,\n    quality_score: analysisJson.score,\n    ai_feedback_json: analysisJson,\n    transcript_or_notes: analysisJson.transcription,\n  }\n}];\n"
-            },
-            "type": "n8n-nodes-base.code",
-            "typeVersion": 2,
-            "position": [
-                256,
-                368
-            ],
-            "id": "3e5f4aca-83dc-4052-bc2d-be62ab740af6",
-            "name": "Combine analysis + arguments"
         },
         {
             "parameters": {
@@ -1071,7 +1003,7 @@
         {
             "parameters": {
                 "chatId": "={{ $('Message Trigger').item.json.message?.chat?.id?.toString() || $('Message Trigger').item.json.callback_query?.message?.chat?.id?.toString() }}",
-                "text": "=Do you know: \"{{ $json.result.text }}\"?",
+                "text": "=Do you know: \"{{ $json.review_text }}\"?",
                 "replyMarkup": "inlineKeyboard",
                 "inlineKeyboard": {
                     "rows": [
@@ -1079,15 +1011,15 @@
                             "row": {
                                 "buttons": [
                                     {
-                                        "text": "✅ I know",
+                                        "text": "\u2705 I know",
                                         "additionalFields": {
-                                            "callback_data": "=know;{{ $json.result.track_id }};{{ $json.result.chunk_id }};3"
+                                            "callback_data": "=know;{{ $json.review_track_id }};{{ $json.review_chunk_id }};3"
                                         }
                                     },
                                     {
-                                        "text": "❌ Don't know",
+                                        "text": "\u274c Don't know",
                                         "additionalFields": {
-                                            "callback_data": "=dont_know;{{ $json.result.track_id }};{{ $json.result.chunk_id }};1"
+                                            "callback_data": "=dont_know;{{ $json.review_track_id }};{{ $json.review_chunk_id }};1"
                                         }
                                     }
                                 ]
@@ -1122,7 +1054,7 @@
                 "binaryData": true,
                 "binaryPropertyName": "=audio",
                 "additionalFields": {
-                    "caption": "=Shadow this: {{ $('Execute Commands').item.json.result.text }}"
+                    "caption": "=Shadow this: {{ $('Normalize Practice Prompt').item.json.shadow_text }}"
                 }
             },
             "type": "n8n-nodes-base.telegram",
@@ -1144,7 +1076,7 @@
         {
             "parameters": {
                 "chatId": "={{ $('Message Trigger').item.json.message.chat.id }}",
-                "text": "Listening to your audio... 🎧 Just a second!",
+                "text": "Listening to your audio... \ud83c\udfa7 Just a second!",
                 "additionalFields": {
                     "appendAttribution": false
                 }
@@ -1164,6 +1096,182 @@
                     "name": "Telegram account"
                 }
             }
+        },
+        {
+            "parameters": {
+                "method": "GET",
+                "url": "http://api:8000/language/chunks/pronunciation",
+                "authentication": "genericCredentialType",
+                "genericAuthType": "httpBearerAuth",
+                "sendQuery": true,
+                "queryParameters": {
+                    "parameters": [
+                        {
+                            "name": "text",
+                            "value": "={{ $('Normalize Practice Prompt').item.json.shadow_text }}"
+                        },
+                        {
+                            "name": "lang",
+                            "value": "={{ $('Normalize Practice Prompt').item.json.shadow_lang }}"
+                        },
+                        {
+                            "name": "format",
+                            "value": "ogg"
+                        }
+                    ]
+                },
+                "options": {
+                    "response": {
+                        "response": {
+                            "responseFormat": "file",
+                            "outputPropertyName": "audio"
+                        }
+                    }
+                }
+            },
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.4,
+            "position": [
+                2944,
+                -16
+            ],
+            "id": "820fdd35-2d7b-4c17-9993-34d6f99ffb68",
+            "name": "Get Pronunciation Audio",
+            "credentials": {
+                "httpBearerAuth": {
+                    "id": "oj5Yf1MhLsryeSrX",
+                    "name": "Bearer Auth account"
+                }
+            }
+        },
+        {
+            "parameters": {
+                "assignments": {
+                    "assignments": [
+                        {
+                            "id": "03ccc6f8-25e8-4cc5-bc4b-2f4bd9a5db45",
+                            "name": "shadow_text",
+                            "value": "={{ $json.result?.text ?? $json.next_practice?.text }}",
+                            "type": "string"
+                        },
+                        {
+                            "id": "b82d529c-9433-426e-ad2f-a0493874d852",
+                            "name": "shadow_lang",
+                            "value": "={{ $json.result?.track_code ?? $json.next_practice?.track_code }}",
+                            "type": "string"
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "type": "n8n-nodes-base.set",
+            "typeVersion": 3.4,
+            "position": [
+                2800,
+                -16
+            ],
+            "id": "8fc0d828-ad6f-4234-babd-4a20402cffaa",
+            "name": "Normalize Practice Prompt"
+        },
+        {
+            "parameters": {
+                "assignments": {
+                    "assignments": [
+                        {
+                            "id": "cf2a5654-be61-454d-a00a-c17ef6f60cce",
+                            "name": "review_text",
+                            "value": "={{ $json.result?.text ?? $json.next_practice?.text }}",
+                            "type": "string"
+                        },
+                        {
+                            "id": "73561347-e9b6-48b5-98bd-3d2d28e5fea8",
+                            "name": "review_track_id",
+                            "value": "={{ $json.result?.track_id ?? $json.next_practice?.track_id }}",
+                            "type": "string"
+                        },
+                        {
+                            "id": "619b7040-9e31-4dcf-ab9a-f159002ceca9",
+                            "name": "review_chunk_id",
+                            "value": "={{ $json.result?.chunk_id ?? $json.next_practice?.chunk_id }}",
+                            "type": "string"
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "type": "n8n-nodes-base.set",
+            "typeVersion": 3.4,
+            "position": [
+                2944,
+                304
+            ],
+            "id": "42b62834-9fe7-4347-b449-2e974bcb615d",
+            "name": "Normalize Review Prompt"
+        },
+        {
+            "parameters": {
+                "rules": {
+                    "values": [
+                        {
+                            "conditions": {
+                                "options": {
+                                    "caseSensitive": true,
+                                    "leftValue": "",
+                                    "typeValidation": "strict",
+                                    "version": 3
+                                },
+                                "conditions": [
+                                    {
+                                        "id": "0ee9d776-a2bf-4380-a011-ebe586be6fc6",
+                                        "leftValue": "={{ $json.next_practice?.mode }}",
+                                        "rightValue": "practice",
+                                        "operator": {
+                                            "type": "string",
+                                            "operation": "equals"
+                                        }
+                                    }
+                                ],
+                                "combinator": "and"
+                            },
+                            "renameOutput": true,
+                            "outputKey": "Continue Practice"
+                        },
+                        {
+                            "conditions": {
+                                "options": {
+                                    "caseSensitive": true,
+                                    "leftValue": "",
+                                    "typeValidation": "strict",
+                                    "version": 3
+                                },
+                                "conditions": [
+                                    {
+                                        "id": "57b15b6a-88f9-40b6-b5a0-9c41221f7f34",
+                                        "leftValue": "={{ $json.next_practice?.mode }}",
+                                        "rightValue": "review",
+                                        "operator": {
+                                            "type": "string",
+                                            "operation": "equals"
+                                        }
+                                    }
+                                ],
+                                "combinator": "and"
+                            },
+                            "renameOutput": true,
+                            "outputKey": "Continue Review"
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "type": "n8n-nodes-base.switch",
+            "typeVersion": 3.4,
+            "position": [
+                2320,
+                -150
+            ],
+            "id": "431a58d8-f190-416d-9bf3-fb6a8452cd91",
+            "name": "Decide Next Practice Mode"
         }
     ],
     "pinData": {},
@@ -1260,6 +1368,11 @@
                 [
                     {
                         "node": "Send Message",
+                        "type": "main",
+                        "index": 0
+                    },
+                    {
+                        "node": "Decide Next Practice Mode",
                         "type": "main",
                         "index": 0
                     }
@@ -1422,40 +1535,11 @@
                 ]
             ]
         },
-        "Gemini TTS": {
-            "main": [
-                [
-                    {
-                        "node": "Convert To Binary Data",
-                        "type": "main",
-                        "index": 0
-                    }
-                ]
-            ]
-        },
-        "Convert To Binary Data": {
-            "main": [
-                [
-                    {
-                        "node": "Send Language Practice Audio",
-                        "type": "main",
-                        "index": 0
-                    }
-                ],
-                [
-                    {
-                        "node": "Set Error Message",
-                        "type": "main",
-                        "index": 0
-                    }
-                ]
-            ]
-        },
         "Is Language Practice Active": {
             "main": [
                 [
                     {
-                        "node": "Analyze audio",
+                        "node": "Record Shadowing Audio",
                         "type": "main",
                         "index": 0
                     }
@@ -1480,44 +1564,11 @@
                 ]
             ]
         },
-        "Analyze audio": {
-            "main": [
-                [
-                    {
-                        "node": "Combine analysis + arguments",
-                        "type": "main",
-                        "index": 0
-                    }
-                ]
-            ]
-        },
-        "Push Grade": {
-            "main": [
-                [
-                    {
-                        "node": "Define Message from Practice",
-                        "type": "main",
-                        "index": 0
-                    }
-                ]
-            ]
-        },
         "Define Message from Practice": {
             "main": [
                 [
                     {
                         "node": "Aggregate Texts",
-                        "type": "main",
-                        "index": 0
-                    }
-                ]
-            ]
-        },
-        "Combine analysis + arguments": {
-            "main": [
-                [
-                    {
-                        "node": "Push Grade",
                         "type": "main",
                         "index": 0
                     }
@@ -1558,14 +1609,14 @@
             "main": [
                 [
                     {
-                        "node": "Gemini TTS",
+                        "node": "Normalize Practice Prompt",
                         "type": "main",
                         "index": 0
                     }
                 ],
                 [
                     {
-                        "node": "Send Language Review",
+                        "node": "Normalize Review Prompt",
                         "type": "main",
                         "index": 0
                     }
@@ -1617,6 +1668,68 @@
                 [
                     {
                         "node": "Get Working Memory",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Record Shadowing Audio": {
+            "main": [
+                [
+                    {
+                        "node": "Define Message from Practice",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Normalize Practice Prompt": {
+            "main": [
+                [
+                    {
+                        "node": "Get Pronunciation Audio",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Get Pronunciation Audio": {
+            "main": [
+                [
+                    {
+                        "node": "Send Language Practice Audio",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Normalize Review Prompt": {
+            "main": [
+                [
+                    {
+                        "node": "Send Language Review",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Decide Next Practice Mode": {
+            "main": [
+                [
+                    {
+                        "node": "Normalize Practice Prompt",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "Normalize Review Prompt",
                         "type": "main",
                         "index": 0
                     }

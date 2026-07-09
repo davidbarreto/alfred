@@ -25,12 +25,13 @@ async def chat(
     service: ChatServiceDep,
     session_service: SessionServiceDep,
 ) -> ChatResponse:
-    reply = await service.chat(request)
+    reply, next_practice = await service.chat(request)
     session = await session_service.get(request.session_id)
     return ChatResponse(
         response=reply,
         source=session.source if session else None,
         external_id=session.external_id if session else None,
+        next_practice=next_practice,
     )
 
 

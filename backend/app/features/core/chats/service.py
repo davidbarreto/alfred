@@ -29,13 +29,17 @@ from app.features.core.messages.schemas import MessageCreate, MessageFilters, Me
 from app.features.core.messages.service import MessageService
 from app.features.core.sessions.repository import SessionRepository
 from app.features.core.sessions.summary_service import SessionSummaryService
-from app.features.core.working_memory.schemas import WorkingMemoryFilters, WorkingMemoryRead
+from app.features.core.working_memory.schemas import WorkingMemoryCreate, WorkingMemoryFilters, WorkingMemoryRead
 from app.features.core.working_memory.service import WorkingMemoryService
+from app.features.language.chunks.service import ChunkService
 from app.features.language.sessions.repository import SessionRepository as LanguageSessionRepository
+from app.features.language.sessions.schemas import NextPracticePrompt
 from app.features.language.sessions.schemas import SessionFilters as LanguageSessionFilters
 from app.features.language.sessions.tables import LearningSession
 from app.integrations.llm_calls.repository import create_llm_call
 from app.shared.llm import LlmProvider, StreamMeta
+
+_LANGUAGE_PENDING_KEY = "language:pending"
 
 _PERSONA_PATH = pathlib.Path(__file__).parents[3] / "assistant" / "persona.md"
 _HISTORY_LIMIT = 10
@@ -98,7 +102,7 @@ def _build_system_prompt(
     if working_memories:
         lines = "\n".join(f"- {wm.key}: {wm.value}" for wm in working_memories)
         section = f"## Active context\n{lines}"
-        pending_wm = next((wm for wm in working_memories if wm.key == "language:pending"), None)
+        pending_wm = next((wm for wm in working_memories if wm.key == _LANGUAGE_PENDING_KEY), None)
         if pending_wm:
             try:
                 pending_data = json.loads(pending_wm.value)
@@ -174,6 +178,7 @@ class ChatService:
         memory_extraction_service: MemoryExtractionService,
         session_summary_service: SessionSummaryService,
         working_memory_service: WorkingMemoryService,
+        chunk_service: ChunkService,
     ) -> None:
         self._session = session
         self._llm_provider = llm_provider
@@ -182,6 +187,7 @@ class ChatService:
         self._memory_extraction_service = memory_extraction_service
         self._session_summary_service = session_summary_service
         self._working_memory_service = working_memory_service
+        self._chunk_service = chunk_service
 
     async def _fetch_history(self, session_id: int) -> list[MessageRead]:
         session = await SessionRepository(self._session).get(session_id)
@@ -193,7 +199,56 @@ class ChatService:
             MessageFilters(session_id=session_id, limit=_HISTORY_LIMIT + 1)
         )
 
-    async def chat(self, request: ChatRequest) -> str:
+    async def _advance_language_loop(self, pending_wm: WorkingMemoryRead) -> NextPracticePrompt | None:
+        """Decrement the pending practice/review loop and either move it to the next due
+        chunk or end it. Must run after the coaching reply is generated — the WM still has
+        to point at the just-completed chunk while `chat()` builds that reply."""
+        try:
+            data = json.loads(pending_wm.value)
+        except (json.JSONDecodeError, AttributeError):
+            await self._working_memory_service.delete(pending_wm.id)
+            return None
+
+        remaining = int(data.get("remaining", 1)) - 1
+        next_chunk = None
+        if remaining > 0:
+            batches = await self._chunk_service.get_daily_batch(data.get("track_id"))
+            due = [c for batch in batches for c in batch.chunks if c.id != data.get("chunk_id")]
+            if due:
+                next_chunk = due[0]
+
+        await self._working_memory_service.delete(pending_wm.id)
+
+        if next_chunk is None:
+            logger.info("Chat: language loop ended wm_id=%d remaining=%d", pending_wm.id, max(remaining, 0))
+            return None
+
+        new_data = {
+            **data,
+            "chunk_id": next_chunk.id,
+            "text": next_chunk.text,
+            "translation": next_chunk.translation,
+            "remaining": remaining,
+        }
+        await self._working_memory_service.create(WorkingMemoryCreate(
+            key=_LANGUAGE_PENDING_KEY, value=json.dumps(new_data), importance=1.0,
+        ))
+        logger.info(
+            "Chat: language loop advanced wm_id=%d next_chunk_id=%d remaining=%d",
+            pending_wm.id, next_chunk.id, remaining,
+        )
+        return NextPracticePrompt(
+            mode=data.get("mode", "practice"),
+            track_id=data["track_id"],
+            track_code=data.get("track_code", ""),
+            chunk_id=next_chunk.id,
+            text=next_chunk.text,
+            translation=next_chunk.translation,
+            language_name=data.get("language_name", ""),
+            remaining=remaining,
+        )
+
+    async def chat(self, request: ChatRequest) -> tuple[str, NextPracticePrompt | None]:
         logger.info("Chat: session_id=%s", request.session_id)
         messages = await self._fetch_history(request.session_id)
         if not messages:
@@ -209,7 +264,7 @@ class ChatService:
         logger.debug("Chat: %d active working memory entries loaded", len(working_memories))
 
         language_session: LearningSession | None = None
-        pending_wm = next((wm for wm in working_memories if wm.key == "language:pending"), None)
+        pending_wm = next((wm for wm in working_memories if wm.key == _LANGUAGE_PENDING_KEY), None)
         if pending_wm:
             logger.debug("Chat: language pending mode — skipping embeddings, summaries, daily context")
             memories, recent_summaries, daily_context = [], [], ""
@@ -281,10 +336,9 @@ class ChatService:
             MessageCreate(session_id=request.session_id, role="assistant", content=response_text)
         )
 
-        for wm in working_memories:
-            if wm.key == "language:pending":
-                await self._working_memory_service.delete(wm.id)
-                logger.info("Chat: cleared language pending WM id=%d", wm.id)
+        next_practice: NextPracticePrompt | None = None
+        if pending_wm:
+            next_practice = await self._advance_language_loop(pending_wm)
 
         asyncio.create_task(
             self._memory_extraction_service.extract_and_save(
@@ -293,7 +347,7 @@ class ChatService:
             )
         )
 
-        return response_text
+        return response_text, next_practice
 
     async def stream_chat(self, request: ChatRequest) -> AsyncGenerator[str, None]:
         logger.info("StreamChat: session_id=%s", request.session_id)
@@ -308,7 +362,7 @@ class ChatService:
         working_memories = await self._working_memory_service.list(WorkingMemoryFilters(active_only=True))
 
         language_session: LearningSession | None = None
-        pending_wm = next((wm for wm in working_memories if wm.key == "language:pending"), None)
+        pending_wm = next((wm for wm in working_memories if wm.key == _LANGUAGE_PENDING_KEY), None)
         if pending_wm:
             memories, recent_summaries, daily_context = [], [], ""
             try:
@@ -384,7 +438,7 @@ class ChatService:
         )
 
         for wm in working_memories:
-            if wm.key == "language:pending":
+            if wm.key == _LANGUAGE_PENDING_KEY:
                 await self._working_memory_service.delete(wm.id)
                 logger.info("StreamChat: cleared language pending WM id=%d", wm.id)
 

@@ -88,11 +88,13 @@ class TestHandleLanguagePractice:
         result = await handle_language("practice", {"language_code": "en"}, track_svc, chunk_svc, wm_svc)
         assert result["chunk_id"] == 42
         assert result["track_id"] == 3
+        assert result["track_code"] == "en"
         assert result["wm_id"] == 7
         assert result["language_name"] == "English"
         assert result["text"] == "The rain fell all night long"
         assert result["translation"] == "A chuva caiu durante a noite toda"
         assert result["mode"] == "practice"
+        assert result["remaining"] == 5
 
     async def test_creates_wm_with_correct_key_and_value(self):
         track_svc, chunk_svc, wm_svc = _make_services()
@@ -104,9 +106,30 @@ class TestHandleLanguagePractice:
         assert payload["mode"] == "practice"
         assert payload["chunk_id"] == 42
         assert payload["track_id"] == 3
+        assert payload["track_code"] == "en"
         assert payload["language_name"] == "English"
         assert payload["text"] == "The rain fell all night long"
         assert payload["translation"] == "A chuva caiu durante a noite toda"
+        assert payload["remaining"] == 5
+
+    async def test_default_round_count_when_not_specified(self):
+        track_svc, chunk_svc, wm_svc = _make_services()
+        result = await handle_language("practice", {"language_code": "en"}, track_svc, chunk_svc, wm_svc)
+        assert result["remaining"] == 5
+
+    async def test_uses_explicit_round_count(self):
+        track_svc, chunk_svc, wm_svc = _make_services()
+        result = await handle_language(
+            "practice", {"language_code": "en", "count": "3"}, track_svc, chunk_svc, wm_svc
+        )
+        assert result["remaining"] == 3
+
+    async def test_falls_back_to_default_on_invalid_count(self):
+        track_svc, chunk_svc, wm_svc = _make_services()
+        result = await handle_language(
+            "practice", {"language_code": "en", "count": "not-a-number"}, track_svc, chunk_svc, wm_svc
+        )
+        assert result["remaining"] == 5
 
     async def test_clears_existing_pending_wm_before_creating_new(self):
         old_wm = _make_wm_read(id=5, chunk_id=10)
@@ -144,7 +167,7 @@ class TestHandleLanguagePractice:
     async def test_raises_400_for_unknown_language_command(self):
         track_svc, chunk_svc, wm_svc = _make_services()
         with pytest.raises(HTTPException) as exc_info:
-            await handle_language("stop", {}, track_svc, chunk_svc, wm_svc)
+            await handle_language("bogus", {}, track_svc, chunk_svc, wm_svc)
         assert exc_info.value.status_code == 400
 
     async def test_raises_400_when_language_code_missing(self):
@@ -204,6 +227,21 @@ class TestHandleLanguageReview:
         assert exc_info.value.status_code == 400
 
 
+class TestHandleLanguageStop:
+    async def test_stop_clears_pending_wm(self):
+        existing = _make_wm_read(id=5, chunk_id=10)
+        track_svc, chunk_svc, wm_svc = _make_services(existing_wm=[existing])
+        result = await handle_language("stop", {}, track_svc, chunk_svc, wm_svc)
+        wm_svc.delete.assert_called_once_with(5)
+        assert result["mode"] == "stopped"
+
+    async def test_stop_is_noop_when_nothing_pending(self):
+        track_svc, chunk_svc, wm_svc = _make_services(existing_wm=[])
+        result = await handle_language("stop", {}, track_svc, chunk_svc, wm_svc)
+        wm_svc.delete.assert_not_called()
+        assert result["mode"] == "stopped"
+
+
 class TestLanguageCommandRegistry:
     async def test_detect_practice_command(self):
         from app.assistant.commands.resolver import detect_commands
@@ -244,3 +282,41 @@ class TestLanguageCommandRegistry:
         from app.assistant.commands.resolver import detect_commands
         commands = await detect_commands("/review")
         assert commands == []
+
+    async def test_practice_parses_optional_count(self):
+        from app.assistant.commands.resolver import detect_commands
+        commands = await detect_commands("/practice pt 3")
+        assert len(commands) == 1
+        assert commands[0].args["language_code"] == "pt"
+        assert commands[0].args["count"] == "3"
+
+    async def test_practice_without_count_has_no_count_arg(self):
+        from app.assistant.commands.resolver import detect_commands
+        commands = await detect_commands("/practice pt")
+        assert "count" not in commands[0].args
+
+    async def test_review_parses_optional_count(self):
+        from app.assistant.commands.resolver import detect_commands
+        commands = await detect_commands("/review fr 10")
+        assert len(commands) == 1
+        assert commands[0].args["language_code"] == "fr"
+        assert commands[0].args["count"] == "10"
+
+    async def test_detect_stop_command(self):
+        from app.assistant.commands.resolver import detect_commands
+        commands = await detect_commands("/stop")
+        assert len(commands) == 1
+        assert commands[0].type == "language"
+        assert commands[0].command == "stop"
+
+    async def test_detect_stop_practice_alias(self):
+        from app.assistant.commands.resolver import detect_commands
+        commands = await detect_commands("/stop-practice")
+        assert len(commands) == 1
+        assert commands[0].command == "stop"
+
+    async def test_detect_stop_review_alias(self):
+        from app.assistant.commands.resolver import detect_commands
+        commands = await detect_commands("/stop-review")
+        assert len(commands) == 1
+        assert commands[0].command == "stop"

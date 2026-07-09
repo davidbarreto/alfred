@@ -13,6 +13,18 @@ from app.features.language.tracks.service import TrackService
 logger = logging.getLogger(__name__)
 
 _WM_KEY = "language:pending"
+_DEFAULT_ROUND_COUNT = 5
+
+
+def _parse_count(arguments: dict[str, Any]) -> int:
+    raw = arguments.get("count")
+    if raw is None:
+        return _DEFAULT_ROUND_COUNT
+    try:
+        count = int(str(raw).strip())
+    except ValueError:
+        return _DEFAULT_ROUND_COUNT
+    return count if count > 0 else _DEFAULT_ROUND_COUNT
 
 
 async def handle_language(
@@ -28,6 +40,8 @@ async def handle_language(
         return await _handle_practice(arguments, track_service, chunk_service, working_memory_service)
     if command == "review":
         return await _handle_review(arguments, track_service, chunk_service, working_memory_service)
+    if command == "stop":
+        return await _handle_stop(working_memory_service)
 
     raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Unknown language command: {command}")
 
@@ -74,6 +88,7 @@ async def _handle_practice(
 
     track, chunk = await _resolve_track_and_chunk(language_code, track_service, chunk_service)
     await _clear_pending(working_memory_service)
+    count = _parse_count(arguments)
 
     wm = await working_memory_service.create(WorkingMemoryCreate(
         key=_WM_KEY,
@@ -81,15 +96,17 @@ async def _handle_practice(
             "mode": "practice",
             "chunk_id": chunk.id,
             "track_id": track.id,
+            "track_code": track.code,
             "language_name": track.name,
             "text": chunk.text,
             "translation": chunk.translation,
+            "remaining": count,
         }),
         importance=1.0,
     ))
     logger.info(
-        "handle_language: practice started track=%s chunk_id=%d wm_id=%d",
-        language_code, chunk.id, wm.id,
+        "handle_language: practice started track=%s chunk_id=%d wm_id=%d rounds=%d",
+        language_code, chunk.id, wm.id, count,
     )
 
     return {
@@ -97,9 +114,11 @@ async def _handle_practice(
         "wm_id": wm.id,
         "chunk_id": chunk.id,
         "track_id": track.id,
+        "track_code": track.code,
         "language_name": track.name,
         "text": chunk.text,
         "translation": chunk.translation,
+        "remaining": count,
     }
 
 
@@ -115,6 +134,7 @@ async def _handle_review(
 
     track, chunk = await _resolve_track_and_chunk(language_code, track_service, chunk_service)
     await _clear_pending(working_memory_service)
+    count = _parse_count(arguments)
 
     wm = await working_memory_service.create(WorkingMemoryCreate(
         key=_WM_KEY,
@@ -122,15 +142,17 @@ async def _handle_review(
             "mode": "review",
             "chunk_id": chunk.id,
             "track_id": track.id,
+            "track_code": track.code,
             "language_name": track.name,
             "text": chunk.text,
             "translation": chunk.translation,
+            "remaining": count,
         }),
         importance=1.0,
     ))
     logger.info(
-        "handle_language: review started track=%s chunk_id=%d wm_id=%d",
-        language_code, chunk.id, wm.id,
+        "handle_language: review started track=%s chunk_id=%d wm_id=%d rounds=%d",
+        language_code, chunk.id, wm.id, count,
     )
 
     return {
@@ -138,7 +160,15 @@ async def _handle_review(
         "wm_id": wm.id,
         "chunk_id": chunk.id,
         "track_id": track.id,
+        "track_code": track.code,
         "language_name": track.name,
         "text": chunk.text,
         "translation": chunk.translation,
+        "remaining": count,
     }
+
+
+async def _handle_stop(working_memory_service: WorkingMemoryService) -> dict[str, Any]:
+    await _clear_pending(working_memory_service)
+    logger.info("handle_language: practice/review session stopped")
+    return {"mode": "stopped"}

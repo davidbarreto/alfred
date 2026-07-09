@@ -75,3 +75,16 @@ class DailyProgressRead(BaseModel):
     daily_quota: int
     completed_today: int
     quota_met: bool
+
+
+class NextPracticePrompt(BaseModel):
+    """The next rep in an active practice/review loop, returned after a chat reply so the
+    caller (n8n) can prompt the user again without a separate lookup."""
+    mode: Literal["practice", "review"]
+    track_id: int
+    track_code: str
+    chunk_id: int
+    text: str
+    translation: str | None
+    language_name: str
+    remaining: int

@@ -254,15 +254,20 @@ COMMAND_DEFINITIONS = {
             "aliases": ["/practice", "/pr"],
             "flags": {},
             "requires_args": True,
-            "arg_keys": ["language_code"],
+            "arg_keys": ["language_code", "count"],
         },
         "review": {
             "description": "Start an SRS review session for a language",
             "aliases": ["/review", "/rv"],
             "flags": {},
             "requires_args": True,
-            "arg_keys": ["language_code"],
-        }
+            "arg_keys": ["language_code", "count"],
+        },
+        "stop": {
+            "description": "Stop the active language practice or review session",
+            "aliases": ["/stop", "/stop-practice", "/stop-review"],
+            "flags": {},
+        },
     },
     "recall": {
         "search": {

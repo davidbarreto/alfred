@@ -9,7 +9,8 @@ TaskPriority: TypeAlias = Literal["LOW", "MEDIUM", "HIGH"]
 TaskUrgency: TypeAlias = Literal["NORMAL", "URGENT"]
 
 # Types for Filter
-TaskStatusFilter: TypeAlias = Literal["TODO", "DOING", "DONE", "CANCELLED", "ALL"]
+# "ACTIVE" excludes terminal states (DONE, CANCELLED) — used to hide finished tasks by default
+TaskStatusFilter: TypeAlias = Literal["TODO", "DOING", "DONE", "CANCELLED", "ALL", "ACTIVE"]
 TaskPriorityFilter: TypeAlias = Literal["LOW", "MEDIUM", "HIGH", "ALL"]
 TaskUrgencyFilter: TypeAlias = Literal["NORMAL", "URGENT", "ALL"]
 

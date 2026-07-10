@@ -11,12 +11,12 @@ from app.templates_config import templates
 router = APIRouter(prefix="/tasks")
 
 _FILTER_DEFS = {
-    "all":       {"label": "All",       "status": "ALL"},
+    "all":       {"label": "All",       "status": "ACTIVE"},
     "today":     {"label": "Today",     "status": "TODO"},
     "this_week": {"label": "This week", "status": "TODO"},
-    "habits":    {"label": "Habits",    "status": "ALL"},
-    "work":      {"label": "Work",      "status": "ALL", "tags": ["work"]},
-    "personal":  {"label": "Personal",  "status": "ALL", "tags": ["personal"]},
+    "habits":    {"label": "Habits",    "status": "ACTIVE"},
+    "work":      {"label": "Work",      "status": "ACTIVE", "tags": ["work"]},
+    "personal":  {"label": "Personal",  "status": "ACTIVE", "tags": ["personal"]},
     "completed": {"label": "Completed", "status": "DONE"},
 }
 

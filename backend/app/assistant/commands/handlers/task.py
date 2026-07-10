@@ -86,7 +86,7 @@ async def handle_task(
         }
 
     if command == "list":
-        raw_status = arguments.get("status", "ALL")
+        raw_status = arguments.get("status", "ACTIVE")
         raw_priority = arguments.get("priority")
         filters = TaskFilters(
             status=cast(TaskStatusFilter, str(raw_status).upper()),

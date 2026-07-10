@@ -25,7 +25,9 @@ class TaskRepository:
 
     async def get_tasks(self, task_filter: TaskFilters) -> list[Task]:
         query = select(Task).options(selectinload(Task.tags)).where(Task.deleted_at.is_(None))
-        if task_filter.status != "ALL":
+        if task_filter.status == "ACTIVE":
+            query = query.where(Task.status.not_in(["DONE", "CANCELLED"]))
+        elif task_filter.status != "ALL":
             query = query.where(Task.status == task_filter.status)
         if task_filter.priority != "ALL":
             query = query.where(Task.priority == task_filter.priority)

@@ -46,7 +46,10 @@
     <!-- Task card -->
     <div id="task-card" class="card bg-white w-full p-6 space-y-4">
       <div class="flex items-center justify-between">
-        <span id="task-type-badge" class="px-2 py-0.5 rounded text-xs bg-purple-50 text-purple-600 font-medium"></span>
+        <div class="flex items-center gap-1.5">
+          <span id="task-type-badge" class="px-2 py-0.5 rounded text-xs bg-purple-50 text-purple-600 font-medium"></span>
+          <span id="task-level-badge" class="hidden text-[10px] font-semibold px-1.5 py-0.5 rounded bg-purple-50 text-purple-600"></span>
+        </div>
         <div class="flex items-center gap-3">
           <span id="timer" class="hidden text-sm font-semibold text-purple-600 tabular-nums"></span>
           <span class="text-xs font-medium text-gray-400 uppercase tracking-widest">{{ track.code | upper }}</span>
@@ -190,6 +193,9 @@ function showTask() {
   stopPassage();
   const spoken = SPOKEN_TYPES.includes(task.task_type);
   document.getElementById("task-type-badge").textContent = TASK_LABELS[task.task_type] || task.task_type;
+  const levelBadge = document.getElementById("task-level-badge");
+  levelBadge.textContent = task.cefr_level || "";
+  levelBadge.classList.toggle("hidden", !task.cefr_level);
 
   // For retell tasks the passage is embedded in prompt_text (for the chat flow);
   // here we show only the instruction and keep the passage behind play/show-text.

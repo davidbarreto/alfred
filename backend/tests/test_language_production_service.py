@@ -37,6 +37,7 @@ def _make_chunk_read(**kwargs):
     chunk.translation = kwargs.get("translation", "to talk about something")
     chunk.example_sentence = kwargs.get("example_sentence", None)
     chunk.example_translation = kwargs.get("example_translation", None)
+    chunk.cefr_level = kwargs.get("cefr_level", "B1")
     return chunk
 
 
@@ -234,6 +235,7 @@ class TestGetNextTask:
         assert task.track_code == "fr"
         assert task.language_name == "French"
         assert task.total_due == 4
+        assert task.cefr_level == "B1"
         assert "parler de quelque chose" in task.prompt_text
 
     async def test_rotates_task_type_from_last_session(self):

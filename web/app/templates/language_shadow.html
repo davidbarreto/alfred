@@ -37,7 +37,10 @@
 
     <!-- Card -->
     <div id="shadow-card" class="card bg-white w-full flex flex-col items-center justify-center p-8 gap-3" style="min-height: 220px;">
-      <span class="text-xs font-medium text-gray-400 uppercase tracking-widest" id="card-lang">{{ track.code | upper }}</span>
+      <div class="flex items-center gap-1.5">
+        <span class="text-xs font-medium text-gray-400 uppercase tracking-widest" id="card-lang">{{ track.code | upper }}</span>
+        <span id="card-level" class="hidden text-[10px] font-semibold px-1.5 py-0.5 rounded bg-purple-50 text-purple-600"></span>
+      </div>
       <div class="flex items-center gap-2">
         <p class="text-3xl font-semibold text-gray-900 text-center" id="card-text"></p>
         <button type="button" id="pronounce-btn" onclick="playReference();"
@@ -95,6 +98,9 @@ function showCard(i) {
   if (i >= total) { showCompletion(); return; }
   const c = chunks[i];
   document.getElementById("card-text").textContent = c.text;
+  const levelEl = document.getElementById("card-level");
+  levelEl.textContent = c.cefr_level || "";
+  levelEl.classList.toggle("hidden", !c.cefr_level);
   document.getElementById("card-translation").textContent = c.translation || "";
   document.getElementById("feedback-area").classList.add("hidden");
   document.getElementById("shadow-status").textContent = "Record yourself saying it and get instant feedback.";

@@ -196,6 +196,7 @@ class ProductionService:
             prompt_text=prompt_text,
             text=chunk.text,
             translation=chunk.translation,
+            cefr_level=chunk.cefr_level,
             total_due=batch.total_due,
         )
 

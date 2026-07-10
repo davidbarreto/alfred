@@ -23,6 +23,7 @@ class ProductionTaskRead(BaseModel):
     prompt_text: str
     text: str | None
     translation: str | None
+    cefr_level: str | None = None
     total_due: int
     time_limit_seconds: int | None = None
     # Set for "retell" tasks: the passage to listen to (also embedded in prompt_text).

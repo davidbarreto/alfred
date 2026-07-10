@@ -44,7 +44,10 @@
         <!-- Front -->
         <div id="card-front" class="card bg-white w-full absolute inset-0 flex flex-col items-center justify-center p-8 gap-3"
              style="backface-visibility: hidden;">
-          <span class="text-xs font-medium text-gray-400 uppercase tracking-widest" id="front-lang">{{ track.code | upper }}</span>
+          <div class="flex items-center gap-1.5">
+            <span class="text-xs font-medium text-gray-400 uppercase tracking-widest" id="front-lang">{{ track.code | upper }}</span>
+            <span id="front-level" class="hidden text-[10px] font-semibold px-1.5 py-0.5 rounded bg-[#E6F1FB] text-[#0C447C]"></span>
+          </div>
           <div class="flex items-center gap-2">
             <p class="text-3xl font-semibold text-gray-900 text-center" id="front-text"></p>
             <button type="button" id="pronounce-btn" onclick="event.stopPropagation(); playPronunciation();"
@@ -124,6 +127,9 @@ function showCard(i) {
   flipped = false;
   document.getElementById("card-inner").style.transform = "rotateY(0deg)";
   document.getElementById("front-text").textContent = c.text;
+  const levelEl = document.getElementById("front-level");
+  levelEl.textContent = c.cefr_level || "";
+  levelEl.classList.toggle("hidden", !c.cefr_level);
   document.getElementById("back-translation").textContent = c.translation;
   const ex = document.getElementById("back-example");
   ex.textContent = c.example_sentence || "";

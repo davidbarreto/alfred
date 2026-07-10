@@ -1,6 +1,826 @@
-# Vocabulary seed for de. Hand-crafted A2 entries.
+# Vocabulary seed for de. Hand-crafted A1 and A2 entries.
 # seed_language_chunks.py loads this on startup (idempotent).
 de:
+# === A1 BEGINNER VOCABULARY ===
+# Greetings and politeness
+- type: word
+  text: Hallo
+  translation: hello
+  example: Hallo, wie heißt du?
+  example_translation: Hello, what is your name?
+  cefr_level: A1
+  frequency_rank: 1
+- type: word
+  text: Guten Morgen
+  translation: good morning
+  example: Guten Morgen! Wie geht es dir?
+  example_translation: Good morning! How are you?
+  cefr_level: A1
+  frequency_rank: 2
+- type: word
+  text: Guten Abend
+  translation: good evening
+  example: Guten Abend, wie war dein Tag?
+  example_translation: Good evening, how was your day?
+  cefr_level: A1
+  frequency_rank: 3
+- type: word
+  text: Auf Wiedersehen
+  translation: goodbye
+  example: Auf Wiedersehen! Bis bald!
+  example_translation: Goodbye! See you soon!
+  cefr_level: A1
+  frequency_rank: 4
+- type: word
+  text: Tschüss
+  translation: bye (informal)
+  example: Tschüss, bis morgen!
+  example_translation: Bye, see you tomorrow!
+  cefr_level: A1
+  frequency_rank: 5
+- type: word
+  text: Danke
+  translation: thank you
+  example: Danke für deine Hilfe!
+  example_translation: Thanks for your help!
+  cefr_level: A1
+  frequency_rank: 6
+- type: word
+  text: Bitte
+  translation: please / you're welcome
+  example: Ein Kaffee, bitte!
+  example_translation: A coffee, please!
+  cefr_level: A1
+  frequency_rank: 7
+- type: word
+  text: Entschuldigung
+  translation: excuse me / sorry
+  example: Entschuldigung, wo ist der Bahnhof?
+  example_translation: Excuse me, where is the train station?
+  cefr_level: A1
+  frequency_rank: 8
+- type: word
+  text: ja
+  translation: "yes"
+  example: "Kommt du mit? — Ja, natürlich!"
+  example_translation: "Are you coming? — Yes, of course!"
+  cefr_level: A1
+  frequency_rank: 9
+- type: word
+  text: nein
+  translation: "no"
+  example: "Magst du Kaffee? — Nein, danke."
+  example_translation: "Do you like coffee? — No, thank you."
+  cefr_level: A1
+  frequency_rank: 10
+# Pronouns
+- type: word
+  text: ich
+  translation: I
+  example: Ich bin David.
+  example_translation: I am David.
+  cefr_level: A1
+  frequency_rank: 11
+- type: word
+  text: du
+  translation: you (informal singular)
+  example: Du bist sehr nett.
+  example_translation: You are very nice.
+  cefr_level: A1
+  frequency_rank: 12
+- type: word
+  text: er
+  translation: he
+  example: Er ist Arzt.
+  example_translation: He is a doctor.
+  cefr_level: A1
+  frequency_rank: 13
+- type: word
+  text: sie
+  translation: she / they (formal you)
+  example: Sie kommt aus Berlin.
+  example_translation: She comes from Berlin.
+  cefr_level: A1
+  frequency_rank: 14
+- type: word
+  text: es
+  translation: it
+  example: Es ist schön heute.
+  example_translation: It's beautiful today.
+  cefr_level: A1
+  frequency_rank: 15
+- type: word
+  text: wir
+  translation: we
+  example: Wir fahren nach Spanien.
+  example_translation: We are going to Spain.
+  cefr_level: A1
+  frequency_rank: 16
+# Basic verbs (most frequent)
+- type: word
+  text: sein
+  translation: to be
+  example: Ich bin müde.
+  example_translation: I am tired.
+  cefr_level: A1
+  frequency_rank: 17
+- type: word
+  text: haben
+  translation: to have
+  example: Ich habe einen Hund.
+  example_translation: I have a dog.
+  cefr_level: A1
+  frequency_rank: 18
+- type: word
+  text: gehen
+  translation: to go / to walk
+  example: Ich gehe zur Arbeit.
+  example_translation: I go to work.
+  cefr_level: A1
+  frequency_rank: 19
+- type: word
+  text: kommen
+  translation: to come
+  example: Wann kommst du?
+  example_translation: When are you coming?
+  cefr_level: A1
+  frequency_rank: 20
+- type: word
+  text: sehen
+  translation: to see
+  example: Ich sehe einen Baum.
+  example_translation: I see a tree.
+  cefr_level: A1
+  frequency_rank: 21
+- type: word
+  text: machen
+  translation: to do / to make
+  example: Was machst du jetzt?
+  example_translation: What are you doing now?
+  cefr_level: A1
+  frequency_rank: 22
+- type: word
+  text: sagen
+  translation: to say
+  example: Ich sage die Wahrheit.
+  example_translation: I tell the truth.
+  cefr_level: A1
+  frequency_rank: 23
+- type: word
+  text: sprechen
+  translation: to speak
+  example: Ich spreche Deutsch.
+  example_translation: I speak German.
+  cefr_level: A1
+  frequency_rank: 24
+- type: word
+  text: verstehen
+  translation: to understand
+  example: Ich verstehe dich nicht.
+  example_translation: I don't understand you.
+  cefr_level: A1
+  frequency_rank: 25
+- type: word
+  text: wissen
+  translation: to know
+  example: Ich weiß nicht.
+  example_translation: I don't know.
+  cefr_level: A1
+  frequency_rank: 26
+- type: word
+  text: mögen
+  translation: to like / to want
+  example: Ich mag Schokolade.
+  example_translation: I like chocolate.
+  cefr_level: A1
+  frequency_rank: 27
+- type: word
+  text: wollen
+  translation: to want
+  example: Ich will einen Kaffee.
+  example_translation: I want a coffee.
+  cefr_level: A1
+  frequency_rank: 28
+- type: word
+  text: können
+  translation: can / to be able
+  example: Ich kann schwimmen.
+  example_translation: I can swim.
+  cefr_level: A1
+  frequency_rank: 29
+- type: word
+  text: müssen
+  translation: must / have to
+  example: Ich muss arbeiten.
+  example_translation: I have to work.
+  cefr_level: A1
+  frequency_rank: 30
+# Basic nouns - people
+- type: word
+  text: Mann
+  translation: man
+  example: Der Mann ist groß.
+  example_translation: The man is tall.
+  cefr_level: A1
+  frequency_rank: 31
+- type: word
+  text: Frau
+  translation: woman
+  example: Die Frau ist Ärztin.
+  example_translation: The woman is a doctor.
+  cefr_level: A1
+  frequency_rank: 32
+- type: word
+  text: Kind
+  translation: child
+  example: Das Kind spielt gern.
+  example_translation: The child likes to play.
+  cefr_level: A1
+  frequency_rank: 33
+- type: word
+  text: Junge
+  translation: boy
+  example: Der Junge geht zur Schule.
+  example_translation: The boy goes to school.
+  cefr_level: A1
+  frequency_rank: 34
+- type: word
+  text: Mädchen
+  translation: girl
+  example: Das Mädchen ist zehn Jahre alt.
+  example_translation: The girl is ten years old.
+  cefr_level: A1
+  frequency_rank: 35
+# Basic nouns - family
+- type: word
+  text: Mutter
+  translation: mother
+  example: Meine Mutter heißt Anna.
+  example_translation: My mother's name is Anna.
+  cefr_level: A1
+  frequency_rank: 36
+- type: word
+  text: Vater
+  translation: father
+  example: Mein Vater ist Ingenieur.
+  example_translation: My father is an engineer.
+  cefr_level: A1
+  frequency_rank: 37
+- type: word
+  text: Schwester
+  translation: sister
+  example: Meine Schwester studiert Mathematik.
+  example_translation: My sister studies mathematics.
+  cefr_level: A1
+  frequency_rank: 38
+- type: word
+  text: Bruder
+  translation: brother
+  example: Mein Bruder ist sechs Jahre alt.
+  example_translation: My brother is six years old.
+  cefr_level: A1
+  frequency_rank: 39
+# Basic nouns - animals
+- type: word
+  text: Hund
+  translation: dog
+  example: Der Hund ist braun.
+  example_translation: The dog is brown.
+  cefr_level: A1
+  frequency_rank: 40
+- type: word
+  text: Katze
+  translation: cat
+  example: Die Katze schläft.
+  example_translation: The cat is sleeping.
+  cefr_level: A1
+  frequency_rank: 41
+# Basic nouns - places
+- type: word
+  text: Haus
+  translation: house
+  example: Das Haus ist schön.
+  example_translation: The house is beautiful.
+  cefr_level: A1
+  frequency_rank: 42
+- type: word
+  text: Schule
+  translation: school
+  example: Ich gehe zur Schule.
+  example_translation: I go to school.
+  cefr_level: A1
+  frequency_rank: 43
+- type: word
+  text: Arbeit
+  translation: work
+  example: Ich gehe zur Arbeit.
+  example_translation: I go to work.
+  cefr_level: A1
+  frequency_rank: 44
+- type: word
+  text: Stadt
+  translation: city / town
+  example: Berlin ist eine große Stadt.
+  example_translation: Berlin is a big city.
+  cefr_level: A1
+  frequency_rank: 45
+- type: word
+  text: Land
+  translation: country
+  example: Deutschland ist mein Land.
+  example_translation: Germany is my country.
+  cefr_level: A1
+  frequency_rank: 46
+# Basic nouns - food and drink
+- type: word
+  text: Wasser
+  translation: water
+  example: Ein Glas Wasser, bitte.
+  example_translation: A glass of water, please.
+  cefr_level: A1
+  frequency_rank: 47
+- type: word
+  text: Kaffee
+  translation: coffee
+  example: Ich trinke gern Kaffee.
+  example_translation: I like drinking coffee.
+  cefr_level: A1
+  frequency_rank: 48
+- type: word
+  text: Tee
+  translation: tea
+  example: Eine Tasse Tee, bitte.
+  example_translation: A cup of tea, please.
+  cefr_level: A1
+  frequency_rank: 49
+- type: word
+  text: Milch
+  translation: milk
+  example: Magst du Milch in deinem Kaffee?
+  example_translation: Do you like milk in your coffee?
+  cefr_level: A1
+  frequency_rank: 50
+- type: word
+  text: Brot
+  translation: bread
+  example: Das Brot ist lecker.
+  example_translation: The bread is delicious.
+  cefr_level: A1
+  frequency_rank: 51
+- type: word
+  text: Essen
+  translation: food
+  example: Das Essen ist sehr gut.
+  example_translation: The food is very good.
+  cefr_level: A1
+  frequency_rank: 52
+- type: word
+  text: Obst
+  translation: fruit
+  example: Ich esse gern Obst.
+  example_translation: I like eating fruit.
+  cefr_level: A1
+  frequency_rank: 53
+# Basic nouns - time
+- type: word
+  text: Tag
+  translation: day
+  example: Der Tag ist schön.
+  example_translation: The day is beautiful.
+  cefr_level: A1
+  frequency_rank: 54
+- type: word
+  text: Nacht
+  translation: night
+  example: Gute Nacht!
+  example_translation: Good night!
+  cefr_level: A1
+  frequency_rank: 55
+- type: word
+  text: Woche
+  translation: week
+  example: Nächste Woche fahre ich in den Urlaub.
+  example_translation: Next week I'm going on holiday.
+  cefr_level: A1
+  frequency_rank: 56
+- type: word
+  text: Monat
+  translation: month
+  example: Der Monat Juni ist warm.
+  example_translation: June is a warm month.
+  cefr_level: A1
+  frequency_rank: 57
+- type: word
+  text: Stunde
+  translation: hour
+  example: Das Treffen dauert eine Stunde.
+  example_translation: The meeting lasts one hour.
+  cefr_level: A1
+  frequency_rank: 58
+# Basic adjectives
+- type: word
+  text: groß
+  translation: big / large / tall
+  example: Das Haus ist groß.
+  example_translation: The house is big.
+  cefr_level: A1
+  frequency_rank: 59
+- type: word
+  text: klein
+  translation: small / little
+  example: Ein kleines Zimmer.
+  example_translation: A small room.
+  cefr_level: A1
+  frequency_rank: 60
+- type: word
+  text: alt
+  translation: old
+  example: Das Auto ist alt.
+  example_translation: The car is old.
+  cefr_level: A1
+  frequency_rank: 61
+- type: word
+  text: jung
+  translation: young
+  example: Sie ist noch jung.
+  example_translation: She is still young.
+  cefr_level: A1
+  frequency_rank: 62
+- type: word
+  text: schön
+  translation: beautiful / nice
+  example: Das Wetter ist schön.
+  example_translation: The weather is nice.
+  cefr_level: A1
+  frequency_rank: 63
+- type: word
+  text: hässlich
+  translation: ugly
+  example: Der Film war hässlich.
+  example_translation: The film was ugly/bad.
+  cefr_level: A1
+  frequency_rank: 64
+- type: word
+  text: gut
+  translation: good
+  example: Das ist eine gute Idee.
+  example_translation: That's a good idea.
+  cefr_level: A1
+  frequency_rank: 65
+- type: word
+  text: schlecht
+  translation: bad
+  example: Mir geht es schlecht.
+  example_translation: I feel bad.
+  cefr_level: A1
+  frequency_rank: 66
+- type: word
+  text: heiß
+  translation: hot
+  example: Der Tag ist sehr heiß.
+  example_translation: The day is very hot.
+  cefr_level: A1
+  frequency_rank: 67
+- type: word
+  text: kalt
+  translation: cold
+  example: Das Wasser ist kalt.
+  example_translation: The water is cold.
+  cefr_level: A1
+  frequency_rank: 68
+- type: word
+  text: warm
+  translation: warm
+  example: Ein warmer Tag.
+  example_translation: A warm day.
+  cefr_level: A1
+  frequency_rank: 69
+- type: word
+  text: schnell
+  translation: fast / quick
+  example: Das Auto ist schnell.
+  example_translation: The car is fast.
+  cefr_level: A1
+  frequency_rank: 70
+- type: word
+  text: langsam
+  translation: slow
+  example: Der alte Mann geht langsam.
+  example_translation: The old man walks slowly.
+  cefr_level: A1
+  frequency_rank: 71
+- type: word
+  text: lang
+  translation: long
+  example: Der Film ist lang.
+  example_translation: The film is long.
+  cefr_level: A1
+  frequency_rank: 72
+- type: word
+  text: kurz
+  translation: short
+  example: Ein kurzes Buch.
+  example_translation: A short book.
+  cefr_level: A1
+  frequency_rank: 73
+- type: word
+  text: neu
+  translation: new
+  example: Mein Auto ist neu.
+  example_translation: My car is new.
+  cefr_level: A1
+  frequency_rank: 74
+- type: word
+  text: müde
+  translation: tired
+  example: Ich bin müde.
+  example_translation: I am tired.
+  cefr_level: A1
+  frequency_rank: 75
+# Numbers and colors
+- type: word
+  text: eins
+  translation: one
+  example: Ein Kaffee, bitte.
+  example_translation: One coffee, please.
+  cefr_level: A1
+  frequency_rank: 76
+- type: word
+  text: zwei
+  translation: two
+  example: Ich habe zwei Brüder.
+  example_translation: I have two brothers.
+  cefr_level: A1
+  frequency_rank: 77
+- type: word
+  text: drei
+  translation: three
+  example: Komm um drei Uhr.
+  example_translation: Come at three o'clock.
+  cefr_level: A1
+  frequency_rank: 78
+- type: word
+  text: rot
+  translation: red
+  example: Ein rotes Auto.
+  example_translation: A red car.
+  cefr_level: A1
+  frequency_rank: 79
+- type: word
+  text: blau
+  translation: blue
+  example: Der Himmel ist blau.
+  example_translation: The sky is blue.
+  cefr_level: A1
+  frequency_rank: 80
+- type: word
+  text: schwarz
+  translation: black
+  example: Ein schwarzes Telefon.
+  example_translation: A black phone.
+  cefr_level: A1
+  frequency_rank: 81
+- type: word
+  text: weiß
+  translation: white
+  example: Ein weißes Hemd.
+  example_translation: A white shirt.
+  cefr_level: A1
+  frequency_rank: 82
+# Prepositions
+- type: word
+  text: in
+  translation: in / into
+  example: Der Schlüssel ist in der Tasche.
+  example_translation: The key is in the bag.
+  cefr_level: A1
+  frequency_rank: 83
+- type: word
+  text: auf
+  translation: on / upon
+  example: Das Buch liegt auf dem Tisch.
+  example_translation: The book is on the table.
+  cefr_level: A1
+  frequency_rank: 84
+- type: word
+  text: an
+  translation: on / at / to
+  example: Das Bild hängt an der Wand.
+  example_translation: The picture hangs on the wall.
+  cefr_level: A1
+  frequency_rank: 85
+- type: word
+  text: unter
+  translation: under
+  example: Der Hund schläft unter dem Tisch.
+  example_translation: The dog sleeps under the table.
+  cefr_level: A1
+  frequency_rank: 86
+- type: word
+  text: über
+  translation: over / above
+  example: Die Lampe hängt über dem Tisch.
+  example_translation: The lamp hangs over the table.
+  cefr_level: A1
+  frequency_rank: 87
+- type: word
+  text: vor
+  translation: in front of / before
+  example: Das Auto steht vor dem Haus.
+  example_translation: The car is in front of the house.
+  cefr_level: A1
+  frequency_rank: 88
+- type: word
+  text: hinter
+  translation: behind
+  example: Die Katze sitzt hinter der Tür.
+  example_translation: The cat is sitting behind the door.
+  cefr_level: A1
+  frequency_rank: 89
+- type: word
+  text: neben
+  translation: next to / beside
+  example: Ich sitze neben dir.
+  example_translation: I'm sitting next to you.
+  cefr_level: A1
+  frequency_rank: 90
+- type: word
+  text: zwischen
+  translation: between
+  example: Das Kind sitzt zwischen seinen Eltern.
+  example_translation: The child is sitting between his parents.
+  cefr_level: A1
+  frequency_rank: 91
+- type: word
+  text: von
+  translation: of / from
+  example: Das Haus von meinem Freund.
+  example_translation: My friend's house.
+  cefr_level: A1
+  frequency_rank: 92
+- type: word
+  text: zu
+  translation: to / at
+  example: Ich gehe zu meiner Mutter.
+  example_translation: I'm going to my mother.
+  cefr_level: A1
+  frequency_rank: 93
+- type: word
+  text: mit
+  translation: with
+  example: Ich gehe mit dir.
+  example_translation: I'm going with you.
+  cefr_level: A1
+  frequency_rank: 94
+- type: word
+  text: ohne
+  translation: without
+  example: Ich kann nicht ohne dich leben.
+  example_translation: I can't live without you.
+  cefr_level: A1
+  frequency_rank: 95
+# Questions and answers
+- type: collocation
+  text: Wie heißt du?
+  translation: What is your name?
+  example: Wie heißt du? Ich heiße David.
+  example_translation: What's your name? My name is David.
+  cefr_level: A1
+  frequency_rank: 96
+- type: collocation
+  text: Ich heiße
+  translation: My name is
+  example: Ich heiße David.
+  example_translation: My name is David.
+  cefr_level: A1
+  frequency_rank: 97
+- type: collocation
+  text: Wie geht es dir?
+  translation: How are you?
+  example: Wie geht es dir? Mir geht es gut.
+  example_translation: How are you? I'm fine.
+  cefr_level: A1
+  frequency_rank: 98
+- type: collocation
+  text: Mir geht es gut.
+  translation: I'm fine / I'm doing well.
+  example: Mir geht es gut, danke der Nachfrage.
+  example_translation: I'm fine, thanks for asking.
+  cefr_level: A1
+  frequency_rank: 99
+- type: collocation
+  text: Woher kommst du?
+  translation: Where are you from?
+  example: Woher kommst du? Aus Deutschland.
+  example_translation: Where are you from? From Germany.
+  cefr_level: A1
+  frequency_rank: 100
+- type: collocation
+  text: Aus
+  translation: from / out of
+  example: Ich bin aus Deutschland.
+  example_translation: I'm from Germany.
+  cefr_level: A1
+  frequency_rank: 101
+- type: collocation
+  text: Wie alt bist du?
+  translation: How old are you?
+  example: Wie alt bist du? Ich bin zwanzig Jahre alt.
+  example_translation: How old are you? I'm twenty years old.
+  cefr_level: A1
+  frequency_rank: 102
+- type: collocation
+  text: Jahre alt
+  translation: years old
+  example: Ich bin fünfundzwanzig Jahre alt.
+  example_translation: I am twenty-five years old.
+  cefr_level: A1
+  frequency_rank: 103
+- type: collocation
+  text: Was ist das?
+  translation: What is that?
+  example: Was ist das? Das ist ein Stift.
+  example_translation: What is that? That's a pen.
+  cefr_level: A1
+  frequency_rank: 104
+- type: collocation
+  text: Das ist
+  translation: That is
+  example: Das ist mein Buch.
+  example_translation: That is my book.
+  cefr_level: A1
+  frequency_rank: 105
+- type: verb_form
+  text: Ich bin
+  translation: I am
+  example: Ich bin glücklich.
+  example_translation: I am happy.
+  cefr_level: A1
+  frequency_rank: 106
+- type: verb_form
+  text: Du bist
+  translation: You are (informal singular)
+  example: Du bist sehr nett.
+  example_translation: You are very nice.
+  cefr_level: A1
+  frequency_rank: 107
+- type: verb_form
+  text: Er ist
+  translation: He is
+  example: Er ist Lehrer.
+  example_translation: He is a teacher.
+  cefr_level: A1
+  frequency_rank: 108
+- type: verb_form
+  text: Ich habe
+  translation: I have
+  example: Ich habe ein Buch.
+  example_translation: I have a book.
+  cefr_level: A1
+  frequency_rank: 109
+- type: verb_form
+  text: Du hast
+  translation: You have (informal singular)
+  example: Du hast eine Katze.
+  example_translation: You have a cat.
+  cefr_level: A1
+  frequency_rank: 110
+- type: verb_form
+  text: Es gibt
+  translation: There is / There are
+  example: Es gibt viele Restaurants hier.
+  example_translation: There are many restaurants here.
+  cefr_level: A1
+  frequency_rank: 111
+- type: sentence_pattern
+  text: Mein Name ist
+  translation: My name is
+  example: Mein Name ist Anna.
+  example_translation: My name is Anna.
+  cefr_level: A1
+  frequency_rank: 112
+- type: sentence_pattern
+  text: Ich komme aus
+  translation: I come from / I'm from
+  example: Ich komme aus Deutschland.
+  example_translation: I'm from Germany.
+  cefr_level: A1
+  frequency_rank: 113
+- type: sentence_pattern
+  text: Ich mag
+  translation: I like
+  example: Ich mag Schokolade und Kaffee.
+  example_translation: I like chocolate and coffee.
+  cefr_level: A1
+  frequency_rank: 114
+- type: sentence_pattern
+  text: Ich esse gern
+  translation: I like eating
+  example: Ich esse gern Obst.
+  example_translation: I like eating fruit.
+  cefr_level: A1
+  frequency_rank: 115
+# === A2 INTERMEDIATE VOCABULARY ===
 - type: word
   text: natürlich
   translation: of course / naturally

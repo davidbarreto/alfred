@@ -760,9 +760,77 @@ class TestChatServiceMemoryExtraction:
         service, _, _, message_service, memory_extraction_service = _make_service()
         msg = _make_message("I prefer dark mode")
         message_service.list.return_value = [msg]
-        with patch("app.features.core.chats.service.asyncio.create_task") as mock_create_task:
+        with patch(
+            "app.features.core.chats.service.asyncio.create_task",
+            side_effect=lambda coro: coro.close(),
+        ) as mock_create_task:
             await service.chat(ChatRequest(session_id=1))
         mock_create_task.assert_called_once()
+
+    async def test_skips_extraction_in_practice_mode(self):
+        service, _, _, message_service, memory_extraction_service = _make_service()
+        service._working_memory_service.list.return_value = [
+            _make_wm("language:pending", '{"mode": "practice", "chunk_id": 42, "track_id": 3}')
+        ]
+        message_service.list.return_value = [_make_message("J'ai un chat")]
+        with patch("app.features.core.chats.service.asyncio.create_task") as mock_create_task:
+            await service.chat(ChatRequest(session_id=1))
+        mock_create_task.assert_not_called()
+        memory_extraction_service.extract_and_save.assert_not_called()
+
+    async def test_skips_extraction_in_review_mode(self):
+        service, _, _, message_service, memory_extraction_service = _make_service()
+        service._working_memory_service.list.return_value = [
+            _make_wm("language:pending", '{"mode": "review", "chunk_id": 42, "track_id": 3}')
+        ]
+        message_service.list.return_value = [_make_message("I know this one")]
+        with patch("app.features.core.chats.service.asyncio.create_task") as mock_create_task:
+            await service.chat(ChatRequest(session_id=1))
+        mock_create_task.assert_not_called()
+        memory_extraction_service.extract_and_save.assert_not_called()
+
+    async def test_skips_extraction_in_produce_mode(self):
+        service, _, _, message_service, memory_extraction_service = _make_service()
+        service._working_memory_service.list.return_value = [_make_produce_wm()]
+        service._production_service.grade_attempt = AsyncMock(return_value=_make_production_attempt())
+        message_service.list.return_value = [_make_message("J'ai un chat")]
+        with patch("app.features.core.chats.service.asyncio.create_task") as mock_create_task:
+            await service.chat(ChatRequest(session_id=1))
+        mock_create_task.assert_not_called()
+        memory_extraction_service.extract_and_save.assert_not_called()
+
+    async def test_stream_chat_schedules_extraction(self):
+        service, llm_provider, _, message_service, memory_extraction_service = _make_service()
+
+        async def _fake_stream(messages, system=None, meta=None):
+            yield "ok"
+
+        llm_provider.stream = _fake_stream
+        message_service.list.return_value = [_make_message("I prefer dark mode")]
+        with patch(
+            "app.features.core.chats.service.asyncio.create_task",
+            side_effect=lambda coro: coro.close(),
+        ) as mock_create_task:
+            async for _ in service.stream_chat(ChatRequest(session_id=1)):
+                pass
+        mock_create_task.assert_called_once()
+
+    async def test_stream_chat_skips_extraction_when_language_pending(self):
+        service, llm_provider, _, message_service, memory_extraction_service = _make_service()
+
+        async def _fake_stream(messages, system=None, meta=None):
+            yield "ok"
+
+        llm_provider.stream = _fake_stream
+        service._working_memory_service.list.return_value = [
+            _make_wm("language:pending", '{"mode": "practice", "chunk_id": 42, "track_id": 3}')
+        ]
+        message_service.list.return_value = [_make_message("J'ai un chat")]
+        with patch("app.features.core.chats.service.asyncio.create_task") as mock_create_task:
+            async for _ in service.stream_chat(ChatRequest(session_id=1)):
+                pass
+        mock_create_task.assert_not_called()
+        memory_extraction_service.extract_and_save.assert_not_called()
 
     async def test_detected_intents_appear_in_system_prompt(self):
         service, llm_provider, _, message_service, _ = _make_service()

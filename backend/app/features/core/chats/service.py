@@ -445,12 +445,17 @@ class ChatService:
             # already carries the next exercise, so there is no next_practice to emit.
             next_practice = await self._advance_language_loop(pending_wm)
 
-        asyncio.create_task(
-            self._memory_extraction_service.extract_and_save(
-                user_message=current_message.content,
-                message_id=current_message.id,
+        if pending_wm is None:
+            asyncio.create_task(
+                self._memory_extraction_service.extract_and_save(
+                    user_message=current_message.content,
+                    message_id=current_message.id,
+                )
             )
-        )
+        else:
+            # Exercise answers (practice/review/produce) are drill content, not facts
+            # about the user — never mine them for memories.
+            logger.debug("Chat: language pending mode — skipping memory extraction")
 
         return response_text, next_practice
 
@@ -555,9 +560,14 @@ class ChatService:
                 await self._working_memory_service.delete(wm.id)
                 logger.info("StreamChat: cleared language pending WM id=%d", wm.id)
 
-        asyncio.create_task(
-            self._memory_extraction_service.extract_and_save(
-                user_message=current_message.content,
-                message_id=current_message.id,
+        if pending_wm is None:
+            asyncio.create_task(
+                self._memory_extraction_service.extract_and_save(
+                    user_message=current_message.content,
+                    message_id=current_message.id,
+                )
             )
-        )
+        else:
+            # Exercise answers (practice/review/produce) are drill content, not facts
+            # about the user — never mine them for memories.
+            logger.debug("StreamChat: language pending mode — skipping memory extraction")

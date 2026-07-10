@@ -7,7 +7,7 @@ from fastapi import HTTPException, status
 from app.features.core.working_memory.schemas import WorkingMemoryCreate, WorkingMemoryFilters
 from app.features.core.working_memory.service import WorkingMemoryService
 from app.features.language.chunks.service import ChunkService
-from app.features.language.production.schemas import ALL_TASK_TYPES, OPEN_ENDED_TASK_TYPES
+from app.features.language.production.schemas import ALL_TASK_TYPES, CHUNKLESS_TASK_TYPES
 from app.features.language.production.service import ProductionService
 from app.features.language.tracks.schemas import TrackFilters
 from app.features.language.tracks.service import TrackService
@@ -206,8 +206,9 @@ async def _handle_produce(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Language code is required")
 
     task_type = _parse_produce_task_type(arguments)
-    # Open-ended tasks (journal, timed) are one whole text each; default to a single round.
-    default_count = 1 if task_type in OPEN_ENDED_TASK_TYPES else _DEFAULT_ROUND_COUNT
+    # Chunk-less tasks (journal, timed, speak, retell) are one whole response each;
+    # default to a single round.
+    default_count = 1 if task_type in CHUNKLESS_TASK_TYPES else _DEFAULT_ROUND_COUNT
     count = _parse_count(arguments, default=default_count)
 
     tracks = await track_service.get_tracks(TrackFilters(code=language_code, active_only=True))

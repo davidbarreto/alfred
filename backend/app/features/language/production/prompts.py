@@ -15,6 +15,15 @@ TIMED_TASK_TEMPLATE = (
     "Keep writing — don't stop to fix mistakes.{suggestion_line}"
 )
 
+SPEAK_TASK_TEMPLATE = (
+    "Speak for about a minute in {language_name} about {topic}. "
+    "Don't script it — just talk.{suggestion_line}"
+)
+
+RETELL_TASK_TEMPLATE = (
+    "Listen to this short passage, then retell it in {language_name} in your own words:\n\n{passage}"
+)
+
 SUGGESTION_LINE_TEMPLATE = " Try to use: {chunk_list}."
 
 JOURNAL_TOPICS: tuple[str, ...] = (
@@ -36,6 +45,32 @@ TIMED_TOPICS: tuple[str, ...] = (
     "a hobby you enjoy",
     "the weather and the seasons",
 )
+
+SPEAK_TOPICS: tuple[str, ...] = (
+    "what you did yesterday",
+    "your plans for the weekend",
+    "the room you are in right now — describe what you see",
+    "a picture or photo you looked at recently — describe it",
+    "the view from your window — describe the scene",
+    "a person who matters to you",
+    "something you want to learn and why",
+    "the best meal you can imagine",
+)
+
+RETELL_TOPICS: tuple[str, ...] = (
+    "a small everyday mishap",
+    "a surprising encounter between neighbors",
+    "a trip that did not go as planned",
+    "an animal doing something unusual",
+    "a memorable meal at a restaurant",
+    "finding something unexpected at a market",
+    "a change of weather that ruined or saved a plan",
+)
+
+RETELL_PASSAGE_PROMPT = """Write a short passage in {language_name} at CEFR level {cefr_level} about {topic}.
+Use 3-4 simple sentences with everyday vocabulary, in the past tense where natural.
+It must be a small self-contained story or anecdote that is easy to retell.
+Respond ONLY with the passage text — no title, no translation, no quotes, no markdown."""
 
 PRODUCTION_GRADING_PROMPT = """You are grading a {language_name} production exercise (CEFR level {cefr_level}).
 Task type: {task_type}
@@ -77,5 +112,28 @@ Respond ONLY with JSON (no markdown fences, even to format text as json):
 }}
 "score" is 0-100. "errors" lists concrete mistakes (empty if none). "corrected_text" is the
 full text rewritten naturally (or unchanged if already correct). "feedback" is one or two short
+encouraging sentences. "new_vocabulary" holds up to 5 useful {language_name} words or expressions
+the student struggled with, worked around, or should learn next (empty if none)."""
+
+SPOKEN_GRADING_PROMPT = """You are grading a spoken {language_name} production exercise (CEFR level {cefr_level}).
+Task type: {task_type}
+Task given to the student: {prompt_text}
+Transcript of the student's speech: {response_text}
+
+Grade the transcript holistically for correctness, naturalness, and range at this CEFR level.
+It is a speech transcript: IGNORE punctuation, capitalization, and plausible transcription
+artifacts; do not penalize fillers or self-corrections. For "speak" tasks reward keeping going
+and getting ideas across. For "retell" tasks also check how well the content of the original
+passage was covered — paraphrasing is good, word-for-word repetition is not required.
+Respond ONLY with JSON (no markdown fences, even to format text as json):
+{{
+  "score": 85,
+  "errors": ["..."],
+  "corrected_text": "...",
+  "feedback": "...",
+  "new_vocabulary": [{{"text": "...", "translation": "..."}}]
+}}
+"score" is 0-100. "errors" lists concrete mistakes (empty if none). "corrected_text" is the
+transcript rewritten naturally (or unchanged if already correct). "feedback" is one or two short
 encouraging sentences. "new_vocabulary" holds up to 5 useful {language_name} words or expressions
 the student struggled with, worked around, or should learn next (empty if none)."""

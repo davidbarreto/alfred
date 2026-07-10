@@ -707,6 +707,37 @@ class TestChatServiceProductionLoop:
         system_prompt = llm_provider.complete.call_args[1]["system"]
         assert "your plans for tomorrow" in system_prompt
 
+    async def test_spoken_loop_keeps_task_type_and_no_chunk(self, mock_language_session_repository):
+        from app.features.language.production.schemas import ProductionTaskRead
+        service, llm_provider, _, message_service, _ = _make_service()
+        service._working_memory_service.list.return_value = [
+            _make_produce_wm(remaining=2, wm_id=99, task_type="speak", chunk_id=None)
+        ]
+        service._production_service.grade_attempt = AsyncMock(return_value=_make_production_attempt())
+        speak_task = ProductionTaskRead(
+            track_id=3, track_code="pt", language_name="Portuguese", chunk_id=None,
+            task_type="speak",
+            prompt_text="Speak for about a minute in Portuguese about your plans for the weekend.",
+            text=None, translation=None, total_due=1,
+        )
+        service._production_service.get_next_task = AsyncMock(return_value=speak_task)
+        message_service.list.return_value = [_make_message("Ontem eu fui ao mercado com a minha irmã.")]
+
+        await service.chat(ChatRequest(session_id=1))
+
+        service._production_service.get_next_task.assert_called_once_with(
+            3, task_type="speak", exclude_chunk_id=None
+        )
+        attempt = service._production_service.grade_attempt.call_args[0][0]
+        assert attempt.chunk_id is None
+        assert attempt.task_type == "speak"
+        created_value = json.loads(service._working_memory_service.create.call_args[0][0].value)
+        assert created_value["task_type"] == "speak"
+        assert created_value["chunk_id"] is None
+        assert created_value["remaining"] == 1
+        system_prompt = llm_provider.complete.call_args[1]["system"]
+        assert "your plans for the weekend" in system_prompt
+
     async def test_keeps_wm_when_grading_fails(self, mock_language_session_repository):
         service, llm_provider, _, message_service, _ = _make_service()
         service._working_memory_service.list.return_value = [_make_produce_wm(wm_id=99)]

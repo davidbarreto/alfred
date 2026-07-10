@@ -2,10 +2,12 @@ import json
 import logging
 import random
 import time
+from uuid import uuid4
 
 from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.features.core.transcription.service import TranscriptionService
 from app.features.language.chunks.repository import ChunkRepository
 from app.features.language.chunks.schemas import ChunkCreate
 from app.features.language.chunks.service import ChunkService
@@ -14,15 +16,23 @@ from app.features.language.production.prompts import (
     JOURNAL_TOPICS,
     OPEN_ENDED_GRADING_PROMPT,
     PRODUCTION_GRADING_PROMPT,
+    RETELL_PASSAGE_PROMPT,
+    RETELL_TASK_TEMPLATE,
+    RETELL_TOPICS,
     SENTENCE_TASK_TEMPLATE,
+    SPEAK_TASK_TEMPLATE,
+    SPEAK_TOPICS,
+    SPOKEN_GRADING_PROMPT,
     SUGGESTION_LINE_TEMPLATE,
     TIMED_TASK_TEMPLATE,
     TIMED_TOPICS,
     TRANSLATE_TASK_TEMPLATE,
 )
 from app.features.language.production.schemas import (
+    CHUNKLESS_TASK_TYPES,
     OPEN_ENDED_TASK_TYPES,
     PRODUCTION_TASK_TYPES,
+    SPOKEN_TASK_TYPES,
     NewVocabularyCandidate,
     ProductionAttemptCreate,
     ProductionAttemptRead,
@@ -38,12 +48,13 @@ from app.features.language.srs import score_to_quality
 from app.features.language.tracks.repository import TrackRepository
 from app.features.language.tracks.schemas import TrackFilters
 from app.integrations.llm_calls.repository import create_llm_call
+from app.shared.audio import AudioConverter, FileStorage
 from app.shared.llm import LlmProvider
 
 logger = logging.getLogger(__name__)
 
 _MAX_VOCABULARY_CANDIDATES = 3
-_MAX_VOCABULARY_CANDIDATES_OPEN_ENDED = 5
+_MAX_VOCABULARY_CANDIDATES_CHUNKLESS = 5
 _MAX_SUGGESTED_CHUNKS = 3
 _TIMED_TASK_SECONDS = 300
 
@@ -84,6 +95,18 @@ def _build_open_ended_prompt(task_type: str, language_name: str, suggested_chunk
     )
 
 
+def _build_speak_prompt(language_name: str, suggested_chunks: list) -> str:
+    suggestion_line = ""
+    if suggested_chunks:
+        chunk_list = ", ".join(f'"{c.text}"' for c in suggested_chunks)
+        suggestion_line = SUGGESTION_LINE_TEMPLATE.format(chunk_list=chunk_list)
+    return SPEAK_TASK_TEMPLATE.format(
+        language_name=language_name,
+        topic=random.choice(SPEAK_TOPICS),
+        suggestion_line=suggestion_line,
+    )
+
+
 def _parse_grading_json(raw: str) -> ProductionGradingRead:
     text = raw.strip()
     if text.startswith("```"):
@@ -116,6 +139,9 @@ class ProductionService:
         chunk_repo: ChunkRepository,
         track_repo: TrackRepository,
         session_repo: SessionRepository,
+        audio_storage: FileStorage | None = None,
+        audio_converter: AudioConverter | None = None,
+        transcription_service: TranscriptionService | None = None,
     ) -> None:
         self._session = session
         self._llm_provider = llm_provider
@@ -124,6 +150,9 @@ class ProductionService:
         self._chunk_repo = chunk_repo
         self._track_repo = track_repo
         self._session_repo = session_repo
+        self._audio_storage = audio_storage
+        self._audio_converter = audio_converter
+        self._transcription_service = transcription_service
 
     async def get_next_task(
         self,
@@ -133,13 +162,15 @@ class ProductionService:
     ) -> ProductionTaskRead | None:
         """Pick the next production-due chunk and build the exercise for it.
 
-        Open-ended types (journal, timed) are not chunk-anchored: they are always
-        available and only use due chunks as optional "try to use" suggestions."""
+        Chunk-less types (journal, timed, speak, retell) are not chunk-anchored: they
+        are always available and only use due chunks as optional "try to use" suggestions."""
         track = await self._track_repo.get_track(track_id)
         if track is None:
             return None
 
         batches = await self._chunk_service.get_production_daily_batch(track_id)
+        if task_type in SPOKEN_TASK_TYPES:
+            return await self._build_spoken_task(track, task_type, batches)
         if task_type in OPEN_ENDED_TASK_TYPES:
             return self._build_open_ended_task(track, task_type, batches)
         if not batches:
@@ -184,7 +215,67 @@ class ProductionService:
             time_limit_seconds=_TIMED_TASK_SECONDS if task_type == "timed" else None,
         )
 
+    async def _build_spoken_task(self, track, task_type: str, batches: list) -> ProductionTaskRead:
+        passage_text = None
+        if task_type == "retell":
+            passage_text = await self._generate_retell_passage(track)
+            prompt_text = RETELL_TASK_TEMPLATE.format(language_name=track.name, passage=passage_text)
+        else:
+            suggested = batches[0].chunks[:_MAX_SUGGESTED_CHUNKS] if batches else []
+            prompt_text = _build_speak_prompt(track.name, suggested)
+        return ProductionTaskRead(
+            track_id=track.id,
+            track_code=track.code,
+            language_name=track.name,
+            chunk_id=None,
+            task_type=task_type,
+            prompt_text=prompt_text,
+            text=None,
+            translation=None,
+            total_due=1,
+            passage_text=passage_text,
+        )
+
+    async def _generate_retell_passage(self, track) -> str:
+        prompt = RETELL_PASSAGE_PROMPT.format(
+            language_name=track.name,
+            cefr_level=track.level,
+            topic=random.choice(RETELL_TOPICS),
+        )
+        messages = [{"role": "user", "content": prompt}]
+        t0 = time.monotonic()
+        try:
+            llm_response = await self._llm_provider.complete(messages)
+        except Exception as exc:
+            logger.error("Retell passage generation failed: track_id=%d error=%s", track.id, exc)
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Could not generate the passage. Please try again in a moment.",
+            ) from exc
+        latency_ms = int((time.monotonic() - t0) * 1000)
+
+        await create_llm_call(
+            self._session,
+            provider=self._llm_provider.provider,
+            model=self._llm_provider.model,
+            feature="production_task_generation",
+            prompt=messages,
+            response=llm_response.text,
+            tokens_input=llm_response.tokens_input,
+            tokens_output=llm_response.tokens_output,
+            latency_ms=latency_ms,
+        )
+        return llm_response.text.strip().strip("`").strip()
+
     def _build_grading_prompt(self, data: ProductionAttemptCreate, track, chunk) -> str:
+        if data.task_type in SPOKEN_TASK_TYPES:
+            return SPOKEN_GRADING_PROMPT.format(
+                language_name=track.name,
+                cefr_level=track.level,
+                task_type=data.task_type,
+                prompt_text=data.prompt_text,
+                response_text=data.response_text,
+            )
         if data.task_type in OPEN_ENDED_TASK_TYPES:
             return OPEN_ENDED_GRADING_PROMPT.format(
                 language_name=track.name,
@@ -207,12 +298,16 @@ class ProductionService:
             response_text=data.response_text,
         )
 
-    async def grade_attempt(self, data: ProductionAttemptCreate) -> ProductionAttemptRead:
+    async def grade_attempt(
+        self, data: ProductionAttemptCreate, audio_ref: str | None = None
+    ) -> ProductionAttemptRead:
         """Grade a production attempt with the LLM, log it, and update production SRS.
 
-        Open-ended attempts (journal, timed) have no anchor chunk and never touch SRS."""
+        Chunk-less attempts (journal, timed, speak, retell) have no anchor chunk and
+        never touch SRS. For spoken attempts submitted as audio, response_text is the
+        transcript and audio_ref points at the stored recording."""
         chunk = None
-        if data.task_type not in OPEN_ENDED_TASK_TYPES:
+        if data.task_type not in CHUNKLESS_TASK_TYPES:
             if data.chunk_id is None:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
@@ -272,12 +367,13 @@ class ProductionService:
                 quality_score=quality_score,
                 ai_feedback_json=grading.model_dump(),
                 transcript_or_notes=data.response_text,
+                audio_ref=audio_ref,
             )
         )
 
         max_vocabulary = (
-            _MAX_VOCABULARY_CANDIDATES_OPEN_ENDED
-            if data.task_type in OPEN_ENDED_TASK_TYPES
+            _MAX_VOCABULARY_CANDIDATES_CHUNKLESS
+            if data.task_type in CHUNKLESS_TASK_TYPES
             else _MAX_VOCABULARY_CANDIDATES
         )
         await self._queue_new_vocabulary(data.track_id, grading.new_vocabulary, max_vocabulary)
@@ -293,6 +389,60 @@ class ProductionService:
             task_type=data.task_type,
             quality_score=quality_score,
             grading=grading,
+            transcript=data.response_text if audio_ref is not None else None,
+        )
+
+    async def grade_audio_attempt(
+        self,
+        track_id: int,
+        task_type: str,
+        prompt_text: str,
+        audio: bytes,
+    ) -> ProductionAttemptRead:
+        """Store a spoken attempt's recording, transcribe it, and grade the transcript."""
+        if task_type not in SPOKEN_TASK_TYPES:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Audio attempts are only supported for {', '.join(SPOKEN_TASK_TYPES)} tasks",
+            )
+        if self._audio_storage is None or self._audio_converter is None or self._transcription_service is None:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Spoken production is not available",
+            )
+
+        ogg_audio = await self._audio_converter.to_ogg_opus(audio)
+        audio_ref = f"production/{uuid4()}.ogg"
+        await self._audio_storage.save(ogg_audio, audio_ref)
+
+        try:
+            transcription = await self._transcription_service.transcribe(ogg_audio, "audio/ogg")
+        except Exception as exc:
+            logger.error("Production transcription failed: track_id=%d error=%s", track_id, exc)
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Could not transcribe your recording. Please try again.",
+            ) from exc
+        transcript = transcription.text.strip()
+        if not transcript:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail="We could not hear any speech in the recording. Please try again.",
+            )
+
+        logger.info(
+            "Production audio attempt transcribed: track_id=%d task=%s audio_ref=%s chars=%d",
+            track_id, task_type, audio_ref, len(transcript),
+        )
+        return await self.grade_attempt(
+            ProductionAttemptCreate(
+                track_id=track_id,
+                chunk_id=None,
+                task_type=task_type,
+                prompt_text=prompt_text,
+                response_text=transcript,
+            ),
+            audio_ref=audio_ref,
         )
 
     async def _queue_new_vocabulary(

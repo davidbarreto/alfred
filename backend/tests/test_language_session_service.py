@@ -156,6 +156,23 @@ class TestRecordProduction:
         assert call_kwargs["feeds_srs"] is False
         service._chunk_service.apply_production_review.assert_not_called()
 
+    async def test_spoken_attempt_stores_audio_ref(self, service):
+        service._repo.create_session.return_value = _make_session_orm(
+            session_type="production", task_type="speak", chunk_id=None, feeds_srs=False
+        )
+        data = ProductionSessionCreate(
+            track_id=1, chunk_id=None, task_type="speak",
+            prompt_text="Speak about your day", quality_score=3.2,
+            transcript_or_notes="transcript text", audio_ref="production/abc.ogg",
+        )
+
+        await service.record_production(data)
+
+        call_kwargs = service._repo.create_session.call_args[1]
+        assert call_kwargs["audio_ref"] == "production/abc.ogg"
+        assert call_kwargs["feeds_srs"] is False
+        service._chunk_service.apply_production_review.assert_not_called()
+
 
 class TestRecordSession:
     async def test_conversation_does_not_feed_srs(self, service):

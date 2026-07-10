@@ -266,7 +266,7 @@ COMMAND_DEFINITIONS = {
         },
         "produce": {
             "description": "Start a production practice session for a language "
-            "(sentence, translate, journal, or timed writing)",
+            "(sentence, translate, journal, timed writing, or spoken speak/retell)",
             "aliases": ["/produce", "/prod"],
             "flags": {},
             "requires_args": True,

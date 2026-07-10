@@ -5,12 +5,13 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 from fastapi import HTTPException
 
-from app.features.language.production.prompts import JOURNAL_TOPICS, TIMED_TOPICS
+from app.features.language.production.prompts import JOURNAL_TOPICS, SPEAK_TOPICS, TIMED_TOPICS
 from app.features.language.production.schemas import ProductionAttemptCreate
 from app.features.language.production.service import (
     ProductionService,
     _build_open_ended_prompt,
     _build_prompt_text,
+    _build_speak_prompt,
     _next_task_type,
     _parse_grading_json,
 )
@@ -77,7 +78,7 @@ def _make_llm_provider(text: str = _GRADING_JSON):
     return provider
 
 
-def _make_service(llm_text: str = _GRADING_JSON):
+def _make_service(llm_text: str = _GRADING_JSON, with_audio: bool = False):
     session = AsyncMock()
     llm_provider = _make_llm_provider(llm_text)
     session_service = AsyncMock()
@@ -86,6 +87,18 @@ def _make_service(llm_text: str = _GRADING_JSON):
     chunk_repo = AsyncMock()
     track_repo = AsyncMock()
     session_repo = AsyncMock()
+    audio_kwargs = {}
+    if with_audio:
+        audio_storage = AsyncMock()
+        audio_converter = AsyncMock()
+        audio_converter.to_ogg_opus.return_value = b"ogg-bytes"
+        transcription_service = AsyncMock()
+        transcription_service.transcribe.return_value = MagicMock(text="Ich habe gestern gekocht.")
+        audio_kwargs = {
+            "audio_storage": audio_storage,
+            "audio_converter": audio_converter,
+            "transcription_service": transcription_service,
+        }
     service = ProductionService(
         session=session,
         llm_provider=llm_provider,
@@ -94,6 +107,7 @@ def _make_service(llm_text: str = _GRADING_JSON):
         chunk_repo=chunk_repo,
         track_repo=track_repo,
         session_repo=session_repo,
+        **audio_kwargs,
     )
     return service, llm_provider, session_service, chunk_service, chunk_repo, track_repo, session_repo
 
@@ -158,6 +172,19 @@ class TestBuildOpenEndedPrompt:
     def test_suggestion_line_lists_chunk_texts(self):
         chunks = [_make_chunk_read(text="parler"), _make_chunk_read(text="manger")]
         prompt = _build_open_ended_prompt("journal", "French", chunks)
+        assert 'Try to use: "parler", "manger".' in prompt
+
+
+class TestBuildSpeakPrompt:
+    def test_has_language_and_topic(self):
+        prompt = _build_speak_prompt("French", [])
+        assert "French" in prompt
+        assert any(topic in prompt for topic in SPEAK_TOPICS)
+        assert "Try to use" not in prompt
+
+    def test_suggestion_line_lists_chunk_texts(self):
+        chunks = [_make_chunk_read(text="parler"), _make_chunk_read(text="manger")]
+        prompt = _build_speak_prompt("French", chunks)
         assert 'Try to use: "parler", "manger".' in prompt
 
 
@@ -293,6 +320,63 @@ class TestGetNextTask:
         assert '"mot3"' in task.prompt_text
         assert '"mot4"' not in task.prompt_text
 
+    async def test_speak_task_available_without_due_chunks(self):
+        service, _, _, chunk_service, _, track_repo, session_repo = _make_service()
+        track_repo.get_track.return_value = _make_track_orm()
+        chunk_service.get_production_daily_batch.return_value = [_make_batch([])]
+
+        task = await service.get_next_task(1, task_type="speak")
+
+        assert task is not None
+        assert task.task_type == "speak"
+        assert task.chunk_id is None
+        assert task.passage_text is None
+        assert task.total_due == 1
+        assert "French" in task.prompt_text
+        session_repo.get_last_production_task_type.assert_not_called()
+
+    async def test_speak_task_suggests_due_chunks(self):
+        service, _, _, chunk_service, _, track_repo, _ = _make_service()
+        track_repo.get_track.return_value = _make_track_orm()
+        chunk_service.get_production_daily_batch.return_value = [
+            _make_batch([_make_chunk_read(text="parler")])
+        ]
+
+        task = await service.get_next_task(1, task_type="speak")
+
+        assert 'Try to use: "parler".' in task.prompt_text
+
+    async def test_retell_task_generates_passage_with_llm(self):
+        passage = "Hier, Marie a perdu ses clés. Elle a cherché partout. Un voisin les a trouvées."
+        service, llm_provider, _, chunk_service, _, track_repo, _ = _make_service(llm_text=passage)
+        track_repo.get_track.return_value = _make_track_orm()
+        chunk_service.get_production_daily_batch.return_value = []
+
+        with patch("app.features.language.production.service.create_llm_call", AsyncMock()) as mock_log:
+            task = await service.get_next_task(1, task_type="retell")
+
+        assert task.task_type == "retell"
+        assert task.chunk_id is None
+        assert task.passage_text == passage
+        assert passage in task.prompt_text
+        assert "retell it in French" in task.prompt_text
+
+        generation_prompt = llm_provider.complete.call_args.args[0][0]["content"]
+        assert "French" in generation_prompt
+        assert "B1" in generation_prompt
+        mock_log.assert_awaited_once()
+        assert mock_log.call_args.kwargs["feature"] == "production_task_generation"
+
+    async def test_retell_raises_503_when_passage_generation_fails(self):
+        service, llm_provider, _, chunk_service, _, track_repo, _ = _make_service()
+        track_repo.get_track.return_value = _make_track_orm()
+        chunk_service.get_production_daily_batch.return_value = []
+        llm_provider.complete.side_effect = RuntimeError("gemini boom")
+
+        with pytest.raises(HTTPException) as exc_info:
+            await service.get_next_task(1, task_type="retell")
+        assert exc_info.value.status_code == 503
+
 
 class TestGradeAttempt:
     async def test_happy_path_records_session_and_returns_grading(self):
@@ -392,6 +476,42 @@ class TestGradeAttempt:
         assert result.chunk_id is None
         assert result.session_id == 7
 
+    async def test_speak_attempt_uses_spoken_prompt_and_skips_chunk(self):
+        service, llm_provider, session_service, _, chunk_repo, track_repo, _ = _make_service()
+        track_repo.get_track.return_value = _make_track_orm()
+
+        with patch("app.features.language.production.service.create_llm_call", AsyncMock()):
+            result = await service.grade_attempt(_make_attempt(
+                chunk_id=None,
+                task_type="speak",
+                prompt_text="Speak for about a minute in French about your plans for the weekend.",
+                response_text="Ce weekend je vais visiter ma grand-mère.",
+            ))
+
+        chunk_repo.get_chunk.assert_not_called()
+        prompt = llm_provider.complete.call_args.args[0][0]["content"]
+        assert "spoken" in prompt
+        assert "transcript" in prompt.lower()
+        assert "Ce weekend je vais visiter ma grand-mère." in prompt
+
+        record_call = session_service.record_production.call_args.args[0]
+        assert record_call.chunk_id is None
+        assert record_call.task_type == "speak"
+        assert record_call.audio_ref is None
+        assert result.chunk_id is None
+        assert result.transcript is None
+
+    async def test_spoken_attempt_allows_five_vocabulary_candidates(self):
+        vocab = [{"text": f"mot{i}", "translation": f"word{i}"} for i in range(6)]
+        raw = json.dumps({"score": 60, "new_vocabulary": vocab})
+        service, _, _, chunk_service, _, track_repo, _ = _make_service(llm_text=raw)
+        track_repo.get_track.return_value = _make_track_orm()
+
+        with patch("app.features.language.production.service.create_llm_call", AsyncMock()):
+            await service.grade_attempt(_make_attempt(chunk_id=None, task_type="retell"))
+
+        assert chunk_service.create_chunk.await_count == 5
+
     async def test_anchored_task_without_chunk_id_raises_400(self):
         service, _, _, _, chunk_repo, _, _ = _make_service()
 
@@ -438,6 +558,65 @@ class TestGradeAttempt:
             with pytest.raises(HTTPException) as exc_info:
                 await service.grade_attempt(_make_attempt())
         assert exc_info.value.status_code == 502
+        session_service.record_production.assert_not_called()
+
+
+class TestGradeAudioAttempt:
+    async def test_happy_path_stores_transcribes_and_grades(self):
+        service, _, session_service, _, _, track_repo, _ = _make_service(with_audio=True)
+        track_repo.get_track.return_value = _make_track_orm(name="German", code="de")
+
+        with patch("app.features.language.production.service.create_llm_call", AsyncMock()):
+            result = await service.grade_audio_attempt(
+                1, "speak", "Speak for about a minute in German about your typical morning.", b"webm-bytes"
+            )
+
+        service._audio_converter.to_ogg_opus.assert_awaited_once_with(b"webm-bytes")
+        saved_bytes, saved_ref = service._audio_storage.save.call_args.args
+        assert saved_bytes == b"ogg-bytes"
+        assert saved_ref.startswith("production/")
+        assert saved_ref.endswith(".ogg")
+        service._transcription_service.transcribe.assert_awaited_once_with(b"ogg-bytes", "audio/ogg")
+
+        record_call = session_service.record_production.call_args.args[0]
+        assert record_call.chunk_id is None
+        assert record_call.task_type == "speak"
+        assert record_call.audio_ref == saved_ref
+        assert record_call.transcript_or_notes == "Ich habe gestern gekocht."
+        assert result.transcript == "Ich habe gestern gekocht."
+        assert result.grading.score == 80
+
+    async def test_rejects_non_spoken_task_type(self):
+        service, _, _, _, _, _, _ = _make_service(with_audio=True)
+
+        with pytest.raises(HTTPException) as exc_info:
+            await service.grade_audio_attempt(1, "journal", "Write about your day.", b"webm-bytes")
+        assert exc_info.value.status_code == 400
+        service._audio_storage.save.assert_not_called()
+
+    async def test_raises_503_when_audio_pipeline_not_configured(self):
+        service, _, _, _, _, _, _ = _make_service()
+
+        with pytest.raises(HTTPException) as exc_info:
+            await service.grade_audio_attempt(1, "speak", "Speak about your day.", b"webm-bytes")
+        assert exc_info.value.status_code == 503
+
+    async def test_raises_503_when_transcription_fails(self):
+        service, _, session_service, _, _, _, _ = _make_service(with_audio=True)
+        service._transcription_service.transcribe.side_effect = RuntimeError("gemini boom")
+
+        with pytest.raises(HTTPException) as exc_info:
+            await service.grade_audio_attempt(1, "speak", "Speak about your day.", b"webm-bytes")
+        assert exc_info.value.status_code == 503
+        session_service.record_production.assert_not_called()
+
+    async def test_raises_422_when_transcript_empty(self):
+        service, _, session_service, _, _, _, _ = _make_service(with_audio=True)
+        service._transcription_service.transcribe.return_value = MagicMock(text="   ")
+
+        with pytest.raises(HTTPException) as exc_info:
+            await service.grade_audio_attempt(1, "retell", "Retell the passage.", b"webm-bytes")
+        assert exc_info.value.status_code == 422
         session_service.record_production.assert_not_called()
 
 

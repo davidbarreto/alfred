@@ -327,6 +327,39 @@ class TestHandleLanguageProduce:
         assert result["chunk_id"] is None
         assert result["remaining"] == 1
 
+    async def test_speak_defaults_to_one_round(self):
+        track_svc, chunk_svc, wm_svc = _make_services()
+        production_svc = _make_production_service(_make_production_task(
+            task_type="speak", chunk_id=None, text=None, translation=None,
+            prompt_text="Speak for about a minute in English about your plans for the weekend.",
+            total_due=1,
+        ))
+        result = await handle_language(
+            "produce", {"language_code": "en", "task_type": "speak"}, track_svc, chunk_svc, wm_svc,
+            production_service=production_svc,
+        )
+        assert production_svc.get_next_task.call_args[0][1] == "speak"
+        assert result["task_type"] == "speak"
+        assert result["chunk_id"] is None
+        assert result["remaining"] == 1
+
+    async def test_retell_prompt_carries_passage_into_wm(self):
+        track_svc, chunk_svc, wm_svc = _make_services()
+        passage = "Yesterday Tom lost his keys. A neighbor found them."
+        production_svc = _make_production_service(_make_production_task(
+            task_type="retell", chunk_id=None, text=None, translation=None,
+            prompt_text=f"Listen to this short passage, then retell it in English in your own words:\n\n{passage}",
+            total_due=1,
+        ))
+        result = await handle_language(
+            "produce", {"language_code": "en", "task_type": "retell"}, track_svc, chunk_svc, wm_svc,
+            production_service=production_svc,
+        )
+        payload = json.loads(wm_svc.create.call_args[0][0].value)
+        assert payload["task_type"] == "retell"
+        assert passage in payload["prompt_text"]
+        assert result["remaining"] == 1
+
     async def test_open_ended_explicit_count_overrides_default(self):
         track_svc, chunk_svc, wm_svc = _make_services()
         production_svc = _make_production_service(_make_production_task(task_type="journal", chunk_id=None))

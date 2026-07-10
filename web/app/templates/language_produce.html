@@ -21,7 +21,7 @@
       <div class="flex items-center gap-1">
         <a href="/languages/{{ track.code }}/produce"
            class="px-2 py-0.5 rounded text-xs {% if not active_type %}bg-purple-100 text-purple-700 font-medium{% else %}text-gray-400 hover:text-gray-600{% endif %}">auto</a>
-        {% for t in ["sentence", "translate", "journal", "timed"] %}
+        {% for t in ["sentence", "translate", "journal", "timed", "speak", "retell"] %}
         <a href="/languages/{{ track.code }}/produce?type={{ t }}"
            class="px-2 py-0.5 rounded text-xs {% if active_type == t %}bg-purple-100 text-purple-700 font-medium{% else %}text-gray-400 hover:text-gray-600{% endif %}">{{ t }}</a>
         {% endfor %}
@@ -54,12 +54,32 @@
       </div>
       <p id="task-prompt" class="text-base font-medium text-gray-900"></p>
 
+      <!-- Retell passage playback (spoken retell tasks only) -->
+      <div id="passage-wrap" class="hidden space-y-2">
+        <div class="flex items-center gap-2">
+          <button id="passage-play-btn" type="button" onclick="playPassage()" class="btn btn-sm btn-outline btn-primary">
+            <i class="ti ti-player-play text-sm"></i><span id="passage-play-label">Play passage</span>
+          </button>
+          <button id="passage-toggle-btn" type="button" onclick="togglePassage()"
+            class="btn btn-sm btn-ghost text-gray-400">Show text</button>
+        </div>
+        <p id="passage-text" class="hidden text-sm text-gray-700 bg-gray-50 rounded-lg p-3"></p>
+      </div>
+
       <textarea id="answer-input" rows="3" placeholder="Type your answer in {{ track.name }}…"
         class="textarea textarea-bordered w-full text-sm bg-white"></textarea>
 
       <button id="start-btn" onclick="startTimed()" class="hidden btn btn-sm btn-primary w-full">
         <i class="ti ti-clock-play text-sm"></i><span id="start-btn-label">Start writing</span>
       </button>
+
+      <!-- Recorder (spoken tasks only) -->
+      <div id="record-wrap" class="hidden space-y-2">
+        <button id="record-btn" type="button" onclick="toggleRecording()" class="btn btn-sm btn-primary w-full">
+          <i class="ti ti-microphone text-sm"></i><span id="record-btn-label">Record your answer</span>
+        </button>
+        <p id="record-status" class="text-xs text-gray-400 text-center"></p>
+      </div>
 
       <div class="flex items-center justify-between">
         <p id="task-error" class="text-xs text-red-500 hidden"></p>
@@ -74,6 +94,10 @@
       <div class="flex items-center justify-between">
         <span class="text-xs font-medium text-gray-400 uppercase tracking-widest">Result</span>
         <span id="feedback-score" class="text-lg font-semibold"></span>
+      </div>
+      <div id="feedback-transcript-wrap" class="hidden">
+        <p class="text-xs text-gray-400 mb-0.5">What we heard</p>
+        <p id="feedback-transcript" class="text-sm text-gray-600 italic"></p>
       </div>
       <div id="feedback-corrected-wrap">
         <p class="text-xs text-gray-400 mb-0.5">Corrected version</p>
@@ -107,9 +131,14 @@ let task = {{ task_json | safe }};
 let graded = 0;
 const total = {{ total_due }};
 
-const TASK_LABELS = { sentence: "Write a sentence", translate: "Translate", journal: "Journal entry", timed: "Timed writing" };
+const TASK_LABELS = {
+  sentence: "Write a sentence", translate: "Translate", journal: "Journal entry",
+  timed: "Timed writing", speak: "Speak", retell: "Listen & retell",
+};
 const OPEN_ENDED_TYPES = ["journal", "timed"];
-const OPEN_ENDED_MODE = OPEN_ENDED_TYPES.includes(FORCED_TYPE);
+const SPOKEN_TYPES = ["speak", "retell"];
+// Chunk-less modes have no fixed exercise count; the progress bar just counts attempts.
+const CHUNKLESS_MODE = OPEN_ENDED_TYPES.concat(SPOKEN_TYPES).includes(FORCED_TYPE);
 
 let timerId = null;
 let timeLeft = 0;
@@ -158,17 +187,40 @@ function onTimeUp() {
 function showTask() {
   if (!task) { showCompletion(); return; }
   stopTimer();
+  stopPassage();
+  const spoken = SPOKEN_TYPES.includes(task.task_type);
   document.getElementById("task-type-badge").textContent = TASK_LABELS[task.task_type] || task.task_type;
-  document.getElementById("task-prompt").textContent = task.prompt_text;
+
+  // For retell tasks the passage is embedded in prompt_text (for the chat flow);
+  // here we show only the instruction and keep the passage behind play/show-text.
+  let promptDisplay = task.prompt_text;
+  if (task.passage_text) {
+    promptDisplay = promptDisplay.replace(task.passage_text, "").trim();
+  }
+  document.getElementById("task-prompt").textContent = promptDisplay;
+
+  const passageWrap = document.getElementById("passage-wrap");
+  passageWrap.classList.toggle("hidden", !task.passage_text);
+  const passageEl = document.getElementById("passage-text");
+  passageEl.textContent = task.passage_text || "";
+  passageEl.classList.add("hidden");
+  document.getElementById("passage-toggle-btn").textContent = "Show text";
+
   const input = document.getElementById("answer-input");
   input.value = "";
   input.rows = OPEN_ENDED_TYPES.includes(task.task_type) ? 6 : 3;
+  input.classList.toggle("hidden", spoken);
+
+  const recordWrap = document.getElementById("record-wrap");
+  recordWrap.classList.toggle("hidden", !spoken);
+  document.getElementById("record-status").textContent = spoken
+    ? "Tap record, speak your answer, then tap stop." : "";
 
   const timed = task.task_type === "timed" && task.time_limit_seconds;
   input.disabled = !!timed;
   const submitBtn = document.getElementById("submit-btn");
   submitBtn.disabled = false;
-  submitBtn.classList.toggle("hidden", !!timed);
+  submitBtn.classList.toggle("hidden", !!timed || spoken);
   const startBtn = document.getElementById("start-btn");
   startBtn.classList.toggle("hidden", !timed);
   if (timed) {
@@ -179,7 +231,114 @@ function showTask() {
   document.getElementById("task-error").classList.add("hidden");
   document.getElementById("feedback-card").classList.add("hidden");
   document.getElementById("task-card").classList.remove("hidden");
-  if (!timed) input.focus();
+  if (!timed && !spoken) input.focus();
+}
+
+// --- Retell passage playback (sentence-by-sentence via the pronunciation proxy) ---
+let passageAudio = null;
+let passageQueue = [];
+
+function stopPassage() {
+  passageQueue = [];
+  if (passageAudio) { passageAudio.pause(); passageAudio = null; }
+  const label = document.getElementById("passage-play-label");
+  if (label) label.textContent = "Play passage";
+}
+
+function playPassage() {
+  if (passageAudio) { stopPassage(); return; }
+  if (!task || !task.passage_text) return;
+  // The TTS endpoint truncates long text, so play one sentence at a time.
+  passageQueue = task.passage_text.split(/(?<=[.!?…])\s+/).filter(s => s.trim());
+  document.getElementById("passage-play-label").textContent = "Stop";
+  _playNextPassageSentence();
+}
+
+function _playNextPassageSentence() {
+  if (!passageQueue.length) { stopPassage(); return; }
+  const sentence = passageQueue.shift();
+  passageAudio = new Audio(`/languages/${TRACK_CODE}/pronounce?text=${encodeURIComponent(sentence)}`);
+  passageAudio.onended = _playNextPassageSentence;
+  passageAudio.onerror = stopPassage;
+  passageAudio.play().catch(stopPassage);
+}
+
+function togglePassage() {
+  const passageEl = document.getElementById("passage-text");
+  const hidden = passageEl.classList.toggle("hidden");
+  document.getElementById("passage-toggle-btn").textContent = hidden ? "Show text" : "Hide text";
+}
+
+// --- Spoken answer recording ---
+let mediaRecorder = null;
+let recordedChunks = [];
+
+async function toggleRecording() {
+  const btn = document.getElementById("record-btn");
+  const statusEl = document.getElementById("record-status");
+  if (mediaRecorder && mediaRecorder.state === "recording") {
+    mediaRecorder.stop();
+    return;
+  }
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    recordedChunks = [];
+    mediaRecorder = new MediaRecorder(stream);
+    mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) recordedChunks.push(e.data); };
+    mediaRecorder.onstop = () => {
+      stream.getTracks().forEach((t) => t.stop());
+      submitRecording();
+    };
+    mediaRecorder.start();
+    stopPassage();
+    btn.classList.add("btn-error");
+    btn.classList.remove("btn-primary");
+    document.getElementById("record-btn-label").textContent = "Stop recording";
+    statusEl.textContent = "Recording… tap stop when done.";
+  } catch (err) {
+    statusEl.textContent = "Microphone access is required for spoken practice.";
+  }
+}
+
+async function submitRecording() {
+  const btn = document.getElementById("record-btn");
+  const statusEl = document.getElementById("record-status");
+  const errEl = document.getElementById("task-error");
+  errEl.classList.add("hidden");
+  btn.disabled = true;
+  btn.classList.remove("btn-error");
+  btn.classList.add("btn-primary");
+  document.getElementById("record-btn-label").textContent = "Record your answer";
+  statusEl.textContent = "Transcribing and grading…";
+
+  const blob = new Blob(recordedChunks, { type: mediaRecorder.mimeType || "audio/webm" });
+  const formData = new FormData();
+  formData.append("track_id", task.track_id);
+  formData.append("task_type", task.task_type);
+  formData.append("prompt_text", task.prompt_text);
+  formData.append("audio", blob, "recording.webm");
+
+  let result;
+  try {
+    const res = await fetch(`/languages/${TRACK_CODE}/produce/attempt/audio`, {
+      method: "POST",
+      body: formData,
+    });
+    result = await res.json();
+    if (!res.ok) throw new Error(result.error || "Grading failed");
+  } catch (e) {
+    errEl.textContent = e.message || "Could not grade your recording. Please try again.";
+    errEl.classList.remove("hidden");
+    statusEl.textContent = "";
+    btn.disabled = false;
+    return;
+  }
+
+  btn.disabled = false;
+  statusEl.textContent = "";
+  graded++;
+  updateProgress();
+  showFeedback(result.grading, result.transcript || "", result.transcript);
 }
 
 function _scoreColor(score) {
@@ -236,10 +395,14 @@ async function submitAnswer() {
   showFeedback(result.grading, answer);
 }
 
-function showFeedback(grading, answer) {
+function showFeedback(grading, answer, transcript) {
   const scoreEl = document.getElementById("feedback-score");
   scoreEl.textContent = Math.round(grading.score) + "/100";
   scoreEl.className = "text-lg font-semibold " + _scoreColor(grading.score);
+
+  const transcriptWrap = document.getElementById("feedback-transcript-wrap");
+  transcriptWrap.classList.toggle("hidden", !transcript);
+  document.getElementById("feedback-transcript").textContent = transcript || "";
 
   const correctedWrap = document.getElementById("feedback-corrected-wrap");
   const changed = grading.corrected_text && grading.corrected_text.trim() !== answer.trim();
@@ -265,8 +428,10 @@ function showFeedback(grading, answer) {
   }
 
   const nextBtn = document.getElementById("next-btn");
-  nextBtn.innerHTML = OPEN_ENDED_MODE
-    ? 'Write another<i class="ti ti-arrow-right text-sm"></i>'
+  nextBtn.innerHTML = CHUNKLESS_MODE
+    ? (SPOKEN_TYPES.includes(FORCED_TYPE)
+        ? 'Speak again<i class="ti ti-arrow-right text-sm"></i>'
+        : 'Write another<i class="ti ti-arrow-right text-sm"></i>')
     : 'Next exercise<i class="ti ti-arrow-right text-sm"></i>';
 
   document.getElementById("feedback-card").classList.remove("hidden");
@@ -289,8 +454,8 @@ async function nextTask() {
 }
 
 function updateProgress() {
-  if (OPEN_ENDED_MODE) {
-    // Journal/timed sessions are open-ended: no fixed denominator, just count them.
+  if (CHUNKLESS_MODE) {
+    // Journal/timed/speak/retell sessions have no fixed denominator, just count them.
     document.getElementById("progress-label").textContent = `${graded} graded`;
     document.getElementById("progress-bar").style.width = graded > 0 ? "100%" : "0%";
     return;

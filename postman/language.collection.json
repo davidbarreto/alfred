@@ -2,7 +2,7 @@
   "info": {
     "name": "Alfred - Language API",
     "_postman_id": "alfred-language-v1",
-    "description": "Run in order: Health Check → Create Track → Create Grammar Scope → Bulk Create Scopes → Create Chunk → Approve Chunk → Get Daily Batch → Record SRS Review → Production (Mastery/Next Task/Attempt) → Record Shadowing → Get Daily Progress → List Sessions → Get Pronunciation (mp3/ogg) → Upload/Get Shadowing Audio → Cleanup",
+    "description": "Run in order: Health Check → Create Track → Create Grammar Scope → Bulk Create Scopes → Create Chunk → Approve Chunk → Get Daily Batch → Record SRS Review → Production (Mastery/Next Task/Attempt/Spoken Audio) → Record Shadowing → Get Daily Progress → List Sessions → Get Pronunciation (mp3/ogg) → Upload/Get Shadowing Audio → Cleanup",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -1036,7 +1036,274 @@
       }
     },
     {
-      "name": "24 - Record Shadowing Session",
+      "name": "24 - Get Production Next Task (speak, spoken)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Returns a chunk-less speak task', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json.task_type).to.eql('speak');",
+              "    pm.expect(json.chunk_id).to.be.null;",
+              "    pm.expect(json.prompt_text).to.be.a('string').and.not.empty;",
+              "    pm.expect(json.passage_text).to.be.null;",
+              "    pm.environment.set('language_speak_prompt', json.prompt_text);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/language/production/next-task?track_id={{language_track_id}}&task_type=speak",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "language",
+            "production",
+            "next-task"
+          ],
+          "query": [
+            {
+              "key": "track_id",
+              "value": "{{language_track_id}}"
+            },
+            {
+              "key": "task_type",
+              "value": "speak"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "25 - Get Production Next Task (retell, has passage)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Returns a retell task with a generated passage', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json.task_type).to.eql('retell');",
+              "    pm.expect(json.chunk_id).to.be.null;",
+              "    pm.expect(json.passage_text).to.be.a('string').and.not.empty;",
+              "    pm.expect(json.prompt_text).to.include(json.passage_text);",
+              "    pm.environment.set('language_retell_prompt', json.prompt_text);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/language/production/next-task?track_id={{language_track_id}}&task_type=retell",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "language",
+            "production",
+            "next-task"
+          ],
+          "query": [
+            {
+              "key": "track_id",
+              "value": "{{language_track_id}}"
+            },
+            {
+              "key": "task_type",
+              "value": "retell"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "26 - Record Production Attempt (speak, typed transcript)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+              "pm.test('Grades chunk-less speak attempt', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json).to.have.property('session_id');",
+              "    pm.expect(json.chunk_id).to.be.null;",
+              "    pm.expect(json.task_type).to.eql('speak');",
+              "    pm.expect(json.grading).to.have.property('score');",
+              "    pm.expect(json.transcript).to.be.null;",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/language/production/attempts",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "language",
+            "production",
+            "attempts"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"track_id\": {{language_track_id}},\n  \"task_type\": \"speak\",\n  \"prompt_text\": \"{{language_speak_prompt}}\",\n  \"response_text\": \"Ce weekend je vais visiter ma grand-m\\u00e8re et nous allons cuisiner ensemble.\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "27 - Upload Production Audio Attempt (speak)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+              "pm.test('Transcribes and grades the spoken attempt', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json).to.have.property('session_id');",
+              "    pm.expect(json.chunk_id).to.be.null;",
+              "    pm.expect(json.task_type).to.eql('speak');",
+              "    pm.expect(json.transcript).to.be.a('string').and.not.empty;",
+              "    pm.expect(json.grading).to.have.property('score');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "formdata",
+          "formdata": [
+            {
+              "key": "track_id",
+              "value": "{{language_track_id}}",
+              "type": "text"
+            },
+            {
+              "key": "task_type",
+              "value": "speak",
+              "type": "text"
+            },
+            {
+              "key": "prompt_text",
+              "value": "{{language_speak_prompt}}",
+              "type": "text"
+            },
+            {
+              "key": "audio",
+              "type": "file",
+              "src": "fixtures/sample_audio.ogg"
+            }
+          ]
+        },
+        "url": {
+          "raw": "{{base_url}}/language/production/attempts/audio",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "language",
+            "production",
+            "attempts",
+            "audio"
+          ]
+        }
+      }
+    },
+    {
+      "name": "28 - Upload Production Audio Attempt (journal, 400)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 400', () => pm.response.to.have.status(400));",
+              "pm.test('Rejects audio for non-spoken task types', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json.detail).to.include('speak');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "formdata",
+          "formdata": [
+            {
+              "key": "track_id",
+              "value": "{{language_track_id}}",
+              "type": "text"
+            },
+            {
+              "key": "task_type",
+              "value": "journal",
+              "type": "text"
+            },
+            {
+              "key": "prompt_text",
+              "value": "Write a short journal entry.",
+              "type": "text"
+            },
+            {
+              "key": "audio",
+              "type": "file",
+              "src": "fixtures/sample_audio.ogg"
+            }
+          ]
+        },
+        "url": {
+          "raw": "{{base_url}}/language/production/attempts/audio",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "language",
+            "production",
+            "attempts",
+            "audio"
+          ]
+        }
+      }
+    },
+    {
+      "name": "29 - Record Shadowing Session",
       "event": [
         {
           "listen": "test",
@@ -1085,7 +1352,7 @@
       }
     },
     {
-      "name": "25 - Record Conversation Session (feeds_srs=false)",
+      "name": "30 - Record Conversation Session (feeds_srs=false)",
       "event": [
         {
           "listen": "test",
@@ -1132,7 +1399,7 @@
       }
     },
     {
-      "name": "26 - Get Daily Progress",
+      "name": "31 - Get Daily Progress",
       "event": [
         {
           "listen": "test",
@@ -1175,7 +1442,7 @@
       }
     },
     {
-      "name": "27 - List Sessions",
+      "name": "32 - List Sessions",
       "event": [
         {
           "listen": "test",
@@ -1218,7 +1485,7 @@
       }
     },
     {
-      "name": "28 - Get Session",
+      "name": "33 - Get Session",
       "event": [
         {
           "listen": "test",
@@ -1252,7 +1519,7 @@
       }
     },
     {
-      "name": "29 - List Sessions (SRS only)",
+      "name": "34 - List Sessions (SRS only)",
       "event": [
         {
           "listen": "test",
@@ -1295,7 +1562,7 @@
       }
     },
     {
-      "name": "30 - List Chunks (active, leech filter)",
+      "name": "35 - List Chunks (active, leech filter)",
       "event": [
         {
           "listen": "test",
@@ -1342,7 +1609,7 @@
       }
     },
     {
-      "name": "31 - Get Pronunciation (mp3)",
+      "name": "36 - Get Pronunciation (mp3)",
       "event": [
         {
           "listen": "test",
@@ -1387,7 +1654,7 @@
       }
     },
     {
-      "name": "32 - Get Pronunciation (ogg, for Telegram voice notes)",
+      "name": "37 - Get Pronunciation (ogg, for Telegram voice notes)",
       "event": [
         {
           "listen": "test",
@@ -1436,7 +1703,7 @@
       }
     },
     {
-      "name": "33 - Upload Shadowing Audio",
+      "name": "38 - Upload Shadowing Audio",
       "event": [
         {
           "listen": "test",
@@ -1493,7 +1760,7 @@
       }
     },
     {
-      "name": "34 - Get Shadowing Audio",
+      "name": "39 - Get Shadowing Audio",
       "event": [
         {
           "listen": "test",
@@ -1529,7 +1796,7 @@
       }
     },
     {
-      "name": "35 - Delete Grammar Scope",
+      "name": "40 - Delete Grammar Scope",
       "event": [
         {
           "listen": "test",
@@ -1558,7 +1825,7 @@
       }
     },
     {
-      "name": "36 - Delete Chunk",
+      "name": "41 - Delete Chunk",
       "event": [
         {
           "listen": "test",
@@ -1587,7 +1854,7 @@
       }
     },
     {
-      "name": "37 - Delete Track",
+      "name": "42 - Delete Track",
       "event": [
         {
           "listen": "test",

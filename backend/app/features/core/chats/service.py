@@ -32,7 +32,7 @@ from app.features.core.sessions.summary_service import SessionSummaryService
 from app.features.core.working_memory.schemas import WorkingMemoryCreate, WorkingMemoryFilters, WorkingMemoryRead
 from app.features.core.working_memory.service import WorkingMemoryService
 from app.features.language.chunks.service import ChunkService
-from app.features.language.production.schemas import OPEN_ENDED_TASK_TYPES, ProductionAttemptCreate
+from app.features.language.production.schemas import CHUNKLESS_TASK_TYPES, ProductionAttemptCreate
 from app.features.language.production.service import ProductionService
 from app.features.language.sessions.repository import SessionRepository as LanguageSessionRepository
 from app.features.language.sessions.schemas import NextPracticePrompt
@@ -287,12 +287,12 @@ class ChatService:
         remaining = int(data.get("remaining", 1)) - 1
         if advance:
             if remaining > 0:
-                # Open-ended loops (journal, timed) keep their task type; anchored
-                # loops keep rotating sentence/translate via the service default.
+                # Chunk-less loops (journal, timed, speak, retell) keep their task type;
+                # anchored loops keep rotating sentence/translate via the service default.
                 loop_type = data.get("task_type")
                 next_task = await self._production_service.get_next_task(
                     data["track_id"],
-                    task_type=loop_type if loop_type in OPEN_ENDED_TASK_TYPES else None,
+                    task_type=loop_type if loop_type in CHUNKLESS_TASK_TYPES else None,
                     exclude_chunk_id=data.get("chunk_id"),
                 )
             await self._working_memory_service.delete(pending_wm.id)

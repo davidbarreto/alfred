@@ -492,7 +492,7 @@ async def review_session(code: str, request: Request):
     })
 
 
-_PRODUCE_TASK_TYPES = ("sentence", "translate", "journal", "timed")
+_PRODUCE_TASK_TYPES = ("sentence", "translate", "journal", "timed", "speak", "retell")
 
 
 async def _next_production_task(track_id: int, task_type: str | None = None) -> dict | None:
@@ -551,6 +551,29 @@ async def produce_attempt(code: str, request: Request):
         })
     except (KeyError, httpx.HTTPError):
         return JSONResponse({"error": "Could not grade your answer. Please try again."}, status_code=502)
+    return JSONResponse(result)
+
+
+@router.post("/{code}/produce/attempt/audio")
+async def produce_attempt_audio(code: str, request: Request):
+    form = await request.form()
+    upload = form.get("audio")
+    if upload is None:
+        return JSONResponse({"error": "No audio provided."}, status_code=400)
+    audio_bytes = await upload.read()
+
+    try:
+        result = await api.post_multipart(
+            "/language/production/attempts/audio",
+            data={
+                "track_id": form["track_id"],
+                "task_type": form["task_type"],
+                "prompt_text": form["prompt_text"],
+            },
+            files={"audio": (upload.filename or "recording.webm", audio_bytes, upload.content_type or "audio/webm")},
+        )
+    except (KeyError, httpx.HTTPError):
+        return JSONResponse({"error": "Could not grade your recording. Please try again."}, status_code=502)
     return JSONResponse(result)
 
 

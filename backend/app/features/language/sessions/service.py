@@ -79,7 +79,7 @@ class SessionService:
 
     async def record_production(self, data: ProductionSessionCreate) -> SessionRead:
         """Record a production attempt and update the chunk's production SRS state.
-        Open-ended attempts (chunk_id=None) are logged only; they never feed SRS."""
+        Chunk-less attempts (chunk_id=None) are logged only; they never feed SRS."""
         feeds_srs = data.chunk_id is not None and data.quality_score is not None
         orm = await self._repo.create_session(
             track_id=data.track_id,
@@ -88,6 +88,7 @@ class SessionService:
             feeds_srs=feeds_srs,
             task_type=data.task_type,
             prompt_text=data.prompt_text,
+            audio_ref=data.audio_ref,
             ai_feedback_json=data.ai_feedback_json,
             quality_score=data.quality_score,
             transcript_or_notes=data.transcript_or_notes,

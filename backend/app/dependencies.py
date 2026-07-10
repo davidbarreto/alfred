@@ -262,6 +262,9 @@ def get_production_service(session: AsyncSession = Depends(get_session)) -> Prod
         chunk_repo=LanguageChunkRepository(session),
         track_repo=TrackRepository(session),
         session_repo=LanguageSessionRepository(session),
+        audio_storage=get_file_storage(),
+        audio_converter=FfmpegClient(),
+        transcription_service=TranscriptionService(provider=get_transcription_provider(), session=session),
     )
 
 def get_shadowing_service(session: AsyncSession = Depends(get_session)) -> ShadowingService:

@@ -4,7 +4,7 @@ from fastapi import Query
 from pydantic import BaseModel
 
 SessionType: TypeAlias = Literal["srs_review", "shadowing", "production", "conversation", "correction"]
-ProductionTaskType: TypeAlias = Literal["sentence", "translate", "journal", "timed"]
+ProductionTaskType: TypeAlias = Literal["sentence", "translate", "journal", "timed", "speak", "retell"]
 _SRS_FEEDING_TYPES = {"srs_review", "shadowing"}
 
 
@@ -41,7 +41,8 @@ class ShadowingSessionCreate(BaseModel):
 
 class ProductionSessionCreate(BaseModel):
     """Convenience body for production attempts (graded externally by ProductionService).
-    chunk_id is None for open-ended tasks (journal, timed) which have no anchor chunk."""
+    chunk_id is None for chunk-less tasks (journal, timed, speak, retell) which have no
+    anchor chunk. audio_ref is set for spoken attempts submitted as audio."""
     track_id: int
     chunk_id: int | None = None
     task_type: ProductionTaskType
@@ -49,6 +50,7 @@ class ProductionSessionCreate(BaseModel):
     quality_score: float | None = None
     ai_feedback_json: dict[str, Any] | None = None
     transcript_or_notes: str | None = None
+    audio_ref: str | None = None
 
 
 class SessionRead(BaseModel):

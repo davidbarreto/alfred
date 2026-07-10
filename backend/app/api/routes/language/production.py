@@ -1,4 +1,6 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from typing import Annotated
+
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile, status
 
 from app.api.auth import require_auth
 from app.dependencies import ProductionServiceDep
@@ -9,6 +11,7 @@ from app.features.language.production.schemas import (
     ProductionMasteryRead,
     ProductionTaskRead,
 )
+from app.features.language.sessions.schemas import ProductionTaskType
 
 router = APIRouter(prefix="/language/production", tags=["language"], dependencies=[Depends(require_auth)])
 
@@ -32,3 +35,15 @@ async def get_mastery(service: ProductionServiceDep, track_id: int | None = None
 @router.post("/attempts", response_model=ProductionAttemptRead, status_code=status.HTTP_201_CREATED)
 async def grade_attempt(request: ProductionAttemptCreate, service: ProductionServiceDep):
     return await service.grade_attempt(request)
+
+
+@router.post("/attempts/audio", response_model=ProductionAttemptRead, status_code=status.HTTP_201_CREATED)
+async def grade_audio_attempt(
+    service: ProductionServiceDep,
+    track_id: Annotated[int, Form()],
+    task_type: Annotated[ProductionTaskType, Form()],
+    prompt_text: Annotated[str, Form()],
+    audio: UploadFile = File(...),
+):
+    audio_bytes = await audio.read()
+    return await service.grade_audio_attempt(track_id, task_type, prompt_text, audio_bytes)

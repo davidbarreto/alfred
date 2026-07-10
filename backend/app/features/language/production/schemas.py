@@ -7,7 +7,10 @@ from app.features.language.sessions.schemas import ProductionTaskType
 
 PRODUCTION_TASK_TYPES: tuple[str, ...] = ("sentence", "translate")
 OPEN_ENDED_TASK_TYPES: tuple[str, ...] = ("journal", "timed")
-ALL_TASK_TYPES: tuple[str, ...] = PRODUCTION_TASK_TYPES + OPEN_ENDED_TASK_TYPES
+SPOKEN_TASK_TYPES: tuple[str, ...] = ("speak", "retell")
+# Task types with no anchor chunk: never feed production SRS, always available.
+CHUNKLESS_TASK_TYPES: tuple[str, ...] = OPEN_ENDED_TASK_TYPES + SPOKEN_TASK_TYPES
+ALL_TASK_TYPES: tuple[str, ...] = PRODUCTION_TASK_TYPES + CHUNKLESS_TASK_TYPES
 
 
 class ProductionTaskRead(BaseModel):
@@ -22,6 +25,8 @@ class ProductionTaskRead(BaseModel):
     translation: str | None
     total_due: int
     time_limit_seconds: int | None = None
+    # Set for "retell" tasks: the passage to listen to (also embedded in prompt_text).
+    passage_text: str | None = None
 
 
 class ProductionAttemptCreate(BaseModel):
@@ -52,6 +57,8 @@ class ProductionAttemptRead(BaseModel):
     task_type: str
     quality_score: float
     grading: ProductionGradingRead
+    # Set for spoken attempts submitted as audio: what the transcription heard.
+    transcript: str | None = None
 
 
 class TrackMasteryStates(BaseModel):

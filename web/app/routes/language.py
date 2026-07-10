@@ -492,6 +492,68 @@ async def review_session(code: str, request: Request):
     })
 
 
+_PRODUCE_TASK_TYPES = ("sentence", "translate")
+
+
+async def _next_production_task(track_id: int, task_type: str | None = None) -> dict | None:
+    """Fetch the next production exercise; None when nothing is due (backend 404)."""
+    params: dict = {"track_id": track_id}
+    if task_type in _PRODUCE_TASK_TYPES:
+        params["task_type"] = task_type
+    try:
+        return await api.get("/language/production/next-task", params=params)
+    except httpx.HTTPError:
+        return None
+
+
+@router.get("/{code}/produce", response_class=HTMLResponse)
+async def produce_session(code: str, request: Request):
+    tracks = await _safe_get("/language/tracks/", {"active_only": "false"})
+    track = next((t for t in tracks if t["code"] == code), None)
+    if not track:
+        return HTMLResponse("<p>Track not found.</p>", status_code=404)
+
+    task_type = request.query_params.get("type")
+    task = await _next_production_task(track["id"], task_type)
+
+    return templates.TemplateResponse(request, "language_produce.html", {
+        "track": track,
+        "flag": _flag(track["code"]),
+        "task_json": json.dumps(task),
+        "total_due": task["total_due"] if task else 0,
+        "active_type": task_type if task_type in _PRODUCE_TASK_TYPES else "",
+    })
+
+
+@router.get("/{code}/produce/next")
+async def produce_next(code: str, request: Request):
+    tracks = await _safe_get("/language/tracks/", {"active_only": "false"})
+    track = next((t for t in tracks if t["code"] == code), None)
+    if not track:
+        return JSONResponse({"error": "Track not found."}, status_code=404)
+
+    task = await _next_production_task(track["id"], request.query_params.get("type"))
+    if task is None:
+        return JSONResponse({"done": True})
+    return JSONResponse({"done": False, "task": task})
+
+
+@router.post("/{code}/produce/attempt")
+async def produce_attempt(code: str, request: Request):
+    body = await request.json()
+    try:
+        result = await api.post("/language/production/attempts", json={
+            "track_id": body["track_id"],
+            "chunk_id": body["chunk_id"],
+            "task_type": body["task_type"],
+            "prompt_text": body["prompt_text"],
+            "response_text": body["response_text"],
+        })
+    except (KeyError, httpx.HTTPError):
+        return JSONResponse({"error": "Could not grade your answer. Please try again."}, status_code=502)
+    return JSONResponse(result)
+
+
 @router.get("/{code}/pronounce")
 async def pronounce(code: str, text: str):
     try:

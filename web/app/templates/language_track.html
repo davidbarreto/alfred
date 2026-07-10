@@ -33,6 +33,12 @@
         <i class="ti ti-brain text-sm"></i>Review
       </a>
       {% endif %}
+      {% if mastery and mastery.production.due > 0 %}
+      <a href="/languages/{{ track.code }}/produce"
+         class="btn btn-sm bg-purple-600 border-purple-600 text-white hover:bg-purple-700 text-xs">
+        <i class="ti ti-pencil text-sm"></i>Produce
+      </a>
+      {% endif %}
       <a href="/languages/{{ track.code }}/chunks"
          class="btn btn-sm bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 text-xs">
         <i class="ti ti-cards text-sm"></i>Chunks

@@ -1,0 +1,234 @@
+{% extends "base.html" %}
+{% set active_page = "languages" %}
+{% block title %}Produce · {{ track.name }}{% endblock %}
+
+{% block content %}
+<div class="p-6 space-y-6 max-w-xl mx-auto">
+
+  <!-- Breadcrumb -->
+  <div class="flex items-center gap-2 text-xs text-gray-400">
+    <a href="/languages" class="hover:text-gray-600">Languages</a>
+    <i class="ti ti-chevron-right text-gray-300"></i>
+    <a href="/languages/{{ track.code }}" class="hover:text-gray-600">{{ flag }} {{ track.name }}</a>
+    <i class="ti ti-chevron-right text-gray-300"></i>
+    <span class="text-gray-700 font-medium">Produce</span>
+  </div>
+
+  <!-- Progress bar -->
+  <div>
+    <div class="flex items-center justify-between text-xs text-gray-400 mb-1.5">
+      <span id="progress-label">0 / {{ total_due }} graded</span>
+      <div class="flex items-center gap-1">
+        <a href="/languages/{{ track.code }}/produce"
+           class="px-2 py-0.5 rounded text-xs {% if not active_type %}bg-purple-100 text-purple-700 font-medium{% else %}text-gray-400 hover:text-gray-600{% endif %}">auto</a>
+        <a href="/languages/{{ track.code }}/produce?type=sentence"
+           class="px-2 py-0.5 rounded text-xs {% if active_type == 'sentence' %}bg-purple-100 text-purple-700 font-medium{% else %}text-gray-400 hover:text-gray-600{% endif %}">sentence</a>
+        <a href="/languages/{{ track.code }}/produce?type=translate"
+           class="px-2 py-0.5 rounded text-xs {% if active_type == 'translate' %}bg-purple-100 text-purple-700 font-medium{% else %}text-gray-400 hover:text-gray-600{% endif %}">translate</a>
+      </div>
+    </div>
+    <div class="w-full bg-gray-100 rounded-full h-1.5">
+      <div id="progress-bar" class="h-1.5 rounded-full bg-purple-500 transition-all duration-300" style="width: 0%"></div>
+    </div>
+  </div>
+
+  <div id="produce-area">
+
+    {% if total_due == 0 %}
+    <div class="card bg-white p-10 text-center space-y-3">
+      <i class="ti ti-circle-check text-4xl text-green-400"></i>
+      <p class="text-sm font-medium text-gray-700">Nothing due for production right now.</p>
+      <p class="text-xs text-gray-400">Chunks unlock for production after their first successful review.</p>
+      <a href="/languages/{{ track.code }}" class="btn btn-sm btn-primary mt-2">Back to {{ track.name }}</a>
+    </div>
+    {% else %}
+
+    <!-- Task card -->
+    <div id="task-card" class="card bg-white w-full p-6 space-y-4">
+      <div class="flex items-center justify-between">
+        <span id="task-type-badge" class="px-2 py-0.5 rounded text-xs bg-purple-50 text-purple-600 font-medium"></span>
+        <span class="text-xs font-medium text-gray-400 uppercase tracking-widest">{{ track.code | upper }}</span>
+      </div>
+      <p id="task-prompt" class="text-base font-medium text-gray-900"></p>
+
+      <textarea id="answer-input" rows="3" placeholder="Type your answer in {{ track.name }}…"
+        class="textarea textarea-bordered w-full text-sm bg-white"></textarea>
+
+      <div class="flex items-center justify-between">
+        <p id="task-error" class="text-xs text-red-500 hidden"></p>
+        <button id="submit-btn" onclick="submitAnswer()" class="btn btn-sm btn-primary ml-auto">
+          <i class="ti ti-send text-sm"></i>Grade my answer
+        </button>
+      </div>
+    </div>
+
+    <!-- Feedback card (hidden until graded) -->
+    <div id="feedback-card" class="hidden card bg-white w-full p-6 space-y-3 mt-4">
+      <div class="flex items-center justify-between">
+        <span class="text-xs font-medium text-gray-400 uppercase tracking-widest">Result</span>
+        <span id="feedback-score" class="text-lg font-semibold"></span>
+      </div>
+      <div id="feedback-corrected-wrap">
+        <p class="text-xs text-gray-400 mb-0.5">Corrected version</p>
+        <p id="feedback-corrected" class="text-sm font-medium text-gray-900"></p>
+      </div>
+      <ul id="feedback-errors" class="text-xs text-red-600 list-disc list-inside space-y-0.5"></ul>
+      <p id="feedback-text" class="text-sm text-gray-600"></p>
+      <p id="feedback-vocab" class="text-xs text-gray-400 hidden"></p>
+      <button id="next-btn" onclick="nextTask()" class="btn btn-sm btn-primary w-full mt-1">
+        Next exercise<i class="ti ti-arrow-right text-sm"></i>
+      </button>
+    </div>
+
+    <!-- Completion (hidden until done) -->
+    <div id="completion" class="hidden card bg-white p-10 text-center space-y-3 mt-4">
+      <i class="ti ti-circle-check text-4xl text-green-400"></i>
+      <p class="text-sm font-medium text-gray-700">Session complete!</p>
+      <p class="text-xs text-gray-400" id="completion-stats"></p>
+      <a href="/languages/{{ track.code }}" class="btn btn-sm btn-primary mt-2">Back to {{ track.name }}</a>
+    </div>
+
+    {% endif %}
+  </div>
+
+</div>
+
+<script>
+const TRACK_CODE = "{{ track.code }}";
+const FORCED_TYPE = "{{ active_type }}";
+let task = {{ task_json | safe }};
+let graded = 0;
+const total = {{ total_due }};
+
+const TASK_LABELS = { sentence: "Write a sentence", translate: "Translate" };
+
+function showTask() {
+  if (!task) { showCompletion(); return; }
+  document.getElementById("task-type-badge").textContent = TASK_LABELS[task.task_type] || task.task_type;
+  document.getElementById("task-prompt").textContent = task.prompt_text;
+  const input = document.getElementById("answer-input");
+  input.value = "";
+  input.disabled = false;
+  document.getElementById("submit-btn").disabled = false;
+  document.getElementById("task-error").classList.add("hidden");
+  document.getElementById("feedback-card").classList.add("hidden");
+  document.getElementById("task-card").classList.remove("hidden");
+  input.focus();
+}
+
+function _scoreColor(score) {
+  if (score >= 80) return "text-green-600";
+  if (score >= 60) return "text-amber-600";
+  return "text-red-500";
+}
+
+async function submitAnswer() {
+  const input = document.getElementById("answer-input");
+  const answer = input.value.trim();
+  const errEl = document.getElementById("task-error");
+  if (!answer) {
+    errEl.textContent = "Write your answer first.";
+    errEl.classList.remove("hidden");
+    return;
+  }
+  errEl.classList.add("hidden");
+
+  const btn = document.getElementById("submit-btn");
+  btn.disabled = true;
+  input.disabled = true;
+  btn.innerHTML = '<span class="loading loading-spinner loading-xs"></span>Grading…';
+
+  let result;
+  try {
+    const res = await fetch(`/languages/${TRACK_CODE}/produce/attempt`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        track_id: task.track_id,
+        chunk_id: task.chunk_id,
+        task_type: task.task_type,
+        prompt_text: task.prompt_text,
+        response_text: answer,
+      }),
+    });
+    result = await res.json();
+    if (!res.ok) throw new Error(result.error || "Grading failed");
+  } catch (e) {
+    errEl.textContent = e.message || "Could not grade your answer. Please try again.";
+    errEl.classList.remove("hidden");
+    btn.disabled = false;
+    input.disabled = false;
+    btn.innerHTML = '<i class="ti ti-send text-sm"></i>Grade my answer';
+    return;
+  }
+
+  btn.innerHTML = '<i class="ti ti-send text-sm"></i>Grade my answer';
+  graded++;
+  updateProgress();
+  showFeedback(result.grading, answer);
+}
+
+function showFeedback(grading, answer) {
+  const scoreEl = document.getElementById("feedback-score");
+  scoreEl.textContent = Math.round(grading.score) + "/100";
+  scoreEl.className = "text-lg font-semibold " + _scoreColor(grading.score);
+
+  const correctedWrap = document.getElementById("feedback-corrected-wrap");
+  const changed = grading.corrected_text && grading.corrected_text.trim() !== answer.trim();
+  correctedWrap.classList.toggle("hidden", !changed);
+  document.getElementById("feedback-corrected").textContent = grading.corrected_text || "";
+
+  const errorsEl = document.getElementById("feedback-errors");
+  errorsEl.innerHTML = "";
+  (grading.errors || []).forEach(e => {
+    const li = document.createElement("li");
+    li.textContent = e;
+    errorsEl.appendChild(li);
+  });
+  errorsEl.classList.toggle("hidden", !(grading.errors || []).length);
+
+  document.getElementById("feedback-text").textContent = grading.feedback || "";
+
+  const vocabEl = document.getElementById("feedback-vocab");
+  const vocab = grading.new_vocabulary || [];
+  vocabEl.classList.toggle("hidden", !vocab.length);
+  if (vocab.length) {
+    vocabEl.textContent = "Sent to triage: " + vocab.map(v => v.text).join(", ");
+  }
+
+  document.getElementById("feedback-card").classList.remove("hidden");
+  document.getElementById("next-btn").focus();
+}
+
+async function nextTask() {
+  const btn = document.getElementById("next-btn");
+  btn.disabled = true;
+  try {
+    const url = `/languages/${TRACK_CODE}/produce/next` + (FORCED_TYPE ? `?type=${FORCED_TYPE}` : "");
+    const res = await fetch(url);
+    const data = await res.json();
+    task = data.done ? null : data.task;
+  } catch (_) {
+    task = null;
+  }
+  btn.disabled = false;
+  showTask();
+}
+
+function updateProgress() {
+  const pct = total > 0 ? Math.min(100, Math.round(graded / total * 100)) : 0;
+  document.getElementById("progress-label").textContent = `${graded} / ${total} graded`;
+  document.getElementById("progress-bar").style.width = pct + "%";
+}
+
+function showCompletion() {
+  document.getElementById("task-card").classList.add("hidden");
+  document.getElementById("feedback-card").classList.add("hidden");
+  document.getElementById("completion").classList.remove("hidden");
+  document.getElementById("completion-stats").textContent =
+    `Graded ${graded} exercise${graded !== 1 ? "s" : ""} this session.`;
+}
+
+if (task) showTask();
+</script>
+{% endblock %}

@@ -97,9 +97,10 @@ def _build_shadowing_chart(shadowing_sessions: list) -> dict | None:
     return {"width": width, "height": height, "points": points, "polyline": polyline}
 
 
-def _build_heatmap(sessions: list, today: date) -> list:
+def _build_heatmap(sessions: list, today: date, predicate=None) -> list:
+    predicate = predicate or (lambda s: s.get("feeds_srs"))
     counts: Counter = Counter(
-        s["created_at"][:10] for s in sessions if s.get("feeds_srs")
+        s["created_at"][:10] for s in sessions if predicate(s)
     )
     start = today - timedelta(weeks=12, days=today.weekday())
     prev_month = ""
@@ -203,6 +204,25 @@ def _daily_reviews(all_sessions: list, today: date, n_days: int = 14) -> list[di
         count = sum(1 for s in all_sessions if s.get("feeds_srs") and s["created_at"][:10] == iso)
         result.append({"label": day.strftime("%b %d"), "count": count})
     return result
+
+
+_CEFR_COLORS = {
+    "A1": "#9CA3AF",
+    "A2": "#6B7280",
+    "B1": "#60A5FA",
+    "B2": "#2563EB",
+    "C1": "#C084FC",
+    "C2": "#9333EA",
+}
+
+
+def _cefr_distribution(all_chunks: list) -> list[dict]:
+    counts = Counter(c["cefr_level"] for c in all_chunks if c.get("cefr_level"))
+    return [
+        {"label": level, "count": counts[level], "color": _CEFR_COLORS[level]}
+        for level in _CEFR_LEVELS
+        if counts.get(level)
+    ]
 
 
 def _ease_distribution(all_chunks: list) -> list[dict]:
@@ -395,9 +415,11 @@ async def insights_page(request: Request):
             "active_count": len(active_chunks),
         })
 
-    heatmap = _build_heatmap(all_sessions, today)
-
     type_counts = Counter(s["session_type"] for s in all_sessions)
+    type_heatmaps = {
+        t: _build_heatmap(all_sessions, today, predicate=lambda s, t=t: s.get("session_type") == t)
+        for t, _ in type_counts.most_common()
+    }
     total_sessions = len(all_sessions)
     total_srs = sum(1 for s in all_sessions if s.get("feeds_srs"))
 
@@ -406,10 +428,11 @@ async def insights_page(request: Request):
     daily_reviews = _daily_reviews(all_sessions, today)
     ease_dist = _ease_distribution(all_active_chunks)
     interval_dist = _interval_distribution(all_active_chunks)
+    cefr_dist = _cefr_distribution(all_active_chunks)
 
     return templates.TemplateResponse(request, "language_insights.html", {
         "track_stats": track_stats,
-        "heatmap_weeks": heatmap,
+        "type_heatmaps": type_heatmaps,
         "type_counts": dict(type_counts),
         "total_sessions": total_sessions,
         "total_srs": total_srs,
@@ -418,6 +441,7 @@ async def insights_page(request: Request):
         "daily_reviews_json": json.dumps(daily_reviews),
         "ease_dist_json": json.dumps(ease_dist),
         "interval_dist_json": json.dumps(interval_dist),
+        "cefr_dist_json": json.dumps(cefr_dist),
     })
 
 

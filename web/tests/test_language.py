@@ -1,6 +1,8 @@
+from datetime import date
+
 import httpx
 
-from app.routes.language import _build_shadowing_chart, _shadowing_score
+from app.routes.language import _build_heatmap, _build_shadowing_chart, _cefr_distribution, _shadowing_score
 
 
 class TestShadowingScore:
@@ -55,6 +57,54 @@ class TestBuildShadowingChart:
 
         expected = " ".join(f"{p['x']},{p['y']}" for p in chart["points"])
         assert chart["polyline"] == expected
+
+
+class TestBuildHeatmap:
+    def test_defaults_to_counting_feeds_srs_sessions(self):
+        today = date(2026, 7, 10)
+        sessions = [
+            {"created_at": "2026-07-10T00:00:00", "feeds_srs": True},
+            {"created_at": "2026-07-10T00:00:00", "feeds_srs": False},
+        ]
+
+        weeks = _build_heatmap(sessions, today)
+        counted = {d["date"]: d["count"] for w in weeks for d in w["days"]}
+
+        assert counted["2026-07-10"] == 1
+
+    def test_accepts_custom_predicate_for_session_type(self):
+        today = date(2026, 7, 10)
+        sessions = [
+            {"created_at": "2026-07-10T00:00:00", "session_type": "shadowing"},
+            {"created_at": "2026-07-10T00:00:00", "session_type": "srs_review"},
+            {"created_at": "2026-07-09T00:00:00", "session_type": "shadowing"},
+        ]
+
+        weeks = _build_heatmap(sessions, today, predicate=lambda s: s["session_type"] == "shadowing")
+        counted = {d["date"]: d["count"] for w in weeks for d in w["days"]}
+
+        assert counted["2026-07-10"] == 1
+        assert counted["2026-07-09"] == 1
+
+
+class TestCefrDistribution:
+    def test_counts_chunks_by_level_in_cefr_order(self):
+        chunks = [
+            {"cefr_level": "B2"},
+            {"cefr_level": "A1"},
+            {"cefr_level": "B2"},
+            {"cefr_level": "C1"},
+        ]
+
+        dist = _cefr_distribution(chunks)
+
+        assert [d["label"] for d in dist] == ["A1", "B2", "C1"]
+        assert {d["label"]: d["count"] for d in dist} == {"A1": 1, "B2": 2, "C1": 1}
+
+    def test_ignores_chunks_without_a_cefr_level(self):
+        chunks = [{"cefr_level": None}, {}]
+
+        assert _cefr_distribution(chunks) == []
 
 
 class TestPronounce:

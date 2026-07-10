@@ -1,3 +1,4 @@
+import logging
 from typing import Annotated, Optional
 
 import httpx
@@ -6,6 +7,8 @@ from fastapi.responses import HTMLResponse
 
 import app.client as api
 from app.templates_config import templates
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/shopping")
 
@@ -18,15 +21,18 @@ async def shopping_page(request: Request):
     category = request.query_params.get("category", "all")
 
     items, wishlist = [], []
+    api_error: str | None = None
     try:
         items = await api.get("/organizer/shopping", params={"status": status, "category": category, "limit": 100})
-    except httpx.HTTPError:
-        pass
+    except httpx.HTTPError as e:
+        logger.error("Failed to load shopping items: error=%s", e)
+        api_error = f"Cannot reach backend: {e}"
 
     try:
         wishlist = await api.get("/organizer/wishlist", params={"limit": 100})
-    except httpx.HTTPError:
-        pass
+    except httpx.HTTPError as e:
+        logger.error("Failed to load wishlist items: error=%s", e)
+        api_error = api_error or f"Cannot reach backend: {e}"
 
     return templates.TemplateResponse(request, "shopping.html", {
         "items": items,
@@ -34,6 +40,7 @@ async def shopping_page(request: Request):
         "active_status": status,
         "active_category": category,
         "categories": _CATEGORIES,
+        "api_error": api_error,
     })
 
 
@@ -44,7 +51,8 @@ async def shopping_list_fragment(request: Request):
 
     try:
         items = await api.get("/organizer/shopping", params={"status": status, "category": category, "limit": 100})
-    except httpx.HTTPError:
+    except httpx.HTTPError as e:
+        logger.error("Failed to load shopping items: error=%s", e)
         items = []
 
     return templates.TemplateResponse(request, "_shopping_list.html", {
@@ -67,18 +75,31 @@ async def add_shopping_item(
             "priority": priority,
             "source": "manual",
         })
-    except httpx.HTTPError:
+    except httpx.HTTPError as e:
+        logger.error("Failed to create shopping item: name=%r error=%s", name, e)
         return HTMLResponse("", status_code=422)
 
     await api.log_command("shopping.add", {"name": name, "category": category, "priority": priority}, "shopping_item", item.get("id"))
-    return templates.TemplateResponse(request, "_shopping_item.html", {"item": item})
+
+    status = request.query_params.get("status", "pending")
+    list_category = request.query_params.get("category", "all")
+    try:
+        items = await api.get("/organizer/shopping", params={"status": status, "category": list_category, "limit": 100})
+    except httpx.HTTPError as e:
+        logger.error("Failed to reload shopping items after create: error=%s", e)
+        items = []
+    return templates.TemplateResponse(request, "_shopping_list.html", {
+        "items": items,
+        "categories": _CATEGORIES,
+    })
 
 
 @router.post("/{item_id}/bought", response_class=HTMLResponse)
 async def mark_bought(item_id: int, request: Request):
     try:
         item = await api.post(f"/organizer/shopping/{item_id}/bought")
-    except httpx.HTTPError:
+    except httpx.HTTPError as e:
+        logger.error("Failed to mark shopping item bought: id=%d error=%s", item_id, e)
         return HTMLResponse("", status_code=422)
     return templates.TemplateResponse(request, "_shopping_item.html", {"item": item})
 
@@ -89,7 +110,8 @@ async def mark_bought(item_id: int, request: Request):
 async def wishlist_fragment(request: Request):
     try:
         items = await api.get("/organizer/wishlist", params={"limit": 100})
-    except httpx.HTTPError:
+    except httpx.HTTPError as e:
+        logger.error("Failed to load wishlist items: error=%s", e)
         items = []
     return templates.TemplateResponse(request, "_wishlist_list.html", {"items": items, "categories": _CATEGORIES})
 
@@ -109,14 +131,15 @@ async def add_wishlist_item(
         payload["brand"] = brand
     try:
         await api.post("/organizer/wishlist", json=payload)
-    except httpx.HTTPError:
+    except httpx.HTTPError as e:
+        logger.error("Failed to create wishlist item: name=%r error=%s", name, e)
         return HTMLResponse('<p class="text-[#E24B4A] text-sm px-1">Failed to add to wishlist.</p>', status_code=422)
 
     items = []
     try:
         items = await api.get("/organizer/wishlist", params={"limit": 100})
-    except httpx.HTTPError:
-        pass
+    except httpx.HTTPError as e:
+        logger.error("Failed to reload wishlist items after create: error=%s", e)
     return templates.TemplateResponse(request, "_wishlist_list.html", {"items": items, "categories": _CATEGORIES})
 
 
@@ -124,14 +147,15 @@ async def add_wishlist_item(
 async def delete_wishlist_item(item_id: int, request: Request):
     try:
         await api.delete(f"/organizer/wishlist/{item_id}")
-    except httpx.HTTPError:
+    except httpx.HTTPError as e:
+        logger.error("Failed to delete wishlist item: id=%d error=%s", item_id, e)
         return HTMLResponse('<p class="text-[#E24B4A] text-sm px-1">Failed to delete item.</p>', status_code=422)
 
     items = []
     try:
         items = await api.get("/organizer/wishlist", params={"limit": 100})
-    except httpx.HTTPError:
-        pass
+    except httpx.HTTPError as e:
+        logger.error("Failed to reload wishlist items after delete: error=%s", e)
     return templates.TemplateResponse(request, "_wishlist_list.html", {"items": items, "categories": _CATEGORIES})
 
 
@@ -139,12 +163,13 @@ async def delete_wishlist_item(item_id: int, request: Request):
 async def promote_wishlist_item(item_id: int, request: Request):
     try:
         await api.post(f"/organizer/wishlist/{item_id}/promote", json={"category": "other"})
-    except httpx.HTTPError:
+    except httpx.HTTPError as e:
+        logger.error("Failed to promote wishlist item: id=%d error=%s", item_id, e)
         return HTMLResponse('<p class="text-[#E24B4A] text-sm px-1">Failed to promote item.</p>', status_code=422)
 
     items = []
     try:
         items = await api.get("/organizer/wishlist", params={"limit": 100})
-    except httpx.HTTPError:
-        pass
+    except httpx.HTTPError as e:
+        logger.error("Failed to reload wishlist items after promote: error=%s", e)
     return templates.TemplateResponse(request, "_wishlist_list.html", {"items": items, "categories": _CATEGORIES})

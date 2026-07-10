@@ -5,7 +5,10 @@
     class="bg-white border border-gray-200 rounded-lg hover:border-gray-300 transition-colors group relative"
     data-note="{{ note.title }} {{ note.content }}"
   >
-    <div class="p-4 flex flex-col gap-1 cursor-pointer">
+    <div
+      class="p-4 flex flex-col gap-1 cursor-pointer"
+      onclick='openNoteView({{ note.id }}, {{ note.title | tojson }}, {{ note.content | tojson }}, {{ (note.tags or []) | tojson }}, {{ (note.updated_at or "") | tojson }})'
+    >
       {% if note.tags %}
       <span class="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-500 self-start mb-0.5">{{ note.tags[0] }}</span>
       {% endif %}

@@ -75,7 +75,45 @@
   </form>
 </dialog>
 
+<!-- View Note Modal -->
+<dialog id="view-note-modal" class="modal">
+  <div class="modal-box bg-white rounded-xl border border-gray-200 shadow-lg max-w-lg w-full p-6">
+    <div class="flex items-start justify-between gap-2 mb-1">
+      <h3 id="view-note-title" class="text-sm font-semibold text-gray-900"></h3>
+      <button onclick="document.getElementById('view-note-modal').close()"
+              class="text-gray-300 hover:text-gray-500">
+        <i class="ti ti-x text-sm"></i>
+      </button>
+    </div>
+    <div id="view-note-tags" class="flex flex-wrap gap-1 mb-2"></div>
+    <p id="view-note-content" class="text-sm text-gray-600 whitespace-pre-wrap break-words max-h-[60vh] overflow-y-auto"></p>
+    <div id="view-note-updated" class="text-[10px] text-gray-300 mt-3"></div>
+  </div>
+  <form method="dialog" class="modal-backdrop">
+    <button>close</button>
+  </form>
+</dialog>
+
 <script>
+function openNoteView(id, title, content, tags, updatedAt) {
+  document.getElementById("view-note-title").textContent = title;
+  document.getElementById("view-note-content").textContent = content;
+
+  const tagsEl = document.getElementById("view-note-tags");
+  tagsEl.innerHTML = "";
+  (tags || []).forEach(tag => {
+    const span = document.createElement("span");
+    span.className = "text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-500";
+    span.textContent = tag;
+    tagsEl.appendChild(span);
+  });
+
+  const updatedEl = document.getElementById("view-note-updated");
+  updatedEl.textContent = updatedAt ? `updated ${new Date(updatedAt).toLocaleString()}` : "";
+
+  document.getElementById("view-note-modal").showModal();
+}
+
 function filterNotes(q) {
   q = q.toLowerCase();
   document.querySelectorAll("#notes-grid [data-note]").forEach(card => {

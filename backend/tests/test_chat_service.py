@@ -569,14 +569,19 @@ class TestChatServiceLanguageLoop:
         assert next_practice is None
 
 
-def _make_produce_wm(remaining: int = 3, wm_id: int = 99) -> WorkingMemoryRead:
+def _make_produce_wm(
+    remaining: int = 3,
+    wm_id: int = 99,
+    task_type: str = "sentence",
+    chunk_id: int | None = 42,
+) -> WorkingMemoryRead:
     return WorkingMemoryRead(
         id=wm_id,
         key="language:pending",
         value=json.dumps({
-            "mode": "produce", "chunk_id": 42, "track_id": 3, "track_code": "pt",
+            "mode": "produce", "chunk_id": chunk_id, "track_id": 3, "track_code": "pt",
             "language_name": "Portuguese", "text": "a chuva caiu", "translation": "it rained",
-            "task_type": "sentence", "prompt_text": 'Write an original sentence using "a chuva caiu".',
+            "task_type": task_type, "prompt_text": 'Write an original sentence using "a chuva caiu".',
             "remaining": remaining,
         }),
         importance=None, expires_at=None, session_id=None, created_at=datetime(2024, 1, 1),
@@ -643,7 +648,9 @@ class TestChatServiceProductionLoop:
 
         _, next_practice = await service.chat(ChatRequest(session_id=1))
 
-        service._production_service.get_next_task.assert_called_once_with(3, exclude_chunk_id=42)
+        service._production_service.get_next_task.assert_called_once_with(
+            3, task_type=None, exclude_chunk_id=42
+        )
         service._working_memory_service.delete.assert_called_once_with(99)
         created_value = json.loads(service._working_memory_service.create.call_args[0][0].value)
         assert created_value["mode"] == "produce"
@@ -668,6 +675,37 @@ class TestChatServiceProductionLoop:
         assert next_practice is None
         system_prompt = llm_provider.complete.call_args[1]["system"]
         assert "last exercise" in system_prompt
+
+    async def test_open_ended_loop_keeps_task_type_and_no_chunk(self, mock_language_session_repository):
+        from app.features.language.production.schemas import ProductionTaskRead
+        service, llm_provider, _, message_service, _ = _make_service()
+        service._working_memory_service.list.return_value = [
+            _make_produce_wm(remaining=2, wm_id=99, task_type="journal", chunk_id=None)
+        ]
+        service._production_service.grade_attempt = AsyncMock(return_value=_make_production_attempt())
+        journal_task = ProductionTaskRead(
+            track_id=3, track_code="pt", language_name="Portuguese", chunk_id=None,
+            task_type="journal",
+            prompt_text="Write a short journal entry in Portuguese (3-5 sentences) about your plans for tomorrow.",
+            text=None, translation=None, total_due=1,
+        )
+        service._production_service.get_next_task = AsyncMock(return_value=journal_task)
+        message_service.list.return_value = [_make_message("Hoje choveu muito e fiquei em casa.")]
+
+        await service.chat(ChatRequest(session_id=1))
+
+        service._production_service.get_next_task.assert_called_once_with(
+            3, task_type="journal", exclude_chunk_id=None
+        )
+        attempt = service._production_service.grade_attempt.call_args[0][0]
+        assert attempt.chunk_id is None
+        assert attempt.task_type == "journal"
+        created_value = json.loads(service._working_memory_service.create.call_args[0][0].value)
+        assert created_value["task_type"] == "journal"
+        assert created_value["chunk_id"] is None
+        assert created_value["remaining"] == 1
+        system_prompt = llm_provider.complete.call_args[1]["system"]
+        assert "your plans for tomorrow" in system_prompt
 
     async def test_keeps_wm_when_grading_fails(self, mock_language_session_repository):
         service, llm_provider, _, message_service, _ = _make_service()

@@ -6,6 +6,8 @@ from pydantic import BaseModel
 from app.features.language.sessions.schemas import ProductionTaskType
 
 PRODUCTION_TASK_TYPES: tuple[str, ...] = ("sentence", "translate")
+OPEN_ENDED_TASK_TYPES: tuple[str, ...] = ("journal", "timed")
+ALL_TASK_TYPES: tuple[str, ...] = PRODUCTION_TASK_TYPES + OPEN_ENDED_TASK_TYPES
 
 
 class ProductionTaskRead(BaseModel):
@@ -13,17 +15,18 @@ class ProductionTaskRead(BaseModel):
     track_id: int
     track_code: str
     language_name: str
-    chunk_id: int
+    chunk_id: int | None
     task_type: ProductionTaskType
     prompt_text: str
-    text: str
-    translation: str
+    text: str | None
+    translation: str | None
     total_due: int
+    time_limit_seconds: int | None = None
 
 
 class ProductionAttemptCreate(BaseModel):
     track_id: int
-    chunk_id: int
+    chunk_id: int | None = None
     task_type: ProductionTaskType
     prompt_text: str
     response_text: str
@@ -45,7 +48,7 @@ class ProductionGradingRead(BaseModel):
 class ProductionAttemptRead(BaseModel):
     session_id: int
     track_id: int
-    chunk_id: int
+    chunk_id: int | None
     task_type: str
     quality_score: float
     grading: ProductionGradingRead

@@ -5,9 +5,11 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 from fastapi import HTTPException
 
+from app.features.language.production.prompts import JOURNAL_TOPICS, TIMED_TOPICS
 from app.features.language.production.schemas import ProductionAttemptCreate
 from app.features.language.production.service import (
     ProductionService,
+    _build_open_ended_prompt,
     _build_prompt_text,
     _next_task_type,
     _parse_grading_json,
@@ -140,6 +142,25 @@ class TestBuildPromptText:
         assert "to talk about something" in prompt
 
 
+class TestBuildOpenEndedPrompt:
+    def test_journal_prompt_has_language_and_topic(self):
+        prompt = _build_open_ended_prompt("journal", "French", [])
+        assert "French" in prompt
+        assert any(topic in prompt for topic in JOURNAL_TOPICS)
+        assert "Try to use" not in prompt
+
+    def test_timed_prompt_has_minutes_and_topic(self):
+        prompt = _build_open_ended_prompt("timed", "French", [])
+        assert "5 min" in prompt
+        assert "French" in prompt
+        assert any(topic in prompt for topic in TIMED_TOPICS)
+
+    def test_suggestion_line_lists_chunk_texts(self):
+        chunks = [_make_chunk_read(text="parler"), _make_chunk_read(text="manger")]
+        prompt = _build_open_ended_prompt("journal", "French", chunks)
+        assert 'Try to use: "parler", "manger".' in prompt
+
+
 class TestParseGradingJson:
     def test_parses_plain_json(self):
         grading = _parse_grading_json(_GRADING_JSON)
@@ -233,6 +254,45 @@ class TestGetNextTask:
 
         assert await service.get_next_task(99) is None
 
+    async def test_journal_task_available_without_due_chunks(self):
+        service, _, _, chunk_service, _, track_repo, session_repo = _make_service()
+        track_repo.get_track.return_value = _make_track_orm()
+        chunk_service.get_production_daily_batch.return_value = [_make_batch([])]
+
+        task = await service.get_next_task(1, task_type="journal")
+
+        assert task is not None
+        assert task.task_type == "journal"
+        assert task.chunk_id is None
+        assert task.text is None
+        assert task.total_due == 1
+        assert task.time_limit_seconds is None
+        session_repo.get_last_production_task_type.assert_not_called()
+
+    async def test_timed_task_sets_time_limit(self):
+        service, _, _, chunk_service, _, track_repo, _ = _make_service()
+        track_repo.get_track.return_value = _make_track_orm()
+        chunk_service.get_production_daily_batch.return_value = []
+
+        task = await service.get_next_task(1, task_type="timed")
+
+        assert task.task_type == "timed"
+        assert task.time_limit_seconds == 300
+
+    async def test_open_ended_task_suggests_up_to_three_due_chunks(self):
+        service, _, _, chunk_service, _, track_repo, _ = _make_service()
+        track_repo.get_track.return_value = _make_track_orm()
+        chunks = [
+            _make_chunk_read(id=i, text=f"mot{i}") for i in range(1, 5)
+        ]
+        chunk_service.get_production_daily_batch.return_value = [_make_batch(chunks)]
+
+        task = await service.get_next_task(1, task_type="journal")
+
+        assert '"mot1"' in task.prompt_text
+        assert '"mot3"' in task.prompt_text
+        assert '"mot4"' not in task.prompt_text
+
 
 class TestGradeAttempt:
     async def test_happy_path_records_session_and_returns_grading(self):
@@ -308,6 +368,48 @@ class TestGradeAttempt:
 
         prompt = llm_provider.complete.call_args.args[0][0]["content"]
         assert "Nous avons parlé du voyage." in prompt
+
+    async def test_journal_attempt_uses_open_ended_prompt_and_skips_chunk(self):
+        service, llm_provider, session_service, _, chunk_repo, track_repo, _ = _make_service()
+        track_repo.get_track.return_value = _make_track_orm()
+
+        with patch("app.features.language.production.service.create_llm_call", AsyncMock()):
+            result = await service.grade_attempt(_make_attempt(
+                chunk_id=None,
+                task_type="journal",
+                prompt_text="Write a short journal entry in French (3-5 sentences) about your day so far.",
+                response_text="Aujourd'hui il a plu toute la journée.",
+            ))
+
+        chunk_repo.get_chunk.assert_not_called()
+        prompt = llm_provider.complete.call_args.args[0][0]["content"]
+        assert "free-writing" in prompt
+        assert "Aujourd'hui il a plu toute la journée." in prompt
+
+        record_call = session_service.record_production.call_args.args[0]
+        assert record_call.chunk_id is None
+        assert record_call.task_type == "journal"
+        assert result.chunk_id is None
+        assert result.session_id == 7
+
+    async def test_anchored_task_without_chunk_id_raises_400(self):
+        service, _, _, _, chunk_repo, _, _ = _make_service()
+
+        with pytest.raises(HTTPException) as exc_info:
+            await service.grade_attempt(_make_attempt(chunk_id=None, task_type="sentence"))
+        assert exc_info.value.status_code == 400
+        chunk_repo.get_chunk.assert_not_called()
+
+    async def test_open_ended_allows_five_vocabulary_candidates(self):
+        vocab = [{"text": f"mot{i}", "translation": f"word{i}"} for i in range(6)]
+        raw = json.dumps({"score": 60, "new_vocabulary": vocab})
+        service, _, _, chunk_service, _, track_repo, _ = _make_service(llm_text=raw)
+        track_repo.get_track.return_value = _make_track_orm()
+
+        with patch("app.features.language.production.service.create_llm_call", AsyncMock()):
+            await service.grade_attempt(_make_attempt(chunk_id=None, task_type="timed"))
+
+        assert chunk_service.create_chunk.await_count == 5
 
     async def test_raises_404_when_chunk_missing(self):
         service, _, _, _, chunk_repo, _, _ = _make_service()

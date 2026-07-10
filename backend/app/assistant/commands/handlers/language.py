@@ -7,7 +7,7 @@ from fastapi import HTTPException, status
 from app.features.core.working_memory.schemas import WorkingMemoryCreate, WorkingMemoryFilters
 from app.features.core.working_memory.service import WorkingMemoryService
 from app.features.language.chunks.service import ChunkService
-from app.features.language.production.schemas import PRODUCTION_TASK_TYPES
+from app.features.language.production.schemas import ALL_TASK_TYPES, OPEN_ENDED_TASK_TYPES
 from app.features.language.production.service import ProductionService
 from app.features.language.tracks.schemas import TrackFilters
 from app.features.language.tracks.service import TrackService
@@ -18,15 +18,15 @@ _WM_KEY = "language:pending"
 _DEFAULT_ROUND_COUNT = 5
 
 
-def _parse_count(arguments: dict[str, Any]) -> int:
+def _parse_count(arguments: dict[str, Any], default: int = _DEFAULT_ROUND_COUNT) -> int:
     raw = arguments.get("count")
     if raw is None:
-        return _DEFAULT_ROUND_COUNT
+        return default
     try:
         count = int(str(raw).strip())
     except ValueError:
-        return _DEFAULT_ROUND_COUNT
-    return count if count > 0 else _DEFAULT_ROUND_COUNT
+        return default
+    return count if count > 0 else default
 
 
 async def handle_language(
@@ -187,10 +187,10 @@ def _parse_produce_task_type(arguments: dict[str, Any]) -> str | None:
     if value.isdigit():
         arguments.setdefault("count", value)
         return None
-    if value not in PRODUCTION_TASK_TYPES:
+    if value not in ALL_TASK_TYPES:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Unknown production task type: {value!r}. Use one of: {', '.join(PRODUCTION_TASK_TYPES)}",
+            detail=f"Unknown production task type: {value!r}. Use one of: {', '.join(ALL_TASK_TYPES)}",
         )
     return value
 
@@ -206,7 +206,9 @@ async def _handle_produce(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Language code is required")
 
     task_type = _parse_produce_task_type(arguments)
-    count = _parse_count(arguments)
+    # Open-ended tasks (journal, timed) are one whole text each; default to a single round.
+    default_count = 1 if task_type in OPEN_ENDED_TASK_TYPES else _DEFAULT_ROUND_COUNT
+    count = _parse_count(arguments, default=default_count)
 
     tracks = await track_service.get_tracks(TrackFilters(code=language_code, active_only=True))
     if not tracks:
@@ -237,12 +239,13 @@ async def _handle_produce(
             "translation": task.translation,
             "task_type": task.task_type,
             "prompt_text": task.prompt_text,
+            "time_limit_seconds": task.time_limit_seconds,
             "remaining": count,
         }),
         importance=1.0,
     ))
     logger.info(
-        "handle_language: production started track=%s chunk_id=%d task=%s wm_id=%d rounds=%d",
+        "handle_language: production started track=%s chunk_id=%s task=%s wm_id=%d rounds=%d",
         language_code, task.chunk_id, task.task_type, wm.id, count,
     )
 
@@ -257,6 +260,7 @@ async def _handle_produce(
         "translation": task.translation,
         "task_type": task.task_type,
         "prompt_text": task.prompt_text,
+        "time_limit_seconds": task.time_limit_seconds,
         "remaining": count,
     }
 

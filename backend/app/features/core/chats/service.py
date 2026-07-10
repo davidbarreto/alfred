@@ -32,7 +32,7 @@ from app.features.core.sessions.summary_service import SessionSummaryService
 from app.features.core.working_memory.schemas import WorkingMemoryCreate, WorkingMemoryFilters, WorkingMemoryRead
 from app.features.core.working_memory.service import WorkingMemoryService
 from app.features.language.chunks.service import ChunkService
-from app.features.language.production.schemas import ProductionAttemptCreate
+from app.features.language.production.schemas import OPEN_ENDED_TASK_TYPES, ProductionAttemptCreate
 from app.features.language.production.service import ProductionService
 from app.features.language.sessions.repository import SessionRepository as LanguageSessionRepository
 from app.features.language.sessions.schemas import NextPracticePrompt
@@ -270,7 +270,7 @@ class ChatService:
         try:
             attempt = await self._production_service.grade_attempt(ProductionAttemptCreate(
                 track_id=data["track_id"],
-                chunk_id=data["chunk_id"],
+                chunk_id=data.get("chunk_id"),
                 task_type=data.get("task_type", "sentence"),
                 prompt_text=data.get("prompt_text", ""),
                 response_text=user_text,
@@ -287,8 +287,13 @@ class ChatService:
         remaining = int(data.get("remaining", 1)) - 1
         if advance:
             if remaining > 0:
+                # Open-ended loops (journal, timed) keep their task type; anchored
+                # loops keep rotating sentence/translate via the service default.
+                loop_type = data.get("task_type")
                 next_task = await self._production_service.get_next_task(
-                    data["track_id"], exclude_chunk_id=data["chunk_id"]
+                    data["track_id"],
+                    task_type=loop_type if loop_type in OPEN_ENDED_TASK_TYPES else None,
+                    exclude_chunk_id=data.get("chunk_id"),
                 )
             await self._working_memory_service.delete(pending_wm.id)
             if next_task is not None:
@@ -304,12 +309,13 @@ class ChatService:
                         "translation": next_task.translation,
                         "task_type": next_task.task_type,
                         "prompt_text": next_task.prompt_text,
+                        "time_limit_seconds": next_task.time_limit_seconds,
                         "remaining": remaining,
                     }),
                     importance=1.0,
                 ))
                 logger.info(
-                    "Chat: production loop advanced wm_id=%d next_chunk_id=%d remaining=%d",
+                    "Chat: production loop advanced wm_id=%d next_chunk_id=%s remaining=%d",
                     pending_wm.id, next_task.chunk_id, remaining,
                 )
             else:

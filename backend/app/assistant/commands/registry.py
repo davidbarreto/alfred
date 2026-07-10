@@ -265,7 +265,8 @@ COMMAND_DEFINITIONS = {
             "arg_keys": ["language_code", "count"],
         },
         "produce": {
-            "description": "Start a production practice session (write sentences or translate) for a language",
+            "description": "Start a production practice session for a language "
+            "(sentence, translate, journal, or timed writing)",
             "aliases": ["/produce", "/prod"],
             "flags": {},
             "requires_args": True,

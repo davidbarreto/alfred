@@ -140,6 +140,22 @@ class TestRecordProduction:
         assert call_kwargs["feeds_srs"] is False
         service._chunk_service.apply_production_review.assert_not_called()
 
+    async def test_chunkless_open_ended_attempt_never_feeds_srs(self, service):
+        service._repo.create_session.return_value = _make_session_orm(
+            session_type="production", task_type="journal", chunk_id=None, feeds_srs=False
+        )
+        data = ProductionSessionCreate(
+            track_id=1, chunk_id=None, task_type="journal",
+            prompt_text="Write a short journal entry", quality_score=3.2,
+        )
+
+        await service.record_production(data)
+
+        call_kwargs = service._repo.create_session.call_args[1]
+        assert call_kwargs["chunk_id"] is None
+        assert call_kwargs["feeds_srs"] is False
+        service._chunk_service.apply_production_review.assert_not_called()
+
 
 class TestRecordSession:
     async def test_conversation_does_not_feed_srs(self, service):

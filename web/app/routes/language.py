@@ -492,7 +492,7 @@ async def review_session(code: str, request: Request):
     })
 
 
-_PRODUCE_TASK_TYPES = ("sentence", "translate")
+_PRODUCE_TASK_TYPES = ("sentence", "translate", "journal", "timed")
 
 
 async def _next_production_task(track_id: int, task_type: str | None = None) -> dict | None:

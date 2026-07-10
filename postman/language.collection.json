@@ -847,7 +847,196 @@
       }
     },
     {
-      "name": "20 - Record Shadowing Session",
+      "name": "20 - Get Production Next Task (journal, open-ended)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Returns a chunk-less journal task', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json.task_type).to.eql('journal');",
+              "    pm.expect(json.chunk_id).to.be.null;",
+              "    pm.expect(json.prompt_text).to.be.a('string').and.not.empty;",
+              "    pm.expect(json.time_limit_seconds).to.be.null;",
+              "    pm.environment.set('language_journal_prompt', json.prompt_text);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/language/production/next-task?track_id={{language_track_id}}&task_type=journal",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "language",
+            "production",
+            "next-task"
+          ],
+          "query": [
+            {
+              "key": "track_id",
+              "value": "{{language_track_id}}"
+            },
+            {
+              "key": "task_type",
+              "value": "journal"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "21 - Get Production Next Task (timed, has time limit)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Returns a timed task with a time limit', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json.task_type).to.eql('timed');",
+              "    pm.expect(json.chunk_id).to.be.null;",
+              "    pm.expect(json.time_limit_seconds).to.eql(300);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/language/production/next-task?track_id={{language_track_id}}&task_type=timed",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "language",
+            "production",
+            "next-task"
+          ],
+          "query": [
+            {
+              "key": "track_id",
+              "value": "{{language_track_id}}"
+            },
+            {
+              "key": "task_type",
+              "value": "timed"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "22 - Record Production Attempt (journal, chunk-less)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+              "pm.test('Grades chunk-less journal attempt', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json).to.have.property('session_id');",
+              "    pm.expect(json.chunk_id).to.be.null;",
+              "    pm.expect(json.task_type).to.eql('journal');",
+              "    pm.expect(json.grading).to.have.property('score');",
+              "    pm.expect(json.grading).to.have.property('corrected_text');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/language/production/attempts",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "language",
+            "production",
+            "attempts"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"track_id\": {{language_track_id}},\n  \"task_type\": \"journal\",\n  \"prompt_text\": \"{{language_journal_prompt}}\",\n  \"response_text\": \"Aujourd'hui je suis all\\u00e9 au march\\u00e9 avec mes amis. Nous avons parl\\u00e9 de nos vacances. Le soir, j'ai pr\\u00e9par\\u00e9 le d\\u00eener.\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "23 - Record Production Attempt (sentence without chunk_id, 400)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 400', () => pm.response.to.have.status(400));",
+              "pm.test('Explains chunk_id is required', () => {",
+              "    pm.expect(pm.response.json().detail).to.include('chunk_id is required');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/language/production/attempts",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "language",
+            "production",
+            "attempts"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"track_id\": {{language_track_id}},\n  \"task_type\": \"sentence\",\n  \"prompt_text\": \"Write a sentence\",\n  \"response_text\": \"Je parle.\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "24 - Record Shadowing Session",
       "event": [
         {
           "listen": "test",
@@ -896,7 +1085,7 @@
       }
     },
     {
-      "name": "21 - Record Conversation Session (feeds_srs=false)",
+      "name": "25 - Record Conversation Session (feeds_srs=false)",
       "event": [
         {
           "listen": "test",
@@ -943,7 +1132,7 @@
       }
     },
     {
-      "name": "22 - Get Daily Progress",
+      "name": "26 - Get Daily Progress",
       "event": [
         {
           "listen": "test",
@@ -986,7 +1175,7 @@
       }
     },
     {
-      "name": "23 - List Sessions",
+      "name": "27 - List Sessions",
       "event": [
         {
           "listen": "test",
@@ -1029,7 +1218,7 @@
       }
     },
     {
-      "name": "24 - Get Session",
+      "name": "28 - Get Session",
       "event": [
         {
           "listen": "test",
@@ -1063,7 +1252,7 @@
       }
     },
     {
-      "name": "25 - List Sessions (SRS only)",
+      "name": "29 - List Sessions (SRS only)",
       "event": [
         {
           "listen": "test",
@@ -1106,7 +1295,7 @@
       }
     },
     {
-      "name": "26 - List Chunks (active, leech filter)",
+      "name": "30 - List Chunks (active, leech filter)",
       "event": [
         {
           "listen": "test",
@@ -1153,7 +1342,7 @@
       }
     },
     {
-      "name": "27 - Get Pronunciation (mp3)",
+      "name": "31 - Get Pronunciation (mp3)",
       "event": [
         {
           "listen": "test",
@@ -1198,7 +1387,7 @@
       }
     },
     {
-      "name": "28 - Get Pronunciation (ogg, for Telegram voice notes)",
+      "name": "32 - Get Pronunciation (ogg, for Telegram voice notes)",
       "event": [
         {
           "listen": "test",
@@ -1247,7 +1436,7 @@
       }
     },
     {
-      "name": "29 - Upload Shadowing Audio",
+      "name": "33 - Upload Shadowing Audio",
       "event": [
         {
           "listen": "test",
@@ -1304,7 +1493,7 @@
       }
     },
     {
-      "name": "30 - Get Shadowing Audio",
+      "name": "34 - Get Shadowing Audio",
       "event": [
         {
           "listen": "test",
@@ -1340,7 +1529,7 @@
       }
     },
     {
-      "name": "31 - Delete Grammar Scope",
+      "name": "35 - Delete Grammar Scope",
       "event": [
         {
           "listen": "test",
@@ -1369,7 +1558,7 @@
       }
     },
     {
-      "name": "32 - Delete Chunk",
+      "name": "36 - Delete Chunk",
       "event": [
         {
           "listen": "test",
@@ -1398,7 +1587,7 @@
       }
     },
     {
-      "name": "33 - Delete Track",
+      "name": "37 - Delete Track",
       "event": [
         {
           "listen": "test",

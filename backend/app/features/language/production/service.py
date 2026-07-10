@@ -1,5 +1,6 @@
 import json
 import logging
+import random
 import time
 
 from fastapi import HTTPException, status
@@ -9,11 +10,18 @@ from app.features.language.chunks.repository import ChunkRepository
 from app.features.language.chunks.schemas import ChunkCreate
 from app.features.language.chunks.service import ChunkService
 from app.features.language.production.prompts import (
+    JOURNAL_TASK_TEMPLATE,
+    JOURNAL_TOPICS,
+    OPEN_ENDED_GRADING_PROMPT,
     PRODUCTION_GRADING_PROMPT,
     SENTENCE_TASK_TEMPLATE,
+    SUGGESTION_LINE_TEMPLATE,
+    TIMED_TASK_TEMPLATE,
+    TIMED_TOPICS,
     TRANSLATE_TASK_TEMPLATE,
 )
 from app.features.language.production.schemas import (
+    OPEN_ENDED_TASK_TYPES,
     PRODUCTION_TASK_TYPES,
     NewVocabularyCandidate,
     ProductionAttemptCreate,
@@ -35,6 +43,9 @@ from app.shared.llm import LlmProvider
 logger = logging.getLogger(__name__)
 
 _MAX_VOCABULARY_CANDIDATES = 3
+_MAX_VOCABULARY_CANDIDATES_OPEN_ENDED = 5
+_MAX_SUGGESTED_CHUNKS = 3
+_TIMED_TASK_SECONDS = 300
 
 
 def _next_task_type(last_task_type: str | None) -> str:
@@ -51,6 +62,25 @@ def _build_prompt_text(task_type: str, language_name: str, chunk) -> str:
         return TRANSLATE_TASK_TEMPLATE.format(language_name=language_name, source_text=source_text)
     return SENTENCE_TASK_TEMPLATE.format(
         language_name=language_name, text=chunk.text, translation=chunk.translation
+    )
+
+
+def _build_open_ended_prompt(task_type: str, language_name: str, suggested_chunks: list) -> str:
+    suggestion_line = ""
+    if suggested_chunks:
+        chunk_list = ", ".join(f'"{c.text}"' for c in suggested_chunks)
+        suggestion_line = SUGGESTION_LINE_TEMPLATE.format(chunk_list=chunk_list)
+    if task_type == "timed":
+        return TIMED_TASK_TEMPLATE.format(
+            minutes=_TIMED_TASK_SECONDS // 60,
+            language_name=language_name,
+            topic=random.choice(TIMED_TOPICS),
+            suggestion_line=suggestion_line,
+        )
+    return JOURNAL_TASK_TEMPLATE.format(
+        language_name=language_name,
+        topic=random.choice(JOURNAL_TOPICS),
+        suggestion_line=suggestion_line,
     )
 
 
@@ -101,12 +131,17 @@ class ProductionService:
         task_type: str | None = None,
         exclude_chunk_id: int | None = None,
     ) -> ProductionTaskRead | None:
-        """Pick the next production-due chunk and build the exercise for it."""
+        """Pick the next production-due chunk and build the exercise for it.
+
+        Open-ended types (journal, timed) are not chunk-anchored: they are always
+        available and only use due chunks as optional "try to use" suggestions."""
         track = await self._track_repo.get_track(track_id)
         if track is None:
             return None
 
         batches = await self._chunk_service.get_production_daily_batch(track_id)
+        if task_type in OPEN_ENDED_TASK_TYPES:
+            return self._build_open_ended_task(track, task_type, batches)
         if not batches:
             return None
         batch = batches[0]
@@ -133,19 +168,35 @@ class ProductionService:
             total_due=batch.total_due,
         )
 
-    async def grade_attempt(self, data: ProductionAttemptCreate) -> ProductionAttemptRead:
-        """Grade a production attempt with the LLM, log it, and update production SRS."""
-        chunk = await self._chunk_repo.get_chunk(data.chunk_id)
-        if chunk is None:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Chunk not found")
-        track = await self._track_repo.get_track(data.track_id)
-        if track is None:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Track not found")
+    def _build_open_ended_task(self, track, task_type: str, batches: list) -> ProductionTaskRead:
+        suggested = batches[0].chunks[:_MAX_SUGGESTED_CHUNKS] if batches else []
+        prompt_text = _build_open_ended_prompt(task_type, track.name, suggested)
+        return ProductionTaskRead(
+            track_id=track.id,
+            track_code=track.code,
+            language_name=track.name,
+            chunk_id=None,
+            task_type=task_type,
+            prompt_text=prompt_text,
+            text=None,
+            translation=None,
+            total_due=1,
+            time_limit_seconds=_TIMED_TASK_SECONDS if task_type == "timed" else None,
+        )
 
+    def _build_grading_prompt(self, data: ProductionAttemptCreate, track, chunk) -> str:
+        if data.task_type in OPEN_ENDED_TASK_TYPES:
+            return OPEN_ENDED_GRADING_PROMPT.format(
+                language_name=track.name,
+                cefr_level=track.level,
+                task_type=data.task_type,
+                prompt_text=data.prompt_text,
+                response_text=data.response_text,
+            )
         reference_line = ""
         if data.task_type == "translate" and chunk.example_sentence:
             reference_line = f'Reference answer: "{chunk.example_sentence}"'
-        grading_prompt = PRODUCTION_GRADING_PROMPT.format(
+        return PRODUCTION_GRADING_PROMPT.format(
             language_name=track.name,
             cefr_level=chunk.cefr_level or track.level,
             task_type=data.task_type,
@@ -155,13 +206,33 @@ class ProductionService:
             reference_line=reference_line,
             response_text=data.response_text,
         )
+
+    async def grade_attempt(self, data: ProductionAttemptCreate) -> ProductionAttemptRead:
+        """Grade a production attempt with the LLM, log it, and update production SRS.
+
+        Open-ended attempts (journal, timed) have no anchor chunk and never touch SRS."""
+        chunk = None
+        if data.task_type not in OPEN_ENDED_TASK_TYPES:
+            if data.chunk_id is None:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"chunk_id is required for {data.task_type!r} tasks",
+                )
+            chunk = await self._chunk_repo.get_chunk(data.chunk_id)
+            if chunk is None:
+                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Chunk not found")
+        track = await self._track_repo.get_track(data.track_id)
+        if track is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Track not found")
+
+        grading_prompt = self._build_grading_prompt(data, track, chunk)
         messages = [{"role": "user", "content": grading_prompt}]
 
         t0 = time.monotonic()
         try:
             llm_response = await self._llm_provider.complete(messages)
         except Exception as exc:
-            logger.error("Production grading LLM call failed: chunk_id=%d error=%s", data.chunk_id, exc)
+            logger.error("Production grading LLM call failed: chunk_id=%s error=%s", data.chunk_id, exc)
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                 detail="AI grading temporarily unavailable. Please try again in a moment.",
@@ -184,7 +255,7 @@ class ProductionService:
             grading = _parse_grading_json(llm_response.text)
         except (json.JSONDecodeError, ValueError, TypeError) as exc:
             logger.error(
-                "Production grading returned invalid JSON: chunk_id=%d error=%s", data.chunk_id, exc
+                "Production grading returned invalid JSON: chunk_id=%s error=%s", data.chunk_id, exc
             )
             raise HTTPException(
                 status_code=status.HTTP_502_BAD_GATEWAY,
@@ -204,10 +275,15 @@ class ProductionService:
             )
         )
 
-        await self._queue_new_vocabulary(data.track_id, grading.new_vocabulary)
+        max_vocabulary = (
+            _MAX_VOCABULARY_CANDIDATES_OPEN_ENDED
+            if data.task_type in OPEN_ENDED_TASK_TYPES
+            else _MAX_VOCABULARY_CANDIDATES
+        )
+        await self._queue_new_vocabulary(data.track_id, grading.new_vocabulary, max_vocabulary)
 
         logger.info(
-            "Production attempt graded: session_id=%d chunk_id=%d task=%s score=%.0f",
+            "Production attempt graded: session_id=%d chunk_id=%s task=%s score=%.0f",
             session_read.id, data.chunk_id, data.task_type, grading.score,
         )
         return ProductionAttemptRead(
@@ -220,10 +296,13 @@ class ProductionService:
         )
 
     async def _queue_new_vocabulary(
-        self, track_id: int, candidates: list[NewVocabularyCandidate]
+        self,
+        track_id: int,
+        candidates: list[NewVocabularyCandidate],
+        max_candidates: int = _MAX_VOCABULARY_CANDIDATES,
     ) -> None:
         """Push graded-out vocabulary into the existing triage/approval queue."""
-        for candidate in candidates[:_MAX_VOCABULARY_CANDIDATES]:
+        for candidate in candidates[:max_candidates]:
             if not candidate.text.strip() or not candidate.translation.strip():
                 continue
             try:

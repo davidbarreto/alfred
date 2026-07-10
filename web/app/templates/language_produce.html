@@ -21,10 +21,10 @@
       <div class="flex items-center gap-1">
         <a href="/languages/{{ track.code }}/produce"
            class="px-2 py-0.5 rounded text-xs {% if not active_type %}bg-purple-100 text-purple-700 font-medium{% else %}text-gray-400 hover:text-gray-600{% endif %}">auto</a>
-        <a href="/languages/{{ track.code }}/produce?type=sentence"
-           class="px-2 py-0.5 rounded text-xs {% if active_type == 'sentence' %}bg-purple-100 text-purple-700 font-medium{% else %}text-gray-400 hover:text-gray-600{% endif %}">sentence</a>
-        <a href="/languages/{{ track.code }}/produce?type=translate"
-           class="px-2 py-0.5 rounded text-xs {% if active_type == 'translate' %}bg-purple-100 text-purple-700 font-medium{% else %}text-gray-400 hover:text-gray-600{% endif %}">translate</a>
+        {% for t in ["sentence", "translate", "journal", "timed"] %}
+        <a href="/languages/{{ track.code }}/produce?type={{ t }}"
+           class="px-2 py-0.5 rounded text-xs {% if active_type == t %}bg-purple-100 text-purple-700 font-medium{% else %}text-gray-400 hover:text-gray-600{% endif %}">{{ t }}</a>
+        {% endfor %}
       </div>
     </div>
     <div class="w-full bg-gray-100 rounded-full h-1.5">
@@ -47,12 +47,19 @@
     <div id="task-card" class="card bg-white w-full p-6 space-y-4">
       <div class="flex items-center justify-between">
         <span id="task-type-badge" class="px-2 py-0.5 rounded text-xs bg-purple-50 text-purple-600 font-medium"></span>
-        <span class="text-xs font-medium text-gray-400 uppercase tracking-widest">{{ track.code | upper }}</span>
+        <div class="flex items-center gap-3">
+          <span id="timer" class="hidden text-sm font-semibold text-purple-600 tabular-nums"></span>
+          <span class="text-xs font-medium text-gray-400 uppercase tracking-widest">{{ track.code | upper }}</span>
+        </div>
       </div>
       <p id="task-prompt" class="text-base font-medium text-gray-900"></p>
 
       <textarea id="answer-input" rows="3" placeholder="Type your answer in {{ track.name }}…"
         class="textarea textarea-bordered w-full text-sm bg-white"></textarea>
+
+      <button id="start-btn" onclick="startTimed()" class="hidden btn btn-sm btn-primary w-full">
+        <i class="ti ti-clock-play text-sm"></i><span id="start-btn-label">Start writing</span>
+      </button>
 
       <div class="flex items-center justify-between">
         <p id="task-error" class="text-xs text-red-500 hidden"></p>
@@ -100,20 +107,79 @@ let task = {{ task_json | safe }};
 let graded = 0;
 const total = {{ total_due }};
 
-const TASK_LABELS = { sentence: "Write a sentence", translate: "Translate" };
+const TASK_LABELS = { sentence: "Write a sentence", translate: "Translate", journal: "Journal entry", timed: "Timed writing" };
+const OPEN_ENDED_TYPES = ["journal", "timed"];
+const OPEN_ENDED_MODE = OPEN_ENDED_TYPES.includes(FORCED_TYPE);
+
+let timerId = null;
+let timeLeft = 0;
+
+function _fmtTime(seconds) {
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return `${m}:${String(s).padStart(2, "0")}`;
+}
+
+function stopTimer() {
+  if (timerId) { clearInterval(timerId); timerId = null; }
+  const timerEl = document.getElementById("timer");
+  timerEl.classList.add("hidden");
+  timerEl.classList.remove("text-red-500");
+}
+
+function startTimed() {
+  const input = document.getElementById("answer-input");
+  input.disabled = false;
+  document.getElementById("start-btn").classList.add("hidden");
+  document.getElementById("submit-btn").classList.remove("hidden");
+  input.focus();
+
+  timeLeft = task.time_limit_seconds;
+  const timerEl = document.getElementById("timer");
+  timerEl.textContent = _fmtTime(timeLeft);
+  timerEl.classList.remove("hidden");
+  timerId = setInterval(() => {
+    timeLeft--;
+    timerEl.textContent = _fmtTime(Math.max(0, timeLeft));
+    timerEl.classList.toggle("text-red-500", timeLeft <= 30);
+    if (timeLeft <= 0) onTimeUp();
+  }, 1000);
+}
+
+function onTimeUp() {
+  stopTimer();
+  const input = document.getElementById("answer-input");
+  if (input.value.trim()) { submitAnswer(); return; }
+  const errEl = document.getElementById("task-error");
+  errEl.textContent = "Time's up — write at least one sentence, then submit.";
+  errEl.classList.remove("hidden");
+}
 
 function showTask() {
   if (!task) { showCompletion(); return; }
+  stopTimer();
   document.getElementById("task-type-badge").textContent = TASK_LABELS[task.task_type] || task.task_type;
   document.getElementById("task-prompt").textContent = task.prompt_text;
   const input = document.getElementById("answer-input");
   input.value = "";
-  input.disabled = false;
-  document.getElementById("submit-btn").disabled = false;
+  input.rows = OPEN_ENDED_TYPES.includes(task.task_type) ? 6 : 3;
+
+  const timed = task.task_type === "timed" && task.time_limit_seconds;
+  input.disabled = !!timed;
+  const submitBtn = document.getElementById("submit-btn");
+  submitBtn.disabled = false;
+  submitBtn.classList.toggle("hidden", !!timed);
+  const startBtn = document.getElementById("start-btn");
+  startBtn.classList.toggle("hidden", !timed);
+  if (timed) {
+    document.getElementById("start-btn-label").textContent =
+      `Start writing — you have ${_fmtTime(task.time_limit_seconds)}`;
+  }
+
   document.getElementById("task-error").classList.add("hidden");
   document.getElementById("feedback-card").classList.add("hidden");
   document.getElementById("task-card").classList.remove("hidden");
-  input.focus();
+  if (!timed) input.focus();
 }
 
 function _scoreColor(score) {
@@ -132,8 +198,10 @@ async function submitAnswer() {
     return;
   }
   errEl.classList.add("hidden");
+  stopTimer();
 
   const btn = document.getElementById("submit-btn");
+  btn.classList.remove("hidden");
   btn.disabled = true;
   input.disabled = true;
   btn.innerHTML = '<span class="loading loading-spinner loading-xs"></span>Grading…';
@@ -196,8 +264,13 @@ function showFeedback(grading, answer) {
     vocabEl.textContent = "Sent to triage: " + vocab.map(v => v.text).join(", ");
   }
 
+  const nextBtn = document.getElementById("next-btn");
+  nextBtn.innerHTML = OPEN_ENDED_MODE
+    ? 'Write another<i class="ti ti-arrow-right text-sm"></i>'
+    : 'Next exercise<i class="ti ti-arrow-right text-sm"></i>';
+
   document.getElementById("feedback-card").classList.remove("hidden");
-  document.getElementById("next-btn").focus();
+  nextBtn.focus();
 }
 
 async function nextTask() {
@@ -216,6 +289,12 @@ async function nextTask() {
 }
 
 function updateProgress() {
+  if (OPEN_ENDED_MODE) {
+    // Journal/timed sessions are open-ended: no fixed denominator, just count them.
+    document.getElementById("progress-label").textContent = `${graded} graded`;
+    document.getElementById("progress-bar").style.width = graded > 0 ? "100%" : "0%";
+    return;
+  }
   const pct = total > 0 ? Math.min(100, Math.round(graded / total * 100)) : 0;
   document.getElementById("progress-label").textContent = `${graded} / ${total} graded`;
   document.getElementById("progress-bar").style.width = pct + "%";
@@ -229,6 +308,7 @@ function showCompletion() {
     `Graded ${graded} exercise${graded !== 1 ? "s" : ""} this session.`;
 }
 
+updateProgress();
 if (task) showTask();
 </script>
 {% endblock %}

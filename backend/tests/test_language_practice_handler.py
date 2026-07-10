@@ -247,6 +247,7 @@ def _make_production_task(**kwargs):
         text=kwargs.get("text", "rain"),
         translation=kwargs.get("translation", "chuva"),
         total_due=kwargs.get("total_due", 4),
+        time_limit_seconds=kwargs.get("time_limit_seconds"),
     )
 
 
@@ -309,6 +310,45 @@ class TestHandleLanguageProduce:
         )
         assert production_svc.get_next_task.call_args[0][1] is None
         assert result["remaining"] == 3
+
+    async def test_journal_defaults_to_one_round(self):
+        track_svc, chunk_svc, wm_svc = _make_services()
+        production_svc = _make_production_service(_make_production_task(
+            task_type="journal", chunk_id=None, text=None, translation=None,
+            prompt_text="Write a short journal entry in English about your day so far.",
+            total_due=1,
+        ))
+        result = await handle_language(
+            "produce", {"language_code": "en", "task_type": "journal"}, track_svc, chunk_svc, wm_svc,
+            production_service=production_svc,
+        )
+        assert production_svc.get_next_task.call_args[0][1] == "journal"
+        assert result["task_type"] == "journal"
+        assert result["chunk_id"] is None
+        assert result["remaining"] == 1
+
+    async def test_open_ended_explicit_count_overrides_default(self):
+        track_svc, chunk_svc, wm_svc = _make_services()
+        production_svc = _make_production_service(_make_production_task(task_type="journal", chunk_id=None))
+        result = await handle_language(
+            "produce", {"language_code": "en", "task_type": "journal", "count": "3"},
+            track_svc, chunk_svc, wm_svc, production_service=production_svc,
+        )
+        assert result["remaining"] == 3
+
+    async def test_timed_carries_time_limit_into_wm(self):
+        track_svc, chunk_svc, wm_svc = _make_services()
+        production_svc = _make_production_service(_make_production_task(
+            task_type="timed", chunk_id=None, time_limit_seconds=300,
+        ))
+        result = await handle_language(
+            "produce", {"language_code": "en", "task_type": "timed"}, track_svc, chunk_svc, wm_svc,
+            production_service=production_svc,
+        )
+        payload = json.loads(wm_svc.create.call_args[0][0].value)
+        assert payload["time_limit_seconds"] == 300
+        assert payload["task_type"] == "timed"
+        assert result["time_limit_seconds"] == 300
 
     async def test_raises_400_on_unknown_task_type(self):
         track_svc, chunk_svc, wm_svc = _make_services()

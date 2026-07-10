@@ -264,7 +264,7 @@ async def _safe_get(path: str, params: dict | None = None) -> list | dict:
 
 @router.get("/", response_class=HTMLResponse)
 async def hub(request: Request):
-    tracks = await _safe_get("/language/tracks/", {"active_only": "false"})
+    tracks = await _safe_get("/language/tracks", {"active_only": "false"})
     progress = await _safe_get("/language/sessions/daily-progress")
     progress_by_track = {p["track_id"]: p for p in progress}
 
@@ -295,12 +295,12 @@ async def hub(request: Request):
 
 @router.get("/triage", response_class=HTMLResponse)
 async def triage_page(request: Request):
-    tracks = await _safe_get("/language/tracks/", {"active_only": "false"})
+    tracks = await _safe_get("/language/tracks", {"active_only": "false"})
     active_code = request.query_params.get("lang")
 
     all_chunks = []
     for track in tracks:
-        chunks = await _safe_get("/language/chunks/", {
+        chunks = await _safe_get("/language/chunks", {
             "track_id": track["id"], "status": "pending_triage", "limit": 200
         })
         for c in chunks:
@@ -358,7 +358,7 @@ async def reject_chunk(chunk_id: int, request: Request):
 
 @router.get("/insights", response_class=HTMLResponse)
 async def insights_page(request: Request):
-    tracks = await _safe_get("/language/tracks/", {"active_only": "false"})
+    tracks = await _safe_get("/language/tracks", {"active_only": "false"})
     today = date.today()
 
     track_stats = []
@@ -366,17 +366,17 @@ async def insights_page(request: Request):
     all_active_chunks: list = []
 
     for track in tracks:
-        sessions = await _safe_get("/language/sessions/", {
+        sessions = await _safe_get("/language/sessions", {
             "track_id": track["id"], "limit": 500
         })
         all_sessions.extend(sessions)
 
-        active_chunks = await _safe_get("/language/chunks/", {
+        active_chunks = await _safe_get("/language/chunks", {
             "track_id": track["id"], "status": "active", "limit": 500
         })
         all_active_chunks.extend(active_chunks)
 
-        chunks_leech = await _safe_get("/language/chunks/", {
+        chunks_leech = await _safe_get("/language/chunks", {
             "track_id": track["id"], "is_leech": "true", "limit": 200
         })
 
@@ -423,13 +423,13 @@ async def insights_page(request: Request):
 
 @router.get("/{code}/grammar-section", response_class=HTMLResponse)
 async def grammar_section(code: str, request: Request):
-    tracks = await _safe_get("/language/tracks/", {"active_only": "false"})
+    tracks = await _safe_get("/language/tracks", {"active_only": "false"})
     track = next((t for t in tracks if t["code"] == code), None)
     if not track:
         return HTMLResponse("<p>Track not found.</p>", status_code=404)
 
     offset = max(0, int(request.query_params.get("offset", "0")))
-    raw = await _safe_get("/language/grammar-scope/", {
+    raw = await _safe_get("/language/grammar-scope", {
         "track_id": track["id"],
         "limit": _GRAMMAR_PAGE_SIZE + 1,
         "offset": offset,
@@ -446,13 +446,13 @@ async def grammar_section(code: str, request: Request):
 
 @router.get("/{code}/sessions-section", response_class=HTMLResponse)
 async def sessions_section(code: str, request: Request):
-    tracks = await _safe_get("/language/tracks/", {"active_only": "false"})
+    tracks = await _safe_get("/language/tracks", {"active_only": "false"})
     track = next((t for t in tracks if t["code"] == code), None)
     if not track:
         return HTMLResponse("<p>Track not found.</p>", status_code=404)
 
     offset = max(0, int(request.query_params.get("offset", "0")))
-    raw = await _safe_get("/language/sessions/", {
+    raw = await _safe_get("/language/sessions", {
         "track_id": track["id"],
         "limit": _SESSIONS_PAGE_SIZE + 1,
         "offset": offset,
@@ -470,7 +470,7 @@ async def sessions_section(code: str, request: Request):
 
 @router.get("/{code}/review", response_class=HTMLResponse)
 async def review_session(code: str, request: Request):
-    tracks = await _safe_get("/language/tracks/", {"active_only": "false"})
+    tracks = await _safe_get("/language/tracks", {"active_only": "false"})
     track = next((t for t in tracks if t["code"] == code), None)
     if not track:
         return HTMLResponse("<p>Track not found.</p>", status_code=404)
@@ -508,7 +508,7 @@ async def _next_production_task(track_id: int, task_type: str | None = None) -> 
 
 @router.get("/{code}/produce", response_class=HTMLResponse)
 async def produce_session(code: str, request: Request):
-    tracks = await _safe_get("/language/tracks/", {"active_only": "false"})
+    tracks = await _safe_get("/language/tracks", {"active_only": "false"})
     track = next((t for t in tracks if t["code"] == code), None)
     if not track:
         return HTMLResponse("<p>Track not found.</p>", status_code=404)
@@ -527,7 +527,7 @@ async def produce_session(code: str, request: Request):
 
 @router.get("/{code}/produce/next")
 async def produce_next(code: str, request: Request):
-    tracks = await _safe_get("/language/tracks/", {"active_only": "false"})
+    tracks = await _safe_get("/language/tracks", {"active_only": "false"})
     track = next((t for t in tracks if t["code"] == code), None)
     if not track:
         return JSONResponse({"error": "Track not found."}, status_code=404)
@@ -574,7 +574,7 @@ async def session_audio(code: str, session_id: int):
 
 @router.post("/{code}/chunks/{chunk_id}/shadow")
 async def submit_shadowing(code: str, chunk_id: int, request: Request):
-    tracks = await _safe_get("/language/tracks/", {"active_only": "false"})
+    tracks = await _safe_get("/language/tracks", {"active_only": "false"})
     track = next((t for t in tracks if t["code"] == code), None)
     if not track:
         return JSONResponse({"error": "Track not found."}, status_code=404)
@@ -612,7 +612,7 @@ async def score_review(code: str, request: Request):
 
 @router.get("/{code}", response_class=HTMLResponse)
 async def track_detail(code: str, request: Request):
-    tracks = await _safe_get("/language/tracks/", {"active_only": "false"})
+    tracks = await _safe_get("/language/tracks", {"active_only": "false"})
     track = next((t for t in tracks if t["code"] == code), None)
     if not track:
         return HTMLResponse("<p>Track not found.</p>", status_code=404)
@@ -664,7 +664,7 @@ _DIFFICULTY_BUCKETS: dict[str, tuple[float, float]] = {
 
 @router.get("/{code}/chunks", response_class=HTMLResponse)
 async def chunk_browser(code: str, request: Request):
-    tracks = await _safe_get("/language/tracks/", {"active_only": "false"})
+    tracks = await _safe_get("/language/tracks", {"active_only": "false"})
     track = next((t for t in tracks if t["code"] == code), None)
     if not track:
         return HTMLResponse("<p>Track not found.</p>", status_code=404)
@@ -699,7 +699,7 @@ async def chunk_browser(code: str, request: Request):
     total_pages = max(1, (total_count + _CHUNK_PAGE_SIZE - 1) // _CHUNK_PAGE_SIZE)
     page = min(page, total_pages)
 
-    chunks = await _safe_get("/language/chunks/", {
+    chunks = await _safe_get("/language/chunks", {
         **filter_params,
         "limit": _CHUNK_PAGE_SIZE,
         "offset": (page - 1) * _CHUNK_PAGE_SIZE,
@@ -726,7 +726,7 @@ async def chunk_browser(code: str, request: Request):
 
 @router.get("/{code}/chunks/{chunk_id}", response_class=HTMLResponse)
 async def chunk_detail(code: str, chunk_id: int, request: Request):
-    tracks = await _safe_get("/language/tracks/", {"active_only": "false"})
+    tracks = await _safe_get("/language/tracks", {"active_only": "false"})
     track = next((t for t in tracks if t["code"] == code), None)
     if not track:
         return HTMLResponse("<p>Track not found.</p>", status_code=404)
@@ -735,7 +735,7 @@ async def chunk_detail(code: str, chunk_id: int, request: Request):
     if not chunk or isinstance(chunk, list):
         return HTMLResponse("<p>Chunk not found.</p>", status_code=404)
 
-    sessions = await _safe_get("/language/sessions/", {
+    sessions = await _safe_get("/language/sessions", {
         "chunk_id": chunk_id, "limit": 50
     })
 
@@ -760,8 +760,8 @@ async def chunk_detail(code: str, chunk_id: int, request: Request):
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
 async def _fetch_track_data(track_id: int):
-    scopes = await _safe_get("/language/grammar-scope/", {"track_id": track_id, "limit": 500})
-    sessions = await _safe_get("/language/sessions/", {"track_id": track_id, "limit": _SESSIONS_PAGE_SIZE + 1})
+    scopes = await _safe_get("/language/grammar-scope", {"track_id": track_id, "limit": 500})
+    sessions = await _safe_get("/language/sessions", {"track_id": track_id, "limit": _SESSIONS_PAGE_SIZE + 1})
     daily_batch = await _safe_get("/language/chunks/daily-batch", {"track_id": track_id})
     due_batch = daily_batch[0] if daily_batch else {"chunks": [], "total_due": 0}
     return scopes, sessions, due_batch

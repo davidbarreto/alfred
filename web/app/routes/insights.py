@@ -128,10 +128,10 @@ async def insights_page(request: Request):
     for path, params, target in [
         ("/core/memories", {"limit": 200}, "memories"),
         ("/core/working-memory", {"active_only": "false", "limit": 200}, "working_memories"),
-        ("/integration/llm-calls/", {"limit": 200}, "llm_calls"),
-        ("/integration/provider-calls/", {"limit": 200}, "provider_calls"),
-        ("/core/command-executions/", {"limit": 200}, "cmd_executions"),
-        ("/organizer/tasks/", {"status": "ALL", "limit": 200}, "tasks"),
+        ("/integration/llm-calls", {"limit": 200}, "llm_calls"),
+        ("/integration/provider-calls", {"limit": 200}, "provider_calls"),
+        ("/core/command-executions", {"limit": 200}, "cmd_executions"),
+        ("/organizer/tasks", {"status": "ALL", "limit": 200}, "tasks"),
         ("/organizer/tasks/history", {"days": 90}, "task_history"),
     ]:
         try:

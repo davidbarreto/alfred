@@ -83,6 +83,43 @@
     {% endif %}
   </div></div>
 
+  {% if mastery %}
+  <!-- Mastery split: recognition vs production -->
+  <div class="card bg-white"><div class="card-body p-4">
+    <div class="flex items-center justify-between mb-3">
+      <p class="text-xs font-medium text-gray-600">Mastery</p>
+      <p class="text-xs text-gray-400">{{ mastery.total_active }} active chunks</p>
+    </div>
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      {% for mode, stats in [("Recognition", mastery.recognition), ("Production", mastery.production)] %}
+      <div class="rounded-lg border border-gray-100 p-3">
+        <div class="flex items-center justify-between mb-2">
+          <p class="text-xs font-medium {% if mode == 'Recognition' %}text-blue-600{% else %}text-purple-600{% endif %}">
+            <i class="ti {% if mode == 'Recognition' %}ti-eye{% else %}ti-pencil{% endif %} text-sm"></i>
+            {{ mode }}
+          </p>
+          {% if stats.due > 0 %}
+          <span class="px-1.5 py-0.5 rounded text-xs bg-amber-50 text-amber-700">{{ stats.due }} due</span>
+          {% else %}
+          <span class="text-xs text-gray-300">nothing due</span>
+          {% endif %}
+        </div>
+        <div class="flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-500">
+          <span>New <span class="font-medium text-gray-700">{{ stats.new }}</span></span>
+          <span>Learning <span class="font-medium text-gray-700">{{ stats.learning }}</span></span>
+          <span>Review <span class="font-medium text-gray-700">{{ stats.review }}</span></span>
+          <span>Relearning <span class="font-medium text-gray-700">{{ stats.relearning }}</span></span>
+          {% if mode == 'Production' %}
+          <span>Locked <span class="font-medium text-gray-400">{{ mastery.production_locked }}</span></span>
+          {% endif %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    <p class="text-xs text-gray-400 mt-2">Production unlocks per chunk after its first successful recognition review.</p>
+  </div></div>
+  {% endif %}
+
   <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
     <!-- Grammar scope -->

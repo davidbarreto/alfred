@@ -113,8 +113,10 @@ def _make_chunk(chunk_id: int, text: str = "next phrase", translation: str = "ne
         text=text, translation=translation, example_sentence=None, example_translation=None,
         cefr_level=None, frequency_rank=None, frequency_source=None,
         stability=1.0, difficulty=1.0, due_at=now, last_review_at=None,
-        repetitions=0, lapses=0, consecutive_failures=0, state="new", status="active",
-        is_leech=False, created_at=now, updated_at=now,
+        repetitions=0, lapses=0, consecutive_failures=0, state="new",
+        prod_stability=0.0, prod_difficulty=5.0, prod_due_at=None, prod_last_review_at=None,
+        prod_repetitions=0, prod_lapses=0, prod_consecutive_failures=0, prod_state="new",
+        status="active", is_leech=False, created_at=now, updated_at=now,
     )
 
 
@@ -139,6 +141,8 @@ def _make_service(llm_text: str = "ok") -> tuple[ChatService, MagicMock, AsyncMo
     working_memory_service.list = AsyncMock(return_value=[])
     chunk_service = AsyncMock()
     chunk_service.get_daily_batch = AsyncMock(return_value=[])
+    production_service = AsyncMock()
+    production_service.get_next_task = AsyncMock(return_value=None)
     service = ChatService(
         session=session,
         llm_provider=llm_provider,
@@ -148,6 +152,7 @@ def _make_service(llm_text: str = "ok") -> tuple[ChatService, MagicMock, AsyncMo
         session_summary_service=session_summary_service,
         working_memory_service=working_memory_service,
         chunk_service=chunk_service,
+        production_service=production_service,
     )
     return service, llm_provider, embedding_service, message_service, memory_extraction_service
 
@@ -562,6 +567,123 @@ class TestChatServiceLanguageLoop:
         service._working_memory_service.delete.assert_called_once_with(99)
         service._working_memory_service.create.assert_not_called()
         assert next_practice is None
+
+
+def _make_produce_wm(remaining: int = 3, wm_id: int = 99) -> WorkingMemoryRead:
+    return WorkingMemoryRead(
+        id=wm_id,
+        key="language:pending",
+        value=json.dumps({
+            "mode": "produce", "chunk_id": 42, "track_id": 3, "track_code": "pt",
+            "language_name": "Portuguese", "text": "a chuva caiu", "translation": "it rained",
+            "task_type": "sentence", "prompt_text": 'Write an original sentence using "a chuva caiu".',
+            "remaining": remaining,
+        }),
+        importance=None, expires_at=None, session_id=None, created_at=datetime(2024, 1, 1),
+    )
+
+
+def _make_production_attempt(score: float = 80.0):
+    from app.features.language.production.schemas import ProductionAttemptRead, ProductionGradingRead
+    return ProductionAttemptRead(
+        session_id=7, track_id=3, chunk_id=42, task_type="sentence", quality_score=3.4,
+        grading=ProductionGradingRead(
+            score=score, errors=["wrong tense"], corrected_text="A chuva caiu ontem.",
+            feedback="Nice attempt!", new_vocabulary=[],
+        ),
+    )
+
+
+def _make_production_task(chunk_id: int = 43):
+    from app.features.language.production.schemas import ProductionTaskRead
+    return ProductionTaskRead(
+        track_id=3, track_code="pt", language_name="Portuguese", chunk_id=chunk_id,
+        task_type="translate", prompt_text='Translate into Portuguese: "It rained all night."',
+        text="outra frase", translation="another phrase", total_due=2,
+    )
+
+
+class TestChatServiceProductionLoop:
+    async def test_grades_attempt_with_wm_data_and_user_text(self, mock_language_session_repository):
+        service, _, _, message_service, _ = _make_service()
+        service._working_memory_service.list.return_value = [_make_produce_wm()]
+        service._production_service.grade_attempt = AsyncMock(return_value=_make_production_attempt())
+        message_service.list.return_value = [_make_message("A chuva caiu toda a noite")]
+
+        await service.chat(ChatRequest(session_id=1))
+
+        attempt = service._production_service.grade_attempt.call_args[0][0]
+        assert attempt.track_id == 3
+        assert attempt.chunk_id == 42
+        assert attempt.task_type == "sentence"
+        assert attempt.prompt_text.startswith("Write an original sentence")
+        assert attempt.response_text == "A chuva caiu toda a noite"
+        mock_language_session_repository.return_value.get_sessions.assert_not_called()
+
+    async def test_grading_result_appears_in_system_prompt(self, mock_language_session_repository):
+        service, llm_provider, _, message_service, _ = _make_service()
+        service._working_memory_service.list.return_value = [_make_produce_wm()]
+        service._production_service.grade_attempt = AsyncMock(return_value=_make_production_attempt(score=80.0))
+        message_service.list.return_value = [_make_message("A chuva caiu toda a noite")]
+
+        await service.chat(ChatRequest(session_id=1))
+
+        system_prompt = llm_provider.complete.call_args[1]["system"]
+        assert "Production result" in system_prompt
+        assert "80/100" in system_prompt
+        assert "A chuva caiu ontem." in system_prompt
+        assert "wrong tense" in system_prompt
+
+    async def test_advances_to_next_task_when_remaining(self, mock_language_session_repository):
+        service, llm_provider, _, message_service, _ = _make_service()
+        service._working_memory_service.list.return_value = [_make_produce_wm(remaining=3, wm_id=99)]
+        service._production_service.grade_attempt = AsyncMock(return_value=_make_production_attempt())
+        service._production_service.get_next_task = AsyncMock(return_value=_make_production_task(chunk_id=43))
+        message_service.list.return_value = [_make_message("A chuva caiu toda a noite")]
+
+        _, next_practice = await service.chat(ChatRequest(session_id=1))
+
+        service._production_service.get_next_task.assert_called_once_with(3, exclude_chunk_id=42)
+        service._working_memory_service.delete.assert_called_once_with(99)
+        created_value = json.loads(service._working_memory_service.create.call_args[0][0].value)
+        assert created_value["mode"] == "produce"
+        assert created_value["chunk_id"] == 43
+        assert created_value["task_type"] == "translate"
+        assert created_value["remaining"] == 2
+        assert next_practice is None
+        system_prompt = llm_provider.complete.call_args[1]["system"]
+        assert 'Translate into Portuguese: "It rained all night."' in system_prompt
+
+    async def test_ends_loop_when_remaining_exhausted(self, mock_language_session_repository):
+        service, llm_provider, _, message_service, _ = _make_service()
+        service._working_memory_service.list.return_value = [_make_produce_wm(remaining=1, wm_id=99)]
+        service._production_service.grade_attempt = AsyncMock(return_value=_make_production_attempt())
+        message_service.list.return_value = [_make_message("A chuva caiu toda a noite")]
+
+        _, next_practice = await service.chat(ChatRequest(session_id=1))
+
+        service._production_service.get_next_task.assert_not_called()
+        service._working_memory_service.delete.assert_called_once_with(99)
+        service._working_memory_service.create.assert_not_called()
+        assert next_practice is None
+        system_prompt = llm_provider.complete.call_args[1]["system"]
+        assert "last exercise" in system_prompt
+
+    async def test_keeps_wm_when_grading_fails(self, mock_language_session_repository):
+        service, llm_provider, _, message_service, _ = _make_service()
+        service._working_memory_service.list.return_value = [_make_produce_wm(wm_id=99)]
+        service._production_service.grade_attempt = AsyncMock(
+            side_effect=HTTPException(status_code=503, detail="LLM down")
+        )
+        message_service.list.return_value = [_make_message("A chuva caiu toda a noite")]
+
+        _, next_practice = await service.chat(ChatRequest(session_id=1))
+
+        service._working_memory_service.delete.assert_not_called()
+        service._working_memory_service.create.assert_not_called()
+        assert next_practice is None
+        system_prompt = llm_provider.complete.call_args[1]["system"]
+        assert "grading is temporarily unavailable" in system_prompt
 
 
 class TestChatServiceMemoryExtraction:

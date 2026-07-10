@@ -20,6 +20,8 @@ class LearningSession(Base):
         Integer, ForeignKey("language.chunks.id", ondelete="SET NULL"), nullable=True, index=True
     )
     session_type: Mapped[str] = mapped_column(String(20), nullable=False)
+    task_type: Mapped[Optional[str]] = mapped_column(String(30), nullable=True)
+    prompt_text: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     feeds_srs: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     audio_ref: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
     ai_feedback_json: Mapped[Optional[dict]] = mapped_column(JSONB, nullable=True)

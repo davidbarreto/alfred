@@ -41,6 +41,17 @@ class Chunk(Base):
     consecutive_failures: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     state: Mapped[str] = mapped_column(String(20), nullable=False, default="new")
 
+    # FSRS-5 production fields (independent track; prod_due_at is NULL until the
+    # chunk is unlocked by a first successful recognition review)
+    prod_stability: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
+    prod_difficulty: Mapped[float] = mapped_column(Float, nullable=False, default=5.0)
+    prod_due_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True, index=True)
+    prod_last_review_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    prod_repetitions: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    prod_lapses: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    prod_consecutive_failures: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    prod_state: Mapped[str] = mapped_column(String(20), nullable=False, default="new")
+
     status: Mapped[str] = mapped_column(String(20), nullable=False, default="pending_triage")
     is_leech: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 

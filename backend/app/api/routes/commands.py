@@ -33,6 +33,7 @@ from app.dependencies import (
     EmbeddingServiceDep,
     ExtractionLlmProviderDep,
     NoteServiceDep,
+    ProductionServiceDep,
     RecurringTransactionServiceDep,
     ShoppingServiceDep,
     TaskServiceDep,
@@ -93,6 +94,7 @@ async def execute_command(
     chunk_service: ChunkServiceDep,
     working_memory_service: WorkingMemoryServiceDep,
     embedding_service: EmbeddingServiceDep,
+    production_service: ProductionServiceDep,
 ):
     logger.info("POST /commands/execute %s.%s", request.type, request.command)
     execution = await cmd_execution_service.create(
@@ -120,6 +122,7 @@ async def execute_command(
             chunk_service=chunk_service,
             working_memory_service=working_memory_service,
             embedding_service=embedding_service,
+            production_service=production_service,
         )
         entity_id = result.get("id") if isinstance(result, dict) else None
         logger.info(
@@ -174,6 +177,10 @@ _RESPOND_SYSTEM = (
     "Here is the weather in <location>:' and then describe the conditions.\n"
     "- task.search / recall.search: List each matching item with its content and relevance.\n"
     "- reminder.set: Confirm what was set and when, in one sentence.\n"
+    "- language.produce: Announce the production exercise in one short sentence (mention the language and "
+    "how many rounds are left via 'remaining'), then present the task from 'prompt_text' verbatim on its own "
+    "line. Do not answer the exercise yourself.\n"
+    "- language.stop: Confirm the practice session was stopped in one friendly sentence.\n"
     "- finance.spending_report / finance.spending_average / finance.spending_top: State the amount, period, and "
     "any notable breakdown clearly.\n"
     "- For create/update/delete operations, confirm in 1 sentence.\n"

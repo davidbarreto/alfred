@@ -46,6 +46,14 @@ def _make_chunk(**kwargs) -> ChunkRead:
         lapses=0,
         consecutive_failures=0,
         state="new",
+        prod_stability=0.0,
+        prod_difficulty=5.0,
+        prod_due_at=None,
+        prod_last_review_at=None,
+        prod_repetitions=0,
+        prod_lapses=0,
+        prod_consecutive_failures=0,
+        prod_state="new",
         status="active",
         is_leech=False,
         created_at=datetime(2026, 1, 1, tzinfo=timezone.utc),
@@ -227,6 +235,138 @@ class TestHandleLanguageReview:
         assert exc_info.value.status_code == 400
 
 
+def _make_production_task(**kwargs):
+    from app.features.language.production.schemas import ProductionTaskRead
+    return ProductionTaskRead(
+        track_id=kwargs.get("track_id", 3),
+        track_code=kwargs.get("track_code", "en"),
+        language_name=kwargs.get("language_name", "English"),
+        chunk_id=kwargs.get("chunk_id", 42),
+        task_type=kwargs.get("task_type", "sentence"),
+        prompt_text=kwargs.get("prompt_text", 'Write an original sentence in English using "rain".'),
+        text=kwargs.get("text", "rain"),
+        translation=kwargs.get("translation", "chuva"),
+        total_due=kwargs.get("total_due", 4),
+    )
+
+
+def _make_production_service(task=...):
+    from unittest.mock import AsyncMock as _AsyncMock
+    production_service = _AsyncMock()
+    production_service.get_next_task = _AsyncMock(
+        return_value=_make_production_task() if task is ... else task
+    )
+    return production_service
+
+
+class TestHandleLanguageProduce:
+    async def test_returns_task_and_wm_id(self):
+        track_svc, chunk_svc, wm_svc = _make_services()
+        production_svc = _make_production_service()
+        result = await handle_language(
+            "produce", {"language_code": "en"}, track_svc, chunk_svc, wm_svc,
+            production_service=production_svc,
+        )
+        assert result["mode"] == "produce"
+        assert result["wm_id"] == 7
+        assert result["chunk_id"] == 42
+        assert result["task_type"] == "sentence"
+        assert "rain" in result["prompt_text"]
+        assert result["remaining"] == 5
+
+    async def test_creates_wm_with_produce_mode_and_task(self):
+        track_svc, chunk_svc, wm_svc = _make_services()
+        production_svc = _make_production_service()
+        await handle_language(
+            "produce", {"language_code": "en"}, track_svc, chunk_svc, wm_svc,
+            production_service=production_svc,
+        )
+        created = wm_svc.create.call_args[0][0]
+        assert created.key == "language:pending"
+        payload = json.loads(created.value)
+        assert payload["mode"] == "produce"
+        assert payload["chunk_id"] == 42
+        assert payload["task_type"] == "sentence"
+        assert payload["prompt_text"].startswith("Write an original sentence")
+        assert payload["remaining"] == 5
+
+    async def test_passes_explicit_task_type(self):
+        track_svc, chunk_svc, wm_svc = _make_services()
+        production_svc = _make_production_service(_make_production_task(task_type="translate"))
+        result = await handle_language(
+            "produce", {"language_code": "en", "task_type": "translate"}, track_svc, chunk_svc, wm_svc,
+            production_service=production_svc,
+        )
+        assert production_svc.get_next_task.call_args[0][1] == "translate"
+        assert result["task_type"] == "translate"
+
+    async def test_numeric_task_type_is_treated_as_count(self):
+        track_svc, chunk_svc, wm_svc = _make_services()
+        production_svc = _make_production_service()
+        result = await handle_language(
+            "produce", {"language_code": "en", "task_type": "3"}, track_svc, chunk_svc, wm_svc,
+            production_service=production_svc,
+        )
+        assert production_svc.get_next_task.call_args[0][1] is None
+        assert result["remaining"] == 3
+
+    async def test_raises_400_on_unknown_task_type(self):
+        track_svc, chunk_svc, wm_svc = _make_services()
+        production_svc = _make_production_service()
+        with pytest.raises(HTTPException) as exc_info:
+            await handle_language(
+                "produce", {"language_code": "en", "task_type": "juggle"}, track_svc, chunk_svc, wm_svc,
+                production_service=production_svc,
+            )
+        assert exc_info.value.status_code == 400
+
+    async def test_raises_404_when_track_not_found(self):
+        track_svc, chunk_svc, wm_svc = _make_services(tracks=[])
+        production_svc = _make_production_service()
+        with pytest.raises(HTTPException) as exc_info:
+            await handle_language(
+                "produce", {"language_code": "xx"}, track_svc, chunk_svc, wm_svc,
+                production_service=production_svc,
+            )
+        assert exc_info.value.status_code == 404
+
+    async def test_raises_404_when_nothing_due_for_production(self):
+        track_svc, chunk_svc, wm_svc = _make_services()
+        production_svc = _make_production_service(task=None)
+        with pytest.raises(HTTPException) as exc_info:
+            await handle_language(
+                "produce", {"language_code": "en"}, track_svc, chunk_svc, wm_svc,
+                production_service=production_svc,
+            )
+        assert exc_info.value.status_code == 404
+
+    async def test_raises_503_without_production_service(self):
+        track_svc, chunk_svc, wm_svc = _make_services()
+        with pytest.raises(HTTPException) as exc_info:
+            await handle_language("produce", {"language_code": "en"}, track_svc, chunk_svc, wm_svc)
+        assert exc_info.value.status_code == 503
+
+    async def test_clears_existing_pending_wm_before_creating_new(self):
+        old_wm = _make_wm_read(id=5, chunk_id=10, mode="practice")
+        track_svc, chunk_svc, wm_svc = _make_services(existing_wm=[old_wm])
+        production_svc = _make_production_service()
+        await handle_language(
+            "produce", {"language_code": "en"}, track_svc, chunk_svc, wm_svc,
+            production_service=production_svc,
+        )
+        wm_svc.delete.assert_called_once_with(5)
+        wm_svc.create.assert_called_once()
+
+    async def test_raises_400_when_language_code_missing(self):
+        track_svc, chunk_svc, wm_svc = _make_services()
+        production_svc = _make_production_service()
+        with pytest.raises(HTTPException) as exc_info:
+            await handle_language(
+                "produce", {}, track_svc, chunk_svc, wm_svc, production_service=production_svc
+            )
+        assert exc_info.value.status_code == 400
+
+
 class TestHandleLanguageStop:
     async def test_stop_clears_pending_wm(self):
         existing = _make_wm_read(id=5, chunk_id=10)
@@ -301,6 +441,42 @@ class TestLanguageCommandRegistry:
         assert len(commands) == 1
         assert commands[0].args["language_code"] == "fr"
         assert commands[0].args["count"] == "10"
+
+    async def test_detect_shadow_alias_maps_to_practice(self):
+        from app.assistant.commands.resolver import detect_commands
+        commands = await detect_commands("/shadow fr")
+        assert len(commands) == 1
+        assert commands[0].type == "language"
+        assert commands[0].command == "practice"
+        assert commands[0].args["language_code"] == "fr"
+
+    async def test_detect_produce_command(self):
+        from app.assistant.commands.resolver import detect_commands
+        commands = await detect_commands("/produce es")
+        assert len(commands) == 1
+        assert commands[0].type == "language"
+        assert commands[0].command == "produce"
+        assert commands[0].args["language_code"] == "es"
+
+    async def test_detect_produce_alias(self):
+        from app.assistant.commands.resolver import detect_commands
+        commands = await detect_commands("/prod pt")
+        assert len(commands) == 1
+        assert commands[0].command == "produce"
+        assert commands[0].args["language_code"] == "pt"
+
+    async def test_produce_parses_task_type_and_count(self):
+        from app.assistant.commands.resolver import detect_commands
+        commands = await detect_commands("/produce es translate 3")
+        assert len(commands) == 1
+        assert commands[0].args["language_code"] == "es"
+        assert commands[0].args["task_type"] == "translate"
+        assert commands[0].args["count"] == "3"
+
+    async def test_produce_requires_language_arg(self):
+        from app.assistant.commands.resolver import detect_commands
+        commands = await detect_commands("/produce")
+        assert commands == []
 
     async def test_detect_stop_command(self):
         from app.assistant.commands.resolver import detect_commands

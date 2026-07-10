@@ -8,16 +8,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.features.language.chunks.repository import ChunkRepository
 from app.features.language.sessions.schemas import SessionRead, ShadowingSessionCreate
 from app.features.language.sessions.service import SessionService
+from app.features.language.srs import score_to_quality
 from app.features.language.tracks.repository import TrackRepository
 from app.integrations.llm_calls.repository import create_llm_call
 from app.shared.audio import AudioAnalysisProvider, AudioConverter, FileStorage
 
 logger = logging.getLogger(__name__)
-
-
-def _score_to_quality(score: float) -> float:
-    """Map Gemini's 0-100 pronunciation score onto the 1-4 FSRS quality scale."""
-    return max(1.0, min(4.0, 1.0 + 3.0 * (score / 100.0)))
 
 
 class ShadowingService:
@@ -80,7 +76,7 @@ class ShadowingService:
             ShadowingSessionCreate(
                 track_id=track_id,
                 chunk_id=chunk_id,
-                quality_score=_score_to_quality(analysis.score) if analysis else None,
+                quality_score=score_to_quality(analysis.score) if analysis else None,
                 ai_feedback_json=asdict(analysis) if analysis else None,
                 transcript_or_notes=analysis.summary if analysis else None,
             ),

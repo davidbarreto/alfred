@@ -563,6 +563,9 @@ async def track_detail(code: str, request: Request):
 
     retention = _retention_rate(sessions_all)
 
+    mastery_list = await _safe_get("/language/production/mastery", {"track_id": track["id"]})
+    mastery = mastery_list[0] if mastery_list else None
+
     scopes_page, scope_has_next, scope_has_prev = _pagination(scopes_all, 0, _GRAMMAR_PAGE_SIZE)
     sessions_page, sessions_has_next, sessions_has_prev = _pagination(sessions_all, 0, _SESSIONS_PAGE_SIZE)
     await _enrich_with_chunk_text(sessions_page)
@@ -584,6 +587,7 @@ async def track_detail(code: str, request: Request):
         "chunk_counts": chunk_counts,
         "progress": prog,
         "retention": retention,
+        "mastery": mastery,
     })
 
 

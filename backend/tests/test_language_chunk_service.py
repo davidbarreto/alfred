@@ -27,6 +27,14 @@ def _make_chunk_orm(**kwargs):
     orm.lapses = kwargs.get("lapses", 0)
     orm.consecutive_failures = kwargs.get("consecutive_failures", 0)
     orm.state = kwargs.get("state", "new")
+    orm.prod_stability = kwargs.get("prod_stability", 0.0)
+    orm.prod_difficulty = kwargs.get("prod_difficulty", 5.0)
+    orm.prod_due_at = kwargs.get("prod_due_at", None)
+    orm.prod_last_review_at = kwargs.get("prod_last_review_at", None)
+    orm.prod_repetitions = kwargs.get("prod_repetitions", 0)
+    orm.prod_lapses = kwargs.get("prod_lapses", 0)
+    orm.prod_consecutive_failures = kwargs.get("prod_consecutive_failures", 0)
+    orm.prod_state = kwargs.get("prod_state", "new")
     orm.status = kwargs.get("status", "active")
     orm.is_leech = kwargs.get("is_leech", False)
     orm.created_at = kwargs.get("created_at", datetime(2026, 1, 1, tzinfo=timezone.utc))
@@ -128,6 +136,76 @@ class TestApplySrsReview:
         update_kwargs = service._repo.update_srs_fields.call_args[1]
         assert update_kwargs["is_leech"] is True
 
+    async def test_unlocks_production_on_first_successful_review(self, service):
+        chunk = _make_chunk_orm(state="new", prod_due_at=None)
+        service._repo.get_chunk.side_effect = [chunk, _make_chunk_orm()]
+        await service.apply_srs_review(1, quality_score=3.0)
+        service._repo.unlock_production.assert_called_once()
+        assert service._repo.unlock_production.call_args[0][0] == 1
+
+    async def test_does_not_unlock_production_on_failed_review(self, service):
+        chunk = _make_chunk_orm(state="new", prod_due_at=None)
+        service._repo.get_chunk.side_effect = [chunk, _make_chunk_orm()]
+        await service.apply_srs_review(1, quality_score=1.0)
+        service._repo.unlock_production.assert_not_called()
+
+    async def test_does_not_unlock_production_when_already_unlocked(self, service):
+        chunk = _make_chunk_orm(
+            state="review",
+            stability=5.0,
+            prod_due_at=datetime(2026, 6, 1, tzinfo=timezone.utc),
+        )
+        service._repo.get_chunk.side_effect = [chunk, _make_chunk_orm()]
+        await service.apply_srs_review(1, quality_score=3.5)
+        service._repo.unlock_production.assert_not_called()
+
+
+class TestApplyProductionReview:
+    async def test_updates_production_fields_only(self, service):
+        chunk = _make_chunk_orm(
+            prod_state="new",
+            prod_due_at=datetime(2026, 6, 25, tzinfo=timezone.utc),
+        )
+        service._repo.get_chunk.side_effect = [chunk, _make_chunk_orm(prod_state="learning")]
+        result = await service.apply_production_review(1, quality_score=3.0)
+        assert result is not None
+        service._repo.update_production_srs_fields.assert_called_once()
+        service._repo.update_srs_fields.assert_not_called()
+
+    async def test_uses_production_card_state(self, service):
+        chunk = _make_chunk_orm(
+            state="review",
+            stability=50.0,
+            prod_state="new",
+            prod_stability=0.0,
+            prod_due_at=datetime(2026, 6, 25, tzinfo=timezone.utc),
+        )
+        service._repo.get_chunk.side_effect = [chunk, _make_chunk_orm()]
+        await service.apply_production_review(1, quality_score=3.0)
+        update_kwargs = service._repo.update_production_srs_fields.call_args[1]
+        # A "new" production card starts learning regardless of the recognition state
+        assert update_kwargs["state"] == "learning"
+        assert update_kwargs["repetitions"] == 1
+
+    async def test_increments_production_lapses_on_again_rating(self, service):
+        chunk = _make_chunk_orm(
+            prod_state="review",
+            prod_stability=10.0,
+            prod_lapses=2,
+            prod_due_at=datetime(2026, 6, 25, tzinfo=timezone.utc),
+            prod_last_review_at=datetime(2026, 6, 20, tzinfo=timezone.utc),
+        )
+        service._repo.get_chunk.side_effect = [chunk, _make_chunk_orm()]
+        await service.apply_production_review(1, quality_score=1.0)
+        update_kwargs = service._repo.update_production_srs_fields.call_args[1]
+        assert update_kwargs["lapses"] == 3
+
+    async def test_returns_none_when_chunk_not_found(self, service):
+        service._repo.get_chunk.return_value = None
+        service._repo.get_chunk.side_effect = None
+        result = await service.apply_production_review(999, quality_score=3.0)
+        assert result is None
+
 
 class TestCountChunks:
     async def test_returns_count_from_repo(self, service):
@@ -172,3 +250,32 @@ class TestGetDailyBatch:
 
         assert len(result) == 1
         assert result[0].track_id == 1
+
+
+class TestGetProductionDailyBatch:
+    async def test_returns_production_due_batch_per_track(self, service):
+        service._track_repo.get_tracks.return_value = [
+            _make_track_orm(id=1, code="fr", daily_quota=5),
+        ]
+        service._repo.count_production_due_for_track.return_value = 2
+        service._repo.get_production_due_chunks_for_track.return_value = [_make_chunk_orm()] * 2
+
+        result = await service.get_production_daily_batch()
+
+        assert len(result) == 1
+        assert result[0].total_due == 2
+        assert len(result[0].chunks) == 2
+        service._repo.get_production_due_chunks_for_track.assert_called_once_with(1, 5)
+
+    async def test_filters_by_track_id_when_provided(self, service):
+        service._track_repo.get_tracks.return_value = [
+            _make_track_orm(id=1, code="fr"),
+            _make_track_orm(id=2, code="ru"),
+        ]
+        service._repo.count_production_due_for_track.return_value = 0
+        service._repo.get_production_due_chunks_for_track.return_value = []
+
+        result = await service.get_production_daily_batch(track_id=2)
+
+        assert len(result) == 1
+        assert result[0].track_id == 2

@@ -13,9 +13,35 @@ from app.features.language.chunks.schemas import (
 )
 from app.features.language.tracks.repository import TrackRepository
 from app.features.language.tracks.schemas import TrackFilters
-from app.features.language.srs import CardState, State, next_card_state, quality_to_rating, is_leech
+from app.features.language.srs import CardState, Rating, next_card_state, quality_to_rating, is_leech
 
 logger = logging.getLogger(__name__)
+
+
+def _recognition_card(orm) -> CardState:
+    return CardState(
+        stability=orm.stability,
+        difficulty=orm.difficulty,
+        due_at=orm.due_at,
+        last_review_at=orm.last_review_at,
+        repetitions=orm.repetitions,
+        lapses=orm.lapses,
+        consecutive_failures=orm.consecutive_failures,
+        state=orm.state,
+    )
+
+
+def _production_card(orm) -> CardState:
+    return CardState(
+        stability=orm.prod_stability,
+        difficulty=orm.prod_difficulty,
+        due_at=orm.prod_due_at,
+        last_review_at=orm.prod_last_review_at,
+        repetitions=orm.prod_repetitions,
+        lapses=orm.prod_lapses,
+        consecutive_failures=orm.prod_consecutive_failures,
+        state=orm.prod_state,
+    )
 
 
 class ChunkService:
@@ -60,24 +86,14 @@ class ChunkService:
         return await self.update_chunk(chunk_id, update_data)
 
     async def apply_srs_review(self, chunk_id: int, quality_score: float) -> ChunkRead | None:
-        """Update FSRS state for a chunk after a review session."""
+        """Update recognition FSRS state for a chunk after a review session."""
         orm = await self._repo.get_chunk(chunk_id)
         if orm is None:
             return None
 
-        card = CardState(
-            stability=orm.stability,
-            difficulty=orm.difficulty,
-            due_at=orm.due_at,
-            last_review_at=orm.last_review_at,
-            repetitions=orm.repetitions,
-            lapses=orm.lapses,
-            consecutive_failures=orm.consecutive_failures,
-            state=orm.state,
-        )
         rating = quality_to_rating(quality_score)
         now = datetime.now(timezone.utc)
-        new_card = next_card_state(card, rating, now)
+        new_card = next_card_state(_recognition_card(orm), rating, now)
         leech = is_leech(new_card.consecutive_failures)
 
         await self._repo.update_srs_fields(
@@ -96,6 +112,43 @@ class ChunkService:
         if leech and not orm.is_leech:
             logger.warning("Chunk flagged as leech: id=%d consecutive_failures=%d", chunk_id, new_card.consecutive_failures)
 
+        if rating >= Rating.GOOD and orm.prod_due_at is None:
+            await self._repo.unlock_production(chunk_id, now)
+            logger.info("Chunk unlocked for production practice: id=%d", chunk_id)
+
+        updated = await self._repo.get_chunk(chunk_id)
+        return ChunkRead.model_validate(updated)
+
+    async def apply_production_review(self, chunk_id: int, quality_score: float) -> ChunkRead | None:
+        """Update production FSRS state for a chunk after a production attempt."""
+        orm = await self._repo.get_chunk(chunk_id)
+        if orm is None:
+            return None
+        if orm.prod_due_at is None:
+            logger.warning("Production review on locked chunk: id=%d — unlocking implicitly", chunk_id)
+
+        rating = quality_to_rating(quality_score)
+        now = datetime.now(timezone.utc)
+        new_card = next_card_state(_production_card(orm), rating, now)
+
+        await self._repo.update_production_srs_fields(
+            chunk_id=chunk_id,
+            stability=new_card.stability,
+            difficulty=new_card.difficulty,
+            due_at=new_card.due_at,
+            last_review_at=new_card.last_review_at,
+            repetitions=new_card.repetitions,
+            lapses=new_card.lapses,
+            consecutive_failures=new_card.consecutive_failures,
+            state=new_card.state,
+        )
+
+        if is_leech(new_card.consecutive_failures):
+            logger.warning(
+                "Chunk struggling in production: id=%d prod_consecutive_failures=%d",
+                chunk_id, new_card.consecutive_failures,
+            )
+
         updated = await self._repo.get_chunk(chunk_id)
         return ChunkRead.model_validate(updated)
 
@@ -111,6 +164,26 @@ class ChunkService:
         for track in tracks_query:
             total_due = await self._repo.count_due_for_track(track.id)
             chunks_orm = await self._repo.get_due_chunks_for_track(track.id, track.daily_quota)
+            batches.append(DailyBatchRead(
+                track_id=track.id,
+                track_code=track.code,
+                chunks=[ChunkRead.model_validate(c) for c in chunks_orm],
+                total_due=total_due,
+            ))
+        return batches
+
+    async def get_production_daily_batch(self, track_id: int | None = None) -> list[DailyBatchRead]:
+        """Return today's production-due batches per active track, Pareto-weighted."""
+        tracks_query = await self._track_repo.get_tracks(
+            TrackFilters(active_only=True)
+        )
+        if track_id is not None:
+            tracks_query = [t for t in tracks_query if t.id == track_id]
+
+        batches = []
+        for track in tracks_query:
+            total_due = await self._repo.count_production_due_for_track(track.id)
+            chunks_orm = await self._repo.get_production_due_chunks_for_track(track.id, track.daily_quota)
             batches.append(DailyBatchRead(
                 track_id=track.id,
                 track_code=track.code,

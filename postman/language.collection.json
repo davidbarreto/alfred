@@ -2,7 +2,7 @@
   "info": {
     "name": "Alfred - Language API",
     "_postman_id": "alfred-language-v1",
-    "description": "Run in order: Health Check → Create Track → Create Grammar Scope → Bulk Create Scopes → Create Chunk → Approve Chunk → Get Daily Batch → Record SRS Review → Record Shadowing → Get Daily Progress → List Sessions → Get Pronunciation (mp3/ogg) → Upload/Get Shadowing Audio → Cleanup",
+    "description": "Run in order: Health Check → Create Track → Create Grammar Scope → Bulk Create Scopes → Create Chunk → Approve Chunk → Get Daily Batch → Record SRS Review → Production (Mastery/Next Task/Attempt) → Record Shadowing → Get Daily Progress → List Sessions → Get Pronunciation (mp3/ogg) → Upload/Get Shadowing Audio → Cleanup",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -40,8 +40,12 @@
         "header": [],
         "url": {
           "raw": "{{base_url}}/health",
-          "host": ["{{base_url}}"],
-          "path": ["health"]
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "health"
+          ]
         }
       }
     },
@@ -71,16 +75,30 @@
       ],
       "request": {
         "method": "POST",
-        "header": [{"key": "Content-Type", "value": "application/json"}],
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
         "body": {
           "mode": "raw",
           "raw": "{\n  \"code\": \"pt\",\n  \"name\": \"Portuguese\",\n  \"level\": \"B1\",\n  \"daily_quota\": 10,\n  \"review_mode\": \"balanced\",\n  \"active\": true\n}",
-          "options": {"raw": {"language": "json"}}
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
         },
         "url": {
           "raw": "{{base_url}}/language/tracks",
-          "host": ["{{base_url}}"],
-          "path": ["language", "tracks"]
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "language",
+            "tracks"
+          ]
         }
       }
     },
@@ -107,9 +125,19 @@
         "header": [],
         "url": {
           "raw": "{{base_url}}/language/tracks?active_only=true",
-          "host": ["{{base_url}}"],
-          "path": ["language", "tracks"],
-          "query": [{"key": "active_only", "value": "true"}]
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "language",
+            "tracks"
+          ],
+          "query": [
+            {
+              "key": "active_only",
+              "value": "true"
+            }
+          ]
         }
       }
     },
@@ -136,8 +164,14 @@
         "header": [],
         "url": {
           "raw": "{{base_url}}/language/tracks/{{language_track_id}}",
-          "host": ["{{base_url}}"],
-          "path": ["language", "tracks", "{{language_track_id}}"]
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "language",
+            "tracks",
+            "{{language_track_id}}"
+          ]
         }
       }
     },
@@ -160,16 +194,31 @@
       ],
       "request": {
         "method": "PATCH",
-        "header": [{"key": "Content-Type", "value": "application/json"}],
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
         "body": {
           "mode": "raw",
           "raw": "{\n  \"daily_quota\": 15\n}",
-          "options": {"raw": {"language": "json"}}
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
         },
         "url": {
           "raw": "{{base_url}}/language/tracks/{{language_track_id}}",
-          "host": ["{{base_url}}"],
-          "path": ["language", "tracks", "{{language_track_id}}"]
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "language",
+            "tracks",
+            "{{language_track_id}}"
+          ]
         }
       }
     },
@@ -196,16 +245,30 @@
       ],
       "request": {
         "method": "POST",
-        "header": [{"key": "Content-Type", "value": "application/json"}],
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
         "body": {
           "mode": "raw",
           "raw": "{\n  \"track_id\": {{language_track_id}},\n  \"category\": \"verb_tense\",\n  \"value\": \"presente indicativo\",\n  \"priority\": 1,\n  \"status\": \"deferred\"\n}",
-          "options": {"raw": {"language": "json"}}
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
         },
         "url": {
           "raw": "{{base_url}}/language/grammar-scope",
-          "host": ["{{base_url}}"],
-          "path": ["language", "grammar-scope"]
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "language",
+            "grammar-scope"
+          ]
         }
       }
     },
@@ -229,16 +292,31 @@
       ],
       "request": {
         "method": "POST",
-        "header": [{"key": "Content-Type", "value": "application/json"}],
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
         "body": {
           "mode": "raw",
           "raw": "[\n  {\n    \"track_id\": {{language_track_id}},\n    \"category\": \"verb_tense\",\n    \"value\": \"preterito perfeito\",\n    \"priority\": 2,\n    \"status\": \"deferred\"\n  },\n  {\n    \"track_id\": {{language_track_id}},\n    \"category\": \"verb_tense\",\n    \"value\": \"futuro simples\",\n    \"priority\": 3,\n    \"status\": \"deferred\"\n  }\n]",
-          "options": {"raw": {"language": "json"}}
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
         },
         "url": {
           "raw": "{{base_url}}/language/grammar-scope/bulk",
-          "host": ["{{base_url}}"],
-          "path": ["language", "grammar-scope", "bulk"]
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "language",
+            "grammar-scope",
+            "bulk"
+          ]
         }
       }
     },
@@ -265,9 +343,19 @@
         "header": [],
         "url": {
           "raw": "{{base_url}}/language/grammar-scope?track_id={{language_track_id}}",
-          "host": ["{{base_url}}"],
-          "path": ["language", "grammar-scope"],
-          "query": [{"key": "track_id", "value": "{{language_track_id}}"}]
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "language",
+            "grammar-scope"
+          ],
+          "query": [
+            {
+              "key": "track_id",
+              "value": "{{language_track_id}}"
+            }
+          ]
         }
       }
     },
@@ -290,16 +378,31 @@
       ],
       "request": {
         "method": "PATCH",
-        "header": [{"key": "Content-Type", "value": "application/json"}],
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
         "body": {
           "mode": "raw",
           "raw": "{\n  \"status\": \"active\"\n}",
-          "options": {"raw": {"language": "json"}}
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
         },
         "url": {
           "raw": "{{base_url}}/language/grammar-scope/{{language_scope_id}}",
-          "host": ["{{base_url}}"],
-          "path": ["language", "grammar-scope", "{{language_scope_id}}"]
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "language",
+            "grammar-scope",
+            "{{language_scope_id}}"
+          ]
         }
       }
     },
@@ -328,16 +431,30 @@
       ],
       "request": {
         "method": "POST",
-        "header": [{"key": "Content-Type", "value": "application/json"}],
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
         "body": {
           "mode": "raw",
           "raw": "{\n  \"track_id\": {{language_track_id}},\n  \"grammar_scope_id\": {{language_scope_id}},\n  \"chunk_type\": \"collocation\",\n  \"text\": \"falar com alguém\",\n  \"translation\": \"to talk to someone\",\n  \"example_sentence\": \"Preciso de falar com alguém sobre isto.\",\n  \"example_translation\": \"I need to talk to someone about this.\",\n  \"cefr_level\": \"B1\",\n  \"frequency_rank\": 42,\n  \"frequency_source\": \"pareto_list\"\n}",
-          "options": {"raw": {"language": "json"}}
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
         },
         "url": {
           "raw": "{{base_url}}/language/chunks",
-          "host": ["{{base_url}}"],
-          "path": ["language", "chunks"]
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "language",
+            "chunks"
+          ]
         }
       }
     },
@@ -365,11 +482,22 @@
         "header": [],
         "url": {
           "raw": "{{base_url}}/language/chunks?track_id={{language_track_id}}&status=pending_triage",
-          "host": ["{{base_url}}"],
-          "path": ["language", "chunks"],
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "language",
+            "chunks"
+          ],
           "query": [
-            {"key": "track_id", "value": "{{language_track_id}}"},
-            {"key": "status", "value": "pending_triage"}
+            {
+              "key": "track_id",
+              "value": "{{language_track_id}}"
+            },
+            {
+              "key": "status",
+              "value": "pending_triage"
+            }
           ]
         }
       }
@@ -396,8 +524,15 @@
         "header": [],
         "url": {
           "raw": "{{base_url}}/language/chunks/{{language_chunk_id}}/approve",
-          "host": ["{{base_url}}"],
-          "path": ["language", "chunks", "{{language_chunk_id}}", "approve"]
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "language",
+            "chunks",
+            "{{language_chunk_id}}",
+            "approve"
+          ]
         }
       }
     },
@@ -423,9 +558,20 @@
         "header": [],
         "url": {
           "raw": "{{base_url}}/language/chunks/daily-batch?track_id={{language_track_id}}",
-          "host": ["{{base_url}}"],
-          "path": ["language", "chunks", "daily-batch"],
-          "query": [{"key": "track_id", "value": "{{language_track_id}}"}]
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "language",
+            "chunks",
+            "daily-batch"
+          ],
+          "query": [
+            {
+              "key": "track_id",
+              "value": "{{language_track_id}}"
+            }
+          ]
         }
       }
     },
@@ -452,8 +598,14 @@
         "header": [],
         "url": {
           "raw": "{{base_url}}/language/chunks/{{language_chunk_id}}",
-          "host": ["{{base_url}}"],
-          "path": ["language", "chunks", "{{language_chunk_id}}"]
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "language",
+            "chunks",
+            "{{language_chunk_id}}"
+          ]
         }
       }
     },
@@ -476,16 +628,31 @@
       ],
       "request": {
         "method": "PATCH",
-        "header": [{"key": "Content-Type", "value": "application/json"}],
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
         "body": {
           "mode": "raw",
           "raw": "{\n  \"cefr_level\": \"B2\"\n}",
-          "options": {"raw": {"language": "json"}}
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
         },
         "url": {
           "raw": "{{base_url}}/language/chunks/{{language_chunk_id}}",
-          "host": ["{{base_url}}"],
-          "path": ["language", "chunks", "{{language_chunk_id}}"]
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "language",
+            "chunks",
+            "{{language_chunk_id}}"
+          ]
         }
       }
     },
@@ -512,21 +679,175 @@
       ],
       "request": {
         "method": "POST",
-        "header": [{"key": "Content-Type", "value": "application/json"}],
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
         "body": {
           "mode": "raw",
           "raw": "{\n  \"track_id\": {{language_track_id}},\n  \"chunk_id\": {{language_chunk_id}},\n  \"quality_score\": 3.5,\n  \"transcript_or_notes\": \"Recalled correctly with minor hesitation\"\n}",
-          "options": {"raw": {"language": "json"}}
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
         },
         "url": {
           "raw": "{{base_url}}/language/sessions/srs-review",
-          "host": ["{{base_url}}"],
-          "path": ["language", "sessions", "srs-review"]
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "language",
+            "sessions",
+            "srs-review"
+          ]
         }
       }
     },
     {
-      "name": "17 - Record Shadowing Session",
+      "name": "17 - Get Production Mastery",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Returns recognition and production split', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json).to.be.an('array').with.lengthOf(1);",
+              "    pm.expect(json[0]).to.have.property('recognition');",
+              "    pm.expect(json[0]).to.have.property('production');",
+              "    pm.expect(json[0]).to.have.property('production_locked');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/language/production/mastery?track_id={{language_track_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "language",
+            "production",
+            "mastery"
+          ],
+          "query": [
+            {
+              "key": "track_id",
+              "value": "{{language_track_id}}"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "18 - Get Production Next Task",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Returns a sentence task for the unlocked chunk', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json.task_type).to.eql('sentence');",
+              "    pm.expect(json.prompt_text).to.be.a('string').and.not.empty;",
+              "    pm.expect(json.chunk_id).to.be.a('number');",
+              "    pm.environment.set('language_production_chunk_id', json.chunk_id);",
+              "    pm.environment.set('language_production_prompt', json.prompt_text);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/language/production/next-task?track_id={{language_track_id}}&task_type=sentence",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "language",
+            "production",
+            "next-task"
+          ],
+          "query": [
+            {
+              "key": "track_id",
+              "value": "{{language_track_id}}"
+            },
+            {
+              "key": "task_type",
+              "value": "sentence"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "19 - Record Production Attempt",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+              "pm.test('Returns grading with score and feedback', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json).to.have.property('session_id');",
+              "    pm.expect(json.grading).to.have.property('score');",
+              "    pm.expect(json.grading).to.have.property('corrected_text');",
+              "    pm.expect(json.quality_score).to.be.within(1, 4);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/language/production/attempts",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "language",
+            "production",
+            "attempts"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"track_id\": {{language_track_id}},\n  \"chunk_id\": {{language_production_chunk_id}},\n  \"task_type\": \"sentence\",\n  \"prompt_text\": \"{{language_production_prompt}}\",\n  \"response_text\": \"Je parle de mes vacances avec mes amis.\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "20 - Record Shadowing Session",
       "event": [
         {
           "listen": "test",
@@ -546,21 +867,36 @@
       ],
       "request": {
         "method": "POST",
-        "header": [{"key": "Content-Type", "value": "application/json"}],
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
         "body": {
           "mode": "raw",
           "raw": "{\n  \"track_id\": {{language_track_id}},\n  \"chunk_id\": {{language_chunk_id}},\n  \"quality_score\": 4.0,\n  \"gemini_feedback_json\": {\n    \"pronunciation_score\": 4.0,\n    \"fluency_score\": 3.8,\n    \"feedback\": \"Good intonation, slight accent on the nasal vowel\"\n  }\n}",
-          "options": {"raw": {"language": "json"}}
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
         },
         "url": {
           "raw": "{{base_url}}/language/sessions/shadowing",
-          "host": ["{{base_url}}"],
-          "path": ["language", "sessions", "shadowing"]
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "language",
+            "sessions",
+            "shadowing"
+          ]
         }
       }
     },
     {
-      "name": "18 - Record Conversation Session (feeds_srs=false)",
+      "name": "21 - Record Conversation Session (feeds_srs=false)",
       "event": [
         {
           "listen": "test",
@@ -579,21 +915,35 @@
       ],
       "request": {
         "method": "POST",
-        "header": [{"key": "Content-Type", "value": "application/json"}],
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
         "body": {
           "mode": "raw",
           "raw": "{\n  \"track_id\": {{language_track_id}},\n  \"session_type\": \"conversation\",\n  \"transcript_or_notes\": \"Free conversation about weekend plans — used subjunctive naturally twice\"\n}",
-          "options": {"raw": {"language": "json"}}
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
         },
         "url": {
           "raw": "{{base_url}}/language/sessions",
-          "host": ["{{base_url}}"],
-          "path": ["language", "sessions"]
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "language",
+            "sessions"
+          ]
         }
       }
     },
     {
-      "name": "19 - Get Daily Progress",
+      "name": "22 - Get Daily Progress",
       "event": [
         {
           "listen": "test",
@@ -618,14 +968,25 @@
         "header": [],
         "url": {
           "raw": "{{base_url}}/language/sessions/daily-progress?track_id={{language_track_id}}",
-          "host": ["{{base_url}}"],
-          "path": ["language", "sessions", "daily-progress"],
-          "query": [{"key": "track_id", "value": "{{language_track_id}}"}]
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "language",
+            "sessions",
+            "daily-progress"
+          ],
+          "query": [
+            {
+              "key": "track_id",
+              "value": "{{language_track_id}}"
+            }
+          ]
         }
       }
     },
     {
-      "name": "20 - List Sessions",
+      "name": "23 - List Sessions",
       "event": [
         {
           "listen": "test",
@@ -647,17 +1008,28 @@
         "header": [],
         "url": {
           "raw": "{{base_url}}/language/sessions?track_id={{language_track_id}}&limit=50",
-          "host": ["{{base_url}}"],
-          "path": ["language", "sessions"],
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "language",
+            "sessions"
+          ],
           "query": [
-            {"key": "track_id", "value": "{{language_track_id}}"},
-            {"key": "limit", "value": "50"}
+            {
+              "key": "track_id",
+              "value": "{{language_track_id}}"
+            },
+            {
+              "key": "limit",
+              "value": "50"
+            }
           ]
         }
       }
     },
     {
-      "name": "21 - Get Session",
+      "name": "24 - Get Session",
       "event": [
         {
           "listen": "test",
@@ -679,13 +1051,19 @@
         "header": [],
         "url": {
           "raw": "{{base_url}}/language/sessions/{{language_session_id}}",
-          "host": ["{{base_url}}"],
-          "path": ["language", "sessions", "{{language_session_id}}"]
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "language",
+            "sessions",
+            "{{language_session_id}}"
+          ]
         }
       }
     },
     {
-      "name": "22 - List Sessions (SRS only)",
+      "name": "25 - List Sessions (SRS only)",
       "event": [
         {
           "listen": "test",
@@ -707,17 +1085,28 @@
         "header": [],
         "url": {
           "raw": "{{base_url}}/language/sessions?track_id={{language_track_id}}&session_type=srs_review",
-          "host": ["{{base_url}}"],
-          "path": ["language", "sessions"],
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "language",
+            "sessions"
+          ],
           "query": [
-            {"key": "track_id", "value": "{{language_track_id}}"},
-            {"key": "session_type", "value": "srs_review"}
+            {
+              "key": "track_id",
+              "value": "{{language_track_id}}"
+            },
+            {
+              "key": "session_type",
+              "value": "srs_review"
+            }
           ]
         }
       }
     },
     {
-      "name": "23 - List Chunks (active, leech filter)",
+      "name": "26 - List Chunks (active, leech filter)",
       "event": [
         {
           "listen": "test",
@@ -739,18 +1128,32 @@
         "header": [],
         "url": {
           "raw": "{{base_url}}/language/chunks?track_id={{language_track_id}}&status=active&is_leech=true",
-          "host": ["{{base_url}}"],
-          "path": ["language", "chunks"],
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "language",
+            "chunks"
+          ],
           "query": [
-            {"key": "track_id", "value": "{{language_track_id}}"},
-            {"key": "status", "value": "active"},
-            {"key": "is_leech", "value": "true"}
+            {
+              "key": "track_id",
+              "value": "{{language_track_id}}"
+            },
+            {
+              "key": "status",
+              "value": "active"
+            },
+            {
+              "key": "is_leech",
+              "value": "true"
+            }
           ]
         }
       }
     },
     {
-      "name": "24 - Get Pronunciation (mp3)",
+      "name": "27 - Get Pronunciation (mp3)",
       "event": [
         {
           "listen": "test",
@@ -773,17 +1176,29 @@
         "header": [],
         "url": {
           "raw": "{{base_url}}/language/chunks/pronunciation?text=bonjour&lang=fr",
-          "host": ["{{base_url}}"],
-          "path": ["language", "chunks", "pronunciation"],
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "language",
+            "chunks",
+            "pronunciation"
+          ],
           "query": [
-            {"key": "text", "value": "bonjour"},
-            {"key": "lang", "value": "fr"}
+            {
+              "key": "text",
+              "value": "bonjour"
+            },
+            {
+              "key": "lang",
+              "value": "fr"
+            }
           ]
         }
       }
     },
     {
-      "name": "25 - Get Pronunciation (ogg, for Telegram voice notes)",
+      "name": "28 - Get Pronunciation (ogg, for Telegram voice notes)",
       "event": [
         {
           "listen": "test",
@@ -806,18 +1221,33 @@
         "header": [],
         "url": {
           "raw": "{{base_url}}/language/chunks/pronunciation?text=bonjour&lang=fr&format=ogg",
-          "host": ["{{base_url}}"],
-          "path": ["language", "chunks", "pronunciation"],
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "language",
+            "chunks",
+            "pronunciation"
+          ],
           "query": [
-            {"key": "text", "value": "bonjour"},
-            {"key": "lang", "value": "fr"},
-            {"key": "format", "value": "ogg"}
+            {
+              "key": "text",
+              "value": "bonjour"
+            },
+            {
+              "key": "lang",
+              "value": "fr"
+            },
+            {
+              "key": "format",
+              "value": "ogg"
+            }
           ]
         }
       }
     },
     {
-      "name": "26 - Upload Shadowing Audio",
+      "name": "29 - Upload Shadowing Audio",
       "event": [
         {
           "listen": "test",
@@ -842,20 +1272,39 @@
         "body": {
           "mode": "formdata",
           "formdata": [
-            {"key": "track_id", "value": "{{language_track_id}}", "type": "text"},
-            {"key": "chunk_id", "value": "{{language_chunk_id}}", "type": "text"},
-            {"key": "audio", "type": "file", "src": "fixtures/sample_audio.ogg"}
+            {
+              "key": "track_id",
+              "value": "{{language_track_id}}",
+              "type": "text"
+            },
+            {
+              "key": "chunk_id",
+              "value": "{{language_chunk_id}}",
+              "type": "text"
+            },
+            {
+              "key": "audio",
+              "type": "file",
+              "src": "fixtures/sample_audio.ogg"
+            }
           ]
         },
         "url": {
           "raw": "{{base_url}}/language/sessions/shadowing/audio",
-          "host": ["{{base_url}}"],
-          "path": ["language", "sessions", "shadowing", "audio"]
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "language",
+            "sessions",
+            "shadowing",
+            "audio"
+          ]
         }
       }
     },
     {
-      "name": "27 - Get Shadowing Audio",
+      "name": "30 - Get Shadowing Audio",
       "event": [
         {
           "listen": "test",
@@ -878,13 +1327,20 @@
         "header": [],
         "url": {
           "raw": "{{base_url}}/language/sessions/{{language_shadowing_session_id}}/audio",
-          "host": ["{{base_url}}"],
-          "path": ["language", "sessions", "{{language_shadowing_session_id}}", "audio"]
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "language",
+            "sessions",
+            "{{language_shadowing_session_id}}",
+            "audio"
+          ]
         }
       }
     },
     {
-      "name": "28 - Delete Grammar Scope",
+      "name": "31 - Delete Grammar Scope",
       "event": [
         {
           "listen": "test",
@@ -901,13 +1357,19 @@
         "header": [],
         "url": {
           "raw": "{{base_url}}/language/grammar-scope/{{language_scope_id}}",
-          "host": ["{{base_url}}"],
-          "path": ["language", "grammar-scope", "{{language_scope_id}}"]
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "language",
+            "grammar-scope",
+            "{{language_scope_id}}"
+          ]
         }
       }
     },
     {
-      "name": "29 - Delete Chunk",
+      "name": "32 - Delete Chunk",
       "event": [
         {
           "listen": "test",
@@ -924,13 +1386,19 @@
         "header": [],
         "url": {
           "raw": "{{base_url}}/language/chunks/{{language_chunk_id}}",
-          "host": ["{{base_url}}"],
-          "path": ["language", "chunks", "{{language_chunk_id}}"]
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "language",
+            "chunks",
+            "{{language_chunk_id}}"
+          ]
         }
       }
     },
     {
-      "name": "30 - Delete Track",
+      "name": "33 - Delete Track",
       "event": [
         {
           "listen": "test",
@@ -947,8 +1415,14 @@
         "header": [],
         "url": {
           "raw": "{{base_url}}/language/tracks/{{language_track_id}}",
-          "host": ["{{base_url}}"],
-          "path": ["language", "tracks", "{{language_track_id}}"]
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "language",
+            "tracks",
+            "{{language_track_id}}"
+          ]
         }
       }
     }

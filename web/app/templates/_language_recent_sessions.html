@@ -4,13 +4,14 @@
   {% set type_style = {
     'srs_review': 'bg-blue-50 text-blue-600',
     'shadowing': 'bg-purple-50 text-purple-600',
+    'production': 'bg-rose-50 text-rose-600',
     'conversation': 'bg-green-50 text-green-600',
     'correction': 'bg-amber-50 text-amber-600'
   } %}
   <div class="flex items-center justify-between px-4 py-2.5">
     <div class="flex items-center gap-2.5 min-w-0">
       <span class="px-1.5 py-0.5 rounded text-xs {{ type_style.get(session.session_type, 'bg-gray-100 text-gray-500') }}">
-        {{ session.session_type | replace('_', ' ') }}
+        {{ session.session_type | replace('_', ' ') }}{% if session.task_type %} · {{ session.task_type }}{% endif %}
       </span>
       {% if session.chunk_id %}
       <a href="/languages/{{ track.code }}/chunks/{{ session.chunk_id }}"

@@ -27,6 +27,8 @@ class ChunkRepository:
             query = query.where(Chunk.is_leech == filters.is_leech)
         if filters.due_only:
             query = query.where(Chunk.due_at <= func.now())
+        if filters.production_due_only:
+            query = query.where(Chunk.prod_due_at.is_not(None), Chunk.prod_due_at <= func.now())
         if filters.cefr_level is not None:
             query = query.where(Chunk.cefr_level == filters.cefr_level)
         if filters.difficulty_min is not None:
@@ -75,6 +77,57 @@ class ChunkRepository:
         )
         return result.scalar_one()
 
+    async def get_production_due_chunks_for_track(self, track_id: int, limit: int) -> list[Chunk]:
+        """Return active chunks due for production practice, Pareto-ordered like recognition."""
+        now = datetime.now(timezone.utc)
+        result = await self._session.execute(
+            select(Chunk)
+            .where(
+                Chunk.track_id == track_id,
+                Chunk.status == "active",
+                Chunk.prod_due_at.is_not(None),
+                Chunk.prod_due_at <= now,
+            )
+            .order_by(
+                Chunk.frequency_rank.asc().nulls_first(),
+                Chunk.prod_due_at.asc(),
+            )
+            .limit(limit)
+        )
+        return list(result.scalars().all())
+
+    async def count_production_due_for_track(self, track_id: int) -> int:
+        now = datetime.now(timezone.utc)
+        result = await self._session.execute(
+            select(func.count(Chunk.id)).where(
+                Chunk.track_id == track_id,
+                Chunk.status == "active",
+                Chunk.prod_due_at.is_not(None),
+                Chunk.prod_due_at <= now,
+            )
+        )
+        return result.scalar_one()
+
+    async def count_production_locked_for_track(self, track_id: int) -> int:
+        result = await self._session.execute(
+            select(func.count(Chunk.id)).where(
+                Chunk.track_id == track_id,
+                Chunk.status == "active",
+                Chunk.prod_due_at.is_(None),
+            )
+        )
+        return result.scalar_one()
+
+    async def count_by_state_for_track(self, track_id: int, production: bool = False) -> dict[str, int]:
+        """Return {srs_state: count} over active chunks for one SRS track."""
+        state_col = Chunk.prod_state if production else Chunk.state
+        result = await self._session.execute(
+            select(state_col, func.count(Chunk.id))
+            .where(Chunk.track_id == track_id, Chunk.status == "active")
+            .group_by(state_col)
+        )
+        return {state: count for state, count in result.all()}
+
     async def create_chunk(self, data: ChunkCreate) -> Chunk:
         chunk = Chunk(**data.model_dump())
         self._session.add(chunk)
@@ -119,6 +172,41 @@ class ChunkRepository:
                 state=state,
                 is_leech=is_leech,
             )
+        )
+        await self._session.commit()
+
+    async def update_production_srs_fields(
+        self,
+        chunk_id: int,
+        stability: float,
+        difficulty: float,
+        due_at: datetime,
+        last_review_at: datetime,
+        repetitions: int,
+        lapses: int,
+        consecutive_failures: int,
+        state: str,
+    ) -> None:
+        await self._session.execute(
+            update(Chunk)
+            .where(Chunk.id == chunk_id)
+            .values(
+                prod_stability=stability,
+                prod_difficulty=difficulty,
+                prod_due_at=due_at,
+                prod_last_review_at=last_review_at,
+                prod_repetitions=repetitions,
+                prod_lapses=lapses,
+                prod_consecutive_failures=consecutive_failures,
+                prod_state=state,
+            )
+        )
+        await self._session.commit()
+
+    async def unlock_production(self, chunk_id: int, due_at: datetime) -> None:
+        """Make a chunk eligible for production practice (sets its first prod_due_at)."""
+        await self._session.execute(
+            update(Chunk).where(Chunk.id == chunk_id).values(prod_due_at=due_at)
         )
         await self._session.commit()
 

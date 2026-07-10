@@ -56,6 +56,14 @@ class ChunkRead(BaseModel):
     lapses: int
     consecutive_failures: int
     state: str
+    prod_stability: float
+    prod_difficulty: float
+    prod_due_at: datetime | None
+    prod_last_review_at: datetime | None
+    prod_repetitions: int
+    prod_lapses: int
+    prod_consecutive_failures: int
+    prod_state: str
     status: str
     is_leech: bool
     created_at: datetime
@@ -72,6 +80,7 @@ class ChunkFilters:
         chunk_type: Annotated[ChunkType | None, Query()] = None,
         is_leech: Annotated[bool | None, Query()] = None,
         due_only: Annotated[bool, Query()] = False,
+        production_due_only: Annotated[bool, Query()] = False,
         cefr_level: Annotated[str | None, Query()] = None,
         difficulty_min: Annotated[float | None, Query(ge=0.0, le=10.0)] = None,
         difficulty_max: Annotated[float | None, Query(ge=0.0, le=10.0)] = None,
@@ -83,6 +92,7 @@ class ChunkFilters:
         self.chunk_type = chunk_type
         self.is_leech = is_leech
         self.due_only = due_only
+        self.production_due_only = production_due_only
         self.cefr_level = cefr_level
         self.difficulty_min = difficulty_min
         self.difficulty_max = difficulty_max

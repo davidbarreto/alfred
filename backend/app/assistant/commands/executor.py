@@ -21,6 +21,7 @@ from app.features.finance.budgets.service import BudgetService
 from app.features.finance.recurring_transactions.service import RecurringTransactionService
 from app.features.finance.transactions.service import TransactionService
 from app.features.language.chunks.service import ChunkService
+from app.features.language.production.service import ProductionService
 from app.features.language.tracks.service import TrackService
 from app.features.organizer.calendar_events.service import CalendarEventService
 from app.features.organizer.notes.service import NoteService
@@ -46,6 +47,7 @@ async def execute(
     chunk_service: ChunkService | None = None,
     working_memory_service: WorkingMemoryService | None = None,
     embedding_service: EmbeddingService | None = None,
+    production_service: ProductionService | None = None,
 ) -> Any:
     logger.info("Execute: %s.%s args_keys=%s", cmd_type, command, list(arguments.keys()))
 
@@ -82,7 +84,10 @@ async def execute(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                 detail="Language service not available",
             )
-        return await handle_language(command, arguments, track_service, chunk_service, working_memory_service)
+        return await handle_language(
+            command, arguments, track_service, chunk_service, working_memory_service,
+            production_service=production_service,
+        )
 
     if cmd_type == "recall":
         if embedding_service is None:

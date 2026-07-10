@@ -49,6 +49,7 @@ from app.api.routes.language.tracks import router as language_tracks_router
 from app.api.routes.language.grammar_scope import router as language_grammar_scope_router
 from app.api.routes.language.chunks import router as language_chunks_router
 from app.api.routes.language.sessions import router as language_sessions_router
+from app.api.routes.language.production import router as language_production_router
 from app.config import get_settings
 
 settings = get_settings()
@@ -120,6 +121,7 @@ app.include_router(language_tracks_router)
 app.include_router(language_grammar_scope_router)
 app.include_router(language_chunks_router)
 app.include_router(language_sessions_router)
+app.include_router(language_production_router)
 
 @app.exception_handler(RequestValidationError)
 async def _validation_error_handler(request: Request, exc: RequestValidationError) -> JSONResponse:

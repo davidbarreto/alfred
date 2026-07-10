@@ -5,6 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.features.language.sessions.repository import SessionRepository
 from app.features.language.sessions.schemas import (
     DailyProgressRead,
+    ProductionSessionCreate,
     SessionCreate,
     SessionFilters,
     SessionRead,
@@ -73,6 +74,28 @@ class SessionService:
         logger.info(
             "Shadowing session recorded: session_id=%d chunk_id=%s score=%s",
             orm.id, data.chunk_id, data.quality_score,
+        )
+        return SessionRead.model_validate(orm)
+
+    async def record_production(self, data: ProductionSessionCreate) -> SessionRead:
+        """Record a production attempt and update the chunk's production SRS state."""
+        feeds_srs = data.quality_score is not None
+        orm = await self._repo.create_session(
+            track_id=data.track_id,
+            chunk_id=data.chunk_id,
+            session_type="production",
+            feeds_srs=feeds_srs,
+            task_type=data.task_type,
+            prompt_text=data.prompt_text,
+            ai_feedback_json=data.ai_feedback_json,
+            quality_score=data.quality_score,
+            transcript_or_notes=data.transcript_or_notes,
+        )
+        if data.quality_score is not None:
+            await self._chunk_service.apply_production_review(data.chunk_id, data.quality_score)
+        logger.info(
+            "Production attempt recorded: session_id=%d chunk_id=%d task=%s score=%s",
+            orm.id, data.chunk_id, data.task_type, data.quality_score,
         )
         return SessionRead.model_validate(orm)
 

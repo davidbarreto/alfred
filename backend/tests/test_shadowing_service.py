@@ -1,7 +1,8 @@
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from app.features.language.sessions.shadowing_service import ShadowingService, _score_to_quality
+from app.features.language.sessions.shadowing_service import ShadowingService
+from app.features.language.srs import score_to_quality
 from app.shared.audio import PronunciationAnalysis, PronunciationAnalysisResult
 
 
@@ -62,17 +63,17 @@ def _make_service(**kwargs):
 class TestScoreToQuality:
 
     def test_zero_maps_to_again(self):
-        assert _score_to_quality(0) == 1.0
+        assert score_to_quality(0) == 1.0
 
     def test_fifty_maps_to_hard_good_boundary(self):
-        assert _score_to_quality(50) == 2.5
+        assert score_to_quality(50) == 2.5
 
     def test_hundred_maps_to_easy(self):
-        assert _score_to_quality(100) == 4.0
+        assert score_to_quality(100) == 4.0
 
     def test_clamps_out_of_range_values(self):
-        assert _score_to_quality(-10) == 1.0
-        assert _score_to_quality(150) == 4.0
+        assert score_to_quality(-10) == 1.0
+        assert score_to_quality(150) == 4.0
 
 
 class TestRecordShadowingWithAudio:
@@ -99,7 +100,7 @@ class TestRecordShadowingWithAudio:
 
         create_call = session_service.record_shadowing.call_args
         data = create_call.args[0]
-        assert data.quality_score == _score_to_quality(85.0)
+        assert data.quality_score == score_to_quality(85.0)
         assert data.ai_feedback_json["transcription"] == "bonjour"
         assert data.transcript_or_notes == "Clear and natural."
         assert create_call.kwargs["audio_ref"] == saved_ref

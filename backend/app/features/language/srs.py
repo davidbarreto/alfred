@@ -50,6 +50,11 @@ class CardState:
     state: str
 
 
+def score_to_quality(score: float) -> float:
+    """Map an LLM 0-100 score onto the 1-4 FSRS quality scale."""
+    return max(1.0, min(4.0, 1.0 + 3.0 * (score / 100.0)))
+
+
 def quality_to_rating(quality_score: float) -> Rating:
     if quality_score < 1.5:
         return Rating.AGAIN

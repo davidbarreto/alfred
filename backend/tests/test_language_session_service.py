@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 
 from app.features.language.sessions.service import SessionService
 from app.features.language.sessions.schemas import (
+    ProductionSessionCreate,
     SrsReviewCreate,
     ShadowingSessionCreate,
     SessionCreate,
@@ -17,6 +18,8 @@ def _make_session_orm(**kwargs):
     orm.track_id = kwargs.get("track_id", 1)
     orm.chunk_id = kwargs.get("chunk_id", 10)
     orm.session_type = kwargs.get("session_type", "srs_review")
+    orm.task_type = kwargs.get("task_type", None)
+    orm.prompt_text = kwargs.get("prompt_text", None)
     orm.feeds_srs = kwargs.get("feeds_srs", True)
     orm.audio_ref = kwargs.get("audio_ref", None)
     orm.ai_feedback_json = kwargs.get("ai_feedback_json", None)
@@ -100,6 +103,42 @@ class TestRecordShadowing:
         await service.record_shadowing(data)
 
         service._chunk_service.apply_srs_review.assert_not_called()
+
+
+class TestRecordProduction:
+    async def test_creates_production_session_and_updates_production_srs(self, service):
+        service._repo.create_session.return_value = _make_session_orm(
+            session_type="production", task_type="sentence", prompt_text="Write a sentence"
+        )
+        data = ProductionSessionCreate(
+            track_id=1, chunk_id=10, task_type="sentence",
+            prompt_text="Write a sentence", quality_score=3.2,
+        )
+
+        result = await service.record_production(data)
+
+        call_kwargs = service._repo.create_session.call_args[1]
+        assert call_kwargs["session_type"] == "production"
+        assert call_kwargs["task_type"] == "sentence"
+        assert call_kwargs["prompt_text"] == "Write a sentence"
+        assert call_kwargs["feeds_srs"] is True
+        service._chunk_service.apply_production_review.assert_called_once_with(10, 3.2)
+        service._chunk_service.apply_srs_review.assert_not_called()
+        assert result.session_type == "production"
+
+    async def test_skips_srs_update_when_no_quality_score(self, service):
+        service._repo.create_session.return_value = _make_session_orm(
+            session_type="production", task_type="translate", feeds_srs=False
+        )
+        data = ProductionSessionCreate(
+            track_id=1, chunk_id=10, task_type="translate", prompt_text="Translate this",
+        )
+
+        await service.record_production(data)
+
+        call_kwargs = service._repo.create_session.call_args[1]
+        assert call_kwargs["feeds_srs"] is False
+        service._chunk_service.apply_production_review.assert_not_called()
 
 
 class TestRecordSession:

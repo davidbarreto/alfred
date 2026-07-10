@@ -42,6 +42,7 @@ def _override_services(app, task_svc=None, note_svc=None):
         get_task_service, get_note_service, get_calendar_event_service,
         get_transaction_service, get_account_service, get_budget_service,
         get_recurring_transaction_service, get_command_execution_service,
+        get_production_service,
     )
     mock_cmd_exec = AsyncMock()
     mock_cmd_exec.create.return_value = MagicMock(id=99)
@@ -56,6 +57,7 @@ def _override_services(app, task_svc=None, note_svc=None):
         (get_account_service, None),
         (get_budget_service, None),
         (get_recurring_transaction_service, None),
+        (get_production_service, None),
     ]:
         app.dependency_overrides[dep] = lambda s=svc: s or AsyncMock()
 

@@ -32,6 +32,8 @@ from app.features.core.sessions.summary_service import SessionSummaryService
 from app.features.core.working_memory.schemas import WorkingMemoryCreate, WorkingMemoryFilters, WorkingMemoryRead
 from app.features.core.working_memory.service import WorkingMemoryService
 from app.features.language.chunks.service import ChunkService
+from app.features.language.production.schemas import ProductionAttemptCreate
+from app.features.language.production.service import ProductionService
 from app.features.language.sessions.repository import SessionRepository as LanguageSessionRepository
 from app.features.language.sessions.schemas import NextPracticePrompt
 from app.features.language.sessions.schemas import SessionFilters as LanguageSessionFilters
@@ -62,6 +64,7 @@ def _build_system_prompt(
     daily_context: str = "",
     working_memories: list[WorkingMemoryRead] | None = None,
     language_session: LearningSession | None = None,
+    production_section: str | None = None,
 ) -> str:
     now = datetime.now(tz=timezone.utc).strftime("%A, %B %d, %Y at %H:%M UTC")
     parts = []
@@ -139,6 +142,9 @@ def _build_system_prompt(
                 )
         parts.append(section)
 
+    if production_section:
+        parts.append(production_section)
+
     if memories:
         lines = "\n".join(f"- [{m.source_type}] {m.content}" for m in memories)
         parts.append(f"## Relevant context from memory\n{lines}")
@@ -179,6 +185,7 @@ class ChatService:
         session_summary_service: SessionSummaryService,
         working_memory_service: WorkingMemoryService,
         chunk_service: ChunkService,
+        production_service: ProductionService,
     ) -> None:
         self._session = session
         self._llm_provider = llm_provider
@@ -188,6 +195,7 @@ class ChatService:
         self._session_summary_service = session_summary_service
         self._working_memory_service = working_memory_service
         self._chunk_service = chunk_service
+        self._production_service = production_service
 
     async def _fetch_history(self, session_id: int) -> list[MessageRead]:
         session = await SessionRepository(self._session).get(session_id)
@@ -248,6 +256,88 @@ class ChatService:
             remaining=remaining,
         )
 
+    async def _handle_production_turn(
+        self,
+        pending_wm: WorkingMemoryRead,
+        data: dict,
+        user_text: str,
+        advance: bool = True,
+    ) -> str:
+        """Grade a pending production attempt, advance the loop, and return the system-prompt
+        section describing the result. Must run before the coaching reply is generated —
+        the reply has to contain the grading feedback and, when the loop continues, the next
+        exercise (the caller returns no next_practice for produce mode)."""
+        try:
+            attempt = await self._production_service.grade_attempt(ProductionAttemptCreate(
+                track_id=data["track_id"],
+                chunk_id=data["chunk_id"],
+                task_type=data.get("task_type", "sentence"),
+                prompt_text=data.get("prompt_text", ""),
+                response_text=user_text,
+            ))
+        except (HTTPException, KeyError) as exc:
+            logger.error("Chat: production grading failed wm_id=%d error=%s", pending_wm.id, exc)
+            return (
+                "## Production practice\nThe user submitted a production exercise answer but "
+                "grading is temporarily unavailable. Apologize briefly and ask them to send "
+                "their answer again."
+            )
+
+        next_task = None
+        remaining = int(data.get("remaining", 1)) - 1
+        if advance:
+            if remaining > 0:
+                next_task = await self._production_service.get_next_task(
+                    data["track_id"], exclude_chunk_id=data["chunk_id"]
+                )
+            await self._working_memory_service.delete(pending_wm.id)
+            if next_task is not None:
+                await self._working_memory_service.create(WorkingMemoryCreate(
+                    key=_LANGUAGE_PENDING_KEY,
+                    value=json.dumps({
+                        "mode": "produce",
+                        "chunk_id": next_task.chunk_id,
+                        "track_id": next_task.track_id,
+                        "track_code": next_task.track_code,
+                        "language_name": next_task.language_name,
+                        "text": next_task.text,
+                        "translation": next_task.translation,
+                        "task_type": next_task.task_type,
+                        "prompt_text": next_task.prompt_text,
+                        "remaining": remaining,
+                    }),
+                    importance=1.0,
+                ))
+                logger.info(
+                    "Chat: production loop advanced wm_id=%d next_chunk_id=%d remaining=%d",
+                    pending_wm.id, next_task.chunk_id, remaining,
+                )
+            else:
+                logger.info("Chat: production loop ended wm_id=%d", pending_wm.id)
+
+        grading = attempt.grading
+        detail_lines = [f"Score: {grading.score:.0f}/100"]
+        if grading.errors:
+            detail_lines.append("Errors: " + "; ".join(grading.errors))
+        if grading.corrected_text:
+            detail_lines.append(f"Corrected version: {grading.corrected_text}")
+        if grading.feedback:
+            detail_lines.append(f"Feedback: {grading.feedback}")
+
+        section = "## Production result\n" + "\n".join(detail_lines)
+        section += (
+            "\n\nRespond as an encouraging coach: give the score, the corrected version if it "
+            "differs from their answer, and one short tip. Keep it brief (2-3 sentences)."
+        )
+        if next_task is not None:
+            section += (
+                f"\n\nThen present the next exercise exactly as written, on its own line "
+                f"({remaining} left after this one is answered):\n{next_task.prompt_text}"
+            )
+        elif advance:
+            section += "\n\nThat was the last exercise — close the session with one short encouraging line."
+        return section
+
     async def chat(self, request: ChatRequest) -> tuple[str, NextPracticePrompt | None]:
         logger.info("Chat: session_id=%s", request.session_id)
         messages = await self._fetch_history(request.session_id)
@@ -264,13 +354,16 @@ class ChatService:
         logger.debug("Chat: %d active working memory entries loaded", len(working_memories))
 
         language_session: LearningSession | None = None
+        production_section: str | None = None
+        pending_mode: str | None = None
         pending_wm = next((wm for wm in working_memories if wm.key == _LANGUAGE_PENDING_KEY), None)
         if pending_wm:
             logger.debug("Chat: language pending mode — skipping embeddings, summaries, daily context")
             memories, recent_summaries, daily_context = [], [], ""
             try:
                 pending_data = json.loads(pending_wm.value)
-                if pending_data.get("mode") == "practice":
+                pending_mode = pending_data.get("mode", "practice")
+                if pending_mode == "practice":
                     chunk_id = pending_data.get("chunk_id")
                     if chunk_id:
                         lang_sessions = await LanguageSessionRepository(self._session).get_sessions(
@@ -282,6 +375,10 @@ class ChatService:
                                 "Chat: practice session loaded: id=%d score=%s",
                                 language_session.id, language_session.quality_score,
                             )
+                elif pending_mode == "produce":
+                    production_section = await self._handle_production_turn(
+                        pending_wm, pending_data, current_message.content
+                    )
             except (json.JSONDecodeError, KeyError):
                 logger.warning("Chat: failed to parse pending WM value=%r", pending_wm.value)
         else:
@@ -298,7 +395,7 @@ class ChatService:
             logger.debug("Chat: %d recent session summaries loaded", len(recent_summaries))
             daily_context = await build_daily_context(self._session)
 
-        system_prompt = _build_system_prompt(memories, request.detected_intents, recent_summaries, daily_context, working_memories, language_session)
+        system_prompt = _build_system_prompt(memories, request.detected_intents, recent_summaries, daily_context, working_memories, language_session, production_section)
         messages = history + [{"role": "user", "content": current_message.content}]
 
         t0 = time.monotonic()
@@ -337,7 +434,9 @@ class ChatService:
         )
 
         next_practice: NextPracticePrompt | None = None
-        if pending_wm:
+        if pending_wm and pending_mode != "produce":
+            # Produce loops advance inside _handle_production_turn; the coaching reply
+            # already carries the next exercise, so there is no next_practice to emit.
             next_practice = await self._advance_language_loop(pending_wm)
 
         asyncio.create_task(
@@ -362,18 +461,26 @@ class ChatService:
         working_memories = await self._working_memory_service.list(WorkingMemoryFilters(active_only=True))
 
         language_session: LearningSession | None = None
+        production_section: str | None = None
         pending_wm = next((wm for wm in working_memories if wm.key == _LANGUAGE_PENDING_KEY), None)
         if pending_wm:
             memories, recent_summaries, daily_context = [], [], ""
             try:
                 pending_data = json.loads(pending_wm.value)
-                if pending_data.get("mode") == "practice":
+                pending_mode = pending_data.get("mode", "practice")
+                if pending_mode == "practice":
                     chunk_id = pending_data.get("chunk_id")
                     if chunk_id:
                         lang_sessions = await LanguageSessionRepository(self._session).get_sessions(
                             LanguageSessionFilters(chunk_id=chunk_id, session_type="shadowing", limit=1)
                         )
                         language_session = lang_sessions[0] if lang_sessions else None
+                elif pending_mode == "produce":
+                    # Streaming does not drive the loop (the pending WM is cleared below),
+                    # so grade without advancing.
+                    production_section = await self._handle_production_turn(
+                        pending_wm, pending_data, current_message.content, advance=False
+                    )
             except (json.JSONDecodeError, KeyError):
                 logger.warning("StreamChat: failed to parse pending WM value=%r", pending_wm.value)
         else:
@@ -388,7 +495,7 @@ class ChatService:
             recent_summaries = await self._session_summary_service.get_recent_summaries(request.session_id)
             daily_context = await build_daily_context(self._session)
 
-        system_prompt = _build_system_prompt(memories, request.detected_intents, recent_summaries, daily_context, working_memories, language_session)
+        system_prompt = _build_system_prompt(memories, request.detected_intents, recent_summaries, daily_context, working_memories, language_session, production_section)
         messages_list = history + [{"role": "user", "content": current_message.content}]
 
         t0 = time.monotonic()

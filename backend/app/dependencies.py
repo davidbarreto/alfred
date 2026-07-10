@@ -41,8 +41,10 @@ from app.integrations.google.transcription_provider import GoogleTranscriptionPr
 from app.features.core.transcription.service import TranscriptionService
 from app.features.language.chunks.repository import ChunkRepository as LanguageChunkRepository
 from app.features.language.tracks.repository import TrackRepository
+from app.features.language.sessions.repository import SessionRepository as LanguageSessionRepository
 from app.features.language.sessions.service import SessionService as LanguageSessionService
 from app.features.language.sessions.shadowing_service import ShadowingService
+from app.features.language.production.service import ProductionService
 from app.features.organizer.contacts.service import ContactService
 from app.integrations.google_contacts.client import GoogleContactsClient
 from app.integrations.google_contacts.provider import GoogleContactsProvider
@@ -170,6 +172,7 @@ def get_chat_service(session: AsyncSession = Depends(get_session)) -> ChatServic
         session_summary_service=get_session_summary_service(),
         working_memory_service=WorkingMemoryService(session),
         chunk_service=LanguageChunkService(session),
+        production_service=get_production_service(session),
     )
 
 @lru_cache
@@ -250,6 +253,17 @@ def get_transcription_provider() -> GoogleTranscriptionProvider:
 def get_transcription_service(session: AsyncSession = Depends(get_session)) -> TranscriptionService:
     return TranscriptionService(provider=get_transcription_provider(), session=session)
 
+def get_production_service(session: AsyncSession = Depends(get_session)) -> ProductionService:
+    return ProductionService(
+        session=session,
+        llm_provider=get_llm_provider(),
+        session_service=get_language_session_service(session),
+        chunk_service=LanguageChunkService(session),
+        chunk_repo=LanguageChunkRepository(session),
+        track_repo=TrackRepository(session),
+        session_repo=LanguageSessionRepository(session),
+    )
+
 def get_shadowing_service(session: AsyncSession = Depends(get_session)) -> ShadowingService:
     return ShadowingService(
         session=session,
@@ -296,4 +310,5 @@ PronunciationServiceDep = Annotated[PronunciationService, Depends(get_pronunciat
 LanguageSessionServiceDep = Annotated[LanguageSessionService, Depends(get_language_session_service)]
 FileStorageDep = Annotated[LocalFileStorage, Depends(get_file_storage)]
 ShadowingServiceDep = Annotated[ShadowingService, Depends(get_shadowing_service)]
+ProductionServiceDep = Annotated[ProductionService, Depends(get_production_service)]
 TranscriptionServiceDep = Annotated[TranscriptionService, Depends(get_transcription_service)]

@@ -250,8 +250,9 @@ COMMAND_DEFINITIONS = {
     },
     "language": {
         "practice": {
-            "description": "Start a vocabulary practice session for a language",
-            "aliases": ["/practice", "/pr"],
+            "description": "Start a shadowing/pronunciation practice session for a language",
+            # /practice is a legacy alias for /shadow; kept for one release.
+            "aliases": ["/shadow", "/practice", "/pr"],
             "flags": {},
             "requires_args": True,
             "arg_keys": ["language_code", "count"],
@@ -263,8 +264,15 @@ COMMAND_DEFINITIONS = {
             "requires_args": True,
             "arg_keys": ["language_code", "count"],
         },
+        "produce": {
+            "description": "Start a production practice session (write sentences or translate) for a language",
+            "aliases": ["/produce", "/prod"],
+            "flags": {},
+            "requires_args": True,
+            "arg_keys": ["language_code", "task_type", "count"],
+        },
         "stop": {
-            "description": "Stop the active language practice or review session",
+            "description": "Stop the active language practice, review, or production session",
             "aliases": ["/stop", "/stop-practice", "/stop-review"],
             "flags": {},
         },

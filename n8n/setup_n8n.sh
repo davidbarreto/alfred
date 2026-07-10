@@ -254,7 +254,11 @@ _import_workflows() {
 }
 
 # ---------------------------------------------------------------------------
-# Step 4 — Publish all workflows (promote draft → live version)
+# Step 4 — Publish all workflows (promote latest draft version → live)
+# n8n 2.x: publishing == activating. POST /rest/workflows/:id/activate with
+# the draft versionId promotes it to the live version and activates the
+# workflow. (The legacy PATCH {"active": true} is ignored by the update DTO,
+# and /publish does not exist.)
 # ---------------------------------------------------------------------------
 _publish_workflows() {
   echo -e "${BLUE}Publishing workflows...${NC}"
@@ -268,88 +272,63 @@ _publish_workflows() {
     return
   fi
 
-  local workflows
-  workflows=$(curl -s -b "$cookie_jar" "${N8N_BASE_URL}/rest/workflows")
-
   local wf_ids
-  wf_ids=$(echo "$workflows" | python3 -c "
+  wf_ids=$(curl -s -b "$cookie_jar" "${N8N_BASE_URL}/rest/workflows" | python3 -c "
 import sys, json
 data = json.load(sys.stdin)
 for w in data.get('data', []):
-    print(str(w['id']) + ' ' + w.get('name', '(unnamed)'))
+    print(w['id'])
 ")
 
   local count=0
-  while IFS=' ' read -r wf_id wf_name; do
-    [ -z "$wf_id" ] && continue
-    local pub_status
-    pub_status=$(curl -s -o /dev/null -w "%{http_code}" \
+  local wf_id
+  for wf_id in $wf_ids; do
+    # Fetch the full workflow to get its draft versionId and live version
+    local wf_info
+    wf_info=$(curl -s -b "$cookie_jar" "${N8N_BASE_URL}/rest/workflows/${wf_id}" | python3 -c "
+import sys, json
+data = json.load(sys.stdin)
+w = data.get('data', data)
+print(w.get('versionId') or '')
+print(w.get('activeVersionId') or '')
+print('true' if w.get('active') else 'false')
+print(w.get('name') or '(unnamed)')
+")
+    local version_id active_version_id is_active wf_name
+    version_id=$(echo "$wf_info" | sed -n 1p)
+    active_version_id=$(echo "$wf_info" | sed -n 2p)
+    is_active=$(echo "$wf_info" | sed -n 3p)
+    wf_name=$(echo "$wf_info" | sed -n 4p)
+
+    if [ -z "$version_id" ]; then
+      echo -e "  ${YELLOW}⚠ no versionId for: ${wf_name} (id=${wf_id}), skipping${NC}"
+      continue
+    fi
+
+    if [ "$is_active" = "true" ] && [ "$version_id" = "$active_version_id" ]; then
+      echo "  → already published: ${wf_name} (id=${wf_id})"
+      continue
+    fi
+
+    local pub_status pub_body
+    pub_body=$(mktemp)
+    pub_status=$(curl -s -o "$pub_body" -w "%{http_code}" \
       -b "$cookie_jar" \
-      -X POST "${N8N_BASE_URL}/rest/workflows/${wf_id}/publish")
+      -X POST "${N8N_BASE_URL}/rest/workflows/${wf_id}/activate" \
+      -H "Content-Type: application/json" \
+      -d "{\"versionId\": \"${version_id}\"}")
     if [ "$pub_status" = "200" ]; then
       echo "  → published: ${wf_name} (id=${wf_id})"
       count=$((count + 1))
     else
       echo -e "  ${YELLOW}⚠ failed to publish: ${wf_name} (id=${wf_id}, HTTP $pub_status)${NC}"
+      python3 -c "import sys,json; print('    ' + json.load(sys.stdin).get('message','(no message)'))" < "$pub_body" 2>/dev/null || true
     fi
-  done <<< "$wf_ids"
+    rm -f "$pub_body"
+  done
 
   rm -f "$cookie_jar"
   echo -e "${GREEN}✓ Published ${count} workflow(s)${NC}"
-}
-
-# ---------------------------------------------------------------------------
-# Step 5 — Activate all workflows
-# ---------------------------------------------------------------------------
-_activate_workflows() {
-  echo -e "${BLUE}Activating workflows...${NC}"
-
-  local cookie_jar
-  cookie_jar=$(mktemp)
-
-  if ! _n8n_login "$cookie_jar"; then
-    echo -e "${YELLOW}Skipping workflow activation${NC}"
-    rm -f "$cookie_jar"
-    return
-  fi
-
-  local workflows
-  workflows=$(curl -s -b "$cookie_jar" "${N8N_BASE_URL}/rest/workflows")
-
-  # Emit "<id> <name>" lines for inactive workflows
-  local inactive
-  inactive=$(echo "$workflows" | python3 -c "
-import sys, json
-data = json.load(sys.stdin)
-for w in data.get('data', []):
-    if not w.get('active', False):
-        print(str(w['id']) + ' ' + w.get('name', '(unnamed)'))
-")
-
-  local count=0
-  while IFS=' ' read -r wf_id wf_name; do
-    [ -z "$wf_id" ] && continue
-    local patch_status
-    patch_status=$(curl -s -o /dev/null -w "%{http_code}" \
-      -b "$cookie_jar" \
-      -X PATCH "${N8N_BASE_URL}/rest/workflows/${wf_id}" \
-      -H "Content-Type: application/json" \
-      -d '{"active": true}')
-    if [ "$patch_status" = "200" ]; then
-      echo "  → activated: ${wf_name} (id=${wf_id})"
-      count=$((count + 1))
-    else
-      echo -e "  ${YELLOW}⚠ failed to activate: ${wf_name} (id=${wf_id}, HTTP $patch_status)${NC}"
-    fi
-  done <<< "$inactive"
-
-  rm -f "$cookie_jar"
-
-  if [ -z "$inactive" ]; then
-    echo -e "${GREEN}✓ All workflows already active${NC}"
-  else
-    echo -e "${GREEN}✓ Activated ${count} workflow(s)${NC}"
-  fi
 }
 
 # ---------------------------------------------------------------------------
@@ -365,7 +344,6 @@ _setup_owner
 _import_credentials
 _import_workflows
 _publish_workflows
-_activate_workflows
 
 echo ""
 echo -e "${GREEN}✓ n8n setup complete${NC}"

@@ -343,7 +343,7 @@ async def approve_chunk(chunk_id: int, request: Request):
     try:
         await api.post(f"/language/chunks/{chunk_id}/approve")
     except httpx.HTTPError:
-        pass
+        return Response(status_code=502)
     return HTMLResponse("")
 
 
@@ -352,7 +352,7 @@ async def reject_chunk(chunk_id: int, request: Request):
     try:
         await api.delete(f"/language/chunks/{chunk_id}")
     except httpx.HTTPError:
-        pass
+        return Response(status_code=502)
     return HTMLResponse("")
 
 

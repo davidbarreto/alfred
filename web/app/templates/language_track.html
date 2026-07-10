@@ -23,7 +23,7 @@
       <span class="px-2 py-0.5 rounded-full text-xs font-medium {{ level_color }}">{{ track.level }}</span>
     </div>
     <div class="flex flex-wrap items-center gap-2">
-      <a href="/languages/{{ track.code }}/chunks?status=pending_triage"
+      <a href="/languages/triage?lang={{ track.code }}"
          class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-amber-50 border border-amber-200 text-xs font-medium text-amber-700 hover:bg-amber-100 transition-colors">
         <i class="ti ti-inbox text-sm"></i>Triage
       </a>

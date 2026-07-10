@@ -27,9 +27,9 @@ async def briefing_page(request: Request):
 
 
 @router.get("/formatted", response_class=HTMLResponse)
-async def briefing_formatted_fragment(request: Request):
+async def briefing_formatted_fragment(request: Request, force: bool = False):
     try:
-        result = await api.get("/briefing/morning/formatted")
+        result = await api.get("/briefing/morning/formatted", params={"force": force})
         text = result.get("text", "")
     except httpx.HTTPError:
         text = None

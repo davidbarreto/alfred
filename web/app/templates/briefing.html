@@ -11,7 +11,7 @@
       {% if briefing %}<p class="text-xs text-gray-400 mt-0.5">{{ briefing.date }}</p>{% endif %}
     </div>
     <button
-      hx-get="/briefing/formatted"
+      hx-get="/briefing/formatted?force=true"
       hx-target="#formatted-section"
       hx-swap="innerHTML"
       hx-indicator="#formatted-spinner"
@@ -36,8 +36,14 @@
         <h2 class="text-sm font-medium text-gray-900">AI Summary</h2>
         <span id="formatted-spinner" class="htmx-indicator text-xs text-gray-400">Generating…</span>
       </div>
-      <div id="formatted-section">
-        <p class="text-sm text-gray-400">Click "Generate summary" to get an AI-written briefing.</p>
+      <div
+        id="formatted-section"
+        hx-get="/briefing/formatted"
+        hx-trigger="load"
+        hx-swap="innerHTML"
+        hx-indicator="#formatted-spinner"
+      >
+        <p class="text-sm text-gray-400">Loading summary…</p>
       </div>
     </div>
   </div>

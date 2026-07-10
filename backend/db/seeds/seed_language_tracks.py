@@ -27,6 +27,7 @@ _TRACKS = [
     ("es", "Spanish", "A2"),
     ("it", "Italian", "A1"),
     ("en", "English", "B2"),
+    ("de", "German",  "A2"),
 ]
 
 

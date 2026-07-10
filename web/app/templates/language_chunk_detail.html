@@ -175,6 +175,70 @@
       </div>
       {% endif %}
 
+      <!-- Production history -->
+      {% if production_sessions %}
+      <div class="card bg-white">
+        <div class="card-body p-0">
+          <div class="px-4 py-3 border-b border-gray-100">
+            <p class="text-xs font-medium text-gray-700">Production history</p>
+            <p class="text-xs text-gray-400">{{ production_sessions | length }} attempt{{ 's' if production_sessions | length != 1 }}</p>
+          </div>
+
+          <div class="divide-y divide-gray-50">
+            {% for session in production_sessions %}
+            {% set grading = session.ai_feedback_json or {} %}
+            <div class="px-4 py-3 space-y-1.5">
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                  <div class="w-8 h-8 rounded-full bg-teal-100 flex items-center justify-center shrink-0">
+                    <i class="ti ti-pencil text-teal-600 text-sm"></i>
+                  </div>
+                  <div>
+                    <p class="text-xs text-gray-600">{{ session.created_at[:10] }}</p>
+                    <p class="text-[10px] text-gray-400 uppercase tracking-wide">{{ (session.task_type or '') | replace('_', ' ') | title }}</p>
+                  </div>
+                </div>
+                {% if grading.score is defined and grading.score is not none %}
+                <div class="text-center">
+                  <p class="text-sm font-semibold {% if grading.score >= 80 %}text-green-600{% elif grading.score >= 55 %}text-gray-700{% else %}text-red-600{% endif %}">
+                    {{ grading.score | round | int }}
+                  </p>
+                  <p class="text-[10px] text-gray-400">score</p>
+                </div>
+                {% elif session.quality_score is not none %}
+                <div class="text-center">
+                  <p class="text-sm font-semibold text-gray-700">{{ "%.1f" | format(session.quality_score) }}</p>
+                  <p class="text-[10px] text-gray-400">score</p>
+                </div>
+                {% endif %}
+              </div>
+
+              {% if session.prompt_text %}
+              <p class="text-xs text-gray-500 pl-11"><span class="text-gray-400">Prompt:</span> {{ session.prompt_text }}</p>
+              {% endif %}
+              {% if session.transcript_or_notes %}
+              <p class="text-xs text-gray-700 pl-11"><span class="text-gray-400">Your answer:</span> {{ session.transcript_or_notes }}</p>
+              {% endif %}
+              {% if grading.corrected_text %}
+              <p class="text-xs text-green-700 pl-11"><span class="text-gray-400">Corrected:</span> {{ grading.corrected_text }}</p>
+              {% endif %}
+              {% if grading.feedback %}
+              <p class="text-xs text-gray-500 italic pl-11">{{ grading.feedback }}</p>
+              {% endif %}
+              {% if grading.errors %}
+              <ul class="text-xs text-red-500 pl-11 list-disc list-inside">
+                {% for err in grading.errors %}
+                <li>{{ err }}</li>
+                {% endfor %}
+              </ul>
+              {% endif %}
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+      {% endif %}
+
     </div>
 
     <!-- FSRS state panel -->

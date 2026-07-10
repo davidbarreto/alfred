@@ -741,6 +741,7 @@ async def chunk_detail(code: str, chunk_id: int, request: Request):
 
     shadowing = [s for s in sessions if s["session_type"] == "shadowing"]
     srs_reviews = [s for s in sessions if s["session_type"] == "srs_review"]
+    production = [s for s in sessions if s["session_type"] == "production"]
 
     chunk["ease_color"] = _ease_color(chunk.get("difficulty", 5.0))
     chunk["source_label"] = _SOURCE_LABEL.get(chunk.get("frequency_source", ""), chunk.get("frequency_source") or "—")
@@ -751,6 +752,7 @@ async def chunk_detail(code: str, chunk_id: int, request: Request):
         "chunk": chunk,
         "shadowing_sessions": shadowing,
         "srs_sessions": srs_reviews,
+        "production_sessions": production,
         "shadowing_chart": _build_shadowing_chart(shadowing),
     })
 

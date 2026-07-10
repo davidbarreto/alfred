@@ -73,7 +73,16 @@ class TestBriefingFormattedFragment:
 
         assert resp.status_code == 200
         assert "Good morning! Here&#39;s your day." in resp.text
-        mock_api["get"].assert_awaited_once_with("/briefing/morning/formatted")
+        mock_api["get"].assert_awaited_once_with("/briefing/morning/formatted", params={"force": False})
+
+    def test_forwards_force_flag_to_bypass_cache(self, client, mock_api):
+        mock_api["get"].return_value = {"text": "Freshly generated briefing."}
+
+        resp = client.get("/briefing/formatted?force=true")
+
+        assert resp.status_code == 200
+        assert "Freshly generated briefing." in resp.text
+        mock_api["get"].assert_awaited_once_with("/briefing/morning/formatted", params={"force": True})
 
     def test_renders_fallback_message_on_http_error(self, client, mock_api):
         request = httpx.Request("GET", "http://api/briefing/morning/formatted")

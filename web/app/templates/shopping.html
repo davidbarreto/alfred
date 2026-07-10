@@ -98,7 +98,9 @@
       <button type="submit" class="btn btn-sm btn-primary">Add</button>
     </form>
     <div id="wishlist-list">
+      {% with items = wishlist %}
       {% include "_wishlist_list.html" %}
+      {% endwith %}
     </div>
   </div>
 

@@ -16,6 +16,11 @@ async def get_morning_briefing(service: BriefingSummaryServiceDep) -> MorningBri
 async def get_morning_briefing_formatted(
     summary_service: BriefingSummaryServiceDep,
     formatter_service: BriefingFormatterServiceDep,
+    force: bool = False,
 ) -> FormattedBriefing:
+    if not force:
+        saved = await formatter_service.get_saved()
+        if saved is not None:
+            return saved
     briefing = await summary_service.build()
     return await formatter_service.format(briefing)

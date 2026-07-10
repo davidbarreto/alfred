@@ -213,6 +213,31 @@
   </div>
   {% endif %}
 
+  <!-- Shopping list -->
+  {% if briefing.shopping %}
+  <div class="card bg-white">
+    <div class="card-body p-4">
+      <div class="flex items-center justify-between mb-3">
+        <h2 class="text-sm font-medium text-gray-900"><i class="ti ti-shopping-cart mr-1"></i>Pending shopping</h2>
+        <a href="/shopping" class="text-xs text-[#378ADD] hover:underline">View all →</a>
+      </div>
+      <ul class="space-y-2">
+        {% for s in briefing.shopping %}
+        <li class="flex items-center gap-2 text-sm min-w-0">
+          <span class="w-1.5 h-1.5 rounded-full flex-shrink-0
+            {% if s.priority == 'need' %}bg-[#BA7517]{% else %}bg-gray-300{% endif %}"></span>
+          <span class="truncate text-gray-700">
+            {{ s.name }}
+            {% if s.quantity %}<span class="text-gray-400">× {{ '%g' | format(s.quantity) }}{% if s.unit %} {{ s.unit }}{% endif %}</span>{% endif %}
+          </span>
+          {% if s.store %}<span class="text-xs text-gray-400 ml-auto shrink-0">{{ s.store }}</span>{% endif %}
+        </li>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+  {% endif %}
+
   {% elif not api_error %}
   <div class="card bg-white">
     <div class="card-body p-4">

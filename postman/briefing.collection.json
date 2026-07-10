@@ -2,7 +2,7 @@
   "info": {
     "name": "Alfred - Briefing API",
     "_postman_id": "alfred-briefing-v1",
-    "description": "Morning briefing endpoints. Run: Health Check → Morning Briefing JSON → Morning Briefing Formatted",
+    "description": "Morning briefing endpoints. Run: Health Check → Morning Briefing JSON → Morning Briefing Formatted → Formatted (Reused) → Formatted (Force Regenerate)",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -75,6 +75,16 @@
               "        pm.expect(e).to.have.property('days_until');",
               "    });",
               "});",
+              "pm.test('Has shopping array', () => {",
+              "    pm.expect(pm.response.json().shopping).to.be.an('array');",
+              "});",
+              "pm.test('Shopping items have name and priority', () => {",
+              "    const shopping = pm.response.json().shopping;",
+              "    shopping.forEach((s) => {",
+              "        pm.expect(s).to.have.property('name');",
+              "        pm.expect(s).to.have.property('priority');",
+              "    });",
+              "});",
               "pm.test('Has weather object', () => {",
               "    const weather = pm.response.json().weather;",
               "    pm.expect(weather).to.have.property('temperature_max_c');",
@@ -116,6 +126,33 @@
               "pm.test('Text has no markdown asterisks', () => {",
               "    pm.expect(pm.response.json().text).to.not.include('**');",
               "    pm.expect(pm.response.json().text).to.not.include('__');",
+              "});",
+              "pm.collectionVariables.set('briefing_text', pm.response.json().text);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/briefing/morning/formatted",
+          "host": ["{{base_url}}"],
+          "path": ["briefing", "morning", "formatted"]
+        }
+      }
+    },
+    {
+      "name": "04 - Morning Briefing (Formatted, Reused Same Day)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Returns the saved briefing text unchanged', () => {",
+              "    pm.expect(pm.response.json().text).to.eql(pm.collectionVariables.get('briefing_text'));",
               "});"
             ],
             "type": "text/javascript"
@@ -129,6 +166,36 @@
           "raw": "{{base_url}}/briefing/morning/formatted",
           "host": ["{{base_url}}"],
           "path": ["briefing", "morning", "formatted"]
+        }
+      }
+    },
+    {
+      "name": "05 - Morning Briefing (Formatted, Force Regenerate)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Has non-empty text field', () => {",
+              "    pm.expect(pm.response.json().text).to.be.a('string');",
+              "    pm.expect(pm.response.json().text.length).to.be.above(0);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/briefing/morning/formatted?force=true",
+          "host": ["{{base_url}}"],
+          "path": ["briefing", "morning", "formatted"],
+          "query": [
+            { "key": "force", "value": "true" }
+          ]
         }
       }
     }

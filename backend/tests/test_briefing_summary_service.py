@@ -102,6 +102,25 @@ def _make_track_orm(id=1, code="pt", name="Portuguese", daily_quota=10):
     return t
 
 
+def _make_shopping_orm(**kwargs):
+    item = MagicMock()
+    item.id = kwargs.get("id", 1)
+    item.name = kwargs.get("name", "Milk")
+    item.category = kwargs.get("category", "grocery")
+    item.priority = kwargs.get("priority", "need")
+    item.quantity = kwargs.get("quantity", None)
+    item.unit = kwargs.get("unit", None)
+    item.store = kwargs.get("store", None)
+    return item
+
+
+@pytest.fixture(autouse=True)
+def _patch_shopping_repo():
+    with patch("app.features.briefing.summary_service.ShoppingRepository") as MockShoppingRepo:
+        MockShoppingRepo.return_value.list = AsyncMock(return_value=[])
+        yield MockShoppingRepo
+
+
 class TestBuild:
     @pytest.fixture(autouse=True)
     def _patch_language_repos(self):
@@ -161,10 +180,8 @@ class TestBuild:
         with (
             patch("app.features.briefing.summary_service.TaskRepository") as MockTaskRepo,
             patch("app.features.briefing.summary_service.CalendarEventRepository") as MockEventRepo,
-            patch("app.features.briefing.summary_service.datetime") as mock_dt,
+            patch("app.features.briefing.summary_service.local_now", return_value=datetime(2026, 6, 23, 8, 0)),
         ):
-            mock_dt.now.return_value = MagicMock(date=lambda: date(2026, 6, 23))
-            mock_dt.combine = datetime.combine
             MockTaskRepo.return_value.get_tasks = AsyncMock(return_value=tasks)
             MockEventRepo.return_value.get_events = AsyncMock(return_value=[])
 
@@ -185,11 +202,8 @@ class TestBuild:
         with (
             patch("app.features.briefing.summary_service.TaskRepository") as MockTaskRepo,
             patch("app.features.briefing.summary_service.CalendarEventRepository") as MockEventRepo,
-            patch("app.features.briefing.summary_service.datetime") as mock_dt,
+            patch("app.features.briefing.summary_service.local_now", return_value=datetime(2026, 6, 23, 8, 0)),
         ):
-            mock_dt.now.return_value = MagicMock(date=lambda: date(2026, 6, 23))
-            mock_dt.combine = datetime.combine
-            mock_dt.max = datetime.max
             MockTaskRepo.return_value.get_tasks = AsyncMock(return_value=tasks)
             MockEventRepo.return_value.get_events = AsyncMock(return_value=[])
 
@@ -206,11 +220,8 @@ class TestBuild:
         with (
             patch("app.features.briefing.summary_service.TaskRepository") as MockTaskRepo,
             patch("app.features.briefing.summary_service.CalendarEventRepository") as MockEventRepo,
-            patch("app.features.briefing.summary_service.datetime") as mock_dt,
+            patch("app.features.briefing.summary_service.local_now", return_value=datetime(2026, 6, 23, 8, 0)),
         ):
-            mock_dt.now.return_value = MagicMock(date=lambda: date(2026, 6, 23))
-            mock_dt.combine = datetime.combine
-            mock_dt.max = datetime.max
             MockTaskRepo.return_value.get_tasks = AsyncMock(return_value=tasks)
             MockEventRepo.return_value.get_events = AsyncMock(return_value=[])
 
@@ -228,10 +239,8 @@ class TestBuild:
         with (
             patch("app.features.briefing.summary_service.TaskRepository") as MockTaskRepo,
             patch("app.features.briefing.summary_service.CalendarEventRepository") as MockEventRepo,
-            patch("app.features.briefing.summary_service.datetime") as mock_dt,
+            patch("app.features.briefing.summary_service.local_now", return_value=datetime(2026, 6, 23, 8, 0)),
         ):
-            mock_dt.now.return_value = MagicMock(date=lambda: date(2026, 6, 23))
-            mock_dt.combine = datetime.combine
             MockTaskRepo.return_value.get_tasks = AsyncMock(return_value=tasks)
             MockEventRepo.return_value.get_events = AsyncMock(return_value=[])
 
@@ -279,11 +288,8 @@ class TestBuild:
         with (
             patch("app.features.briefing.summary_service.TaskRepository") as MockTaskRepo,
             patch("app.features.briefing.summary_service.CalendarEventRepository") as MockEventRepo,
-            patch("app.features.briefing.summary_service.datetime") as mock_dt,
+            patch("app.features.briefing.summary_service.local_now", return_value=datetime(2026, 6, 23, 8, 0)),
         ):
-            mock_dt.now.return_value = MagicMock(date=lambda: date(2026, 6, 23))
-            mock_dt.combine = datetime.combine
-            mock_dt.max = datetime.max
             MockTaskRepo.return_value.get_tasks = AsyncMock(return_value=[])
             MockEventRepo.return_value.get_events = AsyncMock(return_value=events)
 
@@ -452,3 +458,49 @@ class TestLanguageBriefing:
         assert result.language[0].completed_today == 2
         assert result.language[1].code == "es"
         assert result.language[1].due_count == 8
+
+
+class TestShoppingBriefing:
+    @pytest.fixture(autouse=True)
+    def _patch_base_repos(self):
+        with (
+            patch("app.features.briefing.summary_service.TaskRepository") as MockTaskRepo,
+            patch("app.features.briefing.summary_service.CalendarEventRepository") as MockEventRepo,
+            patch("app.features.briefing.summary_service.LanguageTrackRepository") as MockTrackRepo,
+            patch("app.features.briefing.summary_service.ChunkRepository"),
+            patch("app.features.briefing.summary_service.LanguageSessionRepository"),
+        ):
+            MockTaskRepo.return_value.get_tasks = AsyncMock(return_value=[])
+            MockEventRepo.return_value.get_events = AsyncMock(return_value=[])
+            MockTrackRepo.return_value.get_tracks = AsyncMock(return_value=[])
+            yield
+
+    @pytest.mark.asyncio
+    async def test_shopping_empty_when_no_pending_items(self, service):
+        result = await service.build()
+        assert result.shopping == []
+
+    @pytest.mark.asyncio
+    async def test_shopping_includes_pending_items(self, service, _patch_shopping_repo):
+        items = [
+            _make_shopping_orm(id=1, name="Milk", quantity=2, unit="L", store="Continente"),
+            _make_shopping_orm(id=2, name="Headphones", category="electronics", priority="want"),
+        ]
+        _patch_shopping_repo.return_value.list = AsyncMock(return_value=items)
+
+        result = await service.build()
+
+        assert len(result.shopping) == 2
+        assert result.shopping[0].name == "Milk"
+        assert result.shopping[0].quantity == 2.0
+        assert result.shopping[0].unit == "L"
+        assert result.shopping[0].store == "Continente"
+        assert result.shopping[1].category == "electronics"
+        assert result.shopping[1].priority == "want"
+
+    @pytest.mark.asyncio
+    async def test_shopping_requests_pending_status(self, service, _patch_shopping_repo):
+        await service.build()
+
+        filters = _patch_shopping_repo.return_value.list.call_args[0][0]
+        assert filters.status == "pending"

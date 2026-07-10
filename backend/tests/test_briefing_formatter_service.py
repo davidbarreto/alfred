@@ -11,6 +11,7 @@ from app.features.briefing.schemas import (
     HolidayItem,
     LanguageBriefItem,
     MorningBriefing,
+    ShoppingBriefItem,
     TaskBriefItem,
     WeatherForecast,
 )
@@ -68,6 +69,20 @@ def _make_event_item(**kwargs) -> EventBriefItem:
     )
     defaults.update(kwargs)
     return EventBriefItem(**defaults)
+
+
+def _make_shopping_item(**kwargs) -> ShoppingBriefItem:
+    defaults = dict(
+        id=1,
+        name="Milk",
+        category="grocery",
+        priority="need",
+        quantity=None,
+        unit=None,
+        store=None,
+    )
+    defaults.update(kwargs)
+    return ShoppingBriefItem(**defaults)
 
 
 class TestBuildContext:
@@ -190,6 +205,27 @@ class TestBuildContext:
         assert "quota met" in context
         assert "10/10" in context
 
+    def test_no_shopping_section_when_empty(self):
+        briefing = _make_briefing(shopping=[])
+        context = _build_context(briefing)
+        assert "Shopping list" not in context
+
+    def test_shopping_item_name_in_context(self):
+        briefing = _make_briefing(shopping=[_make_shopping_item(name="Olive oil")])
+        context = _build_context(briefing)
+        assert "Shopping list — pending items (1)" in context
+        assert "Olive oil" in context
+
+    def test_shopping_quantity_and_unit_in_context(self):
+        briefing = _make_briefing(shopping=[_make_shopping_item(quantity=2.0, unit="L")])
+        context = _build_context(briefing)
+        assert "x2 L" in context
+
+    def test_shopping_store_in_context(self):
+        briefing = _make_briefing(shopping=[_make_shopping_item(store="Continente")])
+        context = _build_context(briefing)
+        assert "at Continente" in context
+
     def test_birthday_today(self):
         briefing = _make_briefing(
             birthdays=[BirthdayItem(name="Alice", days_until=0, date=date(2026, 6, 23))]
@@ -234,7 +270,9 @@ class TestBriefingFormatterService:
 
     @pytest.fixture
     def service(self, mock_llm, mock_session):
-        return BriefingFormatterService(llm_provider=mock_llm, session=mock_session)
+        svc = BriefingFormatterService(llm_provider=mock_llm, session=mock_session)
+        svc._repo = AsyncMock()
+        return svc
 
     @pytest.mark.asyncio
     async def test_returns_formatted_briefing(self, service):
@@ -274,3 +312,43 @@ class TestBriefingFormatterService:
             await service.format(_make_briefing())
 
         mock_session.commit.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_saves_generated_text(self, service):
+        with patch("app.features.briefing.formatter_service.create_llm_call", new_callable=AsyncMock):
+            await service.format(_make_briefing())
+
+        service._repo.upsert_briefing.assert_called_once_with(
+            date(2026, 6, 23), "Good morning! Here is your briefing."
+        )
+
+    @pytest.mark.asyncio
+    async def test_get_saved_returns_none_when_not_found(self, service):
+        service._repo.get_briefing_by_date.return_value = None
+
+        result = await service.get_saved(date(2026, 6, 23))
+
+        assert result is None
+        service._repo.get_briefing_by_date.assert_called_once_with(date(2026, 6, 23))
+
+    @pytest.mark.asyncio
+    async def test_get_saved_returns_formatted_briefing(self, service):
+        saved = MagicMock()
+        saved.date = date(2026, 6, 23)
+        saved.text = "Saved briefing text."
+        service._repo.get_briefing_by_date.return_value = saved
+
+        result = await service.get_saved(date(2026, 6, 23))
+
+        assert isinstance(result, FormattedBriefing)
+        assert result.date == date(2026, 6, 23)
+        assert result.text == "Saved briefing text."
+
+    @pytest.mark.asyncio
+    async def test_get_saved_defaults_to_today(self, service):
+        service._repo.get_briefing_by_date.return_value = None
+
+        await service.get_saved()
+
+        looked_up = service._repo.get_briefing_by_date.call_args[0][0]
+        assert isinstance(looked_up, date)

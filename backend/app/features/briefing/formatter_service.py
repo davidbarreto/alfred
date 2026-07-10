@@ -2,13 +2,16 @@ from __future__ import annotations
 
 import logging
 import time as time_module
+from datetime import date
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.features.briefing.prompts import MORNING_BRIEFING_SYSTEM_PROMPT
+from app.features.briefing.repository import BriefingRepository
 from app.features.briefing.schemas import FormattedBriefing, MorningBriefing
 from app.integrations.llm_calls.repository import create_llm_call
 from app.shared.llm import LlmProvider
+from app.shared.timezone import local_now
 
 logger = logging.getLogger(__name__)
 
@@ -93,6 +96,17 @@ def _build_context(briefing: MorningBriefing) -> str:
             else:
                 lines.append(f"  {b.name} — in {b.days_until} days ({b.date.strftime('%d %b')})")
 
+    if briefing.shopping:
+        lines.append("")
+        lines.append(f"Shopping list — pending items ({len(briefing.shopping)}):")
+        for item in briefing.shopping:
+            qty = ""
+            if item.quantity is not None:
+                amount = f"{item.quantity:g}"
+                qty = f" x{amount} {item.unit}" if item.unit else f" x{amount}"
+            store = f" at {item.store}" if item.store else ""
+            lines.append(f"  {item.name}{qty} | {item.category} | {item.priority}{store}")
+
     active_language = [t for t in briefing.language if t.due_count > 0 or t.completed_today > 0]
     if active_language:
         lines.append("")
@@ -115,6 +129,17 @@ class BriefingFormatterService:
     def __init__(self, llm_provider: LlmProvider, session: AsyncSession) -> None:
         self._llm_provider = llm_provider
         self._session = session
+        self._repo = BriefingRepository(session)
+
+    async def get_saved(self, briefing_date: date | None = None) -> FormattedBriefing | None:
+        if briefing_date is None:
+            briefing_date = local_now().date()
+        saved = await self._repo.get_briefing_by_date(briefing_date)
+        if saved is None:
+            logger.debug("Saved briefing: date=%s not found", briefing_date)
+            return None
+        logger.info("Reusing saved briefing: date=%s", briefing_date)
+        return FormattedBriefing(date=saved.date, text=saved.text)
 
     async def format(self, briefing: MorningBriefing) -> FormattedBriefing:
         context = _build_context(briefing)
@@ -137,6 +162,8 @@ class BriefingFormatterService:
             tokens_output=llm_response.tokens_output,
             latency_ms=latency_ms,
         )
+        await self._repo.upsert_briefing(briefing.date, text)
         await self._session.commit()
+        logger.info("Briefing formatted and saved: date=%s", briefing.date)
 
         return FormattedBriefing(date=briefing.date, text=text)

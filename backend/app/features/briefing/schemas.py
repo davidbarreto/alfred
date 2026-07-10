@@ -53,6 +53,16 @@ class BirthdayItem(BaseModel):
     date: date
 
 
+class ShoppingBriefItem(BaseModel):
+    id: int
+    name: str
+    category: str
+    priority: str
+    quantity: float | None
+    unit: str | None
+    store: str | None
+
+
 class LanguageBriefItem(BaseModel):
     track_id: int
     code: str
@@ -72,6 +82,7 @@ class MorningBriefing(BaseModel):
     holidays: list[HolidayItem]
     birthdays: list[BirthdayItem]
     language: list[LanguageBriefItem] = []
+    shopping: list[ShoppingBriefItem] = []
 
 
 class FormattedBriefing(BaseModel):

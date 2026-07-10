@@ -2,11 +2,10 @@ from __future__ import annotations
 
 import logging
 from datetime import date, datetime, time, timedelta
-from zoneinfo import ZoneInfo
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.features.briefing.schemas import BirthdayItem, EventBriefItem, HolidayItem, LanguageBriefItem, MorningBriefing, TaskBriefItem
+from app.features.briefing.schemas import BirthdayItem, EventBriefItem, HolidayItem, LanguageBriefItem, MorningBriefing, ShoppingBriefItem, TaskBriefItem
 from app.features.language.chunks.repository import ChunkRepository
 from app.features.language.sessions.repository import SessionRepository as LanguageSessionRepository
 from app.features.language.tracks.repository import TrackRepository as LanguageTrackRepository
@@ -14,14 +13,16 @@ from app.features.language.tracks.schemas import TrackFilters as LanguageTrackFi
 from app.features.organizer.calendar_events.repository import CalendarEventRepository
 from app.features.organizer.calendar_events.schemas import EventFilters
 from app.features.organizer.contacts.service import ContactService
+from app.features.organizer.shopping.repository import ShoppingRepository
+from app.features.organizer.shopping.schemas import ShoppingItemFilters
 from app.features.organizer.tasks.repository import TaskRepository
 from app.features.organizer.tasks.schemas import TaskFilters
 from app.shared.holiday import HolidayProvider
+from app.shared.timezone import local_now
 from app.shared.weather import WeatherProvider
 
 logger = logging.getLogger(__name__)
 
-_PORTO_TZ = ZoneInfo("Europe/Lisbon")
 _ACTIVE_STATUSES = {"TODO", "DOING"}
 _PRIORITY_ORDER = {"HIGH": 0, "MEDIUM": 1, "LOW": 2}
 _HOLIDAY_LOOKAHEAD_DAYS = 7
@@ -42,20 +43,21 @@ class BriefingSummaryService:
         self._contact_service = contact_service
 
     async def build(self) -> MorningBriefing:
-        today = datetime.now(_PORTO_TZ).date()
+        today = local_now().date()
         today_start = datetime.combine(today, time.min)
         today_end = datetime.combine(today, time.max)
         lookahead_end = datetime.combine(today + timedelta(days=_LOOKAHEAD_DAYS - 1), time.max)
 
         holiday_window_end = today + timedelta(days=_HOLIDAY_LOOKAHEAD_DAYS)
 
-        tasks, events, weather, holidays, birthdays, language = await _gather(
+        tasks, events, weather, holidays, birthdays, language, shopping = await _gather(
             self._fetch_tasks(today, today_start, today_end, lookahead_end),
             self._fetch_events(today, today_start, lookahead_end),
             self._weather_client.get_daily_forecast(today),
             self._holiday_client.get_holidays(today, holiday_window_end),
             self._fetch_birthdays(today),
             self._fetch_language(),
+            self._fetch_shopping(),
         )
 
         return MorningBriefing(
@@ -67,6 +69,7 @@ class BriefingSummaryService:
             holidays=holidays,
             birthdays=birthdays,
             language=language,
+            shopping=shopping,
         )
 
     async def _fetch_tasks(
@@ -159,6 +162,22 @@ class BriefingSummaryService:
                 quota_met=quota_met,
             ))
         return items
+
+    async def _fetch_shopping(self) -> list[ShoppingBriefItem]:
+        repo = ShoppingRepository(self._session)
+        raw_items = await repo.list(ShoppingItemFilters(status="pending"))
+        return [
+            ShoppingBriefItem(
+                id=item.id,
+                name=item.name,
+                category=item.category,
+                priority=item.priority,
+                quantity=float(item.quantity) if item.quantity is not None else None,
+                unit=item.unit,
+                store=item.store,
+            )
+            for item in raw_items
+        ]
 
     async def _fetch_birthdays(self, today: date) -> list[BirthdayItem]:
         if self._contact_service is None:

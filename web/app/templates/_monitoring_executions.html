@@ -1,0 +1,27 @@
+{% set status_style = {
+  "found": ("bg-[#FAEEDA]", "text-[#BA7517]"),
+  "not_found": ("bg-[#EAF3DE]", "text-[#639922]"),
+  "error": ("bg-[#FCEBEB]", "text-[#E24B4A]"),
+} %}
+{% if executions %}
+<ul class="divide-y divide-gray-100">
+  {% for e in executions %}
+  <li class="py-2 text-sm">
+    <div class="flex items-center justify-between">
+      {% set style = status_style.get(e.status, ("bg-gray-100", "text-gray-500")) %}
+      <span class="inline-flex items-center text-[11px] font-medium px-1.5 py-0.5 rounded {{ style[0] }} {{ style[1] }}">
+        {{ e.status | replace("_", " ") }}
+      </span>
+      <span class="text-xs text-gray-400">{{ e.created_at[:16] | replace("T", " ") }}</span>
+    </div>
+    {% if e.result %}
+    <div class="text-xs text-gray-600 mt-1 truncate">{{ e.result }}</div>
+    {% elif e.error %}
+    <div class="text-xs text-[#E24B4A] mt-1 truncate">{{ e.error }}</div>
+    {% endif %}
+  </li>
+  {% endfor %}
+</ul>
+{% else %}
+<p class="text-sm text-gray-400 py-3 text-center">No executions yet.</p>
+{% endif %}

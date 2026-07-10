@@ -8,7 +8,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.middleware.sessions import SessionMiddleware
 
 from app.config import get_settings
-from app.routes import auth, briefing, contacts, dashboard, tasks, shopping, calendar, notes, finance, chat, insights, language
+from app.routes import auth, briefing, contacts, dashboard, tasks, shopping, calendar, notes, finance, chat, insights, language, monitoring
 
 logging.basicConfig(level=logging.INFO)
 
@@ -47,3 +47,4 @@ app.include_router(insights.router)
 app.include_router(briefing.router)
 app.include_router(chat.router)
 app.include_router(language.router)
+app.include_router(monitoring.router)

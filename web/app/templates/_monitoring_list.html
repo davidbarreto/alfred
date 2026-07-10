@@ -1,0 +1,87 @@
+{% set status_style = {
+  "found": ("bg-[#FAEEDA]", "text-[#BA7517]", "ti-eye-check"),
+  "not_found": ("bg-[#EAF3DE]", "text-[#639922]", "ti-eye-off"),
+  "error": ("bg-[#FCEBEB]", "text-[#E24B4A]", "ti-alert-triangle"),
+} %}
+{% if monitors %}
+<div class="overflow-x-auto">
+<table class="w-full text-sm">
+  <thead>
+    <tr class="text-left text-[10px] uppercase tracking-wide text-gray-400 border-b border-gray-100">
+      <th class="font-medium py-2 pr-3">Name</th>
+      <th class="font-medium py-2 pr-3">Type</th>
+      <th class="font-medium py-2 pr-3">URL</th>
+      <th class="font-medium py-2 pr-3">Last check</th>
+      <th class="font-medium py-2 pr-3">Enabled</th>
+      <th class="font-medium py-2 pr-3 text-right">Actions</th>
+    </tr>
+  </thead>
+  <tbody class="divide-y divide-gray-50">
+    {% for m in monitors %}
+    {% set latest = latest_by_monitor.get(m.id) %}
+    <tr id="monitor-{{ m.id }}" class="group">
+      <td class="py-2 pr-3">
+        <div class="font-medium text-gray-800">{{ m.name }}</div>
+        {% if m.description %}<div class="text-xs text-gray-400 truncate max-w-[220px]">{{ m.description }}</div>{% endif %}
+      </td>
+      <td class="py-2 pr-3 text-xs text-gray-500">{{ m.type }}</td>
+      <td class="py-2 pr-3 text-xs text-gray-500 max-w-[220px] truncate">
+        <a href="{{ m.url }}" target="_blank" rel="noopener" class="hover:text-[#378ADD] hover:underline">{{ m.url }}</a>
+      </td>
+      <td class="py-2 pr-3">
+        {% if latest %}
+        {% set style = status_style.get(latest.status, ("bg-gray-100", "text-gray-500", "ti-help")) %}
+        <span class="inline-flex items-center gap-1 text-[11px] font-medium px-1.5 py-0.5 rounded {{ style[0] }} {{ style[1] }}">
+          <i class="ti {{ style[2] }}" style="font-size:0.8rem"></i>{{ latest.status | replace("_", " ") }}
+        </span>
+        <div class="text-[10px] text-gray-400 mt-0.5">{{ latest.created_at[:16] | replace("T", " ") }}</div>
+        {% else %}
+        <span class="text-xs text-gray-300">never run</span>
+        {% endif %}
+      </td>
+      <td class="py-2 pr-3">
+        <input
+          type="checkbox"
+          class="toggle toggle-sm"
+          {% if m.enabled %}checked{% endif %}
+          hx-patch="/monitoring/{{ m.id }}/toggle"
+          hx-target="#monitors-list"
+          hx-swap="innerHTML"
+          hx-vals="js:{enabled: event.target.checked}"
+        />
+      </td>
+      <td class="py-2 pr-3">
+        <div class="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+          <button
+            title="Run now"
+            class="text-gray-300 hover:text-[#378ADD] transition-colors"
+            hx-post="/monitoring/{{ m.id }}/run"
+            hx-target="#monitors-list"
+            hx-swap="innerHTML"
+          ><i class="ti ti-player-play text-base"></i></button>
+          <button
+            title="History"
+            class="text-gray-300 hover:text-gray-600 transition-colors"
+            hx-get="/monitoring/{{ m.id }}/executions"
+            hx-target="#monitor-history-content"
+            hx-swap="innerHTML"
+            hx-on::after-request="document.getElementById('monitor-history-modal').showModal()"
+          ><i class="ti ti-history text-base"></i></button>
+          <button
+            title="Delete"
+            class="text-gray-300 hover:text-[#E24B4A] transition-colors"
+            hx-delete="/monitoring/{{ m.id }}"
+            hx-target="#monitors-list"
+            hx-swap="innerHTML"
+            hx-confirm="Delete monitor '{{ m.name }}'? This cannot be undone."
+          ><i class="ti ti-trash text-base"></i></button>
+        </div>
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+</div>
+{% else %}
+<p class="text-sm text-gray-400 py-6 text-center">No monitors yet.</p>
+{% endif %}

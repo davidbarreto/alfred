@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import logging
 from datetime import date, datetime, time
-from zoneinfo import ZoneInfo
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -11,10 +10,10 @@ from app.features.organizer.calendar_events.schemas import EventFilters
 from app.features.organizer.tasks.recurrence import missed_count
 from app.features.organizer.tasks.repository import TaskRepository
 from app.features.organizer.tasks.schemas import TaskFilters
+from app.shared.timezone import local_now
 
 logger = logging.getLogger(__name__)
 
-_PORTO_TZ = ZoneInfo("Europe/Lisbon")
 _ACTIVE_STATUSES = frozenset({"TODO", "DOING"})
 
 
@@ -28,7 +27,7 @@ async def build_daily_context(session: AsyncSession) -> str:
 
 
 async def _build(session: AsyncSession) -> str:
-    today = datetime.now(_PORTO_TZ).date()
+    today = local_now().date()
     today_start = datetime.combine(today, time.min)
     today_end = datetime.combine(today, time.max)
 

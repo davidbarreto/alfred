@@ -43,6 +43,9 @@ class Settings(BaseSettings):
     # Telegram
     telegram_bot_token: str | None = Field(default=None, validation_alias="TELEGRAM_BOT_TOKEN")
 
+    # Local timezone (IANA name) — also mapped to n8n's GENERIC_TIMEZONE in docker-compose
+    timezone: str = Field(default="Europe/Lisbon", validation_alias="TIMEZONE")
+
     # Audio storage — shadowing recordings + pronunciation TTS cache
     audio_storage_dir: str = Field(default="/data/audio", validation_alias="AUDIO_STORAGE_DIR")
 

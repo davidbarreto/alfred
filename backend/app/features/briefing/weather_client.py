@@ -5,6 +5,7 @@ from datetime import date
 
 import httpx
 
+from app.config import get_settings
 from app.features.briefing.schemas import WeatherForecast
 
 logger = logging.getLogger(__name__)
@@ -13,7 +14,6 @@ _BASE_URL = "https://api.open-meteo.com/v1/forecast"
 _GEOCODING_URL = "https://geocoding-api.open-meteo.com/v1/search"
 _PORTO_LAT = 41.1579
 _PORTO_LON = -8.6291
-_TIMEZONE = "Europe/Lisbon"
 
 _WMO_DESCRIPTIONS: dict[int, str] = {
     0: "Clear sky",
@@ -81,7 +81,7 @@ class WeatherClient:
         return forecast, label
 
     async def get_daily_forecast(self, for_date: date) -> WeatherForecast:
-        return await self._fetch_forecast(_PORTO_LAT, _PORTO_LON, _TIMEZONE, for_date)
+        return await self._fetch_forecast(_PORTO_LAT, _PORTO_LON, get_settings().timezone, for_date)
 
     async def _fetch_forecast(self, lat: float, lon: float, timezone: str, for_date: date) -> WeatherForecast:
         params = {

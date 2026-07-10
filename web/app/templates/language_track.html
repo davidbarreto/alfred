@@ -155,7 +155,10 @@
       <div class="card-body p-0">
         <div class="flex items-center justify-between px-4 py-3 border-b border-gray-100">
           <p class="text-xs font-medium text-gray-700">Recent sessions</p>
-          <a href="/languages/{{ track.code }}/chunks" class="text-xs text-[#378ADD] hover:underline">View chunks</a>
+          <div class="flex items-center gap-3">
+            <a href="/languages/sessions?lang={{ track.code }}" class="text-xs text-[#378ADD] hover:underline">All sessions</a>
+            <a href="/languages/{{ track.code }}/chunks" class="text-xs text-[#378ADD] hover:underline">View chunks</a>
+          </div>
         </div>
         <div id="recent-sessions-list">
           {% include "_language_recent_sessions.html" with context %}

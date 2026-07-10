@@ -421,6 +421,70 @@ async def insights_page(request: Request):
     })
 
 
+_ALL_SESSIONS_PAGE_SIZE = 25
+_SESSION_TYPES = ("srs_review", "shadowing", "production", "conversation", "correction")
+_CEFR_LEVELS = ("A1", "A2", "B1", "B2", "C1", "C2")
+
+
+@router.get("/sessions", response_class=HTMLResponse)
+async def all_sessions(request: Request):
+    tracks = await _safe_get("/language/tracks", {"active_only": "false"})
+
+    qp = request.query_params
+    active_lang = qp.get("lang", "")
+    active_type = qp.get("type", "") if qp.get("type", "") in _SESSION_TYPES else ""
+    active_task = qp.get("task", "") if qp.get("task", "") in _PRODUCE_TASK_TYPES else ""
+    active_cefr = qp.get("cefr", "").strip().upper()
+    if active_cefr not in _CEFR_LEVELS:
+        active_cefr = ""
+    offset = max(0, int(qp.get("offset", "0")))
+
+    active_track = next((t for t in tracks if t["code"] == active_lang), None)
+    if active_track is None:
+        active_lang = ""
+
+    params: dict = {"limit": _ALL_SESSIONS_PAGE_SIZE + 1, "offset": offset}
+    if active_track:
+        params["track_id"] = active_track["id"]
+    if active_type:
+        params["session_type"] = active_type
+    if active_task:
+        params["task_type"] = active_task
+    if active_cefr:
+        params["cefr_level"] = active_cefr
+
+    raw = await _safe_get("/language/sessions", params)
+    sessions, has_next, has_prev = _pagination(raw, offset, _ALL_SESSIONS_PAGE_SIZE)
+    await _enrich_with_chunk_text(sessions)
+
+    track_by_id = {t["id"]: t for t in tracks}
+    for s in sessions:
+        t = track_by_id.get(s["track_id"])
+        s["track_code"] = t["code"] if t else ""
+        s["track_name"] = t["name"] if t else f"Track #{s['track_id']}"
+        s["flag"] = _flag(t["code"]) if t else "🌐"
+
+    for t in tracks:
+        t["flag"] = _flag(t["code"])
+
+    return templates.TemplateResponse(request, "language_sessions.html", {
+        "tracks": tracks,
+        "active_track": active_track,
+        "sessions": sessions,
+        "active_lang": active_lang,
+        "active_type": active_type,
+        "active_task": active_task,
+        "active_cefr": active_cefr,
+        "session_types": _SESSION_TYPES,
+        "task_types": _PRODUCE_TASK_TYPES,
+        "cefr_levels": _CEFR_LEVELS,
+        "offset": offset,
+        "has_next": has_next,
+        "has_prev": has_prev,
+        "page_size": _ALL_SESSIONS_PAGE_SIZE,
+    })
+
+
 @router.get("/{code}/grammar-section", response_class=HTMLResponse)
 async def grammar_section(code: str, request: Request):
     tracks = await _safe_get("/language/tracks", {"active_only": "false"})

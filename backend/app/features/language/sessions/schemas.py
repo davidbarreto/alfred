@@ -77,6 +77,7 @@ class SessionFilters:
         chunk_id: Annotated[int | None, Query()] = None,
         session_type: Annotated[SessionType | None, Query()] = None,
         task_type: Annotated[ProductionTaskType | None, Query()] = None,
+        cefr_level: Annotated[str | None, Query()] = None,
         limit: Annotated[int, Query(ge=1, le=500)] = 50,
         offset: Annotated[int, Query(ge=0)] = 0,
     ) -> None:
@@ -84,6 +85,7 @@ class SessionFilters:
         self.chunk_id = chunk_id
         self.session_type = session_type
         self.task_type = task_type
+        self.cefr_level = cefr_level
         self.limit = limit
         self.offset = offset
 

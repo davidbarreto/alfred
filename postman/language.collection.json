@@ -1562,6 +1562,45 @@
       }
     },
     {
+      "name": "34b - List Sessions (CEFR filter)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Response is an array of chunk-anchored sessions', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json).to.be.an('array');",
+              "    json.forEach(s => pm.expect(s.chunk_id).to.not.be.null);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/language/sessions?cefr_level=B1",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "language",
+            "sessions"
+          ],
+          "query": [
+            {
+              "key": "cefr_level",
+              "value": "B1"
+            }
+          ]
+        }
+      }
+    },
+    {
       "name": "35 - List Chunks (active, leech filter)",
       "event": [
         {

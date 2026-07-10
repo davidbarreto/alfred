@@ -1,0 +1,169 @@
+{% extends "base.html" %}
+{% set active_page = "languages" %}
+{% block title %}{% if active_track %}{{ active_track.name }} — Sessions{% else %}All Sessions{% endif %}{% endblock %}
+
+{% block content %}
+<div class="p-6 space-y-5">
+
+  <!-- Breadcrumb -->
+  <div class="flex items-center gap-2 text-xs text-gray-400">
+    <a href="/languages" class="hover:text-gray-600">Languages</a>
+    <i class="ti ti-chevron-right text-gray-300"></i>
+    {% if active_track %}
+    <a href="/languages/{{ active_track.code }}" class="hover:text-gray-600">{{ active_track.flag }} {{ active_track.name }}</a>
+    <i class="ti ti-chevron-right text-gray-300"></i>
+    {% endif %}
+    <span class="text-gray-700 font-medium">Sessions</span>
+  </div>
+
+  <div class="flex items-center justify-between">
+    <h1 class="text-base font-semibold text-gray-900">
+      {% if active_track %}{{ active_track.flag }} {{ active_track.name }} — Sessions{% else %}All Sessions{% endif %}
+    </h1>
+    <p class="text-xs text-gray-400">
+      {% if sessions %}{{ offset + 1 }}–{{ offset + sessions|length }}{% else %}0 sessions{% endif %}
+    </p>
+  </div>
+
+  <!-- Filters -->
+  <form method="get" class="flex flex-wrap items-center gap-2">
+    <!-- Language -->
+    <select name="lang" onchange="this.form.submit()"
+            class="border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-[#378ADD]">
+      <option value="" {% if not active_lang %}selected{% endif %}>All languages</option>
+      {% for t in tracks %}
+      <option value="{{ t.code }}" {% if active_lang == t.code %}selected{% endif %}>{{ t.flag }} {{ t.name }}</option>
+      {% endfor %}
+    </select>
+
+    <!-- Session type -->
+    <select name="type" onchange="this.form.submit()"
+            class="border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-[#378ADD]">
+      <option value="" {% if not active_type %}selected{% endif %}>All practice types</option>
+      {% for t in session_types %}
+      <option value="{{ t }}" {% if active_type == t %}selected{% endif %}>{{ t | replace('_', ' ') | title }}</option>
+      {% endfor %}
+    </select>
+
+    <!-- Task type (production sub-type) -->
+    <select name="task" onchange="this.form.submit()"
+            class="border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-[#378ADD]">
+      <option value="" {% if not active_task %}selected{% endif %}>All tasks</option>
+      {% for t in task_types %}
+      <option value="{{ t }}" {% if active_task == t %}selected{% endif %}>{{ t | title }}</option>
+      {% endfor %}
+    </select>
+
+    <!-- CEFR -->
+    <select name="cefr" onchange="this.form.submit()"
+            class="border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-[#378ADD]">
+      <option value="" {% if not active_cefr %}selected{% endif %}>All CEFR</option>
+      {% for lvl in cefr_levels %}
+      <option value="{{ lvl }}" {% if active_cefr == lvl %}selected{% endif %}>{{ lvl }}</option>
+      {% endfor %}
+    </select>
+
+    {% if active_lang or active_type or active_task or active_cefr %}
+    <a href="/languages/sessions" class="text-xs text-gray-400 hover:text-gray-600 px-1">Clear filters</a>
+    {% endif %}
+  </form>
+
+  <!-- Table -->
+  <div class="card bg-white overflow-hidden">
+    {% if sessions %}
+    {% set type_style = {
+      'srs_review': 'bg-blue-50 text-blue-600',
+      'shadowing': 'bg-purple-50 text-purple-600',
+      'production': 'bg-rose-50 text-rose-600',
+      'conversation': 'bg-green-50 text-green-600',
+      'correction': 'bg-amber-50 text-amber-600'
+    } %}
+    <table class="w-full text-sm">
+      <thead class="border-b border-gray-100">
+        <tr class="text-xs text-gray-400 uppercase tracking-wide">
+          <th class="text-left px-4 py-2.5 font-medium">Date</th>
+          {% if not active_track %}
+          <th class="text-left px-4 py-2.5 font-medium hidden sm:table-cell">Language</th>
+          {% endif %}
+          <th class="text-left px-4 py-2.5 font-medium">Type</th>
+          <th class="text-left px-4 py-2.5 font-medium">Content</th>
+          <th class="text-right px-4 py-2.5 font-medium">Score</th>
+          <th class="text-left px-4 py-2.5 font-medium hidden md:table-cell">SRS</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-gray-50">
+        {% for session in sessions %}
+        <tr class="hover:bg-gray-50/60 transition-colors">
+          <td class="px-4 py-2.5 text-xs text-gray-500 whitespace-nowrap">{{ session.created_at[:10] }}</td>
+          {% if not active_track %}
+          <td class="px-4 py-2.5 hidden sm:table-cell">
+            <a href="/languages/{{ session.track_code }}" class="text-xs text-gray-600 hover:text-gray-900">
+              {{ session.flag }} {{ session.track_name }}
+            </a>
+          </td>
+          {% endif %}
+          <td class="px-4 py-2.5">
+            <span class="px-1.5 py-0.5 rounded text-xs whitespace-nowrap {{ type_style.get(session.session_type, 'bg-gray-100 text-gray-500') }}">
+              {{ session.session_type | replace('_', ' ') }}{% if session.task_type %} · {{ session.task_type }}{% endif %}
+            </span>
+          </td>
+          <td class="px-4 py-2.5 max-w-0 w-full">
+            {% if session.chunk_id %}
+            <a href="/languages/{{ session.track_code }}/chunks/{{ session.chunk_id }}"
+               class="text-xs text-gray-600 hover:text-gray-900 truncate block">
+              {% if session.chunk_text %}{{ session.chunk_text }}{% else %}chunk #{{ session.chunk_id }}{% endif %}
+            </a>
+            {% elif session.prompt_text %}
+            <span class="text-xs text-gray-500 truncate block">{{ session.prompt_text }}</span>
+            {% else %}
+            <span class="text-xs text-gray-400">free session</span>
+            {% endif %}
+          </td>
+          <td class="px-4 py-2.5 text-right">
+            {% if session.quality_score is not none %}
+            <span class="text-xs font-medium {% if session.quality_score >= 3.5 %}text-green-600{% elif session.quality_score >= 2.5 %}text-gray-600{% else %}text-red-500{% endif %}">
+              {{ "%.1f" | format(session.quality_score) }}
+            </span>
+            {% else %}
+            <span class="text-xs text-gray-300">—</span>
+            {% endif %}
+          </td>
+          <td class="px-4 py-2.5 hidden md:table-cell">
+            {% if session.feeds_srs %}
+            <span class="text-xs text-green-600">✓</span>
+            {% else %}
+            <span class="text-xs text-gray-300">—</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="p-8 text-center">
+      <p class="text-sm text-gray-400">No sessions match the current filters.</p>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Pagination -->
+  {% if has_prev or has_next %}
+  {% macro page_url(off) %}?{% if active_lang %}lang={{ active_lang }}&amp;{% endif %}{% if active_type %}type={{ active_type }}&amp;{% endif %}{% if active_task %}task={{ active_task }}&amp;{% endif %}{% if active_cefr %}cefr={{ active_cefr }}&amp;{% endif %}offset={{ off }}{% endmacro %}
+  <div class="flex justify-between items-center">
+    {% if has_prev %}
+    <a href="{{ page_url([offset - page_size, 0] | max) }}"
+       class="px-3 py-1.5 rounded-lg border border-gray-200 text-xs text-gray-600 hover:bg-gray-50">← Prev</a>
+    {% else %}
+    <span></span>
+    {% endif %}
+    {% if has_next %}
+    <a href="{{ page_url(offset + page_size) }}"
+       class="px-3 py-1.5 rounded-lg border border-gray-200 text-xs text-gray-600 hover:bg-gray-50">Next →</a>
+    {% else %}
+    <span></span>
+    {% endif %}
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}

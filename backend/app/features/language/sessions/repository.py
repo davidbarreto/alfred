@@ -3,6 +3,7 @@ from datetime import date, datetime, timezone
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.features.language.chunks.tables import Chunk
 from app.features.language.sessions.tables import LearningSession
 from app.features.language.sessions.schemas import SessionFilters
 
@@ -28,6 +29,10 @@ class SessionRepository:
             query = query.where(LearningSession.session_type == filters.session_type)
         if filters.task_type is not None:
             query = query.where(LearningSession.task_type == filters.task_type)
+        if filters.cefr_level is not None:
+            query = query.join(Chunk, LearningSession.chunk_id == Chunk.id).where(
+                Chunk.cefr_level == filters.cefr_level
+            )
         query = query.order_by(LearningSession.created_at.desc()).limit(filters.limit).offset(filters.offset)
         result = await self._session.execute(query)
         return list(result.scalars().all())

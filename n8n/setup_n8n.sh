@@ -122,6 +122,37 @@ _setup_owner() {
   esac
 }
 
+# Logs into n8n and stores the session cookie in the given jar.
+# n8n >= 1.53 expects `emailOrLdapLoginId` in the login payload; older
+# versions expect `email` — try the new field first, then fall back.
+_n8n_login() {
+  local cookie_jar="$1"
+  local http_status
+
+  http_status=$(curl -s -o /dev/null -w "%{http_code}" \
+    -c "$cookie_jar" \
+    -X POST "${N8N_BASE_URL}/rest/login" \
+    -H "Content-Type: application/json" \
+    -d "{\"emailOrLdapLoginId\": \"${N8N_OWNER_EMAIL}\", \"password\": \"${N8N_OWNER_PASSWORD}\"}")
+
+  if [ "$http_status" = "200" ]; then
+    return 0
+  fi
+
+  http_status=$(curl -s -o /dev/null -w "%{http_code}" \
+    -c "$cookie_jar" \
+    -X POST "${N8N_BASE_URL}/rest/login" \
+    -H "Content-Type: application/json" \
+    -d "{\"email\": \"${N8N_OWNER_EMAIL}\", \"password\": \"${N8N_OWNER_PASSWORD}\"}")
+
+  if [ "$http_status" = "200" ]; then
+    return 0
+  fi
+
+  echo -e "${YELLOW}Warning: login failed (HTTP $http_status)${NC}" >&2
+  return 1
+}
+
 _skip_onboarding() {
   local token="$1"
   curl -s -o /dev/null \
@@ -231,15 +262,8 @@ _publish_workflows() {
   local cookie_jar
   cookie_jar=$(mktemp)
 
-  local http_status
-  http_status=$(curl -s -o /dev/null -w "%{http_code}" \
-    -c "$cookie_jar" \
-    -X POST "${N8N_BASE_URL}/rest/login" \
-    -H "Content-Type: application/json" \
-    -d "{\"email\": \"${N8N_OWNER_EMAIL}\", \"password\": \"${N8N_OWNER_PASSWORD}\"}")
-
-  if [ "$http_status" != "200" ]; then
-    echo -e "${YELLOW}Warning: login failed (HTTP $http_status) — skipping workflow publish${NC}"
+  if ! _n8n_login "$cookie_jar"; then
+    echo -e "${YELLOW}Skipping workflow publish${NC}"
     rm -f "$cookie_jar"
     return
   fi
@@ -283,15 +307,8 @@ _activate_workflows() {
   local cookie_jar
   cookie_jar=$(mktemp)
 
-  local http_status
-  http_status=$(curl -s -o /dev/null -w "%{http_code}" \
-    -c "$cookie_jar" \
-    -X POST "${N8N_BASE_URL}/rest/login" \
-    -H "Content-Type: application/json" \
-    -d "{\"email\": \"${N8N_OWNER_EMAIL}\", \"password\": \"${N8N_OWNER_PASSWORD}\"}")
-
-  if [ "$http_status" != "200" ]; then
-    echo -e "${YELLOW}Warning: login failed (HTTP $http_status) — skipping workflow activation${NC}"
+  if ! _n8n_login "$cookie_jar"; then
+    echo -e "${YELLOW}Skipping workflow activation${NC}"
     rm -f "$cookie_jar"
     return
   fi

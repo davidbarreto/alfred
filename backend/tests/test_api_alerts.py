@@ -33,38 +33,38 @@ def client():
 
 class TestListAlerts:
     def test_returns_empty_list(self, client):
-        with patch("app.api.routes.monitoring.alerts.get_alerts", new=AsyncMock(return_value=[])):
-            response = client.get("/monitoring/alerts/", headers=AUTH)
+        with patch("app.api.routes.watcher.alerts.get_alerts", new=AsyncMock(return_value=[])):
+            response = client.get("/watcher/alerts/", headers=AUTH)
         assert response.status_code == 200
         assert response.json() == []
 
     def test_returns_alert_list(self, client):
-        from app.features.monitoring.schemas import AlertRead
+        from app.features.watcher.schemas import AlertRead
         alerts = [AlertRead(**_alert_dict(id=i)) for i in range(3)]
-        with patch("app.api.routes.monitoring.alerts.get_alerts", new=AsyncMock(return_value=alerts)):
-            response = client.get("/monitoring/alerts/", headers=AUTH)
+        with patch("app.api.routes.watcher.alerts.get_alerts", new=AsyncMock(return_value=alerts)):
+            response = client.get("/watcher/alerts/", headers=AUTH)
         assert response.status_code == 200
         assert len(response.json()) == 3
 
     def test_requires_auth(self, client):
-        response = client.get("/monitoring/alerts/")
+        response = client.get("/watcher/alerts/")
         assert response.status_code == 403
 
     def test_filters_by_status(self, client):
-        with patch("app.api.routes.monitoring.alerts.get_alerts", new=AsyncMock(return_value=[])) as mock_get:
-            client.get("/monitoring/alerts/?status=pending", headers=AUTH)
+        with patch("app.api.routes.watcher.alerts.get_alerts", new=AsyncMock(return_value=[])) as mock_get:
+            client.get("/watcher/alerts/?status=pending", headers=AUTH)
             _, kwargs = mock_get.call_args
             assert kwargs.get("status") == "pending"
 
     def test_filters_by_config_id(self, client):
-        with patch("app.api.routes.monitoring.alerts.get_alerts", new=AsyncMock(return_value=[])) as mock_get:
-            client.get("/monitoring/alerts/?config_id=5", headers=AUTH)
+        with patch("app.api.routes.watcher.alerts.get_alerts", new=AsyncMock(return_value=[])) as mock_get:
+            client.get("/watcher/alerts/?config_id=5", headers=AUTH)
             _, kwargs = mock_get.call_args
             assert kwargs.get("config_id") == 5
 
     def test_filters_combined(self, client):
-        with patch("app.api.routes.monitoring.alerts.get_alerts", new=AsyncMock(return_value=[])) as mock_get:
-            client.get("/monitoring/alerts/?status=done&config_id=3&skip=10&limit=5", headers=AUTH)
+        with patch("app.api.routes.watcher.alerts.get_alerts", new=AsyncMock(return_value=[])) as mock_get:
+            client.get("/watcher/alerts/?status=done&config_id=3&skip=10&limit=5", headers=AUTH)
             _, kwargs = mock_get.call_args
             assert kwargs.get("status") == "done"
             assert kwargs.get("config_id") == 3
@@ -72,14 +72,14 @@ class TestListAlerts:
             assert kwargs.get("limit") == 5
 
     def test_invalid_status_returns_422(self, client):
-        response = client.get("/monitoring/alerts/?status=invalid", headers=AUTH)
+        response = client.get("/watcher/alerts/?status=invalid", headers=AUTH)
         assert response.status_code == 422
 
     def test_alert_response_shape(self, client):
-        from app.features.monitoring.schemas import AlertRead
+        from app.features.watcher.schemas import AlertRead
         alert = AlertRead(**_alert_dict(id=1, execution_id=10, status="pending"))
-        with patch("app.api.routes.monitoring.alerts.get_alerts", new=AsyncMock(return_value=[alert])):
-            response = client.get("/monitoring/alerts/", headers=AUTH)
+        with patch("app.api.routes.watcher.alerts.get_alerts", new=AsyncMock(return_value=[alert])):
+            response = client.get("/watcher/alerts/", headers=AUTH)
         data = response.json()[0]
         assert data["id"] == 1
         assert data["execution_id"] == 10

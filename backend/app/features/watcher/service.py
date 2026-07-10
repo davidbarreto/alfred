@@ -6,13 +6,13 @@ import logging
 import requests
 
 from bs4 import BeautifulSoup
-from app.features.monitoring.repository import (
+from app.features.watcher.repository import (
     create_execution,
-    get_active_monitors,
-    get_monitor,
+    get_active_watchers,
+    get_watcher,
     upsert_alert,
 )
-from app.features.monitoring.tables import Execution, Monitor
+from app.features.watcher.tables import Execution, Watcher
 from app.integrations.http.pagination import paginate
 from selenium import webdriver
 from selenium.webdriver.common.by import By
@@ -34,7 +34,7 @@ def _derive_status(raw: dict) -> tuple[str, str | None, str | None]:
     return "not_found", None, None
 
 
-class MonitorService:
+class WatcherService:
     @staticmethod
     def check_html_static(
         url: str,
@@ -251,76 +251,76 @@ class MonitorService:
             return result
 
     @staticmethod
-    def dispatch_monitor(monitor: Monitor) -> dict:
-        if monitor.type == "html_static":
-            return MonitorService.check_html_static(
-                url=monitor.url,
-                selector=monitor.selector or "",
-                target=monitor.target,
-                case_sensitive=monitor.case_sensitive,
-                timeout=monitor.timeout,
+    def dispatch_watcher(watcher: Watcher) -> dict:
+        if watcher.type == "html_static":
+            return WatcherService.check_html_static(
+                url=watcher.url,
+                selector=watcher.selector or "",
+                target=watcher.target,
+                case_sensitive=watcher.case_sensitive,
+                timeout=watcher.timeout,
             )
-        elif monitor.type == "html_javascript":
-            return MonitorService.check_html_javascript(
-                url=monitor.url,
-                selector=monitor.selector or "",
-                target=monitor.target,
-                case_sensitive=monitor.case_sensitive,
-                timeout=monitor.timeout,
-                wait_selector=monitor.wait_selector,
+        elif watcher.type == "html_javascript":
+            return WatcherService.check_html_javascript(
+                url=watcher.url,
+                selector=watcher.selector or "",
+                target=watcher.target,
+                case_sensitive=watcher.case_sensitive,
+                timeout=watcher.timeout,
+                wait_selector=watcher.wait_selector,
             )
-        elif monitor.type == "api":
-            return MonitorService.check_api(
-                url=monitor.url,
-                json_path=monitor.json_path or "content",
-                target=monitor.target,
-                case_sensitive=monitor.case_sensitive,
-                timeout=monitor.timeout,
-                page_size=monitor.page_size or 32,
-                max_pages=monitor.max_pages,
-                request_delay=(monitor.request_delay or 0) / 1000.0,
+        elif watcher.type == "api":
+            return WatcherService.check_api(
+                url=watcher.url,
+                json_path=watcher.json_path or "content",
+                target=watcher.target,
+                case_sensitive=watcher.case_sensitive,
+                timeout=watcher.timeout,
+                page_size=watcher.page_size or 32,
+                max_pages=watcher.max_pages,
+                request_delay=(watcher.request_delay or 0) / 1000.0,
             )
         else:
             return {
                 "found": False,
                 "matched_content": None,
-                "error": f"Unknown monitor type: {monitor.type}",
+                "error": f"Unknown watcher type: {watcher.type}",
             }
 
     @staticmethod
-    async def run_monitor(session: AsyncSession, monitor: Monitor) -> Execution:
-        logger.info("Monitor run start: id=%d type=%s url=%s", monitor.id, monitor.type, monitor.url)
-        raw = await run_in_threadpool(MonitorService.dispatch_monitor, monitor)
+    async def run_watcher(session: AsyncSession, watcher: Watcher) -> Execution:
+        logger.info("Watcher run start: id=%d type=%s url=%s", watcher.id, watcher.type, watcher.url)
+        raw = await run_in_threadpool(WatcherService.dispatch_watcher, watcher)
         status, result, error = _derive_status(raw)
         logger.info(
-            "Monitor run result: id=%d status=%s%s",
-            monitor.id, status, f" error={error!r}" if error else "",
+            "Watcher run result: id=%d status=%s%s",
+            watcher.id, status, f" error={error!r}" if error else "",
         )
         execution = await create_execution(
             session=session,
-            monitor=monitor,
+            watcher=watcher,
             status=status,
             result=result,
             error=error,
         )
         if status == "found":
-            logger.info("Monitor alert triggered: id=%d url=%s", monitor.id, monitor.url)
+            logger.info("Watcher alert triggered: id=%d url=%s", watcher.id, watcher.url)
             await upsert_alert(session=session, execution=execution)
         return execution
 
     @staticmethod
     async def run_due(session: AsyncSession) -> list[Execution]:
-        monitors = await get_active_monitors(session=session)
-        logger.info("Running %d due monitor(s)", len(monitors))
+        watchers = await get_active_watchers(session=session)
+        logger.info("Running %d due watcher(s)", len(watchers))
         executions = []
-        for monitor in monitors:
-            executions.append(await MonitorService.run_monitor(session=session, monitor=monitor))
+        for watcher in watchers:
+            executions.append(await WatcherService.run_watcher(session=session, watcher=watcher))
         return executions
 
     @staticmethod
-    async def run_monitor_by_id(session: AsyncSession, monitor_id: int) -> Execution | None:
-        monitor = await get_monitor(session=session, monitor_id=monitor_id)
-        if monitor is None:
-            logger.warning("Monitor not found: id=%d", monitor_id)
+    async def run_watcher_by_id(session: AsyncSession, watcher_id: int) -> Execution | None:
+        watcher = await get_watcher(session=session, watcher_id=watcher_id)
+        if watcher is None:
+            logger.warning("Watcher not found: id=%d", watcher_id)
             return None
-        return await MonitorService.run_monitor(session=session, monitor=monitor)
+        return await WatcherService.run_watcher(session=session, watcher=watcher)

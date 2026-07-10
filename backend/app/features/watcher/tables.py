@@ -7,11 +7,11 @@ from datetime import datetime
 from app.db.base import Base
 
 
-class Monitor(Base):
+class Watcher(Base):
     __tablename__ = "configs"
     __table_args__ = (
-        UniqueConstraint("name", name="uq_monitoring_configs_name"),
-        {"schema": "monitoring"},
+        UniqueConstraint("name", name="uq_watcher_configs_name"),
+        {"schema": "watcher"},
     )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
@@ -32,7 +32,7 @@ class Monitor(Base):
 
     executions: Mapped[list["Execution"]] = relationship(
         "Execution",
-        back_populates="monitor",
+        back_populates="watcher",
         cascade="all, delete-orphan",
         passive_deletes=True,
     )
@@ -40,11 +40,11 @@ class Monitor(Base):
 
 class Execution(Base):
     __tablename__ = "executions"
-    __table_args__ = {"schema": "monitoring"}
+    __table_args__ = {"schema": "watcher"}
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
     config_id: Mapped[int] = mapped_column(
-        Integer, ForeignKey("monitoring.configs.id", ondelete="CASCADE"), nullable=False
+        Integer, ForeignKey("watcher.configs.id", ondelete="CASCADE"), nullable=False
     )
     status: Mapped[str] = mapped_column(String(20), nullable=False)  # found, not_found, error
     result: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
@@ -54,7 +54,7 @@ class Execution(Base):
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
 
-    monitor: Mapped["Monitor"] = relationship("Monitor", back_populates="executions")
+    watcher: Mapped["Watcher"] = relationship("Watcher", back_populates="executions")
     alert: Mapped[Optional["Alert"]] = relationship(
         "Alert", back_populates="execution", uselist=False
     )
@@ -62,11 +62,11 @@ class Execution(Base):
 
 class Alert(Base):
     __tablename__ = "alerts"
-    __table_args__ = {"schema": "monitoring"}
+    __table_args__ = {"schema": "watcher"}
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
     execution_id: Mapped[int] = mapped_column(
-        Integer, ForeignKey("monitoring.executions.id", ondelete="CASCADE"), nullable=False
+        Integer, ForeignKey("watcher.executions.id", ondelete="CASCADE"), nullable=False
     )
     status: Mapped[str] = mapped_column(String(20), nullable=False, default="pending")  # pending, done
     created_at: Mapped[datetime] = mapped_column(

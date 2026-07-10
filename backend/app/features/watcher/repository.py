@@ -2,82 +2,82 @@ from datetime import datetime, timezone
 from sqlalchemy import delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.features.monitoring.schemas import ExecutionFilters
+from app.features.watcher.schemas import ExecutionFilters
 
-from app.features.monitoring.tables import Alert, Execution, Monitor
-from app.features.monitoring.schemas import MonitorCreate, MonitorUpdate
+from app.features.watcher.tables import Alert, Execution, Watcher
+from app.features.watcher.schemas import WatcherCreate, WatcherUpdate
 
 
-async def get_monitor(session: AsyncSession, monitor_id: int) -> Monitor | None:
-    result = await session.execute(select(Monitor).where(Monitor.id == monitor_id))
+async def get_watcher(session: AsyncSession, watcher_id: int) -> Watcher | None:
+    result = await session.execute(select(Watcher).where(Watcher.id == watcher_id))
     return result.scalars().first()
 
 
-async def get_monitors(session: AsyncSession, skip: int = 0, limit: int = 100) -> list[Monitor]:
-    result = await session.execute(select(Monitor).offset(skip).limit(limit))
+async def get_watchers(session: AsyncSession, skip: int = 0, limit: int = 100) -> list[Watcher]:
+    result = await session.execute(select(Watcher).offset(skip).limit(limit))
     return list(result.scalars().all())
 
 
-async def get_active_monitors(session: AsyncSession) -> list[Monitor]:
-    result = await session.execute(select(Monitor).where(Monitor.enabled.is_(True)))
+async def get_active_watchers(session: AsyncSession) -> list[Watcher]:
+    result = await session.execute(select(Watcher).where(Watcher.enabled.is_(True)))
     return list(result.scalars().all())
 
 
-async def create_monitor(session: AsyncSession, monitor_create: MonitorCreate) -> Monitor:
-    monitor = Monitor(**monitor_create.model_dump())
-    session.add(monitor)
+async def create_watcher(session: AsyncSession, watcher_create: WatcherCreate) -> Watcher:
+    watcher = Watcher(**watcher_create.model_dump())
+    session.add(watcher)
     await session.commit()
-    await session.refresh(monitor)
-    return monitor
+    await session.refresh(watcher)
+    return watcher
 
 
-async def update_monitor(
+async def update_watcher(
     session: AsyncSession,
-    monitor_id: int,
-    monitor_update: MonitorUpdate,
-) -> Monitor | None:
-    monitor = await get_monitor(session, monitor_id)
-    if monitor is None:
+    watcher_id: int,
+    watcher_update: WatcherUpdate,
+) -> Watcher | None:
+    watcher = await get_watcher(session, watcher_id)
+    if watcher is None:
         return None
 
-    for field, value in monitor_update.model_dump(exclude_unset=True).items():
-        setattr(monitor, field, value)
+    for field, value in watcher_update.model_dump(exclude_unset=True).items():
+        setattr(watcher, field, value)
 
     await session.commit()
-    await session.refresh(monitor)
-    return monitor
+    await session.refresh(watcher)
+    return watcher
 
 
-async def delete_monitor(session: AsyncSession, monitor_id: int) -> Monitor | None:
-    monitor = await get_monitor(session, monitor_id)
-    if monitor is None:
+async def delete_watcher(session: AsyncSession, watcher_id: int) -> Watcher | None:
+    watcher = await get_watcher(session, watcher_id)
+    if watcher is None:
         return None
 
-    await session.execute(delete(Monitor).where(Monitor.id == monitor_id))
+    await session.execute(delete(Watcher).where(Watcher.id == watcher_id))
     await session.commit()
-    return monitor
+    return watcher
 
 
 async def create_execution(
-    session: AsyncSession, monitor: Monitor, status: str, result: str | None, error: str | None
+    session: AsyncSession, watcher: Watcher, status: str, result: str | None, error: str | None
 ) -> Execution:
     snapshot = {
-        "name": monitor.name,
-        "description": monitor.description,
-        "type": monitor.type,
-        "url": monitor.url,
-        "selector": monitor.selector,
-        "json_path": monitor.json_path,
-        "target": monitor.target,
-        "case_sensitive": monitor.case_sensitive,
-        "timeout": monitor.timeout,
-        "page_size": monitor.page_size,
-        "max_pages": monitor.max_pages,
-        "request_delay": monitor.request_delay,
-        "wait_selector": monitor.wait_selector,
+        "name": watcher.name,
+        "description": watcher.description,
+        "type": watcher.type,
+        "url": watcher.url,
+        "selector": watcher.selector,
+        "json_path": watcher.json_path,
+        "target": watcher.target,
+        "case_sensitive": watcher.case_sensitive,
+        "timeout": watcher.timeout,
+        "page_size": watcher.page_size,
+        "max_pages": watcher.max_pages,
+        "request_delay": watcher.request_delay,
+        "wait_selector": watcher.wait_selector,
     }
     execution = Execution(
-        config_id=monitor.id,
+        config_id=watcher.id,
         status=status,
         result=result,
         error=error,
@@ -140,7 +140,7 @@ async def get_alerts(
     return list(result.scalars().all())
 
 
-async def _get_latest_alert_for_monitor(
+async def _get_latest_alert_for_watcher(
     session: AsyncSession, config_id: int
 ) -> Alert | None:
     result = await session.execute(
@@ -154,14 +154,14 @@ async def _get_latest_alert_for_monitor(
 
 
 async def upsert_alert(session: AsyncSession, execution: Execution) -> Alert | None:
-    """Create, reopen, or skip an alert for the monitor that triggered this execution.
+    """Create, reopen, or skip an alert for the watcher that triggered this execution.
 
     Rules:
     - No existing alert → create pending
     - Existing pending → do nothing (already queued)
     - Existing done → reopen as pending, point to current execution
     """
-    existing = await _get_latest_alert_for_monitor(session, execution.config_id)
+    existing = await _get_latest_alert_for_watcher(session, execution.config_id)
 
     if existing is None:
         alert = Alert(execution_id=execution.id, status="pending")

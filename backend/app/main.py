@@ -17,9 +17,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from typing import AsyncGenerator
 
-from app.api.routes.monitoring.monitors import router as monitors_router
-from app.api.routes.monitoring.alerts import router as alerts_router
-from app.api.routes.monitoring.executions import router as executions_router
+from app.api.routes.watcher.watchers import router as watchers_router
+from app.api.routes.watcher.alerts import router as alerts_router
+from app.api.routes.watcher.executions import router as executions_router
 from app.api.routes.integrations.provider_calls import router as provider_calls_router
 from app.api.routes.integrations.llm_calls import router as llm_calls_router
 from app.api.routes.integrations.google_calendar import router as google_calendar_oauth_router
@@ -86,7 +86,7 @@ if _cors_origins:
         allow_headers=["Authorization", "Content-Type"],
     )
 
-app.include_router(monitors_router)
+app.include_router(watchers_router)
 app.include_router(alerts_router)
 app.include_router(executions_router)
 app.include_router(provider_calls_router)

@@ -1,16 +1,16 @@
 {% extends "base.html" %}
-{% set active_page = "monitoring" %}
-{% block title %}Monitoring{% endblock %}
+{% set active_page = "watcher" %}
+{% block title %}Watcher{% endblock %}
 
 {% block content %}
 <div class="p-6 space-y-6">
 
   <div class="flex items-center justify-between gap-3 flex-wrap">
-    <h1 class="text-base font-semibold text-gray-900">Monitoring</h1>
+    <h1 class="text-base font-semibold text-gray-900">Watcher</h1>
     <div class="flex gap-2">
       <button
         class="btn btn-sm btn-ghost gap-1 text-gray-500"
-        hx-post="/monitoring/run"
+        hx-post="/watcher/run"
         hx-target="#monitors-list"
         hx-swap="innerHTML"
         hx-indicator="#run-all-indicator"
@@ -86,7 +86,7 @@
   <div class="bg-white border border-gray-200 rounded-lg p-4">
     <h2 class="text-sm font-medium text-gray-900 mb-3">Monitors</h2>
     <div id="monitors-list">
-      {% include "_monitoring_list.html" %}
+      {% include "_watcher_list.html" %}
     </div>
   </div>
 
@@ -212,7 +212,7 @@ async function submitNewMonitor(e) {
   errEl.classList.add('hidden');
 
   try {
-    const res = await fetch('/monitoring/', { method: 'POST', body: new FormData(e.target) });
+    const res = await fetch('/watcher/', { method: 'POST', body: new FormData(e.target) });
     if (!res.ok) throw new Error(await res.text());
     document.getElementById('monitors-list').innerHTML = await res.text();
     htmx.process(document.getElementById('monitors-list'));

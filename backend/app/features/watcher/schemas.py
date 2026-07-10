@@ -4,7 +4,7 @@ from fastapi import Query
 from pydantic import BaseModel, ConfigDict, Field
 
 
-class MonitorBase(BaseModel):
+class WatcherBase(BaseModel):
     name: str
     description: str | None = None
     enabled: bool = True
@@ -21,11 +21,11 @@ class MonitorBase(BaseModel):
     wait_selector: str | None = None
 
 
-class MonitorCreate(MonitorBase):
+class WatcherCreate(WatcherBase):
     pass
 
 
-class MonitorUpdate(BaseModel):
+class WatcherUpdate(BaseModel):
     name: str | None = None
     description: str | None = None
     enabled: bool | None = None
@@ -42,7 +42,7 @@ class MonitorUpdate(BaseModel):
     wait_selector: str | None = None
 
 
-class MonitorRead(MonitorBase):
+class WatcherRead(WatcherBase):
     model_config = ConfigDict(from_attributes=True)
 
     id: int

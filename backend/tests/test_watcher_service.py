@@ -1,10 +1,10 @@
 import pytest
 from unittest.mock import patch, MagicMock, AsyncMock
-from app.features.monitoring.service import MonitorService, _derive_status
-from app.features.monitoring.tables import Monitor
+from app.features.watcher.service import WatcherService, _derive_status
+from app.features.watcher.tables import Watcher
 
 
-def _make_monitor(**overrides):
+def _make_watcher(**overrides):
     defaults = dict(
         id=1,
         name="Test Monitor",
@@ -23,10 +23,10 @@ def _make_monitor(**overrides):
         wait_selector=None,
     )
     defaults.update(overrides)
-    monitor = MagicMock(spec=Monitor)
+    watcher = MagicMock(spec=Watcher)
     for k, v in defaults.items():
-        setattr(monitor, k, v)
-    return monitor
+        setattr(watcher, k, v)
+    return watcher
 
 
 # ── _derive_status ────────────────────────────────────────────────────────────
@@ -63,7 +63,7 @@ class TestCheckHtmlStatic:
         mock_get.return_value.text = '<div class="content">Target Text here</div>'
         mock_get.return_value.status_code = 200
 
-        result = MonitorService.check_html_static(
+        result = WatcherService.check_html_static(
             url="http://example.com", selector=".content", target="Target Text"
         )
 
@@ -77,7 +77,7 @@ class TestCheckHtmlStatic:
         mock_get.return_value.text = '<div class="content">Other content</div>'
         mock_get.return_value.status_code = 200
 
-        result = MonitorService.check_html_static(
+        result = WatcherService.check_html_static(
             url="http://example.com", selector=".content", target="Missing"
         )
         assert result["found"] is False
@@ -89,7 +89,7 @@ class TestCheckHtmlStatic:
         mock_get.return_value.text = '<div class="content">target text</div>'
         mock_get.return_value.status_code = 200
 
-        result = MonitorService.check_html_static(
+        result = WatcherService.check_html_static(
             url="http://example.com",
             selector=".content",
             target="Target Text",
@@ -102,7 +102,7 @@ class TestCheckHtmlStatic:
         mock_get.return_value.text = "<html><body>no matching selector</body></html>"
         mock_get.return_value.status_code = 200
 
-        result = MonitorService.check_html_static(
+        result = WatcherService.check_html_static(
             url="http://example.com", selector=".content", target="Target"
         )
         assert result["found"] is False
@@ -114,7 +114,7 @@ class TestCheckHtmlStatic:
         import requests as req
         mock_get.side_effect = req.RequestException("Connection refused")
 
-        result = MonitorService.check_html_static(
+        result = WatcherService.check_html_static(
             url="http://example.com", selector=".content", target="Target"
         )
         assert result["found"] is False
@@ -126,7 +126,7 @@ class TestCheckHtmlStatic:
         mock_get.return_value.text = f'<div class="content">{long_text}</div>'
         mock_get.return_value.status_code = 200
 
-        result = MonitorService.check_html_static(
+        result = WatcherService.check_html_static(
             url="http://example.com", selector=".content", target="Target Text"
         )
         assert result["found"] is True
@@ -144,7 +144,7 @@ class TestCheckApi:
             "totalPages": 1,
         }
 
-        result = MonitorService.check_api(
+        result = WatcherService.check_api(
             url="http://api.example.com", json_path="content", target="Target Text"
         )
         assert result["found"] is True
@@ -158,7 +158,7 @@ class TestCheckApi:
             "totalPages": 1,
         }
 
-        result = MonitorService.check_api(
+        result = WatcherService.check_api(
             url="http://api.example.com", json_path="content", target="Missing"
         )
         assert result["found"] is False
@@ -170,7 +170,7 @@ class TestCheckApi:
             "content": [], "last": True, "totalPages": 1
         }
 
-        result = MonitorService.check_api(
+        result = WatcherService.check_api(
             url="http://api.example.com", json_path="content", target="Target"
         )
         assert result["found"] is False
@@ -184,7 +184,7 @@ class TestCheckApi:
             "totalPages": 1,
         }
 
-        result = MonitorService.check_api(
+        result = WatcherService.check_api(
             url="http://api.example.com",
             json_path="content",
             target="Target Text",
@@ -197,7 +197,7 @@ class TestCheckApi:
         import requests as req
         mock_get.side_effect = req.RequestException("Connection error")
 
-        result = MonitorService.check_api(
+        result = WatcherService.check_api(
             url="http://api.example.com", json_path="content", target="Target"
         )
         assert result["found"] is False
@@ -211,7 +211,7 @@ class TestCheckApi:
             "totalPages": 1,
         }
 
-        result = MonitorService.check_api(
+        result = WatcherService.check_api(
             url="http://api.example.com", json_path="content", target="Target Text"
         )
         assert result["found"] is True
@@ -224,19 +224,19 @@ class TestCheckApi:
             "totalPages": 1,
         }
 
-        result = MonitorService.check_api(
+        result = WatcherService.check_api(
             url="http://api.example.com", json_path="content", target="Target Text"
         )
         assert isinstance(result["matched_content"], str)
 
 
-# ── dispatch_monitor ──────────────────────────────────────────────────────────
+# ── dispatch_watcher ──────────────────────────────────────────────────────────
 
-class TestDispatchMonitor:
+class TestDispatchWatcher:
     @patch.object(MonitorService, "check_html_static", return_value={"found": True, "matched_content": "x", "error": None})
     def test_dispatches_html_static(self, mock_check):
-        monitor = _make_monitor(type="html_static", selector=".content")
-        result = MonitorService.dispatch_monitor(monitor)
+        monitor = _make_watcher(type="html_static", selector=".content")
+        result = WatcherService.dispatch_watcher(monitor)
 
         mock_check.assert_called_once_with(
             url=monitor.url,
@@ -249,49 +249,49 @@ class TestDispatchMonitor:
 
     @patch.object(MonitorService, "check_html_javascript", return_value={"found": False, "matched_content": None, "error": None})
     def test_dispatches_html_javascript(self, mock_check):
-        monitor = _make_monitor(type="html_javascript")
-        MonitorService.dispatch_monitor(monitor)
+        monitor = _make_watcher(type="html_javascript")
+        WatcherService.dispatch_watcher(monitor)
         mock_check.assert_called_once()
 
     @patch.object(MonitorService, "check_api", return_value={"found": True, "matched_content": "x", "error": None})
     def test_dispatches_api(self, mock_check):
-        monitor = _make_monitor(type="api", json_path="content", request_delay=100)
-        MonitorService.dispatch_monitor(monitor)
+        monitor = _make_watcher(type="api", json_path="content", request_delay=100)
+        WatcherService.dispatch_watcher(monitor)
 
         mock_check.assert_called_once()
         _, kwargs = mock_check.call_args
         assert kwargs.get("request_delay") == pytest.approx(0.1)
 
     def test_unknown_type_returns_error(self):
-        monitor = _make_monitor(type="unknown_type")
-        result = MonitorService.dispatch_monitor(monitor)
+        monitor = _make_watcher(type="unknown_type")
+        result = WatcherService.dispatch_watcher(monitor)
 
         assert result["found"] is False
         assert "Unknown monitor type" in result["error"]
 
     @patch.object(MonitorService, "check_html_static", return_value={"found": False, "matched_content": None, "error": None})
     def test_html_static_uses_empty_selector_when_none(self, mock_check):
-        monitor = _make_monitor(type="html_static", selector=None)
-        MonitorService.dispatch_monitor(monitor)
+        monitor = _make_watcher(type="html_static", selector=None)
+        WatcherService.dispatch_watcher(monitor)
 
         _, kwargs = mock_check.call_args
         assert kwargs.get("selector") == ""
 
 
-# ── run_monitor, run_due, run_monitor_by_id ───────────────────────────────────
+# ── run_watcher, run_due, run_watcher_by_id ───────────────────────────────────
 
-class TestRunMonitor:
+class TestRunWatcher:
     @patch("app.features.monitoring.service.upsert_alert")
     @patch("app.features.monitoring.service.create_execution")
-    @patch.object(MonitorService, "dispatch_monitor")
+    @patch.object(MonitorService, "dispatch_watcher")
     async def test_found_creates_execution_and_alert(self, mock_dispatch, mock_create, mock_alert):
         session = AsyncMock()
-        monitor = _make_monitor()
+        monitor = _make_watcher()
         mock_dispatch.return_value = {"found": True, "matched_content": "match", "error": None}
         execution = MagicMock()
         mock_create.return_value = execution
 
-        await MonitorService.run_monitor(session=session, monitor=monitor)
+        await WatcherService.run_watcher(session=session, monitor=monitor)
 
         mock_create.assert_called_once_with(
             session=session, monitor=monitor, status="found", result="match", error=None
@@ -300,14 +300,14 @@ class TestRunMonitor:
 
     @patch("app.features.monitoring.service.upsert_alert")
     @patch("app.features.monitoring.service.create_execution")
-    @patch.object(MonitorService, "dispatch_monitor")
+    @patch.object(MonitorService, "dispatch_watcher")
     async def test_not_found_skips_alert(self, mock_dispatch, mock_create, mock_alert):
         session = AsyncMock()
-        monitor = _make_monitor()
+        monitor = _make_watcher()
         mock_dispatch.return_value = {"found": False, "matched_content": None, "error": None}
         mock_create.return_value = MagicMock()
 
-        await MonitorService.run_monitor(session=session, monitor=monitor)
+        await WatcherService.run_watcher(session=session, monitor=monitor)
 
         mock_create.assert_called_once_with(
             session=session, monitor=monitor, status="not_found", result=None, error=None
@@ -316,14 +316,14 @@ class TestRunMonitor:
 
     @patch("app.features.monitoring.service.upsert_alert")
     @patch("app.features.monitoring.service.create_execution")
-    @patch.object(MonitorService, "dispatch_monitor")
+    @patch.object(MonitorService, "dispatch_watcher")
     async def test_error_skips_alert(self, mock_dispatch, mock_create, mock_alert):
         session = AsyncMock()
-        monitor = _make_monitor()
+        monitor = _make_watcher()
         mock_dispatch.return_value = {"found": False, "matched_content": None, "error": "Timeout"}
         mock_create.return_value = MagicMock()
 
-        await MonitorService.run_monitor(session=session, monitor=monitor)
+        await WatcherService.run_watcher(session=session, monitor=monitor)
 
         mock_create.assert_called_once_with(
             session=session, monitor=monitor, status="error", result=None, error="Timeout"
@@ -333,41 +333,41 @@ class TestRunMonitor:
 
 class TestRunDue:
     @patch("app.features.monitoring.service.get_active_monitors")
-    @patch.object(MonitorService, "run_monitor")
+    @patch.object(MonitorService, "run_watcher")
     async def test_runs_all_active_monitors(self, mock_run, mock_get_active):
         session = AsyncMock()
-        monitors = [_make_monitor(id=i) for i in range(3)]
+        monitors = [_make_watcher(id=i) for i in range(3)]
         mock_get_active.return_value = monitors
         mock_run.return_value = MagicMock()
 
-        result = await MonitorService.run_due(session=session)
+        result = await WatcherService.run_due(session=session)
 
         mock_get_active.assert_called_once_with(session=session)
         assert mock_run.call_count == 3
         assert len(result) == 3
 
     @patch("app.features.monitoring.service.get_active_monitors")
-    @patch.object(MonitorService, "run_monitor")
+    @patch.object(MonitorService, "run_watcher")
     async def test_empty_monitors_returns_empty_list(self, mock_run, mock_get_active):
         session = AsyncMock()
         mock_get_active.return_value = []
 
-        result = await MonitorService.run_due(session=session)
+        result = await WatcherService.run_due(session=session)
 
         mock_run.assert_not_called()
         assert result == []
 
 
-class TestRunMonitorById:
+class TestRunWatcherById:
     @patch("app.features.monitoring.service.get_monitor")
-    @patch.object(MonitorService, "run_monitor")
+    @patch.object(MonitorService, "run_watcher")
     async def test_runs_when_found(self, mock_run, mock_get):
         session = AsyncMock()
-        monitor = _make_monitor()
+        monitor = _make_watcher()
         mock_get.return_value = monitor
         mock_run.return_value = MagicMock()
 
-        await MonitorService.run_monitor_by_id(session=session, monitor_id=1)
+        await WatcherService.run_watcher_by_id(session=session, monitor_id=1)
 
         mock_get.assert_called_once_with(session=session, monitor_id=1)
         mock_run.assert_called_once_with(session=session, monitor=monitor)
@@ -377,6 +377,6 @@ class TestRunMonitorById:
         session = AsyncMock()
         mock_get.return_value = None
 
-        result = await MonitorService.run_monitor_by_id(session=session, monitor_id=999)
+        result = await WatcherService.run_watcher_by_id(session=session, monitor_id=999)
 
         assert result is None

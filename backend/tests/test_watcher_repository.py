@@ -1,44 +1,44 @@
 import pytest
 from unittest.mock import AsyncMock, MagicMock
 from sqlalchemy.ext.asyncio import AsyncSession
-from app.features.monitoring.repository import (
-    get_monitor,
-    get_monitors,
-    get_active_monitors,
-    create_monitor,
-    update_monitor,
-    delete_monitor,
+from app.features.watcher.repository import (
+    get_watcher,
+    get_watchers,
+    get_active_watchers,
+    create_watcher,
+    update_watcher,
+    delete_watcher,
     create_execution,
     get_executions,
     get_alerts,
     upsert_alert,
 )
-from app.features.monitoring.tables import Alert, Execution, Monitor
-from app.features.monitoring.schemas import MonitorCreate, MonitorUpdate
+from app.features.watcher.tables import Alert, Execution, Watcher
+from app.features.watcher.schemas import WatcherCreate, WatcherUpdate
 
 
 def _make_session():
     return AsyncMock(spec=AsyncSession)
 
 
-def _make_monitor_orm(id=1, enabled=True):
-    monitor = MagicMock(spec=Monitor)
-    monitor.id = id
-    monitor.name = "Test Monitor"
-    monitor.description = "desc"
-    monitor.enabled = enabled
-    monitor.type = "html_static"
-    monitor.url = "http://example.com"
-    monitor.selector = ".content"
-    monitor.json_path = None
-    monitor.target = "Target"
-    monitor.case_sensitive = True
-    monitor.timeout = 10
-    monitor.page_size = 32
-    monitor.max_pages = None
-    monitor.request_delay = 0
-    monitor.wait_selector = None
-    return monitor
+def _make_watcher_orm(id=1, enabled=True):
+    watcher = MagicMock(spec=Watcher)
+    watcher.id = id
+    watcher.name = "Test Watcher"
+    watcher.description = "desc"
+    watcher.enabled = enabled
+    watcher.type = "html_static"
+    watcher.url = "http://example.com"
+    watcher.selector = ".content"
+    watcher.json_path = None
+    watcher.target = "Target"
+    watcher.case_sensitive = True
+    watcher.timeout = 10
+    watcher.page_size = 32
+    watcher.max_pages = None
+    watcher.request_delay = 0
+    watcher.wait_selector = None
+    return watcher
 
 
 def _make_execution_orm(id=1, config_id=1, status="found"):
@@ -64,73 +64,73 @@ def _scalar_all(values):
     return result
 
 
-class TestGetMonitor:
+class TestGetWatcher:
     async def test_found(self):
         session = _make_session()
-        monitor = _make_monitor_orm()
-        session.execute.return_value = _scalar_first(monitor)
+        watcher = _make_watcher_orm()
+        session.execute.return_value = _scalar_first(watcher)
 
-        result = await get_monitor(session, monitor_id=1)
-        assert result == monitor
+        result = await get_watcher(session, watcher_id=1)
+        assert result == watcher
 
     async def test_not_found(self):
         session = _make_session()
         session.execute.return_value = _scalar_first(None)
 
-        result = await get_monitor(session, monitor_id=999)
+        result = await get_watcher(session, watcher_id=999)
         assert result is None
 
 
-class TestGetMonitors:
+class TestGetWatchers:
     async def test_returns_all(self):
         session = _make_session()
-        monitors = [_make_monitor_orm(id=i) for i in range(3)]
+        monitors = [_make_watcher_orm(id=i) for i in range(3)]
         session.execute.return_value = _scalar_all(monitors)
 
-        result = await get_monitors(session)
+        result = await get_watchers(session)
         assert len(result) == 3
 
     async def test_empty_list(self):
         session = _make_session()
         session.execute.return_value = _scalar_all([])
-        result = await get_monitors(session)
+        result = await get_watchers(session)
         assert result == []
 
     async def test_uses_skip_and_limit(self):
         session = _make_session()
         session.execute.return_value = _scalar_all([])
-        await get_monitors(session, skip=10, limit=5)
+        await get_watchers(session, skip=10, limit=5)
         session.execute.assert_called_once()
 
 
-class TestGetActiveMonitors:
+class TestGetActiveWatchers:
     async def test_returns_enabled_monitors(self):
         session = _make_session()
-        monitors = [_make_monitor_orm(enabled=True)]
+        monitors = [_make_watcher_orm(enabled=True)]
         session.execute.return_value = _scalar_all(monitors)
 
-        result = await get_active_monitors(session)
+        result = await get_active_watchers(session)
         assert len(result) == 1
 
     async def test_empty(self):
         session = _make_session()
         session.execute.return_value = _scalar_all([])
-        result = await get_active_monitors(session)
+        result = await get_active_watchers(session)
         assert result == []
 
 
-class TestCreateMonitor:
+class TestCreateWatcher:
     async def test_creates_and_commits(self):
         session = _make_session()
 
-        monitor_create = MonitorCreate(
+        monitor_create = WatcherCreate(
             name="New Monitor",
             url="http://example.com",
             target="Target",
             type="html_static",
         )
 
-        result = await create_monitor(session, monitor_create)
+        result = await create_watcher(session, monitor_create)
 
         session.add.assert_called_once()
         session.commit.assert_called_once()
@@ -139,23 +139,23 @@ class TestCreateMonitor:
 
     async def test_returns_monitor_object(self):
         session = _make_session()
-        monitor_create = MonitorCreate(
+        monitor_create = WatcherCreate(
             name="Monitor",
             url="http://example.com",
             target="Target",
             type="html_static",
         )
-        result = await create_monitor(session, monitor_create)
+        result = await create_watcher(session, monitor_create)
         assert isinstance(result, Monitor)
 
 
-class TestUpdateMonitor:
+class TestUpdateWatcher:
     async def test_found_updates_and_commits(self):
         session = _make_session()
-        monitor = _make_monitor_orm()
+        monitor = _make_watcher_orm()
         session.execute.return_value = _scalar_first(monitor)
 
-        result = await update_monitor(session, monitor_id=1, monitor_update=MonitorUpdate(name="Updated"))
+        result = await update_watcher(session, monitor_id=1, monitor_update=WatcherUpdate(name="Updated"))
 
         session.commit.assert_called_once()
         session.refresh.assert_called_once()
@@ -165,30 +165,30 @@ class TestUpdateMonitor:
         session = _make_session()
         session.execute.return_value = _scalar_first(None)
 
-        result = await update_monitor(session, monitor_id=999, monitor_update=MonitorUpdate())
+        result = await update_watcher(session, monitor_id=999, monitor_update=WatcherUpdate())
         assert result is None
 
     async def test_updates_fields(self):
         session = _make_session()
-        monitor = _make_monitor_orm()
+        monitor = _make_watcher_orm()
         session.execute.return_value = _scalar_first(monitor)
 
-        await update_monitor(
+        await update_watcher(
             session, monitor_id=1,
-            monitor_update=MonitorUpdate(name="New Name", enabled=False)
+            monitor_update=WatcherUpdate(name="New Name", enabled=False)
         )
         assert monitor.name == "New Name"
         assert monitor.enabled is False
 
 
-class TestDeleteMonitor:
+class TestDeleteWatcher:
     async def test_found_deletes_and_commits(self):
         session = _make_session()
-        monitor = _make_monitor_orm()
+        monitor = _make_watcher_orm()
 
         session.execute.side_effect = [_scalar_first(monitor), MagicMock()]
 
-        result = await delete_monitor(session, monitor_id=1)
+        result = await delete_watcher(session, monitor_id=1)
 
         assert result == monitor
         session.commit.assert_called_once()
@@ -197,14 +197,14 @@ class TestDeleteMonitor:
         session = _make_session()
         session.execute.return_value = _scalar_first(None)
 
-        result = await delete_monitor(session, monitor_id=999)
+        result = await delete_watcher(session, monitor_id=999)
         assert result is None
 
 
 class TestCreateExecution:
     async def test_creates_and_commits(self):
         session = _make_session()
-        monitor = _make_monitor_orm()
+        monitor = _make_watcher_orm()
 
         execution = await create_execution(
             session, monitor=monitor, status="found", result="matched text", error=None
@@ -217,7 +217,7 @@ class TestCreateExecution:
 
     async def test_snapshot_contains_monitor_fields(self):
         session = _make_session()
-        monitor = _make_monitor_orm(id=7)
+        monitor = _make_watcher_orm(id=7)
 
         execution = await create_execution(
             session, monitor=monitor, status="not_found", result=None, error=None
@@ -232,7 +232,7 @@ class TestCreateExecution:
 
     async def test_error_status(self):
         session = _make_session()
-        monitor = _make_monitor_orm()
+        monitor = _make_watcher_orm()
 
         await create_execution(
             session, monitor=monitor, status="error", result=None, error="Request failed"

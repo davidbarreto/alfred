@@ -4,10 +4,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.auth import require_auth
 from app.db.session import get_session
-from app.features.monitoring.repository import get_alerts
-from app.features.monitoring.schemas import AlertRead
+from app.features.watcher.repository import get_alerts
+from app.features.watcher.schemas import AlertRead
 
-router = APIRouter(prefix="/monitoring/alerts", tags=["monitoring"], dependencies=[Depends(require_auth)])
+router = APIRouter(prefix="/watcher/alerts", tags=["watcher"], dependencies=[Depends(require_auth)])
 
 
 @router.get("", response_model=list[AlertRead])

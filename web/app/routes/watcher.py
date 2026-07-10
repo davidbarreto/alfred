@@ -9,17 +9,17 @@ from fastapi.responses import HTMLResponse
 import app.client as api
 from app.templates_config import templates
 
-router = APIRouter(prefix="/monitoring")
+router = APIRouter(prefix="/watcher")
 
 
 async def _render_list(request: Request) -> HTMLResponse:
     monitors, executions = [], []
     try:
-        monitors = await api.get("/monitoring/configs", params={"limit": 200})
+        monitors = await api.get("/watcher/configs", params={"limit": 200})
     except httpx.HTTPError:
         pass
     try:
-        executions = await api.get("/monitoring/executions", params={"limit": 200})
+        executions = await api.get("/watcher/executions", params={"limit": 200})
     except httpx.HTTPError:
         pass
 
@@ -27,28 +27,28 @@ async def _render_list(request: Request) -> HTMLResponse:
     for execution in executions:
         latest_by_monitor.setdefault(execution["config_id"], execution)
 
-    return templates.TemplateResponse(request, "_monitoring_list.html", {
+    return templates.TemplateResponse(request, "_watcher_list.html", {
         "monitors": monitors,
         "latest_by_monitor": latest_by_monitor,
     })
 
 
 @router.get("/", response_class=HTMLResponse)
-async def monitoring_page(request: Request):
+async def watcher_page(request: Request):
     monitors, executions, alerts, errors = [], [], [], []
 
     try:
-        monitors = await api.get("/monitoring/configs", params={"limit": 200})
+        monitors = await api.get("/watcher/configs", params={"limit": 200})
     except httpx.HTTPError:
         errors.append("monitors")
 
     try:
-        executions = await api.get("/monitoring/executions", params={"limit": 200})
+        executions = await api.get("/watcher/executions", params={"limit": 200})
     except httpx.HTTPError:
         errors.append("executions")
 
     try:
-        alerts = await api.get("/monitoring/alerts", params={"limit": 20})
+        alerts = await api.get("/watcher/alerts", params={"limit": 20})
     except httpx.HTTPError:
         errors.append("alerts")
 
@@ -72,7 +72,7 @@ async def monitoring_page(request: Request):
         if status_counts.get(key)
     }
 
-    return templates.TemplateResponse(request, "monitoring.html", {
+    return templates.TemplateResponse(request, "watcher.html", {
         "monitors": monitors,
         "latest_by_monitor": latest_by_monitor,
         "alerts": alerts,
@@ -128,7 +128,7 @@ async def create_monitor(
         payload["wait_selector"] = wait_selector
 
     try:
-        await api.post("/monitoring/configs", json=payload)
+        await api.post("/watcher/configs", json=payload)
     except httpx.HTTPError:
         return HTMLResponse('<p class="text-[#E24B4A] text-sm px-1">Failed to create monitor.</p>', status_code=422)
 
@@ -138,7 +138,7 @@ async def create_monitor(
 @router.delete("/{monitor_id}", response_class=HTMLResponse)
 async def delete_monitor(monitor_id: int, request: Request):
     try:
-        await api.delete(f"/monitoring/configs/{monitor_id}")
+        await api.delete(f"/watcher/configs/{monitor_id}")
     except httpx.HTTPError:
         return HTMLResponse('<p class="text-[#E24B4A] text-sm px-1">Failed to delete monitor.</p>', status_code=422)
 
@@ -148,7 +148,7 @@ async def delete_monitor(monitor_id: int, request: Request):
 @router.patch("/{monitor_id}/toggle", response_class=HTMLResponse)
 async def toggle_monitor(monitor_id: int, request: Request, enabled: Annotated[str, Form()]):
     try:
-        await api.patch(f"/monitoring/configs/{monitor_id}", json={"enabled": enabled == "true"})
+        await api.patch(f"/watcher/configs/{monitor_id}", json={"enabled": enabled == "true"})
     except httpx.HTTPError:
         return HTMLResponse('<p class="text-[#E24B4A] text-sm px-1">Failed to update monitor.</p>', status_code=422)
 
@@ -158,7 +158,7 @@ async def toggle_monitor(monitor_id: int, request: Request, enabled: Annotated[s
 @router.post("/{monitor_id}/run", response_class=HTMLResponse)
 async def run_monitor(monitor_id: int, request: Request):
     try:
-        await api.post(f"/monitoring/configs/{monitor_id}/run")
+        await api.post(f"/watcher/configs/{monitor_id}/run")
     except httpx.HTTPError:
         return HTMLResponse('<p class="text-[#E24B4A] text-sm px-1">Failed to run monitor.</p>', status_code=422)
 
@@ -168,7 +168,7 @@ async def run_monitor(monitor_id: int, request: Request):
 @router.post("/run", response_class=HTMLResponse)
 async def run_all_monitors(request: Request):
     try:
-        await api.post("/monitoring/configs/run")
+        await api.post("/watcher/configs/run")
     except httpx.HTTPError:
         return HTMLResponse('<p class="text-[#E24B4A] text-sm px-1">Failed to run monitors.</p>', status_code=422)
 
@@ -179,8 +179,8 @@ async def run_all_monitors(request: Request):
 async def monitor_executions(monitor_id: int, request: Request):
     executions = []
     try:
-        executions = await api.get(f"/monitoring/configs/{monitor_id}/executions", params={"limit": 20})
+        executions = await api.get(f"/watcher/configs/{monitor_id}/executions", params={"limit": 20})
     except httpx.HTTPError:
         pass
 
-    return templates.TemplateResponse(request, "_monitoring_executions.html", {"executions": executions})
+    return templates.TemplateResponse(request, "_watcher_executions.html", {"executions": executions})

@@ -43,7 +43,18 @@
             </div>
           </div>
           <div class="flex items-center gap-1.5">
-            <span class="px-2 py-0.5 rounded-full text-xs font-medium {{ track.level_color }}">{{ track.level }}</span>
+            <select
+              data-track-code="{{ track.code }}"
+              data-prev-level="{{ track.level }}"
+              onchange="quickUpdateLevel(this)"
+              onclick="event.stopPropagation()"
+              title="Change level"
+              class="level-select appearance-none px-2 py-0.5 rounded-full text-xs font-medium border-0 cursor-pointer focus:outline-none focus:ring-1 focus:ring-[#378ADD] {{ track.level_color }}"
+            >
+              {% for lvl in ["A1", "A2", "B1", "B2", "C1", "C2"] %}
+              <option value="{{ lvl }}" {% if track.level == lvl %}selected{% endif %}>{{ lvl }}</option>
+              {% endfor %}
+            </select>
             {% if not track.active %}
             <span class="px-2 py-0.5 rounded-full text-xs bg-gray-100 text-gray-400">Paused</span>
             {% endif %}
@@ -94,4 +105,42 @@
   </div>
 
 </div>
+
+<script>
+const LEVEL_COLORS = {
+  A1: "bg-gray-100 text-gray-500",
+  A2: "bg-gray-100 text-gray-600",
+  B1: "bg-blue-100 text-blue-700",
+  B2: "bg-blue-100 text-blue-800",
+  C1: "bg-purple-100 text-purple-700",
+  C2: "bg-purple-100 text-purple-800",
+};
+
+async function quickUpdateLevel(selectEl) {
+  const code = selectEl.dataset.trackCode;
+  const prevLevel = selectEl.dataset.prevLevel;
+  const newLevel = selectEl.value;
+  selectEl.disabled = true;
+
+  try {
+    const res = await fetch(`/languages/${code}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ level: newLevel }),
+    });
+    if (!res.ok) throw new Error();
+
+    Object.values(LEVEL_COLORS).forEach(cls => {
+      cls.split(' ').forEach(c => selectEl.classList.remove(c));
+    });
+    LEVEL_COLORS[newLevel].split(' ').forEach(c => selectEl.classList.add(c));
+    selectEl.dataset.prevLevel = newLevel;
+  } catch (e) {
+    selectEl.value = prevLevel;
+    alert('Failed to update level.');
+  } finally {
+    selectEl.disabled = false;
+  }
+}
+</script>
 {% endblock %}

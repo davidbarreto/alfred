@@ -652,6 +652,34 @@ async def score_review(code: str, request: Request):
     return {}
 
 
+_TRACK_UPDATE_FIELDS = ("name", "level", "daily_quota", "review_mode", "active")
+
+
+@router.patch("/{code}")
+async def update_track(code: str, request: Request):
+    tracks = await _safe_get("/language/tracks", {"active_only": "false"})
+    track = next((t for t in tracks if t["code"] == code), None)
+    if not track:
+        return JSONResponse({"error": "Track not found."}, status_code=404)
+
+    body = await request.json()
+    update_data = {field: body[field] for field in _TRACK_UPDATE_FIELDS if field in body}
+
+    try:
+        updated = await api.patch(f"/language/tracks/{track['id']}", json=update_data)
+    except httpx.HTTPStatusError as exc:
+        detail = "Failed to update track."
+        try:
+            detail = exc.response.json().get("detail", detail)
+        except Exception:
+            pass
+        return JSONResponse({"error": detail}, status_code=422)
+    except httpx.HTTPError:
+        return JSONResponse({"error": "Failed to update track."}, status_code=502)
+
+    return JSONResponse(updated)
+
+
 @router.get("/{code}", response_class=HTMLResponse)
 async def track_detail(code: str, request: Request):
     tracks = await _safe_get("/language/tracks", {"active_only": "false"})

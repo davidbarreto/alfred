@@ -21,6 +21,11 @@
         <p class="text-xs text-gray-400">{{ track.code | upper }} · {{ track.review_mode | replace('_', ' ') | title }}</p>
       </div>
       <span class="px-2 py-0.5 rounded-full text-xs font-medium {{ level_color }}">{{ track.level }}</span>
+      <button onclick="openEditTrack()"
+              class="inline-flex items-center justify-center w-6 h-6 rounded-full text-gray-300 hover:text-gray-600 hover:bg-gray-100 transition-colors"
+              title="Edit track">
+        <i class="ti ti-pencil text-sm"></i>
+      </button>
     </div>
     <div class="flex flex-wrap items-center gap-2">
       <a href="/languages/triage?lang={{ track.code }}"
@@ -162,6 +167,78 @@
 
 </div>
 
+<!-- Edit Track Modal -->
+<dialog id="edit-track-modal" class="modal">
+  <div class="modal-box bg-white rounded-xl border border-gray-200 shadow-lg max-w-md w-full p-6">
+    <h3 class="text-sm font-semibold text-gray-900 mb-4">Edit track</h3>
+    <form id="edit-track-form" onsubmit="submitEditTrack(event)" class="flex flex-col gap-3">
+      <div>
+        <label class="text-xs text-gray-500 mb-1 block">Name</label>
+        <input
+          id="edit-track-name"
+          name="name"
+          type="text"
+          required
+          class="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white w-full focus:outline-none focus:ring-1 focus:ring-[#378ADD]"
+        />
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="text-xs text-gray-500 mb-1 block">Level</label>
+          <select
+            id="edit-track-level"
+            name="level"
+            class="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white w-full focus:outline-none focus:ring-1 focus:ring-[#378ADD]"
+          >
+            <option value="A1">A1</option>
+            <option value="A2">A2</option>
+            <option value="B1">B1</option>
+            <option value="B2">B2</option>
+            <option value="C1">C1</option>
+            <option value="C2">C2</option>
+          </select>
+        </div>
+        <div>
+          <label class="text-xs text-gray-500 mb-1 block">Daily quota</label>
+          <input
+            id="edit-track-quota"
+            name="daily_quota"
+            type="number"
+            min="1"
+            required
+            class="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white w-full focus:outline-none focus:ring-1 focus:ring-[#378ADD]"
+          />
+        </div>
+      </div>
+      <div>
+        <label class="text-xs text-gray-500 mb-1 block">Review mode</label>
+        <select
+          id="edit-track-review-mode"
+          name="review_mode"
+          class="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white w-full focus:outline-none focus:ring-1 focus:ring-[#378ADD]"
+        >
+          <option value="balanced">Balanced</option>
+          <option value="shadowing_heavy">Shadowing heavy</option>
+          <option value="recall_heavy">Recall heavy</option>
+        </select>
+      </div>
+      <label class="flex items-center gap-2 text-xs text-gray-500">
+        <input id="edit-track-active" name="active" type="checkbox" class="checkbox checkbox-sm" />
+        Active
+      </label>
+      <p id="edit-track-error" class="text-xs text-[#E24B4A] hidden"></p>
+      <div class="flex justify-end gap-2 mt-1">
+        <button type="button" onclick="document.getElementById('edit-track-modal').close()"
+                class="btn btn-sm btn-ghost text-gray-500">Cancel</button>
+        <button type="submit" id="edit-track-submit-btn" class="btn btn-sm btn-primary">Save changes</button>
+      </div>
+    </form>
+  </div>
+  <form method="dialog" class="modal-backdrop">
+    <button>close</button>
+  </form>
+</dialog>
+
 <script>
 async function updateScopeStatus(scopeId, status) {
   try {
@@ -172,6 +249,51 @@ async function updateScopeStatus(scopeId, status) {
     });
   } catch (e) {
     console.error('Failed to update scope:', e);
+  }
+}
+
+function openEditTrack() {
+  document.getElementById("edit-track-error").classList.add("hidden");
+  document.getElementById("edit-track-name").value = {{ track.name | tojson }};
+  document.getElementById("edit-track-level").value = {{ track.level | tojson }};
+  document.getElementById("edit-track-quota").value = {{ track.daily_quota | tojson }};
+  document.getElementById("edit-track-review-mode").value = {{ track.review_mode | tojson }};
+  document.getElementById("edit-track-active").checked = {{ track.active | tojson }};
+  document.getElementById("edit-track-modal").showModal();
+}
+
+async function submitEditTrack(e) {
+  e.preventDefault();
+  const btn = document.getElementById("edit-track-submit-btn");
+  const errEl = document.getElementById("edit-track-error");
+  btn.disabled = true;
+  btn.textContent = "Saving…";
+  errEl.classList.add("hidden");
+
+  const body = {
+    name: document.getElementById("edit-track-name").value,
+    level: document.getElementById("edit-track-level").value,
+    daily_quota: parseInt(document.getElementById("edit-track-quota").value, 10),
+    review_mode: document.getElementById("edit-track-review-mode").value,
+    active: document.getElementById("edit-track-active").checked,
+  };
+
+  try {
+    const res = await fetch(`/languages/{{ track.code }}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data.error || `Error ${res.status}`);
+    }
+    window.location.reload();
+  } catch (err) {
+    errEl.textContent = err.message || "Failed to update track.";
+    errEl.classList.remove("hidden");
+    btn.disabled = false;
+    btn.textContent = "Save changes";
   }
 }
 </script>

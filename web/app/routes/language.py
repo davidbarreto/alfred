@@ -492,6 +492,25 @@ async def review_session(code: str, request: Request):
     })
 
 
+@router.get("/{code}/shadow", response_class=HTMLResponse)
+async def shadow_session(code: str, request: Request):
+    tracks = await _safe_get("/language/tracks", {"active_only": "false"})
+    track = next((t for t in tracks if t["code"] == code), None)
+    if not track:
+        return HTMLResponse("<p>Track not found.</p>", status_code=404)
+
+    daily_batch = await _safe_get("/language/chunks/daily-batch", {"track_id": track["id"]})
+    due_batch = daily_batch[0] if daily_batch else {"chunks": [], "total_due": 0}
+    chunks = due_batch.get("chunks", [])
+
+    return templates.TemplateResponse(request, "language_shadow.html", {
+        "track": track,
+        "flag": _flag(track["code"]),
+        "chunks_json": json.dumps(chunks),
+        "total_due": due_batch.get("total_due", 0),
+    })
+
+
 _PRODUCE_TASK_TYPES = ("sentence", "translate", "journal", "timed", "speak", "retell")
 
 

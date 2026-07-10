@@ -167,3 +167,36 @@ class TestSubmitShadowing:
 
         assert resp.status_code == 302
         assert resp.headers["location"].startswith("/login")
+
+
+class TestShadowSession:
+    def test_renders_due_chunks_from_daily_batch(self, client, mock_api):
+        mock_api["get"].side_effect = [
+            [{"id": 5, "code": "fr", "name": "French", "daily_quota": 10}],
+            [{"track_id": 5, "track_code": "fr", "total_due": 2,
+              "chunks": [{"id": 42, "text": "bonjour", "translation": "hello"}]}],
+        ]
+
+        resp = client.get("/languages/fr/shadow")
+
+        assert resp.status_code == 200
+        assert "bonjour" in resp.text
+        mock_api["get"].assert_any_await("/language/chunks/daily-batch", params={"track_id": 5})
+
+    def test_renders_empty_state_when_nothing_due(self, client, mock_api):
+        mock_api["get"].side_effect = [
+            [{"id": 5, "code": "fr", "name": "French", "daily_quota": 10}],
+            [],
+        ]
+
+        resp = client.get("/languages/fr/shadow")
+
+        assert resp.status_code == 200
+        assert "Nothing due right now." in resp.text
+
+    def test_returns_404_when_track_not_found(self, client, mock_api):
+        mock_api["get"].return_value = []
+
+        resp = client.get("/languages/xx/shadow")
+
+        assert resp.status_code == 404

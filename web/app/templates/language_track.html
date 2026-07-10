@@ -32,6 +32,10 @@
          class="btn btn-sm btn-primary text-xs">
         <i class="ti ti-brain text-sm"></i>Review
       </a>
+      <a href="/languages/{{ track.code }}/shadow"
+         class="btn btn-sm bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 text-xs">
+        <i class="ti ti-microphone text-sm"></i>Shadow
+      </a>
       {% endif %}
       {% if mastery and mastery.production.due > 0 %}
       <a href="/languages/{{ track.code }}/produce"

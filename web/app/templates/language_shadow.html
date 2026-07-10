@@ -1,0 +1,203 @@
+{% extends "base.html" %}
+{% set active_page = "languages" %}
+{% block title %}Shadow · {{ track.name }}{% endblock %}
+
+{% block content %}
+<div class="p-6 space-y-6 max-w-xl mx-auto">
+
+  <!-- Breadcrumb -->
+  <div class="flex items-center gap-2 text-xs text-gray-400">
+    <a href="/languages" class="hover:text-gray-600">Languages</a>
+    <i class="ti ti-chevron-right text-gray-300"></i>
+    <a href="/languages/{{ track.code }}" class="hover:text-gray-600">{{ flag }} {{ track.name }}</a>
+    <i class="ti ti-chevron-right text-gray-300"></i>
+    <span class="text-gray-700 font-medium">Shadow</span>
+  </div>
+
+  <!-- Progress bar -->
+  <div>
+    <div class="flex items-center justify-between text-xs text-gray-400 mb-1.5">
+      <span id="progress-label">0 / {{ total_due }} shadowed</span>
+    </div>
+    <div class="w-full bg-gray-100 rounded-full h-1.5">
+      <div id="progress-bar" class="h-1.5 rounded-full bg-purple-600 transition-all duration-300" style="width: 0%"></div>
+    </div>
+  </div>
+
+  <div id="shadow-area">
+
+    {% if total_due == 0 %}
+    <div class="card bg-white p-10 text-center space-y-3">
+      <i class="ti ti-circle-check text-4xl text-green-400"></i>
+      <p class="text-sm font-medium text-gray-700">Nothing due right now.</p>
+      <p class="text-xs text-gray-400">Come back later or keep studying with review.</p>
+      <a href="/languages/{{ track.code }}" class="btn btn-sm btn-primary mt-2">Back to {{ track.name }}</a>
+    </div>
+    {% else %}
+
+    <!-- Card -->
+    <div id="shadow-card" class="card bg-white w-full flex flex-col items-center justify-center p-8 gap-3" style="min-height: 220px;">
+      <span class="text-xs font-medium text-gray-400 uppercase tracking-widest" id="card-lang">{{ track.code | upper }}</span>
+      <div class="flex items-center gap-2">
+        <p class="text-3xl font-semibold text-gray-900 text-center" id="card-text"></p>
+        <button type="button" id="pronounce-btn" onclick="playReference();"
+          class="btn btn-sm btn-circle btn-ghost text-gray-400 hover:text-purple-600" title="Play pronunciation">
+          <i class="ti ti-volume"></i>
+        </button>
+      </div>
+      <p class="text-sm text-gray-400 text-center" id="card-translation"></p>
+    </div>
+
+    <!-- Record -->
+    <div id="record-card" class="card bg-white p-4 space-y-3 mt-4">
+      <p id="shadow-status" class="text-xs text-gray-400">Record yourself saying it and get instant feedback.</p>
+      <button type="button" id="record-btn" onclick="toggleRecording()" class="btn btn-sm btn-primary gap-1.5 w-fit">
+        <i class="ti ti-microphone"></i> Record
+      </button>
+      <div id="feedback-area" class="hidden space-y-2 pt-2 border-t border-gray-100">
+        <div class="flex items-center gap-3">
+          <div class="text-center">
+            <p class="text-lg font-semibold" id="feedback-score">—</p>
+            <p class="text-[10px] text-gray-400">score</p>
+          </div>
+          <p class="text-xs text-gray-500 flex-1" id="feedback-summary"></p>
+        </div>
+        <button type="button" id="next-btn" onclick="nextCard()" class="btn btn-sm bg-purple-600 border-purple-600 text-white hover:bg-purple-700">
+          Next <i class="ti ti-arrow-right"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- Completion (hidden until done) -->
+    <div id="completion" class="hidden card bg-white p-10 text-center space-y-3">
+      <i class="ti ti-circle-check text-4xl text-green-400"></i>
+      <p class="text-sm font-medium text-gray-700">Session complete!</p>
+      <p class="text-xs text-gray-400" id="completion-stats"></p>
+      <a href="/languages/{{ track.code }}" class="btn btn-sm btn-primary mt-2">Back to {{ track.name }}</a>
+    </div>
+
+    {% endif %}
+  </div>
+
+</div>
+
+<script>
+const TRACK_CODE = "{{ track.code }}";
+const chunks = {{ chunks_json | safe }};
+let idx = 0;
+let shadowed = 0;
+const total = chunks.length;
+let mediaRecorder = null;
+let recordedChunks = [];
+let currentAudio = null;
+
+function showCard(i) {
+  if (i >= total) { showCompletion(); return; }
+  const c = chunks[i];
+  document.getElementById("card-text").textContent = c.text;
+  document.getElementById("card-translation").textContent = c.translation || "";
+  document.getElementById("feedback-area").classList.add("hidden");
+  document.getElementById("shadow-status").textContent = "Record yourself saying it and get instant feedback.";
+  const btn = document.getElementById("record-btn");
+  btn.classList.remove("hidden");
+  btn.disabled = false;
+}
+
+function playReference() {
+  const c = chunks[idx];
+  if (!c) return;
+  if (currentAudio) currentAudio.pause();
+  currentAudio = new Audio(`/languages/${TRACK_CODE}/pronounce?text=${encodeURIComponent(c.text)}`);
+  currentAudio.play().catch(() => {});
+}
+
+async function toggleRecording() {
+  const btn = document.getElementById("record-btn");
+  const status = document.getElementById("shadow-status");
+  if (mediaRecorder && mediaRecorder.state === "recording") {
+    mediaRecorder.stop();
+    return;
+  }
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    recordedChunks = [];
+    mediaRecorder = new MediaRecorder(stream);
+    mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) recordedChunks.push(e.data); };
+    mediaRecorder.onstop = () => {
+      stream.getTracks().forEach((t) => t.stop());
+      uploadRecording();
+    };
+    mediaRecorder.start();
+    btn.innerHTML = '<i class="ti ti-player-stop"></i> Stop';
+    btn.classList.add("btn-error");
+    btn.classList.remove("btn-primary");
+    status.textContent = "Recording… tap stop when done.";
+  } catch (err) {
+    status.textContent = "Microphone access is required to practice shadowing.";
+  }
+}
+
+async function uploadRecording() {
+  const c = chunks[idx];
+  const btn = document.getElementById("record-btn");
+  const status = document.getElementById("shadow-status");
+  btn.disabled = true;
+  btn.innerHTML = '<i class="ti ti-microphone"></i> Record';
+  btn.classList.remove("btn-error");
+  btn.classList.add("btn-primary");
+  status.textContent = "Analyzing your pronunciation…";
+
+  const blob = new Blob(recordedChunks, { type: mediaRecorder.mimeType || "audio/webm" });
+  const formData = new FormData();
+  formData.append("audio", blob, "recording.webm");
+
+  try {
+    const resp = await fetch(`/languages/${TRACK_CODE}/chunks/${c.id}/shadow`, {
+      method: "POST",
+      body: formData,
+    });
+    if (!resp.ok) throw new Error("upload failed");
+    const result = await resp.json();
+    showFeedback(result);
+  } catch (err) {
+    status.textContent = "Could not analyze recording. Please try again.";
+    btn.disabled = false;
+  }
+}
+
+function showFeedback(result) {
+  const feedback = result.ai_feedback_json || {};
+  const score = feedback.score ?? result.quality_score;
+  document.getElementById("shadow-status").textContent = "Recorded.";
+  document.getElementById("record-btn").classList.add("hidden");
+  document.getElementById("feedback-area").classList.remove("hidden");
+  const scoreEl = document.getElementById("feedback-score");
+  scoreEl.textContent = score != null ? Math.round(score) : "—";
+  scoreEl.className = "text-lg font-semibold " + (score >= 80 ? "text-green-600" : score >= 55 ? "text-gray-700" : "text-red-600");
+  document.getElementById("feedback-summary").textContent = feedback.summary || "";
+  shadowed++;
+  updateProgress();
+}
+
+function nextCard() {
+  idx++;
+  showCard(idx);
+}
+
+function updateProgress() {
+  const pct = total > 0 ? Math.round(shadowed / total * 100) : 0;
+  document.getElementById("progress-label").textContent = `${shadowed} / ${total} shadowed`;
+  document.getElementById("progress-bar").style.width = pct + "%";
+}
+
+function showCompletion() {
+  document.getElementById("shadow-card").classList.add("hidden");
+  document.getElementById("record-card").classList.add("hidden");
+  document.getElementById("completion").classList.remove("hidden");
+  document.getElementById("completion-stats").textContent =
+    `Shadowed ${shadowed} chunk${shadowed !== 1 ? "s" : ""} this session.`;
+}
+
+if (total > 0) showCard(0);
+</script>
+{% endblock %}

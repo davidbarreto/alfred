@@ -88,3 +88,26 @@ class AlertRead(BaseModel):
     status: str
     created_at: datetime
     resolved_at: datetime | None = None
+    watcher_name: str | None = None
+    target: str | None = None
+    result: str | None = None
+
+
+class AlertResolveRequest(BaseModel):
+    alert_ids: list[int]
+
+
+def build_alert_read(alert: Any) -> AlertRead:
+    """Build an AlertRead enriched with denormalized fields from the linked execution."""
+    execution = alert.execution
+    snapshot = execution.config_snapshot if execution else {}
+    return AlertRead(
+        id=alert.id,
+        execution_id=alert.execution_id,
+        status=alert.status,
+        created_at=alert.created_at,
+        resolved_at=alert.resolved_at,
+        watcher_name=snapshot.get("name") if execution else None,
+        target=snapshot.get("target") if execution else None,
+        result=execution.result if execution else None,
+    )

@@ -27,6 +27,7 @@ from app.features.core.memories.extraction_service import MemoryExtractionServic
 from app.features.core.sessions.summary_service import SessionSummaryService
 from app.features.briefing.summary_service import BriefingSummaryService
 from app.features.briefing.formatter_service import BriefingFormatterService
+from app.features.core.reminders.service import ReminderService
 from app.features.briefing.weather_client import WeatherClient
 from app.features.briefing.holiday_client import GooglePublicHolidayClient
 from app.features.language.tracks.service import TrackService
@@ -220,6 +221,9 @@ async def get_briefing_summary_service(session: AsyncSession = Depends(get_sessi
 def get_briefing_formatter_service(session: AsyncSession = Depends(get_session)) -> BriefingFormatterService:
     return BriefingFormatterService(llm_provider=get_llm_provider(), session=session)
 
+def get_reminder_service(session: AsyncSession = Depends(get_session)) -> ReminderService:
+    return ReminderService(session=session, task_service=get_task_service(session))
+
 def get_track_service(session: AsyncSession = Depends(get_session)) -> TrackService:
     return TrackService(session)
 
@@ -306,6 +310,7 @@ ContactServiceDep = Annotated[ContactService | None, Depends(get_contact_service
 ContactsCRUDServiceDep = Annotated[ContactService, Depends(get_contacts_crud_service)]
 BriefingSummaryServiceDep = Annotated[BriefingSummaryService, Depends(get_briefing_summary_service)]
 BriefingFormatterServiceDep = Annotated[BriefingFormatterService, Depends(get_briefing_formatter_service)]
+ReminderServiceDep = Annotated[ReminderService, Depends(get_reminder_service)]
 TrackServiceDep = Annotated[TrackService, Depends(get_track_service)]
 GrammarScopeServiceDep = Annotated[GrammarScopeService, Depends(get_grammar_scope_service)]
 ChunkServiceDep = Annotated[LanguageChunkService, Depends(get_language_chunk_service)]

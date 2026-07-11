@@ -1,6 +1,8 @@
 import pytest
 from unittest.mock import AsyncMock, MagicMock
 from sqlalchemy.ext.asyncio import AsyncSession
+from datetime import datetime, timezone
+
 from app.features.watcher.repository import (
     get_watcher,
     get_watchers,
@@ -12,6 +14,8 @@ from app.features.watcher.repository import (
     get_executions,
     get_alerts,
     upsert_alert,
+    get_pending_alerts_with_context,
+    resolve_alerts,
 )
 from app.features.watcher.tables import Alert, Execution, Watcher
 from app.features.watcher.schemas import WatcherCreate, WatcherUpdate
@@ -146,7 +150,7 @@ class TestCreateWatcher:
             type="html_static",
         )
         result = await create_watcher(session, monitor_create)
-        assert isinstance(result, Monitor)
+        assert isinstance(result, Watcher)
 
 
 class TestUpdateWatcher:
@@ -155,7 +159,7 @@ class TestUpdateWatcher:
         monitor = _make_watcher_orm()
         session.execute.return_value = _scalar_first(monitor)
 
-        result = await update_watcher(session, monitor_id=1, monitor_update=WatcherUpdate(name="Updated"))
+        result = await update_watcher(session, watcher_id=1, watcher_update=WatcherUpdate(name="Updated"))
 
         session.commit.assert_called_once()
         session.refresh.assert_called_once()
@@ -165,7 +169,7 @@ class TestUpdateWatcher:
         session = _make_session()
         session.execute.return_value = _scalar_first(None)
 
-        result = await update_watcher(session, monitor_id=999, monitor_update=WatcherUpdate())
+        result = await update_watcher(session, watcher_id=999, watcher_update=WatcherUpdate())
         assert result is None
 
     async def test_updates_fields(self):
@@ -174,8 +178,8 @@ class TestUpdateWatcher:
         session.execute.return_value = _scalar_first(monitor)
 
         await update_watcher(
-            session, monitor_id=1,
-            monitor_update=WatcherUpdate(name="New Name", enabled=False)
+            session, watcher_id=1,
+            watcher_update=WatcherUpdate(name="New Name", enabled=False)
         )
         assert monitor.name == "New Name"
         assert monitor.enabled is False
@@ -188,7 +192,7 @@ class TestDeleteWatcher:
 
         session.execute.side_effect = [_scalar_first(monitor), MagicMock()]
 
-        result = await delete_watcher(session, monitor_id=1)
+        result = await delete_watcher(session, watcher_id=1)
 
         assert result == monitor
         session.commit.assert_called_once()
@@ -197,7 +201,7 @@ class TestDeleteWatcher:
         session = _make_session()
         session.execute.return_value = _scalar_first(None)
 
-        result = await delete_watcher(session, monitor_id=999)
+        result = await delete_watcher(session, watcher_id=999)
         assert result is None
 
 
@@ -207,7 +211,7 @@ class TestCreateExecution:
         monitor = _make_watcher_orm()
 
         execution = await create_execution(
-            session, monitor=monitor, status="found", result="matched text", error=None
+            session, watcher=monitor, status="found", result="matched text", error=None
         )
 
         session.add.assert_called_once()
@@ -220,7 +224,7 @@ class TestCreateExecution:
         monitor = _make_watcher_orm(id=7)
 
         execution = await create_execution(
-            session, monitor=monitor, status="not_found", result=None, error=None
+            session, watcher=monitor, status="not_found", result=None, error=None
         )
 
         added_obj = session.add.call_args[0][0]
@@ -235,7 +239,7 @@ class TestCreateExecution:
         monitor = _make_watcher_orm()
 
         await create_execution(
-            session, monitor=monitor, status="error", result=None, error="Request failed"
+            session, watcher=monitor, status="error", result=None, error="Request failed"
         )
 
         added_obj = session.add.call_args[0][0]
@@ -337,3 +341,40 @@ class TestUpsertAlert:
         assert existing.execution_id == 12
         assert existing.resolved_at is None
         session.commit.assert_called_once()
+
+
+class TestGetPendingAlertsWithContext:
+    async def test_returns_pending_alerts(self):
+        session = _make_session()
+        alerts = [MagicMock(spec=Alert) for _ in range(2)]
+        session.execute.return_value = _scalar_all(alerts)
+
+        result = await get_pending_alerts_with_context(session)
+        assert result == alerts
+
+    async def test_empty(self):
+        session = _make_session()
+        session.execute.return_value = _scalar_all([])
+
+        result = await get_pending_alerts_with_context(session)
+        assert result == []
+
+
+class TestResolveAlerts:
+    async def test_updates_status_and_commits(self):
+        session = _make_session()
+        resolved = [MagicMock(spec=Alert, id=1), MagicMock(spec=Alert, id=2)]
+        session.execute.side_effect = [MagicMock(), _scalar_all(resolved)]
+
+        result = await resolve_alerts(session, alert_ids=[1, 2])
+
+        assert session.execute.call_count == 2
+        session.commit.assert_called_once()
+        assert result == resolved
+
+    async def test_empty_ids_returns_empty(self):
+        session = _make_session()
+        session.execute.side_effect = [MagicMock(), _scalar_all([])]
+
+        result = await resolve_alerts(session, alert_ids=[])
+        assert result == []

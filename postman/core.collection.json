@@ -1760,6 +1760,40 @@
       }
     },
     {
+      "name": "85 - Reminders - Get Due Digest",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Response has expected shape', () => {",
+              "    const json = pm.response.json();",
+              "    ['date', 'has_content', 'text'].forEach(f => pm.expect(json).to.have.property(f));",
+              "    pm.expect(json.text).to.be.a('string');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/core/reminders/due",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "core",
+            "reminders",
+            "due"
+          ]
+        }
+      }
+    },
+    {
       "name": "90 - Sessions - Finish",
       "event": [
         {

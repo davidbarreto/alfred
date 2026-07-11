@@ -99,7 +99,7 @@ class TestCreateWatcher:
     def test_creates_monitor(self, client):
         from app.features.watcher.schemas import WatcherRead
         monitor = WatcherRead(**_watcher_dict(id=10, name="New Monitor"))
-        with patch("app.api.routes.watcher.watchers.create_monitor", new=AsyncMock(return_value=monitor)):
+        with patch("app.api.routes.watcher.watchers.create_watcher", new=AsyncMock(return_value=monitor)):
             payload = {
                 "name": "New Monitor",
                 "url": "http://example.com",
@@ -120,12 +120,12 @@ class TestDeleteWatcher:
     def test_found_returns_monitor(self, client):
         from app.features.watcher.schemas import WatcherRead
         monitor = WatcherRead(**_watcher_dict())
-        with patch("app.api.routes.watcher.watchers.delete_monitor", new=AsyncMock(return_value=monitor)):
+        with patch("app.api.routes.watcher.watchers.delete_watcher", new=AsyncMock(return_value=monitor)):
             response = client.delete("/watcher/configs/1", headers=AUTH)
         assert response.status_code == 200
 
     def test_not_found_returns_404(self, client):
-        with patch("app.api.routes.watcher.watchers.delete_monitor", new=AsyncMock(return_value=None)):
+        with patch("app.api.routes.watcher.watchers.delete_watcher", new=AsyncMock(return_value=None)):
             response = client.delete("/watcher/configs/999", headers=AUTH)
         assert response.status_code == 404
 
@@ -138,13 +138,13 @@ class TestUpdateWatcher:
     def test_found_returns_updated(self, client):
         from app.features.watcher.schemas import WatcherRead
         monitor = WatcherRead(**_watcher_dict(name="Updated"))
-        with patch("app.api.routes.watcher.watchers.update_monitor", new=AsyncMock(return_value=monitor)):
+        with patch("app.api.routes.watcher.watchers.update_watcher", new=AsyncMock(return_value=monitor)):
             response = client.patch("/watcher/configs/1", json={"name": "Updated"}, headers=AUTH)
         assert response.status_code == 200
         assert response.json()["name"] == "Updated"
 
     def test_not_found_returns_404(self, client):
-        with patch("app.api.routes.watcher.watchers.update_monitor", new=AsyncMock(return_value=None)):
+        with patch("app.api.routes.watcher.watchers.update_watcher", new=AsyncMock(return_value=None)):
             response = client.patch("/watcher/configs/999", json={"name": "X"}, headers=AUTH)
         assert response.status_code == 404
 
@@ -157,7 +157,7 @@ class TestRunActiveWatchers:
     def test_runs_all_and_returns_executions(self, client):
         from app.features.watcher.schemas import ExecutionRead
         executions = [ExecutionRead(**_execution_dict(id=i, config_id=1)) for i in range(2)]
-        with patch("app.api.routes.watcher.watchers.MonitorService.run_due", new=AsyncMock(return_value=executions)):
+        with patch("app.api.routes.watcher.watchers.WatcherService.run_due", new=AsyncMock(return_value=executions)):
             response = client.post("/watcher/configs/run", headers=AUTH)
         assert response.status_code == 200
         assert len(response.json()) == 2
@@ -172,7 +172,7 @@ class TestRunWatcherById:
         from app.features.watcher.schemas import ExecutionRead
         execution = ExecutionRead(**_execution_dict())
         with patch(
-            "app.api.routes.watcher.watchers.MonitorService.run_monitor_by_id",
+            "app.api.routes.watcher.watchers.WatcherService.run_watcher_by_id",
             new=AsyncMock(return_value=execution),
         ):
             response = client.post("/watcher/configs/1/run", headers=AUTH)
@@ -181,7 +181,7 @@ class TestRunWatcherById:
 
     def test_not_found_returns_404(self, client):
         with patch(
-            "app.api.routes.watcher.watchers.MonitorService.run_monitor_by_id",
+            "app.api.routes.watcher.watchers.WatcherService.run_watcher_by_id",
             new=AsyncMock(return_value=None),
         ):
             response = client.post("/watcher/configs/999/run", headers=AUTH)

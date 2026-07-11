@@ -1,0 +1,222 @@
+{
+  "name": "AlfredWatcherCheck",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes",
+              "minutesInterval": 30
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [-560, 0],
+      "id": "a1a1a1a1-0001-4000-8000-000000000001",
+      "name": "Every 30 Minutes"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://api:8000/watcher/configs/run",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBearerAuth",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [-320, 0],
+      "id": "a1a1a1a1-0002-4000-8000-000000000002",
+      "name": "Run Watcher Checks",
+      "credentials": {
+        "httpBearerAuth": {
+          "id": "oj5Yf1MhLsryeSrX",
+          "name": "Bearer Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "http://api:8000/watcher/alerts/pending",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBearerAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            { "name": "limit", "value": "50" }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [-80, 0],
+      "id": "a1a1a1a1-0003-4000-8000-000000000003",
+      "name": "Get Pending Alerts",
+      "credentials": {
+        "httpBearerAuth": {
+          "id": "oj5Yf1MhLsryeSrX",
+          "name": "Bearer Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "destinationFieldName": "alerts",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "alwaysOutputData": true,
+      "position": [160, 0],
+      "id": "a1a1a1a1-0004-4000-8000-000000000004",
+      "name": "Aggregate Pending Alerts"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "b1b1b1b1-0001-4000-8000-000000000001",
+              "name": "has_alerts",
+              "type": "boolean",
+              "value": "={{ ($json.alerts || []).length > 0 }}"
+            },
+            {
+              "id": "b1b1b1b1-0002-4000-8000-000000000002",
+              "name": "text",
+              "type": "string",
+              "value": "=🔔 Watcher alerts\n{{ ($json.alerts || []).map(a => '• ' + a.watcher_name + ': ' + (a.result || 'match found') + ' (' + a.target + ')').join('\\n') }}"
+            },
+            {
+              "id": "b1b1b1b1-0003-4000-8000-000000000003",
+              "name": "alert_ids",
+              "type": "array",
+              "value": "={{ ($json.alerts || []).map(a => a.id) }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [400, 0],
+      "id": "a1a1a1a1-0005-4000-8000-000000000005",
+      "name": "Build Alert Message"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "c1c1c1c1-0001-4000-8000-000000000001",
+              "leftValue": "={{ $json.has_alerts }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [640, 0],
+      "id": "a1a1a1a1-0006-4000-8000-000000000006",
+      "name": "Has Pending Alerts"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $env.TELEGRAM_CHAT_ID }}",
+        "text": "={{ $json.text }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [880, -80],
+      "id": "a1a1a1a1-0007-4000-8000-000000000007",
+      "name": "Send Message",
+      "webhookId": "a1a1a1a1-0007-4000-8000-000000000099",
+      "credentials": {
+        "telegramApi": {
+          "id": "t63z4EHeYTEZtFAR",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://api:8000/watcher/alerts/resolve",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBearerAuth",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "alert_ids",
+              "value": "={{ $('Build Alert Message').item.json.alert_ids }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1120, -80],
+      "id": "a1a1a1a1-0008-4000-8000-000000000008",
+      "name": "Resolve Notified Alerts",
+      "credentials": {
+        "httpBearerAuth": {
+          "id": "oj5Yf1MhLsryeSrX",
+          "name": "Bearer Auth account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Every 30 Minutes": {
+      "main": [[{ "node": "Run Watcher Checks", "type": "main", "index": 0 }]]
+    },
+    "Run Watcher Checks": {
+      "main": [[{ "node": "Get Pending Alerts", "type": "main", "index": 0 }]]
+    },
+    "Get Pending Alerts": {
+      "main": [[{ "node": "Aggregate Pending Alerts", "type": "main", "index": 0 }]]
+    },
+    "Aggregate Pending Alerts": {
+      "main": [[{ "node": "Build Alert Message", "type": "main", "index": 0 }]]
+    },
+    "Build Alert Message": {
+      "main": [[{ "node": "Has Pending Alerts", "type": "main", "index": 0 }]]
+    },
+    "Has Pending Alerts": {
+      "main": [
+        [{ "node": "Send Message", "type": "main", "index": 0 }],
+        []
+      ]
+    },
+    "Send Message": {
+      "main": [[{ "node": "Resolve Notified Alerts", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

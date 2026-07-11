@@ -1,6 +1,7 @@
 from datetime import datetime, timezone
 from sqlalchemy import delete, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.features.watcher.schemas import ExecutionFilters
 
@@ -137,6 +138,28 @@ async def get_alerts(
         query = query.where(Execution.config_id == config_id)
     query = query.order_by(Alert.created_at.desc()).offset(skip).limit(limit)
     result = await session.execute(query)
+    return list(result.scalars().all())
+
+
+async def get_pending_alerts_with_context(session: AsyncSession) -> list[Alert]:
+    result = await session.execute(
+        select(Alert)
+        .options(selectinload(Alert.execution))
+        .where(Alert.status == "pending")
+        .order_by(Alert.created_at.desc())
+    )
+    return list(result.scalars().all())
+
+
+async def resolve_alerts(session: AsyncSession, alert_ids: list[int]) -> list[Alert]:
+    now = datetime.now(timezone.utc)
+    await session.execute(
+        update(Alert)
+        .where(Alert.id.in_(alert_ids))
+        .values(status="done", resolved_at=now)
+    )
+    await session.commit()
+    result = await session.execute(select(Alert).where(Alert.id.in_(alert_ids)))
     return list(result.scalars().all())
 
 

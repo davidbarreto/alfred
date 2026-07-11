@@ -1,0 +1,74 @@
+{
+  "name": "AlfredMorningBriefing",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "30 7 * * *"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [-320, 0],
+      "id": "f1f1f1f1-0001-4000-8000-000000000001",
+      "name": "Daily at 07:30"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "http://api:8000/briefing/morning/formatted",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBearerAuth",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [-80, 0],
+      "id": "f1f1f1f1-0002-4000-8000-000000000002",
+      "name": "Get Morning Briefing",
+      "credentials": {
+        "httpBearerAuth": {
+          "id": "oj5Yf1MhLsryeSrX",
+          "name": "Bearer Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $env.TELEGRAM_CHAT_ID }}",
+        "text": "={{ $json.text }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [160, 0],
+      "id": "f1f1f1f1-0003-4000-8000-000000000003",
+      "name": "Send Message",
+      "webhookId": "f1f1f1f1-0003-4000-8000-000000000099",
+      "credentials": {
+        "telegramApi": {
+          "id": "t63z4EHeYTEZtFAR",
+          "name": "Telegram account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Daily at 07:30": {
+      "main": [[{ "node": "Get Morning Briefing", "type": "main", "index": 0 }]]
+    },
+    "Get Morning Briefing": {
+      "main": [[{ "node": "Send Message", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

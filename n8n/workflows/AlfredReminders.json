@@ -1,0 +1,110 @@
+{
+  "name": "AlfredReminders",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 8-22 * * *"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [-320, 0],
+      "id": "d1d1d1d1-0001-4000-8000-000000000001",
+      "name": "Hourly 08:00-22:00"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "http://api:8000/core/reminders/due",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBearerAuth",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [-80, 0],
+      "id": "d1d1d1d1-0002-4000-8000-000000000002",
+      "name": "Get Due Reminders",
+      "credentials": {
+        "httpBearerAuth": {
+          "id": "oj5Yf1MhLsryeSrX",
+          "name": "Bearer Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "e1e1e1e1-0001-4000-8000-000000000001",
+              "leftValue": "={{ $json.has_content }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [160, 0],
+      "id": "d1d1d1d1-0003-4000-8000-000000000003",
+      "name": "Has Content"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $env.TELEGRAM_CHAT_ID }}",
+        "text": "={{ $json.text }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [400, -80],
+      "id": "d1d1d1d1-0004-4000-8000-000000000004",
+      "name": "Send Message",
+      "webhookId": "d1d1d1d1-0004-4000-8000-000000000099",
+      "credentials": {
+        "telegramApi": {
+          "id": "t63z4EHeYTEZtFAR",
+          "name": "Telegram account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Hourly 08:00-22:00": {
+      "main": [[{ "node": "Get Due Reminders", "type": "main", "index": 0 }]]
+    },
+    "Get Due Reminders": {
+      "main": [[{ "node": "Has Content", "type": "main", "index": 0 }]]
+    },
+    "Has Content": {
+      "main": [
+        [{ "node": "Send Message", "type": "main", "index": 0 }],
+        []
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

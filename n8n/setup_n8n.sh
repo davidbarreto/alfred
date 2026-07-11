@@ -253,6 +253,11 @@ for w in data.get('data', []):
   local count=0
   local wf_id
   for wf_id in $wf_ids; do
+    # Workflows must be archived before they can be deleted.
+    curl -s -o /dev/null \
+      -b "$cookie_jar" \
+      -X POST "${N8N_BASE_URL}/rest/workflows/${wf_id}/archive"
+
     local del_status
     del_status=$(curl -s -o /dev/null -w "%{http_code}" \
       -b "$cookie_jar" \

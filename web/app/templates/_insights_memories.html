@@ -10,15 +10,25 @@
 {% if memories %}
 <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3" id="memories-grid">
   {% for m in memories %}
-  <div class="bg-white border border-gray-200 rounded-lg p-4 hover:border-gray-300 transition-colors"
+  <div class="bg-white border border-gray-200 rounded-lg p-4 hover:border-gray-300 transition-colors group relative"
        data-category="{{ m.category }}">
     <div class="flex items-start justify-between gap-2 mb-2">
       <span class="text-[10px] px-1.5 py-0.5 rounded font-medium {{ cat_styles.get(m.category, 'bg-gray-100 text-gray-500') }}">
         {{ m.category }}
       </span>
-      {% if not m.active %}
-      <span class="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-400">inactive</span>
-      {% endif %}
+      <div class="flex items-center gap-1.5">
+        {% if not m.active %}
+        <span class="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-400">inactive</span>
+        {% endif %}
+        <button
+          class="text-gray-200 hover:text-[#E24B4A] opacity-0 group-hover:opacity-100 transition-all flex-shrink-0"
+          hx-delete="/insights/memories/{{ m.id }}"
+          hx-target="#memories-section"
+          hx-swap="innerHTML"
+          hx-confirm="Delete this memory?"
+          title="Delete"
+        ><i class="ti ti-trash text-sm"></i></button>
+      </div>
     </div>
     <p class="text-sm text-gray-800 leading-relaxed line-clamp-3">{{ m.content }}</p>
     <div class="mt-3 space-y-1.5">

@@ -40,6 +40,31 @@ async def memories_section(request: Request):
     })
 
 
+@router.delete("/memories/{memory_id}", response_class=HTMLResponse)
+async def delete_memory(memory_id: int, request: Request):
+    try:
+        await api.delete(f"/core/memories/{memory_id}")
+    except httpx.HTTPError:
+        return HTMLResponse('<p class="text-[#E24B4A] text-sm">Failed to delete memory.</p>', status_code=422)
+
+    category = request.query_params.get("category", "").strip()
+    params: dict = {"limit": _PAGE_SIZE + 1, "offset": 0}
+    if category:
+        params["category"] = category
+    try:
+        raw = await api.get("/core/memories", params=params)
+    except httpx.HTTPError:
+        raw = []
+    memories, memories_has_next, memories_has_prev = _pagination(raw, 0)
+    return templates.TemplateResponse(request, "_insights_memories.html", {
+        "memories": memories,
+        "memories_offset": 0,
+        "memories_has_next": memories_has_next,
+        "memories_has_prev": False,
+        "memories_category": category,
+    })
+
+
 @router.get("/working-memory-section", response_class=HTMLResponse)
 async def working_memory_section(request: Request):
     offset = max(0, int(request.query_params.get("offset", "0")))

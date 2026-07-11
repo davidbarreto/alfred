@@ -1,8 +1,9 @@
-"""Seed (upsert) language tracks from the _TRACKS list below.
+"""Seed language tracks from the _TRACKS list below.
 
-Inserts any track that doesn't exist yet; updates name and level for
-tracks that do — so changing a level here takes effect on next restart
-without requiring a migration.
+Inserts any track that doesn't exist yet. Tracks that already exist are left
+untouched — name, level, daily_quota, review_mode and active are all
+user-editable via PATCH /language/tracks/{id}, so re-running this on every
+deploy must not clobber those edits.
 
 Usage (from the backend/ directory):
     python db/seeds/seed_language_tracks.py
@@ -24,10 +25,10 @@ from app.features.language.tracks.tables import Track
 _TRACKS = [
     ("fr", "French",  "A2"),
     ("ru", "Russian", "A1"),
-    ("es", "Spanish", "A2"),
+    ("es", "Spanish", "A1"),
     ("it", "Italian", "A1"),
     ("en", "English", "B2"),
-    ("de", "German",  "A2"),
+    ("de", "German",  "A1"),
 ]
 
 
@@ -47,17 +48,16 @@ async def _seed() -> None:
                     created_at=now,
                     updated_at=now,
                 )
-                .on_conflict_do_update(
-                    index_elements=["code"],
-                    set_={"name": name, "level": level, "updated_at": now},
-                )
+                .on_conflict_do_nothing(index_elements=["code"])
             )
-            await session.execute(stmt)
+            result = await session.execute(stmt)
+            if result.rowcount:
+                print(f"  [{code}] {name} ({level}) — inserted")
+            else:
+                print(f"  [{code}] {name} — already exists, left untouched")
         await session.commit()
 
-    for code, name, level in _TRACKS:
-        print(f"  [{code}] {name} ({level}) — upserted")
-    print(f"\nDone — {len(_TRACKS)} tracks seeded.")
+    print(f"\nDone — {len(_TRACKS)} tracks checked.")
 
 
 if __name__ == "__main__":

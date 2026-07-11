@@ -225,7 +225,51 @@ _import_credentials() {
 }
 
 # ---------------------------------------------------------------------------
-# Step 3 — Import workflows
+# Step 3 — Delete existing workflows
+# `n8n import:workflow` creates a new workflow whenever the JSON's id
+# doesn't already exist in the DB, instead of updating in place. Clearing
+# everything first keeps re-imports idempotent and avoids duplicates.
+# ---------------------------------------------------------------------------
+_delete_all_workflows() {
+  echo -e "${BLUE}Deleting existing workflows...${NC}"
+
+  local cookie_jar
+  cookie_jar=$(mktemp)
+
+  if ! _n8n_login "$cookie_jar"; then
+    echo -e "${YELLOW}Skipping workflow deletion${NC}"
+    rm -f "$cookie_jar"
+    return
+  fi
+
+  local wf_ids
+  wf_ids=$(curl -s -b "$cookie_jar" "${N8N_BASE_URL}/rest/workflows" | python3 -c "
+import sys, json
+data = json.load(sys.stdin)
+for w in data.get('data', []):
+    print(w['id'])
+")
+
+  local count=0
+  local wf_id
+  for wf_id in $wf_ids; do
+    local del_status
+    del_status=$(curl -s -o /dev/null -w "%{http_code}" \
+      -b "$cookie_jar" \
+      -X DELETE "${N8N_BASE_URL}/rest/workflows/${wf_id}")
+    if [ "$del_status" = "200" ]; then
+      count=$((count + 1))
+    else
+      echo -e "  ${YELLOW}⚠ failed to delete workflow id=${wf_id} (HTTP $del_status)${NC}"
+    fi
+  done
+
+  rm -f "$cookie_jar"
+  echo -e "${GREEN}✓ Deleted ${count} workflow(s)${NC}"
+}
+
+# ---------------------------------------------------------------------------
+# Step 4 — Import workflows
 # ---------------------------------------------------------------------------
 _import_workflows() {
   echo -e "${BLUE}Importing workflows...${NC}"
@@ -254,7 +298,7 @@ _import_workflows() {
 }
 
 # ---------------------------------------------------------------------------
-# Step 4 — Publish all workflows (promote latest draft version → live)
+# Step 5 — Publish all workflows (promote latest draft version → live)
 # n8n 2.x: publishing == activating. POST /rest/workflows/:id/activate with
 # the draft versionId promotes it to the live version and activates the
 # workflow. (The legacy PATCH {"active": true} is ignored by the update DTO,
@@ -342,6 +386,7 @@ _validate_cred_vars
 _wait_for_n8n
 _setup_owner
 _import_credentials
+_delete_all_workflows
 _import_workflows
 _publish_workflows
 

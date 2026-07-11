@@ -14,12 +14,28 @@ depends_on = None
 
 
 def upgrade() -> None:
-    op.create_unique_constraint(
-        "uq_core_working_memory_key", "working_memory", ["key"], schema="core"
-    )
+    # Guarded so a concurrent/retried "alembic upgrade head" run — which can race on this
+    # DDL and lose — doesn't fail the deploy after the constraint was already committed.
+    op.execute("""
+        DO $$
+        BEGIN
+            IF NOT EXISTS (
+                SELECT 1 FROM pg_constraint WHERE conname = 'uq_core_working_memory_key'
+            ) THEN
+                ALTER TABLE core.working_memory ADD CONSTRAINT uq_core_working_memory_key UNIQUE (key);
+            END IF;
+        END $$;
+    """)
 
 
 def downgrade() -> None:
-    op.drop_constraint(
-        "uq_core_working_memory_key", "working_memory", schema="core", type_="unique"
-    )
+    op.execute("""
+        DO $$
+        BEGIN
+            IF EXISTS (
+                SELECT 1 FROM pg_constraint WHERE conname = 'uq_core_working_memory_key'
+            ) THEN
+                ALTER TABLE core.working_memory DROP CONSTRAINT uq_core_working_memory_key;
+            END IF;
+        END $$;
+    """)

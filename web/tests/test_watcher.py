@@ -118,7 +118,7 @@ class TestDeleteWatcher:
 
 class TestToggleWatcher:
     def test_toggles_enabled_state(self, client, mock_api):
-        mock_api["get"].side_effect = [[_monitor(enabled=False)], []]
+        mock_api["get"].side_effect = [[_watcher(enabled=False)], []]
 
         resp = client.patch("/watcher/1/toggle", data={"enabled": "false"})
 

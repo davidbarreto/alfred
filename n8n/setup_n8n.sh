@@ -184,7 +184,51 @@ _validate_cred_vars() {
 }
 
 # ---------------------------------------------------------------------------
-# Step 2 — Import credentials (envsubst templates)
+# Step 2 — Delete existing credentials
+# `n8n import:credentials` creates a new credential whenever the JSON's id
+# doesn't already exist in the DB, instead of updating in place. Clearing
+# everything first keeps re-imports idempotent and avoids duplicates.
+# ---------------------------------------------------------------------------
+_delete_all_credentials() {
+  echo -e "${BLUE}Deleting existing credentials...${NC}"
+
+  local cookie_jar
+  cookie_jar=$(mktemp)
+
+  if ! _n8n_login "$cookie_jar"; then
+    echo -e "${YELLOW}Skipping credential deletion${NC}"
+    rm -f "$cookie_jar"
+    return
+  fi
+
+  local cred_ids
+  cred_ids=$(curl -s -b "$cookie_jar" "${N8N_BASE_URL}/rest/credentials" | python3 -c "
+import sys, json
+data = json.load(sys.stdin)
+for c in data.get('data', []):
+    print(c['id'])
+")
+
+  local count=0
+  local cred_id
+  for cred_id in $cred_ids; do
+    local del_status
+    del_status=$(curl -s -o /dev/null -w "%{http_code}" \
+      -b "$cookie_jar" \
+      -X DELETE "${N8N_BASE_URL}/rest/credentials/${cred_id}")
+    if [ "$del_status" = "200" ]; then
+      count=$((count + 1))
+    else
+      echo -e "  ${YELLOW}⚠ failed to delete credential id=${cred_id} (HTTP $del_status)${NC}"
+    fi
+  done
+
+  rm -f "$cookie_jar"
+  echo -e "${GREEN}✓ Deleted ${count} credential(s)${NC}"
+}
+
+# ---------------------------------------------------------------------------
+# Step 3 — Import credentials (envsubst templates)
 # ---------------------------------------------------------------------------
 _import_credentials() {
   echo -e "${BLUE}Importing credentials...${NC}"
@@ -225,7 +269,7 @@ _import_credentials() {
 }
 
 # ---------------------------------------------------------------------------
-# Step 3 — Delete existing workflows
+# Step 4 — Delete existing workflows
 # `n8n import:workflow` creates a new workflow whenever the JSON's id
 # doesn't already exist in the DB, instead of updating in place. Clearing
 # everything first keeps re-imports idempotent and avoids duplicates.
@@ -274,7 +318,7 @@ for w in data.get('data', []):
 }
 
 # ---------------------------------------------------------------------------
-# Step 4 — Import workflows
+# Step 5 — Import workflows
 # ---------------------------------------------------------------------------
 _import_workflows() {
   echo -e "${BLUE}Importing workflows...${NC}"
@@ -303,7 +347,7 @@ _import_workflows() {
 }
 
 # ---------------------------------------------------------------------------
-# Step 5 — Publish all workflows (promote latest draft version → live)
+# Step 6 — Publish all workflows (promote latest draft version → live)
 # n8n 2.x: publishing == activating. POST /rest/workflows/:id/activate with
 # the draft versionId promotes it to the live version and activates the
 # workflow. (The legacy PATCH {"active": true} is ignored by the update DTO,
@@ -390,6 +434,7 @@ echo -e "${BLUE}======================================${NC}"
 _validate_cred_vars
 _wait_for_n8n
 _setup_owner
+_delete_all_credentials
 _import_credentials
 _delete_all_workflows
 _import_workflows

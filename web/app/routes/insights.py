@@ -1,5 +1,6 @@
 from collections import Counter, defaultdict
 from datetime import date, timedelta
+from urllib.parse import urlencode
 
 import httpx
 from fastapi import APIRouter, Request
@@ -11,6 +12,8 @@ from app.templates_config import templates
 router = APIRouter(prefix="/insights")
 
 _PAGE_SIZE = 20
+_LLM_CALLS_PREVIEW_SIZE = 5
+_LLM_CALL_OPTIONS_LIMIT = 500
 
 
 def _pagination(items: list, offset: int) -> tuple[list, bool, bool]:
@@ -240,7 +243,10 @@ async def insights_page(request: Request):
 
     # ── LLM aggregations ─────────────────────────────────────────
     llm_by_model = dict(Counter(c["model"] for c in llm_calls).most_common())
-    llm_by_feature = dict(Counter(c["feature"] for c in llm_calls).most_common(10))
+    tokens_by_feature: dict[str, int] = defaultdict(int)
+    for c in llm_calls:
+        tokens_by_feature[c["feature"]] += (c.get("tokens_input") or 0) + (c.get("tokens_output") or 0)
+    tokens_by_feature = dict(sorted(tokens_by_feature.items(), key=lambda kv: -kv[1])[:10])
     total_tokens_in = sum(c.get("tokens_input") or 0 for c in llm_calls)
     total_tokens_out = sum(c.get("tokens_output") or 0 for c in llm_calls)
     avg_latency = (
@@ -284,7 +290,7 @@ async def insights_page(request: Request):
         "total_wm": len(wm_sorted),
         "memories_by_category": memories_by_category,
         # llm
-        "llm_calls": llm_calls[:20],
+        "llm_calls": llm_calls[:_LLM_CALLS_PREVIEW_SIZE],
         "provider_calls": provider_calls[:20],
         "total_llm_calls": len(llm_calls),
         "total_tokens": total_tokens_in + total_tokens_out,
@@ -299,9 +305,58 @@ async def insights_page(request: Request):
         "needs_attention": needs_attention,
         # chart data
         "llm_by_model": llm_by_model,
-        "llm_by_feature": llm_by_feature,
+        "tokens_by_feature": tokens_by_feature,
         "provider_by_name": provider_by_name,
         "provider_by_status": provider_by_status,
         "cmd_by_name": cmd_by_name,
         "cmd_by_status": cmd_by_status,
+    })
+
+
+async def _llm_call_filter_options() -> tuple[list[str], list[str]]:
+    """Distinct models/features for the filter dropdowns, from a recent sample of calls."""
+    try:
+        raw = await api.get("/integration/llm-calls", params={"limit": _LLM_CALL_OPTIONS_LIMIT})
+    except httpx.HTTPError:
+        raw = []
+    models = sorted({c["model"] for c in raw})
+    features = sorted({c["feature"] for c in raw})
+    return models, features
+
+
+@router.get("/llm-calls", response_class=HTMLResponse)
+async def llm_calls_page(request: Request):
+    offset = max(0, int(request.query_params.get("offset", "0")))
+    model = request.query_params.get("model", "").strip()
+    feature = request.query_params.get("feature", "").strip()
+    q = request.query_params.get("q", "").strip()
+
+    params: dict = {"limit": _PAGE_SIZE + 1, "skip": offset}
+    if model:
+        params["model"] = model
+    if feature:
+        params["feature"] = feature
+    if q:
+        params["q"] = q
+
+    try:
+        raw = await api.get("/integration/llm-calls", params=params)
+    except httpx.HTTPError:
+        raw = []
+
+    calls, has_next, has_prev = _pagination(raw, offset)
+    models, features = await _llm_call_filter_options()
+    filter_qs = urlencode({k: v for k, v in {"model": model, "feature": feature, "q": q}.items() if v})
+
+    return templates.TemplateResponse(request, "llm_calls.html", {
+        "calls": calls,
+        "offset": offset,
+        "has_next": has_next,
+        "has_prev": has_prev,
+        "model": model,
+        "feature": feature,
+        "q": q,
+        "models": models,
+        "features": features,
+        "filter_qs": filter_qs,
     })

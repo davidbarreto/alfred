@@ -16,6 +16,15 @@ def _wm(id=1, key="travel_context", value="Belgium next week", expires_at=None):
     }
 
 
+def _llm_call(id=1, provider="google", model="gemini-2.5-flash", feature="chat",
+              tokens_input=100, tokens_output=50, latency_ms=800):
+    return {
+        "id": id, "provider": provider, "model": model, "feature": feature,
+        "tokens_input": tokens_input, "tokens_output": tokens_output, "latency_ms": latency_ms,
+        "created_at": "2026-07-01T00:00:00",
+    }
+
+
 class TestDeleteMemory:
     def test_deletes_memory_and_renders_updated_list(self, client, mock_api):
         mock_api["get"].return_value = [_memory(id=2, content="Remaining memory")]
@@ -100,3 +109,93 @@ class TestWorkingMemorySection:
         assert resp.status_code == 200
         assert "travel_context" in resp.text
         assert "Belgium next week" in resp.text
+
+
+class TestInsightsPageLlmCharts:
+    def test_computes_tokens_spent_per_feature(self, client, mock_api):
+        async def fake_get(path, params=None):
+            if path == "/integration/llm-calls":
+                return [
+                    _llm_call(id=1, feature="chat", tokens_input=100, tokens_output=50),
+                    _llm_call(id=2, feature="chat", tokens_input=200, tokens_output=100),
+                    _llm_call(id=3, feature="briefing", tokens_input=10, tokens_output=5),
+                ]
+            return []
+
+        mock_api["get"].side_effect = fake_get
+
+        resp = client.get("/insights/")
+
+        assert resp.status_code == 200
+        assert "Tokens by feature" in resp.text
+        assert "450" in resp.text  # chat: 100+50+200+100
+        assert "View all" in resp.text
+
+    def test_limits_recent_calls_preview_to_five(self, client, mock_api):
+        async def fake_get(path, params=None):
+            if path == "/integration/llm-calls":
+                return [_llm_call(id=i, latency_ms=100 + i) for i in range(1, 8)]
+            return []
+
+        mock_api["get"].side_effect = fake_get
+
+        resp = client.get("/insights/")
+
+        assert resp.status_code == 200
+        assert "105 ms" in resp.text
+        assert "106 ms" not in resp.text
+        assert "107 ms" not in resp.text
+
+
+class TestLlmCallsPage:
+    def test_lists_calls_and_filter_dropdown_options(self, client, mock_api):
+        async def fake_get(path, params=None):
+            if params.get("limit") == 500:
+                return [
+                    _llm_call(id=1, model="gemini-2.5-flash", feature="chat"),
+                    _llm_call(id=2, model="gpt-4o-mini", feature="briefing"),
+                ]
+            return [_llm_call(id=1, model="gemini-2.5-flash", feature="chat")]
+
+        mock_api["get"].side_effect = fake_get
+
+        resp = client.get("/insights/llm-calls")
+
+        assert resp.status_code == 200
+        assert "gemini-2.5-flash" in resp.text
+        assert "gpt-4o-mini" in resp.text  # only present via the model filter dropdown
+        assert "briefing" in resp.text  # only present via the feature filter dropdown
+
+    def test_applies_filters_as_backend_query_params(self, client, mock_api):
+        seen_params = []
+
+        async def fake_get(path, params=None):
+            seen_params.append(params)
+            if params.get("limit") == 500:
+                return []
+            return [_llm_call(id=1, model="gemini-2.5-flash", feature="chat")]
+
+        mock_api["get"].side_effect = fake_get
+
+        resp = client.get("/insights/llm-calls?model=gemini-2.5-flash&feature=chat&q=hello")
+
+        assert resp.status_code == 200
+        main_call_params = next(p for p in seen_params if p.get("limit") != 500)
+        assert main_call_params["model"] == "gemini-2.5-flash"
+        assert main_call_params["feature"] == "chat"
+        assert main_call_params["q"] == "hello"
+        assert main_call_params["skip"] == 0
+
+    def test_shows_next_link_when_more_than_a_page(self, client, mock_api):
+        async def fake_get(path, params=None):
+            if params.get("limit") == 500:
+                return []
+            return [_llm_call(id=i) for i in range(21)]
+
+        mock_api["get"].side_effect = fake_get
+
+        resp = client.get("/insights/llm-calls")
+
+        assert resp.status_code == 200
+        assert "Next →" in resp.text
+        assert "offset=20" in resp.text

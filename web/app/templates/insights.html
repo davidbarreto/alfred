@@ -178,7 +178,10 @@
 
   <!-- ── LLM Usage ──────────────────────────────────────────── -->
   <section>
-    <h2 class="text-sm font-medium text-gray-900 mb-3">LLM Usage</h2>
+    <div class="flex items-center justify-between mb-3">
+      <h2 class="text-sm font-medium text-gray-900">LLM Usage</h2>
+      <a href="/insights/llm-calls" class="text-xs text-[#378ADD] hover:underline">View all →</a>
+    </div>
     <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
 
       <!-- By model -->
@@ -197,24 +200,24 @@
         {% endif %}
       </div>
 
-      <!-- By feature -->
+      <!-- Tokens by feature -->
       <div class="card bg-white sm:col-span-2">
-        {% if llm_by_feature %}
-        <div class="card-body p-4 cursor-pointer relative group" onclick="openChartModal('llm-feature')">
+        {% if tokens_by_feature %}
+        <div class="card-body p-4 cursor-pointer relative group" onclick="openChartModal('tokens-feature')">
           <i class="ti ti-arrows-maximize text-gray-300 group-hover:text-gray-500 absolute top-3 right-3 text-sm"></i>
-          <p class="text-xs text-gray-400 uppercase tracking-wide mb-3">By feature</p>
-          <canvas id="chart-llm-feature" height="180"></canvas>
+          <p class="text-xs text-gray-400 uppercase tracking-wide mb-3">Tokens by feature</p>
+          <canvas id="chart-tokens-feature" height="180"></canvas>
         </div>
         {% else %}
         <div class="card-body p-4">
-          <p class="text-xs text-gray-400 uppercase tracking-wide mb-3">By feature</p>
+          <p class="text-xs text-gray-400 uppercase tracking-wide mb-3">Tokens by feature</p>
           <p class="text-sm text-gray-300 py-6 text-center">No data</p>
         </div>
         {% endif %}
       </div>
     </div>
 
-    <!-- Recent LLM calls table -->
+    <!-- Recent LLM calls preview -->
     {% if llm_calls %}
     <div class="card bg-white mt-4"><div class="card-body p-0 overflow-x-auto">
       <table class="w-full text-sm">
@@ -471,7 +474,7 @@ function bar(id, data, key, title) {
 }
 
 {% if llm_by_model %}donut("chart-llm-model", {{ llm_by_model | tojson }}, "llm-model", "By model");{% endif %}
-{% if llm_by_feature %}bar("chart-llm-feature", {{ llm_by_feature | tojson }}, "llm-feature", "By feature");{% endif %}
+{% if tokens_by_feature %}bar("chart-tokens-feature", {{ tokens_by_feature | tojson }}, "tokens-feature", "Tokens by feature");{% endif %}
 {% if provider_by_name %}donut("chart-provider-name", {{ provider_by_name | tojson }}, "provider-name", "By provider");{% endif %}
 {% if provider_by_status %}
   const statusData = {{ provider_by_status | tojson }};

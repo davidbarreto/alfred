@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+{% block title %}LLM Calls{% endblock %}
+
+{% block content %}
+<div class="p-6 space-y-4">
+  <a href="/insights" class="text-xs text-[#378ADD] hover:underline">← Insights</a>
+  <h1 class="text-base font-semibold text-gray-900">LLM Calls</h1>
+
+  <!-- Filters — full navigation so active state re-renders server-side -->
+  <form method="get" action="/insights/llm-calls" class="flex flex-wrap gap-3 items-end border-b border-gray-200 pb-4">
+    <div>
+      <label class="text-xs text-gray-500 mb-1 block">Model</label>
+      <select name="model" onchange="this.form.submit()"
+        class="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-[#378ADD]">
+        <option value="">All models</option>
+        {% for m in models %}
+        <option value="{{ m }}" {% if m == model %}selected{% endif %}>{{ m }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <label class="text-xs text-gray-500 mb-1 block">Feature</label>
+      <select name="feature" onchange="this.form.submit()"
+        class="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-[#378ADD]">
+        <option value="">All features</option>
+        {% for f in features %}
+        <option value="{{ f }}" {% if f == feature %}selected{% endif %}>{{ f }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="flex-1 min-w-[180px]">
+      <label class="text-xs text-gray-500 mb-1 block">Search response</label>
+      <input type="text" name="q" value="{{ q }}" placeholder="Search response text…"
+        class="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white w-full focus:outline-none focus:ring-1 focus:ring-[#378ADD]" />
+    </div>
+    <div class="flex gap-2">
+      <button type="submit" class="btn btn-sm btn-primary">Filter</button>
+      {% if model or feature or q %}
+      <a href="/insights/llm-calls" class="btn btn-sm btn-ghost text-gray-500">Clear</a>
+      {% endif %}
+    </div>
+  </form>
+
+  {% if calls %}
+  <div class="card bg-white"><div class="card-body p-0 overflow-x-auto">
+    <table class="w-full text-sm">
+      <thead>
+        <tr class="border-b border-gray-100 text-xs text-gray-400 uppercase tracking-wide">
+          <th class="text-left px-4 py-3 font-medium">Model</th>
+          <th class="text-left px-4 py-3 font-medium">Feature</th>
+          <th class="text-right px-4 py-3 font-medium">Tokens in</th>
+          <th class="text-right px-4 py-3 font-medium">Tokens out</th>
+          <th class="text-right px-4 py-3 font-medium">Latency</th>
+          <th class="text-right px-4 py-3 font-medium">When</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-gray-50">
+        {% for c in calls %}
+        <tr class="hover:bg-gray-50">
+          <td class="px-4 py-2.5 text-gray-700 font-medium">{{ c.model }}</td>
+          <td class="px-4 py-2.5">
+            <span class="text-[10px] px-1.5 py-0.5 rounded bg-[#E6F1FB] text-[#0C447C]">{{ c.feature }}</span>
+          </td>
+          <td class="px-4 py-2.5 text-right text-gray-500">{{ c.tokens_input or "—" }}</td>
+          <td class="px-4 py-2.5 text-right text-gray-500">{{ c.tokens_output or "—" }}</td>
+          <td class="px-4 py-2.5 text-right text-gray-400">
+            {% if c.latency_ms %}{{ c.latency_ms }} ms{% else %}—{% endif %}
+          </td>
+          <td class="px-4 py-2.5 text-right text-gray-400 text-xs">{{ c.created_at[:16].replace("T", " ") }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div></div>
+
+  <div class="flex justify-between items-center">
+    {% if has_prev %}
+    <a href="/insights/llm-calls?offset={{ offset - 20 }}{% if filter_qs %}&{{ filter_qs }}{% endif %}"
+      class="px-3 py-1.5 rounded text-xs font-medium text-gray-600 bg-white border border-gray-200 hover:border-gray-300">← Prev</a>
+    {% else %}<span></span>{% endif %}
+    {% if has_next %}
+    <a href="/insights/llm-calls?offset={{ offset + 20 }}{% if filter_qs %}&{{ filter_qs }}{% endif %}"
+      class="px-3 py-1.5 rounded text-xs font-medium text-gray-600 bg-white border border-gray-200 hover:border-gray-300">Next →</a>
+    {% else %}<span></span>{% endif %}
+  </div>
+  {% else %}
+  <div class="card bg-white"><div class="card-body p-6 text-center text-sm text-gray-400">No LLM calls found.</div></div>
+  {% endif %}
+</div>
+{% endblock %}

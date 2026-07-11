@@ -9,6 +9,7 @@
         <span class="text-[10px] px-1.5 py-0.5 rounded font-medium
           {% if wm.key.startswith('transient:') %}bg-amber-50 text-amber-700
           {% elif wm.key.startswith('language:') %}bg-purple-50 text-purple-700
+          {% elif wm.key.startswith('reminder:') %}bg-blue-50 text-blue-700
           {% else %}bg-gray-100 text-gray-500{% endif %}">
           {{ wm.key.split(':')[0] if ':' in wm.key else wm.key }}
         </span>
@@ -17,8 +18,11 @@
         {% elif wm.expires_at %}
         <span class="text-[10px] text-gray-400">expires {{ wm.expires_at[:10] }}</span>
         {% endif %}
+        {% if wm.display_meta %}
+        <span class="text-[10px] text-gray-400">{{ wm.display_meta }}</span>
+        {% endif %}
       </div>
-      <p class="text-sm text-gray-700 leading-relaxed">{{ wm.value }}</p>
+      <p class="text-sm text-gray-700 leading-relaxed">{{ wm.display_text or wm.value }}</p>
     </div>
     <button
       class="text-gray-200 hover:text-[#E24B4A] opacity-0 group-hover:opacity-100 transition-all flex-shrink-0 mt-0.5"

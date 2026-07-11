@@ -1,6 +1,7 @@
 import logging
 from datetime import datetime, timedelta, timezone
 
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.features.core.reminders.schemas import ReminderDigest
@@ -24,6 +25,7 @@ _NORMAL_DEDUP_TTL = timedelta(hours=24)
 
 class ReminderService:
     def __init__(self, session: AsyncSession, task_service: TaskService) -> None:
+        self._session = session
         self._task_service = task_service
         self._event_repo = CalendarEventRepository(session)
         self._shopping_repo = ShoppingRepository(session)
@@ -120,6 +122,12 @@ class ReminderService:
 
     async def _mark_reminded(self, kind: str, entity_id: int, today, ttl: timedelta) -> None:
         key = f"reminder:{kind}:{entity_id}:{today.isoformat()}"
-        await self._working_memory_repo.create(
-            WorkingMemoryCreate(key=key, value="reminded", expires_at=datetime.now(timezone.utc) + ttl)
-        )
+        try:
+            await self._working_memory_repo.create(
+                WorkingMemoryCreate(key=key, value="reminded", expires_at=datetime.now(timezone.utc) + ttl)
+            )
+        except IntegrityError:
+            # Concurrent build_due_digest calls can both pass _already_reminded before either
+            # commits; the unique constraint on key rejects the loser here instead of duplicating.
+            await self._session.rollback()
+            logger.debug("Reminder dedup marker already exists: key=%s", key)

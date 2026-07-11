@@ -349,6 +349,20 @@ class TestBuildSystemPromptWorkingMemory:
         prompt = _build_system_prompt([])
         assert "Active context" not in prompt
 
+    def test_excludes_reminder_dedup_markers(self):
+        wm = _make_wm("reminder:task:42:2026-07-11", "reminded")
+        prompt = _build_system_prompt([], working_memories=[wm])
+        assert "Active context" not in prompt
+        assert "reminder:" not in prompt
+
+    def test_reminder_marker_does_not_hide_other_entries(self):
+        reminder_wm = _make_wm("reminder:task:42:2026-07-11", "reminded")
+        travel_wm = _make_wm("travel_context", "Belgium next week")
+        prompt = _build_system_prompt([], working_memories=[reminder_wm, travel_wm])
+        assert "Active context" in prompt
+        assert "travel_context" in prompt
+        assert "reminder:" not in prompt
+
     def test_includes_practice_hint_for_language_practice_without_session(self):
         wm = _make_wm("language:pending", '{"mode": "practice", "chunk_id": 1, "text": "fazer questão de"}')
         prompt = _build_system_prompt([], working_memories=[wm])

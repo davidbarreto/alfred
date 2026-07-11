@@ -2,6 +2,7 @@ from datetime import datetime, timedelta, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from sqlalchemy.exc import IntegrityError
 
 from app.features.core.reminders.service import ReminderService
 from app.features.organizer.tasks.schemas import TaskUpdate
@@ -104,6 +105,28 @@ class TestBuildDueDigestTasks:
 
         MockWMRepo.return_value.create.assert_not_awaited()
         assert digest.has_content is False
+
+    async def test_concurrent_mark_reminded_race_is_swallowed(self, mock_session, mock_task_service):
+        task = _make_task(id=7, deadline=NOW - timedelta(hours=1), urgency="URGENT")
+        mock_task_service.get_tasks.return_value = [task]
+
+        with (
+            patch("app.features.core.reminders.service.CalendarEventRepository") as MockEventRepo,
+            patch("app.features.core.reminders.service.ShoppingRepository") as MockShoppingRepo,
+            patch("app.features.core.reminders.service.WorkingMemoryRepository") as MockWMRepo,
+            patch("app.features.core.reminders.service.local_now", return_value=NOW),
+        ):
+            MockEventRepo.return_value.get_events = AsyncMock(return_value=[])
+            MockShoppingRepo.return_value.list = AsyncMock(return_value=[])
+            MockWMRepo.return_value.list = AsyncMock(return_value=[])
+            MockWMRepo.return_value.create = AsyncMock(
+                side_effect=IntegrityError("insert", {}, Exception("duplicate key"))
+            )
+
+            digest = await _service(mock_session, mock_task_service).build_due_digest()
+
+        mock_session.rollback.assert_awaited_once()
+        assert "Overdue (URGENT): Pay rent" in digest.text
 
     async def test_far_future_task_is_excluded(self, mock_session, mock_task_service):
         task = _make_task(id=4, deadline=NOW + timedelta(days=3), urgency="NORMAL")

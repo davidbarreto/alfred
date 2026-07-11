@@ -19,6 +19,40 @@ def _pagination(items: list, offset: int) -> tuple[list, bool, bool]:
     return items[:_PAGE_SIZE], has_next, offset > 0
 
 
+_REMINDER_KIND_PATHS = {"task": "/organizer/tasks", "event": "/organizer/calendar-events"}
+_REMINDER_KIND_LABELS = {"task": "Task", "event": "Event", "shopping": "Shopping list"}
+
+
+async def _describe_reminder(item: dict) -> None:
+    """Resolve a `reminder:{kind}:{entity_id}:{date}` dedup marker to a readable label."""
+    parts = item["key"].split(":", 3)
+    if len(parts) != 4:
+        return
+    _, kind, entity_id, reminded_date = parts
+    label = _REMINDER_KIND_LABELS.get(kind, kind.title())
+
+    if kind == "shopping":
+        item["display_text"] = f"{label}: pending items reminder"
+    else:
+        title = f"#{entity_id}"
+        path = _REMINDER_KIND_PATHS.get(kind)
+        if path:
+            try:
+                entity = await api.get(f"{path}/{entity_id}")
+                title = entity.get("title", title)
+            except httpx.HTTPError:
+                title = f"#{entity_id} (deleted)"
+        item["display_text"] = f"{label}: {title}"
+    item["display_meta"] = f"reminded {reminded_date}"
+
+
+async def _resolve_working_memory(items: list[dict]) -> list[dict]:
+    for item in items:
+        if item["key"].startswith("reminder:"):
+            await _describe_reminder(item)
+    return items
+
+
 @router.get("/memories-section", response_class=HTMLResponse)
 async def memories_section(request: Request):
     offset = max(0, int(request.query_params.get("offset", "0")))
@@ -74,6 +108,7 @@ async def working_memory_section(request: Request):
         raw = []
     wm_sorted = sorted(raw, key=lambda w: (w.get("expires_at") or ""))
     working_memories, wm_has_next, wm_has_prev = _pagination(wm_sorted, offset)
+    working_memories = await _resolve_working_memory(working_memories)
     return templates.TemplateResponse(request, "_working_memory_list.html", {
         "working_memories": working_memories,
         "wm_offset": offset,
@@ -97,6 +132,7 @@ async def delete_working_memory(item_id: int, request: Request):
 
     wm_sorted = sorted(raw, key=lambda w: (w.get("expires_at") or ""))
     working_memories, wm_has_next, wm_has_prev = _pagination(wm_sorted, 0)
+    working_memories = await _resolve_working_memory(working_memories)
     return templates.TemplateResponse(request, "_working_memory_list.html", {
         "working_memories": working_memories,
         "wm_offset": 0,
@@ -228,6 +264,7 @@ async def insights_page(request: Request):
 
     wm_sorted = sorted(working_memories_raw, key=lambda w: (w.get("expires_at") or ""))
     wm_page, wm_has_next, wm_has_prev = _pagination(wm_sorted, 0)
+    wm_page = await _resolve_working_memory(wm_page)
 
     return templates.TemplateResponse(request, "insights.html", {
         # memories (paginated)

@@ -102,10 +102,11 @@ def _build_system_prompt(
         )
         parts.append(f"## Recent conversations\n{lines}")
 
-    if working_memories:
-        lines = "\n".join(f"- {wm.key}: {wm.value}" for wm in working_memories)
+    visible_memories = [wm for wm in (working_memories or []) if not wm.key.startswith("reminder:")]
+    if visible_memories:
+        lines = "\n".join(f"- {wm.key}: {wm.value}" for wm in visible_memories)
         section = f"## Active context\n{lines}"
-        pending_wm = next((wm for wm in working_memories if wm.key == _LANGUAGE_PENDING_KEY), None)
+        pending_wm = next((wm for wm in visible_memories if wm.key == _LANGUAGE_PENDING_KEY), None)
         if pending_wm:
             try:
                 pending_data = json.loads(pending_wm.value)

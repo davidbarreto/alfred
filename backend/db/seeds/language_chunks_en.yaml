@@ -1,4 +1,4 @@
-# Vocabulary seed for en. Hand-crafted B2 and C1 entries.
+# Vocabulary seed for en. Hand-crafted B2, C1 and B1 entries.
 # seed_language_chunks.py loads this on startup (idempotent).
 en:
 - type: word
@@ -131,7 +131,8 @@ en:
   text: viable
   translation: capable of working successfully; feasible
   example: Electric vehicles are now a viable alternative to petrol cars.
-  example_translation: Os veículos elétricos são agora uma alternativa viável aos carros a gasolina.
+  example_translation: Os veículos elétricos são agora uma alternativa viável aos
+    carros a gasolina.
   cefr_level: C1
   frequency_rank: 19
 - type: word
@@ -152,7 +153,8 @@ en:
   text: benevolent
   translation: well meaning and kindly; generous
   example: The benevolent founder donated his entire fortune to charity.
-  example_translation: O fundador benevolente doou toda a sua fortuna a instituições de caridade.
+  example_translation: O fundador benevolente doou toda a sua fortuna a instituições
+    de caridade.
   cefr_level: C1
   frequency_rank: 22
 - type: word
@@ -173,7 +175,8 @@ en:
   text: erode
   translation: to gradually reduce or destroy the strength or effect of something
   example: Public trust in the institution had slowly eroded over time.
-  example_translation: A confiança pública na instituição tinha sido lentamente corroída ao longo do tempo.
+  example_translation: A confiança pública na instituição tinha sido lentamente corroída
+    ao longo do tempo.
   cefr_level: C1
   frequency_rank: 25
 - type: word
@@ -229,7 +232,8 @@ en:
   text: take precedence over
   translation: to be more important than something else; to come first
   example: Safety concerns must take precedence over cost savings.
-  example_translation: As preocupações com segurança devem ter precedência sobre a economia de custos.
+  example_translation: As preocupações com segurança devem ter precedência sobre a
+    economia de custos.
   cefr_level: C1
   frequency_rank: 33
 - type: collocation
@@ -299,7 +303,8 @@ en:
   text: be worth doing
   translation: to deserve the time and effort required
   example: It is worth reading the fine print before you sign anything.
-  example_translation: Vale a pena ler as letras miúdas antes de assinar qualquer coisa.
+  example_translation: Vale a pena ler as letras miúdas antes de assinar qualquer
+    coisa.
   cefr_level: C1
   frequency_rank: 43
 - type: verb_form
@@ -311,9 +316,11 @@ en:
   frequency_rank: 44
 - type: sentence_pattern
   text: Not only ... but also ...
-  translation: double emphasis structure; used to add a stronger or surprising second point
+  translation: double emphasis structure; used to add a stronger or surprising second
+    point
   example: Not only did she finish first, but she also set a new record.
-  example_translation: Ela não só terminou em primeiro, como também estabeleceu um novo recorde.
+  example_translation: Ela não só terminou em primeiro, como também estabeleceu um
+    novo recorde.
   cefr_level: C1
   frequency_rank: 45
 - type: sentence_pattern
@@ -388,7 +395,8 @@ en:
   frequency_rank: 55
 - type: word
   text: bias
-  translation: a strong feeling in favour of or against one group of people, or one side in an argument
+  translation: a strong feeling in favour of or against one group of people, or one
+    side in an argument
   example: The judge was accused of bias in his decision.
   example_translation: O juiz foi acusado de parcialidade em sua decisão.
   cefr_level: B2
@@ -397,14 +405,17 @@ en:
   text: boost
   translation: to increase or improve something
   example: The new advertising campaign boosted sales significantly.
-  example_translation: A nova campanha publicitária aumentou significativamente as vendas.
+  example_translation: A nova campanha publicitária aumentou significativamente as
+    vendas.
   cefr_level: B2
   frequency_rank: 57
 - type: word
   text: breakthrough
-  translation: an important discovery or event that helps improve a situation or solve a problem
+  translation: an important discovery or event that helps improve a situation or solve
+    a problem
   example: Scientists made a major breakthrough in cancer research.
-  example_translation: Os cientistas fizeram um grande avanço na pesquisa sobre o câncer.
+  example_translation: Os cientistas fizeram um grande avanço na pesquisa sobre o
+    câncer.
   cefr_level: B2
   frequency_rank: 58
 - type: word
@@ -446,7 +457,8 @@ en:
   text: consequence
   translation: a result of a particular action or situation
   example: Losing his job was a direct consequence of the company's cutbacks.
-  example_translation: Perder o emprego foi uma consequência direta dos cortes da empresa.
+  example_translation: Perder o emprego foi uma consequência direta dos cortes da
+    empresa.
   cefr_level: B2
   frequency_rank: 64
 - type: word
@@ -647,7 +659,8 @@ en:
   frequency_rank: 92
 - type: word
   text: exert
-  translation: to use influence, power, or a personal quality to affect someone or something
+  translation: to use influence, power, or a personal quality to affect someone or
+    something
   example: Parents exert a strong influence on their children's values.
   example_translation: Os pais exercem uma forte influência sobre os valores dos filhos.
   cefr_level: B2
@@ -733,12 +746,14 @@ en:
   text: inevitable
   translation: certain to happen and unable to be avoided
   example: Change is often inevitable in a fast-growing company.
-  example_translation: A mudança é frequentemente inevitável em uma empresa em rápido crescimento.
+  example_translation: A mudança é frequentemente inevitável em uma empresa em rápido
+    crescimento.
   cefr_level: B2
   frequency_rank: 105
 - type: word
   text: infer
-  translation: to form an opinion that something is true based on information you have
+  translation: to form an opinion that something is true based on information you
+    have
   example: From her silence, we inferred that she was upset.
   example_translation: Pelo silêncio dela, inferimos que ela estava chateada.
   cefr_level: B2
@@ -768,7 +783,8 @@ en:
   text: insight
   translation: a clear understanding of a complicated problem
   example: The book offers valuable insight into human behaviour.
-  example_translation: O livro oferece uma percepção valiosa sobre o comportamento humano.
+  example_translation: O livro oferece uma percepção valiosa sobre o comportamento
+    humano.
   cefr_level: B2
   frequency_rank: 110
 - type: word
@@ -803,19 +819,22 @@ en:
   text: leverage
   translation: to use something you already have in order to achieve something new
   example: The company leveraged its brand name to enter new markets.
-  example_translation: A empresa aproveitou o nome de sua marca para entrar em novos mercados.
+  example_translation: A empresa aproveitou o nome de sua marca para entrar em novos
+    mercados.
   cefr_level: B2
   frequency_rank: 115
 - type: word
   text: likelihood
   translation: the chance of something happening
   example: There is a strong likelihood that prices will rise next year.
-  example_translation: Há uma forte probabilidade de que os preços subam no próximo ano.
+  example_translation: Há uma forte probabilidade de que os preços subam no próximo
+    ano.
   cefr_level: B2
   frequency_rank: 116
 - type: collocation
   text: take into account
-  translation: to consider particular facts or circumstances when deciding or dealing with something
+  translation: to consider particular facts or circumstances when deciding or dealing
+    with something
   example: You need to take into account the extra costs before deciding.
   example_translation: Você precisa levar em conta os custos extras antes de decidir.
   cefr_level: B2
@@ -836,14 +855,16 @@ en:
   frequency_rank: 119
 - type: collocation
   text: keep track of
-  translation: to stay informed about something, or continue to be aware of a changing situation
+  translation: to stay informed about something, or continue to be aware of a changing
+    situation
   example: It's hard to keep track of all these passwords.
   example_translation: É difícil manter o controle de todas essas senhas.
   cefr_level: B2
   frequency_rank: 120
 - type: collocation
   text: make the most of
-  translation: to use an opportunity or situation to get the greatest possible benefit from it
+  translation: to use an opportunity or situation to get the greatest possible benefit
+    from it
   example: We should make the most of the good weather while it lasts.
   example_translation: Devemos aproveitar ao máximo o bom tempo enquanto ele durar.
   cefr_level: B2
@@ -857,7 +878,8 @@ en:
   frequency_rank: 122
 - type: collocation
   text: rely on
-  translation: to need a particular thing or the help of someone in order to survive or work
+  translation: to need a particular thing or the help of someone in order to survive
+    or work
   example: Small businesses often rely on local customers.
   example_translation: As pequenas empresas frequentemente dependem de clientes locais.
   cefr_level: B2
@@ -887,7 +909,8 @@ en:
   text: contribute to
   translation: to be one of the causes of something, or to help make something happen
   example: Poor diet can contribute to a range of health problems.
-  example_translation: Uma dieta ruim pode contribuir para uma série de problemas de saúde.
+  example_translation: Uma dieta ruim pode contribuir para uma série de problemas
+    de saúde.
   cefr_level: B2
   frequency_rank: 127
 - type: collocation
@@ -941,7 +964,8 @@ en:
   frequency_rank: 134
 - type: collocation
   text: point out
-  translation: to tell someone about a fact or piece of information that they had not noticed
+  translation: to tell someone about a fact or piece of information that they had
+    not noticed
   example: He pointed out a few mistakes in the report.
   example_translation: Ele apontou alguns erros no relatório.
   cefr_level: B2
@@ -976,7 +1000,8 @@ en:
   frequency_rank: 139
 - type: collocation
   text: weigh up
-  translation: to consider carefully the facts about a situation, especially advantages and disadvantages
+  translation: to consider carefully the facts about a situation, especially advantages
+    and disadvantages
   example: You should weigh up the pros and cons before you decide.
   example_translation: Você deve ponderar os prós e contras antes de decidir.
   cefr_level: B2
@@ -1046,7 +1071,8 @@ en:
   frequency_rank: 149
 - type: verb_form
   text: end up
-  translation: to finally be in a particular place or situation, often without intending it
+  translation: to finally be in a particular place or situation, often without intending
+    it
   example: If you keep spending like that, you'll end up going broke.
   example_translation: Se você continuar gastando assim, vai acabar ficando sem dinheiro.
   cefr_level: B2
@@ -1095,7 +1121,8 @@ en:
   frequency_rank: 156
 - type: verb_form
   text: it's high time
-  translation: used to say that something should happen or be done now, often because it is overdue
+  translation: used to say that something should happen or be done now, often because
+    it is overdue
   example: It's high time you apologised to her.
   example_translation: Já é hora de você pedir desculpas a ela.
   cefr_level: B2
@@ -1130,7 +1157,8 @@ en:
   frequency_rank: 161
 - type: sentence_pattern
   text: Despite ..., ...
-  translation: used to show a contrast; introduces a noun or gerund even though something is true
+  translation: used to show a contrast; introduces a noun or gerund even though something
+    is true
   example: Despite feeling tired, she finished the race.
   example_translation: Apesar de se sentir cansada, ela terminou a corrida.
   cefr_level: B2
@@ -1151,14 +1179,16 @@ en:
   frequency_rank: 164
 - type: sentence_pattern
   text: Unless ...
-  translation: used to say that something will happen or be true only if something else does not happen
+  translation: used to say that something will happen or be true only if something
+    else does not happen
   example: We'll be late unless we leave right now.
   example_translation: Vamos nos atrasar a menos que saiamos agora mesmo.
   cefr_level: B2
   frequency_rank: 165
 - type: sentence_pattern
   text: In case ...
-  translation: used to talk about things you should do in preparation for possible future situations
+  translation: used to talk about things you should do in preparation for possible
+    future situations
   example: Take an umbrella in case it rains later.
   example_translation: Leve um guarda-chuva caso chova mais tarde.
   cefr_level: B2
@@ -1191,3 +1221,357 @@ en:
   example_translation: Eu preferia que você não fumasse dentro de casa.
   cefr_level: B2
   frequency_rank: 170
+- type: word
+  text: achieve
+  translation: to succeed in reaching a goal through effort
+  example: She worked hard to achieve her dream of becoming a doctor.
+  example_translation: Ela trabalhou muito para realizar seu sonho de se tornar médica.
+  cefr_level: B1
+  frequency_rank: 171
+- type: word
+  text: anxious
+  translation: feeling worried or nervous about something
+  example: He was anxious about his exam results.
+  example_translation: Ele estava ansioso com os resultados do exame.
+  cefr_level: B1
+  frequency_rank: 172
+- type: word
+  text: appropriate
+  translation: suitable or right for a particular situation
+  example: Please wear appropriate clothing for the interview.
+  example_translation: Por favor, use roupas apropriadas para a entrevista.
+  cefr_level: B1
+  frequency_rank: 173
+- type: word
+  text: approximately
+  translation: close to a particular number or time; roughly
+  example: The trip takes approximately two hours.
+  example_translation: A viagem leva aproximadamente duas horas.
+  cefr_level: B1
+  frequency_rank: 174
+- type: word
+  text: attitude
+  translation: the way someone thinks or feels about something, shown in their behaviour
+  example: She has a positive attitude towards new challenges.
+  example_translation: Ela tem uma atitude positiva em relação a novos desafios.
+  cefr_level: B1
+  frequency_rank: 175
+- type: word
+  text: average
+  translation: a typical amount or standard; not especially good or bad
+  example: His grades are just average this year.
+  example_translation: As notas dele estão apenas na média este ano.
+  cefr_level: B1
+  frequency_rank: 176
+- type: word
+  text: behave
+  translation: to act in a particular way
+  example: The children behaved well during the trip.
+  example_translation: As crianças se comportaram bem durante a viagem.
+  cefr_level: B1
+  frequency_rank: 177
+- type: word
+  text: benefit
+  translation: an advantage or helpful effect
+  example: Regular exercise has many health benefits.
+  example_translation: O exercício regular traz muitos benefícios à saúde.
+  cefr_level: B1
+  frequency_rank: 178
+- type: word
+  text: career
+  translation: the series of jobs someone has in their working life
+  example: She started her career as a journalist.
+  example_translation: Ela começou sua carreira como jornalista.
+  cefr_level: B1
+  frequency_rank: 179
+- type: word
+  text: challenge
+  translation: a difficult task that tests someone's ability
+  example: Learning a new language can be a real challenge.
+  example_translation: Aprender um novo idioma pode ser um verdadeiro desafio.
+  cefr_level: B1
+  frequency_rank: 180
+- type: word
+  text: combine
+  translation: to join or mix two or more things together
+  example: Combine the flour and sugar in a large bowl.
+  example_translation: Misture a farinha e o açúcar em uma tigela grande.
+  cefr_level: B1
+  frequency_rank: 181
+- type: word
+  text: commercial
+  translation: related to buying and selling goods or services
+  example: The area is mostly used for commercial purposes.
+  example_translation: A área é usada principalmente para fins comerciais.
+  cefr_level: B1
+  frequency_rank: 182
+- type: word
+  text: community
+  translation: a group of people living in the same area or sharing something in common
+  example: The new park brought the community together.
+  example_translation: O novo parque uniu a comunidade.
+  cefr_level: B1
+  frequency_rank: 183
+- type: word
+  text: compare
+  translation: to examine how things are similar or different
+  example: It's hard to compare the two cities fairly.
+  example_translation: É difícil comparar as duas cidades de forma justa.
+  cefr_level: B1
+  frequency_rank: 184
+- type: word
+  text: complain
+  translation: to say you are unhappy or dissatisfied about something
+  example: Several customers complained about the slow service.
+  example_translation: Vários clientes reclamaram do atendimento lento.
+  cefr_level: B1
+  frequency_rank: 185
+- type: word
+  text: consider
+  translation: to think carefully about something before deciding
+  example: Please consider all the options before you choose.
+  example_translation: Por favor, considere todas as opções antes de escolher.
+  cefr_level: B1
+  frequency_rank: 186
+- type: word
+  text: constant
+  translation: happening all the time; not changing
+  example: The constant noise from the street kept her awake.
+  example_translation: O barulho constante da rua a mantinha acordada.
+  cefr_level: B1
+  frequency_rank: 187
+- type: word
+  text: contain
+  translation: to have something inside; to include
+  example: This drink contains a lot of sugar.
+  example_translation: Esta bebida contém muito açúcar.
+  cefr_level: B1
+  frequency_rank: 188
+- type: word
+  text: convince
+  translation: to make someone believe or agree to do something
+  example: It took a while to convince him to come with us.
+  example_translation: Levou um tempo para convencê-lo a vir conosco.
+  cefr_level: B1
+  frequency_rank: 189
+- type: word
+  text: curious
+  translation: eager to know or learn something
+  example: The children were curious about how the machine worked.
+  example_translation: As crianças estavam curiosas sobre como a máquina funcionava.
+  cefr_level: B1
+  frequency_rank: 190
+- type: word
+  text: delay
+  translation: a period of time when something is made later than planned
+  example: The flight was delayed by three hours.
+  example_translation: O voo foi atrasado em três horas.
+  cefr_level: B1
+  frequency_rank: 191
+- type: word
+  text: depend
+  translation: to be influenced or decided by something else
+  example: Our plans depend on the weather tomorrow.
+  example_translation: Nossos planos dependem do tempo amanhã.
+  cefr_level: B1
+  frequency_rank: 192
+- type: word
+  text: describe
+  translation: to say what someone or something is like
+  example: Can you describe the man you saw?
+  example_translation: Você pode descrever o homem que viu?
+  cefr_level: B1
+  frequency_rank: 193
+- type: word
+  text: determine
+  translation: to find out or decide something exactly
+  example: The test will help determine the cause of the problem.
+  example_translation: O teste vai ajudar a determinar a causa do problema.
+  cefr_level: B1
+  frequency_rank: 194
+- type: word
+  text: develop
+  translation: to grow or change into something more advanced
+  example: The town has developed rapidly in recent years.
+  example_translation: A cidade se desenvolveu rapidamente nos últimos anos.
+  cefr_level: B1
+  frequency_rank: 195
+- type: word
+  text: discover
+  translation: to find or learn something for the first time
+  example: Scientists discovered a new species of frog.
+  example_translation: Cientistas descobriram uma nova espécie de sapo.
+  cefr_level: B1
+  frequency_rank: 196
+- type: word
+  text: eventually
+  translation: after a long time or after some difficulty; in the end
+  example: We got lost, but eventually found the hotel.
+  example_translation: Nós nos perdemos, mas eventualmente encontramos o hotel.
+  cefr_level: B1
+  frequency_rank: 197
+- type: word
+  text: exhausted
+  translation: extremely tired
+  example: She felt exhausted after the long shift at work.
+  example_translation: Ela se sentiu exausta depois do longo turno de trabalho.
+  cefr_level: B1
+  frequency_rank: 198
+- type: collocation
+  text: make a decision
+  translation: to choose something after thinking about it
+  example: We need to make a decision by Friday.
+  example_translation: Precisamos tomar uma decisão até sexta-feira.
+  cefr_level: B1
+  frequency_rank: 199
+- type: collocation
+  text: take responsibility
+  translation: to accept that something is your duty or fault
+  example: He took responsibility for the mistake.
+  example_translation: Ele assumiu a responsabilidade pelo erro.
+  cefr_level: B1
+  frequency_rank: 200
+- type: collocation
+  text: pay attention
+  translation: to watch, listen to, or think about something carefully
+  example: Please pay attention during the lesson.
+  example_translation: Por favor, prestem atenção durante a aula.
+  cefr_level: B1
+  frequency_rank: 201
+- type: collocation
+  text: keep in touch
+  translation: to continue to talk to or write to someone
+  example: We promised to keep in touch after graduation.
+  example_translation: Nós prometemos manter contato depois da formatura.
+  cefr_level: B1
+  frequency_rank: 202
+- type: collocation
+  text: run out of time
+  translation: to have no time left to finish something
+  example: We ran out of time before finishing the test.
+  example_translation: Ficamos sem tempo antes de terminar a prova.
+  cefr_level: B1
+  frequency_rank: 203
+- type: collocation
+  text: take part in
+  translation: to be involved in an activity with other people
+  example: Over a hundred students took part in the event.
+  example_translation: Mais de cem estudantes participaram do evento.
+  cefr_level: B1
+  frequency_rank: 204
+- type: collocation
+  text: get used to
+  translation: to become familiar with something so it feels normal
+  example: It took months to get used to the new schedule.
+  example_translation: Levou meses para se acostumar com o novo horário.
+  cefr_level: B1
+  frequency_rank: 205
+- type: collocation
+  text: change your mind
+  translation: to decide something different from what you decided before
+  example: She changed her mind and decided to stay.
+  example_translation: Ela mudou de ideia e decidiu ficar.
+  cefr_level: B1
+  frequency_rank: 206
+- type: collocation
+  text: give up
+  translation: to stop trying to do something
+  example: Don't give up, you're almost finished.
+  example_translation: Não desista, você já está quase terminando.
+  cefr_level: B1
+  frequency_rank: 207
+- type: collocation
+  text: look forward to
+  translation: to feel happy and excited about something that will happen
+  example: I'm looking forward to the weekend.
+  example_translation: Estou ansioso pelo fim de semana.
+  cefr_level: B1
+  frequency_rank: 208
+- type: verb_form
+  text: have been working
+  translation: present perfect continuous; describes an action that started in the
+    past and continues now
+  example: I have been working here since 2019.
+  example_translation: Eu trabalho aqui desde 2019.
+  cefr_level: B1
+  frequency_rank: 209
+- type: verb_form
+  text: had already left
+  translation: past perfect; describes an action completed before another past action
+  example: When I arrived, the bus had already left.
+  example_translation: Quando cheguei, o ônibus já tinha partido.
+  cefr_level: B1
+  frequency_rank: 210
+- type: verb_form
+  text: would have done
+  translation: third conditional; describes an imagined result of a past situation
+    that didn't happen
+  example: If I had known, I would have helped you.
+  example_translation: Se eu soubesse, eu teria ajudado você.
+  cefr_level: B1
+  frequency_rank: 211
+- type: verb_form
+  text: is being built
+  translation: passive present continuous; describes something happening to the subject
+    right now
+  example: A new bridge is being built near the river.
+  example_translation: Uma nova ponte está sendo construída perto do rio.
+  cefr_level: B1
+  frequency_rank: 212
+- type: verb_form
+  text: must have forgotten
+  translation: modal perfect used to express a confident guess about the past
+  example: She must have forgotten about the meeting.
+  example_translation: Ela deve ter esquecido da reunião.
+  cefr_level: B1
+  frequency_rank: 213
+- type: verb_form
+  text: used to live
+  translation: describes a repeated action or state in the past that is no longer
+    true
+  example: I used to live in a small village.
+  example_translation: Eu costumava morar em uma vila pequena.
+  cefr_level: B1
+  frequency_rank: 214
+- type: verb_form
+  text: was told that
+  translation: passive reported speech; used to report information given to someone
+  example: I was told that the shop closes at nine.
+  example_translation: Me disseram que a loja fecha às nove.
+  cefr_level: B1
+  frequency_rank: 215
+- type: sentence_pattern
+  text: If I were you, I would ...
+  translation: used to give advice by imagining yourself in someone else's situation
+  example: If I were you, I would apologize to her.
+  example_translation: Se eu fosse você, eu pediria desculpas a ela.
+  cefr_level: B1
+  frequency_rank: 216
+- type: sentence_pattern
+  text: I used to ..., but now I ...
+  translation: used to contrast a past habit with the present situation
+  example: I used to hate vegetables, but now I love them.
+  example_translation: Eu costumava odiar vegetais, mas agora eu os amo.
+  cefr_level: B1
+  frequency_rank: 217
+- type: sentence_pattern
+  text: Not only ... but also ...
+  translation: used to add a second, often surprising, point to the first
+  example: Not only did he apologize, but he also brought flowers.
+  example_translation: Ele não só pediu desculpas, como também trouxe flores.
+  cefr_level: B1
+  frequency_rank: 218
+- type: sentence_pattern
+  text: The more ..., the more ...
+  translation: used to show that two things increase or change together
+  example: The more you practice, the more confident you become.
+  example_translation: Quanto mais você pratica, mais confiante você fica.
+  cefr_level: B1
+  frequency_rank: 219
+- type: sentence_pattern
+  text: I'd rather ... than ...
+  translation: used to express a preference between two options
+  example: I'd rather stay home than go to the party.
+  example_translation: Eu prefiro ficar em casa do que ir à festa.
+  cefr_level: B1
+  frequency_rank: 220

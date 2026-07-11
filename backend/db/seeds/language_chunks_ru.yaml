@@ -1,5 +1,4 @@
-# Vocabulary seed for ru. Auto-generated — edit freely.
-# Re-run generate_language_chunks.py to append more entries.
+# Vocabulary seed for ru. Edit freely — add entries by hand.
 # seed_language_chunks.py loads this on startup (idempotent).
 ru:
 - type: word

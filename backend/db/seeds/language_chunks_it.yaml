@@ -1,4 +1,4 @@
-# Vocabulary seed for it. Hand-crafted A2 entries.
+# Vocabulary seed for it. Hand-crafted A2 and A1 entries.
 # seed_language_chunks.py loads this on startup (idempotent).
 it:
 - type: word
@@ -327,7 +327,8 @@ it:
   text: Non riesco a + infinito
   translation: I can't manage to... / I'm unable to...
   example: Non riesco a capire questa parola, puoi spiegarmela?
-  example_translation: I can't manage to understand this word, can you explain it to me?
+  example_translation: I can't manage to understand this word, can you explain it
+    to me?
   cefr_level: A2
   frequency_rank: 47
 - type: sentence_pattern
@@ -351,3 +352,353 @@ it:
   example_translation: I hope you are well and that everything is going well.
   cefr_level: A2
   frequency_rank: 50
+- type: word
+  text: casa
+  translation: house / home
+  example: La mia casa è vicino al parco.
+  example_translation: My house is near the park.
+  cefr_level: A1
+  frequency_rank: 51
+- type: word
+  text: famiglia
+  translation: family
+  example: La mia famiglia è molto grande.
+  example_translation: My family is very big.
+  cefr_level: A1
+  frequency_rank: 52
+- type: word
+  text: amico
+  translation: friend
+  example: Marco è il mio migliore amico.
+  example_translation: Marco is my best friend.
+  cefr_level: A1
+  frequency_rank: 53
+- type: word
+  text: lavoro
+  translation: work / job
+  example: Ho un nuovo lavoro in banca.
+  example_translation: I have a new job at the bank.
+  cefr_level: A1
+  frequency_rank: 54
+- type: word
+  text: scuola
+  translation: school
+  example: I bambini vanno a scuola alle otto.
+  example_translation: The children go to school at eight.
+  cefr_level: A1
+  frequency_rank: 55
+- type: word
+  text: città
+  translation: city
+  example: Roma è una città molto bella.
+  example_translation: Rome is a very beautiful city.
+  cefr_level: A1
+  frequency_rank: 56
+- type: word
+  text: strada
+  translation: street / road
+  example: C'è molto traffico in questa strada.
+  example_translation: There is a lot of traffic on this street.
+  cefr_level: A1
+  frequency_rank: 57
+- type: word
+  text: macchina
+  translation: car
+  example: La mia macchina è rossa.
+  example_translation: My car is red.
+  cefr_level: A1
+  frequency_rank: 58
+- type: word
+  text: treno
+  translation: train
+  example: Il treno arriva alle nove.
+  example_translation: The train arrives at nine.
+  cefr_level: A1
+  frequency_rank: 59
+- type: word
+  text: autobus
+  translation: bus
+  example: Prendo l'autobus ogni mattina.
+  example_translation: I take the bus every morning.
+  cefr_level: A1
+  frequency_rank: 60
+- type: word
+  text: cibo
+  translation: food
+  example: Il cibo italiano è delizioso.
+  example_translation: Italian food is delicious.
+  cefr_level: A1
+  frequency_rank: 61
+- type: word
+  text: acqua
+  translation: water
+  example: Vorrei un bicchiere d'acqua, per favore.
+  example_translation: I would like a glass of water, please.
+  cefr_level: A1
+  frequency_rank: 62
+- type: word
+  text: pane
+  translation: bread
+  example: Compro il pane ogni giorno.
+  example_translation: I buy bread every day.
+  cefr_level: A1
+  frequency_rank: 63
+- type: word
+  text: latte
+  translation: milk
+  example: Bevo un bicchiere di latte a colazione.
+  example_translation: I drink a glass of milk at breakfast.
+  cefr_level: A1
+  frequency_rank: 64
+- type: word
+  text: mela
+  translation: apple
+  example: Mangio una mela ogni giorno.
+  example_translation: I eat an apple every day.
+  cefr_level: A1
+  frequency_rank: 65
+- type: word
+  text: libro
+  translation: book
+  example: Sto leggendo un libro interessante.
+  example_translation: I am reading an interesting book.
+  cefr_level: A1
+  frequency_rank: 66
+- type: word
+  text: penna
+  translation: pen
+  example: Puoi prestarmi la tua penna?
+  example_translation: Can you lend me your pen?
+  cefr_level: A1
+  frequency_rank: 67
+- type: word
+  text: tavolo
+  translation: table
+  example: I piatti sono sul tavolo.
+  example_translation: The plates are on the table.
+  cefr_level: A1
+  frequency_rank: 68
+- type: word
+  text: sedia
+  translation: chair
+  example: Questa sedia è molto comoda.
+  example_translation: This chair is very comfortable.
+  cefr_level: A1
+  frequency_rank: 69
+- type: word
+  text: porta
+  translation: door
+  example: Per favore, chiudi la porta.
+  example_translation: Please close the door.
+  cefr_level: A1
+  frequency_rank: 70
+- type: word
+  text: finestra
+  translation: window
+  example: Apro la finestra perché fa caldo.
+  example_translation: I open the window because it's hot.
+  cefr_level: A1
+  frequency_rank: 71
+- type: word
+  text: giorno
+  translation: day
+  example: Buon giorno! Come stai?
+  example_translation: Good day! How are you?
+  cefr_level: A1
+  frequency_rank: 72
+- type: word
+  text: notte
+  translation: night
+  example: Buona notte, a domani.
+  example_translation: Good night, see you tomorrow.
+  cefr_level: A1
+  frequency_rank: 73
+- type: word
+  text: settimana
+  translation: week
+  example: Lavoro cinque giorni a settimana.
+  example_translation: I work five days a week.
+  cefr_level: A1
+  frequency_rank: 74
+- type: word
+  text: mese
+  translation: month
+  example: Il mio compleanno è il mese prossimo.
+  example_translation: My birthday is next month.
+  cefr_level: A1
+  frequency_rank: 75
+- type: word
+  text: anno
+  translation: year
+  example: Studio italiano da un anno.
+  example_translation: I have been studying Italian for a year.
+  cefr_level: A1
+  frequency_rank: 76
+- type: word
+  text: oggi
+  translation: today
+  example: Oggi fa molto freddo.
+  example_translation: Today it's very cold.
+  cefr_level: A1
+  frequency_rank: 77
+- type: word
+  text: domani
+  translation: tomorrow
+  example: Domani ho un esame importante.
+  example_translation: Tomorrow I have an important exam.
+  cefr_level: A1
+  frequency_rank: 78
+- type: collocation
+  text: avere fame
+  translation: to be hungry
+  example: Ho fame, mangiamo qualcosa.
+  example_translation: I'm hungry, let's eat something.
+  cefr_level: A1
+  frequency_rank: 79
+- type: collocation
+  text: avere sete
+  translation: to be thirsty
+  example: Ho sete, vorrei dell'acqua.
+  example_translation: I'm thirsty, I would like some water.
+  cefr_level: A1
+  frequency_rank: 80
+- type: collocation
+  text: avere fretta
+  translation: to be in a hurry
+  example: Non posso parlare, ho fretta.
+  example_translation: I can't talk, I'm in a hurry.
+  cefr_level: A1
+  frequency_rank: 81
+- type: collocation
+  text: avere paura
+  translation: to be afraid
+  example: Ho paura dei cani grandi.
+  example_translation: I'm afraid of big dogs.
+  cefr_level: A1
+  frequency_rank: 82
+- type: collocation
+  text: fare colazione
+  translation: to have breakfast
+  example: Faccio colazione alle sette.
+  example_translation: I have breakfast at seven.
+  cefr_level: A1
+  frequency_rank: 83
+- type: collocation
+  text: fare la spesa
+  translation: to do the grocery shopping
+  example: Faccio la spesa il sabato.
+  example_translation: I do the grocery shopping on Saturdays.
+  cefr_level: A1
+  frequency_rank: 84
+- type: collocation
+  text: andare a letto
+  translation: to go to bed
+  example: Vado a letto presto stasera.
+  example_translation: I'm going to bed early tonight.
+  cefr_level: A1
+  frequency_rank: 85
+- type: collocation
+  text: tornare a casa
+  translation: to go back home
+  example: Torno a casa alle sei.
+  example_translation: I go back home at six.
+  cefr_level: A1
+  frequency_rank: 86
+- type: collocation
+  text: avere bisogno di
+  translation: to need
+  example: Ho bisogno di aiuto, per favore.
+  example_translation: I need help, please.
+  cefr_level: A1
+  frequency_rank: 87
+- type: collocation
+  text: fare una domanda
+  translation: to ask a question
+  example: Posso fare una domanda?
+  example_translation: Can I ask a question?
+  cefr_level: A1
+  frequency_rank: 88
+- type: verb_form
+  text: sono
+  translation: present tense of essere (to be), first person
+  example: Sono italiano.
+  example_translation: I am Italian.
+  cefr_level: A1
+  frequency_rank: 89
+- type: verb_form
+  text: ho
+  translation: present tense of avere (to have), first person
+  example: Ho due fratelli.
+  example_translation: I have two brothers.
+  cefr_level: A1
+  frequency_rank: 90
+- type: verb_form
+  text: parlo
+  translation: present tense of parlare (to speak), regular -are verb
+  example: Parlo un po' di inglese.
+  example_translation: I speak a little English.
+  cefr_level: A1
+  frequency_rank: 91
+- type: verb_form
+  text: leggo
+  translation: present tense of leggere (to read), regular -ere verb
+  example: Leggo il giornale ogni mattina.
+  example_translation: I read the newspaper every morning.
+  cefr_level: A1
+  frequency_rank: 92
+- type: verb_form
+  text: dormo
+  translation: present tense of dormire (to sleep), regular -ire verb
+  example: Dormo otto ore ogni notte.
+  example_translation: I sleep eight hours every night.
+  cefr_level: A1
+  frequency_rank: 93
+- type: verb_form
+  text: mi chiamo
+  translation: reflexive verb chiamarsi (to be called), used to say one's name
+  example: Mi chiamo Anna.
+  example_translation: My name is Anna.
+  cefr_level: A1
+  frequency_rank: 94
+- type: verb_form
+  text: vado
+  translation: present tense of andare (to go), irregular verb
+  example: Vado al lavoro in bicicletta.
+  example_translation: I go to work by bike.
+  cefr_level: A1
+  frequency_rank: 95
+- type: sentence_pattern
+  text: Come ti chiami?
+  translation: used to ask someone's name
+  example: Ciao, come ti chiami?
+  example_translation: Hi, what's your name?
+  cefr_level: A1
+  frequency_rank: 96
+- type: sentence_pattern
+  text: Quanti anni hai?
+  translation: used to ask someone's age
+  example: Quanti anni hai?
+  example_translation: How old are you?
+  cefr_level: A1
+  frequency_rank: 97
+- type: sentence_pattern
+  text: Mi piace ...
+  translation: used to say what you like
+  example: Mi piace la musica italiana.
+  example_translation: I like Italian music.
+  cefr_level: A1
+  frequency_rank: 98
+- type: sentence_pattern
+  text: C'è / Ci sono ...
+  translation: used to say that something exists or is present
+  example: Ci sono molte persone qui oggi.
+  example_translation: There are many people here today.
+  cefr_level: A1
+  frequency_rank: 99
+- type: sentence_pattern
+  text: Che ora è?
+  translation: used to ask the time
+  example: Scusi, che ora è?
+  example_translation: Excuse me, what time is it?
+  cefr_level: A1
+  frequency_rank: 100

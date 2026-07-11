@@ -1,4 +1,4 @@
-# Vocabulary seed for es. Hand-crafted B1 entries.
+# Vocabulary seed for es. Hand-crafted B1 and A2 entries.
 # seed_language_chunks.py loads this on startup (idempotent).
 es:
 - type: word
@@ -236,7 +236,8 @@ es:
   text: dar por sentado
   translation: to take for granted
   example: No des por sentado que siempre estaré aquí para ayudarte.
-  example_translation: Don't take it for granted that I'll always be here to help you.
+  example_translation: Don't take it for granted that I'll always be here to help
+    you.
   cefr_level: B1
   frequency_rank: 34
 - type: collocation
@@ -292,7 +293,8 @@ es:
   text: Se lo expliqué
   translation: I explained it to him/her (combined direct and indirect object pronouns)
   example: No entendía la situación, así que se lo expliqué con calma.
-  example_translation: He didn't understand the situation, so I explained it to him calmly.
+  example_translation: He didn't understand the situation, so I explained it to him
+    calmly.
   cefr_level: B1
   frequency_rank: 42
 - type: verb_form
@@ -351,3 +353,355 @@ es:
   example_translation: I have been living in this city for three years.
   cefr_level: B1
   frequency_rank: 50
+- type: word
+  text: barato
+  translation: cheap
+  example: Este restaurante es muy barato.
+  example_translation: This restaurant is very cheap.
+  cefr_level: A2
+  frequency_rank: 51
+- type: word
+  text: caro
+  translation: expensive
+  example: El hotel era demasiado caro para nosotros.
+  example_translation: The hotel was too expensive for us.
+  cefr_level: A2
+  frequency_rank: 52
+- type: word
+  text: cerca
+  translation: near / close
+  example: La farmacia está cerca de mi casa.
+  example_translation: The pharmacy is near my house.
+  cefr_level: A2
+  frequency_rank: 53
+- type: word
+  text: lejos
+  translation: far
+  example: La playa está lejos del centro.
+  example_translation: The beach is far from downtown.
+  cefr_level: A2
+  frequency_rank: 54
+- type: word
+  text: cansado
+  translation: tired
+  example: Estoy muy cansado después del trabajo.
+  example_translation: I am very tired after work.
+  cefr_level: A2
+  frequency_rank: 55
+- type: word
+  text: contento
+  translation: happy / content
+  example: Ella está contenta con su nuevo trabajo.
+  example_translation: She is happy with her new job.
+  cefr_level: A2
+  frequency_rank: 56
+- type: word
+  text: enfermo
+  translation: sick / ill
+  example: Mi hermano está enfermo hoy.
+  example_translation: My brother is sick today.
+  cefr_level: A2
+  frequency_rank: 57
+- type: word
+  text: gracioso
+  translation: funny
+  example: El payaso es muy gracioso.
+  example_translation: The clown is very funny.
+  cefr_level: A2
+  frequency_rank: 58
+- type: word
+  text: limpio
+  translation: clean
+  example: El apartamento está muy limpio.
+  example_translation: The apartment is very clean.
+  cefr_level: A2
+  frequency_rank: 59
+- type: word
+  text: sucio
+  translation: dirty
+  example: Tienes las manos sucias.
+  example_translation: Your hands are dirty.
+  cefr_level: A2
+  frequency_rank: 60
+- type: word
+  text: peligroso
+  translation: dangerous
+  example: Nadar aquí es peligroso.
+  example_translation: Swimming here is dangerous.
+  cefr_level: A2
+  frequency_rank: 61
+- type: word
+  text: seguro
+  translation: safe / sure
+  example: Este barrio es muy seguro.
+  example_translation: This neighborhood is very safe.
+  cefr_level: A2
+  frequency_rank: 62
+- type: word
+  text: tranquilo
+  translation: calm / quiet
+  example: El pueblo es muy tranquilo por la noche.
+  example_translation: The town is very quiet at night.
+  cefr_level: A2
+  frequency_rank: 63
+- type: word
+  text: ocupado
+  translation: busy
+  example: Hoy estoy muy ocupado en el trabajo.
+  example_translation: I am very busy at work today.
+  cefr_level: A2
+  frequency_rank: 64
+- type: word
+  text: libre
+  translation: free (available)
+  example: ¿Está libre esta mesa?
+  example_translation: Is this table free?
+  cefr_level: A2
+  frequency_rank: 65
+- type: word
+  text: rápido
+  translation: fast
+  example: Ese coche es muy rápido.
+  example_translation: That car is very fast.
+  cefr_level: A2
+  frequency_rank: 66
+- type: word
+  text: lento
+  translation: slow
+  example: El tren era muy lento hoy.
+  example_translation: The train was very slow today.
+  cefr_level: A2
+  frequency_rank: 67
+- type: word
+  text: temprano
+  translation: early
+  example: Siempre me despierto temprano.
+  example_translation: I always wake up early.
+  cefr_level: A2
+  frequency_rank: 68
+- type: word
+  text: tarde
+  translation: late
+  example: Llegamos tarde a la fiesta.
+  example_translation: We arrived late to the party.
+  cefr_level: A2
+  frequency_rank: 69
+- type: word
+  text: antiguo
+  translation: old / ancient
+  example: Viven en una casa antigua.
+  example_translation: They live in an old house.
+  cefr_level: A2
+  frequency_rank: 70
+- type: word
+  text: moderno
+  translation: modern
+  example: El museo tiene arte moderno.
+  example_translation: The museum has modern art.
+  cefr_level: A2
+  frequency_rank: 71
+- type: word
+  text: ruidoso
+  translation: noisy
+  example: El restaurante era demasiado ruidoso.
+  example_translation: The restaurant was too noisy.
+  cefr_level: A2
+  frequency_rank: 72
+- type: word
+  text: amable
+  translation: kind
+  example: La profesora es muy amable con los estudiantes.
+  example_translation: The teacher is very kind to the students.
+  cefr_level: A2
+  frequency_rank: 73
+- type: word
+  text: maleducado
+  translation: rude
+  example: No seas maleducado con tus abuelos.
+  example_translation: Don't be rude to your grandparents.
+  cefr_level: A2
+  frequency_rank: 74
+- type: word
+  text: inteligente
+  translation: intelligent / smart
+  example: Su hija es muy inteligente.
+  example_translation: Her daughter is very intelligent.
+  cefr_level: A2
+  frequency_rank: 75
+- type: word
+  text: tonto
+  translation: silly / foolish
+  example: No seas tonto, piensa antes de hablar.
+  example_translation: Don't be silly, think before you speak.
+  cefr_level: A2
+  frequency_rank: 76
+- type: word
+  text: fuerte
+  translation: strong
+  example: Mi padre es muy fuerte.
+  example_translation: My father is very strong.
+  cefr_level: A2
+  frequency_rank: 77
+- type: word
+  text: débil
+  translation: weak
+  example: Después de la gripe, me sentía débil.
+  example_translation: After the flu, I felt weak.
+  cefr_level: A2
+  frequency_rank: 78
+- type: collocation
+  text: hacer la compra
+  translation: to do the grocery shopping
+  example: Voy a hacer la compra esta tarde.
+  example_translation: I'm going to do the grocery shopping this afternoon.
+  cefr_level: A2
+  frequency_rank: 79
+- type: collocation
+  text: dar un paseo
+  translation: to go for a walk
+  example: Nos gusta dar un paseo por el parque.
+  example_translation: We like to go for a walk in the park.
+  cefr_level: A2
+  frequency_rank: 80
+- type: collocation
+  text: tener prisa
+  translation: to be in a hurry
+  example: No puedo hablar ahora, tengo prisa.
+  example_translation: I can't talk now, I'm in a hurry.
+  cefr_level: A2
+  frequency_rank: 81
+- type: collocation
+  text: tener razón
+  translation: to be right
+  example: Creo que tienes razón.
+  example_translation: I think you're right.
+  cefr_level: A2
+  frequency_rank: 82
+- type: collocation
+  text: poner la mesa
+  translation: to set the table
+  example: ¿Puedes poner la mesa, por favor?
+  example_translation: Can you set the table, please?
+  cefr_level: A2
+  frequency_rank: 83
+- type: collocation
+  text: echar de menos
+  translation: to miss (someone or something)
+  example: Echo de menos a mi familia.
+  example_translation: I miss my family.
+  cefr_level: A2
+  frequency_rank: 84
+- type: collocation
+  text: tomar una decisión
+  translation: to make a decision
+  example: Es difícil tomar una decisión tan rápido.
+  example_translation: It's hard to make a decision so quickly.
+  cefr_level: A2
+  frequency_rank: 85
+- type: collocation
+  text: pedir perdón
+  translation: to apologize
+  example: Quiero pedir perdón por llegar tarde.
+  example_translation: I want to apologize for being late.
+  cefr_level: A2
+  frequency_rank: 86
+- type: collocation
+  text: hacer caso
+  translation: to pay attention / to obey
+  example: Los niños no me hacen caso.
+  example_translation: The children don't pay attention to me.
+  cefr_level: A2
+  frequency_rank: 87
+- type: collocation
+  text: darse cuenta
+  translation: to realize
+  example: No me di cuenta de que era tan tarde.
+  example_translation: I didn't realize it was so late.
+  cefr_level: A2
+  frequency_rank: 88
+- type: verb_form
+  text: voy a viajar
+  translation: near future (ir a + infinitive); describes a plan for the near future
+  example: Voy a viajar a México en junio.
+  example_translation: I'm going to travel to Mexico in June.
+  cefr_level: A2
+  frequency_rank: 89
+- type: verb_form
+  text: estoy comiendo
+  translation: present continuous (estar + gerund); describes an action happening
+    right now
+  example: Estoy comiendo en el jardín.
+  example_translation: I am eating in the garden.
+  cefr_level: A2
+  frequency_rank: 90
+- type: verb_form
+  text: comí
+  translation: preterite; describes a completed action in the past
+  example: Comí pescado anoche.
+  example_translation: I ate fish last night.
+  cefr_level: A2
+  frequency_rank: 91
+- type: verb_form
+  text: comía
+  translation: imperfect; describes a repeated or ongoing past action
+  example: Cuando era niño, comía mucho pan.
+  example_translation: When I was a child, I used to eat a lot of bread.
+  cefr_level: A2
+  frequency_rank: 92
+- type: verb_form
+  text: me levanto
+  translation: reflexive present; describes a routine action done to oneself
+  example: Me levanto a las siete todos los días.
+  example_translation: I get up at seven every day.
+  cefr_level: A2
+  frequency_rank: 93
+- type: verb_form
+  text: he comido
+  translation: present perfect; describes a recent or relevant past action
+  example: Hoy he comido demasiado.
+  example_translation: Today I have eaten too much.
+  cefr_level: A2
+  frequency_rank: 94
+- type: verb_form
+  text: puedo nadar
+  translation: modal with poder; expresses ability
+  example: Puedo nadar muy bien.
+  example_translation: I can swim very well.
+  cefr_level: A2
+  frequency_rank: 95
+- type: sentence_pattern
+  text: Me gustaría ...
+  translation: used to politely express a wish or desire
+  example: Me gustaría reservar una mesa para dos.
+  example_translation: I would like to book a table for two.
+  cefr_level: A2
+  frequency_rank: 96
+- type: sentence_pattern
+  text: ¿Cuánto cuesta ...?
+  translation: used to ask the price of something
+  example: ¿Cuánto cuesta este bolso?
+  example_translation: How much does this bag cost?
+  cefr_level: A2
+  frequency_rank: 97
+- type: sentence_pattern
+  text: Hace ... que ...
+  translation: used to say how long ago something happened or how long something has
+    lasted
+  example: Hace dos años que vivo aquí.
+  example_translation: I have lived here for two years.
+  cefr_level: A2
+  frequency_rank: 98
+- type: sentence_pattern
+  text: Tengo que ...
+  translation: used to express obligation or necessity
+  example: Tengo que terminar este informe hoy.
+  example_translation: I have to finish this report today.
+  cefr_level: A2
+  frequency_rank: 99
+- type: sentence_pattern
+  text: ¿Podrías ...?
+  translation: used to politely ask someone to do something
+  example: ¿Podrías ayudarme con las maletas?
+  example_translation: Could you help me with the suitcases?
+  cefr_level: A2
+  frequency_rank: 100

@@ -25,6 +25,15 @@ def _llm_call(id=1, provider="google", model="gemini-2.5-flash", feature="chat",
     }
 
 
+def _provider_call(id=1, provider="notion", operation="sync", entity_type="task", status="success"):
+    return {
+        "id": id, "provider": provider, "operation": operation, "entity_type": entity_type,
+        "provider_entity_id": "abc", "status": status, "request_payload": None,
+        "response_payload": None, "error": None, "command_execution_id": None,
+        "created_at": "2026-07-01T00:00:00",
+    }
+
+
 class TestDeleteMemory:
     def test_deletes_memory_and_renders_updated_list(self, client, mock_api):
         mock_api["get"].return_value = [_memory(id=2, content="Remaining memory")]
@@ -127,6 +136,7 @@ class TestInsightsPageLlmCharts:
         resp = client.get("/insights/")
 
         assert resp.status_code == 200
+        assert "By feature" in resp.text
         assert "Tokens by feature" in resp.text
         assert "450" in resp.text  # chat: 100+50+200+100
         assert "View all" in resp.text
@@ -195,6 +205,82 @@ class TestLlmCallsPage:
         mock_api["get"].side_effect = fake_get
 
         resp = client.get("/insights/llm-calls")
+
+        assert resp.status_code == 200
+        assert "Next →" in resp.text
+        assert "offset=20" in resp.text
+
+
+class TestInsightsPageProviderCallsPreview:
+    def test_limits_recent_provider_calls_preview_to_five(self, client, mock_api):
+        async def fake_get(path, params=None):
+            if path == "/integration/provider-calls":
+                return [_provider_call(id=i, operation=f"op-{i}") for i in range(1, 8)]
+            return []
+
+        mock_api["get"].side_effect = fake_get
+
+        resp = client.get("/insights/")
+
+        assert resp.status_code == 200
+        assert "op-5" in resp.text
+        assert "op-6" not in resp.text
+        assert "op-7" not in resp.text
+        assert '/insights/provider-calls" class="text-xs text-[#378ADD] hover:underline">View all' in resp.text
+
+
+class TestProviderCallsPage:
+    def test_lists_calls_and_filter_dropdown_options(self, client, mock_api):
+        async def fake_get(path, params=None):
+            if params.get("limit") == 500:
+                return [
+                    _provider_call(id=1, provider="notion", operation="sync", entity_type="task"),
+                    _provider_call(id=2, provider="google_calendar", operation="import", entity_type="event"),
+                ]
+            return [_provider_call(id=1, provider="notion", operation="sync", entity_type="task")]
+
+        mock_api["get"].side_effect = fake_get
+
+        resp = client.get("/insights/provider-calls")
+
+        assert resp.status_code == 200
+        assert "notion" in resp.text
+        assert "google_calendar" in resp.text  # only present via the provider filter dropdown
+        assert "import" in resp.text  # only present via the operation filter dropdown
+
+    def test_applies_filters_as_backend_query_params(self, client, mock_api):
+        seen_params = []
+
+        async def fake_get(path, params=None):
+            seen_params.append(params)
+            if params.get("limit") == 500:
+                return []
+            return [_provider_call(id=1)]
+
+        mock_api["get"].side_effect = fake_get
+
+        resp = client.get(
+            "/insights/provider-calls?provider=notion&operation=sync&entity_type=task&status=error&q=oops"
+        )
+
+        assert resp.status_code == 200
+        main_call_params = next(p for p in seen_params if p.get("limit") != 500)
+        assert main_call_params["provider"] == "notion"
+        assert main_call_params["operation"] == "sync"
+        assert main_call_params["entity_type"] == "task"
+        assert main_call_params["status"] == "error"
+        assert main_call_params["q"] == "oops"
+        assert main_call_params["skip"] == 0
+
+    def test_shows_next_link_when_more_than_a_page(self, client, mock_api):
+        async def fake_get(path, params=None):
+            if params.get("limit") == 500:
+                return []
+            return [_provider_call(id=i) for i in range(21)]
+
+        mock_api["get"].side_effect = fake_get
+
+        resp = client.get("/insights/provider-calls")
 
         assert resp.status_code == 200
         assert "Next →" in resp.text

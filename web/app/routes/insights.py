@@ -14,6 +14,8 @@ router = APIRouter(prefix="/insights")
 _PAGE_SIZE = 20
 _LLM_CALLS_PREVIEW_SIZE = 5
 _LLM_CALL_OPTIONS_LIMIT = 500
+_PROVIDER_CALLS_PREVIEW_SIZE = 5
+_PROVIDER_CALL_OPTIONS_LIMIT = 500
 
 
 def _pagination(items: list, offset: int) -> tuple[list, bool, bool]:
@@ -243,6 +245,7 @@ async def insights_page(request: Request):
 
     # ── LLM aggregations ─────────────────────────────────────────
     llm_by_model = dict(Counter(c["model"] for c in llm_calls).most_common())
+    llm_by_feature = dict(Counter(c["feature"] for c in llm_calls).most_common(10))
     tokens_by_feature: dict[str, int] = defaultdict(int)
     for c in llm_calls:
         tokens_by_feature[c["feature"]] += (c.get("tokens_input") or 0) + (c.get("tokens_output") or 0)
@@ -291,7 +294,7 @@ async def insights_page(request: Request):
         "memories_by_category": memories_by_category,
         # llm
         "llm_calls": llm_calls[:_LLM_CALLS_PREVIEW_SIZE],
-        "provider_calls": provider_calls[:20],
+        "provider_calls": provider_calls[:_PROVIDER_CALLS_PREVIEW_SIZE],
         "total_llm_calls": len(llm_calls),
         "total_tokens": total_tokens_in + total_tokens_out,
         "total_provider_calls": len(provider_calls),
@@ -305,6 +308,7 @@ async def insights_page(request: Request):
         "needs_attention": needs_attention,
         # chart data
         "llm_by_model": llm_by_model,
+        "llm_by_feature": llm_by_feature,
         "tokens_by_feature": tokens_by_feature,
         "provider_by_name": provider_by_name,
         "provider_by_status": provider_by_status,
@@ -358,5 +362,70 @@ async def llm_calls_page(request: Request):
         "q": q,
         "models": models,
         "features": features,
+        "filter_qs": filter_qs,
+    })
+
+
+async def _provider_call_filter_options() -> tuple[list[str], list[str], list[str], list[str]]:
+    """Distinct providers/operations/entity types/statuses for the filter dropdowns, from a recent sample."""
+    try:
+        raw = await api.get("/integration/provider-calls", params={"limit": _PROVIDER_CALL_OPTIONS_LIMIT})
+    except httpx.HTTPError:
+        raw = []
+    providers = sorted({c["provider"] for c in raw})
+    operations = sorted({c["operation"] for c in raw})
+    entity_types = sorted({c["entity_type"] for c in raw})
+    statuses = sorted({c["status"] for c in raw})
+    return providers, operations, entity_types, statuses
+
+
+@router.get("/provider-calls", response_class=HTMLResponse)
+async def provider_calls_page(request: Request):
+    offset = max(0, int(request.query_params.get("offset", "0")))
+    provider = request.query_params.get("provider", "").strip()
+    operation = request.query_params.get("operation", "").strip()
+    entity_type = request.query_params.get("entity_type", "").strip()
+    status = request.query_params.get("status", "").strip()
+    q = request.query_params.get("q", "").strip()
+
+    params: dict = {"limit": _PAGE_SIZE + 1, "skip": offset}
+    if provider:
+        params["provider"] = provider
+    if operation:
+        params["operation"] = operation
+    if entity_type:
+        params["entity_type"] = entity_type
+    if status:
+        params["status"] = status
+    if q:
+        params["q"] = q
+
+    try:
+        raw = await api.get("/integration/provider-calls", params=params)
+    except httpx.HTTPError:
+        raw = []
+
+    calls, has_next, has_prev = _pagination(raw, offset)
+    providers, operations, entity_types, statuses = await _provider_call_filter_options()
+    filter_qs = urlencode({
+        k: v for k, v in {
+            "provider": provider, "operation": operation, "entity_type": entity_type, "status": status, "q": q,
+        }.items() if v
+    })
+
+    return templates.TemplateResponse(request, "provider_calls.html", {
+        "calls": calls,
+        "offset": offset,
+        "has_next": has_next,
+        "has_prev": has_prev,
+        "provider": provider,
+        "operation": operation,
+        "entity_type": entity_type,
+        "status": status,
+        "q": q,
+        "providers": providers,
+        "operations": operations,
+        "entity_types": entity_types,
+        "statuses": statuses,
         "filter_qs": filter_qs,
     })

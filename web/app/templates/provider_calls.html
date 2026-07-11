@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+{% block title %}Provider Calls{% endblock %}
+
+{% block content %}
+<div class="p-6 space-y-4">
+  <a href="/insights" class="text-xs text-[#378ADD] hover:underline">← Insights</a>
+  <h1 class="text-base font-semibold text-gray-900">Provider Calls</h1>
+
+  <!-- Filters — full navigation so active state re-renders server-side -->
+  <form method="get" action="/insights/provider-calls" class="flex flex-wrap gap-3 items-end border-b border-gray-200 pb-4">
+    <div>
+      <label class="text-xs text-gray-500 mb-1 block">Provider</label>
+      <select name="provider" onchange="this.form.submit()"
+        class="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-[#378ADD]">
+        <option value="">All providers</option>
+        {% for p in providers %}
+        <option value="{{ p }}" {% if p == provider %}selected{% endif %}>{{ p }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <label class="text-xs text-gray-500 mb-1 block">Operation</label>
+      <select name="operation" onchange="this.form.submit()"
+        class="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-[#378ADD]">
+        <option value="">All operations</option>
+        {% for o in operations %}
+        <option value="{{ o }}" {% if o == operation %}selected{% endif %}>{{ o }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <label class="text-xs text-gray-500 mb-1 block">Entity</label>
+      <select name="entity_type" onchange="this.form.submit()"
+        class="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-[#378ADD]">
+        <option value="">All entities</option>
+        {% for e in entity_types %}
+        <option value="{{ e }}" {% if e == entity_type %}selected{% endif %}>{{ e }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <label class="text-xs text-gray-500 mb-1 block">Status</label>
+      <select name="status" onchange="this.form.submit()"
+        class="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-[#378ADD]">
+        <option value="">All statuses</option>
+        {% for s in statuses %}
+        <option value="{{ s }}" {% if s == status %}selected{% endif %}>{{ s }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="flex-1 min-w-[180px]">
+      <label class="text-xs text-gray-500 mb-1 block">Search error / entity id</label>
+      <input type="text" name="q" value="{{ q }}" placeholder="Search…"
+        class="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white w-full focus:outline-none focus:ring-1 focus:ring-[#378ADD]" />
+    </div>
+    <div class="flex gap-2">
+      <button type="submit" class="btn btn-sm btn-primary">Filter</button>
+      {% if provider or operation or entity_type or status or q %}
+      <a href="/insights/provider-calls" class="btn btn-sm btn-ghost text-gray-500">Clear</a>
+      {% endif %}
+    </div>
+  </form>
+
+  {% if calls %}
+  <div class="card bg-white"><div class="card-body p-0 overflow-x-auto">
+    <table class="w-full text-sm">
+      <thead>
+        <tr class="border-b border-gray-100 text-xs text-gray-400 uppercase tracking-wide">
+          <th class="text-left px-4 py-3 font-medium">Provider</th>
+          <th class="text-left px-4 py-3 font-medium">Operation</th>
+          <th class="text-left px-4 py-3 font-medium">Entity</th>
+          <th class="text-left px-4 py-3 font-medium">Status</th>
+          <th class="text-right px-4 py-3 font-medium">When</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-gray-50">
+        {% for c in calls %}
+        <tr class="hover:bg-gray-50">
+          <td class="px-4 py-2.5 text-gray-700 font-medium">{{ c.provider }}</td>
+          <td class="px-4 py-2.5 text-gray-500">{{ c.operation }}</td>
+          <td class="px-4 py-2.5 text-gray-400">{{ c.entity_type }}</td>
+          <td class="px-4 py-2.5">
+            {% if c.status == "success" %}
+            <span class="text-[10px] px-1.5 py-0.5 rounded bg-[#EAF3DE] text-[#639922]">{{ c.status }}</span>
+            {% else %}
+            <span class="text-[10px] px-1.5 py-0.5 rounded bg-[#FCEBEB] text-[#E24B4A]">{{ c.status }}</span>
+            {% endif %}
+          </td>
+          <td class="px-4 py-2.5 text-right text-gray-400 text-xs">{{ c.created_at[:16].replace("T", " ") }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div></div>
+
+  <div class="flex justify-between items-center">
+    {% if has_prev %}
+    <a href="/insights/provider-calls?offset={{ offset - 20 }}{% if filter_qs %}&{{ filter_qs }}{% endif %}"
+      class="px-3 py-1.5 rounded text-xs font-medium text-gray-600 bg-white border border-gray-200 hover:border-gray-300">← Prev</a>
+    {% else %}<span></span>{% endif %}
+    {% if has_next %}
+    <a href="/insights/provider-calls?offset={{ offset + 20 }}{% if filter_qs %}&{{ filter_qs }}{% endif %}"
+      class="px-3 py-1.5 rounded text-xs font-medium text-gray-600 bg-white border border-gray-200 hover:border-gray-300">Next →</a>
+    {% else %}<span></span>{% endif %}
+  </div>
+  {% else %}
+  <div class="card bg-white"><div class="card-body p-6 text-center text-sm text-gray-400">No provider calls found.</div></div>
+  {% endif %}
+</div>
+{% endblock %}

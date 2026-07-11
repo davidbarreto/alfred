@@ -1,7 +1,7 @@
 {
   "info": {
-    "name": "Alfred - Monitors API",
-    "_postman_id": "alfred-monitors-v2",
+    "name": "Alfred - Watcher API",
+    "_postman_id": "alfred-watcher-v2",
     "description": "Run in order: Health Check → Create → List → Get → Update → Run → Get Config Executions → List All Executions → List Alerts → List Pending Alerts → Run All → Delete",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
@@ -44,7 +44,7 @@
       }
     },
     {
-      "name": "02 - Create Monitor",
+      "name": "02 - Create Watcher",
       "event": [
         {
           "listen": "test",
@@ -54,10 +54,10 @@
               "pm.test('Response has id and saves it', () => {",
               "    const json = pm.response.json();",
               "    pm.expect(json).to.have.property('id');",
-              "    pm.expect(json.name).to.eql('Test HTML Monitor');",
+              "    pm.expect(json.name).to.eql('Test HTML Watcher');",
               "    pm.expect(json.enabled).to.be.true;",
               "    pm.expect(json.type).to.eql('html_static');",
-              "    pm.environment.set('monitor_id', json.id);",
+              "    pm.environment.set('watcher_id', json.id);",
               "});"
             ],
             "type": "text/javascript"
@@ -71,7 +71,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"name\": \"Test HTML Monitor\",\n  \"description\": \"Monitors example.com for its title text\",\n  \"type\": \"html_static\",\n  \"url\": \"https://example.com\",\n  \"target\": \"Example Domain\",\n  \"enabled\": true,\n  \"timeout\": 10\n}",
+          "raw": "{\n  \"name\": \"Test HTML Watcher\",\n  \"description\": \"Watches example.com for its title text\",\n  \"type\": \"html_static\",\n  \"url\": \"https://example.com\",\n  \"target\": \"Example Domain\",\n  \"enabled\": true,\n  \"timeout\": 10\n}",
           "options": { "raw": { "language": "json" } }
         },
         "url": {
@@ -82,7 +82,7 @@
       }
     },
     {
-      "name": "03 - List Monitors",
+      "name": "03 - List Watchers",
       "event": [
         {
           "listen": "test",
@@ -114,17 +114,17 @@
       }
     },
     {
-      "name": "04 - Get Monitor",
+      "name": "04 - Get Watcher",
       "event": [
         {
           "listen": "test",
           "script": {
             "exec": [
               "pm.test('Status is 200', () => pm.response.to.have.status(200));",
-              "pm.test('Response matches created monitor', () => {",
+              "pm.test('Response matches created watcher', () => {",
               "    const json = pm.response.json();",
-              "    pm.expect(String(json.id)).to.eql(String(pm.environment.get('monitor_id')));",
-              "    pm.expect(json.name).to.eql('Test HTML Monitor');",
+              "    pm.expect(String(json.id)).to.eql(String(pm.environment.get('watcher_id')));",
+              "    pm.expect(json.name).to.eql('Test HTML Watcher');",
               "    pm.expect(json.url).to.eql('https://example.com');",
               "});"
             ],
@@ -136,14 +136,14 @@
         "method": "GET",
         "header": [],
         "url": {
-          "raw": "{{base_url}}/watcher/configs/{{monitor_id}}",
+          "raw": "{{base_url}}/watcher/configs/{{watcher_id}}",
           "host": ["{{base_url}}"],
-          "path": ["watcher", "configs", "{{monitor_id}}"]
+          "path": ["watcher", "configs", "{{watcher_id}}"]
         }
       }
     },
     {
-      "name": "05 - Update Monitor",
+      "name": "05 - Update Watcher",
       "event": [
         {
           "listen": "test",
@@ -152,7 +152,7 @@
               "pm.test('Status is 200', () => pm.response.to.have.status(200));",
               "pm.test('Name and timeout were updated', () => {",
               "    const json = pm.response.json();",
-              "    pm.expect(json.name).to.eql('Test HTML Monitor (Updated)');",
+              "    pm.expect(json.name).to.eql('Test HTML Watcher (Updated)');",
               "    pm.expect(json.timeout).to.eql(15);",
               "});"
             ],
@@ -167,18 +167,18 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"name\": \"Test HTML Monitor (Updated)\",\n  \"description\": \"Updated description\",\n  \"timeout\": 15\n}",
+          "raw": "{\n  \"name\": \"Test HTML Watcher (Updated)\",\n  \"description\": \"Updated description\",\n  \"timeout\": 15\n}",
           "options": { "raw": { "language": "json" } }
         },
         "url": {
-          "raw": "{{base_url}}/watcher/configs/{{monitor_id}}",
+          "raw": "{{base_url}}/watcher/configs/{{watcher_id}}",
           "host": ["{{base_url}}"],
-          "path": ["watcher", "configs", "{{monitor_id}}"]
+          "path": ["watcher", "configs", "{{watcher_id}}"]
         }
       }
     },
     {
-      "name": "06 - Run Monitor",
+      "name": "06 - Run Watcher",
       "event": [
         {
           "listen": "test",
@@ -204,9 +204,9 @@
         "method": "POST",
         "header": [],
         "url": {
-          "raw": "{{base_url}}/watcher/configs/{{monitor_id}}/run",
+          "raw": "{{base_url}}/watcher/configs/{{watcher_id}}/run",
           "host": ["{{base_url}}"],
-          "path": ["watcher", "configs", "{{monitor_id}}", "run"]
+          "path": ["watcher", "configs", "{{watcher_id}}", "run"]
         }
       }
     },
@@ -236,9 +236,9 @@
         "method": "GET",
         "header": [],
         "url": {
-          "raw": "{{base_url}}/watcher/configs/{{monitor_id}}/executions?limit=10",
+          "raw": "{{base_url}}/watcher/configs/{{watcher_id}}/executions?limit=10",
           "host": ["{{base_url}}"],
-          "path": ["watcher", "configs", "{{monitor_id}}", "executions"],
+          "path": ["watcher", "configs", "{{watcher_id}}", "executions"],
           "query": [
             { "key": "limit", "value": "10" }
           ]
@@ -284,7 +284,7 @@
               "    const json = pm.response.json();",
               "    pm.expect(json).to.be.an('array');",
               "    json.forEach(ex => {",
-              "        pm.expect(String(ex.config_id)).to.eql(String(pm.environment.get('monitor_id')));",
+              "        pm.expect(String(ex.config_id)).to.eql(String(pm.environment.get('watcher_id')));",
               "    });",
               "});"
             ],
@@ -296,11 +296,11 @@
         "method": "GET",
         "header": [],
         "url": {
-          "raw": "{{base_url}}/watcher/executions/?config_id={{monitor_id}}&limit=20",
+          "raw": "{{base_url}}/watcher/executions/?config_id={{watcher_id}}&limit=20",
           "host": ["{{base_url}}"],
           "path": ["watcher", "executions", ""],
           "query": [
-            { "key": "config_id", "value": "{{monitor_id}}" },
+            { "key": "config_id", "value": "{{watcher_id}}" },
             { "key": "limit", "value": "20" }
           ]
         }
@@ -391,12 +391,12 @@
         "method": "GET",
         "header": [],
         "url": {
-          "raw": "{{base_url}}/watcher/alerts/?status=pending&config_id={{monitor_id}}",
+          "raw": "{{base_url}}/watcher/alerts/?status=pending&config_id={{watcher_id}}",
           "host": ["{{base_url}}"],
           "path": ["watcher", "alerts", ""],
           "query": [
             { "key": "status", "value": "pending" },
-            { "key": "config_id", "value": "{{monitor_id}}" }
+            { "key": "config_id", "value": "{{watcher_id}}" }
           ]
         }
       }
@@ -479,7 +479,7 @@
       }
     },
     {
-      "name": "11 - Run All Active Monitors",
+      "name": "11 - Run All Active Watchers",
       "event": [
         {
           "listen": "test",
@@ -505,19 +505,19 @@
       }
     },
     {
-      "name": "12 - Delete Monitor",
+      "name": "12 - Delete Watcher",
       "event": [
         {
           "listen": "test",
           "script": {
             "exec": [
               "pm.test('Status is 200', () => pm.response.to.have.status(200));",
-              "pm.test('Deleted monitor is returned', () => {",
+              "pm.test('Deleted watcher is returned', () => {",
               "    const json = pm.response.json();",
-              "    pm.expect(String(json.id)).to.eql(String(pm.environment.get('monitor_id')));",
-              "    pm.expect(json.name).to.eql('Test HTML Monitor (Updated)');",
+              "    pm.expect(String(json.id)).to.eql(String(pm.environment.get('watcher_id')));",
+              "    pm.expect(json.name).to.eql('Test HTML Watcher (Updated)');",
               "});",
-              "pm.environment.unset('monitor_id');",
+              "pm.environment.unset('watcher_id');",
               "pm.environment.unset('execution_id');"
             ],
             "type": "text/javascript"
@@ -528,9 +528,9 @@
         "method": "DELETE",
         "header": [],
         "url": {
-          "raw": "{{base_url}}/watcher/configs/{{monitor_id}}",
+          "raw": "{{base_url}}/watcher/configs/{{watcher_id}}",
           "host": ["{{base_url}}"],
-          "path": ["watcher", "configs", "{{monitor_id}}"]
+          "path": ["watcher", "configs", "{{watcher_id}}"]
         }
       }
     }

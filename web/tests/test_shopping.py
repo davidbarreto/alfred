@@ -19,8 +19,11 @@ class TestAddShoppingItem:
         mock_api["post"].assert_any_await("/organizer/shopping", json={
             "name": "Milk", "category": "grocery", "priority": "need", "source": "manual",
         })
-        mock_api["get"].assert_awaited_once_with(
+        mock_api["get"].assert_any_await(
             "/organizer/shopping", params={"status": "pending", "category": "all", "limit": 100}
+        )
+        mock_api["get"].assert_any_await(
+            "/organizer/shopping/frequent", params={"limit": 15}
         )
 
     def test_returns_422_when_backend_create_fails(self, client, mock_api):

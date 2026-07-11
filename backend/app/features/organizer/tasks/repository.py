@@ -79,7 +79,11 @@ class TaskRepository:
         if task is None:
             return None
 
-        for field, value in task_update.model_dump(exclude_unset=True).items():
+        update_data = task_update.model_dump(exclude_unset=True)
+        if "tags" in update_data:
+            task.tags = await self._resolve_tags(update_data.pop("tags"), task.provider_id)
+
+        for field, value in update_data.items():
             setattr(task, field, value)
 
         await self._session.commit()

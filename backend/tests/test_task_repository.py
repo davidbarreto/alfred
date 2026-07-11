@@ -219,6 +219,25 @@ class TestUpdateTask:
         # Verify setattr was called on the task for each updated field
         assert task.status == "DONE" or True  # setattr on MagicMock sets attribute
 
+    async def test_update_resolves_tags(self):
+        session = _make_session()
+        from app.features.organizer.tags.tables import Tag
+        task = _make_task_orm(provider_id="provider-1")
+        existing_tag = Tag(name="house", provider_id="provider-1")
+
+        # get_task (first), _resolve_tags (first), reload after commit (one)
+        session.execute.side_effect = [
+            _scalar_first(task),
+            _scalar_first(existing_tag),
+            _scalar_one(task),
+        ]
+
+        repo = TaskRepository(session)
+        result = await repo.update_task(1, TaskUpdate(tags=["house"]))
+
+        session.commit.assert_called_once()
+        assert result == task
+
 
 class TestDeleteTask:
     async def test_soft_delete_issues_update(self):

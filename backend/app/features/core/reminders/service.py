@@ -42,6 +42,12 @@ class ReminderService:
         return ReminderDigest(date=today, has_content=bool(lines), text=text)
 
     async def _collect_task_lines(self, now: datetime, today) -> list[str]:
+        lines: list[str] = []
+        lines.extend(await self._collect_dated_task_lines(now, today))
+        lines.extend(await self._collect_undated_task_lines(today))
+        return lines
+
+    async def _collect_dated_task_lines(self, now: datetime, today) -> list[str]:
         tasks = await self._task_service.get_tasks(
             TaskFilters(status="ACTIVE", deadline_to=now + _TASK_LOOKAHEAD, limit=100)
         )
@@ -69,6 +75,19 @@ class ReminderService:
             lines.append(f"{label} ({urgency}): {task.title}")
             ttl = _URGENT_DEDUP_TTL if urgency == "URGENT" or task.priority == "HIGH" else _NORMAL_DEDUP_TTL
             await self._mark_reminded("task", task.id, today, ttl)
+        return lines
+
+    async def _collect_undated_task_lines(self, today) -> list[str]:
+        tasks = await self._task_service.get_tasks(TaskFilters(status="ACTIVE", limit=100))
+        lines: list[str] = []
+        for task in tasks:
+            if task.deadline is not None:
+                continue
+            if await self._already_reminded("task", task.id, today):
+                continue
+
+            lines.append(f"No due date: {task.title}")
+            await self._mark_reminded("task", task.id, today, _NORMAL_DEDUP_TTL)
         return lines
 
     async def _collect_event_lines(self, now: datetime, today) -> list[str]:

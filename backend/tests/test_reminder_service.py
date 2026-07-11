@@ -125,6 +125,46 @@ class TestBuildDueDigestTasks:
         mock_task_service.update_task.assert_not_awaited()
         assert digest.has_content is False
 
+    async def test_undated_task_is_included_but_not_escalated(self, mock_session, mock_task_service):
+        task = _make_task(id=5, title="Read that book", deadline=None, urgency="NORMAL")
+        mock_task_service.get_tasks.return_value = [task]
+
+        with (
+            patch("app.features.core.reminders.service.CalendarEventRepository") as MockEventRepo,
+            patch("app.features.core.reminders.service.ShoppingRepository") as MockShoppingRepo,
+            patch("app.features.core.reminders.service.WorkingMemoryRepository") as MockWMRepo,
+            patch("app.features.core.reminders.service.local_now", return_value=NOW),
+        ):
+            MockEventRepo.return_value.get_events = AsyncMock(return_value=[])
+            MockShoppingRepo.return_value.list = AsyncMock(return_value=[])
+            MockWMRepo.return_value.list = AsyncMock(return_value=[])
+            MockWMRepo.return_value.create = AsyncMock()
+
+            digest = await _service(mock_session, mock_task_service).build_due_digest()
+
+        mock_task_service.update_task.assert_not_awaited()
+        assert "No due date: Read that book" in digest.text
+
+    async def test_undated_task_already_reminded_today_is_skipped(self, mock_session, mock_task_service):
+        task = _make_task(id=6, title="Read that book", deadline=None, urgency="NORMAL")
+        mock_task_service.get_tasks.return_value = [task]
+
+        with (
+            patch("app.features.core.reminders.service.CalendarEventRepository") as MockEventRepo,
+            patch("app.features.core.reminders.service.ShoppingRepository") as MockShoppingRepo,
+            patch("app.features.core.reminders.service.WorkingMemoryRepository") as MockWMRepo,
+            patch("app.features.core.reminders.service.local_now", return_value=NOW),
+        ):
+            MockEventRepo.return_value.get_events = AsyncMock(return_value=[])
+            MockShoppingRepo.return_value.list = AsyncMock(return_value=[])
+            MockWMRepo.return_value.list = AsyncMock(return_value=[MagicMock()])
+            MockWMRepo.return_value.create = AsyncMock()
+
+            digest = await _service(mock_session, mock_task_service).build_due_digest()
+
+        MockWMRepo.return_value.create.assert_not_awaited()
+        assert digest.has_content is False
+
 
 class TestBuildDueDigestEventsAndShopping:
     async def test_imminent_event_is_included(self, mock_session, mock_task_service):

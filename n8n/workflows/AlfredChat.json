@@ -137,7 +137,8 @@
                     "id": "t63z4EHeYTEZtFAR",
                     "name": "Telegram account"
                 }
-            }
+            },
+            "onError": "continueErrorOutput"
         },
         {
             "parameters": {
@@ -171,7 +172,8 @@
                     "id": "oj5Yf1MhLsryeSrX",
                     "name": "Bearer Auth account"
                 }
-            }
+            },
+            "onError": "continueErrorOutput"
         },
         {
             "parameters": {
@@ -215,7 +217,8 @@
                     "id": "oj5Yf1MhLsryeSrX",
                     "name": "Bearer Auth account"
                 }
-            }
+            },
+            "onError": "continueErrorOutput"
         },
         {
             "parameters": {
@@ -393,7 +396,8 @@
                     "id": "oj5Yf1MhLsryeSrX",
                     "name": "Bearer Auth account"
                 }
-            }
+            },
+            "onError": "continueErrorOutput"
         },
         {
             "parameters": {
@@ -696,7 +700,8 @@
                     "id": "oj5Yf1MhLsryeSrX",
                     "name": "Bearer Auth account"
                 }
-            }
+            },
+            "onError": "continueErrorOutput"
         },
         {
             "parameters": {
@@ -738,7 +743,8 @@
                     "id": "oj5Yf1MhLsryeSrX",
                     "name": "Bearer Auth account"
                 }
-            }
+            },
+            "onError": "continueErrorOutput"
         },
         {
             "parameters": {
@@ -942,7 +948,8 @@
                     "id": "t63z4EHeYTEZtFAR",
                     "name": "Telegram account"
                 }
-            }
+            },
+            "onError": "continueErrorOutput"
         },
         {
             "parameters": {
@@ -1005,7 +1012,8 @@
                     "id": "oj5Yf1MhLsryeSrX",
                     "name": "Bearer Auth account"
                 }
-            }
+            },
+            "onError": "continueErrorOutput"
         },
         {
             "parameters": {
@@ -1052,7 +1060,8 @@
                     "id": "t63z4EHeYTEZtFAR",
                     "name": "Telegram account"
                 }
-            }
+            },
+            "onError": "continueErrorOutput"
         },
         {
             "parameters": {
@@ -1086,7 +1095,8 @@
                 -32
             ],
             "id": "3bf63869-21e4-4916-aff7-bfc327892edc",
-            "name": "Send Language Practice Audio"
+            "name": "Send Language Practice Audio",
+            "onError": "continueErrorOutput"
         },
         {
             "parameters": {
@@ -1110,7 +1120,8 @@
                     "id": "t63z4EHeYTEZtFAR",
                     "name": "Telegram account"
                 }
-            }
+            },
+            "onError": "continueErrorOutput"
         },
         {
             "parameters": {
@@ -1157,7 +1168,8 @@
                     "id": "oj5Yf1MhLsryeSrX",
                     "name": "Bearer Auth account"
                 }
-            }
+            },
+            "onError": "continueErrorOutput"
         },
         {
             "parameters": {
@@ -1335,6 +1347,13 @@
                         "type": "main",
                         "index": 0
                     }
+                ],
+                [
+                    {
+                        "node": "Set Error Message",
+                        "type": "main",
+                        "index": 0
+                    }
                 ]
             ]
         },
@@ -1346,6 +1365,13 @@
                         "type": "main",
                         "index": 0
                     }
+                ],
+                [
+                    {
+                        "node": "Set Error Message",
+                        "type": "main",
+                        "index": 0
+                    }
                 ]
             ]
         },
@@ -1354,6 +1380,13 @@
                 [
                     {
                         "node": "Detect Intents",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "Set Error Message",
                         "type": "main",
                         "index": 0
                     }
@@ -1439,6 +1472,13 @@
                 [
                     {
                         "node": "Decide Response Flow",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "Set Error Message",
                         "type": "main",
                         "index": 0
                     }
@@ -1576,6 +1616,13 @@
                         "type": "main",
                         "index": 0
                     }
+                ],
+                [
+                    {
+                        "node": "Set Error Message",
+                        "type": "main",
+                        "index": 0
+                    }
                 ]
             ]
         },
@@ -1653,6 +1700,13 @@
                         "type": "main",
                         "index": 0
                     }
+                ],
+                [
+                    {
+                        "node": "Set Error Message",
+                        "type": "main",
+                        "index": 0
+                    }
                 ]
             ]
         },
@@ -1661,6 +1715,13 @@
                 [
                     {
                         "node": "Define Message from Callback",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "Set Error Message",
                         "type": "main",
                         "index": 0
                     }
@@ -1686,6 +1747,13 @@
                         "type": "main",
                         "index": 0
                     }
+                ],
+                [
+                    {
+                        "node": "Set Error Message",
+                        "type": "main",
+                        "index": 0
+                    }
                 ]
             ]
         },
@@ -1694,6 +1762,13 @@
                 [
                     {
                         "node": "Define Message from Practice",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "Set Error Message",
                         "type": "main",
                         "index": 0
                     }
@@ -1719,6 +1794,13 @@
                         "type": "main",
                         "index": 0
                     }
+                ],
+                [
+                    {
+                        "node": "Set Error Message",
+                        "type": "main",
+                        "index": 0
+                    }
                 ]
             ]
         },
@@ -1727,6 +1809,30 @@
                 [
                     {
                         "node": "Send Language Review",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Send Language Practice Audio": {
+            "main": [
+                [],
+                [
+                    {
+                        "node": "Set Error Message",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Send Language Review": {
+            "main": [
+                [],
+                [
+                    {
+                        "node": "Set Error Message",
                         "type": "main",
                         "index": 0
                     }

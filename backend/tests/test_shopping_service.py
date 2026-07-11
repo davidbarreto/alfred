@@ -2,11 +2,14 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 from decimal import Decimal
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
 from app.features.organizer.shopping.schemas import (
+    FrequentItemFilters,
+    FrequentItemRead,
     RecurrenceItemCreate,
     RecurrenceItemRead,
     ShoppingItemCreate,
@@ -170,6 +173,30 @@ class TestMarkSkipped:
         service._shopping.mark_skipped.return_value = None
         result = await service.mark_skipped(999)
         assert result is None
+
+
+class TestListFrequentItems:
+    async def test_returns_list_of_reads(self, service):
+        row = SimpleNamespace(name="Milk", category="grocery", purchase_count=5, last_bought_at=_NOW)
+        service._shopping.get_frequent.return_value = [row]
+
+        result = await service.list_frequent_items(FrequentItemFilters())
+
+        assert len(result) == 1
+        assert isinstance(result[0], FrequentItemRead)
+        assert result[0].name == "Milk"
+        assert result[0].purchase_count == 5
+
+    async def test_empty_when_no_history(self, service):
+        service._shopping.get_frequent.return_value = []
+        result = await service.list_frequent_items(FrequentItemFilters())
+        assert result == []
+
+    async def test_passes_filters_to_repo(self, service):
+        service._shopping.get_frequent.return_value = []
+        filters = FrequentItemFilters(category="grocery", limit=5)
+        await service.list_frequent_items(filters)
+        service._shopping.get_frequent.assert_called_once_with(filters)
 
 
 # --- Wishlist ---

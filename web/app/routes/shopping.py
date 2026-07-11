@@ -20,7 +20,7 @@ async def shopping_page(request: Request):
     status = request.query_params.get("status", "pending")
     category = request.query_params.get("category", "all")
 
-    items, wishlist = [], []
+    items, wishlist, frequent_items = [], [], []
     api_error: str | None = None
     try:
         items = await api.get("/organizer/shopping", params={"status": status, "category": category, "limit": 100})
@@ -34,9 +34,16 @@ async def shopping_page(request: Request):
         logger.error("Failed to load wishlist items: error=%s", e)
         api_error = api_error or f"Cannot reach backend: {e}"
 
+    try:
+        frequent_items = await api.get("/organizer/shopping/frequent", params={"limit": 15})
+    except httpx.HTTPError as e:
+        logger.error("Failed to load frequent shopping items: error=%s", e)
+        api_error = api_error or f"Cannot reach backend: {e}"
+
     return templates.TemplateResponse(request, "shopping.html", {
         "items": items,
         "wishlist": wishlist,
+        "frequent_items": frequent_items,
         "active_status": status,
         "active_category": category,
         "categories": _CATEGORIES,
@@ -88,10 +95,22 @@ async def add_shopping_item(
     except httpx.HTTPError as e:
         logger.error("Failed to reload shopping items after create: error=%s", e)
         items = []
-    return templates.TemplateResponse(request, "_shopping_list.html", {
+
+    try:
+        frequent_items = await api.get("/organizer/shopping/frequent", params={"limit": 15})
+    except httpx.HTTPError as e:
+        logger.error("Failed to reload frequent shopping items after create: error=%s", e)
+        frequent_items = []
+
+    list_html = templates.env.get_template("_shopping_list.html").render({
         "items": items,
         "categories": _CATEGORIES,
     })
+    frequent_html = templates.env.get_template("_shopping_frequent.html").render({
+        "frequent_items": frequent_items,
+        "oob": True,
+    })
+    return HTMLResponse(list_html + frequent_html)
 
 
 @router.post("/{item_id}/bought", response_class=HTMLResponse)

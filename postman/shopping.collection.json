@@ -231,7 +231,40 @@
           }
         },
         {
-          "name": "08 - Create Shopping Item (for skipped test)",
+          "name": "08 - List Frequent Shopping Items",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Bought item appears in frequent list', () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.be.an('array');",
+                  "    const beans = json.find((i) => i.name === 'Beans');",
+                  "    pm.expect(beans).to.exist;",
+                  "    pm.expect(beans.category).to.eql('grocery');",
+                  "    pm.expect(beans.purchase_count).to.be.at.least(1);",
+                  "    pm.expect(beans).to.have.property('last_bought_at');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/organizer/shopping/frequent?limit=20",
+              "host": ["{{base_url}}"],
+              "path": ["organizer", "shopping", "frequent"],
+              "query": [{ "key": "limit", "value": "20" }]
+            }
+          }
+        },
+        {
+          "name": "09 - Create Shopping Item (for skipped test)",
           "event": [
             {
               "listen": "test",
@@ -260,7 +293,7 @@
           }
         },
         {
-          "name": "09 - Mark Shopping Item as Skipped",
+          "name": "10 - Mark Shopping Item as Skipped",
           "event": [
             {
               "listen": "test",
@@ -286,7 +319,7 @@
           }
         },
         {
-          "name": "10 - Get Non-existent Shopping Item (404)",
+          "name": "11 - Get Non-existent Shopping Item (404)",
           "event": [
             {
               "listen": "test",
@@ -309,7 +342,7 @@
           }
         },
         {
-          "name": "11 - Delete Shopping Items (cleanup)",
+          "name": "12 - Delete Shopping Items (cleanup)",
           "event": [
             {
               "listen": "test",
@@ -339,7 +372,7 @@
       "name": "Wishlist",
       "item": [
         {
-          "name": "12 - Create Wishlist Item",
+          "name": "13 - Create Wishlist Item",
           "event": [
             {
               "listen": "test",
@@ -374,7 +407,7 @@
           }
         },
         {
-          "name": "13 - List Wishlist Items",
+          "name": "14 - List Wishlist Items",
           "event": [
             {
               "listen": "test",
@@ -400,7 +433,7 @@
           }
         },
         {
-          "name": "14 - Get Wishlist Item",
+          "name": "15 - Get Wishlist Item",
           "event": [
             {
               "listen": "test",
@@ -426,7 +459,7 @@
           }
         },
         {
-          "name": "15 - Update Wishlist Item",
+          "name": "16 - Update Wishlist Item",
           "event": [
             {
               "listen": "test",
@@ -457,7 +490,7 @@
           }
         },
         {
-          "name": "16 - Promote Wishlist Item to Shopping List",
+          "name": "17 - Promote Wishlist Item to Shopping List",
           "event": [
             {
               "listen": "test",
@@ -493,7 +526,7 @@
           }
         },
         {
-          "name": "17 - Verify Wishlist Item Was Deleted After Promote (404)",
+          "name": "18 - Verify Wishlist Item Was Deleted After Promote (404)",
           "event": [
             {
               "listen": "test",
@@ -516,7 +549,7 @@
           }
         },
         {
-          "name": "18 - Delete Promoted Shopping Item (cleanup)",
+          "name": "19 - Delete Promoted Shopping Item (cleanup)",
           "event": [
             {
               "listen": "test",
@@ -546,7 +579,7 @@
       "name": "Recurrence",
       "item": [
         {
-          "name": "19 - Create Recurrence Item",
+          "name": "20 - Create Recurrence Item",
           "event": [
             {
               "listen": "test",
@@ -582,7 +615,7 @@
           }
         },
         {
-          "name": "20 - List Recurrence Items (active only)",
+          "name": "21 - List Recurrence Items (active only)",
           "event": [
             {
               "listen": "test",
@@ -609,7 +642,7 @@
           }
         },
         {
-          "name": "21 - Get Recurrence Item",
+          "name": "22 - Get Recurrence Item",
           "event": [
             {
               "listen": "test",
@@ -635,7 +668,7 @@
           }
         },
         {
-          "name": "22 - Update Recurrence Item",
+          "name": "23 - Update Recurrence Item",
           "event": [
             {
               "listen": "test",
@@ -666,7 +699,7 @@
           }
         },
         {
-          "name": "23 - Deactivate Recurrence Item",
+          "name": "24 - Deactivate Recurrence Item",
           "event": [
             {
               "listen": "test",
@@ -697,7 +730,7 @@
           }
         },
         {
-          "name": "24 - List Recurrence Items (include inactive)",
+          "name": "25 - List Recurrence Items (include inactive)",
           "event": [
             {
               "listen": "test",
@@ -725,7 +758,7 @@
           }
         },
         {
-          "name": "25 - Delete Recurrence Item (cleanup)",
+          "name": "26 - Delete Recurrence Item (cleanup)",
           "event": [
             {
               "listen": "test",

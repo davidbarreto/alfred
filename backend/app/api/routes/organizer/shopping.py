@@ -4,6 +4,8 @@ from pydantic import BaseModel
 from app.api.auth import require_auth
 from app.dependencies import ShoppingServiceDep
 from app.features.organizer.shopping.schemas import (
+    FrequentItemFilters,
+    FrequentItemRead,
     RecurrenceItemCreate,
     RecurrenceItemRead,
     RecurrenceItemUpdate,
@@ -35,6 +37,11 @@ async def list_shopping_items(service: ShoppingServiceDep, filters: ShoppingItem
 @shopping_router.post("", response_model=ShoppingItemRead, status_code=status.HTTP_201_CREATED)
 async def create_shopping_item(request: ShoppingItemCreate, service: ShoppingServiceDep):
     return await service.create_item(request)
+
+
+@shopping_router.get("/frequent", response_model=list[FrequentItemRead])
+async def list_frequent_shopping_items(service: ShoppingServiceDep, filters: FrequentItemFilters = Depends()):
+    return await service.list_frequent_items(filters)
 
 
 @shopping_router.get("/{item_id}", response_model=ShoppingItemRead)

@@ -82,6 +82,34 @@ class ShoppingItemFilters:
         )
 
 
+# --- Frequent item (derived from purchase history) ---
+
+class FrequentItemRead(BaseModel):
+    name: str
+    category: ShoppingCategory
+    purchase_count: int
+    last_bought_at: Optional[datetime]
+
+
+class FrequentItemFilters:
+    def __init__(
+        self,
+        category: Annotated[
+            Literal["grocery", "pharmacy", "electronics", "online", "home", "clothes", "books", "other", "all"],
+            Query(),
+        ] = "all",
+        limit: Annotated[int, Query(ge=1)] = 20,
+    ) -> None:
+        self.category = category
+        self.limit = limit
+
+    def __eq__(self, other: object) -> bool:
+        return isinstance(other, FrequentItemFilters) and vars(self) == vars(other)
+
+    def __repr__(self) -> str:
+        return f"FrequentItemFilters(category={self.category!r}, limit={self.limit})"
+
+
 # --- Wishlist item ---
 
 class WishlistItemBase(BaseModel):

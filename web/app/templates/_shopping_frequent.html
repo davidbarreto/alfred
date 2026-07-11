@@ -1,0 +1,16 @@
+<div id="frequent-items" {% if oob %}hx-swap-oob="true"{% endif %} class="flex gap-1.5 flex-wrap items-center {% if frequent_items %}mb-3{% endif %}">
+  {% if frequent_items %}
+  <span class="text-[10px] text-gray-400 uppercase tracking-widest font-semibold mr-1">Frequently bought</span>
+  {% for f in frequent_items %}
+  <form hx-post="/shopping/" hx-target="#shopping-list" hx-swap="innerHTML" class="inline">
+    <input type="hidden" name="name" value="{{ f.name }}" />
+    <input type="hidden" name="category" value="{{ f.category }}" />
+    <input type="hidden" name="priority" value="need" />
+    <button
+      type="submit"
+      class="px-2.5 py-1 rounded-full text-xs bg-gray-100 text-gray-600 hover:bg-[#E6F1FB] hover:text-[#0C447C] transition-colors"
+    >+ {{ f.name }}</button>
+  </form>
+  {% endfor %}
+  {% endif %}
+</div>

@@ -2,10 +2,12 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
-from sqlalchemy import select, update
+from sqlalchemy import func, select, update
+from sqlalchemy.engine import Row
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.features.organizer.shopping.schemas import (
+    FrequentItemFilters,
     RecurrenceItemCreate,
     RecurrenceItemUpdate,
     ShoppingItemCreate,
@@ -85,6 +87,32 @@ class ShoppingRepository:
         )
         await self._session.commit()
         return await self.get(item_id)
+
+    async def get_frequent(self, filters: FrequentItemFilters) -> list[Row]:
+        pending_names = select(ShoppingItem.name).where(
+            ShoppingItem.status == "pending", ShoppingItem.deleted_at.is_(None)
+        )
+        query = (
+            select(
+                ShoppingItem.name,
+                ShoppingItem.category,
+                func.count().label("purchase_count"),
+                func.max(ShoppingItem.last_bought_at).label("last_bought_at"),
+            )
+            .where(
+                ShoppingItem.status == "bought",
+                ShoppingItem.deleted_at.is_(None),
+                ShoppingItem.name.notin_(pending_names),
+            )
+            .group_by(ShoppingItem.name, ShoppingItem.category)
+        )
+        if filters.category != "all":
+            query = query.where(ShoppingItem.category == filters.category)
+        query = query.order_by(func.count().desc(), func.max(ShoppingItem.last_bought_at).desc()).limit(
+            filters.limit
+        )
+        result = await self._session.execute(query)
+        return list(result.all())
 
 
 class WishlistRepository:

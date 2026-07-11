@@ -10,6 +10,8 @@ from app.features.organizer.shopping.repository import (
     WishlistRepository,
 )
 from app.features.organizer.shopping.schemas import (
+    FrequentItemFilters,
+    FrequentItemRead,
     RecurrenceItemCreate,
     RecurrenceItemRead,
     RecurrenceItemUpdate,
@@ -75,6 +77,18 @@ class ShoppingService:
             return None
         logger.info("Shopping item skipped: id=%d", item_id)
         return ShoppingItemRead.model_validate(orm)
+
+    async def list_frequent_items(self, filters: FrequentItemFilters) -> list[FrequentItemRead]:
+        rows = await self._shopping.get_frequent(filters)
+        return [
+            FrequentItemRead(
+                name=row.name,
+                category=row.category,
+                purchase_count=row.purchase_count,
+                last_bought_at=row.last_bought_at,
+            )
+            for row in rows
+        ]
 
     # --- Wishlist items ---
 

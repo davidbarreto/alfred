@@ -58,7 +58,8 @@ Categories:
 "user has a cat", "user was born in July"). Do NOT use for temporary or current-state \
 information like current location during travel, current mood, or present activity.
 - preference: stable like/dislike or habit (e.g. "user prefers dark coffee")
-- relationship: information about people the user knows
+- relationship: information about people the user knows (e.g. "user's son is named Kenai", \
+"user's friend Maria works as a nurse")
 - skill: something the user knows how to do
 - goal: something the user is working towards
 - episodic: a completed past experience worth remembering (e.g. "visited Paris in 2024", \
@@ -71,6 +72,8 @@ Rules:
 - Skip any data that belongs to a structured domain already tracked in the database: \
 tasks, to-dos, reminders, notes, calendar events, contacts, shopping items, \
 financial transactions, spending, purchases, budgets, and language learning sessions
+- content must be a complete, self-contained sentence stating the fact — never a bare name, \
+word, or value (e.g. write "user's son is named Kenai", not "Kenai")
 - Confidence: lower if information is implied rather than stated directly
 - Importance: how useful this will be in future conversations
 - expires_days: for temporary states (e.g. user is currently travelling, staying somewhere \

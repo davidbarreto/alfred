@@ -644,7 +644,7 @@
                         },
                         {
                             "id": "c11a2b8d-6007-4de9-b4e8-58e10593581b",
-                            "leftValue": "={{ $('Get Working Memory').item.json.value.parseJson().mode }}",
+                            "leftValue": "={{ $('Get Working Memory').item.json.value?.parseJson()?.mode }}",
                             "rightValue": "practice",
                             "operator": {
                                 "type": "string",

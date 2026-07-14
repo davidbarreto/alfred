@@ -81,6 +81,37 @@ async def create_note(
     return templates.TemplateResponse(request, "_notes_grid.html", {"notes": notes})
 
 
+@router.patch("/{note_id}", response_class=HTMLResponse)
+async def update_note(
+    note_id: int,
+    request: Request,
+    title: Annotated[str, Form()],
+    content: Annotated[str, Form()] = "",
+    tags: Annotated[str, Form()] = "",
+):
+    tag_list = [t.strip() for t in tags.split(",") if t.strip()]
+    try:
+        note = await api.patch(f"/organizer/notes/{note_id}", json={"title": title, "content": content, "tags": tag_list})
+    except httpx.HTTPStatusError as exc:
+        detail = "Failed to update note."
+        try:
+            detail = exc.response.json().get("detail", detail)
+        except Exception:
+            pass
+        return Response(detail, status_code=422, media_type="text/plain")
+    except httpx.HTTPError:
+        return Response("Failed to update note.", status_code=422, media_type="text/plain")
+
+    await api.log_command("note.update", {"title": title, "tags": tag_list}, "note", note.get("id"))
+
+    notes = []
+    try:
+        notes = await api.get("/organizer/notes", params={"limit": 100})
+    except httpx.HTTPError:
+        pass
+    return templates.TemplateResponse(request, "_notes_grid.html", {"notes": notes})
+
+
 @router.delete("/{note_id}", response_class=HTMLResponse)
 async def delete_note(note_id: int, request: Request):
     try:

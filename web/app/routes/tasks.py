@@ -134,6 +134,56 @@ async def create_task(
     })
 
 
+@router.patch("/{task_id}", response_class=HTMLResponse)
+async def update_task(
+    task_id: int,
+    request: Request,
+    title: Annotated[str, Form()],
+    priority: Annotated[str, Form()] = "LOW",
+    urgency: Annotated[str, Form()] = "NORMAL",
+    deadline: Annotated[Optional[str], Form()] = None,
+    tags: Annotated[str, Form()] = "",
+    recurrence_rule: Annotated[Optional[str], Form()] = None,
+):
+    tag_list = [t.strip() for t in tags.split(",") if t.strip()]
+    payload: dict = {
+        "title": title,
+        "priority": priority,
+        "urgency": urgency,
+        "tags": tag_list,
+        "deadline": deadline or None,
+        "recurrence_rule": recurrence_rule or None,
+    }
+    try:
+        task = await api.patch(f"/organizer/tasks/{task_id}", json=payload)
+    except httpx.HTTPStatusError as exc:
+        detail = "Failed to update task."
+        try:
+            detail = exc.response.json().get("detail", detail)
+        except Exception:
+            pass
+        return Response(detail, status_code=422, media_type="text/plain")
+    except httpx.HTTPError:
+        return Response("Failed to update task.", status_code=422, media_type="text/plain")
+
+    await api.log_command("task.update", {"title": title}, "task", task.get("id"))
+
+    active_filter = request.query_params.get("filter", "all")
+    params = _build_params(active_filter)
+    tasks = []
+    try:
+        tasks = await api.get("/organizer/tasks", params=params)
+        if active_filter == "habits":
+            tasks = [t for t in tasks if t.get("recurrence_rule")]
+    except httpx.HTTPError:
+        pass
+    return templates.TemplateResponse(request, "_tasks_list.html", {
+        "tasks": tasks,
+        "today": date.today().isoformat(),
+        "tomorrow": (date.today() + timedelta(days=1)).isoformat(),
+    })
+
+
 @router.post("/{task_id}/done", response_class=HTMLResponse)
 async def mark_task_done(task_id: int, request: Request):
     try:

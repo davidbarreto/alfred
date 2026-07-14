@@ -23,6 +23,11 @@
       </div>
     </div>
     <button
+      class="absolute top-2 right-9 text-gray-200 hover:text-[#378ADD] opacity-0 group-hover:opacity-100 transition-all"
+      onclick="openEditNote({{ note | tojson }})"
+      title="Edit note"
+    ><i class="ti ti-pencil text-sm"></i></button>
+    <button
       class="absolute top-2 right-2 text-gray-200 hover:text-[#E24B4A] opacity-0 group-hover:opacity-100 transition-all"
       hx-delete="/notes/{{ note.id }}"
       hx-target="#notes-grid"

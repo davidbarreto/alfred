@@ -38,8 +38,9 @@
 <!-- New Task Modal -->
 <dialog id="new-task-modal" class="modal">
   <div class="modal-box bg-white rounded-xl border border-gray-200 shadow-lg max-w-md w-full p-6">
-    <h3 class="text-sm font-semibold text-gray-900 mb-4">New task</h3>
+    <h3 id="task-form-title" class="text-sm font-semibold text-gray-900 mb-4">New task</h3>
     <form id="new-task-form" onsubmit="submitNewTask(event)" class="flex flex-col gap-3">
+      <input name="task_id" type="hidden" value="" />
       <div>
         <label class="text-xs text-gray-500 mb-1 block">Title <span class="text-[#E24B4A]">*</span></label>
         <input
@@ -174,8 +175,30 @@ function _setRecurrenceChip(value) {
 function openNewTask() {
   document.getElementById("task-error").classList.add("hidden");
   document.getElementById("new-task-form").reset();
+  document.getElementById("task-form-title").textContent = "New task";
   document.getElementById("task-recurrence-custom").value = "";
   _setRecurrenceChip("");
+  document.getElementById("new-task-modal").showModal();
+  setTimeout(() => document.getElementById("task-title").focus(), 50);
+}
+
+function openEditTask(task) {
+  document.getElementById("task-error").classList.add("hidden");
+  document.getElementById("new-task-form").reset();
+  document.getElementById("task-form-title").textContent = "Edit task";
+  const form = document.getElementById("new-task-form");
+  form.querySelector('[name="task_id"]').value = task.id;
+  form.querySelector('[name="title"]').value = task.title;
+  form.querySelector('[name="priority"]').value = task.priority;
+  form.querySelector('[name="urgency"]').value = task.urgency;
+  form.querySelector('[name="deadline"]').value = task.deadline ? task.deadline.slice(0, 10) : "";
+  form.querySelector('[name="tags"]').value = (task.tags || []).join(", ");
+
+  const rr = task.recurrence_rule || "";
+  const knownRecurrences = ["", "FREQ=DAILY", "FREQ=WEEKLY", "FREQ=MONTHLY", "FREQ=YEARLY"];
+  document.getElementById("task-recurrence-custom").value = knownRecurrences.includes(rr) ? "" : rr;
+  _setRecurrenceChip(knownRecurrences.includes(rr) ? rr : "__custom__");
+
   document.getElementById("new-task-modal").showModal();
   setTimeout(() => document.getElementById("task-title").focus(), 50);
 }
@@ -189,8 +212,11 @@ async function submitNewTask(e) {
   errEl.classList.add("hidden");
 
   const data = new FormData(e.target);
+  const taskId = data.get("task_id");
+  const url = taskId ? `/tasks/${taskId}` : "/tasks/";
+  const method = taskId ? "PATCH" : "POST";
   try {
-    const res = await fetch("/tasks/", { method: "POST", body: data });
+    const res = await fetch(url, { method, body: data });
     if (!res.ok) {
       const txt = await res.text();
       throw new Error(txt || `Error ${res.status}`);

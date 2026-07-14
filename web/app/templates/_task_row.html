@@ -173,6 +173,12 @@
           {% endif %}
           <li>
             <button
+              class="w-full text-left px-3 py-1.5 rounded hover:bg-gray-50 text-gray-700"
+              onclick="_taskMenuClose(); openEditTask({{ task | tojson }})"
+            >Edit</button>
+          </li>
+          <li>
+            <button
               class="w-full text-left px-3 py-1.5 rounded hover:bg-[#FCEBEB] text-[#E24B4A]"
               hx-delete="/tasks/{{ task.id }}"
               hx-target="#task-{{ task.id }}"

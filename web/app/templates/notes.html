@@ -29,8 +29,9 @@
 <!-- New Note Modal -->
 <dialog id="new-note-modal" class="modal">
   <div class="modal-box bg-white rounded-xl border border-gray-200 shadow-lg max-w-md w-full p-6">
-    <h3 class="text-sm font-semibold text-gray-900 mb-4">New note</h3>
+    <h3 id="note-form-title" class="text-sm font-semibold text-gray-900 mb-4">New note</h3>
     <form id="new-note-form" onsubmit="submitNewNote(event)" class="flex flex-col gap-3">
+      <input name="note_id" type="hidden" value="" />
       <div>
         <label class="text-xs text-gray-500 mb-1 block">Title <span class="text-[#E24B4A]">*</span></label>
         <input
@@ -125,6 +126,20 @@ function filterNotes(q) {
 function openNewNote() {
   document.getElementById("note-error").classList.add("hidden");
   document.getElementById("new-note-form").reset();
+  document.getElementById("note-form-title").textContent = "New note";
+  document.getElementById("new-note-modal").showModal();
+  setTimeout(() => document.getElementById("note-title").focus(), 50);
+}
+
+function openEditNote(note) {
+  document.getElementById("note-error").classList.add("hidden");
+  document.getElementById("new-note-form").reset();
+  document.getElementById("note-form-title").textContent = "Edit note";
+  const form = document.getElementById("new-note-form");
+  form.querySelector('[name="note_id"]').value = note.id;
+  form.querySelector('[name="title"]').value = note.title;
+  form.querySelector('[name="content"]').value = note.content || "";
+  form.querySelector('[name="tags"]').value = (note.tags || []).join(", ");
   document.getElementById("new-note-modal").showModal();
   setTimeout(() => document.getElementById("note-title").focus(), 50);
 }
@@ -138,8 +153,11 @@ async function submitNewNote(e) {
   errEl.classList.add("hidden");
 
   const body = new FormData(e.target);
+  const noteId = body.get("note_id");
+  const url = noteId ? `/notes/${noteId}` : "/notes/";
+  const method = noteId ? "PATCH" : "POST";
   try {
-    const res = await fetch("/notes/", { method: "POST", body });
+    const res = await fetch(url, { method, body });
     if (!res.ok) {
       const txt = await res.text();
       throw new Error(txt || `Error ${res.status}`);

@@ -87,3 +87,65 @@ class TestCalendarDay:
 
         assert resp.status_code == 200
         assert "Could not load events." in resp.text
+
+    def test_renders_edit_button_per_event(self, client, mock_api):
+        mock_api["get"].return_value = [_event(id=7, title="Marriage Anniversary", all_day=True)]
+
+        resp = client.get("/calendar/day/2026-07-14")
+
+        assert resp.status_code == 200
+        assert "openEditEvent(" in resp.text
+        assert '&#34;id&#34;: 7' in resp.text or '"id": 7' in resp.text
+
+
+class TestUpdateEvent:
+    def test_updates_timed_event(self, client, mock_api):
+        mock_api["patch"].return_value = _event(id=3, title="Team sync")
+
+        resp = client.patch("/calendar/3", data={
+            "title": "Team sync",
+            "start_date": "2026-07-14",
+            "start_time": "09:00",
+            "end_time": "09:30",
+            "location": "Room 2",
+        })
+
+        assert resp.status_code == 204
+        mock_api["patch"].assert_any_await("/organizer/calendar-events/3", json={
+            "title": "Team sync",
+            "start_datetime": "2026-07-14T09:00:00",
+            "end_datetime": "2026-07-14T09:30:00",
+            "all_day": False,
+            "location": "Room 2",
+        })
+
+    def test_updates_all_day_event(self, client, mock_api):
+        mock_api["patch"].return_value = _event(id=1, all_day=True)
+
+        resp = client.patch("/calendar/1", data={
+            "title": "Marriage Anniversary",
+            "start_date": "2026-07-14",
+            "all_day": "1",
+        })
+
+        assert resp.status_code == 204
+        mock_api["patch"].assert_any_await("/organizer/calendar-events/1", json={
+            "title": "Marriage Anniversary",
+            "start_datetime": "2026-07-14T00:00:00",
+            "end_datetime": "2026-07-14T23:59:59",
+            "all_day": True,
+            "location": None,
+        })
+
+    def test_returns_422_when_backend_update_fails(self, client, mock_api):
+        request = httpx.Request("PATCH", "http://api/organizer/calendar-events/3")
+        response = httpx.Response(404, json={"detail": "Event not found"}, request=request)
+        mock_api["patch"].side_effect = httpx.HTTPStatusError("not found", request=request, response=response)
+
+        resp = client.patch("/calendar/3", data={
+            "title": "Team sync",
+            "start_date": "2026-07-14",
+        })
+
+        assert resp.status_code == 422
+        assert "Event not found" in resp.text

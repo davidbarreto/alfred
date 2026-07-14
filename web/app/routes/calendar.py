@@ -103,6 +103,26 @@ async def calendar_day(date_str: str, request: Request):
     })
 
 
+def _event_payload(
+    title: str, start_date: str, start_time: str, end_time: str, location: str, all_day: str
+) -> dict:
+    is_all_day = bool(all_day)
+    if is_all_day:
+        start_iso = f"{start_date}T00:00:00"
+        end_iso = f"{start_date}T23:59:59"
+    else:
+        start_iso = f"{start_date}T{start_time}:00"
+        end_iso = f"{start_date}T{end_time}:00"
+
+    return {
+        "title": title,
+        "start_datetime": start_iso,
+        "end_datetime": end_iso,
+        "all_day": is_all_day,
+        "location": location or None,
+    }
+
+
 @router.post("/", response_class=HTMLResponse)
 async def create_event(
     request: Request,
@@ -113,21 +133,7 @@ async def create_event(
     location: Annotated[str, Form()] = "",
     all_day: Annotated[str, Form()] = "",
 ):
-    is_all_day = bool(all_day)
-    if is_all_day:
-        start_iso = f"{start_date}T00:00:00"
-        end_iso = f"{start_date}T23:59:59"
-    else:
-        start_iso = f"{start_date}T{start_time}:00"
-        end_iso = f"{start_date}T{end_time}:00"
-
-    payload = {
-        "title": title,
-        "start_datetime": start_iso,
-        "end_datetime": end_iso,
-        "all_day": is_all_day,
-        "location": location or None,
-    }
+    payload = _event_payload(title, start_date, start_time, end_time, location, all_day)
     try:
         event = await api.post("/organizer/calendar-events", json=payload)
     except httpx.HTTPStatusError as e:
@@ -140,4 +146,31 @@ async def create_event(
         return HTMLResponse("Failed to create event.", status_code=422)
 
     await api.log_command("event.add", {"title": title}, "event", event.get("id"))
+    return HTMLResponse("", status_code=204)
+
+
+@router.patch("/{event_id}", response_class=HTMLResponse)
+async def update_event(
+    event_id: int,
+    request: Request,
+    title: Annotated[str, Form()],
+    start_date: Annotated[str, Form()],
+    start_time: Annotated[str, Form()] = "09:00",
+    end_time: Annotated[str, Form()] = "10:00",
+    location: Annotated[str, Form()] = "",
+    all_day: Annotated[str, Form()] = "",
+):
+    payload = _event_payload(title, start_date, start_time, end_time, location, all_day)
+    try:
+        event = await api.patch(f"/organizer/calendar-events/{event_id}", json=payload)
+    except httpx.HTTPStatusError as e:
+        try:
+            detail = e.response.json().get("detail", "Failed to update event.")
+        except Exception:
+            detail = "Failed to update event."
+        return HTMLResponse(detail, status_code=422)
+    except httpx.HTTPError:
+        return HTMLResponse("Failed to update event.", status_code=422)
+
+    await api.log_command("event.update", {"title": title}, "event", event.get("id"))
     return HTMLResponse("", status_code=204)

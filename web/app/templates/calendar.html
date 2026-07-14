@@ -113,11 +113,12 @@
 
 </div>
 
-<!-- New Event Modal -->
+<!-- New/Edit Event Modal -->
 <dialog id="new-event-modal" class="modal">
   <div class="modal-box bg-white rounded-xl border border-gray-200 shadow-lg max-w-md w-full p-6">
-    <h3 class="text-sm font-semibold text-gray-900 mb-4">New event</h3>
+    <h3 id="event-form-title" class="text-sm font-semibold text-gray-900 mb-4">New event</h3>
     <form id="new-event-form" onsubmit="submitNewEvent(event)" class="flex flex-col gap-3">
+      <input name="event_id" type="hidden" value="" />
       <div>
         <label class="text-xs text-gray-500 mb-1 block">Title <span class="text-[#E24B4A]">*</span></label>
         <input
@@ -191,9 +192,29 @@
 function openNewEvent(prefillDate) {
   document.getElementById("event-error").classList.add("hidden");
   document.getElementById("new-event-form").reset();
+  document.getElementById("event-form-title").textContent = "New event";
   document.getElementById("event-time-row").classList.remove("hidden");
   if (prefillDate) {
     document.querySelector('#new-event-form [name="start_date"]').value = prefillDate;
+  }
+  document.getElementById("new-event-modal").showModal();
+  setTimeout(() => document.getElementById("event-title").focus(), 50);
+}
+
+function openEditEvent(ev) {
+  document.getElementById("event-error").classList.add("hidden");
+  document.getElementById("new-event-form").reset();
+  document.getElementById("event-form-title").textContent = "Edit event";
+  const form = document.getElementById("new-event-form");
+  form.querySelector('[name="event_id"]').value = ev.id;
+  form.querySelector('[name="title"]').value = ev.title;
+  form.querySelector('[name="start_date"]').value = ev.start_datetime.slice(0, 10);
+  form.querySelector('[name="location"]').value = ev.location || "";
+  form.querySelector('[name="all_day"]').checked = ev.all_day;
+  document.getElementById("event-time-row").classList.toggle("hidden", ev.all_day);
+  if (!ev.all_day) {
+    form.querySelector('[name="start_time"]').value = ev.start_datetime.slice(11, 16);
+    form.querySelector('[name="end_time"]').value = ev.end_datetime.slice(11, 16);
   }
   document.getElementById("new-event-modal").showModal();
   setTimeout(() => document.getElementById("event-title").focus(), 50);
@@ -208,8 +229,11 @@ async function submitNewEvent(e) {
   errEl.classList.add("hidden");
 
   const body = new FormData(e.target);
+  const eventId = body.get("event_id");
+  const url = eventId ? `/calendar/${eventId}` : "/calendar/";
+  const method = eventId ? "PATCH" : "POST";
   try {
-    const res = await fetch("/calendar/", { method: "POST", body });
+    const res = await fetch(url, { method, body });
     if (!res.ok) {
       const txt = await res.text();
       throw new Error(txt || `Error ${res.status}`);

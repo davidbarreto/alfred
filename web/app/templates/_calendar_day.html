@@ -19,12 +19,15 @@
   {% for ev in all_day_events %}
   <li class="flex items-start gap-2 rounded-lg bg-[#0C447C] text-white px-3 py-2">
     <i class="ti ti-calendar mt-0.5" style="font-size:0.85rem"></i>
-    <div class="min-w-0">
+    <div class="min-w-0 flex-1">
       <div class="text-sm truncate">{{ ev.title }}</div>
       {% if ev.location %}
       <div class="text-[11px] text-white/70 truncate">{{ ev.location }}</div>
       {% endif %}
     </div>
+    <button onclick="document.getElementById('calendar-day-modal').close(); openEditEvent({{ ev | tojson }})" class="text-white/60 hover:text-white flex-shrink-0">
+      <i class="ti ti-pencil" style="font-size:0.85rem"></i>
+    </button>
   </li>
   {% endfor %}
 </ul>
@@ -47,6 +50,9 @@
     {% for tag in ev.tags[:2] %}
     <span class="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-400 flex-shrink-0">{{ tag }}</span>
     {% endfor %}
+    <button onclick="document.getElementById('calendar-day-modal').close(); openEditEvent({{ ev | tojson }})" class="text-gray-300 hover:text-gray-500 flex-shrink-0">
+      <i class="ti ti-pencil" style="font-size:0.85rem"></i>
+    </button>
   </li>
   {% endfor %}
 </ul>

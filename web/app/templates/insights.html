@@ -186,7 +186,7 @@
         {% if llm_by_model %}
         <div class="card-body p-4 cursor-pointer relative group" onclick="openChartModal('llm-model')">
           <i class="ti ti-arrows-maximize text-gray-300 group-hover:text-gray-500 absolute top-3 right-3 text-sm"></i>
-          <p class="text-xs text-gray-400 uppercase tracking-wide mb-3">By model</p>
+          <p class="text-xs text-gray-400 uppercase tracking-wide mb-3 grow-0">By model</p>
           <canvas id="chart-llm-model" height="180"></canvas>
         </div>
         {% else %}
@@ -202,7 +202,7 @@
         {% if llm_by_feature %}
         <div class="card-body p-4 cursor-pointer relative group" onclick="openChartModal('llm-feature')">
           <i class="ti ti-arrows-maximize text-gray-300 group-hover:text-gray-500 absolute top-3 right-3 text-sm"></i>
-          <p class="text-xs text-gray-400 uppercase tracking-wide mb-3">By feature</p>
+          <p class="text-xs text-gray-400 uppercase tracking-wide mb-3 grow-0">By feature</p>
           <canvas id="chart-llm-feature" height="180"></canvas>
         </div>
         {% else %}
@@ -218,7 +218,7 @@
         {% if tokens_by_feature %}
         <div class="card-body p-4 cursor-pointer relative group" onclick="openChartModal('tokens-feature')">
           <i class="ti ti-arrows-maximize text-gray-300 group-hover:text-gray-500 absolute top-3 right-3 text-sm"></i>
-          <p class="text-xs text-gray-400 uppercase tracking-wide mb-3">Tokens by feature</p>
+          <p class="text-xs text-gray-400 uppercase tracking-wide mb-3 grow-0">Tokens by feature</p>
           <canvas id="chart-tokens-feature" height="180"></canvas>
         </div>
         {% else %}
@@ -279,7 +279,7 @@
         {% if provider_by_name %}
         <div class="card-body p-4 cursor-pointer relative group" onclick="openChartModal('provider-name')">
           <i class="ti ti-arrows-maximize text-gray-300 group-hover:text-gray-500 absolute top-3 right-3 text-sm"></i>
-          <p class="text-xs text-gray-400 uppercase tracking-wide mb-3">By provider</p>
+          <p class="text-xs text-gray-400 uppercase tracking-wide mb-3 grow-0">By provider</p>
           <canvas id="chart-provider-name" height="180"></canvas>
         </div>
         {% else %}
@@ -295,7 +295,7 @@
         {% if provider_by_status %}
         <div class="card-body p-4 cursor-pointer relative group" onclick="openChartModal('provider-status')">
           <i class="ti ti-arrows-maximize text-gray-300 group-hover:text-gray-500 absolute top-3 right-3 text-sm"></i>
-          <p class="text-xs text-gray-400 uppercase tracking-wide mb-3">By status</p>
+          <p class="text-xs text-gray-400 uppercase tracking-wide mb-3 grow-0">By status</p>
           <canvas id="chart-provider-status" height="180"></canvas>
         </div>
         {% else %}
@@ -311,7 +311,7 @@
         {% if cmd_by_name %}
         <div class="card-body p-4 cursor-pointer relative group" onclick="openChartModal('cmd-name')">
           <i class="ti ti-arrows-maximize text-gray-300 group-hover:text-gray-500 absolute top-3 right-3 text-sm"></i>
-          <p class="text-xs text-gray-400 uppercase tracking-wide mb-3">Commands</p>
+          <p class="text-xs text-gray-400 uppercase tracking-wide mb-3 grow-0">Commands</p>
           <canvas id="chart-cmd-name" height="180"></canvas>
         </div>
         {% else %}

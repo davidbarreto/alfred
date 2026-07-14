@@ -1,3 +1,5 @@
+from datetime import date, timedelta
+
 import httpx
 
 
@@ -118,6 +120,78 @@ class TestWorkingMemorySection:
         assert resp.status_code == 200
         assert "travel_context" in resp.text
         assert "Belgium next week" in resp.text
+
+
+class TestWorkingMemoryExpiredFilter:
+    def test_hides_expired_by_default(self, client, mock_api):
+        yesterday = (date.today() - timedelta(days=1)).isoformat()
+        tomorrow = (date.today() + timedelta(days=1)).isoformat()
+        mock_api["get"].return_value = [
+            _wm(id=1, key="transient:a", value="Old fact", expires_at=f"{yesterday}T00:00:00"),
+            _wm(id=2, key="transient:b", value="Fresh fact", expires_at=f"{tomorrow}T00:00:00"),
+        ]
+
+        resp = client.get("/insights/working-memory-section")
+
+        assert resp.status_code == 200
+        assert "Fresh fact" in resp.text
+        assert "Old fact" not in resp.text
+        assert "Show 1 expired" in resp.text
+
+    def test_shows_expired_when_toggled_on(self, client, mock_api):
+        yesterday = (date.today() - timedelta(days=1)).isoformat()
+        mock_api["get"].return_value = [
+            _wm(id=1, key="transient:a", value="Old fact", expires_at=f"{yesterday}T00:00:00"),
+        ]
+
+        resp = client.get("/insights/working-memory-section?show_expired=true")
+
+        assert resp.status_code == 200
+        assert "Old fact" in resp.text
+        assert "Hide expired" in resp.text
+
+    def test_no_toggle_button_when_nothing_expired(self, client, mock_api):
+        tomorrow = (date.today() + timedelta(days=1)).isoformat()
+        mock_api["get"].return_value = [
+            _wm(id=1, key="transient:a", value="Fresh fact", expires_at=f"{tomorrow}T00:00:00"),
+        ]
+
+        resp = client.get("/insights/working-memory-section")
+
+        assert resp.status_code == 200
+        assert "Show" not in resp.text
+        assert "Hide expired" not in resp.text
+        assert ">expired<" not in resp.text
+
+    def test_delete_preserves_show_expired_state(self, client, mock_api):
+        yesterday = (date.today() - timedelta(days=1)).isoformat()
+        mock_api["get"].return_value = [
+            _wm(id=2, key="transient:a", value="Old fact", expires_at=f"{yesterday}T00:00:00"),
+        ]
+
+        resp = client.delete("/insights/working-memory/1?show_expired=true")
+
+        assert resp.status_code == 200
+        assert "Old fact" in resp.text
+        assert "Hide expired" in resp.text
+        mock_api["delete"].assert_awaited_once_with("/core/working-memory/1")
+
+    def test_main_page_hides_expired_by_default_and_shows_toggle(self, client, mock_api):
+        yesterday = (date.today() - timedelta(days=1)).isoformat()
+
+        async def fake_get(path, params=None):
+            if path == "/core/working-memory":
+                return [_wm(id=1, key="transient:a", value="Old fact", expires_at=f"{yesterday}T00:00:00")]
+            return []
+
+        mock_api["get"].side_effect = fake_get
+
+        resp = client.get("/insights/")
+
+        assert resp.status_code == 200
+        assert "Old fact" not in resp.text
+        assert "Show 1 expired" in resp.text
+        assert "0 entries" in resp.text
 
 
 class TestInsightsPageLlmCharts:

@@ -58,6 +58,20 @@ async def _resolve_working_memory(items: list[dict]) -> list[dict]:
     return items
 
 
+def _filter_and_sort_working_memory(raw: list[dict], show_expired: bool) -> tuple[list[dict], int]:
+    """Sort by expiry (soonest/null first); optionally drop expired entries. Returns (items, expired_count)."""
+    today_str = date.today().isoformat()
+    wm_sorted = sorted(raw, key=lambda w: (w.get("expires_at") or ""))
+    expired_count = sum(1 for w in wm_sorted if w.get("expires_at") and w["expires_at"][:10] < today_str)
+    if not show_expired:
+        wm_sorted = [w for w in wm_sorted if not (w.get("expires_at") and w["expires_at"][:10] < today_str)]
+    return wm_sorted, expired_count
+
+
+def _parse_show_expired(request: Request) -> bool:
+    return request.query_params.get("show_expired", "").lower() == "true"
+
+
 @router.get("/memories-section", response_class=HTMLResponse)
 async def memories_section(request: Request):
     offset = max(0, int(request.query_params.get("offset", "0")))
@@ -107,42 +121,48 @@ async def delete_memory(memory_id: int, request: Request):
 @router.get("/working-memory-section", response_class=HTMLResponse)
 async def working_memory_section(request: Request):
     offset = max(0, int(request.query_params.get("offset", "0")))
+    show_expired = _parse_show_expired(request)
     try:
-        raw = await api.get("/core/working-memory", params={"active_only": "false", "limit": _PAGE_SIZE + 1, "offset": offset})
+        raw = await api.get("/core/working-memory", params={"active_only": "false", "limit": 200})
     except httpx.HTTPError:
         raw = []
-    wm_sorted = sorted(raw, key=lambda w: (w.get("expires_at") or ""))
-    working_memories, wm_has_next, wm_has_prev = _pagination(wm_sorted, offset)
+    wm_filtered, wm_expired_count = _filter_and_sort_working_memory(raw, show_expired)
+    working_memories, wm_has_next, wm_has_prev = _pagination(wm_filtered[offset:], offset)
     working_memories = await _resolve_working_memory(working_memories)
     return templates.TemplateResponse(request, "_working_memory_list.html", {
         "working_memories": working_memories,
         "wm_offset": offset,
         "wm_has_next": wm_has_next,
         "wm_has_prev": wm_has_prev,
+        "wm_show_expired": show_expired,
+        "wm_expired_count": wm_expired_count,
         "now": date.today(),
     })
 
 
 @router.delete("/working-memory/{item_id}", response_class=HTMLResponse)
 async def delete_working_memory(item_id: int, request: Request):
+    show_expired = _parse_show_expired(request)
     try:
         await api.delete(f"/core/working-memory/{item_id}")
     except httpx.HTTPError:
         return HTMLResponse('<p class="text-[#E24B4A] text-sm">Failed to delete entry.</p>', status_code=422)
 
     try:
-        raw = await api.get("/core/working-memory", params={"active_only": "false", "limit": _PAGE_SIZE + 1, "offset": 0})
+        raw = await api.get("/core/working-memory", params={"active_only": "false", "limit": 200})
     except httpx.HTTPError:
         raw = []
 
-    wm_sorted = sorted(raw, key=lambda w: (w.get("expires_at") or ""))
-    working_memories, wm_has_next, wm_has_prev = _pagination(wm_sorted, 0)
+    wm_filtered, wm_expired_count = _filter_and_sort_working_memory(raw, show_expired)
+    working_memories, wm_has_next, wm_has_prev = _pagination(wm_filtered, 0)
     working_memories = await _resolve_working_memory(working_memories)
     return templates.TemplateResponse(request, "_working_memory_list.html", {
         "working_memories": working_memories,
         "wm_offset": 0,
         "wm_has_next": wm_has_next,
         "wm_has_prev": False,
+        "wm_show_expired": show_expired,
+        "wm_expired_count": wm_expired_count,
         "now": date.today(),
     })
 
@@ -271,8 +291,9 @@ async def insights_page(request: Request):
     # ── Paginate memories and working memory for display ─────────
     memories_page, memories_has_next, memories_has_prev = _pagination(memories_raw, 0)
 
-    wm_sorted = sorted(working_memories_raw, key=lambda w: (w.get("expires_at") or ""))
-    wm_page, wm_has_next, wm_has_prev = _pagination(wm_sorted, 0)
+    wm_show_expired = _parse_show_expired(request)
+    wm_filtered, wm_expired_count = _filter_and_sort_working_memory(working_memories_raw, wm_show_expired)
+    wm_page, wm_has_next, wm_has_prev = _pagination(wm_filtered, 0)
     wm_page = await _resolve_working_memory(wm_page)
 
     return templates.TemplateResponse(request, "insights.html", {
@@ -287,10 +308,12 @@ async def insights_page(request: Request):
         "wm_offset": 0,
         "wm_has_next": wm_has_next,
         "wm_has_prev": False,
+        "wm_show_expired": wm_show_expired,
+        "wm_expired_count": wm_expired_count,
         "now": today,
         # stats (computed from full fetch)
         "total_memories": len(memories_raw),
-        "total_wm": len(wm_sorted),
+        "total_wm": len(wm_filtered),
         "memories_by_category": memories_by_category,
         # llm
         "llm_calls": llm_calls[:_LLM_CALLS_PREVIEW_SIZE],

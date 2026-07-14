@@ -74,14 +74,31 @@ async def add_shopping_item(
     name: Annotated[str, Form()],
     category: Annotated[str, Form()] = "other",
     priority: Annotated[str, Form()] = "need",
+    quantity: Annotated[Optional[str], Form()] = None,
+    unit: Annotated[Optional[str], Form()] = None,
+    estimated_price: Annotated[Optional[str], Form()] = None,
+    brand: Annotated[Optional[str], Form()] = None,
+    store: Annotated[Optional[str], Form()] = None,
+    url: Annotated[Optional[str], Form()] = None,
+    notes: Annotated[Optional[str], Form()] = None,
 ):
+    payload: dict = {"name": name, "category": category, "priority": priority, "source": "manual"}
+    if quantity:
+        payload["quantity"] = quantity
+    if unit:
+        payload["unit"] = unit
+    if estimated_price:
+        payload["estimated_price"] = estimated_price
+    if brand:
+        payload["brand"] = brand
+    if store:
+        payload["store"] = store
+    if url:
+        payload["url"] = url
+    if notes:
+        payload["notes"] = notes
     try:
-        item = await api.post("/organizer/shopping", json={
-            "name": name,
-            "category": category,
-            "priority": priority,
-            "source": "manual",
-        })
+        item = await api.post("/organizer/shopping", json=payload)
     except httpx.HTTPError as e:
         logger.error("Failed to create shopping item: name=%r error=%s", name, e)
         return HTMLResponse("", status_code=422)

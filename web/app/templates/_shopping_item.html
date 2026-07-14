@@ -9,12 +9,21 @@
     hx-swap="outerHTML"
   />
   <span class="flex-1 text-sm min-w-0">
-    <span class="{% if is_bought %}line-through text-gray-300{% else %}text-gray-800{% endif %}">{{ item.name }}</span>
+    <span class="{% if is_bought %}line-through text-gray-300{% else %}text-gray-800{% endif %}"
+      {% if item.notes %}title="{{ item.notes }}"{% endif %}>{{ item.name }}</span>
     {% if item.quantity %}
     <span class="text-xs text-gray-400 ml-1">× {{ item.quantity }}{{ item.unit or "" }}</span>
     {% endif %}
     {% if item.brand %}
     <span class="text-xs text-gray-400 ml-1">({{ item.brand }})</span>
+    {% endif %}
+    {% if item.store %}
+    <span class="text-xs text-gray-400 ml-1">@ {{ item.store }}</span>
+    {% endif %}
+    {% if item.url %}
+    <a href="{{ item.url }}" target="_blank" rel="noopener noreferrer" class="text-xs text-[#378ADD] hover:underline ml-1">
+      <i class="ti ti-external-link"></i>
+    </a>
     {% endif %}
   </span>
   {% if item.estimated_price %}

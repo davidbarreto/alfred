@@ -26,6 +26,25 @@ class TestAddShoppingItem:
             "/organizer/shopping/frequent", params={"limit": 15}
         )
 
+    def test_creates_item_with_optional_fields(self, client, mock_api):
+        mock_api["post"].return_value = _item()
+        mock_api["get"].return_value = [_item()]
+
+        resp = client.post("/shopping/", data={
+            "name": "Milk", "category": "grocery", "priority": "need",
+            "quantity": "2", "unit": "L", "estimated_price": "3.50",
+            "brand": "Nesquik", "store": "Lidl", "url": "https://example.com/milk",
+            "notes": "Lactose-free",
+        })
+
+        assert resp.status_code == 200
+        mock_api["post"].assert_any_await("/organizer/shopping", json={
+            "name": "Milk", "category": "grocery", "priority": "need", "source": "manual",
+            "quantity": "2", "unit": "L", "estimated_price": "3.50",
+            "brand": "Nesquik", "store": "Lidl", "url": "https://example.com/milk",
+            "notes": "Lactose-free",
+        })
+
     def test_returns_422_when_backend_create_fails(self, client, mock_api):
         request = httpx.Request("POST", "http://api/organizer/shopping")
         mock_api["post"].side_effect = httpx.ConnectError("connection refused", request=request)

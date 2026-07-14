@@ -10,7 +10,11 @@
       onclick='openNoteView({{ note.id }}, {{ note.title | tojson }}, {{ note.content | tojson }}, {{ (note.tags or []) | tojson }}, {{ (note.updated_at or "") | tojson }})'
     >
       {% if note.tags %}
-      <span class="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-500 self-start mb-0.5">{{ note.tags[0] }}</span>
+      <div class="flex flex-wrap gap-1 self-start mb-0.5">
+        {% for tag in note.tags %}
+        <span class="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-500">{{ tag }}</span>
+        {% endfor %}
+      </div>
       {% endif %}
       <h3 class="text-sm font-medium text-gray-900 truncate">{{ note.title }}</h3>
       <p class="text-xs text-gray-400 line-clamp-2 mt-0.5">{{ note.content }}</p>

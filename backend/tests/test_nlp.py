@@ -4,7 +4,7 @@ from freezegun import freeze_time
 from unittest.mock import patch
 
 from app.nlp.normalizer import clean_text, normalize_date, normalize_priority
-from app.nlp.extractor import extract_entities, extract_finance_entities
+from app.nlp.extractor import extract_entities, extract_finance_entities, extract_time_range
 
 FIXED_NOW = datetime(2024, 5, 20)  # Monday
 
@@ -429,3 +429,59 @@ class TestExtractFinanceEntities:
         text, entities = extract_finance_entities("")
         assert entities == {}
         assert text == ""
+
+
+# ── extract_time_range ────────────────────────────────────────────────────────
+
+class TestExtractTimeRange:
+    def test_24h_range_with_h_suffix(self):
+        cleaned, entities = extract_time_range("Test calendar example today from 19h to 21h")
+        assert cleaned == "Test calendar example today"
+        assert entities == {"start_time": "19:00", "end_time": "21:00"}
+
+    def test_24h_range_with_minutes(self):
+        cleaned, entities = extract_time_range("Standup from 9h30 to 10h00")
+        assert entities == {"start_time": "09:30", "end_time": "10:00"}
+        assert "from" not in cleaned
+
+    def test_colon_range(self):
+        cleaned, entities = extract_time_range("Standup from 9:00 to 9:15")
+        assert entities == {"start_time": "09:00", "end_time": "09:15"}
+
+    def test_ampm_range(self):
+        _, entities = extract_time_range("Party from 7pm to 11pm")
+        assert entities == {"start_time": "19:00", "end_time": "23:00"}
+
+    def test_range_with_unmarked_start(self):
+        _, entities = extract_time_range("Meeting from 7 to 9pm")
+        assert entities == {"start_time": "07:00", "end_time": "21:00"}
+
+    def test_single_time_with_at_and_ampm(self):
+        cleaned, entities = extract_time_range("Doctor visit at 9am")
+        assert cleaned == "Doctor visit"
+        assert entities == {"start_time": "09:00"}
+
+    def test_single_time_bare_24h(self):
+        cleaned, entities = extract_time_range("Capoeira class 19h")
+        assert cleaned == "Capoeira class"
+        assert entities == {"start_time": "19:00"}
+
+    def test_single_time_with_minutes_and_ampm(self):
+        _, entities = extract_time_range("Call at 7:30pm")
+        assert entities == {"start_time": "19:30"}
+
+    def test_noon_and_midnight_edge_cases(self):
+        _, entities = extract_time_range("Lunch at 12pm")
+        assert entities == {"start_time": "12:00"}
+        _, entities = extract_time_range("Reset at 12am")
+        assert entities == {"start_time": "00:00"}
+
+    def test_no_time_returns_empty_entities(self):
+        cleaned, entities = extract_time_range("Just a plain title")
+        assert cleaned == "Just a plain title"
+        assert entities == {}
+
+    def test_invalid_hour_ignored(self):
+        # "25h" is not a valid time-of-day, so no start_time should be set
+        _, entities = extract_time_range("Weird event at 25h")
+        assert "start_time" not in entities

@@ -8,6 +8,7 @@ from app.nlp.normalizer import clean_text, normalize_date
 from app.nlp.patterns import (
     _DATE_RE, _PRIORITY_RE, PRIORITY_MAP,
     _AMOUNT_RE, _MERCHANT_RE, _EXPENSE_INTENT_RE, _INCOME_INTENT_RE,
+    _TIME_RANGE_RE, _TIME_SINGLE_RE,
 )
 
 _CURRENCY_SYMBOL_MAP = {"$": "USD", "€": "EUR", "£": "GBP", "¥": "JPY"}
@@ -57,6 +58,53 @@ def extract_entities(text: str, base_date: Optional[datetime | date] = None) -> 
         current_text = current_text[:date_match.start()] + current_text[date_match.end():]
 
     return clean_text(current_text), entities
+
+
+def _parse_time_token(token: str) -> Optional[Tuple[int, int]]:
+    """Parse a time-of-day token ('19h', '19h30', '19:00', '7pm', '7:30pm') to (hour, minute)."""
+    m = re.match(r'^\s*(\d{1,2})(?:[:h](\d{2})|h)?\s*(am|pm)?\s*$', token.strip(), re.IGNORECASE)
+    if not m:
+        return None
+    hour = int(m.group(1))
+    minute = int(m.group(2)) if m.group(2) else 0
+    ampm = (m.group(3) or "").lower()
+    if ampm == "pm" and hour != 12:
+        hour += 12
+    elif ampm == "am" and hour == 12:
+        hour = 0
+    if hour > 23 or minute > 59:
+        return None
+    return hour, minute
+
+
+def extract_time_range(text: str) -> Tuple[str, Dict[str, str]]:
+    """
+    Extract a start/end time-of-day ('HH:MM') from phrases like 'from 19h to 21h'
+    or a single 'at 7pm'. Returns the text with the matched phrase removed.
+    """
+    entities: Dict[str, str] = {}
+
+    range_match = _TIME_RANGE_RE.search(text)
+    if range_match:
+        start_hm = _parse_time_token(range_match.group(1))
+        end_hm = _parse_time_token(range_match.group(2))
+        if start_hm:
+            entities["start_time"] = f"{start_hm[0]:02d}:{start_hm[1]:02d}"
+        if end_hm:
+            entities["end_time"] = f"{end_hm[0]:02d}:{end_hm[1]:02d}"
+        current_text = text[:range_match.start()] + text[range_match.end():]
+        return clean_text(current_text), entities
+
+    single_match = _TIME_SINGLE_RE.search(text)
+    if single_match:
+        token = single_match.group(1) or single_match.group(2)
+        hm = _parse_time_token(token)
+        if hm:
+            entities["start_time"] = f"{hm[0]:02d}:{hm[1]:02d}"
+        current_text = text[:single_match.start()] + text[single_match.end():]
+        return clean_text(current_text), entities
+
+    return clean_text(text), entities
 
 
 def extract_finance_entities(text: str, base_date: Optional[datetime | date] = None) -> Tuple[str, Dict[str, Any]]:

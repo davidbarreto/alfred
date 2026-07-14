@@ -3,7 +3,9 @@ import pytest
 from unittest.mock import AsyncMock, MagicMock
 
 from app.assistant.intents.extraction_service import (
+    AddShoppingItemArgs,
     AddTransactionArgs,
+    AddWishlistItemArgs,
     CreateEventArgs,
     CreateTaskArgs,
     CreateNoteArgs,
@@ -202,3 +204,52 @@ class TestExtractArgsTransactionAdd:
         result = await extract_args("finance.transaction_add", "I received my salary of 3500 euros", llm_provider=provider)
         assert result["type"] == "income"
         assert result["amount"] == "3500"
+
+    async def test_transaction_add_accepts_bare_numeric_amount(self):
+        # Regression: Gemini often ignores the "as a string" hint and returns a bare
+        # JSON number for amount, which used to fail Pydantic validation entirely and
+        # silently return {} (creating a phantom €0.00 transaction downstream).
+        payload = json.dumps({
+            "amount": 30,
+            "currency": "EUR",
+            "type": "expense",
+            "merchant": "Continente",
+            "description": None,
+            "date": None,
+            "account": None,
+        })
+        provider = _make_provider(payload)
+        result = await extract_args("finance.transaction_add", "I spent 30 euros in Continente", llm_provider=provider)
+        assert result["amount"] == 30
+        assert result["merchant"] == "Continente"
+
+    async def test_transaction_add_accepts_bare_float_amount(self):
+        payload = json.dumps({
+            "amount": 45.5,
+            "currency": "EUR",
+            "type": "expense",
+            "merchant": None,
+            "description": None,
+            "date": None,
+            "account": None,
+        })
+        provider = _make_provider(payload)
+        result = await extract_args("finance.transaction_add", "spent 45.50 euros", llm_provider=provider)
+        assert result["amount"] == 45.5
+
+
+class TestNumericStringFieldsAcceptBareNumbers:
+    """Same Pydantic v2 gotcha (bare JSON numbers rejected by plain `str` fields) also
+    affected these optional fields — regression coverage for the schema fix directly."""
+
+    def test_shopping_quantity_accepts_int(self):
+        args = AddShoppingItemArgs.model_validate({"name": "milk", "quantity": 2})
+        assert args.quantity == 2
+
+    def test_shopping_quantity_still_accepts_string(self):
+        args = AddShoppingItemArgs.model_validate({"name": "milk", "quantity": "500g"})
+        assert args.quantity == "500g"
+
+    def test_wishlist_estimated_price_accepts_int(self):
+        args = AddWishlistItemArgs.model_validate({"name": "headphones", "estimated_price": 150})
+        assert args.estimated_price == 150

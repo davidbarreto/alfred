@@ -2,7 +2,7 @@
   "info": {
     "name": "Alfred - Finance API",
     "_postman_id": "alfred-finance-v1",
-    "description": "Run folders in order: Accounts → Categories → Transactions → Budgets → Recurring Transactions. Within each folder run items in order (Create → List → Get → Update → Delete). Transactions depend on account_id and category_id, so create those first.",
+    "description": "Run folders in order: Accounts \u2192 Categories \u2192 Transactions \u2192 Budgets \u2192 Recurring Transactions. Within each folder run items in order (Create \u2192 List \u2192 Get \u2192 Update \u2192 Delete). Transactions depend on account_id and category_id, so create those first.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -60,8 +60,14 @@
             },
             "url": {
               "raw": "{{base_url}}/finance/accounts/",
-              "host": ["{{base_url}}"],
-              "path": ["finance", "accounts", ""]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "finance",
+                "accounts",
+                ""
+              ]
             }
           }
         },
@@ -88,8 +94,14 @@
             "header": [],
             "url": {
               "raw": "{{base_url}}/finance/accounts/?is_active=true",
-              "host": ["{{base_url}}"],
-              "path": ["finance", "accounts", ""],
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "finance",
+                "accounts",
+                ""
+              ],
               "query": [
                 {
                   "key": "is_active",
@@ -123,8 +135,14 @@
             "header": [],
             "url": {
               "raw": "{{base_url}}/finance/accounts/{{finance_account_id}}",
-              "host": ["{{base_url}}"],
-              "path": ["finance", "accounts", "{{finance_account_id}}"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "finance",
+                "accounts",
+                "{{finance_account_id}}"
+              ]
             }
           }
         },
@@ -165,8 +183,14 @@
             },
             "url": {
               "raw": "{{base_url}}/finance/accounts/{{finance_account_id}}",
-              "host": ["{{base_url}}"],
-              "path": ["finance", "accounts", "{{finance_account_id}}"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "finance",
+                "accounts",
+                "{{finance_account_id}}"
+              ]
             }
           }
         },
@@ -189,8 +213,14 @@
             "header": [],
             "url": {
               "raw": "{{base_url}}/finance/accounts/{{finance_account_id}}",
-              "host": ["{{base_url}}"],
-              "path": ["finance", "accounts", "{{finance_account_id}}"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "finance",
+                "accounts",
+                "{{finance_account_id}}"
+              ]
             }
           }
         }
@@ -238,8 +268,14 @@
             },
             "url": {
               "raw": "{{base_url}}/finance/categories/",
-              "host": ["{{base_url}}"],
-              "path": ["finance", "categories", ""]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "finance",
+                "categories",
+                ""
+              ]
             }
           }
         },
@@ -266,8 +302,14 @@
             "header": [],
             "url": {
               "raw": "{{base_url}}/finance/categories/",
-              "host": ["{{base_url}}"],
-              "path": ["finance", "categories", ""]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "finance",
+                "categories",
+                ""
+              ]
             }
           }
         },
@@ -294,8 +336,14 @@
             "header": [],
             "url": {
               "raw": "{{base_url}}/finance/categories/{{finance_category_id}}",
-              "host": ["{{base_url}}"],
-              "path": ["finance", "categories", "{{finance_category_id}}"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "finance",
+                "categories",
+                "{{finance_category_id}}"
+              ]
             }
           }
         },
@@ -334,8 +382,14 @@
             },
             "url": {
               "raw": "{{base_url}}/finance/categories/{{finance_category_id}}",
-              "host": ["{{base_url}}"],
-              "path": ["finance", "categories", "{{finance_category_id}}"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "finance",
+                "categories",
+                "{{finance_category_id}}"
+              ]
             }
           }
         },
@@ -358,8 +412,14 @@
             "header": [],
             "url": {
               "raw": "{{base_url}}/finance/categories/{{finance_category_id}}",
-              "host": ["{{base_url}}"],
-              "path": ["finance", "categories", "{{finance_category_id}}"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "finance",
+                "categories",
+                "{{finance_category_id}}"
+              ]
             }
           }
         }
@@ -409,8 +469,14 @@
             },
             "url": {
               "raw": "{{base_url}}/finance/transactions/",
-              "host": ["{{base_url}}"],
-              "path": ["finance", "transactions", ""]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "finance",
+                "transactions",
+                ""
+              ]
             }
           }
         },
@@ -437,12 +503,66 @@
             "header": [],
             "url": {
               "raw": "{{base_url}}/finance/transactions/?limit=50&type=expense",
-              "host": ["{{base_url}}"],
-              "path": ["finance", "transactions", ""],
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "finance",
+                "transactions",
+                ""
+              ],
               "query": [
                 {
                   "key": "limit",
                   "value": "50"
+                },
+                {
+                  "key": "type",
+                  "value": "expense"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "02b - List Transactions Paginated",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Response respects limit and offset', () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.be.an('array');",
+                  "    pm.expect(json.length).to.be.at.most(1);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/finance/transactions/?limit=1&offset=1&type=expense",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "finance",
+                "transactions",
+                ""
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "1"
+                },
+                {
+                  "key": "offset",
+                  "value": "1"
                 },
                 {
                   "key": "type",
@@ -476,8 +596,14 @@
             "header": [],
             "url": {
               "raw": "{{base_url}}/finance/transactions/{{finance_transaction_id}}",
-              "host": ["{{base_url}}"],
-              "path": ["finance", "transactions", "{{finance_transaction_id}}"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "finance",
+                "transactions",
+                "{{finance_transaction_id}}"
+              ]
             }
           }
         },
@@ -507,8 +633,14 @@
             "header": [],
             "url": {
               "raw": "{{base_url}}/finance/transactions/report?period=this month",
-              "host": ["{{base_url}}"],
-              "path": ["finance", "transactions", "report"],
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "finance",
+                "transactions",
+                "report"
+              ],
               "query": [
                 {
                   "key": "period",
@@ -544,8 +676,14 @@
             "header": [],
             "url": {
               "raw": "{{base_url}}/finance/transactions/average?period=this month",
-              "host": ["{{base_url}}"],
-              "path": ["finance", "transactions", "average"],
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "finance",
+                "transactions",
+                "average"
+              ],
               "query": [
                 {
                   "key": "period",
@@ -580,8 +718,14 @@
             "header": [],
             "url": {
               "raw": "{{base_url}}/finance/transactions/top?period=this month&top_n=5",
-              "host": ["{{base_url}}"],
-              "path": ["finance", "transactions", "top"],
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "finance",
+                "transactions",
+                "top"
+              ],
               "query": [
                 {
                   "key": "period",
@@ -622,8 +766,14 @@
             "header": [],
             "url": {
               "raw": "{{base_url}}/finance/transactions/forecast?period=this month",
-              "host": ["{{base_url}}"],
-              "path": ["finance", "transactions", "forecast"],
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "finance",
+                "transactions",
+                "forecast"
+              ],
               "query": [
                 {
                   "key": "period",
@@ -670,8 +820,14 @@
             },
             "url": {
               "raw": "{{base_url}}/finance/transactions/{{finance_transaction_id}}",
-              "host": ["{{base_url}}"],
-              "path": ["finance", "transactions", "{{finance_transaction_id}}"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "finance",
+                "transactions",
+                "{{finance_transaction_id}}"
+              ]
             }
           }
         },
@@ -694,8 +850,14 @@
             "header": [],
             "url": {
               "raw": "{{base_url}}/finance/transactions/{{finance_transaction_id}}",
-              "host": ["{{base_url}}"],
-              "path": ["finance", "transactions", "{{finance_transaction_id}}"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "finance",
+                "transactions",
+                "{{finance_transaction_id}}"
+              ]
             }
           }
         }
@@ -744,8 +906,14 @@
             },
             "url": {
               "raw": "{{base_url}}/finance/budgets/",
-              "host": ["{{base_url}}"],
-              "path": ["finance", "budgets", ""]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "finance",
+                "budgets",
+                ""
+              ]
             }
           }
         },
@@ -772,8 +940,14 @@
             "header": [],
             "url": {
               "raw": "{{base_url}}/finance/budgets/?period=monthly",
-              "host": ["{{base_url}}"],
-              "path": ["finance", "budgets", ""],
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "finance",
+                "budgets",
+                ""
+              ],
               "query": [
                 {
                   "key": "period",
@@ -807,8 +981,14 @@
             "header": [],
             "url": {
               "raw": "{{base_url}}/finance/budgets/{{finance_budget_id}}",
-              "host": ["{{base_url}}"],
-              "path": ["finance", "budgets", "{{finance_budget_id}}"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "finance",
+                "budgets",
+                "{{finance_budget_id}}"
+              ]
             }
           }
         },
@@ -839,8 +1019,14 @@
             "header": [],
             "url": {
               "raw": "{{base_url}}/finance/budgets/remaining?period=this month",
-              "host": ["{{base_url}}"],
-              "path": ["finance", "budgets", "remaining"],
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "finance",
+                "budgets",
+                "remaining"
+              ],
               "query": [
                 {
                   "key": "period",
@@ -885,8 +1071,14 @@
             },
             "url": {
               "raw": "{{base_url}}/finance/budgets/{{finance_budget_id}}",
-              "host": ["{{base_url}}"],
-              "path": ["finance", "budgets", "{{finance_budget_id}}"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "finance",
+                "budgets",
+                "{{finance_budget_id}}"
+              ]
             }
           }
         },
@@ -909,8 +1101,14 @@
             "header": [],
             "url": {
               "raw": "{{base_url}}/finance/budgets/{{finance_budget_id}}",
-              "host": ["{{base_url}}"],
-              "path": ["finance", "budgets", "{{finance_budget_id}}"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "finance",
+                "budgets",
+                "{{finance_budget_id}}"
+              ]
             }
           }
         }
@@ -960,8 +1158,14 @@
             },
             "url": {
               "raw": "{{base_url}}/finance/recurring-transactions/",
-              "host": ["{{base_url}}"],
-              "path": ["finance", "recurring-transactions", ""]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "finance",
+                "recurring-transactions",
+                ""
+              ]
             }
           }
         },
@@ -988,8 +1192,14 @@
             "header": [],
             "url": {
               "raw": "{{base_url}}/finance/recurring-transactions/?active=true",
-              "host": ["{{base_url}}"],
-              "path": ["finance", "recurring-transactions", ""],
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "finance",
+                "recurring-transactions",
+                ""
+              ],
               "query": [
                 {
                   "key": "active",
@@ -1023,8 +1233,14 @@
             "header": [],
             "url": {
               "raw": "{{base_url}}/finance/recurring-transactions/{{finance_recurring_id}}",
-              "host": ["{{base_url}}"],
-              "path": ["finance", "recurring-transactions", "{{finance_recurring_id}}"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "finance",
+                "recurring-transactions",
+                "{{finance_recurring_id}}"
+              ]
             }
           }
         },
@@ -1065,8 +1281,14 @@
             },
             "url": {
               "raw": "{{base_url}}/finance/recurring-transactions/{{finance_recurring_id}}",
-              "host": ["{{base_url}}"],
-              "path": ["finance", "recurring-transactions", "{{finance_recurring_id}}"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "finance",
+                "recurring-transactions",
+                "{{finance_recurring_id}}"
+              ]
             }
           }
         },
@@ -1089,8 +1311,14 @@
             "header": [],
             "url": {
               "raw": "{{base_url}}/finance/recurring-transactions/{{finance_recurring_id}}",
-              "host": ["{{base_url}}"],
-              "path": ["finance", "recurring-transactions", "{{finance_recurring_id}}"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "finance",
+                "recurring-transactions",
+                "{{finance_recurring_id}}"
+              ]
             }
           }
         }

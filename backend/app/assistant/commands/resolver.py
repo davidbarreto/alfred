@@ -11,7 +11,7 @@ from app.assistant.commands.schemas import CommandDetail
 from app.assistant.intents.intent_service import detect_intent
 from app.config import get_settings
 from app.nlp.normalizer import normalize_date, normalize_priority, clean_text
-from app.nlp.extractor import extract_entities, extract_finance_entities
+from app.nlp.extractor import extract_entities, extract_finance_entities, extract_time_range
 
 logger = logging.getLogger(__name__)
 
@@ -110,10 +110,35 @@ def _enrich_finance(arguments: Dict[str, Any]) -> Dict[str, Any]:
     return arguments
 
 
+def _enrich_event(arguments: Dict[str, Any]) -> Dict[str, Any]:
+    """Extract a start/end date-time from the event title (deterministic /event syntax)."""
+    title = arguments.get("title")
+    if not isinstance(title, str):
+        return arguments
+
+    today = datetime.now().date()
+    cleaned_text, date_entities = extract_entities(title, base_date=today)
+    cleaned_text, time_entities = extract_time_range(cleaned_text)
+    arguments["title"] = clean_text(cleaned_text)
+
+    date_part = date_entities.get("deadline") or today.isoformat()
+    if not arguments.get("start"):
+        if time_entities.get("start_time"):
+            arguments["start"] = f"{date_part}T{time_entities['start_time']}:00"
+        elif date_entities.get("deadline"):
+            arguments["start"] = date_entities["deadline"]
+    if not arguments.get("end") and time_entities.get("end_time"):
+        arguments["end"] = f"{date_part}T{time_entities['end_time']}:00"
+
+    return arguments
+
+
 def _enrich_arguments(arguments: Dict[str, Any], cmd_type: str = "") -> Dict[str, Any]:
     """Normalize arguments and extract implicit entities from text fields."""
     if cmd_type == "finance":
         return _enrich_finance(arguments)
+    if cmd_type == "event":
+        return _enrich_event(arguments)
 
     today = datetime.now().date()
 

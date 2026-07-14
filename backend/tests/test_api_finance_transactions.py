@@ -123,6 +123,16 @@ class TestListTransactions:
         filters = mock_txn_service.list.call_args[0][0]
         assert filters.limit == 20
 
+    def test_offset_filter_passed_to_service(self, client, mock_txn_service):
+        client.get("/finance/transactions/?offset=40", headers=AUTH)
+        filters = mock_txn_service.list.call_args[0][0]
+        assert filters.offset == 40
+
+    def test_offset_defaults_to_zero(self, client, mock_txn_service):
+        client.get("/finance/transactions/", headers=AUTH)
+        filters = mock_txn_service.list.call_args[0][0]
+        assert filters.offset == 0
+
     def test_invalid_type_returns_422(self, client):
         assert client.get("/finance/transactions/?type=INVALID", headers=AUTH).status_code == 422
 

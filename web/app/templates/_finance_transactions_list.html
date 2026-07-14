@@ -1,0 +1,48 @@
+{% if transactions %}
+<ul>
+  {% for txn in transactions %}
+  <li class="flex items-center gap-3 py-2.5 border-b border-gray-100 last:border-0 group">
+    <div class="w-7 h-7 rounded-full bg-gray-100 flex items-center justify-center flex-shrink-0">
+      <span class="text-xs font-medium text-gray-500">
+        {{ (txn.merchant or txn.description or "?")[0] | upper }}
+      </span>
+    </div>
+    <div class="flex-1 min-w-0">
+      <div class="text-sm text-gray-800 truncate">{{ txn.merchant or txn.description or "—" }}</div>
+      <div class="text-xs text-gray-400">
+        {{ txn.date[:10] }}
+        {% if accounts_by_id.get(txn.account_id) %} · {{ accounts_by_id.get(txn.account_id) }}{% endif %}
+        {% if txn.category_id and categories_by_id.get(txn.category_id) %} · {{ categories_by_id.get(txn.category_id) }}{% endif %}
+      </div>
+    </div>
+    <span class="text-sm font-medium {% if txn.type == 'income' %}text-[#639922]{% else %}text-[#E24B4A]{% endif %} flex-shrink-0">
+      {% if txn.type == 'income' %}+{% else %}-{% endif %}€{{ "%.2f"|format(txn.amount | float) }}
+    </span>
+    <button
+      class="text-gray-200 hover:text-[#E24B4A] opacity-0 group-hover:opacity-100 transition-all flex-shrink-0"
+      hx-delete="/finance/transactions/{{ txn.id }}?{{ filters_qs }}"
+      hx-target="#txn-list-full"
+      hx-confirm="Delete this transaction?"
+      title="Delete"
+    ><i class="ti ti-trash text-sm"></i></button>
+  </li>
+  {% endfor %}
+</ul>
+{% else %}
+<p class="text-sm text-gray-400 py-6 text-center">No transactions match these filters.</p>
+{% endif %}
+
+{% if has_prev or has_next %}
+<div class="flex items-center justify-between mt-4 pt-3 border-t border-gray-100">
+  <button
+    onclick="changeTxnPage(-1)"
+    {% if not has_prev %}disabled{% endif %}
+    class="btn btn-sm btn-ghost text-gray-500 gap-1 {% if not has_prev %}opacity-30 pointer-events-none{% endif %}"
+  ><i class="ti ti-chevron-left text-xs"></i>Prev</button>
+  <button
+    onclick="changeTxnPage(1)"
+    {% if not has_next %}disabled{% endif %}
+    class="btn btn-sm btn-ghost text-gray-500 gap-1 {% if not has_next %}opacity-30 pointer-events-none{% endif %}"
+  >Next<i class="ti ti-chevron-right text-xs"></i></button>
+</div>
+{% endif %}

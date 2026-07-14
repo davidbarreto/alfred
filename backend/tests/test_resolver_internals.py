@@ -9,6 +9,7 @@ from app.assistant.commands.resolver import (
     _extract_args_and_flags,
     _enrich_arguments,
     _enrich_finance,
+    _enrich_event,
     _normalize_date,
     detect_commands,
 )
@@ -360,6 +361,62 @@ class TestEnrichFinance:
         result = _enrich_arguments({"description": "buy €50 groceries urgent"})
         assert "amount" not in result
         assert result.get("priority") == "HIGH"
+
+
+# ── _enrich_event ─────────────────────────────────────────────────────────────
+
+class TestEnrichEvent:
+    @freeze_time(FIXED_NOW)
+    def test_extracts_time_range_from_title(self):
+        result = _enrich_event({"title": "Test calendar example today from 19h to 21h"})
+        assert result["title"] == "Test calendar example"
+        assert result["start"] == "2024-05-20T19:00:00"
+        assert result["end"] == "2024-05-20T21:00:00"
+
+    @freeze_time(FIXED_NOW)
+    def test_extracts_single_time_with_at(self):
+        result = _enrich_event({"title": "Doctor visit next Monday at 9am"})
+        assert result["title"] == "Doctor visit"
+        assert result["start"] == "2024-05-27T09:00:00"
+        assert "end" not in result
+
+    @freeze_time(FIXED_NOW)
+    def test_date_only_no_time_falls_back_to_date_string(self):
+        result = _enrich_event({"title": "Meeting with team on Friday"})
+        assert result["title"] == "Meeting with team"
+        assert result["start"] == "2024-05-24"
+        assert "end" not in result
+
+    def test_no_date_no_time_no_start_set(self):
+        result = _enrich_event({"title": "Dentist appointment"})
+        assert result["title"] == "Dentist appointment"
+        assert "start" not in result
+
+    @freeze_time(FIXED_NOW)
+    def test_explicit_start_not_overwritten(self):
+        result = _enrich_event({
+            "title": "Team dinner tomorrow at 8pm",
+            "start": "2024-06-01T10:00:00",
+        })
+        assert result["start"] == "2024-06-01T10:00:00"
+
+    @freeze_time(FIXED_NOW)
+    def test_explicit_end_not_overwritten(self):
+        result = _enrich_event({
+            "title": "Team dinner from 19h to 21h",
+            "end": "2024-06-01T23:00:00",
+        })
+        assert result["start"] == "2024-05-20T19:00:00"
+        assert result["end"] == "2024-06-01T23:00:00"
+
+    def test_non_string_title_passthrough(self):
+        result = _enrich_event({"title": None})
+        assert result == {"title": None}
+
+    def test_enrich_arguments_routes_to_event_path(self):
+        result = _enrich_arguments({"title": "Standup tomorrow at 9am"}, cmd_type="event")
+        assert result["title"] == "Standup"
+        assert "start" in result
 
 
 # ── detect_commands — finance commands ───────────────────────────────────────

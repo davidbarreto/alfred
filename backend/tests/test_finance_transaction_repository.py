@@ -104,6 +104,12 @@ class TestList:
         await TransactionRepository(session).list(TransactionFilters(period="this month"))
         session.execute.assert_called_once()
 
+    async def test_offset_applied(self):
+        session = _make_session()
+        session.execute.return_value = _scalar_all([])
+        await TransactionRepository(session).list(TransactionFilters(offset=20))
+        session.execute.assert_called_once()
+
 
 class TestCreate:
     async def test_adds_commits_and_refreshes(self):

@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+{% set active_page = "finance" %}
+{% block title %}Transactions{% endblock %}
+
+{% block content %}
+<div class="p-6 space-y-4">
+
+  <div class="flex items-center justify-between">
+    <div class="flex items-center gap-2">
+      <a href="/finance" class="text-gray-400 hover:text-gray-600"><i class="ti ti-arrow-left text-sm"></i></a>
+      <h1 class="text-base font-semibold text-gray-900">All Transactions</h1>
+    </div>
+  </div>
+
+  <div class="flex flex-wrap items-end gap-2">
+    <div>
+      <label class="text-xs text-gray-500 mb-1 block">Type</label>
+      <select id="txn-filter-type" class="border border-gray-200 rounded-lg px-2 py-1.5 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-[#378ADD]" onchange="applyTxnFilters()">
+        <option value="" {% if not query_filters.type %}selected{% endif %}>All types</option>
+        <option value="expense" {% if query_filters.type == 'expense' %}selected{% endif %}>Expense</option>
+        <option value="income" {% if query_filters.type == 'income' %}selected{% endif %}>Income</option>
+      </select>
+    </div>
+    <div>
+      <label class="text-xs text-gray-500 mb-1 block">Category</label>
+      <select id="txn-filter-category" class="border border-gray-200 rounded-lg px-2 py-1.5 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-[#378ADD]" onchange="applyTxnFilters()">
+        <option value="">All categories</option>
+        {% for cat in categories %}
+        <option value="{{ cat.id }}" {% if query_filters.category_id == cat.id | string %}selected{% endif %}>{{ cat.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <label class="text-xs text-gray-500 mb-1 block">Account</label>
+      <select id="txn-filter-account" class="border border-gray-200 rounded-lg px-2 py-1.5 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-[#378ADD]" onchange="applyTxnFilters()">
+        <option value="">All accounts</option>
+        {% for acc in accounts %}
+        <option value="{{ acc.id }}" {% if query_filters.account_id == acc.id | string %}selected{% endif %}>{{ acc.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <label class="text-xs text-gray-500 mb-1 block">Merchant</label>
+      <input
+        id="txn-filter-merchant"
+        type="text"
+        value="{{ query_filters.merchant or '' }}"
+        placeholder="Search merchant…"
+        class="border border-gray-200 rounded-lg px-3 py-1.5 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-[#378ADD]"
+        onchange="applyTxnFilters()"
+      />
+    </div>
+    <div>
+      <label class="text-xs text-gray-500 mb-1 block">From</label>
+      <input id="txn-filter-from" type="date" value="{{ query_filters.from_date or '' }}"
+        class="border border-gray-200 rounded-lg px-2 py-1.5 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-[#378ADD]"
+        onchange="applyTxnFilters()" />
+    </div>
+    <div>
+      <label class="text-xs text-gray-500 mb-1 block">To</label>
+      <input id="txn-filter-to" type="date" value="{{ query_filters.to_date or '' }}"
+        class="border border-gray-200 rounded-lg px-2 py-1.5 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-[#378ADD]"
+        onchange="applyTxnFilters()" />
+    </div>
+    {% if query_filters.type or query_filters.category_id or query_filters.account_id or query_filters.merchant or query_filters.from_date or query_filters.to_date %}
+    <button onclick="clearTxnFilters()" class="btn btn-sm btn-ghost text-gray-500 gap-1">
+      <i class="ti ti-x text-xs"></i>Clear filters
+    </button>
+    {% endif %}
+  </div>
+
+  <div class="bg-white border border-gray-200 rounded-lg p-4">
+    <div id="txn-list-full">
+      {% include "_finance_transactions_list.html" %}
+    </div>
+  </div>
+
+</div>
+
+<script>
+const TXN_LIST_URL = "/finance/transactions/list";
+let _txnOffset = {{ query_offset }};
+const _txnPageSize = {{ page_size }};
+
+function _txnQuery() {
+  const params = new URLSearchParams();
+  const type = document.getElementById("txn-filter-type").value;
+  const category = document.getElementById("txn-filter-category").value;
+  const account = document.getElementById("txn-filter-account").value;
+  const merchant = document.getElementById("txn-filter-merchant").value;
+  const fromDate = document.getElementById("txn-filter-from").value;
+  const toDate = document.getElementById("txn-filter-to").value;
+  if (type) params.set("type", type);
+  if (category) params.set("category_id", category);
+  if (account) params.set("account_id", account);
+  if (merchant) params.set("merchant", merchant);
+  if (fromDate) params.set("from_date", fromDate);
+  if (toDate) params.set("to_date", toDate);
+  params.set("offset", _txnOffset);
+  return params.toString();
+}
+
+function refreshTxnList() {
+  htmx.ajax("GET", TXN_LIST_URL + "?" + _txnQuery(), {
+    target: "#txn-list-full",
+    swap: "innerHTML",
+  });
+}
+
+function applyTxnFilters() {
+  _txnOffset = 0;
+  refreshTxnList();
+}
+
+function clearTxnFilters() {
+  window.location.href = "/finance/transactions";
+}
+
+function changeTxnPage(delta) {
+  _txnOffset = Math.max(0, _txnOffset + delta * _txnPageSize);
+  refreshTxnList();
+}
+</script>
+{% endblock %}

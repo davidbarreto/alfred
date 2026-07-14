@@ -43,3 +43,20 @@ _MERCHANT_RE = re.compile(
 )
 _EXPENSE_INTENT_RE = re.compile(r'\b(?:spent|paid|bought|charged|cost|expensed)\b', re.IGNORECASE)
 _INCOME_INTENT_RE = re.compile(r'\b(?:received|earned|income|salary|revenue|refund|got\s+paid)\b', re.IGNORECASE)
+
+# --- Event time-of-day patterns ---
+# A loose time token, e.g. "7pm", "7:30pm", "19:00", "19h", "19h30" — used for the first
+# side of a range, where the "from ... to ..." wrapper already disambiguates intent.
+_TIME_TOKEN = r'\d{1,2}(?:h\d{2}|h|:\d{2})?\s*(?:am|pm)?'
+# A time token that unambiguously denotes a time of day (has an am/pm suffix or an
+# "h"/":" separator), so standalone numbers elsewhere in the text are never mistaken for one.
+_TIME_TOKEN_MARKED = r'\d{1,2}(?:h\d{2}|h|:\d{2})\s*(?:am|pm)?|\d{1,2}\s*(?:am|pm)'
+
+_TIME_RANGE_RE = re.compile(
+    rf'\bfrom\s+({_TIME_TOKEN})\s*(?:to|-|until|till)\s*({_TIME_TOKEN_MARKED})\b',
+    re.IGNORECASE,
+)
+_TIME_SINGLE_RE = re.compile(
+    rf'\bat\s+({_TIME_TOKEN_MARKED})\b|\b({_TIME_TOKEN_MARKED})\b',
+    re.IGNORECASE,
+)

@@ -124,7 +124,10 @@
 
   <!-- Recent transactions -->
   <div class="bg-white border border-gray-200 rounded-lg p-4">
-    <h2 class="text-sm font-medium text-gray-900 mb-3">Recent Transactions</h2>
+    <div class="flex items-center justify-between mb-3">
+      <h2 class="text-sm font-medium text-gray-900">Recent Transactions</h2>
+      <a href="/finance/transactions" class="text-xs text-[#378ADD] hover:underline">See all</a>
+    </div>
     <div id="transaction-list">
       {% include "_finance_transactions.html" %}
     </div>

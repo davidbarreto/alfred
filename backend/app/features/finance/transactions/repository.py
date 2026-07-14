@@ -42,7 +42,7 @@ class TransactionRepository:
             from app.features.finance.transactions.schemas import resolve_period
             from_dt, to_dt = resolve_period(filters.period, filters.from_date, filters.to_date)
             query = query.where(Transaction.date >= from_dt).where(Transaction.date <= to_dt)
-        query = query.limit(filters.limit)
+        query = query.offset(filters.offset).limit(filters.limit)
         result = await self._session.execute(query)
         return list(result.scalars().all())
 

@@ -47,7 +47,7 @@ class AddShoppingItemArgs(BaseModel):
     name: str = Field(description="Name of the item to buy")
     category: Literal["grocery", "pharmacy", "electronics", "online", "home", "clothes", "books", "other"] | None = Field(default=None)
     priority: Literal["need", "want"] | None = Field(default=None)
-    quantity: str | None = Field(default=None, description="Quantity, e.g. '2' or '500g'")
+    quantity: str | int | float | None = Field(default=None, description="Quantity, e.g. 2 or '500g'")
     unit: str | None = Field(default=None, description="Unit of measure, e.g. 'kg', 'bottles', 'packs'")
     store: str | None = Field(default=None, description="Store name if mentioned, e.g. 'Pingo Doce'")
 
@@ -70,7 +70,7 @@ class DeleteShoppingItemArgs(BaseModel):
 class AddWishlistItemArgs(BaseModel):
     name: str = Field(description="Name of the item to add to the wishlist")
     category: Literal["grocery", "pharmacy", "electronics", "online", "home", "clothes", "books", "other"] | None = Field(default=None)
-    estimated_price: str | None = Field(default=None, description="Estimated price if mentioned, e.g. '150'")
+    estimated_price: str | int | float | None = Field(default=None, description="Estimated price if mentioned, e.g. 150")
     url: str | None = Field(default=None)
 
 
@@ -81,7 +81,7 @@ class PromoteWishlistItemArgs(BaseModel):
 
 
 class AddTransactionArgs(BaseModel):
-    amount: str = Field(description="Monetary amount as a number string, e.g. '10' or '45.50'")
+    amount: str | int | float = Field(description="Monetary amount, e.g. 10 or 45.50")
     currency: str | None = Field(default=None, description="Currency code, e.g. 'EUR', 'USD'. Default to EUR if not mentioned.")
     type: Literal["expense", "income"] | None = Field(default=None, description="'expense' for spending/payments, 'income' for received money. Default to 'expense'.")
     merchant: str | None = Field(default=None, description="Store or merchant name if mentioned, e.g. 'Pingo Doce', 'Netflix'")

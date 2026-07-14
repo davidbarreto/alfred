@@ -96,6 +96,7 @@ class TransactionFilters:
     def __init__(
         self,
         limit: Annotated[int, Query(ge=1)] = 100,
+        offset: Annotated[int, Query(ge=0)] = 0,
         type: Annotated[TransactionType | None, Query()] = None,
         category_id: Annotated[int | None, Query()] = None,
         account_id: Annotated[int | None, Query()] = None,
@@ -105,6 +106,7 @@ class TransactionFilters:
         period: Annotated[str | None, Query()] = None,
     ) -> None:
         self.limit = limit
+        self.offset = offset
         self.type = type
         self.category_id = category_id
         self.account_id = account_id

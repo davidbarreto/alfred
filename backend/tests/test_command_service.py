@@ -129,7 +129,7 @@ async def test_detect_multiple_commands_in_one_message(mock_now):
     assert event_cmd.type == "event"
     assert event_cmd.command == "add"
     assert event_cmd.args["title"] == "Kenai's birthday"
-    assert event_cmd.args["deadline"] == "2024-05-25"
+    assert event_cmd.args["start"] == "2024-05-25"
 
     assert task_cmd.type == "task"
     assert task_cmd.command == "add"

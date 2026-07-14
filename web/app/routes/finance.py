@@ -1,5 +1,6 @@
 from collections import defaultdict
 from typing import Annotated, Optional
+from urllib.parse import urlencode
 
 import httpx
 from fastapi import APIRouter, Form, Request
@@ -9,6 +10,65 @@ import app.client as api
 from app.templates_config import templates
 
 router = APIRouter(prefix="/finance")
+
+_PAGE_SIZE = 20
+
+
+def _parse_txn_query(request: Request) -> tuple[dict, int]:
+    qp = request.query_params
+    filters = {
+        "type": qp.get("type") or None,
+        "category_id": qp.get("category_id") or None,
+        "account_id": qp.get("account_id") or None,
+        "merchant": qp.get("merchant") or None,
+        "from_date": qp.get("from_date") or None,
+        "to_date": qp.get("to_date") or None,
+    }
+    offset = max(0, int(qp.get("offset", "0") or "0"))
+    return filters, offset
+
+
+def _build_txn_params(filters: dict, offset: int) -> dict:
+    params: dict = {"limit": _PAGE_SIZE + 1, "offset": offset}
+    params.update({k: v for k, v in filters.items() if v})
+    return params
+
+
+def _pagination(items: list, offset: int) -> tuple[list, bool, bool]:
+    has_next = len(items) > _PAGE_SIZE
+    return items[:_PAGE_SIZE], has_next, offset > 0
+
+
+async def _txn_list_context(filters: dict, offset: int) -> dict:
+    try:
+        raw = await api.get("/finance/transactions", params=_build_txn_params(filters, offset))
+    except httpx.HTTPError:
+        raw = []
+    transactions, has_next, has_prev = _pagination(raw, offset)
+
+    categories, txn_accounts = [], []
+    try:
+        categories = await api.get("/finance/categories")
+    except httpx.HTTPError:
+        pass
+    try:
+        txn_accounts = await api.get("/finance/accounts")
+    except httpx.HTTPError:
+        pass
+
+    return {
+        "transactions": transactions,
+        "has_next": has_next,
+        "has_prev": has_prev,
+        "categories": categories,
+        "accounts": txn_accounts,
+        "categories_by_id": {c["id"]: c["name"] for c in categories},
+        "accounts_by_id": {a["id"]: a["name"] for a in txn_accounts},
+        "query_filters": filters,
+        "query_offset": offset,
+        "page_size": _PAGE_SIZE,
+        "filters_qs": urlencode({**{k: v for k, v in filters.items() if v}, "offset": offset}),
+    }
 
 
 @router.get("/", response_class=HTMLResponse)
@@ -157,18 +217,37 @@ async def create_transaction(
 
 @router.delete("/transactions/{transaction_id}", response_class=Response)
 async def delete_transaction(transaction_id: int, request: Request):
-    period = request.query_params.get("period", "this month")
     try:
         await api.delete(f"/finance/transactions/{transaction_id}")
     except httpx.HTTPError:
         return HTMLResponse('<p class="text-[#E24B4A] text-sm px-1">Failed to delete transaction.</p>', status_code=422)
 
+    if "offset" in request.query_params:
+        filters, offset = _parse_txn_query(request)
+        context = await _txn_list_context(filters, offset)
+        return templates.TemplateResponse(request, "_finance_transactions_list.html", context)
+
+    period = request.query_params.get("period", "this month")
     transactions = []
     try:
         transactions = await api.get("/finance/transactions", params={"limit": 15, "period": period})
     except httpx.HTTPError:
         pass
     return templates.TemplateResponse(request, "_finance_transactions.html", {"transactions": transactions})
+
+
+@router.get("/transactions", response_class=HTMLResponse)
+async def transactions_page(request: Request):
+    filters, offset = _parse_txn_query(request)
+    context = await _txn_list_context(filters, offset)
+    return templates.TemplateResponse(request, "finance_transactions.html", context)
+
+
+@router.get("/transactions/list", response_class=HTMLResponse)
+async def transactions_list_fragment(request: Request):
+    filters, offset = _parse_txn_query(request)
+    context = await _txn_list_context(filters, offset)
+    return templates.TemplateResponse(request, "_finance_transactions_list.html", context)
 
 
 # --- Accounts ---

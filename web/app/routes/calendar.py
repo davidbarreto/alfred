@@ -51,6 +51,8 @@ async def calendar_page(request: Request):
     for ev in events:
         ev_date = ev["start_datetime"][:10]
         events_by_date.setdefault(ev_date, []).append(ev)
+    for day_events in events_by_date.values():
+        day_events.sort(key=lambda e: (not e["all_day"], e["start_datetime"]))
 
     prev_month = month - 1 if month > 1 else 12
     prev_year = year if month > 1 else year - 1
@@ -70,6 +72,34 @@ async def calendar_page(request: Request):
         "prev_month": prev_month,
         "next_year": next_year,
         "next_month": next_month,
+    })
+
+
+@router.get("/day/{date_str}", response_class=HTMLResponse)
+async def calendar_day(date_str: str, request: Request):
+    try:
+        day = date.fromisoformat(date_str)
+    except ValueError:
+        return HTMLResponse('<p class="text-sm text-gray-400 p-4">Invalid date.</p>')
+
+    start = datetime(day.year, day.month, day.day).isoformat()
+    end = datetime(day.year, day.month, day.day, 23, 59, 59).isoformat()
+
+    try:
+        events = await api.get("/organizer/calendar-events", params={
+            "start_from": start,
+            "start_to": end,
+            "limit": 200,
+        })
+    except httpx.HTTPError:
+        return HTMLResponse('<p class="text-sm text-gray-400 p-4">Could not load events.</p>')
+
+    events.sort(key=lambda e: (not e["all_day"], e["start_datetime"]))
+
+    return templates.TemplateResponse(request, "_calendar_day.html", {
+        "day": day,
+        "day_str": date_str,
+        "events": events,
     })
 
 

@@ -1,0 +1,62 @@
+{% set all_day_events = events | selectattr("all_day") | list %}
+{% set timed_events = events | rejectattr("all_day") | list %}
+
+<div class="flex items-center justify-between mb-4">
+  <h3 class="text-sm font-semibold text-gray-900">{{ day.strftime("%A, %B %-d, %Y") }}</h3>
+  <button onclick="document.getElementById('calendar-day-modal').close()"
+          class="text-gray-400 hover:text-gray-600 flex-shrink-0">
+    <i class="ti ti-x" style="font-size:1rem"></i>
+  </button>
+</div>
+
+{% if not events %}
+<p class="text-sm text-gray-400 text-center py-6">No events this day.</p>
+{% else %}
+
+{% if all_day_events %}
+<p class="text-[10px] text-gray-400 uppercase tracking-wide mb-2">All day</p>
+<ul class="space-y-1 mb-4">
+  {% for ev in all_day_events %}
+  <li class="flex items-start gap-2 rounded-lg bg-[#0C447C] text-white px-3 py-2">
+    <i class="ti ti-calendar mt-0.5" style="font-size:0.85rem"></i>
+    <div class="min-w-0">
+      <div class="text-sm truncate">{{ ev.title }}</div>
+      {% if ev.location %}
+      <div class="text-[11px] text-white/70 truncate">{{ ev.location }}</div>
+      {% endif %}
+    </div>
+  </li>
+  {% endfor %}
+</ul>
+{% endif %}
+
+{% if timed_events %}
+<p class="text-[10px] text-gray-400 uppercase tracking-wide mb-2">Schedule</p>
+<ul class="space-y-1 max-h-72 overflow-y-auto">
+  {% for ev in timed_events %}
+  <li class="flex items-start gap-3 py-2 border-b border-gray-50 last:border-0">
+    <span class="font-mono text-xs text-gray-500 w-24 flex-shrink-0 mt-0.5">
+      {{ ev.start_datetime[11:16] }}&ndash;{{ ev.end_datetime[11:16] }}
+    </span>
+    <div class="min-w-0 flex-1">
+      <div class="text-sm text-gray-800 truncate">{{ ev.title }}</div>
+      {% if ev.location %}
+      <div class="text-xs text-gray-400 truncate">{{ ev.location }}</div>
+      {% endif %}
+    </div>
+    {% for tag in ev.tags[:2] %}
+    <span class="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-400 flex-shrink-0">{{ tag }}</span>
+    {% endfor %}
+  </li>
+  {% endfor %}
+</ul>
+{% endif %}
+
+{% endif %}
+
+<div class="border-t border-gray-100 mt-4 pt-3">
+  <button onclick="document.getElementById('calendar-day-modal').close(); openNewEvent('{{ day_str }}');"
+          class="flex items-center gap-1.5 text-xs text-gray-400 hover:text-[#378ADD] transition-colors py-1">
+    <i class="ti ti-plus text-sm"></i>New event
+  </button>
+</div>

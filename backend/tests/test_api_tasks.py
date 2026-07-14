@@ -1,4 +1,5 @@
 import pytest
+from datetime import datetime
 from fastapi.testclient import TestClient
 from unittest.mock import AsyncMock
 from app.features.organizer.tasks.schemas import TaskCompletionRead, TaskRead
@@ -9,7 +10,8 @@ AUTH = {"Authorization": "Bearer test-api-token"}
 def _task_read(**kwargs):
     defaults = dict(
         id=1, title="Test Task", status="TODO",
-        priority="LOW", urgency="NORMAL", tags=[], is_done_today=False
+        priority="LOW", urgency="NORMAL", tags=[], is_done_today=False,
+        created_at=datetime(2024, 6, 1),
     )
     defaults.update(kwargs)
     return TaskRead(**defaults)
@@ -28,10 +30,18 @@ def mock_service():
 
 
 @pytest.fixture
-def client(mock_service):
+def mock_working_memory_service():
+    svc = AsyncMock()
+    svc.list.return_value = []
+    return svc
+
+
+@pytest.fixture
+def client(mock_service, mock_working_memory_service):
     from app.main import app
-    from app.dependencies import get_task_service
+    from app.dependencies import get_task_service, get_working_memory_service
     app.dependency_overrides[get_task_service] = lambda: mock_service
+    app.dependency_overrides[get_working_memory_service] = lambda: mock_working_memory_service
     yield TestClient(app)
     app.dependency_overrides.clear()
 
@@ -184,4 +194,31 @@ class TestCompleteTask:
 
     def test_requires_auth(self, client):
         response = client.post("/organizer/tasks/1/complete")
+        assert response.status_code == 403
+
+
+class TestSnoozeTask:
+    def test_snoozes_and_returns_200(self, client, mock_working_memory_service):
+        response = client.post("/organizer/tasks/1/snooze", headers=AUTH)
+        assert response.status_code == 200
+        data = response.json()
+        assert data["id"] == 1
+        assert "snoozed_until" in data
+        mock_working_memory_service.create.assert_awaited_once()
+
+    def test_respects_explicit_days(self, client, mock_working_memory_service):
+        from datetime import datetime, timezone
+
+        before = datetime.now(timezone.utc)
+        client.post("/organizer/tasks/1/snooze?days=3", headers=AUTH)
+        created = mock_working_memory_service.create.call_args.args[0]
+        assert 2 <= (created.expires_at - before).days <= 3
+
+    def test_not_found_returns_404(self, client, mock_service):
+        mock_service.get_task.return_value = None
+        response = client.post("/organizer/tasks/999/snooze", headers=AUTH)
+        assert response.status_code == 404
+
+    def test_requires_auth(self, client):
+        response = client.post("/organizer/tasks/1/snooze")
         assert response.status_code == 403

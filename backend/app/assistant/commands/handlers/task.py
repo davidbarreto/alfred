@@ -7,6 +7,8 @@ from fastapi import HTTPException, status
 from app.assistant.commands.handlers._utils import parse_dt, parse_tags
 from app.features.core.embeddings.schemas import EmbeddingSearchRequest
 from app.features.core.embeddings.service import EmbeddingService
+from app.features.core.reminders.service import snooze_undated_escalation
+from app.features.core.working_memory.service import WorkingMemoryService
 from app.features.organizer.tasks.schemas import (
     TaskCompletionRead,
     TaskCreate,
@@ -37,6 +39,7 @@ async def handle_task(
     arguments: dict[str, Any],
     service: TaskService,
     embedding_service: EmbeddingService | None = None,
+    working_memory_service: WorkingMemoryService | None = None,
 ) -> Any:
     logger.debug("handle_task: command=%s args_keys=%s", command, list(arguments.keys()))
     if command == "add":
@@ -107,6 +110,8 @@ async def handle_task(
             update_fields["deadline"] = parse_dt(arguments["deadline"])
         if "status" in arguments:
             update_fields["status"] = str(arguments["status"]).upper()
+        if "urgency" in arguments:
+            update_fields["urgency"] = str(arguments["urgency"]).upper()
         if "tags" in arguments:
             update_fields["tags"] = parse_tags(arguments["tags"])
         if "recurrence" in arguments:
@@ -140,5 +145,19 @@ async def handle_task(
         task_id = int(arguments["id"])
         await service.delete_task(task_id)
         return {"deleted": True, "id": task_id}
+
+    if command == "snooze":
+        task_id = int(arguments["id"])
+        existing = await service.get_task(task_id)
+        if existing is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Task {task_id} not found")
+        if working_memory_service is None:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Working memory service not available"
+            )
+
+        days = int(arguments["days"]) if arguments.get("days") else None
+        expires_at = await snooze_undated_escalation(working_memory_service, task_id, days)
+        return {"id": task_id, "snoozed_until": expires_at.isoformat()}
 
     raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Unknown task command: {command}")

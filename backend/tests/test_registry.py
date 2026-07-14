@@ -89,6 +89,24 @@ class TestCommandRegistryTaskUpdate:
         assert meta.requires_args is True
         assert meta.arg_keys == ["id"]
 
+    def test_task_update_has_urgency_flag(self):
+        meta = COMMAND_REGISTRY["/tu"]
+        assert "-u" in meta.flags or "--urgency" in meta.flags
+
+
+class TestCommandRegistryTaskSnooze:
+    @pytest.mark.parametrize("alias", ["/tasksnooze", "/snooze"])
+    def test_task_snooze_aliases(self, alias):
+        meta = COMMAND_REGISTRY[alias]
+        assert meta.type == "task"
+        assert meta.action == "snooze"
+        assert meta.requires_args is True
+        assert meta.arg_keys == ["id"]
+
+    def test_task_snooze_has_days_flag(self):
+        meta = COMMAND_REGISTRY["/snooze"]
+        assert "-d" in meta.flags or "--days" in meta.flags
+
 
 class TestCommandRegistryTaskActions:
     @pytest.mark.parametrize("alias", ["/taskdone", "/td", "/done"])

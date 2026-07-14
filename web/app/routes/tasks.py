@@ -214,6 +214,22 @@ async def mark_task_doing(task_id: int, request: Request):
     })
 
 
+@router.post("/{task_id}/snooze", response_class=HTMLResponse)
+async def snooze_task(task_id: int, request: Request):
+    try:
+        await api.post(f"/organizer/tasks/{task_id}/snooze")
+        await api.log_command("task.snooze", {"task_id": task_id}, "task", task_id)
+        task = await api.get(f"/organizer/tasks/{task_id}")
+    except httpx.HTTPError:
+        return Response("Failed to snooze task.", status_code=422, media_type="text/plain")
+    return templates.TemplateResponse(request, "_task_row.html", {
+        "task": task,
+        "today": date.today().isoformat(),
+        "tomorrow": (date.today() + timedelta(days=1)).isoformat(),
+        "just_snoozed": True,
+    })
+
+
 @router.get("/{task_id}/history", response_class=HTMLResponse)
 async def task_history(task_id: int, request: Request):
     try:

@@ -37,6 +37,7 @@ class TaskUpdate(BaseModel):
 
 class TaskRead(TaskBase):
     id: int
+    created_at: datetime
     is_done_today: bool = False
     streak: int | None = None
     total_completions: int | None = None
@@ -89,3 +90,8 @@ class TaskCompletionRead(BaseModel):
     completed_at: datetime
 
     model_config = {"from_attributes": True}
+
+
+class TaskSnoozeRead(BaseModel):
+    id: int
+    snoozed_until: datetime

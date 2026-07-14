@@ -74,13 +74,14 @@ class TestTaskRead:
             priority="LOW",
             urgency="NORMAL",
             tags=[],
+            created_at=datetime(2024, 6, 1),
         )
         assert task.id == 1
 
     def test_coerce_tags_from_strings(self):
         task = TaskRead(
             id=1, title="T", status="TODO", priority="LOW", urgency="NORMAL",
-            tags=["work", "personal"],
+            tags=["work", "personal"], created_at=datetime(2024, 6, 1),
         )
         assert task.tags == ["work", "personal"]
 
@@ -90,7 +91,7 @@ class TestTaskRead:
 
         task = TaskRead(
             id=2, title="T", status="TODO", priority="LOW", urgency="NORMAL",
-            tags=[FakeTag()],
+            tags=[FakeTag()], created_at=datetime(2024, 6, 1),
         )
         assert task.tags == ["work"]
 
@@ -101,7 +102,7 @@ class TestTaskRead:
 
         task = TaskRead(
             id=3, title="T", status="TODO", priority="LOW", urgency="NORMAL",
-            tags=[FakeTag("work"), "personal"],
+            tags=[FakeTag("work"), "personal"], created_at=datetime(2024, 6, 1),
         )
         assert task.tags == ["work", "personal"]
 

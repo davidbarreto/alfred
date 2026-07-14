@@ -10,6 +10,8 @@ FLAG_PRIORITY = {"-p": "priority", "--priority": "priority"}
 FLAG_DUE = {"-d": "deadline", "--due": "deadline"}
 FLAG_TITLE = {"-ti": "title", "--title": "title"}
 FLAG_LIMIT = {"-lim": "limit", "--limit": "limit"}
+FLAG_URGENCY = {"-u": "urgency", "--urgency": "urgency"}
+FLAG_DAYS = {"-d": "days", "--days": "days"}
 FLAG_LINKS = {"-l": "links", "--links": "links"}
 FLAG_CONTENT = {"-c": "content", "--content": "content"}
 FLAG_START = {"-s": "start", "--start": "start"}
@@ -35,8 +37,9 @@ FLAG_OCCURRENCE_DATE = {"-d": "occurrence_date", "--date": "occurrence_date"}
 
 TASK_ADD_FLAGS = {**FLAG_DUE, **FLAG_PRIORITY, **FLAG_TAGS, **FLAG_RECURRENCE}
 TASK_LIST_FLAGS = {**FLAG_STATUS, **FLAG_DUE, **FLAG_PRIORITY, **FLAG_TAGS, **FLAG_LIMIT}
-TASK_UPDATE_FLAGS = {**FLAG_STATUS, **FLAG_DUE, **FLAG_PRIORITY, **FLAG_TITLE}
+TASK_UPDATE_FLAGS = {**FLAG_STATUS, **FLAG_DUE, **FLAG_PRIORITY, **FLAG_TITLE, **FLAG_URGENCY}
 TASK_COMPLETE_FLAGS = {**FLAG_OCCURRENCE_DATE}
+TASK_SNOOZE_FLAGS = {**FLAG_DAYS}
 
 NOTE_ADD_FLAGS = {**FLAG_TAGS, **FLAG_LINKS, **FLAG_TITLE, **FLAG_CONTENT}
 
@@ -111,6 +114,13 @@ COMMAND_DEFINITIONS = {
             "description": "Cancel a task by ID",
             "aliases": ["/taskcancel", "/tcancel", "/tc"],
             "flags": {},
+            "requires_args": True,
+            "arg_keys": ["id"]
+        },
+        "snooze": {
+            "description": "Snooze the no-deadline escalation reminder for a task by ID",
+            "aliases": ["/tasksnooze", "/snooze"],
+            "flags": TASK_SNOOZE_FLAGS,
             "requires_args": True,
             "arg_keys": ["id"]
         },

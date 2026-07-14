@@ -52,7 +52,11 @@ async def execute(
     logger.info("Execute: %s.%s args_keys=%s", cmd_type, command, list(arguments.keys()))
 
     if cmd_type == "task":
-        return await handle_task(command, arguments, task_service, embedding_service=embedding_service)
+        return await handle_task(
+            command, arguments, task_service,
+            embedding_service=embedding_service,
+            working_memory_service=working_memory_service,
+        )
 
     if cmd_type == "note":
         return await handle_note(command, arguments, note_service)

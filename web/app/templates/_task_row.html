@@ -2,6 +2,7 @@
 {% set is_done = task.status == "DONE" %}
 {% set is_done_today = task.is_done_today and task.status != "DONE" %}
 {% set is_doing = task.status == "DOING" %}
+{% set just_snoozed = just_snoozed | default(false) %}
 
 {% if task.recurrence_rule %}
   {% set rr = task.recurrence_rule %}
@@ -86,6 +87,13 @@
       {% else %}
       <span class="flex items-center gap-1 text-gray-300">
         <i class="ti ti-clock" style="font-size:0.8rem"></i>Normal
+      </span>
+      {% endif %}
+
+      <!-- Just snoozed (ephemeral confirmation, not a persisted field) -->
+      {% if just_snoozed %}
+      <span class="flex items-center gap-1 text-emerald-500 font-medium">
+        <i class="ti ti-moon" style="font-size:0.8rem"></i>Snoozed
       </span>
       {% endif %}
 
@@ -176,6 +184,15 @@
               class="w-full text-left px-3 py-1.5 rounded hover:bg-gray-50 text-gray-700"
               onclick="_taskMenuClose(); openEditTask({{ task | tojson }})"
             >Edit</button>
+          </li>
+          <li>
+            <button
+              class="w-full text-left px-3 py-1.5 rounded hover:bg-gray-50 text-gray-700"
+              hx-post="/tasks/{{ task.id }}/snooze"
+              hx-target="#task-{{ task.id }}"
+              hx-swap="outerHTML"
+              onclick="_taskMenuClose()"
+            >Snooze reminder</button>
           </li>
           <li>
             <button

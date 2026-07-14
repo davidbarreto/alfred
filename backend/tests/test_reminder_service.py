@@ -8,13 +8,14 @@ from app.features.core.reminders.service import ReminderService
 from app.features.organizer.tasks.schemas import TaskUpdate
 
 
-def _make_task(id=1, title="Pay rent", deadline=None, urgency="NORMAL", priority="LOW"):
+def _make_task(id=1, title="Pay rent", deadline=None, urgency="NORMAL", priority="LOW", created_at=None):
     task = MagicMock()
     task.id = id
     task.title = title
     task.deadline = deadline
     task.urgency = urgency
     task.priority = priority
+    task.created_at = created_at or NOW
     return task
 
 
@@ -148,8 +149,8 @@ class TestBuildDueDigestTasks:
         mock_task_service.update_task.assert_not_awaited()
         assert digest.has_content is False
 
-    async def test_undated_task_is_included_but_not_escalated(self, mock_session, mock_task_service):
-        task = _make_task(id=5, title="Read that book", deadline=None, urgency="NORMAL")
+    async def test_undated_normal_task_is_counted_not_listed(self, mock_session, mock_task_service):
+        task = _make_task(id=5, title="Read that book", deadline=None, urgency="NORMAL", priority="LOW")
         mock_task_service.get_tasks.return_value = [task]
 
         with (
@@ -166,10 +167,11 @@ class TestBuildDueDigestTasks:
             digest = await _service(mock_session, mock_task_service).build_due_digest()
 
         mock_task_service.update_task.assert_not_awaited()
-        assert "No due date: Read that book" in digest.text
+        assert "Read that book" not in digest.text
+        assert "1 other task(s) without a due date" in digest.text
 
-    async def test_undated_task_already_reminded_today_is_skipped(self, mock_session, mock_task_service):
-        task = _make_task(id=6, title="Read that book", deadline=None, urgency="NORMAL")
+    async def test_undated_summary_already_reminded_today_is_skipped(self, mock_session, mock_task_service):
+        task = _make_task(id=6, title="Read that book", deadline=None, urgency="NORMAL", priority="LOW")
         mock_task_service.get_tasks.return_value = [task]
 
         with (
@@ -187,6 +189,201 @@ class TestBuildDueDigestTasks:
 
         MockWMRepo.return_value.create.assert_not_awaited()
         assert digest.has_content is False
+
+    async def test_undated_high_priority_task_is_listed_individually(self, mock_session, mock_task_service):
+        task = _make_task(id=7, title="Renew passport", deadline=None, urgency="NORMAL", priority="HIGH")
+        mock_task_service.get_tasks.return_value = [task]
+
+        with (
+            patch("app.features.core.reminders.service.CalendarEventRepository") as MockEventRepo,
+            patch("app.features.core.reminders.service.ShoppingRepository") as MockShoppingRepo,
+            patch("app.features.core.reminders.service.WorkingMemoryRepository") as MockWMRepo,
+            patch("app.features.core.reminders.service.local_now", return_value=NOW),
+        ):
+            MockEventRepo.return_value.get_events = AsyncMock(return_value=[])
+            MockShoppingRepo.return_value.list = AsyncMock(return_value=[])
+            MockWMRepo.return_value.list = AsyncMock(return_value=[])
+            MockWMRepo.return_value.create = AsyncMock()
+
+            digest = await _service(mock_session, mock_task_service).build_due_digest()
+
+        mock_task_service.update_task.assert_not_awaited()
+        assert "No due date (NORMAL): Renew passport" in digest.text
+
+    async def test_undated_task_older_than_a_month_is_escalated_and_listed(self, mock_session, mock_task_service):
+        stale_created_at = NOW - timedelta(days=31)
+        task = _make_task(
+            id=8, title="Learn guitar", deadline=None, urgency="NORMAL", priority="LOW",
+            created_at=stale_created_at,
+        )
+        updated_task = _make_task(
+            id=8, title="Learn guitar", deadline=None, urgency="URGENT", priority="LOW",
+            created_at=stale_created_at,
+        )
+        mock_task_service.get_tasks.return_value = [task]
+        mock_task_service.update_task.return_value = updated_task
+
+        with (
+            patch("app.features.core.reminders.service.CalendarEventRepository") as MockEventRepo,
+            patch("app.features.core.reminders.service.ShoppingRepository") as MockShoppingRepo,
+            patch("app.features.core.reminders.service.WorkingMemoryRepository") as MockWMRepo,
+            patch("app.features.core.reminders.service.local_now", return_value=NOW),
+        ):
+            MockEventRepo.return_value.get_events = AsyncMock(return_value=[])
+            MockShoppingRepo.return_value.list = AsyncMock(return_value=[])
+            MockWMRepo.return_value.list = AsyncMock(return_value=[])
+            MockWMRepo.return_value.create = AsyncMock()
+
+            digest = await _service(mock_session, mock_task_service).build_due_digest()
+
+        mock_task_service.update_task.assert_awaited_once_with(8, TaskUpdate(urgency="URGENT"))
+        assert "No due date (URGENT): Learn guitar" in digest.text
+
+    async def test_undated_task_under_a_month_old_is_not_escalated(self, mock_session, mock_task_service):
+        task = _make_task(
+            id=9, title="Learn guitar", deadline=None, urgency="NORMAL", priority="LOW",
+            created_at=NOW - timedelta(days=10),
+        )
+        mock_task_service.get_tasks.return_value = [task]
+
+        with (
+            patch("app.features.core.reminders.service.CalendarEventRepository") as MockEventRepo,
+            patch("app.features.core.reminders.service.ShoppingRepository") as MockShoppingRepo,
+            patch("app.features.core.reminders.service.WorkingMemoryRepository") as MockWMRepo,
+            patch("app.features.core.reminders.service.local_now", return_value=NOW),
+        ):
+            MockEventRepo.return_value.get_events = AsyncMock(return_value=[])
+            MockShoppingRepo.return_value.list = AsyncMock(return_value=[])
+            MockWMRepo.return_value.list = AsyncMock(return_value=[])
+            MockWMRepo.return_value.create = AsyncMock()
+
+            digest = await _service(mock_session, mock_task_service).build_due_digest()
+
+        mock_task_service.update_task.assert_not_awaited()
+        assert "1 other task(s) without a due date" in digest.text
+
+
+def _snooze_list_side_effect(snoozed_task_id: int):
+    from app.features.core.reminders.service import undated_escalation_snooze_key
+
+    def _side_effect(filters):
+        if filters.key == undated_escalation_snooze_key(snoozed_task_id):
+            return [MagicMock()]
+        return []
+
+    return _side_effect
+
+
+class TestSnoozeUndatedEscalation:
+    async def test_creates_marker_with_default_days(self):
+        from app.features.core.reminders.service import snooze_undated_escalation, undated_escalation_snooze_key
+
+        wm_service = AsyncMock()
+        wm_service.list.return_value = []
+
+        expires_at = await snooze_undated_escalation(wm_service, task_id=5)
+
+        wm_service.create.assert_awaited_once()
+        created = wm_service.create.call_args.args[0]
+        assert created.key == undated_escalation_snooze_key(5)
+        assert created.expires_at == expires_at
+
+    async def test_respects_explicit_days(self):
+        from app.features.core.reminders.service import snooze_undated_escalation
+
+        wm_service = AsyncMock()
+        wm_service.list.return_value = []
+        before = datetime.now(timezone.utc)
+
+        await snooze_undated_escalation(wm_service, task_id=5, days=3)
+
+        created = wm_service.create.call_args.args[0]
+        assert 2 <= (created.expires_at - before).days <= 3
+
+    async def test_replaces_existing_marker(self):
+        from app.features.core.reminders.service import snooze_undated_escalation
+
+        wm_service = AsyncMock()
+        wm_service.list.return_value = [MagicMock(id=99)]
+
+        await snooze_undated_escalation(wm_service, task_id=5)
+
+        wm_service.delete.assert_awaited_once_with(99)
+
+
+class TestUndatedTaskEscalationConfigAndSnooze:
+    async def test_escalation_age_respects_setting(self, mock_session, mock_task_service):
+        task = _make_task(
+            id=20, title="Organize garage", deadline=None, urgency="NORMAL", priority="LOW",
+            created_at=NOW - timedelta(days=8),
+        )
+        mock_task_service.get_tasks.return_value = [task]
+        mock_task_service.update_task.return_value = _make_task(
+            id=20, title="Organize garage", deadline=None, urgency="URGENT", priority="LOW",
+            created_at=NOW - timedelta(days=8),
+        )
+        settings = MagicMock(undated_task_escalation_days=7)
+
+        with (
+            patch("app.features.core.reminders.service.CalendarEventRepository") as MockEventRepo,
+            patch("app.features.core.reminders.service.ShoppingRepository") as MockShoppingRepo,
+            patch("app.features.core.reminders.service.WorkingMemoryRepository") as MockWMRepo,
+            patch("app.features.core.reminders.service.local_now", return_value=NOW),
+            patch("app.features.core.reminders.service.get_settings", return_value=settings),
+        ):
+            MockEventRepo.return_value.get_events = AsyncMock(return_value=[])
+            MockShoppingRepo.return_value.list = AsyncMock(return_value=[])
+            MockWMRepo.return_value.list = AsyncMock(return_value=[])
+            MockWMRepo.return_value.create = AsyncMock()
+
+            digest = await _service(mock_session, mock_task_service).build_due_digest()
+
+        mock_task_service.update_task.assert_awaited_once_with(20, TaskUpdate(urgency="URGENT"))
+        assert "No due date (URGENT): Organize garage" in digest.text
+
+    async def test_snoozed_stale_task_is_not_escalated_or_listed(self, mock_session, mock_task_service):
+        task = _make_task(
+            id=21, title="Learn guitar", deadline=None, urgency="NORMAL", priority="LOW",
+            created_at=NOW - timedelta(days=40),
+        )
+        mock_task_service.get_tasks.return_value = [task]
+
+        with (
+            patch("app.features.core.reminders.service.CalendarEventRepository") as MockEventRepo,
+            patch("app.features.core.reminders.service.ShoppingRepository") as MockShoppingRepo,
+            patch("app.features.core.reminders.service.WorkingMemoryRepository") as MockWMRepo,
+            patch("app.features.core.reminders.service.local_now", return_value=NOW),
+        ):
+            MockEventRepo.return_value.get_events = AsyncMock(return_value=[])
+            MockShoppingRepo.return_value.list = AsyncMock(return_value=[])
+            MockWMRepo.return_value.list = AsyncMock(side_effect=_snooze_list_side_effect(21))
+            MockWMRepo.return_value.create = AsyncMock()
+
+            digest = await _service(mock_session, mock_task_service).build_due_digest()
+
+        mock_task_service.update_task.assert_not_awaited()
+        assert "Learn guitar" not in digest.text
+        assert "1 other task(s) without a due date" in digest.text
+
+    async def test_snoozed_already_urgent_task_is_not_listed(self, mock_session, mock_task_service):
+        task = _make_task(id=22, title="Call plumber", deadline=None, urgency="URGENT", priority="LOW")
+        mock_task_service.get_tasks.return_value = [task]
+
+        with (
+            patch("app.features.core.reminders.service.CalendarEventRepository") as MockEventRepo,
+            patch("app.features.core.reminders.service.ShoppingRepository") as MockShoppingRepo,
+            patch("app.features.core.reminders.service.WorkingMemoryRepository") as MockWMRepo,
+            patch("app.features.core.reminders.service.local_now", return_value=NOW),
+        ):
+            MockEventRepo.return_value.get_events = AsyncMock(return_value=[])
+            MockShoppingRepo.return_value.list = AsyncMock(return_value=[])
+            MockWMRepo.return_value.list = AsyncMock(side_effect=_snooze_list_side_effect(22))
+            MockWMRepo.return_value.create = AsyncMock()
+
+            digest = await _service(mock_session, mock_task_service).build_due_digest()
+
+        assert "Call plumber" not in digest.text
+        assert "1 other task(s) without a due date" in digest.text
 
 
 class TestBuildDueDigestEventsAndShopping:

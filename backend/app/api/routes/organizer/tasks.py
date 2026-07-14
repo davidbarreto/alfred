@@ -1,8 +1,16 @@
 from datetime import date
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
-from app.features.organizer.tasks.schemas import TaskCompletionRead, TaskRead, TaskCreate, TaskUpdate, TaskFilters
+from app.features.core.reminders.service import snooze_undated_escalation
+from app.features.organizer.tasks.schemas import (
+    TaskCompletionRead,
+    TaskRead,
+    TaskCreate,
+    TaskSnoozeRead,
+    TaskUpdate,
+    TaskFilters,
+)
 from app.api.auth import require_auth
-from app.dependencies import TaskServiceDep
+from app.dependencies import TaskServiceDep, WorkingMemoryServiceDep
 
 router = APIRouter(prefix="/organizer/tasks", tags=["organizer"], dependencies=[Depends(require_auth)])
 
@@ -49,6 +57,20 @@ async def get_task_completions(task_id: int, service: TaskServiceDep):
     if result is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found")
     return result
+
+
+@router.post("/{task_id}/snooze", response_model=TaskSnoozeRead)
+async def snooze_task(
+    task_id: int,
+    service: TaskServiceDep,
+    working_memory_service: WorkingMemoryServiceDep,
+    days: int | None = Query(None, ge=1),
+):
+    task_read = await service.get_task(task_id)
+    if task_read is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found")
+    expires_at = await snooze_undated_escalation(working_memory_service, task_id, days)
+    return TaskSnoozeRead(id=task_id, snoozed_until=expires_at)
 
 
 @router.post("/{task_id}/complete", response_model=TaskRead)

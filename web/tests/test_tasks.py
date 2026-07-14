@@ -71,3 +71,31 @@ class TestUpdateTask:
 
         assert resp.status_code == 302
         assert resp.headers["location"].startswith("/login")
+
+
+class TestSnoozeTask:
+    def test_snoozes_and_renders_row(self, client, mock_api):
+        mock_api["post"].return_value = {"id": 3, "snoozed_until": "2026-07-21T00:00:00Z"}
+        mock_api["get"].return_value = _task(id=3, title="Learn guitar")
+
+        resp = client.post("/tasks/3/snooze")
+
+        assert resp.status_code == 200
+        assert "Learn guitar" in resp.text
+        assert "Snoozed" in resp.text
+        mock_api["post"].assert_any_await("/organizer/tasks/3/snooze")
+
+    def test_returns_422_when_backend_snooze_fails(self, client, mock_api):
+        request = httpx.Request("POST", "http://api/organizer/tasks/3/snooze")
+        response = httpx.Response(404, json={"detail": "Task not found"}, request=request)
+        mock_api["post"].side_effect = httpx.HTTPStatusError("not found", request=request, response=response)
+
+        resp = client.post("/tasks/3/snooze")
+
+        assert resp.status_code == 422
+
+    def test_requires_authentication(self, anon_client):
+        resp = anon_client.post("/tasks/3/snooze", follow_redirects=False)
+
+        assert resp.status_code == 302
+        assert resp.headers["location"].startswith("/login")

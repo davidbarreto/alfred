@@ -47,7 +47,7 @@ class TaskRepository:
                 query = query.where(deadline_cond)
         if task_filter.tags:
             query = query.where(Task.tags.any(Tag.name.in_(task_filter.tags)))
-        query = query.limit(task_filter.limit)
+        query = query.order_by(Task.id.desc()).limit(task_filter.limit)
         result = await self._session.execute(query)
         return list(result.scalars().all())
 

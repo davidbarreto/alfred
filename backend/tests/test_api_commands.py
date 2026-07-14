@@ -2,6 +2,14 @@ import pytest
 from fastapi.testclient import TestClient
 from unittest.mock import AsyncMock, patch
 
+from app.api.routes.commands import (
+    _cap_response_length,
+    _format_result,
+    _summarize_list,
+    _LIST_DISPLAY_LIMIT,
+    _MAX_RESPONSE_CHARS,
+    _TEXT_FIELD_MAX,
+)
 from app.assistant.intents.intent_service import IntentResult
 
 AUTH = {"Authorization": "Bearer test-api-token"}
@@ -170,3 +178,80 @@ class TestExtractCommand:
     def test_missing_fields_returns_422(self, client):
         response = client.post("/commands/extract", json={"text": "test"}, headers=AUTH)
         assert response.status_code == 422
+
+
+class TestSummarizeList:
+    def test_empty_list(self):
+        assert _summarize_list([]) == "(empty — no items found)"
+
+    def test_under_limit_no_truncation_note(self):
+        items = [{"id": i, "title": f"Note {i}"} for i in range(3)]
+        result = _summarize_list(items)
+        assert result.startswith("3 item(s):")
+        assert "not shown" not in result
+
+    def test_over_limit_reports_total_and_omitted_ids(self):
+        items = [{"id": i, "title": f"Note {i}"} for i in range(25)]
+        result = _summarize_list(items)
+        assert "25 item(s) total, showing 10 most recent" in result
+        assert "15 more not shown" in result
+        assert "IDs not shown:" in result
+        for i in range(10, 25):
+            assert str(i) in result
+
+    def test_long_text_field_is_truncated(self):
+        long_content = "x" * 1000
+        items = [{"id": 1, "content": long_content}]
+        result = _summarize_list(items)
+        assert long_content not in result
+        assert "x" * _TEXT_FIELD_MAX in result
+
+    def test_non_dict_items_pass_through(self):
+        result = _summarize_list([1, 2, 3])
+        assert "3 item(s)" in result
+
+
+class TestFormatResult:
+    def test_none_result(self):
+        assert _format_result(None) == "(no data)"
+
+    def test_scalar_result(self):
+        assert _format_result("done") == "done"
+
+    def test_dict_with_short_list_values(self):
+        result = _format_result({"deleted": True, "id": 5})
+        assert "deleted=True" in result
+        assert "id=5" in result
+
+    def test_dict_with_nested_long_list_is_summarized(self):
+        overdue = [{"id": i, "title": f"Task {i}"} for i in range(30)]
+        result = _format_result({"overdue": overdue, "due_today": [], "overdue_count": 30})
+        assert "overdue:" in result
+        assert "30 item(s) total, showing 10 most recent" in result
+        assert "overdue_count=30" in result
+
+    def test_large_note_list_stays_well_under_telegram_limit(self):
+        notes = [
+            {"id": i, "title": f"Note {i}", "content": "lorem ipsum " * 200}
+            for i in range(50)
+        ]
+        result = _format_result(notes)
+        assert len(result) < _MAX_RESPONSE_CHARS
+        assert "50 item(s) total, showing 10 most recent" in result
+
+
+class TestCapResponseLength:
+    def test_short_text_untouched(self):
+        text = "All good, nothing to do."
+        assert _cap_response_length(text) == text
+
+    def test_long_text_truncated_with_notice(self):
+        text = "a" * (_MAX_RESPONSE_CHARS + 500)
+        result = _cap_response_length(text)
+        assert len(result) <= _MAX_RESPONSE_CHARS
+        assert result.endswith("(message truncated — too long to send)")
+
+    def test_result_never_exceeds_telegram_limit(self):
+        text = "z" * 10000
+        result = _cap_response_length(text)
+        assert len(result) < 4096

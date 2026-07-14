@@ -85,6 +85,16 @@ class TestGetEvents:
         assert len(result) == 3
         session.execute.assert_called_once()
 
+    async def test_orders_by_start_datetime_ascending(self):
+        session = _make_session()
+        session.execute.return_value = _scalar_all([])
+
+        repo = CalendarEventRepository(session)
+        await repo.get_events(EventFilters())
+
+        query = session.execute.call_args[0][0]
+        assert "ORDER BY organizer.calendar_events.start_datetime ASC" in str(query)
+
     async def test_empty_list(self):
         session = _make_session()
         session.execute.return_value = _scalar_all([])

@@ -89,6 +89,16 @@ class TestGetNotes:
         await repo.get_notes(NoteFilters(tags=["work"]))
         session.execute.assert_called_once()
 
+    async def test_orders_by_most_recent_first(self):
+        session = _make_session()
+        session.execute.return_value = _scalar_all([])
+
+        repo = NoteRepository(session)
+        await repo.get_notes(NoteFilters())
+
+        query = session.execute.call_args[0][0]
+        assert "ORDER BY organizer.notes.created_at DESC" in str(query)
+
 
 class TestCreateNote:
     async def test_create_with_no_tags(self):

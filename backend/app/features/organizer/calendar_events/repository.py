@@ -39,7 +39,7 @@ class CalendarEventRepository:
             query = query.where(CalendarEvent.start_datetime <= _naive_utc(event_filter.start_to))
         if event_filter.tags:
             query = query.where(CalendarEvent.tags.any(Tag.name.in_(event_filter.tags)))
-        query = query.limit(event_filter.limit)
+        query = query.order_by(CalendarEvent.start_datetime.asc()).limit(event_filter.limit)
         result = await self._session.execute(query)
         return list(result.scalars().all())
 

@@ -27,7 +27,7 @@ class NoteRepository:
         query = select(Note).options(selectinload(Note.tags)).where(Note.deleted_at.is_(None))
         if note_filter.tags:
             query = query.where(Note.tags.any(Tag.name.in_(note_filter.tags)))
-        query = query.limit(note_filter.limit)
+        query = query.order_by(Note.created_at.desc()).limit(note_filter.limit)
         result = await self._session.execute(query)
         return list(result.scalars().all())
 

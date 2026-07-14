@@ -139,7 +139,4 @@ async def _validation_error_handler(request: Request, exc: RequestValidationErro
 
 @app.get("/health")
 async def health():
-    return {
-        "status": "ok",
-        "database_url": settings.database_url,
-    }
+    return {"status": "ok"}

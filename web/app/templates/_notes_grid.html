@@ -24,7 +24,7 @@
     </div>
     <button
       class="absolute top-2 right-16 text-gray-200 hover:text-[#378ADD] opacity-0 group-hover:opacity-100 transition-all"
-      onclick="openEditNote({{ note | tojson }})"
+      onclick='openEditNote({{ note | tojson }})'
       title="Edit note"
     ><i class="ti ti-pencil text-sm"></i></button>
     {% if archived_view %}
@@ -42,7 +42,7 @@
     {% endif %}
     <button
       class="absolute top-2 right-2 text-gray-200 hover:text-[#E24B4A] opacity-0 group-hover:opacity-100 transition-all"
-      onclick="deleteNote({{ note.id }}, {{ note.title | tojson }})"
+      onclick='deleteNote({{ note.id }}, {{ note.title | tojson }})'
       title="Delete note"
     ><i class="ti ti-trash text-sm"></i></button>
   </div>

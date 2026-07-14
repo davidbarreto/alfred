@@ -31,6 +31,9 @@ class Note(Base):
     deleted_at: Mapped[Optional[datetime]] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
+    archived_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
 
     tags: Mapped[List["Tag"]] = relationship(
         "Tag",

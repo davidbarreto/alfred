@@ -90,3 +90,21 @@ class NoteService:
                     logger.warning("Note embedding delete failed: id=%d error=%s", note_id, exc)
         else:
             logger.debug("Note delete: id=%d not found", note_id)
+
+    async def archive_note(self, note_id: int) -> NoteRead | None:
+        note = await self._repo.get_note(note_id)
+        if note is None:
+            logger.debug("Note archive: id=%d not found", note_id)
+            return None
+        note_orm = await self._repo.archive_note(note_id)
+        logger.info("Note archived: id=%d", note_id)
+        return NoteRead.model_validate(note_orm)
+
+    async def unarchive_note(self, note_id: int) -> NoteRead | None:
+        note = await self._repo.get_note(note_id)
+        if note is None:
+            logger.debug("Note unarchive: id=%d not found", note_id)
+            return None
+        note_orm = await self._repo.unarchive_note(note_id)
+        logger.info("Note unarchived: id=%d", note_id)
+        return NoteRead.model_validate(note_orm)

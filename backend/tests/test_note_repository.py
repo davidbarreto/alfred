@@ -99,6 +99,36 @@ class TestGetNotes:
         query = session.execute.call_args[0][0]
         assert "ORDER BY organizer.notes.created_at DESC" in str(query)
 
+    async def test_orders_by_updated_at_when_sort_updated(self):
+        session = _make_session()
+        session.execute.return_value = _scalar_all([])
+
+        repo = NoteRepository(session)
+        await repo.get_notes(NoteFilters(sort="updated"))
+
+        query = session.execute.call_args[0][0]
+        assert "ORDER BY organizer.notes.updated_at DESC" in str(query)
+
+    async def test_excludes_archived_by_default(self):
+        session = _make_session()
+        session.execute.return_value = _scalar_all([])
+
+        repo = NoteRepository(session)
+        await repo.get_notes(NoteFilters())
+
+        query = session.execute.call_args[0][0]
+        assert "notes.archived_at IS NULL" in str(query)
+
+    async def test_archived_filter_returns_only_archived(self):
+        session = _make_session()
+        session.execute.return_value = _scalar_all([])
+
+        repo = NoteRepository(session)
+        await repo.get_notes(NoteFilters(archived=True))
+
+        query = session.execute.call_args[0][0]
+        assert "notes.archived_at IS NOT NULL" in str(query)
+
 
 class TestCreateNote:
     async def test_create_with_no_tags(self):
@@ -205,6 +235,32 @@ class TestDeleteNote:
 
         session.execute.assert_called_once()
         session.commit.assert_called_once()
+
+
+class TestArchiveNote:
+    async def test_archive_sets_archived_at_and_reloads(self):
+        session = _make_session()
+        note = _make_note_orm()
+
+        session.execute.side_effect = [MagicMock(), _scalar_first(note)]
+
+        repo = NoteRepository(session)
+        result = await repo.archive_note(1)
+
+        session.commit.assert_called_once()
+        assert result == note
+
+    async def test_unarchive_clears_archived_at_and_reloads(self):
+        session = _make_session()
+        note = _make_note_orm()
+
+        session.execute.side_effect = [MagicMock(), _scalar_first(note)]
+
+        repo = NoteRepository(session)
+        result = await repo.unarchive_note(1)
+
+        session.commit.assert_called_once()
+        assert result == note
 
 
 class TestResolveTags:

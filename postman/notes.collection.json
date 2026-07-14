@@ -2,7 +2,7 @@
   "info": {
     "name": "Alfred - Notes API",
     "_postman_id": "alfred-notes-v1",
-    "description": "Run in order: Health Check \u2192 Create \u2192 List \u2192 Get \u2192 Update \u2192 Filter by Tags \u2192 Filter by Task \u2192 Delete",
+    "description": "Run in order: Health Check \u2192 Create \u2192 List \u2192 Get \u2192 Update \u2192 Filter by Tags \u2192 Archive \u2192 List Archived \u2192 Unarchive \u2192 Get Not Found \u2192 Delete",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -266,7 +266,115 @@
       }
     },
     {
-      "name": "07 - Get Note Not Found",
+      "name": "07 - Archive Note",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('archived_at is set', () => {",
+              "    pm.expect(pm.response.json().archived_at).to.not.be.null;",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/organizer/notes/{{note_id}}/archive",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "notes",
+            "{{note_id}}",
+            "archive"
+          ]
+        }
+      }
+    },
+    {
+      "name": "08 - List Archived Notes",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Archived note is included', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json.some(n => String(n.id) === String(pm.environment.get('note_id')))).to.be.true;",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/organizer/notes?archived=true&limit=100",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "notes"
+          ],
+          "query": [
+            {
+              "key": "archived",
+              "value": "true"
+            },
+            {
+              "key": "limit",
+              "value": "100"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "09 - Unarchive Note",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('archived_at is cleared', () => {",
+              "    pm.expect(pm.response.json().archived_at).to.be.null;",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/organizer/notes/{{note_id}}/unarchive",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "notes",
+            "{{note_id}}",
+            "unarchive"
+          ]
+        }
+      }
+    },
+    {
+      "name": "10 - Get Note Not Found",
       "event": [
         {
           "listen": "test",
@@ -298,7 +406,7 @@
       }
     },
     {
-      "name": "08 - Delete Note",
+      "name": "11 - Delete Note",
       "event": [
         {
           "listen": "test",

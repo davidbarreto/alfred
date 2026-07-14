@@ -23,19 +23,31 @@
       </div>
     </div>
     <button
-      class="absolute top-2 right-9 text-gray-200 hover:text-[#378ADD] opacity-0 group-hover:opacity-100 transition-all"
+      class="absolute top-2 right-16 text-gray-200 hover:text-[#378ADD] opacity-0 group-hover:opacity-100 transition-all"
       onclick="openEditNote({{ note | tojson }})"
       title="Edit note"
     ><i class="ti ti-pencil text-sm"></i></button>
+    {% if archived_view %}
+    <button
+      class="absolute top-2 right-9 text-gray-200 hover:text-[#378ADD] opacity-0 group-hover:opacity-100 transition-all"
+      onclick="unarchiveNote({{ note.id }})"
+      title="Unarchive note"
+    ><i class="ti ti-archive-off text-sm"></i></button>
+    {% else %}
+    <button
+      class="absolute top-2 right-9 text-gray-200 hover:text-[#378ADD] opacity-0 group-hover:opacity-100 transition-all"
+      onclick="archiveNote({{ note.id }})"
+      title="Archive note"
+    ><i class="ti ti-archive text-sm"></i></button>
+    {% endif %}
     <button
       class="absolute top-2 right-2 text-gray-200 hover:text-[#E24B4A] opacity-0 group-hover:opacity-100 transition-all"
-      hx-delete="/notes/{{ note.id }}"
-      hx-target="#notes-grid"
-      hx-confirm="Delete '{{ note.title }}'?"
+      onclick="deleteNote({{ note.id }}, {{ note.title | tojson }})"
       title="Delete note"
     ><i class="ti ti-trash text-sm"></i></button>
   </div>
   {% endfor %}
+  {% if not archived_view %}
   <!-- New note placeholder -->
   <div onclick="openNewNote()" class="border border-dashed border-gray-200 rounded-lg hover:border-[#378ADD]/40 transition-colors cursor-pointer min-h-[100px]">
     <div class="h-full flex flex-col items-center justify-center text-gray-300 hover:text-[#378ADD]/50 transition-colors p-4">
@@ -43,14 +55,34 @@
       <span class="text-xs">New note</span>
     </div>
   </div>
+  {% endif %}
 </div>
 {% else %}
 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+  {% if archived_view %}
+  <p class="text-sm text-gray-400 py-4">No archived notes.</p>
+  {% else %}
   <div onclick="openNewNote()" class="border border-dashed border-gray-200 rounded-lg hover:border-[#378ADD]/40 transition-colors cursor-pointer min-h-[120px]">
     <div class="h-full flex flex-col items-center justify-center text-gray-300 hover:text-[#378ADD]/50 transition-colors p-4">
       <i class="ti ti-plus text-xl mb-1"></i>
       <span class="text-xs">New note</span>
     </div>
   </div>
+  {% endif %}
+</div>
+{% endif %}
+
+{% if has_prev or has_next %}
+<div class="flex items-center justify-between mt-4 pt-3 border-t border-gray-100">
+  <button
+    onclick="changePage(-1)"
+    {% if not has_prev %}disabled{% endif %}
+    class="btn btn-sm btn-ghost text-gray-500 gap-1 {% if not has_prev %}opacity-30 pointer-events-none{% endif %}"
+  ><i class="ti ti-chevron-left text-xs"></i>Prev</button>
+  <button
+    onclick="changePage(1)"
+    {% if not has_next %}disabled{% endif %}
+    class="btn btn-sm btn-ghost text-gray-500 gap-1 {% if not has_next %}opacity-30 pointer-events-none{% endif %}"
+  >Next<i class="ti ti-chevron-right text-xs"></i></button>
 </div>
 {% endif %}

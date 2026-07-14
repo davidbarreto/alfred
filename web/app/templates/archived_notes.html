@@ -1,20 +1,16 @@
 {% extends "base.html" %}
 {% set active_page = "notes" %}
-{% block title %}Notes{% endblock %}
+{% block title %}Archived Notes{% endblock %}
 
 {% block content %}
 <div class="p-6 space-y-4">
 
   <div class="flex items-center justify-between">
-    <h1 class="text-base font-semibold text-gray-900">Notes</h1>
     <div class="flex items-center gap-2">
-      <a href="/notes/archived" class="btn btn-sm btn-ghost gap-1 text-gray-500">
-        <i class="ti ti-archive text-sm"></i>Archived
+      <a href="/notes" class="btn btn-sm btn-ghost gap-1 text-gray-500">
+        <i class="ti ti-arrow-left text-sm"></i>Back to Notes
       </a>
-      <button onclick="document.getElementById('new-note-modal').showModal()"
-              class="btn btn-sm btn-primary gap-1">
-        <i class="ti ti-plus text-sm"></i>New note
-      </button>
+      <h1 class="text-base font-semibold text-gray-900">Archived Notes</h1>
     </div>
   </div>
 
@@ -22,7 +18,7 @@
     <input
       id="notes-search"
       type="text"
-      placeholder="Search notes…"
+      placeholder="Search archived notes…"
       class="border border-gray-200 rounded-lg px-3 py-1.5 text-sm bg-white w-full max-w-sm focus:outline-none focus:ring-1 focus:ring-[#378ADD]"
       oninput="filterNotes(this.value)"
     />
@@ -54,10 +50,29 @@
   </div>
 </div>
 
-<!-- New Note Modal -->
+<!-- View Note Modal -->
+<dialog id="view-note-modal" class="modal">
+  <div class="modal-box bg-white rounded-xl border border-gray-200 shadow-lg max-w-lg w-full p-6">
+    <div class="flex items-start justify-between gap-2 mb-1">
+      <h3 id="view-note-title" class="text-sm font-semibold text-gray-900"></h3>
+      <button onclick="document.getElementById('view-note-modal').close()"
+              class="text-gray-300 hover:text-gray-500">
+        <i class="ti ti-x text-sm"></i>
+      </button>
+    </div>
+    <div id="view-note-tags" class="flex flex-wrap gap-1 mb-2"></div>
+    <p id="view-note-content" class="text-sm text-gray-600 whitespace-pre-wrap break-words max-h-[60vh] overflow-y-auto"></p>
+    <div id="view-note-updated" class="text-[10px] text-gray-300 mt-3"></div>
+  </div>
+  <form method="dialog" class="modal-backdrop">
+    <button>close</button>
+  </form>
+</dialog>
+
+<!-- Edit Note Modal -->
 <dialog id="new-note-modal" class="modal">
   <div class="modal-box bg-white rounded-xl border border-gray-200 shadow-lg max-w-md w-full p-6">
-    <h3 id="note-form-title" class="text-sm font-semibold text-gray-900 mb-4">New note</h3>
+    <h3 id="note-form-title" class="text-sm font-semibold text-gray-900 mb-4">Edit note</h3>
     <form id="new-note-form" onsubmit="submitNewNote(event)" class="flex flex-col gap-3">
       <input name="note_id" type="hidden" value="" />
       <div>
@@ -104,27 +119,8 @@
   </form>
 </dialog>
 
-<!-- View Note Modal -->
-<dialog id="view-note-modal" class="modal">
-  <div class="modal-box bg-white rounded-xl border border-gray-200 shadow-lg max-w-lg w-full p-6">
-    <div class="flex items-start justify-between gap-2 mb-1">
-      <h3 id="view-note-title" class="text-sm font-semibold text-gray-900"></h3>
-      <button onclick="document.getElementById('view-note-modal').close()"
-              class="text-gray-300 hover:text-gray-500">
-        <i class="ti ti-x text-sm"></i>
-      </button>
-    </div>
-    <div id="view-note-tags" class="flex flex-wrap gap-1 mb-2"></div>
-    <p id="view-note-content" class="text-sm text-gray-600 whitespace-pre-wrap break-words max-h-[60vh] overflow-y-auto"></p>
-    <div id="view-note-updated" class="text-[10px] text-gray-300 mt-3"></div>
-  </div>
-  <form method="dialog" class="modal-backdrop">
-    <button>close</button>
-  </form>
-</dialog>
-
 <script>
-const GRID_URL = "/notes/grid";
+const GRID_URL = "/notes/archived/grid";
 let _activeTags = new Set({{ query_tags | tojson }});
 let _currentSort = "{{ query_sort }}";
 let _currentOffset = {{ query_offset }};
@@ -162,6 +158,7 @@ function _gridQuery() {
   _activeTags.forEach(t => params.append("tags", t));
   params.set("sort", _currentSort);
   params.set("offset", _currentOffset);
+  params.set("archived", "true");
   return params.toString();
 }
 
@@ -217,22 +214,14 @@ async function deleteNote(id, title) {
   }
 }
 
-async function archiveNote(id) {
+async function unarchiveNote(id) {
   try {
-    const res = await fetch(`/notes/${id}/archive?${_gridQuery()}`, { method: "POST" });
+    const res = await fetch(`/notes/${id}/unarchive?${_gridQuery()}`, { method: "POST" });
     if (!res.ok) throw new Error(await res.text());
     document.getElementById("notes-grid").innerHTML = await res.text();
   } catch (err) {
-    alert(err.message || "Failed to archive note.");
+    alert(err.message || "Failed to unarchive note.");
   }
-}
-
-function openNewNote() {
-  document.getElementById("note-error").classList.add("hidden");
-  document.getElementById("new-note-form").reset();
-  document.getElementById("note-form-title").textContent = "New note";
-  document.getElementById("new-note-modal").showModal();
-  setTimeout(() => document.getElementById("note-title").focus(), 50);
 }
 
 function openEditNote(note) {
@@ -258,22 +247,13 @@ async function submitNewNote(e) {
 
   const body = new FormData(e.target);
   const noteId = body.get("note_id");
-  const url = noteId ? `/notes/${noteId}?${_gridQuery()}` : "/notes/";
-  const method = noteId ? "PATCH" : "POST";
   try {
-    const res = await fetch(url, { method, body });
+    const res = await fetch(`/notes/${noteId}?${_gridQuery()}`, { method: "PATCH", body });
     if (!res.ok) {
       const txt = await res.text();
       throw new Error(txt || `Error ${res.status}`);
     }
     document.getElementById("notes-grid").innerHTML = await res.text();
-    if (!noteId) {
-      _activeTags.clear();
-      _currentSort = "created";
-      _currentOffset = 0;
-      _updateTagChips();
-      document.getElementById("notes-sort").value = "created";
-    }
     document.getElementById("new-note-modal").close();
     document.getElementById("new-note-form").reset();
   } catch (err) {

@@ -23,6 +23,8 @@ def mock_service():
     svc.create_note.return_value = _note_read(id=2, title="New Note")
     svc.update_note.return_value = _note_read(title="Updated Note")
     svc.delete_note.return_value = None
+    svc.archive_note.return_value = _note_read(archived_at=_TS)
+    svc.unarchive_note.return_value = _note_read()
     return svc
 
 
@@ -135,3 +137,43 @@ class TestDeleteNote:
     def test_service_called_with_correct_id(self, client, mock_service):
         client.delete("/organizer/notes/42", headers=AUTH)
         mock_service.delete_note.assert_called_once_with(42)
+
+
+class TestArchiveNote:
+    def test_archives_and_returns_200(self, client):
+        response = client.post("/organizer/notes/1/archive", headers=AUTH)
+        assert response.status_code == 200
+        assert response.json()["archived_at"] is not None
+
+    def test_not_found_returns_404(self, client, mock_service):
+        mock_service.archive_note.return_value = None
+        response = client.post("/organizer/notes/999/archive", headers=AUTH)
+        assert response.status_code == 404
+
+    def test_requires_auth(self, client):
+        response = client.post("/organizer/notes/1/archive")
+        assert response.status_code == 403
+
+    def test_service_called_with_correct_id(self, client, mock_service):
+        client.post("/organizer/notes/42/archive", headers=AUTH)
+        mock_service.archive_note.assert_called_once_with(42)
+
+
+class TestUnarchiveNote:
+    def test_unarchives_and_returns_200(self, client):
+        response = client.post("/organizer/notes/1/unarchive", headers=AUTH)
+        assert response.status_code == 200
+        assert response.json()["archived_at"] is None
+
+    def test_not_found_returns_404(self, client, mock_service):
+        mock_service.unarchive_note.return_value = None
+        response = client.post("/organizer/notes/999/unarchive", headers=AUTH)
+        assert response.status_code == 404
+
+    def test_requires_auth(self, client):
+        response = client.post("/organizer/notes/1/unarchive")
+        assert response.status_code == 403
+
+    def test_service_called_with_correct_id(self, client, mock_service):
+        client.post("/organizer/notes/42/unarchive", headers=AUTH)
+        mock_service.unarchive_note.assert_called_once_with(42)

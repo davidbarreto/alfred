@@ -173,6 +173,68 @@ class TestDeleteNote:
         mock_provider.delete.assert_called_once_with("provider-abc", service._session)
 
 
+class TestArchiveNote:
+    async def test_calls_archive_when_found(self, service):
+        service._repo.get_note.return_value = _make_note_orm()
+        service._repo.archive_note.return_value = _make_note_orm()
+
+        await service.archive_note(1)
+
+        service._repo.archive_note.assert_called_once_with(1)
+
+    async def test_returns_none_when_not_found(self, service):
+        service._repo.get_note.return_value = None
+
+        result = await service.archive_note(999)
+
+        assert result is None
+        service._repo.archive_note.assert_not_called()
+
+    async def test_returns_note_read(self, service):
+        service._repo.get_note.return_value = _make_note_orm()
+        service._repo.archive_note.return_value = _make_note_orm()
+
+        result = await service.archive_note(1)
+
+        assert isinstance(result, NoteRead)
+
+    async def test_does_not_touch_provider_or_embeddings(self, service_with_embeddings, mock_provider, mock_embedding_service):
+        service_with_embeddings._repo.get_note.return_value = _make_note_orm(id=3)
+        service_with_embeddings._repo.archive_note.return_value = _make_note_orm(id=3)
+
+        await service_with_embeddings.archive_note(3)
+
+        mock_provider.delete.assert_not_called()
+        mock_embedding_service.delete_by_source.assert_not_called()
+        mock_embedding_service.embed.assert_not_called()
+
+
+class TestUnarchiveNote:
+    async def test_calls_unarchive_when_found(self, service):
+        service._repo.get_note.return_value = _make_note_orm()
+        service._repo.unarchive_note.return_value = _make_note_orm()
+
+        await service.unarchive_note(1)
+
+        service._repo.unarchive_note.assert_called_once_with(1)
+
+    async def test_returns_none_when_not_found(self, service):
+        service._repo.get_note.return_value = None
+
+        result = await service.unarchive_note(999)
+
+        assert result is None
+        service._repo.unarchive_note.assert_not_called()
+
+    async def test_returns_note_read(self, service):
+        service._repo.get_note.return_value = _make_note_orm()
+        service._repo.unarchive_note.return_value = _make_note_orm()
+
+        result = await service.unarchive_note(1)
+
+        assert isinstance(result, NoteRead)
+
+
 class TestNoteEmbedContent:
     def test_combines_title_and_content(self):
         assert _note_embed_content("My Title", "Some body") == "My Title: Some body"

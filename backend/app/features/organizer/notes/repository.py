@@ -25,9 +25,13 @@ class NoteRepository:
 
     async def get_notes(self, note_filter: NoteFilters) -> list[Note]:
         query = select(Note).options(selectinload(Note.tags)).where(Note.deleted_at.is_(None))
+        query = query.where(
+            Note.archived_at.isnot(None) if note_filter.archived else Note.archived_at.is_(None)
+        )
         if note_filter.tags:
             query = query.where(Note.tags.any(Tag.name.in_(note_filter.tags)))
-        query = query.order_by(Note.created_at.desc()).limit(note_filter.limit)
+        order_by = Note.updated_at.desc() if note_filter.sort == "updated" else Note.created_at.desc()
+        query = query.order_by(order_by).limit(note_filter.limit).offset(note_filter.offset)
         result = await self._session.execute(query)
         return list(result.scalars().all())
 
@@ -79,3 +83,27 @@ class NoteRepository:
             .values(deleted_at=datetime.now(timezone.utc))
         )
         await self._session.commit()
+
+    async def archive_note(self, note_id: int) -> Note | None:
+        await self._session.execute(
+            update(Note)
+            .where(Note.id == note_id)
+            .values(archived_at=datetime.now(timezone.utc))
+        )
+        await self._session.commit()
+        result = await self._session.execute(
+            select(Note).options(selectinload(Note.tags)).where(Note.id == note_id)
+        )
+        return result.scalars().first()
+
+    async def unarchive_note(self, note_id: int) -> Note | None:
+        await self._session.execute(
+            update(Note)
+            .where(Note.id == note_id)
+            .values(archived_at=None)
+        )
+        await self._session.commit()
+        result = await self._session.execute(
+            select(Note).options(selectinload(Note.tags)).where(Note.id == note_id)
+        )
+        return result.scalars().first()

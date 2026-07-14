@@ -49,6 +49,10 @@ _MEMORY_LIMIT = 5
 _MEMORY_THRESHOLD = 0.6
 
 
+def _is_language_command(detected_intents: list[str] | None) -> bool:
+    return bool(detected_intents) and any(intent.startswith("language.") for intent in detected_intents)
+
+
 def _load_persona() -> str:
     try:
         return _PERSONA_PATH.read_text(encoding="utf-8")
@@ -364,6 +368,15 @@ class ChatService:
         production_section: str | None = None
         pending_mode: str | None = None
         pending_wm = next((wm for wm in working_memories if wm.key == _LANGUAGE_PENDING_KEY), None)
+        if pending_wm and _is_language_command(request.detected_intents):
+            # The message is itself a language command (e.g. /stop, /produce) running through
+            # the parallel command pipeline, not a free-text answer to the pending exercise —
+            # grading/advancing the loop here would present a bogus extra exercise.
+            logger.debug(
+                "Chat: message is a language command (%s) — not treating as exercise answer",
+                request.detected_intents,
+            )
+            pending_wm = None
         if pending_wm:
             logger.debug("Chat: language pending mode — skipping embeddings, summaries, daily context")
             memories, recent_summaries, daily_context = [], [], ""
@@ -475,6 +488,12 @@ class ChatService:
         language_session: LearningSession | None = None
         production_section: str | None = None
         pending_wm = next((wm for wm in working_memories if wm.key == _LANGUAGE_PENDING_KEY), None)
+        if pending_wm and _is_language_command(request.detected_intents):
+            logger.debug(
+                "StreamChat: message is a language command (%s) — not treating as exercise answer",
+                request.detected_intents,
+            )
+            pending_wm = None
         if pending_wm:
             memories, recent_summaries, daily_context = [], [], ""
             try:

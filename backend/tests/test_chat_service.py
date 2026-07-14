@@ -583,6 +583,68 @@ class TestChatServiceLanguageLoop:
         assert next_practice is None
 
 
+class TestChatServiceLanguageCommandDuringPending:
+    """A message that itself resolves to a language.* command (e.g. /stop, /produce)
+    must not be treated as a free-text answer to the pending exercise, even while a
+    language:pending working memory entry is still active."""
+
+    async def test_stop_command_does_not_advance_practice_loop(self, mock_language_session_repository):
+        service, _, _, message_service, _ = _make_service()
+        wm = _make_wm("language:pending", json.dumps({
+            "mode": "practice", "chunk_id": 42, "track_id": 3, "track_code": "pt",
+            "language_name": "Portuguese", "text": "a chuva caiu", "translation": "it rained",
+            "remaining": 3,
+        }))
+        wm = WorkingMemoryRead(id=99, key=wm.key, value=wm.value, importance=None,
+                               expires_at=None, session_id=None, created_at=wm.created_at)
+        service._working_memory_service.list.return_value = [wm]
+        message_service.list.return_value = [_make_message("/stop")]
+
+        _, next_practice = await service.chat(ChatRequest(session_id=1, detected_intents=["language.stop"]))
+
+        service._working_memory_service.delete.assert_not_called()
+        service._working_memory_service.create.assert_not_called()
+        service._chunk_service.get_daily_batch.assert_not_called()
+        assert next_practice is None
+
+    async def test_stop_command_does_not_grade_produce_attempt(self, mock_language_session_repository):
+        service, _, _, message_service, _ = _make_service()
+        service._working_memory_service.list.return_value = [_make_produce_wm()]
+        service._production_service.grade_attempt = AsyncMock(return_value=_make_production_attempt())
+        message_service.list.return_value = [_make_message("/stop")]
+
+        await service.chat(ChatRequest(session_id=1, detected_intents=["language.stop"]))
+
+        service._production_service.grade_attempt.assert_not_called()
+
+    async def test_produce_command_does_not_advance_produce_loop(self, mock_language_session_repository):
+        service, _, _, message_service, _ = _make_service()
+        service._working_memory_service.list.return_value = [_make_produce_wm(remaining=3)]
+        service._production_service.grade_attempt = AsyncMock(return_value=_make_production_attempt())
+        message_service.list.return_value = [_make_message("/produce pt")]
+
+        await service.chat(ChatRequest(session_id=1, detected_intents=["language.produce"]))
+
+        service._production_service.grade_attempt.assert_not_called()
+        service._production_service.get_next_task.assert_not_called()
+
+    async def test_stop_command_runs_normal_chat_pipeline(self, mock_language_session_repository):
+        service, _, embedding_service, message_service, _ = _make_service()
+        service._working_memory_service.list.return_value = [
+            _make_wm("language:pending", '{"mode": "practice", "chunk_id": 42, "track_id": 3}')
+        ]
+        message_service.list.return_value = [_make_message("/stop")]
+
+        with patch(
+            "app.features.core.chats.service.asyncio.create_task",
+            side_effect=lambda coro: coro.close(),
+        ) as mock_create_task:
+            await service.chat(ChatRequest(session_id=1, detected_intents=["language.stop"]))
+
+        embedding_service.search.assert_called_once()
+        mock_create_task.assert_called_once()
+
+
 def _make_produce_wm(
     remaining: int = 3,
     wm_id: int = 99,

@@ -339,6 +339,45 @@ class TestBuild:
         assert result.holidays[0].country == "PT"
 
     @pytest.mark.asyncio
+    async def test_weather_none_when_client_fails(self, mock_session, mock_weather_client, mock_holiday_client):
+        mock_weather_client.get_daily_forecast.side_effect = RuntimeError("boom")
+        svc = BriefingSummaryService(
+            session=mock_session,
+            weather_client=mock_weather_client,
+            holiday_client=mock_holiday_client,
+            contact_service=None,
+        )
+        with (
+            patch("app.features.briefing.summary_service.TaskRepository") as MockTaskRepo,
+            patch("app.features.briefing.summary_service.CalendarEventRepository") as MockEventRepo,
+        ):
+            MockTaskRepo.return_value.get_tasks = AsyncMock(return_value=[])
+            MockEventRepo.return_value.get_events = AsyncMock(return_value=[])
+            result = await svc.build()
+
+        assert result.weather is None
+
+    @pytest.mark.asyncio
+    async def test_holidays_empty_when_client_fails(self, mock_session, mock_weather_client, mock_holiday_client):
+        mock_holiday_client.get_holidays.side_effect = RuntimeError("boom")
+        svc = BriefingSummaryService(
+            session=mock_session,
+            weather_client=mock_weather_client,
+            holiday_client=mock_holiday_client,
+            contact_service=None,
+        )
+        with (
+            patch("app.features.briefing.summary_service.TaskRepository") as MockTaskRepo,
+            patch("app.features.briefing.summary_service.CalendarEventRepository") as MockEventRepo,
+        ):
+            MockTaskRepo.return_value.get_tasks = AsyncMock(return_value=[])
+            MockEventRepo.return_value.get_events = AsyncMock(return_value=[])
+            result = await svc.build()
+
+        assert result.holidays == []
+        assert result.weather == _make_weather()
+
+    @pytest.mark.asyncio
     async def test_birthdays_empty_when_no_contact_service(self, service):
         with (
             patch("app.features.briefing.summary_service.TaskRepository") as MockTaskRepo,

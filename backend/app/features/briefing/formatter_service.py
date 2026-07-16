@@ -66,13 +66,16 @@ def _build_context(briefing: MorningBriefing) -> str:
     w = briefing.weather
     lines.append("")
     lines.append("Weather in Porto:")
-    lines.append(
-        f"  {w.description}, {w.temperature_min_c}C - {w.temperature_max_c}C"
-        f" (feels like up to {w.feels_like_max_c}C)"
-    )
-    lines.append(f"  Rain probability: {w.precipitation_probability}%, Wind: {w.wind_speed_max_kmh} km/h")
-    if w.advice:
-        lines.append(f"  Advice: {', '.join(w.advice)}")
+    if w is None:
+        lines.append("  Unavailable")
+    else:
+        lines.append(
+            f"  {w.description}, {w.temperature_min_c}C - {w.temperature_max_c}C"
+            f" (feels like up to {w.feels_like_max_c}C)"
+        )
+        lines.append(f"  Rain probability: {w.precipitation_probability}%, Wind: {w.wind_speed_max_kmh} km/h")
+        if w.advice:
+            lines.append(f"  Advice: {', '.join(w.advice)}")
 
     if briefing.holidays:
         lines.append("")

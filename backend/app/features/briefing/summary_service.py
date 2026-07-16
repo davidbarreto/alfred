@@ -1,11 +1,12 @@
 from __future__ import annotations
 
+import asyncio
 import logging
 from datetime import date, datetime, time, timedelta
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.features.briefing.schemas import BirthdayItem, EventBriefItem, HolidayItem, LanguageBriefItem, MorningBriefing, ShoppingBriefItem, TaskBriefItem
+from app.features.briefing.schemas import BirthdayItem, EventBriefItem, HolidayItem, LanguageBriefItem, MorningBriefing, ShoppingBriefItem, TaskBriefItem, WeatherForecast
 from app.features.language.chunks.repository import ChunkRepository
 from app.features.language.sessions.repository import SessionRepository as LanguageSessionRepository
 from app.features.language.tracks.repository import TrackRepository as LanguageTrackRepository
@@ -50,14 +51,20 @@ class BriefingSummaryService:
 
         holiday_window_end = today + timedelta(days=_HOLIDAY_LOOKAHEAD_DAYS)
 
-        tasks, events, weather, holidays, birthdays, language, shopping = await _gather(
-            self._fetch_tasks(today, today_start, today_end, lookahead_end),
-            self._fetch_events(today, today_start, lookahead_end),
-            self._weather_client.get_daily_forecast(today),
-            self._holiday_client.get_holidays(today, holiday_window_end),
-            self._fetch_birthdays(today),
-            self._fetch_language(),
-            self._fetch_shopping(),
+        # These all share a single AsyncSession, which SQLAlchemy does not
+        # support using concurrently, so they must run sequentially.
+        tasks = await self._fetch_tasks(today, today_start, today_end, lookahead_end)
+        events = await self._fetch_events(today, today_start, lookahead_end)
+        birthdays = await self._fetch_birthdays(today)
+        language = await self._fetch_language()
+        shopping = await self._fetch_shopping()
+
+        # External integrations don't touch the session, so they can run
+        # concurrently; each degrades to an empty result on failure instead
+        # of failing the whole briefing.
+        weather, holidays = await asyncio.gather(
+            self._fetch_weather(today),
+            self._fetch_holidays(today, holiday_window_end),
         )
 
         return MorningBriefing(
@@ -185,7 +192,16 @@ class BriefingSummaryService:
         raw = await self._contact_service.get_upcoming_birthdays(today)
         return [BirthdayItem(name=r["name"], days_until=r["days_until"], date=r["date"]) for r in raw]
 
+    async def _fetch_weather(self, today: date) -> WeatherForecast | None:
+        try:
+            return await self._weather_client.get_daily_forecast(today)
+        except Exception:
+            logger.warning("Failed to fetch weather forecast", exc_info=True)
+            return None
 
-async def _gather(*coros):
-    import asyncio
-    return await asyncio.gather(*coros)
+    async def _fetch_holidays(self, today: date, window_end: date) -> list[HolidayItem]:
+        try:
+            return await self._holiday_client.get_holidays(today, window_end)
+        except Exception:
+            logger.warning("Failed to fetch holidays", exc_info=True)
+            return []

@@ -132,6 +132,12 @@ class TestBuildContext:
         assert "Take an umbrella" in context
         assert "Take a coat" in context
 
+    def test_weather_unavailable_when_none(self):
+        briefing = _make_briefing(weather=None)
+        context = _build_context(briefing)
+        assert "Weather in Porto:" in context
+        assert "Unavailable" in context
+
     def test_all_day_event_label(self):
         briefing = _make_briefing(
             events=[_make_event_item(start_time="All day", end_time=None, all_day=True)]

@@ -78,7 +78,7 @@ class MorningBriefing(BaseModel):
     lookahead_days: int = 1
     tasks: list[TaskBriefItem]
     events: list[EventBriefItem]
-    weather: WeatherForecast
+    weather: WeatherForecast | None
     holidays: list[HolidayItem]
     birthdays: list[BirthdayItem]
     language: list[LanguageBriefItem] = []

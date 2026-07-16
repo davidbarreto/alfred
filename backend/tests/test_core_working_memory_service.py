@@ -77,6 +77,15 @@ class TestCreate:
         assert result.value == "happy"
 
 
+class TestUpsert:
+    async def test_returns_working_memory_read(self, service):
+        service._repo.upsert.return_value = _make_wm_orm(key="mood", value="calm")
+        result = await service.upsert(WorkingMemoryCreate(key="mood", value="calm"))
+        assert isinstance(result, WorkingMemoryRead)
+        assert result.value == "calm"
+        service._repo.upsert.assert_awaited_once()
+
+
 class TestDelete:
     async def test_returns_true_when_deleted(self, service):
         service._repo.delete.return_value = True

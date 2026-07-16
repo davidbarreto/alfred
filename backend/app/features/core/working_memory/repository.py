@@ -1,6 +1,7 @@
 from datetime import datetime, timezone
 
 from sqlalchemy import select
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.features.core.working_memory.schemas import WorkingMemoryCreate, WorkingMemoryFilters
@@ -38,6 +39,23 @@ class WorkingMemoryRepository:
         await self._session.commit()
         await self._session.refresh(item)
         return item
+
+    async def upsert(self, data: WorkingMemoryCreate) -> WorkingMemory:
+        # key is unique and expired rows are not purged, so a plain insert would fail
+        # whenever the same key is written again after its marker expired.
+        values = data.model_dump()
+        stmt = (
+            pg_insert(WorkingMemory)
+            .values(**values)
+            .on_conflict_do_update(
+                constraint="uq_core_working_memory_key",
+                set_={field: value for field, value in values.items() if field != "key"},
+            )
+            .returning(WorkingMemory)
+        )
+        result = await self._session.execute(stmt)
+        await self._session.commit()
+        return result.scalars().one()
 
     async def delete(self, item_id: int) -> bool:
         item = await self.get(item_id)

@@ -1,7 +1,6 @@
 import logging
 from datetime import datetime, timedelta, timezone
 
-from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import get_settings
@@ -21,7 +20,9 @@ logger = logging.getLogger(__name__)
 
 _TASK_LOOKAHEAD = timedelta(hours=24)
 _EVENT_LOOKAHEAD = timedelta(hours=2)
-_URGENT_DEDUP_TTL = timedelta(hours=1)
+# Must stay strictly shorter than the n8n reminder cron cadence (hourly): a TTL equal
+# to the cadence lets a marker written seconds after the hour outlive the next run.
+_URGENT_DEDUP_TTL = timedelta(minutes=50)
 _NORMAL_DEDUP_TTL = timedelta(hours=24)
 
 
@@ -35,10 +36,8 @@ async def snooze_undated_escalation(
     """Shared by the Telegram `task.snooze` command and the portal's snooze button."""
     days = days if days is not None else get_settings().undated_task_snooze_days
     key = undated_escalation_snooze_key(task_id)
-    for marker in await working_memory_service.list(WorkingMemoryFilters(key=key, active_only=True, limit=1)):
-        await working_memory_service.delete(marker.id)
     expires_at = datetime.now(timezone.utc) + timedelta(days=days)
-    await working_memory_service.create(WorkingMemoryCreate(key=key, value="snoozed", expires_at=expires_at))
+    await working_memory_service.upsert(WorkingMemoryCreate(key=key, value="snoozed", expires_at=expires_at))
     logger.info("Task escalation snoozed: id=%d days=%d until=%s", task_id, days, expires_at.isoformat())
     return expires_at
 
@@ -77,6 +76,8 @@ class ReminderService:
         for task in tasks:
             if task.deadline is None:
                 continue
+            if task.recurrence_rule is not None and task.is_done_today:
+                continue
             is_overdue = task.deadline < now
             if not is_overdue and task.deadline > now + _TASK_LOOKAHEAD:
                 continue
@@ -108,6 +109,8 @@ class ReminderService:
         escalated = []
         quiet = []
         for task in undated:
+            if task.recurrence_rule is not None and task.is_done_today:
+                continue
             if await self._is_escalation_snoozed(task.id):
                 quiet.append(task)
                 continue
@@ -176,13 +179,9 @@ class ReminderService:
         return bool(existing)
 
     async def _mark_reminded(self, kind: str, entity_id: int, today, ttl: timedelta) -> None:
+        # Upsert: the key is unique and expired rows linger, so re-reminding the same
+        # entity later the same day must refresh expires_at instead of failing the insert.
         key = f"reminder:{kind}:{entity_id}:{today.isoformat()}"
-        try:
-            await self._working_memory_repo.create(
-                WorkingMemoryCreate(key=key, value="reminded", expires_at=datetime.now(timezone.utc) + ttl)
-            )
-        except IntegrityError:
-            # Concurrent build_due_digest calls can both pass _already_reminded before either
-            # commits; the unique constraint on key rejects the loser here instead of duplicating.
-            await self._session.rollback()
-            logger.debug("Reminder dedup marker already exists: key=%s", key)
+        await self._working_memory_repo.upsert(
+            WorkingMemoryCreate(key=key, value="reminded", expires_at=datetime.now(timezone.utc) + ttl)
+        )

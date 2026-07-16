@@ -2,13 +2,15 @@ from datetime import datetime, timedelta, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from sqlalchemy.exc import IntegrityError
 
 from app.features.core.reminders.service import ReminderService
 from app.features.organizer.tasks.schemas import TaskUpdate
 
 
-def _make_task(id=1, title="Pay rent", deadline=None, urgency="NORMAL", priority="LOW", created_at=None):
+def _make_task(
+    id=1, title="Pay rent", deadline=None, urgency="NORMAL", priority="LOW", created_at=None,
+    recurrence_rule=None, is_done_today=False,
+):
     task = MagicMock()
     task.id = id
     task.title = title
@@ -16,6 +18,8 @@ def _make_task(id=1, title="Pay rent", deadline=None, urgency="NORMAL", priority
     task.urgency = urgency
     task.priority = priority
     task.created_at = created_at or NOW
+    task.recurrence_rule = recurrence_rule
+    task.is_done_today = is_done_today
     return task
 
 
@@ -60,7 +64,7 @@ class TestBuildDueDigestTasks:
             MockEventRepo.return_value.get_events = AsyncMock(return_value=[])
             MockShoppingRepo.return_value.list = AsyncMock(return_value=[])
             MockWMRepo.return_value.list = AsyncMock(return_value=[])
-            MockWMRepo.return_value.create = AsyncMock()
+            MockWMRepo.return_value.upsert = AsyncMock()
 
             digest = await _service(mock_session, mock_task_service).build_due_digest()
 
@@ -81,7 +85,7 @@ class TestBuildDueDigestTasks:
             MockEventRepo.return_value.get_events = AsyncMock(return_value=[])
             MockShoppingRepo.return_value.list = AsyncMock(return_value=[])
             MockWMRepo.return_value.list = AsyncMock(return_value=[])
-            MockWMRepo.return_value.create = AsyncMock()
+            MockWMRepo.return_value.upsert = AsyncMock()
 
             await _service(mock_session, mock_task_service).build_due_digest()
 
@@ -100,14 +104,16 @@ class TestBuildDueDigestTasks:
             MockEventRepo.return_value.get_events = AsyncMock(return_value=[])
             MockShoppingRepo.return_value.list = AsyncMock(return_value=[])
             MockWMRepo.return_value.list = AsyncMock(return_value=[MagicMock()])
-            MockWMRepo.return_value.create = AsyncMock()
+            MockWMRepo.return_value.upsert = AsyncMock()
 
             digest = await _service(mock_session, mock_task_service).build_due_digest()
 
-        MockWMRepo.return_value.create.assert_not_awaited()
+        MockWMRepo.return_value.upsert.assert_not_awaited()
         assert digest.has_content is False
 
-    async def test_concurrent_mark_reminded_race_is_swallowed(self, mock_session, mock_task_service):
+    async def test_mark_reminded_upserts_marker_with_urgent_ttl_under_an_hour(
+        self, mock_session, mock_task_service
+    ):
         task = _make_task(id=7, deadline=NOW - timedelta(hours=1), urgency="URGENT")
         mock_task_service.get_tasks.return_value = [task]
 
@@ -120,14 +126,89 @@ class TestBuildDueDigestTasks:
             MockEventRepo.return_value.get_events = AsyncMock(return_value=[])
             MockShoppingRepo.return_value.list = AsyncMock(return_value=[])
             MockWMRepo.return_value.list = AsyncMock(return_value=[])
-            MockWMRepo.return_value.create = AsyncMock(
-                side_effect=IntegrityError("insert", {}, Exception("duplicate key"))
-            )
+            MockWMRepo.return_value.upsert = AsyncMock()
+            before = datetime.now(timezone.utc)
 
             digest = await _service(mock_session, mock_task_service).build_due_digest()
 
-        mock_session.rollback.assert_awaited_once()
         assert "Overdue (URGENT): Pay rent" in digest.text
+        MockWMRepo.return_value.upsert.assert_awaited_once()
+        marker = MockWMRepo.return_value.upsert.call_args.args[0]
+        assert marker.key == f"reminder:task:7:{NOW.date().isoformat()}"
+        # The dedup TTL for urgent tasks must be strictly shorter than the hourly cron
+        # cadence, otherwise a marker written seconds after the hour suppresses the next run.
+        assert marker.expires_at - before < timedelta(hours=1)
+
+    async def test_recurring_task_done_today_is_not_reminded(self, mock_session, mock_task_service):
+        task = _make_task(
+            id=10, deadline=NOW - timedelta(hours=2), urgency="URGENT", priority="HIGH",
+            recurrence_rule="daily", is_done_today=True,
+        )
+        mock_task_service.get_tasks.return_value = [task]
+
+        with (
+            patch("app.features.core.reminders.service.CalendarEventRepository") as MockEventRepo,
+            patch("app.features.core.reminders.service.ShoppingRepository") as MockShoppingRepo,
+            patch("app.features.core.reminders.service.WorkingMemoryRepository") as MockWMRepo,
+            patch("app.features.core.reminders.service.local_now", return_value=NOW),
+        ):
+            MockEventRepo.return_value.get_events = AsyncMock(return_value=[])
+            MockShoppingRepo.return_value.list = AsyncMock(return_value=[])
+            MockWMRepo.return_value.list = AsyncMock(return_value=[])
+            MockWMRepo.return_value.upsert = AsyncMock()
+
+            digest = await _service(mock_session, mock_task_service).build_due_digest()
+
+        assert digest.has_content is False
+        MockWMRepo.return_value.upsert.assert_not_awaited()
+
+    async def test_recurring_task_not_done_today_is_reminded(self, mock_session, mock_task_service):
+        task = _make_task(
+            id=11, title="Take meds", deadline=NOW - timedelta(hours=2), urgency="URGENT",
+            priority="HIGH", recurrence_rule="daily", is_done_today=False,
+        )
+        mock_task_service.get_tasks.return_value = [task]
+
+        with (
+            patch("app.features.core.reminders.service.CalendarEventRepository") as MockEventRepo,
+            patch("app.features.core.reminders.service.ShoppingRepository") as MockShoppingRepo,
+            patch("app.features.core.reminders.service.WorkingMemoryRepository") as MockWMRepo,
+            patch("app.features.core.reminders.service.local_now", return_value=NOW),
+        ):
+            MockEventRepo.return_value.get_events = AsyncMock(return_value=[])
+            MockShoppingRepo.return_value.list = AsyncMock(return_value=[])
+            MockWMRepo.return_value.list = AsyncMock(return_value=[])
+            MockWMRepo.return_value.upsert = AsyncMock()
+
+            digest = await _service(mock_session, mock_task_service).build_due_digest()
+
+        assert "Overdue (URGENT): Take meds" in digest.text
+
+    async def test_undated_recurring_task_done_today_is_excluded_entirely(
+        self, mock_session, mock_task_service
+    ):
+        task = _make_task(
+            id=12, title="Journal", deadline=None, urgency="NORMAL", priority="HIGH",
+            recurrence_rule="daily", is_done_today=True,
+        )
+        mock_task_service.get_tasks.return_value = [task]
+
+        with (
+            patch("app.features.core.reminders.service.CalendarEventRepository") as MockEventRepo,
+            patch("app.features.core.reminders.service.ShoppingRepository") as MockShoppingRepo,
+            patch("app.features.core.reminders.service.WorkingMemoryRepository") as MockWMRepo,
+            patch("app.features.core.reminders.service.local_now", return_value=NOW),
+        ):
+            MockEventRepo.return_value.get_events = AsyncMock(return_value=[])
+            MockShoppingRepo.return_value.list = AsyncMock(return_value=[])
+            MockWMRepo.return_value.list = AsyncMock(return_value=[])
+            MockWMRepo.return_value.upsert = AsyncMock()
+
+            digest = await _service(mock_session, mock_task_service).build_due_digest()
+
+        assert "Journal" not in digest.text
+        assert "without a due date" not in digest.text
+        assert digest.has_content is False
 
     async def test_far_future_task_is_excluded(self, mock_session, mock_task_service):
         task = _make_task(id=4, deadline=NOW + timedelta(days=3), urgency="NORMAL")
@@ -142,7 +223,7 @@ class TestBuildDueDigestTasks:
             MockEventRepo.return_value.get_events = AsyncMock(return_value=[])
             MockShoppingRepo.return_value.list = AsyncMock(return_value=[])
             MockWMRepo.return_value.list = AsyncMock(return_value=[])
-            MockWMRepo.return_value.create = AsyncMock()
+            MockWMRepo.return_value.upsert = AsyncMock()
 
             digest = await _service(mock_session, mock_task_service).build_due_digest()
 
@@ -162,7 +243,7 @@ class TestBuildDueDigestTasks:
             MockEventRepo.return_value.get_events = AsyncMock(return_value=[])
             MockShoppingRepo.return_value.list = AsyncMock(return_value=[])
             MockWMRepo.return_value.list = AsyncMock(return_value=[])
-            MockWMRepo.return_value.create = AsyncMock()
+            MockWMRepo.return_value.upsert = AsyncMock()
 
             digest = await _service(mock_session, mock_task_service).build_due_digest()
 
@@ -183,11 +264,11 @@ class TestBuildDueDigestTasks:
             MockEventRepo.return_value.get_events = AsyncMock(return_value=[])
             MockShoppingRepo.return_value.list = AsyncMock(return_value=[])
             MockWMRepo.return_value.list = AsyncMock(return_value=[MagicMock()])
-            MockWMRepo.return_value.create = AsyncMock()
+            MockWMRepo.return_value.upsert = AsyncMock()
 
             digest = await _service(mock_session, mock_task_service).build_due_digest()
 
-        MockWMRepo.return_value.create.assert_not_awaited()
+        MockWMRepo.return_value.upsert.assert_not_awaited()
         assert digest.has_content is False
 
     async def test_undated_high_priority_task_is_listed_individually(self, mock_session, mock_task_service):
@@ -203,7 +284,7 @@ class TestBuildDueDigestTasks:
             MockEventRepo.return_value.get_events = AsyncMock(return_value=[])
             MockShoppingRepo.return_value.list = AsyncMock(return_value=[])
             MockWMRepo.return_value.list = AsyncMock(return_value=[])
-            MockWMRepo.return_value.create = AsyncMock()
+            MockWMRepo.return_value.upsert = AsyncMock()
 
             digest = await _service(mock_session, mock_task_service).build_due_digest()
 
@@ -232,7 +313,7 @@ class TestBuildDueDigestTasks:
             MockEventRepo.return_value.get_events = AsyncMock(return_value=[])
             MockShoppingRepo.return_value.list = AsyncMock(return_value=[])
             MockWMRepo.return_value.list = AsyncMock(return_value=[])
-            MockWMRepo.return_value.create = AsyncMock()
+            MockWMRepo.return_value.upsert = AsyncMock()
 
             digest = await _service(mock_session, mock_task_service).build_due_digest()
 
@@ -255,7 +336,7 @@ class TestBuildDueDigestTasks:
             MockEventRepo.return_value.get_events = AsyncMock(return_value=[])
             MockShoppingRepo.return_value.list = AsyncMock(return_value=[])
             MockWMRepo.return_value.list = AsyncMock(return_value=[])
-            MockWMRepo.return_value.create = AsyncMock()
+            MockWMRepo.return_value.upsert = AsyncMock()
 
             digest = await _service(mock_session, mock_task_service).build_due_digest()
 
@@ -275,16 +356,15 @@ def _snooze_list_side_effect(snoozed_task_id: int):
 
 
 class TestSnoozeUndatedEscalation:
-    async def test_creates_marker_with_default_days(self):
+    async def test_upserts_marker_with_default_days(self):
         from app.features.core.reminders.service import snooze_undated_escalation, undated_escalation_snooze_key
 
         wm_service = AsyncMock()
-        wm_service.list.return_value = []
 
         expires_at = await snooze_undated_escalation(wm_service, task_id=5)
 
-        wm_service.create.assert_awaited_once()
-        created = wm_service.create.call_args.args[0]
+        wm_service.upsert.assert_awaited_once()
+        created = wm_service.upsert.call_args.args[0]
         assert created.key == undated_escalation_snooze_key(5)
         assert created.expires_at == expires_at
 
@@ -292,23 +372,12 @@ class TestSnoozeUndatedEscalation:
         from app.features.core.reminders.service import snooze_undated_escalation
 
         wm_service = AsyncMock()
-        wm_service.list.return_value = []
         before = datetime.now(timezone.utc)
 
         await snooze_undated_escalation(wm_service, task_id=5, days=3)
 
-        created = wm_service.create.call_args.args[0]
+        created = wm_service.upsert.call_args.args[0]
         assert 2 <= (created.expires_at - before).days <= 3
-
-    async def test_replaces_existing_marker(self):
-        from app.features.core.reminders.service import snooze_undated_escalation
-
-        wm_service = AsyncMock()
-        wm_service.list.return_value = [MagicMock(id=99)]
-
-        await snooze_undated_escalation(wm_service, task_id=5)
-
-        wm_service.delete.assert_awaited_once_with(99)
 
 
 class TestUndatedTaskEscalationConfigAndSnooze:
@@ -334,7 +403,7 @@ class TestUndatedTaskEscalationConfigAndSnooze:
             MockEventRepo.return_value.get_events = AsyncMock(return_value=[])
             MockShoppingRepo.return_value.list = AsyncMock(return_value=[])
             MockWMRepo.return_value.list = AsyncMock(return_value=[])
-            MockWMRepo.return_value.create = AsyncMock()
+            MockWMRepo.return_value.upsert = AsyncMock()
 
             digest = await _service(mock_session, mock_task_service).build_due_digest()
 
@@ -357,7 +426,7 @@ class TestUndatedTaskEscalationConfigAndSnooze:
             MockEventRepo.return_value.get_events = AsyncMock(return_value=[])
             MockShoppingRepo.return_value.list = AsyncMock(return_value=[])
             MockWMRepo.return_value.list = AsyncMock(side_effect=_snooze_list_side_effect(21))
-            MockWMRepo.return_value.create = AsyncMock()
+            MockWMRepo.return_value.upsert = AsyncMock()
 
             digest = await _service(mock_session, mock_task_service).build_due_digest()
 
@@ -378,7 +447,7 @@ class TestUndatedTaskEscalationConfigAndSnooze:
             MockEventRepo.return_value.get_events = AsyncMock(return_value=[])
             MockShoppingRepo.return_value.list = AsyncMock(return_value=[])
             MockWMRepo.return_value.list = AsyncMock(side_effect=_snooze_list_side_effect(22))
-            MockWMRepo.return_value.create = AsyncMock()
+            MockWMRepo.return_value.upsert = AsyncMock()
 
             digest = await _service(mock_session, mock_task_service).build_due_digest()
 
@@ -399,7 +468,7 @@ class TestBuildDueDigestEventsAndShopping:
             MockEventRepo.return_value.get_events = AsyncMock(return_value=[event])
             MockShoppingRepo.return_value.list = AsyncMock(return_value=[])
             MockWMRepo.return_value.list = AsyncMock(return_value=[])
-            MockWMRepo.return_value.create = AsyncMock()
+            MockWMRepo.return_value.upsert = AsyncMock()
 
             digest = await _service(mock_session, mock_task_service).build_due_digest()
 
@@ -415,7 +484,7 @@ class TestBuildDueDigestEventsAndShopping:
             MockEventRepo.return_value.get_events = AsyncMock(return_value=[])
             MockShoppingRepo.return_value.list = AsyncMock(return_value=[MagicMock(), MagicMock()])
             MockWMRepo.return_value.list = AsyncMock(return_value=[])
-            MockWMRepo.return_value.create = AsyncMock()
+            MockWMRepo.return_value.upsert = AsyncMock()
 
             digest = await _service(mock_session, mock_task_service).build_due_digest()
 
@@ -431,7 +500,7 @@ class TestBuildDueDigestEventsAndShopping:
             MockEventRepo.return_value.get_events = AsyncMock(return_value=[])
             MockShoppingRepo.return_value.list = AsyncMock(return_value=[])
             MockWMRepo.return_value.list = AsyncMock(return_value=[])
-            MockWMRepo.return_value.create = AsyncMock()
+            MockWMRepo.return_value.upsert = AsyncMock()
 
             digest = await _service(mock_session, mock_task_service).build_due_digest()
 

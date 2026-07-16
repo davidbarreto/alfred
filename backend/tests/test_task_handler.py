@@ -55,10 +55,23 @@ class TestHandleTaskSnooze:
             "snooze", {"id": "5"}, mock_service, working_memory_service=mock_working_memory_service
         )
 
-        mock_working_memory_service.create.assert_awaited_once()
-        created = mock_working_memory_service.create.call_args.args[0]
+        mock_working_memory_service.upsert.assert_awaited_once()
+        created = mock_working_memory_service.upsert.call_args.args[0]
         assert created.key == undated_escalation_snooze_key(5)
         assert result == {"id": 5, "snoozed_until": created.expires_at.isoformat()}
+
+    async def test_snooze_again_overwrites_existing_marker(self, mock_service, mock_working_memory_service):
+        mock_service.get_task = AsyncMock(return_value=MagicMock(id=5))
+
+        await handle_task(
+            "snooze", {"id": "5"}, mock_service, working_memory_service=mock_working_memory_service
+        )
+        await handle_task(
+            "snooze", {"id": "5"}, mock_service, working_memory_service=mock_working_memory_service
+        )
+
+        assert mock_working_memory_service.upsert.await_count == 2
+        mock_working_memory_service.delete.assert_not_awaited()
 
     async def test_snooze_respects_explicit_days(self, mock_service, mock_working_memory_service):
         mock_service.get_task = AsyncMock(return_value=MagicMock(id=5))
@@ -68,18 +81,8 @@ class TestHandleTaskSnooze:
             "snooze", {"id": "5", "days": "3"}, mock_service, working_memory_service=mock_working_memory_service
         )
 
-        created = mock_working_memory_service.create.call_args.args[0]
+        created = mock_working_memory_service.upsert.call_args.args[0]
         assert 2 <= (created.expires_at - before).days <= 3
-
-    async def test_snooze_replaces_existing_marker(self, mock_service, mock_working_memory_service):
-        mock_service.get_task = AsyncMock(return_value=MagicMock(id=5))
-        mock_working_memory_service.list = AsyncMock(return_value=[MagicMock(id=99)])
-
-        await handle_task(
-            "snooze", {"id": "5"}, mock_service, working_memory_service=mock_working_memory_service
-        )
-
-        mock_working_memory_service.delete.assert_awaited_once_with(99)
 
     async def test_snooze_task_not_found_raises_404(self, mock_service, mock_working_memory_service):
         mock_service.get_task = AsyncMock(return_value=None)

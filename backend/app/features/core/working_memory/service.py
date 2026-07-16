@@ -29,6 +29,11 @@ class WorkingMemoryService:
         logger.info("WorkingMemory created: id=%d key=%r", obj.id, data.key)
         return WorkingMemoryRead.model_validate(obj)
 
+    async def upsert(self, data: WorkingMemoryCreate) -> WorkingMemoryRead:
+        obj = await self._repo.upsert(data)
+        logger.info("WorkingMemory upserted: id=%d key=%r", obj.id, data.key)
+        return WorkingMemoryRead.model_validate(obj)
+
     async def delete(self, item_id: int) -> bool:
         deleted = await self._repo.delete(item_id)
         if deleted:

@@ -204,14 +204,14 @@ class TestSnoozeTask:
         data = response.json()
         assert data["id"] == 1
         assert "snoozed_until" in data
-        mock_working_memory_service.create.assert_awaited_once()
+        mock_working_memory_service.upsert.assert_awaited_once()
 
     def test_respects_explicit_days(self, client, mock_working_memory_service):
         from datetime import datetime, timezone
 
         before = datetime.now(timezone.utc)
         client.post("/organizer/tasks/1/snooze?days=3", headers=AUTH)
-        created = mock_working_memory_service.create.call_args.args[0]
+        created = mock_working_memory_service.upsert.call_args.args[0]
         assert 2 <= (created.expires_at - before).days <= 3
 
     def test_not_found_returns_404(self, client, mock_service):

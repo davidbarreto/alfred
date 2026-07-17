@@ -70,7 +70,32 @@ class TestBuildDueDigestTasks:
 
         mock_task_service.update_task.assert_awaited_once_with(1, TaskUpdate(urgency="URGENT"))
         assert digest.has_content is True
-        assert "Overdue (URGENT): Pay rent" in digest.text
+        assert "Urgent tasks:" in digest.text
+        assert "- Pay rent (LOW, overdue)" in digest.text
+
+    async def test_due_today_normal_task_is_not_escalated(self, mock_session, mock_task_service):
+        task = _make_task(
+            id=13, title="Water plants", deadline=NOW + timedelta(hours=3),
+            urgency="NORMAL", priority="LOW",
+        )
+        mock_task_service.get_tasks.return_value = [task]
+
+        with (
+            patch("app.features.core.reminders.service.CalendarEventRepository") as MockEventRepo,
+            patch("app.features.core.reminders.service.ShoppingRepository") as MockShoppingRepo,
+            patch("app.features.core.reminders.service.WorkingMemoryRepository") as MockWMRepo,
+            patch("app.features.core.reminders.service.local_now", return_value=NOW),
+        ):
+            MockEventRepo.return_value.get_events = AsyncMock(return_value=[])
+            MockShoppingRepo.return_value.list = AsyncMock(return_value=[])
+            MockWMRepo.return_value.list = AsyncMock(return_value=[])
+            MockWMRepo.return_value.upsert = AsyncMock()
+
+            digest = await _service(mock_session, mock_task_service).build_due_digest()
+
+        mock_task_service.update_task.assert_not_awaited()
+        assert "Normal tasks:" in digest.text
+        assert "- Water plants (LOW, due 13:00)" in digest.text
 
     async def test_already_urgent_task_is_not_updated_again(self, mock_session, mock_task_service):
         task = _make_task(id=2, deadline=NOW - timedelta(hours=1), urgency="URGENT")
@@ -131,7 +156,7 @@ class TestBuildDueDigestTasks:
 
             digest = await _service(mock_session, mock_task_service).build_due_digest()
 
-        assert "Overdue (URGENT): Pay rent" in digest.text
+        assert "- Pay rent (LOW, overdue)" in digest.text
         MockWMRepo.return_value.upsert.assert_awaited_once()
         marker = MockWMRepo.return_value.upsert.call_args.args[0]
         assert marker.key == f"reminder:task:7:{NOW.date().isoformat()}"
@@ -182,7 +207,7 @@ class TestBuildDueDigestTasks:
 
             digest = await _service(mock_session, mock_task_service).build_due_digest()
 
-        assert "Overdue (URGENT): Take meds" in digest.text
+        assert "- Take meds (HIGH, overdue)" in digest.text
 
     async def test_undated_recurring_task_done_today_is_excluded_entirely(
         self, mock_session, mock_task_service
@@ -289,7 +314,8 @@ class TestBuildDueDigestTasks:
             digest = await _service(mock_session, mock_task_service).build_due_digest()
 
         mock_task_service.update_task.assert_not_awaited()
-        assert "No due date (NORMAL): Renew passport" in digest.text
+        assert "Normal tasks:" in digest.text
+        assert "- Renew passport (HIGH)" in digest.text
 
     async def test_undated_task_older_than_a_month_is_escalated_and_listed(self, mock_session, mock_task_service):
         stale_created_at = NOW - timedelta(days=31)
@@ -318,7 +344,8 @@ class TestBuildDueDigestTasks:
             digest = await _service(mock_session, mock_task_service).build_due_digest()
 
         mock_task_service.update_task.assert_awaited_once_with(8, TaskUpdate(urgency="URGENT"))
-        assert "No due date (URGENT): Learn guitar" in digest.text
+        assert "Urgent tasks:" in digest.text
+        assert "- Learn guitar (LOW)" in digest.text
 
     async def test_undated_task_under_a_month_old_is_not_escalated(self, mock_session, mock_task_service):
         task = _make_task(
@@ -342,6 +369,152 @@ class TestBuildDueDigestTasks:
 
         mock_task_service.update_task.assert_not_awaited()
         assert "1 other task(s) without a due date" in digest.text
+
+
+class TestDigestGrouping:
+    async def test_groups_by_urgency_and_sorts_by_priority_then_deadline(
+        self, mock_session, mock_task_service
+    ):
+        tasks = [
+            _make_task(id=31, title="Call bank", deadline=NOW + timedelta(hours=6),
+                       urgency="NORMAL", priority="LOW"),
+            _make_task(id=32, title="Send invoice", deadline=NOW + timedelta(hours=1),
+                       urgency="NORMAL", priority="MEDIUM"),
+            _make_task(id=33, title="Take Medicine: Night routine", deadline=None,
+                       urgency="NORMAL", priority="HIGH"),
+            _make_task(id=34, title="Pay rent", deadline=NOW - timedelta(hours=2),
+                       urgency="URGENT", priority="LOW"),
+        ]
+        mock_task_service.get_tasks.return_value = tasks
+
+        with (
+            patch("app.features.core.reminders.service.CalendarEventRepository") as MockEventRepo,
+            patch("app.features.core.reminders.service.ShoppingRepository") as MockShoppingRepo,
+            patch("app.features.core.reminders.service.WorkingMemoryRepository") as MockWMRepo,
+            patch("app.features.core.reminders.service.local_now", return_value=NOW),
+        ):
+            MockEventRepo.return_value.get_events = AsyncMock(return_value=[])
+            MockShoppingRepo.return_value.list = AsyncMock(return_value=[])
+            MockWMRepo.return_value.list = AsyncMock(return_value=[])
+            MockWMRepo.return_value.upsert = AsyncMock()
+
+            digest = await _service(mock_session, mock_task_service).build_due_digest()
+
+        assert digest.text == (
+            "⏰ Reminders\n"
+            "Urgent tasks:\n"
+            "- Pay rent (LOW, overdue)\n"
+            "\n"
+            "Normal tasks:\n"
+            "- Take Medicine: Night routine (HIGH)\n"
+            "- Send invoice (MEDIUM, due 11:00)\n"
+            "- Call bank (LOW, due 16:00)"
+        )
+
+    async def test_overdue_sorts_before_dated_within_same_priority(
+        self, mock_session, mock_task_service
+    ):
+        tasks = [
+            _make_task(id=35, title="Later today", deadline=NOW + timedelta(hours=2),
+                       urgency="URGENT", priority="LOW"),
+            _make_task(id=36, title="Already late", deadline=NOW - timedelta(hours=1),
+                       urgency="URGENT", priority="LOW"),
+        ]
+        mock_task_service.get_tasks.return_value = tasks
+
+        with (
+            patch("app.features.core.reminders.service.CalendarEventRepository") as MockEventRepo,
+            patch("app.features.core.reminders.service.ShoppingRepository") as MockShoppingRepo,
+            patch("app.features.core.reminders.service.WorkingMemoryRepository") as MockWMRepo,
+            patch("app.features.core.reminders.service.local_now", return_value=NOW),
+        ):
+            MockEventRepo.return_value.get_events = AsyncMock(return_value=[])
+            MockShoppingRepo.return_value.list = AsyncMock(return_value=[])
+            MockWMRepo.return_value.list = AsyncMock(return_value=[])
+            MockWMRepo.return_value.upsert = AsyncMock()
+
+            digest = await _service(mock_session, mock_task_service).build_due_digest()
+
+        assert digest.text.index("Already late") < digest.text.index("Later today")
+
+    async def test_deadline_tomorrow_is_labelled(self, mock_session, mock_task_service):
+        task = _make_task(
+            id=37, title="Early flight", deadline=NOW + timedelta(hours=20),
+            urgency="NORMAL", priority="MEDIUM",
+        )
+        mock_task_service.get_tasks.return_value = [task]
+
+        with (
+            patch("app.features.core.reminders.service.CalendarEventRepository") as MockEventRepo,
+            patch("app.features.core.reminders.service.ShoppingRepository") as MockShoppingRepo,
+            patch("app.features.core.reminders.service.WorkingMemoryRepository") as MockWMRepo,
+            patch("app.features.core.reminders.service.local_now", return_value=NOW),
+        ):
+            MockEventRepo.return_value.get_events = AsyncMock(return_value=[])
+            MockShoppingRepo.return_value.list = AsyncMock(return_value=[])
+            MockWMRepo.return_value.list = AsyncMock(return_value=[])
+            MockWMRepo.return_value.upsert = AsyncMock()
+
+            digest = await _service(mock_session, mock_task_service).build_due_digest()
+
+        assert "- Early flight (MEDIUM, due tomorrow 06:00)" in digest.text
+
+
+class TestReminderFrequency:
+    """The dedup TTL sets how often the hourly cron (08:00-22:00) re-reminds a task."""
+
+    def test_urgent_reminds_every_hourly_run(self):
+        from app.features.core.reminders.service import _task_dedup_ttl
+
+        assert _task_dedup_ttl("URGENT", "LOW") < timedelta(hours=1)
+
+    def test_high_priority_reminds_four_times_a_day(self):
+        from app.features.core.reminders.service import _task_dedup_ttl
+
+        ttl = _task_dedup_ttl("NORMAL", "HIGH")
+        assert timedelta(hours=3) < ttl < timedelta(hours=4)
+
+    def test_medium_priority_reminds_twice_a_day(self):
+        from app.features.core.reminders.service import _task_dedup_ttl
+
+        ttl = _task_dedup_ttl("NORMAL", "MEDIUM")
+        assert timedelta(hours=7) < ttl < timedelta(hours=8)
+
+    def test_low_priority_reminds_once_a_day(self):
+        from app.features.core.reminders.service import _task_dedup_ttl
+
+        assert _task_dedup_ttl("NORMAL", "LOW") >= timedelta(hours=24)
+
+    def test_urgency_wins_over_priority(self):
+        from app.features.core.reminders.service import _task_dedup_ttl
+
+        assert _task_dedup_ttl("URGENT", "HIGH") < timedelta(hours=1)
+
+    async def test_due_today_medium_task_marker_uses_twice_a_day_ttl(self, mock_session, mock_task_service):
+        task = _make_task(
+            id=14, title="Send invoice", deadline=NOW + timedelta(hours=5),
+            urgency="NORMAL", priority="MEDIUM",
+        )
+        mock_task_service.get_tasks.return_value = [task]
+
+        with (
+            patch("app.features.core.reminders.service.CalendarEventRepository") as MockEventRepo,
+            patch("app.features.core.reminders.service.ShoppingRepository") as MockShoppingRepo,
+            patch("app.features.core.reminders.service.WorkingMemoryRepository") as MockWMRepo,
+            patch("app.features.core.reminders.service.local_now", return_value=NOW),
+        ):
+            MockEventRepo.return_value.get_events = AsyncMock(return_value=[])
+            MockShoppingRepo.return_value.list = AsyncMock(return_value=[])
+            MockWMRepo.return_value.list = AsyncMock(return_value=[])
+            MockWMRepo.return_value.upsert = AsyncMock()
+            before = datetime.now(timezone.utc)
+
+            digest = await _service(mock_session, mock_task_service).build_due_digest()
+
+        assert "- Send invoice (MEDIUM, due 15:00)" in digest.text
+        marker = MockWMRepo.return_value.upsert.call_args.args[0]
+        assert marker.key == f"reminder:task:14:{NOW.date().isoformat()}"
+        assert timedelta(hours=7) < marker.expires_at - before < timedelta(hours=8)
 
 
 def _snooze_list_side_effect(snoozed_task_id: int):
@@ -408,7 +581,8 @@ class TestUndatedTaskEscalationConfigAndSnooze:
             digest = await _service(mock_session, mock_task_service).build_due_digest()
 
         mock_task_service.update_task.assert_awaited_once_with(20, TaskUpdate(urgency="URGENT"))
-        assert "No due date (URGENT): Organize garage" in digest.text
+        assert "Urgent tasks:" in digest.text
+        assert "- Organize garage (LOW)" in digest.text
 
     async def test_snoozed_stale_task_is_not_escalated_or_listed(self, mock_session, mock_task_service):
         task = _make_task(

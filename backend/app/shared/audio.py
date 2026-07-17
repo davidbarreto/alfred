@@ -26,6 +26,8 @@ class FileStorage(Protocol):
 
     async def read(self, relative_path: str) -> bytes | None: ...
 
+    async def delete(self, relative_path: str) -> bool: ...
+
 
 @dataclass
 class PronunciationAnalysis:

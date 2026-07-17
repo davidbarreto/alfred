@@ -1,0 +1,93 @@
+<form class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2 items-end mb-3"
+      hx-post="/finance/import/rules" hx-target="#import-rules" hx-swap="innerHTML">
+  <div class="col-span-2">
+    <label class="text-xs text-gray-500 mb-1 block">Match text <span class="text-[#E24B4A]">*</span></label>
+    <input type="text" name="pattern" required placeholder="e.g. PINGO DOCE or PoupeUp"
+           class="input input-sm border-gray-200 bg-white w-full" />
+  </div>
+  <div>
+    <label class="text-xs text-gray-500 mb-1 block">Amount (opt.)</label>
+    <input type="text" name="amount" placeholder="-10.00"
+           class="input input-sm border-gray-200 bg-white w-full" />
+  </div>
+  <div>
+    <label class="text-xs text-gray-500 mb-1 block">Mode</label>
+    <select name="mode" class="select select-sm border-gray-200 bg-white w-full">
+      <option value="auto">Auto-apply</option>
+      <option value="suggest">Suggest only</option>
+    </select>
+  </div>
+  <div>
+    <label class="text-xs text-gray-500 mb-1 block">Description</label>
+    <input type="text" name="description" placeholder="Pingo Doce"
+           class="input input-sm border-gray-200 bg-white w-full" />
+  </div>
+  <div>
+    <label class="text-xs text-gray-500 mb-1 block">Category</label>
+    <select name="category_id" class="select select-sm border-gray-200 bg-white w-full">
+      <option value="">—</option>
+      {% for cat in categories %}
+      <option value="{{ cat.id }}">{{ cat.name }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div>
+    <label class="text-xs text-gray-500 mb-1 block">Transfer to</label>
+    <select name="transfer_account_id" class="select select-sm border-gray-200 bg-white w-full">
+      <option value="">— not a transfer —</option>
+      {% for acc in rule_accounts %}
+      <option value="{{ acc.id }}">{{ acc.name }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <button type="submit" class="btn btn-sm btn-primary gap-1">
+    <i class="ti ti-plus text-sm"></i>Add rule
+  </button>
+</form>
+
+{% if rules %}
+<div class="overflow-x-auto">
+  <table class="table table-xs w-full">
+    <thead>
+      <tr class="text-[10px] text-gray-400 uppercase tracking-wide">
+        <th>Match text</th>
+        <th class="text-right">Amount</th>
+        <th>Mode</th>
+        <th>Applies</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for rule in rules %}
+      <tr>
+        <td class="text-xs font-medium">{{ rule.pattern }}</td>
+        <td class="text-xs text-right whitespace-nowrap">{% if rule.amount is not none %}€{{ "%.2f"|format(rule.amount | float) }}{% else %}<span class="text-gray-300">any</span>{% endif %}</td>
+        <td>
+          <span class="px-1.5 py-0.5 rounded text-[10px] font-medium {% if rule.mode == 'auto' %}bg-[#E9F5E9] text-[#2E7D32]{% else %}bg-amber-100 text-amber-700{% endif %}">
+            {{ "auto" if rule.mode == "auto" else "suggest" }}
+          </span>
+        </td>
+        <td class="text-xs">
+          {% if rule.transfer_account_id %}
+          <span class="text-gray-500"><i class="ti ti-arrows-exchange text-xs"></i> Transfer → {{ accounts_by_id.get(rule.transfer_account_id, "?") }}</span>
+          {% else %}
+          {{ rule.description or rule.merchant or "" }}{% if rule.category_id %}{% if rule.description or rule.merchant %} · {% endif %}{{ categories_by_id.get(rule.category_id, "?") }}{% endif %}
+          {% endif %}
+        </td>
+        <td class="text-right">
+          <button class="btn btn-ghost btn-xs text-gray-400 hover:text-[#E24B4A]"
+                  hx-delete="/finance/import/rules/{{ rule.id }}"
+                  hx-target="#import-rules"
+                  hx-swap="innerHTML"
+                  hx-confirm="Delete this rule?">
+            <i class="ti ti-trash text-sm"></i>
+          </button>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<p class="text-sm text-gray-400">No rules yet. Rules are also created from the “Remember” toggle during import review.</p>
+{% endif %}

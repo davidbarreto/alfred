@@ -6,6 +6,12 @@
       <span class="font-medium text-gray-800">{{ acc.name }}</span>
       <span class="ml-2 text-xs text-gray-400">{{ acc.type }} · {{ acc.currency }}</span>
       {% if acc.institution %}<span class="ml-1 text-xs text-gray-400">· {{ acc.institution }}</span>{% endif %}
+      {% if acc.credit_limit %}
+      <span class="ml-1 text-xs text-gray-400">
+        · limit {{ "%.2f"|format(acc.credit_limit | float) }}
+        · available {{ "%.2f"|format((acc.credit_limit | float) + (acc.balance | float)) }}
+      </span>
+      {% endif %}
     </div>
     <button
       class="text-gray-300 hover:text-[#E24B4A] transition-colors"

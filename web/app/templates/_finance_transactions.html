@@ -4,15 +4,15 @@
   <li class="flex items-center gap-3 py-2.5 border-b border-gray-100 last:border-0 group">
     <div class="w-7 h-7 rounded-full bg-gray-100 flex items-center justify-center flex-shrink-0">
       <span class="text-xs font-medium text-gray-500">
-        {{ (txn.merchant or txn.description or "?")[0] | upper }}
+        {{ (txn.description or txn.merchant or txn.bank_description or "?")[0] | upper }}
       </span>
     </div>
     <div class="flex-1 min-w-0">
-      <div class="text-sm text-gray-800 truncate">{{ txn.merchant or txn.description or "—" }}</div>
+      <div class="text-sm text-gray-800 truncate">{{ txn.description or txn.merchant or txn.bank_description or "—" }}</div>
       <div class="text-xs text-gray-400">{{ txn.date[:10] }}{% if txn.category_name %} · {{ txn.category_name }}{% endif %}</div>
     </div>
-    <span class="text-sm font-medium {% if txn.type == 'income' %}text-[#639922]{% else %}text-[#E24B4A]{% endif %} flex-shrink-0">
-      {% if txn.type == 'income' %}+{% else %}-{% endif %}€{{ "%.2f"|format(txn.amount | float) }}
+    <span class="text-sm font-medium {% if txn.type == 'income' %}text-[#639922]{% elif txn.type == 'transfer' %}text-gray-500{% else %}text-[#E24B4A]{% endif %} flex-shrink-0">
+      {% if txn.type == 'income' %}+{% elif txn.type == 'expense' %}-{% endif %}{{ "R$" if txn.currency == "BRL" else ("$" if txn.currency == "USD" else "€") }}{{ "%.2f"|format(txn.amount | float | abs) }}
     </span>
     <button
       class="text-gray-200 hover:text-[#E24B4A] opacity-0 group-hover:opacity-100 transition-all flex-shrink-0"

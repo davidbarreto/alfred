@@ -19,6 +19,7 @@
         <option value="" {% if not query_filters.type %}selected{% endif %}>All types</option>
         <option value="expense" {% if query_filters.type == 'expense' %}selected{% endif %}>Expense</option>
         <option value="income" {% if query_filters.type == 'income' %}selected{% endif %}>Income</option>
+        <option value="transfer" {% if query_filters.type == 'transfer' %}selected{% endif %}>Transfer</option>
       </select>
     </div>
     <div>

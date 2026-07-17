@@ -1,0 +1,11 @@
+<div class="bg-white border border-[#3E9C42]/40 rounded-lg p-4 flex items-center gap-3">
+  <i class="ti ti-circle-check text-xl text-[#3E9C42]"></i>
+  <div class="text-sm text-gray-700">
+    Imported <span class="font-semibold">{{ result.inserted }}</span> transactions
+    {% if result.skipped_duplicates %}· {{ result.skipped_duplicates }} duplicates skipped{% endif %}
+    {% if result.rules_created %}· {{ result.rules_created }} rules saved{% endif %}
+  </div>
+  <a href="/finance/transactions" class="btn btn-sm btn-ghost gap-1 ml-auto text-gray-500">
+    <i class="ti ti-list text-sm"></i>View transactions
+  </a>
+</div>

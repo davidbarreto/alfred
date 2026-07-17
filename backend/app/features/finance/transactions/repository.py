@@ -34,6 +34,8 @@ class TransactionRepository:
             query = query.where(Transaction.account_id == filters.account_id)
         if filters.merchant is not None:
             query = query.where(Transaction.merchant.ilike(f"%{filters.merchant}%"))
+        if filters.currency is not None:
+            query = query.where(Transaction.currency == filters.currency)
         if filters.from_date is not None:
             query = query.where(Transaction.date >= filters.from_date)
         if filters.to_date is not None:
@@ -75,6 +77,42 @@ class TransactionRepository:
         )
         return result.scalar() is not None
 
+    async def get_existing_dedup_hashes(self, dedup_hashes: list[str]) -> set[str]:
+        if not dedup_hashes:
+            return set()
+        result = await self._session.execute(
+            select(Transaction.deduplication_hash).where(
+                Transaction.deduplication_hash.in_(dedup_hashes)
+            )
+        )
+        return {row for row in result.scalars().all()}
+
+    async def get_by_ids(self, transaction_ids: list[int]) -> list[Transaction]:
+        if not transaction_ids:
+            return []
+        result = await self._session.execute(
+            select(Transaction).where(Transaction.id.in_(transaction_ids))
+        )
+        return list(result.scalars().all())
+
+    async def get_ids_by_import_batch(self, import_batch_id: int) -> list[int]:
+        result = await self._session.execute(
+            select(Transaction.id).where(Transaction.import_batch_id == import_batch_id)
+        )
+        return list(result.scalars().all())
+
+    async def delete_by_ids(self, transaction_ids: list[int]) -> int:
+        if not transaction_ids:
+            return 0
+        result = await self._session.execute(
+            select(Transaction).where(Transaction.id.in_(transaction_ids))
+        )
+        transactions = list(result.scalars().all())
+        for transaction in transactions:
+            await self._session.delete(transaction)
+        await self._session.commit()
+        return len(transactions)
+
     async def delete(self, transaction_id: int) -> bool:
         transaction = await self.get(transaction_id)
         if transaction is None:
@@ -90,12 +128,14 @@ class TransactionRepository:
         category_id: int | None = None,
         account_id: int | None = None,
         merchant: str | None = None,
+        currency: str = "EUR",
     ) -> tuple[Decimal, int]:
         query = select(
             func.coalesce(func.sum(Transaction.amount), 0),
             func.count(Transaction.id),
         ).where(
             Transaction.type == "expense",
+            Transaction.currency == currency,
             Transaction.date >= from_date,
             Transaction.date <= to_date,
         )
@@ -115,11 +155,13 @@ class TransactionRepository:
         to_date: date,
         top_n: int,
         category_id: int | None = None,
+        currency: str = "EUR",
     ) -> list[Transaction]:
         query = (
             select(Transaction)
             .where(
                 Transaction.type == "expense",
+                Transaction.currency == currency,
                 Transaction.date >= from_date,
                 Transaction.date <= to_date,
             )
@@ -136,6 +178,7 @@ class TransactionRepository:
         from_date: date,
         to_date: date,
         account_id: int | None = None,
+        currency: str = "EUR",
     ) -> list[tuple[int | None, str | None, Decimal, int]]:
         from app.features.finance.categories.tables import Category
 
@@ -149,6 +192,7 @@ class TransactionRepository:
             .outerjoin(Category, Transaction.category_id == Category.id)
             .where(
                 Transaction.type == "expense",
+                Transaction.currency == currency,
                 Transaction.date >= from_date,
                 Transaction.date <= to_date,
             )
@@ -168,11 +212,13 @@ class TransactionRepository:
         category_id: int,
         from_date: date,
         to_date: date,
+        currency: str = "EUR",
     ) -> Decimal:
         query = select(
             func.coalesce(func.sum(Transaction.amount), 0)
         ).where(
             Transaction.type == "expense",
+            Transaction.currency == currency,
             Transaction.category_id == category_id,
             Transaction.date >= from_date,
             Transaction.date <= to_date,

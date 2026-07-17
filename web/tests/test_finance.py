@@ -115,3 +115,70 @@ class TestDeleteTransaction:
 
         assert resp.status_code == 302
         assert resp.headers["location"].startswith("/login")
+
+
+class TestFinanceDashboardCurrency:
+    def _fake_get(self, calls, accounts):
+        async def fake(path, params=None):
+            calls.append((path, params or {}))
+            if path == "/finance/accounts":
+                return accounts
+            return []
+        return fake
+
+    def test_defaults_to_eur_and_fetches_budgets(self, client, mock_api):
+        calls = []
+        mock_api["get"].side_effect = self._fake_get(
+            calls, [{"id": 1, "name": "Checking", "currency": "EUR"}]
+        )
+
+        resp = client.get("/finance/")
+
+        assert resp.status_code == 200
+        report_call = next(p for path, p in calls if path == "/finance/transactions/report")
+        assert report_call["currency"] == "EUR"
+        assert any(path == "/finance/budgets/remaining" for path, _ in calls)
+
+    def test_brl_view_filters_and_skips_budgets(self, client, mock_api):
+        calls = []
+        mock_api["get"].side_effect = self._fake_get(
+            calls,
+            [
+                {"id": 1, "name": "Checking", "currency": "EUR"},
+                {"id": 2, "name": "Conta BR", "currency": "BRL"},
+            ],
+        )
+
+        resp = client.get("/finance/?currency=BRL")
+
+        assert resp.status_code == 200
+        report_call = next(p for path, p in calls if path == "/finance/transactions/report")
+        assert report_call["currency"] == "BRL"
+        txn_call = next(p for path, p in calls if path == "/finance/transactions")
+        assert txn_call["currency"] == "BRL"
+        assert not any(path == "/finance/budgets/remaining" for path, _ in calls)
+        assert 'R$' in resp.text or "R$" in resp.text
+
+    def test_currency_toggle_shown_only_with_multiple_currencies(self, client, mock_api):
+        calls = []
+        mock_api["get"].side_effect = self._fake_get(
+            calls,
+            [
+                {"id": 1, "name": "Checking", "currency": "EUR"},
+                {"id": 2, "name": "Conta BR", "currency": "BRL"},
+            ],
+        )
+
+        resp = client.get("/finance/")
+
+        assert "?period=this month&currency=BRL" in resp.text.replace("&amp;", "&")
+
+    def test_no_toggle_for_single_currency(self, client, mock_api):
+        calls = []
+        mock_api["get"].side_effect = self._fake_get(
+            calls, [{"id": 1, "name": "Checking", "currency": "EUR"}]
+        )
+
+        resp = client.get("/finance/")
+
+        assert "currency=BRL" not in resp.text

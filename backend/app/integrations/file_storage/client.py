@@ -29,3 +29,11 @@ class LocalFileStorage:
     def _write(path: Path, data: bytes) -> None:
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_bytes(data)
+
+    async def delete(self, relative_path: str) -> bool:
+        path = self._resolve(relative_path)
+        if not await asyncio.to_thread(path.exists):
+            return False
+        await asyncio.to_thread(path.unlink)
+        logger.debug("File deleted: path=%s", relative_path)
+        return True

@@ -11,14 +11,28 @@
     <div class="flex gap-1.5 flex-wrap">
       {% for p, label in [("this month", "This month"), ("last month", "Last month"), ("this year", "This year")] %}
       <a
-        href="/finance?period={{ p }}"
+        href="/finance?period={{ p }}&currency={{ currency }}"
         class="px-3 py-1 rounded-full text-xs font-medium transition-colors
           {% if period == p %}bg-[#E6F1FB] text-[#0C447C]{% else %}text-gray-500 hover:bg-gray-100{% endif %}"
       >{{ label }}</a>
       {% endfor %}
     </div>
+    {% if account_currencies | length > 1 %}
+    <div class="flex gap-1.5 flex-wrap border-l border-gray-200 pl-3">
+      {% for c in account_currencies %}
+      <a
+        href="/finance?period={{ period }}&currency={{ c }}"
+        class="px-3 py-1 rounded-full text-xs font-medium transition-colors
+          {% if currency == c %}bg-[#FDF1E2] text-[#8A5A0B]{% else %}text-gray-500 hover:bg-gray-100{% endif %}"
+      >{{ c }}</a>
+      {% endfor %}
+    </div>
+    {% endif %}
     </div>
     <div class="flex gap-2">
+      <a href="/finance/import" class="btn btn-sm btn-ghost gap-1 text-gray-500">
+        <i class="ti ti-file-import text-sm"></i>Import
+      </a>
       <button onclick="document.getElementById('manage-modal').showModal()"
               class="btn btn-sm btn-ghost gap-1 text-gray-500">
         <i class="ti ti-settings text-sm"></i>Manage
@@ -35,7 +49,7 @@
     <div class="bg-white border border-gray-200 rounded-lg p-4">
       <div class="text-[10px] text-gray-400 uppercase tracking-wide">Spent</div>
       <div class="text-2xl font-semibold text-[#E24B4A] mt-1">
-        {% if spending %}€{{ "%.2f"|format(spending.total | float) }}{% else %}—{% endif %}
+        {% if spending %}{{ currency_symbol }}{{ "%.2f"|format(spending.total | float) }}{% else %}—{% endif %}
       </div>
       {% if spending %}
       <div class="text-xs text-gray-400 mt-1">{{ spending.transaction_count }} transactions</div>
@@ -45,7 +59,7 @@
     <div class="bg-white border border-gray-200 rounded-lg p-4">
       <div class="text-[10px] text-gray-400 uppercase tracking-wide">Remaining</div>
       <div class="text-2xl font-semibold mt-1 {% if total_remaining is not none and total_remaining | float < 0 %}text-[#E24B4A]{% else %}text-[#639922]{% endif %}">
-        {% if total_remaining is not none %}€{{ "%.2f"|format(total_remaining | float) }}{% else %}—{% endif %}
+        {% if total_remaining is not none %}{{ currency_symbol }}{{ "%.2f"|format(total_remaining | float) }}{% else %}—{% endif %}
       </div>
       {% if budgets %}
       <div class="text-xs text-gray-400 mt-1">across {{ budgets | length }} budget{{ "s" if budgets | length != 1 }}</div>
@@ -58,7 +72,7 @@
       <div class="text-[10px] text-gray-400 uppercase tracking-wide">Top Category</div>
       {% if top_category %}
       <div class="text-2xl font-semibold text-gray-900 mt-1 truncate">{{ top_category.category_name or "Uncategorized" }}</div>
-      <div class="text-xs text-gray-400 mt-1">€{{ "%.2f"|format(top_category.total | float) }}</div>
+      <div class="text-xs text-gray-400 mt-1">{{ currency_symbol }}{{ "%.2f"|format(top_category.total | float) }}</div>
       {% else %}
       <div class="text-2xl font-semibold text-gray-900 mt-1">—</div>
       {% endif %}
@@ -115,7 +129,7 @@
         <div class="flex justify-between text-xs mb-1">
           <span class="font-medium text-gray-700">{{ item.category_name or "Uncategorized" }}</span>
           <span class="text-gray-400">
-            €{{ "%.2f"|format(item.total | float) }}
+            {{ currency_symbol }}{{ "%.2f"|format(item.total | float) }}
             <span class="text-gray-300 ml-1">({{ item.transaction_count }})</span>
           </span>
         </div>
@@ -186,8 +200,11 @@
           {% endfor %}
         </select>
         <select name="currency" class="border border-gray-200 rounded-lg px-3 py-1.5 text-sm w-full sm:w-auto focus:outline-none focus:ring-1 focus:ring-[#378ADD]">
-          {% for c in ["EUR","USD","GBP"] %}<option value="{{ c }}">{{ c }}</option>{% endfor %}
+          {% for c in ["EUR","BRL","USD","GBP"] %}<option value="{{ c }}">{{ c }}</option>{% endfor %}
         </select>
+        <input name="credit_limit" type="number" step="0.01" min="0" placeholder="Credit limit"
+               class="border border-gray-200 rounded-lg px-3 py-1.5 text-sm w-full sm:w-28 focus:outline-none focus:ring-1 focus:ring-[#378ADD]"
+               title="Only for credit cards — total limit of the card" />
         <button type="submit" class="btn btn-sm btn-primary w-full sm:w-auto">Add</button>
       </form>
     </div>
@@ -416,6 +433,7 @@ async function submitNewTxn(e) {
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
 <script>
 const PALETTE = ["#378ADD","#BA7517","#639922","#E24B4A","#6366F1","#EC4899","#14B8A6","#F97316","#8B5CF6","#06B6D4"];
+const CURRENCY_SYMBOL = {{ currency_symbol | tojson }};
 const CHART_REGISTRY = {};
 let modalChart = null;
 
@@ -457,7 +475,7 @@ function closeChartModal() {
           legend: { position: "bottom", labels: { boxWidth: 10, font: { size: 11 } } },
           tooltip: {
             callbacks: {
-              label: ctx => ` €${ctx.parsed.toFixed(2)}`
+              label: ctx => ` ${CURRENCY_SYMBOL}${ctx.parsed.toFixed(2)}`
             }
           }
         },
@@ -490,14 +508,14 @@ function closeChartModal() {
         plugins: {
           legend: { display: false },
           tooltip: {
-            callbacks: { label: ctx => ` €${ctx.parsed.y.toFixed(2)}` }
+            callbacks: { label: ctx => ` ${CURRENCY_SYMBOL}${ctx.parsed.y.toFixed(2)}` }
           }
         },
         scales: {
           x: { grid: { display: false }, ticks: { font: { size: 10 } } },
           y: {
             grid: { color: "#F3F4F6" },
-            ticks: { font: { size: 10 }, callback: v => "€" + v }
+            ticks: { font: { size: 10 }, callback: v => CURRENCY_SYMBOL + v }
           }
         }
       }
@@ -529,14 +547,14 @@ function closeChartModal() {
         plugins: {
           legend: { position: "bottom", labels: { boxWidth: 10, font: { size: 11 } } },
           tooltip: {
-            callbacks: { label: ctx => ` ${ctx.dataset.label}: €${ctx.parsed.y.toFixed(2)}` }
+            callbacks: { label: ctx => ` ${ctx.dataset.label}: ${CURRENCY_SYMBOL}${ctx.parsed.y.toFixed(2)}` }
           }
         },
         scales: {
           x: { grid: { display: false }, ticks: { font: { size: 10 } } },
           y: {
             grid: { color: "#F3F4F6" },
-            ticks: { font: { size: 10 }, callback: v => "€" + v }
+            ticks: { font: { size: 10 }, callback: v => CURRENCY_SYMBOL + v }
           }
         }
       }

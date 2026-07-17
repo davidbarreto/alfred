@@ -29,3 +29,20 @@ class TestSaveAndRead:
         await storage.save(b"data", "a/b/c/file.bin")
 
         assert (tmp_path / "a" / "b" / "c" / "file.bin").read_bytes() == b"data"
+
+
+class TestDelete:
+
+    @pytest.mark.asyncio
+    async def test_delete_removes_file(self, tmp_path):
+        storage = LocalFileStorage(str(tmp_path))
+        await storage.save(b"data", "sub/file.bin")
+
+        assert await storage.delete("sub/file.bin") is True
+        assert await storage.read("sub/file.bin") is None
+
+    @pytest.mark.asyncio
+    async def test_delete_missing_returns_false(self, tmp_path):
+        storage = LocalFileStorage(str(tmp_path))
+
+        assert await storage.delete("nope.bin") is False

@@ -14,6 +14,8 @@ from app.features.organizer.shopping.service import ShoppingService
 from app.features.finance.accounts.service import AccountService
 from app.features.finance.categories.service import CategoryService
 from app.features.finance.transactions.service import TransactionService
+from app.features.finance.imports.service import ImportService
+from app.features.finance.imports.registry import all_parsers
 from app.features.finance.budgets.service import BudgetService
 from app.features.finance.recurring_transactions.service import RecurringTransactionService
 from app.features.core.sessions.service import SessionService
@@ -151,6 +153,19 @@ def get_extraction_llm_provider() -> LlmProvider:
 
 def get_embedding_service(session: AsyncSession = Depends(get_session)) -> EmbeddingService:
     return EmbeddingService(session, get_embedding_provider())
+
+def get_import_service(session: AsyncSession = Depends(get_session)) -> ImportService:
+    try:
+        llm_provider = get_extraction_llm_provider()
+    except RuntimeError:
+        llm_provider = None
+    return ImportService(
+        session=session,
+        parsers=all_parsers(),
+        embedding_service=EmbeddingService(session, get_embedding_provider()),
+        llm_provider=llm_provider,
+        file_storage=LocalFileStorage(get_settings().statement_storage_dir),
+    )
 
 @lru_cache
 def get_memory_extraction_service() -> MemoryExtractionService:
@@ -294,6 +309,7 @@ CalendarEventServiceDep = Annotated[CalendarEventService, Depends(get_calendar_e
 AccountServiceDep = Annotated[AccountService, Depends(get_account_service)]
 CategoryServiceDep = Annotated[CategoryService, Depends(get_category_service)]
 TransactionServiceDep = Annotated[TransactionService, Depends(get_transaction_service)]
+ImportServiceDep = Annotated[ImportService, Depends(get_import_service)]
 BudgetServiceDep = Annotated[BudgetService, Depends(get_budget_service)]
 RecurringTransactionServiceDep = Annotated[RecurringTransactionService, Depends(get_recurring_transaction_service)]
 SessionServiceDep = Annotated[SessionService, Depends(get_session_service)]

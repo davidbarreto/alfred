@@ -31,6 +31,7 @@ services:
     volumes:
       - ${HF_CACHE_DIR}:/root/.cache/huggingface
       - ${AUDIO_DATA_DIR}:/data/audio
+      - ${STATEMENT_DATA_DIR}:/data/statements
     environment:
       - ENV=${ENV}
       - LOG_LEVEL=${LOG_LEVEL}
@@ -59,6 +60,7 @@ services:
       - CORS_ORIGINS=${CORS_ORIGINS}
       - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
       - AUDIO_STORAGE_DIR=${AUDIO_STORAGE_DIR}
+      - STATEMENT_STORAGE_DIR=${STATEMENT_STORAGE_DIR}
       - TIMEZONE=${TIMEZONE}
 
   web:

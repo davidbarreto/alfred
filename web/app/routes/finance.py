@@ -3,7 +3,7 @@ from typing import Annotated, Optional
 from urllib.parse import urlencode
 
 import httpx
-from fastapi import APIRouter, Form, Request
+from fastapi import APIRouter, File, Form, Request, UploadFile
 from fastapi.responses import HTMLResponse, Response
 
 import app.client as api
@@ -71,9 +71,13 @@ async def _txn_list_context(filters: dict, offset: int) -> dict:
     }
 
 
+_CURRENCY_SYMBOLS = {"EUR": "€", "BRL": "R$", "USD": "$", "GBP": "£"}
+
+
 @router.get("/", response_class=HTMLResponse)
 async def finance_page(request: Request):
     period = request.query_params.get("period", "this month")
+    currency = (request.query_params.get("currency") or "EUR").upper()
 
     spending, by_category, transactions, budgets, all_txns = None, None, [], [], []
     accounts, categories, recurring, all_budgets, errors = [], [], [], [], []
@@ -89,27 +93,34 @@ async def finance_page(request: Request):
         pass
 
     try:
-        spending = await api.get("/finance/transactions/report", params={"period": period})
+        spending = await api.get("/finance/transactions/report", params={"period": period, "currency": currency})
     except httpx.HTTPError:
         errors.append("spending")
 
     try:
-        by_category = await api.get("/finance/transactions/by-category", params={"period": period})
+        by_category = await api.get("/finance/transactions/by-category", params={"period": period, "currency": currency})
     except httpx.HTTPError:
         errors.append("by_category")
 
     try:
-        transactions = await api.get("/finance/transactions", params={"type": "expense", "limit": 15, "period": period})
+        transactions = await api.get(
+            "/finance/transactions",
+            params={"type": "expense", "limit": 15, "period": period, "currency": currency},
+        )
     except httpx.HTTPError:
         errors.append("transactions")
 
-    try:
-        budgets = await api.get("/finance/budgets/remaining", params={"period": "monthly"})
-    except httpx.HTTPError:
-        errors.append("budgets")
+    if currency == "EUR":  # budgets are EUR-scoped
+        try:
+            budgets = await api.get("/finance/budgets/remaining", params={"period": "monthly"})
+        except httpx.HTTPError:
+            errors.append("budgets")
 
     try:
-        all_txns = await api.get("/finance/transactions", params={"type": "expense", "limit": 500, "period": period})
+        all_txns = await api.get(
+            "/finance/transactions",
+            params={"type": "expense", "limit": 500, "period": period, "currency": currency},
+        )
     except httpx.HTTPError:
         pass
 
@@ -173,6 +184,9 @@ async def finance_page(request: Request):
         "categories": categories,
         "recurring": recurring,
         "all_budgets": budgets,
+        "currency": currency,
+        "currency_symbol": _CURRENCY_SYMBOLS.get(currency, currency + " "),
+        "account_currencies": sorted({a["currency"] for a in accounts} | {"EUR"}),
     })
 
 
@@ -259,10 +273,13 @@ async def create_account(
     type: Annotated[str, Form()],
     currency: Annotated[str, Form()] = "EUR",
     institution: Annotated[Optional[str], Form()] = None,
+    credit_limit: Annotated[Optional[str], Form()] = None,
 ):
     payload: dict = {"name": name, "type": type, "currency": currency}
     if institution:
         payload["institution"] = institution
+    if credit_limit:
+        payload["credit_limit"] = credit_limit
     try:
         await api.post("/finance/accounts", json=payload)
     except httpx.HTTPError:
@@ -450,3 +467,243 @@ async def delete_recurring(recurring_id: int, request: Request):
         request, "_finance_recurring.html",
         {"recurring": recurring, "accounts": accounts, "categories": categories},
     )
+
+
+# --- Statement import ---
+
+async def _import_batches_context() -> dict:
+    batches, accounts = [], []
+    try:
+        batches = await api.get("/finance/imports")
+    except httpx.HTTPError:
+        pass
+    try:
+        accounts = await api.get("/finance/accounts")
+    except httpx.HTTPError:
+        pass
+    return {
+        "batches": batches,
+        "accounts_by_id": {a["id"]: a["name"] for a in accounts},
+    }
+
+
+async def _import_rules_context() -> dict:
+    rules, categories, accounts = [], [], []
+    try:
+        rules = await api.get("/finance/imports/rules")
+    except httpx.HTTPError:
+        pass
+    try:
+        categories = await api.get("/finance/categories")
+    except httpx.HTTPError:
+        pass
+    try:
+        accounts = await api.get("/finance/accounts")
+    except httpx.HTTPError:
+        pass
+    return {
+        "rules": rules,
+        "categories": categories,
+        "rule_accounts": accounts,
+        "categories_by_id": {c["id"]: c["name"] for c in categories},
+        "accounts_by_id": {a["id"]: a["name"] for a in accounts},
+    }
+
+
+@router.get("/import", response_class=HTMLResponse)
+async def import_page(request: Request):
+    accounts, providers = [], []
+    try:
+        accounts = await api.get("/finance/accounts", params={"is_active": "true"})
+    except httpx.HTTPError:
+        pass
+    try:
+        providers = await api.get("/finance/imports/providers")
+    except httpx.HTTPError:
+        pass
+
+    context = await _import_batches_context()
+    context.update(await _import_rules_context())
+    context.update({"accounts": accounts, "providers": providers})
+    return templates.TemplateResponse(request, "finance_import.html", context)
+
+
+@router.get("/import/rules", response_class=HTMLResponse)
+async def import_rules_fragment(request: Request):
+    context = await _import_rules_context()
+    return templates.TemplateResponse(request, "_finance_import_rules.html", context)
+
+
+@router.post("/import/rules", response_class=HTMLResponse)
+async def create_import_rule(
+    request: Request,
+    pattern: Annotated[str, Form()],
+    mode: Annotated[str, Form()] = "auto",
+    amount: Annotated[Optional[str], Form()] = None,
+    description: Annotated[Optional[str], Form()] = None,
+    merchant: Annotated[Optional[str], Form()] = None,
+    category_id: Annotated[Optional[str], Form()] = None,
+    transfer_account_id: Annotated[Optional[str], Form()] = None,
+):
+    payload: dict = {"pattern": pattern.strip(), "mode": mode}
+    if amount:
+        payload["amount"] = amount.replace(",", ".").strip()
+    if description:
+        payload["description"] = description.strip()
+    if merchant:
+        payload["merchant"] = merchant.strip()
+    if category_id:
+        payload["category_id"] = int(category_id)
+    if transfer_account_id:
+        payload["transfer_account_id"] = int(transfer_account_id)
+
+    try:
+        await api.post("/finance/imports/rules", json=payload)
+    except httpx.HTTPError:
+        return HTMLResponse('<p class="text-[#E24B4A] text-sm px-1">Failed to create rule.</p>', status_code=422)
+
+    context = await _import_rules_context()
+    return templates.TemplateResponse(request, "_finance_import_rules.html", context)
+
+
+@router.delete("/import/rules/{rule_id}", response_class=HTMLResponse)
+async def delete_import_rule(rule_id: int, request: Request):
+    try:
+        await api.delete(f"/finance/imports/rules/{rule_id}")
+    except httpx.HTTPError:
+        return HTMLResponse('<p class="text-[#E24B4A] text-sm px-1">Failed to delete rule.</p>', status_code=422)
+    context = await _import_rules_context()
+    return templates.TemplateResponse(request, "_finance_import_rules.html", context)
+
+
+@router.get("/import/batches", response_class=HTMLResponse)
+async def import_batches_fragment(request: Request):
+    context = await _import_batches_context()
+    return templates.TemplateResponse(request, "_finance_import_batches.html", context)
+
+
+@router.post("/import/preview", response_class=HTMLResponse)
+async def import_preview(
+    request: Request,
+    file: UploadFile = File(...),
+    account_id: Annotated[str, Form()] = "",
+    provider: Annotated[Optional[str], Form()] = None,
+):
+    content = await file.read()
+    data: dict = {"account_id": account_id}
+    if provider:
+        data["provider"] = provider
+    try:
+        preview = await api.post_multipart(
+            "/finance/imports/preview",
+            data=data,
+            files={"file": (file.filename or "statement.csv", content, file.content_type or "text/csv")},
+        )
+    except httpx.HTTPError:
+        return HTMLResponse(
+            '<p class="text-[#E24B4A] text-sm px-1">Could not parse this file. '
+            'Check that it is a supported bank statement export.</p>',
+            status_code=422,
+        )
+
+    accounts, categories = [], []
+    try:
+        accounts = await api.get("/finance/accounts")
+    except httpx.HTTPError:
+        pass
+    try:
+        categories = await api.get("/finance/categories")
+    except httpx.HTTPError:
+        pass
+
+    return templates.TemplateResponse(
+        request, "_finance_import_review.html",
+        {
+            "preview": preview,
+            "accounts": accounts,
+            "categories": categories,
+            "accounts_by_id": {a["id"]: a["name"] for a in accounts},
+        },
+    )
+
+
+def _form_value(form, key: str, default: str = "") -> str:
+    value = form.get(key)
+    return value if isinstance(value, str) else default
+
+
+@router.post("/import/commit", response_class=HTMLResponse)
+async def import_commit(request: Request):
+    form = await request.form()
+    rows = []
+    row_count = int(_form_value(form, "row_count", "0") or "0")
+    for i in range(row_count):
+        if f"include_{i}" not in form:
+            continue
+        row: dict = {
+            "date_posted": _form_value(form, f"date_{i}"),
+            "bank_description": _form_value(form, f"bank_description_{i}"),
+            "amount": _form_value(form, f"amount_{i}"),
+            "type": _form_value(form, f"type_{i}"),
+            "deduplication_hash": _form_value(form, f"hash_{i}"),
+        }
+        for field in ("description", "merchant", "note"):
+            value = _form_value(form, f"{field}_{i}").strip()
+            if value:
+                row[field] = value
+        category_id = _form_value(form, f"category_{i}")
+        if category_id:
+            row["category_id"] = int(category_id)
+        counterpart = _form_value(form, f"counterpart_{i}")
+        if counterpart:
+            row["counterpart_account_id"] = int(counterpart)
+        if f"save_rule_{i}" in form:
+            pattern = _form_value(form, f"rule_pattern_{i}").strip()
+            if pattern:
+                row["save_rule"] = True
+                row["rule_pattern"] = pattern
+                row["rule_mode"] = _form_value(form, f"rule_mode_{i}", "auto")
+                if _form_value(form, f"rule_match_amount_{i}"):
+                    row["rule_match_amount"] = True
+        rows.append(row)
+
+    payload: dict = {
+        "account_id": int(_form_value(form, "account_id", "0")),
+        "provider": _form_value(form, "provider"),
+        "source_file": _form_value(form, "source_file") or None,
+        "stored_file": _form_value(form, "stored_file") or None,
+        "currency": _form_value(form, "currency", "EUR") or "EUR",
+        "period_start": _form_value(form, "period_start") or None,
+        "period_end": _form_value(form, "period_end") or None,
+        "closing_balance": _form_value(form, "closing_balance") or None,
+        "rows": rows,
+    }
+    try:
+        result = await api.post("/finance/imports/commit", json=payload)
+    except httpx.HTTPError:
+        return HTMLResponse('<p class="text-[#E24B4A] text-sm px-1">Import failed.</p>', status_code=422)
+
+    return templates.TemplateResponse(request, "_finance_import_result.html", {"result": result})
+
+
+@router.get("/import/batches/{batch_id}/file")
+async def download_import_batch_file(batch_id: int):
+    try:
+        content, content_type = await api.get_bytes(f"/finance/imports/{batch_id}/file")
+    except httpx.HTTPError:
+        return HTMLResponse('<p class="text-[#E24B4A] text-sm px-1">File not available.</p>', status_code=404)
+    return Response(
+        content=content,
+        media_type=content_type,
+        headers={"Content-Disposition": f'attachment; filename="statement-batch-{batch_id}.csv"'},
+    )
+
+
+@router.delete("/import/batches/{batch_id}", response_class=HTMLResponse)
+async def delete_import_batch(batch_id: int, request: Request):
+    try:
+        await api.delete(f"/finance/imports/{batch_id}")
+    except httpx.HTTPError:
+        return HTMLResponse('<p class="text-[#E24B4A] text-sm px-1">Failed to delete import batch.</p>', status_code=422)
+    context = await _import_batches_context()
+    return templates.TemplateResponse(request, "_finance_import_batches.html", context)

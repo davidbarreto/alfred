@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+{% set active_page = "finance" %}
+{% block title %}Import Statement{% endblock %}
+
+{% block content %}
+<div class="p-6 space-y-4">
+
+  <div class="flex items-center gap-2">
+    <a href="/finance" class="text-gray-400 hover:text-gray-600"><i class="ti ti-arrow-left text-sm"></i></a>
+    <h1 class="text-base font-semibold text-gray-900">Import bank statement</h1>
+  </div>
+
+  <div class="bg-white border border-gray-200 rounded-lg p-4">
+    <form id="import-upload-form" onsubmit="submitImportPreview(event)" class="flex flex-wrap items-end gap-3">
+      <div>
+        <label class="text-xs text-gray-500 mb-1 block">Account</label>
+        <select name="account_id" required
+                class="border border-gray-200 rounded-lg px-2 py-1.5 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-[#378ADD]">
+          {% for acc in accounts %}
+          <option value="{{ acc.id }}">{{ acc.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label class="text-xs text-gray-500 mb-1 block">Bank</label>
+        <select name="provider"
+                class="border border-gray-200 rounded-lg px-2 py-1.5 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-[#378ADD]">
+          <option value="">Auto-detect</option>
+          {% for p in providers %}
+          <option value="{{ p }}">{{ p }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label class="text-xs text-gray-500 mb-1 block">Statement file</label>
+        <input type="file" name="file" required accept=".csv"
+               class="file-input file-input-sm file-input-bordered bg-white text-sm" />
+      </div>
+      <button type="submit" id="import-preview-btn" class="btn btn-sm btn-primary gap-1">
+        <i class="ti ti-file-search text-sm"></i>Preview
+      </button>
+    </form>
+    <p class="text-xs text-gray-400 mt-2">
+      Nothing is imported at this step — you review every transaction before committing.
+    </p>
+  </div>
+
+  <div id="import-review"></div>
+
+  <div class="bg-white border border-gray-200 rounded-lg p-4 space-y-3">
+    <div>
+      <h2 class="text-sm font-semibold text-gray-900">Categorization rules</h2>
+      <p class="text-xs text-gray-400 mt-0.5">
+        Applied to every import. Use “Transfer to” for aliases of your own accounts (e.g. savings) so those rows are excluded from spending.
+      </p>
+    </div>
+    <div id="import-rules">
+      {% include "_finance_import_rules.html" %}
+    </div>
+  </div>
+
+  <div class="bg-white border border-gray-200 rounded-lg p-4 space-y-3">
+    <h2 class="text-sm font-semibold text-gray-900">Previous imports</h2>
+    <div id="import-batches">
+      {% include "_finance_import_batches.html" %}
+    </div>
+  </div>
+
+</div>
+
+<script>
+async function submitImportPreview(event) {
+  event.preventDefault();
+  const btn = document.getElementById("import-preview-btn");
+  btn.disabled = true;
+  btn.innerHTML = '<span class="loading loading-spinner loading-xs"></span>Analyzing…';
+  try {
+    const resp = await fetch("/finance/import/preview", {
+      method: "POST",
+      body: new FormData(document.getElementById("import-upload-form")),
+    });
+    const target = document.getElementById("import-review");
+    target.innerHTML = await resp.text();
+    if (window.htmx) htmx.process(target);
+    target.scrollIntoView({ behavior: "smooth", block: "start" });
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="ti ti-file-search text-sm"></i>Preview';
+  }
+}
+
+async function submitImportCommit(event) {
+  event.preventDefault();
+  const btn = document.getElementById("import-commit-btn");
+  btn.disabled = true;
+  btn.innerHTML = '<span class="loading loading-spinner loading-xs"></span>Importing…';
+  const resp = await fetch("/finance/import/commit", {
+    method: "POST",
+    body: new FormData(document.getElementById("import-commit-form")),
+  });
+  const target = document.getElementById("import-review");
+  target.innerHTML = await resp.text();
+  if (window.htmx) htmx.process(target);
+  if (resp.ok) {
+    htmx.ajax("GET", "/finance/import/batches", { target: "#import-batches", swap: "innerHTML" });
+  } else {
+    btn.disabled = false;
+  }
+}
+
+function toggleRuleInputs(index, checked) {
+  const cell = document.getElementById("rule-inputs-" + index);
+  if (cell) cell.classList.toggle("hidden", !checked);
+}
+</script>
+{% endblock %}

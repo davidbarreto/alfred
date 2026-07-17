@@ -74,10 +74,14 @@ async def balance_forecast(
     from app.features.finance.recurring_transactions.schemas import RecurringTransactionFilters
 
     accounts = await account_service.list(AccountFilters(is_active=True))
+    accounts = [a for a in accounts if a.currency == filters.currency]
     current_balance = sum(a.balance for a in accounts) if accounts else Decimal("0")
 
     rt_filters = RecurringTransactionFilters(active=True)
-    active_recurring = await recurring_service.list(rt_filters)
+    active_recurring = [
+        rt for rt in await recurring_service.list(rt_filters)
+        if rt.currency == filters.currency
+    ]
 
     # Resolve raw ORM objects for the service calculation
     from app.features.finance.recurring_transactions.repository import RecurringTransactionRepository
@@ -93,7 +97,7 @@ async def balance_forecast(
         projected_income=projected_income.quantize(Decimal("0.01")),
         projected_expenses=projected_expenses.quantize(Decimal("0.01")),
         projected_balance=(current_balance + projected_income - projected_expenses).quantize(Decimal("0.01")),
-        currency="EUR",
+        currency=filters.currency,
         forecast_to=forecast_to,
     )
 

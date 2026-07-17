@@ -66,10 +66,11 @@ class TransactionService:
             category_id=filters.category_id,
             account_id=filters.account_id,
             merchant=filters.merchant,
+            currency=filters.currency,
         )
         return SpendingReportResponse(
             total=total,
-            currency="EUR",
+            currency=filters.currency,
             from_date=from_date,
             to_date=to_date,
             transaction_count=count,
@@ -81,6 +82,7 @@ class TransactionService:
             from_date=from_date,
             to_date=to_date,
             category_id=filters.category_id,
+            currency=filters.currency,
         )
         days = max((to_date - from_date).days + 1, 1)
         average_per_day = total / days if days > 0 else Decimal("0")
@@ -98,6 +100,7 @@ class TransactionService:
             from_date=from_date,
             to_date=to_date,
             account_id=filters.account_id,
+            currency=filters.currency,
         )
         items = [
             CategorySpendingItem(
@@ -112,7 +115,7 @@ class TransactionService:
             items=items,
             from_date=from_date,
             to_date=to_date,
-            currency="EUR",
+            currency=filters.currency,
         )
 
     async def spending_top(self, filters: AnalyticsFilters) -> SpendingTopResponse:
@@ -122,6 +125,7 @@ class TransactionService:
             to_date=to_date,
             top_n=filters.top_n,
             category_id=filters.category_id,
+            currency=filters.currency,
         )
         return SpendingTopResponse(
             transactions=[TransactionRead.model_validate(t) for t in txns],

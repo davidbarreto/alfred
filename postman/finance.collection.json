@@ -2,7 +2,7 @@
   "info": {
     "name": "Alfred - Finance API",
     "_postman_id": "alfred-finance-v1",
-    "description": "Run folders in order: Accounts \u2192 Categories \u2192 Transactions \u2192 Budgets \u2192 Recurring Transactions. Within each folder run items in order (Create \u2192 List \u2192 Get \u2192 Update \u2192 Delete). Transactions depend on account_id and category_id, so create those first.",
+    "description": "Run folders in order: Accounts → Categories → Transactions → Budgets → Recurring Transactions → Imports. Within each folder run items in order (Create → List → Get → Update → Delete). Transactions depend on account_id and category_id, so create those first.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -1318,6 +1318,411 @@
                 "finance",
                 "recurring-transactions",
                 "{{finance_recurring_id}}"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Imports",
+      "item": [
+        {
+          "name": "01 - List Providers",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Contains activobank', () => {",
+                  "    pm.expect(pm.response.json()).to.include('activobank');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/finance/imports/providers",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "finance",
+                "imports",
+                "providers"
+              ]
+            }
+          }
+        },
+        {
+          "name": "02 - Create Rule",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+                  "pm.test('Rule saved', () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.have.property('id');",
+                  "    pm.expect(json.pattern).to.eql('PINGO DOCE');",
+                  "    pm.expect(json.mode).to.eql('auto');",
+                  "    pm.environment.set('import_rule_id', json.id);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"pattern\": \"PINGO DOCE\",\n  \"mode\": \"auto\",\n  \"description\": \"Pingo Doce\",\n  \"merchant\": \"Pingo Doce\",\n  \"category_id\": null\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/finance/imports/rules",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "finance",
+                "imports",
+                "rules"
+              ]
+            }
+          }
+        },
+        {
+          "name": "03 - List Rules",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Array with created rule', () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.be.an('array');",
+                  "    pm.expect(json.some(r => r.pattern === 'PINGO DOCE')).to.eql(true);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/finance/imports/rules",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "finance",
+                "imports",
+                "rules"
+              ]
+            }
+          }
+        },
+        {
+          "name": "04 - Preview Import (file upload)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Preview has rows and counts', () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.provider).to.eql('activobank');",
+                  "    pm.expect(json.rows).to.be.an('array');",
+                  "    pm.expect(json.rows.length).to.be.at.least(1);",
+                  "    pm.expect(json).to.have.property('new_count');",
+                  "    pm.expect(json).to.have.property('duplicate_count');",
+                  "    const first = json.rows[0];",
+                  "    pm.expect(first).to.have.property('deduplication_hash');",
+                  "    pm.environment.set('import_dedup_hash', first.deduplication_hash);",
+                  "    pm.environment.set('import_row_date', first.date_posted);",
+                  "    pm.environment.set('import_row_amount', first.amount);",
+                  "    pm.environment.set('import_row_bank_description', first.bank_description);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": "fixtures/activobank_sample.csv"
+                },
+                {
+                  "key": "account_id",
+                  "value": "{{finance_account_id}}",
+                  "type": "text"
+                },
+                {
+                  "key": "provider",
+                  "value": "activobank",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/finance/imports/preview",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "finance",
+                "imports",
+                "preview"
+              ]
+            },
+            "description": "Select postman/fixtures/activobank_sample.csv as the file if the relative path does not resolve (set your Postman working directory to the postman/ folder)."
+          }
+        },
+        {
+          "name": "05 - Commit Import",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+                  "pm.test('Batch created with one insert', () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.have.property('batch_id');",
+                  "    pm.expect(json.inserted).to.eql(1);",
+                  "    pm.environment.set('import_batch_id', json.batch_id);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"account_id\": {{finance_account_id}},\n  \"provider\": \"activobank\",\n  \"source_file\": \"activobank_sample.csv\",\n  \"currency\": \"EUR\",\n  \"period_start\": \"2026-06-01\",\n  \"period_end\": \"2026-06-30\",\n  \"closing_balance\": \"6345.24\",\n  \"rows\": [\n    {\n      \"date_posted\": \"{{import_row_date}}\",\n      \"bank_description\": \"{{import_row_bank_description}}\",\n      \"amount\": \"{{import_row_amount}}\",\n      \"type\": \"expense\",\n      \"deduplication_hash\": \"{{import_dedup_hash}}\",\n      \"description\": \"Pingo Doce\",\n      \"merchant\": \"Pingo Doce\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/finance/imports/commit",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "finance",
+                "imports",
+                "commit"
+              ]
+            }
+          }
+        },
+        {
+          "name": "06 - Commit Again Is Deduplicated",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+                  "pm.test('Duplicate row skipped', () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.inserted).to.eql(0);",
+                  "    pm.expect(json.skipped_duplicates).to.eql(1);",
+                  "    pm.environment.set('import_dup_batch_id', json.batch_id);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"account_id\": {{finance_account_id}},\n  \"provider\": \"activobank\",\n  \"source_file\": \"activobank_sample.csv\",\n  \"currency\": \"EUR\",\n  \"rows\": [\n    {\n      \"date_posted\": \"{{import_row_date}}\",\n      \"bank_description\": \"{{import_row_bank_description}}\",\n      \"amount\": \"{{import_row_amount}}\",\n      \"type\": \"expense\",\n      \"deduplication_hash\": \"{{import_dedup_hash}}\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/finance/imports/commit",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "finance",
+                "imports",
+                "commit"
+              ]
+            }
+          }
+        },
+        {
+          "name": "07 - List Batches",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Contains created batch', () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.be.an('array');",
+                  "    const id = Number(pm.environment.get('import_batch_id'));",
+                  "    pm.expect(json.some(b => b.id === id)).to.eql(true);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/finance/imports",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "finance",
+                "imports"
+              ]
+            }
+          }
+        },
+        {
+          "name": "08 - Delete Batch",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 204', () => pm.response.to.have.status(204));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/finance/imports/{{import_batch_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "finance",
+                "imports",
+                "{{import_batch_id}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "09 - Delete Duplicate Batch",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 204', () => pm.response.to.have.status(204));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/finance/imports/{{import_dup_batch_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "finance",
+                "imports",
+                "{{import_dup_batch_id}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "10 - Delete Rule",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 204', () => pm.response.to.have.status(204));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/finance/imports/rules/{{import_rule_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "finance",
+                "imports",
+                "rules",
+                "{{import_rule_id}}"
               ]
             }
           }

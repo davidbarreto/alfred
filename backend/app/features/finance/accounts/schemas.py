@@ -12,6 +12,7 @@ class AccountBase(BaseModel):
     currency: str = "EUR"
     balance: Decimal = Decimal("0")
     institution: str | None = None
+    credit_limit: Decimal | None = None
     is_active: bool = True
 
 
@@ -25,6 +26,7 @@ class AccountUpdate(BaseModel):
     currency: str | None = None
     balance: Decimal | None = None
     institution: str | None = None
+    credit_limit: Decimal | None = None
     is_active: bool | None = None
 
 

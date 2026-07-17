@@ -13,6 +13,7 @@ def _make_account_orm(**kwargs):
     a.currency = kwargs.get("currency", "EUR")
     a.balance = kwargs.get("balance", Decimal("0"))
     a.institution = kwargs.get("institution", None)
+    a.credit_limit = kwargs.get("credit_limit", None)
     a.is_active = kwargs.get("is_active", True)
     return a
 

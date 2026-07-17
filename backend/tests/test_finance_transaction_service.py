@@ -24,8 +24,12 @@ def _make_txn_orm(**kwargs):
     t.type = kwargs.get("type", "expense")
     t.category_id = kwargs.get("category_id", None)
     t.description = kwargs.get("description", None)
+    t.bank_description = kwargs.get("bank_description", None)
+    t.note = kwargs.get("note", None)
     t.merchant = kwargs.get("merchant", "Shop")
     t.source = kwargs.get("source", None)
+    t.counterpart_account_id = kwargs.get("counterpart_account_id", None)
+    t.import_batch_id = kwargs.get("import_batch_id", None)
     t.created_at = kwargs.get("created_at", "2026-06-12T10:00:00")
     return t
 
@@ -125,7 +129,19 @@ class TestSpendingReport:
             category_id=None,
             account_id=None,
             merchant=None,
+            currency="EUR",
         )
+
+    async def test_currency_passed_through(self, service):
+        service._repo.get_spending_total.return_value = (Decimal("0"), 0)
+        filters = AnalyticsFilters(
+            from_date=date(2026, 6, 1), to_date=date(2026, 6, 30), currency="BRL"
+        )
+
+        result = await service.spending_report(filters)
+
+        assert result.currency == "BRL"
+        assert service._repo.get_spending_total.call_args.kwargs["currency"] == "BRL"
 
 
 class TestSpendingAverage:

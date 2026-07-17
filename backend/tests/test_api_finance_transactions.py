@@ -208,6 +208,16 @@ class TestSpendingReport:
         assert "currency" in data
         assert "transaction_count" in data
 
+    def test_currency_defaults_to_eur(self, client, mock_txn_service):
+        client.get("/finance/transactions/report", headers=AUTH)
+        filters = mock_txn_service.spending_report.call_args[0][0]
+        assert filters.currency == "EUR"
+
+    def test_currency_filter_passed_to_service(self, client, mock_txn_service):
+        client.get("/finance/transactions/report?currency=BRL", headers=AUTH)
+        filters = mock_txn_service.spending_report.call_args[0][0]
+        assert filters.currency == "BRL"
+
     def test_requires_auth(self, client):
         assert client.get("/finance/transactions/report").status_code == 403
 

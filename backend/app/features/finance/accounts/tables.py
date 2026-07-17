@@ -20,10 +20,14 @@ class Account(Base):
     currency: Mapped[str] = mapped_column(String(10), nullable=False, default="EUR")
     balance: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False, default=0)
     institution: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    credit_limit: Mapped[Optional[Decimal]] = mapped_column(Numeric(12, 2), nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
 
     transactions: Mapped[List["Transaction"]] = relationship(
-        "Transaction", back_populates="account", passive_deletes=True
+        "Transaction",
+        back_populates="account",
+        foreign_keys="Transaction.account_id",
+        passive_deletes=True,
     )
     recurring_transactions: Mapped[List["RecurringTransaction"]] = relationship(
         "RecurringTransaction", back_populates="account", passive_deletes=True

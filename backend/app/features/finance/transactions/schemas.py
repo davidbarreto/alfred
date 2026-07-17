@@ -4,7 +4,7 @@ from typing import Annotated, Literal, Optional, TypeAlias
 from fastapi import Query
 from pydantic import BaseModel
 
-TransactionType: TypeAlias = Literal["expense", "income"]
+TransactionType: TypeAlias = Literal["expense", "income", "transfer"]
 
 
 def resolve_period(
@@ -66,12 +66,16 @@ class TransactionBase(BaseModel):
     type: TransactionType
     category_id: int | None = None
     description: str | None = None
+    bank_description: str | None = None
+    note: str | None = None
     merchant: str | None = None
     source: str | None = None
+    counterpart_account_id: int | None = None
 
 
 class TransactionCreate(TransactionBase):
     deduplication_hash: str | None = None
+    import_batch_id: int | None = None
 
 
 class TransactionUpdate(BaseModel):
@@ -82,11 +86,14 @@ class TransactionUpdate(BaseModel):
     type: TransactionType | None = None
     category_id: int | None = None
     description: str | None = None
+    note: str | None = None
     merchant: str | None = None
+    counterpart_account_id: int | None = None
 
 
 class TransactionRead(TransactionBase):
     id: int
+    import_batch_id: int | None = None
     created_at: datetime
 
     model_config = {"from_attributes": True}
@@ -104,6 +111,7 @@ class TransactionFilters:
         from_date: Annotated[date | None, Query()] = None,
         to_date: Annotated[date | None, Query()] = None,
         period: Annotated[str | None, Query()] = None,
+        currency: Annotated[str | None, Query()] = None,
     ) -> None:
         self.limit = limit
         self.offset = offset
@@ -114,6 +122,7 @@ class TransactionFilters:
         self.from_date = from_date
         self.to_date = to_date
         self.period = period
+        self.currency = currency
 
 
 # --- Analytics response models ---
@@ -174,6 +183,7 @@ class AnalyticsFilters:
         account_id: Annotated[int | None, Query()] = None,
         merchant: Annotated[str | None, Query()] = None,
         top_n: Annotated[int, Query(ge=1, le=50)] = 5,
+        currency: Annotated[str, Query()] = "EUR",
     ) -> None:
         self.period = period
         self.from_date = from_date
@@ -182,3 +192,4 @@ class AnalyticsFilters:
         self.account_id = account_id
         self.merchant = merchant
         self.top_n = top_n
+        self.currency = currency

@@ -2,11 +2,16 @@ from __future__ import annotations
 
 from app.integrations.activobank.card_statement_parser import ActivoBankCardStatementParser
 from app.integrations.activobank.statement_parser import ActivoBankStatementParser
+from app.integrations.nubank.card_statement_parser import NubankCardStatementParser
 from app.shared.statement import StatementParser
 
 _PARSERS: dict[str, StatementParser] = {
     parser.provider: parser
-    for parser in (ActivoBankStatementParser(), ActivoBankCardStatementParser())
+    for parser in (
+        ActivoBankStatementParser(),
+        ActivoBankCardStatementParser(),
+        NubankCardStatementParser(),
+    )
 }
 
 

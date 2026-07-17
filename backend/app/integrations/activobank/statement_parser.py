@@ -13,10 +13,10 @@ import io
 import re
 from datetime import date
 
-from app.integrations.activobank.parsing import decode as _decode
-from app.integrations.activobank.parsing import parse_amount as _parse_amount
 from app.integrations.activobank.parsing import parse_date as _parse_date
 from app.shared.statement import ParsedRow, ParsedStatement
+from app.shared.statement import decode as _decode
+from app.shared.statement import parse_european_amount as _parse_amount
 
 _PROVIDER = "activobank"
 _HEADER_FIRST_COL = "data lanc"

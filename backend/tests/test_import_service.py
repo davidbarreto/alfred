@@ -197,6 +197,7 @@ class TestPreview:
         assert row.description == "Pingo Doce"
         assert row.suggestion_source == "rule_auto"
         assert row.needs_review is False
+        assert row.review_reasons == []
 
     @pytest.mark.asyncio
     async def test_suggest_rule_flags_for_review(self):
@@ -208,6 +209,7 @@ class TestPreview:
 
         assert preview.rows[0].suggestion_source == "rule_suggest"
         assert preview.rows[0].needs_review is True
+        assert preview.rows[0].review_reasons == ["rule_suggested"]
         assert preview.needs_review_count == 1
 
     @pytest.mark.asyncio
@@ -223,6 +225,7 @@ class TestPreview:
         assert preview.rows[0].type == "transfer"
         assert preview.rows[0].counterpart_account_id == 5
         assert preview.rows[0].needs_review is False
+        assert preview.rows[0].review_reasons == []
 
     @pytest.mark.asyncio
     async def test_parser_flagged_row_needs_review_even_when_categorized(self):
@@ -237,6 +240,18 @@ class TestPreview:
         assert preview.rows[0].category_id == 10
         assert preview.rows[0].suggestion_source == "rule_auto"
         assert preview.rows[0].needs_review is True
+        assert preview.rows[0].review_reasons == ["redated_installment"]
+
+    @pytest.mark.asyncio
+    async def test_parser_flagged_row_combines_with_uncategorized_reason(self):
+        row = _row()
+        row.flag_for_review = True
+        service = _service(_statement([row]))
+
+        preview = await service.preview(1, "x.csv", b"", provider="fakebank")
+
+        assert preview.rows[0].needs_review is True
+        assert preview.rows[0].review_reasons == ["uncategorized", "redated_installment"]
 
     @pytest.mark.asyncio
     async def test_income_detected_from_positive_amount(self):
@@ -267,6 +282,7 @@ class TestPreview:
         assert row.suggestion_source == "knn"
         assert row.confidence == 1.0
         assert row.needs_review is False
+        assert row.review_reasons == []
 
     @pytest.mark.asyncio
     async def test_knn_below_vote_threshold_leaves_uncategorized(self):
@@ -291,6 +307,7 @@ class TestPreview:
 
         assert preview.rows[0].category_id is None
         assert preview.rows[0].needs_review is True
+        assert preview.rows[0].review_reasons == ["uncategorized"]
 
     @pytest.mark.asyncio
     async def test_llm_fallback_categorizes(self):
@@ -310,6 +327,7 @@ class TestPreview:
         assert row.suggestion_source == "llm"
         assert row.confidence == 0.8
         assert row.needs_review is True
+        assert row.review_reasons == ["ai_suggested"]
 
     @pytest.mark.asyncio
     async def test_llm_unknown_category_ignored(self):

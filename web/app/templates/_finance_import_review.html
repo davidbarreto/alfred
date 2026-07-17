@@ -1,3 +1,9 @@
+{% set review_reason_labels = {
+  "uncategorized": "No category found",
+  "rule_suggested": "Rule suggestion, please confirm",
+  "ai_suggested": "AI suggestion, please confirm",
+  "redated_installment": "Installment date adjusted to this month",
+} %}
 <div class="bg-white border border-gray-200 rounded-lg p-4 space-y-3">
 
   <div class="flex flex-wrap items-center gap-2">
@@ -69,6 +75,12 @@
               {% if row.suggestion_source %}
               <span class="text-[10px] {% if row.suggestion_source == 'rule_auto' %}text-[#3E9C42]{% elif row.suggestion_source == 'knn' %}text-[#378ADD]{% else %}text-amber-600{% endif %}">
                 {% if row.suggestion_source == 'rule_auto' %}rule{% elif row.suggestion_source == 'rule_suggest' %}rule (suggested){% elif row.suggestion_source == 'knn' %}similar transactions{% else %}AI suggestion{% endif %}{% if row.confidence is not none %} · {{ (row.confidence * 100) | round | int }}%{% endif %}
+              </span>
+              {% endif %}
+              {% if row.review_reasons %}
+              <span class="block text-[10px] text-amber-700 mt-0.5" title="Why this row needs review">
+                <i class="ti ti-alert-triangle text-[10px]"></i>
+                {% for reason in row.review_reasons %}{{ review_reason_labels.get(reason, reason) }}{% if not loop.last %}, {% endif %}{% endfor %}
               </span>
               {% endif %}
             </td>

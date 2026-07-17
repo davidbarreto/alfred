@@ -148,10 +148,21 @@ class ImportService:
         await self._apply_llm(rows, categories)
 
         for row in rows:
-            if row.status == "new" and row.type != "transfer":
-                row.needs_review = row.category_id is None or row.suggestion_source in ("rule_suggest", "llm")
+            if row.status != "new" or row.type == "transfer":
+                continue
+            reasons: list[str] = []
+            if row.category_id is None:
+                reasons.append("uncategorized")
+            elif row.suggestion_source == "rule_suggest":
+                reasons.append("rule_suggested")
+            elif row.suggestion_source == "llm":
+                reasons.append("ai_suggested")
+            row.review_reasons = reasons
+            row.needs_review = bool(reasons)
         for preview_row, parsed_row in zip(rows, statement.rows):
             if parsed_row.flag_for_review and preview_row.status == "new":
+                if "redated_installment" not in preview_row.review_reasons:
+                    preview_row.review_reasons.append("redated_installment")
                 preview_row.needs_review = True
 
         return ImportPreviewResponse(

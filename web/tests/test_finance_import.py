@@ -38,6 +38,7 @@ def _preview_row(**kwargs):
         "suggestion_source": "rule_auto",
         "confidence": None,
         "needs_review": False,
+        "review_reasons": [],
     }
     row.update(kwargs)
     return row
@@ -132,6 +133,25 @@ class TestImportPreview:
         )
 
         assert "already imported" in resp.text
+
+    def test_review_reasons_rendered_for_flagged_rows(self, client, mock_api):
+        rows = [
+            _preview_row(
+                needs_review=True,
+                review_reasons=["rule_suggested", "redated_installment"],
+            )
+        ]
+        mock_api["post_multipart"].return_value = _preview(rows)
+        mock_api["get"].side_effect = [[_account()], [_category()]]
+
+        resp = client.post(
+            "/finance/import/preview",
+            data={"account_id": "1"},
+            files={"file": ("mov.csv", b"x", "text/csv")},
+        )
+
+        assert "Rule suggestion, please confirm" in resp.text
+        assert "Installment date adjusted to this month" in resp.text
 
     def test_parse_failure_returns_error(self, client, mock_api):
         mock_api["post_multipart"].side_effect = httpx.HTTPError("boom")

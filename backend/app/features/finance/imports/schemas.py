@@ -2,13 +2,14 @@ from datetime import date, datetime
 from decimal import Decimal
 from typing import Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from app.features.finance.transactions.schemas import TransactionType
 
 RuleMode = Literal["auto", "suggest"]
 SuggestionSource = Literal["rule_auto", "rule_suggest", "knn", "llm"]
 RowStatus = Literal["new", "duplicate"]
+ReviewReason = Literal["uncategorized", "rule_suggested", "ai_suggested", "redated_installment"]
 
 
 class ImportRuleCreate(BaseModel):
@@ -45,6 +46,7 @@ class ImportPreviewRow(BaseModel):
     suggestion_source: SuggestionSource | None = None
     confidence: float | None = None
     needs_review: bool = False
+    review_reasons: list[ReviewReason] = Field(default_factory=list)
 
 
 class ImportPreviewResponse(BaseModel):

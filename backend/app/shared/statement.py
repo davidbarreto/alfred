@@ -36,6 +36,7 @@ class ParsedRow:
     raw_description: str
     amount: Decimal
     balance_after: Decimal | None = None
+    flag_for_review: bool = False
 
 
 @dataclass

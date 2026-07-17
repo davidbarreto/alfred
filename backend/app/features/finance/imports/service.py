@@ -47,6 +47,8 @@ _NOISE_PATTERNS = [
     re.compile(r"^DD\s+"),
     re.compile(r"\bCONTACTLESS\b"),
     re.compile(r"\b\d{4}-\d{3}\b"),
+    re.compile(r"\(Parcela \d+ de \d+\)", re.IGNORECASE),
+    re.compile(r"-?\s*Parcela \d+/\d+", re.IGNORECASE),
 ]
 _WHITESPACE = re.compile(r"\s+")
 
@@ -126,7 +128,11 @@ class ImportService:
             logger.warning("Import preview: no parser found for file=%r provider=%r", filename, provider)
             return None
 
-        statement = parser.parse(content)
+        try:
+            statement = parser.parse(content)
+        except Exception as exc:
+            logger.error("Import preview: parse failed provider=%s file=%r error=%s", parser.provider, filename, exc)
+            return None
         logger.info(
             "Import preview: provider=%s file=%r rows=%d account_id=%d",
             parser.provider, filename, len(statement.rows), account_id,
@@ -144,6 +150,9 @@ class ImportService:
         for row in rows:
             if row.status == "new" and row.type != "transfer":
                 row.needs_review = row.category_id is None or row.suggestion_source in ("rule_suggest", "llm")
+        for preview_row, parsed_row in zip(rows, statement.rows):
+            if parsed_row.flag_for_review and preview_row.status == "new":
+                preview_row.needs_review = True
 
         return ImportPreviewResponse(
             provider=parser.provider,

@@ -225,6 +225,20 @@ class TestPreview:
         assert preview.rows[0].needs_review is False
 
     @pytest.mark.asyncio
+    async def test_parser_flagged_row_needs_review_even_when_categorized(self):
+        row = _row()
+        row.flag_for_review = True
+        service = _service(_statement([row]))
+        service._repo.list_rules.return_value = [_rule()]
+        service._category_repo.list.return_value = [_category(10, "Groceries")]
+
+        preview = await service.preview(1, "x.csv", b"", provider="fakebank")
+
+        assert preview.rows[0].category_id == 10
+        assert preview.rows[0].suggestion_source == "rule_auto"
+        assert preview.rows[0].needs_review is True
+
+    @pytest.mark.asyncio
     async def test_income_detected_from_positive_amount(self):
         row = _row(raw_description="TRANSFERENCIA - VENCIMENTO", amount=Decimal("3878.41"))
         service = _service(_statement([row]))

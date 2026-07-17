@@ -33,7 +33,8 @@ class ActivoBankStatementParser:
         if not filename.lower().endswith(".csv"):
             return False
         head = _decode(content[:2048]).upper()
-        return "HIST" in head and "CONTA" in head and ";" in head
+        # "RICO DE CONTA" matches HISTÓRICO/HISTORICO DE CONTA regardless of accents
+        return "RICO DE CONTA" in head and ";" in head
 
     def parse(self, content: bytes) -> ParsedStatement:
         text = _decode(content)

@@ -94,9 +94,12 @@ async function submitImportCommit(event) {
   const btn = document.getElementById("import-commit-btn");
   btn.disabled = true;
   btn.innerHTML = '<span class="loading loading-spinner loading-xs"></span>Importing…';
+  const formData = new FormData(document.getElementById("import-commit-form"));
+  const payload = Object.fromEntries(formData.entries());
   const resp = await fetch("/finance/import/commit", {
     method: "POST",
-    body: new FormData(document.getElementById("import-commit-form")),
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
   });
   const target = document.getElementById("import-review");
   target.innerHTML = await resp.text();

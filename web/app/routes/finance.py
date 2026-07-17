@@ -634,7 +634,12 @@ def _form_value(form, key: str, default: str = "") -> str:
 
 @router.post("/import/commit", response_class=HTMLResponse)
 async def import_commit(request: Request):
-    form = await request.form()
+    # JSON, not multipart/form-data: statements with >~75 rows produce more
+    # form fields than Starlette's request.form() field-count cap allows.
+    try:
+        form = await request.json()
+    except ValueError:
+        return HTMLResponse('<p class="text-[#E24B4A] text-sm px-1">Invalid import payload.</p>', status_code=422)
     rows = []
     row_count = int(_form_value(form, "row_count", "0") or "0")
     for i in range(row_count):

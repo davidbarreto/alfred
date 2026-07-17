@@ -174,7 +174,7 @@ class TestImportCommit:
 
         resp = client.post(
             "/finance/import/commit",
-            data={
+            json={
                 "account_id": "1",
                 "provider": "activobank",
                 "source_file": "mov.csv",
@@ -225,10 +225,41 @@ class TestImportCommit:
 
         resp = client.post(
             "/finance/import/commit",
-            data={"account_id": "1", "provider": "activobank", "row_count": "0"},
+            json={"account_id": "1", "provider": "activobank", "row_count": "0"},
         )
 
         assert resp.status_code == 422
+
+    def test_invalid_json_body_returns_error(self, client):
+        resp = client.post(
+            "/finance/import/commit",
+            content=b"not json",
+            headers={"Content-Type": "application/json"},
+        )
+
+        assert resp.status_code == 422
+
+    def test_large_statement_over_1000_form_fields_still_commits(self, client, mock_api):
+        """Regression test: a real statement's row count (~13 fields/row) can exceed
+        Starlette's request.form() 1000-field cap. Must not hit that parser at all."""
+        mock_api["post"].return_value = {
+            "batch_id": 8, "inserted": 120, "skipped_duplicates": 0, "rules_created": 0
+        }
+        payload = {
+            "account_id": "1", "provider": "activobank", "row_count": "120",
+        }
+        for i in range(120):
+            payload[f"include_{i}"] = "on"
+            payload[f"date_{i}"] = "2026-06-01"
+            payload[f"bank_description_{i}"] = f"ROW {i}"
+            payload[f"amount_{i}"] = "-1.00"
+            payload[f"type_{i}"] = "expense"
+            payload[f"hash_{i}"] = f"hash{i}"
+
+        resp = client.post("/finance/import/commit", json=payload)
+
+        assert resp.status_code == 200
+        assert len(mock_api["post"].call_args.kwargs["json"]["rows"]) == 120
 
 
 class TestImportBatches:

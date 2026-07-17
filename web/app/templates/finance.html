@@ -73,7 +73,9 @@
     <div class="bg-white border border-gray-200 rounded-lg p-4 cursor-pointer relative group" onclick="openChartModal('category')">
       <i class="ti ti-arrows-maximize text-gray-300 group-hover:text-gray-500 absolute top-4 right-4 text-sm"></i>
       <h2 class="text-sm font-medium text-gray-900 mb-3">By category</h2>
-      <canvas id="chart-category" height="220"></canvas>
+      <div class="relative h-56">
+        <canvas id="chart-category"></canvas>
+      </div>
     </div>
     {% endif %}
 
@@ -83,7 +85,9 @@
       <h2 class="text-sm font-medium text-gray-900 mb-3">
         Spending over time <span class="text-xs font-normal text-gray-400">({{ time_label | lower }})</span>
       </h2>
-      <canvas id="chart-time" height="220"></canvas>
+      <div class="relative h-56">
+        <canvas id="chart-time"></canvas>
+      </div>
     </div>
     {% endif %}
 
@@ -95,7 +99,9 @@
   <div class="bg-white border border-gray-200 rounded-lg p-4 cursor-pointer relative group" onclick="openChartModal('budget')">
     <i class="ti ti-arrows-maximize text-gray-300 group-hover:text-gray-500 absolute top-4 right-4 text-sm"></i>
     <h2 class="text-sm font-medium text-gray-900 mb-3">Budget utilization</h2>
-    <canvas id="chart-budget" height="80"></canvas>
+    <div class="relative h-20">
+      <canvas id="chart-budget"></canvas>
+    </div>
   </div>
   {% endif %}
 
@@ -446,6 +452,7 @@ function closeChartModal() {
         }]
       },
       options: {
+        maintainAspectRatio: false,
         plugins: {
           legend: { position: "bottom", labels: { boxWidth: 10, font: { size: 11 } } },
           tooltip: {
@@ -479,6 +486,7 @@ function closeChartModal() {
         }]
       },
       options: {
+        maintainAspectRatio: false,
         plugins: {
           legend: { display: false },
           tooltip: {
@@ -517,6 +525,7 @@ function closeChartModal() {
         ]
       },
       options: {
+        maintainAspectRatio: false,
         plugins: {
           legend: { position: "bottom", labels: { boxWidth: 10, font: { size: 11 } } },
           tooltip: {

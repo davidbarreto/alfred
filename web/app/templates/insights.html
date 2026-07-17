@@ -187,7 +187,9 @@
         <div class="card-body p-4 cursor-pointer relative group" onclick="openChartModal('llm-model')">
           <i class="ti ti-arrows-maximize text-gray-300 group-hover:text-gray-500 absolute top-3 right-3 text-sm"></i>
           <p class="text-xs text-gray-400 uppercase tracking-wide mb-3 grow-0">By model</p>
-          <canvas id="chart-llm-model" height="180"></canvas>
+          <div class="relative h-44">
+            <canvas id="chart-llm-model"></canvas>
+          </div>
         </div>
         {% else %}
         <div class="card-body p-4">
@@ -203,7 +205,9 @@
         <div class="card-body p-4 cursor-pointer relative group" onclick="openChartModal('llm-feature')">
           <i class="ti ti-arrows-maximize text-gray-300 group-hover:text-gray-500 absolute top-3 right-3 text-sm"></i>
           <p class="text-xs text-gray-400 uppercase tracking-wide mb-3 grow-0">By feature</p>
-          <canvas id="chart-llm-feature" height="180"></canvas>
+          <div class="relative h-44">
+            <canvas id="chart-llm-feature"></canvas>
+          </div>
         </div>
         {% else %}
         <div class="card-body p-4">
@@ -219,7 +223,9 @@
         <div class="card-body p-4 cursor-pointer relative group" onclick="openChartModal('tokens-feature')">
           <i class="ti ti-arrows-maximize text-gray-300 group-hover:text-gray-500 absolute top-3 right-3 text-sm"></i>
           <p class="text-xs text-gray-400 uppercase tracking-wide mb-3 grow-0">Tokens by feature</p>
-          <canvas id="chart-tokens-feature" height="180"></canvas>
+          <div class="relative h-44">
+            <canvas id="chart-tokens-feature"></canvas>
+          </div>
         </div>
         {% else %}
         <div class="card-body p-4">
@@ -280,7 +286,9 @@
         <div class="card-body p-4 cursor-pointer relative group" onclick="openChartModal('provider-name')">
           <i class="ti ti-arrows-maximize text-gray-300 group-hover:text-gray-500 absolute top-3 right-3 text-sm"></i>
           <p class="text-xs text-gray-400 uppercase tracking-wide mb-3 grow-0">By provider</p>
-          <canvas id="chart-provider-name" height="180"></canvas>
+          <div class="relative h-44">
+            <canvas id="chart-provider-name"></canvas>
+          </div>
         </div>
         {% else %}
         <div class="card-body p-4">
@@ -296,7 +304,9 @@
         <div class="card-body p-4 cursor-pointer relative group" onclick="openChartModal('provider-status')">
           <i class="ti ti-arrows-maximize text-gray-300 group-hover:text-gray-500 absolute top-3 right-3 text-sm"></i>
           <p class="text-xs text-gray-400 uppercase tracking-wide mb-3 grow-0">By status</p>
-          <canvas id="chart-provider-status" height="180"></canvas>
+          <div class="relative h-44">
+            <canvas id="chart-provider-status"></canvas>
+          </div>
         </div>
         {% else %}
         <div class="card-body p-4">
@@ -312,7 +322,9 @@
         <div class="card-body p-4 cursor-pointer relative group" onclick="openChartModal('cmd-name')">
           <i class="ti ti-arrows-maximize text-gray-300 group-hover:text-gray-500 absolute top-3 right-3 text-sm"></i>
           <p class="text-xs text-gray-400 uppercase tracking-wide mb-3 grow-0">Commands</p>
-          <canvas id="chart-cmd-name" height="180"></canvas>
+          <div class="relative h-44">
+            <canvas id="chart-cmd-name"></canvas>
+          </div>
         </div>
         {% else %}
         <div class="card-body p-4">
@@ -468,6 +480,7 @@ function donut(id, data, key, title) {
       datasets: [{ data: vals, backgroundColor: colors, borderWidth: 0 }]
     },
     options: {
+      maintainAspectRatio: false,
       plugins: { legend: { position: "bottom", labels: { boxWidth: 10, font: { size: 11 } } } },
       cutout: "65%"
     }
@@ -484,6 +497,7 @@ function bar(id, data, key, title) {
       datasets: [{ data: vals, backgroundColor: "#378ADD", borderRadius: 4 }]
     },
     options: {
+      maintainAspectRatio: false,
       plugins: { legend: { display: false } },
       scales: {
         x: { grid: { display: false }, ticks: { font: { size: 10 } } },
@@ -508,6 +522,7 @@ function bar(id, data, key, title) {
       datasets: [{ data: Object.values(statusData), backgroundColor: statusColors, borderWidth: 0 }]
     },
     options: {
+      maintainAspectRatio: false,
       plugins: { legend: { position: "bottom", labels: { boxWidth: 10, font: { size: 11 } } } },
       cutout: "65%"
     }

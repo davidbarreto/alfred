@@ -4,6 +4,7 @@ from app.integrations.activobank.card_statement_parser import ActivoBankCardStat
 from app.integrations.activobank.statement_parser import ActivoBankStatementParser
 from app.integrations.banco_inter.fatura_parser import BancoInterFaturaParser
 from app.integrations.banco_inter.statement_parser import BancoInterStatementParser
+from app.integrations.coverflex.card_statement_parser import CoverflexCardStatementParser
 from app.integrations.nubank.card_statement_parser import NubankCardStatementParser
 from app.integrations.revolut.statement_parser import RevolutStatementParser
 from app.shared.statement import StatementParser
@@ -15,6 +16,7 @@ _PARSERS: dict[str, StatementParser] = {
         ActivoBankCardStatementParser(),
         BancoInterStatementParser(),
         BancoInterFaturaParser(),
+        CoverflexCardStatementParser(),
         NubankCardStatementParser(),
         RevolutStatementParser(),
     )

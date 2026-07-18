@@ -2,7 +2,7 @@
   "info": {
     "name": "Alfred - Briefing API",
     "_postman_id": "alfred-briefing-v1",
-    "description": "Morning briefing endpoints. Run: Health Check → Morning Briefing JSON → Morning Briefing Formatted → Formatted (Reused) → Formatted (Force Regenerate)",
+    "description": "Morning briefing and evening digest endpoints. Run: Health Check → Morning Briefing JSON → Morning Briefing Formatted → Formatted (Reused) → Formatted (Force Regenerate) → Evening Digest JSON → Evening Digest Formatted → Formatted (Reused) → Formatted (Force Regenerate)",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -193,6 +193,140 @@
           "raw": "{{base_url}}/briefing/morning/formatted?force=true",
           "host": ["{{base_url}}"],
           "path": ["briefing", "morning", "formatted"],
+          "query": [
+            { "key": "force", "value": "true" }
+          ]
+        }
+      }
+    },
+    {
+      "name": "06 - Evening Digest (JSON)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Has date field', () => {",
+              "    pm.expect(pm.response.json()).to.have.property('date');",
+              "});",
+              "pm.test('Has wins array', () => {",
+              "    pm.expect(pm.response.json().wins).to.be.an('array');",
+              "});",
+              "pm.test('Has tasks array', () => {",
+              "    pm.expect(pm.response.json().tasks).to.be.an('array');",
+              "});",
+              "pm.test('Task items have is_overdue flag', () => {",
+              "    const tasks = pm.response.json().tasks;",
+              "    tasks.forEach((t) => pm.expect(t).to.have.property('is_overdue'));",
+              "});",
+              "pm.test('Has tomorrow_events array', () => {",
+              "    pm.expect(pm.response.json().tomorrow_events).to.be.an('array');",
+              "});",
+              "pm.test('Has notes array', () => {",
+              "    pm.expect(pm.response.json().notes).to.be.an('array');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/briefing/evening",
+          "host": ["{{base_url}}"],
+          "path": ["briefing", "evening"]
+        }
+      }
+    },
+    {
+      "name": "07 - Evening Digest (Formatted Text)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Has date field', () => {",
+              "    pm.expect(pm.response.json()).to.have.property('date');",
+              "});",
+              "pm.test('Has text field', () => {",
+              "    pm.expect(pm.response.json()).to.have.property('text');",
+              "    pm.expect(pm.response.json().text).to.be.a('string');",
+              "    pm.expect(pm.response.json().text.length).to.be.above(0);",
+              "});",
+              "pm.test('Text has no markdown asterisks', () => {",
+              "    pm.expect(pm.response.json().text).to.not.include('**');",
+              "    pm.expect(pm.response.json().text).to.not.include('__');",
+              "});",
+              "pm.collectionVariables.set('evening_digest_text', pm.response.json().text);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/briefing/evening/formatted",
+          "host": ["{{base_url}}"],
+          "path": ["briefing", "evening", "formatted"]
+        }
+      }
+    },
+    {
+      "name": "08 - Evening Digest (Formatted, Reused Same Day)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Returns the saved digest text unchanged', () => {",
+              "    pm.expect(pm.response.json().text).to.eql(pm.collectionVariables.get('evening_digest_text'));",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/briefing/evening/formatted",
+          "host": ["{{base_url}}"],
+          "path": ["briefing", "evening", "formatted"]
+        }
+      }
+    },
+    {
+      "name": "09 - Evening Digest (Formatted, Force Regenerate)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Has non-empty text field', () => {",
+              "    pm.expect(pm.response.json().text).to.be.a('string');",
+              "    pm.expect(pm.response.json().text.length).to.be.above(0);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/briefing/evening/formatted?force=true",
+          "host": ["{{base_url}}"],
+          "path": ["briefing", "evening", "formatted"],
           "query": [
             { "key": "force", "value": "true" }
           ]

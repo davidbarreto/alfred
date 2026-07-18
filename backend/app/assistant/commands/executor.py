@@ -105,7 +105,9 @@ async def execute(
         return await handle_weather(command, arguments)
 
     if cmd_type == "assistant":
-        return await handle_assistant(command, arguments, task_service=task_service, event_service=event_service)
+        return await handle_assistant(
+            command, arguments, task_service=task_service, event_service=event_service, note_service=note_service,
+        )
 
     if cmd_type == "reminder":
         return await handle_reminder(command, arguments, task_service=task_service)

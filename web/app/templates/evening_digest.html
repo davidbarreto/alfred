@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% set active_page = "briefing" %}
+{% block title %}Evening Digest{% endblock %}
+
+{% block content %}
+<div class="p-6 space-y-5">
+
+  <div class="flex items-center justify-between">
+    <div>
+      <h1 class="text-base font-semibold text-gray-900">Evening Digest</h1>
+      {% if digest %}<p class="text-xs text-gray-400 mt-0.5">{{ digest.date }}</p>{% endif %}
+    </div>
+    <button
+      hx-get="/briefing/evening/formatted?force=true"
+      hx-target="#formatted-section"
+      hx-swap="innerHTML"
+      hx-indicator="#formatted-spinner"
+      class="btn btn-sm btn-primary gap-1"
+    >
+      <i class="ti ti-sparkles text-sm"></i>Generate summary
+    </button>
+  </div>
+
+  <div class="tabs tabs-boxed w-fit">
+    <a href="/briefing/" class="tab">Morning</a>
+    <span class="tab tab-active">Evening</span>
+  </div>
+
+  {% if api_error %}
+  <div class="rounded-lg bg-[#FCEBEB] border border-[#E24B4A]/20 px-4 py-2.5 text-sm text-[#E24B4A]">
+    <strong>Error:</strong> {{ api_error }}
+  </div>
+  {% endif %}
+
+  {% if digest %}
+
+  <!-- AI summary placeholder -->
+  <div class="card bg-white">
+    <div class="card-body p-4">
+      <div class="flex items-center justify-between mb-3">
+        <h2 class="text-sm font-medium text-gray-900">AI Summary</h2>
+        <span id="formatted-spinner" class="htmx-indicator text-xs text-gray-400">Generating…</span>
+      </div>
+      <div
+        id="formatted-section"
+        hx-get="/briefing/evening/formatted"
+        hx-trigger="load"
+        hx-swap="innerHTML"
+        hx-indicator="#formatted-spinner"
+      >
+        <p class="text-sm text-gray-400">Loading summary…</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Wins -->
+  <div class="card bg-white">
+    <div class="card-body p-4">
+      <h2 class="text-sm font-medium text-gray-900 mb-3"><i class="ti ti-confetti mr-1"></i>Completed today</h2>
+      {% if digest.wins %}
+      <ul class="space-y-2">
+        {% for win in digest.wins %}
+        <li class="flex items-center gap-2 text-sm">
+          <i class="ti ti-check text-[#639922]"></i>
+          <span class="text-gray-700">{{ win.title }}</span>
+        </li>
+        {% endfor %}
+      </ul>
+      {% else %}
+      <p class="text-sm text-gray-400">Nothing marked done today yet.</p>
+      {% endif %}
+    </div>
+  </div>
+
+  {% elif not api_error %}
+  <div class="card bg-white">
+    <div class="card-body p-4">
+      <p class="text-sm text-gray-400">No digest data available.</p>
+    </div>
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}

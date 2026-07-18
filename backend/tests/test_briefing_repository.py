@@ -32,7 +32,7 @@ class TestGetBriefingByDate:
         session.execute.return_value = _scalar_first(briefing)
 
         repo = BriefingRepository(session)
-        result = await repo.get_briefing_by_date(date(2026, 7, 10))
+        result = await repo.get_briefing_by_date(date(2026, 7, 10), "morning")
 
         assert result == briefing
         session.execute.assert_called_once()
@@ -42,7 +42,7 @@ class TestGetBriefingByDate:
         session.execute.return_value = _scalar_first(None)
 
         repo = BriefingRepository(session)
-        assert await repo.get_briefing_by_date(date(2026, 7, 10)) is None
+        assert await repo.get_briefing_by_date(date(2026, 7, 10), "morning") is None
 
 
 class TestUpsertBriefing:
@@ -52,12 +52,13 @@ class TestUpsertBriefing:
         session.add = MagicMock()
 
         repo = BriefingRepository(session)
-        result = await repo.upsert_briefing(date(2026, 7, 10), "Fresh text")
+        result = await repo.upsert_briefing(date(2026, 7, 10), "morning", "Fresh text")
 
         session.add.assert_called_once()
         added = session.add.call_args[0][0]
         assert isinstance(added, Briefing)
         assert added.date == date(2026, 7, 10)
+        assert added.type == "morning"
         assert added.text == "Fresh text"
         assert result is added
         session.flush.assert_called_once()
@@ -69,9 +70,21 @@ class TestUpsertBriefing:
         session.add = MagicMock()
 
         repo = BriefingRepository(session)
-        result = await repo.upsert_briefing(date(2026, 7, 10), "New text")
+        result = await repo.upsert_briefing(date(2026, 7, 10), "morning", "New text")
 
         session.add.assert_not_called()
         assert result is existing
         assert existing.text == "New text"
         session.flush.assert_called_once()
+
+    async def test_creates_separate_row_per_type(self):
+        session = _make_session()
+        session.execute.return_value = _scalar_first(None)
+        session.add = MagicMock()
+
+        repo = BriefingRepository(session)
+        result = await repo.upsert_briefing(date(2026, 7, 10), "evening", "Evening text")
+
+        added = session.add.call_args[0][0]
+        assert added.type == "evening"
+        assert result.type == "evening"

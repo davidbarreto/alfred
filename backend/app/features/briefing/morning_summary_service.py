@@ -30,7 +30,7 @@ _HOLIDAY_LOOKAHEAD_DAYS = 7
 _LOOKAHEAD_DAYS = 3
 
 
-class BriefingSummaryService:
+class MorningBriefingSummaryService:
     def __init__(
         self,
         session: AsyncSession,

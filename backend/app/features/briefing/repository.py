@@ -10,16 +10,16 @@ class BriefingRepository:
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
 
-    async def get_briefing_by_date(self, briefing_date: date) -> Briefing | None:
+    async def get_briefing_by_date(self, briefing_date: date, briefing_type: str) -> Briefing | None:
         result = await self._session.execute(
-            select(Briefing).where(Briefing.date == briefing_date)
+            select(Briefing).where(Briefing.date == briefing_date, Briefing.type == briefing_type)
         )
         return result.scalars().first()
 
-    async def upsert_briefing(self, briefing_date: date, text: str) -> Briefing:
-        briefing = await self.get_briefing_by_date(briefing_date)
+    async def upsert_briefing(self, briefing_date: date, briefing_type: str, text: str) -> Briefing:
+        briefing = await self.get_briefing_by_date(briefing_date, briefing_type)
         if briefing is None:
-            briefing = Briefing(date=briefing_date, text=text)
+            briefing = Briefing(date=briefing_date, type=briefing_type, text=text)
             self._session.add(briefing)
         else:
             briefing.text = text

@@ -27,8 +27,10 @@ from app.features.core.embeddings.service import EmbeddingService
 from app.features.core.chats.service import ChatService
 from app.features.core.memories.extraction_service import MemoryExtractionService
 from app.features.core.sessions.summary_service import SessionSummaryService
-from app.features.briefing.summary_service import BriefingSummaryService
-from app.features.briefing.formatter_service import BriefingFormatterService
+from app.features.briefing.morning_summary_service import MorningBriefingSummaryService
+from app.features.briefing.morning_formatter_service import MorningBriefingFormatterService
+from app.features.briefing.evening_summary_service import EveningDigestSummaryService
+from app.features.briefing.evening_formatter_service import EveningDigestFormatterService
 from app.features.core.reminders.service import ReminderService
 from app.features.briefing.weather_client import WeatherClient
 from app.features.briefing.holiday_client import GooglePublicHolidayClient
@@ -224,17 +226,23 @@ async def get_contacts_crud_service(session: AsyncSession = Depends(get_session)
     provider = GoogleContactsProvider(client, entity_type="contact") if client else None
     return ContactService(session=session, client=client, provider=provider)
 
-async def get_briefing_summary_service(session: AsyncSession = Depends(get_session)) -> BriefingSummaryService:
+async def get_morning_briefing_summary_service(session: AsyncSession = Depends(get_session)) -> MorningBriefingSummaryService:
     contact_service = await get_contact_service(session)
-    return BriefingSummaryService(
+    return MorningBriefingSummaryService(
         session=session,
         weather_client=get_weather_client(),
         holiday_client=get_holiday_client(),
         contact_service=contact_service,
     )
 
-def get_briefing_formatter_service(session: AsyncSession = Depends(get_session)) -> BriefingFormatterService:
-    return BriefingFormatterService(llm_provider=get_llm_provider(), session=session)
+def get_morning_briefing_formatter_service(session: AsyncSession = Depends(get_session)) -> MorningBriefingFormatterService:
+    return MorningBriefingFormatterService(llm_provider=get_llm_provider(), session=session)
+
+def get_evening_digest_summary_service(session: AsyncSession = Depends(get_session)) -> EveningDigestSummaryService:
+    return EveningDigestSummaryService(session=session)
+
+def get_evening_digest_formatter_service(session: AsyncSession = Depends(get_session)) -> EveningDigestFormatterService:
+    return EveningDigestFormatterService(llm_provider=get_llm_provider(), session=session)
 
 def get_reminder_service(session: AsyncSession = Depends(get_session)) -> ReminderService:
     return ReminderService(session=session, task_service=get_task_service(session))
@@ -324,8 +332,10 @@ LlmProviderDep = Annotated[LlmProvider, Depends(get_llm_provider)]
 ExtractionLlmProviderDep = Annotated[LlmProvider, Depends(get_extraction_llm_provider)]
 ContactServiceDep = Annotated[ContactService | None, Depends(get_contact_service)]
 ContactsCRUDServiceDep = Annotated[ContactService, Depends(get_contacts_crud_service)]
-BriefingSummaryServiceDep = Annotated[BriefingSummaryService, Depends(get_briefing_summary_service)]
-BriefingFormatterServiceDep = Annotated[BriefingFormatterService, Depends(get_briefing_formatter_service)]
+MorningBriefingSummaryServiceDep = Annotated[MorningBriefingSummaryService, Depends(get_morning_briefing_summary_service)]
+MorningBriefingFormatterServiceDep = Annotated[MorningBriefingFormatterService, Depends(get_morning_briefing_formatter_service)]
+EveningDigestSummaryServiceDep = Annotated[EveningDigestSummaryService, Depends(get_evening_digest_summary_service)]
+EveningDigestFormatterServiceDep = Annotated[EveningDigestFormatterService, Depends(get_evening_digest_formatter_service)]
 ReminderServiceDep = Annotated[ReminderService, Depends(get_reminder_service)]
 TrackServiceDep = Annotated[TrackService, Depends(get_track_service)]
 GrammarScopeServiceDep = Annotated[GrammarScopeService, Depends(get_grammar_scope_service)]

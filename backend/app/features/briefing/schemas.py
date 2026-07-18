@@ -85,6 +85,44 @@ class MorningBriefing(BaseModel):
     shopping: list[ShoppingBriefItem] = []
 
 
+class WinItem(BaseModel):
+    title: str
+
+
+class EveningTaskItem(BaseModel):
+    id: int
+    title: str
+    priority: str
+    urgency: str
+    deadline: datetime | None
+    tags: list[str]
+    is_overdue: bool
+
+
+class EveningEventItem(BaseModel):
+    id: int
+    title: str
+    date: date
+    start_time: str
+    end_time: str | None
+    location: str | None
+    all_day: bool
+
+
+class EveningNoteItem(BaseModel):
+    id: int
+    title: str
+    content: str
+
+
+class EveningDigest(BaseModel):
+    date: date
+    wins: list[WinItem]
+    tasks: list[EveningTaskItem]
+    tomorrow_events: list[EveningEventItem]
+    notes: list[EveningNoteItem]
+
+
 class FormattedBriefing(BaseModel):
     date: date
     text: str

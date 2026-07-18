@@ -15,6 +15,9 @@ from app.shared.timezone import local_now
 
 logger = logging.getLogger(__name__)
 
+_BRIEFING_TYPE = "morning"
+_HEADER = "☀️ Morning Briefing"
+
 
 def _build_context(briefing: MorningBriefing) -> str:
     lines = [f"Date: {briefing.date.strftime('%A, %d %B %Y')}"]
@@ -115,20 +118,24 @@ def _build_context(briefing: MorningBriefing) -> str:
         lines.append("")
         lines.append("Language practice:")
         for lang in active_language:
+            # due_count is the raw SRS backlog and can be huge (hundreds of cards);
+            # cap what's shown at daily_quota so the briefing reports today's goal,
+            # not the full backlog.
+            remaining = max(0, min(lang.due_count, lang.daily_quota) - lang.completed_today)
             if lang.quota_met:
                 lines.append(f"  {lang.name}: quota met ({lang.completed_today}/{lang.daily_quota} reviews done)")
             elif lang.completed_today > 0:
                 lines.append(
                     f"  {lang.name}: {lang.completed_today}/{lang.daily_quota} done, "
-                    f"{lang.due_count} still due"
+                    f"{remaining} more to hit today's goal"
                 )
             else:
-                lines.append(f"  {lang.name}: {lang.due_count} reviews due")
+                lines.append(f"  {lang.name}: {remaining} review(s) to hit today's goal")
 
     return "\n".join(lines)
 
 
-class BriefingFormatterService:
+class MorningBriefingFormatterService:
     def __init__(self, llm_provider: LlmProvider, session: AsyncSession) -> None:
         self._llm_provider = llm_provider
         self._session = session
@@ -137,7 +144,7 @@ class BriefingFormatterService:
     async def get_saved(self, briefing_date: date | None = None) -> FormattedBriefing | None:
         if briefing_date is None:
             briefing_date = local_now().date()
-        saved = await self._repo.get_briefing_by_date(briefing_date)
+        saved = await self._repo.get_briefing_by_date(briefing_date, _BRIEFING_TYPE)
         if saved is None:
             logger.debug("Saved briefing: date=%s not found", briefing_date)
             return None
@@ -152,7 +159,7 @@ class BriefingFormatterService:
         llm_response = await self._llm_provider.complete(messages, system=MORNING_BRIEFING_SYSTEM_PROMPT)
         latency_ms = int((time_module.monotonic() - t0) * 1000)
 
-        text = llm_response.text.strip()
+        text = f"{_HEADER}\n\n{llm_response.text.strip()}"
 
         await create_llm_call(
             self._session,
@@ -165,7 +172,7 @@ class BriefingFormatterService:
             tokens_output=llm_response.tokens_output,
             latency_ms=latency_ms,
         )
-        await self._repo.upsert_briefing(briefing.date, text)
+        await self._repo.upsert_briefing(briefing.date, _BRIEFING_TYPE, text)
         await self._session.commit()
         logger.info("Briefing formatted and saved: date=%s", briefing.date)
 

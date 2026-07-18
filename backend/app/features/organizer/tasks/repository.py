@@ -1,4 +1,4 @@
-from datetime import date, datetime, timezone
+from datetime import date, datetime, time, timedelta, timezone
 from sqlalchemy import and_, or_, select, update
 from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -92,6 +92,21 @@ class TaskRepository:
         )
         return result.scalars().one()
 
+    async def complete_task(self, task_id: int) -> Task | None:
+        task = await self.get_task(task_id)
+        if task is None:
+            return None
+
+        # completed_at is set by Task._sync_completed_at (SQLAlchemy @validates on
+        # status), so this stays in sync with any other path that closes a task too.
+        task.status = "DONE"
+
+        await self._session.commit()
+        result = await self._session.execute(
+            select(Task).options(selectinload(Task.tags)).where(Task.id == task_id)
+        )
+        return result.scalars().one()
+
     async def delete_task(self, task_id: int) -> None:
         await self._session.execute(
             update(Task)
@@ -146,6 +161,22 @@ class TaskRepository:
             select(TaskCompletion)
             .where(TaskCompletion.task_id == task_id)
             .order_by(TaskCompletion.occurrence_date.desc())
+        )
+        return list(result.scalars().all())
+
+    async def get_tasks_completed_on(self, for_date: date) -> list[Task]:
+        # completed_at-scoped, not id-ordered/limited like get_tasks(status="DONE") --
+        # a task done today can be arbitrarily old, so id-desc + limit would miss it.
+        start = datetime.combine(for_date, time.min)
+        end = start + timedelta(days=1)
+        result = await self._session.execute(
+            select(Task)
+            .options(selectinload(Task.tags))
+            .where(
+                Task.completed_at >= start,
+                Task.completed_at < end,
+                Task.deleted_at.is_(None),
+            )
         )
         return list(result.scalars().all())
 

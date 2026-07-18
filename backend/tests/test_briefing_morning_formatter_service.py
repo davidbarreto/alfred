@@ -3,7 +3,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from app.features.briefing.formatter_service import BriefingFormatterService, _build_context
+from app.features.briefing.morning_formatter_service import MorningBriefingFormatterService, _build_context
 from app.features.briefing.schemas import (
     BirthdayItem,
     EventBriefItem,
@@ -189,7 +189,17 @@ class TestBuildContext:
         context = _build_context(briefing)
         assert "Language practice" in context
         assert "Portuguese" in context
-        assert "7 reviews due" in context
+        assert "7 review(s) to hit today's goal" in context
+
+    def test_language_due_count_capped_at_quota(self):
+        lang = LanguageBriefItem(
+            track_id=1, code="ru", name="Russian",
+            due_count=353, completed_today=0, daily_quota=15, quota_met=False,
+        )
+        briefing = _make_briefing(language=[lang])
+        context = _build_context(briefing)
+        assert "353" not in context
+        assert "15 review(s) to hit today's goal" in context
 
     def test_language_partial_progress_in_context(self):
         lang = LanguageBriefItem(
@@ -199,7 +209,7 @@ class TestBuildContext:
         briefing = _make_briefing(language=[lang])
         context = _build_context(briefing)
         assert "3/10 done" in context
-        assert "5 still due" in context
+        assert "2 more to hit today's goal" in context
 
     def test_language_quota_met_in_context(self):
         lang = LanguageBriefItem(
@@ -257,7 +267,7 @@ class TestBuildContext:
         assert "in 5 days" in context
 
 
-class TestBriefingFormatterService:
+class TestMorningBriefingFormatterService:
     @pytest.fixture
     def mock_llm(self):
         provider = MagicMock()
@@ -276,22 +286,22 @@ class TestBriefingFormatterService:
 
     @pytest.fixture
     def service(self, mock_llm, mock_session):
-        svc = BriefingFormatterService(llm_provider=mock_llm, session=mock_session)
+        svc = MorningBriefingFormatterService(llm_provider=mock_llm, session=mock_session)
         svc._repo = AsyncMock()
         return svc
 
     @pytest.mark.asyncio
     async def test_returns_formatted_briefing(self, service):
-        with patch("app.features.briefing.formatter_service.create_llm_call", new_callable=AsyncMock):
+        with patch("app.features.briefing.morning_formatter_service.create_llm_call", new_callable=AsyncMock):
             result = await service.format(_make_briefing())
 
         assert isinstance(result, FormattedBriefing)
-        assert result.text == "Good morning! Here is your briefing."
+        assert result.text == "☀️ Morning Briefing\n\nGood morning! Here is your briefing."
         assert result.date == date(2026, 6, 23)
 
     @pytest.mark.asyncio
     async def test_logs_llm_call(self, service, mock_session):
-        with patch("app.features.briefing.formatter_service.create_llm_call", new_callable=AsyncMock) as mock_log:
+        with patch("app.features.briefing.morning_formatter_service.create_llm_call", new_callable=AsyncMock) as mock_log:
             await service.format(_make_briefing())
 
         mock_log.assert_called_once()
@@ -307,25 +317,25 @@ class TestBriefingFormatterService:
             tokens_output=5,
             finish_reason="STOP",
         )
-        with patch("app.features.briefing.formatter_service.create_llm_call", new_callable=AsyncMock):
+        with patch("app.features.briefing.morning_formatter_service.create_llm_call", new_callable=AsyncMock):
             result = await service.format(_make_briefing())
 
-        assert result.text == "Briefing text with spaces"
+        assert result.text == "☀️ Morning Briefing\n\nBriefing text with spaces"
 
     @pytest.mark.asyncio
     async def test_commits_session(self, service, mock_session):
-        with patch("app.features.briefing.formatter_service.create_llm_call", new_callable=AsyncMock):
+        with patch("app.features.briefing.morning_formatter_service.create_llm_call", new_callable=AsyncMock):
             await service.format(_make_briefing())
 
         mock_session.commit.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_saves_generated_text(self, service):
-        with patch("app.features.briefing.formatter_service.create_llm_call", new_callable=AsyncMock):
+        with patch("app.features.briefing.morning_formatter_service.create_llm_call", new_callable=AsyncMock):
             await service.format(_make_briefing())
 
         service._repo.upsert_briefing.assert_called_once_with(
-            date(2026, 6, 23), "Good morning! Here is your briefing."
+            date(2026, 6, 23), "morning", "☀️ Morning Briefing\n\nGood morning! Here is your briefing."
         )
 
     @pytest.mark.asyncio
@@ -335,7 +345,7 @@ class TestBriefingFormatterService:
         result = await service.get_saved(date(2026, 6, 23))
 
         assert result is None
-        service._repo.get_briefing_by_date.assert_called_once_with(date(2026, 6, 23))
+        service._repo.get_briefing_by_date.assert_called_once_with(date(2026, 6, 23), "morning")
 
     @pytest.mark.asyncio
     async def test_get_saved_returns_formatted_briefing(self, service):

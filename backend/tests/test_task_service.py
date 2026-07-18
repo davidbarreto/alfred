@@ -223,11 +223,11 @@ class TestCompleteTask:
     async def test_non_recurring_sets_status_done(self, service):
         task_orm = _make_task_orm(recurrence_rule=None)
         service._repo.get_task.return_value = task_orm
-        service._repo.update_task.return_value = _make_task_orm(status="DONE")
+        service._repo.complete_task.return_value = _make_task_orm(status="DONE")
 
         result = await service.complete_task(1)
 
-        service._repo.update_task.assert_called_once_with(1, TaskUpdate(status="DONE"))
+        service._repo.complete_task.assert_called_once_with(1)
         assert isinstance(result, TaskRead)
         assert result.status == "DONE"
 

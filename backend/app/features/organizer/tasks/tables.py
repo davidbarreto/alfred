@@ -1,7 +1,7 @@
 from sqlalchemy import Date, DateTime, ForeignKey, Integer, String, UniqueConstraint, func
-from sqlalchemy.orm import relationship, Mapped, mapped_column
+from sqlalchemy.orm import relationship, Mapped, mapped_column, validates
 from typing import Optional, List
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 
 from app.features.organizer.tags.tables import Tag
 from app.db.base import Base
@@ -22,6 +22,7 @@ class Task(Base):
     urgency: Mapped[str] = mapped_column(String(255), nullable=False)
     deadline: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
     recurrence_rule: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    completed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
@@ -40,6 +41,17 @@ class Task(Base):
         back_populates="task",
         cascade="all, delete-orphan",
     )
+
+    @validates("status")
+    def _sync_completed_at(self, key: str, value: str) -> str:
+        # Runs on every status write, not just TaskService.complete_task -- so a task
+        # closed via a plain field update (e.g. PATCH or /taskupdate -s DONE) still gets
+        # completed_at set, and reopening a DONE task clears the stale timestamp.
+        if value == "DONE" and self.status != "DONE":
+            self.completed_at = datetime.now(timezone.utc)
+        elif value != "DONE" and self.status == "DONE":
+            self.completed_at = None
+        return value
 
 
 class TaskCompletion(Base):

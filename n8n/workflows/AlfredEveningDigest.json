@@ -1,0 +1,74 @@
+{
+  "name": "AlfredEveningDigest",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 20 * * *"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [-320, 0],
+      "id": "f2f2f2f2-0001-4000-8000-000000000001",
+      "name": "Daily at 20:00"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "http://api:8000/briefing/evening/formatted",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBearerAuth",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [-80, 0],
+      "id": "f2f2f2f2-0002-4000-8000-000000000002",
+      "name": "Get Evening Digest",
+      "credentials": {
+        "httpBearerAuth": {
+          "id": "oj5Yf1MhLsryeSrX",
+          "name": "Bearer Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $env.TELEGRAM_CHAT_ID }}",
+        "text": "={{ $json.text }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [160, 0],
+      "id": "f2f2f2f2-0003-4000-8000-000000000003",
+      "name": "Send Message",
+      "webhookId": "f2f2f2f2-0003-4000-8000-000000000099",
+      "credentials": {
+        "telegramApi": {
+          "id": "t63z4EHeYTEZtFAR",
+          "name": "Telegram account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Daily at 20:00": {
+      "main": [[{ "node": "Get Evening Digest", "type": "main", "index": 0 }]]
+    },
+    "Get Evening Digest": {
+      "main": [[{ "node": "Send Message", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

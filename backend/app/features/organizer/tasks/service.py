@@ -120,7 +120,7 @@ class TaskService:
             return None
 
         if task.recurrence_rule is None:
-            task_orm = await self._repo.update_task(task_id, TaskUpdate(status="DONE"))
+            task_orm = await self._repo.complete_task(task_id)
             logger.info("Task completed (non-recurring): id=%d", task_id)
             result = TaskRead.model_validate(task_orm)
             result.is_done_today = True

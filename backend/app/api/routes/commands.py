@@ -21,6 +21,7 @@ from app.assistant.commands.schemas import (
 )
 from app.assistant.intents.extraction_service import extract_args
 from app.assistant.intents.intent_service import get_operation_type
+from app.assistant.prompts import RESPOND_SYSTEM_PROMPT
 from app.config import get_settings
 from app.api.auth import require_auth
 from app.dependencies import (
@@ -163,43 +164,6 @@ async def execute_command(
     )
 
 
-_RESPOND_SYSTEM = (
-    "You are Alfred, a helpful personal AI assistant. "
-    "Respond to the user about the executed command results in a natural, friendly tone. "
-    "Plain text only, no markdown. "
-    "Follow these guidelines based on the command name:\n"
-    "- task.pending: Enumerate the overdue tasks shown first, then the tasks due today shown, each with its id "
-    "(e.g. '#42'), title, priority, and deadline. If both lists are empty, say the user is all caught up.\n"
-    "- assistant.focus: Based on the tasks and today's events, recommend the single most important thing to focus on "
-    "right now. Be direct and actionable in 2-3 sentences.\n"
-    "- weather.current: Describe the conditions naturally and give practical advice (umbrella, coat, etc.). "
-    "If the result contains location_inferred=True, start with: 'I didn't recognize the place you asked about. "
-    "Here is the weather in <location>:' and then describe the conditions.\n"
-    "- task.search / recall.search: List each matching item with its id, content and relevance.\n"
-    "- note.list / note.search / task.list / event.list / finance.transaction_list / finance.budget_list / "
-    "shopping.list / wishlist.list: State the total item count, then list only the items actually provided to you "
-    "(id, title/name and one key detail each, not the full content). If the result says more items were not shown, "
-    "mention how many more there are — do not invent or list items you were not given.\n"
-    "- reminder.set: Confirm what was set and when, in one sentence.\n"
-    "- language.produce: Announce the production exercise in one short sentence (mention the language and "
-    "how many rounds are left via 'remaining'), then present the task from 'prompt_text' verbatim on its own "
-    "line. Do not answer the exercise yourself. If task_type is 'timed', add one sentence telling the user "
-    "to time themselves and send whatever they have written when the time is up. If task_type is 'speak' or "
-    "'retell', add one sentence telling the user to reply with a voice message (or type it if they prefer).\n"
-    "- language.stop: Confirm the practice session was stopped in one friendly sentence.\n"
-    "- finance.spending_report / finance.spending_average / finance.spending_top: State the amount, period, and "
-    "any notable breakdown clearly.\n"
-    "- For create/update/delete operations, confirm in 1 sentence.\n"
-    "- If a result is empty, say so clearly (e.g. 'You have no tasks right now' or 'Your calendar is clear').\n"
-    "- help.help with type='summary': Give a friendly overview of available command groups. For each group list "
-    "its main commands with a one-line description. End with a hint that the user can type /help <command> for "
-    "details on any specific command.\n"
-    "- help.help with type='command': Describe the command naturally in one sentence, then list all its aliases "
-    "on one line, then explain each flag (key and short/long forms) with its purpose. Be concise but complete.\n"
-    "- help.help with type='not_found': Say you couldn't find that command and suggest typing /help for the full list."
-)
-
-
 # Telegram rejects messages over 4096 chars; keep well under that after the LLM
 # wraps our summary in its own prose.
 _MAX_RESPONSE_CHARS = 3500
@@ -285,7 +249,7 @@ async def respond_to_commands(
     summary = "\n".join(lines)
     prompt_messages = [{"role": "user", "content": f"Commands executed:\n{summary}"}]
     t0 = time.monotonic()
-    llm_response = await llm_provider.complete(prompt_messages, system=_RESPOND_SYSTEM)
+    llm_response = await llm_provider.complete(prompt_messages, system=RESPOND_SYSTEM_PROMPT)
     latency_ms = int((time.monotonic() - t0) * 1000)
 
     await create_llm_call(
@@ -293,7 +257,7 @@ async def respond_to_commands(
         provider=llm_provider.provider,
         model=llm_provider.model,
         feature="command_respond",
-        prompt=[{"role": "system", "content": _RESPOND_SYSTEM}] + prompt_messages,
+        prompt=[{"role": "system", "content": RESPOND_SYSTEM_PROMPT}] + prompt_messages,
         response=llm_response.text,
         tokens_input=llm_response.tokens_input,
         tokens_output=llm_response.tokens_output,

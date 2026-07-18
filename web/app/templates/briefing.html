@@ -21,6 +21,11 @@
     </button>
   </div>
 
+  <div class="tabs tabs-boxed w-fit">
+    <span class="tab tab-active">Morning</span>
+    <a href="/briefing/evening" class="tab">Evening</a>
+  </div>
+
   {% if api_error %}
   <div class="rounded-lg bg-[#FCEBEB] border border-[#E24B4A]/20 px-4 py-2.5 text-sm text-[#E24B4A]">
     <strong>Error:</strong> {{ api_error }}

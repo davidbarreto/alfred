@@ -38,6 +38,7 @@ class TaskUpdate(BaseModel):
 class TaskRead(TaskBase):
     id: int
     created_at: datetime
+    completed_at: datetime | None = None
     is_done_today: bool = False
     streak: int | None = None
     total_completions: int | None = None

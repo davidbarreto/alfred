@@ -249,6 +249,57 @@ class TestUpdateTask:
         assert result == task
 
 
+class TestCompleteTask:
+    async def test_sets_status_done(self):
+        # completed_at itself is set by Task._sync_completed_at (a real SQLAlchemy
+        # @validates hook) -- see test_task_tables.py, since a MagicMock task here
+        # wouldn't run that validator.
+        session = _make_session()
+        task = _make_task_orm(status="TODO")
+        session.execute.side_effect = [_scalar_first(task), _scalar_one(task)]
+
+        repo = TaskRepository(session)
+        result = await repo.complete_task(1)
+
+        assert task.status == "DONE"
+        session.commit.assert_called_once()
+        assert result == task
+
+    async def test_not_found(self):
+        session = _make_session()
+        session.execute.return_value = _scalar_first(None)
+
+        repo = TaskRepository(session)
+        result = await repo.complete_task(999)
+
+        assert result is None
+        session.commit.assert_not_called()
+
+
+class TestGetTasksCompletedOn:
+    async def test_returns_matching_tasks(self):
+        from datetime import date
+        session = _make_session()
+        tasks = [_make_task_orm(id=1), _make_task_orm(id=2)]
+        session.execute.return_value = _scalar_all(tasks)
+
+        repo = TaskRepository(session)
+        result = await repo.get_tasks_completed_on(date(2026, 7, 18))
+
+        assert result == tasks
+        session.execute.assert_called_once()
+
+    async def test_empty_when_none_completed(self):
+        from datetime import date
+        session = _make_session()
+        session.execute.return_value = _scalar_all([])
+
+        repo = TaskRepository(session)
+        result = await repo.get_tasks_completed_on(date(2026, 7, 18))
+
+        assert result == []
+
+
 class TestDeleteTask:
     async def test_soft_delete_issues_update(self):
         session = _make_session()

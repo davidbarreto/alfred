@@ -13,6 +13,7 @@ from app.features.organizer.calendar_events.service import CalendarEventService
 from app.features.organizer.shopping.service import ShoppingService
 from app.features.finance.accounts.service import AccountService
 from app.features.finance.categories.service import CategoryService
+from app.features.finance.currencies.service import CurrencyService
 from app.features.finance.transactions.service import TransactionService
 from app.features.finance.imports.service import ImportService
 from app.features.finance.imports.registry import all_parsers
@@ -110,6 +111,9 @@ def get_account_service(session: AsyncSession = Depends(get_session)) -> Account
 
 def get_category_service(session: AsyncSession = Depends(get_session)) -> CategoryService:
     return CategoryService(session)
+
+def get_currency_service(session: AsyncSession = Depends(get_session)) -> CurrencyService:
+    return CurrencyService(session)
 
 def get_transaction_service(session: AsyncSession = Depends(get_session)) -> TransactionService:
     return TransactionService(session)
@@ -316,6 +320,7 @@ NoteServiceDep = Annotated[NoteService, Depends(get_note_service)]
 CalendarEventServiceDep = Annotated[CalendarEventService, Depends(get_calendar_event_service)]
 AccountServiceDep = Annotated[AccountService, Depends(get_account_service)]
 CategoryServiceDep = Annotated[CategoryService, Depends(get_category_service)]
+CurrencyServiceDep = Annotated[CurrencyService, Depends(get_currency_service)]
 TransactionServiceDep = Annotated[TransactionService, Depends(get_transaction_service)]
 ImportServiceDep = Annotated[ImportService, Depends(get_import_service)]
 BudgetServiceDep = Annotated[BudgetService, Depends(get_budget_service)]

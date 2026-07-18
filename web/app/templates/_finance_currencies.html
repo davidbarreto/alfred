@@ -1,0 +1,18 @@
+{% if currencies %}
+<ul class="divide-y divide-gray-100">
+  {% for cur in currencies %}
+  <li class="flex items-center justify-between py-2 text-sm" id="currency-{{ cur.code }}">
+    <span class="text-gray-800">{{ cur.code }}{% if cur.symbol %} ({{ cur.symbol }}){% endif %}{% if cur.name %} · {{ cur.name }}{% endif %}</span>
+    <button
+      class="text-gray-300 hover:text-[#E24B4A] transition-colors"
+      hx-delete="/finance/currencies/{{ cur.code }}"
+      hx-target="#currencies-list"
+      hx-confirm="Delete currency '{{ cur.code }}'?"
+      title="Delete"
+    ><i class="ti ti-trash text-base"></i></button>
+  </li>
+  {% endfor %}
+</ul>
+{% else %}
+<p class="text-sm text-gray-400 py-3 text-center">No currencies yet.</p>
+{% endif %}

@@ -40,6 +40,14 @@ def _pagination(items: list, offset: int) -> tuple[list, bool, bool]:
     return items[:_PAGE_SIZE], has_next, offset > 0
 
 
+async def _currency_symbols() -> dict[str, str]:
+    try:
+        currencies = await api.get("/finance/currencies")
+    except httpx.HTTPError:
+        return {}
+    return {c["code"]: c["symbol"] for c in currencies if c.get("symbol")}
+
+
 async def _txn_list_context(filters: dict, offset: int) -> dict:
     try:
         raw = await api.get("/finance/transactions", params=_build_txn_params(filters, offset))
@@ -65,6 +73,7 @@ async def _txn_list_context(filters: dict, offset: int) -> dict:
         "accounts": txn_accounts,
         "categories_by_id": {c["id"]: c["name"] for c in categories},
         "accounts_by_id": {a["id"]: a["name"] for a in txn_accounts},
+        "currency_symbols": await _currency_symbols(),
         "query_filters": filters,
         "query_offset": offset,
         "page_size": _PAGE_SIZE,
@@ -72,7 +81,6 @@ async def _txn_list_context(filters: dict, offset: int) -> dict:
     }
 
 
-_CURRENCY_SYMBOLS = {"EUR": "€", "BRL": "R$", "USD": "$", "GBP": "£"}
 _MONTH_GROUPING_THRESHOLD_DAYS = 60
 
 
@@ -123,6 +131,7 @@ async def _dashboard_txn_list_context(range_params: dict, currency: str) -> dict
         "transactions": transactions,
         "categories_by_id": {c["id"]: c["name"] for c in categories},
         "accounts_by_id": {a["id"]: a["name"] for a in txn_accounts},
+        "currency_symbols": await _currency_symbols(),
     }
 
 
@@ -137,7 +146,7 @@ async def finance_page(request: Request):
     currency = _resolve_currency(request)
 
     spending, by_category, transactions, budgets, all_txns = None, None, [], [], []
-    accounts, categories, recurring, all_budgets, errors = [], [], [], [], []
+    accounts, categories, currencies, recurring, all_budgets, errors = [], [], [], [], [], []
 
     try:
         accounts = await api.get("/finance/accounts", params={"is_active": "true"})
@@ -146,6 +155,11 @@ async def finance_page(request: Request):
 
     try:
         categories = await api.get("/finance/categories")
+    except httpx.HTTPError:
+        pass
+
+    try:
+        currencies = await api.get("/finance/currencies")
     except httpx.HTTPError:
         pass
 
@@ -232,6 +246,8 @@ async def finance_page(request: Request):
         if b.get("category_name")
     }
 
+    currency_symbols = {c["code"]: c["symbol"] for c in currencies if c.get("symbol")}
+
     return templates.TemplateResponse(request, "finance.html", {
         "spending": spending,
         "category_items": category_items,
@@ -252,10 +268,12 @@ async def finance_page(request: Request):
         "time_label": "Month" if group_by_month else "Day",
         "accounts": accounts,
         "categories": categories,
+        "currencies": currencies,
         "recurring": recurring,
         "all_budgets": budgets,
         "currency": currency,
-        "currency_symbol": _CURRENCY_SYMBOLS.get(currency, currency + " "),
+        "currency_symbol": currency_symbols.get(currency, currency + " "),
+        "currency_symbols": currency_symbols,
         "account_currencies": sorted({a["currency"] for a in accounts} | {"EUR"}),
     })
 
@@ -479,6 +497,46 @@ async def delete_category(category_id: int, request: Request):
     except httpx.HTTPError:
         pass
     return templates.TemplateResponse(request, "_finance_categories.html", {"categories": categories})
+
+
+# --- Currencies ---
+
+@router.post("/currencies", response_class=HTMLResponse)
+async def create_currency(
+    request: Request,
+    code: Annotated[str, Form()],
+    symbol: Annotated[str, Form()] = "",
+    name: Annotated[str, Form()] = "",
+):
+    try:
+        await api.post(
+            "/finance/currencies",
+            json={"code": code, "symbol": symbol or None, "name": name or None},
+        )
+    except httpx.HTTPError:
+        return HTMLResponse('<p class="text-[#E24B4A] text-sm">Failed to create currency.</p>', status_code=422)
+
+    currencies = []
+    try:
+        currencies = await api.get("/finance/currencies")
+    except httpx.HTTPError:
+        pass
+    return templates.TemplateResponse(request, "_finance_currencies.html", {"currencies": currencies})
+
+
+@router.delete("/currencies/{code}", response_class=HTMLResponse)
+async def delete_currency(code: str, request: Request):
+    try:
+        await api.delete(f"/finance/currencies/{code}")
+    except httpx.HTTPError:
+        return HTMLResponse('<p class="text-[#E24B4A] text-sm">Failed to delete currency.</p>', status_code=422)
+
+    currencies = []
+    try:
+        currencies = await api.get("/finance/currencies")
+    except httpx.HTTPError:
+        pass
+    return templates.TemplateResponse(request, "_finance_currencies.html", {"currencies": currencies})
 
 
 # --- Budgets ---

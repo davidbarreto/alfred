@@ -33,6 +33,7 @@ from app.api.routes.organizer.contacts import router as contacts_router
 from app.api.routes.organizer.shopping import shopping_router, wishlist_router, recurrence_router
 from app.api.routes.finance.accounts import router as finance_accounts_router
 from app.api.routes.finance.categories import router as finance_categories_router
+from app.api.routes.finance.currencies import router as finance_currencies_router
 from app.api.routes.finance.transactions import router as finance_transactions_router
 from app.api.routes.finance.budgets import router as finance_budgets_router
 from app.api.routes.finance.recurring_transactions import router as finance_recurring_router
@@ -109,6 +110,7 @@ app.include_router(wishlist_router)
 app.include_router(recurrence_router)
 app.include_router(finance_accounts_router)
 app.include_router(finance_categories_router)
+app.include_router(finance_currencies_router)
 app.include_router(finance_transactions_router)
 app.include_router(finance_budgets_router)
 app.include_router(finance_recurring_router)

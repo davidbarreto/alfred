@@ -16,7 +16,7 @@
       </div>
     </div>
     <span class="text-sm font-medium {% if txn.type == 'income' %}text-[#639922]{% elif txn.type == 'transfer' %}text-gray-500{% else %}text-[#E24B4A]{% endif %} flex-shrink-0">
-      {% if txn.type == 'income' %}+{% elif txn.type == 'expense' %}-{% endif %}{{ "R$" if txn.currency == "BRL" else ("$" if txn.currency == "USD" else "€") }}{{ "%.2f"|format(txn.amount | float | abs) }}
+      {% if txn.type == 'income' %}+{% elif txn.type == 'expense' %}-{% endif %}{{ currency_symbols.get(txn.currency, txn.currency + " ") }}{{ "%.2f"|format(txn.amount | float | abs) }}
     </span>
     <button
       class="text-gray-300 hover:text-[#378ADD] opacity-0 group-hover:opacity-100 transition-all flex-shrink-0"

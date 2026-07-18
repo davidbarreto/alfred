@@ -426,6 +426,204 @@
       ]
     },
     {
+      "name": "Currencies",
+      "item": [
+        {
+          "name": "01 - Create Currency",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+                  "pm.test('Response has code and saves it', () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.code).to.eql('PLN');",
+                  "    pm.expect(json.symbol).to.eql('zł');",
+                  "    pm.environment.set('finance_currency_code', json.code);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"PLN\",\n  \"symbol\": \"zł\",\n  \"name\": \"Polish Zloty\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/finance/currencies/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "finance",
+                "currencies",
+                ""
+              ]
+            }
+          }
+        },
+        {
+          "name": "02 - List Currencies",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Response is an array with at least one currency', () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.be.an('array');",
+                  "    pm.expect(json.length).to.be.at.least(1);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/finance/currencies/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "finance",
+                "currencies",
+                ""
+              ]
+            }
+          }
+        },
+        {
+          "name": "03 - Get Currency",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Response matches created currency', () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.code).to.eql(pm.environment.get('finance_currency_code'));",
+                  "    pm.expect(json.name).to.eql('Polish Zloty');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/finance/currencies/{{finance_currency_code}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "finance",
+                "currencies",
+                "{{finance_currency_code}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "04 - Update Currency",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Name was updated', () => {",
+                  "    pm.expect(pm.response.json().name).to.eql('Polish Złoty');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Polish Złoty\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/finance/currencies/{{finance_currency_code}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "finance",
+                "currencies",
+                "{{finance_currency_code}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "05 - Delete Currency",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 204', () => pm.response.to.have.status(204));",
+                  "pm.environment.unset('finance_currency_code');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/finance/currencies/{{finance_currency_code}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "finance",
+                "currencies",
+                "{{finance_currency_code}}"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
       "name": "Transactions",
       "item": [
         {

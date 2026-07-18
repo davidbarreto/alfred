@@ -1,10 +1,10 @@
 import httpx
 
 
-def _txn(id=1, merchant="Continente", amount="30.00", type="expense", category_id=None, account_id=1):
+def _txn(id=1, merchant="Continente", amount="30.00", type="expense", category_id=None, account_id=1, currency="EUR"):
     return {
         "id": id, "account_id": account_id, "date": "2026-07-14T22:35:14",
-        "amount": amount, "currency": "EUR", "type": type,
+        "amount": amount, "currency": currency, "type": type,
         "category_id": category_id, "description": None, "merchant": merchant,
         "source": None, "created_at": "2026-07-14T22:35:14",
     }
@@ -24,6 +24,7 @@ class TestTransactionsPage:
             [_txn(id=1, merchant="Continente")],
             [_category()],
             [_account()],
+            [],
         ]
 
         resp = client.get("/finance/transactions")
@@ -38,7 +39,7 @@ class TestTransactionsPage:
         assert resp.headers["location"].startswith("/login")
 
     def test_type_filter_passed_to_api(self, client, mock_api):
-        mock_api["get"].side_effect = [[], [], []]
+        mock_api["get"].side_effect = [[], [], [], []]
 
         client.get("/finance/transactions?type=income")
 
@@ -47,7 +48,7 @@ class TestTransactionsPage:
         assert txn_call.kwargs["params"]["type"] == "income"
 
     def test_merchant_filter_passed_to_api(self, client, mock_api):
-        mock_api["get"].side_effect = [[], [], []]
+        mock_api["get"].side_effect = [[], [], [], []]
 
         client.get("/finance/transactions?merchant=Continente")
 
@@ -56,7 +57,7 @@ class TestTransactionsPage:
         assert txn_call.kwargs["params"]["merchant"] == "Continente"
 
     def test_offset_passed_to_api(self, client, mock_api):
-        mock_api["get"].side_effect = [[], [], []]
+        mock_api["get"].side_effect = [[], [], [], []]
 
         client.get("/finance/transactions?offset=20")
 
@@ -71,6 +72,7 @@ class TestTransactionsListFragment:
             [_txn(id=i) for i in range(21)],
             [],
             [],
+            [],
         ]
 
         resp = client.get("/finance/transactions/list")
@@ -79,7 +81,7 @@ class TestTransactionsListFragment:
         assert "changeTxnPage(1)" in resp.text
 
     def test_no_pagination_footer_for_short_list(self, client, mock_api):
-        mock_api["get"].side_effect = [[_txn(id=1)], [], []]
+        mock_api["get"].side_effect = [[_txn(id=1)], [], [], []]
 
         resp = client.get("/finance/transactions/list")
 
@@ -87,16 +89,29 @@ class TestTransactionsListFragment:
         assert "changeTxnPage(1)" not in resp.text
 
     def test_empty_state_message(self, client, mock_api):
-        mock_api["get"].side_effect = [[], [], []]
+        mock_api["get"].side_effect = [[], [], [], []]
 
         resp = client.get("/finance/transactions/list")
 
         assert "No transactions match these filters" in resp.text
 
+    def test_uses_symbol_for_non_major_currency(self, client, mock_api):
+        async def fake_get(path, params=None):
+            if path == "/finance/transactions":
+                return [_txn(id=1, currency="PLN")]
+            if path == "/finance/currencies":
+                return [{"code": "PLN", "symbol": "zł", "name": "Polish Zloty"}]
+            return []
+        mock_api["get"].side_effect = fake_get
+
+        resp = client.get("/finance/transactions/list")
+
+        assert "zł" in resp.text
+
 
 class TestDeleteTransaction:
     def test_delete_with_offset_renders_list_partial(self, client, mock_api):
-        mock_api["get"].side_effect = [[_txn(id=2)], [], []]
+        mock_api["get"].side_effect = [[_txn(id=2)], [], [], []]
 
         resp = client.delete("/finance/transactions/1?offset=0")
 
@@ -130,6 +145,13 @@ class TestFinanceDashboardCurrency:
             calls.append((path, params or {}))
             if path == "/finance/accounts":
                 return accounts
+            if path == "/finance/currencies":
+                return [
+                    {"code": "EUR", "symbol": "€", "name": "Euro"},
+                    {"code": "BRL", "symbol": "R$", "name": "Brazilian Real"},
+                    {"code": "USD", "symbol": "$", "name": "US Dollar"},
+                    {"code": "GBP", "symbol": "£", "name": "British Pound"},
+                ]
             return []
         return fake
 
@@ -626,14 +648,14 @@ class TestBulkMoveTransactions:
 
 class TestTransactionsPageBulkMoveButton:
     def test_shown_when_account_filter_set(self, client, mock_api):
-        mock_api["get"].side_effect = [[], [_account()], []]
+        mock_api["get"].side_effect = [[], [_account()], [], []]
 
         resp = client.get("/finance/transactions?account_id=1")
 
         assert "Move to account" in resp.text
 
     def test_hidden_without_account_filter(self, client, mock_api):
-        mock_api["get"].side_effect = [[], [], []]
+        mock_api["get"].side_effect = [[], [], [], []]
 
         resp = client.get("/finance/transactions")
 

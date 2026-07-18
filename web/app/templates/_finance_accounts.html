@@ -17,7 +17,7 @@
       class="text-gray-300 hover:text-[#E24B4A] transition-colors"
       hx-delete="/finance/accounts/{{ acc.id }}"
       hx-target="#accounts-list"
-      hx-confirm="Delete account '{{ acc.name }}'? This cannot be undone."
+      hx-confirm="Delete account '{{ acc.name }}'? This cannot be undone. Accounts with transactions can't be deleted — deactivate them instead."
       title="Delete"
     ><i class="ti ti-trash text-base"></i></button>
   </li>

@@ -1,5 +1,6 @@
 import logging
 
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.features.finance.accounts.repository import AccountRepository
@@ -9,14 +10,29 @@ from app.features.finance.accounts.schemas import (
     AccountRead,
     AccountUpdate,
 )
+from app.features.finance.transactions.repository import TransactionRepository
 
 logger = logging.getLogger(__name__)
+
+
+class AccountDeletionBlockedError(Exception):
+    """Raised when an account can't be deleted because other rows still reference it
+    (transactions, recurring transactions, or import batches -- all RESTRICT, not CASCADE,
+    specifically so a delete can never silently destroy financial history)."""
+
+    def __init__(self, account_id: int, transaction_count: int) -> None:
+        self.account_id = account_id
+        self.transaction_count = transaction_count
+        super().__init__(
+            f"Account {account_id} cannot be deleted: {transaction_count} transaction(s) reference it"
+        )
 
 
 class AccountService:
 
     def __init__(self, session: AsyncSession) -> None:
         self._repo = AccountRepository(session)
+        self._txn_repo = TransactionRepository(session)
 
     async def get(self, account_id: int) -> AccountRead | None:
         account = await self._repo.get(account_id)
@@ -42,9 +58,18 @@ class AccountService:
         return AccountRead.model_validate(account)
 
     async def delete(self, account_id: int) -> bool:
-        deleted = await self._repo.delete(account_id)
-        if deleted:
-            logger.info("Account deleted: id=%d", account_id)
-        else:
+        account = await self._repo.get(account_id)
+        if account is None:
             logger.debug("Account delete: id=%d not found", account_id)
-        return deleted
+            return False
+        try:
+            await self._repo.delete(account_id)
+        except IntegrityError:
+            transaction_count = await self._txn_repo.count_by_account(account_id)
+            logger.warning(
+                "Account delete blocked: id=%d name=%r transaction_count=%d",
+                account_id, account.name, transaction_count,
+            )
+            raise AccountDeletionBlockedError(account_id, transaction_count)
+        logger.info("Account deleted: id=%d name=%r", account_id, account.name)
+        return True

@@ -13,7 +13,7 @@ class ImportBatch(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
     account_id: Mapped[int] = mapped_column(
-        Integer, ForeignKey("finance.accounts.id", ondelete="CASCADE"), nullable=False
+        Integer, ForeignKey("finance.accounts.id", ondelete="RESTRICT"), nullable=False
     )
     provider: Mapped[str] = mapped_column(String(50), nullable=False)
     source_file: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)

@@ -1,4 +1,5 @@
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.features.finance.accounts.tables import Account
@@ -47,5 +48,9 @@ class AccountRepository:
         if account is None:
             return False
         await self._session.delete(account)
-        await self._session.commit()
+        try:
+            await self._session.commit()
+        except IntegrityError:
+            await self._session.rollback()
+            raise
         return True

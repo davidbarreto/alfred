@@ -497,3 +497,43 @@ class TestFinanceSessionPersistence:
         report_call = next(p for path, p in calls if path == "/finance/transactions/report")
         assert report_call["period"] == "this month"
         assert report_call["currency"] == "EUR"
+
+
+class TestDeleteAccount:
+    def _http_status_error(self, detail: str) -> httpx.HTTPStatusError:
+        request = httpx.Request("DELETE", "http://backend/finance/accounts/1")
+        response = httpx.Response(409, json={"detail": detail}, request=request)
+        return httpx.HTTPStatusError("Conflict", request=request, response=response)
+
+    def test_surfaces_transaction_count_from_api(self, client, mock_api):
+        mock_api["delete"].side_effect = self._http_status_error(
+            "Cannot delete this account: it still has 187 transaction(s). "
+            "Deactivate the account instead, or delete its transactions first."
+        )
+        mock_api["get"].return_value = []
+
+        resp = client.delete("/finance/accounts/1")
+
+        assert resp.status_code == 422
+        assert "187 transaction(s)" in resp.text
+
+    def test_generic_error_when_response_not_json(self, client, mock_api):
+        request = httpx.Request("DELETE", "http://backend/finance/accounts/1")
+        response = httpx.Response(409, content=b"not json", request=request)
+        mock_api["delete"].side_effect = httpx.HTTPStatusError(
+            "Conflict", request=request, response=response
+        )
+
+        resp = client.delete("/finance/accounts/1")
+
+        assert resp.status_code == 422
+        assert "Failed to delete account" in resp.text
+
+    def test_successful_delete_refreshes_list(self, client, mock_api):
+        mock_api["delete"].return_value = None
+        mock_api["get"].return_value = []
+
+        resp = client.delete("/finance/accounts/1")
+
+        assert resp.status_code == 200
+        mock_api["delete"].assert_awaited_once_with("/finance/accounts/1")

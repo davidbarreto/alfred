@@ -1,6 +1,7 @@
 import pytest
 from decimal import Decimal
 from unittest.mock import AsyncMock, MagicMock
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.features.finance.accounts.repository import AccountRepository
 from app.features.finance.accounts.schemas import AccountCreate, AccountUpdate, AccountFilters
@@ -134,3 +135,15 @@ class TestDelete:
         assert result is True
         session.delete.assert_called_once_with(account)
         session.commit.assert_called_once()
+
+    async def test_rolls_back_and_reraises_on_integrity_error(self):
+        session = _make_session()
+        account = _make_account_orm()
+        session.execute.return_value = _scalar_first(account)
+        session.commit.side_effect = IntegrityError("", "", Exception("fk violation"))
+        repo = AccountRepository(session)
+
+        with pytest.raises(IntegrityError):
+            await repo.delete(1)
+
+        session.rollback.assert_awaited_once()

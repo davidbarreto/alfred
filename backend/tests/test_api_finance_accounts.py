@@ -3,6 +3,7 @@ from decimal import Decimal
 from fastapi.testclient import TestClient
 from unittest.mock import AsyncMock
 from app.features.finance.accounts.schemas import AccountRead
+from app.features.finance.accounts.service import AccountDeletionBlockedError
 
 AUTH = {"Authorization": "Bearer test-api-token"}
 
@@ -127,3 +128,15 @@ class TestDeleteAccount:
     def test_service_called_with_correct_id(self, client, mock_service):
         client.delete("/finance/accounts/42", headers=AUTH)
         mock_service.delete.assert_called_once_with(42)
+
+    def test_blocked_by_transactions_returns_409_with_count(self, client, mock_service):
+        mock_service.delete.side_effect = AccountDeletionBlockedError(1, 187)
+        response = client.delete("/finance/accounts/1", headers=AUTH)
+        assert response.status_code == 409
+        assert "187" in response.json()["detail"]
+
+    def test_blocked_by_other_records_returns_409_generic_message(self, client, mock_service):
+        mock_service.delete.side_effect = AccountDeletionBlockedError(1, 0)
+        response = client.delete("/finance/accounts/1", headers=AUTH)
+        assert response.status_code == 409
+        assert "recurring" in response.json()["detail"].lower()

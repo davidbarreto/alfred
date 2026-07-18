@@ -71,6 +71,12 @@ class TransactionRepository:
         self._session.add(transaction)
         return transaction
 
+    async def count_by_account(self, account_id: int) -> int:
+        result = await self._session.execute(
+            select(func.count(Transaction.id)).where(Transaction.account_id == account_id)
+        )
+        return result.scalar_one()
+
     async def exists_by_dedup_hash(self, dedup_hash: str) -> bool:
         result = await self._session.execute(
             select(Transaction.id).where(Transaction.deduplication_hash == dedup_hash)

@@ -401,6 +401,12 @@ async def create_account(
 async def delete_account(account_id: int, request: Request):
     try:
         await api.delete(f"/finance/accounts/{account_id}")
+    except httpx.HTTPStatusError as exc:
+        try:
+            detail = exc.response.json().get("detail") or "Failed to delete account."
+        except ValueError:
+            detail = "Failed to delete account."
+        return HTMLResponse(f'<p class="text-[#E24B4A] text-sm">{detail}</p>', status_code=422)
     except httpx.HTTPError:
         return HTMLResponse('<p class="text-[#E24B4A] text-sm">Failed to delete account.</p>', status_code=422)
 

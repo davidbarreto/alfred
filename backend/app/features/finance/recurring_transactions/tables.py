@@ -17,7 +17,7 @@ class RecurringTransaction(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
     account_id: Mapped[int] = mapped_column(
-        Integer, ForeignKey("finance.accounts.id", ondelete="CASCADE"), nullable=False
+        Integer, ForeignKey("finance.accounts.id", ondelete="RESTRICT"), nullable=False
     )
     category_id: Mapped[Optional[int]] = mapped_column(
         Integer, ForeignKey("finance.categories.id", ondelete="SET NULL"), nullable=True

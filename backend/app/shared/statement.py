@@ -36,7 +36,13 @@ class ParsedRow:
     raw_description: str
     amount: Decimal
     balance_after: Decimal | None = None
-    flag_for_review: bool = False
+    suggested_type: str | None = None
+    """Overrides the default sign-based expense/income inference, e.g. "transfer" for a
+    structurally-known transfer (a bank's own Type column), when the parser can be certain."""
+    flag_reason: str | None = None
+    """Set when the parser wants this row flagged for review regardless of category
+    confidence (e.g. "redated_installment", "uncertain_transfer"). Surfaced to the user
+    as a ReviewReason by the import service."""
 
 
 @dataclass

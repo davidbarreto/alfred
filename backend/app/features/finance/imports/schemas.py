@@ -9,7 +9,9 @@ from app.features.finance.transactions.schemas import TransactionType
 RuleMode = Literal["auto", "suggest"]
 SuggestionSource = Literal["rule_auto", "rule_suggest", "knn", "llm"]
 RowStatus = Literal["new", "duplicate"]
-ReviewReason = Literal["uncategorized", "rule_suggested", "ai_suggested", "redated_installment"]
+ReviewReason = Literal[
+    "uncategorized", "rule_suggested", "ai_suggested", "redated_installment", "uncertain_transfer"
+]
 
 
 class ImportRuleCreate(BaseModel):

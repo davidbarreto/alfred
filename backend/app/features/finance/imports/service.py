@@ -160,9 +160,9 @@ class ImportService:
             row.review_reasons = reasons
             row.needs_review = bool(reasons)
         for preview_row, parsed_row in zip(rows, statement.rows):
-            if parsed_row.flag_for_review and preview_row.status == "new":
-                if "redated_installment" not in preview_row.review_reasons:
-                    preview_row.review_reasons.append("redated_installment")
+            if parsed_row.flag_reason and preview_row.status == "new":
+                if parsed_row.flag_reason not in preview_row.review_reasons:
+                    preview_row.review_reasons.append(parsed_row.flag_reason)
                 preview_row.needs_review = True
 
         return ImportPreviewResponse(
@@ -218,7 +218,7 @@ class ImportService:
                     bank_description=parsed_row.raw_description,
                     amount=parsed_row.amount,
                     balance_after=parsed_row.balance_after,
-                    type="expense" if parsed_row.amount < 0 else "income",
+                    type=parsed_row.suggested_type or ("expense" if parsed_row.amount < 0 else "income"),
                     status="new",
                     deduplication_hash=_compute_dedup_hash(
                         account_id, parsed_row, occurrences[key]

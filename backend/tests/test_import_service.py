@@ -230,7 +230,7 @@ class TestPreview:
     @pytest.mark.asyncio
     async def test_parser_flagged_row_needs_review_even_when_categorized(self):
         row = _row()
-        row.flag_for_review = True
+        row.flag_reason = "redated_installment"
         service = _service(_statement([row]))
         service._repo.list_rules.return_value = [_rule()]
         service._category_repo.list.return_value = [_category(10, "Groceries")]
@@ -245,7 +245,7 @@ class TestPreview:
     @pytest.mark.asyncio
     async def test_parser_flagged_row_combines_with_uncategorized_reason(self):
         row = _row()
-        row.flag_for_review = True
+        row.flag_reason = "redated_installment"
         service = _service(_statement([row]))
 
         preview = await service.preview(1, "x.csv", b"", provider="fakebank")

@@ -49,7 +49,7 @@ class TestParseText:
 
     def test_parse_text_alone_does_not_redate(self):
         rows = _parse_text(_FATURA_TEXT)
-        assert all(r.flag_for_review is False for r in rows)
+        assert all(r.flag_reason is None for r in rows)
 
     def test_total_and_header_lines_skipped(self):
         rows = _parse_text(_FATURA_TEXT)
@@ -103,11 +103,11 @@ class TestParse:
         old = by_desc["LOJA DE BRINQUEDOS XY (Parcela 08 de 10)"]
         assert old.date_posted == date(2026, 6, 1)
         assert old.date_value == date(2025, 10, 12)  # printed date kept for dedup
-        assert old.flag_for_review is True
+        assert old.flag_reason == "redated_installment"
 
         march = by_desc["CURSO ONLINE ABC (Parcela 03 de 10)"]
         assert march.date_posted == date(2026, 6, 1)
-        assert march.flag_for_review is True
+        assert march.flag_reason == "redated_installment"
 
     def test_recent_rows_keep_printed_dates(self, monkeypatch):
         import app.integrations.banco_inter.fatura_parser as module
@@ -117,9 +117,9 @@ class TestParse:
         by_desc = {r.raw_description: r for r in statement.rows}
 
         assert by_desc["NETFLIX.COM"].date_posted == date(2026, 5, 9)
-        assert by_desc["NETFLIX.COM"].flag_for_review is False
+        assert by_desc["NETFLIX.COM"].flag_reason is None
         assert by_desc["PAGTO DEBITO AUTOMATICO"].date_posted == date(2026, 5, 15)
-        assert by_desc["PAGTO DEBITO AUTOMATICO"].flag_for_review is False
+        assert by_desc["PAGTO DEBITO AUTOMATICO"].flag_reason is None
 
     def test_unreadable_pdf_yields_empty_statement(self, monkeypatch):
         import app.integrations.banco_inter.fatura_parser as module

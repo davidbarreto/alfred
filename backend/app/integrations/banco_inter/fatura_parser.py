@@ -101,7 +101,7 @@ def _redate_old_rows(rows: list[ParsedRow], vencimento: date | None) -> None:
     for row in rows:
         if row.date_posted < cutoff:
             row.date_posted = fatura_month_start
-            row.flag_for_review = True
+            row.flag_reason = "redated_installment"
 
 
 class BancoInterFaturaParser:

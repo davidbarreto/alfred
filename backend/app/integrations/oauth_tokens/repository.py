@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from sqlalchemy import func, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -24,4 +24,9 @@ async def upsert_oauth_token(session: AsyncSession, provider: str, refresh_token
         )
     )
     await session.execute(stmt)
+    await session.commit()
+
+
+async def delete_oauth_token(session: AsyncSession, provider: str) -> None:
+    await session.execute(delete(OAuthToken).where(OAuthToken.provider == provider))
     await session.commit()

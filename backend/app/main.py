@@ -53,6 +53,9 @@ from app.api.routes.language.chunks import router as language_chunks_router
 from app.api.routes.language.sessions import router as language_sessions_router
 from app.api.routes.language.production import router as language_production_router
 from app.config import get_settings
+from app.db.session import async_session
+from app.integrations.google_oauth.client import GoogleTokenExpiredError
+from app.integrations.oauth_tokens.repository import delete_oauth_token
 
 settings = get_settings()
 
@@ -137,6 +140,23 @@ async def _validation_error_handler(request: Request, exc: RequestValidationErro
         exc.errors(),
     )
     return JSONResponse(status_code=422, content={"detail": exc.errors()})
+
+
+@app.exception_handler(GoogleTokenExpiredError)
+async def _google_token_expired_handler(request: Request, exc: GoogleTokenExpiredError) -> JSONResponse:
+    logger.warning("Google OAuth token expired: provider=%s", exc.provider)
+    async with async_session() as session:
+        await delete_oauth_token(session, exc.provider)
+    reauth_path = exc.provider.replace("_", "-")
+    return JSONResponse(
+        status_code=401,
+        content={
+            "detail": (
+                f"Google authorization for '{exc.provider}' has expired or was revoked. "
+                f"Re-authorize via GET /integration/{reauth_path}/oauth/url."
+            )
+        },
+    )
 
 
 @app.get("/health")

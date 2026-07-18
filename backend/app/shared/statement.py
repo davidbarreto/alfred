@@ -35,6 +35,10 @@ class ParsedRow:
     date_value: date
     raw_description: str
     amount: Decimal
+    currency: str
+    """Set by the parser per-row. Almost always identical to ParsedStatement.currency for a
+    single-currency export; the one exception is a multi-currency wallet (Revolut) where a
+    single file mixes several currencies and each row carries its own."""
     balance_after: Decimal | None = None
     suggested_type: str | None = None
     """Overrides the default sign-based expense/income inference, e.g. "transfer" for a

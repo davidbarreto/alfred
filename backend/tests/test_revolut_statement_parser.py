@@ -23,87 +23,94 @@ def _content() -> bytes:
 
 
 class TestCanParse:
-    def test_accepts_matching_currency(self):
-        parser = RevolutStatementParser("EUR")
+    def test_accepts_matching_header(self):
+        parser = RevolutStatementParser()
         assert parser.can_parse("revolut.csv", _content()) is True
 
-    def test_rejects_currency_absent_from_file(self):
-        parser = RevolutStatementParser("GBP")
-        assert parser.can_parse("revolut.csv", _content()) is False
-
     def test_rejects_non_csv_extension(self):
-        parser = RevolutStatementParser("EUR")
+        parser = RevolutStatementParser()
         assert parser.can_parse("revolut.pdf", _content()) is False
 
     def test_rejects_unrelated_csv(self):
-        parser = RevolutStatementParser("EUR")
+        parser = RevolutStatementParser()
         assert parser.can_parse("other.csv", b"col1,col2\n1,2\n") is False
 
-    def test_provider_name_is_currency_scoped(self):
-        assert RevolutStatementParser("EUR").provider == "revolut_eur"
-        assert RevolutStatementParser("pln").provider == "revolut_pln"
+    def test_provider_name(self):
+        assert RevolutStatementParser().provider == "revolut"
 
 
 class TestParse:
-    def test_filters_to_own_currency_only(self):
-        statement = RevolutStatementParser("EUR").parse(_content())
-        assert statement.currency == "EUR"
-        assert all(r.raw_description not in ("Bolt", "Starbucks") for r in statement.rows)
+    def test_single_pass_produces_all_currencies(self):
+        statement = RevolutStatementParser().parse(_content())
+        currencies = {r.currency for r in statement.rows}
+        assert currencies == {"PLN", "EUR", "USD", "CZK"}
 
     def test_reverted_rows_are_excluded(self):
-        statement = RevolutStatementParser("PLN").parse(_content())
+        statement = RevolutStatementParser().parse(_content())
         assert all(r.raw_description != "Uber" for r in statement.rows)
 
+    def test_row_count_matches_completed_rows(self):
+        statement = RevolutStatementParser().parse(_content())
+        # 10 data rows, 1 REVERTED excluded -> 9
+        assert len(statement.rows) == 9
+
     def test_exchange_is_always_a_transfer(self):
-        pln = RevolutStatementParser("PLN").parse(_content())
-        by_desc = {r.raw_description: r for r in pln.rows}
-        assert by_desc["Exchanged to PLN"].suggested_type == "transfer"
-        assert by_desc["Exchanged to EUR"].suggested_type == "transfer"
-        assert by_desc["Exchanged to EUR"].amount == Decimal("-26.78")
+        statement = RevolutStatementParser().parse(_content())
+        pln_leg = next(r for r in statement.rows if r.raw_description == "Exchanged to PLN")
+        eur_leg = next(r for r in statement.rows if r.raw_description == "Exchanged to EUR")
+        assert pln_leg.suggested_type == "transfer"
+        assert pln_leg.currency == "PLN"
+        assert eur_leg.suggested_type == "transfer"
+        assert eur_leg.currency == "PLN"  # the outgoing leg is booked on the PLN balance
+        assert eur_leg.amount == Decimal("-26.78")
 
     def test_topup_is_a_transfer_not_income(self):
-        eur = RevolutStatementParser("EUR").parse(_content())
-        topup = next(r for r in eur.rows if "top-up" in r.raw_description)
+        statement = RevolutStatementParser().parse(_content())
+        topup = next(r for r in statement.rows if "top-up" in r.raw_description)
         assert topup.suggested_type == "transfer"
+        assert topup.currency == "EUR"
 
     def test_card_refund_uses_default_income_inference(self):
-        eur = RevolutStatementParser("EUR").parse(_content())
-        refund = next(r for r in eur.rows if r.raw_description == "Some Shop")
+        statement = RevolutStatementParser().parse(_content())
+        refund = next(r for r in statement.rows if r.raw_description == "Some Shop")
         assert refund.suggested_type is None
         assert refund.amount > 0
+        assert refund.currency == "EUR"
 
     def test_revolut_entity_transfer_is_flagged_uncertain(self):
-        usd = RevolutStatementParser("USD").parse(_content())
-        internal = next(r for r in usd.rows if "Revolut Bank UAB" in r.raw_description)
+        statement = RevolutStatementParser().parse(_content())
+        internal = next(r for r in statement.rows if "Revolut Bank UAB" in r.raw_description)
         assert internal.suggested_type == "transfer"
         assert internal.flag_reason == "uncertain_transfer"
+        assert internal.currency == "USD"
 
     def test_p2p_transfer_is_left_as_default_expense(self):
-        usd = RevolutStatementParser("USD").parse(_content())
-        p2p = next(r for r in usd.rows if r.raw_description == "Transfer to SOME PERSON")
+        statement = RevolutStatementParser().parse(_content())
+        p2p = next(r for r in statement.rows if r.raw_description == "Transfer to SOME PERSON")
         assert p2p.suggested_type is None
         assert p2p.flag_reason is None
         assert p2p.amount < 0
 
     def test_ordinary_card_payment_untouched(self):
-        czk = RevolutStatementParser("CZK").parse(_content())
-        assert len(czk.rows) == 1
-        assert czk.rows[0].suggested_type is None
+        statement = RevolutStatementParser().parse(_content())
+        starbucks = next(r for r in statement.rows if r.raw_description == "Starbucks")
+        assert starbucks.suggested_type is None
+        assert starbucks.currency == "CZK"
 
     def test_posted_date_is_completed_date_value_date_is_started_date(self):
-        pln = RevolutStatementParser("PLN").parse(_content())
-        bolt = next(r for r in pln.rows if r.raw_description == "Bolt")
+        statement = RevolutStatementParser().parse(_content())
+        bolt = next(r for r in statement.rows if r.raw_description == "Bolt")
         assert bolt.date_posted == date(2025, 12, 5)
         assert bolt.date_value == date(2025, 12, 4)
 
-    def test_closing_balance_and_period_from_own_currency_only(self):
-        pln = RevolutStatementParser("PLN").parse(_content())
-        assert pln.period_start == date(2025, 12, 4)
-        assert pln.period_end == date(2025, 12, 11)
-        assert pln.closing_balance == Decimal("286.74")
+    def test_period_spans_all_currencies(self):
+        statement = RevolutStatementParser().parse(_content())
+        assert statement.period_start == date(2025, 11, 22)
+        assert statement.period_end == date(2026, 4, 30)
 
-    def test_no_matching_rows_yields_empty_statement(self):
-        statement = RevolutStatementParser("GBP").parse(_content())
+    def test_empty_file_yields_empty_statement(self):
+        statement = RevolutStatementParser().parse(
+            b"Type,Product,Started Date,Completed Date,Description,Amount,Fee,Currency,State,Balance\n"
+        )
         assert statement.rows == []
         assert statement.period_start is None
-        assert statement.closing_balance is None

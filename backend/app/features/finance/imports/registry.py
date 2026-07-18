@@ -8,11 +8,6 @@ from app.integrations.nubank.card_statement_parser import NubankCardStatementPar
 from app.integrations.revolut.statement_parser import RevolutStatementParser
 from app.shared.statement import StatementParser
 
-# One Revolut parser per currency actually held — Alfred models one currency per
-# account, and a single Revolut export can mix several. Add a line here for any
-# other currency the export contains; nothing else needs to change.
-_REVOLUT_CURRENCIES = ("EUR", "PLN", "CZK", "USD")
-
 _PARSERS: dict[str, StatementParser] = {
     parser.provider: parser
     for parser in (
@@ -21,7 +16,7 @@ _PARSERS: dict[str, StatementParser] = {
         BancoInterStatementParser(),
         BancoInterFaturaParser(),
         NubankCardStatementParser(),
-        *(RevolutStatementParser(c) for c in _REVOLUT_CURRENCIES),
+        RevolutStatementParser(),
     )
 }
 

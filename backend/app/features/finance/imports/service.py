@@ -10,13 +10,23 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.features.core.embeddings.schemas import EmbeddingCreate, EmbeddingSearchRequest
 from app.features.core.embeddings.service import EmbeddingService
+from app.features.finance.accounts.repository import AccountRepository
+from app.features.finance.accounts.schemas import AccountFilters
 from app.features.finance.categories.repository import CategoryRepository
 from app.features.finance.imports.prompts import CATEGORIZE_SYSTEM_PROMPT, CATEGORIZE_USER_PROMPT
 from app.features.finance.imports.repository import ImportRepository
 from app.features.finance.imports.schemas import (
+    CurrencyCandidateAccount,
+    CurrencyDetection,
+    DetectCurrenciesResponse,
     ImportBatchRead,
+    ImportCommitBatchResult,
+    ImportCommitGroupedRequest,
+    ImportCommitGroupedResponse,
     ImportCommitRequest,
     ImportCommitResponse,
+    ImportCurrencyGroup,
+    ImportPreviewGroupedResponse,
     ImportPreviewResponse,
     ImportPreviewRow,
     ImportRuleCreate,
@@ -32,6 +42,10 @@ from app.shared.statement import ParsedRow, StatementParser
 logger = logging.getLogger(__name__)
 
 TRANSACTION_SOURCE_TYPE = "transaction"
+
+# Providers that can mix several currencies in one export and therefore go through the
+# grouped (multi-account) preview/commit flow instead of the single-account one.
+GROUPED_PROVIDERS = frozenset({"revolut"})
 
 _KNN_LIMIT = 7
 _KNN_THRESHOLD = 0.55
@@ -85,6 +99,15 @@ def _rule_matches(rule: ImportRule, raw_description: str, amount: Decimal) -> bo
     return True
 
 
+class InvalidGroupedImportError(Exception):
+    """Raised when a grouped (multi-currency) import request is malformed: an unknown
+    provider, or an account_map that doesn't cover every currency present."""
+
+    def __init__(self, message: str) -> None:
+        self.message = message
+        super().__init__(message)
+
+
 def _extract_json(text: str) -> dict | None:
     """Extract the first JSON object from an LLM response, tolerating code fences."""
     match = re.search(r"\{.*\}", text, re.DOTALL)
@@ -109,6 +132,7 @@ class ImportService:
         self._repo = ImportRepository(session)
         self._txn_repo = TransactionRepository(session)
         self._category_repo = CategoryRepository(session)
+        self._account_repo = AccountRepository(session)
         self._parsers = parsers
         self._embeddings = embedding_service
         self._llm = llm_provider
@@ -126,6 +150,11 @@ class ImportService:
         parser = self._resolve_parser(provider, filename, content)
         if parser is None:
             logger.warning("Import preview: no parser found for file=%r provider=%r", filename, provider)
+            return None
+        if parser.provider in GROUPED_PROVIDERS:
+            logger.warning(
+                "Import preview: provider=%s requires the grouped multi-currency flow", parser.provider
+            )
             return None
 
         try:
@@ -147,23 +176,7 @@ class ImportService:
         await self._apply_knn(rows, categories)
         await self._apply_llm(rows, categories)
 
-        for row in rows:
-            if row.status != "new" or row.type == "transfer":
-                continue
-            reasons: list[str] = []
-            if row.category_id is None:
-                reasons.append("uncategorized")
-            elif row.suggestion_source == "rule_suggest":
-                reasons.append("rule_suggested")
-            elif row.suggestion_source == "llm":
-                reasons.append("ai_suggested")
-            row.review_reasons = reasons
-            row.needs_review = bool(reasons)
-        for preview_row, parsed_row in zip(rows, statement.rows):
-            if parsed_row.flag_reason and preview_row.status == "new":
-                if parsed_row.flag_reason not in preview_row.review_reasons:
-                    preview_row.review_reasons.append(parsed_row.flag_reason)
-                preview_row.needs_review = True
+        self._apply_review_reasons(rows, statement.rows)
 
         return ImportPreviewResponse(
             provider=parser.provider,
@@ -180,6 +193,27 @@ class ImportService:
             duplicate_count=sum(1 for r in rows if r.status == "duplicate"),
             needs_review_count=sum(1 for r in rows if r.needs_review),
         )
+
+    def _apply_review_reasons(
+        self, rows: list[ImportPreviewRow], parsed: list[ParsedRow]
+    ) -> None:
+        for row in rows:
+            if row.status != "new" or row.type == "transfer":
+                continue
+            reasons: list[str] = []
+            if row.category_id is None:
+                reasons.append("uncategorized")
+            elif row.suggestion_source == "rule_suggest":
+                reasons.append("rule_suggested")
+            elif row.suggestion_source == "llm":
+                reasons.append("ai_suggested")
+            row.review_reasons = reasons
+            row.needs_review = bool(reasons)
+        for preview_row, parsed_row in zip(rows, parsed):
+            if parsed_row.flag_reason and preview_row.status == "new":
+                if parsed_row.flag_reason not in preview_row.review_reasons:
+                    preview_row.review_reasons.append(parsed_row.flag_reason)
+                preview_row.needs_review = True
 
     async def _store_file(self, provider: str, filename: str, content: bytes) -> str | None:
         """Persist the original upload; the content-hash path makes re-uploads idempotent."""
@@ -507,4 +541,232 @@ class ImportService:
         return deleted
 
     def available_providers(self) -> list[str]:
-        return sorted(self._parsers.keys())
+        """Single-account providers only; grouped (multi-currency) providers are offered
+        through a separate upload flow (detect_currencies / preview_grouped / commit_grouped)."""
+        return sorted(k for k in self._parsers if k not in GROUPED_PROVIDERS)
+
+    def available_grouped_providers(self) -> list[str]:
+        return sorted(k for k in self._parsers if k in GROUPED_PROVIDERS)
+
+    # -- grouped (multi-currency) preview/commit --------------------------
+
+    async def detect_currencies(
+        self, filename: str, content: bytes, provider: str
+    ) -> DetectCurrenciesResponse | None:
+        parser = self._parsers.get(provider)
+        if parser is None:
+            logger.warning("Currency detection: unknown provider=%r", provider)
+            return None
+        try:
+            statement = parser.parse(content)
+        except Exception as exc:
+            logger.error(
+                "Currency detection: parse failed provider=%s file=%r error=%s", provider, filename, exc
+            )
+            return None
+
+        counts: dict[str, int] = defaultdict(int)
+        for row in statement.rows:
+            counts[row.currency] += 1
+
+        all_accounts = await self._account_repo.list(AccountFilters())
+        detections = []
+        for currency in sorted(counts):
+            matching = [a for a in all_accounts if a.currency == currency]
+            detections.append(
+                CurrencyDetection(
+                    currency=currency,
+                    row_count=counts[currency],
+                    auto_account_id=matching[0].id if len(matching) == 1 else None,
+                    candidate_accounts=[
+                        CurrencyCandidateAccount(id=a.id, name=a.name) for a in matching
+                    ],
+                )
+            )
+        logger.info(
+            "Currency detection: provider=%s file=%r currencies=%s",
+            parser.provider, filename, sorted(counts),
+        )
+        return DetectCurrenciesResponse(provider=parser.provider, currencies=detections)
+
+    async def preview_grouped(
+        self,
+        account_map: dict[str, int],
+        filename: str,
+        content: bytes,
+        provider: str,
+    ) -> ImportPreviewGroupedResponse | None:
+        parser = self._parsers.get(provider)
+        if parser is None:
+            logger.warning("Grouped import preview: unknown provider=%r", provider)
+            return None
+        try:
+            statement = parser.parse(content)
+        except Exception as exc:
+            logger.error(
+                "Grouped import preview: parse failed provider=%s file=%r error=%s", provider, filename, exc
+            )
+            return None
+
+        by_currency: dict[str, list[ParsedRow]] = defaultdict(list)
+        for row in statement.rows:
+            by_currency[row.currency].append(row)
+
+        missing = sorted(c for c in by_currency if c not in account_map)
+        if missing:
+            raise InvalidGroupedImportError(
+                f"No account selected for currency(ies): {', '.join(missing)}"
+            )
+
+        stored_file = await self._store_file(parser.provider, filename, content)
+        rules = await self._repo.list_rules()
+        categories = {c.id: c.name for c in await self._category_repo.list()}
+        accounts_by_id = {a.id: a.name for a in await self._account_repo.list(AccountFilters())}
+
+        groups: list[ImportCurrencyGroup] = []
+        for currency in sorted(by_currency):
+            parsed_rows = by_currency[currency]
+            account_id = account_map[currency]
+            rows = self._build_rows(account_id, parsed_rows)
+            await self._mark_duplicates(rows)
+            self._apply_rules(rows, rules, categories)
+            await self._apply_knn(rows, categories)
+            await self._apply_llm(rows, categories)
+            self._apply_review_reasons(rows, parsed_rows)
+
+            dates = [r.date_posted for r in parsed_rows]
+            groups.append(
+                ImportCurrencyGroup(
+                    currency=currency,
+                    account_id=account_id,
+                    account_name=accounts_by_id.get(account_id, "?"),
+                    period_start=min(dates) if dates else None,
+                    period_end=max(dates) if dates else None,
+                    closing_balance=parsed_rows[-1].balance_after if parsed_rows else None,
+                    rows=rows,
+                    new_count=sum(1 for r in rows if r.status == "new"),
+                    duplicate_count=sum(1 for r in rows if r.status == "duplicate"),
+                    needs_review_count=sum(1 for r in rows if r.needs_review),
+                )
+            )
+
+        logger.info(
+            "Grouped import preview: provider=%s file=%r currencies=%s",
+            parser.provider, filename, sorted(by_currency),
+        )
+        return ImportPreviewGroupedResponse(
+            provider=parser.provider,
+            source_file=filename,
+            stored_file=stored_file,
+            groups=groups,
+            new_count=sum(g.new_count for g in groups),
+            duplicate_count=sum(g.duplicate_count for g in groups),
+            needs_review_count=sum(g.needs_review_count for g in groups),
+        )
+
+    async def commit_grouped(self, request: ImportCommitGroupedRequest) -> ImportCommitGroupedResponse:
+        by_currency: dict[str, list] = defaultdict(list)
+        for row in request.rows:
+            by_currency[row.currency].append(row)
+
+        missing = sorted(c for c in by_currency if c not in request.account_map)
+        if missing:
+            raise InvalidGroupedImportError(
+                f"No account selected for currency(ies): {', '.join(missing)}"
+            )
+        for currency, account_id in request.account_map.items():
+            if await self._account_repo.get(account_id) is None:
+                raise InvalidGroupedImportError(f"Account for currency {currency} not found")
+
+        existing = await self._txn_repo.get_existing_dedup_hashes(
+            [r.deduplication_hash for r in request.rows]
+        )
+
+        batch_results: list[ImportCommitBatchResult] = []
+        all_transactions = []
+        total_rules_created = 0
+
+        for currency in sorted(by_currency):
+            rows = by_currency[currency]
+            account_id = request.account_map[currency]
+            to_insert = [r for r in rows if r.deduplication_hash not in existing]
+            skipped = len(rows) - len(to_insert)
+            dates = [r.date_posted for r in rows]
+
+            batch = await self._repo.add_batch(
+                ImportBatch(
+                    account_id=account_id,
+                    provider=request.provider,
+                    source_file=request.source_file,
+                    stored_file=request.stored_file,
+                    period_start=min(dates) if dates else None,
+                    period_end=max(dates) if dates else None,
+                    closing_balance=None,
+                    inserted_count=len(to_insert),
+                    duplicate_count=skipped,
+                )
+            )
+
+            for row in to_insert:
+                txn = await self._txn_repo.add(
+                    TransactionCreate(
+                        account_id=account_id,
+                        date=datetime.combine(row.date_posted, datetime.min.time()),
+                        amount=row.amount if row.type == "transfer" else abs(row.amount),
+                        currency=currency,
+                        type=row.type,
+                        category_id=row.category_id,
+                        description=row.description,
+                        bank_description=row.bank_description,
+                        note=row.note,
+                        merchant=row.merchant,
+                        source=request.provider,
+                        counterpart_account_id=row.counterpart_account_id,
+                        deduplication_hash=row.deduplication_hash,
+                        import_batch_id=batch.id,
+                    )
+                )
+                all_transactions.append(txn)
+
+            rules_created_here = 0
+            for row in to_insert:
+                if not row.save_rule or not row.rule_pattern:
+                    continue
+                self._repo.add_rule(
+                    ImportRule(
+                        pattern=row.rule_pattern,
+                        amount=row.amount if row.rule_match_amount else None,
+                        mode=row.rule_mode,
+                        description=row.description,
+                        merchant=row.merchant,
+                        category_id=row.category_id,
+                        transfer_account_id=row.counterpart_account_id if row.type == "transfer" else None,
+                    )
+                )
+                rules_created_here += 1
+            total_rules_created += rules_created_here
+
+            batch_results.append(
+                ImportCommitBatchResult(
+                    batch_id=batch.id,
+                    currency=currency,
+                    account_id=account_id,
+                    inserted=len(to_insert),
+                    skipped_duplicates=skipped,
+                )
+            )
+
+        await self._repo.commit()
+        logger.info(
+            "Grouped import committed: provider=%s currencies=%s total_inserted=%d rules=%d",
+            request.provider, sorted(by_currency), len(all_transactions), total_rules_created,
+        )
+
+        await self._embed_transactions(all_transactions)
+
+        return ImportCommitGroupedResponse(
+            batches=batch_results,
+            total_inserted=len(all_transactions),
+            total_skipped_duplicates=sum(b.skipped_duplicates for b in batch_results),
+            rules_created=total_rules_created,
+        )

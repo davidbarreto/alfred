@@ -79,6 +79,7 @@ def _parse_text(text: str) -> list[ParsedRow]:
                 date_value=row_date,
                 raw_description=description.strip(),
                 amount=amount if plus else -amount,
+                currency="BRL",
                 balance_after=None,
             )
         )

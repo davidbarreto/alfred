@@ -89,6 +89,7 @@ class BancoInterStatementParser:
                     date_value=row_date,
                     raw_description=description,
                     amount=amount,
+                    currency="BRL",
                     balance_after=balance_after,
                 )
             )

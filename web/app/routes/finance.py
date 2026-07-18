@@ -1,3 +1,4 @@
+import json
 from collections import defaultdict
 from typing import Annotated, Optional
 from urllib.parse import urlencode
@@ -649,7 +650,7 @@ async def _import_rules_context() -> dict:
 
 @router.get("/import", response_class=HTMLResponse)
 async def import_page(request: Request):
-    accounts, providers = [], []
+    accounts, providers, grouped_providers = [], [], []
     try:
         accounts = await api.get("/finance/accounts", params={"is_active": "true"})
     except httpx.HTTPError:
@@ -658,10 +659,14 @@ async def import_page(request: Request):
         providers = await api.get("/finance/imports/providers")
     except httpx.HTTPError:
         pass
+    try:
+        grouped_providers = await api.get("/finance/imports/providers-grouped")
+    except httpx.HTTPError:
+        pass
 
     context = await _import_batches_context()
     context.update(await _import_rules_context())
-    context.update({"accounts": accounts, "providers": providers})
+    context.update({"accounts": accounts, "providers": providers, "grouped_providers": grouped_providers})
     return templates.TemplateResponse(request, "finance_import.html", context)
 
 
@@ -826,6 +831,131 @@ async def import_commit(request: Request):
         return HTMLResponse('<p class="text-[#E24B4A] text-sm px-1">Import failed.</p>', status_code=422)
 
     return templates.TemplateResponse(request, "_finance_import_result.html", {"result": result})
+
+
+@router.post("/import/detect-currencies", response_class=HTMLResponse)
+async def import_detect_currencies(
+    request: Request,
+    file: UploadFile = File(...),
+    provider: Annotated[str, Form()] = "",
+):
+    content = await file.read()
+    try:
+        detection = await api.post_multipart(
+            "/finance/imports/detect-currencies",
+            data={"provider": provider},
+            files={"file": (file.filename or "statement.csv", content, file.content_type or "text/csv")},
+        )
+    except httpx.HTTPError:
+        return HTMLResponse(
+            '<p class="text-[#E24B4A] text-sm px-1">Could not read this file.</p>', status_code=422
+        )
+
+    return templates.TemplateResponse(
+        request, "_finance_import_currency_map.html", {"detection": detection}
+    )
+
+
+@router.post("/import/preview-grouped", response_class=HTMLResponse)
+async def import_preview_grouped(
+    request: Request,
+    file: UploadFile = File(...),
+    provider: Annotated[str, Form()] = "",
+    account_map: Annotated[str, Form()] = "{}",
+):
+    content = await file.read()
+    try:
+        preview = await api.post_multipart(
+            "/finance/imports/preview-grouped",
+            data={"provider": provider, "account_map": account_map},
+            files={"file": (file.filename or "statement.csv", content, file.content_type or "text/csv")},
+        )
+    except httpx.HTTPStatusError as exc:
+        try:
+            detail = exc.response.json().get("detail") or "Could not preview this import."
+        except ValueError:
+            detail = "Could not preview this import."
+        return HTMLResponse(f'<p class="text-[#E24B4A] text-sm px-1">{detail}</p>', status_code=422)
+    except httpx.HTTPError:
+        return HTMLResponse(
+            '<p class="text-[#E24B4A] text-sm px-1">Could not preview this import.</p>', status_code=422
+        )
+
+    categories = []
+    try:
+        categories = await api.get("/finance/categories")
+    except httpx.HTTPError:
+        pass
+
+    return templates.TemplateResponse(
+        request, "_finance_import_review_grouped.html", {"preview": preview, "categories": categories}
+    )
+
+
+@router.post("/import/commit-grouped", response_class=HTMLResponse)
+async def import_commit_grouped(request: Request):
+    try:
+        form = await request.json()
+    except ValueError:
+        return HTMLResponse('<p class="text-[#E24B4A] text-sm px-1">Invalid import payload.</p>', status_code=422)
+
+    rows = []
+    row_count = int(_form_value(form, "row_count", "0") or "0")
+    for i in range(row_count):
+        if f"include_{i}" not in form:
+            continue
+        row: dict = {
+            "date_posted": _form_value(form, f"date_{i}"),
+            "bank_description": _form_value(form, f"bank_description_{i}"),
+            "amount": _form_value(form, f"amount_{i}"),
+            "type": _form_value(form, f"type_{i}"),
+            "currency": _form_value(form, f"currency_{i}"),
+            "deduplication_hash": _form_value(form, f"hash_{i}"),
+        }
+        for field in ("description", "merchant", "note"):
+            value = _form_value(form, f"{field}_{i}").strip()
+            if value:
+                row[field] = value
+        category_id = _form_value(form, f"category_{i}")
+        if category_id:
+            row["category_id"] = int(category_id)
+        counterpart = _form_value(form, f"counterpart_{i}")
+        if counterpart:
+            row["counterpart_account_id"] = int(counterpart)
+        if f"save_rule_{i}" in form:
+            pattern = _form_value(form, f"rule_pattern_{i}").strip()
+            if pattern:
+                row["save_rule"] = True
+                row["rule_pattern"] = pattern
+                row["rule_mode"] = _form_value(form, f"rule_mode_{i}", "auto")
+                if _form_value(form, f"rule_match_amount_{i}"):
+                    row["rule_match_amount"] = True
+        rows.append(row)
+
+    try:
+        account_map = json.loads(_form_value(form, "account_map", "{}"))
+    except json.JSONDecodeError:
+        account_map = {}
+
+    payload: dict = {
+        "provider": _form_value(form, "provider"),
+        "source_file": _form_value(form, "source_file") or None,
+        "stored_file": _form_value(form, "stored_file") or None,
+        "account_map": account_map,
+        "rows": rows,
+    }
+    try:
+        result = await api.post("/finance/imports/commit-grouped", json=payload)
+    except httpx.HTTPStatusError as exc:
+        try:
+            detail = exc.response.json().get("detail") or "Import failed."
+        except ValueError:
+            detail = "Import failed."
+        return HTMLResponse(f'<p class="text-[#E24B4A] text-sm px-1">{detail}</p>', status_code=422)
+    except httpx.HTTPError:
+        return HTMLResponse('<p class="text-[#E24B4A] text-sm px-1">Import failed.</p>', status_code=422)
+
+    return templates.TemplateResponse(request, "_finance_import_result_grouped.html", {"result": result})
 
 
 @router.get("/import/batches/{batch_id}/file")

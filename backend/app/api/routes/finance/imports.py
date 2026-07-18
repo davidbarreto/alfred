@@ -1,15 +1,22 @@
+import json
+
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Response, UploadFile, status
 
 from app.api.auth import require_auth
 from app.dependencies import ImportServiceDep
 from app.features.finance.imports.schemas import (
+    DetectCurrenciesResponse,
     ImportBatchRead,
+    ImportCommitGroupedRequest,
+    ImportCommitGroupedResponse,
     ImportCommitRequest,
     ImportCommitResponse,
+    ImportPreviewGroupedResponse,
     ImportPreviewResponse,
     ImportRuleCreate,
     ImportRuleRead,
 )
+from app.features.finance.imports.service import InvalidGroupedImportError
 
 router = APIRouter(prefix="/finance/imports", tags=["finance"], dependencies=[Depends(require_auth)])
 
@@ -17,6 +24,69 @@ router = APIRouter(prefix="/finance/imports", tags=["finance"], dependencies=[De
 @router.get("/providers", response_model=list[str])
 async def list_providers(service: ImportServiceDep):
     return service.available_providers()
+
+
+@router.get("/providers-grouped", response_model=list[str])
+async def list_grouped_providers(service: ImportServiceDep):
+    return service.available_grouped_providers()
+
+
+@router.post("/detect-currencies", response_model=DetectCurrenciesResponse)
+async def detect_currencies(
+    service: ImportServiceDep,
+    file: UploadFile = File(...),
+    provider: str = Form(...),
+):
+    content = await file.read()
+    result = await service.detect_currencies(
+        filename=file.filename or "statement", content=content, provider=provider
+    )
+    if result is None:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="No parser available for this file",
+        )
+    return result
+
+
+@router.post("/preview-grouped", response_model=ImportPreviewGroupedResponse)
+async def preview_import_grouped(
+    service: ImportServiceDep,
+    file: UploadFile = File(...),
+    provider: str = Form(...),
+    account_map: str = Form(...),
+):
+    try:
+        parsed_map = {k: int(v) for k, v in json.loads(account_map).items()}
+    except (json.JSONDecodeError, ValueError, AttributeError):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid account_map")
+
+    content = await file.read()
+    try:
+        result = await service.preview_grouped(
+            account_map=parsed_map,
+            filename=file.filename or "statement",
+            content=content,
+            provider=provider,
+        )
+    except InvalidGroupedImportError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=exc.message)
+    if result is None:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="No parser available for this file",
+        )
+    return result
+
+
+@router.post(
+    "/commit-grouped", response_model=ImportCommitGroupedResponse, status_code=status.HTTP_201_CREATED
+)
+async def commit_import_grouped(request: ImportCommitGroupedRequest, service: ImportServiceDep):
+    try:
+        return await service.commit_grouped(request)
+    except InvalidGroupedImportError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=exc.message)
 
 
 @router.post("/preview", response_model=ImportPreviewResponse)

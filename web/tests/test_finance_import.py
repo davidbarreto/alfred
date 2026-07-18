@@ -79,6 +79,7 @@ class TestImportPage:
         mock_api["get"].side_effect = [
             [_account()],          # accounts (active)
             ["activobank"],        # providers
+            ["revolut"],           # grouped providers
             [_batch()],            # batches
             [_account()],          # accounts for batches context
             [_rule()],             # rules
@@ -94,6 +95,7 @@ class TestImportPage:
         assert "Checking" in resp.text
         assert "Categorization rules" in resp.text
         assert "PINGO DOCE" in resp.text
+        assert "Import multi-currency" in resp.text
 
     def test_requires_authentication(self, anon_client):
         resp = anon_client.get("/finance/import", follow_redirects=False)
@@ -352,3 +354,174 @@ class TestImportRules:
         assert resp.status_code == 200
         assert "No rules yet" in resp.text
         mock_api["delete"].assert_awaited_once_with("/finance/imports/rules/1")
+
+
+def _detection_response(currencies=None):
+    return {
+        "provider": "revolut",
+        "currencies": currencies if currencies is not None else [
+            {"currency": "EUR", "row_count": 10, "auto_account_id": 1,
+             "candidate_accounts": [{"id": 1, "name": "Revolut EUR"}]},
+            {"currency": "PLN", "row_count": 5, "auto_account_id": None, "candidate_accounts": []},
+        ],
+    }
+
+
+def _grouped_preview_response():
+    return {
+        "provider": "revolut",
+        "source_file": "revolut.csv",
+        "stored_file": "revolut/abc.csv",
+        "groups": [
+            {
+                "currency": "EUR", "account_id": 1, "account_name": "Revolut EUR",
+                "period_start": "2026-06-01", "period_end": "2026-06-30", "closing_balance": "100.00",
+                "rows": [_preview_row()], "new_count": 1, "duplicate_count": 0, "needs_review_count": 0,
+            }
+        ],
+        "new_count": 1, "duplicate_count": 0, "needs_review_count": 0,
+    }
+
+
+class TestDetectCurrencies:
+    def test_renders_currency_map(self, client, mock_api):
+        mock_api["post_multipart"].return_value = _detection_response()
+
+        resp = client.post(
+            "/finance/import/detect-currencies",
+            data={"provider": "revolut"},
+            files={"file": ("revolut.csv", b"csv-bytes", "text/csv")},
+        )
+
+        assert resp.status_code == 200
+        assert "Revolut EUR" in resp.text
+        assert "No PLN account exists" in resp.text
+        call = mock_api["post_multipart"].call_args
+        assert call.args[0] == "/finance/imports/detect-currencies"
+        assert call.kwargs["data"]["provider"] == "revolut"
+
+    def test_parse_failure_returns_error(self, client, mock_api):
+        mock_api["post_multipart"].side_effect = httpx.HTTPError("boom")
+
+        resp = client.post(
+            "/finance/import/detect-currencies",
+            data={"provider": "revolut"},
+            files={"file": ("weird.txt", b"???", "text/plain")},
+        )
+
+        assert resp.status_code == 422
+        assert "Could not read" in resp.text
+
+
+class TestPreviewGrouped:
+    def test_renders_grouped_review(self, client, mock_api):
+        mock_api["post_multipart"].return_value = _grouped_preview_response()
+        mock_api["get"].return_value = [_category()]
+
+        resp = client.post(
+            "/finance/import/preview-grouped",
+            data={"provider": "revolut", "account_map": '{"EUR": 1}'},
+            files={"file": ("revolut.csv", b"csv-bytes", "text/csv")},
+        )
+
+        assert resp.status_code == 200
+        assert "Revolut EUR" in resp.text
+        assert "1 new" in resp.text
+        call = mock_api["post_multipart"].call_args
+        assert call.args[0] == "/finance/imports/preview-grouped"
+        assert call.kwargs["data"]["account_map"] == '{"EUR": 1}'
+
+    def test_surfaces_api_error_detail(self, client, mock_api):
+        request = httpx.Request("POST", "http://backend/finance/imports/preview-grouped")
+        response = httpx.Response(400, json={"detail": "No account selected for currency(ies): PLN"}, request=request)
+        mock_api["post_multipart"].side_effect = httpx.HTTPStatusError(
+            "Bad Request", request=request, response=response
+        )
+
+        resp = client.post(
+            "/finance/import/preview-grouped",
+            data={"provider": "revolut", "account_map": "{}"},
+            files={"file": ("revolut.csv", b"csv-bytes", "text/csv")},
+        )
+
+        assert resp.status_code == 422
+        assert "PLN" in resp.text
+
+    def test_generic_error_when_response_not_json(self, client, mock_api):
+        request = httpx.Request("POST", "http://backend/finance/imports/preview-grouped")
+        response = httpx.Response(400, content=b"not json", request=request)
+        mock_api["post_multipart"].side_effect = httpx.HTTPStatusError(
+            "Bad Request", request=request, response=response
+        )
+
+        resp = client.post(
+            "/finance/import/preview-grouped",
+            data={"provider": "revolut", "account_map": "{}"},
+            files={"file": ("revolut.csv", b"csv-bytes", "text/csv")},
+        )
+
+        assert resp.status_code == 422
+        assert "Could not preview" in resp.text
+
+
+class TestCommitGrouped:
+    def test_builds_grouped_payload(self, client, mock_api):
+        mock_api["post"].return_value = {
+            "batches": [{"batch_id": 1, "currency": "EUR", "account_id": 1, "inserted": 1, "skipped_duplicates": 0}],
+            "total_inserted": 1, "total_skipped_duplicates": 0, "rules_created": 0,
+        }
+
+        resp = client.post(
+            "/finance/import/commit-grouped",
+            json={
+                "provider": "revolut",
+                "source_file": "revolut.csv",
+                "account_map": '{"EUR": 1, "PLN": 2}',
+                "row_count": "2",
+                "include_0": "on",
+                "date_0": "2026-06-01",
+                "bank_description_0": "Bolt",
+                "amount_0": "-20.63",
+                "type_0": "expense",
+                "currency_0": "EUR",
+                "hash_0": "h1",
+                # row 1 not included (no include_1)
+                "date_1": "2026-06-02",
+                "bank_description_1": "Other",
+                "amount_1": "-5.00",
+                "type_1": "expense",
+                "currency_1": "PLN",
+                "hash_1": "h2",
+            },
+        )
+
+        assert resp.status_code == 200
+        payload = mock_api["post"].call_args.kwargs["json"]
+        assert payload["account_map"] == {"EUR": 1, "PLN": 2}
+        assert len(payload["rows"]) == 1
+        assert payload["rows"][0]["currency"] == "EUR"
+        assert payload["rows"][0]["deduplication_hash"] == "h1"
+
+    def test_service_error_surfaces_detail(self, client, mock_api):
+        request = httpx.Request("POST", "http://backend/finance/imports/commit-grouped")
+        response = httpx.Response(400, json={"detail": "Account for currency EUR not found"}, request=request)
+        mock_api["post"].side_effect = httpx.HTTPStatusError(
+            "Bad Request", request=request, response=response
+        )
+
+        resp = client.post(
+            "/finance/import/commit-grouped",
+            json={"provider": "revolut", "account_map": "{}", "row_count": "0"},
+        )
+
+        assert resp.status_code == 422
+        assert "Account for currency EUR not found" in resp.text
+
+    def test_invalid_json_body_returns_error(self, client):
+        resp = client.post(
+            "/finance/import/commit-grouped",
+            content=b"not json",
+            headers={"Content-Type": "application/json"},
+        )
+
+        assert resp.status_code == 422

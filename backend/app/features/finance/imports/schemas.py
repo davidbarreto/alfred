@@ -103,6 +103,81 @@ class ImportCommitResponse(BaseModel):
     rules_created: int
 
 
+# --- Multi-currency (grouped) import: Revolut today, any future multi-wallet bank later.
+# Kept fully separate from the single-account flow above -- ImportPreviewRow/ImportRuleRead
+# are reused, but the account is resolved per currency instead of once for the whole file.
+
+class CurrencyCandidateAccount(BaseModel):
+    id: int
+    name: str
+
+
+class CurrencyDetection(BaseModel):
+    currency: str
+    row_count: int
+    auto_account_id: int | None = None
+    """Pre-filled only when exactly one existing account has this currency."""
+    candidate_accounts: list[CurrencyCandidateAccount] = Field(default_factory=list)
+    """Every account with this currency, for the picker. Empty means none exist yet --
+    the user must create one before this currency can be imported."""
+
+
+class DetectCurrenciesResponse(BaseModel):
+    provider: str
+    currencies: list[CurrencyDetection]
+
+
+class ImportCurrencyGroup(BaseModel):
+    currency: str
+    account_id: int
+    account_name: str
+    period_start: date | None = None
+    period_end: date | None = None
+    closing_balance: Decimal | None = None
+    rows: list[ImportPreviewRow]
+    new_count: int
+    duplicate_count: int
+    needs_review_count: int
+
+
+class ImportPreviewGroupedResponse(BaseModel):
+    provider: str
+    source_file: str | None = None
+    stored_file: str | None = None
+    groups: list[ImportCurrencyGroup]
+    new_count: int
+    duplicate_count: int
+    needs_review_count: int
+
+
+class ImportCommitGroupedRow(ImportCommitRow):
+    currency: str
+
+
+class ImportCommitGroupedRequest(BaseModel):
+    provider: str
+    source_file: str | None = None
+    stored_file: str | None = None
+    account_map: dict[str, int]
+    """currency -> target account_id, covering every currency present in rows."""
+    rows: list[ImportCommitGroupedRow]
+
+
+class ImportCommitBatchResult(BaseModel):
+    batch_id: int
+    currency: str
+    account_id: int
+    inserted: int
+    skipped_duplicates: int
+
+
+class ImportCommitGroupedResponse(BaseModel):
+    batches: list[ImportCommitBatchResult]
+    total_inserted: int
+    total_skipped_duplicates: int
+    rules_created: int
+
+
 class ImportBatchRead(BaseModel):
     id: int
     account_id: int

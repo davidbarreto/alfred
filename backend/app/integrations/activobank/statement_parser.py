@@ -80,6 +80,7 @@ class ActivoBankStatementParser:
                     date_value=date_value or date_posted,
                     raw_description=record[2].strip(),
                     amount=amount,
+                    currency=currency,
                     balance_after=balance_after,
                 )
             )

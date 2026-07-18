@@ -67,6 +67,7 @@ class NubankCardStatementParser:
                     date_value=row_date,
                     raw_description=record[1].strip(),
                     amount=-amount,
+                    currency="BRL",
                     balance_after=None,
                 )
             )

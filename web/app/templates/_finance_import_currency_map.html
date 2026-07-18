@@ -1,0 +1,30 @@
+<form id="currency-map-form" onsubmit="submitPreviewGrouped(event)" class="flex flex-col gap-3">
+  {% if not detection.currencies %}
+  <p class="text-sm text-gray-400">No completed transactions found in this file.</p>
+  {% endif %}
+  {% for c in detection.currencies %}
+  <div>
+    <div class="flex items-center gap-2">
+      <div class="flex-1">
+        <span class="text-sm font-medium text-gray-800">{{ c.currency }}</span>
+        <span class="text-xs text-gray-400">({{ c.row_count }} transaction{{ "s" if c.row_count != 1 }})</span>
+      </div>
+      <select name="account_{{ c.currency }}" {% if c.candidate_accounts %}required{% else %}disabled{% endif %}
+              class="select select-sm border-gray-200 bg-white">
+        <option value="">— select account —</option>
+        {% for acc in c.candidate_accounts %}
+        <option value="{{ acc.id }}" {% if acc.id == c.auto_account_id %}selected{% endif %}>{{ acc.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    {% if not c.candidate_accounts %}
+    <p class="text-xs text-amber-600 mt-1">No {{ c.currency }} account exists yet — create one first (Manage → Accounts), then re-upload.</p>
+    {% endif %}
+  </div>
+  {% endfor %}
+  <p id="currency-map-error" class="text-xs text-[#E24B4A] hidden"></p>
+  <div class="flex justify-end gap-2 mt-1">
+    <button type="button" onclick="document.getElementById('multi-currency-modal').close()" class="btn btn-sm btn-ghost">Cancel</button>
+    <button type="submit" id="currency-map-submit-btn" class="btn btn-sm btn-primary" {% if not detection.currencies %}disabled{% endif %}>Continue</button>
+  </div>
+</form>

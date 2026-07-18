@@ -5,12 +5,20 @@ from fastapi.testclient import TestClient
 from unittest.mock import AsyncMock, MagicMock
 
 from app.features.finance.imports.schemas import (
+    CurrencyCandidateAccount,
+    CurrencyDetection,
+    DetectCurrenciesResponse,
     ImportBatchRead,
+    ImportCommitBatchResult,
+    ImportCommitGroupedResponse,
     ImportCommitResponse,
+    ImportCurrencyGroup,
+    ImportPreviewGroupedResponse,
     ImportPreviewResponse,
     ImportPreviewRow,
     ImportRuleRead,
 )
+from app.features.finance.imports.service import InvalidGroupedImportError
 
 AUTH = {"Authorization": "Bearer test-api-token"}
 
@@ -87,6 +95,7 @@ def _rule_read(**kwargs):
 def mock_service():
     svc = AsyncMock()
     svc.available_providers = MagicMock(return_value=["activobank"])
+    svc.available_grouped_providers = MagicMock(return_value=["revolut"])
     svc.preview.return_value = _preview_response()
     svc.commit.return_value = ImportCommitResponse(
         batch_id=7, inserted=10, skipped_duplicates=2, rules_created=1
@@ -232,3 +241,163 @@ class TestRules:
     def test_delete_missing_rule_404(self, client, mock_service):
         mock_service.delete_rule.return_value = False
         assert client.delete("/finance/imports/rules/9", headers=AUTH).status_code == 404
+
+
+class TestGroupedProviders:
+    def test_lists_grouped_providers(self, client):
+        response = client.get("/finance/imports/providers-grouped", headers=AUTH)
+        assert response.status_code == 200
+        assert response.json() == ["revolut"]
+
+    def test_requires_auth(self, client):
+        assert client.get("/finance/imports/providers-grouped").status_code == 403
+
+
+class TestDetectCurrencies:
+    def test_returns_detection(self, client, mock_service):
+        mock_service.detect_currencies.return_value = DetectCurrenciesResponse(
+            provider="revolut",
+            currencies=[
+                CurrencyDetection(
+                    currency="EUR", row_count=10, auto_account_id=1,
+                    candidate_accounts=[CurrencyCandidateAccount(id=1, name="Revolut EUR")],
+                ),
+                CurrencyDetection(currency="PLN", row_count=5, auto_account_id=None, candidate_accounts=[]),
+            ],
+        )
+        response = client.post(
+            "/finance/imports/detect-currencies",
+            headers=AUTH,
+            data={"provider": "revolut"},
+            files={"file": ("revolut.csv", b"csv-bytes", "text/csv")},
+        )
+        assert response.status_code == 200
+        body = response.json()
+        assert len(body["currencies"]) == 2
+        assert body["currencies"][0]["auto_account_id"] == 1
+
+    def test_unknown_provider_returns_422(self, client, mock_service):
+        mock_service.detect_currencies.return_value = None
+        response = client.post(
+            "/finance/imports/detect-currencies",
+            headers=AUTH,
+            data={"provider": "nope"},
+            files={"file": ("x.csv", b"x", "text/csv")},
+        )
+        assert response.status_code == 422
+
+    def test_requires_auth(self, client):
+        response = client.post(
+            "/finance/imports/detect-currencies",
+            data={"provider": "revolut"},
+            files={"file": ("x.csv", b"x", "text/csv")},
+        )
+        assert response.status_code == 403
+
+
+class TestPreviewGrouped:
+    def _grouped_response(self):
+        return ImportPreviewGroupedResponse(
+            provider="revolut",
+            source_file="revolut.csv",
+            groups=[
+                ImportCurrencyGroup(
+                    currency="EUR", account_id=1, account_name="Revolut EUR",
+                    rows=[_preview_row()], new_count=1, duplicate_count=0, needs_review_count=0,
+                )
+            ],
+            new_count=1, duplicate_count=0, needs_review_count=0,
+        )
+
+    def test_preview_grouped(self, client, mock_service):
+        mock_service.preview_grouped.return_value = self._grouped_response()
+        response = client.post(
+            "/finance/imports/preview-grouped",
+            headers=AUTH,
+            data={"provider": "revolut", "account_map": '{"EUR": 1}'},
+            files={"file": ("revolut.csv", b"csv-bytes", "text/csv")},
+        )
+        assert response.status_code == 200
+        body = response.json()
+        assert body["groups"][0]["currency"] == "EUR"
+        kwargs = mock_service.preview_grouped.call_args.kwargs
+        assert kwargs["account_map"] == {"EUR": 1}
+
+    def test_invalid_account_map_json_returns_400(self, client):
+        response = client.post(
+            "/finance/imports/preview-grouped",
+            headers=AUTH,
+            data={"provider": "revolut", "account_map": "not json"},
+            files={"file": ("revolut.csv", b"csv-bytes", "text/csv")},
+        )
+        assert response.status_code == 400
+
+    def test_service_error_returns_400(self, client, mock_service):
+        mock_service.preview_grouped.side_effect = InvalidGroupedImportError(
+            "No account selected for currency(ies): PLN"
+        )
+        response = client.post(
+            "/finance/imports/preview-grouped",
+            headers=AUTH,
+            data={"provider": "revolut", "account_map": "{}"},
+            files={"file": ("revolut.csv", b"csv-bytes", "text/csv")},
+        )
+        assert response.status_code == 400
+        assert "PLN" in response.json()["detail"]
+
+    def test_unparseable_file_returns_422(self, client, mock_service):
+        mock_service.preview_grouped.return_value = None
+        response = client.post(
+            "/finance/imports/preview-grouped",
+            headers=AUTH,
+            data={"provider": "revolut", "account_map": "{}"},
+            files={"file": ("weird.txt", b"???", "text/plain")},
+        )
+        assert response.status_code == 422
+
+    def test_requires_auth(self, client):
+        response = client.post(
+            "/finance/imports/preview-grouped",
+            data={"provider": "revolut", "account_map": "{}"},
+            files={"file": ("x.csv", b"x", "text/csv")},
+        )
+        assert response.status_code == 403
+
+
+class TestCommitGrouped:
+    def test_commit_grouped(self, client, mock_service):
+        mock_service.commit_grouped.return_value = ImportCommitGroupedResponse(
+            batches=[
+                ImportCommitBatchResult(
+                    batch_id=1, currency="EUR", account_id=1, inserted=5, skipped_duplicates=0
+                )
+            ],
+            total_inserted=5, total_skipped_duplicates=0, rules_created=0,
+        )
+        payload = {
+            "provider": "revolut",
+            "account_map": {"EUR": 1},
+            "rows": [
+                {
+                    "date_posted": "2026-06-01",
+                    "bank_description": "Bolt",
+                    "amount": "-10.00",
+                    "type": "expense",
+                    "currency": "EUR",
+                    "deduplication_hash": "h1",
+                }
+            ],
+        }
+        response = client.post("/finance/imports/commit-grouped", headers=AUTH, json=payload)
+        assert response.status_code == 201
+        assert response.json()["total_inserted"] == 5
+
+    def test_service_error_returns_400(self, client, mock_service):
+        mock_service.commit_grouped.side_effect = InvalidGroupedImportError("Account for currency EUR not found")
+        payload = {"provider": "revolut", "account_map": {"EUR": 1}, "rows": []}
+        response = client.post("/finance/imports/commit-grouped", headers=AUTH, json=payload)
+        assert response.status_code == 400
+
+    def test_requires_auth(self, client):
+        payload = {"provider": "revolut", "account_map": {}, "rows": []}
+        assert client.post("/finance/imports/commit-grouped", json=payload).status_code == 403

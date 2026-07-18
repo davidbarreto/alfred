@@ -1,0 +1,157 @@
+{% set review_reason_labels = {
+  "uncategorized": "No category found",
+  "rule_suggested": "Rule suggestion, please confirm",
+  "ai_suggested": "AI suggestion, please confirm",
+  "redated_installment": "Installment date adjusted to this month",
+  "uncertain_transfer": "Guessed as a transfer — please verify",
+} %}
+{% set account_map = {} %}
+{% for group in preview.groups %}{% set _ = account_map.update({group.currency: group.account_id}) %}{% endfor %}
+<div class="bg-white border border-gray-200 rounded-lg p-4 space-y-3">
+
+  <div class="flex flex-wrap items-center gap-2">
+    <h2 class="text-sm font-semibold text-gray-900">Review import</h2>
+    <span class="px-2 py-0.5 rounded-full text-xs font-medium bg-[#E6F1FB] text-[#0C447C]">{{ preview.new_count }} new</span>
+    {% if preview.duplicate_count %}
+    <span class="px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-500">{{ preview.duplicate_count }} already imported</span>
+    {% endif %}
+    {% if preview.needs_review_count %}
+    <span class="px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-700">{{ preview.needs_review_count }} need review</span>
+    {% endif %}
+    <span class="text-xs text-gray-400 ml-auto">{{ preview.provider }} · {{ preview.groups | length }} currenc{{ "y" if preview.groups | length == 1 else "ies" }}</span>
+  </div>
+
+  <form id="import-commit-grouped-form" onsubmit="submitImportCommitGrouped(event)">
+    <input type="hidden" name="provider" value="{{ preview.provider }}" />
+    <input type="hidden" name="source_file" value="{{ preview.source_file or '' }}" />
+    <input type="hidden" name="stored_file" value="{{ preview.stored_file or '' }}" />
+    <input type="hidden" name="account_map" value='{{ account_map | tojson }}' />
+    {% set ns = namespace(i=0) %}
+
+    {% for group in preview.groups %}
+    <div class="mb-4">
+      <h3 class="text-xs font-semibold text-gray-700 mb-2">
+        {{ group.currency }} → {{ group.account_name }}
+        <span class="text-gray-400 font-normal">
+          ({{ group.new_count }} new{% if group.duplicate_count %}, {{ group.duplicate_count }} already imported{% endif %}{% if group.period_start %} · {{ group.period_start }} → {{ group.period_end }}{% endif %})
+        </span>
+      </h3>
+      <div class="overflow-x-auto">
+        <table class="table table-xs w-full">
+          <thead>
+            <tr class="text-[10px] text-gray-400 uppercase tracking-wide">
+              <th></th>
+              <th>Date</th>
+              <th>Bank description</th>
+              <th class="text-right">Amount</th>
+              <th>Type</th>
+              <th>Category</th>
+              <th>Description</th>
+              <th>Note</th>
+              <th>Rule</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in group.rows %}
+            {% set i = ns.i %}
+            {% set ns.i = ns.i + 1 %}
+            {% if row.status == "duplicate" %}
+            <tr class="opacity-40">
+              <td><i class="ti ti-copy-check text-sm text-gray-400" title="Already imported"></i></td>
+              <td class="whitespace-nowrap text-xs">{{ row.date_posted }}</td>
+              <td class="text-xs max-w-64 truncate" title="{{ row.bank_description }}">{{ row.bank_description }}</td>
+              <td class="text-right text-xs whitespace-nowrap">{{ group.currency }} {{ "%.2f"|format(row.amount | float) }}</td>
+              <td colspan="5" class="text-xs text-gray-400">Skipped — already imported</td>
+            </tr>
+            {% else %}
+            <tr class="{% if row.needs_review %}bg-amber-50{% endif %} align-top">
+              <td>
+                <input type="checkbox" name="include_{{ i }}" checked class="checkbox checkbox-xs" title="Include in import" />
+                <input type="hidden" name="currency_{{ i }}" value="{{ group.currency }}" />
+                <input type="hidden" name="date_{{ i }}" value="{{ row.date_posted }}" />
+                <input type="hidden" name="bank_description_{{ i }}" value="{{ row.bank_description }}" />
+                <input type="hidden" name="amount_{{ i }}" value="{{ row.amount }}" />
+                <input type="hidden" name="hash_{{ i }}" value="{{ row.deduplication_hash }}" />
+                {% if row.counterpart_account_id %}
+                <input type="hidden" name="counterpart_{{ i }}" value="{{ row.counterpart_account_id }}" />
+                {% endif %}
+              </td>
+              <td class="whitespace-nowrap text-xs">{{ row.date_posted }}</td>
+              <td class="text-xs max-w-64">
+                <span class="block truncate" title="{{ row.bank_description }}">{{ row.bank_description }}</span>
+                {% if row.suggestion_source %}
+                <span class="text-[10px] {% if row.suggestion_source == 'rule_auto' %}text-[#3E9C42]{% elif row.suggestion_source == 'knn' %}text-[#378ADD]{% else %}text-amber-600{% endif %}">
+                  {% if row.suggestion_source == 'rule_auto' %}rule{% elif row.suggestion_source == 'rule_suggest' %}rule (suggested){% elif row.suggestion_source == 'knn' %}similar transactions{% else %}AI suggestion{% endif %}{% if row.confidence is not none %} · {{ (row.confidence * 100) | round | int }}%{% endif %}
+                </span>
+                {% endif %}
+                {% if row.review_reasons %}
+                <span class="block text-[10px] text-amber-700 mt-0.5" title="Why this row needs review">
+                  <i class="ti ti-alert-triangle text-[10px]"></i>
+                  {% for reason in row.review_reasons %}{{ review_reason_labels.get(reason, reason) }}{% if not loop.last %}, {% endif %}{% endfor %}
+                </span>
+                {% endif %}
+              </td>
+              <td class="text-right text-xs whitespace-nowrap font-medium {% if row.amount | float < 0 %}text-[#E24B4A]{% else %}text-[#3E9C42]{% endif %}">
+                {{ group.currency }} {{ "%.2f"|format(row.amount | float) }}
+              </td>
+              <td>
+                <select name="type_{{ i }}" class="select select-xs border-gray-200 bg-white">
+                  <option value="expense" {% if row.type == "expense" %}selected{% endif %}>Expense</option>
+                  <option value="income" {% if row.type == "income" %}selected{% endif %}>Income</option>
+                  <option value="transfer" {% if row.type == "transfer" %}selected{% endif %}>Transfer</option>
+                </select>
+              </td>
+              <td>
+                <select name="category_{{ i }}" class="select select-xs border-gray-200 bg-white">
+                  <option value="">—</option>
+                  {% for cat in categories %}
+                  <option value="{{ cat.id }}" {% if row.category_id == cat.id %}selected{% endif %}>{{ cat.name }}</option>
+                  {% endfor %}
+                </select>
+              </td>
+              <td>
+                <input type="text" name="description_{{ i }}" value="{{ row.description or '' }}" placeholder="Friendly description"
+                       class="input input-xs border-gray-200 bg-white w-36" />
+                <input type="hidden" name="merchant_{{ i }}" value="{{ row.merchant or '' }}" />
+              </td>
+              <td>
+                <input type="text" name="note_{{ i }}" value="" placeholder="Note"
+                       class="input input-xs border-gray-200 bg-white w-28" />
+              </td>
+              <td class="text-xs">
+                <label class="flex items-center gap-1 cursor-pointer whitespace-nowrap">
+                  <input type="checkbox" name="save_rule_{{ i }}" class="checkbox checkbox-xs"
+                         onchange="toggleRuleInputs({{ i }}, this.checked)" />
+                  <span class="text-[10px] text-gray-500">Remember</span>
+                </label>
+                <div id="rule-inputs-{{ i }}" class="hidden mt-1 space-y-1">
+                  <input type="text" name="rule_pattern_{{ i }}" value="{{ row.merchant or '' }}" placeholder="Match text"
+                         class="input input-xs border-gray-200 bg-white w-28" />
+                  <select name="rule_mode_{{ i }}" class="select select-xs border-gray-200 bg-white w-28">
+                    <option value="auto">Apply automatically</option>
+                    <option value="suggest">Suggest only</option>
+                  </select>
+                  <label class="flex items-center gap-1 cursor-pointer whitespace-nowrap">
+                    <input type="checkbox" name="rule_match_amount_{{ i }}" value="1" class="checkbox checkbox-xs" />
+                    <span class="text-[10px] text-gray-500">Only this amount</span>
+                  </label>
+                </div>
+              </td>
+            </tr>
+            {% endif %}
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    {% endfor %}
+
+    <input type="hidden" name="row_count" value="{{ ns.i }}" />
+    <div class="flex items-center justify-end gap-3 mt-3">
+      <span class="text-xs text-gray-400">Unchecked rows are skipped.</span>
+      <button type="submit" id="import-commit-grouped-btn" class="btn btn-sm btn-primary gap-1">
+        <i class="ti ti-database-import text-sm"></i>Import {{ preview.new_count }} transactions
+      </button>
+    </div>
+  </form>
+</div>

@@ -4,23 +4,23 @@ Format notes:
 - UTF-8, ``,``-delimited, single header row:
   ``Type,Product,Started Date,Completed Date,Description,Amount,Fee,Currency,State,Balance``
 - One export can contain SEVERAL currencies mixed together (Revolut's multi-currency
-  wallet), typically grouped into per-currency blocks. Alfred models one currency per
-  account, so this parser is instantiated once per currency (see registry.py) and
-  filters to only the rows matching its currency — the user picks the matching
-  provider/account at upload time, auto-detection can't disambiguate which currency
-  they mean.
+  wallet), typically grouped into per-currency blocks. Unlike every other parser here,
+  this one does NOT filter to a single currency -- it parses every row and tags each
+  with its own currency (ParsedRow.currency). The import service handles routing each
+  currency's rows to the right Alfred account (see ImportService.preview_grouped).
 - Only ``State == "COMPLETED"`` rows are kept; PENDING/REVERTED rows never actually
   moved money (empty Completed Date and Balance confirm this).
 - ``Type`` classifies the row structurally, which lets us set the transaction type
   directly instead of relying on the sign-based expense/income default:
     - "Exchange": the user's own money moving between their own Revolut currency
-      balances — always a transfer, in both directions/currencies.
+      balances -- always a transfer. (No counterpart account is set: reliably pairing
+      the two legs of one conversion isn't attempted here -- see the import plan notes.)
     - "Topup": money entering from an external card not tracked as an Alfred
-      account — treated as a transfer (not income) so it doesn't inflate earnings.
+      account -- treated as a transfer (not income) so it doesn't inflate earnings.
     - "Transfer" to "Revolut Bank UAB ...": Revolut's own entity name, most likely an
-      internal sweep of a foreign-currency e-money balance into the core account —
+      internal sweep of a foreign-currency e-money balance into the core account --
       treated as a transfer, but flagged for review since this is a guess.
-    - "Transfer to <person>": a real payment to someone else — left as a normal
+    - "Transfer to <person>": a real payment to someone else -- left as a normal
       expense (the default sign-based inference already gets this right).
     - "Card Payment" / "ATM" / "Rev Payment" / "Card Refund": ordinary
       expense/income, sign-based inference already correct.
@@ -38,6 +38,7 @@ from decimal import Decimal, InvalidOperation
 
 from app.shared.statement import ParsedRow, ParsedStatement, decode
 
+_PROVIDER = "revolut"
 _HEADER = "Type,Product,Started Date,Completed Date,Description,Amount,Fee,Currency,State,Balance"
 _REVOLUT_ENTITY_HINT = "Revolut Bank UAB"
 
@@ -59,31 +60,28 @@ def _parse_amount(raw: str) -> Decimal | None:
         return None
 
 
-class RevolutStatementParser:
-    """One instance per currency; register a separate provider per currency held."""
+def _classify(row_type: str, description: str) -> tuple[str | None, str | None]:
+    if row_type == "Exchange":
+        return "transfer", None
+    if row_type == "Topup":
+        return "transfer", None
+    if row_type == "Transfer" and _REVOLUT_ENTITY_HINT in description:
+        return "transfer", "uncertain_transfer"
+    return None, None
 
-    def __init__(self, currency: str) -> None:
-        self._currency = currency.upper()
+
+class RevolutStatementParser:
 
     @property
     def provider(self) -> str:
-        return f"revolut_{self._currency.lower()}"
-
-    @property
-    def currency(self) -> str:
-        return self._currency
+        return _PROVIDER
 
     def can_parse(self, filename: str, content: bytes) -> bool:
         if not filename.lower().endswith(".csv"):
             return False
-        text = decode(content)
-        lines = text.splitlines()
-        if not lines or lines[0].strip() != _HEADER:
-            return False
-        # A Revolut export can hold several currencies at once; auto-detect can't
-        # disambiguate which one the user means, but at least rule out currencies
-        # that aren't present in the file at all.
-        return f",{self._currency}," in text
+        head = decode(content[:512])
+        first_line = head.splitlines()[0].strip() if head else ""
+        return first_line == _HEADER
 
     def parse(self, content: bytes) -> ParsedStatement:
         text = decode(content)
@@ -91,8 +89,6 @@ class RevolutStatementParser:
 
         rows: list[ParsedRow] = []
         for record in reader:
-            if (record.get("Currency") or "").strip().upper() != self._currency:
-                continue
             if (record.get("State") or "").strip().upper() != "COMPLETED":
                 continue
 
@@ -100,12 +96,13 @@ class RevolutStatementParser:
             started = _parse_datetime(record.get("Started Date") or "")
             amount = _parse_amount(record.get("Amount") or "")
             balance = _parse_amount(record.get("Balance") or "")
-            if completed is None or amount is None:
+            currency = (record.get("Currency") or "").strip().upper()
+            if completed is None or amount is None or not currency:
                 continue
 
             row_type = (record.get("Type") or "").strip()
             description = (record.get("Description") or "").strip()
-            suggested_type, flag_reason = self._classify(row_type, description)
+            suggested_type, flag_reason = _classify(row_type, description)
 
             rows.append(
                 ParsedRow(
@@ -113,6 +110,7 @@ class RevolutStatementParser:
                     date_value=started or completed,
                     raw_description=description,
                     amount=amount,
+                    currency=currency,
                     balance_after=balance,
                     suggested_type=suggested_type,
                     flag_reason=flag_reason,
@@ -120,23 +118,12 @@ class RevolutStatementParser:
             )
 
         dates = [r.date_posted for r in rows]
-        closing_balance = rows[-1].balance_after if rows else None
         return ParsedStatement(
-            provider=self.provider,
+            provider=_PROVIDER,
             account_number=None,
-            currency=self._currency,
+            currency=rows[0].currency if rows else "EUR",
             period_start=min(dates) if dates else None,
             period_end=max(dates) if dates else None,
-            closing_balance=closing_balance,
+            closing_balance=None,
             rows=rows,
         )
-
-    @staticmethod
-    def _classify(row_type: str, description: str) -> tuple[str | None, str | None]:
-        if row_type == "Exchange":
-            return "transfer", None
-        if row_type == "Topup":
-            return "transfer", None
-        if row_type == "Transfer" and _REVOLUT_ENTITY_HINT in description:
-            return "transfer", "uncertain_transfer"
-        return None, None

@@ -5,11 +5,14 @@ from unittest.mock import AsyncMock, MagicMock
 
 from app.features.core.embeddings.schemas import EmbeddingSearchResult
 from app.features.finance.imports.schemas import (
+    ImportCommitGroupedRequest,
+    ImportCommitGroupedRow,
     ImportCommitRequest,
     ImportCommitRow,
 )
 from app.features.finance.imports.service import (
     ImportService,
+    InvalidGroupedImportError,
     _clean_description,
     _compute_dedup_hash,
     _extract_json,
@@ -26,6 +29,7 @@ def _row(**kwargs) -> ParsedRow:
         date_value=date(2026, 6, 1),
         raw_description="COMPRA 8597 PINGO DOCE CIRCUNVALPOR CONTACTLESS",
         amount=Decimal("-23.17"),
+        currency="EUR",
         balance_after=Decimal("471.09"),
     )
     defaults.update(kwargs)
@@ -82,6 +86,14 @@ def _category(cat_id: int, name: str):
     return cat
 
 
+def _account(account_id: int, name: str, currency: str):
+    a = MagicMock()
+    a.id = account_id
+    a.name = name
+    a.currency = currency
+    return a
+
+
 def _service(statement: ParsedStatement | None = None, llm=None, files=None) -> ImportService:
     service = ImportService(
         session=AsyncMock(),
@@ -93,10 +105,12 @@ def _service(statement: ParsedStatement | None = None, llm=None, files=None) -> 
     service._repo = AsyncMock()
     service._txn_repo = AsyncMock()
     service._category_repo = AsyncMock()
+    service._account_repo = AsyncMock()
     service._repo.list_rules.return_value = []
     service._repo.add_rule = MagicMock()
     service._txn_repo.get_existing_dedup_hashes.return_value = set()
     service._category_repo.list.return_value = []
+    service._account_repo.list.return_value = []
     service._embeddings.search.return_value = []
     return service
 
@@ -582,3 +596,299 @@ class TestDeleteBatch:
 
         assert await service.delete_batch(7) is True
         files.delete.assert_awaited_once_with("fakebank/abc_mov.csv")
+
+
+class TestDetectCurrencies:
+    @pytest.mark.asyncio
+    async def test_unknown_provider_returns_none(self):
+        service = _service()
+        assert await service.detect_currencies("x.csv", b"", provider="nope") is None
+
+    @pytest.mark.asyncio
+    async def test_groups_by_currency_with_counts(self):
+        rows = [
+            _row(currency="EUR"), _row(currency="EUR"),
+            _row(currency="PLN", balance_after=Decimal("10")),
+        ]
+        service = _service(_statement(rows))
+
+        result = await service.detect_currencies("x.csv", b"", provider="fakebank")
+
+        by_currency = {d.currency: d for d in result.currencies}
+        assert by_currency["EUR"].row_count == 2
+        assert by_currency["PLN"].row_count == 1
+
+    @pytest.mark.asyncio
+    async def test_auto_resolves_when_exactly_one_account_matches(self):
+        service = _service(_statement([_row(currency="PLN")]))
+        service._account_repo.list.return_value = [_account(5, "Revolut PLN", "PLN")]
+
+        result = await service.detect_currencies("x.csv", b"", provider="fakebank")
+
+        detection = result.currencies[0]
+        assert detection.auto_account_id == 5
+        assert [a.id for a in detection.candidate_accounts] == [5]
+
+    @pytest.mark.asyncio
+    async def test_no_auto_resolve_when_multiple_accounts_share_currency(self):
+        service = _service(_statement([_row(currency="EUR")]))
+        service._account_repo.list.return_value = [
+            _account(1, "ActivoBank", "EUR"), _account(2, "PoupeUp", "EUR"),
+        ]
+
+        result = await service.detect_currencies("x.csv", b"", provider="fakebank")
+
+        detection = result.currencies[0]
+        assert detection.auto_account_id is None
+        assert len(detection.candidate_accounts) == 2
+
+    @pytest.mark.asyncio
+    async def test_no_candidates_when_no_account_matches(self):
+        service = _service(_statement([_row(currency="USD")]))
+        service._account_repo.list.return_value = [_account(1, "ActivoBank", "EUR")]
+
+        result = await service.detect_currencies("x.csv", b"", provider="fakebank")
+
+        detection = result.currencies[0]
+        assert detection.auto_account_id is None
+        assert detection.candidate_accounts == []
+
+
+class TestPreviewGrouped:
+    @pytest.mark.asyncio
+    async def test_unknown_provider_returns_none(self):
+        service = _service()
+        assert await service.preview_grouped({}, "x.csv", b"", provider="nope") is None
+
+    @pytest.mark.asyncio
+    async def test_missing_account_map_entry_raises(self):
+        service = _service(_statement([_row(currency="PLN")]))
+
+        with pytest.raises(InvalidGroupedImportError):
+            await service.preview_grouped({}, "x.csv", b"", provider="fakebank")
+
+    @pytest.mark.asyncio
+    async def test_groups_rows_by_currency(self):
+        rows = [
+            _row(currency="EUR", raw_description="A"),
+            _row(currency="PLN", raw_description="B", balance_after=Decimal("10")),
+        ]
+        service = _service(_statement(rows))
+        service._account_repo.list.return_value = [
+            _account(1, "EUR Acc", "EUR"), _account(2, "PLN Acc", "PLN"),
+        ]
+
+        result = await service.preview_grouped(
+            {"EUR": 1, "PLN": 2}, "x.csv", b"", provider="fakebank"
+        )
+
+        by_currency = {g.currency: g for g in result.groups}
+        assert by_currency["EUR"].account_id == 1
+        assert by_currency["EUR"].account_name == "EUR Acc"
+        assert len(by_currency["EUR"].rows) == 1
+        assert by_currency["PLN"].account_id == 2
+        assert len(by_currency["PLN"].rows) == 1
+
+    @pytest.mark.asyncio
+    async def test_top_level_counts_sum_across_groups(self):
+        rows = [_row(currency="EUR"), _row(currency="PLN", balance_after=Decimal("10"))]
+        service = _service(_statement(rows))
+        service._account_repo.list.return_value = [
+            _account(1, "EUR Acc", "EUR"), _account(2, "PLN Acc", "PLN"),
+        ]
+
+        result = await service.preview_grouped(
+            {"EUR": 1, "PLN": 2}, "x.csv", b"", provider="fakebank"
+        )
+
+        assert result.new_count == 2
+
+    @pytest.mark.asyncio
+    async def test_rules_applied_per_group(self):
+        service = _service(_statement([_row(currency="EUR")]))
+        service._account_repo.list.return_value = [_account(1, "EUR Acc", "EUR")]
+        service._repo.list_rules.return_value = [_rule()]
+        service._category_repo.list.return_value = [_category(10, "Groceries")]
+
+        result = await service.preview_grouped({"EUR": 1}, "x.csv", b"", provider="fakebank")
+
+        row = result.groups[0].rows[0]
+        assert row.category_id == 10
+        assert row.suggestion_source == "rule_auto"
+
+    @pytest.mark.asyncio
+    async def test_duplicate_marked_per_group(self):
+        row = _row(currency="EUR")
+        service = _service(_statement([row]))
+        service._account_repo.list.return_value = [_account(1, "EUR Acc", "EUR")]
+        dup_hash = _compute_dedup_hash(1, row, 1)
+        service._txn_repo.get_existing_dedup_hashes.return_value = {dup_hash}
+
+        result = await service.preview_grouped({"EUR": 1}, "x.csv", b"", provider="fakebank")
+
+        assert result.groups[0].rows[0].status == "duplicate"
+        assert result.duplicate_count == 1
+        assert result.new_count == 0
+
+
+def _grouped_commit_row(**kwargs) -> ImportCommitGroupedRow:
+    defaults = dict(
+        date_posted=date(2026, 6, 1),
+        bank_description="Some desc",
+        amount=Decimal("-10.00"),
+        type="expense",
+        currency="EUR",
+        deduplication_hash="hash-1",
+        category_id=10,
+    )
+    defaults.update(kwargs)
+    return ImportCommitGroupedRow(**defaults)
+
+
+def _grouped_commit_request(rows, account_map=None) -> ImportCommitGroupedRequest:
+    return ImportCommitGroupedRequest(
+        provider="fakebank",
+        source_file="x.csv",
+        account_map=account_map if account_map is not None else {"EUR": 1},
+        rows=rows,
+    )
+
+
+class TestCommitGrouped:
+    def _prepare(self, service: ImportService):
+        batches: list = []
+
+        async def _add_batch(batch):
+            batch.id = len(batches) + 1
+            batches.append(batch)
+            return batch
+        service._repo.add_batch.side_effect = _add_batch
+
+        created: list = []
+
+        async def _add_txn(data):
+            txn = MagicMock()
+            txn.id = len(created) + 100
+            txn.category_id = data.category_id
+            txn.type = data.type
+            txn.bank_description = data.bank_description
+            txn.description = data.description
+            created.append(data)
+            return txn
+        service._txn_repo.add.side_effect = _add_txn
+        service._repo.add_rule = MagicMock()
+        service._account_repo.get.return_value = MagicMock()
+        return created, batches
+
+    @pytest.mark.asyncio
+    async def test_missing_account_map_entry_raises(self):
+        service = _service()
+        request = _grouped_commit_request([_grouped_commit_row()], account_map={})
+
+        with pytest.raises(InvalidGroupedImportError):
+            await service.commit_grouped(request)
+
+    @pytest.mark.asyncio
+    async def test_missing_account_raises(self):
+        service = _service()
+        service._account_repo.get.return_value = None
+        request = _grouped_commit_request([_grouped_commit_row()], account_map={"EUR": 999})
+
+        with pytest.raises(InvalidGroupedImportError):
+            await service.commit_grouped(request)
+
+    @pytest.mark.asyncio
+    async def test_creates_one_batch_per_currency(self):
+        service = _service()
+        created, batches = self._prepare(service)
+
+        request = _grouped_commit_request(
+            [
+                _grouped_commit_row(currency="EUR", deduplication_hash="h1"),
+                _grouped_commit_row(currency="PLN", deduplication_hash="h2"),
+            ],
+            account_map={"EUR": 1, "PLN": 2},
+        )
+
+        result = await service.commit_grouped(request)
+
+        assert len(batches) == 2
+        assert len(result.batches) == 2
+        assert result.total_inserted == 2
+        currencies = {b.currency: b for b in result.batches}
+        assert currencies["EUR"].account_id == 1
+        assert currencies["PLN"].account_id == 2
+
+    @pytest.mark.asyncio
+    async def test_skips_duplicates_per_row(self):
+        service = _service()
+        self._prepare(service)
+        service._txn_repo.get_existing_dedup_hashes.return_value = {"h1"}
+
+        request = _grouped_commit_request(
+            [
+                _grouped_commit_row(currency="EUR", deduplication_hash="h1"),
+                _grouped_commit_row(currency="EUR", deduplication_hash="h2"),
+            ],
+            account_map={"EUR": 1},
+        )
+
+        result = await service.commit_grouped(request)
+
+        assert result.total_inserted == 1
+        assert result.total_skipped_duplicates == 1
+
+    @pytest.mark.asyncio
+    async def test_transfer_amount_keeps_sign(self):
+        service = _service()
+        created, _ = self._prepare(service)
+
+        request = _grouped_commit_request(
+            [_grouped_commit_row(currency="EUR", type="transfer", amount=Decimal("-100.00"), category_id=None)],
+            account_map={"EUR": 1},
+        )
+
+        await service.commit_grouped(request)
+
+        assert created[0].amount == Decimal("-100.00")
+
+    @pytest.mark.asyncio
+    async def test_expense_amount_stored_positive(self):
+        service = _service()
+        created, _ = self._prepare(service)
+
+        request = _grouped_commit_request(
+            [_grouped_commit_row(currency="EUR", type="expense", amount=Decimal("-23.17"))],
+            account_map={"EUR": 1},
+        )
+
+        await service.commit_grouped(request)
+
+        assert created[0].amount == Decimal("23.17")
+
+    @pytest.mark.asyncio
+    async def test_save_rule_creates_rule(self):
+        service = _service()
+        self._prepare(service)
+
+        request = _grouped_commit_request(
+            [_grouped_commit_row(currency="EUR", save_rule=True, rule_pattern="PINGO DOCE")],
+            account_map={"EUR": 1},
+        )
+
+        result = await service.commit_grouped(request)
+
+        assert result.rules_created == 1
+
+    @pytest.mark.asyncio
+    async def test_categorized_transactions_are_embedded(self):
+        service = _service()
+        self._prepare(service)
+
+        request = _grouped_commit_request(
+            [_grouped_commit_row(currency="EUR", category_id=10)], account_map={"EUR": 1}
+        )
+
+        await service.commit_grouped(request)
+
+        assert service._embeddings.embed.await_count == 1

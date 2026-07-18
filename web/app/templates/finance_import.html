@@ -5,9 +5,16 @@
 {% block content %}
 <div class="p-6 space-y-4">
 
-  <div class="flex items-center gap-2">
-    <a href="/finance" class="text-gray-400 hover:text-gray-600"><i class="ti ti-arrow-left text-sm"></i></a>
-    <h1 class="text-base font-semibold text-gray-900">Import bank statement</h1>
+  <div class="flex items-center justify-between gap-2">
+    <div class="flex items-center gap-2">
+      <a href="/finance" class="text-gray-400 hover:text-gray-600"><i class="ti ti-arrow-left text-sm"></i></a>
+      <h1 class="text-base font-semibold text-gray-900">Import bank statement</h1>
+    </div>
+    {% if grouped_providers %}
+    <button onclick="openMultiCurrencyModal()" class="btn btn-sm btn-ghost gap-1 text-gray-500">
+      <i class="ti ti-currency-euro text-sm"></i>Import multi-currency…
+    </button>
+    {% endif %}
   </div>
 
   <div class="bg-white border border-gray-200 rounded-lg p-4">
@@ -68,6 +75,40 @@
 
 </div>
 
+<dialog id="multi-currency-modal" class="modal">
+  <div class="modal-box bg-white rounded-xl border border-gray-200 shadow-lg max-w-md w-full p-6">
+    <h3 class="text-sm font-semibold text-gray-900 mb-2">Import multi-currency statement</h3>
+    <p class="text-xs text-gray-400 mb-4">
+      For statements that mix several currencies in one file (e.g. Revolut). Upload once —
+      you'll match each currency to one of your accounts before reviewing transactions.
+    </p>
+    <div id="multi-currency-modal-content">
+      <form id="detect-currencies-form" onsubmit="submitDetectCurrencies(event)" class="flex flex-col gap-3">
+        <div>
+          <label class="text-xs text-gray-500 mb-1 block">Bank</label>
+          <select id="multi-currency-provider" required
+                  class="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white w-full focus:outline-none focus:ring-1 focus:ring-[#378ADD]">
+            {% for p in grouped_providers %}
+            <option value="{{ p }}">{{ p }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <label class="text-xs text-gray-500 mb-1 block">Statement file</label>
+          <input type="file" id="multi-currency-file" required accept=".csv"
+                 class="file-input file-input-sm file-input-bordered bg-white text-sm w-full" />
+        </div>
+        <p id="detect-currencies-error" class="text-xs text-[#E24B4A] hidden"></p>
+        <div class="flex justify-end gap-2 mt-1">
+          <button type="button" onclick="document.getElementById('multi-currency-modal').close()" class="btn btn-sm btn-ghost">Cancel</button>
+          <button type="submit" id="detect-currencies-submit-btn" class="btn btn-sm btn-primary">Detect currencies</button>
+        </div>
+      </form>
+    </div>
+  </div>
+  <form method="dialog" class="modal-backdrop"><button>close</button></form>
+</dialog>
+
 <script>
 async function submitImportPreview(event) {
   event.preventDefault();
@@ -114,6 +155,112 @@ async function submitImportCommit(event) {
 function toggleRuleInputs(index, checked) {
   const cell = document.getElementById("rule-inputs-" + index);
   if (cell) cell.classList.toggle("hidden", !checked);
+}
+
+let _multiCurrencyStepAHtml = null;
+let _multiCurrencyFile = null;
+let _multiCurrencyProvider = "";
+
+function openMultiCurrencyModal() {
+  const content = document.getElementById("multi-currency-modal-content");
+  if (_multiCurrencyStepAHtml === null) {
+    _multiCurrencyStepAHtml = content.innerHTML;
+  } else {
+    content.innerHTML = _multiCurrencyStepAHtml;
+  }
+  document.getElementById("multi-currency-modal").showModal();
+}
+
+async function submitDetectCurrencies(event) {
+  event.preventDefault();
+  const btn = document.getElementById("detect-currencies-submit-btn");
+  const errEl = document.getElementById("detect-currencies-error");
+  const fileInput = document.getElementById("multi-currency-file");
+  if (!fileInput.files.length) return;
+  _multiCurrencyFile = fileInput.files[0];
+  _multiCurrencyProvider = document.getElementById("multi-currency-provider").value;
+
+  btn.disabled = true;
+  btn.innerHTML = '<span class="loading loading-spinner loading-xs"></span>Detecting…';
+  errEl.classList.add("hidden");
+
+  const formData = new FormData();
+  formData.append("provider", _multiCurrencyProvider);
+  formData.append("file", _multiCurrencyFile, _multiCurrencyFile.name);
+
+  try {
+    const resp = await fetch("/finance/import/detect-currencies", { method: "POST", body: formData });
+    const html = await resp.text();
+    if (!resp.ok) throw new Error(html || `Error ${resp.status}`);
+    document.getElementById("multi-currency-modal-content").innerHTML = html;
+    if (window.htmx) htmx.process(document.getElementById("multi-currency-modal-content"));
+  } catch (err) {
+    errEl.textContent = err.message || "Could not read this file.";
+    errEl.classList.remove("hidden");
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = "Detect currencies";
+  }
+}
+
+async function submitPreviewGrouped(event) {
+  event.preventDefault();
+  const btn = document.getElementById("currency-map-submit-btn");
+  const errEl = document.getElementById("currency-map-error");
+  btn.disabled = true;
+  btn.innerHTML = '<span class="loading loading-spinner loading-xs"></span>Loading…';
+  errEl.classList.add("hidden");
+
+  const accountMap = {};
+  for (const el of event.target.elements) {
+    if (el.name && el.name.startsWith("account_") && el.value) {
+      accountMap[el.name.slice("account_".length)] = parseInt(el.value, 10);
+    }
+  }
+
+  const formData = new FormData();
+  formData.append("provider", _multiCurrencyProvider);
+  formData.append("account_map", JSON.stringify(accountMap));
+  formData.append("file", _multiCurrencyFile, _multiCurrencyFile.name);
+
+  try {
+    const resp = await fetch("/finance/import/preview-grouped", { method: "POST", body: formData });
+    const html = await resp.text();
+    if (!resp.ok) throw new Error(html || `Error ${resp.status}`);
+    document.getElementById("multi-currency-modal").close();
+    const target = document.getElementById("import-review");
+    target.innerHTML = html;
+    if (window.htmx) htmx.process(target);
+    target.scrollIntoView({ behavior: "smooth", block: "start" });
+  } catch (err) {
+    errEl.textContent = err.message || "Could not preview this import.";
+    errEl.classList.remove("hidden");
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = "Continue";
+  }
+}
+
+async function submitImportCommitGrouped(event) {
+  event.preventDefault();
+  const btn = document.getElementById("import-commit-grouped-btn");
+  btn.disabled = true;
+  btn.innerHTML = '<span class="loading loading-spinner loading-xs"></span>Importing…';
+  const formData = new FormData(document.getElementById("import-commit-grouped-form"));
+  const payload = Object.fromEntries(formData.entries());
+  const resp = await fetch("/finance/import/commit-grouped", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  const target = document.getElementById("import-review");
+  target.innerHTML = await resp.text();
+  if (window.htmx) htmx.process(target);
+  if (resp.ok) {
+    htmx.ajax("GET", "/finance/import/batches", { target: "#import-batches", swap: "innerHTML" });
+  } else {
+    btn.disabled = false;
+  }
 }
 </script>
 {% endblock %}

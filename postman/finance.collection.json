@@ -1726,6 +1726,199 @@
               ]
             }
           }
+        },
+        {
+          "name": "11 - List Grouped Providers",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Contains revolut', () => {",
+                  "    pm.expect(pm.response.json()).to.include('revolut');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/finance/imports/providers-grouped",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "finance",
+                "imports",
+                "providers-grouped"
+              ]
+            }
+          }
+        },
+        {
+          "name": "12 - Detect Currencies (Revolut, file upload)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Detects at least one currency', () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.provider).to.eql('revolut');",
+                  "    pm.expect(json.currencies).to.be.an('array');",
+                  "    pm.expect(json.currencies.length).to.be.at.least(1);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": "fixtures/revolut_sample.csv"
+                },
+                {
+                  "key": "provider",
+                  "value": "revolut",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/finance/imports/detect-currencies",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "finance",
+                "imports",
+                "detect-currencies"
+              ]
+            },
+            "description": "Select postman/fixtures/revolut_sample.csv if the relative path does not resolve."
+          }
+        },
+        {
+          "name": "13 - Preview Grouped (all currencies mapped to the finance test account)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Groups rows by currency', () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.groups).to.be.an('array');",
+                  "    pm.expect(json.groups.length).to.be.at.least(1);",
+                  "    let allRows = [];",
+                  "    json.groups.forEach(g => allRows = allRows.concat(g.rows));",
+                  "    pm.environment.set('revolut_commit_rows', JSON.stringify(allRows.map((r, i) => ({",
+                  "        row: r, currency: json.groups.find(g => g.rows.includes(r)).currency",
+                  "    }))));",
+                  "    pm.environment.set('revolut_groups', JSON.stringify(json.groups.map(g => ({currency: g.currency, account_id: g.account_id}))));",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": "fixtures/revolut_sample.csv"
+                },
+                {
+                  "key": "provider",
+                  "value": "revolut",
+                  "type": "text"
+                },
+                {
+                  "key": "account_map",
+                  "value": "{{revolut_account_map}}",
+                  "type": "text",
+                  "description": "Set this environment variable to e.g. {\"EUR\": <account_id>, \"PLN\": <account_id>, \"USD\": <account_id>, \"CZK\": <account_id>} using accounts created in the Accounts folder first."
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/finance/imports/preview-grouped",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "finance",
+                "imports",
+                "preview-grouped"
+              ]
+            }
+          }
+        },
+        {
+          "name": "14 - Commit Grouped",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+                  "pm.test('Inserts across at least one batch', () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.batches).to.be.an('array');",
+                  "    pm.expect(json.total_inserted).to.be.at.least(0);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"provider\": \"revolut\",\n  \"source_file\": \"revolut_sample.csv\",\n  \"account_map\": {{revolut_account_map}},\n  \"rows\": []\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/finance/imports/commit-grouped",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "finance",
+                "imports",
+                "commit-grouped"
+              ]
+            },
+            "description": "Populate rows[] manually from the preview-grouped response (each row needs date_posted, bank_description, amount, type, currency, deduplication_hash) -- left empty here since row content is specific to the uploaded fixture."
+          }
         }
       ]
     }

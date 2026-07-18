@@ -285,8 +285,15 @@ logger.warning("Auth failed: invalid token")
 - Test file mirrors source structure: `tests/test_task_service.py` → `app/features/organizer/tasks/service.py`
 - Aim for behaviour coverage, not line coverage — test contracts, not internals
 
+### Sensitive data & test fixtures
+- Never copy real personal or financial data — names, account/card numbers, amounts, addresses, merchant strings from a real statement, etc. — from a user-provided file into code, test fixtures, Postman collections, or documentation, even as a "quick example." Always invent synthetic equivalents that preserve the shape/format needed for the test (e.g. `"SOME PERSON"` instead of a real name, `*1234` instead of a real card suffix, round invented amounts instead of real ones).
+- Treat every file the user pastes or drops for debugging (bank/card statement exports, CSVs, screenshots) as containing real third-party data by default. It's fine to read and analyze it in place; the rule is about what gets written back into the repo.
+- Before committing a new fixture derived from a real file, re-read the fixture itself and confirm nothing was copy-pasted verbatim — don't trust that an earlier "I'll anonymize this" intention actually landed in the file.
+
 ### Commits
 - Don't add Co-Authored-By: Claude or similar text in commit messages
+- Commit freely once a change is complete and tested — no need to ask first.
+- Never run `git push` (including `--force`/`--force-with-lease`) unless the user explicitly asks for a push in that specific turn. An earlier "commit and push" is not standing permission for the rest of the session — commit and stop, then say the changes are committed locally and ready to push. This matters most on this repo since it's public on GitHub: push is the last checkpoint before anything sensitive that slipped into a commit becomes visible to anyone.
 
 ---
 

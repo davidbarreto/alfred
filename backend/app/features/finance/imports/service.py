@@ -413,7 +413,16 @@ class ImportService:
         existing = await self._txn_repo.get_existing_dedup_hashes(
             [r.deduplication_hash for r in request.rows]
         )
-        to_insert = [r for r in request.rows if r.deduplication_hash not in existing]
+        # A hash can also repeat WITHIN this request (e.g. overlapping export date
+        # ranges produce the same source line twice); the DB's unique constraint would
+        # reject the second one and abort the whole batch insert if it weren't caught here.
+        seen: set[str] = set()
+        to_insert = []
+        for row in request.rows:
+            if row.deduplication_hash in existing or row.deduplication_hash in seen:
+                continue
+            seen.add(row.deduplication_hash)
+            to_insert.append(row)
         skipped = len(request.rows) - len(to_insert)
 
         batch = await self._repo.add_batch(
@@ -696,6 +705,9 @@ class ImportService:
         existing = await self._txn_repo.get_existing_dedup_hashes(
             [r.deduplication_hash for r in request.rows]
         )
+        # See commit(): a hash can also repeat WITHIN this request, which the
+        # existing-in-DB check alone wouldn't catch and would abort the batch insert.
+        seen: set[str] = set()
 
         batch_results: list[ImportCommitBatchResult] = []
         all_transactions = []
@@ -704,7 +716,12 @@ class ImportService:
         for currency in sorted(by_currency):
             rows = by_currency[currency]
             account_id = request.account_map[currency]
-            to_insert = [r for r in rows if r.deduplication_hash not in existing]
+            to_insert = []
+            for row in rows:
+                if row.deduplication_hash in existing or row.deduplication_hash in seen:
+                    continue
+                seen.add(row.deduplication_hash)
+                to_insert.append(row)
             skipped = len(rows) - len(to_insert)
             dates = [r.date_posted for r in rows]
 

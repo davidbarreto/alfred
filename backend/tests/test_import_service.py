@@ -435,6 +435,26 @@ class TestCommit:
         assert service._created[0].source == "fakebank"
 
     @pytest.mark.asyncio
+    async def test_duplicate_within_the_same_request_is_skipped_not_inserted_twice(self):
+        # A hash repeating within request.rows (not yet in the DB) must be caught here --
+        # otherwise the DB's unique constraint rejects the second insert and aborts the
+        # whole batch instead of just skipping the one duplicate row.
+        service = _service()
+        self._prepare(service)
+        service._txn_repo.get_existing_dedup_hashes.return_value = set()
+        rows = [
+            _commit_row(deduplication_hash="hash-repeat"),
+            _commit_row(deduplication_hash="hash-repeat"),
+            _commit_row(deduplication_hash="hash-unique"),
+        ]
+
+        result = await service.commit(_commit_request(rows))
+
+        assert result.inserted == 2
+        assert result.skipped_duplicates == 1
+        assert len(service._created) == 2
+
+    @pytest.mark.asyncio
     async def test_expense_amount_stored_positive(self):
         service = _service()
         self._prepare(service)
@@ -854,6 +874,25 @@ class TestCommitGrouped:
             [
                 _grouped_commit_row(currency="EUR", deduplication_hash="h1"),
                 _grouped_commit_row(currency="EUR", deduplication_hash="h2"),
+            ],
+            account_map={"EUR": 1},
+        )
+
+        result = await service.commit_grouped(request)
+
+        assert result.total_inserted == 1
+        assert result.total_skipped_duplicates == 1
+
+    @pytest.mark.asyncio
+    async def test_duplicate_within_the_same_request_is_skipped_not_inserted_twice(self):
+        service = _service()
+        self._prepare(service)
+        service._txn_repo.get_existing_dedup_hashes.return_value = set()
+
+        request = _grouped_commit_request(
+            [
+                _grouped_commit_row(currency="EUR", deduplication_hash="hash-repeat"),
+                _grouped_commit_row(currency="EUR", deduplication_hash="hash-repeat"),
             ],
             account_map={"EUR": 1},
         )

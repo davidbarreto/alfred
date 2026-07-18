@@ -14,11 +14,14 @@ from app.features.finance.transactions.schemas import (
     SpendingByCategoryResponse,
     SpendingReportResponse,
     SpendingTopResponse,
+    TransactionBulkMoveRequest,
+    TransactionBulkMoveResponse,
     TransactionCreate,
     TransactionFilters,
     TransactionRead,
     TransactionUpdate,
 )
+from app.features.finance.transactions.service import InvalidBulkMoveError
 
 router = APIRouter(prefix="/finance/transactions", tags=["finance"], dependencies=[Depends(require_auth)])
 
@@ -33,6 +36,15 @@ async def list_transactions(
     service: TransactionServiceDep, filters: TransactionFilters = Depends()
 ):
     return await service.list(filters)
+
+
+@router.post("/bulk-move", response_model=TransactionBulkMoveResponse)
+async def bulk_move_transactions(request: TransactionBulkMoveRequest, service: TransactionServiceDep):
+    try:
+        moved = await service.bulk_move_account(request)
+    except InvalidBulkMoveError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=exc.message)
+    return TransactionBulkMoveResponse(moved_count=moved)
 
 
 @router.get("/by-category", response_model=SpendingByCategoryResponse)

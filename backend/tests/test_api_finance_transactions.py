@@ -13,6 +13,7 @@ from app.features.finance.transactions.schemas import (
     SpendingTopResponse,
     TransactionRead,
 )
+from app.features.finance.transactions.service import InvalidBulkMoveError
 
 AUTH = {"Authorization": "Bearer test-api-token"}
 
@@ -59,6 +60,7 @@ def mock_txn_service():
         from_date=date(2026, 6, 1), to_date=date(2026, 6, 30), top_n=5,
     )
     svc.balance_forecast.return_value = (Decimal("0"), Decimal("0"), date(2026, 6, 30))
+    svc.bulk_move_account.return_value = 12
     svc.spending_by_category.return_value = SpendingByCategoryResponse(
         items=[
             CategorySpendingItem(
@@ -197,6 +199,43 @@ class TestDeleteTransaction:
 
     def test_requires_auth(self, client):
         assert client.delete("/finance/transactions/1").status_code == 403
+
+
+class TestBulkMoveTransactions:
+    def test_returns_moved_count(self, client):
+        response = client.post(
+            "/finance/transactions/bulk-move",
+            json={"account_id": 1, "target_account_id": 2},
+            headers=AUTH,
+        )
+        assert response.status_code == 200
+        assert response.json()["moved_count"] == 12
+
+    def test_passes_optional_filters_to_service(self, client, mock_txn_service):
+        client.post(
+            "/finance/transactions/bulk-move",
+            json={"account_id": 1, "target_account_id": 2, "type": "expense", "category_id": 3},
+            headers=AUTH,
+        )
+        request = mock_txn_service.bulk_move_account.call_args[0][0]
+        assert request.type == "expense"
+        assert request.category_id == 3
+
+    def test_invalid_move_returns_400(self, client, mock_txn_service):
+        mock_txn_service.bulk_move_account.side_effect = InvalidBulkMoveError("Target account not found")
+        response = client.post(
+            "/finance/transactions/bulk-move",
+            json={"account_id": 1, "target_account_id": 999},
+            headers=AUTH,
+        )
+        assert response.status_code == 400
+        assert response.json()["detail"] == "Target account not found"
+
+    def test_requires_auth(self, client):
+        response = client.post(
+            "/finance/transactions/bulk-move", json={"account_id": 1, "target_account_id": 2}
+        )
+        assert response.status_code == 403
 
 
 class TestSpendingReport:

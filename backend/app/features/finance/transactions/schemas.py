@@ -141,6 +141,28 @@ class TransactionFilters:
         self.currency = currency
 
 
+class TransactionBulkMoveRequest(BaseModel):
+    """Reassign every transaction from account_id to target_account_id, optionally
+    narrowed by the same filters as the transaction list (type/category/merchant/date
+    range/currency). account_id is required -- bulk moves are always scoped to "every
+    transaction currently on this one account [matching these filters]", never an
+    unscoped cross-account bulk edit.
+    """
+    account_id: int
+    target_account_id: int
+    type: TransactionType | None = None
+    category_id: int | None = None
+    merchant: str | None = None
+    from_date: date | None = None
+    to_date: date | None = None
+    period: str | None = None
+    currency: str | None = None
+
+
+class TransactionBulkMoveResponse(BaseModel):
+    moved_count: int
+
+
 # --- Analytics response models ---
 
 class SpendingReportResponse(BaseModel):

@@ -5,6 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 logger = logging.getLogger(__name__)
 
+from app.features.finance.accounts.repository import AccountRepository
 from app.features.finance.transactions.repository import TransactionRepository
 from app.features.finance.transactions.schemas import (
     AnalyticsFilters,
@@ -14,6 +15,7 @@ from app.features.finance.transactions.schemas import (
     SpendingByCategoryResponse,
     SpendingReportResponse,
     SpendingTopResponse,
+    TransactionBulkMoveRequest,
     TransactionCreate,
     TransactionFilters,
     TransactionRead,
@@ -22,10 +24,20 @@ from app.features.finance.transactions.schemas import (
 )
 
 
+class InvalidBulkMoveError(Exception):
+    """Raised when a bulk account-move request is malformed (same source/target
+    account, or a target account that doesn't exist)."""
+
+    def __init__(self, message: str) -> None:
+        self.message = message
+        super().__init__(message)
+
+
 class TransactionService:
 
     def __init__(self, session: AsyncSession) -> None:
         self._repo = TransactionRepository(session)
+        self._account_repo = AccountRepository(session)
 
     async def get(self, transaction_id: int) -> TransactionRead | None:
         txn = await self._repo.get(transaction_id)
@@ -57,6 +69,20 @@ class TransactionService:
         else:
             logger.debug("Transaction delete: id=%d not found", transaction_id)
         return deleted
+
+    async def bulk_move_account(self, request: TransactionBulkMoveRequest) -> int:
+        if request.account_id == request.target_account_id:
+            raise InvalidBulkMoveError("Source and target account must be different")
+        target = await self._account_repo.get(request.target_account_id)
+        if target is None:
+            raise InvalidBulkMoveError("Target account not found")
+
+        moved = await self._repo.bulk_reassign_account(request)
+        logger.info(
+            "Transactions bulk-moved: source_account_id=%d target_account_id=%d count=%d",
+            request.account_id, request.target_account_id, moved,
+        )
+        return moved
 
     async def spending_report(self, filters: AnalyticsFilters) -> SpendingReportResponse:
         from_date, to_date = resolve_period(filters.period, filters.from_date, filters.to_date)

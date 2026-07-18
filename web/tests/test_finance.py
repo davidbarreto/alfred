@@ -537,3 +537,104 @@ class TestDeleteAccount:
 
         assert resp.status_code == 200
         mock_api["delete"].assert_awaited_once_with("/finance/accounts/1")
+
+
+class TestBulkMoveTransactions:
+    def _http_status_error(self, detail: str) -> httpx.HTTPStatusError:
+        request = httpx.Request("POST", "http://backend/finance/transactions/bulk-move")
+        response = httpx.Response(400, json={"detail": detail}, request=request)
+        return httpx.HTTPStatusError("Bad Request", request=request, response=response)
+
+    def test_forwards_required_fields(self, client, mock_api):
+        mock_api["post"].return_value = {"moved_count": 5}
+
+        resp = client.post(
+            "/finance/transactions/bulk-move",
+            json={"account_id": "1", "target_account_id": "2"},
+        )
+
+        assert resp.status_code == 200
+        payload = mock_api["post"].call_args.kwargs["json"]
+        assert payload == {"account_id": 1, "target_account_id": 2}
+
+    def test_forwards_optional_filters_when_present(self, client, mock_api):
+        mock_api["post"].return_value = {"moved_count": 5}
+
+        client.post(
+            "/finance/transactions/bulk-move",
+            json={
+                "account_id": "1", "target_account_id": "2",
+                "type": "expense", "category_id": "3", "merchant": "Uber",
+                "from_date": "2026-06-01", "to_date": "2026-06-30",
+            },
+        )
+
+        payload = mock_api["post"].call_args.kwargs["json"]
+        assert payload["type"] == "expense"
+        assert payload["category_id"] == 3
+        assert payload["merchant"] == "Uber"
+        assert payload["from_date"] == "2026-06-01"
+        assert payload["to_date"] == "2026-06-30"
+
+    def test_omits_empty_optional_filters(self, client, mock_api):
+        mock_api["post"].return_value = {"moved_count": 5}
+
+        client.post(
+            "/finance/transactions/bulk-move",
+            json={"account_id": "1", "target_account_id": "2", "type": "", "merchant": ""},
+        )
+
+        payload = mock_api["post"].call_args.kwargs["json"]
+        assert "type" not in payload
+        assert "merchant" not in payload
+
+    def test_surfaces_api_error_detail(self, client, mock_api):
+        mock_api["post"].side_effect = self._http_status_error("Target account not found")
+
+        resp = client.post(
+            "/finance/transactions/bulk-move",
+            json={"account_id": "1", "target_account_id": "999"},
+        )
+
+        assert resp.status_code == 422
+        assert "Target account not found" in resp.text
+
+    def test_generic_error_when_response_not_json(self, client, mock_api):
+        request = httpx.Request("POST", "http://backend/finance/transactions/bulk-move")
+        response = httpx.Response(400, content=b"not json", request=request)
+        mock_api["post"].side_effect = httpx.HTTPStatusError(
+            "Bad Request", request=request, response=response
+        )
+
+        resp = client.post(
+            "/finance/transactions/bulk-move",
+            json={"account_id": "1", "target_account_id": "2"},
+        )
+
+        assert resp.status_code == 422
+        assert "Failed to move transactions" in resp.text
+
+    def test_requires_authentication(self, anon_client):
+        resp = anon_client.post(
+            "/finance/transactions/bulk-move",
+            json={"account_id": "1", "target_account_id": "2"},
+            follow_redirects=False,
+        )
+        assert resp.status_code == 302
+        assert resp.headers["location"].startswith("/login")
+
+
+class TestTransactionsPageBulkMoveButton:
+    def test_shown_when_account_filter_set(self, client, mock_api):
+        mock_api["get"].side_effect = [[], [_account()], []]
+
+        resp = client.get("/finance/transactions?account_id=1")
+
+        assert "Move to account" in resp.text
+
+    def test_hidden_without_account_filter(self, client, mock_api):
+        mock_api["get"].side_effect = [[], [], []]
+
+        resp = client.get("/finance/transactions")
+
+        assert "Move to account" not in resp.text

@@ -2,15 +2,45 @@ from __future__ import annotations
 
 from datetime import date
 from decimal import Decimal
-from sqlalchemy import func, select
+from typing import Any
+from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.features.finance.transactions.tables import Transaction
 from app.features.finance.transactions.schemas import (
+    TransactionBulkMoveRequest,
     TransactionCreate,
     TransactionUpdate,
     TransactionFilters,
 )
+
+
+def _filter_conditions(filters: Any) -> list:
+    """Shared WHERE-clause building for anything shaped like TransactionFilters
+    (duck-typed: also used by TransactionBulkMoveRequest, which carries the same
+    optional type/category/merchant/date/currency fields plus a required account_id).
+    """
+    conditions = []
+    if filters.type is not None:
+        conditions.append(Transaction.type == filters.type)
+    if filters.category_id is not None:
+        conditions.append(Transaction.category_id == filters.category_id)
+    if getattr(filters, "account_id", None) is not None:
+        conditions.append(Transaction.account_id == filters.account_id)
+    if filters.merchant is not None:
+        conditions.append(Transaction.merchant.ilike(f"%{filters.merchant}%"))
+    if filters.currency is not None:
+        conditions.append(Transaction.currency == filters.currency)
+    if filters.from_date is not None:
+        conditions.append(Transaction.date >= filters.from_date)
+    if filters.to_date is not None:
+        conditions.append(Transaction.date <= filters.to_date)
+    elif filters.period is not None:
+        from app.features.finance.transactions.schemas import resolve_period
+        from_dt, to_dt = resolve_period(filters.period, filters.from_date, filters.to_date)
+        conditions.append(Transaction.date >= from_dt)
+        conditions.append(Transaction.date <= to_dt)
+    return conditions
 
 
 class TransactionRepository:
@@ -26,27 +56,24 @@ class TransactionRepository:
 
     async def list(self, filters: TransactionFilters) -> list[Transaction]:
         query = select(Transaction).order_by(Transaction.date.desc())
-        if filters.type is not None:
-            query = query.where(Transaction.type == filters.type)
-        if filters.category_id is not None:
-            query = query.where(Transaction.category_id == filters.category_id)
-        if filters.account_id is not None:
-            query = query.where(Transaction.account_id == filters.account_id)
-        if filters.merchant is not None:
-            query = query.where(Transaction.merchant.ilike(f"%{filters.merchant}%"))
-        if filters.currency is not None:
-            query = query.where(Transaction.currency == filters.currency)
-        if filters.from_date is not None:
-            query = query.where(Transaction.date >= filters.from_date)
-        if filters.to_date is not None:
-            query = query.where(Transaction.date <= filters.to_date)
-        elif filters.period is not None:
-            from app.features.finance.transactions.schemas import resolve_period
-            from_dt, to_dt = resolve_period(filters.period, filters.from_date, filters.to_date)
-            query = query.where(Transaction.date >= from_dt).where(Transaction.date <= to_dt)
+        for condition in _filter_conditions(filters):
+            query = query.where(condition)
         query = query.offset(filters.offset).limit(filters.limit)
         result = await self._session.execute(query)
         return list(result.scalars().all())
+
+    async def bulk_reassign_account(self, request: TransactionBulkMoveRequest) -> int:
+        """Move every transaction matching request's account_id + optional filters to
+        target_account_id. Clears deduplication_hash on moved rows: the stored hash was
+        computed against the old account_id (and the source statement's balance, which
+        isn't persisted), so it can no longer be trusted to detect a future re-import.
+        """
+        stmt = update(Transaction).values(account_id=request.target_account_id, deduplication_hash=None)
+        for condition in _filter_conditions(request):
+            stmt = stmt.where(condition)
+        result = await self._session.execute(stmt)
+        await self._session.commit()
+        return result.rowcount
 
     async def create(self, data: TransactionCreate) -> Transaction:
         transaction = Transaction(**data.model_dump())

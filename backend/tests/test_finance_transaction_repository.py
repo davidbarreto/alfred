@@ -4,7 +4,12 @@ from decimal import Decimal
 from unittest.mock import AsyncMock, MagicMock
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.features.finance.transactions.repository import TransactionRepository
-from app.features.finance.transactions.schemas import TransactionCreate, TransactionUpdate, TransactionFilters
+from app.features.finance.transactions.schemas import (
+    TransactionBulkMoveRequest,
+    TransactionCreate,
+    TransactionUpdate,
+    TransactionFilters,
+)
 
 
 def _make_session() -> AsyncMock:
@@ -223,3 +228,49 @@ class TestGetCategorySpent:
             to_date=date(2026, 6, 30),
         )
         assert result == Decimal("80.00")
+
+
+class TestBulkReassignAccount:
+    async def test_returns_moved_count(self):
+        session = _make_session()
+        result_proxy = MagicMock()
+        result_proxy.rowcount = 12
+        session.execute.return_value = result_proxy
+
+        moved = await TransactionRepository(session).bulk_reassign_account(
+            TransactionBulkMoveRequest(account_id=1, target_account_id=2)
+        )
+
+        assert moved == 12
+        session.commit.assert_called_once()
+
+    async def test_applies_account_and_extra_filters(self):
+        session = _make_session()
+        result_proxy = MagicMock()
+        result_proxy.rowcount = 0
+        session.execute.return_value = result_proxy
+
+        await TransactionRepository(session).bulk_reassign_account(
+            TransactionBulkMoveRequest(
+                account_id=1, target_account_id=2, type="expense", category_id=3,
+            )
+        )
+
+        session.execute.assert_called_once()
+
+    async def test_statement_sets_target_account_and_clears_dedup_hash(self):
+        session = _make_session()
+        result_proxy = MagicMock()
+        result_proxy.rowcount = 0
+        session.execute.return_value = result_proxy
+
+        await TransactionRepository(session).bulk_reassign_account(
+            TransactionBulkMoveRequest(account_id=1, target_account_id=2)
+        )
+
+        stmt = session.execute.call_args[0][0]
+        compiled_values = stmt._values
+        # SQLAlchemy Update._values maps Column -> bound value; match by column name
+        values_by_name = {col.name: val for col, val in compiled_values.items()}
+        assert values_by_name["account_id"].value == 2
+        assert values_by_name["deduplication_hash"].value is None

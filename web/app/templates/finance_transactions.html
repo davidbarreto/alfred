@@ -68,6 +68,11 @@
       <i class="ti ti-x text-xs"></i>Clear filters
     </button>
     {% endif %}
+    {% if query_filters.account_id %}
+    <button onclick="openBulkMoveModal()" class="btn btn-sm btn-ghost text-gray-500 gap-1">
+      <i class="ti ti-transfer text-xs"></i>Move to account…
+    </button>
+    {% endif %}
   </div>
 
   <div class="bg-white border border-gray-200 rounded-lg p-4">
@@ -150,6 +155,35 @@
         <button type="button" onclick="document.getElementById('edit-txn-modal').close()"
                 class="btn btn-sm btn-ghost text-gray-500">Cancel</button>
         <button type="submit" id="edit-txn-submit-btn" class="btn btn-sm btn-primary">Save</button>
+      </div>
+    </form>
+  </div>
+  <form method="dialog" class="modal-backdrop"><button>close</button></form>
+</dialog>
+
+<dialog id="bulk-move-modal" class="modal">
+  <div class="modal-box bg-white rounded-xl border border-gray-200 shadow-lg max-w-sm w-full p-6">
+    <h3 class="text-sm font-semibold text-gray-900 mb-2">Move transactions to another account</h3>
+    <p class="text-xs text-gray-500 mb-4">
+      Moves every transaction currently matching your filters on
+      <span id="bulk-move-source-name" class="font-medium text-gray-700"></span> to the account below.
+      This can't be undone from here — you'd need to move them back manually.
+    </p>
+    <form id="bulk-move-form" onsubmit="submitBulkMove(event)" class="flex flex-col gap-3">
+      <div>
+        <label class="text-xs text-gray-500 mb-1 block">Target account <span class="text-[#E24B4A]">*</span></label>
+        <select id="bulk-move-target" required class="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white w-full focus:outline-none focus:ring-1 focus:ring-[#378ADD]">
+          <option value="">— select —</option>
+          {% for acc in accounts %}
+          <option value="{{ acc.id }}">{{ acc.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <p id="bulk-move-error" class="text-xs text-[#E24B4A] hidden"></p>
+      <div class="flex justify-end gap-2 mt-1">
+        <button type="button" onclick="document.getElementById('bulk-move-modal').close()"
+                class="btn btn-sm btn-ghost text-gray-500">Cancel</button>
+        <button type="submit" id="bulk-move-submit-btn" class="btn btn-sm btn-primary">Move</button>
       </div>
     </form>
   </div>
@@ -250,6 +284,66 @@ async function submitEditTransaction(e) {
   } finally {
     btn.disabled = false;
     btn.textContent = "Save";
+  }
+}
+
+function openBulkMoveModal() {
+  const sourceSelect = document.getElementById("txn-filter-account");
+  if (!sourceSelect.value) return;
+  document.getElementById("bulk-move-source-name").textContent = sourceSelect.selectedOptions[0].textContent;
+  const targetSelect = document.getElementById("bulk-move-target");
+  targetSelect.value = "";
+  for (const opt of targetSelect.options) {
+    opt.disabled = (opt.value === sourceSelect.value);
+  }
+  document.getElementById("bulk-move-error").classList.add("hidden");
+  document.getElementById("bulk-move-modal").showModal();
+}
+
+async function submitBulkMove(e) {
+  e.preventDefault();
+  const btn = document.getElementById("bulk-move-submit-btn");
+  const errEl = document.getElementById("bulk-move-error");
+  const sourceId = document.getElementById("txn-filter-account").value;
+  const targetId = document.getElementById("bulk-move-target").value;
+  btn.disabled = true;
+  btn.textContent = "Moving…";
+  errEl.classList.add("hidden");
+
+  const body = { account_id: sourceId, target_account_id: targetId };
+  const type = document.getElementById("txn-filter-type").value;
+  const category = document.getElementById("txn-filter-category").value;
+  const merchant = document.getElementById("txn-filter-merchant").value;
+  const fromDate = document.getElementById("txn-filter-from").value;
+  const toDate = document.getElementById("txn-filter-to").value;
+  if (type) body.type = type;
+  if (category) body.category_id = category;
+  if (merchant) body.merchant = merchant;
+  if (fromDate) body.from_date = fromDate;
+  if (toDate) body.to_date = toDate;
+
+  try {
+    const res = await fetch("/finance/transactions/bulk-move", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(text || `Error ${res.status}`);
+    }
+    const params = new URLSearchParams({ account_id: targetId });
+    if (type) params.set("type", type);
+    if (category) params.set("category_id", category);
+    if (merchant) params.set("merchant", merchant);
+    if (fromDate) params.set("from_date", fromDate);
+    if (toDate) params.set("to_date", toDate);
+    window.location.href = "/finance/transactions?" + params.toString();
+  } catch (err) {
+    errEl.textContent = err.message || "Failed to move transactions.";
+    errEl.classList.remove("hidden");
+    btn.disabled = false;
+    btn.textContent = "Move";
   }
 }
 </script>

@@ -2,9 +2,10 @@ import pytest
 from datetime import date
 from decimal import Decimal
 from unittest.mock import AsyncMock, MagicMock, patch
-from app.features.finance.transactions.service import TransactionService
+from app.features.finance.transactions.service import InvalidBulkMoveError, TransactionService
 from app.features.finance.transactions.schemas import (
     AnalyticsFilters,
+    TransactionBulkMoveRequest,
     TransactionCreate,
     TransactionFilters,
     TransactionRead,
@@ -46,6 +47,7 @@ def _make_rt(type_="expense", amount=Decimal("100.00"), rule="monthly"):
 def service():
     svc = TransactionService.__new__(TransactionService)
     svc._repo = AsyncMock()
+    svc._account_repo = AsyncMock()
     return svc
 
 
@@ -103,6 +105,48 @@ class TestDelete:
     async def test_passes_through_false(self, service):
         service._repo.delete.return_value = False
         assert await service.delete(999) is False
+
+
+class TestBulkMoveAccount:
+    async def test_returns_moved_count(self, service):
+        service._account_repo.get.return_value = MagicMock(id=2)
+        service._repo.bulk_reassign_account.return_value = 42
+
+        moved = await service.bulk_move_account(
+            TransactionBulkMoveRequest(account_id=1, target_account_id=2)
+        )
+
+        assert moved == 42
+        service._repo.bulk_reassign_account.assert_awaited_once()
+
+    async def test_rejects_same_source_and_target(self, service):
+        with pytest.raises(InvalidBulkMoveError):
+            await service.bulk_move_account(
+                TransactionBulkMoveRequest(account_id=1, target_account_id=1)
+            )
+        service._repo.bulk_reassign_account.assert_not_awaited()
+
+    async def test_rejects_missing_target_account(self, service):
+        service._account_repo.get.return_value = None
+
+        with pytest.raises(InvalidBulkMoveError):
+            await service.bulk_move_account(
+                TransactionBulkMoveRequest(account_id=1, target_account_id=999)
+            )
+        service._repo.bulk_reassign_account.assert_not_awaited()
+
+    async def test_logs_info_with_counts(self, service, caplog):
+        service._account_repo.get.return_value = MagicMock(id=2)
+        service._repo.bulk_reassign_account.return_value = 7
+
+        with caplog.at_level("INFO"):
+            await service.bulk_move_account(
+                TransactionBulkMoveRequest(account_id=1, target_account_id=2)
+            )
+
+        assert any(
+            "bulk-moved" in m and "count=7" in m for m in caplog.messages
+        )
 
 
 class TestSpendingReport:

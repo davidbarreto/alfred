@@ -368,6 +368,33 @@ async def transactions_list_fragment(request: Request):
     return templates.TemplateResponse(request, "_finance_transactions_list.html", context)
 
 
+@router.post("/transactions/bulk-move", response_class=Response)
+async def bulk_move_transactions(request: Request):
+    body = await request.json()
+    payload: dict = {
+        "account_id": int(body["account_id"]),
+        "target_account_id": int(body["target_account_id"]),
+    }
+    for key in ("type", "merchant", "from_date", "to_date"):
+        if body.get(key):
+            payload[key] = body[key]
+    if body.get("category_id"):
+        payload["category_id"] = int(body["category_id"])
+
+    try:
+        await api.post("/finance/transactions/bulk-move", json=payload)
+    except httpx.HTTPStatusError as exc:
+        try:
+            detail = exc.response.json().get("detail") or "Failed to move transactions."
+        except ValueError:
+            detail = "Failed to move transactions."
+        return HTMLResponse(detail, status_code=422)
+    except httpx.HTTPError:
+        return HTMLResponse("Failed to move transactions.", status_code=422)
+
+    return Response(status_code=200)
+
+
 # --- Accounts ---
 
 @router.post("/accounts", response_class=HTMLResponse)

@@ -12,6 +12,7 @@ from app.features.core.embeddings.schemas import EmbeddingCreate, EmbeddingSearc
 from app.features.core.embeddings.service import EmbeddingService
 from app.features.finance.accounts.repository import AccountRepository
 from app.features.finance.accounts.schemas import AccountFilters
+from app.features.finance.accounts.tables import Account
 from app.features.finance.categories.repository import CategoryRepository
 from app.features.finance.imports.prompts import CATEGORIZE_SYSTEM_PROMPT, CATEGORIZE_USER_PROMPT
 from app.features.finance.imports.repository import ImportRepository
@@ -97,6 +98,20 @@ def _rule_matches(rule: ImportRule, raw_description: str, amount: Decimal) -> bo
     if rule.amount is not None and rule.amount != amount:
         return False
     return True
+
+
+def _auto_match_account(matching: list[Account], provider: str) -> int | None:
+    """Pick the account to pre-select for a detected currency. A single currency match
+    is unambiguous; with several (e.g. an ActivoBank EUR account alongside a Revolut EUR
+    account), narrow by provider name (e.g. "Revolut EUR") before giving up and leaving
+    it to the user."""
+    if len(matching) == 1:
+        return matching[0].id
+    if len(matching) > 1:
+        provider_matches = [a for a in matching if provider.lower() in a.name.lower()]
+        if len(provider_matches) == 1:
+            return provider_matches[0].id
+    return None
 
 
 class InvalidGroupedImportError(Exception):
@@ -577,7 +592,7 @@ class ImportService:
                 CurrencyDetection(
                     currency=currency,
                     row_count=counts[currency],
-                    auto_account_id=matching[0].id if len(matching) == 1 else None,
+                    auto_account_id=_auto_match_account(matching, provider),
                     candidate_accounts=[
                         CurrencyCandidateAccount(id=a.id, name=a.name) for a in matching
                     ],

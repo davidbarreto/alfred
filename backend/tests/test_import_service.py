@@ -653,6 +653,31 @@ class TestDetectCurrencies:
         assert detection.auto_account_id is None
         assert detection.candidate_accounts == []
 
+    @pytest.mark.asyncio
+    async def test_auto_resolves_by_provider_name_when_multiple_accounts_share_currency(self):
+        service = _service(_statement([_row(currency="EUR")]))
+        service._account_repo.list.return_value = [
+            _account(1, "ActivoBank EUR", "EUR"), _account(2, "Fakebank EUR", "EUR"),
+        ]
+
+        result = await service.detect_currencies("x.csv", b"", provider="fakebank")
+
+        detection = result.currencies[0]
+        assert detection.auto_account_id == 2
+        assert len(detection.candidate_accounts) == 2
+
+    @pytest.mark.asyncio
+    async def test_no_auto_resolve_when_provider_name_matches_multiple_accounts(self):
+        service = _service(_statement([_row(currency="EUR")]))
+        service._account_repo.list.return_value = [
+            _account(1, "Fakebank EUR Main", "EUR"), _account(2, "Fakebank EUR Savings", "EUR"),
+        ]
+
+        result = await service.detect_currencies("x.csv", b"", provider="fakebank")
+
+        detection = result.currencies[0]
+        assert detection.auto_account_id is None
+
 
 class TestPreviewGrouped:
     @pytest.mark.asyncio

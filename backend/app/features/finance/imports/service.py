@@ -46,7 +46,7 @@ TRANSACTION_SOURCE_TYPE = "transaction"
 
 # Providers that can mix several currencies in one export and therefore go through the
 # grouped (multi-account) preview/commit flow instead of the single-account one.
-GROUPED_PROVIDERS = frozenset({"revolut"})
+GROUPED_PROVIDERS = frozenset({"revolut", "wise"})
 
 _KNN_LIMIT = 7
 _KNN_THRESHOLD = 0.55

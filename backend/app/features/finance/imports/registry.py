@@ -7,6 +7,7 @@ from app.integrations.banco_inter.statement_parser import BancoInterStatementPar
 from app.integrations.coverflex.card_statement_parser import CoverflexCardStatementParser
 from app.integrations.nubank.card_statement_parser import NubankCardStatementParser
 from app.integrations.revolut.statement_parser import RevolutStatementParser
+from app.integrations.wise.statement_parser import WiseStatementParser
 from app.shared.statement import StatementParser
 
 _PARSERS: dict[str, StatementParser] = {
@@ -19,6 +20,7 @@ _PARSERS: dict[str, StatementParser] = {
         CoverflexCardStatementParser(),
         NubankCardStatementParser(),
         RevolutStatementParser(),
+        WiseStatementParser(),
     )
 }
 

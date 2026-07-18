@@ -10,10 +10,12 @@ Format notes:
 - Amounts already follow the import convention (negative = money out): card
   purchases arrive negative, top-ups positive. No sign flip needed, unlike
   Nubank's inverted export.
-- ``type == "transfer"`` rows are payroll top-ups reloading the card, not
-  income earned by the user -- classified as a transfer via
-  ``suggested_type`` so they don't inflate income totals. ``type ==
-  "purchase"`` is left to the default sign-based expense inference.
+- ``type == "transfer"`` rows are payroll top-ups: real income the employer
+  pays directly onto the card, never recorded as income anywhere else in
+  Alfred -- unlike Revolut's card top-ups (money moving from an account
+  that's typically already tracked elsewhere), these must NOT be
+  suppressed to a transfer or they'd silently understate income. Left to
+  the default sign-based inference, same as ``type == "purchase"``.
 - No running balance and no account metadata; ``category``/``product``/
   ``voucher_count``/``voucher_amount``/``rejection_reason`` are not surfaced.
 """
@@ -78,9 +80,6 @@ class CoverflexCardStatementParser:
             if row_date is None or amount is None or not currency:
                 continue
 
-            row_type = (record.get("type") or "").strip().lower()
-            suggested_type = "transfer" if row_type == "transfer" else None
-
             rows.append(
                 ParsedRow(
                     date_posted=row_date,
@@ -89,7 +88,6 @@ class CoverflexCardStatementParser:
                     amount=amount,
                     currency=currency,
                     balance_after=None,
-                    suggested_type=suggested_type,
                 )
             )
 

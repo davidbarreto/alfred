@@ -55,10 +55,10 @@ class TestParse:
         # 4 data rows, 1 rejected excluded -> 3
         assert len(statement.rows) == 3
 
-    def test_topup_is_a_transfer_not_income(self):
+    def test_topup_uses_default_income_inference(self):
         statement = CoverflexCardStatementParser().parse(_content())
         topup = next(r for r in statement.rows if "TOPUP" in r.raw_description)
-        assert topup.suggested_type == "transfer"
+        assert topup.suggested_type is None
         assert topup.amount == Decimal("200.00")
 
     def test_purchase_uses_default_expense_inference(self):

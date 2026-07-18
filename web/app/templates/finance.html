@@ -45,7 +45,7 @@
               class="btn btn-sm btn-ghost gap-1 text-gray-500">
         <i class="ti ti-settings text-sm"></i>Manage
       </button>
-      <button onclick="document.getElementById('new-txn-modal').showModal()"
+      <button onclick="openNewTransaction()"
               class="btn btn-sm btn-primary gap-1">
         <i class="ti ti-plus text-sm"></i>New transaction
       </button>
@@ -356,8 +356,9 @@ async function submitManageForm(e, url, targetId) {
 
 <dialog id="new-txn-modal" class="modal">
   <div class="modal-box bg-white rounded-xl border border-gray-200 shadow-lg max-w-md w-full p-6">
-    <h3 class="text-sm font-semibold text-gray-900 mb-4">New transaction</h3>
+    <h3 id="txn-form-title" class="text-sm font-semibold text-gray-900 mb-4">New transaction</h3>
     <form id="new-txn-form" onsubmit="submitNewTxn(event)" class="flex flex-col gap-3">
+      <input type="hidden" name="transaction_id" value="" />
       <div class="grid grid-cols-2 gap-3">
         <div>
           <label class="text-xs text-gray-500 mb-1 block">Amount <span class="text-[#E24B4A]">*</span></label>
@@ -366,7 +367,6 @@ async function submitManageForm(e, url, targetId) {
             name="amount"
             type="number"
             step="0.01"
-            min="0"
             required
             placeholder="0.00"
             class="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white w-full focus:outline-none focus:ring-1 focus:ring-[#378ADD]"
@@ -388,6 +388,7 @@ async function submitManageForm(e, url, targetId) {
           <select name="type" required class="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white w-full focus:outline-none focus:ring-1 focus:ring-[#378ADD]">
             <option value="expense">Expense</option>
             <option value="income">Income</option>
+            <option value="transfer">Transfer</option>
           </select>
         </div>
         <div>
@@ -423,7 +424,16 @@ async function submitManageForm(e, url, targetId) {
         <input
           name="description"
           type="text"
-          placeholder="Optional note"
+          placeholder="A more readable description"
+          class="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white w-full focus:outline-none focus:ring-1 focus:ring-[#378ADD]"
+        />
+      </div>
+      <div>
+        <label class="text-xs text-gray-500 mb-1 block">Note</label>
+        <input
+          name="note"
+          type="text"
+          placeholder="Your own free-text note"
           class="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white w-full focus:outline-none focus:ring-1 focus:ring-[#378ADD]"
         />
       </div>
@@ -439,12 +449,32 @@ async function submitManageForm(e, url, targetId) {
 </dialog>
 
 <script>
-(function() {
-  const dateInput = document.querySelector('#new-txn-form [name="date"]');
-  if (dateInput && !dateInput.value) {
-    dateInput.value = new Date().toISOString().slice(0, 10);
-  }
-})();
+function openNewTransaction() {
+  const form = document.getElementById("new-txn-form");
+  form.reset();
+  form.querySelector('[name="transaction_id"]').value = "";
+  form.querySelector('[name="date"]').value = new Date().toISOString().slice(0, 10);
+  document.getElementById("txn-form-title").textContent = "New transaction";
+  document.getElementById("txn-error").classList.add("hidden");
+  document.getElementById("new-txn-modal").showModal();
+}
+
+function openEditTransaction(txn) {
+  const form = document.getElementById("new-txn-form");
+  form.reset();
+  form.querySelector('[name="transaction_id"]').value = txn.id;
+  form.querySelector('[name="amount"]').value = txn.amount;
+  form.querySelector('[name="date"]').value = (txn.date || "").slice(0, 10);
+  form.querySelector('[name="type"]').value = txn.type;
+  form.querySelector('[name="account_id"]').value = txn.account_id;
+  form.querySelector('[name="merchant"]').value = txn.merchant || "";
+  form.querySelector('[name="category_id"]').value = txn.category_id || "";
+  form.querySelector('[name="description"]').value = txn.description || "";
+  form.querySelector('[name="note"]').value = txn.note || "";
+  document.getElementById("txn-form-title").textContent = "Edit transaction";
+  document.getElementById("txn-error").classList.add("hidden");
+  document.getElementById("new-txn-modal").showModal();
+}
 
 function openCustomRangeModal() {
   document.getElementById("custom-range-modal").showModal();
@@ -473,9 +503,16 @@ async function submitNewTxn(e) {
   errEl.classList.add("hidden");
 
   const data = new FormData(e.target);
+  // Expense/income are always stored as a positive magnitude; only transfers keep a sign.
+  if (data.get("type") !== "transfer") {
+    data.set("amount", Math.abs(parseFloat(data.get("amount")) || 0));
+  }
+  const txnId = data.get("transaction_id");
+  const url = txnId ? `/finance/transactions/${txnId}${window.location.search}` : `/finance/transactions${window.location.search}`;
+  const method = txnId ? "PATCH" : "POST";
   try {
-    const res = await fetch(`/finance/transactions${window.location.search}`, {
-      method: "POST",
+    const res = await fetch(url, {
+      method,
       body: data,
     });
     if (!res.ok) {

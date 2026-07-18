@@ -1,3 +1,6 @@
+import httpx
+
+
 def _txn(id=1, merchant="Continente", amount="30.00", type="expense", category_id=None, account_id=1):
     return {
         "id": id, "account_id": account_id, "date": "2026-07-14T22:35:14",
@@ -103,7 +106,11 @@ class TestDeleteTransaction:
         assert 'hx-target="#txn-list-full"' in resp.text
 
     def test_delete_without_offset_renders_dashboard_partial(self, client, mock_api):
-        mock_api["get"].return_value = [_txn(id=2)]
+        async def fake_get(path, params=None):
+            if path == "/finance/transactions":
+                return [_txn(id=2)]
+            return []
+        mock_api["get"].side_effect = fake_get
 
         resp = client.delete("/finance/transactions/1")
 
@@ -319,3 +326,174 @@ class TestFinanceDashboardPeriods:
         txn_call = next(p for path, p in calls if path == "/finance/transactions")
         assert txn_call["from_date"] == "2026-01-01"
         assert txn_call["to_date"] == "2026-03-15"
+
+
+class TestUpdateTransaction:
+    def _fake_get(self, calls, extra=None):
+        extra = extra or {}
+        async def fake(path, params=None):
+            calls.append((path, params or {}))
+            return extra.get(path, [])
+        return fake
+
+    def test_offset_present_renders_list_partial(self, client, mock_api):
+        calls = []
+        mock_api["get"].side_effect = self._fake_get(calls)
+        mock_api["patch"].return_value = {"id": 1}
+
+        resp = client.patch(
+            "/finance/transactions/1?offset=20",
+            data={"amount": "10.00", "date": "2026-06-01", "type": "expense", "account_id": "1"},
+        )
+
+        assert resp.status_code == 200
+        mock_api["patch"].assert_awaited_once()
+        assert mock_api["patch"].call_args.args[0] == "/finance/transactions/1"
+        # list-page context fetches paginated transactions, not the dashboard's range-scoped ones
+        assert any(p.get("offset") == 20 for path, p in calls if path == "/finance/transactions")
+
+    def test_no_offset_renders_dashboard_partial(self, client, mock_api):
+        calls = []
+        mock_api["get"].side_effect = self._fake_get(calls)
+        mock_api["patch"].return_value = {"id": 1}
+
+        resp = client.patch(
+            "/finance/transactions/1?period=this quarter&currency=BRL",
+            data={"amount": "10.00", "date": "2026-06-01", "type": "expense", "account_id": "1"},
+        )
+
+        assert resp.status_code == 200
+        txn_call = next(p for path, p in calls if path == "/finance/transactions")
+        assert txn_call["period"] == "this quarter"
+        assert txn_call["currency"] == "BRL"
+
+    def test_payload_always_includes_clearable_fields(self, client, mock_api):
+        mock_api["get"].side_effect = self._fake_get([])
+        mock_api["patch"].return_value = {"id": 1}
+
+        client.patch(
+            "/finance/transactions/1?period=this month",
+            data={
+                "amount": "10.00", "date": "2026-06-01", "type": "expense", "account_id": "1",
+                "merchant": "", "description": "", "note": "", "category_id": "",
+            },
+        )
+
+        payload = mock_api["patch"].call_args.kwargs["json"]
+        assert payload["merchant"] is None
+        assert payload["description"] is None
+        assert payload["note"] is None
+        assert payload["category_id"] is None
+
+    def test_category_and_note_forwarded_when_set(self, client, mock_api):
+        mock_api["get"].side_effect = self._fake_get([])
+        mock_api["patch"].return_value = {"id": 1}
+
+        client.patch(
+            "/finance/transactions/1?period=this month",
+            data={
+                "amount": "10.00", "date": "2026-06-01", "type": "expense", "account_id": "1",
+                "category_id": "5", "note": "Kenai's lunch",
+            },
+        )
+
+        payload = mock_api["patch"].call_args.kwargs["json"]
+        assert payload["category_id"] == 5
+        assert payload["note"] == "Kenai's lunch"
+
+    def test_backend_failure_returns_error(self, client, mock_api):
+        mock_api["patch"].side_effect = httpx.HTTPError("boom")
+
+        resp = client.patch(
+            "/finance/transactions/1?period=this month",
+            data={"amount": "10.00", "date": "2026-06-01", "type": "expense", "account_id": "1"},
+        )
+
+        assert resp.status_code == 422
+
+    def test_requires_authentication(self, anon_client):
+        resp = anon_client.patch(
+            "/finance/transactions/1",
+            data={"amount": "10.00", "date": "2026-06-01", "type": "expense", "account_id": "1"},
+            follow_redirects=False,
+        )
+        assert resp.status_code == 302
+        assert resp.headers["location"].startswith("/login")
+
+
+class TestFinanceSessionPersistence:
+    def _fake_get(self):
+        async def fake(path, params=None):
+            return []
+        return fake
+
+    def test_explicit_period_is_remembered_on_next_bare_visit(self, client, mock_api):
+        calls = []
+        async def fake(path, params=None):
+            calls.append((path, params or {}))
+            return []
+        mock_api["get"].side_effect = fake
+
+        client.get("/finance/?period=this quarter")
+        calls.clear()
+        client.get("/finance/")
+
+        report_call = next(p for path, p in calls if path == "/finance/transactions/report")
+        assert report_call["period"] == "this quarter"
+
+    def test_custom_range_is_remembered_on_next_bare_visit(self, client, mock_api):
+        calls = []
+        async def fake(path, params=None):
+            calls.append((path, params or {}))
+            return []
+        mock_api["get"].side_effect = fake
+
+        client.get("/finance/?from_date=2026-01-01&to_date=2026-03-15")
+        calls.clear()
+        client.get("/finance/")
+
+        report_call = next(p for path, p in calls if path == "/finance/transactions/report")
+        assert report_call == {"from_date": "2026-01-01", "to_date": "2026-03-15", "currency": "EUR"}
+
+    def test_explicit_query_param_overrides_remembered_range(self, client, mock_api):
+        calls = []
+        async def fake(path, params=None):
+            calls.append((path, params or {}))
+            return []
+        mock_api["get"].side_effect = fake
+
+        client.get("/finance/?period=this quarter")
+        calls.clear()
+        client.get("/finance/?period=this year")
+
+        report_call = next(p for path, p in calls if path == "/finance/transactions/report")
+        assert report_call["period"] == "this year"
+
+    def test_currency_is_remembered_on_next_bare_visit(self, client, mock_api):
+        calls = []
+        async def fake(path, params=None):
+            calls.append((path, params or {}))
+            if path == "/finance/accounts":
+                return [{"id": 1, "name": "Conta BR", "currency": "BRL"}]
+            return []
+        mock_api["get"].side_effect = fake
+
+        client.get("/finance/?currency=BRL")
+        calls.clear()
+        client.get("/finance/")
+
+        report_call = next(p for path, p in calls if path == "/finance/transactions/report")
+        assert report_call["currency"] == "BRL"
+
+    def test_fresh_session_defaults_to_this_month_and_eur(self, client, mock_api):
+        calls = []
+        async def fake(path, params=None):
+            calls.append((path, params or {}))
+            return []
+        mock_api["get"].side_effect = fake
+
+        client.get("/finance/")
+
+        report_call = next(p for path, p in calls if path == "/finance/transactions/report")
+        assert report_call["period"] == "this month"
+        assert report_call["currency"] == "EUR"

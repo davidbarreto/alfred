@@ -19,6 +19,11 @@
       {% if txn.type == 'income' %}+{% elif txn.type == 'expense' %}-{% endif %}{{ "R$" if txn.currency == "BRL" else ("$" if txn.currency == "USD" else "€") }}{{ "%.2f"|format(txn.amount | float | abs) }}
     </span>
     <button
+      class="text-gray-300 hover:text-[#378ADD] opacity-0 group-hover:opacity-100 transition-all flex-shrink-0"
+      onclick="openEditTransaction({{ txn | tojson }}, {{ filters_qs | tojson }})"
+      title="Edit"
+    ><i class="ti ti-pencil text-sm"></i></button>
+    <button
       class="text-gray-200 hover:text-[#E24B4A] opacity-0 group-hover:opacity-100 transition-all flex-shrink-0"
       hx-delete="/finance/transactions/{{ txn.id }}?{{ filters_qs }}"
       hx-target="#txn-list-full"

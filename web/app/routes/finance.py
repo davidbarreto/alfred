@@ -76,12 +76,53 @@ _MONTH_GROUPING_THRESHOLD_DAYS = 60
 
 
 def _range_params(request: Request) -> dict:
-    """Resolve the active date range from query params: explicit from/to wins over period keyword."""
-    from_date = request.query_params.get("from_date")
-    to_date = request.query_params.get("to_date")
+    """Resolve the active date range: explicit query params win, otherwise fall back to
+    whatever range was last used in this session, otherwise default to this month.
+    Whatever is resolved is saved back to the session so the choice survives a new visit.
+    """
+    qp = request.query_params
+    from_date = qp.get("from_date")
+    to_date = qp.get("to_date")
+    period = qp.get("period")
     if from_date and to_date:
-        return {"from_date": from_date, "to_date": to_date}
-    return {"period": request.query_params.get("period", "this month")}
+        params = {"from_date": from_date, "to_date": to_date}
+    elif period:
+        params = {"period": period}
+    else:
+        params = request.session.get("finance_range") or {"period": "this month"}
+    request.session["finance_range"] = params
+    return params
+
+
+def _resolve_currency(request: Request) -> str:
+    """Same persistence pattern as _range_params, for the currency toggle."""
+    raw = request.query_params.get("currency")
+    currency = (raw or request.session.get("finance_currency") or "EUR").upper()
+    request.session["finance_currency"] = currency
+    return currency
+
+
+async def _dashboard_txn_list_context(range_params: dict, currency: str) -> dict:
+    transactions, categories, txn_accounts = [], [], []
+    try:
+        transactions = await api.get(
+            "/finance/transactions", params={"limit": 15, "currency": currency, **range_params}
+        )
+    except httpx.HTTPError:
+        pass
+    try:
+        categories = await api.get("/finance/categories")
+    except httpx.HTTPError:
+        pass
+    try:
+        txn_accounts = await api.get("/finance/accounts")
+    except httpx.HTTPError:
+        pass
+    return {
+        "transactions": transactions,
+        "categories_by_id": {c["id"]: c["name"] for c in categories},
+        "accounts_by_id": {a["id"]: a["name"] for a in txn_accounts},
+    }
 
 
 @router.get("/", response_class=HTMLResponse)
@@ -92,7 +133,7 @@ async def finance_page(request: Request):
     custom_from = range_params.get("from_date")
     custom_to = range_params.get("to_date")
     range_qs = urlencode(range_params)
-    currency = (request.query_params.get("currency") or "EUR").upper()
+    currency = _resolve_currency(request)
 
     spending, by_category, transactions, budgets, all_txns = None, None, [], [], []
     accounts, categories, recurring, all_budgets, errors = [], [], [], [], []
@@ -230,6 +271,7 @@ async def create_transaction(
     description: Annotated[Optional[str], Form()] = None,
 ):
     range_params = _range_params(request)
+    currency = _resolve_currency(request)
     payload: dict = {
         "amount": amount,
         "date": f"{date}T00:00:00",
@@ -248,13 +290,50 @@ async def create_transaction(
     except httpx.HTTPError:
         return HTMLResponse('<p class="text-[#E24B4A] text-sm px-1">Failed to create transaction.</p>', status_code=422)
 
-    transactions = []
-    try:
-        transactions = await api.get("/finance/transactions", params={"limit": 15, **range_params})
-    except httpx.HTTPError:
-        pass
+    context = await _dashboard_txn_list_context(range_params, currency)
+    return templates.TemplateResponse(request, "_finance_transactions.html", context)
 
-    return templates.TemplateResponse(request, "_finance_transactions.html", {"transactions": transactions})
+
+@router.patch("/transactions/{transaction_id}", response_class=HTMLResponse)
+async def update_transaction(
+    transaction_id: int,
+    request: Request,
+    amount: Annotated[str, Form()],
+    date: Annotated[str, Form()],
+    type: Annotated[str, Form()],
+    account_id: Annotated[str, Form()],
+    category_id: Annotated[Optional[str], Form()] = None,
+    merchant: Annotated[Optional[str], Form()] = None,
+    description: Annotated[Optional[str], Form()] = None,
+    note: Annotated[Optional[str], Form()] = None,
+):
+    # Every editable field is sent on every save (not just changed ones) so clearing a
+    # field (e.g. removing a merchant) actually clears it rather than leaving it untouched.
+    payload: dict = {
+        "amount": amount,
+        "date": f"{date}T00:00:00",
+        "type": type,
+        "account_id": int(account_id),
+        "category_id": int(category_id) if category_id else None,
+        "merchant": merchant or None,
+        "description": description or None,
+        "note": note or None,
+    }
+
+    try:
+        await api.patch(f"/finance/transactions/{transaction_id}", json=payload)
+    except httpx.HTTPError:
+        return HTMLResponse('<p class="text-[#E24B4A] text-sm px-1">Failed to update transaction.</p>', status_code=422)
+
+    if "offset" in request.query_params:
+        filters, offset = _parse_txn_query(request)
+        context = await _txn_list_context(filters, offset)
+        return templates.TemplateResponse(request, "_finance_transactions_list.html", context)
+
+    range_params = _range_params(request)
+    currency = _resolve_currency(request)
+    context = await _dashboard_txn_list_context(range_params, currency)
+    return templates.TemplateResponse(request, "_finance_transactions.html", context)
 
 
 @router.delete("/transactions/{transaction_id}", response_class=Response)
@@ -270,12 +349,9 @@ async def delete_transaction(transaction_id: int, request: Request):
         return templates.TemplateResponse(request, "_finance_transactions_list.html", context)
 
     range_params = _range_params(request)
-    transactions = []
-    try:
-        transactions = await api.get("/finance/transactions", params={"limit": 15, **range_params})
-    except httpx.HTTPError:
-        pass
-    return templates.TemplateResponse(request, "_finance_transactions.html", {"transactions": transactions})
+    currency = _resolve_currency(request)
+    context = await _dashboard_txn_list_context(range_params, currency)
+    return templates.TemplateResponse(request, "_finance_transactions.html", context)
 
 
 @router.get("/transactions", response_class=HTMLResponse)

@@ -78,6 +78,84 @@
 
 </div>
 
+<dialog id="edit-txn-modal" class="modal">
+  <div class="modal-box bg-white rounded-xl border border-gray-200 shadow-lg max-w-md w-full p-6">
+    <h3 class="text-sm font-semibold text-gray-900 mb-4">Edit transaction</h3>
+    <form id="edit-txn-form" onsubmit="submitEditTransaction(event)" class="flex flex-col gap-3">
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="text-xs text-gray-500 mb-1 block">Amount <span class="text-[#E24B4A]">*</span></label>
+          <input
+            name="amount"
+            type="number"
+            step="0.01"
+            required
+            class="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white w-full focus:outline-none focus:ring-1 focus:ring-[#378ADD]"
+          />
+        </div>
+        <div>
+          <label class="text-xs text-gray-500 mb-1 block">Date <span class="text-[#E24B4A]">*</span></label>
+          <input
+            name="date"
+            type="date"
+            required
+            class="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white w-full focus:outline-none focus:ring-1 focus:ring-[#378ADD]"
+          />
+        </div>
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="text-xs text-gray-500 mb-1 block">Type <span class="text-[#E24B4A]">*</span></label>
+          <select name="type" required class="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white w-full focus:outline-none focus:ring-1 focus:ring-[#378ADD]">
+            <option value="expense">Expense</option>
+            <option value="income">Income</option>
+            <option value="transfer">Transfer</option>
+          </select>
+        </div>
+        <div>
+          <label class="text-xs text-gray-500 mb-1 block">Account <span class="text-[#E24B4A]">*</span></label>
+          <select name="account_id" required class="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white w-full focus:outline-none focus:ring-1 focus:ring-[#378ADD]">
+            {% for acc in accounts %}
+            <option value="{{ acc.id }}">{{ acc.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+      <div>
+        <label class="text-xs text-gray-500 mb-1 block">Merchant</label>
+        <input name="merchant" type="text" placeholder="e.g. Lidl"
+               class="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white w-full focus:outline-none focus:ring-1 focus:ring-[#378ADD]" />
+      </div>
+      <div>
+        <label class="text-xs text-gray-500 mb-1 block">Category</label>
+        <select name="category_id" class="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white w-full focus:outline-none focus:ring-1 focus:ring-[#378ADD]">
+          <option value="">— none —</option>
+          {% for cat in categories %}
+          <option value="{{ cat.id }}">{{ cat.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div>
+        <label class="text-xs text-gray-500 mb-1 block">Description</label>
+        <input name="description" type="text" placeholder="A more readable description"
+               class="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white w-full focus:outline-none focus:ring-1 focus:ring-[#378ADD]" />
+      </div>
+      <div>
+        <label class="text-xs text-gray-500 mb-1 block">Note</label>
+        <input name="note" type="text" placeholder="Your own free-text note"
+               class="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white w-full focus:outline-none focus:ring-1 focus:ring-[#378ADD]" />
+      </div>
+      <p id="edit-txn-error" class="text-xs text-[#E24B4A] hidden"></p>
+      <div class="flex justify-end gap-2 mt-1">
+        <button type="button" onclick="document.getElementById('edit-txn-modal').close()"
+                class="btn btn-sm btn-ghost text-gray-500">Cancel</button>
+        <button type="submit" id="edit-txn-submit-btn" class="btn btn-sm btn-primary">Save</button>
+      </div>
+    </form>
+  </div>
+  <form method="dialog" class="modal-backdrop"><button>close</button></form>
+</dialog>
+
 <script>
 const TXN_LIST_URL = "/finance/transactions/list";
 let _txnOffset = {{ query_offset }};
@@ -120,6 +198,59 @@ function clearTxnFilters() {
 function changeTxnPage(delta) {
   _txnOffset = Math.max(0, _txnOffset + delta * _txnPageSize);
   refreshTxnList();
+}
+
+let _editTxnFiltersQs = "";
+
+function openEditTransaction(txn, filtersQs) {
+  _editTxnFiltersQs = filtersQs || "";
+  const form = document.getElementById("edit-txn-form");
+  form.reset();
+  form.querySelector('[name="amount"]').value = txn.amount;
+  form.querySelector('[name="date"]').value = (txn.date || "").slice(0, 10);
+  form.querySelector('[name="type"]').value = txn.type;
+  form.querySelector('[name="account_id"]').value = txn.account_id;
+  form.querySelector('[name="merchant"]').value = txn.merchant || "";
+  form.querySelector('[name="category_id"]').value = txn.category_id || "";
+  form.querySelector('[name="description"]').value = txn.description || "";
+  form.querySelector('[name="note"]').value = txn.note || "";
+  document.getElementById("edit-txn-error").classList.add("hidden");
+  document.getElementById("edit-txn-modal").showModal();
+  document.getElementById("edit-txn-modal").dataset.txnId = txn.id;
+}
+
+async function submitEditTransaction(e) {
+  e.preventDefault();
+  const btn = document.getElementById("edit-txn-submit-btn");
+  const errEl = document.getElementById("edit-txn-error");
+  const txnId = document.getElementById("edit-txn-modal").dataset.txnId;
+  btn.disabled = true;
+  btn.textContent = "Saving…";
+  errEl.classList.add("hidden");
+
+  const data = new FormData(e.target);
+  if (data.get("type") !== "transfer") {
+    data.set("amount", Math.abs(parseFloat(data.get("amount")) || 0));
+  }
+  try {
+    const res = await fetch(`/finance/transactions/${txnId}?${_editTxnFiltersQs}`, {
+      method: "PATCH",
+      body: data,
+    });
+    const html = await res.text();
+    if (!res.ok) {
+      throw new Error(html || `Error ${res.status}`);
+    }
+    document.getElementById("txn-list-full").innerHTML = html;
+    if (window.htmx) htmx.process(document.getElementById("txn-list-full"));
+    document.getElementById("edit-txn-modal").close();
+  } catch (err) {
+    errEl.textContent = err.message || "Failed to save transaction.";
+    errEl.classList.remove("hidden");
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Save";
+  }
 }
 </script>
 {% endblock %}

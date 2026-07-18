@@ -38,6 +38,22 @@ def resolve_period(
             start_of_week = today - timedelta(days=today.weekday())
             start = start_of_week - timedelta(days=7)
             return start, start_of_week - timedelta(days=1)
+        if p in ("this quarter", "current quarter"):
+            quarter_start_month = ((today.month - 1) // 3) * 3 + 1
+            start = today.replace(month=quarter_start_month, day=1)
+            if quarter_start_month + 3 > 12:
+                end = date(start.year + 1, 1, 1) - timedelta(days=1)
+            else:
+                end = start.replace(month=quarter_start_month + 3, day=1) - timedelta(days=1)
+            return start, end
+        if p in ("this semester", "current semester"):
+            semester_start_month = 1 if today.month <= 6 else 7
+            start = today.replace(month=semester_start_month, day=1)
+            if semester_start_month == 1:
+                end = today.replace(month=6, day=30)
+            else:
+                end = today.replace(month=12, day=31)
+            return start, end
         if p in ("this year", "current year"):
             return today.replace(month=1, day=1), today.replace(month=12, day=31)
         if p in ("last year", "previous year"):

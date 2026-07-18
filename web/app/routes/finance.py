@@ -72,11 +72,26 @@ async def _txn_list_context(filters: dict, offset: int) -> dict:
 
 
 _CURRENCY_SYMBOLS = {"EUR": "€", "BRL": "R$", "USD": "$", "GBP": "£"}
+_MONTH_GROUPING_THRESHOLD_DAYS = 60
+
+
+def _range_params(request: Request) -> dict:
+    """Resolve the active date range from query params: explicit from/to wins over period keyword."""
+    from_date = request.query_params.get("from_date")
+    to_date = request.query_params.get("to_date")
+    if from_date and to_date:
+        return {"from_date": from_date, "to_date": to_date}
+    return {"period": request.query_params.get("period", "this month")}
 
 
 @router.get("/", response_class=HTMLResponse)
 async def finance_page(request: Request):
-    period = request.query_params.get("period", "this month")
+    range_params = _range_params(request)
+    is_custom = "from_date" in range_params
+    period = None if is_custom else range_params["period"]
+    custom_from = range_params.get("from_date")
+    custom_to = range_params.get("to_date")
+    range_qs = urlencode(range_params)
     currency = (request.query_params.get("currency") or "EUR").upper()
 
     spending, by_category, transactions, budgets, all_txns = None, None, [], [], []
@@ -93,19 +108,19 @@ async def finance_page(request: Request):
         pass
 
     try:
-        spending = await api.get("/finance/transactions/report", params={"period": period, "currency": currency})
+        spending = await api.get("/finance/transactions/report", params={**range_params, "currency": currency})
     except httpx.HTTPError:
         errors.append("spending")
 
     try:
-        by_category = await api.get("/finance/transactions/by-category", params={"period": period, "currency": currency})
+        by_category = await api.get("/finance/transactions/by-category", params={**range_params, "currency": currency})
     except httpx.HTTPError:
         errors.append("by_category")
 
     try:
         transactions = await api.get(
             "/finance/transactions",
-            params={"type": "expense", "limit": 15, "period": period, "currency": currency},
+            params={"type": "expense", "limit": 15, "currency": currency, **range_params},
         )
     except httpx.HTTPError:
         errors.append("transactions")
@@ -119,7 +134,7 @@ async def finance_page(request: Request):
     try:
         all_txns = await api.get(
             "/finance/transactions",
-            params={"type": "expense", "limit": 500, "period": period, "currency": currency},
+            params={"type": "expense", "limit": 500, "currency": currency, **range_params},
         )
     except httpx.HTTPError:
         pass
@@ -143,10 +158,19 @@ async def finance_page(request: Request):
     total_spent_budget = sum(float(b["spent"]) for b in budgets) if budgets else None
     total_remaining = (total_budget - total_spent_budget) if total_budget is not None else None
 
-    # Spending over time: group by day (month view) or month (year view)
+    # Spending over time: group by day for short ranges, by month for long ones
+    # (year/quarter/semester/wide custom ranges), based on the range the API resolved.
+    resolved_from = (spending or {}).get("from_date") or (by_category or {}).get("from_date")
+    resolved_to = (spending or {}).get("to_date") or (by_category or {}).get("to_date")
+    group_by_month = False
+    if resolved_from and resolved_to:
+        from datetime import date as _date
+        span_days = (_date.fromisoformat(resolved_to) - _date.fromisoformat(resolved_from)).days + 1
+        group_by_month = span_days > _MONTH_GROUPING_THRESHOLD_DAYS
+
     time_spending: dict[str, float] = defaultdict(float)
     for txn in all_txns:
-        key = txn["date"][:7] if period == "this year" else txn["date"][:10]
+        key = txn["date"][:7] if group_by_month else txn["date"][:10]
         time_spending[key] += float(txn["amount"])
     time_spending_sorted = dict(sorted(time_spending.items()))
 
@@ -175,11 +199,15 @@ async def finance_page(request: Request):
         "budgets": budgets,
         "total_remaining": total_remaining,
         "period": period,
+        "is_custom": is_custom,
+        "custom_from": custom_from,
+        "custom_to": custom_to,
+        "range_qs": range_qs,
         "errors": errors,
         "time_spending": time_spending_sorted,
         "category_chart": category_chart,
         "budget_chart": budget_chart,
-        "time_label": "Month" if period == "this year" else "Day",
+        "time_label": "Month" if group_by_month else "Day",
         "accounts": accounts,
         "categories": categories,
         "recurring": recurring,
@@ -201,7 +229,7 @@ async def create_transaction(
     merchant: Annotated[Optional[str], Form()] = None,
     description: Annotated[Optional[str], Form()] = None,
 ):
-    period = request.query_params.get("period", "this month")
+    range_params = _range_params(request)
     payload: dict = {
         "amount": amount,
         "date": f"{date}T00:00:00",
@@ -222,7 +250,7 @@ async def create_transaction(
 
     transactions = []
     try:
-        transactions = await api.get("/finance/transactions", params={"limit": 15, "period": period})
+        transactions = await api.get("/finance/transactions", params={"limit": 15, **range_params})
     except httpx.HTTPError:
         pass
 
@@ -241,10 +269,10 @@ async def delete_transaction(transaction_id: int, request: Request):
         context = await _txn_list_context(filters, offset)
         return templates.TemplateResponse(request, "_finance_transactions_list.html", context)
 
-    period = request.query_params.get("period", "this month")
+    range_params = _range_params(request)
     transactions = []
     try:
-        transactions = await api.get("/finance/transactions", params={"limit": 15, "period": period})
+        transactions = await api.get("/finance/transactions", params={"limit": 15, **range_params})
     except httpx.HTTPError:
         pass
     return templates.TemplateResponse(request, "_finance_transactions.html", {"transactions": transactions})

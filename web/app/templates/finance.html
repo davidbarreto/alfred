@@ -9,19 +9,27 @@
     <div class="flex items-center gap-3 flex-wrap">
     <h1 class="text-base font-semibold text-gray-900">Finance</h1>
     <div class="flex gap-1.5 flex-wrap">
-      {% for p, label in [("this month", "This month"), ("last month", "Last month"), ("this year", "This year")] %}
+      {% for p, label in [("this month", "This month"), ("last month", "Last month"), ("this quarter", "This quarter"), ("this semester", "This semester"), ("this year", "This year")] %}
       <a
         href="/finance?period={{ p }}&currency={{ currency }}"
         class="px-3 py-1 rounded-full text-xs font-medium transition-colors
-          {% if period == p %}bg-[#E6F1FB] text-[#0C447C]{% else %}text-gray-500 hover:bg-gray-100{% endif %}"
+          {% if not is_custom and period == p %}bg-[#E6F1FB] text-[#0C447C]{% else %}text-gray-500 hover:bg-gray-100{% endif %}"
       >{{ label }}</a>
       {% endfor %}
+      <button
+        onclick="openCustomRangeModal()"
+        class="px-3 py-1 rounded-full text-xs font-medium transition-colors inline-flex items-center gap-1
+          {% if is_custom %}bg-[#E6F1FB] text-[#0C447C]{% else %}text-gray-500 hover:bg-gray-100{% endif %}"
+      >
+        <i class="ti ti-calendar text-xs"></i>
+        {% if is_custom %}{{ custom_from }} → {{ custom_to }}{% else %}Custom{% endif %}
+      </button>
     </div>
     {% if account_currencies | length > 1 %}
     <div class="flex gap-1.5 flex-wrap border-l border-gray-200 pl-3">
       {% for c in account_currencies %}
       <a
-        href="/finance?period={{ period }}&currency={{ c }}"
+        href="/finance?{{ range_qs }}&currency={{ c }}"
         class="px-3 py-1 rounded-full text-xs font-medium transition-colors
           {% if currency == c %}bg-[#FDF1E2] text-[#8A5A0B]{% else %}text-gray-500 hover:bg-gray-100{% endif %}"
       >{{ c }}</a>
@@ -308,6 +316,44 @@ async function submitManageForm(e, url, targetId) {
 </script>
 
 <!-- New Transaction Modal -->
+<dialog id="custom-range-modal" class="modal">
+  <div class="modal-box bg-white rounded-xl border border-gray-200 shadow-lg max-w-sm w-full p-6">
+    <h3 class="text-sm font-semibold text-gray-900 mb-4">Custom date range</h3>
+    <form id="custom-range-form" onsubmit="submitCustomRange(event)" class="flex flex-col gap-3">
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="text-xs text-gray-500 mb-1 block">From <span class="text-[#E24B4A]">*</span></label>
+          <input
+            id="custom-range-from"
+            name="from_date"
+            type="date"
+            required
+            value="{{ custom_from or '' }}"
+            class="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white w-full focus:outline-none focus:ring-1 focus:ring-[#378ADD]"
+          />
+        </div>
+        <div>
+          <label class="text-xs text-gray-500 mb-1 block">To <span class="text-[#E24B4A]">*</span></label>
+          <input
+            id="custom-range-to"
+            name="to_date"
+            type="date"
+            required
+            value="{{ custom_to or '' }}"
+            class="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white w-full focus:outline-none focus:ring-1 focus:ring-[#378ADD]"
+          />
+        </div>
+      </div>
+      <p id="custom-range-error" class="text-xs text-[#E24B4A] hidden"></p>
+      <div class="flex justify-end gap-2 mt-1">
+        <button type="button" onclick="document.getElementById('custom-range-modal').close()" class="btn btn-sm btn-ghost">Cancel</button>
+        <button type="submit" class="btn btn-sm btn-primary">Apply</button>
+      </div>
+    </form>
+  </div>
+  <form method="dialog" class="modal-backdrop"><button>close</button></form>
+</dialog>
+
 <dialog id="new-txn-modal" class="modal">
   <div class="modal-box bg-white rounded-xl border border-gray-200 shadow-lg max-w-md w-full p-6">
     <h3 class="text-sm font-semibold text-gray-900 mb-4">New transaction</h3>
@@ -400,6 +446,24 @@ async function submitManageForm(e, url, targetId) {
   }
 })();
 
+function openCustomRangeModal() {
+  document.getElementById("custom-range-modal").showModal();
+}
+
+function submitCustomRange(e) {
+  e.preventDefault();
+  const from = document.getElementById("custom-range-from").value;
+  const to = document.getElementById("custom-range-to").value;
+  const errEl = document.getElementById("custom-range-error");
+  if (from > to) {
+    errEl.textContent = "The start date must be before the end date.";
+    errEl.classList.remove("hidden");
+    return;
+  }
+  const params = new URLSearchParams({ from_date: from, to_date: to, currency: {{ currency | tojson }} });
+  window.location.href = "/finance?" + params.toString();
+}
+
 async function submitNewTxn(e) {
   e.preventDefault();
   const btn = document.getElementById("txn-submit-btn");
@@ -409,9 +473,8 @@ async function submitNewTxn(e) {
   errEl.classList.add("hidden");
 
   const data = new FormData(e.target);
-  const period = new URLSearchParams(window.location.search).get("period") || "this month";
   try {
-    const res = await fetch(`/finance/transactions?period=${encodeURIComponent(period)}`, {
+    const res = await fetch(`/finance/transactions${window.location.search}`, {
       method: "POST",
       body: data,
     });

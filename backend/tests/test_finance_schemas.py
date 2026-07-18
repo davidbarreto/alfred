@@ -61,6 +61,48 @@ class TestResolvePeriodKeywords:
         assert start == date(2026, 6, 1)
         assert end == date(2026, 6, 7)
 
+    def test_this_quarter(self):
+        with _today():  # June -> Q2
+            start, end = resolve_period("this quarter", None, None)
+        assert start == date(2026, 4, 1)
+        assert end == date(2026, 6, 30)
+
+    def test_current_quarter_alias(self):
+        with _today():
+            start, end = resolve_period("current quarter", None, None)
+        assert start == date(2026, 4, 1)
+        assert end == date(2026, 6, 30)
+
+    def test_this_quarter_q1(self):
+        with _today(date(2026, 2, 10)):
+            start, end = resolve_period("this quarter", None, None)
+        assert start == date(2026, 1, 1)
+        assert end == date(2026, 3, 31)
+
+    def test_this_quarter_q4_wraps_year(self):
+        with _today(date(2026, 11, 5)):
+            start, end = resolve_period("this quarter", None, None)
+        assert start == date(2026, 10, 1)
+        assert end == date(2026, 12, 31)
+
+    def test_this_semester_first_half(self):
+        with _today():  # June -> H1
+            start, end = resolve_period("this semester", None, None)
+        assert start == date(2026, 1, 1)
+        assert end == date(2026, 6, 30)
+
+    def test_current_semester_alias(self):
+        with _today():
+            start, end = resolve_period("current semester", None, None)
+        assert start == date(2026, 1, 1)
+        assert end == date(2026, 6, 30)
+
+    def test_this_semester_second_half(self):
+        with _today(date(2026, 9, 15)):
+            start, end = resolve_period("this semester", None, None)
+        assert start == date(2026, 7, 1)
+        assert end == date(2026, 12, 31)
+
     def test_this_year(self):
         with _today():
             start, end = resolve_period("this year", None, None)

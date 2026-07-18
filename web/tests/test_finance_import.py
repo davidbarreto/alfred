@@ -232,6 +232,27 @@ class TestImportCommit:
 
         assert resp.status_code == 422
 
+    def test_surfaces_validation_error_detail(self, client, mock_api):
+        # FastAPI's own request-validation failures return `detail` as a list of
+        # {loc, msg} objects, not a plain string -- must not collapse to the generic
+        # "Import failed." message, or the real cause is invisible to the user.
+        request = httpx.Request("POST", "http://backend/finance/imports/commit")
+        response = httpx.Response(
+            422,
+            json={"detail": [{"loc": ["body", "rows", 0, "date_posted"], "msg": "Field required"}]},
+            request=request,
+        )
+        mock_api["post"].side_effect = httpx.HTTPStatusError("Unprocessable", request=request, response=response)
+
+        resp = client.post(
+            "/finance/import/commit",
+            json={"account_id": "1", "provider": "activobank", "row_count": "0"},
+        )
+
+        assert resp.status_code == 422
+        assert "rows.0.date_posted" in resp.text
+        assert "Field required" in resp.text
+
     def test_invalid_json_body_returns_error(self, client):
         resp = client.post(
             "/finance/import/commit",

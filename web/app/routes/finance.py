@@ -1,3 +1,4 @@
+import html
 import json
 from collections import defaultdict
 from typing import Annotated, Optional
@@ -799,6 +800,11 @@ async def import_preview(
             data=data,
             files={"file": (file.filename or "statement.csv", content, file.content_type or "text/csv")},
         )
+    except httpx.HTTPStatusError as exc:
+        detail = html.escape(
+            _extract_error_detail(exc, "Could not parse this file. Check that it is a supported bank statement export.")
+        )
+        return HTMLResponse(f'<p class="text-[#E24B4A] text-sm px-1">{detail}</p>', status_code=422)
     except httpx.HTTPError:
         return HTMLResponse(
             '<p class="text-[#E24B4A] text-sm px-1">Could not parse this file. '
@@ -830,6 +836,27 @@ async def import_preview(
 def _form_value(form, key: str, default: str = "") -> str:
     value = form.get(key)
     return value if isinstance(value, str) else default
+
+
+def _extract_error_detail(exc: httpx.HTTPStatusError, fallback: str) -> str:
+    """Surface the backend's actual error instead of a flat generic message --
+    FastAPI validation failures return `detail` as a list of {loc, msg} objects,
+    HTTPException-raised errors return it as a plain string."""
+    try:
+        body = exc.response.json()
+    except ValueError:
+        return fallback
+    detail = body.get("detail")
+    if isinstance(detail, str):
+        return detail
+    if isinstance(detail, list):
+        parts = []
+        for item in detail:
+            loc = ".".join(str(p) for p in item.get("loc", []) if p != "body")
+            msg = item.get("msg", "")
+            parts.append(f"{loc}: {msg}" if loc else msg)
+        return "; ".join(parts) or fallback
+    return fallback
 
 
 @router.post("/import/commit", response_class=HTMLResponse)
@@ -885,6 +912,9 @@ async def import_commit(request: Request):
     }
     try:
         result = await api.post("/finance/imports/commit", json=payload)
+    except httpx.HTTPStatusError as exc:
+        detail = html.escape(_extract_error_detail(exc, "Import failed."))
+        return HTMLResponse(f'<p class="text-[#E24B4A] text-sm px-1">{detail}</p>', status_code=422)
     except httpx.HTTPError:
         return HTMLResponse('<p class="text-[#E24B4A] text-sm px-1">Import failed.</p>', status_code=422)
 
@@ -904,6 +934,9 @@ async def import_detect_currencies(
             data={"provider": provider},
             files={"file": (file.filename or "statement.csv", content, file.content_type or "text/csv")},
         )
+    except httpx.HTTPStatusError as exc:
+        detail = html.escape(_extract_error_detail(exc, "Could not read this file."))
+        return HTMLResponse(f'<p class="text-[#E24B4A] text-sm px-1">{detail}</p>', status_code=422)
     except httpx.HTTPError:
         return HTMLResponse(
             '<p class="text-[#E24B4A] text-sm px-1">Could not read this file.</p>', status_code=422
@@ -929,10 +962,7 @@ async def import_preview_grouped(
             files={"file": (file.filename or "statement.csv", content, file.content_type or "text/csv")},
         )
     except httpx.HTTPStatusError as exc:
-        try:
-            detail = exc.response.json().get("detail") or "Could not preview this import."
-        except ValueError:
-            detail = "Could not preview this import."
+        detail = html.escape(_extract_error_detail(exc, "Could not preview this import."))
         return HTMLResponse(f'<p class="text-[#E24B4A] text-sm px-1">{detail}</p>', status_code=422)
     except httpx.HTTPError:
         return HTMLResponse(
@@ -1005,10 +1035,7 @@ async def import_commit_grouped(request: Request):
     try:
         result = await api.post("/finance/imports/commit-grouped", json=payload)
     except httpx.HTTPStatusError as exc:
-        try:
-            detail = exc.response.json().get("detail") or "Import failed."
-        except ValueError:
-            detail = "Import failed."
+        detail = html.escape(_extract_error_detail(exc, "Import failed."))
         return HTMLResponse(f'<p class="text-[#E24B4A] text-sm px-1">{detail}</p>', status_code=422)
     except httpx.HTTPError:
         return HTMLResponse('<p class="text-[#E24B4A] text-sm px-1">Import failed.</p>', status_code=422)

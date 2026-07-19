@@ -104,7 +104,8 @@ async def calendar_day(date_str: str, request: Request):
 
 
 def _event_payload(
-    title: str, start_date: str, start_time: str, end_time: str, location: str, all_day: str
+    title: str, start_date: str, start_time: str, end_time: str, location: str, all_day: str,
+    recurrence_rule: str | None = None,
 ) -> dict:
     is_all_day = bool(all_day)
     if is_all_day:
@@ -120,6 +121,7 @@ def _event_payload(
         "end_datetime": end_iso,
         "all_day": is_all_day,
         "location": location or None,
+        "recurrence_rule": recurrence_rule or None,
     }
 
 
@@ -132,8 +134,9 @@ async def create_event(
     end_time: Annotated[str, Form()] = "10:00",
     location: Annotated[str, Form()] = "",
     all_day: Annotated[str, Form()] = "",
+    recurrence_rule: Annotated[str | None, Form()] = None,
 ):
-    payload = _event_payload(title, start_date, start_time, end_time, location, all_day)
+    payload = _event_payload(title, start_date, start_time, end_time, location, all_day, recurrence_rule)
     try:
         event = await api.post("/organizer/calendar-events", json=payload)
     except httpx.HTTPStatusError as e:
@@ -159,8 +162,9 @@ async def update_event(
     end_time: Annotated[str, Form()] = "10:00",
     location: Annotated[str, Form()] = "",
     all_day: Annotated[str, Form()] = "",
+    recurrence_rule: Annotated[str | None, Form()] = None,
 ):
-    payload = _event_payload(title, start_date, start_time, end_time, location, all_day)
+    payload = _event_payload(title, start_date, start_time, end_time, location, all_day, recurrence_rule)
     try:
         event = await api.patch(f"/organizer/calendar-events/{event_id}", json=payload)
     except httpx.HTTPStatusError as e:
@@ -173,4 +177,21 @@ async def update_event(
         return HTMLResponse("Failed to update event.", status_code=422)
 
     await api.log_command("event.update", {"title": title}, "event", event.get("id"))
+    return HTMLResponse("", status_code=204)
+
+
+@router.delete("/{event_id}", response_class=HTMLResponse)
+async def delete_event(event_id: int):
+    try:
+        await api.delete(f"/organizer/calendar-events/{event_id}")
+    except httpx.HTTPStatusError as e:
+        try:
+            detail = e.response.json().get("detail", "Failed to delete event.")
+        except Exception:
+            detail = "Failed to delete event."
+        return HTMLResponse(detail, status_code=422)
+    except httpx.HTTPError:
+        return HTMLResponse("Failed to delete event.", status_code=422)
+
+    await api.log_command("event.delete", {}, "event", event_id)
     return HTMLResponse("", status_code=204)

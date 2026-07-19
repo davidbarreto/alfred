@@ -98,6 +98,83 @@ class TestCalendarDay:
         assert '&#34;id&#34;: 7' in resp.text or '"id": 7' in resp.text
 
 
+class TestCreateEvent:
+    def test_creates_event_without_recurrence(self, client, mock_api):
+        mock_api["post"].return_value = _event(id=5, title="Team sync")
+
+        resp = client.post("/calendar/", data={
+            "title": "Team sync",
+            "start_date": "2026-07-14",
+            "start_time": "09:00",
+            "end_time": "09:30",
+        })
+
+        assert resp.status_code == 204
+        mock_api["post"].assert_any_await("/organizer/calendar-events", json={
+            "title": "Team sync",
+            "start_datetime": "2026-07-14T09:00:00",
+            "end_datetime": "2026-07-14T09:30:00",
+            "all_day": False,
+            "location": None,
+            "recurrence_rule": None,
+        })
+
+    def test_creates_recurring_event(self, client, mock_api):
+        mock_api["post"].return_value = _event(id=5, title="Standup")
+
+        resp = client.post("/calendar/", data={
+            "title": "Standup",
+            "start_date": "2026-07-14",
+            "start_time": "09:00",
+            "end_time": "09:15",
+            "recurrence_rule": "FREQ=DAILY",
+        })
+
+        assert resp.status_code == 204
+        mock_api["post"].assert_any_await("/organizer/calendar-events", json={
+            "title": "Standup",
+            "start_datetime": "2026-07-14T09:00:00",
+            "end_datetime": "2026-07-14T09:15:00",
+            "all_day": False,
+            "location": None,
+            "recurrence_rule": "FREQ=DAILY",
+        })
+
+    def test_creates_event_with_custom_recurrence_rule(self, client, mock_api):
+        mock_api["post"].return_value = _event(id=5, title="Standup")
+
+        resp = client.post("/calendar/", data={
+            "title": "Standup",
+            "start_date": "2026-07-14",
+            "start_time": "09:00",
+            "end_time": "09:15",
+            "recurrence_rule": "FREQ=WEEKLY;BYDAY=MO,WE,FR;COUNT=10",
+        })
+
+        assert resp.status_code == 204
+        mock_api["post"].assert_any_await("/organizer/calendar-events", json={
+            "title": "Standup",
+            "start_datetime": "2026-07-14T09:00:00",
+            "end_datetime": "2026-07-14T09:15:00",
+            "all_day": False,
+            "location": None,
+            "recurrence_rule": "FREQ=WEEKLY;BYDAY=MO,WE,FR;COUNT=10",
+        })
+
+    def test_returns_422_when_backend_create_fails(self, client, mock_api):
+        request = httpx.Request("POST", "http://api/organizer/calendar-events")
+        response = httpx.Response(422, json={"detail": "Invalid event"}, request=request)
+        mock_api["post"].side_effect = httpx.HTTPStatusError("invalid", request=request, response=response)
+
+        resp = client.post("/calendar/", data={
+            "title": "Standup",
+            "start_date": "2026-07-14",
+        })
+
+        assert resp.status_code == 422
+        assert "Invalid event" in resp.text
+
+
 class TestUpdateEvent:
     def test_updates_timed_event(self, client, mock_api):
         mock_api["patch"].return_value = _event(id=3, title="Team sync")
@@ -117,6 +194,7 @@ class TestUpdateEvent:
             "end_datetime": "2026-07-14T09:30:00",
             "all_day": False,
             "location": "Room 2",
+            "recurrence_rule": None,
         })
 
     def test_updates_all_day_event(self, client, mock_api):
@@ -135,6 +213,28 @@ class TestUpdateEvent:
             "end_datetime": "2026-07-14T23:59:59",
             "all_day": True,
             "location": None,
+            "recurrence_rule": None,
+        })
+
+    def test_updates_recurrence_rule(self, client, mock_api):
+        mock_api["patch"].return_value = _event(id=3, title="Team sync", tags=["work"])
+
+        resp = client.patch("/calendar/3", data={
+            "title": "Team sync",
+            "start_date": "2026-07-14",
+            "start_time": "09:00",
+            "end_time": "09:30",
+            "recurrence_rule": "FREQ=WEEKLY",
+        })
+
+        assert resp.status_code == 204
+        mock_api["patch"].assert_any_await("/organizer/calendar-events/3", json={
+            "title": "Team sync",
+            "start_datetime": "2026-07-14T09:00:00",
+            "end_datetime": "2026-07-14T09:30:00",
+            "all_day": False,
+            "location": None,
+            "recurrence_rule": "FREQ=WEEKLY",
         })
 
     def test_returns_422_when_backend_update_fails(self, client, mock_api):
@@ -149,3 +249,30 @@ class TestUpdateEvent:
 
         assert resp.status_code == 422
         assert "Event not found" in resp.text
+
+
+class TestDeleteEvent:
+    def test_deletes_event(self, client, mock_api):
+        resp = client.delete("/calendar/3")
+
+        assert resp.status_code == 204
+        mock_api["delete"].assert_awaited_once_with("/organizer/calendar-events/3")
+
+    def test_returns_422_when_backend_delete_fails(self, client, mock_api):
+        request = httpx.Request("DELETE", "http://api/organizer/calendar-events/3")
+        response = httpx.Response(404, json={"detail": "Event not found"}, request=request)
+        mock_api["delete"].side_effect = httpx.HTTPStatusError("not found", request=request, response=response)
+
+        resp = client.delete("/calendar/3")
+
+        assert resp.status_code == 422
+        assert "Event not found" in resp.text
+
+    def test_returns_422_when_backend_unreachable(self, client, mock_api):
+        request = httpx.Request("DELETE", "http://api/organizer/calendar-events/3")
+        mock_api["delete"].side_effect = httpx.ConnectError("connection refused", request=request)
+
+        resp = client.delete("/calendar/3")
+
+        assert resp.status_code == 422
+        assert "Failed to delete event." in resp.text

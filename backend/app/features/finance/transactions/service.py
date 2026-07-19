@@ -102,6 +102,25 @@ class TransactionService:
             transaction_count=count,
         )
 
+    async def income_report(self, filters: AnalyticsFilters) -> SpendingReportResponse:
+        from_date, to_date = resolve_period(filters.period, filters.from_date, filters.to_date)
+        total, count = await self._repo.get_spending_total(
+            from_date=from_date,
+            to_date=to_date,
+            category_id=filters.category_id,
+            account_id=filters.account_id,
+            merchant=filters.merchant,
+            currency=filters.currency,
+            transaction_type="income",
+        )
+        return SpendingReportResponse(
+            total=total,
+            currency=filters.currency,
+            from_date=from_date,
+            to_date=to_date,
+            transaction_count=count,
+        )
+
     async def spending_average(self, filters: AnalyticsFilters) -> SpendingAverageResponse:
         from_date, to_date = resolve_period(filters.period, filters.from_date, filters.to_date)
         total, _ = await self._repo.get_spending_total(

@@ -849,6 +849,49 @@
           }
         },
         {
+          "name": "04b - Income Report",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Response has income report fields', () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.have.property('total');",
+                  "    pm.expect(json).to.have.property('currency');",
+                  "    pm.expect(json).to.have.property('from_date');",
+                  "    pm.expect(json).to.have.property('to_date');",
+                  "    pm.expect(json).to.have.property('transaction_count');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/finance/transactions/income-report?period=this month",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "finance",
+                "transactions",
+                "income-report"
+              ],
+              "query": [
+                {
+                  "key": "period",
+                  "value": "this month"
+                }
+              ]
+            }
+          }
+        },
+        {
           "name": "05 - Spending Average",
           "event": [
             {

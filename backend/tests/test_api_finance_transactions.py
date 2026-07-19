@@ -51,6 +51,11 @@ def mock_txn_service():
         from_date=date(2026, 6, 1), to_date=date(2026, 6, 30),
         transaction_count=4,
     )
+    svc.income_report.return_value = SpendingReportResponse(
+        total=Decimal("2000.00"), currency="EUR",
+        from_date=date(2026, 6, 1), to_date=date(2026, 6, 30),
+        transaction_count=1,
+    )
     svc.spending_average.return_value = SpendingAverageResponse(
         average_per_day=Decimal("10.00"), total=Decimal("300.00"),
         days=30, from_date=date(2026, 6, 1), to_date=date(2026, 6, 30),
@@ -259,6 +264,24 @@ class TestSpendingReport:
 
     def test_requires_auth(self, client):
         assert client.get("/finance/transactions/report").status_code == 403
+
+
+class TestIncomeReport:
+    def test_returns_200_with_report_fields(self, client):
+        response = client.get("/finance/transactions/income-report", headers=AUTH)
+        assert response.status_code == 200
+        data = response.json()
+        assert "total" in data
+        assert "currency" in data
+        assert "transaction_count" in data
+
+    def test_currency_filter_passed_to_service(self, client, mock_txn_service):
+        client.get("/finance/transactions/income-report?currency=BRL", headers=AUTH)
+        filters = mock_txn_service.income_report.call_args[0][0]
+        assert filters.currency == "BRL"
+
+    def test_requires_auth(self, client):
+        assert client.get("/finance/transactions/income-report").status_code == 403
 
 
 class TestSpendingAverage:

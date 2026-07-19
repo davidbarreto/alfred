@@ -147,7 +147,7 @@ async def finance_page(request: Request):
     range_qs = urlencode(range_params)
     currency = _resolve_currency(request)
 
-    spending, by_category, transactions, budgets, all_txns = None, None, [], [], []
+    spending, income, by_category, transactions, budgets, all_txns = None, None, None, [], [], []
     accounts, categories, currencies, recurring, all_budgets, errors = [], [], [], [], [], []
 
     try:
@@ -169,6 +169,11 @@ async def finance_page(request: Request):
         spending = await api.get("/finance/transactions/report", params={**range_params, "currency": currency})
     except httpx.HTTPError:
         errors.append("spending")
+
+    try:
+        income = await api.get("/finance/transactions/income-report", params={**range_params, "currency": currency})
+    except httpx.HTTPError:
+        errors.append("income")
 
     try:
         by_category = await api.get("/finance/transactions/by-category", params={**range_params, "currency": currency})
@@ -252,6 +257,7 @@ async def finance_page(request: Request):
 
     return templates.TemplateResponse(request, "finance.html", {
         "spending": spending,
+        "income": income,
         "category_items": category_items,
         "max_total": max_total,
         "top_category": top_category,

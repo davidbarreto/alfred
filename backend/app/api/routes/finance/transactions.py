@@ -61,6 +61,13 @@ async def spending_report(
     return await service.spending_report(filters)
 
 
+@router.get("/income-report", response_model=SpendingReportResponse)
+async def income_report(
+    service: TransactionServiceDep, filters: AnalyticsFilters = Depends()
+):
+    return await service.income_report(filters)
+
+
 @router.get("/average", response_model=SpendingAverageResponse)
 async def spending_average(
     service: TransactionServiceDep, filters: AnalyticsFilters = Depends()

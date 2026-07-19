@@ -188,6 +188,35 @@ class TestSpendingReport:
         assert service._repo.get_spending_total.call_args.kwargs["currency"] == "BRL"
 
 
+class TestIncomeReport:
+    async def test_returns_correct_response(self, service):
+        service._repo.get_spending_total.return_value = (Decimal("2000.00"), 1)
+        filters = AnalyticsFilters(from_date=date(2026, 6, 1), to_date=date(2026, 6, 30))
+
+        result = await service.income_report(filters)
+
+        assert result.total == Decimal("2000.00")
+        assert result.currency == "EUR"
+        assert result.transaction_count == 1
+        assert result.from_date == date(2026, 6, 1)
+
+    async def test_calls_repo_with_income_type(self, service):
+        service._repo.get_spending_total.return_value = (Decimal("0"), 0)
+        filters = AnalyticsFilters(from_date=date(2026, 6, 1), to_date=date(2026, 6, 30))
+
+        await service.income_report(filters)
+
+        service._repo.get_spending_total.assert_called_once_with(
+            from_date=date(2026, 6, 1),
+            to_date=date(2026, 6, 30),
+            category_id=None,
+            account_id=None,
+            merchant=None,
+            currency="EUR",
+            transaction_type="income",
+        )
+
+
 class TestSpendingAverage:
     async def test_calculates_average_per_day(self, service):
         service._repo.get_spending_total.return_value = (Decimal("300.00"), 6)

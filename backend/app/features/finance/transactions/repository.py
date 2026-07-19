@@ -162,12 +162,13 @@ class TransactionRepository:
         account_id: int | None = None,
         merchant: str | None = None,
         currency: str = "EUR",
+        transaction_type: str = "expense",
     ) -> tuple[Decimal, int]:
         query = select(
             func.coalesce(func.sum(Transaction.amount), 0),
             func.count(Transaction.id),
         ).where(
-            Transaction.type == "expense",
+            Transaction.type == transaction_type,
             Transaction.currency == currency,
             Transaction.date >= from_date,
             Transaction.date <= to_date,

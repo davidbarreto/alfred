@@ -52,8 +52,18 @@
     </div>
   </div>
 
-  <!-- 3 summary cards -->
-  <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+  <!-- 4 summary cards -->
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+    <div class="bg-white border border-gray-200 rounded-lg p-4">
+      <div class="text-[10px] text-gray-400 uppercase tracking-wide">Income</div>
+      <div class="text-2xl font-semibold text-[#639922] mt-1">
+        {% if income %}{{ currency_symbol }}{{ "%.2f"|format(income.total | float) }}{% else %}—{% endif %}
+      </div>
+      {% if income %}
+      <div class="text-xs text-gray-400 mt-1">{{ income.transaction_count }} transactions</div>
+      {% endif %}
+    </div>
+
     <div class="bg-white border border-gray-200 rounded-lg p-4">
       <div class="text-[10px] text-gray-400 uppercase tracking-wide">Spent</div>
       <div class="text-2xl font-semibold text-[#E24B4A] mt-1">

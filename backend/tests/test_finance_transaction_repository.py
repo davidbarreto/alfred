@@ -193,6 +193,29 @@ class TestGetSpendingTotal:
         )
         session.execute.assert_called_once()
 
+    async def test_transaction_type_defaults_to_expense(self):
+        session = _make_session()
+        session.execute.return_value = _one_result((Decimal("0"), 0))
+        await TransactionRepository(session).get_spending_total(
+            from_date=date(2026, 6, 1),
+            to_date=date(2026, 6, 30),
+        )
+        query = session.execute.call_args.args[0]
+        assert "expense" in str(query.compile(compile_kwargs={"literal_binds": True}))
+
+    async def test_transaction_type_income_override(self):
+        session = _make_session()
+        session.execute.return_value = _one_result((Decimal("500.00"), 1))
+        total, count = await TransactionRepository(session).get_spending_total(
+            from_date=date(2026, 6, 1),
+            to_date=date(2026, 6, 30),
+            transaction_type="income",
+        )
+        query = session.execute.call_args.args[0]
+        assert "income" in str(query.compile(compile_kwargs={"literal_binds": True}))
+        assert total == Decimal("500.00")
+        assert count == 1
+
 
 class TestGetTopExpenses:
     async def test_returns_list(self):

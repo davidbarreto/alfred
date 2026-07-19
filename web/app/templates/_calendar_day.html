@@ -28,6 +28,9 @@
     <button onclick='document.getElementById("calendar-day-modal").close(); openEditEvent({{ ev | tojson }})' class="text-white/60 hover:text-white flex-shrink-0">
       <i class="ti ti-pencil" style="font-size:0.85rem"></i>
     </button>
+    <button onclick='deleteEventFromDay({{ ev.id }})' class="text-white/60 hover:text-white flex-shrink-0">
+      <i class="ti ti-trash" style="font-size:0.85rem"></i>
+    </button>
   </li>
   {% endfor %}
 </ul>
@@ -52,6 +55,9 @@
     {% endfor %}
     <button onclick='document.getElementById("calendar-day-modal").close(); openEditEvent({{ ev | tojson }})' class="text-gray-300 hover:text-gray-500 flex-shrink-0">
       <i class="ti ti-pencil" style="font-size:0.85rem"></i>
+    </button>
+    <button onclick='deleteEventFromDay({{ ev.id }})' class="text-gray-300 hover:text-gray-500 flex-shrink-0">
+      <i class="ti ti-trash" style="font-size:0.85rem"></i>
     </button>
   </li>
   {% endfor %}

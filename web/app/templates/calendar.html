@@ -194,14 +194,10 @@
         <input type="hidden" name="recurrence_rule" id="event-recurrence-value" />
       </div>
       <p id="event-error" class="text-xs text-[#E24B4A] hidden"></p>
-      <div class="flex justify-between items-center mt-1">
-        <button type="button" id="event-delete-btn" onclick="deleteEvent()"
-                class="btn btn-sm btn-ghost text-[#E24B4A] hidden">Delete</button>
-        <div class="flex justify-end gap-2 ml-auto">
-          <button type="button" onclick="document.getElementById('new-event-modal').close()"
-                  class="btn btn-sm btn-ghost text-gray-500">Cancel</button>
-          <button type="submit" id="event-submit-btn" class="btn btn-sm btn-primary">Save event</button>
-        </div>
+      <div class="flex justify-end gap-2 mt-1">
+        <button type="button" onclick="document.getElementById('new-event-modal').close()"
+                class="btn btn-sm btn-ghost text-gray-500">Cancel</button>
+        <button type="submit" id="event-submit-btn" class="btn btn-sm btn-primary">Save event</button>
       </div>
     </form>
   </div>
@@ -248,7 +244,6 @@ function openNewEvent(prefillDate) {
   document.getElementById("new-event-form").reset();
   document.getElementById("event-form-title").textContent = "New event";
   document.getElementById("event-time-row").classList.remove("hidden");
-  document.getElementById("event-delete-btn").classList.add("hidden");
   document.getElementById("event-recurrence-custom").value = "";
   _setEventRecurrenceChip("");
   if (prefillDate) {
@@ -279,35 +274,21 @@ function openEditEvent(ev) {
     form.querySelector('[name="start_time"]').value = ev.start_datetime.slice(11, 16);
     form.querySelector('[name="end_time"]').value = ev.end_datetime.slice(11, 16);
   }
-  document.getElementById("event-delete-btn").classList.remove("hidden");
   document.getElementById("new-event-modal").showModal();
   setTimeout(() => document.getElementById("event-title").focus(), 50);
 }
 
-async function deleteEvent() {
-  const eventId = document.querySelector('#new-event-form [name="event_id"]').value;
-  if (!eventId) return;
+async function deleteEventFromDay(eventId) {
   if (!confirm("Delete this event? This cannot be undone.")) return;
-
-  const btn = document.getElementById("event-delete-btn");
-  const errEl = document.getElementById("event-error");
-  btn.disabled = true;
-  btn.textContent = "Deleting…";
-  errEl.classList.add("hidden");
   try {
     const res = await fetch(`/calendar/${eventId}`, { method: "DELETE" });
     if (!res.ok) {
       const txt = await res.text();
       throw new Error(txt || `Error ${res.status}`);
     }
-    document.getElementById("new-event-modal").close();
     window.location.reload();
   } catch (err) {
-    errEl.textContent = err.message || "Failed to delete event.";
-    errEl.classList.remove("hidden");
-  } finally {
-    btn.disabled = false;
-    btn.textContent = "Delete";
+    alert(err.message || "Failed to delete event.");
   }
 }
 

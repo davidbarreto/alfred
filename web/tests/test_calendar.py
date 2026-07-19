@@ -97,6 +97,14 @@ class TestCalendarDay:
         assert "openEditEvent(" in resp.text
         assert '&#34;id&#34;: 7' in resp.text or '"id": 7' in resp.text
 
+    def test_renders_delete_button_per_event(self, client, mock_api):
+        mock_api["get"].return_value = [_event(id=7, title="Marriage Anniversary", all_day=True)]
+
+        resp = client.get("/calendar/day/2026-07-14")
+
+        assert resp.status_code == 200
+        assert "deleteEventFromDay(7)" in resp.text
+
 
 class TestCreateEvent:
     def test_creates_event_without_recurrence(self, client, mock_api):

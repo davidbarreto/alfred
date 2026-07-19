@@ -27,6 +27,7 @@
             {"label": "Chicago",     "value": "America/Chicago"},
             {"label": "Denver",      "value": "America/Denver"},
             {"label": "Los Angeles", "value": "America/Los_Angeles"},
+            {"label": "Brasilia",    "value": "America/Sao_Paulo"},
             {"label": "UTC",         "value": "UTC"}
           ] %}
           <option value="{{ tz.value }}" {% if tz.value == viewer_tz %}selected{% endif %}>{{ tz.label }}</option>
@@ -224,6 +225,7 @@
             {"label": "Chicago",     "value": "America/Chicago"},
             {"label": "Denver",      "value": "America/Denver"},
             {"label": "Los Angeles", "value": "America/Los_Angeles"},
+            {"label": "Brasilia",    "value": "America/Sao_Paulo"},
             {"label": "UTC",         "value": "UTC"},
             {"label": "Custom…",     "value": "__custom__"}
           ] %}
@@ -269,7 +271,7 @@
 <script>
 const VIEWER_TZ = "{{ viewer_tz }}";
 const APP_DEFAULT_TZ = "Europe/Lisbon";
-const KNOWN_TIMEZONES = ["Europe/Lisbon", "Europe/London", "America/New_York", "America/Chicago", "America/Denver", "America/Los_Angeles", "UTC"];
+const KNOWN_TIMEZONES = ["Europe/Lisbon", "Europe/London", "America/New_York", "America/Chicago", "America/Denver", "America/Los_Angeles", "America/Sao_Paulo", "UTC"];
 
 function _setEventTimezoneChip(value) {
   document.querySelectorAll(".event-timezone-chip").forEach(el => {

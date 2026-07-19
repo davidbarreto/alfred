@@ -7,6 +7,7 @@ from app.shared.storage import StorageProvider
 from app.features.organizer.calendar_events.tables import CalendarEvent  # noqa: F401 — registers CalendarEvent with SQLAlchemy mapper
 from app.features.organizer.calendar_events.schemas import EventCreate, EventUpdate, EventFilters, EventRead
 from app.features.organizer.calendar_events.repository import CalendarEventRepository
+from app.features.organizer.calendar_events.recurrence import expand_occurrences
 
 logger = logging.getLogger(__name__)
 
@@ -31,7 +32,33 @@ class CalendarEventService:
 
     async def get_events(self, filters: EventFilters) -> list[EventRead]:
         events_orm = await self._repo.get_events(filters)
-        return [EventRead.model_validate(e) for e in events_orm]
+        occurrences: list[EventRead] = []
+        for event_orm in events_orm:
+            event_read = EventRead.model_validate(event_orm)
+            if not event_read.recurrence_rule:
+                occurrences.append(event_read)
+                continue
+            try:
+                spans = expand_occurrences(
+                    event_read.start_datetime,
+                    event_read.end_datetime,
+                    event_read.recurrence_rule,
+                    filters.start_from,
+                    filters.start_to,
+                )
+            except (ValueError, OverflowError) as exc:
+                logger.warning(
+                    "CalendarEvent recurrence expansion failed: id=%d rule=%r error=%s",
+                    event_read.id, event_read.recurrence_rule, exc,
+                )
+                occurrences.append(event_read)
+                continue
+            occurrences.extend(
+                event_read.model_copy(update={"start_datetime": s, "end_datetime": e})
+                for s, e in spans
+            )
+        occurrences.sort(key=lambda e: e.start_datetime)
+        return occurrences
 
     async def create_event(self, event_create: EventCreate) -> EventRead:
         if self._provider is None:

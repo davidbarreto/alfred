@@ -127,6 +127,29 @@ class TestGetEvents:
         await repo.get_events(EventFilters(tags=["work"]))
         session.execute.assert_called_once()
 
+    async def test_range_query_includes_recurring_series_regardless_of_own_start(self):
+        # A recurring series can start well before the queried range and still produce
+        # occurrences inside it, so it must not be excluded by start_datetime alone.
+        session = _make_session()
+        session.execute.return_value = _scalar_all([])
+
+        repo = CalendarEventRepository(session)
+        await repo.get_events(EventFilters(start_from=datetime(2026, 6, 1), start_to=datetime(2026, 6, 30)))
+
+        query = str(session.execute.call_args[0][0])
+        assert "recurrence_rule IS NULL AND organizer.calendar_events.start_datetime >=" in query
+        assert "recurrence_rule IS NOT NULL AND organizer.calendar_events.start_datetime <=" in query
+
+    async def test_range_query_without_start_to_still_bounds_non_recurring_only(self):
+        session = _make_session()
+        session.execute.return_value = _scalar_all([])
+
+        repo = CalendarEventRepository(session)
+        await repo.get_events(EventFilters(start_from=datetime(2026, 6, 1)))
+
+        query = str(session.execute.call_args[0][0])
+        assert "recurrence_rule IS NOT NULL" in query
+
 
 class TestCreateEvent:
     async def test_create_with_no_tags_or_invitees(self):

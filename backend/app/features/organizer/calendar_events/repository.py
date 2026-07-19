@@ -1,4 +1,4 @@
-from sqlalchemy import delete, select
+from sqlalchemy import and_, delete, or_, select
 from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -33,10 +33,23 @@ class CalendarEventRepository:
         query = select(CalendarEvent).options(
             selectinload(CalendarEvent.tags), selectinload(CalendarEvent.invitees)
         )
-        if event_filter.start_from is not None:
-            query = query.where(CalendarEvent.start_datetime >= _naive_utc(event_filter.start_from))
-        if event_filter.start_to is not None:
-            query = query.where(CalendarEvent.start_datetime <= _naive_utc(event_filter.start_to))
+        start_from = _naive_utc(event_filter.start_from)
+        start_to = _naive_utc(event_filter.start_to)
+        if start_from is not None or start_to is not None:
+            # A recurring series' own start_datetime can predate the queried range while
+            # still producing occurrences inside it, so it can't be filtered by start_datetime
+            # alone — only bound it by start_to; occurrence expansion happens in the service.
+            non_recurring_range = [CalendarEvent.recurrence_rule.is_(None)]
+            if start_from is not None:
+                non_recurring_range.append(CalendarEvent.start_datetime >= start_from)
+            if start_to is not None:
+                non_recurring_range.append(CalendarEvent.start_datetime <= start_to)
+
+            recurring_range = [CalendarEvent.recurrence_rule.isnot(None)]
+            if start_to is not None:
+                recurring_range.append(CalendarEvent.start_datetime <= start_to)
+
+            query = query.where(or_(and_(*non_recurring_range), and_(*recurring_range)))
         if event_filter.tags:
             query = query.where(CalendarEvent.tags.any(Tag.name.in_(event_filter.tags)))
         query = query.order_by(CalendarEvent.start_datetime.asc()).limit(event_filter.limit)

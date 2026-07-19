@@ -104,6 +104,52 @@ class TestGetEvents:
         await service.get_events(filters)
         service._repo.get_events.assert_called_once_with(filters)
 
+    async def test_expands_recurring_event_into_occurrences_within_range(self, service):
+        service._repo.get_events.return_value = [
+            _make_event_orm(recurrence_rule="FREQ=WEEKLY")
+        ]
+        filters = EventFilters(
+            start_from=datetime(2026, 7, 1), start_to=datetime(2026, 7, 31, 23, 59, 59)
+        )
+
+        result = await service.get_events(filters)
+
+        assert len(result) == 4  # 2026-06-15 weekly -> four Mondays in July
+        assert all(e.id == 1 for e in result)
+        assert [e.start_datetime.date().isoformat() for e in result] == [
+            "2026-07-06", "2026-07-13", "2026-07-20", "2026-07-27",
+        ]
+
+    async def test_recurring_event_outside_range_is_dropped(self, service):
+        service._repo.get_events.return_value = [
+            _make_event_orm(recurrence_rule="FREQ=WEEKLY;COUNT=2")
+        ]
+        filters = EventFilters(
+            start_from=datetime(2026, 12, 1), start_to=datetime(2026, 12, 31)
+        )
+
+        result = await service.get_events(filters)
+
+        assert result == []
+
+    async def test_non_recurring_event_unaffected(self, service):
+        service._repo.get_events.return_value = [_make_event_orm(recurrence_rule=None)]
+
+        result = await service.get_events(EventFilters())
+
+        assert len(result) == 1
+        assert result[0].start_datetime == _START
+
+    async def test_invalid_recurrence_rule_falls_back_to_master_event(self, service):
+        service._repo.get_events.return_value = [
+            _make_event_orm(recurrence_rule="NOT-A-VALID-RRULE")
+        ]
+
+        result = await service.get_events(EventFilters())
+
+        assert len(result) == 1
+        assert result[0].start_datetime == _START
+
 
 class TestCreateEvent:
     async def test_calls_provider_create(self, service, mock_provider):

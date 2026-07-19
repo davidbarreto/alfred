@@ -2,7 +2,7 @@
   "info": {
     "name": "Alfred - Calendar Events API",
     "_postman_id": "alfred-calendar-events-v1",
-    "description": "Run in order: Health Check \u2192 Create \u2192 List \u2192 Get \u2192 Update \u2192 Filter by Date Range \u2192 Filter by Tags \u2192 Get 404 \u2192 Create with Timezone \u2192 Delete with Timezone \u2192 Delete",
+    "description": "Run in order: Health Check \u2192 Create \u2192 List \u2192 Get \u2192 Update \u2192 Filter by Date Range \u2192 Filter by Tags \u2192 Get 404 \u2192 Create with Timezone \u2192 Delete with Timezone \u2192 Delete \u2192 Create Recurring Weekly Event \u2192 List Events (Recurring Series Expands Into Occurrences) \u2192 Delete Recurring Event",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -447,6 +447,132 @@
             "organizer",
             "calendar-events",
             "{{event_id}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "12 - Create Recurring Weekly Event",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+              "pm.test('Response echoes the recurrence rule and saves id', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json).to.have.property('id');",
+              "    pm.expect(json.recurrence_rule).to.eql('FREQ=WEEKLY');",
+              "    pm.environment.set('recurring_event_id', json.id);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"title\": \"Weekly Sync\",\n  \"start_datetime\": \"2026-08-03T09:00:00\",\n  \"end_datetime\": \"2026-08-03T09:30:00\",\n  \"all_day\": false,\n  \"recurrence_rule\": \"FREQ=WEEKLY\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{base_url}}/organizer/calendar-events",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "calendar-events"
+          ]
+        }
+      }
+    },
+    {
+      "name": "13 - List Events (Recurring Series Expands Into Occurrences)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Series expands into every weekly occurrence in the queried month, not just the creation month', () => {",
+              "    const json = pm.response.json();",
+              "    const occurrences = json.filter(e => e.id === pm.environment.get('recurring_event_id'));",
+              "    pm.expect(occurrences.length).to.eql(4);",
+              "    occurrences.forEach(e => pm.expect(e.start_datetime.startsWith('2026-09')).to.be.true);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/organizer/calendar-events?start_from=2026-09-01T00:00:00&start_to=2026-09-30T23:59:59&limit=100",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "calendar-events"
+          ],
+          "query": [
+            {
+              "key": "start_from",
+              "value": "2026-09-01T00:00:00"
+            },
+            {
+              "key": "start_to",
+              "value": "2026-09-30T23:59:59"
+            },
+            {
+              "key": "limit",
+              "value": "100"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "14 - Delete Recurring Event",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 204', () => pm.response.to.have.status(204));",
+              "pm.environment.unset('recurring_event_id');"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/organizer/calendar-events/{{recurring_event_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "calendar-events",
+            "{{recurring_event_id}}"
           ]
         }
       }

@@ -195,7 +195,24 @@ class TestPreview:
         assert preview.duplicate_count == 1
         assert preview.new_count == 1
         assert preview.rows[0].status == "duplicate"
+        assert preview.rows[0].duplicate_reason == "already_imported"
         assert preview.rows[1].status == "new"
+
+    @pytest.mark.asyncio
+    async def test_marks_rows_repeated_within_the_same_file(self):
+        # Overlapping export date ranges can produce the exact same source line twice
+        # in one file, before either has ever been imported -- this must be caught at
+        # preview time, not silently dropped at commit with no visible explanation.
+        rows = [_row(), _row()]
+        service = _service(_statement(rows))
+
+        preview = await service.preview(1, "x.csv", b"", provider="fakebank")
+
+        assert preview.rows[0].status == "new"
+        assert preview.rows[1].status == "duplicate"
+        assert preview.rows[1].duplicate_reason == "repeated_in_file"
+        assert preview.new_count == 1
+        assert preview.duplicate_count == 1
 
     @pytest.mark.asyncio
     async def test_auto_rule_applies_category_and_description(self):
@@ -508,10 +525,11 @@ class TestCommit:
             _commit_request([_commit_row(), _commit_row(deduplication_hash="hash-2", category_id=None)])
         )
 
-        assert service._embeddings.embed.await_count == 1
-        embedded = service._embeddings.embed.call_args[0][0]
-        assert embedded.source_type == "transaction"
-        assert "Pingo Doce" in embedded.content
+        service._embeddings.embed_many.assert_awaited_once()
+        items = service._embeddings.embed_many.call_args[0][0]
+        assert len(items) == 1
+        assert items[0].source_type == "transaction"
+        assert "Pingo Doce" in items[0].content
 
 
 class TestStoredFile:
@@ -955,4 +973,5 @@ class TestCommitGrouped:
 
         await service.commit_grouped(request)
 
-        assert service._embeddings.embed.await_count == 1
+        service._embeddings.embed_many.assert_awaited_once()
+        assert len(service._embeddings.embed_many.call_args[0][0]) == 1

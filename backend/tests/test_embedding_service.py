@@ -84,6 +84,67 @@ class TestEmbedMethod:
         assert kwargs["vector"] == vector
 
 
+class TestEmbedManyMethod:
+    @pytest.mark.asyncio
+    async def test_embeds_and_upserts_each_item(self):
+        session = AsyncMock()
+        provider = _make_provider()
+
+        with patch(
+            "app.features.core.embeddings.service.EmbeddingRepository"
+        ) as MockRepo:
+            repo_instance = MockRepo.return_value
+            repo_instance.upsert = AsyncMock(
+                side_effect=[_make_embedding_orm(source_id=1), _make_embedding_orm(source_id=2)]
+            )
+
+            service = EmbeddingService(session, provider)
+            results = await service.embed_many(
+                [
+                    EmbeddingCreate(source_type="transaction", source_id=1, content="First"),
+                    EmbeddingCreate(source_type="transaction", source_id=2, content="Second"),
+                ]
+            )
+
+        assert len(results) == 2
+        assert provider.embed.await_count == 2
+        assert repo_instance.upsert.await_count == 2
+
+    @pytest.mark.asyncio
+    async def test_returns_empty_list_for_empty_input(self):
+        session = AsyncMock()
+        provider = _make_provider()
+
+        service = EmbeddingService(session, provider)
+        results = await service.embed_many([])
+
+        assert results == []
+        provider.embed.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_one_failure_does_not_block_the_rest(self):
+        session = AsyncMock()
+        provider = _make_provider()
+        provider.embed = AsyncMock(side_effect=[Exception("boom"), [0.2] * 1536])
+
+        with patch(
+            "app.features.core.embeddings.service.EmbeddingRepository"
+        ) as MockRepo:
+            repo_instance = MockRepo.return_value
+            repo_instance.upsert = AsyncMock(return_value=_make_embedding_orm(source_id=2))
+
+            service = EmbeddingService(session, provider)
+            results = await service.embed_many(
+                [
+                    EmbeddingCreate(source_type="transaction", source_id=1, content="Fails"),
+                    EmbeddingCreate(source_type="transaction", source_id=2, content="Succeeds"),
+                ]
+            )
+
+        assert len(results) == 1
+        assert repo_instance.upsert.await_count == 1
+
+
 class TestSearchMethod:
     @pytest.mark.asyncio
     async def test_returns_search_results_with_similarity(self):

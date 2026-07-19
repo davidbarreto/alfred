@@ -136,6 +136,24 @@ class TestImportPreview:
 
         assert "already imported" in resp.text
 
+    def test_repeated_in_file_duplicate_labeled_distinctly(self, client, mock_api):
+        rows = [
+            _preview_row(),
+            _preview_row(
+                status="duplicate", duplicate_reason="repeated_in_file", deduplication_hash="dup1"
+            ),
+        ]
+        mock_api["post_multipart"].return_value = _preview(rows)
+        mock_api["get"].side_effect = [[_account()], [_category()]]
+
+        resp = client.post(
+            "/finance/import/preview",
+            data={"account_id": "1"},
+            files={"file": ("mov.csv", b"x", "text/csv")},
+        )
+
+        assert "repeated within this file" in resp.text
+
     def test_review_reasons_rendered_for_flagged_rows(self, client, mock_api):
         rows = [
             _preview_row(
@@ -231,6 +249,32 @@ class TestImportCommit:
         )
 
         assert resp.status_code == 422
+
+    def test_commit_timeout_does_not_claim_failure(self, client, mock_api):
+        # A client-side timeout doesn't mean the backend commit failed -- it may have
+        # already succeeded server-side. The message must not say "Import failed."
+        mock_api["post"].side_effect = httpx.ReadTimeout("timed out")
+
+        resp = client.post(
+            "/finance/import/commit",
+            json={"account_id": "1", "provider": "activobank", "row_count": "0"},
+        )
+
+        assert resp.status_code == 422
+        assert "Import failed." not in resp.text
+        assert "may have completed" in resp.text
+
+    def test_commit_uses_extended_timeout(self, client, mock_api):
+        mock_api["post"].return_value = {
+            "batch_id": 7, "inserted": 1, "skipped_duplicates": 0, "rules_created": 0
+        }
+
+        client.post(
+            "/finance/import/commit",
+            json={"account_id": "1", "provider": "activobank", "row_count": "0"},
+        )
+
+        assert mock_api["post"].call_args.kwargs["timeout"] == 60.0
 
     def test_surfaces_validation_error_detail(self, client, mock_api):
         # FastAPI's own request-validation failures return `detail` as a list of
@@ -537,6 +581,18 @@ class TestCommitGrouped:
 
         assert resp.status_code == 422
         assert "Account for currency EUR not found" in resp.text
+
+    def test_commit_timeout_does_not_claim_failure(self, client, mock_api):
+        mock_api["post"].side_effect = httpx.ReadTimeout("timed out")
+
+        resp = client.post(
+            "/finance/import/commit-grouped",
+            json={"provider": "revolut", "account_map": "{}", "row_count": "0"},
+        )
+
+        assert resp.status_code == 422
+        assert "Import failed." not in resp.text
+        assert "may have completed" in resp.text
 
     def test_invalid_json_body_returns_error(self, client):
         resp = client.post(

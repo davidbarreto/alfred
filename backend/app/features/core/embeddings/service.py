@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import logging
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -14,6 +15,8 @@ from app.features.core.embeddings.schemas import (
 from app.shared.embedding import EmbeddingProvider
 
 logger = logging.getLogger(__name__)
+
+_EMBED_MANY_CONCURRENCY = 8
 
 
 class EmbeddingService:
@@ -33,6 +36,42 @@ class EmbeddingService:
         )
         logger.debug("Embedding upserted: source_type=%s source_id=%d model=%s", data.source_type, data.source_id, self._provider.model)
         return EmbeddingRead.model_validate(obj)
+
+    async def embed_many(self, items: list[EmbeddingCreate]) -> list[EmbeddingRead]:
+        """Embed a batch of items. Provider calls (the slow part -- model inference or a
+        network round-trip) run concurrently, bounded by a semaphore; DB upserts stay
+        sequential since the AsyncSession isn't safe for concurrent use. A failure on one
+        item is logged and skipped rather than aborting the rest of the batch."""
+        semaphore = asyncio.Semaphore(_EMBED_MANY_CONCURRENCY)
+
+        async def _vector_or_none(item: EmbeddingCreate) -> list[float] | None:
+            async with semaphore:
+                try:
+                    return await self._provider.embed(item.content)
+                except Exception as exc:
+                    logger.error(
+                        "Embedding failed: source_type=%s source_id=%d error=%s",
+                        item.source_type, item.source_id, exc,
+                    )
+                    return None
+
+        vectors = await asyncio.gather(*(_vector_or_none(item) for item in items))
+
+        results = []
+        for item, vector in zip(items, vectors):
+            if vector is None:
+                continue
+            obj = await self._repo.upsert(
+                source_type=item.source_type,
+                source_id=item.source_id,
+                content=item.content,
+                vector=vector,
+                model=self._provider.model,
+                dimensions=self._provider.dimensions,
+            )
+            results.append(EmbeddingRead.model_validate(obj))
+        logger.debug("Embedding batch upserted: count=%d model=%s", len(results), self._provider.model)
+        return results
 
     async def search(self, request: EmbeddingSearchRequest) -> list[EmbeddingSearchResult]:
         query_vector = await self._provider.embed(request.query)

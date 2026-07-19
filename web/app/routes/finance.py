@@ -14,6 +14,7 @@ from app.templates_config import templates
 router = APIRouter(prefix="/finance")
 
 _PAGE_SIZE = 20
+_IMPORT_COMMIT_TIMEOUT = 60.0
 
 
 def _parse_txn_query(request: Request) -> tuple[dict, int]:
@@ -861,6 +862,17 @@ def _extract_error_detail(exc: httpx.HTTPStatusError, fallback: str) -> str:
     return fallback
 
 
+def _timeout_response() -> HTMLResponse:
+    # A timeout here doesn't mean the import failed -- the backend commits the batch
+    # in one transaction before the (potentially slow) post-commit embedding step, so
+    # the rows may already be saved even though this request gave up waiting.
+    return HTMLResponse(
+        '<p class="text-[#E24B4A] text-sm px-1">Import is taking longer than expected. '
+        "It may have completed on the server — check the import history below before retrying.</p>",
+        status_code=422,
+    )
+
+
 @router.post("/import/commit", response_class=HTMLResponse)
 async def import_commit(request: Request):
     # JSON, not multipart/form-data: statements with >~75 rows produce more
@@ -913,10 +925,12 @@ async def import_commit(request: Request):
         "rows": rows,
     }
     try:
-        result = await api.post("/finance/imports/commit", json=payload)
+        result = await api.post("/finance/imports/commit", json=payload, timeout=_IMPORT_COMMIT_TIMEOUT)
     except httpx.HTTPStatusError as exc:
         detail = html.escape(_extract_error_detail(exc, "Import failed."))
         return HTMLResponse(f'<p class="text-[#E24B4A] text-sm px-1">{detail}</p>', status_code=422)
+    except httpx.TimeoutException:
+        return _timeout_response()
     except httpx.HTTPError:
         return HTMLResponse('<p class="text-[#E24B4A] text-sm px-1">Import failed.</p>', status_code=422)
 
@@ -1035,10 +1049,14 @@ async def import_commit_grouped(request: Request):
         "rows": rows,
     }
     try:
-        result = await api.post("/finance/imports/commit-grouped", json=payload)
+        result = await api.post(
+            "/finance/imports/commit-grouped", json=payload, timeout=_IMPORT_COMMIT_TIMEOUT
+        )
     except httpx.HTTPStatusError as exc:
         detail = html.escape(_extract_error_detail(exc, "Import failed."))
         return HTMLResponse(f'<p class="text-[#E24B4A] text-sm px-1">{detail}</p>', status_code=422)
+    except httpx.TimeoutException:
+        return _timeout_response()
     except httpx.HTTPError:
         return HTMLResponse('<p class="text-[#E24B4A] text-sm px-1">Import failed.</p>', status_code=422)
 

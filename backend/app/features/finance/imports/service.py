@@ -277,12 +277,23 @@ class ImportService:
         return rows
 
     async def _mark_duplicates(self, rows: list[ImportPreviewRow]) -> None:
+        """Flag rows already present in the DB, as well as rows that repeat within this
+        same file (e.g. overlapping export date ranges) -- both would otherwise slip
+        through preview as "new" and then get silently dropped at commit time, leaving
+        the user unable to tell why fewer rows landed than they saw on screen."""
         existing = await self._txn_repo.get_existing_dedup_hashes(
             [r.deduplication_hash for r in rows]
         )
+        seen: set[str] = set()
         for row in rows:
             if row.deduplication_hash in existing:
                 row.status = "duplicate"
+                row.duplicate_reason = "already_imported"
+            elif row.deduplication_hash in seen:
+                row.status = "duplicate"
+                row.duplicate_reason = "repeated_in_file"
+            else:
+                seen.add(row.deduplication_hash)
 
     def _apply_rules(
         self,
@@ -496,6 +507,7 @@ class ImportService:
 
     async def _embed_transactions(self, transactions: list) -> None:
         """Index categorized imported transactions so future imports can kNN-vote on them."""
+        items = []
         for txn in transactions:
             if txn.category_id is None or txn.type == "transfer":
                 continue
@@ -504,16 +516,11 @@ class ImportService:
                 content = f"{txn.description} | {content}" if content else txn.description
             if not content:
                 continue
-            try:
-                await self._embeddings.embed(
-                    EmbeddingCreate(
-                        source_type=TRANSACTION_SOURCE_TYPE,
-                        source_id=txn.id,
-                        content=content,
-                    )
-                )
-            except Exception as exc:
-                logger.error("Import embedding failed: transaction_id=%d error=%s", txn.id, exc)
+            items.append(
+                EmbeddingCreate(source_type=TRANSACTION_SOURCE_TYPE, source_id=txn.id, content=content)
+            )
+        if items:
+            await self._embeddings.embed_many(items)
 
     # -- batches and rules ----------------------------------------------
 

@@ -9,6 +9,7 @@ from app.features.finance.transactions.schemas import TransactionType
 RuleMode = Literal["auto", "suggest"]
 SuggestionSource = Literal["rule_auto", "rule_suggest", "knn", "llm"]
 RowStatus = Literal["new", "duplicate"]
+DuplicateReason = Literal["already_imported", "repeated_in_file"]
 ReviewReason = Literal[
     "uncategorized", "rule_suggested", "ai_suggested", "redated_installment", "uncertain_transfer"
 ]
@@ -39,6 +40,7 @@ class ImportPreviewRow(BaseModel):
     balance_after: Decimal | None = None
     type: TransactionType
     status: RowStatus
+    duplicate_reason: DuplicateReason | None = None
     deduplication_hash: str
     description: str | None = None
     merchant: str | None = None

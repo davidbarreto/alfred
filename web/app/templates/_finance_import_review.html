@@ -11,7 +11,7 @@
     <h2 class="text-sm font-semibold text-gray-900">Review import</h2>
     <span class="px-2 py-0.5 rounded-full text-xs font-medium bg-[#E6F1FB] text-[#0C447C]">{{ preview.new_count }} new</span>
     {% if preview.duplicate_count %}
-    <span class="px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-500">{{ preview.duplicate_count }} already imported</span>
+    <span class="px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-500" title="Already imported or repeated within this file">{{ preview.duplicate_count }} duplicates</span>
     {% endif %}
     {% if preview.needs_review_count %}
     <span class="px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-700">{{ preview.needs_review_count }} need review</span>
@@ -52,11 +52,21 @@
           {% set i = loop.index0 %}
           {% if row.status == "duplicate" %}
           <tr class="opacity-40">
-            <td><i class="ti ti-copy-check text-sm text-gray-400" title="Already imported"></i></td>
+            <td>
+              {% if row.duplicate_reason == "repeated_in_file" %}
+              <i class="ti ti-copy text-sm text-amber-500" title="Repeated within this file"></i>
+              {% else %}
+              <i class="ti ti-copy-check text-sm text-gray-400" title="Already imported"></i>
+              {% endif %}
+            </td>
             <td class="whitespace-nowrap text-xs">{{ row.date_posted }}</td>
             <td class="text-xs max-w-64 truncate" title="{{ row.bank_description }}">{{ row.bank_description }}</td>
             <td class="text-right text-xs whitespace-nowrap">€{{ "%.2f"|format(row.amount | float) }}</td>
+            {% if row.duplicate_reason == "repeated_in_file" %}
+            <td colspan="5" class="text-xs text-amber-600">Skipped — repeated within this file</td>
+            {% else %}
             <td colspan="5" class="text-xs text-gray-400">Skipped — already imported</td>
+            {% endif %}
           </tr>
           {% else %}
           <tr class="{% if row.needs_review %}bg-amber-50{% endif %} align-top">

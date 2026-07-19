@@ -44,9 +44,9 @@ async def post_multipart(
         return resp.json()
 
 
-async def post(path: str, json: Any = None) -> Any:
+async def post(path: str, json: Any = None, timeout: float = 10.0) -> Any:
     async with httpx.AsyncClient(follow_redirects=True) as client:
-        resp = await client.post(_url(path), headers=_headers(), json=json, timeout=10.0)
+        resp = await client.post(_url(path), headers=_headers(), json=json, timeout=timeout)
         resp.raise_for_status()
         return resp.json()
 

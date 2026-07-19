@@ -32,6 +32,7 @@ from app.features.briefing.morning_summary_service import MorningBriefingSummary
 from app.features.briefing.morning_formatter_service import MorningBriefingFormatterService
 from app.features.briefing.evening_summary_service import EveningDigestSummaryService
 from app.features.briefing.evening_formatter_service import EveningDigestFormatterService
+from app.features.briefing.history_service import BriefingHistoryService
 from app.features.core.reminders.service import ReminderService
 from app.features.briefing.weather_client import WeatherClient
 from app.features.briefing.holiday_client import GooglePublicHolidayClient
@@ -248,6 +249,9 @@ def get_evening_digest_summary_service(session: AsyncSession = Depends(get_sessi
 def get_evening_digest_formatter_service(session: AsyncSession = Depends(get_session)) -> EveningDigestFormatterService:
     return EveningDigestFormatterService(llm_provider=get_llm_provider(), session=session)
 
+def get_briefing_history_service(session: AsyncSession = Depends(get_session)) -> BriefingHistoryService:
+    return BriefingHistoryService(session=session)
+
 def get_reminder_service(session: AsyncSession = Depends(get_session)) -> ReminderService:
     return ReminderService(session=session, task_service=get_task_service(session))
 
@@ -341,6 +345,7 @@ MorningBriefingSummaryServiceDep = Annotated[MorningBriefingSummaryService, Depe
 MorningBriefingFormatterServiceDep = Annotated[MorningBriefingFormatterService, Depends(get_morning_briefing_formatter_service)]
 EveningDigestSummaryServiceDep = Annotated[EveningDigestSummaryService, Depends(get_evening_digest_summary_service)]
 EveningDigestFormatterServiceDep = Annotated[EveningDigestFormatterService, Depends(get_evening_digest_formatter_service)]
+BriefingHistoryServiceDep = Annotated[BriefingHistoryService, Depends(get_briefing_history_service)]
 ReminderServiceDep = Annotated[ReminderService, Depends(get_reminder_service)]
 TrackServiceDep = Annotated[TrackService, Depends(get_track_service)]
 GrammarScopeServiceDep = Annotated[GrammarScopeService, Depends(get_grammar_scope_service)]

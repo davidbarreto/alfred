@@ -7,7 +7,7 @@
           "interval": [
             {
               "field": "cronExpression",
-              "expression": "0 20 * * *"
+              "expression": "30 21 * * *"
             }
           ]
         }
@@ -16,12 +16,12 @@
       "typeVersion": 1.2,
       "position": [-320, 0],
       "id": "f2f2f2f2-0001-4000-8000-000000000001",
-      "name": "Daily at 20:00"
+      "name": "Daily at 21:30"
     },
     {
       "parameters": {
         "method": "GET",
-        "url": "http://api:8000/briefing/evening/formatted",
+        "url": "http://api:8000/briefing/evening/formatted?force=true",
         "authentication": "genericCredentialType",
         "genericAuthType": "httpBearerAuth",
         "options": {}
@@ -61,7 +61,7 @@
     }
   ],
   "connections": {
-    "Daily at 20:00": {
+    "Daily at 21:30": {
       "main": [[{ "node": "Get Evening Digest", "type": "main", "index": 0 }]]
     },
     "Get Evening Digest": {

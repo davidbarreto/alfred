@@ -126,3 +126,9 @@ class EveningDigest(BaseModel):
 class FormattedBriefing(BaseModel):
     date: date
     text: str
+
+
+class BriefingHistoryItem(BaseModel):
+    date: date
+    type: str
+    text: str

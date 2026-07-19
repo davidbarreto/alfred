@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% set active_page = "briefing" %}
+{% block title %}Briefing History{% endblock %}
+
+{% block content %}
+<div class="p-6 space-y-5">
+
+  <div class="flex items-center justify-between">
+    <h1 class="text-base font-semibold text-gray-900">Briefing History</h1>
+  </div>
+
+  <div class="flex items-center justify-between">
+    <div class="tabs tabs-boxed w-fit">
+      <a href="/briefing/" class="tab">Morning</a>
+      <a href="/briefing/evening" class="tab">Evening</a>
+      <span class="tab tab-active">History</span>
+    </div>
+
+    <div class="tabs tabs-boxed w-fit">
+      <a href="/briefing/history" class="tab {% if not type_filter %}tab-active{% endif %}">All</a>
+      <a href="/briefing/history?type=morning" class="tab {% if type_filter == 'morning' %}tab-active{% endif %}">Morning</a>
+      <a href="/briefing/history?type=evening" class="tab {% if type_filter == 'evening' %}tab-active{% endif %}">Evening</a>
+    </div>
+  </div>
+
+  {% include "_briefing_history_list.html" %}
+
+</div>
+{% endblock %}

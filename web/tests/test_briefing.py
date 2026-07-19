@@ -172,3 +172,72 @@ class TestEveningDigestFormattedFragment:
 
         assert resp.status_code == 200
         assert "Could not generate formatted briefing." in resp.text
+
+    def test_renders_not_generated_message_on_404(self, client, mock_api):
+        request = httpx.Request("GET", "http://api/briefing/evening/formatted")
+        response = httpx.Response(404, request=request, text="not found")
+        mock_api["get"].side_effect = httpx.HTTPStatusError("error", request=request, response=response)
+
+        resp = client.get("/briefing/evening/formatted")
+
+        assert resp.status_code == 200
+        assert "Not generated yet." in resp.text
+        assert "Could not generate formatted briefing." not in resp.text
+
+
+class TestBriefingHistoryPage:
+    def test_renders_history_items(self, client, mock_api):
+        mock_api["get"].return_value = [
+            {"date": "2026-07-18", "type": "evening", "text": "Evening digest text."},
+            {"date": "2026-07-18", "type": "morning", "text": "Morning briefing text."},
+        ]
+
+        resp = client.get("/briefing/history")
+
+        assert resp.status_code == 200
+        assert "Evening digest text." in resp.text
+        assert "Morning briefing text." in resp.text
+        mock_api["get"].assert_awaited_once_with("/briefing/history", params={"limit": 21, "offset": 0})
+
+    def test_forwards_type_filter(self, client, mock_api):
+        mock_api["get"].return_value = []
+
+        resp = client.get("/briefing/history?type=morning")
+
+        assert resp.status_code == 200
+        mock_api["get"].assert_awaited_once_with("/briefing/history", params={"limit": 21, "offset": 0, "type": "morning"})
+
+    def test_renders_empty_state(self, client, mock_api):
+        mock_api["get"].return_value = []
+
+        resp = client.get("/briefing/history")
+
+        assert resp.status_code == 200
+        assert "No briefings yet." in resp.text
+
+    def test_requires_authentication(self, anon_client):
+        resp = anon_client.get("/briefing/history", follow_redirects=False)
+
+        assert resp.status_code == 302
+        assert resp.headers["location"].startswith("/login")
+
+
+class TestBriefingHistoryListFragment:
+    def test_shows_next_when_more_than_page_size(self, client, mock_api):
+        mock_api["get"].return_value = [
+            {"date": "2026-07-18", "type": "evening", "text": f"Digest {i}"} for i in range(21)
+        ]
+
+        resp = client.get("/briefing/history/list")
+
+        assert resp.status_code == 200
+        assert "Next" in resp.text
+        assert "Prev" not in resp.text
+
+    def test_shows_prev_when_offset_positive(self, client, mock_api):
+        mock_api["get"].return_value = []
+
+        resp = client.get("/briefing/history/list?offset=20")
+
+        assert resp.status_code == 200
+        mock_api["get"].assert_awaited_once_with("/briefing/history", params={"limit": 21, "offset": 20})

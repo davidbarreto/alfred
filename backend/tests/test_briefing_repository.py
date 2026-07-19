@@ -45,6 +45,32 @@ class TestGetBriefingByDate:
         assert await repo.get_briefing_by_date(date(2026, 7, 10), "morning") is None
 
 
+class TestListBriefings:
+    async def test_lists_all_types(self):
+        session = _make_session()
+        briefings = [_make_briefing_orm(id=1), _make_briefing_orm(id=2)]
+        result = MagicMock()
+        result.scalars.return_value.all.return_value = briefings
+        session.execute.return_value = result
+
+        repo = BriefingRepository(session)
+        items = await repo.list_briefings(None, limit=20, offset=0)
+
+        assert items == briefings
+        session.execute.assert_called_once()
+
+    async def test_filters_by_type(self):
+        session = _make_session()
+        result = MagicMock()
+        result.scalars.return_value.all.return_value = []
+        session.execute.return_value = result
+
+        repo = BriefingRepository(session)
+        await repo.list_briefings("evening", limit=20, offset=0)
+
+        session.execute.assert_called_once()
+
+
 class TestUpsertBriefing:
     async def test_creates_when_missing(self):
         session = _make_session()

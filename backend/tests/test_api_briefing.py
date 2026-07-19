@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock
 import pytest
 from fastapi.testclient import TestClient
 
-from app.features.briefing.schemas import FormattedBriefing, MorningBriefing, WeatherForecast
+from app.features.briefing.schemas import BriefingHistoryItem, FormattedBriefing, MorningBriefing, WeatherForecast
 
 AUTH = {"Authorization": "Bearer test-api-token"}
 
@@ -121,13 +121,14 @@ class TestEveningDigestFormatted:
     def test_requires_auth(self, evening_client):
         assert evening_client.get("/briefing/evening/formatted").status_code == 403
 
-    def test_generates_when_no_saved_digest(self, evening_client, mock_evening_summary_service, mock_evening_formatter_service):
+    def test_returns_404_when_no_saved_digest_and_not_forced(
+        self, evening_client, mock_evening_summary_service, mock_evening_formatter_service
+    ):
         response = evening_client.get("/briefing/evening/formatted", headers=AUTH)
 
-        assert response.status_code == 200
-        assert response.json()["text"] == "Freshly generated digest."
-        mock_evening_summary_service.build.assert_called_once()
-        mock_evening_formatter_service.format.assert_called_once()
+        assert response.status_code == 404
+        mock_evening_summary_service.build.assert_not_called()
+        mock_evening_formatter_service.format.assert_not_called()
 
     def test_reuses_saved_digest(self, evening_client, mock_evening_summary_service, mock_evening_formatter_service):
         mock_evening_formatter_service.get_saved.return_value = FormattedBriefing(
@@ -140,3 +141,72 @@ class TestEveningDigestFormatted:
         assert response.json()["text"] == "Saved digest."
         mock_evening_summary_service.build.assert_not_called()
         mock_evening_formatter_service.format.assert_not_called()
+
+    def test_force_regenerates_even_when_saved(
+        self, evening_client, mock_evening_summary_service, mock_evening_formatter_service
+    ):
+        mock_evening_formatter_service.get_saved.return_value = FormattedBriefing(
+            date=date(2026, 7, 10), text="Saved digest."
+        )
+
+        response = evening_client.get("/briefing/evening/formatted?force=true", headers=AUTH)
+
+        assert response.status_code == 200
+        assert response.json()["text"] == "Freshly generated digest."
+        mock_evening_formatter_service.get_saved.assert_not_called()
+        mock_evening_summary_service.build.assert_called_once()
+        mock_evening_formatter_service.format.assert_called_once()
+
+    def test_force_regenerates_when_nothing_saved(
+        self, evening_client, mock_evening_summary_service, mock_evening_formatter_service
+    ):
+        response = evening_client.get("/briefing/evening/formatted?force=true", headers=AUTH)
+
+        assert response.status_code == 200
+        assert response.json()["text"] == "Freshly generated digest."
+        mock_evening_summary_service.build.assert_called_once()
+        mock_evening_formatter_service.format.assert_called_once()
+
+
+@pytest.fixture
+def mock_history_service():
+    svc = AsyncMock()
+    svc.list.return_value = [
+        BriefingHistoryItem(date=date(2026, 7, 18), type="evening", text="Evening digest."),
+        BriefingHistoryItem(date=date(2026, 7, 18), type="morning", text="Morning briefing."),
+    ]
+    return svc
+
+
+@pytest.fixture
+def history_client(mock_history_service):
+    from app.main import app
+    from app.dependencies import get_briefing_history_service
+    app.dependency_overrides[get_briefing_history_service] = lambda: mock_history_service
+    yield TestClient(app)
+    app.dependency_overrides.clear()
+
+
+class TestBriefingHistory:
+    def test_requires_auth(self, history_client):
+        assert history_client.get("/briefing/history").status_code == 403
+
+    def test_returns_history_items(self, history_client, mock_history_service):
+        response = history_client.get("/briefing/history", headers=AUTH)
+
+        assert response.status_code == 200
+        body = response.json()
+        assert len(body) == 2
+        assert body[0]["type"] == "evening"
+        mock_history_service.list.assert_called_once_with(briefing_type=None, limit=20, offset=0)
+
+    def test_forwards_type_limit_offset(self, history_client, mock_history_service):
+        response = history_client.get("/briefing/history?type=morning&limit=5&offset=10", headers=AUTH)
+
+        assert response.status_code == 200
+        mock_history_service.list.assert_called_once_with(briefing_type="morning", limit=5, offset=10)
+
+    def test_rejects_invalid_type(self, history_client):
+        response = history_client.get("/briefing/history?type=noon", headers=AUTH)
+
+        assert response.status_code == 422

@@ -1,0 +1,55 @@
+<div id="history-list">
+  {% if api_error %}
+  <div class="rounded-lg bg-[#FCEBEB] border border-[#E24B4A]/20 px-4 py-2.5 text-sm text-[#E24B4A]">
+    <strong>Error:</strong> {{ api_error }}
+  </div>
+  {% elif items %}
+  <div class="space-y-3">
+    {% for item in items %}
+    <details class="card bg-white">
+      <summary class="card-body p-4 cursor-pointer flex-row items-center gap-2">
+        <span class="badge badge-sm {% if item.type == 'morning' %}badge-warning{% else %}badge-info{% endif %}">
+          {{ item.type | capitalize }}
+        </span>
+        <span class="text-sm text-gray-700">{{ item.date }}</span>
+      </summary>
+      <div class="px-4 pb-4">
+        <div class="prose prose-sm max-w-none text-gray-700 whitespace-pre-wrap leading-relaxed">{{ item.text }}</div>
+      </div>
+    </details>
+    {% endfor %}
+  </div>
+
+  {% if history_has_prev or history_has_next %}
+  <div class="flex justify-between items-center mt-4">
+    {% if history_has_prev %}
+    <button
+      class="px-3 py-1.5 rounded text-xs font-medium text-gray-600 bg-white border border-gray-200 hover:border-gray-300"
+      hx-get="/briefing/history/list?offset={{ history_offset - 20 }}{% if type_filter %}&type={{ type_filter }}{% endif %}"
+      hx-target="#history-list"
+      hx-swap="outerHTML"
+    >← Prev</button>
+    {% else %}
+    <span></span>
+    {% endif %}
+    {% if history_has_next %}
+    <button
+      class="px-3 py-1.5 rounded text-xs font-medium text-gray-600 bg-white border border-gray-200 hover:border-gray-300"
+      hx-get="/briefing/history/list?offset={{ history_offset + 20 }}{% if type_filter %}&type={{ type_filter }}{% endif %}"
+      hx-target="#history-list"
+      hx-swap="outerHTML"
+    >Next →</button>
+    {% else %}
+    <span></span>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  {% else %}
+  <div class="card bg-white">
+    <div class="card-body p-4">
+      <p class="text-sm text-gray-400">No briefings yet.</p>
+    </div>
+  </div>
+  {% endif %}
+</div>

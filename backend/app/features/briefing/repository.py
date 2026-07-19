@@ -16,6 +16,14 @@ class BriefingRepository:
         )
         return result.scalars().first()
 
+    async def list_briefings(self, briefing_type: str | None, limit: int, offset: int) -> list[Briefing]:
+        stmt = select(Briefing).order_by(Briefing.date.desc(), Briefing.type.asc())
+        if briefing_type is not None:
+            stmt = stmt.where(Briefing.type == briefing_type)
+        stmt = stmt.offset(offset).limit(limit)
+        result = await self._session.execute(stmt)
+        return list(result.scalars().all())
+
     async def upsert_briefing(self, briefing_date: date, briefing_type: str, text: str) -> Briefing:
         briefing = await self.get_briefing_by_date(briefing_date, briefing_type)
         if briefing is None:

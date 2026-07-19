@@ -2,7 +2,7 @@
   "info": {
     "name": "Alfred - Briefing API",
     "_postman_id": "alfred-briefing-v1",
-    "description": "Morning briefing and evening digest endpoints. Run: Health Check → Morning Briefing JSON → Morning Briefing Formatted → Formatted (Reused) → Formatted (Force Regenerate) → Evening Digest JSON → Evening Digest Formatted → Formatted (Reused) → Formatted (Force Regenerate)",
+    "description": "Morning briefing and evening digest endpoints. Run: Health Check → Morning Briefing JSON → Morning Briefing Formatted → Formatted (Reused) → Formatted (Force Regenerate) → Evening Digest JSON → Evening Digest Formatted (Not Generated Yet) → Formatted (Force Regenerate) → Formatted (Reused) → Briefing History → Briefing History (Filtered by Type)",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -242,7 +242,7 @@
       }
     },
     {
-      "name": "07 - Evening Digest (Formatted Text)",
+      "name": "07 - Evening Digest (Formatted, Force Regenerate)",
       "event": [
         {
           "listen": "test",
@@ -271,9 +271,12 @@
         "method": "GET",
         "header": [],
         "url": {
-          "raw": "{{base_url}}/briefing/evening/formatted",
+          "raw": "{{base_url}}/briefing/evening/formatted?force=true",
           "host": ["{{base_url}}"],
-          "path": ["briefing", "evening", "formatted"]
+          "path": ["briefing", "evening", "formatted"],
+          "query": [
+            { "key": "force", "value": "true" }
+          ]
         }
       }
     },
@@ -304,16 +307,26 @@
       }
     },
     {
-      "name": "09 - Evening Digest (Formatted, Force Regenerate)",
+      "name": "09 - Briefing History (All Types)",
       "event": [
         {
           "listen": "test",
           "script": {
             "exec": [
               "pm.test('Status is 200', () => pm.response.to.have.status(200));",
-              "pm.test('Has non-empty text field', () => {",
-              "    pm.expect(pm.response.json().text).to.be.a('string');",
-              "    pm.expect(pm.response.json().text.length).to.be.above(0);",
+              "pm.test('Returns an array', () => {",
+              "    pm.expect(pm.response.json()).to.be.an('array');",
+              "});",
+              "pm.test('Items have date, type and text', () => {",
+              "    pm.response.json().forEach((item) => {",
+              "        pm.expect(item).to.have.property('date');",
+              "        pm.expect(item).to.have.property('type');",
+              "        pm.expect(item).to.have.property('text');",
+              "    });",
+              "});",
+              "pm.test('Includes at least one evening entry', () => {",
+              "    const types = pm.response.json().map((item) => item.type);",
+              "    pm.expect(types).to.include('evening');",
               "});"
             ],
             "type": "text/javascript"
@@ -324,11 +337,39 @@
         "method": "GET",
         "header": [],
         "url": {
-          "raw": "{{base_url}}/briefing/evening/formatted?force=true",
+          "raw": "{{base_url}}/briefing/history",
           "host": ["{{base_url}}"],
-          "path": ["briefing", "evening", "formatted"],
+          "path": ["briefing", "history"]
+        }
+      }
+    },
+    {
+      "name": "10 - Briefing History (Filtered by Type)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('All items have type evening', () => {",
+              "    pm.response.json().forEach((item) => {",
+              "        pm.expect(item.type).to.eql('evening');",
+              "    });",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/briefing/history?type=evening",
+          "host": ["{{base_url}}"],
+          "path": ["briefing", "history"],
           "query": [
-            { "key": "force", "value": "true" }
+            { "key": "type", "value": "evening" }
           ]
         }
       }

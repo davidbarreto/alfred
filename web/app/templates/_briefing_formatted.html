@@ -1,5 +1,8 @@
+{% set generated = generated | default(true) %}
 {% if text %}
 <div class="prose prose-sm max-w-none text-gray-700 whitespace-pre-wrap leading-relaxed">{{ text }}</div>
+{% elif not generated %}
+<p class="text-sm text-gray-400">Not generated yet.</p>
 {% else %}
 <p class="text-sm text-[#E24B4A]">Could not generate formatted briefing.</p>
 {% endif %}

@@ -106,6 +106,11 @@ class TestParse:
         assert received.currency == "EUR"
         assert received.suggested_type is None
 
+    def test_posted_at_carries_the_raw_finished_timestamp(self):
+        statement = WiseStatementParser().parse(_content())
+        purchase = next(r for r in statement.rows if r.raw_description == "SOME SHOP")
+        assert purchase.posted_at == "2026-06-01 10:00:00"
+
     def test_period_spans_completed_rows_only(self):
         statement = WiseStatementParser().parse(_content())
         assert statement.period_start == date(2026, 6, 1)

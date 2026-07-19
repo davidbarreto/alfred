@@ -103,6 +103,11 @@ class TestParse:
         assert bolt.date_posted == date(2025, 12, 5)
         assert bolt.date_value == date(2025, 12, 4)
 
+    def test_posted_at_carries_the_raw_completed_timestamp(self):
+        statement = RevolutStatementParser().parse(_content())
+        bolt = next(r for r in statement.rows if r.raw_description == "Bolt")
+        assert bolt.posted_at == "2025-12-05 02:30:37"
+
     def test_period_spans_all_currencies(self):
         statement = RevolutStatementParser().parse(_content())
         assert statement.period_start == date(2025, 11, 22)

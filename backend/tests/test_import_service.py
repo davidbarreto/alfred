@@ -152,6 +152,23 @@ class TestDedupHash:
         row = _row(balance_after=None)
         assert _compute_dedup_hash(1, row, 1) != _compute_dedup_hash(1, row, 2)
 
+    def test_same_day_same_amount_same_balance_disambiguated_by_posted_at(self):
+        # Regression: two real top-ups on the same day, for the same amount, with an
+        # Exchange in between spending each one back down to zero -- same date, same
+        # description, same amount, and coincidentally the same balance_after too.
+        # Without posted_at these hash identically and the second is wrongly flagged
+        # as an in-file duplicate.
+        morning = _row(posted_at="2025-12-05 08:01:14")
+        afternoon = _row(posted_at="2025-12-05 15:57:40")
+        assert _compute_dedup_hash(1, morning, 1) != _compute_dedup_hash(1, afternoon, 2)
+
+    def test_identical_posted_at_still_collides(self):
+        # A genuine repeated line (overlapping export windows) has the same timestamp
+        # down to the second, so it must still be caught as a duplicate.
+        row_a = _row(posted_at="2025-12-05 08:01:14")
+        row_b = _row(posted_at="2025-12-05 08:01:14")
+        assert _compute_dedup_hash(1, row_a, 1) == _compute_dedup_hash(1, row_b, 1)
+
 
 class TestRuleMatches:
     def test_case_insensitive_substring(self):
@@ -213,6 +230,35 @@ class TestPreview:
         assert preview.rows[1].duplicate_reason == "repeated_in_file"
         assert preview.new_count == 1
         assert preview.duplicate_count == 1
+
+    @pytest.mark.asyncio
+    async def test_does_not_flag_coincidental_same_balance_rows_as_duplicates(self):
+        # Regression for the Revolut top-up scenario: two distinct top-ups on the same
+        # day, same amount, same description, whose balance coincidentally matches
+        # because each was spent back down to zero by an Exchange in between. These are
+        # real, separate transactions and must both come through as "new".
+        rows = [
+            _row(
+                raw_description="Apple Pay top-up by *7098",
+                amount=Decimal("200.00"),
+                balance_after=Decimal("200.00"),
+                posted_at="2025-12-05 08:01:14",
+            ),
+            _row(
+                raw_description="Apple Pay top-up by *7098",
+                amount=Decimal("200.00"),
+                balance_after=Decimal("200.00"),
+                posted_at="2025-12-05 15:57:40",
+            ),
+        ]
+        service = _service(_statement(rows))
+
+        preview = await service.preview(1, "x.csv", b"", provider="fakebank")
+
+        assert preview.rows[0].status == "new"
+        assert preview.rows[1].status == "new"
+        assert preview.new_count == 2
+        assert preview.duplicate_count == 0
 
     @pytest.mark.asyncio
     async def test_auto_rule_applies_category_and_description(self):

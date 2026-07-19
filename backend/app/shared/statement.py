@@ -47,6 +47,12 @@ class ParsedRow:
     """Set when the parser wants this row flagged for review regardless of category
     confidence (e.g. "redated_installment", "uncertain_transfer"). Surfaced to the user
     as a ReviewReason by the import service."""
+    posted_at: str | None = None
+    """Raw source timestamp string (date + time), for providers whose export has
+    intra-day precision (Revolut, Wise) even though date_posted/date_value are
+    date-only. Used only as an extra dedup-hash disambiguator: two same-day,
+    same-amount, same-description rows can otherwise collide, e.g. a running balance
+    that coincidentally returns to the same value between them."""
 
 
 @dataclass

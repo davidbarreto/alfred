@@ -25,7 +25,12 @@ Format notes:
     - "Card Payment" / "ATM" / "Rev Payment" / "Card Refund": ordinary
       expense/income, sign-based inference already correct.
 - ``Completed Date`` is used as the posting date (when it actually affected the
-  balance); ``Started Date`` as the value date.
+  balance); ``Started Date`` as the value date. The raw ``Completed Date`` string
+  (with its time-of-day) is also kept on ``ParsedRow.posted_at``: the dedup hash
+  needs it because a same-day, same-amount, same-description pair can otherwise
+  collide on ``balance_after`` too, e.g. two top-ups on the same day that both left
+  the balance at the same figure because an Exchange in between spent it back down
+  to zero.
 - The ``Fee`` column is informational only in the observed export (always 0.00);
   ``Amount`` already reflects the net effect on the balance, so Fee is not applied.
 """
@@ -92,7 +97,8 @@ class RevolutStatementParser:
             if (record.get("State") or "").strip().upper() != "COMPLETED":
                 continue
 
-            completed = _parse_datetime(record.get("Completed Date") or "")
+            completed_raw = (record.get("Completed Date") or "").strip()
+            completed = _parse_datetime(completed_raw)
             started = _parse_datetime(record.get("Started Date") or "")
             amount = _parse_amount(record.get("Amount") or "")
             balance = _parse_amount(record.get("Balance") or "")
@@ -114,6 +120,7 @@ class RevolutStatementParser:
                     balance_after=balance,
                     suggested_type=suggested_type,
                     flag_reason=flag_reason,
+                    posted_at=completed_raw or None,
                 )
             )
 

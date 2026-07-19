@@ -34,7 +34,9 @@ Format notes:
 - Amounts in the export are unsigned magnitudes ("after fees" already
   applied); this parser assigns the sign itself based on the above rules.
 - ``Finished on`` is used as the posting date; ``Created on`` as the value
-  date. No running balance or account metadata in this export.
+  date. No running balance or account metadata in this export. The raw
+  ``Finished on`` string (with its time-of-day) is kept on
+  ``ParsedRow.posted_at`` as an extra dedup-hash disambiguator, same as Revolut.
 """
 from __future__ import annotations
 
@@ -94,10 +96,12 @@ class WiseStatementParser:
             if (record.get("Status") or "").strip().upper() != "COMPLETED":
                 continue
 
-            finished = _parse_datetime(record.get("Finished on") or "")
+            finished_raw = (record.get("Finished on") or "").strip()
+            finished = _parse_datetime(finished_raw)
             created = _parse_datetime(record.get("Created on") or "")
             if finished is None:
                 continue
+            posted_at = finished_raw or None
 
             source_name = (record.get("Source name") or "").strip()
             target_name = (record.get("Target name") or "").strip()
@@ -122,6 +126,7 @@ class WiseStatementParser:
                         amount=-source_amount,
                         currency=source_currency,
                         suggested_type="transfer",
+                        posted_at=posted_at,
                     )
                 )
                 rows.append(
@@ -132,6 +137,7 @@ class WiseStatementParser:
                         amount=target_amount,
                         currency=target_currency,
                         suggested_type="transfer",
+                        posted_at=posted_at,
                     )
                 )
             elif is_self:
@@ -145,6 +151,7 @@ class WiseStatementParser:
                             amount=target_amount,
                             currency=target_currency,
                             suggested_type="transfer",
+                            posted_at=posted_at,
                         )
                     )
                 else:
@@ -156,6 +163,7 @@ class WiseStatementParser:
                             amount=-source_amount,
                             currency=source_currency,
                             suggested_type="transfer",
+                            posted_at=posted_at,
                         )
                     )
             elif direction == "IN":
@@ -166,6 +174,7 @@ class WiseStatementParser:
                         raw_description=source_name,
                         amount=target_amount,
                         currency=target_currency,
+                        posted_at=posted_at,
                     )
                 )
             else:
@@ -176,6 +185,7 @@ class WiseStatementParser:
                         raw_description=target_name,
                         amount=-source_amount,
                         currency=source_currency,
+                        posted_at=posted_at,
                     )
                 )
 

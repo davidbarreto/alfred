@@ -76,6 +76,12 @@ def _clean_description(raw: str) -> str:
 
 
 def _compute_dedup_hash(account_id: int, row: ParsedRow, occurrence: int) -> str:
+    # balance_after alone isn't always a reliable disambiguator: two distinct same-day,
+    # same-amount, same-description rows can still coincidentally leave the same running
+    # balance (e.g. two top-ups on the same day, each immediately spent back down to zero
+    # by an unrelated transaction in between). row.posted_at folds in intra-day precision
+    # for providers that have it (Revolut, Wise) to break that tie without touching the
+    # date-only date_posted used everywhere else.
     disambiguator = (
         str(row.balance_after) if row.balance_after is not None else f"occ:{occurrence}"
     )
@@ -87,6 +93,7 @@ def _compute_dedup_hash(account_id: int, row: ParsedRow, occurrence: int) -> str
             row.raw_description,
             str(row.amount),
             disambiguator,
+            row.posted_at or "",
         ]
     )
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()

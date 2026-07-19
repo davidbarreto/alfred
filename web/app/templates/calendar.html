@@ -13,10 +13,31 @@
       <a href="/calendar?year={{ next_year }}&month={{ next_month }}" class="w-7 h-7 flex items-center justify-center rounded hover:bg-gray-100 text-gray-500">›</a>
       <h1 class="text-base font-semibold text-gray-900 ml-1">{{ month_name }}</h1>
     </div>
-    <button onclick="openNewEvent()"
-            class="btn btn-sm btn-primary gap-1">
-      <i class="ti ti-plus text-sm"></i>New event
-    </button>
+    <div class="flex items-center gap-3">
+      <div class="flex items-center gap-1.5">
+        <label class="text-xs text-gray-400">Viewing in</label>
+        <select
+          onchange="location.href = '/calendar/timezone?tz=' + encodeURIComponent(this.value) + '&year={{ year }}&month={{ month }}'"
+          class="border border-gray-200 rounded-lg px-2 py-1 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-[#378ADD]"
+        >
+          {% for tz in [
+            {"label": "Lisbon",      "value": "Europe/Lisbon"},
+            {"label": "London",      "value": "Europe/London"},
+            {"label": "New York",    "value": "America/New_York"},
+            {"label": "Chicago",     "value": "America/Chicago"},
+            {"label": "Denver",      "value": "America/Denver"},
+            {"label": "Los Angeles", "value": "America/Los_Angeles"},
+            {"label": "UTC",         "value": "UTC"}
+          ] %}
+          <option value="{{ tz.value }}" {% if tz.value == viewer_tz %}selected{% endif %}>{{ tz.label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <button onclick="openNewEvent()"
+              class="btn btn-sm btn-primary gap-1">
+        <i class="ti ti-plus text-sm"></i>New event
+      </button>
+    </div>
   </div>
 
   {% if api_error %}
@@ -60,7 +81,7 @@
           </div>
           {% else %}
           <div class="text-[10px] rounded px-1 py-0.5 mb-0.5 truncate bg-[#E6F1FB] text-[#0C447C] leading-tight">
-            {{ ev.start_datetime[11:16] }} {{ ev.title }}
+            {{ ev.display_start[11:16] }} {{ ev.title }}
           </div>
           {% endif %}
           {% endfor %}
@@ -78,7 +99,7 @@
   <div class="bg-white border border-gray-200 rounded-lg">
     <div class="p-4">
       <h2 class="text-sm font-medium text-gray-900 mb-3">Upcoming</h2>
-      {% set upcoming = events | selectattr("start_datetime", "ge", today) | list | sort(attribute="start_datetime") %}
+      {% set upcoming = events | selectattr("display_start", "ge", today) | list | sort(attribute="display_start") %}
       {% if upcoming %}
       <ul>
         {% for ev in upcoming[:8] %}
@@ -86,7 +107,7 @@
           <span class="w-1.5 h-1.5 rounded-full bg-[#378ADD] mt-2 flex-shrink-0"></span>
           <div class="flex-1 min-w-0">
             <div class="flex items-baseline gap-2">
-              <span class="text-xs text-gray-400 flex-shrink-0">{{ ev.start_datetime[:10] }}{% if not ev.all_day %} {{ ev.start_datetime[11:16] }}{% endif %}</span>
+              <span class="text-xs text-gray-400 flex-shrink-0">{{ ev.display_start[:10] }}{% if not ev.all_day %} {{ ev.display_start[11:16] }}{% endif %}</span>
               <span class="text-sm text-gray-800 truncate">{{ ev.title }}</span>
             </div>
             {% if ev.location %}
@@ -193,6 +214,35 @@
         />
         <input type="hidden" name="recurrence_rule" id="event-recurrence-value" />
       </div>
+      <div>
+        <label class="text-xs text-gray-500 mb-2 block">Timezone</label>
+        <div class="flex flex-wrap gap-1.5" id="event-timezone-chips">
+          {% for chip in [
+            {"label": "Lisbon",      "value": "Europe/Lisbon"},
+            {"label": "London",      "value": "Europe/London"},
+            {"label": "New York",    "value": "America/New_York"},
+            {"label": "Chicago",     "value": "America/Chicago"},
+            {"label": "Denver",      "value": "America/Denver"},
+            {"label": "Los Angeles", "value": "America/Los_Angeles"},
+            {"label": "UTC",         "value": "UTC"},
+            {"label": "Custom…",     "value": "__custom__"}
+          ] %}
+          <button type="button"
+            class="event-timezone-chip px-2.5 py-1 text-xs rounded-full border transition-colors border-gray-200 bg-white text-gray-500 hover:bg-gray-50"
+            data-value="{{ chip.value }}"
+            onclick="_setEventTimezoneChip('{{ chip.value }}')"
+          >{{ chip.label }}</button>
+          {% endfor %}
+        </div>
+        <input
+          type="text"
+          id="event-timezone-custom"
+          placeholder="e.g. Asia/Tokyo"
+          class="mt-2 hidden border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white w-full focus:outline-none focus:ring-1 focus:ring-[#378ADD]"
+          oninput="document.getElementById('event-timezone-value').value = this.value.trim()"
+        />
+        <input type="hidden" name="timezone" id="event-timezone-value" />
+      </div>
       <p id="event-error" class="text-xs text-[#E24B4A] hidden"></p>
       <div class="flex justify-end gap-2 mt-1">
         <button type="button" onclick="document.getElementById('new-event-modal').close()"
@@ -217,6 +267,32 @@
 </dialog>
 
 <script>
+const VIEWER_TZ = "{{ viewer_tz }}";
+const APP_DEFAULT_TZ = "Europe/Lisbon";
+const KNOWN_TIMEZONES = ["Europe/Lisbon", "Europe/London", "America/New_York", "America/Chicago", "America/Denver", "America/Los_Angeles", "UTC"];
+
+function _setEventTimezoneChip(value) {
+  document.querySelectorAll(".event-timezone-chip").forEach(el => {
+    const active = el.dataset.value === value;
+    el.className = [
+      "event-timezone-chip px-2.5 py-1 text-xs rounded-full border transition-colors",
+      active
+        ? "border-[#378ADD] bg-[#E6F1FB] text-[#378ADD]"
+        : "border-gray-200 bg-white text-gray-500 hover:bg-gray-50",
+    ].join(" ");
+  });
+  const customInput = document.getElementById("event-timezone-custom");
+  const valueInput  = document.getElementById("event-timezone-value");
+  if (value === "__custom__") {
+    customInput.classList.remove("hidden");
+    valueInput.value = customInput.value.trim();
+    customInput.focus();
+  } else {
+    customInput.classList.add("hidden");
+    valueInput.value = value;
+  }
+}
+
 function _setEventRecurrenceChip(value) {
   document.querySelectorAll(".event-recurrence-chip").forEach(el => {
     const active = el.dataset.value === value;
@@ -246,6 +322,9 @@ function openNewEvent(prefillDate) {
   document.getElementById("event-time-row").classList.remove("hidden");
   document.getElementById("event-recurrence-custom").value = "";
   _setEventRecurrenceChip("");
+  const viewerTzKnown = KNOWN_TIMEZONES.includes(VIEWER_TZ);
+  document.getElementById("event-timezone-custom").value = viewerTzKnown ? "" : VIEWER_TZ;
+  _setEventTimezoneChip(viewerTzKnown ? VIEWER_TZ : "__custom__");
   if (prefillDate) {
     document.querySelector('#new-event-form [name="start_date"]').value = prefillDate;
   }
@@ -267,6 +346,11 @@ function openEditEvent(ev) {
   const knownRecurrences = ["", "FREQ=DAILY", "FREQ=WEEKLY", "FREQ=MONTHLY", "FREQ=YEARLY"];
   document.getElementById("event-recurrence-custom").value = knownRecurrences.includes(rr) ? "" : rr;
   _setEventRecurrenceChip(knownRecurrences.includes(rr) ? rr : "__custom__");
+
+  const tz = ev.timezone || APP_DEFAULT_TZ;
+  const tzKnown = KNOWN_TIMEZONES.includes(tz);
+  document.getElementById("event-timezone-custom").value = tzKnown ? "" : tz;
+  _setEventTimezoneChip(tzKnown ? tz : "__custom__");
 
   form.querySelector('[name="all_day"]').checked = ev.all_day;
   document.getElementById("event-time-row").classList.toggle("hidden", ev.all_day);

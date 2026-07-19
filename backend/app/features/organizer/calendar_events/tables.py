@@ -37,6 +37,7 @@ class CalendarEvent(Base):
     end_datetime: Mapped[datetime] = mapped_column(DateTime, nullable=False)
     all_day: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     recurrence_rule: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
+    timezone: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
     host: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
 
     invitees: Mapped[List["CalendarEventInvitee"]] = relationship(

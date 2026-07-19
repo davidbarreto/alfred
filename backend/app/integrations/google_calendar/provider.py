@@ -7,6 +7,7 @@ from typing import Any
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.integrations.provider_calls.repository import create_sync_log
+from app.shared.timezone import local_timezone_name
 
 from .client import GoogleCalendarClient
 
@@ -35,18 +36,19 @@ class GoogleCalendarProvider:
             event["location"] = record["location"]
 
         all_day = record.get("all_day", False)
+        event_timezone = record.get("timezone") or local_timezone_name()
 
         if "start_datetime" in record:
             dt = record["start_datetime"]
             if isinstance(dt, str):
                 dt = datetime.fromisoformat(dt)
-            event["start"] = {"date": dt.date().isoformat()} if all_day else {"dateTime": dt.isoformat(), "timeZone": "UTC"}
+            event["start"] = {"date": dt.date().isoformat()} if all_day else {"dateTime": dt.isoformat(), "timeZone": event_timezone}
 
         if "end_datetime" in record:
             dt = record["end_datetime"]
             if isinstance(dt, str):
                 dt = datetime.fromisoformat(dt)
-            event["end"] = {"date": dt.date().isoformat()} if all_day else {"dateTime": dt.isoformat(), "timeZone": "UTC"}
+            event["end"] = {"date": dt.date().isoformat()} if all_day else {"dateTime": dt.isoformat(), "timeZone": event_timezone}
 
         if record.get("recurrence_rule"):
             event["recurrence"] = [f"RRULE:{record['recurrence_rule']}"]
@@ -64,13 +66,18 @@ class GoogleCalendarProvider:
         end = google_event.get("end", {})
 
         all_day = "date" in start
+        event_timezone: str | None = None
 
         if all_day:
             start_dt: datetime = datetime.fromisoformat(start["date"])
             end_dt: datetime = datetime.fromisoformat(end["date"])
         else:
-            start_dt = datetime.fromisoformat(start["dateTime"].replace("Z", "+00:00"))
-            end_dt = datetime.fromisoformat(end["dateTime"].replace("Z", "+00:00"))
+            event_timezone = start.get("timeZone") or local_timezone_name()
+            # Google's dateTime carries a numeric UTC offset alongside the timeZone name;
+            # the offset is redundant with the name and would double-apply on the next
+            # conversion, so keep only the wall-clock digits.
+            start_dt = datetime.fromisoformat(start["dateTime"].replace("Z", "+00:00")).replace(tzinfo=None)
+            end_dt = datetime.fromisoformat(end["dateTime"].replace("Z", "+00:00")).replace(tzinfo=None)
 
         recurrence_rule: str | None = None
         for rule in google_event.get("recurrence", []):
@@ -87,6 +94,7 @@ class GoogleCalendarProvider:
             "end_datetime": end_dt,
             "all_day": all_day,
             "recurrence_rule": recurrence_rule,
+            "timezone": event_timezone,
             "host": google_event.get("organizer", {}).get("email"),
             "invitees": [a["email"] for a in google_event.get("attendees", []) if "email" in a],
         }

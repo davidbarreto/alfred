@@ -2,7 +2,7 @@
   "info": {
     "name": "Alfred - Calendar Events API",
     "_postman_id": "alfred-calendar-events-v1",
-    "description": "Run in order: Health Check \u2192 Create \u2192 List \u2192 Get \u2192 Update \u2192 Filter by Date Range \u2192 Filter by Tags \u2192 Get 404 \u2192 Delete",
+    "description": "Run in order: Health Check \u2192 Create \u2192 List \u2192 Get \u2192 Update \u2192 Filter by Date Range \u2192 Filter by Tags \u2192 Get 404 \u2192 Create with Timezone \u2192 Delete with Timezone \u2192 Delete",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -344,7 +344,85 @@
       }
     },
     {
-      "name": "09 - Delete Event",
+      "name": "09 - Create Event with Timezone",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+              "pm.test('Response echoes the timezone', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json).to.have.property('id');",
+              "    pm.expect(json.timezone).to.eql('America/Chicago');",
+              "    pm.environment.set('tz_event_id', json.id);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"title\": \"CT Standup\",\n  \"start_datetime\": \"2026-03-15T09:00:00\",\n  \"end_datetime\": \"2026-03-15T09:30:00\",\n  \"all_day\": false,\n  \"timezone\": \"America/Chicago\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{base_url}}/organizer/calendar-events",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "calendar-events"
+          ]
+        }
+      }
+    },
+    {
+      "name": "10 - Delete Event with Timezone",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 204', () => pm.response.to.have.status(204));",
+              "pm.environment.unset('tz_event_id');"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/organizer/calendar-events/{{tz_event_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "calendar-events",
+            "{{tz_event_id}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "11 - Delete Event",
       "event": [
         {
           "listen": "test",

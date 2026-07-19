@@ -1,11 +1,12 @@
 import httpx
 
 
-def _event(id=1, title="Marriage Anniversary", start="2026-07-14T00:00:00", end="2026-07-14T23:59:59", all_day=False, location=None, tags=None):
+def _event(id=1, title="Marriage Anniversary", start="2026-07-14T00:00:00", end="2026-07-14T23:59:59", all_day=False, location=None, tags=None, timezone=None):
     return {
         "id": id, "title": title, "description": None, "location": location,
         "start_datetime": start, "end_datetime": end, "all_day": all_day,
         "host": None, "invitees": [], "tags": tags or [], "recurrence_rule": None,
+        "timezone": timezone,
     }
 
 
@@ -60,8 +61,8 @@ class TestCalendarDay:
         assert "Team sync" in resp.text
         assert "09:00" in resp.text
         mock_api["get"].assert_awaited_once_with("/organizer/calendar-events", params={
-            "start_from": "2026-07-14T00:00:00",
-            "start_to": "2026-07-14T23:59:59",
+            "start_from": "2026-07-13T00:00:00",
+            "start_to": "2026-07-15T23:59:59",
             "limit": 200,
         })
 
@@ -125,6 +126,7 @@ class TestCreateEvent:
             "all_day": False,
             "location": None,
             "recurrence_rule": None,
+            "timezone": None,
         })
 
     def test_creates_recurring_event(self, client, mock_api):
@@ -146,6 +148,7 @@ class TestCreateEvent:
             "all_day": False,
             "location": None,
             "recurrence_rule": "FREQ=DAILY",
+            "timezone": None,
         })
 
     def test_creates_event_with_custom_recurrence_rule(self, client, mock_api):
@@ -167,6 +170,29 @@ class TestCreateEvent:
             "all_day": False,
             "location": None,
             "recurrence_rule": "FREQ=WEEKLY;BYDAY=MO,WE,FR;COUNT=10",
+            "timezone": None,
+        })
+
+    def test_creates_event_with_timezone(self, client, mock_api):
+        mock_api["post"].return_value = _event(id=5, title="CT Standup", timezone="America/Chicago")
+
+        resp = client.post("/calendar/", data={
+            "title": "CT Standup",
+            "start_date": "2026-03-15",
+            "start_time": "09:00",
+            "end_time": "09:30",
+            "timezone": "America/Chicago",
+        })
+
+        assert resp.status_code == 204
+        mock_api["post"].assert_any_await("/organizer/calendar-events", json={
+            "title": "CT Standup",
+            "start_datetime": "2026-03-15T09:00:00",
+            "end_datetime": "2026-03-15T09:30:00",
+            "all_day": False,
+            "location": None,
+            "recurrence_rule": None,
+            "timezone": "America/Chicago",
         })
 
     def test_returns_422_when_backend_create_fails(self, client, mock_api):
@@ -203,6 +229,7 @@ class TestUpdateEvent:
             "all_day": False,
             "location": "Room 2",
             "recurrence_rule": None,
+            "timezone": None,
         })
 
     def test_updates_all_day_event(self, client, mock_api):
@@ -222,6 +249,7 @@ class TestUpdateEvent:
             "all_day": True,
             "location": None,
             "recurrence_rule": None,
+            "timezone": None,
         })
 
     def test_updates_recurrence_rule(self, client, mock_api):
@@ -243,6 +271,29 @@ class TestUpdateEvent:
             "all_day": False,
             "location": None,
             "recurrence_rule": "FREQ=WEEKLY",
+            "timezone": None,
+        })
+
+    def test_updates_timezone(self, client, mock_api):
+        mock_api["patch"].return_value = _event(id=3, title="CT Standup", timezone="America/Chicago")
+
+        resp = client.patch("/calendar/3", data={
+            "title": "CT Standup",
+            "start_date": "2026-03-15",
+            "start_time": "09:00",
+            "end_time": "09:30",
+            "timezone": "America/Chicago",
+        })
+
+        assert resp.status_code == 204
+        mock_api["patch"].assert_any_await("/organizer/calendar-events/3", json={
+            "title": "CT Standup",
+            "start_datetime": "2026-03-15T09:00:00",
+            "end_datetime": "2026-03-15T09:30:00",
+            "all_day": False,
+            "location": None,
+            "recurrence_rule": None,
+            "timezone": "America/Chicago",
         })
 
     def test_returns_422_when_backend_update_fails(self, client, mock_api):
@@ -284,3 +335,62 @@ class TestDeleteEvent:
 
         assert resp.status_code == 422
         assert "Failed to delete event." in resp.text
+
+
+class TestViewerTimezone:
+    def test_converts_event_across_mismatched_dst_transition(self, client, mock_api):
+        # 2026-03-15 falls between the US DST switch (Sun Mar 8) and the EU DST
+        # switch (Sun Mar 29): Chicago is on CDT (UTC-5) while Lisbon is still on
+        # WET (UTC+0), a 5-hour gap instead of the usual 6. This is exactly the
+        # scenario that silently drifted before origin timezones were tracked.
+        mock_api["get"].return_value = [
+            _event(id=1, title="CT Standup", start="2026-03-15T09:00:00", end="2026-03-15T09:30:00", timezone="America/Chicago"),
+        ]
+
+        resp = client.get("/calendar/day/2026-03-15")
+
+        assert resp.status_code == 200
+        assert "14:00" in resp.text
+        assert "14:30" in resp.text
+
+    def test_converts_event_when_both_zones_share_dst(self, client, mock_api):
+        # Well outside any transition window, Chicago (CDT, UTC-5) and Lisbon
+        # (WEST, UTC+1) differ by the usual 6 hours.
+        mock_api["get"].return_value = [
+            _event(id=1, title="CT Standup", start="2026-07-14T09:00:00", end="2026-07-14T09:30:00", timezone="America/Chicago"),
+        ]
+
+        resp = client.get("/calendar/day/2026-07-14")
+
+        assert resp.status_code == 200
+        assert "15:00" in resp.text
+
+    def test_untimezoned_event_assumes_app_default_lisbon(self, client, mock_api):
+        mock_api["get"].return_value = [
+            _event(id=1, title="Local Meeting", start="2026-07-14T09:00:00", end="2026-07-14T09:30:00"),
+        ]
+
+        resp = client.get("/calendar/day/2026-07-14")
+
+        assert resp.status_code == 200
+        assert "09:00" in resp.text
+
+    def test_viewer_timezone_cookie_changes_display(self, client, mock_api):
+        client.get("/calendar/timezone?tz=America/Chicago&year=2026&month=7", follow_redirects=False)
+        mock_api["get"].return_value = [
+            _event(id=1, title="Lisbon Meeting", start="2026-07-14T15:00:00", end="2026-07-14T15:30:00"),
+        ]
+
+        resp = client.get("/calendar/day/2026-07-14")
+
+        assert resp.status_code == 200
+        assert "09:00" in resp.text
+
+    def test_viewer_timezone_selector_marks_current_selection(self, client, mock_api):
+        client.get("/calendar/timezone?tz=America/Chicago&year=2026&month=7", follow_redirects=False)
+        mock_api["get"].return_value = []
+
+        resp = client.get("/calendar?year=2026&month=7")
+
+        assert resp.status_code == 200
+        assert '<option value="America/Chicago" selected>Chicago</option>' in resp.text

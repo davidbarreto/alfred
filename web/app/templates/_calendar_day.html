@@ -42,7 +42,7 @@
   {% for ev in timed_events %}
   <li class="flex items-start gap-3 py-2 border-b border-gray-50 last:border-0">
     <span class="font-mono text-xs text-gray-500 w-24 flex-shrink-0 mt-0.5">
-      {{ ev.start_datetime[11:16] }}&ndash;{{ ev.end_datetime[11:16] }}
+      {{ ev.display_start[11:16] }}&ndash;{{ ev.display_end[11:16] }}
     </span>
     <div class="min-w-0 flex-1">
       <div class="text-sm text-gray-800 truncate">{{ ev.title }}</div>

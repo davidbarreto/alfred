@@ -8,5 +8,9 @@ def local_timezone() -> ZoneInfo:
     return ZoneInfo(get_settings().timezone)
 
 
+def local_timezone_name() -> str:
+    return get_settings().timezone
+
+
 def local_now() -> datetime:
     return datetime.now(local_timezone())

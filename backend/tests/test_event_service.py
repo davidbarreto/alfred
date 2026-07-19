@@ -39,6 +39,7 @@ def _make_event_orm(**kwargs):
     event.host = kwargs.get("host", None)
     event.invitees = kwargs.get("invitees", [])
     event.tags = kwargs.get("tags", [])
+    event.timezone = kwargs.get("timezone", None)
     event.provider_id = kwargs.get("provider_id", "gc-event-1")
     return event
 

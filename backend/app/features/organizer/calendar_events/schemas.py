@@ -15,6 +15,7 @@ class EventBase(BaseModel):
     invitees: list[str] = []
     tags: list[str] = []
     recurrence_rule: str | None = None
+    timezone: str | None = None
 
 
 class EventCreate(EventBase):
@@ -32,6 +33,7 @@ class EventUpdate(BaseModel):
     invitees: list[str] | None = None
     tags: list[str] | None = None
     recurrence_rule: str | None = None
+    timezone: str | None = None
 
 
 class EventRead(EventBase):

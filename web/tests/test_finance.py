@@ -212,6 +212,24 @@ class TestFinanceDashboardCurrency:
 
         assert "currency=BRL" not in resp.text
 
+    def test_renders_transaction_list_with_account_and_category_names(self, client, mock_api):
+        async def fake(path, params=None):
+            if path == "/finance/accounts":
+                return [{"id": 1, "name": "Checking", "currency": "EUR"}]
+            if path == "/finance/categories":
+                return [_category(id=1, name="Groceries")]
+            if path == "/finance/transactions":
+                return [_txn(id=1, account_id=1, category_id=1)]
+            return []
+
+        mock_api["get"].side_effect = fake
+
+        resp = client.get("/finance/")
+
+        assert resp.status_code == 200
+        assert "Checking" in resp.text
+        assert "Groceries" in resp.text
+
 
 class TestFinanceDashboardPeriods:
     def _fake_get(self, calls, accounts, spending=None, by_category=None, all_txns=None):

@@ -276,6 +276,8 @@ async def finance_page(request: Request):
         "currency_symbol": currency_symbols.get(currency, currency + " "),
         "currency_symbols": currency_symbols,
         "account_currencies": sorted({a["currency"] for a in accounts} | {"EUR"}),
+        "accounts_by_id": {a["id"]: a["name"] for a in accounts},
+        "categories_by_id": {c["id"]: c["name"] for c in categories},
     })
 
 

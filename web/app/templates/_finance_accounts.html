@@ -1,20 +1,34 @@
 {% if accounts %}
 <ul class="divide-y divide-gray-100">
   {% for acc in accounts %}
-  <li class="flex items-center justify-between py-2 text-sm" id="account-{{ acc.id }}">
-    <div>
-      <span class="font-medium text-gray-800">{{ acc.name }}</span>
-      <span class="ml-2 text-xs text-gray-400">{{ acc.type }} · {{ acc.currency }}</span>
-      {% if acc.institution %}<span class="ml-1 text-xs text-gray-400">· {{ acc.institution }}</span>{% endif %}
-      {% if acc.credit_limit %}
-      <span class="ml-1 text-xs text-gray-400">
-        · limit {{ acc.credit_limit | money }}
-        · available {{ ((acc.credit_limit | float) + (acc.balance | float)) | money }}
-      </span>
+  {% set used_pct = ((-1 * (acc.balance | float)) / (acc.credit_limit | float) * 100) if acc.credit_limit and (acc.credit_limit | float) > 0 else none %}
+  <li class="flex items-center justify-between gap-2 py-2 text-sm" id="account-{{ acc.id }}">
+    <div class="flex-1 min-w-0">
+      <div>
+        <span class="font-medium text-gray-800">{{ acc.name }}</span>
+        <span class="ml-2 text-xs text-gray-400">{{ acc.type }} · {{ acc.currency }}</span>
+        {% if acc.institution %}<span class="ml-1 text-xs text-gray-400">· {{ acc.institution }}</span>{% endif %}
+        {% if acc.credit_limit %}
+        <span class="ml-1 text-xs text-gray-400">
+          · limit {{ acc.credit_limit | money }}
+          · available {{ ((acc.credit_limit | float) + (acc.balance | float)) | money }}
+        </span>
+        {% endif %}
+      </div>
+      {% if used_pct is not none %}
+      <div class="flex items-center gap-2 mt-1 max-w-xs">
+        <div class="h-1 bg-gray-100 rounded-full overflow-hidden flex-1">
+          <div
+            class="h-full rounded-full {% if used_pct >= 90 %}bg-[#E24B4A]{% elif used_pct >= 70 %}bg-amber-500{% else %}bg-[#3E9C42]{% endif %}"
+            style="width: {{ [used_pct | round(1), 100] | min }}%"
+          ></div>
+        </div>
+        <span class="text-[10px] text-gray-400 flex-shrink-0">{{ used_pct | round | int }}% used</span>
+      </div>
       {% endif %}
     </div>
     <button
-      class="text-gray-300 hover:text-[#E24B4A] transition-colors"
+      class="text-gray-300 hover:text-[#E24B4A] transition-colors flex-shrink-0"
       hx-delete="/finance/accounts/{{ acc.id }}"
       hx-target="#accounts-list"
       hx-confirm="Delete account '{{ acc.name }}'? This cannot be undone. Accounts with transactions can't be deleted — deactivate them instead."

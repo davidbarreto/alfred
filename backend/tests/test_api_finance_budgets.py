@@ -1,146 +1,111 @@
 import pytest
-from datetime import date
+from datetime import date, datetime
 from decimal import Decimal
 from fastapi.testclient import TestClient
 from unittest.mock import AsyncMock
-from app.features.finance.budgets.schemas import BudgetRead, BudgetRemainingResponse
+from app.features.finance.budgets.schemas import BudgetTargetRead, CategoryBudgetStatus
 
 AUTH = {"Authorization": "Bearer test-api-token"}
 
 
-def _budget_read(**kwargs):
+def _target_read(**kwargs):
     defaults = dict(
-        id=1, name="Monthly Groceries", category_id=1,
-        amount=Decimal("300.00"), period="monthly",
-        starts_at=None, ends_at=None,
+        id=1, category_id=1, amount=Decimal("300.00"),
+        effective_from=datetime(2026, 7, 1), effective_to=None,
     )
     defaults.update(kwargs)
-    return BudgetRead(**defaults)
+    return BudgetTargetRead(**defaults)
 
 
-def _remaining_response(**kwargs):
+def _status(**kwargs):
     defaults = dict(
-        budget_id=1, budget_name="Monthly Groceries",
-        budget_amount=Decimal("300.00"), spent=Decimal("120.00"),
-        remaining=Decimal("180.00"), period="monthly",
-        from_date=date(2026, 6, 1), to_date=date(2026, 6, 30),
+        category_id=1, category_name="Groceries", year_month=date(2026, 7, 1),
+        limit_amount=Decimal("300.00"), spent=Decimal("120.00"),
     )
     defaults.update(kwargs)
-    return BudgetRemainingResponse(**defaults)
+    return CategoryBudgetStatus(**defaults)
 
 
 @pytest.fixture
 def mock_service():
     svc = AsyncMock()
-    svc.get.return_value = _budget_read()
-    svc.list.return_value = [_budget_read()]
-    svc.create.return_value = _budget_read(id=2)
-    svc.update.return_value = _budget_read(amount=Decimal("350.00"))
-    svc.delete.return_value = True
-    svc.remaining.return_value = [_remaining_response()]
+    svc.list_current_targets.return_value = [_target_read()]
+    svc.set_target.return_value = _target_read(amount=Decimal("350.00"))
+    svc.set_targets_bulk.return_value = [_target_read()]
+    svc.get_status.return_value = [_status()]
     return svc
 
 
 @pytest.fixture
 def client(mock_service):
     from app.main import app
-    from app.dependencies import get_budget_service
-    app.dependency_overrides[get_budget_service] = lambda: mock_service
+    from app.dependencies import get_budget_target_service
+    app.dependency_overrides[get_budget_target_service] = lambda: mock_service
     yield TestClient(app)
     app.dependency_overrides.clear()
 
 
-class TestListBudgets:
+class TestListBudgetTargets:
     def test_returns_list(self, client):
-        response = client.get("/finance/budgets/", headers=AUTH)
+        response = client.get("/finance/budgets/targets", headers=AUTH)
         assert response.status_code == 200
         data = response.json()
         assert isinstance(data, list)
-        assert data[0]["name"] == "Monthly Groceries"
+        assert data[0]["category_id"] == 1
 
     def test_requires_auth(self, client):
-        assert client.get("/finance/budgets/").status_code == 403
-
-    def test_period_filter_passed_to_service(self, client, mock_service):
-        client.get("/finance/budgets/?period=monthly", headers=AUTH)
-        filters = mock_service.list.call_args[0][0]
-        assert filters.period == "monthly"
-
-    def test_invalid_period_returns_422(self, client):
-        assert client.get("/finance/budgets/?period=invalid", headers=AUTH).status_code == 422
+        assert client.get("/finance/budgets/targets").status_code == 403
 
 
-class TestGetBudget:
-    def test_found_returns_200(self, client):
-        response = client.get("/finance/budgets/1", headers=AUTH)
+class TestSetBudgetTargetsBulk:
+    def test_sets_and_returns_200(self, client):
+        payload = {"targets": [{"category_id": 1, "amount": "300.00"}, {"category_id": 2, "amount": None}]}
+        response = client.put("/finance/budgets/targets", json=payload, headers=AUTH)
         assert response.status_code == 200
-        assert response.json()["id"] == 1
+        assert isinstance(response.json(), list)
 
-    def test_not_found_returns_404(self, client, mock_service):
-        mock_service.get.return_value = None
-        response = client.get("/finance/budgets/999", headers=AUTH)
-        assert response.status_code == 404
-        assert response.json()["detail"] == "Budget not found"
-
-    def test_requires_auth(self, client):
-        assert client.get("/finance/budgets/1").status_code == 403
-
-
-class TestBudgetRemaining:
-    def test_returns_list_of_remaining(self, client):
-        response = client.get("/finance/budgets/remaining", headers=AUTH)
-        assert response.status_code == 200
-        data = response.json()
-        assert isinstance(data, list)
-        assert data[0]["spent"] == "120.00"
-        assert data[0]["remaining"] == "180.00"
-
-    def test_period_and_category_passed_to_service(self, client, mock_service):
-        client.get("/finance/budgets/remaining?period=this month&category_id=2", headers=AUTH)
-        mock_service.remaining.assert_called_once_with(period="this month", category_id=2)
+    def test_passes_items_to_service(self, client, mock_service):
+        payload = {"targets": [{"category_id": 1, "amount": "300.00"}]}
+        client.put("/finance/budgets/targets", json=payload, headers=AUTH)
+        items = mock_service.set_targets_bulk.call_args[0][0]
+        assert items[0].category_id == 1
+        assert items[0].amount == Decimal("300.00")
 
     def test_requires_auth(self, client):
-        assert client.get("/finance/budgets/remaining").status_code == 403
+        assert client.put("/finance/budgets/targets", json={"targets": []}).status_code == 403
 
 
-class TestCreateBudget:
-    def test_creates_and_returns_201(self, client):
-        payload = {"name": "Transport", "amount": "150.00", "period": "monthly"}
-        response = client.post("/finance/budgets/", json=payload, headers=AUTH)
-        assert response.status_code == 201
-
-    def test_missing_required_fields_returns_422(self, client):
-        assert client.post("/finance/budgets/", json={}, headers=AUTH).status_code == 422
-
-    def test_requires_auth(self, client):
-        assert client.post("/finance/budgets/", json={}).status_code == 403
-
-
-class TestUpdateBudget:
-    def test_updates_and_returns_200(self, client):
-        response = client.patch("/finance/budgets/1", json={"amount": "350.00"}, headers=AUTH)
+class TestSetBudgetTarget:
+    def test_sets_and_returns_200(self, client):
+        response = client.put("/finance/budgets/targets/1", json={"amount": "350.00"}, headers=AUTH)
         assert response.status_code == 200
         assert response.json()["amount"] == "350.00"
 
-    def test_not_found_returns_404(self, client, mock_service):
-        mock_service.update.return_value = None
-        assert client.patch("/finance/budgets/999", json={"name": "X"}, headers=AUTH).status_code == 404
+    def test_clear_returns_null(self, client, mock_service):
+        mock_service.set_target.return_value = None
+        response = client.put("/finance/budgets/targets/1", json={"amount": None}, headers=AUTH)
+        assert response.status_code == 200
+        assert response.json() is None
 
     def test_requires_auth(self, client):
-        assert client.patch("/finance/budgets/1", json={}).status_code == 403
+        assert client.put("/finance/budgets/targets/1", json={}).status_code == 403
 
 
-class TestDeleteBudget:
-    def test_deletes_returns_204(self, client):
-        assert client.delete("/finance/budgets/1", headers=AUTH).status_code == 204
+class TestBudgetStatus:
+    def test_returns_list(self, client):
+        response = client.get("/finance/budgets/status", headers=AUTH)
+        assert response.status_code == 200
+        data = response.json()
+        assert data[0]["category_name"] == "Groceries"
+        assert data[0]["spent"] == "120.00"
 
-    def test_not_found_returns_404(self, client, mock_service):
-        mock_service.delete.return_value = False
-        assert client.delete("/finance/budgets/999", headers=AUTH).status_code == 404
+    def test_year_month_passed_to_service(self, client, mock_service):
+        client.get("/finance/budgets/status?year_month=2026-06", headers=AUTH)
+        called_with = mock_service.get_status.call_args[0][0]
+        assert called_with == date(2026, 6, 1)
+
+    def test_invalid_year_month_returns_422(self, client):
+        assert client.get("/finance/budgets/status?year_month=not-a-date", headers=AUTH).status_code == 422
 
     def test_requires_auth(self, client):
-        assert client.delete("/finance/budgets/1").status_code == 403
-
-    def test_service_called_with_correct_id(self, client, mock_service):
-        client.delete("/finance/budgets/7", headers=AUTH)
-        mock_service.delete.assert_called_once_with(7)
+        assert client.get("/finance/budgets/status").status_code == 403

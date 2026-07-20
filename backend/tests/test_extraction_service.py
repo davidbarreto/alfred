@@ -27,7 +27,7 @@ def _make_provider(response_text: str) -> MagicMock:
 class TestExtractArgs:
     async def test_unknown_intent_returns_empty_dict(self):
         provider = _make_provider("{}")
-        result = await extract_args("finance.budget_add", "some text", llm_provider=provider)
+        result = await extract_args("finance.budget_set", "some text", llm_provider=provider)
         assert result == {}
         provider.complete.assert_not_called()
 

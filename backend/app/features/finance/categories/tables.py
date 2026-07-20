@@ -6,7 +6,7 @@ from app.db.base import Base
 
 if TYPE_CHECKING:
     from app.features.finance.transactions.tables import Transaction
-    from app.features.finance.budgets.tables import Budget
+    from app.features.finance.budgets.tables import BudgetTarget
 
 
 class Category(Base):
@@ -26,4 +26,4 @@ class Category(Base):
     transactions: Mapped[List["Transaction"]] = relationship(
         "Transaction", back_populates="category"
     )
-    budgets: Mapped[List["Budget"]] = relationship("Budget", back_populates="category")
+    budget_targets: Mapped[List["BudgetTarget"]] = relationship("BudgetTarget", back_populates="category")

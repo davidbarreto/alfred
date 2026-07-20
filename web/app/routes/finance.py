@@ -1,6 +1,7 @@
 import html
 import json
 from collections import defaultdict
+from datetime import date
 from typing import Annotated, Optional
 from urllib.parse import urlencode
 
@@ -148,7 +149,7 @@ async def finance_page(request: Request):
     currency = _resolve_currency(request)
 
     spending, income, by_category, transactions, budgets, all_txns = None, None, None, [], [], []
-    accounts, categories, currencies, recurring, all_budgets, errors = [], [], [], [], [], []
+    accounts, categories, currencies, recurring, errors = [], [], [], [], []
 
     try:
         accounts = await api.get("/finance/accounts", params={"is_active": "true"})
@@ -190,7 +191,7 @@ async def finance_page(request: Request):
 
     if currency == "EUR":  # budgets are EUR-scoped
         try:
-            budgets = await api.get("/finance/budgets/remaining", params={"period": "monthly"})
+            budgets = await api.get("/finance/budgets/status")
         except httpx.HTTPError:
             errors.append("budgets")
 
@@ -207,18 +208,14 @@ async def finance_page(request: Request):
     except httpx.HTTPError:
         pass
 
-    try:
-        all_budgets = await api.get("/finance/budgets")
-    except httpx.HTTPError:
-        pass
-
     category_items = (by_category or {}).get("items", [])
     max_total = max((float(i["total"]) for i in category_items), default=1) or 1
     top_category = category_items[0] if category_items else None
 
     # Budget totals for the "remaining" summary card
-    total_budget = sum(float(b["budget_amount"]) for b in budgets) if budgets else None
-    total_spent_budget = sum(float(b["spent"]) for b in budgets) if budgets else None
+    tracked_budgets = [b for b in (budgets or []) if b.get("limit_amount") is not None]
+    total_budget = sum(float(b["limit_amount"]) for b in tracked_budgets) if tracked_budgets else None
+    total_spent_budget = sum(float(b["spent"]) for b in tracked_budgets) if tracked_budgets else None
     total_remaining = (total_budget - total_spent_budget) if total_budget is not None else None
 
     # Spending over time: group by day for short ranges, by month for long ones
@@ -247,9 +244,9 @@ async def finance_page(request: Request):
     budget_chart = {
         b["category_name"]: {
             "spent": float(b["spent"]),
-            "budget": float(b["budget_amount"]),
+            "budget": float(b["limit_amount"]),
         }
-        for b in (budgets or [])
+        for b in tracked_budgets
         if b.get("category_name")
     }
 
@@ -278,7 +275,6 @@ async def finance_page(request: Request):
         "categories": categories,
         "currencies": currencies,
         "recurring": recurring,
-        "all_budgets": budgets,
         "currency": currency,
         "currency_symbol": currency_symbols.get(currency, currency + " "),
         "currency_symbols": currency_symbols,
@@ -551,51 +547,67 @@ async def delete_currency(code: str, request: Request):
 
 # --- Budgets ---
 
-@router.post("/budgets", response_class=HTMLResponse)
-async def create_budget(
-    request: Request,
-    name: Annotated[str, Form()],
-    amount: Annotated[str, Form()],
-    period: Annotated[str, Form()],
-    category_id: Annotated[Optional[str], Form()] = None,
-):
-    payload: dict = {"name": name, "amount": amount, "period": period}
-    if category_id:
-        payload["category_id"] = int(category_id)
-    try:
-        await api.post("/finance/budgets", json=payload)
-    except httpx.HTTPError:
-        return HTMLResponse('<p class="text-[#E24B4A] text-sm">Failed to create budget.</p>', status_code=422)
-
-    budgets, categories = [], []
-    try:
-        budgets = await api.get("/finance/budgets")
-    except httpx.HTTPError:
-        pass
+async def _budget_targets_context() -> dict:
+    categories, targets, currencies = [], [], []
     try:
         categories = await api.get("/finance/categories")
     except httpx.HTTPError:
         pass
-    return templates.TemplateResponse(request, "_finance_budgets.html", {"budgets": budgets, "categories": categories})
-
-
-@router.delete("/budgets/{budget_id}", response_class=HTMLResponse)
-async def delete_budget(budget_id: int, request: Request):
     try:
-        await api.delete(f"/finance/budgets/{budget_id}")
-    except httpx.HTTPError:
-        return HTMLResponse('<p class="text-[#E24B4A] text-sm">Failed to delete budget.</p>', status_code=422)
-
-    budgets, categories = [], []
-    try:
-        budgets = await api.get("/finance/budgets")
+        targets = await api.get("/finance/budgets/targets")
     except httpx.HTTPError:
         pass
     try:
-        categories = await api.get("/finance/categories")
+        currencies = await api.get("/finance/currencies")
     except httpx.HTTPError:
         pass
-    return templates.TemplateResponse(request, "_finance_budgets.html", {"budgets": budgets, "categories": categories})
+    targets_by_category = {t["category_id"]: t["amount"] for t in targets}
+    currency_symbols = {c["code"]: c["symbol"] for c in currencies if c.get("symbol")}
+    return {
+        "categories": categories,
+        "targets_by_category": targets_by_category,
+        "currency_symbol": currency_symbols.get("EUR", "€"),
+    }
+
+
+@router.get("/budgets", response_class=HTMLResponse)
+async def budgets_page(request: Request):
+    context = await _budget_targets_context()
+    year_month = date.today().strftime("%Y-%m")
+    budget_status = []
+    try:
+        budget_status = await api.get("/finance/budgets/status", params={"year_month": year_month})
+    except httpx.HTTPError:
+        pass
+    context.update({"budget_status": budget_status, "year_month": year_month})
+    return templates.TemplateResponse(request, "finance_budgets.html", context)
+
+
+@router.put("/budgets/targets", response_class=HTMLResponse)
+async def set_budget_targets(request: Request):
+    try:
+        body = await request.json()
+        items = body["targets"]
+    except (ValueError, KeyError, TypeError):
+        return HTMLResponse('<p class="text-[#E24B4A] text-sm">Invalid payload.</p>', status_code=422)
+
+    try:
+        await api.put("/finance/budgets/targets", json={"targets": items})
+    except httpx.HTTPError:
+        return HTMLResponse('<p class="text-[#E24B4A] text-sm">Failed to save budgets.</p>', status_code=422)
+
+    context = await _budget_targets_context()
+    return templates.TemplateResponse(request, "_finance_budgets_targets.html", context)
+
+
+@router.get("/budgets/status.json")
+async def budget_status_json(year_month: Optional[str] = None):
+    params = {"year_month": year_month} if year_month else {}
+    try:
+        status = await api.get("/finance/budgets/status", params=params)
+    except httpx.HTTPError:
+        status = []
+    return status
 
 
 # --- Recurring transactions ---

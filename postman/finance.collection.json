@@ -2,7 +2,7 @@
   "info": {
     "name": "Alfred - Finance API",
     "_postman_id": "alfred-finance-v1",
-    "description": "Run folders in order: Accounts → Categories → Transactions → Budgets → Recurring Transactions → Imports. Within each folder run items in order (Create → List → Get → Update → Delete). Transactions depend on account_id and category_id, so create those first.",
+    "description": "Run folders in order: Accounts \u2192 Categories \u2192 Transactions \u2192 Budgets \u2192 Recurring Transactions \u2192 Imports. Within each folder run items in order (Create \u2192 List \u2192 Get \u2192 Update \u2192 Delete). Transactions depend on account_id and category_id, so create those first.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -439,7 +439,7 @@
                   "pm.test('Response has code and saves it', () => {",
                   "    const json = pm.response.json();",
                   "    pm.expect(json.code).to.eql('PLN');",
-                  "    pm.expect(json.symbol).to.eql('zł');",
+                  "    pm.expect(json.symbol).to.eql('z\u0142');",
                   "    pm.environment.set('finance_currency_code', json.code);",
                   "});"
                 ],
@@ -457,7 +457,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"code\": \"PLN\",\n  \"symbol\": \"zł\",\n  \"name\": \"Polish Zloty\"\n}",
+              "raw": "{\n  \"code\": \"PLN\",\n  \"symbol\": \"z\u0142\",\n  \"name\": \"Polish Zloty\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -554,7 +554,7 @@
                 "exec": [
                   "pm.test('Status is 200', () => pm.response.to.have.status(200));",
                   "pm.test('Name was updated', () => {",
-                  "    pm.expect(pm.response.json().name).to.eql('Polish Złoty');",
+                  "    pm.expect(pm.response.json().name).to.eql('Polish Z\u0142oty');",
                   "});"
                 ],
                 "type": "text/javascript"
@@ -571,7 +571,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Polish Złoty\"\n}",
+              "raw": "{\n  \"name\": \"Polish Z\u0142oty\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -1108,20 +1108,15 @@
       "name": "Budgets",
       "item": [
         {
-          "name": "01 - Create Budget",
+          "name": "01 - List Budget Targets",
           "event": [
             {
               "listen": "test",
               "script": {
                 "exec": [
-                  "pm.test('Status is 201', () => pm.response.to.have.status(201));",
-                  "pm.test('Response has id and saves it', () => {",
-                  "    const json = pm.response.json();",
-                  "    pm.expect(json).to.have.property('id');",
-                  "    pm.expect(json.name).to.eql('Monthly Groceries');",
-                  "    pm.expect(json.period).to.eql('monthly');",
-                  "    pm.expect(json.amount).to.eql('300.00');",
-                  "    pm.environment.set('finance_budget_id', json.id);",
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Response is an array', () => {",
+                  "    pm.expect(pm.response.json()).to.be.an('array');",
                   "});"
                 ],
                 "type": "text/javascript"
@@ -1129,7 +1124,41 @@
             }
           ],
           "request": {
-            "method": "POST",
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/finance/budgets/targets",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "finance",
+                "budgets",
+                "targets"
+              ]
+            }
+          }
+        },
+        {
+          "name": "02 - Set Budget Target",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Target set for category', () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(String(json.category_id)).to.eql(String(pm.environment.get('finance_category_id')));",
+                  "    pm.expect(json.amount).to.eql('300.00');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
             "header": [
               {
                 "key": "Content-Type",
@@ -1138,7 +1167,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Monthly Groceries\",\n  \"category_id\": {{finance_category_id}},\n  \"amount\": \"300.00\",\n  \"period\": \"monthly\"\n}",
+              "raw": "{\n  \"amount\": \"300.00\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -1146,108 +1175,34 @@
               }
             },
             "url": {
-              "raw": "{{base_url}}/finance/budgets/",
+              "raw": "{{base_url}}/finance/budgets/targets/{{finance_category_id}}",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
                 "finance",
                 "budgets",
-                ""
+                "targets",
+                "{{finance_category_id}}"
               ]
             }
           }
         },
         {
-          "name": "02 - List Budgets",
+          "name": "03 - Budget Status",
           "event": [
             {
               "listen": "test",
               "script": {
                 "exec": [
                   "pm.test('Status is 200', () => pm.response.to.have.status(200));",
-                  "pm.test('Response is an array with at least one budget', () => {",
-                  "    const json = pm.response.json();",
-                  "    pm.expect(json).to.be.an('array');",
-                  "    pm.expect(json.length).to.be.at.least(1);",
-                  "});"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{base_url}}/finance/budgets/?period=monthly",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "finance",
-                "budgets",
-                ""
-              ],
-              "query": [
-                {
-                  "key": "period",
-                  "value": "monthly"
-                }
-              ]
-            }
-          }
-        },
-        {
-          "name": "03 - Get Budget",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
-                  "pm.test('Response matches created budget', () => {",
-                  "    const json = pm.response.json();",
-                  "    pm.expect(String(json.id)).to.eql(String(pm.environment.get('finance_budget_id')));",
-                  "    pm.expect(json.name).to.eql('Monthly Groceries');",
-                  "    pm.expect(json.period).to.eql('monthly');",
-                  "});"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{base_url}}/finance/budgets/{{finance_budget_id}}",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "finance",
-                "budgets",
-                "{{finance_budget_id}}"
-              ]
-            }
-          }
-        },
-        {
-          "name": "04 - Budget Remaining",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
-                  "pm.test('Response is an array of remaining budgets', () => {",
+                  "pm.test('Response is an array of category budget status', () => {",
                   "    const json = pm.response.json();",
                   "    pm.expect(json).to.be.an('array');",
                   "    if (json.length > 0) {",
-                  "        pm.expect(json[0]).to.have.property('budget_id');",
+                  "        pm.expect(json[0]).to.have.property('category_id');",
+                  "        pm.expect(json[0]).to.have.property('limit_amount');",
                   "        pm.expect(json[0]).to.have.property('spent');",
-                  "        pm.expect(json[0]).to.have.property('remaining');",
                   "    }",
                   "});"
                 ],
@@ -1259,34 +1214,30 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{base_url}}/finance/budgets/remaining?period=this month",
+              "raw": "{{base_url}}/finance/budgets/status",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
                 "finance",
                 "budgets",
-                "remaining"
-              ],
-              "query": [
-                {
-                  "key": "period",
-                  "value": "this month"
-                }
+                "status"
               ]
             }
           }
         },
         {
-          "name": "05 - Update Budget",
+          "name": "04 - Set Budget Targets Bulk",
           "event": [
             {
               "listen": "test",
               "script": {
                 "exec": [
                   "pm.test('Status is 200', () => pm.response.to.have.status(200));",
-                  "pm.test('Amount was updated', () => {",
-                  "    pm.expect(pm.response.json().amount).to.eql('350.00');",
+                  "pm.test('Amount was updated in bulk', () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.be.an('array');",
+                  "    pm.expect(json[0].amount).to.eql('350.00');",
                   "});"
                 ],
                 "type": "text/javascript"
@@ -1294,7 +1245,7 @@
             }
           ],
           "request": {
-            "method": "PATCH",
+            "method": "PUT",
             "header": [
               {
                 "key": "Content-Type",
@@ -1303,7 +1254,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"amount\": \"350.00\"\n}",
+              "raw": "{\n  \"targets\": [\n    { \"category_id\": {{finance_category_id}}, \"amount\": \"350.00\" }\n  ]\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -1311,44 +1262,61 @@
               }
             },
             "url": {
-              "raw": "{{base_url}}/finance/budgets/{{finance_budget_id}}",
+              "raw": "{{base_url}}/finance/budgets/targets",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
                 "finance",
                 "budgets",
-                "{{finance_budget_id}}"
+                "targets"
               ]
             }
           }
         },
         {
-          "name": "06 - Delete Budget",
+          "name": "05 - Clear Budget Target",
           "event": [
             {
               "listen": "test",
               "script": {
                 "exec": [
-                  "pm.test('Status is 204', () => pm.response.to.have.status(204));",
-                  "pm.environment.unset('finance_budget_id');"
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Target cleared', () => {",
+                  "    pm.expect(pm.response.json()).to.be.null;",
+                  "});"
                 ],
                 "type": "text/javascript"
               }
             }
           ],
           "request": {
-            "method": "DELETE",
-            "header": [],
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": null\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
             "url": {
-              "raw": "{{base_url}}/finance/budgets/{{finance_budget_id}}",
+              "raw": "{{base_url}}/finance/budgets/targets/{{finance_category_id}}",
               "host": [
                 "{{base_url}}"
               ],
               "path": [
                 "finance",
                 "budgets",
-                "{{finance_budget_id}}"
+                "targets",
+                "{{finance_category_id}}"
               ]
             }
           }

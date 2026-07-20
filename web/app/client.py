@@ -58,6 +58,13 @@ async def patch(path: str, json: Any = None) -> Any:
         return resp.json()
 
 
+async def put(path: str, json: Any = None) -> Any:
+    async with httpx.AsyncClient(follow_redirects=True) as client:
+        resp = await client.put(_url(path), headers=_headers(), json=json, timeout=10.0)
+        resp.raise_for_status()
+        return resp.json()
+
+
 async def delete(path: str) -> None:
     async with httpx.AsyncClient(follow_redirects=True) as client:
         resp = await client.delete(_url(path), headers=_headers(), timeout=10.0)

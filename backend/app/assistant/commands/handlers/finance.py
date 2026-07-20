@@ -10,8 +10,8 @@ from app.assistant.commands.handlers._utils import parse_dt
 logger = logging.getLogger(__name__)
 from app.features.finance.accounts.schemas import AccountFilters
 from app.features.finance.accounts.service import AccountService
-from app.features.finance.budgets.schemas import BudgetCreate, BudgetFilters, BudgetUpdate
-from app.features.finance.budgets.service import BudgetService
+from app.features.finance.budgets.service import BudgetTargetService
+from app.features.finance.categories.service import CategoryService
 from app.features.finance.recurring_transactions.schemas import RecurringTransactionFilters
 from app.features.finance.recurring_transactions.service import RecurringTransactionService
 from app.features.finance.transactions.schemas import (
@@ -49,13 +49,31 @@ async def _resolve_account_id(account_name: str | None, service: AccountService)
     return accounts[0].id
 
 
+async def _resolve_category_id(category_name: str | None, service: CategoryService) -> int:
+    if not category_name:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="A category is required")
+    categories = await service.list()
+    match = next((c for c in categories if category_name.lower() in c.name.lower()), None)
+    if match is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Category not found: {category_name}")
+    return match.id
+
+
+def _resolve_year_month(period: str | None) -> date:
+    if not period:
+        return date.today().replace(day=1)
+    dt = parse_dt(period)
+    return dt.date().replace(day=1) if dt else date.today().replace(day=1)
+
+
 async def handle_finance(
     command: str,
     arguments: dict[str, Any],
     transaction_service: TransactionService,
     account_service: AccountService,
-    budget_service: BudgetService,
+    budget_service: BudgetTargetService,
     recurring_service: RecurringTransactionService,
+    category_service: CategoryService,
 ) -> Any:
     logger.debug("handle_finance: command=%s args_keys=%s", command, list(arguments.keys()))
 
@@ -118,50 +136,20 @@ async def handle_finance(
 
     # --- Budgets ---
 
-    if command == "budget_add":
-        payload = BudgetCreate(
-            name=arguments.get("name", ""),
-            amount=_parse_decimal(arguments.get("amount")) or Decimal("0"),
-            period=arguments.get("period", "monthly"),
-            starts_at=parse_dt(arguments.get("start")),
-            ends_at=parse_dt(arguments.get("end")),
-        )
-        result = await budget_service.create(payload)
-        return result.model_dump(mode='json')
-
-    if command == "budget_list":
-        filters = BudgetFilters(period=arguments.get("period"))
-        results = await budget_service.list(filters)
-        return [r.model_dump(mode='json') for r in results]
-
-    if command == "budget_update":
-        budget_id = int(arguments["id"])
-        update_fields = {}
-        if "amount" in arguments:
-            update_fields["amount"] = _parse_decimal(arguments["amount"])
-        if "period" in arguments:
-            update_fields["period"] = arguments["period"]
-        if "start" in arguments:
-            update_fields["starts_at"] = parse_dt(arguments["start"])
-        if "end" in arguments:
-            update_fields["ends_at"] = parse_dt(arguments["end"])
-        result = await budget_service.update(budget_id, BudgetUpdate(**update_fields))
+    if command == "budget_set":
+        category_id = await _resolve_category_id(arguments.get("category"), category_service)
+        amount = _parse_decimal(arguments.get("amount"))
+        result = await budget_service.set_target(category_id, amount)
         if result is None:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Budget {budget_id} not found")
+            return {"category_id": category_id, "amount": None, "cleared": True}
         return result.model_dump(mode='json')
 
-    if command == "budget_delete":
-        budget_id = int(arguments["id"])
-        deleted = await budget_service.delete(budget_id)
-        if not deleted:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Budget {budget_id} not found")
-        return {"deleted": True, "id": budget_id}
-
-    if command == "budget_remaining":
-        results = await budget_service.remaining(
-            period=arguments.get("period"),
-            category_id=int(arguments["category"]) if arguments.get("category") else None,
-        )
+    if command == "budget_status":
+        year_month = _resolve_year_month(arguments.get("period"))
+        results = await budget_service.get_status(year_month)
+        if arguments.get("category"):
+            category_id = await _resolve_category_id(arguments["category"], category_service)
+            results = [r for r in results if r.category_id == category_id]
         return [r.model_dump(mode='json') for r in results]
 
     # --- Analytics ---

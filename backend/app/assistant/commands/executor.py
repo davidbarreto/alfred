@@ -17,7 +17,8 @@ from app.assistant.commands.handlers.weather import handle_weather
 from app.features.core.embeddings.service import EmbeddingService
 from app.features.core.working_memory.service import WorkingMemoryService
 from app.features.finance.accounts.service import AccountService
-from app.features.finance.budgets.service import BudgetService
+from app.features.finance.budgets.service import BudgetTargetService
+from app.features.finance.categories.service import CategoryService
 from app.features.finance.recurring_transactions.service import RecurringTransactionService
 from app.features.finance.transactions.service import TransactionService
 from app.features.language.chunks.service import ChunkService
@@ -40,8 +41,9 @@ async def execute(
     event_service: CalendarEventService,
     transaction_service: TransactionService,
     account_service: AccountService,
-    budget_service: BudgetService,
+    budget_service: BudgetTargetService,
     recurring_service: RecurringTransactionService,
+    category_service: CategoryService,
     shopping_service: ShoppingService | None = None,
     track_service: TrackService | None = None,
     chunk_service: ChunkService | None = None,
@@ -72,6 +74,7 @@ async def execute(
             account_service=account_service,
             budget_service=budget_service,
             recurring_service=recurring_service,
+            category_service=category_service,
         )
 
     if cmd_type in ("shopping", "wishlist"):

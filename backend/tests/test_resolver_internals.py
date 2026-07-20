@@ -502,26 +502,25 @@ class TestDetectCommandsFinance:
         assert cmd.command == "spending_top"
         assert cmd.args["period"] == "this week"
 
-    async def test_budget_add_with_flags(self):
-        commands = await detect_commands("/budget Monthly food -a 300 --period monthly")
+    async def test_budget_set_with_flags(self):
+        commands = await detect_commands("/budget Groceries -a 300")
         cmd = commands[0]
-        assert cmd.command == "budget_add"
-        assert cmd.args["name"] == "Monthly food"
+        assert cmd.command == "budget_set"
+        assert cmd.args["category"] == "Groceries"
         assert cmd.args["amount"] == "300"
-        assert cmd.args["period"] == "monthly"
 
-    async def test_budget_list(self):
+    async def test_budget_status(self):
         commands = await detect_commands("/budgets")
-        assert commands[0].command == "budget_list"
+        assert commands[0].command == "budget_status"
 
-    async def test_budget_list_short_alias(self):
+    async def test_budget_status_short_alias(self):
         commands = await detect_commands("/bl")
-        assert commands[0].command == "budget_list"
+        assert commands[0].command == "budget_status"
 
-    async def test_budget_remaining_with_period(self):
+    async def test_budget_status_with_period(self):
         commands = await detect_commands("/br this month")
         cmd = commands[0]
-        assert cmd.command == "budget_remaining"
+        assert cmd.command == "budget_status"
         assert cmd.args["period"] == "this month"
 
     async def test_balance_forecast(self):

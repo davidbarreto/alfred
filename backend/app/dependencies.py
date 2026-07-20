@@ -17,7 +17,7 @@ from app.features.finance.currencies.service import CurrencyService
 from app.features.finance.transactions.service import TransactionService
 from app.features.finance.imports.service import ImportService
 from app.features.finance.imports.registry import all_parsers
-from app.features.finance.budgets.service import BudgetService
+from app.features.finance.budgets.service import BudgetTargetService
 from app.features.finance.recurring_transactions.service import RecurringTransactionService
 from app.features.core.sessions.service import SessionService
 from app.features.core.messages.service import MessageService
@@ -119,8 +119,8 @@ def get_currency_service(session: AsyncSession = Depends(get_session)) -> Curren
 def get_transaction_service(session: AsyncSession = Depends(get_session)) -> TransactionService:
     return TransactionService(session)
 
-def get_budget_service(session: AsyncSession = Depends(get_session)) -> BudgetService:
-    return BudgetService(session)
+def get_budget_target_service(session: AsyncSession = Depends(get_session)) -> BudgetTargetService:
+    return BudgetTargetService(session)
 
 def get_recurring_transaction_service(session: AsyncSession = Depends(get_session)) -> RecurringTransactionService:
     return RecurringTransactionService(session)
@@ -327,7 +327,7 @@ CategoryServiceDep = Annotated[CategoryService, Depends(get_category_service)]
 CurrencyServiceDep = Annotated[CurrencyService, Depends(get_currency_service)]
 TransactionServiceDep = Annotated[TransactionService, Depends(get_transaction_service)]
 ImportServiceDep = Annotated[ImportService, Depends(get_import_service)]
-BudgetServiceDep = Annotated[BudgetService, Depends(get_budget_service)]
+BudgetTargetServiceDep = Annotated[BudgetTargetService, Depends(get_budget_target_service)]
 RecurringTransactionServiceDep = Annotated[RecurringTransactionService, Depends(get_recurring_transaction_service)]
 SessionServiceDep = Annotated[SessionService, Depends(get_session_service)]
 MessageServiceDep = Annotated[MessageService, Depends(get_message_service)]

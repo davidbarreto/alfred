@@ -1,56 +1,44 @@
-from fastapi import APIRouter, Depends, HTTPException, Response, status
+from datetime import date
+
+from fastapi import APIRouter, Depends, HTTPException, status
 
 from app.api.auth import require_auth
-from app.dependencies import BudgetServiceDep
+from app.dependencies import BudgetTargetServiceDep
 from app.features.finance.budgets.schemas import (
-    BudgetCreate,
-    BudgetFilters,
-    BudgetRead,
-    BudgetRemainingResponse,
-    BudgetUpdate,
+    BudgetTargetBulkSet,
+    BudgetTargetRead,
+    BudgetTargetSet,
+    CategoryBudgetStatus,
 )
 
 router = APIRouter(prefix="/finance/budgets", tags=["finance"], dependencies=[Depends(require_auth)])
 
 
-@router.post("", response_model=BudgetRead, status_code=status.HTTP_201_CREATED)
-async def create_budget(request: BudgetCreate, service: BudgetServiceDep):
-    return await service.create(request)
+def _parse_year_month(year_month: str | None) -> date:
+    if year_month is None:
+        return date.today().replace(day=1)
+    try:
+        year, month = (int(part) for part in year_month.split("-", 1))
+        return date(year, month, 1)
+    except (ValueError, TypeError):
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="year_month must be in YYYY-MM format")
 
 
-@router.get("", response_model=list[BudgetRead])
-async def list_budgets(service: BudgetServiceDep, filters: BudgetFilters = Depends()):
-    return await service.list(filters)
+@router.get("/targets", response_model=list[BudgetTargetRead])
+async def list_budget_targets(service: BudgetTargetServiceDep):
+    return await service.list_current_targets()
 
 
-@router.get("/remaining", response_model=list[BudgetRemainingResponse])
-async def budget_remaining(
-    service: BudgetServiceDep,
-    period: str | None = None,
-    category_id: int | None = None,
-):
-    return await service.remaining(period=period, category_id=category_id)
+@router.put("/targets", response_model=list[BudgetTargetRead])
+async def set_budget_targets_bulk(request: BudgetTargetBulkSet, service: BudgetTargetServiceDep):
+    return await service.set_targets_bulk(request.targets)
 
 
-@router.get("/{budget_id}", response_model=BudgetRead)
-async def get_budget(budget_id: int, service: BudgetServiceDep):
-    budget = await service.get(budget_id)
-    if budget is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Budget not found")
-    return budget
+@router.put("/targets/{category_id}", response_model=BudgetTargetRead | None)
+async def set_budget_target(category_id: int, request: BudgetTargetSet, service: BudgetTargetServiceDep):
+    return await service.set_target(category_id, request.amount)
 
 
-@router.patch("/{budget_id}", response_model=BudgetRead)
-async def update_budget(budget_id: int, request: BudgetUpdate, service: BudgetServiceDep):
-    budget = await service.update(budget_id, request)
-    if budget is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Budget not found")
-    return budget
-
-
-@router.delete("/{budget_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_budget(budget_id: int, service: BudgetServiceDep):
-    deleted = await service.delete(budget_id)
-    if not deleted:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Budget not found")
-    return Response(status_code=status.HTTP_204_NO_CONTENT)
+@router.get("/status", response_model=list[CategoryBudgetStatus])
+async def budget_status(service: BudgetTargetServiceDep, year_month: str | None = None):
+    return await service.get_status(_parse_year_month(year_month))

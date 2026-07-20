@@ -49,14 +49,12 @@ TXN_ADD_FLAGS = {**FLAG_AMOUNT, **FLAG_CATEGORY, **FLAG_MERCHANT, **FLAG_TXN_TYP
 TXN_LIST_FLAGS = {**FLAG_CATEGORY, **FLAG_MERCHANT, **FLAG_TXN_TYPE, **FLAG_ACCOUNT, **FLAG_FROM_DATE, **FLAG_TO_DATE, **FLAG_PERIOD, **FLAG_LIMIT}
 TXN_UPDATE_FLAGS = {**FLAG_AMOUNT, **FLAG_CATEGORY, **FLAG_MERCHANT, **FLAG_TXN_TYPE, **FLAG_DATE, **FLAG_ACCOUNT, **FLAG_CURRENCY, **FLAG_NOTES}
 
-BUDGET_ADD_FLAGS = {**FLAG_AMOUNT, **FLAG_CATEGORY, **FLAG_PERIOD, **FLAG_START, **FLAG_END, **FLAG_CURRENCY}
-BUDGET_LIST_FLAGS = {**FLAG_CATEGORY, **FLAG_PERIOD}
-BUDGET_UPDATE_FLAGS = {**FLAG_AMOUNT, **FLAG_CATEGORY, **FLAG_PERIOD, **FLAG_START, **FLAG_END}
+BUDGET_SET_FLAGS = {**FLAG_CATEGORY, **FLAG_AMOUNT}
+BUDGET_STATUS_FLAGS = {**FLAG_CATEGORY, **FLAG_PERIOD}
 
 SPENDING_REPORT_FLAGS = {**FLAG_CATEGORY, **FLAG_MERCHANT, **FLAG_ACCOUNT, **FLAG_PERIOD, **FLAG_FROM_DATE, **FLAG_TO_DATE}
 SPENDING_AVERAGE_FLAGS = {**FLAG_CATEGORY, **FLAG_PERIOD, **FLAG_FROM_DATE, **FLAG_TO_DATE}
 SPENDING_TOP_FLAGS = {**FLAG_CATEGORY, **FLAG_PERIOD, **FLAG_FROM_DATE, **FLAG_TO_DATE, **FLAG_TOP_N}
-BUDGET_REMAINING_FLAGS = {**FLAG_CATEGORY, **FLAG_PERIOD}
 BALANCE_FORECAST_FLAGS = {**FLAG_PERIOD, **FLAG_FROM_DATE, **FLAG_TO_DATE, **FLAG_ACCOUNT}
 
 # --- Shopping Flag Constants ---
@@ -379,31 +377,12 @@ COMMAND_DEFINITIONS = {
             "arg_keys": ["id"]
         },
         # --- Budgets ---
-        "budget_add": {
-            "description": "Create a budget for a category with an amount and period",
-            "aliases": ["/budgetadd", "/ba", "/budget"],
-            "flags": BUDGET_ADD_FLAGS,
+        "budget_set": {
+            "description": "Set or clear the monthly spending target for a category (omit amount to clear)",
+            "aliases": ["/budgetset", "/bs", "/budget"],
+            "flags": BUDGET_SET_FLAGS,
             "requires_args": True,
-            "arg_keys": ["name"]
-        },
-        "budget_list": {
-            "description": "List budgets with optional filters by category or period",
-            "aliases": ["/budgetlist", "/bl", "/budgets"],
-            "flags": BUDGET_LIST_FLAGS
-        },
-        "budget_update": {
-            "description": "Update a budget by ID",
-            "aliases": ["/budgetupdate", "/bu", "/budgetupd"],
-            "flags": BUDGET_UPDATE_FLAGS,
-            "requires_args": True,
-            "arg_keys": ["id"]
-        },
-        "budget_delete": {
-            "description": "Delete a budget by ID",
-            "aliases": ["/budgetdelete", "/bd", "/budgetrm"],
-            "flags": {},
-            "requires_args": True,
-            "arg_keys": ["id"]
+            "arg_keys": ["category", "amount"]
         },
         # --- Spending analytics ---
         # First positional arg is the period ("this month", "last week", "this year", etc.)
@@ -427,10 +406,10 @@ COMMAND_DEFINITIONS = {
             "arg_keys": ["period"]
         },
         # --- Balance ---
-        "budget_remaining": {
-            "description": "Check remaining budget for a category or period",
-            "aliases": ["/budgetremaining", "/br", "/remaining", "/left"],
-            "flags": BUDGET_REMAINING_FLAGS,
+        "budget_status": {
+            "description": "Check spending vs. target per category for a month",
+            "aliases": ["/budgetstatus", "/bst", "/budgetlist", "/bl", "/budgets", "/budgetremaining", "/br", "/remaining", "/left"],
+            "flags": BUDGET_STATUS_FLAGS,
             "arg_keys": ["period"]
         },
         "balance_forecast": {

@@ -206,27 +206,25 @@ INTENT_EXAMPLES: list[IntentExample] = [
     IntentExample(id=118, text="What are the top 5 things I spend on?", intent="finance.spending_top"),
     IntentExample(id=119, text="Which merchants do I spend the most at?", intent="finance.spending_top"),
 
-    # --- finance.budget_add ---
-    IntentExample(id=120, text="Set a budget of 500 euros for groceries", intent="finance.budget_add"),
-    IntentExample(id=121, text="Create a monthly food budget of 300", intent="finance.budget_add"),
-    IntentExample(id=122, text="Add a 200 euro transport budget for this month", intent="finance.budget_add"),
-    IntentExample(id=123, text="Set up an entertainment budget of 100 per month", intent="finance.budget_add"),
-    IntentExample(id=124, text="I want to limit my restaurant spending to 150 a month", intent="finance.budget_add"),
+    # --- finance.budget_set ---
+    IntentExample(id=120, text="Set a budget of 500 euros for groceries", intent="finance.budget_set"),
+    IntentExample(id=121, text="Set my monthly food budget to 300", intent="finance.budget_set"),
+    IntentExample(id=122, text="Set a 200 euro transport budget for this month", intent="finance.budget_set"),
+    IntentExample(id=123, text="Set up an entertainment budget of 100 per month", intent="finance.budget_set"),
+    IntentExample(id=124, text="I want to limit my restaurant spending to 150 a month", intent="finance.budget_set"),
 
-    # --- finance.budget_list ---
-    IntentExample(id=125, text="Show my budgets", intent="finance.budget_list"),
-    IntentExample(id=126, text="What budgets have I set?", intent="finance.budget_list"),
-    IntentExample(id=127, text="List all my spending limits", intent="finance.budget_list"),
-    IntentExample(id=128, text="What are my active budgets?", intent="finance.budget_list"),
-    IntentExample(id=129, text="Show all budget categories", intent="finance.budget_list"),
-
-    # --- finance.budget_remaining ---
-    IntentExample(id=130, text="How much budget do I have left?", intent="finance.budget_remaining"),
-    IntentExample(id=131, text="What's remaining in my grocery budget?", intent="finance.budget_remaining"),
-    IntentExample(id=132, text="How much can I still spend this month?", intent="finance.budget_remaining"),
-    IntentExample(id=133, text="Am I over budget on food?", intent="finance.budget_remaining"),
-    IntentExample(id=134, text="How close am I to my entertainment limit?", intent="finance.budget_remaining"),
-    IntentExample(id=135, text="What's left in my transport budget?", intent="finance.budget_remaining"),
+    # --- finance.budget_status ---
+    IntentExample(id=125, text="Show my budgets", intent="finance.budget_status"),
+    IntentExample(id=126, text="What budgets have I set?", intent="finance.budget_status"),
+    IntentExample(id=127, text="List all my spending limits", intent="finance.budget_status"),
+    IntentExample(id=128, text="What are my active budgets?", intent="finance.budget_status"),
+    IntentExample(id=129, text="Show all budget categories", intent="finance.budget_status"),
+    IntentExample(id=130, text="How much budget do I have left?", intent="finance.budget_status"),
+    IntentExample(id=131, text="What's remaining in my grocery budget?", intent="finance.budget_status"),
+    IntentExample(id=132, text="How much can I still spend this month?", intent="finance.budget_status"),
+    IntentExample(id=133, text="Am I over budget on food?", intent="finance.budget_status"),
+    IntentExample(id=134, text="How close am I to my entertainment limit?", intent="finance.budget_status"),
+    IntentExample(id=135, text="What's left in my transport budget?", intent="finance.budget_status"),
 
     # --- finance.balance_forecast ---
     IntentExample(id=136, text="What will my balance be at the end of the month?", intent="finance.balance_forecast"),

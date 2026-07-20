@@ -23,7 +23,7 @@ RESPOND_SYSTEM_PROMPT = (
     "If the result contains location_inferred=True, start with: 'I didn't recognize the place you asked about. "
     "Here is the weather in <location>:' and then describe the conditions.\n"
     "- task.search / recall.search: List each matching item with its id, content and relevance.\n"
-    "- note.list / note.search / task.list / event.list / finance.transaction_list / finance.budget_list / "
+    "- note.list / note.search / task.list / event.list / finance.transaction_list / finance.budget_status / "
     "shopping.list / wishlist.list: State the total item count, then list only the items actually provided to you "
     "(id, title/name and one key detail each, not the full content). If the result says more items were not shown, "
     "mention how many more there are — do not invent or list items you were not given.\n"

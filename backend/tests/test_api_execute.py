@@ -40,7 +40,8 @@ def _note_read_mock(id=1, title="Some note", tags=None):
 def _override_services(app, task_svc=None, note_svc=None):
     from app.dependencies import (
         get_task_service, get_note_service, get_calendar_event_service,
-        get_transaction_service, get_account_service, get_budget_service,
+        get_transaction_service, get_account_service, get_budget_target_service,
+        get_category_service,
         get_recurring_transaction_service, get_command_execution_service,
         get_production_service,
     )
@@ -55,7 +56,8 @@ def _override_services(app, task_svc=None, note_svc=None):
         (get_calendar_event_service, None),
         (get_transaction_service, None),
         (get_account_service, None),
-        (get_budget_service, None),
+        (get_budget_target_service, None),
+        (get_category_service, None),
         (get_recurring_transaction_service, None),
         (get_production_service, None),
     ]:

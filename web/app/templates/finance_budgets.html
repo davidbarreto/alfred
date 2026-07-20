@@ -1,0 +1,142 @@
+{% extends "base.html" %}
+{% set active_page = "finance" %}
+{% block title %}Budgets{% endblock %}
+
+{% block content %}
+<div class="p-6 space-y-4">
+
+  <div class="flex items-center gap-2">
+    <a href="/finance" class="text-gray-400 hover:text-gray-600"><i class="ti ti-arrow-left text-sm"></i></a>
+    <h1 class="text-base font-semibold text-gray-900">Budgets</h1>
+  </div>
+
+  <!-- Monthly targets -->
+  <div class="bg-white border border-gray-200 rounded-lg p-4">
+    <div class="flex items-center justify-between mb-3">
+      <h2 class="text-sm font-medium text-gray-900">Monthly targets</h2>
+      <button id="budget-targets-save" onclick="saveBudgetTargets()" class="btn btn-sm btn-primary">Save</button>
+    </div>
+    <p id="budget-targets-error" class="text-xs text-[#E24B4A] hidden mb-2"></p>
+    <div id="budget-targets-list">
+      {% include "_finance_budgets_targets.html" %}
+    </div>
+  </div>
+
+  <!-- Spend vs. limit -->
+  <div class="bg-white border border-gray-200 rounded-lg p-4">
+    <div class="flex items-center justify-between mb-3">
+      <h2 class="text-sm font-medium text-gray-900">Spend vs. limit</h2>
+      <div class="flex items-center gap-2">
+        <button onclick="shiftBudgetMonth(-1)" class="text-gray-400 hover:text-gray-600"><i class="ti ti-chevron-left"></i></button>
+        <span id="budget-month-label" class="text-xs text-gray-500 w-16 text-center">{{ year_month }}</span>
+        <button onclick="shiftBudgetMonth(1)" class="text-gray-400 hover:text-gray-600"><i class="ti ti-chevron-right"></i></button>
+      </div>
+    </div>
+    <div id="budget-status-empty" class="text-sm text-gray-400 py-3 text-center {% if budget_status %}hidden{% endif %}">
+      No tracked categories for this month.
+    </div>
+    <div class="relative h-64 {% if not budget_status %}hidden{% endif %}" id="budget-status-chart-wrap">
+      <canvas id="chart-budget-status"></canvas>
+    </div>
+  </div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+<script>
+const CURRENCY_SYMBOL = {{ currency_symbol | tojson }};
+let _budgetMonth = {{ year_month | tojson }};
+let _budgetChart = null;
+
+function _shiftMonth(ym, delta) {
+  const [y, m] = ym.split("-").map(Number);
+  const d = new Date(Date.UTC(y, m - 1 + delta, 1));
+  return d.getUTCFullYear() + "-" + String(d.getUTCMonth() + 1).padStart(2, "0");
+}
+
+function _buildBudgetChart(data) {
+  const canvas = document.getElementById("chart-budget-status");
+  const labels = data.map(d => d.category_name);
+  const spent = data.map(d => parseFloat(d.spent));
+  const limit = data.map(d => parseFloat(d.limit_amount));
+  if (_budgetChart) _budgetChart.destroy();
+  _budgetChart = new Chart(canvas, {
+    type: "bar",
+    data: {
+      labels,
+      datasets: [
+        { label: "Spent", data: spent, backgroundColor: "#E24B4A", borderRadius: 3, borderSkipped: false },
+        { label: "Limit", data: limit, backgroundColor: "#E5E7EB", borderRadius: 3, borderSkipped: false }
+      ]
+    },
+    options: {
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { position: "bottom", labels: { boxWidth: 10, font: { size: 11 } } },
+        tooltip: { callbacks: { label: ctx => ` ${ctx.dataset.label}: ${CURRENCY_SYMBOL}${ctx.parsed.y.toFixed(2)}` } }
+      },
+      scales: {
+        x: { grid: { display: false }, ticks: { font: { size: 10 } } },
+        y: { grid: { color: "#F3F4F6" }, ticks: { font: { size: 10 }, callback: v => CURRENCY_SYMBOL + v } }
+      }
+    }
+  });
+}
+
+async function loadBudgetStatus(yearMonth) {
+  document.getElementById("budget-month-label").textContent = yearMonth;
+  try {
+    const res = await fetch(`/finance/budgets/status.json?year_month=${yearMonth}`);
+    const data = await res.json();
+    const wrap = document.getElementById("budget-status-chart-wrap");
+    const empty = document.getElementById("budget-status-empty");
+    if (!data.length) {
+      wrap.classList.add("hidden");
+      empty.classList.remove("hidden");
+      if (_budgetChart) { _budgetChart.destroy(); _budgetChart = null; }
+      return;
+    }
+    wrap.classList.remove("hidden");
+    empty.classList.add("hidden");
+    _buildBudgetChart(data);
+  } catch (err) {
+    // leave the previously rendered chart in place on failure
+  }
+}
+
+function shiftBudgetMonth(delta) {
+  _budgetMonth = _shiftMonth(_budgetMonth, delta);
+  loadBudgetStatus(_budgetMonth);
+}
+
+async function saveBudgetTargets() {
+  const btn = document.getElementById("budget-targets-save");
+  const errEl = document.getElementById("budget-targets-error");
+  errEl.classList.add("hidden");
+  btn.disabled = true;
+  const targets = Array.from(document.querySelectorAll(".budget-target-input")).map(input => ({
+    category_id: parseInt(input.dataset.categoryId, 10),
+    amount: input.value === "" ? null : parseFloat(input.value),
+  }));
+  try {
+    const res = await fetch("/finance/budgets/targets", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ targets }),
+    });
+    if (!res.ok) throw new Error(await res.text());
+    document.getElementById("budget-targets-list").innerHTML = await res.text();
+    loadBudgetStatus(_budgetMonth);
+  } catch (err) {
+    errEl.textContent = "Failed to save budgets.";
+    errEl.classList.remove("hidden");
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+{% if budget_status %}
+_buildBudgetChart({{ budget_status | tojson }});
+{% endif %}
+</script>
+{% endblock %}

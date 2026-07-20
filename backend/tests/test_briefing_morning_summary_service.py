@@ -266,6 +266,7 @@ class TestBuild:
 
         assert len(result.tasks) == 1
         assert result.tasks[0].id == 1
+        assert result.tasks[0].is_today is True
 
     @pytest.mark.asyncio
     async def test_excludes_recurring_task_already_completed_today(self, service):

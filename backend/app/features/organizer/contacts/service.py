@@ -113,6 +113,8 @@ class ContactService:
         window_end = today + timedelta(days=_BIRTHDAY_LOOKAHEAD_DAYS)
         result = []
         for contact in contacts:
+            if contact.is_self:
+                continue
             next_bd = _next_birthday(contact.birthday, today)  # type: ignore[arg-type]
             if today <= next_bd <= window_end:
                 result.append({

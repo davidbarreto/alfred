@@ -126,6 +126,30 @@ async def create_contact(
     })
 
 
+@router.patch("/{contact_id}/self", response_class=HTMLResponse)
+async def set_contact_self(contact_id: int, request: Request, value: bool = True):
+    offset = max(0, int(request.query_params.get("offset", "0")))
+    letter = request.query_params.get("letter", "").strip().upper()
+    has_birthday = request.query_params.get("has_birthday", "")
+
+    try:
+        await api.patch(f"/organizer/contacts/{contact_id}", json={"is_self": value})
+    except httpx.HTTPError:
+        pass
+
+    try:
+        raw = await api.get("/organizer/contacts", params=_build_params("", "", has_birthday, letter, offset))
+    except httpx.HTTPError:
+        raw = []
+
+    contacts, has_next, has_prev = _pagination(raw, offset)
+    return templates.TemplateResponse(request, "_contacts_table.html", {
+        "contacts": contacts,
+        "has_next": has_next,
+        "has_prev": has_prev,
+    })
+
+
 @router.delete("/{contact_id}", response_class=HTMLResponse)
 async def delete_contact(contact_id: int, request: Request):
     offset = max(0, int(request.query_params.get("offset", "0")))

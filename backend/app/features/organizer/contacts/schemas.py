@@ -18,6 +18,7 @@ class ContactUpdate(BaseModel):
     email: str | None = None
     phone: str | None = None
     birthday: date | None = None
+    is_self: bool | None = None
 
 
 class ContactRead(BaseModel):
@@ -27,6 +28,7 @@ class ContactRead(BaseModel):
     email: str | None
     phone: str | None
     birthday: date | None
+    is_self: bool
 
     model_config = {"from_attributes": True}
 

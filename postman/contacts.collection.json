@@ -2,7 +2,7 @@
   "info": {
     "name": "Alfred - Contacts API",
     "_postman_id": "alfred-contacts-v1",
-    "description": "CRUD for contacts with Google write-through cache. Run in order: List → Create → Get → Filter by name → Filter by email → Filter by birthday → Filter by letter → Paginate → Update → Delete. Requires Google Contacts re-authorized with full contacts scope (not readonly).",
+    "description": "CRUD for contacts with Google write-through cache. Run in order: List → Create → Get → Filter by name → Filter by email → Filter by birthday → Filter by letter → Paginate → Update → Mark as Self → Get Not Found → Delete. Requires Google Contacts re-authorized with full contacts scope (not readonly).",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -297,7 +297,41 @@
       }
     },
     {
-      "name": "10 - Get Contact Not Found",
+      "name": "10 - Mark Contact as Self",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('is_self was set', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json.is_self).to.eql(true);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "PATCH",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"is_self\": true\n}",
+          "options": { "raw": { "language": "json" } }
+        },
+        "url": {
+          "raw": "{{base_url}}/organizer/contacts/{{contact_id}}",
+          "host": ["{{base_url}}"],
+          "path": ["organizer", "contacts", "{{contact_id}}"]
+        }
+      }
+    },
+    {
+      "name": "11 - Get Contact Not Found",
       "event": [
         {
           "listen": "test",
@@ -323,7 +357,7 @@
       }
     },
     {
-      "name": "11 - Delete Contact",
+      "name": "12 - Delete Contact",
       "event": [
         {
           "listen": "test",

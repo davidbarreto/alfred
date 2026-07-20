@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import date
 
-from sqlalchemy import Date, Integer, String, UniqueConstraint
+from sqlalchemy import Boolean, Date, Integer, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 from typing import Optional
 
@@ -22,3 +22,4 @@ class Contact(Base):
     email: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     phone: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
     birthday: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
+    is_self: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")

@@ -14,7 +14,10 @@
     {% for c in contacts %}
     <tr class="hover:bg-gray-50 group" id="contact-row-{{ c.id }}">
       <td class="py-2.5 pr-4">
-        <p class="font-medium text-gray-900 truncate max-w-[160px] sm:max-w-none">{{ c.name }}</p>
+        <p class="font-medium text-gray-900 truncate max-w-[160px] sm:max-w-none">
+          {{ c.name }}
+          {% if c.is_self %}<span class="badge badge-ghost badge-sm ml-1">You</span>{% endif %}
+        </p>
         <p class="text-xs text-gray-400 truncate max-w-[160px] sm:hidden">{{ c.email or c.phone or "—" }}</p>
       </td>
       <td class="py-2.5 pr-4 text-gray-500 hidden sm:table-cell truncate max-w-[220px]">{{ c.email or "—" }}</td>
@@ -22,7 +25,16 @@
       <td class="py-2.5 pr-4 text-gray-500 hidden sm:table-cell">
         {% if c.birthday %}{{ c.birthday }}{% else %}—{% endif %}
       </td>
-      <td class="py-2.5 text-right">
+      <td class="py-2.5 text-right whitespace-nowrap">
+        <button
+          hx-patch="/contacts/{{ c.id }}/self?value={{ 'false' if c.is_self else 'true' }}"
+          hx-target="#contacts-table"
+          hx-swap="innerHTML"
+          class="opacity-0 group-hover:opacity-100 text-gray-300 hover:text-[#4A90E2] transition-opacity"
+          title="{{ 'Unmark as me' if c.is_self else 'Mark as me' }}"
+        >
+          <i class="ti {{ 'ti-user-off' if c.is_self else 'ti-user-star' }} text-sm"></i>
+        </button>
         <button
           hx-delete="/contacts/{{ c.id }}"
           hx-target="#contacts-table"

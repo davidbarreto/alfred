@@ -100,7 +100,11 @@ class MorningBriefingSummaryService:
                 if not is_due_today(task.recurrence_rule, today) or task.id in completed_today:
                     continue
             is_overdue = task.deadline is not None and task.deadline < today_start
-            is_today = task.deadline is not None and today_start <= task.deadline <= today_end
+            # Recurring tasks have no deadline, but reaching this point already means
+            # is_due_today matched -- so they belong in the "today" bucket, not "upcoming".
+            is_today = task.recurrence_rule is not None or (
+                task.deadline is not None and today_start <= task.deadline <= today_end
+            )
             items.append(
                 TaskBriefItem(
                     id=task.id,

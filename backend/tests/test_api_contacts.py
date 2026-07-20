@@ -10,7 +10,7 @@ AUTH = {"Authorization": "Bearer test-api-token"}
 
 
 def _contact_read(**kwargs):
-    defaults = dict(id=1, provider_id="people/c1", name="Alice", email="alice@example.com", phone=None, birthday=None)
+    defaults = dict(id=1, provider_id="people/c1", name="Alice", email="alice@example.com", phone=None, birthday=None, is_self=False)
     defaults.update(kwargs)
     return ContactRead(**defaults)
 
@@ -139,6 +139,12 @@ class TestUpdateContact:
         mock_service.update_contact.return_value = None
         response = client.patch("/organizer/contacts/999", json={"name": "X"}, headers=AUTH)
         assert response.status_code == 404
+
+    def test_marks_as_self(self, client, mock_service):
+        mock_service.update_contact.return_value = _contact_read(is_self=True)
+        response = client.patch("/organizer/contacts/1", json={"is_self": True}, headers=AUTH)
+        assert response.status_code == 200
+        assert response.json()["is_self"] is True
 
 
 class TestDeleteContact:

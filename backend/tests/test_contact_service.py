@@ -156,7 +156,7 @@ class TestNextBirthday:
         assert result == date(2027, 3, 1)
 
 
-def _make_contact_orm(id=1, provider_id="people/c1", name="Alice", email="alice@example.com", phone=None, birthday=None):
+def _make_contact_orm(id=1, provider_id="people/c1", name="Alice", email="alice@example.com", phone=None, birthday=None, is_self=False):
     c = MagicMock()
     c.id = id
     c.provider_id = provider_id
@@ -164,6 +164,7 @@ def _make_contact_orm(id=1, provider_id="people/c1", name="Alice", email="alice@
     c.email = email
     c.phone = phone
     c.birthday = birthday
+    c.is_self = is_self
     c.model_fields = {}
     return c
 
@@ -234,6 +235,7 @@ class TestContactService:
         contact = MagicMock()
         contact.name = "Alice"
         contact.birthday = date(1990, 6, 28)
+        contact.is_self = False
 
         with __import__("unittest.mock", fromlist=["patch"]).patch(
             "app.features.organizer.contacts.service.ContactRepository"
@@ -251,6 +253,23 @@ class TestContactService:
         contact = MagicMock()
         contact.name = "Bob"
         contact.birthday = date(1990, 7, 20)
+        contact.is_self = False
+
+        with __import__("unittest.mock", fromlist=["patch"]).patch(
+            "app.features.organizer.contacts.service.ContactRepository"
+        ) as MockRepo:
+            MockRepo.return_value.get_all_with_birthday = AsyncMock(return_value=[contact])
+            result = await service.get_upcoming_birthdays(today)
+
+        assert result == []
+
+    @pytest.mark.asyncio
+    async def test_get_upcoming_birthdays_excludes_self(self, service):
+        today = date(2026, 6, 23)
+        contact = MagicMock()
+        contact.name = "David Barreto"
+        contact.birthday = date(1990, 6, 28)
+        contact.is_self = True
 
         with __import__("unittest.mock", fromlist=["patch"]).patch(
             "app.features.organizer.contacts.service.ContactRepository"
@@ -266,9 +285,11 @@ class TestContactService:
         c1 = MagicMock()
         c1.name = "Alice"
         c1.birthday = date(1990, 7, 4)
+        c1.is_self = False
         c2 = MagicMock()
         c2.name = "Bob"
         c2.birthday = date(1990, 6, 25)
+        c2.is_self = False
 
         with __import__("unittest.mock", fromlist=["patch"]).patch(
             "app.features.organizer.contacts.service.ContactRepository"

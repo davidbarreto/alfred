@@ -6,8 +6,31 @@ def _task(id=1, title="Buy milk", status="TODO", priority="LOW", urgency="NORMAL
     return {
         "id": id, "title": title, "status": status, "priority": priority, "urgency": urgency,
         "deadline": deadline, "tags": tags or [], "recurrence_rule": recurrence_rule,
-        "is_done_today": False, "streak": None, "total_completions": None, "missed_count": None,
+        "is_done_today": False, "is_done_in_cycle": False,
+        "streak": None, "total_completions": None, "missed_count": None,
     }
+
+
+class TestTasksPageFilters:
+    def test_today_filter_requests_due_today(self, client, mock_api):
+        mock_api["get"].return_value = [_task(id=1)]
+
+        resp = client.get("/tasks/?filter=today")
+
+        assert resp.status_code == 200
+        params = mock_api["get"].call_args.kwargs["params"]
+        assert params["due_today"] == "true"
+        assert "deadline_from" not in params
+        assert "deadline_to" not in params
+
+    def test_all_filter_does_not_request_due_today(self, client, mock_api):
+        mock_api["get"].return_value = [_task(id=1)]
+
+        resp = client.get("/tasks/?filter=all")
+
+        assert resp.status_code == 200
+        params = mock_api["get"].call_args.kwargs["params"]
+        assert "due_today" not in params
 
 
 class TestUpdateTask:

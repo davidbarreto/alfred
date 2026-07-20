@@ -14,6 +14,7 @@ from app.features.organizer.calendar_events.repository import CalendarEventRepos
 from app.features.organizer.calendar_events.schemas import EventFilters
 from app.features.organizer.shopping.repository import ShoppingRepository
 from app.features.organizer.shopping.schemas import ShoppingItemFilters
+from app.features.organizer.tasks.recurrence import is_due_today
 from app.features.organizer.tasks.schemas import TaskFilters, TaskUpdate
 from app.features.organizer.tasks.service import TaskService
 from app.shared.timezone import local_now
@@ -134,7 +135,9 @@ class ReminderService:
         for task in tasks:
             if task.deadline is None:
                 continue
-            if task.recurrence_rule is not None and task.is_done_today:
+            if task.recurrence_rule is not None and (
+                not is_due_today(task.recurrence_rule, today) or task.is_done_today
+            ):
                 continue
             is_overdue = task.deadline < now
             if not is_overdue and task.deadline > now + _TASK_LOOKAHEAD:
@@ -165,7 +168,9 @@ class ReminderService:
         escalated = []
         quiet = []
         for task in undated:
-            if task.recurrence_rule is not None and task.is_done_today:
+            if task.recurrence_rule is not None and (
+                not is_due_today(task.recurrence_rule, today) or task.is_done_today
+            ):
                 continue
             if await self._is_escalation_snoozed(task.id):
                 quiet.append(task)

@@ -1,8 +1,14 @@
 import pytest
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock
 from app.features.organizer.tasks.service import TaskService, _compute_streak, _missed_count
-from app.features.organizer.tasks.recurrence import compute_streak, is_due_today, missed_count, parse_byday as _parse_byday
+from app.features.organizer.tasks.recurrence import (
+    compute_streak,
+    is_done_in_cycle,
+    is_due_today,
+    missed_count,
+    parse_byday as _parse_byday,
+)
 from app.features.organizer.tasks.schemas import TaskCompletionRead, TaskCreate, TaskUpdate, TaskFilters, TaskRead
 
 
@@ -84,6 +90,17 @@ class TestGetTask:
         result = await service.get_task(1)
         assert isinstance(result, TaskRead)
 
+    async def test_computes_is_done_in_cycle_for_recurring(self, service):
+        today = date.today()
+        task_orm = _make_task_orm(recurrence_rule="FREQ=MONTHLY")
+        service._repo.get_task.return_value = task_orm
+        service._repo.get_completed_task_ids_for_date.return_value = set()
+        service._repo.get_completions_by_task.return_value = {1: [today.replace(day=1)]}
+
+        result = await service.get_task(1)
+
+        assert result.is_done_in_cycle is True
+
 
 class TestGetTasks:
     async def test_returns_list_of_task_reads(self, service):
@@ -104,6 +121,55 @@ class TestGetTasks:
         filters = TaskFilters(status="TODO", priority="HIGH")
         await service.get_tasks(filters)
         service._repo.get_tasks.assert_called_once_with(filters)
+
+    async def test_computes_is_done_in_cycle_for_recurring(self, service):
+        today = date.today()
+        task_orm = _make_task_orm(id=1, recurrence_rule="FREQ=MONTHLY")
+        service._repo.get_tasks.return_value = [task_orm]
+        service._repo.get_completed_task_ids_for_date.return_value = set()
+        service._repo.get_completions_by_task.return_value = {1: [today.replace(day=1)]}
+
+        result = await service.get_tasks(TaskFilters())
+
+        assert result[0].is_done_in_cycle is True
+
+    async def test_due_today_excludes_dated_task_not_due_today(self, service):
+        tomorrow = datetime.combine(date.today() + timedelta(days=1), datetime.min.time())
+        service._repo.get_tasks.return_value = [_make_task_orm(id=1, deadline=tomorrow)]
+
+        result = await service.get_tasks(TaskFilters(due_today=True))
+
+        assert result == []
+
+    async def test_due_today_includes_undated_non_recurring_task(self, service):
+        service._repo.get_tasks.return_value = [_make_task_orm(id=1, deadline=None, recurrence_rule=None)]
+
+        result = await service.get_tasks(TaskFilters(due_today=True))
+
+        assert len(result) == 1
+
+    async def test_due_today_excludes_recurring_task_not_scheduled_today(self, service):
+        # Pick whatever weekday isn't today so the rule never matches.
+        other_day = "MO" if date.today().weekday() != 0 else "TU"
+        task_orm = _make_task_orm(id=1, recurrence_rule=f"FREQ=WEEKLY;BYDAY={other_day}")
+        service._repo.get_tasks.return_value = [task_orm]
+        service._repo.get_completed_task_ids_for_date.return_value = set()
+        service._repo.get_completions_by_task.return_value = {1: []}
+
+        result = await service.get_tasks(TaskFilters(due_today=True))
+
+        assert result == []
+
+    async def test_due_today_includes_recurring_task_scheduled_today(self, service):
+        today_code = ["MO", "TU", "WE", "TH", "FR", "SA", "SU"][date.today().weekday()]
+        task_orm = _make_task_orm(id=1, recurrence_rule=f"FREQ=WEEKLY;BYDAY={today_code}")
+        service._repo.get_tasks.return_value = [task_orm]
+        service._repo.get_completed_task_ids_for_date.return_value = set()
+        service._repo.get_completions_by_task.return_value = {1: []}
+
+        result = await service.get_tasks(TaskFilters(due_today=True))
+
+        assert len(result) == 1
 
 
 class TestCreateTask:
@@ -428,6 +494,51 @@ class TestIsDueToday:
 
     def test_monthly_always_due(self):
         assert is_due_today("FREQ=MONTHLY", date(2026, 6, 22)) is True
+
+
+class TestIsDoneInCycle:
+    def test_empty_dates_returns_false(self):
+        assert is_done_in_cycle("FREQ=DAILY", [], date(2026, 7, 20)) is False
+
+    def test_daily_done_only_if_completed_today(self):
+        today = date(2026, 7, 20)
+        assert is_done_in_cycle("FREQ=DAILY", [today], today) is True
+        assert is_done_in_cycle("FREQ=DAILY", [today - timedelta(days=1)], today) is False
+
+    def test_weekly_byday_stays_done_through_rest_of_cycle(self):
+        # Completed Sunday (its scheduled day); still "done" checking on Monday, since
+        # the next occurrence isn't due until the following Sunday.
+        sunday = date(2026, 7, 19)
+        monday = date(2026, 7, 20)
+        assert is_done_in_cycle("FREQ=WEEKLY;BYDAY=SU", [sunday], monday) is True
+
+    def test_weekly_byday_not_done_if_last_completion_previous_cycle(self):
+        last_sunday = date(2026, 7, 12)
+        monday = date(2026, 7, 20)
+        assert is_done_in_cycle("FREQ=WEEKLY;BYDAY=SU", [last_sunday], monday) is False
+
+    def test_weekly_no_byday_done_if_completed_earlier_same_iso_week(self):
+        monday = date(2026, 7, 20)
+        wednesday = date(2026, 7, 22)
+        assert is_done_in_cycle("FREQ=WEEKLY", [monday], wednesday) is True
+
+    def test_weekly_no_byday_not_done_if_completed_previous_iso_week(self):
+        previous_week = date(2026, 7, 13)
+        wednesday = date(2026, 7, 22)
+        assert is_done_in_cycle("FREQ=WEEKLY", [previous_week], wednesday) is False
+
+    def test_monthly_done_if_completed_earlier_same_month(self):
+        today = date(2026, 7, 20)
+        assert is_done_in_cycle("FREQ=MONTHLY", [date(2026, 7, 3)], today) is True
+
+    def test_monthly_not_done_if_completed_previous_month(self):
+        today = date(2026, 7, 20)
+        assert is_done_in_cycle("FREQ=MONTHLY", [date(2026, 6, 30)], today) is False
+
+    def test_unknown_rule_falls_back_to_exact_day(self):
+        today = date(2026, 7, 20)
+        assert is_done_in_cycle("FREQ=YEARLY", [today], today) is True
+        assert is_done_in_cycle("FREQ=YEARLY", [today - timedelta(days=1)], today) is False
 
 
 class TestMissedCount:

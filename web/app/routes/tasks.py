@@ -27,9 +27,7 @@ def _build_params(active_filter: str) -> dict:
     params: dict = {"status": defn["status"], "limit": 200}
 
     if active_filter == "today":
-        params["deadline_from"] = today.isoformat()
-        params["deadline_to"] = today.isoformat()
-        params["include_recurring"] = "true"
+        params["due_today"] = "true"
     elif active_filter == "this_week":
         params["deadline_from"] = today.isoformat()
         params["deadline_to"] = (today + timedelta(days=6)).isoformat()

@@ -12,7 +12,7 @@ from app.features.organizer.tasks.schemas import (
     TaskUpdate,
     TaskFilters,
 )
-from app.features.organizer.tasks.recurrence import compute_streak, missed_count
+from app.features.organizer.tasks.recurrence import compute_streak, is_done_in_cycle, is_due_today, missed_count
 from app.features.organizer.tasks.repository import TaskRepository
 from app.features.core.embeddings.schemas import EmbeddingCreate
 from app.features.core.embeddings.service import EmbeddingService
@@ -57,14 +57,15 @@ class TaskService:
             task_read.total_completions = len(dates)
             task_read.streak = _compute_streak(dates, task_orm.recurrence_rule, today)
             task_read.missed_count = _missed_count(task_orm.recurrence_rule, dates, today)
+            task_read.is_done_in_cycle = is_done_in_cycle(task_orm.recurrence_rule, dates, today)
         return task_read
 
     async def get_tasks(self, filters: TaskFilters) -> list[TaskRead]:
         tasks_orm = await self._repo.get_tasks(filters)
         task_reads = [TaskRead.model_validate(t) for t in tasks_orm]
         recurring_ids = [t.id for t in task_reads if t.recurrence_rule is not None]
+        today = date.today()
         if recurring_ids:
-            today = date.today()
             completed_today = await self._repo.get_completed_task_ids_for_date(recurring_ids, today)
             completions_map = await self._repo.get_completions_by_task(recurring_ids)
             recurring_orm = {t.id: t for t in tasks_orm if t.recurrence_rule is not None}
@@ -74,8 +75,18 @@ class TaskService:
                 task.is_done_today = task.id in completed_today
                 dates = completions_map.get(task.id, [])
                 task.total_completions = len(dates)
-                task.streak = _compute_streak(dates, recurring_orm[task.id].recurrence_rule, today)
-                task.missed_count = _missed_count(recurring_orm[task.id].recurrence_rule, dates, today)
+                rule = recurring_orm[task.id].recurrence_rule
+                task.streak = _compute_streak(dates, rule, today)
+                task.missed_count = _missed_count(rule, dates, today)
+                task.is_done_in_cycle = is_done_in_cycle(rule, dates, today)
+
+        if filters.due_today:
+            task_reads = [
+                t for t in task_reads
+                if (t.deadline is not None and t.deadline.date() == today)
+                or (t.deadline is None and t.recurrence_rule is None)
+                or (t.recurrence_rule is not None and is_due_today(t.recurrence_rule, today))
+            ]
         return task_reads
 
     async def create_task(self, task_create: TaskCreate) -> TaskRead:

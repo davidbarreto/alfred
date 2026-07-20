@@ -40,6 +40,7 @@ class TaskRead(TaskBase):
     created_at: datetime
     completed_at: datetime | None = None
     is_done_today: bool = False
+    is_done_in_cycle: bool = False
     streak: int | None = None
     total_completions: int | None = None
     missed_count: int | None = None
@@ -62,6 +63,7 @@ class TaskFilters:
         deadline_from: Annotated[Optional[datetime], Query()] = None,
         deadline_to: Annotated[Optional[datetime], Query()] = None,
         include_recurring: Annotated[bool, Query()] = False,
+        due_today: Annotated[bool, Query()] = False,
     ) -> None:
         self.limit = limit
         self.status = status
@@ -71,6 +73,7 @@ class TaskFilters:
         self.deadline_from = deadline_from
         self.deadline_to = deadline_to
         self.include_recurring = include_recurring
+        self.due_today = due_today
 
     def __eq__(self, other: object) -> bool:
         return isinstance(other, TaskFilters) and vars(self) == vars(other)
@@ -80,7 +83,8 @@ class TaskFilters:
             f"TaskFilters(limit={self.limit}, status={self.status!r}, "
             f"priority={self.priority!r}, urgency={self.urgency!r}, "
             f"tags={self.tags!r}, deadline_from={self.deadline_from!r}, "
-            f"deadline_to={self.deadline_to!r}, include_recurring={self.include_recurring!r})"
+            f"deadline_to={self.deadline_to!r}, include_recurring={self.include_recurring!r}, "
+            f"due_today={self.due_today!r})"
         )
 
 

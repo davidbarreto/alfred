@@ -20,6 +20,28 @@ def is_due_today(rule: str, today: date) -> bool:
     return True
 
 
+def is_done_in_cycle(rule: str, dates: list[date], today: date) -> bool:
+    """Whether a completion covers the current occurrence, from its most recent due
+    date (inclusive) through today — e.g. a Sunday-only habit stays "done" through the
+    following Saturday once completed, not just on the day it was actually checked off."""
+    if not dates:
+        return False
+    if "FREQ=WEEKLY" in rule:
+        byday = parse_byday(rule)
+        if byday:
+            cycle_start = next(
+                candidate
+                for offset in range(7)
+                if (candidate := today - timedelta(days=offset)).weekday() in byday
+            )
+            return any(cycle_start <= d <= today for d in dates)
+        today_week = today.isocalendar()[:2]
+        return any(d.isocalendar()[:2] == today_week for d in dates)
+    if "FREQ=MONTHLY" in rule:
+        return any((d.year, d.month) == (today.year, today.month) for d in dates)
+    return today in dates
+
+
 def compute_streak(dates: list[date], rule: str, today: date) -> int:
     if not dates:
         return 0

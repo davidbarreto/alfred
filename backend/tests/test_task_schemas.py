@@ -109,6 +109,13 @@ class TestTaskRead:
     def test_from_attributes_enabled(self):
         assert TaskRead.model_config.get("from_attributes") is True
 
+    def test_is_done_in_cycle_defaults_false(self):
+        task = TaskRead(
+            id=1, title="T", status="TODO", priority="LOW", urgency="NORMAL",
+            tags=[], created_at=datetime(2024, 6, 1),
+        )
+        assert task.is_done_in_cycle is False
+
 
 class TestTaskFilters:
     def test_defaults(self):
@@ -120,6 +127,7 @@ class TestTaskFilters:
         assert filters.tags is None
         assert filters.deadline_from is None
         assert filters.deadline_to is None
+        assert filters.due_today is False
 
     def test_custom_values(self):
         filters = TaskFilters(

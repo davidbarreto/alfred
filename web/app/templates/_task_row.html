@@ -1,16 +1,16 @@
 {% set deadline = task.deadline[:10] if task.deadline else "" %}
 {% set is_done = task.status == "DONE" %}
-{% set is_done_today = task.is_done_today and task.status != "DONE" %}
+{% set is_recurring_done = task.recurrence_rule and task.is_done_in_cycle and task.status != "DONE" %}
 {% set is_doing = task.status == "DOING" %}
 {% set just_snoozed = just_snoozed | default(false) %}
 
 {% if task.recurrence_rule %}
   {% set rr = task.recurrence_rule %}
-  {% if "FREQ=DAILY" in rr %}{% set freq_label = "daily" %}
-  {% elif "FREQ=WEEKLY" in rr %}{% set freq_label = "weekly" %}
-  {% elif "FREQ=MONTHLY" in rr %}{% set freq_label = "monthly" %}
-  {% elif "FREQ=YEARLY" in rr %}{% set freq_label = "yearly" %}
-  {% else %}{% set freq_label = "recurring" %}{% endif %}
+  {% if "FREQ=DAILY" in rr %}{% set freq_label = "daily" %}{% set done_label = "Done today" %}
+  {% elif "FREQ=WEEKLY" in rr %}{% set freq_label = "weekly" %}{% set done_label = "Done this week" %}
+  {% elif "FREQ=MONTHLY" in rr %}{% set freq_label = "monthly" %}{% set done_label = "Done this month" %}
+  {% elif "FREQ=YEARLY" in rr %}{% set freq_label = "yearly" %}{% set done_label = "Done this year" %}
+  {% else %}{% set freq_label = "recurring" %}{% set done_label = "Done" %}{% endif %}
 {% endif %}
 
 <div class="bg-white border border-gray-200 border-l-[3px] rounded-lg hover:border-gray-300 transition-colors group relative
@@ -27,14 +27,14 @@
       <input
         type="checkbox"
         class="checkbox checkbox-sm mt-0.5 flex-shrink-0"
-        {% if is_done or is_done_today %}checked disabled{% endif %}
+        {% if is_done or is_recurring_done %}checked disabled{% endif %}
         hx-post="/tasks/{{ task.id }}/done"
         hx-target="#task-{{ task.id }}"
         hx-swap="outerHTML"
       />
       <span class="flex-1 text-sm font-medium leading-snug
         {% if is_done %}line-through text-gray-300
-        {% elif is_done_today %}text-gray-400
+        {% elif is_recurring_done %}text-gray-400
         {% else %}text-gray-900{% endif %}">
         {{ task.title }}
       </span>
@@ -126,10 +126,10 @@
       </span>
       {% endif %}
 
-      <!-- Done today (recurring only) -->
-      {% if is_done_today %}
+      <!-- Done this cycle (recurring only) -->
+      {% if is_recurring_done %}
       <span class="flex items-center gap-1 text-emerald-500 font-medium">
-        <i class="ti ti-check" style="font-size:0.8rem"></i>Done today
+        <i class="ti ti-check" style="font-size:0.8rem"></i>{{ done_label }}
       </span>
       {% endif %}
 

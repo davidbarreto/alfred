@@ -143,6 +143,27 @@ class TestGetTasks:
         await repo.get_tasks(TaskFilters(tags=["work"]))
         session.execute.assert_called_once()
 
+    async def test_due_today_filter_applied(self):
+        session = _make_session()
+        session.execute.return_value = _scalar_all([])
+
+        repo = TaskRepository(session)
+        await repo.get_tasks(TaskFilters(due_today=True))
+        session.execute.assert_called_once()
+
+    async def test_due_today_overrides_deadline_range(self):
+        from datetime import datetime
+        session = _make_session()
+        session.execute.return_value = _scalar_all([])
+
+        repo = TaskRepository(session)
+        await repo.get_tasks(TaskFilters(
+            due_today=True,
+            deadline_from=datetime(2024, 1, 1),
+            deadline_to=datetime(2024, 12, 31),
+        ))
+        session.execute.assert_called_once()
+
 
 class TestCreateTask:
     async def test_create_with_no_tags(self):

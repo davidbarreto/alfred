@@ -33,18 +33,29 @@ class TaskRepository:
             query = query.where(Task.priority == task_filter.priority)
         if task_filter.urgency != "ALL":
             query = query.where(Task.urgency == task_filter.urgency)
-        has_deadline_filter = task_filter.deadline_from is not None or task_filter.deadline_to is not None
-        if has_deadline_filter:
-            deadline_clauses = []
-            if task_filter.deadline_from is not None:
-                deadline_clauses.append(Task.deadline >= task_filter.deadline_from)
-            if task_filter.deadline_to is not None:
-                deadline_clauses.append(Task.deadline <= task_filter.deadline_to)
-            deadline_cond = and_(*deadline_clauses)
-            if task_filter.include_recurring:
-                query = query.where(or_(deadline_cond, Task.recurrence_rule.is_not(None)))
-            else:
-                query = query.where(deadline_cond)
+        if task_filter.due_today:
+            today_start = datetime.combine(date.today(), time.min)
+            tomorrow_start = today_start + timedelta(days=1)
+            query = query.where(
+                or_(
+                    and_(Task.deadline >= today_start, Task.deadline < tomorrow_start),
+                    and_(Task.deadline.is_(None), Task.recurrence_rule.is_(None)),
+                    Task.recurrence_rule.is_not(None),
+                )
+            )
+        else:
+            has_deadline_filter = task_filter.deadline_from is not None or task_filter.deadline_to is not None
+            if has_deadline_filter:
+                deadline_clauses = []
+                if task_filter.deadline_from is not None:
+                    deadline_clauses.append(Task.deadline >= task_filter.deadline_from)
+                if task_filter.deadline_to is not None:
+                    deadline_clauses.append(Task.deadline <= task_filter.deadline_to)
+                deadline_cond = and_(*deadline_clauses)
+                if task_filter.include_recurring:
+                    query = query.where(or_(deadline_cond, Task.recurrence_rule.is_not(None)))
+                else:
+                    query = query.where(deadline_cond)
         if task_filter.tags:
             query = query.where(Task.tags.any(Tag.name.in_(task_filter.tags)))
         query = query.order_by(Task.id.desc()).limit(task_filter.limit)

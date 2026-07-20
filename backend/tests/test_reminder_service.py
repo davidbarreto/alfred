@@ -209,6 +209,85 @@ class TestBuildDueDigestTasks:
 
         assert "- Take meds (HIGH, overdue)" in digest.text
 
+    async def test_recurring_task_not_due_today_is_not_reminded(self, mock_session, mock_task_service):
+        # NOW (2026-07-11) is a Saturday; a Sunday-only weekly task must not be
+        # reminded on any other day, even though it wasn't completed today either.
+        task = _make_task(
+            id=15, title="Refill pill organizer", deadline=NOW - timedelta(hours=2),
+            urgency="URGENT", priority="HIGH", recurrence_rule="FREQ=WEEKLY;BYDAY=SU",
+            is_done_today=False,
+        )
+        mock_task_service.get_tasks.return_value = [task]
+
+        with (
+            patch("app.features.core.reminders.service.CalendarEventRepository") as MockEventRepo,
+            patch("app.features.core.reminders.service.ShoppingRepository") as MockShoppingRepo,
+            patch("app.features.core.reminders.service.WorkingMemoryRepository") as MockWMRepo,
+            patch("app.features.core.reminders.service.local_now", return_value=NOW),
+        ):
+            MockEventRepo.return_value.get_events = AsyncMock(return_value=[])
+            MockShoppingRepo.return_value.list = AsyncMock(return_value=[])
+            MockWMRepo.return_value.list = AsyncMock(return_value=[])
+            MockWMRepo.return_value.upsert = AsyncMock()
+
+            digest = await _service(mock_session, mock_task_service).build_due_digest()
+
+        assert "Refill pill organizer" not in digest.text
+        assert digest.has_content is False
+
+    async def test_recurring_task_due_today_is_reminded_when_not_done(self, mock_session, mock_task_service):
+        # NOW (2026-07-11) is a Saturday.
+        task = _make_task(
+            id=16, title="Water the garden", deadline=NOW - timedelta(hours=2),
+            urgency="URGENT", priority="HIGH", recurrence_rule="FREQ=WEEKLY;BYDAY=SA",
+            is_done_today=False,
+        )
+        mock_task_service.get_tasks.return_value = [task]
+
+        with (
+            patch("app.features.core.reminders.service.CalendarEventRepository") as MockEventRepo,
+            patch("app.features.core.reminders.service.ShoppingRepository") as MockShoppingRepo,
+            patch("app.features.core.reminders.service.WorkingMemoryRepository") as MockWMRepo,
+            patch("app.features.core.reminders.service.local_now", return_value=NOW),
+        ):
+            MockEventRepo.return_value.get_events = AsyncMock(return_value=[])
+            MockShoppingRepo.return_value.list = AsyncMock(return_value=[])
+            MockWMRepo.return_value.list = AsyncMock(return_value=[])
+            MockWMRepo.return_value.upsert = AsyncMock()
+
+            digest = await _service(mock_session, mock_task_service).build_due_digest()
+
+        assert "Water the garden" in digest.text
+
+    async def test_undated_recurring_task_not_due_today_is_not_reminded(
+        self, mock_session, mock_task_service
+    ):
+        # NOW (2026-07-11) is a Saturday; a Sunday-only weekly undated habit must not
+        # be reminded on any other day.
+        task = _make_task(
+            id=17, title="Refill pill organizer", deadline=None,
+            urgency="NORMAL", priority="HIGH", recurrence_rule="FREQ=WEEKLY;BYDAY=SU",
+            is_done_today=False,
+        )
+        mock_task_service.get_tasks.return_value = [task]
+
+        with (
+            patch("app.features.core.reminders.service.CalendarEventRepository") as MockEventRepo,
+            patch("app.features.core.reminders.service.ShoppingRepository") as MockShoppingRepo,
+            patch("app.features.core.reminders.service.WorkingMemoryRepository") as MockWMRepo,
+            patch("app.features.core.reminders.service.local_now", return_value=NOW),
+        ):
+            MockEventRepo.return_value.get_events = AsyncMock(return_value=[])
+            MockShoppingRepo.return_value.list = AsyncMock(return_value=[])
+            MockWMRepo.return_value.list = AsyncMock(return_value=[])
+            MockWMRepo.return_value.upsert = AsyncMock()
+
+            digest = await _service(mock_session, mock_task_service).build_due_digest()
+
+        assert "Refill pill organizer" not in digest.text
+        assert "without a due date" not in digest.text
+        assert digest.has_content is False
+
     async def test_undated_recurring_task_done_today_is_excluded_entirely(
         self, mock_session, mock_task_service
     ):

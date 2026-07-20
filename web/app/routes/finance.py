@@ -27,6 +27,7 @@ def _parse_txn_query(request: Request) -> tuple[dict, int]:
         "merchant": qp.get("merchant") or None,
         "from_date": qp.get("from_date") or None,
         "to_date": qp.get("to_date") or None,
+        "currency": qp.get("currency") or None,
     }
     offset = max(0, int(qp.get("offset", "0") or "0"))
     return filters, offset
@@ -228,6 +229,11 @@ async def finance_page(request: Request):
         span_days = (_date.fromisoformat(resolved_to) - _date.fromisoformat(resolved_from)).days + 1
         group_by_month = span_days > _MONTH_GROUPING_THRESHOLD_DAYS
 
+    # Query string for "drill down to transactions" links on the summary cards.
+    txn_range_qs = urlencode(
+        {k: v for k, v in {"from_date": resolved_from, "to_date": resolved_to, "currency": currency}.items() if v}
+    )
+
     time_spending: dict[str, float] = defaultdict(float)
     for txn in all_txns:
         key = txn["date"][:7] if group_by_month else txn["date"][:10]
@@ -266,6 +272,7 @@ async def finance_page(request: Request):
         "custom_from": custom_from,
         "custom_to": custom_to,
         "range_qs": range_qs,
+        "txn_range_qs": txn_range_qs,
         "errors": errors,
         "time_spending": time_spending_sorted,
         "category_chart": category_chart,

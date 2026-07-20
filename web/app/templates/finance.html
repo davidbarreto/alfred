@@ -54,7 +54,7 @@
 
   <!-- 4 summary cards -->
   <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-    <div class="bg-white border border-gray-200 rounded-lg p-4">
+    <a href="/finance/transactions?type=income&{{ txn_range_qs }}" class="block bg-white border border-gray-200 rounded-lg p-4 hover:border-gray-300 transition-colors">
       <div class="text-[10px] text-gray-400 uppercase tracking-wide">Income</div>
       <div class="text-2xl font-semibold text-[#639922] mt-1">
         {% if income %}{{ currency_symbol }}{{ income.total | money }}{% else %}—{% endif %}
@@ -62,9 +62,9 @@
       {% if income %}
       <div class="text-xs text-gray-400 mt-1">{{ income.transaction_count }} transactions</div>
       {% endif %}
-    </div>
+    </a>
 
-    <div class="bg-white border border-gray-200 rounded-lg p-4">
+    <a href="/finance/transactions?type=expense&{{ txn_range_qs }}" class="block bg-white border border-gray-200 rounded-lg p-4 hover:border-gray-300 transition-colors">
       <div class="text-[10px] text-gray-400 uppercase tracking-wide">Spent</div>
       <div class="text-2xl font-semibold text-[#E24B4A] mt-1">
         {% if spending %}{{ currency_symbol }}{{ spending.total | money }}{% else %}—{% endif %}
@@ -72,9 +72,9 @@
       {% if spending %}
       <div class="text-xs text-gray-400 mt-1">{{ spending.transaction_count }} transactions</div>
       {% endif %}
-    </div>
+    </a>
 
-    <div class="bg-white border border-gray-200 rounded-lg p-4">
+    <a href="/finance/budgets" class="block bg-white border border-gray-200 rounded-lg p-4 hover:border-gray-300 transition-colors">
       <div class="text-[10px] text-gray-400 uppercase tracking-wide">Remaining</div>
       <div class="text-2xl font-semibold mt-1 {% if total_remaining is not none and total_remaining | float < 0 %}text-[#E24B4A]{% else %}text-[#639922]{% endif %}">
         {% if total_remaining is not none %}{{ currency_symbol }}{{ total_remaining | money }}{% else %}—{% endif %}
@@ -84,8 +84,15 @@
       {% else %}
       <div class="text-xs text-gray-400 mt-1">no budgets configured</div>
       {% endif %}
-    </div>
+    </a>
 
+    {% if top_category and top_category.category_id %}
+    <a href="/finance/transactions?type=expense&category_id={{ top_category.category_id }}&{{ txn_range_qs }}" class="block bg-white border border-gray-200 rounded-lg p-4 hover:border-gray-300 transition-colors">
+      <div class="text-[10px] text-gray-400 uppercase tracking-wide">Top Category</div>
+      <div class="text-2xl font-semibold text-gray-900 mt-1 truncate">{{ top_category.category_name or "Uncategorized" }}</div>
+      <div class="text-xs text-gray-400 mt-1">{{ currency_symbol }}{{ top_category.total | money }}</div>
+    </a>
+    {% else %}
     <div class="bg-white border border-gray-200 rounded-lg p-4">
       <div class="text-[10px] text-gray-400 uppercase tracking-wide">Top Category</div>
       {% if top_category %}
@@ -95,6 +102,7 @@
       <div class="text-2xl font-semibold text-gray-900 mt-1">—</div>
       {% endif %}
     </div>
+    {% endif %}
   </div>
 
   <!-- Charts row: category donut + spending over time -->

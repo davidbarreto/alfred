@@ -36,6 +36,8 @@ class ImportRule(Base):
     pattern: Mapped[str] = mapped_column(String(255), nullable=False)
     amount: Mapped[Optional[Decimal]] = mapped_column(Numeric(12, 2), nullable=True)
     mode: Mapped[str] = mapped_column(String(10), nullable=False, default="auto")
+    # Match precedence: rules are checked in ascending position order, first match wins.
+    position: Mapped[int] = mapped_column(Integer, nullable=False)
     description: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     merchant: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     category_id: Mapped[Optional[int]] = mapped_column(

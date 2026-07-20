@@ -1685,7 +1685,60 @@
           }
         },
         {
-          "name": "04 - Preview Import (file upload)",
+          "name": "04 - List Rules Filtered",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Only matching rules returned', () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.be.an('array');",
+                  "    pm.expect(json.every(r => r.pattern.toUpperCase().includes('PINGO'))).to.eql(true);",
+                  "    pm.expect(json.every(r => r.mode === 'auto')).to.eql(true);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/finance/imports/rules?pattern=PINGO&mode=auto&limit=10&offset=0",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "finance",
+                "imports",
+                "rules"
+              ],
+              "query": [
+                {
+                  "key": "pattern",
+                  "value": "PINGO"
+                },
+                {
+                  "key": "mode",
+                  "value": "auto"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                },
+                {
+                  "key": "offset",
+                  "value": "0"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "05 - Preview Import (file upload)",
           "event": [
             {
               "listen": "test",
@@ -1749,7 +1802,7 @@
           }
         },
         {
-          "name": "05 - Commit Import",
+          "name": "06 - Commit Import",
           "event": [
             {
               "listen": "test",
@@ -1798,7 +1851,7 @@
           }
         },
         {
-          "name": "06 - Commit Again Is Deduplicated",
+          "name": "07 - Commit Again Is Deduplicated",
           "event": [
             {
               "listen": "test",
@@ -1847,7 +1900,7 @@
           }
         },
         {
-          "name": "07 - List Batches",
+          "name": "08 - List Batches",
           "event": [
             {
               "listen": "test",
@@ -1881,7 +1934,7 @@
           }
         },
         {
-          "name": "08 - Delete Batch",
+          "name": "09 - Delete Batch",
           "event": [
             {
               "listen": "test",
@@ -1910,7 +1963,7 @@
           }
         },
         {
-          "name": "09 - Delete Duplicate Batch",
+          "name": "10 - Delete Duplicate Batch",
           "event": [
             {
               "listen": "test",
@@ -1939,7 +1992,107 @@
           }
         },
         {
-          "name": "10 - Delete Rule",
+          "name": "11 - Update Rule",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Rule updated', () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.id).to.eql(parseInt(pm.environment.get('import_rule_id')));",
+                  "    pm.expect(json.pattern).to.eql('PINGO DOCE UPDATED');",
+                  "    pm.expect(json.mode).to.eql('suggest');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"pattern\": \"PINGO DOCE UPDATED\",\n  \"mode\": \"suggest\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/finance/imports/rules/{{import_rule_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "finance",
+                "imports",
+                "rules",
+                "{{import_rule_id}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "12 - Reorder Rules",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Rules returned in the requested order', () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.be.an('array');",
+                  "    const ids = json.map(r => r.id);",
+                  "    pm.expect(ids).to.eql([parseInt(pm.environment.get('import_rule_id'))]);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"rule_ids\": [{{import_rule_id}}]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/finance/imports/rules/reorder",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "finance",
+                "imports",
+                "rules",
+                "reorder"
+              ]
+            }
+          }
+        },
+        {
+          "name": "13 - Delete Rule",
           "event": [
             {
               "listen": "test",
@@ -1969,7 +2122,7 @@
           }
         },
         {
-          "name": "11 - List Grouped Providers",
+          "name": "14 - List Grouped Providers",
           "event": [
             {
               "listen": "test",
@@ -2001,7 +2154,7 @@
           }
         },
         {
-          "name": "12 - Detect Currencies (Revolut, file upload)",
+          "name": "15 - Detect Currencies (Revolut, file upload)",
           "event": [
             {
               "listen": "test",
@@ -2052,7 +2205,7 @@
           }
         },
         {
-          "name": "13 - Preview Grouped (all currencies mapped to the finance test account)",
+          "name": "16 - Preview Grouped (all currencies mapped to the finance test account)",
           "event": [
             {
               "listen": "test",
@@ -2113,7 +2266,7 @@
           }
         },
         {
-          "name": "14 - Commit Grouped",
+          "name": "17 - Commit Grouped",
           "event": [
             {
               "listen": "test",

@@ -157,6 +157,36 @@ function toggleRuleInputs(index, checked) {
   if (cell) cell.classList.toggle("hidden", !checked);
 }
 
+function startEditRule(id) {
+  document.getElementById(`rule-view-${id}`).classList.add("hidden");
+  document.getElementById(`rule-edit-${id}`).classList.remove("hidden");
+}
+
+function cancelEditRule(id) {
+  document.getElementById(`rule-edit-${id}`).classList.add("hidden");
+  document.getElementById(`rule-view-${id}`).classList.remove("hidden");
+}
+
+async function submitRuleEdit(e, id, filtersQs) {
+  e.preventDefault();
+  const form = e.target;
+  const btn = form.querySelector('button[type="submit"]');
+  btn.disabled = true;
+  try {
+    const res = await fetch(`/finance/import/rules/${id}${filtersQs ? "?" + filtersQs : ""}`, {
+      method: "PATCH",
+      body: new FormData(form),
+    });
+    const html = await res.text();
+    if (!res.ok) throw new Error(html || `Error ${res.status}`);
+    document.getElementById(`rule-group-${id}`).outerHTML = html;
+    if (window.htmx) htmx.process(document.getElementById("import-rules"));
+  } catch (err) {
+    alert(err.message || "Failed to update rule.");
+    btn.disabled = false;
+  }
+}
+
 let _multiCurrencyStepAHtml = null;
 let _multiCurrencyFile = null;
 let _multiCurrencyProvider = "";

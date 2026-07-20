@@ -14,7 +14,10 @@ from app.features.finance.imports.schemas import (
     ImportPreviewGroupedResponse,
     ImportPreviewResponse,
     ImportRuleCreate,
+    ImportRuleFilters,
     ImportRuleRead,
+    ImportRuleReorderRequest,
+    ImportRuleUpdate,
 )
 from app.features.finance.imports.service import InvalidGroupedImportError
 
@@ -117,13 +120,26 @@ async def commit_import(request: ImportCommitRequest, service: ImportServiceDep)
 
 
 @router.get("/rules", response_model=list[ImportRuleRead])
-async def list_rules(service: ImportServiceDep):
-    return await service.list_rules()
+async def list_rules(service: ImportServiceDep, filters: ImportRuleFilters = Depends()):
+    return await service.list_rules_page(filters)
 
 
 @router.post("/rules", response_model=ImportRuleRead, status_code=status.HTTP_201_CREATED)
 async def create_rule(request: ImportRuleCreate, service: ImportServiceDep):
     return await service.create_rule(request)
+
+
+@router.post("/rules/reorder", response_model=list[ImportRuleRead])
+async def reorder_rules(request: ImportRuleReorderRequest, service: ImportServiceDep):
+    return await service.reorder_rules(request.rule_ids)
+
+
+@router.patch("/rules/{rule_id}", response_model=ImportRuleRead)
+async def update_rule(rule_id: int, request: ImportRuleUpdate, service: ImportServiceDep):
+    rule = await service.update_rule(rule_id, request)
+    if rule is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Rule not found")
+    return rule
 
 
 @router.delete("/rules/{rule_id}", status_code=status.HTTP_204_NO_CONTENT)

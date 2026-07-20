@@ -1,0 +1,90 @@
+<tbody id="rule-group-{{ rule.id }}" {% if show_reorder %}data-rule-id="{{ rule.id }}"{% endif %}>
+  <tr id="rule-view-{{ rule.id }}">
+    {% if show_reorder %}
+    <td class="whitespace-nowrap">
+      <button type="button" onclick="moveRuleLocal({{ rule.id }}, 'up')" class="btn btn-ghost btn-xs text-gray-400 hover:text-[#378ADD]" title="Move up">
+        <i class="ti ti-chevron-up text-xs"></i>
+      </button>
+      <button type="button" onclick="moveRuleLocal({{ rule.id }}, 'down')" class="btn btn-ghost btn-xs text-gray-400 hover:text-[#378ADD]" title="Move down">
+        <i class="ti ti-chevron-down text-xs"></i>
+      </button>
+    </td>
+    {% endif %}
+    <td class="text-xs font-medium">{{ rule.pattern }}</td>
+    <td class="text-xs text-right whitespace-nowrap">{% if rule.amount is not none %}€{{ "%.2f"|format(rule.amount | float) }}{% else %}<span class="text-gray-300">any</span>{% endif %}</td>
+    <td>
+      <span class="px-1.5 py-0.5 rounded text-[10px] font-medium {% if rule.mode == 'auto' %}bg-[#E9F5E9] text-[#2E7D32]{% else %}bg-amber-100 text-amber-700{% endif %}">
+        {{ "auto" if rule.mode == "auto" else "suggest" }}
+      </span>
+    </td>
+    <td class="text-xs">
+      {% if rule.transfer_account_id %}
+      <span class="text-gray-500"><i class="ti ti-arrows-exchange text-xs"></i> Transfer → {{ accounts_by_id.get(rule.transfer_account_id, "?") }}</span>
+      {% else %}
+      {{ rule.description or rule.merchant or "" }}{% if rule.category_id %}{% if rule.description or rule.merchant %} · {% endif %}{{ categories_by_id.get(rule.category_id, "?") }}{% endif %}
+      {% endif %}
+    </td>
+    <td class="text-right whitespace-nowrap">
+      <button type="button" onclick="startEditRule({{ rule.id }})" class="btn btn-ghost btn-xs text-gray-400 hover:text-[#378ADD]" title="Edit rule">
+        <i class="ti ti-pencil text-sm"></i>
+      </button>
+      <button class="btn btn-ghost btn-xs text-gray-400 hover:text-[#E24B4A]"
+              hx-delete="/finance/import/rules/{{ rule.id }}{% if rules_filters_qs %}?{{ rules_filters_qs }}{% endif %}"
+              hx-target="{{ rules_delete_target }}"
+              hx-swap="innerHTML"
+              hx-confirm="Delete this rule?">
+        <i class="ti ti-trash text-sm"></i>
+      </button>
+    </td>
+  </tr>
+  <tr id="rule-edit-{{ rule.id }}" class="hidden bg-gray-50">
+    <td colspan="{{ 6 if show_reorder else 5 }}" class="py-2">
+      <form onsubmit="submitRuleEdit(event, {{ rule.id }}, '{{ rules_filters_qs }}')" class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2 items-end">
+        <div class="col-span-2">
+          <label class="text-[10px] text-gray-500 mb-1 block">Match text</label>
+          <input type="text" name="pattern" required value="{{ rule.pattern }}"
+                 class="input input-xs border-gray-200 bg-white w-full" />
+        </div>
+        <div>
+          <label class="text-[10px] text-gray-500 mb-1 block">Amount</label>
+          <input type="text" name="amount" value="{{ rule.amount if rule.amount is not none else '' }}" placeholder="-10.00"
+                 class="input input-xs border-gray-200 bg-white w-full" />
+        </div>
+        <div>
+          <label class="text-[10px] text-gray-500 mb-1 block">Mode</label>
+          <select name="mode" class="select select-xs border-gray-200 bg-white w-full">
+            <option value="auto" {% if rule.mode == "auto" %}selected{% endif %}>Auto-apply</option>
+            <option value="suggest" {% if rule.mode == "suggest" %}selected{% endif %}>Suggest only</option>
+          </select>
+        </div>
+        <div>
+          <label class="text-[10px] text-gray-500 mb-1 block">Description</label>
+          <input type="text" name="description" value="{{ rule.description or '' }}"
+                 class="input input-xs border-gray-200 bg-white w-full" />
+        </div>
+        <div>
+          <label class="text-[10px] text-gray-500 mb-1 block">Category</label>
+          <select name="category_id" class="select select-xs border-gray-200 bg-white w-full">
+            <option value="">—</option>
+            {% for cat in categories %}
+            <option value="{{ cat.id }}" {% if rule.category_id == cat.id %}selected{% endif %}>{{ cat.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <label class="text-[10px] text-gray-500 mb-1 block">Transfer to</label>
+          <select name="transfer_account_id" class="select select-xs border-gray-200 bg-white w-full">
+            <option value="">— not a transfer —</option>
+            {% for acc in rule_accounts %}
+            <option value="{{ acc.id }}" {% if rule.transfer_account_id == acc.id %}selected{% endif %}>{{ acc.name }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="flex gap-1">
+          <button type="submit" class="btn btn-primary btn-xs">Save</button>
+          <button type="button" onclick="cancelEditRule({{ rule.id }})" class="btn btn-ghost btn-xs">Cancel</button>
+        </div>
+      </form>
+    </td>
+  </tr>
+</tbody>

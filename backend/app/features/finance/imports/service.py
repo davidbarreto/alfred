@@ -2,6 +2,7 @@ import hashlib
 import json
 import logging
 import re
+import time
 from collections import defaultdict
 from datetime import datetime
 from decimal import Decimal
@@ -31,11 +32,14 @@ from app.features.finance.imports.schemas import (
     ImportPreviewResponse,
     ImportPreviewRow,
     ImportRuleCreate,
+    ImportRuleFilters,
     ImportRuleRead,
+    ImportRuleUpdate,
 )
 from app.features.finance.imports.tables import ImportBatch, ImportRule
 from app.features.finance.transactions.repository import TransactionRepository
 from app.features.finance.transactions.schemas import TransactionCreate
+from app.integrations.llm_calls.repository import create_llm_call
 from app.shared.audio import FileStorage
 from app.shared.llm import LlmProvider
 from app.shared.statement import ParsedRow, StatementParser
@@ -43,14 +47,19 @@ from app.shared.statement import ParsedRow, StatementParser
 logger = logging.getLogger(__name__)
 
 TRANSACTION_SOURCE_TYPE = "transaction"
+LLM_CALL_FEATURE = "finance_import_categorization"
 
 # Providers that can mix several currencies in one export and therefore go through the
 # grouped (multi-account) preview/commit flow instead of the single-account one.
 GROUPED_PROVIDERS = frozenset({"revolut", "wise"})
 
 _KNN_LIMIT = 7
-_KNN_THRESHOLD = 0.55
-_KNN_MIN_VOTE = 0.6
+# Cosine similarity thresholds (0..1). Raised from 0.55/0.6 -- the lower values were
+# letting semantically-unrelated past transactions vote on a category often enough to
+# feel like noise; both gates are now stricter so a kNN suggestion only fires when the
+# match is genuinely close.
+_KNN_THRESHOLD = 0.72
+_KNN_MIN_VOTE = 0.7
 
 _NOISE_PATTERNS = [
     re.compile(r"^COMPRA \d+\s+"),
@@ -151,6 +160,7 @@ class ImportService:
         llm_provider: LlmProvider | None = None,
         file_storage: FileStorage | None = None,
     ) -> None:
+        self._session = session
         self._repo = ImportRepository(session)
         self._txn_repo = TransactionRepository(session)
         self._category_repo = CategoryRepository(session)
@@ -229,6 +239,8 @@ class ImportService:
                 reasons.append("rule_suggested")
             elif row.suggestion_source == "llm":
                 reasons.append("ai_suggested")
+            elif row.suggestion_source == "knn":
+                reasons.append("similarity_suggested")
             row.review_reasons = reasons
             row.needs_review = bool(reasons)
         for preview_row, parsed_row in zip(rows, parsed):
@@ -389,14 +401,28 @@ class ImportService:
             categories="\n".join(f"- {name}" for name in categories.values()),
             transactions=listing,
         )
+        messages = [{"role": "user", "content": prompt}]
+        t0 = time.monotonic()
         try:
-            response = await self._llm.complete(
-                messages=[{"role": "user", "content": prompt}],
-                system=CATEGORIZE_SYSTEM_PROMPT,
-            )
+            response = await self._llm.complete(messages=messages, system=CATEGORIZE_SYSTEM_PROMPT)
         except Exception as exc:
             logger.error("Import LLM categorization failed: error=%s", exc)
             return
+        latency_ms = int((time.monotonic() - t0) * 1000)
+
+        await create_llm_call(
+            self._session,
+            provider=self._llm.provider,
+            model=self._llm.model,
+            feature=LLM_CALL_FEATURE,
+            prompt=messages,
+            response=response.text,
+            tokens_input=response.tokens_input,
+            tokens_output=response.tokens_output,
+            latency_ms=latency_ms,
+            finish_reason=response.finish_reason,
+        )
+        await self._session.commit()
 
         payload = _extract_json(response.text)
         if payload is None or not isinstance(payload.get("items"), list):
@@ -481,6 +507,7 @@ class ImportService:
             )
 
         rules_created = 0
+        next_position = await self._repo.next_position()
         for row in to_insert:
             if not row.save_rule or not row.rule_pattern:
                 continue
@@ -493,8 +520,10 @@ class ImportService:
                     merchant=row.merchant,
                     category_id=row.category_id,
                     transfer_account_id=row.counterpart_account_id if row.type == "transfer" else None,
+                    position=next_position,
                 )
             )
+            next_position += 1
             rules_created += 1
 
         await self._repo.commit()
@@ -567,10 +596,40 @@ class ImportService:
         rules = await self._repo.list_rules()
         return [ImportRuleRead.model_validate(r) for r in rules]
 
+    async def list_rules_page(self, filters: ImportRuleFilters) -> list[ImportRuleRead]:
+        rules = await self._repo.list_rules_page(filters)
+        return [ImportRuleRead.model_validate(r) for r in rules]
+
     async def create_rule(self, data: ImportRuleCreate) -> ImportRuleRead:
         rule = await self._repo.create_rule(data)
         logger.info("Import rule created: id=%d pattern=%r mode=%s", rule.id, rule.pattern, rule.mode)
         return ImportRuleRead.model_validate(rule)
+
+    async def update_rule(self, rule_id: int, data: ImportRuleUpdate) -> ImportRuleRead | None:
+        rule = await self._repo.update_rule(rule_id, data)
+        if rule is None:
+            logger.debug("Import rule update: id=%d not found", rule_id)
+            return None
+        logger.info(
+            "Import rule updated: id=%d fields=%s", rule_id, list(data.model_dump(exclude_unset=True).keys())
+        )
+        return ImportRuleRead.model_validate(rule)
+
+    async def reorder_rules(self, rule_ids: list[int]) -> list[ImportRuleRead]:
+        """Apply a client-defined order to a set of rules in one shot: the rules keep the
+        same block of position "slots" they already occupy, those slots are just handed
+        out to the rules in the caller's new order -- rules outside this set, and any
+        gaps from deleted rules, are left untouched."""
+        rules = await self._repo.get_rules_by_ids(rule_ids)
+        by_id = {r.id: r for r in rules}
+        ordered = [by_id[rid] for rid in rule_ids if rid in by_id]
+        slots = sorted(r.position for r in ordered)
+        for rule, position in zip(ordered, slots):
+            rule.position = position
+        if ordered:
+            await self._repo.commit()
+            logger.info("Import rules reordered: ids=%s", [r.id for r in ordered])
+        return [ImportRuleRead.model_validate(r) for r in ordered]
 
     async def delete_rule(self, rule_id: int) -> bool:
         deleted = await self._repo.delete_rule(rule_id)
@@ -726,6 +785,7 @@ class ImportService:
         batch_results: list[ImportCommitBatchResult] = []
         all_transactions = []
         total_rules_created = 0
+        next_position = await self._repo.next_position()
 
         for currency in sorted(by_currency):
             rows = by_currency[currency]
@@ -787,8 +847,10 @@ class ImportService:
                         merchant=row.merchant,
                         category_id=row.category_id,
                         transfer_account_id=row.counterpart_account_id if row.type == "transfer" else None,
+                        position=next_position,
                     )
                 )
+                next_position += 1
                 rules_created_here += 1
             total_rules_created += rules_created_here
 

@@ -85,6 +85,7 @@ def _rule_read(**kwargs):
         merchant="Pingo Doce",
         category_id=10,
         transfer_account_id=None,
+        position=0,
         created_at=datetime(2026, 7, 17, 10, 0),
     )
     defaults.update(kwargs)
@@ -102,8 +103,10 @@ def mock_service():
     )
     svc.list_batches.return_value = [_batch_read()]
     svc.delete_batch.return_value = True
-    svc.list_rules.return_value = [_rule_read()]
+    svc.list_rules_page.return_value = [_rule_read()]
     svc.create_rule.return_value = _rule_read(id=2)
+    svc.update_rule.return_value = _rule_read(pattern="PINGO DOCE UPDATED")
+    svc.reorder_rules.return_value = [_rule_read(id=1), _rule_read(id=2)]
     svc.delete_rule.return_value = True
     return svc
 
@@ -229,11 +232,46 @@ class TestRules:
         assert response.status_code == 200
         assert response.json()[0]["pattern"] == "PINGO DOCE"
 
+    def test_list_rules_passes_filters_through(self, client, mock_service):
+        response = client.get(
+            "/finance/imports/rules",
+            headers=AUTH,
+            params={"pattern": "pingo", "mode": "auto", "category_id": 10, "limit": 5, "offset": 0},
+        )
+        assert response.status_code == 200
+        filters = mock_service.list_rules_page.call_args[0][0]
+        assert filters.pattern == "pingo"
+        assert filters.mode == "auto"
+        assert filters.category_id == 10
+        assert filters.limit == 5
+
     def test_create_rule(self, client):
         payload = {"pattern": "PAYSHOP", "amount": "-10.00", "mode": "suggest"}
         response = client.post("/finance/imports/rules", headers=AUTH, json=payload)
         assert response.status_code == 201
         assert response.json()["id"] == 2
+
+    def test_update_rule(self, client, mock_service):
+        response = client.patch(
+            "/finance/imports/rules/1", headers=AUTH, json={"pattern": "PINGO DOCE UPDATED"}
+        )
+        assert response.status_code == 200
+        assert response.json()["pattern"] == "PINGO DOCE UPDATED"
+        request = mock_service.update_rule.call_args[0][1]
+        assert request.pattern == "PINGO DOCE UPDATED"
+
+    def test_update_missing_rule_404(self, client, mock_service):
+        mock_service.update_rule.return_value = None
+        response = client.patch("/finance/imports/rules/99", headers=AUTH, json={"pattern": "X"})
+        assert response.status_code == 404
+
+    def test_reorder_rules(self, client, mock_service):
+        response = client.post(
+            "/finance/imports/rules/reorder", headers=AUTH, json={"rule_ids": [2, 1]}
+        )
+        assert response.status_code == 200
+        assert [r["id"] for r in response.json()] == [1, 2]
+        assert mock_service.reorder_rules.call_args[0][0] == [2, 1]
 
     def test_delete_rule(self, client):
         assert client.delete("/finance/imports/rules/1", headers=AUTH).status_code == 204

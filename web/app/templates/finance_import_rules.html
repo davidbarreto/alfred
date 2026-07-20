@@ -1,0 +1,211 @@
+{% extends "base.html" %}
+{% set active_page = "finance" %}
+{% block title %}Categorization Rules{% endblock %}
+
+{% block content %}
+<div class="p-6 space-y-4">
+
+  <div class="flex items-center gap-2">
+    <a href="/finance/import" class="text-gray-400 hover:text-gray-600"><i class="ti ti-arrow-left text-sm"></i></a>
+    <h1 class="text-base font-semibold text-gray-900">Categorization rules</h1>
+  </div>
+
+  <div class="flex flex-wrap items-end gap-2">
+    <div>
+      <label class="text-xs text-gray-500 mb-1 block">Match text</label>
+      <input
+        id="rule-filter-pattern"
+        type="text"
+        value="{{ query_filters.pattern or '' }}"
+        placeholder="Search…"
+        class="border border-gray-200 rounded-lg px-3 py-1.5 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-[#378ADD]"
+        onchange="applyRuleFilters()"
+      />
+    </div>
+    <div>
+      <label class="text-xs text-gray-500 mb-1 block">Mode</label>
+      <select id="rule-filter-mode" class="border border-gray-200 rounded-lg px-2 py-1.5 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-[#378ADD]" onchange="applyRuleFilters()">
+        <option value="" {% if not query_filters.mode %}selected{% endif %}>All modes</option>
+        <option value="auto" {% if query_filters.mode == 'auto' %}selected{% endif %}>Auto-apply</option>
+        <option value="suggest" {% if query_filters.mode == 'suggest' %}selected{% endif %}>Suggest only</option>
+      </select>
+    </div>
+    <div>
+      <label class="text-xs text-gray-500 mb-1 block">Category</label>
+      <select id="rule-filter-category" class="border border-gray-200 rounded-lg px-2 py-1.5 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-[#378ADD]" onchange="applyRuleFilters()">
+        <option value="">All categories</option>
+        {% for cat in categories %}
+        <option value="{{ cat.id }}" {% if query_filters.category_id == cat.id | string %}selected{% endif %}>{{ cat.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    {% if query_filters.pattern or query_filters.mode or query_filters.category_id %}
+    <button onclick="clearRuleFilters()" class="btn btn-sm btn-ghost text-gray-500 gap-1">
+      <i class="ti ti-x text-xs"></i>Clear filters
+    </button>
+    {% endif %}
+  </div>
+
+  <div class="bg-white border border-gray-200 rounded-lg p-4">
+    <div id="import-rules-full">
+      {% include "_finance_import_rules_list.html" %}
+    </div>
+  </div>
+
+</div>
+
+<script>
+const RULES_LIST_URL = "/finance/import/rules/all/list";
+let _ruleOffset = {{ query_offset }};
+const _rulePageSize = {{ page_size }};
+
+function _ruleQuery() {
+  const params = new URLSearchParams();
+  const pattern = document.getElementById("rule-filter-pattern").value;
+  const mode = document.getElementById("rule-filter-mode").value;
+  const category = document.getElementById("rule-filter-category").value;
+  if (pattern) params.set("pattern", pattern);
+  if (mode) params.set("mode", mode);
+  if (category) params.set("category_id", category);
+  params.set("offset", _ruleOffset);
+  return params.toString();
+}
+
+function refreshRuleList() {
+  htmx.ajax("GET", RULES_LIST_URL + "?" + _ruleQuery(), {
+    target: "#import-rules-full",
+    swap: "innerHTML",
+  });
+}
+
+function _confirmDiscardUnsavedOrder() {
+  if (!_hasUnsavedRuleOrder()) return true;
+  return confirm("You have an unsaved rule order. Discard it?");
+}
+
+function applyRuleFilters() {
+  if (!_confirmDiscardUnsavedOrder()) return;
+  _ruleOffset = 0;
+  refreshRuleList();
+}
+
+function clearRuleFilters() {
+  if (!_confirmDiscardUnsavedOrder()) return;
+  window.location.href = "/finance/import/rules/all";
+}
+
+function changeRulePage(delta) {
+  if (!_confirmDiscardUnsavedOrder()) return;
+  _ruleOffset = Math.max(0, _ruleOffset + delta * _rulePageSize);
+  refreshRuleList();
+}
+
+// Reordering is applied to the in-memory list only -- clicking the arrows never hits
+// the network. "Save order" sends the whole current sequence in one request, so rapid
+// clicking can't race (there's nothing to race: no request fires until Save).
+let _ruleOrder = [];
+let _ruleOrderSnapshot = [];
+
+function _hasUnsavedRuleOrder() {
+  return _ruleOrder.join(",") !== _ruleOrderSnapshot.join(",");
+}
+
+function captureRuleOrder() {
+  const container = document.getElementById("import-rules-full");
+  const groups = container.querySelectorAll("tbody[data-rule-id]");
+  _ruleOrder = Array.from(groups).map((tb) => tb.dataset.ruleId);
+  _ruleOrderSnapshot = [..._ruleOrder];
+  updateSaveOrderButton();
+}
+
+function updateSaveOrderButton() {
+  const btn = document.getElementById("save-rule-order-btn");
+  if (!btn) return;
+  btn.disabled = !_hasUnsavedRuleOrder();
+}
+
+function applyRuleOrderToDom() {
+  const table = document.querySelector("#import-rules-full table");
+  if (!table) return;
+  _ruleOrder.forEach((id) => {
+    const tbody = document.getElementById(`rule-group-${id}`);
+    if (tbody) table.appendChild(tbody);
+  });
+}
+
+function moveRuleLocal(id, direction) {
+  const key = String(id);
+  const idx = _ruleOrder.indexOf(key);
+  if (idx === -1) return;
+  const swapIdx = direction === "up" ? idx - 1 : idx + 1;
+  if (swapIdx < 0 || swapIdx >= _ruleOrder.length) return;
+  [_ruleOrder[idx], _ruleOrder[swapIdx]] = [_ruleOrder[swapIdx], _ruleOrder[idx]];
+  applyRuleOrderToDom();
+  updateSaveOrderButton();
+}
+
+async function saveRuleOrder() {
+  const btn = document.getElementById("save-rule-order-btn");
+  const originalText = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = "Saving…";
+  try {
+    const res = await fetch(`/finance/import/rules/reorder?${_ruleQuery()}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ rule_ids: _ruleOrder.map(Number) }),
+    });
+    const html = await res.text();
+    if (!res.ok) throw new Error(html || `Error ${res.status}`);
+    document.getElementById("import-rules-full").innerHTML = html;
+    if (window.htmx) htmx.process(document.getElementById("import-rules-full"));
+    captureRuleOrder();
+  } catch (err) {
+    alert(err.message || "Failed to save order.");
+    btn.textContent = originalText;
+    updateSaveOrderButton();
+  }
+}
+
+// Delete and filter/pagination refreshes all swap #import-rules-full via htmx (either
+// declaratively via hx-delete, or through htmx.ajax() in refreshRuleList) -- catching
+// them here in one place keeps the in-memory order in sync with whatever the server
+// last rendered, instead of needing a capture call after every individual action.
+document.body.addEventListener("htmx:afterSwap", (evt) => {
+  if (evt.detail && evt.detail.target && evt.detail.target.id === "import-rules-full") {
+    captureRuleOrder();
+  }
+});
+captureRuleOrder();
+
+function startEditRule(id) {
+  document.getElementById(`rule-view-${id}`).classList.add("hidden");
+  document.getElementById(`rule-edit-${id}`).classList.remove("hidden");
+}
+
+function cancelEditRule(id) {
+  document.getElementById(`rule-edit-${id}`).classList.add("hidden");
+  document.getElementById(`rule-view-${id}`).classList.remove("hidden");
+}
+
+async function submitRuleEdit(e, id, filtersQs) {
+  e.preventDefault();
+  const form = e.target;
+  const btn = form.querySelector('button[type="submit"]');
+  btn.disabled = true;
+  try {
+    const res = await fetch(`/finance/import/rules/${id}${filtersQs ? "?" + filtersQs : ""}`, {
+      method: "PATCH",
+      body: new FormData(form),
+    });
+    const html = await res.text();
+    if (!res.ok) throw new Error(html || `Error ${res.status}`);
+    document.getElementById(`rule-group-${id}`).outerHTML = html;
+    if (window.htmx) htmx.process(document.getElementById("import-rules-full"));
+  } catch (err) {
+    alert(err.message || "Failed to update rule.");
+    btn.disabled = false;
+  }
+}
+</script>
+{% endblock %}

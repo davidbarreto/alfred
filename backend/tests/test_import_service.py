@@ -1,5 +1,5 @@
 import pytest
-from datetime import date
+from datetime import date, datetime
 from decimal import Decimal
 from unittest.mock import AsyncMock, MagicMock
 
@@ -9,6 +9,8 @@ from app.features.finance.imports.schemas import (
     ImportCommitGroupedRow,
     ImportCommitRequest,
     ImportCommitRow,
+    ImportRuleFilters,
+    ImportRuleUpdate,
 )
 from app.features.finance.imports.service import (
     ImportService,
@@ -46,6 +48,7 @@ def _rule(**kwargs) -> ImportRule:
         merchant="Pingo Doce",
         category_id=10,
         transfer_account_id=None,
+        position=0,
     )
     defaults.update(kwargs)
     rule = ImportRule()
@@ -108,6 +111,9 @@ def _service(statement: ParsedStatement | None = None, llm=None, files=None) -> 
     service._account_repo = AsyncMock()
     service._repo.list_rules.return_value = []
     service._repo.add_rule = MagicMock()
+    # session.add() is sync on a real AsyncSession; AsyncMock would otherwise turn it
+    # into a coroutine-returning attribute that nothing awaits.
+    service._session.add = MagicMock()
     service._txn_repo.get_existing_dedup_hashes.return_value = set()
     service._category_repo.list.return_value = []
     service._account_repo.list.return_value = []
@@ -358,8 +364,11 @@ class TestPreview:
         assert row.category_id == 10
         assert row.suggestion_source == "knn"
         assert row.confidence == 1.0
-        assert row.needs_review is False
-        assert row.review_reasons == []
+        # Similarity-based matches are weaker evidence than an explicit rule or a
+        # direct AI categorization, so they're flagged for review just like those --
+        # previously they slipped through uncounted and unhighlighted in the UI.
+        assert row.needs_review is True
+        assert row.review_reasons == ["similarity_suggested"]
 
     @pytest.mark.asyncio
     async def test_knn_below_vote_threshold_leaves_uncategorized(self):
@@ -405,6 +414,43 @@ class TestPreview:
         assert row.confidence == 0.8
         assert row.needs_review is True
         assert row.review_reasons == ["ai_suggested"]
+
+    @pytest.mark.asyncio
+    async def test_llm_call_is_logged(self):
+        llm = AsyncMock()
+        llm.provider = "google"
+        llm.model = "gemini-2.5-flash"
+        llm.complete.return_value = LlmResponse(
+            text='{"items": [{"index": 0, "category": "Groceries", "confidence": 0.8}]}',
+            tokens_input=42,
+            tokens_output=7,
+            finish_reason="STOP",
+        )
+        service = _service(_statement([_row()]), llm=llm)
+        service._category_repo.list.return_value = [_category(10, "Groceries")]
+
+        await service.preview(1, "x.csv", b"", provider="fakebank")
+
+        service._session.add.assert_called_once()
+        call = service._session.add.call_args[0][0]
+        assert call.provider == "google"
+        assert call.model == "gemini-2.5-flash"
+        assert call.feature == "finance_import_categorization"
+        assert call.tokens_input == 42
+        assert call.tokens_output == 7
+        assert call.finish_reason == "STOP"
+        service._session.commit.assert_awaited()
+
+    @pytest.mark.asyncio
+    async def test_llm_failure_does_not_log_a_call(self):
+        llm = AsyncMock()
+        llm.complete.side_effect = RuntimeError("boom")
+        service = _service(_statement([_row()]), llm=llm)
+        service._category_repo.list.return_value = [_category(10, "Groceries")]
+
+        await service.preview(1, "x.csv", b"", provider="fakebank")
+
+        service._session.add.assert_not_called()
 
     @pytest.mark.asyncio
     async def test_llm_unknown_category_ignored(self):
@@ -680,6 +726,114 @@ class TestDeleteBatch:
 
         assert await service.delete_batch(7) is True
         files.delete.assert_awaited_once_with("fakebank/abc_mov.csv")
+
+
+class TestRulesManagement:
+    @pytest.mark.asyncio
+    async def test_list_rules_page_delegates_to_repo_with_filters(self):
+        service = _service()
+        service._repo.list_rules_page.return_value = [_rule(created_at=datetime(2026, 7, 20, 10, 0))]
+        filters = ImportRuleFilters(pattern="PINGO")
+
+        rules = await service.list_rules_page(filters)
+
+        assert len(rules) == 1
+        assert rules[0].pattern == "PINGO DOCE"
+        service._repo.list_rules_page.assert_awaited_once_with(filters)
+
+    @pytest.mark.asyncio
+    async def test_update_rule_returns_updated_read_model(self):
+        service = _service()
+        service._repo.update_rule.return_value = _rule(
+            pattern="PINGO DOCE UPDATED", created_at=datetime(2026, 7, 20, 10, 0)
+        )
+
+        result = await service.update_rule(1, ImportRuleUpdate(pattern="PINGO DOCE UPDATED"))
+
+        assert result.pattern == "PINGO DOCE UPDATED"
+
+    @pytest.mark.asyncio
+    async def test_update_missing_rule_returns_none(self):
+        service = _service()
+        service._repo.update_rule.return_value = None
+
+        assert await service.update_rule(99, ImportRuleUpdate(pattern="X")) is None
+
+    @pytest.mark.asyncio
+    async def test_reorder_reassigns_existing_slots_to_the_new_order(self):
+        service = _service()
+        rule_a = _rule(id=1, position=3, created_at=datetime(2026, 7, 20, 10, 0))
+        rule_b = _rule(id=2, position=9, created_at=datetime(2026, 7, 20, 10, 0))
+        rule_c = _rule(id=3, position=12, created_at=datetime(2026, 7, 20, 10, 0))
+        service._repo.get_rules_by_ids.return_value = [rule_a, rule_b, rule_c]
+
+        result = await service.reorder_rules([3, 1, 2])
+
+        # Same three position slots (3, 9, 12), now handed out in the caller's order.
+        assert rule_c.position == 3
+        assert rule_a.position == 9
+        assert rule_b.position == 12
+        assert [r.id for r in result] == [3, 1, 2]
+        service._repo.commit.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_reorder_ignores_ids_that_no_longer_exist(self):
+        service = _service()
+        rule_a = _rule(id=1, position=3, created_at=datetime(2026, 7, 20, 10, 0))
+        service._repo.get_rules_by_ids.return_value = [rule_a]
+
+        result = await service.reorder_rules([1, 999])
+
+        assert [r.id for r in result] == [1]
+        assert rule_a.position == 3
+
+    @pytest.mark.asyncio
+    async def test_reorder_empty_result_does_not_commit(self):
+        service = _service()
+        service._repo.get_rules_by_ids.return_value = []
+
+        result = await service.reorder_rules([404])
+
+        assert result == []
+        service._repo.commit.assert_not_awaited()
+
+
+class TestRulePositionAssignment:
+    @pytest.mark.asyncio
+    async def test_remembered_rules_get_sequential_positions(self):
+        # Multiple "Remember this" rules saved from the same commit must not collide on
+        # position -- each subsequent one should be appended after the last.
+        service = _service()
+        TestCommit()._prepare(service)
+        service._repo.next_position.return_value = 7
+        rows = [
+            _commit_row(deduplication_hash="h1", save_rule=True, rule_pattern="A"),
+            _commit_row(deduplication_hash="h2", save_rule=True, rule_pattern="B"),
+        ]
+
+        await service.commit(_commit_request(rows))
+
+        added = [c.args[0] for c in service._repo.add_rule.call_args_list]
+        assert [r.position for r in added] == [7, 8]
+
+    @pytest.mark.asyncio
+    async def test_grouped_remembered_rules_share_one_position_counter_across_currencies(self):
+        service = _service()
+        TestCommitGrouped()._prepare(service)
+        service._repo.next_position.return_value = 3
+
+        request = _grouped_commit_request(
+            [
+                _grouped_commit_row(currency="EUR", deduplication_hash="h1", save_rule=True, rule_pattern="A"),
+                _grouped_commit_row(currency="PLN", deduplication_hash="h2", save_rule=True, rule_pattern="B"),
+            ],
+            account_map={"EUR": 1, "PLN": 2},
+        )
+
+        await service.commit_grouped(request)
+
+        added = [c.args[0] for c in service._repo.add_rule.call_args_list]
+        assert [r.position for r in added] == [3, 4]
 
 
 class TestDetectCurrencies:

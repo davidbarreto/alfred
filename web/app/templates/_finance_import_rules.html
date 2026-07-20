@@ -45,6 +45,11 @@
   </button>
 </form>
 
+<div class="flex items-center justify-between mb-2">
+  <span class="text-xs text-gray-400">{% if rules %}Showing the {{ rules | length }} most recently added{% endif %}</span>
+  <a href="/finance/import/rules/all" class="text-xs text-[#378ADD] hover:underline">See all rules →</a>
+</div>
+
 {% if rules %}
 <div class="overflow-x-auto">
   <table class="table table-xs w-full">
@@ -57,35 +62,9 @@
         <th></th>
       </tr>
     </thead>
-    <tbody>
-      {% for rule in rules %}
-      <tr>
-        <td class="text-xs font-medium">{{ rule.pattern }}</td>
-        <td class="text-xs text-right whitespace-nowrap">{% if rule.amount is not none %}€{{ "%.2f"|format(rule.amount | float) }}{% else %}<span class="text-gray-300">any</span>{% endif %}</td>
-        <td>
-          <span class="px-1.5 py-0.5 rounded text-[10px] font-medium {% if rule.mode == 'auto' %}bg-[#E9F5E9] text-[#2E7D32]{% else %}bg-amber-100 text-amber-700{% endif %}">
-            {{ "auto" if rule.mode == "auto" else "suggest" }}
-          </span>
-        </td>
-        <td class="text-xs">
-          {% if rule.transfer_account_id %}
-          <span class="text-gray-500"><i class="ti ti-arrows-exchange text-xs"></i> Transfer → {{ accounts_by_id.get(rule.transfer_account_id, "?") }}</span>
-          {% else %}
-          {{ rule.description or rule.merchant or "" }}{% if rule.category_id %}{% if rule.description or rule.merchant %} · {% endif %}{{ categories_by_id.get(rule.category_id, "?") }}{% endif %}
-          {% endif %}
-        </td>
-        <td class="text-right">
-          <button class="btn btn-ghost btn-xs text-gray-400 hover:text-[#E24B4A]"
-                  hx-delete="/finance/import/rules/{{ rule.id }}"
-                  hx-target="#import-rules"
-                  hx-swap="innerHTML"
-                  hx-confirm="Delete this rule?">
-            <i class="ti ti-trash text-sm"></i>
-          </button>
-        </td>
-      </tr>
-      {% endfor %}
-    </tbody>
+    {% for rule in rules %}
+    {% include "_finance_import_rule_row.html" %}
+    {% endfor %}
   </table>
 </div>
 {% else %}

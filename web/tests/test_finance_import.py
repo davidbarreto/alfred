@@ -420,6 +420,158 @@ class TestImportRules:
         assert "No rules yet" in resp.text
         mock_api["delete"].assert_awaited_once_with("/finance/imports/rules/1")
 
+    def test_card_has_no_reorder_controls(self, client, mock_api):
+        mock_api["get"].side_effect = [[_rule()], [_category()], [_account()]]
+
+        resp = client.get("/finance/import/rules")
+
+        assert resp.status_code == 200
+        assert "moveRuleLocal(" not in resp.text
+        assert "data-rule-id" not in resp.text
+
+    def test_delete_rule_from_full_page_refreshes_full_list(self, client, mock_api):
+        mock_api["get"].side_effect = [[], [_category()], [_account()]]
+
+        resp = client.request("DELETE", "/finance/import/rules/1?offset=20&pattern=pingo")
+
+        assert resp.status_code == 200
+        assert "No rules match these filters" in resp.text
+
+    def test_card_requests_only_the_latest_five(self, client, mock_api):
+        mock_api["get"].side_effect = [[_rule()], [_category()], [_account()]]
+
+        client.get("/finance/import/rules")
+
+        params = mock_api["get"].call_args_list[0].kwargs["params"]
+        assert params["limit"] == 5
+
+
+class TestUpdateRule:
+    def test_update_rule_in_card_context(self, client, mock_api):
+        mock_api["patch"].return_value = _rule(pattern="PINGO DOCE UPDATED")
+
+        resp = client.request(
+            "PATCH",
+            "/finance/import/rules/1",
+            data={"pattern": "PINGO DOCE UPDATED", "mode": "auto", "category_id": ""},
+        )
+
+        assert resp.status_code == 200
+        assert "PINGO DOCE UPDATED" in resp.text
+        assert 'hx-target="#import-rules"' in resp.text
+        payload = mock_api["patch"].call_args.kwargs["json"]
+        assert payload["pattern"] == "PINGO DOCE UPDATED"
+        assert payload["category_id"] is None
+
+    def test_update_rule_in_full_page_context_targets_full_list(self, client, mock_api):
+        mock_api["patch"].return_value = _rule(pattern="PINGO DOCE UPDATED")
+
+        resp = client.request(
+            "PATCH",
+            "/finance/import/rules/1?offset=20&pattern=pingo",
+            data={"pattern": "PINGO DOCE UPDATED", "mode": "auto"},
+        )
+
+        assert resp.status_code == 200
+        assert 'hx-target="#import-rules-full"' in resp.text
+        assert "offset=20" in resp.text
+
+    def test_update_rule_failure_returns_422(self, client, mock_api):
+        mock_api["patch"].side_effect = httpx.HTTPError("boom")
+
+        resp = client.request("PATCH", "/finance/import/rules/1", data={"pattern": "X", "mode": "auto"})
+
+        assert resp.status_code == 422
+
+
+class TestImportRulesPage:
+    def test_renders_full_rules_page(self, client, mock_api):
+        mock_api["get"].side_effect = [[_rule()], [_category()], [_account()]]
+
+        resp = client.get("/finance/import/rules/all")
+
+        assert resp.status_code == 200
+        assert "Categorization rules" in resp.text
+        assert "PINGO DOCE" in resp.text
+        params = mock_api["get"].call_args_list[0].kwargs["params"]
+        assert params["limit"] == 21
+        assert params["offset"] == 0
+
+    def test_applies_filters_and_pagination_to_list_fragment(self, client, mock_api):
+        mock_api["get"].side_effect = [[_rule()], [_category()], [_account()]]
+
+        resp = client.get(
+            "/finance/import/rules/all/list",
+            params={"pattern": "pingo", "mode": "auto", "category_id": "10", "offset": "20"},
+        )
+
+        assert resp.status_code == 200
+        params = mock_api["get"].call_args_list[0].kwargs["params"]
+        assert params["pattern"] == "pingo"
+        assert params["mode"] == "auto"
+        assert params["category_id"] == "10"
+        assert params["offset"] == 20
+        assert params["limit"] == 21
+
+    def test_more_rows_than_page_size_are_truncated(self, client, mock_api):
+        rules = [_rule(id=i) for i in range(1, 22)]  # 21 rows from a limit=21 request
+        mock_api["get"].side_effect = [rules, [_category()], [_account()]]
+
+        resp = client.get("/finance/import/rules/all/list")
+
+        assert resp.status_code == 200
+        assert "20 rules shown" in resp.text
+
+    def test_requests_precedence_sort(self, client, mock_api):
+        mock_api["get"].side_effect = [[_rule()], [_category()], [_account()]]
+
+        client.get("/finance/import/rules/all")
+
+        params = mock_api["get"].call_args_list[0].kwargs["params"]
+        assert params["sort"] == "precedence"
+
+    def test_full_page_has_reorder_controls(self, client, mock_api):
+        mock_api["get"].side_effect = [[_rule()], [_category()], [_account()]]
+
+        resp = client.get("/finance/import/rules/all/list")
+
+        assert resp.status_code == 200
+        assert "moveRuleLocal(1, 'up')" in resp.text
+        assert "moveRuleLocal(1, 'down')" in resp.text
+        assert 'data-rule-id="1"' in resp.text
+        assert 'id="save-rule-order-btn"' in resp.text
+
+
+class TestReorderRules:
+    def test_reorder_forwards_new_order_and_refreshes_full_list(self, client, mock_api):
+        mock_api["get"].side_effect = [[_rule(id=2), _rule(id=1)], [_category()], [_account()]]
+
+        resp = client.post(
+            "/finance/import/rules/reorder",
+            params={"offset": "20"},
+            json={"rule_ids": [2, 1]},
+        )
+
+        assert resp.status_code == 200
+        mock_api["post"].assert_awaited_once_with(
+            "/finance/imports/rules/reorder", json={"rule_ids": [2, 1]}
+        )
+        params = mock_api["get"].call_args_list[0].kwargs["params"]
+        assert params["offset"] == 20
+
+    def test_reorder_rejects_invalid_payload(self, client, mock_api):
+        resp = client.post("/finance/import/rules/reorder", json={"rule_ids": ["not-an-int"]})
+
+        assert resp.status_code == 422
+        mock_api["post"].assert_not_awaited()
+
+    def test_reorder_failure_returns_422(self, client, mock_api):
+        mock_api["post"].side_effect = httpx.HTTPError("boom")
+
+        resp = client.post("/finance/import/rules/reorder", json={"rule_ids": [1, 2]})
+
+        assert resp.status_code == 422
+
 
 def _detection_response(currencies=None):
     return {

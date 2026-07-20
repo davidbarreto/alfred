@@ -693,12 +693,12 @@ async def _import_batches_context() -> dict:
     }
 
 
-async def _import_rules_context() -> dict:
-    rules, categories, accounts = [], [], []
-    try:
-        rules = await api.get("/finance/imports/rules")
-    except httpx.HTTPError:
-        pass
+_RULES_CARD_LIMIT = 5
+_RULES_PAGE_SIZE = 20
+
+
+async def _import_rules_shared_context() -> dict:
+    categories, accounts = [], []
     try:
         categories = await api.get("/finance/categories")
     except httpx.HTTPError:
@@ -708,12 +708,67 @@ async def _import_rules_context() -> dict:
     except httpx.HTTPError:
         pass
     return {
-        "rules": rules,
         "categories": categories,
         "rule_accounts": accounts,
         "categories_by_id": {c["id"]: c["name"] for c in categories},
         "accounts_by_id": {a["id"]: a["name"] for a in accounts},
     }
+
+
+async def _import_rules_context() -> dict:
+    """Context for the small rules card on the import page: latest 5, no filters."""
+    rules = []
+    try:
+        rules = await api.get("/finance/imports/rules", params={"limit": _RULES_CARD_LIMIT})
+    except httpx.HTTPError:
+        pass
+    context = await _import_rules_shared_context()
+    context.update({"rules": rules, "rules_delete_target": "#import-rules", "rules_filters_qs": ""})
+    return context
+
+
+def _parse_rule_query(request: Request) -> tuple[dict, int]:
+    qp = request.query_params
+    filters = {
+        "pattern": qp.get("pattern") or None,
+        "mode": qp.get("mode") or None,
+        "category_id": qp.get("category_id") or None,
+    }
+    offset = max(0, int(qp.get("offset", "0") or "0"))
+    return filters, offset
+
+
+def _build_rule_params(filters: dict, offset: int) -> dict:
+    params: dict = {"limit": _RULES_PAGE_SIZE + 1, "offset": offset, "sort": "precedence"}
+    params.update({k: v for k, v in filters.items() if v})
+    return params
+
+
+def _rule_pagination(items: list, offset: int) -> tuple[list, bool, bool]:
+    has_next = len(items) > _RULES_PAGE_SIZE
+    return items[:_RULES_PAGE_SIZE], has_next, offset > 0
+
+
+async def _import_rules_page_context(filters: dict, offset: int) -> dict:
+    """Context for the full, filterable, paginated rules page ("See all")."""
+    try:
+        raw = await api.get("/finance/imports/rules", params=_build_rule_params(filters, offset))
+    except httpx.HTTPError:
+        raw = []
+    rules, has_next, has_prev = _rule_pagination(raw, offset)
+    context = await _import_rules_shared_context()
+    context.update({
+        "rules": rules,
+        "has_next": has_next,
+        "has_prev": has_prev,
+        "query_filters": filters,
+        "query_offset": offset,
+        "page_size": _RULES_PAGE_SIZE,
+        "rules_delete_target": "#import-rules-full",
+        "rules_filters_qs": urlencode({**{k: v for k, v in filters.items() if v}, "offset": offset}),
+        "show_reorder": True,
+    })
+    return context
 
 
 @router.get("/import", response_class=HTMLResponse)
@@ -776,14 +831,91 @@ async def create_import_rule(
     return templates.TemplateResponse(request, "_finance_import_rules.html", context)
 
 
+@router.patch("/import/rules/{rule_id}", response_class=HTMLResponse)
+async def update_import_rule(
+    rule_id: int,
+    request: Request,
+    pattern: Annotated[str, Form()],
+    mode: Annotated[str, Form()] = "auto",
+    amount: Annotated[Optional[str], Form()] = None,
+    description: Annotated[Optional[str], Form()] = None,
+    category_id: Annotated[Optional[str], Form()] = None,
+    transfer_account_id: Annotated[Optional[str], Form()] = None,
+):
+    # Every editable field is sent on every save (not just changed ones) so clearing a
+    # field (e.g. removing the category) actually clears it rather than leaving it untouched.
+    payload: dict = {
+        "pattern": pattern.strip(),
+        "mode": mode,
+        "amount": amount.replace(",", ".").strip() if amount else None,
+        "description": description.strip() if description else None,
+        "category_id": int(category_id) if category_id else None,
+        "transfer_account_id": int(transfer_account_id) if transfer_account_id else None,
+    }
+    try:
+        rule = await api.patch(f"/finance/imports/rules/{rule_id}", json=payload)
+    except httpx.HTTPError:
+        return HTMLResponse('<p class="text-[#E24B4A] text-sm px-1">Failed to update rule.</p>', status_code=422)
+
+    context = await _import_rules_shared_context()
+    if "offset" in request.query_params:
+        filters, offset = _parse_rule_query(request)
+        context["rules_delete_target"] = "#import-rules-full"
+        context["rules_filters_qs"] = urlencode({**{k: v for k, v in filters.items() if v}, "offset": offset})
+        context["show_reorder"] = True
+    else:
+        context["rules_delete_target"] = "#import-rules"
+        context["rules_filters_qs"] = ""
+    context["rule"] = rule
+    return templates.TemplateResponse(request, "_finance_import_rule_row.html", context)
+
+
+@router.post("/import/rules/reorder", response_class=HTMLResponse)
+async def reorder_import_rules(request: Request):
+    try:
+        body = await request.json()
+        rule_ids = [int(rid) for rid in body["rule_ids"]]
+    except (ValueError, KeyError, TypeError):
+        return HTMLResponse('<p class="text-[#E24B4A] text-sm px-1">Invalid reorder payload.</p>', status_code=422)
+
+    try:
+        await api.post("/finance/imports/rules/reorder", json={"rule_ids": rule_ids})
+    except httpx.HTTPError:
+        return HTMLResponse('<p class="text-[#E24B4A] text-sm px-1">Failed to save order.</p>', status_code=422)
+
+    filters, offset = _parse_rule_query(request)
+    context = await _import_rules_page_context(filters, offset)
+    return templates.TemplateResponse(request, "_finance_import_rules_list.html", context)
+
+
 @router.delete("/import/rules/{rule_id}", response_class=HTMLResponse)
 async def delete_import_rule(rule_id: int, request: Request):
     try:
         await api.delete(f"/finance/imports/rules/{rule_id}")
     except httpx.HTTPError:
         return HTMLResponse('<p class="text-[#E24B4A] text-sm px-1">Failed to delete rule.</p>', status_code=422)
+
+    if "offset" in request.query_params:
+        filters, offset = _parse_rule_query(request)
+        context = await _import_rules_page_context(filters, offset)
+        return templates.TemplateResponse(request, "_finance_import_rules_list.html", context)
+
     context = await _import_rules_context()
     return templates.TemplateResponse(request, "_finance_import_rules.html", context)
+
+
+@router.get("/import/rules/all", response_class=HTMLResponse)
+async def import_rules_page(request: Request):
+    filters, offset = _parse_rule_query(request)
+    context = await _import_rules_page_context(filters, offset)
+    return templates.TemplateResponse(request, "finance_import_rules.html", context)
+
+
+@router.get("/import/rules/all/list", response_class=HTMLResponse)
+async def import_rules_list_fragment(request: Request):
+    filters, offset = _parse_rule_query(request)
+    context = await _import_rules_page_context(filters, offset)
+    return templates.TemplateResponse(request, "_finance_import_rules_list.html", context)
 
 
 @router.get("/import/batches", response_class=HTMLResponse)

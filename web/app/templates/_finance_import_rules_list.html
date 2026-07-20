@@ -1,0 +1,38 @@
+{% if rules %}
+<div class="flex items-center justify-between mb-2 gap-2">
+  <p class="text-xs text-gray-400">Rules are checked top to bottom — the first match wins. Use the arrows to reorder, then save.</p>
+  {% if show_reorder %}
+  <button id="save-rule-order-btn" onclick="saveRuleOrder()" class="btn btn-xs btn-primary" disabled>Save order</button>
+  {% endif %}
+</div>
+<div class="overflow-x-auto">
+  <table class="table table-xs w-full">
+    <thead>
+      <tr class="text-[10px] text-gray-400 uppercase tracking-wide">
+        {% if show_reorder %}<th></th>{% endif %}
+        <th>Match text</th>
+        <th class="text-right">Amount</th>
+        <th>Mode</th>
+        <th>Applies</th>
+        <th></th>
+      </tr>
+    </thead>
+    {% for rule in rules %}
+    {% include "_finance_import_rule_row.html" %}
+    {% endfor %}
+  </table>
+</div>
+<div class="flex items-center justify-between mt-3">
+  <span class="text-xs text-gray-400">{{ rules | length }} rule{{ "s" if rules | length != 1 else "" }} shown</span>
+  <div class="flex gap-2">
+    <button onclick="changeRulePage(-1)" class="btn btn-xs btn-ghost" {% if not has_prev %}disabled{% endif %}>
+      <i class="ti ti-chevron-left text-xs"></i>Prev
+    </button>
+    <button onclick="changeRulePage(1)" class="btn btn-xs btn-ghost" {% if not has_next %}disabled{% endif %}>
+      Next<i class="ti ti-chevron-right text-xs"></i>
+    </button>
+  </div>
+</div>
+{% else %}
+<p class="text-sm text-gray-400">No rules match these filters.</p>
+{% endif %}

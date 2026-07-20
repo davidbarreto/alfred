@@ -301,6 +301,7 @@ async def create_transaction(
     category_id: Annotated[Optional[str], Form()] = None,
     merchant: Annotated[Optional[str], Form()] = None,
     description: Annotated[Optional[str], Form()] = None,
+    counterpart_account_id: Annotated[Optional[str], Form()] = None,
 ):
     range_params = _range_params(request)
     currency = _resolve_currency(request)
@@ -316,6 +317,8 @@ async def create_transaction(
         payload["merchant"] = merchant
     if description:
         payload["description"] = description
+    if counterpart_account_id:
+        payload["counterpart_account_id"] = int(counterpart_account_id)
 
     try:
         await api.post("/finance/transactions", json=payload)
@@ -338,6 +341,7 @@ async def update_transaction(
     merchant: Annotated[Optional[str], Form()] = None,
     description: Annotated[Optional[str], Form()] = None,
     note: Annotated[Optional[str], Form()] = None,
+    counterpart_account_id: Annotated[Optional[str], Form()] = None,
 ):
     # Every editable field is sent on every save (not just changed ones) so clearing a
     # field (e.g. removing a merchant) actually clears it rather than leaving it untouched.
@@ -350,6 +354,7 @@ async def update_transaction(
         "merchant": merchant or None,
         "description": description or None,
         "note": note or None,
+        "counterpart_account_id": int(counterpart_account_id) if counterpart_account_id else None,
     }
 
     try:

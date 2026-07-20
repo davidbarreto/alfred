@@ -402,7 +402,7 @@ async function submitManageForm(e, url, targetId) {
       <div class="grid grid-cols-2 gap-3">
         <div>
           <label class="text-xs text-gray-500 mb-1 block">Type <span class="text-[#E24B4A]">*</span></label>
-          <select name="type" required class="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white w-full focus:outline-none focus:ring-1 focus:ring-[#378ADD]">
+          <select name="type" required onchange="toggleTxnCounterpartField(this.value)" class="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white w-full focus:outline-none focus:ring-1 focus:ring-[#378ADD]">
             <option value="expense">Expense</option>
             <option value="income">Income</option>
             <option value="transfer">Transfer</option>
@@ -417,6 +417,16 @@ async function submitManageForm(e, url, targetId) {
             {% endfor %}
           </select>
         </div>
+      </div>
+      <div id="txn-counterpart-field" class="hidden">
+        <label class="text-xs text-gray-500 mb-1 block">Transfer to account</label>
+        <select name="counterpart_account_id" class="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white w-full focus:outline-none focus:ring-1 focus:ring-[#378ADD]">
+          <option value="">— not tracked in Alfred —</option>
+          {% for acc in accounts %}
+          <option value="{{ acc.id }}">{{ acc.name }}</option>
+          {% endfor %}
+        </select>
+        <p class="text-[10px] text-gray-400 mt-1">If the money landed in one of your tracked accounts, link it here so it isn't counted as spend.</p>
       </div>
       <div>
         <label class="text-xs text-gray-500 mb-1 block">Merchant</label>
@@ -466,11 +476,16 @@ async function submitManageForm(e, url, targetId) {
 </dialog>
 
 <script>
+function toggleTxnCounterpartField(type) {
+  document.getElementById("txn-counterpart-field").classList.toggle("hidden", type !== "transfer");
+}
+
 function openNewTransaction() {
   const form = document.getElementById("new-txn-form");
   form.reset();
   form.querySelector('[name="transaction_id"]').value = "";
   form.querySelector('[name="date"]').value = new Date().toISOString().slice(0, 10);
+  toggleTxnCounterpartField(form.querySelector('[name="type"]').value);
   document.getElementById("txn-form-title").textContent = "New transaction";
   document.getElementById("txn-error").classList.add("hidden");
   document.getElementById("new-txn-modal").showModal();
@@ -484,10 +499,12 @@ function openEditTransaction(txn) {
   form.querySelector('[name="date"]').value = (txn.date || "").slice(0, 10);
   form.querySelector('[name="type"]').value = txn.type;
   form.querySelector('[name="account_id"]').value = txn.account_id;
+  form.querySelector('[name="counterpart_account_id"]').value = txn.counterpart_account_id || "";
   form.querySelector('[name="merchant"]').value = txn.merchant || "";
   form.querySelector('[name="category_id"]').value = txn.category_id || "";
   form.querySelector('[name="description"]').value = txn.description || "";
   form.querySelector('[name="note"]').value = txn.note || "";
+  toggleTxnCounterpartField(txn.type);
   document.getElementById("txn-form-title").textContent = "Edit transaction";
   document.getElementById("txn-error").classList.add("hidden");
   document.getElementById("new-txn-modal").showModal();

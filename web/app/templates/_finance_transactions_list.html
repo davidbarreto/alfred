@@ -19,6 +19,7 @@
         {{ txn.date[:10] }}
         {% if accounts_by_id.get(txn.account_id) %} · {{ accounts_by_id.get(txn.account_id) }}{% endif %}
         {% if txn.category_id and categories_by_id.get(txn.category_id) %} · {{ categories_by_id.get(txn.category_id) }}{% endif %}
+        {% if txn.type == 'transfer' and txn.counterpart_account_id %} · → {{ accounts_by_id.get(txn.counterpart_account_id, "?") }}{% endif %}
       </div>
     </div>
     <span class="text-sm font-medium {% if txn.type == 'income' %}text-[#639922]{% elif txn.type == 'transfer' and not counts_as_spend %}text-gray-500{% else %}text-[#E24B4A]{% endif %} flex-shrink-0">

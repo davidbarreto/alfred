@@ -41,6 +41,16 @@ class TestParseText:
         payment = next(r for r in rows if r.raw_description == "PAGTO DEBITO AUTOMATICO")
         assert payment.amount == Decimal("388.41")
 
+    def test_payment_is_suggested_as_transfer_not_income(self):
+        rows = _parse_text(_FATURA_TEXT)
+        payment = next(r for r in rows if r.raw_description == "PAGTO DEBITO AUTOMATICO")
+        assert payment.suggested_type == "transfer"
+
+    def test_charges_have_no_suggested_type(self):
+        rows = _parse_text(_FATURA_TEXT)
+        charge = next(r for r in rows if r.raw_description == "NETFLIX.COM")
+        assert charge.suggested_type is None
+
     def test_portuguese_month_names(self):
         rows = _parse_text(_FATURA_TEXT)
         dates = {r.raw_description: r.date_posted for r in rows}

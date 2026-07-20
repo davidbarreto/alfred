@@ -5,7 +5,12 @@ Format notes:
   grouped per card (``CARTÃO 2306****6588``)
 - Row shape: ``12 de out. 2025 RI HAPPY BRINQUEDOS LO (Parcela 08 de 10) - R$ 57,04``;
   the bill payment carries a ``+``: ``15 de mai. 2026 PAGTO DEBITO AUTOMATICO - + R$ 388,41``
-- Charges are normalized to negative amounts, the payment to a positive inflow
+- Charges are normalized to negative amounts, the payment to a positive inflow,
+  tagged ``suggested_type="transfer"`` -- paying off your own card is never
+  income, it's your own money clearing debt already counted as spend when
+  each underlying charge posted. Link its counterpart_account_id (via a rule
+  matching the description) to whichever tracked account actually funds the
+  auto-debit so it nets to zero instead of counting as spend a second time.
 - Installment rows print the ORIGINAL purchase date; rows dated before the
   previous billing month are re-dated to the 1st of the fatura (vencimento)
   month so monthly spending reflects cash flow. The printed date is kept as
@@ -81,6 +86,7 @@ def _parse_text(text: str) -> list[ParsedRow]:
                 amount=amount if plus else -amount,
                 currency="BRL",
                 balance_after=None,
+                suggested_type="transfer" if plus else None,
             )
         )
     return rows

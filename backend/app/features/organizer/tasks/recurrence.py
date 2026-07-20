@@ -12,6 +12,14 @@ def parse_byday(rule: str) -> list[int] | None:
     return None
 
 
+def is_due_today(rule: str, today: date) -> bool:
+    if "FREQ=WEEKLY" in rule:
+        byday = parse_byday(rule)
+        if byday:
+            return today.weekday() in byday
+    return True
+
+
 def compute_streak(dates: list[date], rule: str, today: date) -> int:
     if not dates:
         return 0

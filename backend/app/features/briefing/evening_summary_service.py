@@ -10,6 +10,7 @@ from app.features.organizer.calendar_events.schemas import EventFilters
 from app.features.organizer.notes.repository import NoteRepository
 from app.features.organizer.notes.schemas import NoteFilters
 from app.features.organizer.tasks.ranking import task_priority_sort_key
+from app.features.organizer.tasks.recurrence import is_due_today
 from app.features.organizer.tasks.repository import TaskRepository
 from app.features.organizer.tasks.schemas import TaskFilters
 from app.shared.timezone import local_now
@@ -58,6 +59,8 @@ class EveningDigestSummaryService:
                 is_overdue=t.deadline is not None and t.deadline < now,
             )
             for t in active_orm
+            if t.recurrence_rule is None
+            or (is_due_today(t.recurrence_rule, today) and t.id not in completed_recurring_ids)
         ]
         tasks.sort(key=lambda item: task_priority_sort_key(item, now))
         return wins, tasks

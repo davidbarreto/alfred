@@ -2,7 +2,7 @@ import pytest
 from datetime import date, timedelta
 from unittest.mock import AsyncMock, MagicMock
 from app.features.organizer.tasks.service import TaskService, _compute_streak, _missed_count
-from app.features.organizer.tasks.recurrence import compute_streak, missed_count, parse_byday as _parse_byday
+from app.features.organizer.tasks.recurrence import compute_streak, is_due_today, missed_count, parse_byday as _parse_byday
 from app.features.organizer.tasks.schemas import TaskCompletionRead, TaskCreate, TaskUpdate, TaskFilters, TaskRead
 
 
@@ -409,6 +409,25 @@ class TestParseByday:
 
     def test_case_insensitive(self):
         assert _parse_byday("FREQ=WEEKLY;BYDAY=mo,WE") == [0, 2]
+
+
+class TestIsDueToday:
+    def test_daily_always_due(self):
+        assert is_due_today("FREQ=DAILY", date(2026, 6, 22)) is True
+
+    def test_weekly_byday_due_on_matching_day(self):
+        # 2026-06-21 is a Sunday.
+        assert is_due_today("FREQ=WEEKLY;BYDAY=SU", date(2026, 6, 21)) is True
+
+    def test_weekly_byday_not_due_on_other_day(self):
+        # 2026-06-22 is a Monday.
+        assert is_due_today("FREQ=WEEKLY;BYDAY=SU", date(2026, 6, 22)) is False
+
+    def test_weekly_no_byday_always_due(self):
+        assert is_due_today("FREQ=WEEKLY", date(2026, 6, 22)) is True
+
+    def test_monthly_always_due(self):
+        assert is_due_today("FREQ=MONTHLY", date(2026, 6, 22)) is True
 
 
 class TestMissedCount:

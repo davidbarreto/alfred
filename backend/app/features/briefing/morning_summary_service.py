@@ -16,6 +16,7 @@ from app.features.organizer.calendar_events.schemas import EventFilters
 from app.features.organizer.contacts.service import ContactService
 from app.features.organizer.shopping.repository import ShoppingRepository
 from app.features.organizer.shopping.schemas import ShoppingItemFilters
+from app.features.organizer.tasks.recurrence import is_due_today
 from app.features.organizer.tasks.repository import TaskRepository
 from app.features.organizer.tasks.schemas import TaskFilters
 from app.shared.holiday import HolidayProvider
@@ -86,10 +87,18 @@ class MorningBriefingSummaryService:
         task_filter = TaskFilters(deadline_to=lookahead_end, include_recurring=True, limit=100)
         raw_tasks = await repo.get_tasks(task_filter)
 
+        recurring_ids = [t.id for t in raw_tasks if t.recurrence_rule is not None]
+        completed_today = (
+            await repo.get_completed_task_ids_for_date(recurring_ids, today) if recurring_ids else set()
+        )
+
         items = []
         for task in raw_tasks:
             if task.status not in _ACTIVE_STATUSES:
                 continue
+            if task.recurrence_rule is not None:
+                if not is_due_today(task.recurrence_rule, today) or task.id in completed_today:
+                    continue
             is_overdue = task.deadline is not None and task.deadline < today_start
             is_today = task.deadline is not None and today_start <= task.deadline <= today_end
             items.append(

@@ -102,6 +102,28 @@ class TestBuild:
         assert [w.title for w in result.wins] == ["Pay bill"]
 
     @pytest.mark.asyncio
+    async def test_recurring_task_not_due_today_excluded_from_tasks(self, service, _patch_repos):
+        # local_now is patched to 2026-07-18, a Saturday; rule only recurs on Sundays.
+        MockTaskRepo, _, _ = _patch_repos
+        task = _make_task_orm(id=1, title="Weekly review", recurrence_rule="FREQ=WEEKLY;BYDAY=SU")
+        MockTaskRepo.return_value.get_tasks.return_value = [task]
+
+        result = await service.build()
+
+        assert result.tasks == []
+
+    @pytest.mark.asyncio
+    async def test_recurring_task_completed_today_excluded_from_tasks(self, service, _patch_repos):
+        MockTaskRepo, _, _ = _patch_repos
+        task = _make_task_orm(id=1, title="Water plants", recurrence_rule="FREQ=DAILY")
+        MockTaskRepo.return_value.get_tasks.return_value = [task]
+        MockTaskRepo.return_value.get_completed_task_ids_for_date.return_value = {1}
+
+        result = await service.build()
+
+        assert result.tasks == []
+
+    @pytest.mark.asyncio
     async def test_active_tasks_sorted_priority_first(self, service, _patch_repos):
         MockTaskRepo, _, _ = _patch_repos
         overdue_low = _make_task_orm(id=1, title="Low overdue", priority="LOW", deadline=datetime(2020, 1, 1))

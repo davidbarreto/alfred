@@ -27,6 +27,7 @@ def _make_task_orm(
     urgency="NORMAL",
     deadline=None,
     tags=None,
+    recurrence_rule=None,
 ):
     task = MagicMock()
     task.id = id
@@ -35,6 +36,7 @@ def _make_task_orm(
     task.priority = priority
     task.urgency = urgency
     task.deadline = deadline
+    task.recurrence_rule = recurrence_rule
     tag_mocks = []
     for name in (tags or []):
         t = MagicMock()
@@ -229,6 +231,57 @@ class TestBuild:
 
         assert MockTaskRepo.return_value.get_tasks.call_args[0][0].deadline_to == datetime(2026, 6, 25, 23, 59, 59, 999999)
         assert len(result.tasks) == 1
+
+    @pytest.mark.asyncio
+    async def test_excludes_recurring_task_not_due_today(self, service):
+        # 2026-06-22 is a Monday; rule only recurs on Sundays.
+        tasks = [_make_task_orm(id=1, status="TODO", recurrence_rule="FREQ=WEEKLY;BYDAY=SU")]
+        with (
+            patch("app.features.briefing.morning_summary_service.TaskRepository") as MockTaskRepo,
+            patch("app.features.briefing.morning_summary_service.CalendarEventRepository") as MockEventRepo,
+            patch("app.features.briefing.morning_summary_service.local_now", return_value=datetime(2026, 6, 22, 8, 0)),
+        ):
+            MockTaskRepo.return_value.get_tasks = AsyncMock(return_value=tasks)
+            MockTaskRepo.return_value.get_completed_task_ids_for_date = AsyncMock(return_value=set())
+            MockEventRepo.return_value.get_events = AsyncMock(return_value=[])
+
+            result = await service.build()
+
+        assert result.tasks == []
+
+    @pytest.mark.asyncio
+    async def test_includes_recurring_task_due_today(self, service):
+        # 2026-06-21 is a Sunday, matching the rule's BYDAY.
+        tasks = [_make_task_orm(id=1, status="TODO", recurrence_rule="FREQ=WEEKLY;BYDAY=SU")]
+        with (
+            patch("app.features.briefing.morning_summary_service.TaskRepository") as MockTaskRepo,
+            patch("app.features.briefing.morning_summary_service.CalendarEventRepository") as MockEventRepo,
+            patch("app.features.briefing.morning_summary_service.local_now", return_value=datetime(2026, 6, 21, 8, 0)),
+        ):
+            MockTaskRepo.return_value.get_tasks = AsyncMock(return_value=tasks)
+            MockTaskRepo.return_value.get_completed_task_ids_for_date = AsyncMock(return_value=set())
+            MockEventRepo.return_value.get_events = AsyncMock(return_value=[])
+
+            result = await service.build()
+
+        assert len(result.tasks) == 1
+        assert result.tasks[0].id == 1
+
+    @pytest.mark.asyncio
+    async def test_excludes_recurring_task_already_completed_today(self, service):
+        tasks = [_make_task_orm(id=1, status="TODO", recurrence_rule="FREQ=DAILY")]
+        with (
+            patch("app.features.briefing.morning_summary_service.TaskRepository") as MockTaskRepo,
+            patch("app.features.briefing.morning_summary_service.CalendarEventRepository") as MockEventRepo,
+            patch("app.features.briefing.morning_summary_service.local_now", return_value=datetime(2026, 6, 22, 8, 0)),
+        ):
+            MockTaskRepo.return_value.get_tasks = AsyncMock(return_value=tasks)
+            MockTaskRepo.return_value.get_completed_task_ids_for_date = AsyncMock(return_value={1})
+            MockEventRepo.return_value.get_events = AsyncMock(return_value=[])
+
+            result = await service.build()
+
+        assert result.tasks == []
 
     @pytest.mark.asyncio
     async def test_sorts_tasks_overdue_first(self, service):

@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.features.organizer.calendar_events.repository import CalendarEventRepository
 from app.features.organizer.calendar_events.schemas import EventFilters
-from app.features.organizer.tasks.recurrence import missed_count
+from app.features.organizer.tasks.recurrence import is_due_today, missed_count
 from app.features.organizer.tasks.repository import TaskRepository
 from app.features.organizer.tasks.schemas import TaskFilters
 from app.shared.timezone import local_now
@@ -50,6 +50,8 @@ async def _build(session: AsyncSession) -> str:
 
     for t in active_tasks:
         if t.recurrence_rule:
+            if not is_due_today(t.recurrence_rule, today):
+                continue
             done = t.id in completed_today
             dates = completions_map.get(t.id, [])
             mc = missed_count(t.recurrence_rule, dates, today)

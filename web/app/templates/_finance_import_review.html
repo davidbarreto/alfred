@@ -18,7 +18,7 @@
     <span class="px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-700">{{ preview.needs_review_count }} need review</span>
     {% endif %}
     <span class="text-xs text-gray-400 ml-auto">
-      {{ preview.provider }}{% if preview.period_start %} · {{ preview.period_start }} → {{ preview.period_end }}{% endif %}{% if preview.closing_balance is not none %} · closing balance €{{ "%.2f"|format(preview.closing_balance | float) }}{% endif %}
+      {{ preview.provider }}{% if preview.period_start %} · {{ preview.period_start }} → {{ preview.period_end }}{% endif %}{% if preview.closing_balance is not none %} · closing balance €{{ preview.closing_balance | money }}{% endif %}
     </span>
   </div>
 
@@ -62,7 +62,7 @@
             </td>
             <td class="whitespace-nowrap text-xs">{{ row.date_posted }}</td>
             <td class="text-xs max-w-64 truncate" title="{{ row.bank_description }}">{{ row.bank_description }}</td>
-            <td class="text-right text-xs whitespace-nowrap">€{{ "%.2f"|format(row.amount | float) }}</td>
+            <td class="text-right text-xs whitespace-nowrap">€{{ row.amount | money }}</td>
             {% if row.duplicate_reason == "repeated_in_file" %}
             <td colspan="5" class="text-xs text-amber-600">Skipped — repeated within this file</td>
             {% else %}
@@ -97,7 +97,7 @@
               {% endif %}
             </td>
             <td class="text-right text-xs whitespace-nowrap font-medium {% if row.amount | float < 0 %}text-[#E24B4A]{% else %}text-[#3E9C42]{% endif %}">
-              €{{ "%.2f"|format(row.amount | float) }}
+              €{{ row.amount | money }}
             </td>
             <td>
               <select name="type_{{ i }}" class="select select-xs border-gray-200 bg-white">

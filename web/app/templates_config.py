@@ -45,5 +45,12 @@ def _compact_number(value: int | float | None) -> str:
     return f"{sign}{int(n)}"
 
 
+def _money(value: int | float | None, decimals: int = 2) -> str:
+    if value is None:
+        return ""
+    return f"{float(value):,.{decimals}f}"
+
+
 templates.env.filters["timeago"] = _timeago
 templates.env.filters["compact_number"] = _compact_number
+templates.env.filters["money"] = _money

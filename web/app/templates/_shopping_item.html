@@ -27,7 +27,7 @@
     {% endif %}
   </span>
   {% if item.estimated_price %}
-  <span class="text-xs text-gray-400 flex-shrink-0">€{{ item.estimated_price }}</span>
+  <span class="text-xs text-gray-400 flex-shrink-0">€{{ item.estimated_price | money }}</span>
   {% endif %}
   {% if item.source %}
   <span class="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-400 flex-shrink-0">{{ item.source }}</span>

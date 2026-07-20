@@ -11,7 +11,7 @@
     </div>
     <div class="flex items-center gap-3">
       <span class="text-sm font-medium {% if r.type == 'income' %}text-[#639922]{% else %}text-[#E24B4A]{% endif %}">
-        {% if r.type == 'income' %}+{% else %}-{% endif %}€{{ "%.2f"|format(r.amount | float) }}
+        {% if r.type == 'income' %}+{% else %}-{% endif %}€{{ r.amount | money }}
       </span>
       <button
         class="text-gray-300 hover:text-[#E24B4A] transition-colors"

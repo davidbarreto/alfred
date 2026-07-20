@@ -11,7 +11,7 @@
     </td>
     {% endif %}
     <td class="text-xs font-medium">{{ rule.pattern }}</td>
-    <td class="text-xs text-right whitespace-nowrap">{% if rule.amount is not none %}€{{ "%.2f"|format(rule.amount | float) }}{% else %}<span class="text-gray-300">any</span>{% endif %}</td>
+    <td class="text-xs text-right whitespace-nowrap">{% if rule.amount is not none %}€{{ rule.amount | money }}{% else %}<span class="text-gray-300">any</span>{% endif %}</td>
     <td>
       <span class="px-1.5 py-0.5 rounded text-[10px] font-medium {% if rule.mode == 'auto' %}bg-[#E9F5E9] text-[#2E7D32]{% else %}bg-amber-100 text-amber-700{% endif %}">
         {{ "auto" if rule.mode == "auto" else "suggest" }}

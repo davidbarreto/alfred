@@ -30,7 +30,7 @@
       <div class="card-body p-4">
         <p class="text-xs text-gray-400 uppercase tracking-wide">Monthly spend</p>
         <p class="text-2xl font-semibold text-gray-900 mt-1">
-          {% if spending %}€{{ "%.0f"|format(spending.total | float) }}{% else %}—{% endif %}
+          {% if spending %}€{{ spending.total | money(0) }}{% else %}—{% endif %}
         </p>
       </div>
     </a>

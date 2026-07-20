@@ -10,7 +10,7 @@
         <span class="text-xs text-gray-400">({{ c.row_count }} transaction{{ "s" if c.row_count != 1 }})</span>
       </div>
       <select name="account_{{ c.currency }}" {% if c.candidate_accounts %}required{% else %}disabled{% endif %}
-              class="select select-sm border-gray-200 bg-white">
+              class="select select-sm border-gray-200 bg-white w-48 shrink-0">
         <option value="">— select account —</option>
         {% for acc in c.candidate_accounts %}
         <option value="{{ acc.id }}" {% if acc.id == c.auto_account_id %}selected{% endif %}>{{ acc.name }}</option>

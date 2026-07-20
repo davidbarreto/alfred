@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import logging
 from datetime import date, timedelta
+from urllib.parse import quote
 
 import httpx
 
@@ -29,7 +30,7 @@ class GooglePublicHolidayClient:
             for country, calendar_id in _CALENDARS.items():
                 try:
                     resp = await http.get(
-                        f"{_BASE_URL}/{calendar_id}/events",
+                        f"{_BASE_URL}/{quote(calendar_id, safe='')}/events",
                         params={
                             "key": self._api_key,
                             "timeMin": time_min,

@@ -418,7 +418,9 @@
         <i class="ti ti-x text-lg"></i>
       </button>
     </div>
-    <canvas id="chart-modal-canvas" height="320"></canvas>
+    <div class="relative h-[60vh] max-h-[420px]">
+      <canvas id="chart-modal-canvas"></canvas>
+    </div>
   </div>
 </div>
 
@@ -454,8 +456,9 @@ function openChartModal(key) {
       }]
     },
     options: isDonut
-      ? { plugins: { legend: { position: "bottom", labels: { boxWidth: 10, font: { size: 12 } } } }, cutout: "65%" }
+      ? { maintainAspectRatio: false, plugins: { legend: { position: "bottom", labels: { boxWidth: 10, font: { size: 12 } } } }, cutout: "65%" }
       : {
+          maintainAspectRatio: false,
           plugins: { legend: { display: false } },
           scales: {
             x: { grid: { display: false } },

@@ -7,16 +7,22 @@
         {{ (txn.description or txn.merchant or txn.bank_description or "?")[0] | upper }}
       </span>
     </div>
+    {% set counts_as_spend = txn.type == 'transfer' and not txn.counterpart_account_id %}
     <div class="flex-1 min-w-0">
-      <div class="text-sm text-gray-800 truncate">{{ txn.description or txn.merchant or txn.bank_description or "—" }}</div>
+      <div class="text-sm text-gray-800 truncate flex items-center gap-1.5">
+        <span class="truncate">{{ txn.description or txn.merchant or txn.bank_description or "—" }}</span>
+        {% if counts_as_spend %}
+        <span class="flex-shrink-0 px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-50 text-amber-700" title="Transfer with no tracked destination account — counted as spend">counts as spend</span>
+        {% endif %}
+      </div>
       <div class="text-xs text-gray-400">
         {{ txn.date[:10] }}
         {% if accounts_by_id.get(txn.account_id) %} · {{ accounts_by_id.get(txn.account_id) }}{% endif %}
         {% if txn.category_id and categories_by_id.get(txn.category_id) %} · {{ categories_by_id.get(txn.category_id) }}{% endif %}
       </div>
     </div>
-    <span class="text-sm font-medium {% if txn.type == 'income' %}text-[#639922]{% elif txn.type == 'transfer' %}text-gray-500{% else %}text-[#E24B4A]{% endif %} flex-shrink-0">
-      {% if txn.type == 'income' %}+{% elif txn.type == 'expense' %}-{% endif %}{{ currency_symbols.get(txn.currency, txn.currency + " ") }}{{ txn.amount | float | abs | money }}
+    <span class="text-sm font-medium {% if txn.type == 'income' %}text-[#639922]{% elif txn.type == 'transfer' and not counts_as_spend %}text-gray-500{% else %}text-[#E24B4A]{% endif %} flex-shrink-0">
+      {% if txn.type == 'income' %}+{% elif txn.type == 'expense' or counts_as_spend %}-{% endif %}{{ currency_symbols.get(txn.currency, txn.currency + " ") }}{{ txn.amount | float | abs | money }}
     </span>
     <button
       class="text-gray-300 hover:text-[#378ADD] opacity-0 group-hover:opacity-100 transition-all flex-shrink-0"

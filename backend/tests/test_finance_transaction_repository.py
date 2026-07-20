@@ -216,6 +216,32 @@ class TestGetSpendingTotal:
         assert total == Decimal("500.00")
         assert count == 1
 
+    async def test_expense_query_counts_untracked_transfers_as_spend(self):
+        """A transfer with no counterpart_account_id never landed in another tracked
+        account, so it should be included in "expense" totals alongside real expenses."""
+        session = _make_session()
+        session.execute.return_value = _one_result((Decimal("0"), 0))
+        await TransactionRepository(session).get_spending_total(
+            from_date=date(2026, 6, 1),
+            to_date=date(2026, 6, 30),
+        )
+        query = session.execute.call_args.args[0]
+        sql = str(query.compile(compile_kwargs={"literal_binds": True}))
+        assert "transfer" in sql
+        assert "counterpart_account_id" in sql
+
+    async def test_income_query_does_not_consider_transfers(self):
+        session = _make_session()
+        session.execute.return_value = _one_result((Decimal("0"), 0))
+        await TransactionRepository(session).get_spending_total(
+            from_date=date(2026, 6, 1),
+            to_date=date(2026, 6, 30),
+            transaction_type="income",
+        )
+        query = session.execute.call_args.args[0]
+        sql = str(query.compile(compile_kwargs={"literal_binds": True}))
+        assert "counterpart_account_id" not in sql
+
 
 class TestGetTopExpenses:
     async def test_returns_list(self):
@@ -240,6 +266,33 @@ class TestGetTopExpenses:
         )
         session.execute.assert_called_once()
 
+    async def test_includes_untracked_transfers(self):
+        session = _make_session()
+        session.execute.return_value = _scalar_all([])
+        await TransactionRepository(session).get_top_expenses(
+            from_date=date(2026, 6, 1),
+            to_date=date(2026, 6, 30),
+            top_n=5,
+        )
+        query = session.execute.call_args.args[0]
+        sql = str(query.compile(compile_kwargs={"literal_binds": True}))
+        assert "counterpart_account_id" in sql
+
+
+class TestGetSpendingByCategory:
+    async def test_includes_untracked_transfers(self):
+        session = _make_session()
+        result = MagicMock()
+        result.all.return_value = []
+        session.execute.return_value = result
+        await TransactionRepository(session).get_spending_by_category(
+            from_date=date(2026, 6, 1),
+            to_date=date(2026, 6, 30),
+        )
+        query = session.execute.call_args.args[0]
+        sql = str(query.compile(compile_kwargs={"literal_binds": True}))
+        assert "counterpart_account_id" in sql
+
 
 class TestGetCategorySpent:
     async def test_returns_decimal_total(self):
@@ -251,6 +304,18 @@ class TestGetCategorySpent:
             to_date=date(2026, 6, 30),
         )
         assert result == Decimal("80.00")
+
+    async def test_includes_untracked_transfers(self):
+        session = _make_session()
+        session.execute.return_value = _scalar_result(Decimal("0"))
+        await TransactionRepository(session).get_category_spent(
+            category_id=1,
+            from_date=date(2026, 6, 1),
+            to_date=date(2026, 6, 30),
+        )
+        query = session.execute.call_args.args[0]
+        sql = str(query.compile(compile_kwargs={"literal_binds": True}))
+        assert "counterpart_account_id" in sql
 
 
 class TestBulkReassignAccount:

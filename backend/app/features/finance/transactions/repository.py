@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import date
 from decimal import Decimal
 from typing import Any
-from sqlalchemy import func, select, update
+from sqlalchemy import and_, func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.features.finance.transactions.tables import Transaction
@@ -15,6 +15,23 @@ from app.features.finance.transactions.schemas import (
 )
 
 
+def _spend_condition(transaction_type: str):
+    """A transfer with no tracked counterpart account is money that left an
+    Alfred-tracked account and never landed in another one (e.g. sent to an external
+    wallet, or converted to a currency Alfred doesn't track) -- it's effectively spent,
+    even though the bank/import labeled it a transfer. A transfer that does have a
+    counterpart_account_id is a genuine internal move between two tracked accounts and
+    stays excluded from spend. Only applies when reporting "expense"; other types
+    (income) match the column exactly.
+    """
+    if transaction_type == "expense":
+        return or_(
+            Transaction.type == "expense",
+            and_(Transaction.type == "transfer", Transaction.counterpart_account_id.is_(None)),
+        )
+    return Transaction.type == transaction_type
+
+
 def _filter_conditions(filters: Any) -> list:
     """Shared WHERE-clause building for anything shaped like TransactionFilters
     (duck-typed: also used by TransactionBulkMoveRequest, which carries the same
@@ -22,7 +39,7 @@ def _filter_conditions(filters: Any) -> list:
     """
     conditions = []
     if filters.type is not None:
-        conditions.append(Transaction.type == filters.type)
+        conditions.append(_spend_condition(filters.type))
     if filters.category_id is not None:
         conditions.append(Transaction.category_id == filters.category_id)
     if getattr(filters, "account_id", None) is not None:
@@ -168,7 +185,7 @@ class TransactionRepository:
             func.coalesce(func.sum(Transaction.amount), 0),
             func.count(Transaction.id),
         ).where(
-            Transaction.type == transaction_type,
+            _spend_condition(transaction_type),
             Transaction.currency == currency,
             Transaction.date >= from_date,
             Transaction.date <= to_date,
@@ -194,7 +211,7 @@ class TransactionRepository:
         query = (
             select(Transaction)
             .where(
-                Transaction.type == "expense",
+                _spend_condition("expense"),
                 Transaction.currency == currency,
                 Transaction.date >= from_date,
                 Transaction.date <= to_date,
@@ -225,7 +242,7 @@ class TransactionRepository:
             )
             .outerjoin(Category, Transaction.category_id == Category.id)
             .where(
-                Transaction.type == "expense",
+                _spend_condition("expense"),
                 Transaction.currency == currency,
                 Transaction.date >= from_date,
                 Transaction.date <= to_date,
@@ -251,7 +268,7 @@ class TransactionRepository:
         query = select(
             func.coalesce(func.sum(Transaction.amount), 0)
         ).where(
-            Transaction.type == "expense",
+            _spend_condition("expense"),
             Transaction.currency == currency,
             Transaction.category_id == category_id,
             Transaction.date >= from_date,

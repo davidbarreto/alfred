@@ -264,7 +264,7 @@ class TestContactService:
         assert result == []
 
     @pytest.mark.asyncio
-    async def test_get_upcoming_birthdays_excludes_self(self, service):
+    async def test_get_upcoming_birthdays_flags_self(self, service):
         today = date(2026, 6, 23)
         contact = MagicMock()
         contact.name = "David Barreto"
@@ -277,7 +277,8 @@ class TestContactService:
             MockRepo.return_value.get_all_with_birthday = AsyncMock(return_value=[contact])
             result = await service.get_upcoming_birthdays(today)
 
-        assert result == []
+        assert len(result) == 1
+        assert result[0]["is_self"] is True
 
     @pytest.mark.asyncio
     async def test_get_upcoming_birthdays_sorted_by_days(self, service):

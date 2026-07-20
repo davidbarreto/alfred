@@ -203,7 +203,10 @@ class MorningBriefingSummaryService:
         if self._contact_service is None:
             return []
         raw = await self._contact_service.get_upcoming_birthdays(today)
-        return [BirthdayItem(name=r["name"], days_until=r["days_until"], date=r["date"]) for r in raw]
+        return [
+            BirthdayItem(name=r["name"], days_until=r["days_until"], date=r["date"], is_self=r.get("is_self", False))
+            for r in raw
+        ]
 
     async def _fetch_weather(self, today: date) -> WeatherForecast | None:
         try:

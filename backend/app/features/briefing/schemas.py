@@ -51,6 +51,7 @@ class BirthdayItem(BaseModel):
     name: str
     days_until: int
     date: date
+    is_self: bool = False
 
 
 class ShoppingBriefItem(BaseModel):

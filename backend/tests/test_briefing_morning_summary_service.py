@@ -466,6 +466,29 @@ class TestBuild:
         assert len(result.birthdays) == 1
         assert result.birthdays[0].name == "Alice"
         assert result.birthdays[0].days_until == 3
+        assert result.birthdays[0].is_self is False
+
+    @pytest.mark.asyncio
+    async def test_birthdays_passthrough_is_self_flag(self, mock_session, mock_weather_client, mock_holiday_client):
+        mock_contact_service = AsyncMock()
+        mock_contact_service.get_upcoming_birthdays.return_value = [
+            {"name": "David Barreto", "days_until": 8, "date": date(2026, 7, 28), "is_self": True},
+        ]
+        svc = MorningBriefingSummaryService(
+            session=mock_session,
+            weather_client=mock_weather_client,
+            holiday_client=mock_holiday_client,
+            contact_service=mock_contact_service,
+        )
+        with (
+            patch("app.features.briefing.morning_summary_service.TaskRepository") as MockTaskRepo,
+            patch("app.features.briefing.morning_summary_service.CalendarEventRepository") as MockEventRepo,
+        ):
+            MockTaskRepo.return_value.get_tasks = AsyncMock(return_value=[])
+            MockEventRepo.return_value.get_events = AsyncMock(return_value=[])
+            result = await svc.build()
+
+        assert result.birthdays[0].is_self is True
 
 
 class TestLanguageBriefing:

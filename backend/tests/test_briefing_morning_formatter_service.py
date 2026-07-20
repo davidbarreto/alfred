@@ -266,6 +266,14 @@ class TestBuildContext:
         assert "Carol" in context
         assert "in 5 days" in context
 
+    def test_self_birthday_not_labeled_with_own_name(self):
+        briefing = _make_briefing(
+            birthdays=[BirthdayItem(name="David Barreto", days_until=8, date=date(2026, 7, 28), is_self=True)]
+        )
+        context = _build_context(briefing)
+        assert "David Barreto" not in context
+        assert "own birthday" in context
+
 
 class TestMorningBriefingFormatterService:
     @pytest.fixture

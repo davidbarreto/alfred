@@ -249,6 +249,31 @@ class ImportService:
                     preview_row.review_reasons.append(parsed_row.flag_reason)
                 preview_row.needs_review = True
 
+    def _link_transfer_pairs(
+        self, pair_candidates: dict[str, list[tuple[ImportPreviewRow, int]]]
+    ) -> None:
+        """Auto-set counterpart_account_id on both legs of a same-event currency
+        conversion (see ParsedRow.transfer_pair_key), so a genuinely internal move
+        between two tracked accounts nets to zero instead of counting as spend. No FX
+        conversion happens here -- we only link the two rows, never their amounts.
+        Skips anything a rule already classified, ambiguous groups (not exactly 2 legs),
+        legs still resolving to the same account, and duplicate rows.
+        """
+        for entries in pair_candidates.values():
+            if len(entries) != 2:
+                continue
+            (row_a, account_a), (row_b, account_b) = entries
+            if account_a == account_b:
+                continue
+            if row_a.status != "new" or row_b.status != "new":
+                continue
+            if row_a.type != "transfer" or row_b.type != "transfer":
+                continue
+            if row_a.counterpart_account_id is not None or row_b.counterpart_account_id is not None:
+                continue
+            row_a.counterpart_account_id = account_b
+            row_b.counterpart_account_id = account_a
+
     async def _store_file(self, provider: str, filename: str, content: bytes) -> str | None:
         """Persist the original upload; the content-hash path makes re-uploads idempotent."""
         if self._files is None:
@@ -721,6 +746,7 @@ class ImportService:
         accounts_by_id = {a.id: a.name for a in await self._account_repo.list(AccountFilters())}
 
         groups: list[ImportCurrencyGroup] = []
+        pair_candidates: dict[str, list[tuple[ImportPreviewRow, int]]] = defaultdict(list)
         for currency in sorted(by_currency):
             parsed_rows = by_currency[currency]
             account_id = account_map[currency]
@@ -730,6 +756,9 @@ class ImportService:
             await self._apply_knn(rows, categories)
             await self._apply_llm(rows, categories)
             self._apply_review_reasons(rows, parsed_rows)
+            for parsed_row, built_row in zip(parsed_rows, rows):
+                if parsed_row.transfer_pair_key:
+                    pair_candidates[parsed_row.transfer_pair_key].append((built_row, account_id))
 
             dates = [r.date_posted for r in parsed_rows]
             groups.append(
@@ -746,6 +775,8 @@ class ImportService:
                     needs_review_count=sum(1 for r in rows if r.needs_review),
                 )
             )
+
+        self._link_transfer_pairs(pair_candidates)
 
         logger.info(
             "Grouped import preview: provider=%s file=%r currencies=%s",

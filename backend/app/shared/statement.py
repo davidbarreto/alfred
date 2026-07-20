@@ -53,6 +53,12 @@ class ParsedRow:
     date-only. Used only as an extra dedup-hash disambiguator: two same-day,
     same-amount, same-description rows can otherwise collide, e.g. a running balance
     that coincidentally returns to the same value between them."""
+    transfer_pair_key: str | None = None
+    """Set only when the parser can be certain two rows are the opposing legs of the
+    same self-transfer/currency-conversion event (e.g. Wise's own transaction ID for a
+    split conversion row). The grouped-import service uses this to auto-link both legs'
+    counterpart_account_id once each leg's Alfred account is resolved, without needing
+    any FX conversion -- we're only pairing rows, never converting amounts."""
 
 
 @dataclass

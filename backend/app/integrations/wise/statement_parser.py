@@ -14,7 +14,12 @@ Format notes:
   not two separate rows. This parser splits such a row into two
   ``ParsedRow`` entries so each currency's balance is affected correctly --
   the import service then routes each currency to its own Alfred account,
-  same as Revolut's multi-currency handling.
+  same as Revolut's multi-currency handling. Both legs share
+  ``transfer_pair_key=f"wise:{ID}"`` (the CSV's own transaction ID), which
+  the grouped-import service uses to auto-link them via
+  ``counterpart_account_id`` once each leg's account is resolved -- no FX
+  conversion needed, since we're only linking the two rows, not converting
+  between them.
 - "Source name" == "Target name" identifies a self-transfer (moving your
   own money), as opposed to a real payment to/from a third party:
     - Self-transfer, differing currencies: a currency conversion -- two
@@ -103,6 +108,7 @@ class WiseStatementParser:
                 continue
             posted_at = finished_raw or None
 
+            record_id = (record.get("ID") or "").strip()
             source_name = (record.get("Source name") or "").strip()
             target_name = (record.get("Target name") or "").strip()
             source_currency = (record.get("Source currency") or "").strip().upper()
@@ -118,6 +124,7 @@ class WiseStatementParser:
             is_self = bool(source_name) and source_name == target_name
 
             if is_self and source_currency != target_currency:
+                pair_key = f"wise:{record_id}" if record_id else None
                 rows.append(
                     ParsedRow(
                         date_posted=finished,
@@ -127,6 +134,7 @@ class WiseStatementParser:
                         currency=source_currency,
                         suggested_type="transfer",
                         posted_at=posted_at,
+                        transfer_pair_key=pair_key,
                     )
                 )
                 rows.append(
@@ -138,6 +146,7 @@ class WiseStatementParser:
                         currency=target_currency,
                         suggested_type="transfer",
                         posted_at=posted_at,
+                        transfer_pair_key=pair_key,
                     )
                 )
             elif is_self:

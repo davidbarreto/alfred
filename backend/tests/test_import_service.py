@@ -993,6 +993,70 @@ class TestPreviewGrouped:
         assert result.duplicate_count == 1
         assert result.new_count == 0
 
+    @pytest.mark.asyncio
+    async def test_matching_transfer_pair_key_links_counterpart_accounts(self):
+        rows = [
+            _row(
+                currency="EUR", raw_description="Currency exchange to BRL",
+                amount=Decimal("-50.00"), suggested_type="transfer",
+                transfer_pair_key="wise:TX1",
+            ),
+            _row(
+                currency="BRL", raw_description="Currency exchange from EUR",
+                amount=Decimal("300.00"), balance_after=Decimal("10"),
+                suggested_type="transfer", transfer_pair_key="wise:TX1",
+            ),
+        ]
+        service = _service(_statement(rows))
+        service._account_repo.list.return_value = [
+            _account(1, "Wise EUR", "EUR"), _account(2, "Wise BRL", "BRL"),
+        ]
+
+        result = await service.preview_grouped(
+            {"EUR": 1, "BRL": 2}, "x.csv", b"", provider="fakebank"
+        )
+
+        by_currency = {g.currency: g for g in result.groups}
+        assert by_currency["EUR"].rows[0].counterpart_account_id == 2
+        assert by_currency["BRL"].rows[0].counterpart_account_id == 1
+
+    @pytest.mark.asyncio
+    async def test_transfer_pair_not_linked_when_legs_resolve_to_same_account(self):
+        rows = [
+            _row(currency="EUR", raw_description="leg A", suggested_type="transfer", transfer_pair_key="wise:TX1"),
+            _row(
+                currency="EUR", raw_description="leg B", suggested_type="transfer",
+                transfer_pair_key="wise:TX1", balance_after=Decimal("10"),
+            ),
+        ]
+        service = _service(_statement(rows))
+        service._account_repo.list.return_value = [_account(1, "EUR Acc", "EUR")]
+
+        result = await service.preview_grouped({"EUR": 1}, "x.csv", b"", provider="fakebank")
+
+        assert all(row.counterpart_account_id is None for row in result.groups[0].rows)
+
+    @pytest.mark.asyncio
+    async def test_transfer_pair_does_not_override_rule_assigned_counterpart(self):
+        rows = [
+            _row(currency="EUR", raw_description="leg A", suggested_type="transfer", transfer_pair_key="wise:TX1"),
+            _row(
+                currency="BRL", raw_description="leg B", suggested_type="transfer",
+                transfer_pair_key="wise:TX1", balance_after=Decimal("10"),
+            ),
+        ]
+        service = _service(_statement(rows))
+        service._account_repo.list.return_value = [
+            _account(1, "Wise EUR", "EUR"), _account(2, "Wise BRL", "BRL"),
+        ]
+        service._repo.list_rules.return_value = [_rule(pattern="leg A", transfer_account_id=99)]
+
+        result = await service.preview_grouped({"EUR": 1, "BRL": 2}, "x.csv", b"", provider="fakebank")
+
+        by_currency = {g.currency: g for g in result.groups}
+        assert by_currency["EUR"].rows[0].counterpart_account_id == 99
+        assert by_currency["BRL"].rows[0].counterpart_account_id is None
+
 
 def _grouped_commit_row(**kwargs) -> ImportCommitGroupedRow:
     defaults = dict(

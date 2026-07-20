@@ -79,6 +79,18 @@ class TestParse:
         assert in_leg.currency == "BRL"
         assert in_leg.suggested_type == "transfer"
 
+    def test_conversion_legs_share_a_transfer_pair_key(self):
+        statement = WiseStatementParser().parse(_content())
+        out_leg = next(r for r in statement.rows if r.raw_description == "Currency exchange to BRL")
+        in_leg = next(r for r in statement.rows if r.raw_description == "Currency exchange from EUR")
+        assert out_leg.transfer_pair_key == "wise:TRANSFER-0000000002"
+        assert in_leg.transfer_pair_key == "wise:TRANSFER-0000000002"
+
+    def test_non_conversion_rows_have_no_transfer_pair_key(self):
+        statement = WiseStatementParser().parse(_content())
+        purchase = next(r for r in statement.rows if r.raw_description == "SOME SHOP")
+        assert purchase.transfer_pair_key is None
+
     def test_conversion_uses_finished_date_for_posting_and_created_for_value(self):
         statement = WiseStatementParser().parse(_content())
         out_leg = next(r for r in statement.rows if r.raw_description == "Currency exchange to BRL")

@@ -7,7 +7,7 @@ from typing import Any
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.integrations.provider_calls.repository import create_sync_log
-from app.shared.timezone import local_timezone_name
+from app.shared.timezone import local_timezone, local_timezone_name
 
 from .client import GoogleCalendarClient
 
@@ -73,11 +73,11 @@ class GoogleCalendarProvider:
             end_dt: datetime = datetime.fromisoformat(end["date"])
         else:
             event_timezone = start.get("timeZone") or local_timezone_name()
-            # Google's dateTime carries a numeric UTC offset alongside the timeZone name;
-            # the offset is redundant with the name and would double-apply on the next
-            # conversion, so keep only the wall-clock digits.
-            start_dt = datetime.fromisoformat(start["dateTime"].replace("Z", "+00:00")).replace(tzinfo=None)
-            end_dt = datetime.fromisoformat(end["dateTime"].replace("Z", "+00:00")).replace(tzinfo=None)
+            # Google's dateTime carries the event's own UTC offset (e.g. Central Time),
+            # not the user's. Convert to the user's local timezone before dropping
+            # tzinfo, so the stored naive wall-clock time matches what the user sees.
+            start_dt = datetime.fromisoformat(start["dateTime"].replace("Z", "+00:00")).astimezone(local_timezone()).replace(tzinfo=None)
+            end_dt = datetime.fromisoformat(end["dateTime"].replace("Z", "+00:00")).astimezone(local_timezone()).replace(tzinfo=None)
 
         recurrence_rule: str | None = None
         for rule in google_event.get("recurrence", []):

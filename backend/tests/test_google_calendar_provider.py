@@ -49,7 +49,7 @@ class TestToGoogleEvent:
 
 
 class TestFromGoogleEvent:
-    def test_extracts_timezone_and_strips_offset(self):
+    def test_converts_event_timezone_to_local(self):
         provider = _make_provider()
         record = provider._from_google_event({
             "id": "gc-1",
@@ -58,9 +58,10 @@ class TestFromGoogleEvent:
             "end": {"dateTime": "2026-03-15T09:30:00-05:00", "timeZone": "America/Chicago"},
         })
 
+        # Chicago is UTC-5 (CDT) and Lisbon is UTC+0 (WET) on this date, a 5-hour gap.
         assert record["timezone"] == "America/Chicago"
-        assert record["start_datetime"] == datetime(2026, 3, 15, 9, 0)
-        assert record["end_datetime"] == datetime(2026, 3, 15, 9, 30)
+        assert record["start_datetime"] == datetime(2026, 3, 15, 14, 0)
+        assert record["end_datetime"] == datetime(2026, 3, 15, 14, 30)
         assert record["start_datetime"].tzinfo is None
 
     def test_falls_back_to_local_timezone_when_missing(self, monkeypatch):
@@ -76,6 +77,8 @@ class TestFromGoogleEvent:
         })
 
         assert record["timezone"] == "Europe/Lisbon"
+        assert record["start_datetime"] == datetime(2026, 3, 15, 9, 0)
+        assert record["end_datetime"] == datetime(2026, 3, 15, 9, 30)
 
     def test_all_day_event_has_no_timezone(self):
         provider = _make_provider()

@@ -393,6 +393,27 @@ class TestBuild:
         assert result.holidays[0].country == "PT"
 
     @pytest.mark.asyncio
+    async def test_passes_session_to_weather_and_holiday_clients(
+        self, mock_session, mock_weather_client, mock_holiday_client
+    ):
+        svc = MorningBriefingSummaryService(
+            session=mock_session,
+            weather_client=mock_weather_client,
+            holiday_client=mock_holiday_client,
+            contact_service=None,
+        )
+        with (
+            patch("app.features.briefing.morning_summary_service.TaskRepository") as MockTaskRepo,
+            patch("app.features.briefing.morning_summary_service.CalendarEventRepository") as MockEventRepo,
+        ):
+            MockTaskRepo.return_value.get_tasks = AsyncMock(return_value=[])
+            MockEventRepo.return_value.get_events = AsyncMock(return_value=[])
+            await svc.build()
+
+        assert mock_weather_client.get_daily_forecast.call_args.kwargs["session"] is mock_session
+        assert mock_holiday_client.get_holidays.call_args.kwargs["session"] is mock_session
+
+    @pytest.mark.asyncio
     async def test_weather_none_when_client_fails(self, mock_session, mock_weather_client, mock_holiday_client):
         mock_weather_client.get_daily_forecast.side_effect = RuntimeError("boom")
         svc = MorningBriefingSummaryService(

@@ -4,11 +4,12 @@ from typing import Any
 
 from fastapi import HTTPException, status
 
-from app.features.briefing.weather_client import WeatherClient
+from app.integrations.open_meteo.client import OpenMeteoClient
+from app.integrations.open_meteo.provider import OpenMeteoProvider
 
 logger = logging.getLogger(__name__)
 
-_client = WeatherClient()
+_client = OpenMeteoProvider(OpenMeteoClient())
 
 
 async def handle_weather(command: str, arguments: dict[str, Any]) -> Any:

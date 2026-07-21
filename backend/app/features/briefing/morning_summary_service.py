@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import asyncio
 import logging
 from datetime import date, datetime, time, timedelta
 
@@ -53,20 +52,18 @@ class MorningBriefingSummaryService:
         holiday_window_end = today + timedelta(days=_HOLIDAY_LOOKAHEAD_DAYS)
 
         # These all share a single AsyncSession, which SQLAlchemy does not
-        # support using concurrently, so they must run sequentially.
+        # support using concurrently, so they must run sequentially. Weather
+        # and holidays now also log to that same session (provider_calls),
+        # so they've moved into this sequential run too -- each still
+        # degrades to an empty result on failure instead of failing the
+        # whole briefing.
         tasks = await self._fetch_tasks(today, today_start, today_end, lookahead_end)
         events = await self._fetch_events(today, today_start, lookahead_end)
         birthdays = await self._fetch_birthdays(today)
         language = await self._fetch_language()
         shopping = await self._fetch_shopping()
-
-        # External integrations don't touch the session, so they can run
-        # concurrently; each degrades to an empty result on failure instead
-        # of failing the whole briefing.
-        weather, holidays = await asyncio.gather(
-            self._fetch_weather(today),
-            self._fetch_holidays(today, holiday_window_end),
-        )
+        weather = await self._fetch_weather(today)
+        holidays = await self._fetch_holidays(today, holiday_window_end)
 
         return MorningBriefing(
             date=today,
@@ -210,14 +207,14 @@ class MorningBriefingSummaryService:
 
     async def _fetch_weather(self, today: date) -> WeatherForecast | None:
         try:
-            return await self._weather_client.get_daily_forecast(today)
+            return await self._weather_client.get_daily_forecast(today, session=self._session)
         except Exception:
             logger.warning("Failed to fetch weather forecast", exc_info=True)
             return None
 
     async def _fetch_holidays(self, today: date, window_end: date) -> list[HolidayItem]:
         try:
-            return await self._holiday_client.get_holidays(today, window_end)
+            return await self._holiday_client.get_holidays(today, window_end, session=self._session)
         except Exception:
             logger.warning("Failed to fetch holidays", exc_info=True)
             return []

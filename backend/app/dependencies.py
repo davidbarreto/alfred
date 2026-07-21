@@ -37,8 +37,10 @@ from app.features.briefing.evening_summary_service import EveningDigestSummarySe
 from app.features.briefing.evening_formatter_service import EveningDigestFormatterService
 from app.features.briefing.history_service import BriefingHistoryService
 from app.features.core.reminders.service import ReminderService
-from app.features.briefing.weather_client import WeatherClient
-from app.features.briefing.holiday_client import GooglePublicHolidayClient
+from app.integrations.open_meteo.client import OpenMeteoClient
+from app.integrations.open_meteo.provider import OpenMeteoProvider
+from app.integrations.google_public_holidays.client import GooglePublicHolidayClient
+from app.integrations.google_public_holidays.provider import GooglePublicHolidayProvider
 from app.features.language.tracks.service import TrackService
 from app.features.language.grammar_scope.service import GrammarScopeService
 from app.features.language.chunks.service import ChunkService as LanguageChunkService
@@ -214,14 +216,21 @@ def get_chat_service(session: AsyncSession = Depends(get_session)) -> ChatServic
     )
 
 @lru_cache
-def get_weather_client() -> WeatherClient:
-    return WeatherClient()
+def get_weather_client() -> OpenMeteoClient:
+    return OpenMeteoClient()
+
+@lru_cache
+def get_weather_provider() -> OpenMeteoProvider:
+    return OpenMeteoProvider(get_weather_client())
 
 def get_holiday_client() -> GooglePublicHolidayClient:
     s = get_settings()
     if not s.google_api_key:
         raise RuntimeError("GOOGLE_API_KEY is not set")
     return GooglePublicHolidayClient(api_key=s.google_api_key)
+
+def get_holiday_provider() -> GooglePublicHolidayProvider:
+    return GooglePublicHolidayProvider(get_holiday_client())
 
 async def get_google_contacts_client(session: AsyncSession = Depends(get_session)) -> GoogleContactsClient | None:
     s = get_settings()
@@ -250,8 +259,8 @@ async def get_morning_briefing_summary_service(session: AsyncSession = Depends(g
     contact_service = await get_contact_service(session)
     return MorningBriefingSummaryService(
         session=session,
-        weather_client=get_weather_client(),
-        holiday_client=get_holiday_client(),
+        weather_client=get_weather_provider(),
+        holiday_client=get_holiday_provider(),
         contact_service=contact_service,
     )
 

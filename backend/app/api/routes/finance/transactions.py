@@ -1,5 +1,6 @@
 from decimal import Decimal
-from fastapi import APIRouter, Depends, HTTPException, Response, status
+from typing import Annotated
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 
 from app.api.auth import require_auth
 from app.dependencies import (
@@ -8,12 +9,14 @@ from app.dependencies import (
     TransactionServiceDep,
 )
 from app.features.finance.transactions.schemas import (
+    GLOBAL_CURRENCY,
     AnalyticsFilters,
     BalanceForecastResponse,
     SpendingAverageResponse,
     SpendingByCategoryResponse,
     SpendingReportResponse,
     SpendingTopResponse,
+    TransactionBackfillEurResponse,
     TransactionBulkMoveRequest,
     TransactionBulkMoveResponse,
     TransactionCreate,
@@ -45,6 +48,14 @@ async def bulk_move_transactions(request: TransactionBulkMoveRequest, service: T
     except InvalidBulkMoveError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=exc.message)
     return TransactionBulkMoveResponse(moved_count=moved)
+
+
+@router.post("/backfill-eur", response_model=TransactionBackfillEurResponse)
+async def backfill_eur(
+    service: TransactionServiceDep,
+    limit: Annotated[int, Query(ge=1, le=5000)] = 1000,
+):
+    return await service.backfill_amount_eur(batch_size=limit)
 
 
 @router.get("/by-category", response_model=SpendingByCategoryResponse)
@@ -89,6 +100,12 @@ async def balance_forecast(
     account_service: AccountServiceDep = None,
     recurring_service: RecurringTransactionServiceDep = None,
 ):
+    if filters.currency == GLOBAL_CURRENCY:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Forecast is not supported for the Global currency view",
+        )
+
     from app.features.finance.accounts.schemas import AccountFilters
     from app.features.finance.recurring_transactions.schemas import RecurringTransactionFilters
 

@@ -102,6 +102,7 @@ def _service(statement: ParsedStatement | None = None, llm=None, files=None) -> 
         session=AsyncMock(),
         parsers={"fakebank": _FakeParser(statement or _statement([]))},
         embedding_service=AsyncMock(),
+        exchange_rate_service=AsyncMock(),
         llm_provider=llm,
         file_storage=files,
     )
@@ -117,6 +118,7 @@ def _service(statement: ParsedStatement | None = None, llm=None, files=None) -> 
     service._txn_repo.get_existing_dedup_hashes.return_value = set()
     service._category_repo.list.return_value = []
     service._account_repo.list.return_value = []
+    service._fx.convert_to_eur.return_value = None
     service._embeddings.search.return_value = []
     return service
 
@@ -513,7 +515,7 @@ class TestCommit:
 
         created = []
 
-        async def _add(data):
+        async def _add(data, amount_eur=None):
             txn = MagicMock()
             txn.id = len(created) + 100
             txn.category_id = data.category_id
@@ -521,6 +523,7 @@ class TestCommit:
             txn.bank_description = data.bank_description
             txn.description = data.description
             txn.amount = data.amount
+            txn.amount_eur = amount_eur
             created.append(data)
             return txn
 
@@ -542,6 +545,19 @@ class TestCommit:
         assert len(service._created) == 1
         assert service._created[0].import_batch_id == 7
         assert service._created[0].source == "fakebank"
+
+    @pytest.mark.asyncio
+    async def test_converts_amount_to_eur_via_fx_service(self):
+        service = _service()
+        self._prepare(service)
+        service._fx.convert_to_eur.return_value = Decimal("45.00")
+        rows = [_commit_row()]
+
+        await service.commit(_commit_request(rows))
+
+        service._fx.convert_to_eur.assert_awaited_once()
+        add_kwargs = service._txn_repo.add.call_args.kwargs
+        assert add_kwargs["amount_eur"] == Decimal("45.00")
 
     @pytest.mark.asyncio
     async def test_duplicate_within_the_same_request_is_skipped_not_inserted_twice(self):
@@ -1093,13 +1109,14 @@ class TestCommitGrouped:
 
         created: list = []
 
-        async def _add_txn(data):
+        async def _add_txn(data, amount_eur=None):
             txn = MagicMock()
             txn.id = len(created) + 100
             txn.category_id = data.category_id
             txn.type = data.type
             txn.bank_description = data.bank_description
             txn.description = data.description
+            txn.amount_eur = amount_eur
             created.append(data)
             return txn
         service._txn_repo.add.side_effect = _add_txn
@@ -1164,6 +1181,23 @@ class TestCommitGrouped:
 
         assert result.total_inserted == 1
         assert result.total_skipped_duplicates == 1
+
+    @pytest.mark.asyncio
+    async def test_converts_amount_to_eur_per_row_currency(self):
+        service = _service()
+        self._prepare(service)
+        service._fx.convert_to_eur.return_value = Decimal("30.00")
+
+        request = _grouped_commit_request(
+            [_grouped_commit_row(currency="PLN", deduplication_hash="h1")],
+            account_map={"PLN": 2},
+        )
+
+        await service.commit_grouped(request)
+
+        service._fx.convert_to_eur.assert_awaited_once()
+        add_kwargs = service._txn_repo.add.call_args.kwargs
+        assert add_kwargs["amount_eur"] == Decimal("30.00")
 
     @pytest.mark.asyncio
     async def test_duplicate_within_the_same_request_is_skipped_not_inserted_twice(self):

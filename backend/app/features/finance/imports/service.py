@@ -15,6 +15,7 @@ from app.features.finance.accounts.repository import AccountRepository
 from app.features.finance.accounts.schemas import AccountFilters
 from app.features.finance.accounts.tables import Account
 from app.features.finance.categories.repository import CategoryRepository
+from app.features.finance.exchange_rates.service import ExchangeRateService
 from app.features.finance.imports.prompts import CATEGORIZE_SYSTEM_PROMPT, CATEGORIZE_USER_PROMPT
 from app.features.finance.imports.repository import ImportRepository
 from app.features.finance.imports.schemas import (
@@ -157,6 +158,7 @@ class ImportService:
         session: AsyncSession,
         parsers: dict[str, StatementParser],
         embedding_service: EmbeddingService,
+        exchange_rate_service: ExchangeRateService,
         llm_provider: LlmProvider | None = None,
         file_storage: FileStorage | None = None,
     ) -> None:
@@ -167,6 +169,7 @@ class ImportService:
         self._account_repo = AccountRepository(session)
         self._parsers = parsers
         self._embeddings = embedding_service
+        self._fx = exchange_rate_service
         self._llm = llm_provider
         self._files = file_storage
 
@@ -510,12 +513,14 @@ class ImportService:
 
         transactions = []
         for row in to_insert:
+            amount = row.amount if row.type == "transfer" else abs(row.amount)
+            amount_eur = await self._fx.convert_to_eur(amount, request.currency, row.date_posted)
             transactions.append(
                 await self._txn_repo.add(
                     TransactionCreate(
                         account_id=request.account_id,
                         date=datetime.combine(row.date_posted, datetime.min.time()),
-                        amount=row.amount if row.type == "transfer" else abs(row.amount),
+                        amount=amount,
                         currency=request.currency,
                         type=row.type,
                         category_id=row.category_id,
@@ -527,7 +532,8 @@ class ImportService:
                         counterpart_account_id=row.counterpart_account_id,
                         deduplication_hash=row.deduplication_hash,
                         import_batch_id=batch.id,
-                    )
+                    ),
+                    amount_eur=amount_eur,
                 )
             )
 
@@ -845,11 +851,13 @@ class ImportService:
             )
 
             for row in to_insert:
+                amount = row.amount if row.type == "transfer" else abs(row.amount)
+                amount_eur = await self._fx.convert_to_eur(amount, currency, row.date_posted)
                 txn = await self._txn_repo.add(
                     TransactionCreate(
                         account_id=account_id,
                         date=datetime.combine(row.date_posted, datetime.min.time()),
-                        amount=row.amount if row.type == "transfer" else abs(row.amount),
+                        amount=amount,
                         currency=currency,
                         type=row.type,
                         category_id=row.category_id,
@@ -861,7 +869,8 @@ class ImportService:
                         counterpart_account_id=row.counterpart_account_id,
                         deduplication_hash=row.deduplication_hash,
                         import_batch_id=batch.id,
-                    )
+                    ),
+                    amount_eur=amount_eur,
                 )
                 all_transactions.append(txn)
 

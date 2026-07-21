@@ -1101,6 +1101,47 @@
               ]
             }
           }
+        },
+        {
+          "name": "10 - Backfill EUR Amounts",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Response has backfill fields', () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.have.property('updated_count');",
+                  "    pm.expect(json).to.have.property('failed_count');",
+                  "    pm.expect(json).to.have.property('remaining_count');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/finance/transactions/backfill-eur?limit=1000",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "finance",
+                "transactions",
+                "backfill-eur"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "1000"
+                }
+              ]
+            }
+          }
         }
       ]
     },

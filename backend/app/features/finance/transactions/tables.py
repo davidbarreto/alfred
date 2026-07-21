@@ -22,6 +22,7 @@ class Transaction(Base):
     date: Mapped[datetime] = mapped_column(DateTime, nullable=False)
     amount: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
     currency: Mapped[str] = mapped_column(String(10), nullable=False, default="EUR")
+    amount_eur: Mapped[Optional[Decimal]] = mapped_column(Numeric(12, 2), nullable=True)
     type: Mapped[str] = mapped_column(String(20), nullable=False)
     category_id: Mapped[Optional[int]] = mapped_column(
         Integer, ForeignKey("finance.categories.id", ondelete="SET NULL"), nullable=True

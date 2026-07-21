@@ -6,8 +6,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 logger = logging.getLogger(__name__)
 
 from app.features.finance.accounts.repository import AccountRepository
+from app.features.finance.exchange_rates.service import ExchangeRateService
 from app.features.finance.transactions.repository import TransactionRepository
 from app.features.finance.transactions.schemas import (
+    GLOBAL_CURRENCY,
     AnalyticsFilters,
     BalanceForecastResponse,
     CategorySpendingItem,
@@ -15,6 +17,7 @@ from app.features.finance.transactions.schemas import (
     SpendingByCategoryResponse,
     SpendingReportResponse,
     SpendingTopResponse,
+    TransactionBackfillEurResponse,
     TransactionBulkMoveRequest,
     TransactionCreate,
     TransactionFilters,
@@ -35,9 +38,10 @@ class InvalidBulkMoveError(Exception):
 
 class TransactionService:
 
-    def __init__(self, session: AsyncSession) -> None:
+    def __init__(self, session: AsyncSession, exchange_rate_service: ExchangeRateService) -> None:
         self._repo = TransactionRepository(session)
         self._account_repo = AccountRepository(session)
+        self._fx = exchange_rate_service
 
     async def get(self, transaction_id: int) -> TransactionRead | None:
         txn = await self._repo.get(transaction_id)
@@ -50,17 +54,55 @@ class TransactionService:
         return [TransactionRead.model_validate(t) for t in txns]
 
     async def create(self, data: TransactionCreate) -> TransactionRead:
-        txn = await self._repo.create(data)
-        logger.info("Transaction created: id=%d amount=%s merchant=%r", txn.id, data.amount, data.merchant)
+        amount_eur = await self._fx.convert_to_eur(data.amount, data.currency, data.date.date())
+        txn = await self._repo.create(data, amount_eur=amount_eur)
+        logger.info("Transaction created: id=%d merchant=%r", txn.id, data.merchant)
         return TransactionRead.model_validate(txn)
 
     async def update(self, transaction_id: int, data: TransactionUpdate) -> TransactionRead | None:
-        txn = await self._repo.update(transaction_id, data)
+        fields = data.model_dump(exclude_unset=True)
+        amount_eur: Decimal | None = None
+        recompute_amount_eur = False
+        if {"amount", "currency", "date"} & fields.keys():
+            current = await self._repo.get(transaction_id)
+            if current is None:
+                logger.debug("Transaction update: id=%d not found", transaction_id)
+                return None
+            effective_amount = fields.get("amount", current.amount)
+            effective_currency = fields.get("currency", current.currency)
+            effective_date = fields.get("date", current.date)
+            amount_eur = await self._fx.convert_to_eur(
+                effective_amount, effective_currency, effective_date.date()
+            )
+            recompute_amount_eur = True
+
+        txn = await self._repo.update(
+            transaction_id, data, amount_eur=amount_eur, recompute_amount_eur=recompute_amount_eur
+        )
         if txn is None:
             logger.debug("Transaction update: id=%d not found", transaction_id)
             return None
-        logger.info("Transaction updated: id=%d fields=%s", transaction_id, list(data.model_dump(exclude_unset=True).keys()))
+        logger.info("Transaction updated: id=%d fields=%s", transaction_id, list(fields.keys()))
         return TransactionRead.model_validate(txn)
+
+    async def backfill_amount_eur(self, batch_size: int = 1000) -> TransactionBackfillEurResponse:
+        pending = await self._repo.list_missing_amount_eur(limit=batch_size)
+        updated = 0
+        failed = 0
+        for txn in pending:
+            amount_eur = await self._fx.convert_to_eur(txn.amount, txn.currency, txn.date.date())
+            if amount_eur is None:
+                failed += 1
+                continue
+            await self._repo.set_amount_eur(txn.id, amount_eur)
+            updated += 1
+        remaining = await self._repo.count_missing_amount_eur()
+        logger.info(
+            "Transaction EUR backfill: updated=%d failed=%d remaining=%d", updated, failed, remaining
+        )
+        return TransactionBackfillEurResponse(
+            updated_count=updated, failed_count=failed, remaining_count=remaining
+        )
 
     async def delete(self, transaction_id: int) -> bool:
         deleted = await self._repo.delete(transaction_id)

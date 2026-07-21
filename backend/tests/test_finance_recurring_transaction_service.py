@@ -36,6 +36,8 @@ def service():
     svc = RecurringTransactionService.__new__(RecurringTransactionService)
     svc._repo = AsyncMock()
     svc._session = AsyncMock()
+    svc._fx = AsyncMock()
+    svc._fx.convert_to_eur.return_value = None
     return svc
 
 
@@ -170,6 +172,28 @@ class TestProcess:
         assert result.created == 1
         assert result.deactivated == 0
         mock_txn_repo.add.assert_called_once()
+
+    async def test_materialized_transaction_carries_amount_eur(self, service):
+        rt = _make_rt_orm(
+            last_occurrence_date=None, recurrence_rule="FREQ=MONTHLY", currency="USD"
+        )
+        service._repo.list_active.return_value = [rt]
+        service._fx.convert_to_eur.return_value = Decimal("8.50")
+
+        with patch(
+            "app.features.finance.recurring_transactions.service.TransactionRepository"
+        ) as MockTxnRepo:
+            mock_txn_repo = AsyncMock()
+            mock_txn_repo.exists_by_dedup_hash.return_value = False
+            MockTxnRepo.return_value = mock_txn_repo
+
+            with patch("app.features.finance.recurring_transactions.service.date") as mock_date:
+                mock_date.today.return_value = date(2026, 7, 1)
+                mock_date.side_effect = lambda *a, **k: date(*a, **k)
+                await service.process()
+
+        service._fx.convert_to_eur.assert_awaited_once_with(rt.amount, "USD", date(2026, 7, 1))
+        assert mock_txn_repo.add.call_args.kwargs["amount_eur"] == Decimal("8.50")
 
     async def test_idempotent_when_already_created(self, service):
         rt = _make_rt_orm(last_occurrence_date=date(2026, 6, 1), recurrence_rule="FREQ=MONTHLY")

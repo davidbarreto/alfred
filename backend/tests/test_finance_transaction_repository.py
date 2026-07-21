@@ -115,6 +115,14 @@ class TestList:
         await TransactionRepository(session).list(TransactionFilters(offset=20))
         session.execute.assert_called_once()
 
+    async def test_global_currency_does_not_filter_by_currency(self):
+        session = _make_session()
+        session.execute.return_value = _scalar_all([])
+        await TransactionRepository(session).list(TransactionFilters(currency="GLOBAL"))
+        query = session.execute.call_args.args[0]
+        sql = str(query.compile(compile_kwargs={"literal_binds": True}))
+        assert "transactions.currency =" not in sql
+
 
 class TestCreate:
     async def test_adds_commits_and_refreshes(self):
@@ -127,6 +135,15 @@ class TestCreate:
         session.add.assert_called_once()
         session.commit.assert_called_once()
         session.refresh.assert_called_once()
+
+    async def test_sets_amount_eur_on_created_transaction(self):
+        session = _make_session()
+        data = TransactionCreate(
+            account_id=1, date="2026-06-12T10:00:00",
+            amount=Decimal("50"), currency="USD", type="expense",
+        )
+        txn = await TransactionRepository(session).create(data, amount_eur=Decimal("45.00"))
+        assert txn.amount_eur == Decimal("45.00")
 
 
 class TestUpdate:
@@ -143,6 +160,24 @@ class TestUpdate:
         session.execute.return_value = _scalar_first(txn)
         await TransactionRepository(session).update(1, TransactionUpdate(merchant="NewShop"))
         session.commit.assert_called_once()
+
+    async def test_leaves_amount_eur_untouched_when_not_recomputing(self):
+        session = _make_session()
+        txn = _make_txn_orm()
+        txn.amount_eur = Decimal("10.00")
+        session.execute.return_value = _scalar_first(txn)
+        result = await TransactionRepository(session).update(1, TransactionUpdate(merchant="NewShop"))
+        assert result.amount_eur == Decimal("10.00")
+
+    async def test_sets_amount_eur_when_recomputing(self):
+        session = _make_session()
+        txn = _make_txn_orm()
+        session.execute.return_value = _scalar_first(txn)
+        result = await TransactionRepository(session).update(
+            1, TransactionUpdate(amount=Decimal("99")),
+            amount_eur=Decimal("88.00"), recompute_amount_eur=True,
+        )
+        assert result.amount_eur == Decimal("88.00")
 
 
 class TestDelete:
@@ -242,6 +277,21 @@ class TestGetSpendingTotal:
         sql = str(query.compile(compile_kwargs={"literal_binds": True}))
         assert "counterpart_account_id" not in sql
 
+    async def test_global_currency_sums_amount_eur_across_all_currencies(self):
+        session = _make_session()
+        session.execute.return_value = _one_result((Decimal("300.00"), 5))
+        total, count = await TransactionRepository(session).get_spending_total(
+            from_date=date(2026, 6, 1),
+            to_date=date(2026, 6, 30),
+            currency="GLOBAL",
+        )
+        query = session.execute.call_args.args[0]
+        sql = str(query.compile(compile_kwargs={"literal_binds": True}))
+        assert "amount_eur" in sql
+        assert "transactions.currency =" not in sql
+        assert total == Decimal("300.00")
+        assert count == 5
+
 
 class TestGetTopExpenses:
     async def test_returns_list(self):
@@ -278,6 +328,20 @@ class TestGetTopExpenses:
         sql = str(query.compile(compile_kwargs={"literal_binds": True}))
         assert "counterpart_account_id" in sql
 
+    async def test_global_currency_orders_by_amount_eur(self):
+        session = _make_session()
+        session.execute.return_value = _scalar_all([])
+        await TransactionRepository(session).get_top_expenses(
+            from_date=date(2026, 6, 1),
+            to_date=date(2026, 6, 30),
+            top_n=5,
+            currency="GLOBAL",
+        )
+        query = session.execute.call_args.args[0]
+        sql = str(query.compile(compile_kwargs={"literal_binds": True}))
+        assert "amount_eur" in sql
+        assert "transactions.currency =" not in sql
+
 
 class TestGetSpendingByCategory:
     async def test_includes_untracked_transfers(self):
@@ -292,6 +356,21 @@ class TestGetSpendingByCategory:
         query = session.execute.call_args.args[0]
         sql = str(query.compile(compile_kwargs={"literal_binds": True}))
         assert "counterpart_account_id" in sql
+
+    async def test_global_currency_sums_amount_eur(self):
+        session = _make_session()
+        result = MagicMock()
+        result.all.return_value = []
+        session.execute.return_value = result
+        await TransactionRepository(session).get_spending_by_category(
+            from_date=date(2026, 6, 1),
+            to_date=date(2026, 6, 30),
+            currency="GLOBAL",
+        )
+        query = session.execute.call_args.args[0]
+        sql = str(query.compile(compile_kwargs={"literal_binds": True}))
+        assert "amount_eur" in sql
+        assert "transactions.currency =" not in sql
 
 
 class TestGetCategorySpent:
@@ -316,6 +395,44 @@ class TestGetCategorySpent:
         query = session.execute.call_args.args[0]
         sql = str(query.compile(compile_kwargs={"literal_binds": True}))
         assert "counterpart_account_id" in sql
+
+    async def test_global_currency_sums_amount_eur(self):
+        session = _make_session()
+        session.execute.return_value = _scalar_result(Decimal("0"))
+        await TransactionRepository(session).get_category_spent(
+            category_id=1,
+            from_date=date(2026, 6, 1),
+            to_date=date(2026, 6, 30),
+            currency="GLOBAL",
+        )
+        query = session.execute.call_args.args[0]
+        sql = str(query.compile(compile_kwargs={"literal_binds": True}))
+        assert "amount_eur" in sql
+        assert "transactions.currency =" not in sql
+
+
+class TestMissingAmountEur:
+    async def test_list_missing_amount_eur_returns_rows(self):
+        session = _make_session()
+        txns = [_make_txn_orm(id=i) for i in range(2)]
+        session.execute.return_value = _scalar_all(txns)
+        result = await TransactionRepository(session).list_missing_amount_eur(limit=10)
+        assert len(result) == 2
+
+    async def test_set_amount_eur_commits(self):
+        session = _make_session()
+        result_proxy = MagicMock()
+        session.execute.return_value = result_proxy
+        await TransactionRepository(session).set_amount_eur(1, Decimal("12.00"))
+        session.commit.assert_called_once()
+
+    async def test_count_missing_amount_eur_returns_count(self):
+        session = _make_session()
+        result = MagicMock()
+        result.scalar_one.return_value = 7
+        session.execute.return_value = result
+        count = await TransactionRepository(session).count_missing_amount_eur()
+        assert count == 7
 
 
 class TestBulkReassignAccount:

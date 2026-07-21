@@ -31,6 +31,7 @@ def _make_txn_orm(**kwargs):
     t.source = kwargs.get("source", None)
     t.counterpart_account_id = kwargs.get("counterpart_account_id", None)
     t.import_batch_id = kwargs.get("import_batch_id", None)
+    t.amount_eur = kwargs.get("amount_eur", None)
     t.created_at = kwargs.get("created_at", "2026-06-12T10:00:00")
     return t
 
@@ -48,6 +49,8 @@ def service():
     svc = TransactionService.__new__(TransactionService)
     svc._repo = AsyncMock()
     svc._account_repo = AsyncMock()
+    svc._fx = AsyncMock()
+    svc._fx.convert_to_eur.return_value = None
     return svc
 
 
@@ -85,6 +88,20 @@ class TestCreate:
         ))
         assert isinstance(result, TransactionRead)
 
+    async def test_converts_amount_and_passes_to_repo(self, service):
+        service._fx.convert_to_eur.return_value = Decimal("45.00")
+        service._repo.create.return_value = _make_txn_orm()
+
+        await service.create(TransactionCreate(
+            account_id=1, date="2026-06-12T10:00:00",
+            amount=Decimal("50"), currency="USD", type="expense",
+        ))
+
+        service._fx.convert_to_eur.assert_awaited_once_with(
+            Decimal("50"), "USD", date(2026, 6, 12)
+        )
+        assert service._repo.create.call_args.kwargs["amount_eur"] == Decimal("45.00")
+
 
 class TestUpdate:
     async def test_returns_transaction_read_when_found(self, service):
@@ -95,6 +112,34 @@ class TestUpdate:
     async def test_returns_none_when_not_found(self, service):
         service._repo.update.return_value = None
         assert await service.update(999, TransactionUpdate()) is None
+
+    async def test_field_unrelated_to_fx_skips_recompute(self, service):
+        service._repo.update.return_value = _make_txn_orm(merchant="Updated")
+
+        await service.update(1, TransactionUpdate(merchant="Updated"))
+
+        service._repo.get.assert_not_called()
+        assert service._repo.update.call_args.kwargs["recompute_amount_eur"] is False
+
+    async def test_amount_change_recomputes_amount_eur(self, service):
+        from datetime import datetime as dt
+
+        current = _make_txn_orm(amount=Decimal("50.00"), currency="USD", date=dt(2026, 6, 12))
+        service._repo.get.return_value = current
+        service._fx.convert_to_eur.return_value = Decimal("90.00")
+        service._repo.update.return_value = _make_txn_orm(amount=Decimal("100.00"))
+
+        await service.update(1, TransactionUpdate(amount=Decimal("100.00")))
+
+        service._fx.convert_to_eur.assert_awaited_once_with(
+            Decimal("100.00"), "USD", date(2026, 6, 12)
+        )
+        assert service._repo.update.call_args.kwargs["amount_eur"] == Decimal("90.00")
+        assert service._repo.update.call_args.kwargs["recompute_amount_eur"] is True
+
+    async def test_returns_none_when_fx_relevant_update_target_missing(self, service):
+        service._repo.get.return_value = None
+        assert await service.update(999, TransactionUpdate(amount=Decimal("10"))) is None
 
 
 class TestDelete:
@@ -316,3 +361,34 @@ class TestBalanceForecast:
             income, expenses, _ = await service.balance_forecast(filters, [rt])
 
         assert expenses == Decimal("0")
+
+
+class TestBackfillAmountEur:
+    async def test_updates_successful_conversions_and_counts_failures(self, service):
+        from datetime import datetime as dt
+
+        pending = [
+            _make_txn_orm(id=1, amount=Decimal("10.00"), currency="USD", date=dt(2026, 6, 12)),
+            _make_txn_orm(id=2, amount=Decimal("20.00"), currency="XXX", date=dt(2026, 6, 12)),
+        ]
+        service._repo.list_missing_amount_eur.return_value = pending
+        service._fx.convert_to_eur.side_effect = [Decimal("9.00"), None]
+        service._repo.count_missing_amount_eur.return_value = 1
+
+        result = await service.backfill_amount_eur(batch_size=500)
+
+        service._repo.set_amount_eur.assert_awaited_once_with(1, Decimal("9.00"))
+        assert result.updated_count == 1
+        assert result.failed_count == 1
+        assert result.remaining_count == 1
+
+    async def test_no_pending_rows(self, service):
+        service._repo.list_missing_amount_eur.return_value = []
+        service._repo.count_missing_amount_eur.return_value = 0
+
+        result = await service.backfill_amount_eur()
+
+        service._repo.set_amount_eur.assert_not_called()
+        assert result.updated_count == 0
+        assert result.failed_count == 0
+        assert result.remaining_count == 0

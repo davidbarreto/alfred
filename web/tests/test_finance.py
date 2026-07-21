@@ -212,6 +212,47 @@ class TestFinanceDashboardCurrency:
 
         assert "currency=BRL" not in resp.text
 
+    def test_global_pill_shown_alongside_multiple_currencies(self, client, mock_api):
+        calls = []
+        mock_api["get"].side_effect = self._fake_get(
+            calls,
+            [
+                {"id": 1, "name": "Checking", "currency": "EUR"},
+                {"id": 2, "name": "Conta BR", "currency": "BRL"},
+            ],
+        )
+
+        resp = client.get("/finance/")
+
+        assert "currency=GLOBAL" in resp.text
+        assert ">Global<" in resp.text
+
+    def test_no_global_pill_for_single_currency(self, client, mock_api):
+        mock_api["get"].side_effect = self._fake_get(
+            [], [{"id": 1, "name": "Checking", "currency": "EUR"}]
+        )
+
+        resp = client.get("/finance/")
+
+        assert "currency=GLOBAL" not in resp.text
+
+    def test_global_view_sums_across_currencies_and_skips_budgets(self, client, mock_api):
+        calls = []
+        mock_api["get"].side_effect = self._fake_get(
+            calls,
+            [
+                {"id": 1, "name": "Checking", "currency": "EUR"},
+                {"id": 2, "name": "Conta BR", "currency": "BRL"},
+            ],
+        )
+
+        resp = client.get("/finance/?currency=GLOBAL")
+
+        assert resp.status_code == 200
+        report_call = next(p for path, p in calls if path == "/finance/transactions/report")
+        assert report_call["currency"] == "GLOBAL"
+        assert not any(path == "/finance/budgets/status" for path, _ in calls)
+
     def test_renders_transaction_list_with_account_and_category_names(self, client, mock_api):
         async def fake(path, params=None):
             if path == "/finance/accounts":

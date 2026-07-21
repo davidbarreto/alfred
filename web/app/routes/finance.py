@@ -234,10 +234,11 @@ async def finance_page(request: Request):
         {k: v for k, v in {"from_date": resolved_from, "to_date": resolved_to, "currency": currency}.items() if v}
     )
 
+    amount_key = "amount_eur" if currency == "GLOBAL" else "amount"
     time_spending: dict[str, float] = defaultdict(float)
     for txn in all_txns:
         key = txn["date"][:7] if group_by_month else txn["date"][:10]
-        time_spending[key] += float(txn["amount"])
+        time_spending[key] += float(txn.get(amount_key) or 0)
     time_spending_sorted = dict(sorted(time_spending.items()))
 
     # Category chart data
@@ -257,6 +258,8 @@ async def finance_page(request: Request):
     }
 
     currency_symbols = {c["code"]: c["symbol"] for c in currencies if c.get("symbol")}
+    distinct_currencies = sorted({a["currency"] for a in accounts} | {"EUR"})
+    account_currencies = distinct_currencies + ["GLOBAL"] if len(distinct_currencies) > 1 else distinct_currencies
 
     return templates.TemplateResponse(request, "finance.html", {
         "spending": spending,
@@ -283,9 +286,9 @@ async def finance_page(request: Request):
         "currencies": currencies,
         "recurring": recurring,
         "currency": currency,
-        "currency_symbol": currency_symbols.get(currency, currency + " "),
+        "currency_symbol": currency_symbols.get("EUR", "€ ") if currency == "GLOBAL" else currency_symbols.get(currency, currency + " "),
         "currency_symbols": currency_symbols,
-        "account_currencies": sorted({a["currency"] for a in accounts} | {"EUR"}),
+        "account_currencies": account_currencies,
         "accounts_by_id": {a["id"]: a["name"] for a in accounts},
         "categories_by_id": {c["id"]: c["name"] for c in categories},
     })

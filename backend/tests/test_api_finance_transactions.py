@@ -11,6 +11,7 @@ from app.features.finance.transactions.schemas import (
     SpendingByCategoryResponse,
     SpendingReportResponse,
     SpendingTopResponse,
+    TransactionBackfillEurResponse,
     TransactionRead,
 )
 from app.features.finance.transactions.service import InvalidBulkMoveError
@@ -66,6 +67,9 @@ def mock_txn_service():
     )
     svc.balance_forecast.return_value = (Decimal("0"), Decimal("0"), date(2026, 6, 30))
     svc.bulk_move_account.return_value = 12
+    svc.backfill_amount_eur.return_value = TransactionBackfillEurResponse(
+        updated_count=3, failed_count=1, remaining_count=1,
+    )
     svc.spending_by_category.return_value = SpendingByCategoryResponse(
         items=[
             CategorySpendingItem(
@@ -243,6 +247,21 @@ class TestBulkMoveTransactions:
         assert response.status_code == 403
 
 
+class TestBackfillEur:
+    def test_returns_backfill_result(self, client):
+        response = client.post("/finance/transactions/backfill-eur", headers=AUTH)
+        assert response.status_code == 200
+        data = response.json()
+        assert data == {"updated_count": 3, "failed_count": 1, "remaining_count": 1}
+
+    def test_passes_limit_as_batch_size(self, client, mock_txn_service):
+        client.post("/finance/transactions/backfill-eur?limit=50", headers=AUTH)
+        mock_txn_service.backfill_amount_eur.assert_called_once_with(batch_size=50)
+
+    def test_requires_auth(self, client):
+        assert client.post("/finance/transactions/backfill-eur").status_code == 403
+
+
 class TestSpendingReport:
     def test_returns_200_with_report_fields(self, client):
         response = client.get("/finance/transactions/report", headers=AUTH)
@@ -357,3 +376,7 @@ class TestBalanceForecast:
 
     def test_requires_auth(self, client):
         assert client.get("/finance/transactions/forecast").status_code == 403
+
+    def test_global_currency_returns_400(self, client):
+        response = client.get("/finance/transactions/forecast?currency=GLOBAL", headers=AUTH)
+        assert response.status_code == 400

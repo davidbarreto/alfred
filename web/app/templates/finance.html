@@ -32,7 +32,7 @@
         href="/finance?{{ range_qs }}&currency={{ c }}"
         class="px-3 py-1 rounded-full text-xs font-medium transition-colors
           {% if currency == c %}bg-[#FDF1E2] text-[#8A5A0B]{% else %}text-gray-500 hover:bg-gray-100{% endif %}"
-      >{{ c }}</a>
+      >{{ "Global" if c == "GLOBAL" else c }}</a>
       {% endfor %}
     </div>
     {% endif %}

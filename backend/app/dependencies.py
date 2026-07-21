@@ -6,6 +6,8 @@ from app.integrations.notion.client import NotionClient
 from app.integrations.notion.provider import NotionProvider
 from app.integrations.google_calendar.client import GoogleCalendarClient
 from app.integrations.google_calendar.provider import GoogleCalendarProvider
+from app.integrations.frankfurter.client import FrankfurterClient
+from app.integrations.frankfurter.provider import FrankfurterProvider
 from app.integrations.oauth_tokens.repository import get_oauth_token
 from app.features.organizer.tasks.service import TaskService
 from app.features.organizer.notes.service import NoteService
@@ -14,6 +16,7 @@ from app.features.organizer.shopping.service import ShoppingService
 from app.features.finance.accounts.service import AccountService
 from app.features.finance.categories.service import CategoryService
 from app.features.finance.currencies.service import CurrencyService
+from app.features.finance.exchange_rates.service import ExchangeRateService
 from app.features.finance.transactions.service import TransactionService
 from app.features.finance.imports.service import ImportService
 from app.features.finance.imports.registry import all_parsers
@@ -116,14 +119,25 @@ def get_category_service(session: AsyncSession = Depends(get_session)) -> Catego
 def get_currency_service(session: AsyncSession = Depends(get_session)) -> CurrencyService:
     return CurrencyService(session)
 
+@lru_cache
+def get_frankfurter_client() -> FrankfurterClient:
+    return FrankfurterClient()
+
+@lru_cache
+def get_frankfurter_provider() -> FrankfurterProvider:
+    return FrankfurterProvider(get_frankfurter_client())
+
+def get_exchange_rate_service(session: AsyncSession = Depends(get_session)) -> ExchangeRateService:
+    return ExchangeRateService(session, get_frankfurter_provider())
+
 def get_transaction_service(session: AsyncSession = Depends(get_session)) -> TransactionService:
-    return TransactionService(session)
+    return TransactionService(session, get_exchange_rate_service(session))
 
 def get_budget_target_service(session: AsyncSession = Depends(get_session)) -> BudgetTargetService:
     return BudgetTargetService(session)
 
 def get_recurring_transaction_service(session: AsyncSession = Depends(get_session)) -> RecurringTransactionService:
-    return RecurringTransactionService(session)
+    return RecurringTransactionService(session, get_exchange_rate_service(session))
 
 def get_session_service(session: AsyncSession = Depends(get_session)) -> SessionService:
     return SessionService(session)
@@ -170,6 +184,7 @@ def get_import_service(session: AsyncSession = Depends(get_session)) -> ImportSe
         session=session,
         parsers=all_parsers(),
         embedding_service=EmbeddingService(session, get_embedding_provider()),
+        exchange_rate_service=get_exchange_rate_service(session),
         llm_provider=llm_provider,
         file_storage=LocalFileStorage(get_settings().statement_storage_dir),
     )

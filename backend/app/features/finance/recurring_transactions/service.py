@@ -5,6 +5,7 @@ from datetime import date, datetime, timedelta
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.features.finance.exchange_rates.service import ExchangeRateService
 from app.features.finance.recurring_transactions.repository import RecurringTransactionRepository
 from app.features.finance.recurring_transactions.schemas import (
     ProcessResult,
@@ -64,9 +65,10 @@ def _next_occurrence(rule: str, last: date) -> date | None:
 
 class RecurringTransactionService:
 
-    def __init__(self, session: AsyncSession) -> None:
+    def __init__(self, session: AsyncSession, exchange_rate_service: ExchangeRateService) -> None:
         self._repo = RecurringTransactionRepository(session)
         self._session = session
+        self._fx = exchange_rate_service
 
     async def get(self, recurring_id: int) -> RecurringTransactionRead | None:
         rt = await self._repo.get(recurring_id)
@@ -131,6 +133,7 @@ class RecurringTransactionService:
                 ).hexdigest()
 
                 if not await txn_repo.exists_by_dedup_hash(dedup_hash):
+                    amount_eur = await self._fx.convert_to_eur(rt.amount, rt.currency, next_date)
                     await txn_repo.add(TransactionCreate(
                         account_id=rt.account_id,
                         date=datetime.combine(next_date, datetime.min.time()),
@@ -141,7 +144,7 @@ class RecurringTransactionService:
                         merchant=rt.merchant,
                         source="recurring",
                         deduplication_hash=dedup_hash,
-                    ))
+                    ), amount_eur=amount_eur)
                     created += 1
                     occurrences_created += 1
                     logger.info(

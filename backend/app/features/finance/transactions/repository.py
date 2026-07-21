@@ -8,11 +8,16 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.features.finance.transactions.tables import Transaction
 from app.features.finance.transactions.schemas import (
+    GLOBAL_CURRENCY,
     TransactionBulkMoveRequest,
     TransactionCreate,
     TransactionUpdate,
     TransactionFilters,
 )
+
+
+def _amount_column(currency: str):
+    return Transaction.amount_eur if currency == GLOBAL_CURRENCY else Transaction.amount
 
 
 def _spend_condition(transaction_type: str):
@@ -46,7 +51,7 @@ def _filter_conditions(filters: Any) -> list:
         conditions.append(Transaction.account_id == filters.account_id)
     if filters.merchant is not None:
         conditions.append(Transaction.merchant.ilike(f"%{filters.merchant}%"))
-    if filters.currency is not None:
+    if filters.currency is not None and filters.currency != GLOBAL_CURRENCY:
         conditions.append(Transaction.currency == filters.currency)
     if filters.from_date is not None:
         conditions.append(Transaction.date >= filters.from_date)
@@ -92,26 +97,34 @@ class TransactionRepository:
         await self._session.commit()
         return result.rowcount
 
-    async def create(self, data: TransactionCreate) -> Transaction:
-        transaction = Transaction(**data.model_dump())
+    async def create(self, data: TransactionCreate, amount_eur: Decimal | None = None) -> Transaction:
+        transaction = Transaction(**data.model_dump(), amount_eur=amount_eur)
         self._session.add(transaction)
         await self._session.commit()
         await self._session.refresh(transaction)
         return transaction
 
-    async def update(self, transaction_id: int, data: TransactionUpdate) -> Transaction | None:
+    async def update(
+        self,
+        transaction_id: int,
+        data: TransactionUpdate,
+        amount_eur: Decimal | None = None,
+        recompute_amount_eur: bool = False,
+    ) -> Transaction | None:
         transaction = await self.get(transaction_id)
         if transaction is None:
             return None
         for field, value in data.model_dump(exclude_unset=True).items():
             setattr(transaction, field, value)
+        if recompute_amount_eur:
+            transaction.amount_eur = amount_eur
         await self._session.commit()
         await self._session.refresh(transaction)
         return transaction
 
-    async def add(self, data: TransactionCreate) -> Transaction:
+    async def add(self, data: TransactionCreate, amount_eur: Decimal | None = None) -> Transaction:
         """Add transaction to session without committing. Caller is responsible for commit."""
-        transaction = Transaction(**data.model_dump())
+        transaction = Transaction(**data.model_dump(), amount_eur=amount_eur)
         self._session.add(transaction)
         return transaction
 
@@ -181,15 +194,17 @@ class TransactionRepository:
         currency: str = "EUR",
         transaction_type: str = "expense",
     ) -> tuple[Decimal, int]:
+        amount_column = _amount_column(currency)
         query = select(
-            func.coalesce(func.sum(Transaction.amount), 0),
+            func.coalesce(func.sum(amount_column), 0),
             func.count(Transaction.id),
         ).where(
             _spend_condition(transaction_type),
-            Transaction.currency == currency,
             Transaction.date >= from_date,
             Transaction.date <= to_date,
         )
+        if currency != GLOBAL_CURRENCY:
+            query = query.where(Transaction.currency == currency)
         if category_id is not None:
             query = query.where(Transaction.category_id == category_id)
         if account_id is not None:
@@ -212,13 +227,14 @@ class TransactionRepository:
             select(Transaction)
             .where(
                 _spend_condition("expense"),
-                Transaction.currency == currency,
                 Transaction.date >= from_date,
                 Transaction.date <= to_date,
             )
-            .order_by(Transaction.amount.desc())
+            .order_by(_amount_column(currency).desc())
             .limit(top_n)
         )
+        if currency != GLOBAL_CURRENCY:
+            query = query.where(Transaction.currency == currency)
         if category_id is not None:
             query = query.where(Transaction.category_id == category_id)
         result = await self._session.execute(query)
@@ -233,23 +249,25 @@ class TransactionRepository:
     ) -> list[tuple[int | None, str | None, Decimal, int]]:
         from app.features.finance.categories.tables import Category
 
+        amount_column = _amount_column(currency)
         query = (
             select(
                 Transaction.category_id,
                 Category.name,
-                func.coalesce(func.sum(Transaction.amount), 0),
+                func.coalesce(func.sum(amount_column), 0),
                 func.count(Transaction.id),
             )
             .outerjoin(Category, Transaction.category_id == Category.id)
             .where(
                 _spend_condition("expense"),
-                Transaction.currency == currency,
                 Transaction.date >= from_date,
                 Transaction.date <= to_date,
             )
             .group_by(Transaction.category_id, Category.name)
-            .order_by(func.sum(Transaction.amount).desc())
+            .order_by(func.sum(amount_column).desc())
         )
+        if currency != GLOBAL_CURRENCY:
+            query = query.where(Transaction.currency == currency)
         if account_id is not None:
             query = query.where(Transaction.account_id == account_id)
         result = await self._session.execute(query)
@@ -266,13 +284,35 @@ class TransactionRepository:
         currency: str = "EUR",
     ) -> Decimal:
         query = select(
-            func.coalesce(func.sum(Transaction.amount), 0)
+            func.coalesce(func.sum(_amount_column(currency)), 0)
         ).where(
             _spend_condition("expense"),
-            Transaction.currency == currency,
             Transaction.category_id == category_id,
             Transaction.date >= from_date,
             Transaction.date <= to_date,
         )
+        if currency != GLOBAL_CURRENCY:
+            query = query.where(Transaction.currency == currency)
         result = await self._session.execute(query)
         return Decimal(str(result.scalar()))
+
+    async def list_missing_amount_eur(self, limit: int = 1000) -> list[Transaction]:
+        result = await self._session.execute(
+            select(Transaction)
+            .where(Transaction.amount_eur.is_(None))
+            .order_by(Transaction.id)
+            .limit(limit)
+        )
+        return list(result.scalars().all())
+
+    async def set_amount_eur(self, transaction_id: int, amount_eur: Decimal) -> None:
+        await self._session.execute(
+            update(Transaction).where(Transaction.id == transaction_id).values(amount_eur=amount_eur)
+        )
+        await self._session.commit()
+
+    async def count_missing_amount_eur(self) -> int:
+        result = await self._session.execute(
+            select(func.count(Transaction.id)).where(Transaction.amount_eur.is_(None))
+        )
+        return result.scalar_one()

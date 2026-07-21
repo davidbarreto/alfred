@@ -6,6 +6,10 @@ from pydantic import BaseModel
 
 TransactionType: TypeAlias = Literal["expense", "income", "transfer"]
 
+# Sentinel AnalyticsFilters.currency value meaning "sum amount_eur across every
+# currency" instead of filtering to one native currency.
+GLOBAL_CURRENCY = "GLOBAL"
+
 
 def resolve_period(
     period: str | None,
@@ -110,6 +114,7 @@ class TransactionUpdate(BaseModel):
 class TransactionRead(TransactionBase):
     id: int
     import_batch_id: int | None = None
+    amount_eur: Decimal | None = None
     created_at: datetime
 
     model_config = {"from_attributes": True}
@@ -138,7 +143,7 @@ class TransactionFilters:
         self.from_date = from_date
         self.to_date = to_date
         self.period = period
-        self.currency = currency
+        self.currency = currency.upper() if currency is not None else None
 
 
 class TransactionBulkMoveRequest(BaseModel):
@@ -202,6 +207,12 @@ class SpendingTopResponse(BaseModel):
     top_n: int
 
 
+class TransactionBackfillEurResponse(BaseModel):
+    updated_count: int
+    failed_count: int
+    remaining_count: int
+
+
 class BalanceForecastResponse(BaseModel):
     current_balance: Decimal
     projected_income: Decimal
@@ -230,4 +241,4 @@ class AnalyticsFilters:
         self.account_id = account_id
         self.merchant = merchant
         self.top_n = top_n
-        self.currency = currency
+        self.currency = currency.upper()

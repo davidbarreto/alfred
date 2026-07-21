@@ -194,6 +194,19 @@ class SpendingByCategoryResponse(BaseModel):
     currency: str
 
 
+class SpendingOverTimeItem(BaseModel):
+    period: str
+    total: Decimal
+
+
+class SpendingOverTimeResponse(BaseModel):
+    items: list[SpendingOverTimeItem]
+    from_date: date
+    to_date: date
+    currency: str
+    group_by: str
+
+
 class SpendingAverageResponse(BaseModel):
     average_per_day: Decimal
     total: Decimal

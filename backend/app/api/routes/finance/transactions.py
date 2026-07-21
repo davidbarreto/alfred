@@ -1,5 +1,5 @@
 from decimal import Decimal
-from typing import Annotated
+from typing import Annotated, Literal
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 
 from app.api.auth import require_auth
@@ -14,6 +14,7 @@ from app.features.finance.transactions.schemas import (
     BalanceForecastResponse,
     SpendingAverageResponse,
     SpendingByCategoryResponse,
+    SpendingOverTimeResponse,
     SpendingReportResponse,
     SpendingTopResponse,
     TransactionBackfillEurResponse,
@@ -63,6 +64,15 @@ async def spending_by_category(
     service: TransactionServiceDep, filters: AnalyticsFilters = Depends()
 ):
     return await service.spending_by_category(filters)
+
+
+@router.get("/over-time", response_model=SpendingOverTimeResponse)
+async def spending_over_time(
+    service: TransactionServiceDep,
+    filters: AnalyticsFilters = Depends(),
+    group_by: Annotated[Literal["day", "month"], Query()] = "day",
+):
+    return await service.spending_over_time(filters, group_by)
 
 
 @router.get("/report", response_model=SpendingReportResponse)

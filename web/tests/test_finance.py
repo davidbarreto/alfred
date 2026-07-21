@@ -283,7 +283,7 @@ class TestFinanceDashboardCurrency:
 
 
 class TestFinanceDashboardPeriods:
-    def _fake_get(self, calls, accounts, spending=None, by_category=None, all_txns=None):
+    def _fake_get(self, calls, accounts, spending=None, by_category=None, over_time=None):
         async def fake(path, params=None):
             params = params or {}
             calls.append((path, params))
@@ -293,8 +293,8 @@ class TestFinanceDashboardPeriods:
                 return spending
             if path == "/finance/transactions/by-category" and by_category is not None:
                 return by_category
-            if path == "/finance/transactions" and params.get("limit") == 500 and all_txns is not None:
-                return all_txns
+            if path == "/finance/transactions/over-time" and over_time is not None:
+                return over_time
             return []
         return fake
 
@@ -376,28 +376,55 @@ class TestFinanceDashboardPeriods:
         assert "from_date=2026-01-01&to_date=2026-03-15&currency=BRL" in text
 
     def test_long_range_groups_spending_by_month(self, client, mock_api):
+        calls = []
         mock_api["get"].side_effect = self._fake_get(
-            [],
+            calls,
             [{"id": 1, "name": "Checking", "currency": "EUR"}],
             spending={"total": "10.00", "currency": "EUR", "from_date": "2026-01-01", "to_date": "2026-06-30", "transaction_count": 1},
-            all_txns=[_txn(id=1, amount="10.00")],
+            over_time={"items": [{"period": "2026-01", "total": "10.00"}]},
         )
 
         resp = client.get("/finance/?period=this semester")
 
         assert "(month)" in resp.text.lower()
+        over_time_call = next(p for path, p in calls if path == "/finance/transactions/over-time")
+        assert over_time_call["group_by"] == "month"
 
     def test_short_range_groups_spending_by_day(self, client, mock_api):
+        calls = []
         mock_api["get"].side_effect = self._fake_get(
-            [],
+            calls,
             [{"id": 1, "name": "Checking", "currency": "EUR"}],
             spending={"total": "10.00", "currency": "EUR", "from_date": "2026-06-01", "to_date": "2026-06-30", "transaction_count": 1},
-            all_txns=[_txn(id=1, amount="10.00")],
+            over_time={"items": [{"period": "2026-06-01", "total": "10.00"}]},
         )
 
         resp = client.get("/finance/?period=this month")
 
         assert "(day)" in resp.text.lower()
+        over_time_call = next(p for path, p in calls if path == "/finance/transactions/over-time")
+        assert over_time_call["group_by"] == "day"
+
+    def test_over_time_endpoint_used_instead_of_capped_raw_fetch(self, client, mock_api):
+        """Regression test: the dashboard chart must be powered by the unbounded
+        SQL aggregate endpoint, not a raw transaction fetch capped at a row limit
+        that would silently drop older months for busy date ranges."""
+        calls = []
+        mock_api["get"].side_effect = self._fake_get(
+            calls,
+            [{"id": 1, "name": "Checking", "currency": "EUR"}],
+            spending={"total": "10.00", "currency": "EUR", "from_date": "2026-01-01", "to_date": "2026-12-31", "transaction_count": 1},
+            over_time={"items": [
+                {"period": "2026-01", "total": "10.00"},
+                {"period": "2026-06", "total": "20.00"},
+            ]},
+        )
+
+        client.get("/finance/?period=this year")
+
+        assert not any("limit" in p and p.get("limit") == 500 for path, p in calls if path == "/finance/transactions")
+        over_time_call = next(p for path, p in calls if path == "/finance/transactions/over-time")
+        assert "limit" not in over_time_call
 
     def test_top_category_card_links_to_uncategorized_filter_when_top_is_uncategorized(self, client, mock_api):
         mock_api["get"].side_effect = self._fake_get(

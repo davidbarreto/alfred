@@ -1,6 +1,5 @@
 import html
 import json
-from collections import defaultdict
 from datetime import date
 from typing import Annotated, Optional
 from urllib.parse import urlencode
@@ -150,7 +149,7 @@ async def finance_page(request: Request):
     range_qs = urlencode(range_params)
     currency = _resolve_currency(request)
 
-    spending, income, by_category, transactions, budgets, all_txns = None, None, None, [], [], []
+    spending, income, by_category, transactions, budgets = None, None, None, [], []
     accounts, categories, currencies, recurring, errors = [], [], [], [], []
 
     try:
@@ -198,14 +197,6 @@ async def finance_page(request: Request):
             errors.append("budgets")
 
     try:
-        all_txns = await api.get(
-            "/finance/transactions",
-            params={"type": "expense", "limit": 500, "currency": currency, **range_params},
-        )
-    except httpx.HTTPError:
-        pass
-
-    try:
         recurring = await api.get("/finance/recurring-transactions")
     except httpx.HTTPError:
         pass
@@ -235,12 +226,23 @@ async def finance_page(request: Request):
         {k: v for k, v in {"from_date": resolved_from, "to_date": resolved_to, "currency": currency}.items() if v}
     )
 
-    amount_key = "amount_eur" if currency == "GLOBAL" else "amount"
-    time_spending: dict[str, float] = defaultdict(float)
-    for txn in all_txns:
-        key = txn["date"][:7] if group_by_month else txn["date"][:10]
-        time_spending[key] += float(txn.get(amount_key) or 0)
-    time_spending_sorted = dict(sorted(time_spending.items()))
+    # Fetched as a server-side SQL aggregate (not a capped raw-transaction fetch) so
+    # wide ranges with many transactions don't silently drop their oldest buckets.
+    over_time = None
+    try:
+        over_time = await api.get(
+            "/finance/transactions/over-time",
+            params={
+                "currency": currency,
+                "group_by": "month" if group_by_month else "day",
+                **range_params,
+            },
+        )
+    except httpx.HTTPError:
+        errors.append("over_time")
+    time_spending_sorted = {
+        item["period"]: float(item["total"]) for item in (over_time or {}).get("items", [])
+    }
 
     # Category chart data
     category_chart = {

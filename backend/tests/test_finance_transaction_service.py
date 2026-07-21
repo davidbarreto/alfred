@@ -305,6 +305,31 @@ class TestSpendingTop:
         assert call_kwargs["top_n"] == 10
 
 
+class TestSpendingOverTime:
+    async def test_returns_items_from_repo(self, service):
+        service._repo.get_spending_over_time.return_value = [
+            ("2026-06-01", Decimal("30.00")),
+            ("2026-06-02", Decimal("15.00")),
+        ]
+        filters = AnalyticsFilters(from_date=date(2026, 6, 1), to_date=date(2026, 6, 30))
+
+        result = await service.spending_over_time(filters, group_by="day")
+
+        assert [i.period for i in result.items] == ["2026-06-01", "2026-06-02"]
+        assert result.group_by == "day"
+        assert result.from_date == date(2026, 6, 1)
+        assert result.to_date == date(2026, 6, 30)
+
+    async def test_passes_group_by_to_repo(self, service):
+        service._repo.get_spending_over_time.return_value = []
+        filters = AnalyticsFilters(from_date=date(2026, 1, 1), to_date=date(2026, 12, 31))
+
+        await service.spending_over_time(filters, group_by="month")
+
+        call_kwargs = service._repo.get_spending_over_time.call_args[1]
+        assert call_kwargs["group_by"] == "month"
+
+
 class TestBalanceForecast:
     async def test_empty_recurring_returns_zeros(self, service):
         filters = AnalyticsFilters(from_date=date(2026, 6, 1), to_date=date(2026, 6, 30))

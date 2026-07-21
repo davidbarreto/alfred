@@ -278,6 +278,38 @@ class TransactionRepository:
             for row in result.all()
         ]
 
+    async def get_spending_over_time(
+        self,
+        from_date: date,
+        to_date: date,
+        group_by: str,
+        account_id: int | None = None,
+        currency: str = "EUR",
+    ) -> list[tuple[str, Decimal]]:
+        """Aggregate expense totals bucketed by day or month, entirely in SQL --
+        unlike fetching raw transactions, this scales to any date range without
+        a row cap silently dropping older buckets.
+        """
+        amount_column = _amount_column(currency)
+        bucket = func.date_trunc(group_by, Transaction.date)
+        query = (
+            select(bucket, func.coalesce(func.sum(amount_column), 0))
+            .where(
+                _spend_condition("expense"),
+                Transaction.date >= from_date,
+                Transaction.date <= to_date,
+            )
+            .group_by(bucket)
+            .order_by(bucket)
+        )
+        if currency != GLOBAL_CURRENCY:
+            query = query.where(Transaction.currency == currency)
+        if account_id is not None:
+            query = query.where(Transaction.account_id == account_id)
+        result = await self._session.execute(query)
+        key_format = "%Y-%m" if group_by == "month" else "%Y-%m-%d"
+        return [(row[0].strftime(key_format), Decimal(str(row[1]))) for row in result.all()]
+
     async def get_category_spent(
         self,
         category_id: int,

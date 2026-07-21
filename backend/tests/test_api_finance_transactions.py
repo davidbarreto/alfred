@@ -9,6 +9,8 @@ from app.features.finance.transactions.schemas import (
     CategorySpendingItem,
     SpendingAverageResponse,
     SpendingByCategoryResponse,
+    SpendingOverTimeItem,
+    SpendingOverTimeResponse,
     SpendingReportResponse,
     SpendingTopResponse,
     TransactionBackfillEurResponse,
@@ -82,6 +84,16 @@ def mock_txn_service():
         from_date=date(2026, 6, 1),
         to_date=date(2026, 6, 30),
         currency="EUR",
+    )
+    svc.spending_over_time.return_value = SpendingOverTimeResponse(
+        items=[
+            SpendingOverTimeItem(period="2026-06-01", total=Decimal("30.00")),
+            SpendingOverTimeItem(period="2026-06-02", total=Decimal("15.00")),
+        ],
+        from_date=date(2026, 6, 1),
+        to_date=date(2026, 6, 30),
+        currency="EUR",
+        group_by="day",
     )
     return svc
 
@@ -352,6 +364,32 @@ class TestSpendingByCategory:
 
     def test_requires_auth(self, client):
         assert client.get("/finance/transactions/by-category").status_code == 403
+
+
+class TestSpendingOverTime:
+    def test_returns_200_with_items(self, client):
+        response = client.get("/finance/transactions/over-time", headers=AUTH)
+        assert response.status_code == 200
+        data = response.json()
+        assert data["group_by"] == "day"
+        assert data["items"][0]["period"] == "2026-06-01"
+        assert data["items"][0]["total"] == "30.00"
+
+    def test_group_by_forwarded(self, client, mock_txn_service):
+        client.get("/finance/transactions/over-time?group_by=month", headers=AUTH)
+        assert mock_txn_service.spending_over_time.call_args[0][1] == "month"
+
+    def test_defaults_to_day(self, client, mock_txn_service):
+        client.get("/finance/transactions/over-time", headers=AUTH)
+        assert mock_txn_service.spending_over_time.call_args[0][1] == "day"
+
+    def test_period_filter_forwarded(self, client, mock_txn_service):
+        client.get("/finance/transactions/over-time?period=this+month", headers=AUTH)
+        filters = mock_txn_service.spending_over_time.call_args[0][0]
+        assert filters.period == "this month"
+
+    def test_requires_auth(self, client):
+        assert client.get("/finance/transactions/over-time").status_code == 403
 
 
 class TestBalanceForecast:

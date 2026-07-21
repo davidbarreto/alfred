@@ -1,5 +1,5 @@
 import pytest
-from datetime import date
+from datetime import date, datetime
 from decimal import Decimal
 from unittest.mock import AsyncMock, MagicMock
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -382,6 +382,65 @@ class TestGetSpendingByCategory:
         await TransactionRepository(session).get_spending_by_category(
             from_date=date(2026, 6, 1),
             to_date=date(2026, 6, 30),
+            currency="GLOBAL",
+        )
+        query = session.execute.call_args.args[0]
+        sql = str(query.compile(compile_kwargs={"literal_binds": True}))
+        assert "amount_eur" in sql
+        assert "transactions.currency =" not in sql
+
+
+class TestGetSpendingOverTime:
+    async def test_formats_day_buckets(self):
+        session = _make_session()
+        result = MagicMock()
+        result.all.return_value = [(datetime(2026, 6, 5), Decimal("30.00"))]
+        session.execute.return_value = result
+        rows = await TransactionRepository(session).get_spending_over_time(
+            from_date=date(2026, 6, 1),
+            to_date=date(2026, 6, 30),
+            group_by="day",
+        )
+        assert rows == [("2026-06-05", Decimal("30.00"))]
+
+    async def test_formats_month_buckets(self):
+        session = _make_session()
+        result = MagicMock()
+        result.all.return_value = [(datetime(2026, 6, 1), Decimal("120.00"))]
+        session.execute.return_value = result
+        rows = await TransactionRepository(session).get_spending_over_time(
+            from_date=date(2026, 1, 1),
+            to_date=date(2026, 12, 31),
+            group_by="month",
+        )
+        assert rows == [("2026-06", Decimal("120.00"))]
+
+    async def test_does_not_cap_result_rows(self):
+        """Unlike a raw transaction fetch, the aggregate query has no LIMIT --
+        every bucket in the date range comes back regardless of transaction volume."""
+        session = _make_session()
+        result = MagicMock()
+        result.all.return_value = []
+        session.execute.return_value = result
+        await TransactionRepository(session).get_spending_over_time(
+            from_date=date(2026, 1, 1),
+            to_date=date(2026, 12, 31),
+            group_by="month",
+        )
+        query = session.execute.call_args.args[0]
+        sql = str(query.compile(compile_kwargs={"literal_binds": True}))
+        assert "LIMIT" not in sql.upper()
+        assert "date_trunc" in sql.lower()
+
+    async def test_global_currency_sums_amount_eur(self):
+        session = _make_session()
+        result = MagicMock()
+        result.all.return_value = []
+        session.execute.return_value = result
+        await TransactionRepository(session).get_spending_over_time(
+            from_date=date(2026, 6, 1),
+            to_date=date(2026, 6, 30),
+            group_by="day",
             currency="GLOBAL",
         )
         query = session.execute.call_args.args[0]

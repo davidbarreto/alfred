@@ -15,6 +15,8 @@ from app.features.finance.transactions.schemas import (
     CategorySpendingItem,
     SpendingAverageResponse,
     SpendingByCategoryResponse,
+    SpendingOverTimeItem,
+    SpendingOverTimeResponse,
     SpendingReportResponse,
     SpendingTopResponse,
     TransactionBackfillEurResponse,
@@ -203,6 +205,24 @@ class TransactionService:
             from_date=from_date,
             to_date=to_date,
             currency=filters.currency,
+        )
+
+    async def spending_over_time(self, filters: AnalyticsFilters, group_by: str) -> SpendingOverTimeResponse:
+        from_date, to_date = resolve_period(filters.period, filters.from_date, filters.to_date)
+        rows = await self._repo.get_spending_over_time(
+            from_date=from_date,
+            to_date=to_date,
+            group_by=group_by,
+            account_id=filters.account_id,
+            currency=filters.currency,
+        )
+        items = [SpendingOverTimeItem(period=period, total=total) for period, total in rows]
+        return SpendingOverTimeResponse(
+            items=items,
+            from_date=from_date,
+            to_date=to_date,
+            currency=filters.currency,
+            group_by=group_by,
         )
 
     async def spending_top(self, filters: AnalyticsFilters) -> SpendingTopResponse:

@@ -29,6 +29,14 @@ class CalendarEventRepository:
         )
         return result.scalars().first()
 
+    async def get_event_by_provider_id(self, provider_id: str) -> CalendarEvent | None:
+        result = await self._session.execute(
+            select(CalendarEvent)
+            .options(selectinload(CalendarEvent.tags), selectinload(CalendarEvent.invitees))
+            .where(CalendarEvent.provider_id == provider_id)
+        )
+        return result.scalars().first()
+
     async def get_events(self, event_filter: EventFilters) -> list[CalendarEvent]:
         query = select(CalendarEvent).options(
             selectinload(CalendarEvent.tags), selectinload(CalendarEvent.invitees)

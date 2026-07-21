@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import urllib.parse
+from datetime import date
 
 import httpx
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -9,6 +10,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.auth import require_auth
 from app.config import get_settings
 from app.db.session import get_session
+from app.dependencies import CalendarEventServiceDep
+from app.features.organizer.calendar_events.schemas import CalendarSyncResult
 from app.integrations.oauth_tokens.repository import get_oauth_token, upsert_oauth_token
 
 router = APIRouter(
@@ -75,3 +78,12 @@ async def oauth_callback(
 
     await upsert_oauth_token(session, "google_calendar", refresh_token)
     return {"status": "ok", "message": "Google Calendar authorized successfully."}
+
+
+@router.post("/sync", response_model=CalendarSyncResult, dependencies=[Depends(require_auth)])
+async def sync_calendar(
+    service: CalendarEventServiceDep,
+    start: date | None = Query(None, description="Defaults to today"),
+    end: date | None = Query(None, description="Defaults to start + 3 months"),
+) -> CalendarSyncResult:
+    return await service.sync(start, end)

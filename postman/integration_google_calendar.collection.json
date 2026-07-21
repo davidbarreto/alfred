@@ -2,7 +2,7 @@
   "info": {
     "name": "Alfred - Google Calendar OAuth",
     "_postman_id": "alfred-google-calendar-oauth-v1",
-    "description": "OAuth flow for Google Calendar. Run 01 to get the authorization URL, open it in a browser, authorize, and Google will call the callback automatically.",
+    "description": "OAuth flow and sync for Google Calendar. Run 01 to get the authorization URL, open it in a browser, authorize, and Google will call the callback automatically. Run 04/05 to sync events from Google Calendar into Alfred for a given date range (defaults to today through 3 months ahead).",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -99,6 +99,69 @@
           "path": ["integration", "google-calendar", "oauth", "callback"],
           "query": [
             { "key": "code", "value": "PASTE_CODE_HERE" }
+          ]
+        }
+      }
+    },
+    {
+      "name": "04 - Sync Calendar (default range)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Response has sync result fields', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json).to.have.property('created');",
+              "    pm.expect(json).to.have.property('updated');",
+              "    pm.expect(json).to.have.property('start');",
+              "    pm.expect(json).to.have.property('end');",
+              "    console.log('Synced calendar:', json);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/integration/google-calendar/sync",
+          "host": ["{{base_url}}"],
+          "path": ["integration", "google-calendar", "sync"]
+        }
+      }
+    },
+    {
+      "name": "05 - Sync Calendar (explicit range)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Response echoes requested range', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json.start).to.eql('2026-08-01');",
+              "    pm.expect(json.end).to.eql('2026-08-31');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/integration/google-calendar/sync?start=2026-08-01&end=2026-08-31",
+          "host": ["{{base_url}}"],
+          "path": ["integration", "google-calendar", "sync"],
+          "query": [
+            { "key": "start", "value": "2026-08-01" },
+            { "key": "end", "value": "2026-08-31" }
           ]
         }
       }

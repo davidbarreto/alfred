@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import date, datetime
 from typing import Annotated, Any, List, Optional
 from pydantic import BaseModel, field_validator
 from fastapi import Query
@@ -73,3 +73,10 @@ class EventFilters:
             f"EventFilters(limit={self.limit}, start_from={self.start_from!r}, "
             f"start_to={self.start_to!r}, tags={self.tags!r})"
         )
+
+
+class CalendarSyncResult(BaseModel):
+    created: int
+    updated: int
+    start: date
+    end: date

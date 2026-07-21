@@ -1,11 +1,20 @@
 import logging
+from datetime import date, datetime, time
 
+from dateutil.relativedelta import relativedelta
 from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.shared.storage import StorageProvider
+from app.shared.timezone import local_now, local_timezone
 from app.features.organizer.calendar_events.tables import CalendarEvent  # noqa: F401 — registers CalendarEvent with SQLAlchemy mapper
-from app.features.organizer.calendar_events.schemas import EventCreate, EventUpdate, EventFilters, EventRead
+from app.features.organizer.calendar_events.schemas import (
+    CalendarSyncResult,
+    EventCreate,
+    EventUpdate,
+    EventFilters,
+    EventRead,
+)
 from app.features.organizer.calendar_events.repository import CalendarEventRepository
 from app.features.organizer.calendar_events.recurrence import expand_occurrences
 
@@ -15,6 +24,7 @@ _OAUTH_REQUIRED = HTTPException(
     status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
     detail="Google Calendar not authorized. Open GET /integration/google-calendar/oauth/url to start the flow.",
 )
+_SYNC_LOOKAHEAD = relativedelta(months=3)
 
 
 class CalendarEventService:
@@ -59,6 +69,38 @@ class CalendarEventService:
             )
         occurrences.sort(key=lambda e: e.start_datetime)
         return occurrences
+
+    async def sync(self, start: date | None = None, end: date | None = None) -> CalendarSyncResult:
+        if self._provider is None:
+            logger.warning("CalendarEvent sync: Google Calendar not authorized")
+            raise _OAUTH_REQUIRED
+
+        sync_start = start or local_now().date()
+        sync_end = end or sync_start + _SYNC_LOOKAHEAD
+        start_dt = datetime.combine(sync_start, time.min, tzinfo=local_timezone())
+        end_dt = datetime.combine(sync_end, time.min, tzinfo=local_timezone())
+
+        records = await self._provider.list(
+            {"start_from": start_dt, "start_to": end_dt}, self._session
+        )
+
+        created = 0
+        updated = 0
+        for record in records:
+            provider_id = record.pop("id")
+            existing = await self._repo.get_event_by_provider_id(provider_id)
+            if existing is not None:
+                await self._repo.update_event(existing.id, EventUpdate(**record))
+                updated += 1
+            else:
+                await self._repo.create_event(EventCreate(**record), provider_id)
+                created += 1
+
+        logger.info(
+            "CalendarEvent sync: start=%s end=%s created=%d updated=%d",
+            sync_start, sync_end, created, updated,
+        )
+        return CalendarSyncResult(created=created, updated=updated, start=sync_start, end=sync_end)
 
     async def create_event(self, event_create: EventCreate) -> EventRead:
         if self._provider is None:

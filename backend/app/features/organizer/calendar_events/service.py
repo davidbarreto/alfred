@@ -107,7 +107,15 @@ class CalendarEventService:
             logger.warning("CalendarEvent create: Google Calendar not authorized")
             raise _OAUTH_REQUIRED
         event_record = await self._provider.create(event_create.model_dump(), self._session)
-        event_orm = await self._repo.create_event(event_create, event_record["id"])
+        # The provider converts start/end into the user's local timezone before returning;
+        # persist that converted value instead of the caller's raw payload so the naive
+        # DB datetime matches what _from_google_event guarantees elsewhere (see sync()).
+        converted = event_create.model_copy(update={
+            "start_datetime": event_record["start_datetime"],
+            "end_datetime": event_record["end_datetime"],
+            "timezone": event_record["timezone"],
+        })
+        event_orm = await self._repo.create_event(converted, event_record["id"])
         logger.info("CalendarEvent created: id=%d title=%r", event_orm.id, event_create.title)
         return EventRead.model_validate(event_orm)
 
@@ -119,12 +127,20 @@ class CalendarEventService:
         if event is None:
             logger.debug("CalendarEvent update: id=%d not found", event_id)
             return None
-        await self._provider.update(
+        event_record = await self._provider.update(
             event.provider_id,
             event_update.model_dump(exclude_unset=True),
             self._session,
         )
-        event_orm = await self._repo.update_event(event_id, event_update)
+        # Same timezone-conversion guarantee as create_event: always resync the naive
+        # start/end/timezone from the provider's response, even when this update didn't
+        # touch them, so previously-uncoverted events self-heal on the next edit.
+        converted = event_update.model_copy(update={
+            "start_datetime": event_record["start_datetime"],
+            "end_datetime": event_record["end_datetime"],
+            "timezone": event_record["timezone"],
+        })
+        event_orm = await self._repo.update_event(event_id, converted)
         logger.info("CalendarEvent updated: id=%d fields=%s", event_id, list(event_update.model_dump(exclude_unset=True).keys()))
         return EventRead.model_validate(event_orm)
 

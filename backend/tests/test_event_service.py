@@ -151,10 +151,21 @@ class TestGetEvents:
         assert result[0].start_datetime == _START
 
 
+def _provider_record(provider_id: str, **kwargs) -> dict:
+    defaults = dict(
+        id=provider_id,
+        start_datetime=_START,
+        end_datetime=_END,
+        timezone=None,
+    )
+    defaults.update(kwargs)
+    return defaults
+
+
 class TestCreateEvent:
     async def test_calls_provider_create(self, service, mock_provider):
         event_create = EventCreate(title="Stand-up", start_datetime=_START, end_datetime=_END)
-        mock_provider.create.return_value = {"id": "gc-abc"}
+        mock_provider.create.return_value = _provider_record("gc-abc")
         service._repo.create_event.return_value = _make_event_orm(title="Stand-up")
 
         await service.create_event(event_create)
@@ -163,15 +174,17 @@ class TestCreateEvent:
 
     async def test_calls_repo_create_with_provider_id(self, service, mock_provider):
         event_create = EventCreate(title="Stand-up", start_datetime=_START, end_datetime=_END)
-        mock_provider.create.return_value = {"id": "gc-xyz"}
+        mock_provider.create.return_value = _provider_record("gc-xyz")
         service._repo.create_event.return_value = _make_event_orm()
 
         await service.create_event(event_create)
 
+        # Provider echoed back the same start/end/timezone, so the persisted
+        # event is value-equal to the caller's original payload.
         service._repo.create_event.assert_called_once_with(event_create, "gc-xyz")
 
     async def test_returns_event_read(self, service, mock_provider):
-        mock_provider.create.return_value = {"id": "gc-1"}
+        mock_provider.create.return_value = _provider_record("gc-1")
         service._repo.create_event.return_value = _make_event_orm()
 
         result = await service.create_event(
@@ -181,14 +194,19 @@ class TestCreateEvent:
 
 
 class TestUpdateEvent:
-    async def test_returns_updated_event(self, service):
+    async def test_returns_updated_event(self, service, mock_provider):
         service._repo.get_event.return_value = _make_event_orm()
         service._repo.update_event.return_value = _make_event_orm(title="Updated")
+        mock_provider.update.return_value = _provider_record("gc-event-1")
         event_update = EventUpdate(title="Updated")
 
         result = await service.update_event(1, event_update)
 
-        service._repo.update_event.assert_called_once_with(1, event_update)
+        # The provider always reports the event's true current start/end/timezone,
+        # which the service persists alongside the requested field(s).
+        service._repo.update_event.assert_called_once_with(
+            1, EventUpdate(title="Updated", start_datetime=_START, end_datetime=_END, timezone=None)
+        )
         assert isinstance(result, EventRead)
 
     async def test_returns_none_when_not_found(self, service):

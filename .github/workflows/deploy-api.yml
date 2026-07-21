@@ -70,11 +70,11 @@ jobs:
             $COMPOSE up -d api
 
             echo "==> Waiting for API to be ready (entrypoint.sh runs migrations and seeds before uvicorn starts)..."
-            for i in $(seq 1 30); do
+            for i in $(seq 1 60); do
               if $COMPOSE exec -T api python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=3)" 2>/dev/null; then
                 echo "API is ready"
                 break
               fi
-              [ "$i" -eq 30 ] && echo "Error: API failed to start within 90s" && exit 1
+              [ "$i" -eq 60 ] && echo "Error: API failed to start within 180s" && exit 1
               sleep 3
             done

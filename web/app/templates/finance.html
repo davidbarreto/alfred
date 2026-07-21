@@ -89,8 +89,8 @@
       {% endif %}
     </a>
 
-    {% if top_category and top_category.category_id %}
-    <a href="/finance/transactions?type=expense&category_id={{ top_category.category_id }}&{{ txn_range_qs }}" class="block bg-white border border-gray-200 rounded-lg p-4 hover:border-gray-300 transition-colors">
+    {% if top_category %}
+    <a href="/finance/transactions?type=expense&{% if top_category.category_id %}category_id={{ top_category.category_id }}{% else %}uncategorized=true{% endif %}&{{ txn_range_qs }}" class="block bg-white border border-gray-200 rounded-lg p-4 hover:border-gray-300 transition-colors">
       <div class="text-[10px] text-gray-400 uppercase tracking-wide">Top Category</div>
       <div class="text-2xl font-semibold text-gray-900 mt-1 truncate">{{ top_category.category_name or "Uncategorized" }}</div>
       <div class="text-xs text-gray-400 mt-1">{{ currency_symbol }}{{ top_category.total | money }}</div>
@@ -98,12 +98,7 @@
     {% else %}
     <div class="bg-white border border-gray-200 rounded-lg p-4">
       <div class="text-[10px] text-gray-400 uppercase tracking-wide">Top Category</div>
-      {% if top_category %}
-      <div class="text-2xl font-semibold text-gray-900 mt-1 truncate">{{ top_category.category_name or "Uncategorized" }}</div>
-      <div class="text-xs text-gray-400 mt-1">{{ currency_symbol }}{{ top_category.total | money }}</div>
-      {% else %}
       <div class="text-2xl font-semibold text-gray-900 mt-1">—</div>
-      {% endif %}
     </div>
     {% endif %}
   </div>

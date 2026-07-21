@@ -127,6 +127,7 @@ class TransactionFilters:
         offset: Annotated[int, Query(ge=0)] = 0,
         type: Annotated[TransactionType | None, Query()] = None,
         category_id: Annotated[int | None, Query()] = None,
+        uncategorized: Annotated[bool, Query()] = False,
         account_id: Annotated[int | None, Query()] = None,
         merchant: Annotated[str | None, Query()] = None,
         from_date: Annotated[date | None, Query()] = None,
@@ -138,6 +139,7 @@ class TransactionFilters:
         self.offset = offset
         self.type = type
         self.category_id = category_id
+        self.uncategorized = uncategorized
         self.account_id = account_id
         self.merchant = merchant
         self.from_date = from_date

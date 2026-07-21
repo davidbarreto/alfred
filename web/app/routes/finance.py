@@ -23,6 +23,7 @@ def _parse_txn_query(request: Request) -> tuple[dict, int]:
     filters = {
         "type": qp.get("type") or None,
         "category_id": qp.get("category_id") or None,
+        "uncategorized": qp.get("uncategorized") or None,
         "account_id": qp.get("account_id") or None,
         "merchant": qp.get("merchant") or None,
         "from_date": qp.get("from_date") or None,

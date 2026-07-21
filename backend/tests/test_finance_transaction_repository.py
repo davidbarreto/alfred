@@ -83,6 +83,23 @@ class TestList:
         await TransactionRepository(session).list(TransactionFilters(category_id=2))
         session.execute.assert_called_once()
 
+    async def test_uncategorized_filter(self):
+        session = _make_session()
+        session.execute.return_value = _scalar_all([])
+        await TransactionRepository(session).list(TransactionFilters(uncategorized=True))
+        query = session.execute.call_args.args[0]
+        sql = str(query.compile(compile_kwargs={"literal_binds": True}))
+        assert "transactions.category_id IS NULL" in sql
+
+    async def test_uncategorized_filter_takes_precedence_over_category_id(self):
+        session = _make_session()
+        session.execute.return_value = _scalar_all([])
+        await TransactionRepository(session).list(TransactionFilters(category_id=2, uncategorized=True))
+        query = session.execute.call_args.args[0]
+        sql = str(query.compile(compile_kwargs={"literal_binds": True}))
+        assert "transactions.category_id IS NULL" in sql
+        assert "transactions.category_id = " not in sql
+
     async def test_account_id_filter(self):
         session = _make_session()
         session.execute.return_value = _scalar_all([])

@@ -45,7 +45,9 @@ def _filter_conditions(filters: Any) -> list:
     conditions = []
     if filters.type is not None:
         conditions.append(_spend_condition(filters.type))
-    if filters.category_id is not None:
+    if getattr(filters, "uncategorized", False):
+        conditions.append(Transaction.category_id.is_(None))
+    elif filters.category_id is not None:
         conditions.append(Transaction.category_id == filters.category_id)
     if getattr(filters, "account_id", None) is not None:
         conditions.append(Transaction.account_id == filters.account_id)

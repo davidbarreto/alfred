@@ -26,6 +26,7 @@
       <label class="text-xs text-gray-500 mb-1 block">Category</label>
       <select id="txn-filter-category" class="border border-gray-200 rounded-lg px-2 py-1.5 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-[#378ADD]" onchange="applyTxnFilters()">
         <option value="">All categories</option>
+        <option value="uncategorized" {% if query_filters.uncategorized %}selected{% endif %}>Uncategorized</option>
         {% for cat in categories %}
         <option value="{{ cat.id }}" {% if query_filters.category_id == cat.id | string %}selected{% endif %}>{{ cat.name }}</option>
         {% endfor %}
@@ -63,7 +64,7 @@
         class="border border-gray-200 rounded-lg px-2 py-1.5 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-[#378ADD]"
         onchange="applyTxnFilters()" />
     </div>
-    {% if query_filters.type or query_filters.category_id or query_filters.account_id or query_filters.merchant or query_filters.from_date or query_filters.to_date or query_filters.currency %}
+    {% if query_filters.type or query_filters.category_id or query_filters.uncategorized or query_filters.account_id or query_filters.merchant or query_filters.from_date or query_filters.to_date or query_filters.currency %}
     <button onclick="clearTxnFilters()" class="btn btn-sm btn-ghost text-gray-500 gap-1">
       <i class="ti ti-x text-xs"></i>Clear filters
     </button>
@@ -215,7 +216,8 @@ function _txnQuery() {
   const fromDate = document.getElementById("txn-filter-from").value;
   const toDate = document.getElementById("txn-filter-to").value;
   if (type) params.set("type", type);
-  if (category) params.set("category_id", category);
+  if (category === "uncategorized") params.set("uncategorized", "true");
+  else if (category) params.set("category_id", category);
   if (account) params.set("account_id", account);
   if (merchant) params.set("merchant", merchant);
   if (fromDate) params.set("from_date", fromDate);

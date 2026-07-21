@@ -56,6 +56,16 @@ class TestTransactionsPage:
         txn_call = next(c for c in calls if c.args[0] == "/finance/transactions")
         assert txn_call.kwargs["params"]["merchant"] == "Continente"
 
+    def test_uncategorized_filter_passed_to_api(self, client, mock_api):
+        mock_api["get"].side_effect = [[], [], [], []]
+
+        client.get("/finance/transactions?uncategorized=true")
+
+        calls = mock_api["get"].call_args_list
+        txn_call = next(c for c in calls if c.args[0] == "/finance/transactions")
+        assert txn_call.kwargs["params"]["uncategorized"] == "true"
+        assert "category_id" not in txn_call.kwargs["params"]
+
     def test_offset_passed_to_api(self, client, mock_api):
         mock_api["get"].side_effect = [[], [], [], []]
 
@@ -388,6 +398,40 @@ class TestFinanceDashboardPeriods:
         resp = client.get("/finance/?period=this month")
 
         assert "(day)" in resp.text.lower()
+
+    def test_top_category_card_links_to_uncategorized_filter_when_top_is_uncategorized(self, client, mock_api):
+        mock_api["get"].side_effect = self._fake_get(
+            [],
+            [{"id": 1, "name": "Checking", "currency": "EUR"}],
+            by_category={
+                "items": [
+                    {"category_id": None, "category_name": None, "total": "42.00", "transaction_count": 3},
+                ],
+                "from_date": "2026-06-01", "to_date": "2026-06-30",
+            },
+        )
+
+        resp = client.get("/finance/")
+
+        text = resp.text.replace("&amp;", "&")
+        assert 'href="/finance/transactions?type=expense&uncategorized=true' in text
+
+    def test_top_category_card_links_to_category_id_filter_when_top_is_categorized(self, client, mock_api):
+        mock_api["get"].side_effect = self._fake_get(
+            [],
+            [{"id": 1, "name": "Checking", "currency": "EUR"}],
+            by_category={
+                "items": [
+                    {"category_id": 7, "category_name": "Groceries", "total": "42.00", "transaction_count": 3},
+                ],
+                "from_date": "2026-06-01", "to_date": "2026-06-30",
+            },
+        )
+
+        resp = client.get("/finance/")
+
+        text = resp.text.replace("&amp;", "&")
+        assert 'href="/finance/transactions?type=expense&category_id=7' in text
 
     def test_new_transaction_refresh_uses_custom_range(self, client, mock_api):
         calls = []

@@ -5,6 +5,7 @@ from datetime import date, datetime, timezone
 
 from app.features.organizer.tags.tables import Tag
 from app.db.base import Base
+from app.db.types import LocalDateTime
 
 
 class Task(Base):
@@ -20,7 +21,7 @@ class Task(Base):
     status: Mapped[str] = mapped_column(String(255), nullable=False)
     priority: Mapped[str] = mapped_column(String(255), nullable=False)
     urgency: Mapped[str] = mapped_column(String(255), nullable=False)
-    deadline: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    deadline: Mapped[Optional[datetime]] = mapped_column(LocalDateTime, nullable=True)
     recurrence_rule: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     completed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(

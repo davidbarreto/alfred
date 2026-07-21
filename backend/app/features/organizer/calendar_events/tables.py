@@ -1,10 +1,11 @@
 from datetime import datetime
 from typing import List, Optional
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint
+from sqlalchemy import Boolean, ForeignKey, Integer, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
+from app.db.types import LocalDateTime
 from app.features.organizer.tags.tables import Tag
 
 
@@ -33,8 +34,8 @@ class CalendarEvent(Base):
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     location: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
-    start_datetime: Mapped[datetime] = mapped_column(DateTime, nullable=False)
-    end_datetime: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    start_datetime: Mapped[datetime] = mapped_column(LocalDateTime, nullable=False)
+    end_datetime: Mapped[datetime] = mapped_column(LocalDateTime, nullable=False)
     all_day: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     recurrence_rule: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
     timezone: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)

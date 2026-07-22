@@ -34,6 +34,7 @@ def mock_session():
 def mock_embedding_service():
     svc = AsyncMock()
     svc.embed = AsyncMock()
+    svc.embed_background = MagicMock()
     svc.delete_by_source = AsyncMock()
     return svc
 
@@ -206,7 +207,7 @@ class TestArchiveNote:
 
         mock_provider.delete.assert_not_called()
         mock_embedding_service.delete_by_source.assert_not_called()
-        mock_embedding_service.embed.assert_not_called()
+        mock_embedding_service.embed_background.assert_not_called()
 
 
 class TestUnarchiveNote:
@@ -253,8 +254,8 @@ class TestNoteEmbedding:
 
         await service_with_embeddings.create_note(NoteCreate(title="T", content="C"))
 
-        mock_embedding_service.embed.assert_called_once()
-        call_arg = mock_embedding_service.embed.call_args[0][0]
+        mock_embedding_service.embed_background.assert_called_once()
+        call_arg = mock_embedding_service.embed_background.call_args[0][0]
         assert call_arg.source_type == "note"
         assert call_arg.source_id == 5
 
@@ -272,7 +273,7 @@ class TestNoteEmbedding:
 
         await service_with_embeddings.update_note(1, NoteUpdate(title="New"))
 
-        mock_embedding_service.embed.assert_called_once()
+        mock_embedding_service.embed_background.assert_called_once()
 
     async def test_delete_by_source_called_on_delete(self, service_with_embeddings, mock_provider, mock_embedding_service):
         service_with_embeddings._repo.get_note.return_value = _make_note_orm(id=3)
@@ -281,11 +282,18 @@ class TestNoteEmbedding:
 
         mock_embedding_service.delete_by_source.assert_called_once_with("note", 3)
 
-    async def test_embed_failure_does_not_raise(self, service_with_embeddings, mock_provider, mock_embedding_service):
+    async def test_create_does_not_use_the_blocking_embed_call(self, service_with_embeddings, mock_provider, mock_embedding_service):
         mock_provider.create.return_value = {"id": "provider-1"}
         service_with_embeddings._repo.create_note.return_value = _make_note_orm()
-        mock_embedding_service.embed.side_effect = RuntimeError("embedding failed")
 
-        result = await service_with_embeddings.create_note(NoteCreate(title="T"))
+        await service_with_embeddings.create_note(NoteCreate(title="T"))
 
-        assert isinstance(result, NoteRead)
+        mock_embedding_service.embed.assert_not_called()
+
+    async def test_update_does_not_use_the_blocking_embed_call(self, service_with_embeddings, mock_embedding_service):
+        service_with_embeddings._repo.get_note.return_value = _make_note_orm()
+        service_with_embeddings._repo.update_note.return_value = _make_note_orm(title="New")
+
+        await service_with_embeddings.update_note(1, NoteUpdate(title="New"))
+
+        mock_embedding_service.embed.assert_not_called()

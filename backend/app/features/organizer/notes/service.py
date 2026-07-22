@@ -46,13 +46,10 @@ class NoteService:
         note_orm = await self._repo.create_note(note_create, note_record["id"])
         logger.info("Note created: id=%d title=%r", note_orm.id, note_create.title)
         if self._embedding_service:
-            try:
-                content = _note_embed_content(note_orm.title, note_orm.content)
-                await self._embedding_service.embed(
-                    EmbeddingCreate(source_type=_SOURCE_TYPE, source_id=note_orm.id, content=content)
-                )
-            except Exception as exc:
-                logger.warning("Note embed failed: id=%d error=%s", note_orm.id, exc)
+            content = _note_embed_content(note_orm.title, note_orm.content)
+            self._embedding_service.embed_background(
+                EmbeddingCreate(source_type=_SOURCE_TYPE, source_id=note_orm.id, content=content)
+            )
         return NoteRead.model_validate(note_orm)
 
     async def update_note(self, note_id: int, note_update: NoteUpdate) -> NoteRead | None:
@@ -68,13 +65,10 @@ class NoteService:
         note_orm = await self._repo.update_note(note_id, note_update)
         logger.info("Note updated: id=%d fields=%s", note_id, list(note_update.model_dump(exclude_unset=True).keys()))
         if self._embedding_service:
-            try:
-                content = _note_embed_content(note_orm.title, note_orm.content)
-                await self._embedding_service.embed(
-                    EmbeddingCreate(source_type=_SOURCE_TYPE, source_id=note_id, content=content)
-                )
-            except Exception as exc:
-                logger.warning("Note embed failed on update: id=%d error=%s", note_id, exc)
+            content = _note_embed_content(note_orm.title, note_orm.content)
+            self._embedding_service.embed_background(
+                EmbeddingCreate(source_type=_SOURCE_TYPE, source_id=note_id, content=content)
+            )
         return NoteRead.model_validate(note_orm)
 
     async def delete_note(self, note_id: int) -> None:

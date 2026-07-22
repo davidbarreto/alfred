@@ -94,12 +94,9 @@ class TaskService:
         task_orm = await self._repo.create_task(task_create, task_record["id"])
         logger.info("Task created: id=%d title=%r", task_orm.id, task_create.title)
         if self._embedding_service:
-            try:
-                await self._embedding_service.embed(
-                    EmbeddingCreate(source_type=_SOURCE_TYPE, source_id=task_orm.id, content=task_orm.title)
-                )
-            except Exception as exc:
-                logger.warning("Task embed failed: id=%d error=%s", task_orm.id, exc)
+            self._embedding_service.embed_background(
+                EmbeddingCreate(source_type=_SOURCE_TYPE, source_id=task_orm.id, content=task_orm.title)
+            )
         return TaskRead.model_validate(task_orm)
 
     async def update_task(self, task_id: int, task_update: TaskUpdate) -> TaskRead | None:
@@ -115,12 +112,9 @@ class TaskService:
         task_orm = await self._repo.update_task(task_id, task_update)
         logger.info("Task updated: id=%d fields=%s", task_id, list(task_update.model_dump(exclude_unset=True).keys()))
         if self._embedding_service and task_update.title is not None:
-            try:
-                await self._embedding_service.embed(
-                    EmbeddingCreate(source_type=_SOURCE_TYPE, source_id=task_id, content=task_orm.title)
-                )
-            except Exception as exc:
-                logger.warning("Task embed failed on update: id=%d error=%s", task_id, exc)
+            self._embedding_service.embed_background(
+                EmbeddingCreate(source_type=_SOURCE_TYPE, source_id=task_id, content=task_orm.title)
+            )
         return TaskRead.model_validate(task_orm)
 
     async def complete_task(

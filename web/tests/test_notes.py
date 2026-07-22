@@ -26,7 +26,7 @@ class TestUpdateNote:
             "title": "Groceries updated",
             "content": "Milk, eggs, bread",
             "tags": ["home"],
-        })
+        }, timeout=30.0)
 
     def test_clearing_tags_sends_empty_list(self, client, mock_api):
         mock_api["patch"].return_value = _note(id=2, tags=[])
@@ -39,7 +39,7 @@ class TestUpdateNote:
             "title": "Groceries",
             "content": "",
             "tags": [],
-        })
+        }, timeout=30.0)
 
     def test_returns_422_when_backend_update_fails(self, client, mock_api):
         request = httpx.Request("PATCH", "http://api/organizer/notes/2")

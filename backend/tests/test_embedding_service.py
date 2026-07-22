@@ -8,6 +8,7 @@ from app.features.core.embeddings.schemas import (
     EmbeddingSearchRequest,
     EmbeddingSearchResult,
 )
+from app.features.core.embeddings import service as embedding_service_module
 from app.features.core.embeddings.service import EmbeddingService
 
 
@@ -82,6 +83,64 @@ class TestEmbedMethod:
 
         _, kwargs = repo_instance.upsert.call_args
         assert kwargs["vector"] == vector
+
+
+class TestEmbedBackgroundMethod:
+    @pytest.mark.asyncio
+    async def test_upserts_via_a_dedicated_session(self):
+        orm_obj = _make_embedding_orm()
+        session = AsyncMock()
+        provider = _make_provider()
+
+        new_session = AsyncMock()
+        session_cm = MagicMock()
+        session_cm.__aenter__ = AsyncMock(return_value=new_session)
+        session_cm.__aexit__ = AsyncMock(return_value=False)
+
+        with patch(
+            "app.features.core.embeddings.service.EmbeddingRepository"
+        ) as MockRepo, patch(
+            "app.features.core.embeddings.service.async_session", return_value=session_cm
+        ):
+            repo_instance = MockRepo.return_value
+            repo_instance.upsert = AsyncMock(return_value=orm_obj)
+
+            service = EmbeddingService(session, provider)
+            service.embed_background(
+                EmbeddingCreate(source_type="note", source_id=5, content="A note")
+            )
+
+            assert len(embedding_service_module._background_tasks) == 1
+            task = next(iter(embedding_service_module._background_tasks))
+            await task
+
+        provider.embed.assert_awaited_once_with("A note")
+        MockRepo.assert_any_call(new_session)
+        repo_instance.upsert.assert_awaited_once_with(
+            source_type="note",
+            source_id=5,
+            content="A note",
+            vector=[0.1] * 1536,
+            model="text-embedding-3-small",
+            dimensions=1536,
+        )
+        assert embedding_service_module._background_tasks == set()
+
+    @pytest.mark.asyncio
+    async def test_failure_is_caught_and_does_not_raise(self):
+        session = AsyncMock()
+        provider = _make_provider()
+        provider.embed = AsyncMock(side_effect=Exception("boom"))
+
+        service = EmbeddingService(session, provider)
+        service.embed_background(
+            EmbeddingCreate(source_type="note", source_id=5, content="A note")
+        )
+        task = next(iter(embedding_service_module._background_tasks))
+
+        await task  # must not raise
+
+        assert embedding_service_module._background_tasks == set()
 
 
 class TestEmbedManyMethod:

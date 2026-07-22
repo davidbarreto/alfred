@@ -50,6 +50,7 @@ def mock_session():
 def mock_embedding_service():
     svc = AsyncMock()
     svc.embed = AsyncMock()
+    svc.embed_background = MagicMock()
     svc.delete_by_source = AsyncMock()
     return svc
 
@@ -238,8 +239,8 @@ class TestTaskEmbedding:
 
         await service_with_embeddings.create_task(TaskCreate(title="Buy milk"))
 
-        mock_embedding_service.embed.assert_called_once()
-        call_arg = mock_embedding_service.embed.call_args[0][0]
+        mock_embedding_service.embed_background.assert_called_once()
+        call_arg = mock_embedding_service.embed_background.call_args[0][0]
         assert call_arg.source_type == "task"
         assert call_arg.source_id == 7
         assert call_arg.content == "Buy milk"
@@ -258,7 +259,7 @@ class TestTaskEmbedding:
 
         await service_with_embeddings.update_task(1, TaskUpdate(title="New title"))
 
-        mock_embedding_service.embed.assert_called_once()
+        mock_embedding_service.embed_background.assert_called_once()
 
     async def test_embed_not_called_on_non_title_update(self, service_with_embeddings, mock_embedding_service):
         service_with_embeddings._repo.get_task.return_value = _make_task_orm()
@@ -266,7 +267,7 @@ class TestTaskEmbedding:
 
         await service_with_embeddings.update_task(1, TaskUpdate(status="DONE"))
 
-        mock_embedding_service.embed.assert_not_called()
+        mock_embedding_service.embed_background.assert_not_called()
 
     async def test_delete_by_source_called_on_delete(self, service_with_embeddings, mock_provider, mock_embedding_service):
         service_with_embeddings._repo.get_task.return_value = _make_task_orm(id=4)
@@ -275,14 +276,14 @@ class TestTaskEmbedding:
 
         mock_embedding_service.delete_by_source.assert_called_once_with("task", 4)
 
-    async def test_embed_failure_does_not_raise(self, service_with_embeddings, mock_provider, mock_embedding_service):
+    async def test_create_does_not_use_the_blocking_embed_call(self, service_with_embeddings, mock_provider, mock_embedding_service):
         mock_provider.create.return_value = {"id": "provider-1"}
         service_with_embeddings._repo.create_task.return_value = _make_task_orm()
-        mock_embedding_service.embed.side_effect = RuntimeError("embedding failed")
 
         result = await service_with_embeddings.create_task(TaskCreate(title="Test"))
 
         assert isinstance(result, TaskRead)
+        mock_embedding_service.embed.assert_not_called()
 
 
 class TestCompleteTask:

@@ -5,6 +5,7 @@ import logging
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.db.session import async_session
 from app.features.core.embeddings.repository import EmbeddingRepository
 from app.features.core.embeddings.schemas import (
     EmbeddingCreate,
@@ -17,6 +18,11 @@ from app.shared.embedding import EmbeddingProvider
 logger = logging.getLogger(__name__)
 
 _EMBED_MANY_CONCURRENCY = 8
+
+# Strong references for embed_background's fire-and-forget tasks -- asyncio only
+# holds a weak reference to a task, so an unreferenced task can be garbage
+# collected mid-run. Cleared via the done callback once each task finishes.
+_background_tasks: set[asyncio.Task] = set()
 
 
 class EmbeddingService:
@@ -36,6 +42,39 @@ class EmbeddingService:
         )
         logger.debug("Embedding upserted: source_type=%s source_id=%d model=%s", data.source_type, data.source_id, self._provider.model)
         return EmbeddingRead.model_validate(obj)
+
+    def embed_background(self, data: EmbeddingCreate) -> None:
+        """Compute and upsert an embedding without making the caller wait.
+
+        Runs on its own DB session so it can keep going after the calling
+        request's session is closed. Use this from write paths (create/update)
+        where an external sync call already dominates request latency and the
+        embedding itself is a derived index, not source of truth."""
+        task = asyncio.create_task(self._embed_with_own_session(data))
+        _background_tasks.add(task)
+        task.add_done_callback(_background_tasks.discard)
+
+    async def _embed_with_own_session(self, data: EmbeddingCreate) -> None:
+        try:
+            vector = await self._provider.embed(data.content)
+            async with async_session() as session:
+                await EmbeddingRepository(session).upsert(
+                    source_type=data.source_type,
+                    source_id=data.source_id,
+                    content=data.content,
+                    vector=vector,
+                    model=self._provider.model,
+                    dimensions=self._provider.dimensions,
+                )
+            logger.debug(
+                "Background embedding upserted: source_type=%s source_id=%d model=%s",
+                data.source_type, data.source_id, self._provider.model,
+            )
+        except Exception as exc:
+            logger.error(
+                "Background embedding failed: source_type=%s source_id=%d error=%s",
+                data.source_type, data.source_id, exc,
+            )
 
     async def embed_many(self, items: list[EmbeddingCreate]) -> list[EmbeddingRead]:
         """Embed a batch of items. Provider calls (the slow part -- model inference or a

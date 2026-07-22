@@ -10,6 +10,7 @@ from app.templates_config import templates
 router = APIRouter(prefix="/notes")
 
 _PAGE_SIZE = 24
+_WRITE_TIMEOUT = 30.0  # Notion sync + embedding generation run synchronously on the backend
 
 
 def _build_params(tags: list[str], sort: str, archived: bool, offset: int) -> dict:
@@ -115,7 +116,11 @@ async def create_note(
 ):
     tag_list = [t.strip() for t in tags.split(",") if t.strip()]
     try:
-        note = await api.post("/organizer/notes", json={"title": title, "content": content, "tags": tag_list})
+        note = await api.post(
+            "/organizer/notes",
+            json={"title": title, "content": content, "tags": tag_list},
+            timeout=_WRITE_TIMEOUT,
+        )
     except httpx.HTTPStatusError as exc:
         detail = "Failed to save note."
         try:
@@ -141,7 +146,11 @@ async def update_note(
 ):
     tag_list = [t.strip() for t in tags.split(",") if t.strip()]
     try:
-        note = await api.patch(f"/organizer/notes/{note_id}", json={"title": title, "content": content, "tags": tag_list})
+        note = await api.patch(
+            f"/organizer/notes/{note_id}",
+            json={"title": title, "content": content, "tags": tag_list},
+            timeout=_WRITE_TIMEOUT,
+        )
     except httpx.HTTPStatusError as exc:
         detail = "Failed to update note."
         try:

@@ -35,7 +35,7 @@ class MorningBriefingSummaryService:
         self,
         session: AsyncSession,
         weather_client: WeatherProvider,
-        holiday_client: HolidayProvider,
+        holiday_client: HolidayProvider | None,
         contact_service: ContactService | None,
     ) -> None:
         self._session = session
@@ -216,6 +216,8 @@ class MorningBriefingSummaryService:
             return None
 
     async def _fetch_holidays(self, today: date, window_end: date) -> list[HolidayItem]:
+        if self._holiday_client is None:
+            return []
         try:
             return await self._holiday_client.get_holidays(today, window_end, session=self._session)
         except Exception:

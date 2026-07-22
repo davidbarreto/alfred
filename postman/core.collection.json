@@ -2,7 +2,7 @@
   "info": {
     "name": "Alfred - Core API",
     "_postman_id": "alfred-core-v1",
-    "description": "Core module: sessions, messages, command executions, memories, working memory, embeddings, transcription. Run in order \u2014 each section builds on the previous (session \u2192 message \u2192 command execution). Note: embedding requests (60-62) call the OpenAI API and require OPENAI_API_KEY to be set; transcription (80) calls the Gemini API and requires GOOGLE_API_KEY to be set.",
+    "description": "Core module: sessions, messages, command executions, memories, working memory, embeddings, transcription. Run in order \u2014 each section builds on the previous (session \u2192 message \u2192 command execution). Note: embedding requests (60-62) call the OpenAI API and require OPENAI_API_KEY to be set; transcription (80) calls the Gemini API and requires GEMINI_API_KEY to be set.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {

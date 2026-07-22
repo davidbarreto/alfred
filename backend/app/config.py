@@ -31,7 +31,11 @@ class Settings(BaseSettings):
     embedding_model: str = Field(default="all-MiniLM-L6-v2", validation_alias="EMBEDDING_MODEL")
     openai_api_key: str | None = Field(default=None, validation_alias="OPENAI_API_KEY")
 
-    # LLM (argument extraction via Gemini free tier)
+    # LLM (argument extraction via Gemini free tier) — AI Studio key, Generative Language API only
+    gemini_api_key: str | None = Field(default=None, validation_alias="GEMINI_API_KEY")
+
+    # General Google Cloud API key (Calendar API, etc.) — separate from the Gemini key above,
+    # which cannot be granted access to other Google APIs
     google_api_key: str | None = Field(default=None, validation_alias="GOOGLE_API_KEY")
     llm_chat_model: str = Field(default="gemini-2.0-flash", validation_alias="LLM_CHAT_MODEL")
     llm_chat_temperature: float = Field(default=0.35, validation_alias="LLM_CHAT_TEMPERATURE")

@@ -163,16 +163,16 @@ def get_embedding_provider() -> SentenceTransformerEmbeddingProvider:
 @lru_cache
 def get_llm_provider() -> LlmProvider:
     s = get_settings()
-    if not s.google_api_key:
-        raise RuntimeError("GOOGLE_API_KEY is not set")
-    return GoogleLlmProvider(api_key=s.google_api_key, model_name=s.llm_chat_model, temperature=s.llm_chat_temperature)
+    if not s.gemini_api_key:
+        raise RuntimeError("GEMINI_API_KEY is not set")
+    return GoogleLlmProvider(api_key=s.gemini_api_key, model_name=s.llm_chat_model, temperature=s.llm_chat_temperature)
 
 @lru_cache
 def get_extraction_llm_provider() -> LlmProvider:
     s = get_settings()
-    if not s.google_api_key:
-        raise RuntimeError("GOOGLE_API_KEY is not set")
-    return GoogleLlmProvider(api_key=s.google_api_key, model_name=s.llm_extraction_model)
+    if not s.gemini_api_key:
+        raise RuntimeError("GEMINI_API_KEY is not set")
+    return GoogleLlmProvider(api_key=s.gemini_api_key, model_name=s.llm_extraction_model)
 
 def get_embedding_service(session: AsyncSession = Depends(get_session)) -> EmbeddingService:
     return EmbeddingService(session, get_embedding_provider())
@@ -223,14 +223,17 @@ def get_weather_client() -> OpenMeteoClient:
 def get_weather_provider() -> OpenMeteoProvider:
     return OpenMeteoProvider(get_weather_client())
 
-def get_holiday_client() -> GooglePublicHolidayClient:
+def get_holiday_client() -> GooglePublicHolidayClient | None:
     s = get_settings()
     if not s.google_api_key:
-        raise RuntimeError("GOOGLE_API_KEY is not set")
+        return None
     return GooglePublicHolidayClient(api_key=s.google_api_key)
 
-def get_holiday_provider() -> GooglePublicHolidayProvider:
-    return GooglePublicHolidayProvider(get_holiday_client())
+def get_holiday_provider() -> GooglePublicHolidayProvider | None:
+    client = get_holiday_client()
+    if client is None:
+        return None
+    return GooglePublicHolidayProvider(client)
 
 async def get_google_contacts_client(session: AsyncSession = Depends(get_session)) -> GoogleContactsClient | None:
     s = get_settings()
@@ -299,15 +302,15 @@ def get_language_session_service(session: AsyncSession = Depends(get_session)) -
 
 def get_audio_analysis_provider() -> GoogleAudioAnalysisProvider:
     s = get_settings()
-    if not s.google_api_key:
-        raise RuntimeError("GOOGLE_API_KEY is not set")
-    return GoogleAudioAnalysisProvider(api_key=s.google_api_key, model_name=s.llm_pronunciation_model)
+    if not s.gemini_api_key:
+        raise RuntimeError("GEMINI_API_KEY is not set")
+    return GoogleAudioAnalysisProvider(api_key=s.gemini_api_key, model_name=s.llm_pronunciation_model)
 
 def get_transcription_provider() -> GoogleTranscriptionProvider:
     s = get_settings()
-    if not s.google_api_key:
-        raise RuntimeError("GOOGLE_API_KEY is not set")
-    return GoogleTranscriptionProvider(api_key=s.google_api_key, model_name=s.llm_transcription_model)
+    if not s.gemini_api_key:
+        raise RuntimeError("GEMINI_API_KEY is not set")
+    return GoogleTranscriptionProvider(api_key=s.gemini_api_key, model_name=s.llm_transcription_model)
 
 def get_transcription_service(session: AsyncSession = Depends(get_session)) -> TranscriptionService:
     return TranscriptionService(provider=get_transcription_provider(), session=session)

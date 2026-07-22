@@ -471,6 +471,25 @@ class TestBuild:
         assert result.weather == _make_weather()
 
     @pytest.mark.asyncio
+    async def test_holidays_empty_when_no_client(self, mock_session, mock_weather_client):
+        svc = MorningBriefingSummaryService(
+            session=mock_session,
+            weather_client=mock_weather_client,
+            holiday_client=None,
+            contact_service=None,
+        )
+        with (
+            patch("app.features.briefing.morning_summary_service.TaskRepository") as MockTaskRepo,
+            patch("app.features.briefing.morning_summary_service.CalendarEventRepository") as MockEventRepo,
+        ):
+            MockTaskRepo.return_value.get_tasks = AsyncMock(return_value=[])
+            MockEventRepo.return_value.get_events = AsyncMock(return_value=[])
+            result = await svc.build()
+
+        assert result.holidays == []
+        assert result.weather == _make_weather()
+
+    @pytest.mark.asyncio
     async def test_birthdays_empty_when_no_contact_service(self, service):
         with (
             patch("app.features.briefing.morning_summary_service.TaskRepository") as MockTaskRepo,

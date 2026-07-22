@@ -20,6 +20,7 @@ def _make_task(
     task.created_at = created_at or NOW
     task.recurrence_rule = recurrence_rule
     task.is_done_today = is_done_today
+    task.is_done_in_cycle = is_done_today
     return task
 
 

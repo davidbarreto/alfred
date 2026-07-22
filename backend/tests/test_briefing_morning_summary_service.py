@@ -242,7 +242,7 @@ class TestBuild:
             patch("app.features.briefing.morning_summary_service.local_now", return_value=datetime(2026, 6, 22, 8, 0)),
         ):
             MockTaskRepo.return_value.get_tasks = AsyncMock(return_value=tasks)
-            MockTaskRepo.return_value.get_completed_task_ids_for_date = AsyncMock(return_value=set())
+            MockTaskRepo.return_value.get_completions_by_task = AsyncMock(return_value={1: []})
             MockEventRepo.return_value.get_events = AsyncMock(return_value=[])
 
             result = await service.build()
@@ -259,7 +259,7 @@ class TestBuild:
             patch("app.features.briefing.morning_summary_service.local_now", return_value=datetime(2026, 6, 21, 8, 0)),
         ):
             MockTaskRepo.return_value.get_tasks = AsyncMock(return_value=tasks)
-            MockTaskRepo.return_value.get_completed_task_ids_for_date = AsyncMock(return_value=set())
+            MockTaskRepo.return_value.get_completions_by_task = AsyncMock(return_value={1: []})
             MockEventRepo.return_value.get_events = AsyncMock(return_value=[])
 
             result = await service.build()
@@ -277,7 +277,25 @@ class TestBuild:
             patch("app.features.briefing.morning_summary_service.local_now", return_value=datetime(2026, 6, 22, 8, 0)),
         ):
             MockTaskRepo.return_value.get_tasks = AsyncMock(return_value=tasks)
-            MockTaskRepo.return_value.get_completed_task_ids_for_date = AsyncMock(return_value={1})
+            MockTaskRepo.return_value.get_completions_by_task = AsyncMock(return_value={1: [date(2026, 6, 22)]})
+            MockEventRepo.return_value.get_events = AsyncMock(return_value=[])
+
+            result = await service.build()
+
+        assert result.tasks == []
+
+    @pytest.mark.asyncio
+    async def test_excludes_recurring_task_already_completed_earlier_this_week(self, service):
+        # Weekly habit (no BYDAY) completed on Monday; today is Wednesday -- still
+        # satisfied for the week, so it should not show up as pending.
+        tasks = [_make_task_orm(id=1, status="TODO", recurrence_rule="FREQ=WEEKLY")]
+        with (
+            patch("app.features.briefing.morning_summary_service.TaskRepository") as MockTaskRepo,
+            patch("app.features.briefing.morning_summary_service.CalendarEventRepository") as MockEventRepo,
+            patch("app.features.briefing.morning_summary_service.local_now", return_value=datetime(2026, 6, 24, 8, 0)),
+        ):
+            MockTaskRepo.return_value.get_tasks = AsyncMock(return_value=tasks)
+            MockTaskRepo.return_value.get_completions_by_task = AsyncMock(return_value={1: [date(2026, 6, 22)]})
             MockEventRepo.return_value.get_events = AsyncMock(return_value=[])
 
             result = await service.build()

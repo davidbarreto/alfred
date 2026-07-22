@@ -136,7 +136,7 @@ class ReminderService:
             if task.deadline is None:
                 continue
             if task.recurrence_rule is not None and (
-                not is_due_today(task.recurrence_rule, today) or task.is_done_today
+                not is_due_today(task.recurrence_rule, today) or task.is_done_in_cycle
             ):
                 continue
             is_overdue = task.deadline < now
@@ -169,7 +169,7 @@ class ReminderService:
         quiet = []
         for task in undated:
             if task.recurrence_rule is not None and (
-                not is_due_today(task.recurrence_rule, today) or task.is_done_today
+                not is_due_today(task.recurrence_rule, today) or task.is_done_in_cycle
             ):
                 continue
             if await self._is_escalation_snoozed(task.id):

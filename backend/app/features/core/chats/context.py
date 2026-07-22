@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.features.organizer.calendar_events.repository import CalendarEventRepository
 from app.features.organizer.calendar_events.schemas import EventFilters
-from app.features.organizer.tasks.recurrence import is_due_today, missed_count
+from app.features.organizer.tasks.recurrence import is_done_in_cycle, is_due_today, missed_count
 from app.features.organizer.tasks.repository import TaskRepository
 from app.features.organizer.tasks.schemas import TaskFilters
 from app.shared.timezone import local_now
@@ -38,10 +38,8 @@ async def _build(session: AsyncSession) -> str:
     active_tasks = [t for t in tasks_orm if t.status in _ACTIVE_STATUSES]
 
     recurring_ids = [t.id for t in active_tasks if t.recurrence_rule]
-    completed_today: set[int] = set()
     completions_map: dict[int, list[date]] = {}
     if recurring_ids:
-        completed_today = await task_repo.get_completed_task_ids_for_date(recurring_ids, today)
         completions_map = await task_repo.get_completions_by_task(recurring_ids)
 
     overdue_lines: list[str] = []
@@ -52,8 +50,8 @@ async def _build(session: AsyncSession) -> str:
         if t.recurrence_rule:
             if not is_due_today(t.recurrence_rule, today):
                 continue
-            done = t.id in completed_today
             dates = completions_map.get(t.id, [])
+            done = is_done_in_cycle(t.recurrence_rule, dates, today)
             mc = missed_count(t.recurrence_rule, dates, today)
             mark = "✓" if done else ("✗" if mc > 0 else "○")
             note = f" ({mc} missed)" if mc > 0 else ""

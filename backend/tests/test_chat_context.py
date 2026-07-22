@@ -44,7 +44,6 @@ def _patch_repos():
         patch("app.features.core.chats.context.local_now", return_value=datetime(2026, 7, 20, 8, 0)),
     ):
         MockTaskRepo.return_value.get_tasks = AsyncMock(return_value=[])
-        MockTaskRepo.return_value.get_completed_task_ids_for_date = AsyncMock(return_value=set())
         MockTaskRepo.return_value.get_completions_by_task = AsyncMock(return_value={})
         MockEventRepo.return_value.get_events = AsyncMock(return_value=[])
         yield MockTaskRepo, MockEventRepo
@@ -104,7 +103,7 @@ class TestBuildDailyContext:
         MockTaskRepo, _ = _patch_repos
         task = _make_task_orm(id=1, title="Meditate", recurrence_rule="FREQ=DAILY")
         MockTaskRepo.return_value.get_tasks.return_value = [task]
-        MockTaskRepo.return_value.get_completed_task_ids_for_date.return_value = {1}
+        MockTaskRepo.return_value.get_completions_by_task.return_value = {1: [date(2026, 7, 20)]}
 
         result = await build_daily_context(mock_session)
 

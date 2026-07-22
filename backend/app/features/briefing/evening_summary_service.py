@@ -10,7 +10,7 @@ from app.features.organizer.calendar_events.schemas import EventFilters
 from app.features.organizer.notes.repository import NoteRepository
 from app.features.organizer.notes.schemas import NoteFilters
 from app.features.organizer.tasks.ranking import task_priority_sort_key
-from app.features.organizer.tasks.recurrence import is_due_today
+from app.features.organizer.tasks.recurrence import is_done_in_cycle, is_due_today
 from app.features.organizer.tasks.repository import TaskRepository
 from app.features.organizer.tasks.schemas import TaskFilters
 from app.shared.timezone import local_now
@@ -43,6 +43,9 @@ class EveningDigestSummaryService:
         completed_recurring_ids = (
             await repo.get_completed_task_ids_for_date(recurring_ids, today) if recurring_ids else set()
         )
+        completions_map = (
+            await repo.get_completions_by_task(recurring_ids) if recurring_ids else {}
+        )
         wins = [WinItem(title=t.title) for t in active_orm if t.id in completed_recurring_ids]
 
         done_today = await repo.get_tasks_completed_on(today)
@@ -60,7 +63,10 @@ class EveningDigestSummaryService:
             )
             for t in active_orm
             if t.recurrence_rule is None
-            or (is_due_today(t.recurrence_rule, today) and t.id not in completed_recurring_ids)
+            or (
+                is_due_today(t.recurrence_rule, today)
+                and not is_done_in_cycle(t.recurrence_rule, completions_map.get(t.id, []), today)
+            )
         ]
         tasks.sort(key=lambda item: task_priority_sort_key(item, now))
         return wins, tasks

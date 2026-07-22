@@ -15,7 +15,7 @@ from app.features.organizer.calendar_events.schemas import EventFilters
 from app.features.organizer.contacts.service import ContactService
 from app.features.organizer.shopping.repository import ShoppingRepository
 from app.features.organizer.shopping.schemas import ShoppingItemFilters
-from app.features.organizer.tasks.recurrence import is_due_today
+from app.features.organizer.tasks.recurrence import is_done_in_cycle, is_due_today
 from app.features.organizer.tasks.repository import TaskRepository
 from app.features.organizer.tasks.schemas import TaskFilters
 from app.shared.holiday import HolidayProvider
@@ -85,8 +85,8 @@ class MorningBriefingSummaryService:
         raw_tasks = await repo.get_tasks(task_filter)
 
         recurring_ids = [t.id for t in raw_tasks if t.recurrence_rule is not None]
-        completed_today = (
-            await repo.get_completed_task_ids_for_date(recurring_ids, today) if recurring_ids else set()
+        completions_map = (
+            await repo.get_completions_by_task(recurring_ids) if recurring_ids else {}
         )
 
         items = []
@@ -94,7 +94,10 @@ class MorningBriefingSummaryService:
             if task.status not in _ACTIVE_STATUSES:
                 continue
             if task.recurrence_rule is not None:
-                if not is_due_today(task.recurrence_rule, today) or task.id in completed_today:
+                dates = completions_map.get(task.id, [])
+                if not is_due_today(task.recurrence_rule, today) or is_done_in_cycle(
+                    task.recurrence_rule, dates, today
+                ):
                     continue
             is_overdue = task.deadline is not None and task.deadline < today_start
             # Recurring tasks have no deadline, but reaching this point already means

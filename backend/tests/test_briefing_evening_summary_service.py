@@ -63,6 +63,7 @@ def _patch_repos():
     ):
         MockTaskRepo.return_value.get_tasks = AsyncMock(return_value=[])
         MockTaskRepo.return_value.get_completed_task_ids_for_date = AsyncMock(return_value=set())
+        MockTaskRepo.return_value.get_completions_by_task = AsyncMock(return_value={})
         MockTaskRepo.return_value.get_tasks_completed_on = AsyncMock(return_value=[])
         MockEventRepo.return_value.get_events = AsyncMock(return_value=[])
         MockNoteRepo.return_value.get_notes = AsyncMock(return_value=[])
@@ -118,6 +119,20 @@ class TestBuild:
         task = _make_task_orm(id=1, title="Water plants", recurrence_rule="FREQ=DAILY")
         MockTaskRepo.return_value.get_tasks.return_value = [task]
         MockTaskRepo.return_value.get_completed_task_ids_for_date.return_value = {1}
+        MockTaskRepo.return_value.get_completions_by_task.return_value = {1: [date(2026, 7, 18)]}
+
+        result = await service.build()
+
+        assert result.tasks == []
+
+    @pytest.mark.asyncio
+    async def test_recurring_task_completed_earlier_this_week_excluded_from_tasks(self, service, _patch_repos):
+        # local_now is patched to 2026-07-18 (Saturday); a weekly habit with no
+        # BYDAY completed earlier in the week is still satisfied for the cycle.
+        MockTaskRepo, _, _ = _patch_repos
+        task = _make_task_orm(id=1, title="Weekly laundry", recurrence_rule="FREQ=WEEKLY")
+        MockTaskRepo.return_value.get_tasks.return_value = [task]
+        MockTaskRepo.return_value.get_completions_by_task.return_value = {1: [date(2026, 7, 14)]}
 
         result = await service.build()
 

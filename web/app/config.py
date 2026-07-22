@@ -12,6 +12,9 @@ class Settings(BaseSettings):
     web_port: int = Field(default=8080, validation_alias="WEB_PORT")
     web_password: str = Field(validation_alias="WEB_PASSWORD")
     session_secret_key: str = Field(validation_alias="SESSION_SECRET_KEY")
+    # Local timezone (IANA name) — must match the backend's TIMEZONE, since it's the
+    # zone the backend normalizes all stored calendar/task datetimes to.
+    timezone: str = Field(default="Europe/Lisbon", validation_alias="TIMEZONE")
 
 
 @lru_cache

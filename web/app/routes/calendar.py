@@ -8,15 +8,18 @@ from fastapi import APIRouter, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 
 import app.client as api
+from app.config import get_settings
 from app.templates_config import templates
 
 router = APIRouter(prefix="/calendar")
 
-_DEFAULT_TZ = "Europe/Lisbon"
+
+def _app_timezone() -> str:
+    return get_settings().timezone
 
 
 def _viewer_timezone(request: Request) -> str:
-    return request.session.get("calendar_tz", _DEFAULT_TZ)
+    return request.session.get("calendar_tz", _app_timezone())
 
 
 def _add_display_times(events: list[dict], viewer_tz: str) -> None:
@@ -26,9 +29,13 @@ def _add_display_times(events: list[dict], viewer_tz: str) -> None:
             ev["display_start"] = ev["start_datetime"]
             ev["display_end"] = ev["end_datetime"]
             continue
-        origin_zone = ZoneInfo(ev.get("timezone") or _DEFAULT_TZ)
-        start = datetime.fromisoformat(ev["start_datetime"]).replace(tzinfo=origin_zone)
-        end = datetime.fromisoformat(ev["end_datetime"]).replace(tzinfo=origin_zone)
+        # The backend always normalizes start/end to its configured local timezone
+        # before storing, regardless of the event's own origin timezone -- ev["timezone"]
+        # is metadata about where the event came from, not the zone the returned
+        # datetime is expressed in.
+        app_zone = ZoneInfo(_app_timezone())
+        start = datetime.fromisoformat(ev["start_datetime"]).replace(tzinfo=app_zone)
+        end = datetime.fromisoformat(ev["end_datetime"]).replace(tzinfo=app_zone)
         ev["display_start"] = start.astimezone(viewer_zone).isoformat()
         ev["display_end"] = end.astimezone(viewer_zone).isoformat()
 
@@ -44,8 +51,8 @@ async def set_viewer_timezone(request: Request, tz: str, year: int | None = None
 
 def _month_range(year: int, month: int) -> tuple[str, str]:
     # Padded by a day on each side: converting to the viewer's timezone can shift an
-    # event onto an adjacent calendar day, so the raw fetch window (in the event's own
-    # origin timezone) must be wider than the displayed month to avoid missing it.
+    # event onto an adjacent calendar day, so the raw fetch window (in the app's local
+    # timezone) must be wider than the displayed month to avoid missing it.
     first = date(year, month, 1) - timedelta(days=1)
     last_day = cal_lib.monthrange(year, month)[1]
     last = date(year, month, last_day) + timedelta(days=1)
@@ -109,6 +116,7 @@ async def calendar_page(request: Request):
         "next_year": next_year,
         "next_month": next_month,
         "viewer_tz": viewer_tz,
+        "app_tz": _app_timezone(),
     })
 
 
@@ -120,7 +128,7 @@ async def calendar_day(date_str: str, request: Request):
         return HTMLResponse('<p class="text-sm text-gray-400 p-4">Invalid date.</p>')
 
     # Padded by a day on each side for the same reason as _month_range: the raw fetch
-    # window is in each event's own origin timezone, not the viewer's display timezone.
+    # window is in the app's local timezone, not the viewer's display timezone.
     fetch_start = datetime(day.year, day.month, day.day) - timedelta(days=1)
     fetch_end = datetime(day.year, day.month, day.day, 23, 59, 59) + timedelta(days=1)
 

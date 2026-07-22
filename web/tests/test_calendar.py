@@ -338,24 +338,12 @@ class TestDeleteEvent:
 
 
 class TestViewerTimezone:
-    def test_converts_event_across_mismatched_dst_transition(self, client, mock_api):
-        # 2026-03-15 falls between the US DST switch (Sun Mar 8) and the EU DST
-        # switch (Sun Mar 29): Chicago is on CDT (UTC-5) while Lisbon is still on
-        # WET (UTC+0), a 5-hour gap instead of the usual 6. This is exactly the
-        # scenario that silently drifted before origin timezones were tracked.
-        mock_api["get"].return_value = [
-            _event(id=1, title="CT Standup", start="2026-03-15T09:00:00", end="2026-03-15T09:30:00", timezone="America/Chicago"),
-        ]
-
-        resp = client.get("/calendar/day/2026-03-15")
-
-        assert resp.status_code == 200
-        assert "14:00" in resp.text
-        assert "14:30" in resp.text
-
-    def test_converts_event_when_both_zones_share_dst(self, client, mock_api):
-        # Well outside any transition window, Chicago (CDT, UTC-5) and Lisbon
-        # (WEST, UTC+1) differ by the usual 6 hours.
+    def test_origin_timezone_metadata_ignored_for_default_display(self, client, mock_api):
+        # The backend always normalizes start/end to the app's local timezone
+        # (Lisbon) before storing, regardless of the event's own origin timezone --
+        # ev["timezone"] is just metadata about where the event came from. The
+        # default (Lisbon) viewer must show the stored wall-clock time verbatim,
+        # not reinterpret it through the origin zone.
         mock_api["get"].return_value = [
             _event(id=1, title="CT Standup", start="2026-07-14T09:00:00", end="2026-07-14T09:30:00", timezone="America/Chicago"),
         ]
@@ -363,7 +351,24 @@ class TestViewerTimezone:
         resp = client.get("/calendar/day/2026-07-14")
 
         assert resp.status_code == 200
-        assert "15:00" in resp.text
+        assert "09:00" in resp.text
+        assert "09:30" in resp.text
+
+    def test_viewer_timezone_conversion_across_mismatched_dst_transition(self, client, mock_api):
+        # 2026-03-15 falls between the US DST switch (Sun Mar 8) and the EU DST
+        # switch (Sun Mar 29): Chicago is on CDT (UTC-5) while Lisbon (the app's
+        # local timezone, and thus the source of every stored datetime) is still
+        # on WET (UTC+0) -- a 5-hour gap instead of the usual 6.
+        mock_api["get"].return_value = [
+            _event(id=1, title="Lisbon Meeting", start="2026-03-15T09:00:00", end="2026-03-15T09:30:00"),
+        ]
+        client.get("/calendar/timezone?tz=America/Chicago&year=2026&month=3", follow_redirects=False)
+
+        resp = client.get("/calendar/day/2026-03-15")
+
+        assert resp.status_code == 200
+        assert "04:00" in resp.text
+        assert "04:30" in resp.text
 
     def test_untimezoned_event_assumes_app_default_lisbon(self, client, mock_api):
         mock_api["get"].return_value = [

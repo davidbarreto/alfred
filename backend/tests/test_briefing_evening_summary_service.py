@@ -57,7 +57,7 @@ def service(mock_session):
 def _patch_repos():
     with (
         patch("app.features.briefing.evening_summary_service.TaskRepository") as MockTaskRepo,
-        patch("app.features.briefing.evening_summary_service.CalendarEventRepository") as MockEventRepo,
+        patch("app.features.briefing.evening_summary_service.CalendarEventService") as MockEventService,
         patch("app.features.briefing.evening_summary_service.NoteRepository") as MockNoteRepo,
         patch("app.features.briefing.evening_summary_service.local_now", return_value=datetime(2026, 7, 18, 20, 0)),
     ):
@@ -65,9 +65,9 @@ def _patch_repos():
         MockTaskRepo.return_value.get_completed_task_ids_for_date = AsyncMock(return_value=set())
         MockTaskRepo.return_value.get_completions_by_task = AsyncMock(return_value={})
         MockTaskRepo.return_value.get_tasks_completed_on = AsyncMock(return_value=[])
-        MockEventRepo.return_value.get_events = AsyncMock(return_value=[])
+        MockEventService.return_value.get_events = AsyncMock(return_value=[])
         MockNoteRepo.return_value.get_notes = AsyncMock(return_value=[])
-        yield MockTaskRepo, MockEventRepo, MockNoteRepo
+        yield MockTaskRepo, MockEventService, MockNoteRepo
 
 
 class TestBuild:
@@ -161,9 +161,9 @@ class TestBuild:
 
     @pytest.mark.asyncio
     async def test_includes_tomorrow_events(self, service, _patch_repos):
-        _, MockEventRepo, _ = _patch_repos
+        _, MockEventService, _ = _patch_repos
         event = _make_event_orm(title="Dentist")
-        MockEventRepo.return_value.get_events.return_value = [event]
+        MockEventService.return_value.get_events.return_value = [event]
 
         result = await service.build()
 
@@ -171,9 +171,9 @@ class TestBuild:
 
     @pytest.mark.asyncio
     async def test_all_day_event_label(self, service, _patch_repos):
-        _, MockEventRepo, _ = _patch_repos
+        _, MockEventService, _ = _patch_repos
         event = _make_event_orm(title="Holiday", all_day=True)
-        MockEventRepo.return_value.get_events.return_value = [event]
+        MockEventService.return_value.get_events.return_value = [event]
 
         result = await service.build()
 

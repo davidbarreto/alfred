@@ -10,8 +10,8 @@ from app.features.language.chunks.repository import ChunkRepository
 from app.features.language.sessions.repository import SessionRepository as LanguageSessionRepository
 from app.features.language.tracks.repository import TrackRepository as LanguageTrackRepository
 from app.features.language.tracks.schemas import TrackFilters as LanguageTrackFilters
-from app.features.organizer.calendar_events.repository import CalendarEventRepository
 from app.features.organizer.calendar_events.schemas import EventFilters
+from app.features.organizer.calendar_events.service import CalendarEventService
 from app.features.organizer.contacts.service import ContactService
 from app.features.organizer.shopping.repository import ShoppingRepository
 from app.features.organizer.shopping.schemas import ShoppingItemFilters
@@ -129,9 +129,9 @@ class MorningBriefingSummaryService:
         return items
 
     async def _fetch_events(self, today: date, today_start: datetime, lookahead_end: datetime) -> list[EventBriefItem]:
-        repo = CalendarEventRepository(self._session)
+        service = CalendarEventService(provider=None, session=self._session)
         event_filter = EventFilters(start_from=today_start, start_to=lookahead_end)
-        raw_events = await repo.get_events(event_filter)
+        raw_events = await service.get_events(event_filter)
 
         items = []
         for event in raw_events:

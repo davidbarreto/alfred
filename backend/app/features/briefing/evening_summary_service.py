@@ -5,8 +5,8 @@ from datetime import date, datetime, time, timedelta
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.features.briefing.schemas import EveningDigest, EveningEventItem, EveningNoteItem, EveningTaskItem, WinItem
-from app.features.organizer.calendar_events.repository import CalendarEventRepository
 from app.features.organizer.calendar_events.schemas import EventFilters
+from app.features.organizer.calendar_events.service import CalendarEventService
 from app.features.organizer.notes.repository import NoteRepository
 from app.features.organizer.notes.schemas import NoteFilters
 from app.features.organizer.tasks.ranking import task_priority_sort_key
@@ -72,10 +72,10 @@ class EveningDigestSummaryService:
         return wins, tasks
 
     async def _fetch_tomorrow_events(self, tomorrow: date) -> list[EveningEventItem]:
-        repo = CalendarEventRepository(self._session)
+        service = CalendarEventService(provider=None, session=self._session)
         start = datetime.combine(tomorrow, time.min)
         end = datetime.combine(tomorrow, time.max)
-        events = await repo.get_events(EventFilters(start_from=start, start_to=end, limit=20))
+        events = await service.get_events(EventFilters(start_from=start, start_to=end, limit=20))
 
         items = []
         for event in events:

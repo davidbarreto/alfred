@@ -169,7 +169,10 @@ class GoogleCalendarProvider:
                 dt = filters["start_to"]
                 params["timeMax"] = dt.isoformat() if isinstance(dt, datetime) else dt
         results = await self._client.list_events(self._calendar_id, params)
-        return [self._from_google_event(e) for e in results]
+        # Google tags contact-birthday-derived entries with eventType="birthday";
+        # Alfred already tracks birthdays via Contacts, so skip them here to avoid
+        # duplicating stale/unexpanded recurrence data into calendar_events.
+        return [self._from_google_event(e) for e in results if e.get("eventType") != "birthday"]
 
     # ------------------------------------------------------------------
     # Internal logging helper

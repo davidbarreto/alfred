@@ -140,10 +140,10 @@ class TestBuild:
     async def test_returns_morning_briefing(self, service):
         with (
             patch("app.features.briefing.morning_summary_service.TaskRepository") as MockTaskRepo,
-            patch("app.features.briefing.morning_summary_service.CalendarEventRepository") as MockEventRepo,
+            patch("app.features.briefing.morning_summary_service.CalendarEventService") as MockEventService,
         ):
             MockTaskRepo.return_value.get_tasks = AsyncMock(return_value=[])
-            MockEventRepo.return_value.get_events = AsyncMock(return_value=[])
+            MockEventService.return_value.get_events = AsyncMock(return_value=[])
 
             result = await service.build()
 
@@ -163,10 +163,10 @@ class TestBuild:
         ]
         with (
             patch("app.features.briefing.morning_summary_service.TaskRepository") as MockTaskRepo,
-            patch("app.features.briefing.morning_summary_service.CalendarEventRepository") as MockEventRepo,
+            patch("app.features.briefing.morning_summary_service.CalendarEventService") as MockEventService,
         ):
             MockTaskRepo.return_value.get_tasks = AsyncMock(return_value=tasks)
-            MockEventRepo.return_value.get_events = AsyncMock(return_value=[])
+            MockEventService.return_value.get_events = AsyncMock(return_value=[])
 
             result = await service.build()
 
@@ -181,11 +181,11 @@ class TestBuild:
         ]
         with (
             patch("app.features.briefing.morning_summary_service.TaskRepository") as MockTaskRepo,
-            patch("app.features.briefing.morning_summary_service.CalendarEventRepository") as MockEventRepo,
+            patch("app.features.briefing.morning_summary_service.CalendarEventService") as MockEventService,
             patch("app.features.briefing.morning_summary_service.local_now", return_value=datetime(2026, 6, 23, 8, 0)),
         ):
             MockTaskRepo.return_value.get_tasks = AsyncMock(return_value=tasks)
-            MockEventRepo.return_value.get_events = AsyncMock(return_value=[])
+            MockEventService.return_value.get_events = AsyncMock(return_value=[])
 
             result = await service.build()
 
@@ -203,11 +203,11 @@ class TestBuild:
         ]
         with (
             patch("app.features.briefing.morning_summary_service.TaskRepository") as MockTaskRepo,
-            patch("app.features.briefing.morning_summary_service.CalendarEventRepository") as MockEventRepo,
+            patch("app.features.briefing.morning_summary_service.CalendarEventService") as MockEventService,
             patch("app.features.briefing.morning_summary_service.local_now", return_value=datetime(2026, 6, 23, 8, 0)),
         ):
             MockTaskRepo.return_value.get_tasks = AsyncMock(return_value=tasks)
-            MockEventRepo.return_value.get_events = AsyncMock(return_value=[])
+            MockEventService.return_value.get_events = AsyncMock(return_value=[])
 
             result = await service.build()
 
@@ -221,11 +221,11 @@ class TestBuild:
         tasks = [_make_task_orm(id=1, status="TODO", deadline=datetime(2026, 6, 25))]
         with (
             patch("app.features.briefing.morning_summary_service.TaskRepository") as MockTaskRepo,
-            patch("app.features.briefing.morning_summary_service.CalendarEventRepository") as MockEventRepo,
+            patch("app.features.briefing.morning_summary_service.CalendarEventService") as MockEventService,
             patch("app.features.briefing.morning_summary_service.local_now", return_value=datetime(2026, 6, 23, 8, 0)),
         ):
             MockTaskRepo.return_value.get_tasks = AsyncMock(return_value=tasks)
-            MockEventRepo.return_value.get_events = AsyncMock(return_value=[])
+            MockEventService.return_value.get_events = AsyncMock(return_value=[])
 
             result = await service.build()
 
@@ -238,12 +238,12 @@ class TestBuild:
         tasks = [_make_task_orm(id=1, status="TODO", recurrence_rule="FREQ=WEEKLY;BYDAY=SU")]
         with (
             patch("app.features.briefing.morning_summary_service.TaskRepository") as MockTaskRepo,
-            patch("app.features.briefing.morning_summary_service.CalendarEventRepository") as MockEventRepo,
+            patch("app.features.briefing.morning_summary_service.CalendarEventService") as MockEventService,
             patch("app.features.briefing.morning_summary_service.local_now", return_value=datetime(2026, 6, 22, 8, 0)),
         ):
             MockTaskRepo.return_value.get_tasks = AsyncMock(return_value=tasks)
             MockTaskRepo.return_value.get_completions_by_task = AsyncMock(return_value={1: []})
-            MockEventRepo.return_value.get_events = AsyncMock(return_value=[])
+            MockEventService.return_value.get_events = AsyncMock(return_value=[])
 
             result = await service.build()
 
@@ -255,12 +255,12 @@ class TestBuild:
         tasks = [_make_task_orm(id=1, status="TODO", recurrence_rule="FREQ=WEEKLY;BYDAY=SU")]
         with (
             patch("app.features.briefing.morning_summary_service.TaskRepository") as MockTaskRepo,
-            patch("app.features.briefing.morning_summary_service.CalendarEventRepository") as MockEventRepo,
+            patch("app.features.briefing.morning_summary_service.CalendarEventService") as MockEventService,
             patch("app.features.briefing.morning_summary_service.local_now", return_value=datetime(2026, 6, 21, 8, 0)),
         ):
             MockTaskRepo.return_value.get_tasks = AsyncMock(return_value=tasks)
             MockTaskRepo.return_value.get_completions_by_task = AsyncMock(return_value={1: []})
-            MockEventRepo.return_value.get_events = AsyncMock(return_value=[])
+            MockEventService.return_value.get_events = AsyncMock(return_value=[])
 
             result = await service.build()
 
@@ -273,12 +273,12 @@ class TestBuild:
         tasks = [_make_task_orm(id=1, status="TODO", recurrence_rule="FREQ=DAILY")]
         with (
             patch("app.features.briefing.morning_summary_service.TaskRepository") as MockTaskRepo,
-            patch("app.features.briefing.morning_summary_service.CalendarEventRepository") as MockEventRepo,
+            patch("app.features.briefing.morning_summary_service.CalendarEventService") as MockEventService,
             patch("app.features.briefing.morning_summary_service.local_now", return_value=datetime(2026, 6, 22, 8, 0)),
         ):
             MockTaskRepo.return_value.get_tasks = AsyncMock(return_value=tasks)
             MockTaskRepo.return_value.get_completions_by_task = AsyncMock(return_value={1: [date(2026, 6, 22)]})
-            MockEventRepo.return_value.get_events = AsyncMock(return_value=[])
+            MockEventService.return_value.get_events = AsyncMock(return_value=[])
 
             result = await service.build()
 
@@ -291,12 +291,12 @@ class TestBuild:
         tasks = [_make_task_orm(id=1, status="TODO", recurrence_rule="FREQ=WEEKLY")]
         with (
             patch("app.features.briefing.morning_summary_service.TaskRepository") as MockTaskRepo,
-            patch("app.features.briefing.morning_summary_service.CalendarEventRepository") as MockEventRepo,
+            patch("app.features.briefing.morning_summary_service.CalendarEventService") as MockEventService,
             patch("app.features.briefing.morning_summary_service.local_now", return_value=datetime(2026, 6, 24, 8, 0)),
         ):
             MockTaskRepo.return_value.get_tasks = AsyncMock(return_value=tasks)
             MockTaskRepo.return_value.get_completions_by_task = AsyncMock(return_value={1: [date(2026, 6, 22)]})
-            MockEventRepo.return_value.get_events = AsyncMock(return_value=[])
+            MockEventService.return_value.get_events = AsyncMock(return_value=[])
 
             result = await service.build()
 
@@ -310,11 +310,11 @@ class TestBuild:
         ]
         with (
             patch("app.features.briefing.morning_summary_service.TaskRepository") as MockTaskRepo,
-            patch("app.features.briefing.morning_summary_service.CalendarEventRepository") as MockEventRepo,
+            patch("app.features.briefing.morning_summary_service.CalendarEventService") as MockEventService,
             patch("app.features.briefing.morning_summary_service.local_now", return_value=datetime(2026, 6, 23, 8, 0)),
         ):
             MockTaskRepo.return_value.get_tasks = AsyncMock(return_value=tasks)
-            MockEventRepo.return_value.get_events = AsyncMock(return_value=[])
+            MockEventService.return_value.get_events = AsyncMock(return_value=[])
 
             result = await service.build()
 
@@ -325,10 +325,10 @@ class TestBuild:
         events = [_make_event_orm(title="Standup", start_datetime=datetime(2026, 6, 23, 9, 0), end_datetime=datetime(2026, 6, 23, 9, 30))]
         with (
             patch("app.features.briefing.morning_summary_service.TaskRepository") as MockTaskRepo,
-            patch("app.features.briefing.morning_summary_service.CalendarEventRepository") as MockEventRepo,
+            patch("app.features.briefing.morning_summary_service.CalendarEventService") as MockEventService,
         ):
             MockTaskRepo.return_value.get_tasks = AsyncMock(return_value=[])
-            MockEventRepo.return_value.get_events = AsyncMock(return_value=events)
+            MockEventService.return_value.get_events = AsyncMock(return_value=events)
 
             result = await service.build()
 
@@ -341,10 +341,10 @@ class TestBuild:
         events = [_make_event_orm(title="Holiday", all_day=True)]
         with (
             patch("app.features.briefing.morning_summary_service.TaskRepository") as MockTaskRepo,
-            patch("app.features.briefing.morning_summary_service.CalendarEventRepository") as MockEventRepo,
+            patch("app.features.briefing.morning_summary_service.CalendarEventService") as MockEventService,
         ):
             MockTaskRepo.return_value.get_tasks = AsyncMock(return_value=[])
-            MockEventRepo.return_value.get_events = AsyncMock(return_value=events)
+            MockEventService.return_value.get_events = AsyncMock(return_value=events)
 
             result = await service.build()
 
@@ -359,11 +359,11 @@ class TestBuild:
         ]
         with (
             patch("app.features.briefing.morning_summary_service.TaskRepository") as MockTaskRepo,
-            patch("app.features.briefing.morning_summary_service.CalendarEventRepository") as MockEventRepo,
+            patch("app.features.briefing.morning_summary_service.CalendarEventService") as MockEventService,
             patch("app.features.briefing.morning_summary_service.local_now", return_value=datetime(2026, 6, 23, 8, 0)),
         ):
             MockTaskRepo.return_value.get_tasks = AsyncMock(return_value=[])
-            MockEventRepo.return_value.get_events = AsyncMock(return_value=events)
+            MockEventService.return_value.get_events = AsyncMock(return_value=events)
 
             result = await service.build()
 
@@ -380,10 +380,10 @@ class TestBuild:
         tasks = [_make_task_orm(deadline=datetime(2026, 6, 23), tags=["work", "urgent"])]
         with (
             patch("app.features.briefing.morning_summary_service.TaskRepository") as MockTaskRepo,
-            patch("app.features.briefing.morning_summary_service.CalendarEventRepository") as MockEventRepo,
+            patch("app.features.briefing.morning_summary_service.CalendarEventService") as MockEventService,
         ):
             MockTaskRepo.return_value.get_tasks = AsyncMock(return_value=tasks)
-            MockEventRepo.return_value.get_events = AsyncMock(return_value=[])
+            MockEventService.return_value.get_events = AsyncMock(return_value=[])
 
             result = await service.build()
 
@@ -401,10 +401,10 @@ class TestBuild:
         )
         with (
             patch("app.features.briefing.morning_summary_service.TaskRepository") as MockTaskRepo,
-            patch("app.features.briefing.morning_summary_service.CalendarEventRepository") as MockEventRepo,
+            patch("app.features.briefing.morning_summary_service.CalendarEventService") as MockEventService,
         ):
             MockTaskRepo.return_value.get_tasks = AsyncMock(return_value=[])
-            MockEventRepo.return_value.get_events = AsyncMock(return_value=[])
+            MockEventService.return_value.get_events = AsyncMock(return_value=[])
             result = await svc.build()
 
         assert len(result.holidays) == 1
@@ -422,10 +422,10 @@ class TestBuild:
         )
         with (
             patch("app.features.briefing.morning_summary_service.TaskRepository") as MockTaskRepo,
-            patch("app.features.briefing.morning_summary_service.CalendarEventRepository") as MockEventRepo,
+            patch("app.features.briefing.morning_summary_service.CalendarEventService") as MockEventService,
         ):
             MockTaskRepo.return_value.get_tasks = AsyncMock(return_value=[])
-            MockEventRepo.return_value.get_events = AsyncMock(return_value=[])
+            MockEventService.return_value.get_events = AsyncMock(return_value=[])
             await svc.build()
 
         assert mock_weather_client.get_daily_forecast.call_args.kwargs["session"] is mock_session
@@ -442,10 +442,10 @@ class TestBuild:
         )
         with (
             patch("app.features.briefing.morning_summary_service.TaskRepository") as MockTaskRepo,
-            patch("app.features.briefing.morning_summary_service.CalendarEventRepository") as MockEventRepo,
+            patch("app.features.briefing.morning_summary_service.CalendarEventService") as MockEventService,
         ):
             MockTaskRepo.return_value.get_tasks = AsyncMock(return_value=[])
-            MockEventRepo.return_value.get_events = AsyncMock(return_value=[])
+            MockEventService.return_value.get_events = AsyncMock(return_value=[])
             result = await svc.build()
 
         assert result.weather is None
@@ -461,10 +461,10 @@ class TestBuild:
         )
         with (
             patch("app.features.briefing.morning_summary_service.TaskRepository") as MockTaskRepo,
-            patch("app.features.briefing.morning_summary_service.CalendarEventRepository") as MockEventRepo,
+            patch("app.features.briefing.morning_summary_service.CalendarEventService") as MockEventService,
         ):
             MockTaskRepo.return_value.get_tasks = AsyncMock(return_value=[])
-            MockEventRepo.return_value.get_events = AsyncMock(return_value=[])
+            MockEventService.return_value.get_events = AsyncMock(return_value=[])
             result = await svc.build()
 
         assert result.holidays == []
@@ -480,10 +480,10 @@ class TestBuild:
         )
         with (
             patch("app.features.briefing.morning_summary_service.TaskRepository") as MockTaskRepo,
-            patch("app.features.briefing.morning_summary_service.CalendarEventRepository") as MockEventRepo,
+            patch("app.features.briefing.morning_summary_service.CalendarEventService") as MockEventService,
         ):
             MockTaskRepo.return_value.get_tasks = AsyncMock(return_value=[])
-            MockEventRepo.return_value.get_events = AsyncMock(return_value=[])
+            MockEventService.return_value.get_events = AsyncMock(return_value=[])
             result = await svc.build()
 
         assert result.holidays == []
@@ -493,10 +493,10 @@ class TestBuild:
     async def test_birthdays_empty_when_no_contact_service(self, service):
         with (
             patch("app.features.briefing.morning_summary_service.TaskRepository") as MockTaskRepo,
-            patch("app.features.briefing.morning_summary_service.CalendarEventRepository") as MockEventRepo,
+            patch("app.features.briefing.morning_summary_service.CalendarEventService") as MockEventService,
         ):
             MockTaskRepo.return_value.get_tasks = AsyncMock(return_value=[])
-            MockEventRepo.return_value.get_events = AsyncMock(return_value=[])
+            MockEventService.return_value.get_events = AsyncMock(return_value=[])
             result = await service.build()
 
         assert result.birthdays == []
@@ -515,10 +515,10 @@ class TestBuild:
         )
         with (
             patch("app.features.briefing.morning_summary_service.TaskRepository") as MockTaskRepo,
-            patch("app.features.briefing.morning_summary_service.CalendarEventRepository") as MockEventRepo,
+            patch("app.features.briefing.morning_summary_service.CalendarEventService") as MockEventService,
         ):
             MockTaskRepo.return_value.get_tasks = AsyncMock(return_value=[])
-            MockEventRepo.return_value.get_events = AsyncMock(return_value=[])
+            MockEventService.return_value.get_events = AsyncMock(return_value=[])
             result = await svc.build()
 
         assert len(result.birthdays) == 1
@@ -540,10 +540,10 @@ class TestBuild:
         )
         with (
             patch("app.features.briefing.morning_summary_service.TaskRepository") as MockTaskRepo,
-            patch("app.features.briefing.morning_summary_service.CalendarEventRepository") as MockEventRepo,
+            patch("app.features.briefing.morning_summary_service.CalendarEventService") as MockEventService,
         ):
             MockTaskRepo.return_value.get_tasks = AsyncMock(return_value=[])
-            MockEventRepo.return_value.get_events = AsyncMock(return_value=[])
+            MockEventService.return_value.get_events = AsyncMock(return_value=[])
             result = await svc.build()
 
         assert result.birthdays[0].is_self is True
@@ -554,10 +554,10 @@ class TestLanguageBriefing:
     def _patch_base_repos(self):
         with (
             patch("app.features.briefing.morning_summary_service.TaskRepository") as MockTaskRepo,
-            patch("app.features.briefing.morning_summary_service.CalendarEventRepository") as MockEventRepo,
+            patch("app.features.briefing.morning_summary_service.CalendarEventService") as MockEventService,
         ):
             MockTaskRepo.return_value.get_tasks = AsyncMock(return_value=[])
-            MockEventRepo.return_value.get_events = AsyncMock(return_value=[])
+            MockEventService.return_value.get_events = AsyncMock(return_value=[])
             yield
 
     @pytest.mark.asyncio
@@ -639,13 +639,13 @@ class TestShoppingBriefing:
     def _patch_base_repos(self):
         with (
             patch("app.features.briefing.morning_summary_service.TaskRepository") as MockTaskRepo,
-            patch("app.features.briefing.morning_summary_service.CalendarEventRepository") as MockEventRepo,
+            patch("app.features.briefing.morning_summary_service.CalendarEventService") as MockEventService,
             patch("app.features.briefing.morning_summary_service.LanguageTrackRepository") as MockTrackRepo,
             patch("app.features.briefing.morning_summary_service.ChunkRepository"),
             patch("app.features.briefing.morning_summary_service.LanguageSessionRepository"),
         ):
             MockTaskRepo.return_value.get_tasks = AsyncMock(return_value=[])
-            MockEventRepo.return_value.get_events = AsyncMock(return_value=[])
+            MockEventService.return_value.get_events = AsyncMock(return_value=[])
             MockTrackRepo.return_value.get_tracks = AsyncMock(return_value=[])
             yield
 

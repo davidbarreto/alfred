@@ -1,6 +1,8 @@
 from datetime import datetime
 from unittest.mock import AsyncMock
 
+import pytest
+
 from app.integrations.google_calendar.provider import GoogleCalendarProvider
 
 
@@ -91,3 +93,29 @@ class TestFromGoogleEvent:
 
         assert record["all_day"] is True
         assert record["timezone"] is None
+
+
+class TestList:
+    @pytest.mark.asyncio
+    async def test_excludes_contact_birthday_events(self):
+        provider = _make_provider()
+        provider._client.list_events = AsyncMock(return_value=[
+            {
+                "id": "gc-1",
+                "eventType": "birthday",
+                "summary": "Aniversário de Maria Barreto",
+                "start": {"date": "1953-08-23"},
+                "end": {"date": "1953-08-24"},
+            },
+            {
+                "id": "gc-2",
+                "eventType": "default",
+                "summary": "Standup",
+                "start": {"dateTime": "2026-03-15T09:00:00+00:00"},
+                "end": {"dateTime": "2026-03-15T09:30:00+00:00"},
+            },
+        ])
+
+        records = await provider.list()
+
+        assert [r["id"] for r in records] == ["gc-2"]

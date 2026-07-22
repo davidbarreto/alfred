@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import logging
 from datetime import datetime
 from typing import Any
@@ -11,6 +12,11 @@ from app.integrations.provider_calls.repository import create_sync_log
 from .client import NotionClient
 
 logger = logging.getLogger(__name__)
+
+# Notion's rate limit averages ~3 requests/second per integration; this bounds
+# concurrent block deletes so a long note doesn't trip 429s while still cutting
+# an N-block diff down from N sequential round-trips to ceil(N / 3).
+_BLOCK_DELETE_CONCURRENCY = 3
 
 
 class NotionProvider:
@@ -99,8 +105,7 @@ class NotionProvider:
             if self._content_field and self._content_field in record:
                 content = record[self._content_field] or ""
                 existing_blocks = await self._client.get_block_children(record_id)
-                for block in existing_blocks:
-                    await self._client.delete_block(block["id"])
+                await self._delete_blocks(existing_blocks)
                 if content:
                     await self._client.append_block_children(record_id, self._text_to_blocks(content))
         except Exception as exc:
@@ -110,6 +115,15 @@ class NotionProvider:
 
         await self._write_log(session, "update", record_id, request_payload, page)
         return self._from_notion_page(page)
+
+    async def _delete_blocks(self, blocks: list[dict[str, Any]]) -> None:
+        semaphore = asyncio.Semaphore(_BLOCK_DELETE_CONCURRENCY)
+
+        async def _delete(block: dict[str, Any]) -> None:
+            async with semaphore:
+                await self._client.delete_block(block["id"])
+
+        await asyncio.gather(*(_delete(block) for block in blocks))
 
     async def delete(
         self, record_id: str, session: AsyncSession | None = None

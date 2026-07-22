@@ -231,3 +231,19 @@ class TestUpdateWithContentField:
 
         client.update_page.assert_not_called()
         client.get_page.assert_called_once_with("page-1")
+
+    async def test_deletes_all_existing_blocks_when_multiple(self):
+        client = _make_client()
+        client.get_page.return_value = _make_page()
+        client.get_block_children.return_value = [
+            _make_paragraph_block("line one", "b1"),
+            _make_paragraph_block("line two", "b2"),
+            _make_paragraph_block("line three", "b3"),
+        ]
+
+        provider = NotionProvider(client, "db-id", content_field="description")
+        await provider.update("page-1", {"description": "new content"})
+
+        assert client.delete_block.call_count == 3
+        deleted_ids = {call.args[0] for call in client.delete_block.call_args_list}
+        assert deleted_ids == {"b1", "b2", "b3"}

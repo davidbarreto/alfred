@@ -9,6 +9,10 @@ class NotionClient:
     """
     Thin async wrapper around the Notion REST API.
     Knows nothing about domain concepts — only HTTP and Notion's wire format.
+
+    Holds a single, reused httpx.AsyncClient rather than opening one per call —
+    Notion updates often chain several requests (update properties, diff blocks),
+    and a fresh TCP+TLS handshake on every one of those was dominating latency.
     """
 
     def _raise(self, response: httpx.Response) -> None:
@@ -18,96 +22,82 @@ class NotionClient:
 
     def __init__(self, api_key: str, base_url: str, api_version: str = "2022-06-28") -> None:
         self._base_url = base_url
-        self._headers = {
+        headers = {
             "Authorization": f"Bearer {api_key}",
             "Notion-Version": api_version,
             "Content-Type": "application/json",
         }
+        self._http = httpx.AsyncClient(headers=headers, timeout=10.0)
+
+    async def aclose(self) -> None:
+        await self._http.aclose()
 
     # ------------------------------------------------------------------
     # Pages (records inside a database)
     # ------------------------------------------------------------------
 
     async def create_page(self, database_id: str, properties: dict[str, Any]) -> dict[str, Any]:
-        async with httpx.AsyncClient() as http:
-            response = await http.post(
-                f"{self._base_url}/pages",
-                headers=self._headers,
-                json={"parent": {"database_id": database_id}, "properties": properties},
-            )
-            self._raise(response)
-            return response.json()
+        response = await self._http.post(
+            f"{self._base_url}/pages",
+            json={"parent": {"database_id": database_id}, "properties": properties},
+        )
+        self._raise(response)
+        return response.json()
 
     async def get_page(self, page_id: str) -> dict[str, Any]:
-        async with httpx.AsyncClient() as http:
-            response = await http.get(
-                f"{self._base_url}/pages/{page_id}",
-                headers=self._headers,
-            )
-            self._raise(response)
-            return response.json()
+        response = await self._http.get(f"{self._base_url}/pages/{page_id}")
+        self._raise(response)
+        return response.json()
 
     async def update_page(self, page_id: str, properties: dict[str, Any]) -> dict[str, Any]:
-        async with httpx.AsyncClient() as http:
-            response = await http.patch(
-                f"{self._base_url}/pages/{page_id}",
-                headers=self._headers,
-                json={"properties": properties},
-            )
-            self._raise(response)
-            return response.json()
+        response = await self._http.patch(
+            f"{self._base_url}/pages/{page_id}",
+            json={"properties": properties},
+        )
+        self._raise(response)
+        return response.json()
 
     async def archive_page(self, page_id: str) -> dict[str, Any]:
         """Notion doesn't hard-delete pages; archiving is the equivalent of delete."""
-        async with httpx.AsyncClient() as http:
-            response = await http.patch(
-                f"{self._base_url}/pages/{page_id}",
-                headers=self._headers,
-                json={"archived": True},
-            )
-            self._raise(response)
-            return response.json()
+        response = await self._http.patch(
+            f"{self._base_url}/pages/{page_id}",
+            json={"archived": True},
+        )
+        self._raise(response)
+        return response.json()
 
     # ------------------------------------------------------------------
     # Blocks (page content)
     # ------------------------------------------------------------------
 
     async def append_block_children(self, block_id: str, children: list[dict[str, Any]]) -> dict[str, Any]:
-        async with httpx.AsyncClient() as http:
-            response = await http.patch(
-                f"{self._base_url}/blocks/{block_id}/children",
-                headers=self._headers,
-                json={"children": children},
-            )
-            self._raise(response)
-            return response.json()
+        response = await self._http.patch(
+            f"{self._base_url}/blocks/{block_id}/children",
+            json={"children": children},
+        )
+        self._raise(response)
+        return response.json()
 
     async def get_block_children(self, block_id: str) -> list[dict[str, Any]]:
         """Returns all block children, handling pagination automatically."""
         results: list[dict[str, Any]] = []
         params: dict[str, Any] = {"page_size": 100}
-        async with httpx.AsyncClient() as http:
-            while True:
-                response = await http.get(
-                    f"{self._base_url}/blocks/{block_id}/children",
-                    headers=self._headers,
-                    params=params,
-                )
-                self._raise(response)
-                data = response.json()
-                results.extend(data.get("results", []))
-                if not data.get("has_more"):
-                    break
-                params["start_cursor"] = data["next_cursor"]
+        while True:
+            response = await self._http.get(
+                f"{self._base_url}/blocks/{block_id}/children",
+                params=params,
+            )
+            self._raise(response)
+            data = response.json()
+            results.extend(data.get("results", []))
+            if not data.get("has_more"):
+                break
+            params["start_cursor"] = data["next_cursor"]
         return results
 
     async def delete_block(self, block_id: str) -> None:
-        async with httpx.AsyncClient() as http:
-            response = await http.delete(
-                f"{self._base_url}/blocks/{block_id}",
-                headers=self._headers,
-            )
-            self._raise(response)
+        response = await self._http.delete(f"{self._base_url}/blocks/{block_id}")
+        self._raise(response)
 
     # ------------------------------------------------------------------
     # Database queries
@@ -128,18 +118,16 @@ class NotionClient:
         if sorts:
             body["sorts"] = sorts
 
-        async with httpx.AsyncClient() as http:
-            while True:
-                response = await http.post(
-                    f"{self._base_url}/databases/{database_id}/query",
-                    headers=self._headers,
-                    json=body,
-                )
-                self._raise(response)
-                data = response.json()
-                results.extend(data.get("results", []))
-                if not data.get("has_more"):
-                    break
-                body["start_cursor"] = data["next_cursor"]
+        while True:
+            response = await self._http.post(
+                f"{self._base_url}/databases/{database_id}/query",
+                json=body,
+            )
+            self._raise(response)
+            data = response.json()
+            results.extend(data.get("results", []))
+            if not data.get("has_more"):
+                break
+            body["start_cursor"] = data["next_cursor"]
 
         return results

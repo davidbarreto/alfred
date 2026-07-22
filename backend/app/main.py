@@ -55,6 +55,7 @@ from app.api.routes.language.sessions import router as language_sessions_router
 from app.api.routes.language.production import router as language_production_router
 from app.config import get_settings
 from app.db.session import async_session
+from app.dependencies import get_notion_client
 from app.integrations.google_oauth.client import GoogleTokenExpiredError
 from app.integrations.oauth_tokens.repository import delete_oauth_token
 
@@ -79,6 +80,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     logger.info("Startup logging configured: LOG_LEVEL=%s, root_level=%s", level_name, logging.getLogger().getEffectiveLevel())
     app.state.settings = settings
     yield
+    await get_notion_client().aclose()
 
 
 app = FastAPI(title="Alfred Backend", version="0.1.0", lifespan=lifespan)

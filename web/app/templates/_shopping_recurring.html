@@ -1,0 +1,13 @@
+<div id="recurring-items" {% if oob %}hx-swap-oob="true"{% endif %} class="flex gap-1.5 flex-wrap items-center {% if due_recurrences %}mb-3{% endif %}">
+  {% if due_recurrences %}
+  <span class="text-[10px] text-gray-400 uppercase tracking-widest font-semibold mr-1">Recurring — due</span>
+  {% for r in due_recurrences %}
+  <form hx-post="/shopping/recurring/{{ r.id }}/accept" hx-target="#shopping-list" hx-swap="innerHTML" class="inline">
+    <button
+      type="submit"
+      class="px-2.5 py-1 rounded-full text-xs bg-[#FDF3E7] text-[#8A5A00] hover:bg-[#FCE8CC] transition-colors"
+    >↻ {{ r.name }}</button>
+  </form>
+  {% endfor %}
+  {% endif %}
+</div>

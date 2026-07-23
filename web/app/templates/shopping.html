@@ -37,6 +37,7 @@
 
   <!-- Shopping list panel -->
   <div id="panel-list">
+    {% include "_shopping_recurring.html" %}
     {% include "_shopping_frequent.html" %}
 
     <!-- Add item form -->
@@ -45,16 +46,25 @@
       hx-target="#shopping-list"
       hx-swap="innerHTML"
       class="space-y-2"
-      hx-on::after-request="this.reset()"
+      hx-on::after-request="this.reset(); document.getElementById('shopping-name-suggestions').innerHTML = '';"
     >
       <div class="flex gap-2">
-        <input
-          name="name"
-          type="text"
-          placeholder="Add item…"
-          class="input input-sm flex-1 border border-gray-200 bg-white rounded-lg px-3 text-sm"
-          required
-        />
+        <div class="relative flex-1">
+          <input
+            name="name"
+            id="shopping-name-input"
+            type="text"
+            placeholder="Add item…"
+            class="input input-sm w-full border border-gray-200 bg-white rounded-lg px-3 text-sm"
+            autocomplete="off"
+            required
+            hx-get="/shopping/names"
+            hx-trigger="keyup changed delay:300ms"
+            hx-target="#shopping-name-suggestions"
+            hx-swap="innerHTML"
+          />
+          <div id="shopping-name-suggestions" class="absolute z-10 left-0 right-0 mt-1"></div>
+        </div>
         <select name="category_id" class="border border-gray-200 rounded-lg px-2 py-1.5 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-[#378ADD]">
           {% for cat in categories %}
           <option value="{{ cat.id }}" {% if cat.name == "other" %}selected{% endif %}>{{ cat.name }}</option>
@@ -154,6 +164,14 @@
   </div>
 
 <script>
+function pickShoppingSuggestion(name, categoryId) {
+  const input = document.getElementById('shopping-name-input');
+  input.value = name;
+  const form = input.closest('form');
+  form.querySelector('select[name="category_id"]').value = categoryId;
+  document.getElementById('shopping-name-suggestions').innerHTML = '';
+}
+
 function showShoppingTab(name) {
   ['list', 'wishlist', 'categories'].forEach(t => {
     document.getElementById('panel-' + t).classList.toggle('hidden', t !== name);

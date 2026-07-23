@@ -13,6 +13,8 @@ from app.features.organizer.shopping.schemas import (
     ShoppingItemFilters,
     ShoppingItemRead,
     ShoppingItemUpdate,
+    ShoppingNameSuggestion,
+    ShoppingNameSuggestionFilters,
     ShoppingPriority,
     WishlistItemCreate,
     WishlistItemFilters,
@@ -42,6 +44,11 @@ async def create_shopping_item(request: ShoppingItemCreate, service: ShoppingSer
 @shopping_router.get("/frequent", response_model=list[FrequentItemRead])
 async def list_frequent_shopping_items(service: ShoppingServiceDep, filters: FrequentItemFilters = Depends()):
     return await service.list_frequent_items(filters)
+
+
+@shopping_router.get("/names", response_model=list[ShoppingNameSuggestion])
+async def suggest_shopping_names(service: ShoppingServiceDep, filters: ShoppingNameSuggestionFilters = Depends()):
+    return await service.suggest_names(filters.q, limit=filters.limit)
 
 
 @shopping_router.get("/{item_id}", response_model=ShoppingItemRead)
@@ -140,6 +147,11 @@ async def create_recurrence_item(request: RecurrenceItemCreate, service: Shoppin
     return await service.create_recurrence(request)
 
 
+@recurrence_router.get("/due", response_model=list[RecurrenceItemRead])
+async def list_due_recurrence_items(service: ShoppingServiceDep):
+    return await service.list_due_recurrences()
+
+
 @recurrence_router.get("/{item_id}", response_model=RecurrenceItemRead)
 async def get_recurrence_item(item_id: int, service: ShoppingServiceDep):
     item = await service.get_recurrence(item_id)
@@ -160,3 +172,11 @@ async def update_recurrence_item(item_id: int, request: RecurrenceItemUpdate, se
 async def delete_recurrence_item(item_id: int, service: ShoppingServiceDep):
     await service.delete_recurrence(item_id)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@recurrence_router.post("/{item_id}/accept", response_model=ShoppingItemRead, status_code=status.HTTP_201_CREATED)
+async def accept_recurrence_item(item_id: int, service: ShoppingServiceDep):
+    item = await service.accept_recurrence(item_id)
+    if item is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Recurrence item not found")
+    return item

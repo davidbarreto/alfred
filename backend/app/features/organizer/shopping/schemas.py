@@ -102,6 +102,29 @@ class FrequentItemFilters:
         return f"FrequentItemFilters(category_id={self.category_id!r}, limit={self.limit})"
 
 
+# --- Name suggestion (typeahead across shopping/wishlist/recurrence names) ---
+
+class ShoppingNameSuggestion(BaseModel):
+    name: str
+    category_id: int
+
+
+class ShoppingNameSuggestionFilters:
+    def __init__(
+        self,
+        q: Annotated[str, Query(min_length=1)],
+        limit: Annotated[int, Query(ge=1, le=20)] = 8,
+    ) -> None:
+        self.q = q
+        self.limit = limit
+
+    def __eq__(self, other: object) -> bool:
+        return isinstance(other, ShoppingNameSuggestionFilters) and vars(self) == vars(other)
+
+    def __repr__(self) -> str:
+        return f"ShoppingNameSuggestionFilters(q={self.q!r}, limit={self.limit})"
+
+
 # --- Wishlist item ---
 
 class WishlistItemBase(BaseModel):

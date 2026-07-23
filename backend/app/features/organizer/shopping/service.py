@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import logging
+from datetime import datetime
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.features.organizer.shopping.recurrence import is_recurrence_due
 from app.features.organizer.shopping.repository import (
     RecurrenceRepository,
     ShoppingRepository,
@@ -19,6 +21,7 @@ from app.features.organizer.shopping.schemas import (
     ShoppingItemFilters,
     ShoppingItemRead,
     ShoppingItemUpdate,
+    ShoppingNameSuggestion,
     ShoppingPriority,
     WishlistItemCreate,
     WishlistItemFilters,
@@ -106,6 +109,22 @@ class ShoppingService:
             for row in rows
         ]
 
+    async def suggest_names(self, query: str, limit: int = 8) -> list[ShoppingNameSuggestion]:
+        shopping_rows = await self._shopping.search_names(query, limit)
+        wishlist_rows = await self._wishlist.search_names(query, limit)
+        recurrence_rows = await self._recurrence.search_names(query, limit)
+
+        merged: dict[str, tuple[str, int, datetime]] = {}
+        for rows in (shopping_rows, wishlist_rows, recurrence_rows):
+            for name, category_id, recency in rows:
+                key = name.lower()
+                existing = merged.get(key)
+                if existing is None or recency > existing[2]:
+                    merged[key] = (name, category_id, recency)
+
+        ranked = sorted(merged.values(), key=lambda entry: entry[2], reverse=True)[:limit]
+        return [ShoppingNameSuggestion(name=name, category_id=category_id) for name, category_id, _ in ranked]
+
     # --- Wishlist items ---
 
     async def get_wish(self, item_id: int) -> WishlistItemRead | None:
@@ -186,3 +205,22 @@ class ShoppingService:
     async def delete_recurrence(self, item_id: int) -> None:
         await self._recurrence.delete(item_id)
         logger.info("Recurrence item deleted: id=%d", item_id)
+
+    async def list_due_recurrences(self) -> list[RecurrenceItemRead]:
+        items = await self._recurrence.list(active_only=True)
+        due = [item for item in items if is_recurrence_due(item.last_added_at, item.recurrence_days)]
+        return [RecurrenceItemRead.model_validate(item) for item in due]
+
+    async def accept_recurrence(self, item_id: int) -> ShoppingItemRead | None:
+        recurrence = await self._recurrence.get(item_id)
+        if recurrence is None:
+            return None
+        shopping_item = await self._shopping.create(
+            ShoppingItemCreate(name=recurrence.name, category_id=recurrence.category_id, priority="need")
+        )
+        await self._recurrence.mark_added(item_id)
+        logger.info(
+            "Recurrence item accepted: recurrence_id=%d name=%r -> shopping_id=%d",
+            item_id, recurrence.name, shopping_item.id,
+        )
+        return ShoppingItemRead.model_validate(shopping_item)

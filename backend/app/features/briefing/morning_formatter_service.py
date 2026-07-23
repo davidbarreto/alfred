@@ -114,6 +114,12 @@ def _build_context(briefing: MorningBriefing) -> str:
             store = f" at {item.store}" if item.store else ""
             lines.append(f"  {item.name}{qty} | {item.category} | {item.priority}{store}")
 
+    if briefing.recurring:
+        lines.append("")
+        lines.append(f"Recurring items due ({len(briefing.recurring)}):")
+        for r in briefing.recurring:
+            lines.append(f"  {r.name}")
+
     active_language = [t for t in briefing.language if t.due_count > 0 or t.completed_today > 0]
     if active_language:
         lines.append("")

@@ -120,6 +120,15 @@ class ShoppingRepository:
         )
         return result.scalar_one()
 
+    async def search_names(self, query: str, limit: int) -> list[Row]:
+        result = await self._session.execute(
+            select(ShoppingItem.name, ShoppingItem.category_id, ShoppingItem.updated_at)
+            .where(ShoppingItem.deleted_at.is_(None), ShoppingItem.name.ilike(f"%{query}%"))
+            .order_by(ShoppingItem.updated_at.desc())
+            .limit(limit)
+        )
+        return list(result.all())
+
 
 class WishlistRepository:
     def __init__(self, session: AsyncSession) -> None:
@@ -182,6 +191,15 @@ class WishlistRepository:
         )
         return result.scalar_one()
 
+    async def search_names(self, query: str, limit: int) -> list[Row]:
+        result = await self._session.execute(
+            select(WishlistItem.name, WishlistItem.category_id, WishlistItem.updated_at)
+            .where(WishlistItem.deleted_at.is_(None), WishlistItem.name.ilike(f"%{query}%"))
+            .order_by(WishlistItem.updated_at.desc())
+            .limit(limit)
+        )
+        return list(result.all())
+
 
 class RecurrenceRepository:
     def __init__(self, session: AsyncSession) -> None:
@@ -224,8 +242,25 @@ class RecurrenceRepository:
         await self._session.execute(delete(RecurrenceItem).where(RecurrenceItem.id == item_id))
         await self._session.commit()
 
+    async def mark_added(self, item_id: int) -> RecurrenceItem | None:
+        now = datetime.now(timezone.utc)
+        await self._session.execute(
+            update(RecurrenceItem).where(RecurrenceItem.id == item_id).values(last_added_at=now, updated_at=now)
+        )
+        await self._session.commit()
+        return await self.get(item_id)
+
     async def count_by_category(self, category_id: int) -> int:
         result = await self._session.execute(
             select(func.count()).select_from(RecurrenceItem).where(RecurrenceItem.category_id == category_id)
         )
         return result.scalar_one()
+
+    async def search_names(self, query: str, limit: int) -> list[Row]:
+        result = await self._session.execute(
+            select(RecurrenceItem.name, RecurrenceItem.category_id, RecurrenceItem.updated_at)
+            .where(RecurrenceItem.name.ilike(f"%{query}%"))
+            .order_by(RecurrenceItem.updated_at.desc())
+            .limit(limit)
+        )
+        return list(result.all())

@@ -523,6 +523,37 @@
           }
         },
         {
+          "name": "08b - List Shopping Name Suggestions",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Contains-match is case-insensitive', () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.be.an('array');",
+                  "    const beans = json.find((s) => s.name === 'Beans');",
+                  "    pm.expect(beans).to.exist;",
+                  "    pm.expect(String(beans.category_id)).to.eql(String(pm.environment.get('shopping_grocery_category_id')));",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/organizer/shopping/names?q=EAN&limit=8",
+              "host": ["{{base_url}}"],
+              "path": ["organizer", "shopping", "names"],
+              "query": [{ "key": "q", "value": "EAN" }, { "key": "limit", "value": "8" }]
+            }
+          }
+        },
+        {
           "name": "09 - Create Shopping Item (for skipped test)",
           "event": [
             {
@@ -923,6 +954,117 @@
               "raw": "{{base_url}}/organizer/recurrence/{{recurrence_item_id}}",
               "host": ["{{base_url}}"],
               "path": ["organizer", "recurrence", "{{recurrence_item_id}}"]
+            }
+          }
+        },
+        {
+          "name": "22b - List Due Recurrence Items (never added, so it's due)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Newly created recurrence item is due', () => {",
+                  "    const json = pm.response.json();",
+                  "    const ids = json.map((i) => String(i.id));",
+                  "    pm.expect(ids).to.include(String(pm.environment.get('recurrence_item_id')));",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/organizer/recurrence/due",
+              "host": ["{{base_url}}"],
+              "path": ["organizer", "recurrence", "due"]
+            }
+          }
+        },
+        {
+          "name": "22c - Accept Recurrence Item",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+                  "pm.test('Creates a pending shopping item from the recurrence', () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.have.property('id');",
+                  "    pm.expect(json.name).to.eql('Milk');",
+                  "    pm.expect(json.status).to.eql('pending');",
+                  "    pm.expect(String(json.category_id)).to.eql(String(pm.environment.get('shopping_grocery_category_id')));",
+                  "    pm.environment.set('recurrence_accepted_shopping_item_id', json.id);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/organizer/recurrence/{{recurrence_item_id}}/accept",
+              "host": ["{{base_url}}"],
+              "path": ["organizer", "recurrence", "{{recurrence_item_id}}", "accept"]
+            }
+          }
+        },
+        {
+          "name": "22d - List Due Recurrence Items (no longer due right after accept)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Accepted recurrence item is no longer due', () => {",
+                  "    const json = pm.response.json();",
+                  "    const ids = json.map((i) => String(i.id));",
+                  "    pm.expect(ids).to.not.include(String(pm.environment.get('recurrence_item_id')));",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/organizer/recurrence/due",
+              "host": ["{{base_url}}"],
+              "path": ["organizer", "recurrence", "due"]
+            }
+          }
+        },
+        {
+          "name": "22e - Delete Accepted Shopping Item (cleanup)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 204', () => pm.response.to.have.status(204));",
+                  "pm.environment.unset('recurrence_accepted_shopping_item_id');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/organizer/shopping/{{recurrence_accepted_shopping_item_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["organizer", "shopping", "{{recurrence_accepted_shopping_item_id}}"]
             }
           }
         },

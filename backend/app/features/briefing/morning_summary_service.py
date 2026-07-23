@@ -5,7 +5,7 @@ from datetime import date, datetime, time, timedelta
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.features.briefing.schemas import BirthdayItem, EventBriefItem, HolidayItem, LanguageBriefItem, MorningBriefing, ShoppingBriefItem, TaskBriefItem, WeatherForecast
+from app.features.briefing.schemas import BirthdayItem, EventBriefItem, HolidayItem, LanguageBriefItem, MorningBriefing, RecurringBriefItem, ShoppingBriefItem, TaskBriefItem, WeatherForecast
 from app.features.language.chunks.repository import ChunkRepository
 from app.features.language.sessions.repository import SessionRepository as LanguageSessionRepository
 from app.features.language.tracks.repository import TrackRepository as LanguageTrackRepository
@@ -13,7 +13,8 @@ from app.features.language.tracks.schemas import TrackFilters as LanguageTrackFi
 from app.features.organizer.calendar_events.schemas import EventFilters
 from app.features.organizer.calendar_events.service import CalendarEventService
 from app.features.organizer.contacts.service import ContactService
-from app.features.organizer.shopping.repository import ShoppingRepository
+from app.features.organizer.shopping.recurrence import is_recurrence_due
+from app.features.organizer.shopping.repository import RecurrenceRepository, ShoppingRepository
 from app.features.organizer.shopping.schemas import ShoppingItemFilters
 from app.features.organizer.shopping_categories.repository import ShoppingCategoryRepository
 from app.features.organizer.tasks.recurrence import is_done_in_cycle, is_due_today
@@ -63,6 +64,7 @@ class MorningBriefingSummaryService:
         birthdays = await self._fetch_birthdays(today)
         language = await self._fetch_language()
         shopping = await self._fetch_shopping()
+        recurring = await self._fetch_recurring()
         weather = await self._fetch_weather(today)
         holidays = await self._fetch_holidays(today, holiday_window_end)
 
@@ -76,6 +78,7 @@ class MorningBriefingSummaryService:
             birthdays=birthdays,
             language=language,
             shopping=shopping,
+            recurring=recurring,
         )
 
     async def _fetch_tasks(
@@ -201,6 +204,12 @@ class MorningBriefingSummaryService:
             )
             for item in raw_items
         ]
+
+    async def _fetch_recurring(self) -> list[RecurringBriefItem]:
+        repo = RecurrenceRepository(self._session)
+        items = await repo.list(active_only=True)
+        due = [item for item in items if is_recurrence_due(item.last_added_at, item.recurrence_days)]
+        return [RecurringBriefItem(id=item.id, name=item.name) for item in due]
 
     async def _fetch_birthdays(self, today: date) -> list[BirthdayItem]:
         if self._contact_service is None:

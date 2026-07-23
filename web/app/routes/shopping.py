@@ -33,7 +33,7 @@ async def shopping_page(request: Request):
     status = request.query_params.get("status", "pending")
     category_id = request.query_params.get("category_id")
 
-    items, wishlist, frequent_items = [], [], []
+    items, wishlist, frequent_items, due_recurrences = [], [], [], []
     api_error: str | None = None
     try:
         items = await api.get("/organizer/shopping", params=_shopping_list_params(status, category_id))
@@ -53,18 +53,40 @@ async def shopping_page(request: Request):
         logger.error("Failed to load frequent shopping items: error=%s", e)
         api_error = api_error or f"Cannot reach backend: {e}"
 
+    try:
+        due_recurrences = await api.get("/organizer/recurrence/due")
+    except httpx.HTTPError as e:
+        logger.error("Failed to load due recurring items: error=%s", e)
+        api_error = api_error or f"Cannot reach backend: {e}"
+
     categories = await _get_categories()
 
     return templates.TemplateResponse(request, "shopping.html", {
         "items": items,
         "wishlist": wishlist,
         "frequent_items": frequent_items,
+        "due_recurrences": due_recurrences,
         "active_status": status,
         "active_category_id": int(category_id) if category_id else None,
         "categories": categories,
         "categories_by_id": {c["id"]: c["name"] for c in categories},
         "api_error": api_error,
     })
+
+
+@router.get("/names", response_class=HTMLResponse)
+async def shopping_name_suggestions(request: Request):
+    query = request.query_params.get("name", "").strip()
+    if not query:
+        return templates.TemplateResponse(request, "_shopping_name_suggestions.html", {"suggestions": []})
+
+    try:
+        suggestions = await api.get("/organizer/shopping/names", params={"q": query, "limit": 8})
+    except httpx.HTTPError as e:
+        logger.error("Failed to load shopping name suggestions: q=%r error=%s", query, e)
+        suggestions = []
+
+    return templates.TemplateResponse(request, "_shopping_name_suggestions.html", {"suggestions": suggestions})
 
 
 @router.get("/list", response_class=HTMLResponse)
@@ -158,6 +180,53 @@ async def mark_bought(item_id: int, request: Request):
         logger.error("Failed to mark shopping item bought: id=%d error=%s", item_id, e)
         return HTMLResponse("", status_code=422)
     return templates.TemplateResponse(request, "_shopping_item.html", {"item": item})
+
+
+# --- Recurring items ---
+
+@router.post("/recurring/{item_id}/accept", response_class=HTMLResponse)
+async def accept_recurring_item(item_id: int, request: Request):
+    try:
+        await api.post(f"/organizer/recurrence/{item_id}/accept")
+    except httpx.HTTPError as e:
+        logger.error("Failed to accept recurring item: id=%d error=%s", item_id, e)
+        return HTMLResponse("", status_code=422)
+
+    status = request.query_params.get("status", "pending")
+    category_id = request.query_params.get("category_id")
+    try:
+        items = await api.get("/organizer/shopping", params=_shopping_list_params(status, category_id))
+    except httpx.HTTPError as e:
+        logger.error("Failed to reload shopping items after recurrence accept: error=%s", e)
+        items = []
+
+    try:
+        frequent_items = await api.get("/organizer/shopping/frequent", params={"limit": 15})
+    except httpx.HTTPError as e:
+        logger.error("Failed to reload frequent shopping items after recurrence accept: error=%s", e)
+        frequent_items = []
+
+    try:
+        due_recurrences = await api.get("/organizer/recurrence/due")
+    except httpx.HTTPError as e:
+        logger.error("Failed to reload due recurring items after accept: error=%s", e)
+        due_recurrences = []
+
+    categories_by_id = {c["id"]: c["name"] for c in await _get_categories()}
+
+    list_html = templates.env.get_template("_shopping_list.html").render({
+        "items": items,
+        "categories_by_id": categories_by_id,
+    })
+    frequent_html = templates.env.get_template("_shopping_frequent.html").render({
+        "frequent_items": frequent_items,
+        "oob": True,
+    })
+    recurring_html = templates.env.get_template("_shopping_recurring.html").render({
+        "due_recurrences": due_recurrences,
+        "oob": True,
+    })
+    return HTMLResponse(list_html + frequent_html + recurring_html)
 
 
 # --- Wishlist ---

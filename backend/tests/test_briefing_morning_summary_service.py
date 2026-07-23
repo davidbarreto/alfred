@@ -1,4 +1,4 @@
-from datetime import date, datetime
+from datetime import date, datetime, timedelta, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -137,6 +137,13 @@ def _patch_shopping_category_repo():
             return_value=[_make_category_orm(1, "grocery"), _make_category_orm(2, "electronics")]
         )
         yield MockCategoryRepo
+
+
+@pytest.fixture(autouse=True)
+def _patch_recurrence_repo():
+    with patch("app.features.briefing.morning_summary_service.RecurrenceRepository") as MockRecurrenceRepo:
+        MockRecurrenceRepo.return_value.list = AsyncMock(return_value=[])
+        yield MockRecurrenceRepo
 
 
 class TestBuild:
@@ -694,3 +701,72 @@ class TestShoppingBriefing:
 
         filters = _patch_shopping_repo.return_value.list.call_args[0][0]
         assert filters.status == "pending"
+
+
+def _make_recurrence_orm(id=1, name="Bananas", recurrence_days=7, last_added_at=None):
+    item = MagicMock()
+    item.id = id
+    item.name = name
+    item.recurrence_days = recurrence_days
+    item.last_added_at = last_added_at
+    return item
+
+
+class TestRecurringBriefing:
+    @pytest.fixture(autouse=True)
+    def _patch_base_repos(self):
+        with (
+            patch("app.features.briefing.morning_summary_service.TaskRepository") as MockTaskRepo,
+            patch("app.features.briefing.morning_summary_service.CalendarEventService") as MockEventService,
+            patch("app.features.briefing.morning_summary_service.LanguageTrackRepository") as MockTrackRepo,
+            patch("app.features.briefing.morning_summary_service.ChunkRepository"),
+            patch("app.features.briefing.morning_summary_service.LanguageSessionRepository"),
+        ):
+            MockTaskRepo.return_value.get_tasks = AsyncMock(return_value=[])
+            MockEventService.return_value.get_events = AsyncMock(return_value=[])
+            MockTrackRepo.return_value.get_tracks = AsyncMock(return_value=[])
+            yield
+
+    @pytest.mark.asyncio
+    async def test_recurring_empty_when_no_active_recurrences(self, service):
+        result = await service.build()
+        assert result.recurring == []
+
+    @pytest.mark.asyncio
+    async def test_recurring_includes_item_never_added(self, service, _patch_recurrence_repo):
+        _patch_recurrence_repo.return_value.list = AsyncMock(
+            return_value=[_make_recurrence_orm(id=1, name="Bananas", last_added_at=None)]
+        )
+
+        result = await service.build()
+
+        assert len(result.recurring) == 1
+        assert result.recurring[0].name == "Bananas"
+
+    @pytest.mark.asyncio
+    async def test_recurring_excludes_item_not_yet_due(self, service, _patch_recurrence_repo):
+        recent = datetime.now(timezone.utc) - timedelta(days=1)
+        _patch_recurrence_repo.return_value.list = AsyncMock(
+            return_value=[_make_recurrence_orm(id=1, recurrence_days=7, last_added_at=recent)]
+        )
+
+        result = await service.build()
+
+        assert result.recurring == []
+
+    @pytest.mark.asyncio
+    async def test_recurring_includes_item_past_its_window(self, service, _patch_recurrence_repo):
+        stale = datetime.now(timezone.utc) - timedelta(days=10)
+        _patch_recurrence_repo.return_value.list = AsyncMock(
+            return_value=[_make_recurrence_orm(id=1, recurrence_days=7, last_added_at=stale)]
+        )
+
+        result = await service.build()
+
+        assert len(result.recurring) == 1
+
+    @pytest.mark.asyncio
+    async def test_recurring_requests_active_only(self, service, _patch_recurrence_repo):
+        await service.build()
+
+        assert _patch_recurrence_repo.return_value.list.call_args.kwargs == {"active_only": True}

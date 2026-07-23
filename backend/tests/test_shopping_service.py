@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
@@ -16,6 +16,7 @@ from app.features.organizer.shopping.schemas import (
     ShoppingItemFilters,
     ShoppingItemRead,
     ShoppingItemUpdate,
+    ShoppingNameSuggestion,
     WishlistItemCreate,
     WishlistItemRead,
     WishlistItemFilters,
@@ -327,3 +328,93 @@ class TestListRecurrences:
         service._recurrence.list.return_value = []
         await service.list_recurrences(active_only=False)
         service._recurrence.list.assert_called_once_with(active_only=False)
+
+
+class TestListDueRecurrences:
+    async def test_includes_item_never_added(self, service):
+        service._recurrence.list.return_value = [
+            _make_recurrence_orm(id=1, name="Bananas", last_added_at=None)
+        ]
+        result = await service.list_due_recurrences()
+        assert len(result) == 1
+        assert result[0].name == "Bananas"
+
+    async def test_excludes_item_not_yet_due(self, service):
+        recent = datetime.now(timezone.utc) - timedelta(days=1)
+        service._recurrence.list.return_value = [
+            _make_recurrence_orm(recurrence_days=7, last_added_at=recent)
+        ]
+        result = await service.list_due_recurrences()
+        assert result == []
+
+    async def test_includes_item_past_its_window(self, service):
+        stale = datetime.now(timezone.utc) - timedelta(days=10)
+        service._recurrence.list.return_value = [
+            _make_recurrence_orm(recurrence_days=7, last_added_at=stale)
+        ]
+        result = await service.list_due_recurrences()
+        assert len(result) == 1
+
+    async def test_only_considers_active_recurrences(self, service):
+        service._recurrence.list.return_value = []
+        await service.list_due_recurrences()
+        service._recurrence.list.assert_called_once_with(active_only=True)
+
+
+class TestAcceptRecurrence:
+    async def test_creates_shopping_item_and_marks_added(self, service):
+        recurrence = _make_recurrence_orm(id=5, name="Bananas", category_id=_GROCERY_ID)
+        service._recurrence.get.return_value = recurrence
+        service._shopping.create.return_value = _make_shopping_orm(id=10, name="Bananas", category_id=_GROCERY_ID)
+
+        result = await service.accept_recurrence(5)
+
+        assert isinstance(result, ShoppingItemRead)
+        assert result.name == "Bananas"
+        call_args = service._shopping.create.call_args[0][0]
+        assert call_args.name == "Bananas"
+        assert call_args.category_id == _GROCERY_ID
+        assert call_args.priority == "need"
+        service._recurrence.mark_added.assert_called_once_with(5)
+
+    async def test_returns_none_when_not_found(self, service):
+        service._recurrence.get.return_value = None
+        result = await service.accept_recurrence(999)
+        assert result is None
+        service._shopping.create.assert_not_called()
+        service._recurrence.mark_added.assert_not_called()
+
+
+# --- Name suggestions ---
+
+class TestSuggestNames:
+    async def test_merges_and_dedupes_case_insensitively(self, service):
+        older = _NOW - timedelta(days=5)
+        service._shopping.search_names.return_value = [("Banana", _GROCERY_ID, older)]
+        service._wishlist.search_names.return_value = [("banana", _GROCERY_ID, _NOW)]
+        service._recurrence.search_names.return_value = []
+
+        result = await service.suggest_names("ban")
+
+        assert len(result) == 1
+        assert isinstance(result[0], ShoppingNameSuggestion)
+        assert result[0].name == "banana"
+
+    async def test_ranks_by_recency_descending(self, service):
+        older = _NOW - timedelta(days=5)
+        service._shopping.search_names.return_value = [("Bananas", _GROCERY_ID, older)]
+        service._wishlist.search_names.return_value = []
+        service._recurrence.search_names.return_value = [("Banana bread", _GROCERY_ID, _NOW)]
+
+        result = await service.suggest_names("ban")
+
+        assert [r.name for r in result] == ["Banana bread", "Bananas"]
+
+    async def test_empty_when_no_matches(self, service):
+        service._shopping.search_names.return_value = []
+        service._wishlist.search_names.return_value = []
+        service._recurrence.search_names.return_value = []
+
+        result = await service.suggest_names("xyz")
+
+        assert result == []

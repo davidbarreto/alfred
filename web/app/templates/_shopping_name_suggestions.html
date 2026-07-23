@@ -1,0 +1,11 @@
+{% if suggestions %}
+<div class="bg-white border border-gray-200 rounded-lg shadow-md text-sm overflow-hidden">
+  {% for s in suggestions %}
+  <button
+    type="button"
+    onclick="pickShoppingSuggestion('{{ s.name|e }}', {{ s.category_id }})"
+    class="block w-full text-left px-3 py-1.5 hover:bg-[#E6F1FB] hover:text-[#0C447C]"
+  >{{ s.name }}</button>
+  {% endfor %}
+</div>
+{% endif %}

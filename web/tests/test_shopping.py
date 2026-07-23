@@ -85,6 +85,69 @@ class TestAddShoppingItem:
         assert resp.status_code == 422
 
 
+class TestShoppingNameSuggestions:
+    def test_returns_suggestions_from_backend(self, client, mock_api):
+        mock_api["get"].side_effect = _route_get({
+            "/organizer/shopping-categories": [_category()],
+            "/organizer/shopping/names": [{"name": "Bananas", "category_id": 1}],
+        })
+
+        resp = client.get("/shopping/names?name=ban")
+
+        assert resp.status_code == 200
+        assert "Bananas" in resp.text
+        mock_api["get"].assert_any_await(
+            "/organizer/shopping/names", params={"q": "ban", "limit": 8}
+        )
+
+    def test_returns_empty_fragment_when_query_blank(self, client, mock_api):
+        resp = client.get("/shopping/names?name=")
+
+        assert resp.status_code == 200
+        assert resp.text.strip() == ""
+        for call in mock_api["get"].await_args_list:
+            assert call.args[0] != "/organizer/shopping/names"
+
+    def test_renders_empty_fragment_on_backend_error(self, client, mock_api):
+        request = httpx.Request("GET", "http://api/organizer/shopping/names")
+
+        async def _side_effect(path, params=None):
+            if path == "/organizer/shopping/names":
+                raise httpx.ConnectError("connection refused", request=request)
+            return []
+
+        mock_api["get"].side_effect = _side_effect
+
+        resp = client.get("/shopping/names?name=ban")
+
+        assert resp.status_code == 200
+        assert resp.text.strip() == ""
+
+
+class TestAcceptRecurringItem:
+    def test_accepts_and_renders_updated_list(self, client, mock_api):
+        mock_api["get"].side_effect = _route_get({
+            "/organizer/shopping-categories": [_category()],
+            "/organizer/shopping/frequent": [],
+            "/organizer/recurrence/due": [],
+            "/organizer/shopping": [_item(name="Bananas")],
+        })
+
+        resp = client.post("/shopping/recurring/5/accept")
+
+        assert resp.status_code == 200
+        assert "Bananas" in resp.text
+        mock_api["post"].assert_awaited_once_with("/organizer/recurrence/5/accept")
+
+    def test_returns_422_when_backend_fails(self, client, mock_api):
+        request = httpx.Request("POST", "http://api/organizer/recurrence/5/accept")
+        mock_api["post"].side_effect = httpx.ConnectError("connection refused", request=request)
+
+        resp = client.post("/shopping/recurring/5/accept")
+
+        assert resp.status_code == 422
+
+
 class TestShoppingPage:
     def test_renders_api_error_when_backend_unreachable(self, client, mock_api):
         request = httpx.Request("GET", "http://api/organizer/shopping")

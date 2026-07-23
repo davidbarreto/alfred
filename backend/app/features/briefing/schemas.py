@@ -64,6 +64,11 @@ class ShoppingBriefItem(BaseModel):
     store: str | None
 
 
+class RecurringBriefItem(BaseModel):
+    id: int
+    name: str
+
+
 class LanguageBriefItem(BaseModel):
     track_id: int
     code: str
@@ -84,6 +89,7 @@ class MorningBriefing(BaseModel):
     birthdays: list[BirthdayItem]
     language: list[LanguageBriefItem] = []
     shopping: list[ShoppingBriefItem] = []
+    recurring: list[RecurringBriefItem] = []
 
 
 class WinItem(BaseModel):

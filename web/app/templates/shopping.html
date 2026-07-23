@@ -46,7 +46,7 @@
       hx-target="#shopping-list"
       hx-swap="innerHTML"
       class="space-y-2"
-      hx-on::after-request="this.reset(); document.getElementById('shopping-name-suggestions').innerHTML = '';"
+      hx-on::after-request="if (event.detail.elt === this) { this.reset(); document.getElementById('shopping-name-suggestions').innerHTML = ''; }"
     >
       <div class="flex gap-2">
         <div class="relative flex-1">

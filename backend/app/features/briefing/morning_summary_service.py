@@ -15,6 +15,7 @@ from app.features.organizer.calendar_events.service import CalendarEventService
 from app.features.organizer.contacts.service import ContactService
 from app.features.organizer.shopping.repository import ShoppingRepository
 from app.features.organizer.shopping.schemas import ShoppingItemFilters
+from app.features.organizer.shopping_categories.repository import ShoppingCategoryRepository
 from app.features.organizer.tasks.recurrence import is_done_in_cycle, is_due_today
 from app.features.organizer.tasks.repository import TaskRepository
 from app.features.organizer.tasks.schemas import TaskFilters
@@ -185,12 +186,14 @@ class MorningBriefingSummaryService:
 
     async def _fetch_shopping(self) -> list[ShoppingBriefItem]:
         repo = ShoppingRepository(self._session)
+        category_repo = ShoppingCategoryRepository(self._session)
         raw_items = await repo.list(ShoppingItemFilters(status="pending"))
+        categories = {c.id: c.name for c in await category_repo.list()}
         return [
             ShoppingBriefItem(
                 id=item.id,
                 name=item.name,
-                category=item.category,
+                category=categories.get(item.category_id, "other"),
                 priority=item.priority,
                 quantity=float(item.quantity) if item.quantity is not None else None,
                 unit=item.unit,

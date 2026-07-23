@@ -108,7 +108,7 @@ def _make_shopping_orm(**kwargs):
     item = MagicMock()
     item.id = kwargs.get("id", 1)
     item.name = kwargs.get("name", "Milk")
-    item.category = kwargs.get("category", "grocery")
+    item.category_id = kwargs.get("category_id", 1)
     item.priority = kwargs.get("priority", "need")
     item.quantity = kwargs.get("quantity", None)
     item.unit = kwargs.get("unit", None)
@@ -116,11 +116,27 @@ def _make_shopping_orm(**kwargs):
     return item
 
 
+def _make_category_orm(id, name):
+    category = MagicMock()
+    category.id = id
+    category.name = name
+    return category
+
+
 @pytest.fixture(autouse=True)
 def _patch_shopping_repo():
     with patch("app.features.briefing.morning_summary_service.ShoppingRepository") as MockShoppingRepo:
         MockShoppingRepo.return_value.list = AsyncMock(return_value=[])
         yield MockShoppingRepo
+
+
+@pytest.fixture(autouse=True)
+def _patch_shopping_category_repo():
+    with patch("app.features.briefing.morning_summary_service.ShoppingCategoryRepository") as MockCategoryRepo:
+        MockCategoryRepo.return_value.list = AsyncMock(
+            return_value=[_make_category_orm(1, "grocery"), _make_category_orm(2, "electronics")]
+        )
+        yield MockCategoryRepo
 
 
 class TestBuild:
@@ -658,7 +674,7 @@ class TestShoppingBriefing:
     async def test_shopping_includes_pending_items(self, service, _patch_shopping_repo):
         items = [
             _make_shopping_orm(id=1, name="Milk", quantity=2, unit="L", store="Continente"),
-            _make_shopping_orm(id=2, name="Headphones", category="electronics", priority="want"),
+            _make_shopping_orm(id=2, name="Headphones", category_id=2, priority="want"),
         ]
         _patch_shopping_repo.return_value.list = AsyncMock(return_value=items)
 

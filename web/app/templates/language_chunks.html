@@ -81,6 +81,7 @@
   <!-- Table -->
   <div class="card bg-white overflow-hidden">
     {% if chunks %}
+    <div class="overflow-x-auto">
     <table class="w-full text-sm">
       <thead class="border-b border-gray-100">
         <tr class="text-xs text-gray-400 uppercase tracking-wide">
@@ -160,6 +161,7 @@
         {% endfor %}
       </tbody>
     </table>
+    </div>
     {% else %}
     <div class="p-8 text-center">
       <p class="text-sm text-gray-400">No chunks match the current filters.</p>

@@ -7,7 +7,7 @@ from app.integrations.google_oauth.client import GoogleOAuthClient
 logger = logging.getLogger(__name__)
 
 _BASE_URL = "https://people.googleapis.com/v1"
-_PERSON_FIELDS = "names,emailAddresses,phoneNumbers,birthdays"
+_PERSON_FIELDS = "names,emailAddresses,phoneNumbers,birthdays,memberships"
 _PAGE_SIZE = 1000
 
 
@@ -36,6 +36,24 @@ class GoogleContactsClient(GoogleOAuthClient):
 
         logger.info("Fetched %d contacts from Google", len(connections))
         return connections
+
+    async def list_contact_groups(self) -> list[dict]:
+        groups: list[dict] = []
+        page_token: str | None = None
+
+        while True:
+            params: dict = {"pageSize": _PAGE_SIZE}
+            if page_token:
+                params["pageToken"] = page_token
+
+            data = await self._request("GET", f"{_BASE_URL}/contactGroups", params=params)
+            groups.extend(data.get("contactGroups") or [])
+            page_token = data.get("nextPageToken")
+            if not page_token:
+                break
+
+        logger.info("Fetched %d contact groups from Google", len(groups))
+        return groups
 
     async def get_contact(self, resource_name: str) -> dict:
         return await self._request(

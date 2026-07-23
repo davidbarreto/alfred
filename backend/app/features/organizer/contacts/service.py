@@ -18,7 +18,16 @@ from app.shared.storage import StorageProvider
 
 logger = logging.getLogger(__name__)
 
-_BIRTHDAY_LOOKAHEAD_DAYS = 14
+_DEFAULT_BIRTHDAY_LOOKAHEAD_DAYS = 7
+_BIRTHDAY_LOOKAHEAD_DAYS_BY_RELATIONSHIP = {
+    "family": 30,
+    "relative": 30,
+}
+_RELATIONSHIP_LABEL_MAP = {
+    "family": "family",
+    "relatives": "relative",
+    "friends": "friend",
+}
 _PLACEHOLDER_YEAR = 2000
 _NO_WRITE_ACCESS_DETAIL = (
     "Google Contacts write access not authorized. "
@@ -44,7 +53,17 @@ class ContactService:
                 detail="Google Contacts not authorized.",
             )
         raw = await self._client.list_connections()
-        rows = [_to_row(c) for c in raw if _has_useful_data(c)]
+        try:
+            groups = await self._client.list_contact_groups()
+        except Exception:
+            logger.warning("Failed to fetch Google contact groups; skipping relationship sync", exc_info=True)
+            groups = []
+        group_names = {
+            g["resourceName"]: g.get("formattedName") or g.get("name") or ""
+            for g in groups
+            if g.get("resourceName")
+        }
+        rows = [_to_row(c, group_names) for c in raw if _has_useful_data(c)]
         repo = ContactRepository(self._session)
         count = await repo.upsert(rows)
         logger.info("Synced %d contacts from Google", count)
@@ -110,9 +129,12 @@ class ContactService:
     async def get_upcoming_birthdays(self, today: date) -> list[dict]:
         repo = ContactRepository(self._session)
         contacts = await repo.get_all_with_birthday()
-        window_end = today + timedelta(days=_BIRTHDAY_LOOKAHEAD_DAYS)
         result = []
         for contact in contacts:
+            lookahead = _BIRTHDAY_LOOKAHEAD_DAYS_BY_RELATIONSHIP.get(
+                contact.relationship, _DEFAULT_BIRTHDAY_LOOKAHEAD_DAYS
+            )
+            window_end = today + timedelta(days=lookahead)
             next_bd = _next_birthday(contact.birthday, today)  # type: ignore[arg-type]
             if today <= next_bd <= window_end:
                 result.append({
@@ -120,6 +142,7 @@ class ContactService:
                     "days_until": (next_bd - today).days,
                     "date": next_bd,
                     "is_self": contact.is_self,
+                    "relationship": contact.relationship,
                 })
         result.sort(key=lambda x: x["days_until"])
         return result
@@ -130,11 +153,12 @@ def _has_useful_data(raw: dict) -> bool:
     return bool(names)
 
 
-def _to_row(raw: dict) -> dict:
+def _to_row(raw: dict, group_names: dict[str, str] | None = None) -> dict:
     names = raw.get("names") or []
     emails = raw.get("emailAddresses") or []
     phones = raw.get("phoneNumbers") or []
     birthdays = raw.get("birthdays") or []
+    memberships = raw.get("memberships") or []
 
     name = names[0].get("displayName", "") if names else ""
     email = emails[0].get("value") if emails else None
@@ -151,7 +175,21 @@ def _to_row(raw: dict) -> dict:
         "email": email,
         "phone": phone,
         "birthday": birthday,
+        "relationship": _relationship_from_memberships(memberships, group_names or {}),
     }
+
+
+def _relationship_from_memberships(memberships: list[dict], group_names: dict[str, str]) -> str:
+    for membership in memberships:
+        contact_group = membership.get("contactGroupMembership")
+        if not contact_group:
+            continue
+        resource_name = contact_group.get("contactGroupResourceName")
+        label = group_names.get(resource_name, "")
+        mapped = _RELATIONSHIP_LABEL_MAP.get(label.strip().lower())
+        if mapped:
+            return mapped
+    return "other"
 
 
 _BIRTHDAY_TEXT_FORMATS = [

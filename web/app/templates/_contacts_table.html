@@ -7,6 +7,7 @@
       <th class="text-left pb-2 font-medium hidden sm:table-cell">Email</th>
       <th class="text-left pb-2 font-medium hidden sm:table-cell">Phone</th>
       <th class="text-left pb-2 font-medium hidden sm:table-cell">Birthday</th>
+      <th class="text-left pb-2 font-medium hidden sm:table-cell">Relationship</th>
       <th class="pb-2"></th>
     </tr>
   </thead>
@@ -24,6 +25,13 @@
       <td class="py-2.5 pr-4 text-gray-500 hidden sm:table-cell">{{ c.phone or "—" }}</td>
       <td class="py-2.5 pr-4 text-gray-500 hidden sm:table-cell">
         {% if c.birthday %}{{ c.birthday }}{% else %}—{% endif %}
+      </td>
+      <td class="py-2.5 pr-4 hidden sm:table-cell">
+        {% if c.relationship and c.relationship != "other" %}
+        <span class="badge badge-ghost badge-sm capitalize">{{ c.relationship }}</span>
+        {% else %}
+        <span class="text-gray-400">—</span>
+        {% endif %}
       </td>
       <td class="py-2.5 text-right whitespace-nowrap">
         <button

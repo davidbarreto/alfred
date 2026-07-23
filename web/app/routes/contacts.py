@@ -18,6 +18,7 @@ def _build_params(
     has_birthday: str,
     letter: str,
     offset: int,
+    relationship: str = "",
 ) -> dict:
     params: dict = {"limit": _PAGE_SIZE + 1, "offset": offset}
     if name:
@@ -28,6 +29,8 @@ def _build_params(
         params["has_birthday"] = has_birthday
     if letter and len(letter) == 1:
         params["letter"] = letter
+    if relationship:
+        params["relationship"] = relationship
     return params
 
 
@@ -42,11 +45,12 @@ async def contacts_page(request: Request):
     email = request.query_params.get("email", "").strip()
     has_birthday = request.query_params.get("has_birthday", "")
     letter = request.query_params.get("letter", "").strip().upper()
+    relationship = request.query_params.get("relationship", "").strip()
     offset = max(0, int(request.query_params.get("offset", "0")))
 
     api_error: str | None = None
     try:
-        raw = await api.get("/organizer/contacts", params=_build_params(name, email, has_birthday, letter, offset))
+        raw = await api.get("/organizer/contacts", params=_build_params(name, email, has_birthday, letter, offset, relationship))
     except httpx.HTTPStatusError as e:
         raw = []
         api_error = f"API error {e.response.status_code}"
@@ -64,6 +68,7 @@ async def contacts_page(request: Request):
         "query_email": email,
         "query_has_birthday": has_birthday,
         "query_letter": letter,
+        "query_relationship": relationship,
         "query_offset": offset,
         "page_size": _PAGE_SIZE,
         "api_error": api_error,
@@ -76,10 +81,11 @@ async def contacts_table_fragment(request: Request):
     email = request.query_params.get("email", "").strip()
     has_birthday = request.query_params.get("has_birthday", "")
     letter = request.query_params.get("letter", "").strip().upper()
+    relationship = request.query_params.get("relationship", "").strip()
     offset = max(0, int(request.query_params.get("offset", "0")))
 
     try:
-        raw = await api.get("/organizer/contacts", params=_build_params(name, email, has_birthday, letter, offset))
+        raw = await api.get("/organizer/contacts", params=_build_params(name, email, has_birthday, letter, offset, relationship))
     except httpx.HTTPError:
         raw = []
 

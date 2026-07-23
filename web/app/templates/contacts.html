@@ -45,6 +45,17 @@
       <option value="true" {% if query_has_birthday == 'true' %}selected{% endif %}>With birthday</option>
       <option value="false" {% if query_has_birthday == 'false' %}selected{% endif %}>Without birthday</option>
     </select>
+    <select
+      id="filter-relationship"
+      class="border border-gray-200 rounded-lg px-3 py-1.5 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-[#378ADD]"
+      onchange="_resetPage(); _updateLetterChips(); applyFilters()"
+    >
+      <option value="" {% if not query_relationship %}selected{% endif %}>Any relationship</option>
+      <option value="family" {% if query_relationship == 'family' %}selected{% endif %}>Family</option>
+      <option value="relative" {% if query_relationship == 'relative' %}selected{% endif %}>Relative</option>
+      <option value="friend" {% if query_relationship == 'friend' %}selected{% endif %}>Friend</option>
+      <option value="other" {% if query_relationship == 'other' %}selected{% endif %}>Other</option>
+    </select>
   </div>
 
   <!-- A–Z letter filter -->
@@ -138,7 +149,8 @@ function _hasTextFilters() {
   return !!(
     document.getElementById("filter-name").value.trim() ||
     document.getElementById("filter-email").value.trim() ||
-    document.getElementById("filter-birthday").value
+    document.getElementById("filter-birthday").value ||
+    document.getElementById("filter-relationship").value
   );
 }
 
@@ -186,11 +198,13 @@ function applyFilters() {
   const name = document.getElementById("filter-name").value.trim();
   const email = document.getElementById("filter-email").value.trim();
   const birthday = document.getElementById("filter-birthday").value;
+  const relationship = document.getElementById("filter-relationship").value;
 
   const params = new URLSearchParams();
   if (name) params.set("name", name);
   if (email) params.set("email", email);
   if (birthday) params.set("has_birthday", birthday);
+  if (relationship) params.set("relationship", relationship);
   if (_activeLetter) params.set("letter", _activeLetter);
   params.set("offset", _currentOffset);
 

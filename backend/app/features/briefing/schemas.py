@@ -52,6 +52,7 @@ class BirthdayItem(BaseModel):
     days_until: int
     date: date
     is_self: bool = False
+    relationship: str | None = None
 
 
 class ShoppingBriefItem(BaseModel):

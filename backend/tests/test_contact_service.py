@@ -9,6 +9,7 @@ from app.features.organizer.contacts.service import (
     _next_birthday,
     _parse_birthday,
     _parse_birthday_text,
+    _relationship_from_memberships,
     _to_row,
 )
 from app.features.organizer.contacts.schemas import ContactCreate, ContactFilters, ContactRead, ContactUpdate
@@ -50,6 +51,26 @@ class TestToRow:
         assert row["phone"] is None
         assert row["birthday"] is None
 
+    def test_no_memberships_defaults_relationship_to_other(self):
+        raw = {
+            "resourceName": "people/c456",
+            "names": [{"displayName": "Bob"}],
+        }
+        row = _to_row(raw)
+        assert row["relationship"] == "other"
+
+    def test_relationship_resolved_from_matching_group_label(self):
+        raw = {
+            "resourceName": "people/c1",
+            "names": [{"displayName": "Alice"}],
+            "memberships": [
+                {"contactGroupMembership": {"contactGroupResourceName": "contactGroups/family123"}}
+            ],
+        }
+        group_names = {"contactGroups/family123": "Family"}
+        row = _to_row(raw, group_names)
+        assert row["relationship"] == "family"
+
     def test_birthday_parsed_from_date(self):
         raw = {
             "resourceName": "people/c789",
@@ -69,6 +90,48 @@ class TestToRow:
         assert row["birthday"] is not None
         assert row["birthday"].month == 3
         assert row["birthday"].day == 15
+
+
+class TestRelationshipFromMemberships:
+    def test_family_label_maps_to_family(self):
+        memberships = [{"contactGroupMembership": {"contactGroupResourceName": "contactGroups/g1"}}]
+        group_names = {"contactGroups/g1": "Family"}
+        assert _relationship_from_memberships(memberships, group_names) == "family"
+
+    def test_relatives_label_maps_to_relative(self):
+        memberships = [{"contactGroupMembership": {"contactGroupResourceName": "contactGroups/g2"}}]
+        group_names = {"contactGroups/g2": "Relatives"}
+        assert _relationship_from_memberships(memberships, group_names) == "relative"
+
+    def test_friends_label_maps_to_friend(self):
+        memberships = [{"contactGroupMembership": {"contactGroupResourceName": "contactGroups/g3"}}]
+        group_names = {"contactGroups/g3": "Friends"}
+        assert _relationship_from_memberships(memberships, group_names) == "friend"
+
+    def test_label_matching_is_case_insensitive(self):
+        memberships = [{"contactGroupMembership": {"contactGroupResourceName": "contactGroups/g1"}}]
+        group_names = {"contactGroups/g1": "family"}
+        assert _relationship_from_memberships(memberships, group_names) == "family"
+
+    def test_unrecognised_label_defaults_to_other(self):
+        memberships = [{"contactGroupMembership": {"contactGroupResourceName": "contactGroups/g4"}}]
+        group_names = {"contactGroups/g4": "Work"}
+        assert _relationship_from_memberships(memberships, group_names) == "other"
+
+    def test_no_memberships_defaults_to_other(self):
+        assert _relationship_from_memberships([], {}) == "other"
+
+    def test_non_group_membership_entries_are_skipped(self):
+        memberships = [{"domainMembership": {"inViewerDomain": True}}]
+        assert _relationship_from_memberships(memberships, {}) == "other"
+
+    def test_first_matching_group_wins(self):
+        memberships = [
+            {"contactGroupMembership": {"contactGroupResourceName": "contactGroups/g1"}},
+            {"contactGroupMembership": {"contactGroupResourceName": "contactGroups/g2"}},
+        ]
+        group_names = {"contactGroups/g1": "Family", "contactGroups/g2": "Friends"}
+        assert _relationship_from_memberships(memberships, group_names) == "family"
 
 
 class TestParseBirthday:
@@ -156,7 +219,7 @@ class TestNextBirthday:
         assert result == date(2027, 3, 1)
 
 
-def _make_contact_orm(id=1, provider_id="people/c1", name="Alice", email="alice@example.com", phone=None, birthday=None, is_self=False):
+def _make_contact_orm(id=1, provider_id="people/c1", name="Alice", email="alice@example.com", phone=None, birthday=None, is_self=False, relationship=None):
     c = MagicMock()
     c.id = id
     c.provider_id = provider_id
@@ -165,6 +228,7 @@ def _make_contact_orm(id=1, provider_id="people/c1", name="Alice", email="alice@
     c.phone = phone
     c.birthday = birthday
     c.is_self = is_self
+    c.relationship = relationship
     c.model_fields = {}
     return c
 
@@ -222,6 +286,43 @@ class TestContactService:
         assert count == 1
 
     @pytest.mark.asyncio
+    async def test_sync_resolves_relationship_from_contact_groups(self, service, mock_client):
+        mock_client.list_connections.return_value = [
+            {
+                "resourceName": "people/c1",
+                "names": [{"displayName": "Mom"}],
+                "memberships": [
+                    {"contactGroupMembership": {"contactGroupResourceName": "contactGroups/g1"}}
+                ],
+            },
+        ]
+        mock_client.list_contact_groups.return_value = [
+            {"resourceName": "contactGroups/g1", "formattedName": "Family"},
+        ]
+        with __import__("unittest.mock", fromlist=["patch"]).patch(
+            "app.features.organizer.contacts.service.ContactRepository"
+        ) as MockRepo:
+            MockRepo.return_value.upsert = AsyncMock(return_value=1)
+            await service.sync()
+            call_args = MockRepo.return_value.upsert.call_args[0][0]
+
+        assert call_args[0]["relationship"] == "family"
+
+    @pytest.mark.asyncio
+    async def test_sync_continues_when_contact_groups_fetch_fails(self, service, mock_client):
+        mock_client.list_connections.return_value = [
+            {"resourceName": "people/c1", "names": [{"displayName": "Alice"}]},
+        ]
+        mock_client.list_contact_groups.side_effect = Exception("boom")
+        with __import__("unittest.mock", fromlist=["patch"]).patch(
+            "app.features.organizer.contacts.service.ContactRepository"
+        ) as MockRepo:
+            MockRepo.return_value.upsert = AsyncMock(return_value=1)
+            count = await service.sync()
+
+        assert count == 1
+
+    @pytest.mark.asyncio
     async def test_sync_raises_503_when_client_is_none(self, mock_session):
         from fastapi import HTTPException
         svc = ContactService(session=mock_session)
@@ -264,6 +365,77 @@ class TestContactService:
         assert result == []
 
     @pytest.mark.asyncio
+    async def test_get_upcoming_birthdays_default_window_is_7_days(self, service):
+        today = date(2026, 6, 23)
+        contact = MagicMock()
+        contact.name = "Carl"
+        contact.birthday = date(1990, 7, 1)
+        contact.is_self = False
+        contact.relationship = "friend"
+
+        with __import__("unittest.mock", fromlist=["patch"]).patch(
+            "app.features.organizer.contacts.service.ContactRepository"
+        ) as MockRepo:
+            MockRepo.return_value.get_all_with_birthday = AsyncMock(return_value=[contact])
+            result = await service.get_upcoming_birthdays(today)
+
+        assert result == []
+
+    @pytest.mark.asyncio
+    async def test_get_upcoming_birthdays_family_gets_30_day_window(self, service):
+        today = date(2026, 6, 23)
+        contact = MagicMock()
+        contact.name = "Mom"
+        contact.birthday = date(1960, 7, 15)
+        contact.is_self = False
+        contact.relationship = "family"
+
+        with __import__("unittest.mock", fromlist=["patch"]).patch(
+            "app.features.organizer.contacts.service.ContactRepository"
+        ) as MockRepo:
+            MockRepo.return_value.get_all_with_birthday = AsyncMock(return_value=[contact])
+            result = await service.get_upcoming_birthdays(today)
+
+        assert len(result) == 1
+        assert result[0]["name"] == "Mom"
+        assert result[0]["relationship"] == "family"
+
+    @pytest.mark.asyncio
+    async def test_get_upcoming_birthdays_relative_gets_30_day_window(self, service):
+        today = date(2026, 6, 23)
+        contact = MagicMock()
+        contact.name = "Cousin"
+        contact.birthday = date(1990, 7, 15)
+        contact.is_self = False
+        contact.relationship = "relative"
+
+        with __import__("unittest.mock", fromlist=["patch"]).patch(
+            "app.features.organizer.contacts.service.ContactRepository"
+        ) as MockRepo:
+            MockRepo.return_value.get_all_with_birthday = AsyncMock(return_value=[contact])
+            result = await service.get_upcoming_birthdays(today)
+
+        assert len(result) == 1
+        assert result[0]["name"] == "Cousin"
+
+    @pytest.mark.asyncio
+    async def test_get_upcoming_birthdays_friend_outside_7_days_excluded(self, service):
+        today = date(2026, 6, 23)
+        contact = MagicMock()
+        contact.name = "Friend"
+        contact.birthday = date(1990, 7, 15)
+        contact.is_self = False
+        contact.relationship = "friend"
+
+        with __import__("unittest.mock", fromlist=["patch"]).patch(
+            "app.features.organizer.contacts.service.ContactRepository"
+        ) as MockRepo:
+            MockRepo.return_value.get_all_with_birthday = AsyncMock(return_value=[contact])
+            result = await service.get_upcoming_birthdays(today)
+
+        assert result == []
+
+    @pytest.mark.asyncio
     async def test_get_upcoming_birthdays_flags_self(self, service):
         today = date(2026, 6, 23)
         contact = MagicMock()
@@ -285,7 +457,7 @@ class TestContactService:
         today = date(2026, 6, 23)
         c1 = MagicMock()
         c1.name = "Alice"
-        c1.birthday = date(1990, 7, 4)
+        c1.birthday = date(1990, 6, 29)
         c1.is_self = False
         c2 = MagicMock()
         c2.name = "Bob"

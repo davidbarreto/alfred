@@ -216,7 +216,13 @@ class MorningBriefingSummaryService:
             return []
         raw = await self._contact_service.get_upcoming_birthdays(today)
         return [
-            BirthdayItem(name=r["name"], days_until=r["days_until"], date=r["date"], is_self=r.get("is_self", False))
+            BirthdayItem(
+                name=r["name"],
+                days_until=r["days_until"],
+                date=r["date"],
+                is_self=r.get("is_self", False),
+                relationship=r.get("relationship"),
+            )
             for r in raw
         ]
 

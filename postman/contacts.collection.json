@@ -379,6 +379,37 @@
           "path": ["organizer", "contacts", "{{contact_id}}"]
         }
       }
+    },
+    {
+      "name": "13 - List Contacts (Filter by relationship)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('All contacts have relationship family', () => {",
+              "    pm.response.json().forEach(c => {",
+              "        pm.expect(c.relationship).to.eql('family');",
+              "    });",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/organizer/contacts/?relationship=family",
+          "host": ["{{base_url}}"],
+          "path": ["organizer", "contacts", ""],
+          "query": [
+            { "key": "relationship", "value": "family" }
+          ]
+        }
+      }
     }
   ]
 }

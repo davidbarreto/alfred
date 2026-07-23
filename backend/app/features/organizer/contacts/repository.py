@@ -33,6 +33,8 @@ class ContactRepository:
             stmt = stmt.where(Contact.birthday.is_not(None))
         elif filters.has_birthday is False:
             stmt = stmt.where(Contact.birthday.is_(None))
+        if filters.relationship is not None:
+            stmt = stmt.where(Contact.relationship == filters.relationship)
         stmt = stmt.order_by(Contact.name).offset(filters.offset).limit(filters.limit)
         result = await self._session.execute(stmt)
         return list(result.scalars().all())
@@ -85,6 +87,7 @@ class ContactRepository:
                     "email": insert(Contact).excluded.email,
                     "phone": insert(Contact).excluded.phone,
                     "birthday": insert(Contact).excluded.birthday,
+                    "relationship": insert(Contact).excluded.relationship,
                 },
             )
         )

@@ -95,7 +95,12 @@ def _build_context(briefing: MorningBriefing) -> str:
         lines.append("")
         lines.append("Birthdays:")
         for b in briefing.birthdays:
-            label = "David's own birthday" if b.is_self else b.name
+            if b.is_self:
+                label = "David's own birthday"
+            elif b.relationship in ("family", "relative"):
+                label = f"{b.name} ({b.relationship})"
+            else:
+                label = b.name
             if b.days_until == 0:
                 lines.append(f"  {label} — today!")
             elif b.days_until == 1:

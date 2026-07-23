@@ -29,6 +29,7 @@ class ContactRead(BaseModel):
     phone: str | None
     birthday: date | None
     is_self: bool
+    relationship: str | None = None
 
     model_config = {"from_attributes": True}
 
@@ -42,6 +43,7 @@ class ContactFilters:
         email: str | None = Query(None, description="Case-insensitive substring match on email"),
         letter: str | None = Query(None, max_length=1, description="Filter by first letter of name"),
         has_birthday: bool | None = Query(None, description="Filter to contacts with (true) or without (false) a birthday"),
+        relationship: str | None = Query(None, description="Filter by relationship: family, relative, friend, other"),
     ) -> None:
         self.limit = limit
         self.offset = offset
@@ -49,3 +51,4 @@ class ContactFilters:
         self.email = email
         self.letter = letter.upper() if isinstance(letter, str) and letter else None
         self.has_birthday = has_birthday
+        self.relationship = relationship

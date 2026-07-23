@@ -5,9 +5,6 @@ from typing import Annotated, Literal, Optional, TypeAlias
 from fastapi import Query
 from pydantic import BaseModel
 
-ShoppingCategory: TypeAlias = Literal[
-    "grocery", "pharmacy", "electronics", "online", "home", "clothes", "books", "other"
-]
 ShoppingPriority: TypeAlias = Literal["need", "want"]
 ShoppingStatus: TypeAlias = Literal["pending", "bought", "skipped"]
 
@@ -16,7 +13,7 @@ ShoppingStatus: TypeAlias = Literal["pending", "bought", "skipped"]
 
 class ShoppingItemBase(BaseModel):
     name: str
-    category: ShoppingCategory = "other"
+    category_id: Optional[int] = None
     priority: ShoppingPriority = "need"
     quantity: Optional[Decimal] = None
     unit: Optional[str] = None
@@ -34,7 +31,7 @@ class ShoppingItemCreate(ShoppingItemBase):
 
 class ShoppingItemUpdate(BaseModel):
     name: Optional[str] = None
-    category: Optional[ShoppingCategory] = None
+    category_id: Optional[int] = None
     priority: Optional[ShoppingPriority] = None
     quantity: Optional[Decimal] = None
     unit: Optional[str] = None
@@ -48,6 +45,7 @@ class ShoppingItemUpdate(BaseModel):
 
 class ShoppingItemRead(ShoppingItemBase):
     id: int
+    category_id: int
     status: ShoppingStatus
     last_bought_at: Optional[datetime]
     created_at: datetime
@@ -60,15 +58,12 @@ class ShoppingItemFilters:
     def __init__(
         self,
         status: Annotated[Literal["pending", "bought", "skipped", "all"], Query()] = "pending",
-        category: Annotated[
-            Literal["grocery", "pharmacy", "electronics", "online", "home", "clothes", "books", "other", "all"],
-            Query(),
-        ] = "all",
+        category_id: Annotated[Optional[int], Query()] = None,
         priority: Annotated[Literal["need", "want", "all"], Query()] = "all",
         limit: Annotated[int, Query(ge=1)] = 100,
     ) -> None:
         self.status = status
-        self.category = category
+        self.category_id = category_id
         self.priority = priority
         self.limit = limit
 
@@ -77,7 +72,7 @@ class ShoppingItemFilters:
 
     def __repr__(self) -> str:
         return (
-            f"ShoppingItemFilters(status={self.status!r}, category={self.category!r}, "
+            f"ShoppingItemFilters(status={self.status!r}, category_id={self.category_id!r}, "
             f"priority={self.priority!r}, limit={self.limit})"
         )
 
@@ -86,7 +81,7 @@ class ShoppingItemFilters:
 
 class FrequentItemRead(BaseModel):
     name: str
-    category: ShoppingCategory
+    category_id: int
     purchase_count: int
     last_bought_at: Optional[datetime]
 
@@ -94,27 +89,24 @@ class FrequentItemRead(BaseModel):
 class FrequentItemFilters:
     def __init__(
         self,
-        category: Annotated[
-            Literal["grocery", "pharmacy", "electronics", "online", "home", "clothes", "books", "other", "all"],
-            Query(),
-        ] = "all",
+        category_id: Annotated[Optional[int], Query()] = None,
         limit: Annotated[int, Query(ge=1)] = 20,
     ) -> None:
-        self.category = category
+        self.category_id = category_id
         self.limit = limit
 
     def __eq__(self, other: object) -> bool:
         return isinstance(other, FrequentItemFilters) and vars(self) == vars(other)
 
     def __repr__(self) -> str:
-        return f"FrequentItemFilters(category={self.category!r}, limit={self.limit})"
+        return f"FrequentItemFilters(category_id={self.category_id!r}, limit={self.limit})"
 
 
 # --- Wishlist item ---
 
 class WishlistItemBase(BaseModel):
     name: str
-    category: ShoppingCategory = "other"
+    category_id: Optional[int] = None
     estimated_price: Optional[Decimal] = None
     brand: Optional[str] = None
     url: Optional[str] = None
@@ -127,7 +119,7 @@ class WishlistItemCreate(WishlistItemBase):
 
 class WishlistItemUpdate(BaseModel):
     name: Optional[str] = None
-    category: Optional[ShoppingCategory] = None
+    category_id: Optional[int] = None
     estimated_price: Optional[Decimal] = None
     brand: Optional[str] = None
     url: Optional[str] = None
@@ -136,6 +128,7 @@ class WishlistItemUpdate(BaseModel):
 
 class WishlistItemRead(WishlistItemBase):
     id: int
+    category_id: int
     created_at: datetime
     updated_at: datetime
 
@@ -145,27 +138,24 @@ class WishlistItemRead(WishlistItemBase):
 class WishlistItemFilters:
     def __init__(
         self,
-        category: Annotated[
-            Literal["grocery", "pharmacy", "electronics", "online", "home", "clothes", "books", "other", "all"],
-            Query(),
-        ] = "all",
+        category_id: Annotated[Optional[int], Query()] = None,
         limit: Annotated[int, Query(ge=1)] = 100,
     ) -> None:
-        self.category = category
+        self.category_id = category_id
         self.limit = limit
 
     def __eq__(self, other: object) -> bool:
         return isinstance(other, WishlistItemFilters) and vars(self) == vars(other)
 
     def __repr__(self) -> str:
-        return f"WishlistItemFilters(category={self.category!r}, limit={self.limit})"
+        return f"WishlistItemFilters(category_id={self.category_id!r}, limit={self.limit})"
 
 
 # --- Recurrence item ---
 
 class RecurrenceItemBase(BaseModel):
     name: str
-    category: ShoppingCategory = "other"
+    category_id: Optional[int] = None
     recurrence_days: int
 
 
@@ -175,13 +165,14 @@ class RecurrenceItemCreate(RecurrenceItemBase):
 
 class RecurrenceItemUpdate(BaseModel):
     name: Optional[str] = None
-    category: Optional[ShoppingCategory] = None
+    category_id: Optional[int] = None
     recurrence_days: Optional[int] = None
     active: Optional[bool] = None
 
 
 class RecurrenceItemRead(RecurrenceItemBase):
     id: int
+    category_id: int
     last_added_at: Optional[datetime]
     active: bool
     created_at: datetime

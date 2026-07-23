@@ -45,7 +45,7 @@ class CreateEventArgs(BaseModel):
 
 class AddShoppingItemArgs(BaseModel):
     name: str = Field(description="Name of the item to buy")
-    category: Literal["grocery", "pharmacy", "electronics", "online", "home", "clothes", "books", "other"] | None = Field(default=None)
+    category: str | None = Field(default=None, description="Best-guess category name from context, e.g. 'grocery', 'electronics', 'pharmacy'")
     priority: Literal["need", "want"] | None = Field(default=None)
     quantity: str | int | float | None = Field(default=None, description="Quantity, e.g. 2 or '500g'")
     unit: str | None = Field(default=None, description="Unit of measure, e.g. 'kg', 'bottles', 'packs'")
@@ -53,7 +53,7 @@ class AddShoppingItemArgs(BaseModel):
 
 
 class ListShoppingItemsArgs(BaseModel):
-    category: Literal["grocery", "pharmacy", "electronics", "online", "home", "clothes", "books", "other", "all"] | None = Field(default=None)
+    category: str | None = Field(default=None, description="Category name to filter by, if mentioned")
     status: Literal["pending", "bought", "skipped", "all"] | None = Field(default=None)
 
 
@@ -69,7 +69,7 @@ class DeleteShoppingItemArgs(BaseModel):
 
 class AddWishlistItemArgs(BaseModel):
     name: str = Field(description="Name of the item to add to the wishlist")
-    category: Literal["grocery", "pharmacy", "electronics", "online", "home", "clothes", "books", "other"] | None = Field(default=None)
+    category: str | None = Field(default=None, description="Best-guess category name from context, e.g. 'grocery', 'electronics', 'pharmacy'")
     estimated_price: str | int | float | None = Field(default=None, description="Estimated price if mentioned, e.g. 150")
     url: str | None = Field(default=None)
 

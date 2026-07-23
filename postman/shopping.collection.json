@@ -2,7 +2,7 @@
   "info": {
     "name": "Alfred - Shopping API",
     "_postman_id": "alfred-shopping-v1",
-    "description": "Run in order: Shopping Items (Create → List → Get → Update → Mark Bought → Mark Skipped → Delete) → Wishlist (Create → List → Get → Update → Promote → Cleanup) → Recurrence (Create → List → Get → Update → Deactivate → Delete)",
+    "description": "Run in order: Categories (lookup seeded ids → Create → List → Get → Update → Delete) → Shopping Items (Create → List → Get → Update → Mark Bought → Mark Skipped → Delete) → Wishlist (Create → List → Get → Update → Promote → Cleanup) → Recurrence (Create → List → Get → Update → Deactivate → Delete)",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -16,6 +16,264 @@
     ]
   },
   "item": [
+    {
+      "name": "Categories",
+      "item": [
+        {
+          "name": "00 - List Categories (lookup seeded ids)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Seeded grocery and electronics categories exist', () => {",
+                  "    const json = pm.response.json();",
+                  "    const grocery = json.find((c) => c.name === 'grocery');",
+                  "    const electronics = json.find((c) => c.name === 'electronics');",
+                  "    pm.expect(grocery, 'grocery category').to.exist;",
+                  "    pm.expect(electronics, 'electronics category').to.exist;",
+                  "    pm.environment.set('shopping_grocery_category_id', grocery.id);",
+                  "    pm.environment.set('shopping_electronics_category_id', electronics.id);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/organizer/shopping-categories/",
+              "host": ["{{base_url}}"],
+              "path": ["organizer", "shopping-categories", ""]
+            }
+          }
+        },
+        {
+          "name": "01 - Create Category",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+                  "pm.test('Response has id and saves it', () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.have.property('id');",
+                  "    pm.expect(json.name).to.eql('camping');",
+                  "    pm.environment.set('shopping_category_id', json.id);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"camping\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/organizer/shopping-categories/",
+              "host": ["{{base_url}}"],
+              "path": ["organizer", "shopping-categories", ""]
+            }
+          }
+        },
+        {
+          "name": "02 - List Categories",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Response is an array with at least one category', () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.be.an('array');",
+                  "    pm.expect(json.length).to.be.at.least(1);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/organizer/shopping-categories/",
+              "host": ["{{base_url}}"],
+              "path": ["organizer", "shopping-categories", ""]
+            }
+          }
+        },
+        {
+          "name": "03 - Get Category",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Response matches created category', () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(String(json.id)).to.eql(String(pm.environment.get('shopping_category_id')));",
+                  "    pm.expect(json.name).to.eql('camping');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/organizer/shopping-categories/{{shopping_category_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["organizer", "shopping-categories", "{{shopping_category_id}}"]
+            }
+          }
+        },
+        {
+          "name": "04 - Update Category",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Name was updated', () => {",
+                  "    pm.expect(pm.response.json().name).to.eql('camping & outdoors');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"camping & outdoors\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/organizer/shopping-categories/{{shopping_category_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["organizer", "shopping-categories", "{{shopping_category_id}}"]
+            }
+          }
+        },
+        {
+          "name": "05 - Create Shopping Item In Category (for delete-blocked test)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+                  "pm.environment.set('shopping_category_test_item_id', pm.response.json().id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Tent\",\n  \"category_id\": {{shopping_category_id}}\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/organizer/shopping/",
+              "host": ["{{base_url}}"],
+              "path": ["organizer", "shopping", ""]
+            }
+          }
+        },
+        {
+          "name": "06 - Delete Category Blocked While In Use (409)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 409 while a shopping item still references it', () => pm.response.to.have.status(409));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/organizer/shopping-categories/{{shopping_category_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["organizer", "shopping-categories", "{{shopping_category_id}}"]
+            }
+          }
+        },
+        {
+          "name": "07 - Delete Category Test Item (cleanup)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 204', () => pm.response.to.have.status(204));",
+                  "pm.environment.unset('shopping_category_test_item_id');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/organizer/shopping/{{shopping_category_test_item_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["organizer", "shopping", "{{shopping_category_test_item_id}}"]
+            }
+          }
+        },
+        {
+          "name": "08 - Delete Category (cleanup)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 204', () => pm.response.to.have.status(204));",
+                  "pm.environment.unset('shopping_category_id');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/organizer/shopping-categories/{{shopping_category_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["organizer", "shopping-categories", "{{shopping_category_id}}"]
+            }
+          }
+        }
+      ]
+    },
     {
       "name": "Shopping Items",
       "item": [
@@ -31,7 +289,7 @@
                   "    const json = pm.response.json();",
                   "    pm.expect(json).to.have.property('id');",
                   "    pm.expect(json.name).to.eql('Beans');",
-                  "    pm.expect(json.category).to.eql('grocery');",
+                  "    pm.expect(String(json.category_id)).to.eql(String(pm.environment.get('shopping_grocery_category_id')));",
                   "    pm.expect(json.priority).to.eql('need');",
                   "    pm.expect(json.status).to.eql('pending');",
                   "    pm.expect(json.store).to.eql('Pingo Doce');",
@@ -47,7 +305,7 @@
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Beans\",\n  \"category\": \"grocery\",\n  \"priority\": \"need\",\n  \"quantity\": 2,\n  \"unit\": \"cans\",\n  \"store\": \"Pingo Doce\",\n  \"notes\": \"Red kidney beans\"\n}",
+              "raw": "{\n  \"name\": \"Beans\",\n  \"category_id\": {{shopping_grocery_category_id}},\n  \"priority\": \"need\",\n  \"quantity\": 2,\n  \"unit\": \"cans\",\n  \"store\": \"Pingo Doce\",\n  \"notes\": \"Red kidney beans\"\n}",
               "options": { "raw": { "language": "json" } }
             },
             "url": {
@@ -98,7 +356,8 @@
                 "exec": [
                   "pm.test('Status is 200', () => pm.response.to.have.status(200));",
                   "pm.test('All items are grocery', () => {",
-                  "    pm.response.json().forEach(i => pm.expect(i.category).to.eql('grocery'));",
+                  "    const groceryId = String(pm.environment.get('shopping_grocery_category_id'));",
+                  "    pm.response.json().forEach(i => pm.expect(String(i.category_id)).to.eql(groceryId));",
                   "});"
                 ],
                 "type": "text/javascript"
@@ -109,10 +368,10 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{base_url}}/organizer/shopping/?category=grocery",
+              "raw": "{{base_url}}/organizer/shopping/?category_id={{shopping_grocery_category_id}}",
               "host": ["{{base_url}}"],
               "path": ["organizer", "shopping", ""],
-              "query": [{ "key": "category", "value": "grocery" }]
+              "query": [{ "key": "category_id", "value": "{{shopping_grocery_category_id}}" }]
             }
           }
         },
@@ -243,7 +502,7 @@
                   "    pm.expect(json).to.be.an('array');",
                   "    const beans = json.find((i) => i.name === 'Beans');",
                   "    pm.expect(beans).to.exist;",
-                  "    pm.expect(beans.category).to.eql('grocery');",
+                  "    pm.expect(String(beans.category_id)).to.eql(String(pm.environment.get('shopping_grocery_category_id')));",
                   "    pm.expect(beans.purchase_count).to.be.at.least(1);",
                   "    pm.expect(beans).to.have.property('last_bought_at');",
                   "});"
@@ -282,7 +541,7 @@
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Fancy cheese\",\n  \"category\": \"grocery\",\n  \"priority\": \"want\"\n}",
+              "raw": "{\n  \"name\": \"Fancy cheese\",\n  \"category_id\": {{shopping_grocery_category_id}},\n  \"priority\": \"want\"\n}",
               "options": { "raw": { "language": "json" } }
             },
             "url": {
@@ -383,7 +642,7 @@
                   "    const json = pm.response.json();",
                   "    pm.expect(json).to.have.property('id');",
                   "    pm.expect(json.name).to.eql('Sony WH-1000XM5');",
-                  "    pm.expect(json.category).to.eql('electronics');",
+                  "    pm.expect(String(json.category_id)).to.eql(String(pm.environment.get('shopping_electronics_category_id')));",
                   "    pm.environment.set('wishlist_item_id', json.id);",
                   "});"
                 ],
@@ -396,7 +655,7 @@
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Sony WH-1000XM5\",\n  \"category\": \"electronics\",\n  \"estimated_price\": 350,\n  \"brand\": \"Sony\",\n  \"notes\": \"Noise-cancelling headphones\"\n}",
+              "raw": "{\n  \"name\": \"Sony WH-1000XM5\",\n  \"category_id\": {{shopping_electronics_category_id}},\n  \"estimated_price\": 350,\n  \"brand\": \"Sony\",\n  \"notes\": \"Noise-cancelling headphones\"\n}",
               "options": { "raw": { "language": "json" } }
             },
             "url": {
@@ -500,7 +759,7 @@
                   "pm.test('Promoted item is on shopping list with correct fields', () => {",
                   "    const json = pm.response.json();",
                   "    pm.expect(json.name).to.eql('Sony WH-1000XM5');",
-                  "    pm.expect(json.category).to.eql('electronics');",
+                  "    pm.expect(String(json.category_id)).to.eql(String(pm.environment.get('shopping_electronics_category_id')));",
                   "    pm.expect(json.priority).to.eql('want');",
                   "    pm.expect(json.status).to.eql('pending');",
                   "    pm.environment.set('promoted_shopping_id', json.id);",
@@ -604,7 +863,7 @@
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Milk\",\n  \"category\": \"grocery\",\n  \"recurrence_days\": 7\n}",
+              "raw": "{\n  \"name\": \"Milk\",\n  \"category_id\": {{shopping_grocery_category_id}},\n  \"recurrence_days\": 7\n}",
               "options": { "raw": { "language": "json" } }
             },
             "url": {

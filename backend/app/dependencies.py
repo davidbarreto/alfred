@@ -13,6 +13,7 @@ from app.features.organizer.tasks.service import TaskService
 from app.features.organizer.notes.service import NoteService
 from app.features.organizer.calendar_events.service import CalendarEventService
 from app.features.organizer.shopping.service import ShoppingService
+from app.features.organizer.shopping_categories.service import ShoppingCategoryService
 from app.features.finance.accounts.service import AccountService
 from app.features.finance.categories.service import CategoryService
 from app.features.finance.currencies.service import CurrencyService
@@ -111,6 +112,9 @@ async def get_calendar_event_service(session: AsyncSession = Depends(get_session
 
 def get_shopping_service(session: AsyncSession = Depends(get_session)) -> ShoppingService:
     return ShoppingService(session)
+
+def get_shopping_category_service(session: AsyncSession = Depends(get_session)) -> ShoppingCategoryService:
+    return ShoppingCategoryService(session)
 
 def get_account_service(session: AsyncSession = Depends(get_session)) -> AccountService:
     return AccountService(session)
@@ -347,6 +351,7 @@ DbSessionDep = Annotated[AsyncSession, Depends(get_session)]
 # Services
 TaskServiceDep = Annotated[TaskService, Depends(get_task_service)]
 ShoppingServiceDep = Annotated[ShoppingService, Depends(get_shopping_service)]
+ShoppingCategoryServiceDep = Annotated[ShoppingCategoryService, Depends(get_shopping_category_service)]
 NoteServiceDep = Annotated[NoteService, Depends(get_note_service)]
 CalendarEventServiceDep = Annotated[CalendarEventService, Depends(get_calendar_event_service)]
 AccountServiceDep = Annotated[AccountService, Depends(get_account_service)]

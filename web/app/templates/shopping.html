@@ -22,11 +22,15 @@
         class="px-3 py-1.5 text-xs font-medium text-gray-500 hover:text-gray-700 border-b-2 border-transparent transition-colors">
         Wishlist <span class="ml-1 text-gray-300 font-normal">{{ wishlist | length }}</span>
       </button>
+      <button onclick="showShoppingTab('categories')" id="stab-categories"
+        class="px-3 py-1.5 text-xs font-medium text-gray-500 hover:text-gray-700 border-b-2 border-transparent transition-colors">
+        Categories
+      </button>
     </div>
     <button
       class="text-xs text-gray-400 hover:text-gray-600 px-2 py-1 rounded hover:bg-gray-100"
       id="clear-checked-btn"
-      hx-get="/shopping/list?status=pending&category={{ active_category }}"
+      hx-get="/shopping/list?status=pending&category_id={{ active_category_id or '' }}"
       hx-target="#shopping-list"
     >Clear checked</button>
   </div>
@@ -51,9 +55,9 @@
           class="input input-sm flex-1 border border-gray-200 bg-white rounded-lg px-3 text-sm"
           required
         />
-        <select name="category" class="border border-gray-200 rounded-lg px-2 py-1.5 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-[#378ADD]">
+        <select name="category_id" class="border border-gray-200 rounded-lg px-2 py-1.5 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-[#378ADD]">
           {% for cat in categories %}
-          <option value="{{ cat }}">{{ cat }}</option>
+          <option value="{{ cat.id }}" {% if cat.name == "other" %}selected{% endif %}>{{ cat.name }}</option>
           {% endfor %}
         </select>
         <select name="priority" class="border border-gray-200 rounded-lg px-2 py-1.5 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-[#378ADD]">
@@ -87,18 +91,23 @@
     <div class="flex gap-1.5 flex-wrap items-center">
       {% for value, label in [("pending", "Pending"), ("bought", "Bought"), ("all", "All")] %}
       <a
-        href="/shopping?status={{ value }}&category={{ active_category }}"
+        href="/shopping?status={{ value }}&category_id={{ active_category_id or '' }}"
         class="px-3 py-1 rounded-full text-xs font-medium transition-colors
           {% if active_status == value %}bg-[#E6F1FB] text-[#0C447C]{% else %}text-gray-500 hover:bg-gray-100{% endif %}"
       >{{ label }}</a>
       {% endfor %}
       <div class="w-px h-4 bg-gray-200 mx-1"></div>
-      {% for cat in ["all"] + categories %}
       <a
-        href="/shopping?status={{ active_status }}&category={{ cat }}"
+        href="/shopping?status={{ active_status }}"
         class="px-2.5 py-0.5 rounded-full text-xs transition-colors
-          {% if active_category == cat %}bg-gray-200 text-gray-700 font-medium{% else %}text-gray-400 hover:bg-gray-100{% endif %}"
-      >{{ cat }}</a>
+          {% if not active_category_id %}bg-gray-200 text-gray-700 font-medium{% else %}text-gray-400 hover:bg-gray-100{% endif %}"
+      >all</a>
+      {% for cat in categories %}
+      <a
+        href="/shopping?status={{ active_status }}&category_id={{ cat.id }}"
+        class="px-2.5 py-0.5 rounded-full text-xs transition-colors
+          {% if active_category_id == cat.id %}bg-gray-200 text-gray-700 font-medium{% else %}text-gray-400 hover:bg-gray-100{% endif %}"
+      >{{ cat.name }}</a>
       {% endfor %}
     </div>
 
@@ -114,9 +123,9 @@
     <form class="flex gap-2" onsubmit="submitWishlistForm(event)">
       <input name="name" required placeholder="Add to wishlist…"
         class="input input-sm flex-1 border border-gray-200 bg-white rounded-lg px-3 text-sm" />
-      <select name="category" class="border border-gray-200 rounded-lg px-2 py-1.5 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-[#378ADD]">
+      <select name="category_id" class="border border-gray-200 rounded-lg px-2 py-1.5 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-[#378ADD]">
         {% for cat in categories %}
-        <option value="{{ cat }}">{{ cat }}</option>
+        <option value="{{ cat.id }}" {% if cat.name == "other" %}selected{% endif %}>{{ cat.name }}</option>
         {% endfor %}
       </select>
       <input name="brand" placeholder="Brand"
@@ -132,9 +141,21 @@
     </div>
   </div>
 
+  <!-- Categories panel (hidden by default) -->
+  <div id="panel-categories" class="hidden space-y-3">
+    <div id="shopping-categories-list">
+      {% include "_shopping_categories.html" %}
+    </div>
+    <form class="flex gap-2" onsubmit="submitManageForm(event, '/shopping/categories', 'shopping-categories-list')">
+      <input name="name" required placeholder="Category name"
+        class="input input-sm flex-1 border border-gray-200 bg-white rounded-lg px-3 text-sm" />
+      <button type="submit" class="btn btn-sm btn-primary">Add</button>
+    </form>
+  </div>
+
 <script>
 function showShoppingTab(name) {
-  ['list', 'wishlist'].forEach(t => {
+  ['list', 'wishlist', 'categories'].forEach(t => {
     document.getElementById('panel-' + t).classList.toggle('hidden', t !== name);
     const btn = document.getElementById('stab-' + t);
     const active = t === name;
@@ -157,6 +178,24 @@ async function submitWishlistForm(e) {
     document.getElementById('wishlist-list').innerHTML = await res.text();
     form.reset();
     htmx.process(document.getElementById('wishlist-list'));
+  } catch (err) {
+    alert(err.message || 'Failed.');
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+async function submitManageForm(e, url, targetId) {
+  e.preventDefault();
+  const form = e.target;
+  const btn = form.querySelector('[type="submit"]');
+  btn.disabled = true;
+  try {
+    const res = await fetch(url, { method: 'POST', body: new FormData(form) });
+    if (!res.ok) throw new Error(await res.text());
+    document.getElementById(targetId).innerHTML = await res.text();
+    form.reset();
+    htmx.process(document.getElementById(targetId));
   } catch (err) {
     alert(err.message || 'Failed.');
   } finally {

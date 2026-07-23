@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
-from sqlalchemy import func, select, update
+from sqlalchemy import delete, func, select, update
 from sqlalchemy.engine import Row
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -34,8 +34,8 @@ class ShoppingRepository:
         query = select(ShoppingItem).where(ShoppingItem.deleted_at.is_(None))
         if filters.status != "all":
             query = query.where(ShoppingItem.status == filters.status)
-        if filters.category != "all":
-            query = query.where(ShoppingItem.category == filters.category)
+        if filters.category_id is not None:
+            query = query.where(ShoppingItem.category_id == filters.category_id)
         if filters.priority != "all":
             query = query.where(ShoppingItem.priority == filters.priority)
         query = query.order_by(ShoppingItem.created_at.asc()).limit(filters.limit)
@@ -95,7 +95,7 @@ class ShoppingRepository:
         query = (
             select(
                 ShoppingItem.name,
-                ShoppingItem.category,
+                ShoppingItem.category_id,
                 func.count().label("purchase_count"),
                 func.max(ShoppingItem.last_bought_at).label("last_bought_at"),
             )
@@ -104,15 +104,21 @@ class ShoppingRepository:
                 ShoppingItem.deleted_at.is_(None),
                 ShoppingItem.name.notin_(pending_names),
             )
-            .group_by(ShoppingItem.name, ShoppingItem.category)
+            .group_by(ShoppingItem.name, ShoppingItem.category_id)
         )
-        if filters.category != "all":
-            query = query.where(ShoppingItem.category == filters.category)
+        if filters.category_id is not None:
+            query = query.where(ShoppingItem.category_id == filters.category_id)
         query = query.order_by(func.count().desc(), func.max(ShoppingItem.last_bought_at).desc()).limit(
             filters.limit
         )
         result = await self._session.execute(query)
         return list(result.all())
+
+    async def count_by_category(self, category_id: int) -> int:
+        result = await self._session.execute(
+            select(func.count()).select_from(ShoppingItem).where(ShoppingItem.category_id == category_id)
+        )
+        return result.scalar_one()
 
 
 class WishlistRepository:
@@ -130,8 +136,8 @@ class WishlistRepository:
             WishlistItem.deleted_at.is_(None),
             WishlistItem.promoted_at.is_(None),
         )
-        if filters.category != "all":
-            query = query.where(WishlistItem.category == filters.category)
+        if filters.category_id is not None:
+            query = query.where(WishlistItem.category_id == filters.category_id)
         query = query.order_by(WishlistItem.created_at.asc()).limit(filters.limit)
         result = await self._session.execute(query)
         return list(result.scalars().all())
@@ -169,6 +175,12 @@ class WishlistRepository:
         )
         await self._session.commit()
         return await self.get(item_id)
+
+    async def count_by_category(self, category_id: int) -> int:
+        result = await self._session.execute(
+            select(func.count()).select_from(WishlistItem).where(WishlistItem.category_id == category_id)
+        )
+        return result.scalar_one()
 
 
 class RecurrenceRepository:
@@ -211,3 +223,9 @@ class RecurrenceRepository:
     async def delete(self, item_id: int) -> None:
         await self._session.execute(delete(RecurrenceItem).where(RecurrenceItem.id == item_id))
         await self._session.commit()
+
+    async def count_by_category(self, category_id: int) -> int:
+        result = await self._session.execute(
+            select(func.count()).select_from(RecurrenceItem).where(RecurrenceItem.category_id == category_id)
+        )
+        return result.scalar_one()

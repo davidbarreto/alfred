@@ -4,7 +4,7 @@ from datetime import datetime
 from decimal import Decimal
 from typing import Optional
 
-from sqlalchemy import Boolean, DateTime, Integer, Numeric, String, Text, func
+from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, Numeric, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base
@@ -16,7 +16,9 @@ class ShoppingItem(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
-    category: Mapped[str] = mapped_column(String(50), nullable=False, default="other")
+    category_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("organizer.shopping_categories.id", ondelete="RESTRICT"), nullable=False
+    )
     priority: Mapped[str] = mapped_column(String(10), nullable=False, default="need")
     quantity: Mapped[Optional[Decimal]] = mapped_column(Numeric(10, 2), nullable=True)
     unit: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
@@ -43,7 +45,9 @@ class WishlistItem(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
-    category: Mapped[str] = mapped_column(String(50), nullable=False, default="other")
+    category_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("organizer.shopping_categories.id", ondelete="RESTRICT"), nullable=False
+    )
     estimated_price: Mapped[Optional[Decimal]] = mapped_column(Numeric(10, 2), nullable=True)
     brand: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     url: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
@@ -64,7 +68,9 @@ class RecurrenceItem(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
-    category: Mapped[str] = mapped_column(String(50), nullable=False, default="other")
+    category_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("organizer.shopping_categories.id", ondelete="RESTRICT"), nullable=False
+    )
     recurrence_days: Mapped[int] = mapped_column(Integer, nullable=False)
     last_added_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)

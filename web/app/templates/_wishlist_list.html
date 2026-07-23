@@ -5,7 +5,7 @@
     <div class="flex-1 min-w-0">
       <div class="text-sm font-medium text-gray-800 truncate">{{ item.name }}</div>
       <div class="text-xs text-gray-400 mt-0.5">
-        {{ item.category }}
+        {{ categories_by_id.get(item.category_id) or "Other" }}
         {% if item.brand %} · {{ item.brand }}{% endif %}
         {% if item.estimated_price %} · ~€{{ item.estimated_price | money }}{% endif %}
       </div>

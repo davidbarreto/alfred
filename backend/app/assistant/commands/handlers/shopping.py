@@ -28,7 +28,7 @@ async def handle_shopping(cmd_type: str, command: str, arguments: dict[str, Any]
             estimated_price_raw = arguments.get("estimated_price")
             payload = ShoppingItemCreate(
                 name=arguments.get("name", ""),
-                category=arguments.get("category", "other"),
+                category_id=await service.resolve_category_id(arguments.get("category")),
                 priority=arguments.get("priority", "need"),
                 quantity=Decimal(str(quantity)) if quantity else None,
                 unit=arguments.get("unit"),
@@ -40,9 +40,10 @@ async def handle_shopping(cmd_type: str, command: str, arguments: dict[str, Any]
             return result.model_dump(mode='json')
 
         if command == "list":
+            category_name = arguments.get("category")
             filters = ShoppingItemFilters(
                 status=arguments.get("status", "pending"),
-                category=arguments.get("category", "all"),
+                category_id=await service.resolve_category_id(category_name) if category_name else None,
                 priority=arguments.get("priority", "all"),
                 limit=int(arguments.get("limit", 100)),
             )
@@ -67,7 +68,7 @@ async def handle_shopping(cmd_type: str, command: str, arguments: dict[str, Any]
             if "name" in arguments:
                 fields["name"] = arguments["name"]
             if "category" in arguments:
-                fields["category"] = arguments["category"]
+                fields["category_id"] = await service.resolve_category_id(arguments["category"])
             if "priority" in arguments:
                 fields["priority"] = arguments["priority"]
             if "status" in arguments:
@@ -84,7 +85,7 @@ async def handle_shopping(cmd_type: str, command: str, arguments: dict[str, Any]
             estimated_price_raw = arguments.get("estimated_price")
             payload = WishlistItemCreate(
                 name=arguments.get("name", ""),
-                category=arguments.get("category", "other"),
+                category_id=await service.resolve_category_id(arguments.get("category")),
                 estimated_price=Decimal(str(estimated_price_raw)) if estimated_price_raw else None,
                 url=arguments.get("url"),
                 notes=arguments.get("notes"),
@@ -93,8 +94,9 @@ async def handle_shopping(cmd_type: str, command: str, arguments: dict[str, Any]
             return result.model_dump(mode='json')
 
         if command == "list":
+            category_name = arguments.get("category")
             filters = WishlistItemFilters(
-                category=arguments.get("category", "all"),
+                category_id=await service.resolve_category_id(category_name) if category_name else None,
                 limit=int(arguments.get("limit", 100)),
             )
             results = await service.list_wishes(filters)

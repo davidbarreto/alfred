@@ -25,8 +25,11 @@ from app.features.organizer.shopping.schemas import (
     WishlistItemRead,
     WishlistItemUpdate,
 )
+from app.features.organizer.shopping_categories.repository import ShoppingCategoryRepository
 
 logger = logging.getLogger(__name__)
+
+_DEFAULT_CATEGORY_NAME = "other"
 
 
 class ShoppingService:
@@ -34,6 +37,17 @@ class ShoppingService:
         self._shopping = ShoppingRepository(session)
         self._wishlist = WishlistRepository(session)
         self._recurrence = RecurrenceRepository(session)
+        self._categories = ShoppingCategoryRepository(session)
+
+    async def resolve_category_id(self, name: str | None) -> int:
+        if name:
+            category = await self._categories.get_by_name(name)
+            if category is not None:
+                return category.id
+        default_category = await self._categories.get_by_name(_DEFAULT_CATEGORY_NAME)
+        if default_category is None:
+            raise ValueError(f"Default shopping category {_DEFAULT_CATEGORY_NAME!r} is missing")
+        return default_category.id
 
     # --- Shopping items ---
 
@@ -48,6 +62,8 @@ class ShoppingService:
         return [ShoppingItemRead.model_validate(item) for item in items]
 
     async def create_item(self, data: ShoppingItemCreate) -> ShoppingItemRead:
+        if data.category_id is None:
+            data = data.model_copy(update={"category_id": await self.resolve_category_id(None)})
         orm = await self._shopping.create(data)
         logger.info("Shopping item created: id=%d name=%r", orm.id, data.name)
         return ShoppingItemRead.model_validate(orm)
@@ -83,7 +99,7 @@ class ShoppingService:
         return [
             FrequentItemRead(
                 name=row.name,
-                category=row.category,
+                category_id=row.category_id,
                 purchase_count=row.purchase_count,
                 last_bought_at=row.last_bought_at,
             )
@@ -103,6 +119,8 @@ class ShoppingService:
         return [WishlistItemRead.model_validate(item) for item in items]
 
     async def create_wish(self, data: WishlistItemCreate) -> WishlistItemRead:
+        if data.category_id is None:
+            data = data.model_copy(update={"category_id": await self.resolve_category_id(None)})
         orm = await self._wishlist.create(data)
         logger.info("Wishlist item created: id=%d name=%r", orm.id, data.name)
         return WishlistItemRead.model_validate(orm)
@@ -126,7 +144,7 @@ class ShoppingService:
         shopping_item = await self._shopping.create(
             ShoppingItemCreate(
                 name=wish.name,
-                category=wish.category,
+                category_id=wish.category_id,
                 priority=priority,
                 estimated_price=wish.estimated_price,
                 brand=wish.brand,
@@ -151,6 +169,8 @@ class ShoppingService:
         return [RecurrenceItemRead.model_validate(item) for item in items]
 
     async def create_recurrence(self, data: RecurrenceItemCreate) -> RecurrenceItemRead:
+        if data.category_id is None:
+            data = data.model_copy(update={"category_id": await self.resolve_category_id(None)})
         orm = await self._recurrence.create(data)
         logger.info("Recurrence item created: id=%d name=%r every=%d days", orm.id, data.name, data.recurrence_days)
         return RecurrenceItemRead.model_validate(orm)

@@ -12,18 +12,31 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/shopping")
 
-_CATEGORIES = ["grocery", "pharmacy", "electronics", "online", "home", "clothes", "books", "other"]
+
+async def _get_categories() -> list[dict]:
+    try:
+        return await api.get("/organizer/shopping-categories")
+    except httpx.HTTPError as e:
+        logger.error("Failed to load shopping categories: error=%s", e)
+        return []
+
+
+def _shopping_list_params(status: str, category_id: str | None, limit: int = 100) -> dict:
+    params: dict = {"status": status, "limit": limit}
+    if category_id:
+        params["category_id"] = category_id
+    return params
 
 
 @router.get("/", response_class=HTMLResponse)
 async def shopping_page(request: Request):
     status = request.query_params.get("status", "pending")
-    category = request.query_params.get("category", "all")
+    category_id = request.query_params.get("category_id")
 
     items, wishlist, frequent_items = [], [], []
     api_error: str | None = None
     try:
-        items = await api.get("/organizer/shopping", params={"status": status, "category": category, "limit": 100})
+        items = await api.get("/organizer/shopping", params=_shopping_list_params(status, category_id))
     except httpx.HTTPError as e:
         logger.error("Failed to load shopping items: error=%s", e)
         api_error = f"Cannot reach backend: {e}"
@@ -40,13 +53,16 @@ async def shopping_page(request: Request):
         logger.error("Failed to load frequent shopping items: error=%s", e)
         api_error = api_error or f"Cannot reach backend: {e}"
 
+    categories = await _get_categories()
+
     return templates.TemplateResponse(request, "shopping.html", {
         "items": items,
         "wishlist": wishlist,
         "frequent_items": frequent_items,
         "active_status": status,
-        "active_category": category,
-        "categories": _CATEGORIES,
+        "active_category_id": int(category_id) if category_id else None,
+        "categories": categories,
+        "categories_by_id": {c["id"]: c["name"] for c in categories},
         "api_error": api_error,
     })
 
@@ -54,17 +70,19 @@ async def shopping_page(request: Request):
 @router.get("/list", response_class=HTMLResponse)
 async def shopping_list_fragment(request: Request):
     status = request.query_params.get("status", "pending")
-    category = request.query_params.get("category", "all")
+    category_id = request.query_params.get("category_id")
 
     try:
-        items = await api.get("/organizer/shopping", params={"status": status, "category": category, "limit": 100})
+        items = await api.get("/organizer/shopping", params=_shopping_list_params(status, category_id))
     except httpx.HTTPError as e:
         logger.error("Failed to load shopping items: error=%s", e)
         items = []
 
+    categories = await _get_categories()
+
     return templates.TemplateResponse(request, "_shopping_list.html", {
         "items": items,
-        "categories": _CATEGORIES,
+        "categories_by_id": {c["id"]: c["name"] for c in categories},
     })
 
 
@@ -72,7 +90,7 @@ async def shopping_list_fragment(request: Request):
 async def add_shopping_item(
     request: Request,
     name: Annotated[str, Form()],
-    category: Annotated[str, Form()] = "other",
+    category_id: Annotated[int, Form()],
     priority: Annotated[str, Form()] = "need",
     quantity: Annotated[Optional[str], Form()] = None,
     unit: Annotated[Optional[str], Form()] = None,
@@ -82,7 +100,7 @@ async def add_shopping_item(
     url: Annotated[Optional[str], Form()] = None,
     notes: Annotated[Optional[str], Form()] = None,
 ):
-    payload: dict = {"name": name, "category": category, "priority": priority, "source": "manual"}
+    payload: dict = {"name": name, "category_id": category_id, "priority": priority, "source": "manual"}
     if quantity:
         payload["quantity"] = quantity
     if unit:
@@ -103,12 +121,12 @@ async def add_shopping_item(
         logger.error("Failed to create shopping item: name=%r error=%s", name, e)
         return HTMLResponse("", status_code=422)
 
-    await api.log_command("shopping.add", {"name": name, "category": category, "priority": priority}, "shopping_item", item.get("id"))
+    await api.log_command("shopping.add", {"name": name, "category_id": category_id, "priority": priority}, "shopping_item", item.get("id"))
 
     status = request.query_params.get("status", "pending")
-    list_category = request.query_params.get("category", "all")
+    list_category_id = request.query_params.get("category_id")
     try:
-        items = await api.get("/organizer/shopping", params={"status": status, "category": list_category, "limit": 100})
+        items = await api.get("/organizer/shopping", params=_shopping_list_params(status, list_category_id))
     except httpx.HTTPError as e:
         logger.error("Failed to reload shopping items after create: error=%s", e)
         items = []
@@ -119,9 +137,11 @@ async def add_shopping_item(
         logger.error("Failed to reload frequent shopping items after create: error=%s", e)
         frequent_items = []
 
+    categories_by_id = {c["id"]: c["name"] for c in await _get_categories()}
+
     list_html = templates.env.get_template("_shopping_list.html").render({
         "items": items,
-        "categories": _CATEGORIES,
+        "categories_by_id": categories_by_id,
     })
     frequent_html = templates.env.get_template("_shopping_frequent.html").render({
         "frequent_items": frequent_items,
@@ -149,18 +169,19 @@ async def wishlist_fragment(request: Request):
     except httpx.HTTPError as e:
         logger.error("Failed to load wishlist items: error=%s", e)
         items = []
-    return templates.TemplateResponse(request, "_wishlist_list.html", {"items": items, "categories": _CATEGORIES})
+    categories_by_id = {c["id"]: c["name"] for c in await _get_categories()}
+    return templates.TemplateResponse(request, "_wishlist_list.html", {"items": items, "categories_by_id": categories_by_id})
 
 
 @router.post("/wishlist", response_class=HTMLResponse)
 async def add_wishlist_item(
     request: Request,
     name: Annotated[str, Form()],
-    category: Annotated[str, Form()] = "other",
+    category_id: Annotated[int, Form()],
     estimated_price: Annotated[Optional[str], Form()] = None,
     brand: Annotated[Optional[str], Form()] = None,
 ):
-    payload: dict = {"name": name, "category": category}
+    payload: dict = {"name": name, "category_id": category_id}
     if estimated_price:
         payload["estimated_price"] = estimated_price
     if brand:
@@ -176,7 +197,8 @@ async def add_wishlist_item(
         items = await api.get("/organizer/wishlist", params={"limit": 100})
     except httpx.HTTPError as e:
         logger.error("Failed to reload wishlist items after create: error=%s", e)
-    return templates.TemplateResponse(request, "_wishlist_list.html", {"items": items, "categories": _CATEGORIES})
+    categories_by_id = {c["id"]: c["name"] for c in await _get_categories()}
+    return templates.TemplateResponse(request, "_wishlist_list.html", {"items": items, "categories_by_id": categories_by_id})
 
 
 @router.delete("/wishlist/{item_id}", response_class=HTMLResponse)
@@ -192,13 +214,14 @@ async def delete_wishlist_item(item_id: int, request: Request):
         items = await api.get("/organizer/wishlist", params={"limit": 100})
     except httpx.HTTPError as e:
         logger.error("Failed to reload wishlist items after delete: error=%s", e)
-    return templates.TemplateResponse(request, "_wishlist_list.html", {"items": items, "categories": _CATEGORIES})
+    categories_by_id = {c["id"]: c["name"] for c in await _get_categories()}
+    return templates.TemplateResponse(request, "_wishlist_list.html", {"items": items, "categories_by_id": categories_by_id})
 
 
 @router.post("/wishlist/{item_id}/promote", response_class=HTMLResponse)
 async def promote_wishlist_item(item_id: int, request: Request):
     try:
-        await api.post(f"/organizer/wishlist/{item_id}/promote", json={"category": "other"})
+        await api.post(f"/organizer/wishlist/{item_id}/promote", json={"priority": "want"})
     except httpx.HTTPError as e:
         logger.error("Failed to promote wishlist item: id=%d error=%s", item_id, e)
         return HTMLResponse('<p class="text-[#E24B4A] text-sm px-1">Failed to promote item.</p>', status_code=422)
@@ -208,4 +231,34 @@ async def promote_wishlist_item(item_id: int, request: Request):
         items = await api.get("/organizer/wishlist", params={"limit": 100})
     except httpx.HTTPError as e:
         logger.error("Failed to reload wishlist items after promote: error=%s", e)
-    return templates.TemplateResponse(request, "_wishlist_list.html", {"items": items, "categories": _CATEGORIES})
+    categories_by_id = {c["id"]: c["name"] for c in await _get_categories()}
+    return templates.TemplateResponse(request, "_wishlist_list.html", {"items": items, "categories_by_id": categories_by_id})
+
+
+# --- Categories ---
+
+@router.post("/categories", response_class=HTMLResponse)
+async def create_shopping_category(
+    request: Request,
+    name: Annotated[str, Form()],
+):
+    try:
+        await api.post("/organizer/shopping-categories", json={"name": name})
+    except httpx.HTTPError as e:
+        logger.error("Failed to create shopping category: name=%r error=%s", name, e)
+        return HTMLResponse('<p class="text-[#E24B4A] text-sm">Failed to create category.</p>', status_code=422)
+
+    categories = await _get_categories()
+    return templates.TemplateResponse(request, "_shopping_categories.html", {"categories": categories})
+
+
+@router.delete("/categories/{category_id}", response_class=HTMLResponse)
+async def delete_shopping_category(category_id: int, request: Request):
+    try:
+        await api.delete(f"/organizer/shopping-categories/{category_id}")
+    except httpx.HTTPError as e:
+        logger.error("Failed to delete shopping category: id=%d error=%s", category_id, e)
+        return HTMLResponse('<p class="text-[#E24B4A] text-sm">Failed to delete category.</p>', status_code=422)
+
+    categories = await _get_categories()
+    return templates.TemplateResponse(request, "_shopping_categories.html", {"categories": categories})

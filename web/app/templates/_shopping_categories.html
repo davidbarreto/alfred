@@ -1,0 +1,18 @@
+{% if categories %}
+<ul class="divide-y divide-gray-100">
+  {% for cat in categories %}
+  <li class="flex items-center justify-between py-2 text-sm" id="shopping-category-{{ cat.id }}">
+    <span class="text-gray-800">{{ cat.name }}</span>
+    <button
+      class="text-gray-300 hover:text-[#E24B4A] transition-colors"
+      hx-delete="/shopping/categories/{{ cat.id }}"
+      hx-target="#shopping-categories-list"
+      hx-confirm="Delete category '{{ cat.name }}'?"
+      title="Delete"
+    ><i class="ti ti-trash text-base"></i></button>
+  </li>
+  {% endfor %}
+</ul>
+{% else %}
+<p class="text-sm text-gray-400 py-3 text-center">No categories yet.</p>
+{% endif %}

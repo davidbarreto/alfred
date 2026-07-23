@@ -31,6 +31,7 @@ from app.api.routes.organizer.notes import router as notes_router
 from app.api.routes.organizer.calendar_events import router as calendar_events_router
 from app.api.routes.organizer.contacts import router as contacts_router
 from app.api.routes.organizer.shopping import shopping_router, wishlist_router, recurrence_router
+from app.api.routes.organizer.shopping_categories import router as shopping_categories_router
 from app.api.routes.finance.accounts import router as finance_accounts_router
 from app.api.routes.finance.categories import router as finance_categories_router
 from app.api.routes.finance.currencies import router as finance_currencies_router
@@ -110,6 +111,7 @@ app.include_router(contacts_router)
 app.include_router(shopping_router)
 app.include_router(wishlist_router)
 app.include_router(recurrence_router)
+app.include_router(shopping_categories_router)
 app.include_router(finance_accounts_router)
 app.include_router(finance_categories_router)
 app.include_router(finance_currencies_router)

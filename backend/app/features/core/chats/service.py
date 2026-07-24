@@ -21,6 +21,7 @@ from app.features.core.prompts import (
     CHAT_FOCUS_INSTRUCTIONS,
     CHAT_FORMATTING_INSTRUCTIONS,
     CHAT_LANGUAGE_INSTRUCTIONS,
+    CONVERSATION_TURN_PROMPT,
 )
 from app.features.core.embeddings.schemas import EmbeddingSearchRequest, EmbeddingSearchResult
 from app.features.core.embeddings.service import EmbeddingService
@@ -28,9 +29,11 @@ from app.features.core.memories.extraction_service import MemoryExtractionServic
 from app.features.core.messages.schemas import MessageCreate, MessageFilters, MessageRead
 from app.features.core.messages.service import MessageService
 from app.features.core.sessions.repository import SessionRepository
+from app.features.core.sessions.service import SessionService
 from app.features.core.sessions.summary_service import SessionSummaryService
 from app.features.core.working_memory.schemas import WorkingMemoryCreate, WorkingMemoryFilters, WorkingMemoryRead
 from app.features.core.working_memory.service import WorkingMemoryService
+from app.features.language.chunks.pronunciation_service import PronunciationService
 from app.features.language.chunks.service import ChunkService
 from app.features.language.production.schemas import CHUNKLESS_TASK_TYPES, ProductionAttemptCreate
 from app.features.language.production.service import ProductionService
@@ -39,6 +42,7 @@ from app.features.language.sessions.schemas import NextPracticePrompt
 from app.features.language.sessions.schemas import SessionFilters as LanguageSessionFilters
 from app.features.language.sessions.tables import LearningSession
 from app.integrations.llm_calls.repository import create_llm_call
+from app.shared.audio import AudioConversationProvider, AudioConverter
 from app.shared.llm import LlmProvider, StreamMeta
 
 _LANGUAGE_PENDING_KEY = "language:pending"
@@ -191,6 +195,9 @@ class ChatService:
         working_memory_service: WorkingMemoryService,
         chunk_service: ChunkService,
         production_service: ProductionService,
+        audio_converter: AudioConverter,
+        conversation_provider: AudioConversationProvider,
+        pronunciation_service: PronunciationService,
     ) -> None:
         self._session = session
         self._llm_provider = llm_provider
@@ -201,6 +208,9 @@ class ChatService:
         self._working_memory_service = working_memory_service
         self._chunk_service = chunk_service
         self._production_service = production_service
+        self._audio_converter = audio_converter
+        self._conversation_provider = conversation_provider
+        self._pronunciation_service = pronunciation_service
 
     async def _fetch_history(self, session_id: int) -> list[MessageRead]:
         session = await SessionRepository(self._session).get(session_id)
@@ -472,6 +482,86 @@ class ChatService:
             logger.debug("Chat: language pending mode — skipping memory extraction")
 
         return response_text, next_practice
+
+    async def chat_with_audio(
+        self, source: str, external_id: str, audio: bytes, mime_type: str
+    ) -> tuple[str, bytes | None]:
+        """Free-conversation turn (mode="conversation"): Gemini receives the user's raw
+        audio directly instead of a transcript. Structurally this is normal chat — same
+        session/messages/llm_calls(feature="chat") — just audio-native input."""
+        logger.info("ChatAudio: source=%s external_id=%s", source, external_id)
+        session, _ = await SessionService(self._session).get_or_create_active(source, external_id)
+
+        working_memories = await self._working_memory_service.list(WorkingMemoryFilters(active_only=True))
+        pending_wm = next((wm for wm in working_memories if wm.key == _LANGUAGE_PENDING_KEY), None)
+        pending_data: dict = {}
+        if pending_wm:
+            try:
+                pending_data = json.loads(pending_wm.value)
+            except (json.JSONDecodeError, AttributeError):
+                pending_data = {}
+        if pending_data.get("mode") != "conversation":
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="No active free-conversation session",
+            )
+
+        history = _to_message_dicts(await self._fetch_history(session.id))
+        ogg_audio = await self._audio_converter.to_ogg_opus(audio)
+
+        language_name = pending_data.get("language_name") or "the target language"
+        topic = pending_data.get("topic")
+        topic_line = f"Talk about: {topic}." if topic else "Talk about whatever comes up naturally."
+        system_prompt = CONVERSATION_TURN_PROMPT.format(language_name=language_name, topic_line=topic_line)
+
+        t0 = time.monotonic()
+        try:
+            result = await self._conversation_provider.reply(history, ogg_audio, "audio/ogg", system_prompt)
+        except Exception as exc:
+            logger.error("ChatAudio: conversation LLM call failed session_id=%d error=%s", session.id, exc)
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="AI service temporarily unavailable. Please try again in a moment.",
+            ) from exc
+        latency_ms = int((time.monotonic() - t0) * 1000)
+
+        await create_llm_call(
+            self._session,
+            provider=self._conversation_provider.provider,
+            model=self._conversation_provider.model,
+            feature="chat",
+            prompt=[{"role": "system", "content": system_prompt}] + history,
+            response=result.raw_response,
+            tokens_input=result.tokens_input,
+            tokens_output=result.tokens_output,
+            latency_ms=latency_ms,
+            is_audio=True,
+        )
+
+        await self._message_service.create(
+            MessageCreate(
+                session_id=session.id, role="user", content=result.transcript, meta={"is_audio": True}
+            )
+        )
+        await self._message_service.create(
+            MessageCreate(session_id=session.id, role="assistant", content=result.reply)
+        )
+        logger.info(
+            "ChatAudio: reply generated session_id=%d transcript_chars=%d",
+            session.id, len(result.transcript),
+        )
+
+        reply_audio: bytes | None = None
+        if pending_data.get("voice_reply"):
+            track_code = pending_data.get("track_code") or "en"
+            try:
+                reply_audio, _ = await self._pronunciation_service.get_audio(
+                    result.reply, track_code, audio_format="ogg"
+                )
+            except Exception:
+                logger.error("ChatAudio: TTS synthesis failed session_id=%d", session.id, exc_info=True)
+
+        return result.reply, reply_audio
 
     async def stream_chat(self, request: ChatRequest) -> AsyncGenerator[str, None]:
         logger.info("StreamChat: session_id=%s", request.session_id)

@@ -20,6 +20,7 @@ async def create_llm_call(
     tokens_output: int | None,
     latency_ms: int | None,
     finish_reason: str | None = None,
+    is_audio: bool = False,
 ) -> LlmCall:
     call = LlmCall(
         provider=provider,
@@ -31,6 +32,7 @@ async def create_llm_call(
         tokens_output=tokens_output,
         latency_ms=latency_ms,
         finish_reason=finish_reason,
+        is_audio=is_audio,
     )
     session.add(call)
     return call
@@ -45,6 +47,7 @@ async def get_llm_calls(
     q: str | None = None,
     after: datetime | None = None,
     before: datetime | None = None,
+    is_audio: bool | None = None,
     skip: int = 0,
     limit: int = 50,
 ) -> list[LlmCall]:
@@ -55,6 +58,8 @@ async def get_llm_calls(
         query = query.where(LlmCall.model == model)
     if feature:
         query = query.where(LlmCall.feature == feature)
+    if is_audio is not None:
+        query = query.where(LlmCall.is_audio == is_audio)
     if q:
         pattern = f"%{q}%"
         query = query.where(LlmCall.response.ilike(pattern))

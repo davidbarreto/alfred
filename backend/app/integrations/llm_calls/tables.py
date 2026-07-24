@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Optional
 
-from sqlalchemy import DateTime, Integer, String, Text, func
+from sqlalchemy import Boolean, DateTime, Integer, String, Text, func
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -24,6 +24,7 @@ class LlmCall(Base):
     tokens_output: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     latency_ms: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     finish_reason: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+    is_audio: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )

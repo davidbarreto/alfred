@@ -18,6 +18,7 @@ from app.features.core.sessions.tables import Session
 from app.features.core.working_memory.schemas import WorkingMemoryRead
 from app.features.language.chunks.schemas import ChunkRead, DailyBatchRead
 from app.features.language.sessions.tables import LearningSession
+from app.shared.audio import AudioConversationResult
 from app.shared.llm import LlmResponse
 
 
@@ -143,6 +144,11 @@ def _make_service(llm_text: str = "ok") -> tuple[ChatService, MagicMock, AsyncMo
     chunk_service.get_daily_batch = AsyncMock(return_value=[])
     production_service = AsyncMock()
     production_service.get_next_task = AsyncMock(return_value=None)
+    audio_converter = AsyncMock()
+    conversation_provider = AsyncMock()
+    conversation_provider.provider = "google"
+    conversation_provider.model = "gemini-2.5-flash"
+    pronunciation_service = AsyncMock()
     service = ChatService(
         session=session,
         llm_provider=llm_provider,
@@ -153,6 +159,9 @@ def _make_service(llm_text: str = "ok") -> tuple[ChatService, MagicMock, AsyncMo
         working_memory_service=working_memory_service,
         chunk_service=chunk_service,
         production_service=production_service,
+        audio_converter=audio_converter,
+        conversation_provider=conversation_provider,
+        pronunciation_service=pronunciation_service,
     )
     return service, llm_provider, embedding_service, message_service, memory_extraction_service
 
@@ -980,3 +989,104 @@ class TestToMessageDicts:
 
     def test_empty_list(self):
         assert _to_message_dicts([]) == []
+
+
+def _make_session_read(id: int = 1, source: str = "telegram", external_id: str = "user_123") -> MagicMock:
+    session_read = MagicMock()
+    session_read.id = id
+    session_read.source = source
+    session_read.external_id = external_id
+    return session_read
+
+
+class TestChatServiceAudio:
+    async def test_rejects_when_no_active_conversation_mode(self, mock_session_repository):
+        service, _, _, message_service, _ = _make_service()
+        service._working_memory_service.list.return_value = []
+        with patch("app.features.core.chats.service.SessionService") as mock_session_service_cls:
+            mock_session_service_cls.return_value.get_or_create_active = AsyncMock(
+                return_value=(_make_session_read(), False)
+            )
+            with pytest.raises(HTTPException) as exc_info:
+                await service.chat_with_audio("telegram", "user_123", b"raw-audio", "audio/ogg")
+        assert exc_info.value.status_code == 400
+
+    async def test_persists_transcript_and_reply_as_messages(self, mock_session_repository):
+        service, _, _, message_service, _ = _make_service()
+        message_service.list.return_value = []
+        service._working_memory_service.list.return_value = [
+            _make_wm("language:pending", json.dumps({
+                "mode": "conversation", "track_id": 3, "track_code": "fr",
+                "language_name": "French", "topic": "food", "voice_reply": False,
+            }))
+        ]
+        service._conversation_provider.reply = AsyncMock(return_value=AudioConversationResult(
+            transcript="Bonjour", reply="Salut! Comment ca va?", tip=None,
+            raw_response="{}", tokens_input=10, tokens_output=5,
+        ))
+
+        with patch("app.features.core.chats.service.SessionService") as mock_session_service_cls, \
+             patch("app.features.core.chats.service.create_llm_call", AsyncMock()) as mock_log:
+            mock_session_service_cls.return_value.get_or_create_active = AsyncMock(
+                return_value=(_make_session_read(id=7), False)
+            )
+            reply_text, reply_audio = await service.chat_with_audio("telegram", "user_123", b"raw-audio", "audio/ogg")
+
+        assert reply_text == "Salut! Comment ca va?"
+        assert reply_audio is None
+        service._audio_converter.to_ogg_opus.assert_awaited_once_with(b"raw-audio")
+
+        create_calls = message_service.create.call_args_list
+        assert len(create_calls) == 2
+        user_data = create_calls[0].args[0]
+        assert user_data.session_id == 7
+        assert user_data.role == "user"
+        assert user_data.content == "Bonjour"
+        assert user_data.meta == {"is_audio": True}
+        assistant_data = create_calls[1].args[0]
+        assert assistant_data.role == "assistant"
+        assert assistant_data.content == "Salut! Comment ca va?"
+
+        log_kwargs = mock_log.call_args.kwargs
+        assert log_kwargs["feature"] == "chat"
+        assert log_kwargs["is_audio"] is True
+
+    async def test_voice_reply_synthesizes_audio(self, mock_session_repository):
+        service, _, _, message_service, _ = _make_service()
+        message_service.list.return_value = []
+        service._working_memory_service.list.return_value = [
+            _make_wm("language:pending", json.dumps({
+                "mode": "conversation", "track_id": 3, "track_code": "fr",
+                "language_name": "French", "topic": None, "voice_reply": True,
+            }))
+        ]
+        service._conversation_provider.reply = AsyncMock(return_value=AudioConversationResult(
+            transcript="Bonjour", reply="Salut!", tip=None, raw_response="{}", tokens_input=10, tokens_output=5,
+        ))
+        service._pronunciation_service.get_audio = AsyncMock(return_value=(b"tts-bytes", "audio/ogg"))
+
+        with patch("app.features.core.chats.service.SessionService") as mock_session_service_cls, \
+             patch("app.features.core.chats.service.create_llm_call", AsyncMock()):
+            mock_session_service_cls.return_value.get_or_create_active = AsyncMock(
+                return_value=(_make_session_read(), False)
+            )
+            reply_text, reply_audio = await service.chat_with_audio("telegram", "user_123", b"raw-audio", "audio/ogg")
+
+        assert reply_audio == b"tts-bytes"
+        service._pronunciation_service.get_audio.assert_awaited_once_with("Salut!", "fr", audio_format="ogg")
+
+    async def test_provider_failure_raises_503(self, mock_session_repository):
+        service, _, _, message_service, _ = _make_service()
+        message_service.list.return_value = []
+        service._working_memory_service.list.return_value = [
+            _make_wm("language:pending", json.dumps({"mode": "conversation", "track_id": 3}))
+        ]
+        service._conversation_provider.reply = AsyncMock(side_effect=RuntimeError("gemini boom"))
+
+        with patch("app.features.core.chats.service.SessionService") as mock_session_service_cls:
+            mock_session_service_cls.return_value.get_or_create_active = AsyncMock(
+                return_value=(_make_session_read(), False)
+            )
+            with pytest.raises(HTTPException) as exc_info:
+                await service.chat_with_audio("telegram", "user_123", b"raw-audio", "audio/ogg")
+        assert exc_info.value.status_code == 503

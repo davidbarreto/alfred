@@ -51,6 +51,7 @@ from app.integrations.ffmpeg.client import FfmpegClient
 from app.integrations.file_storage.client import LocalFileStorage
 from app.integrations.google.audio_analysis_provider import GoogleAudioAnalysisProvider
 from app.integrations.google.transcription_provider import GoogleTranscriptionProvider
+from app.integrations.google.conversation_provider import GoogleConversationProvider
 from app.features.core.transcription.service import TranscriptionService
 from app.features.language.chunks.repository import ChunkRepository as LanguageChunkRepository
 from app.features.language.tracks.repository import TrackRepository
@@ -58,6 +59,8 @@ from app.features.language.sessions.repository import SessionRepository as Langu
 from app.features.language.sessions.service import SessionService as LanguageSessionService
 from app.features.language.sessions.shadowing_service import ShadowingService
 from app.features.language.production.service import ProductionService
+from app.features.language.conversation.repository import ConversationRepository
+from app.features.language.conversation.service import ConversationService
 from app.features.organizer.contacts.service import ContactService
 from app.integrations.google_contacts.client import GoogleContactsClient
 from app.integrations.google_contacts.provider import GoogleContactsProvider
@@ -217,6 +220,9 @@ def get_chat_service(session: AsyncSession = Depends(get_session)) -> ChatServic
         working_memory_service=WorkingMemoryService(session),
         chunk_service=LanguageChunkService(session),
         production_service=get_production_service(session),
+        audio_converter=FfmpegClient(),
+        conversation_provider=get_conversation_provider(),
+        pronunciation_service=get_pronunciation_service(),
     )
 
 @lru_cache
@@ -310,6 +316,12 @@ def get_audio_analysis_provider() -> GoogleAudioAnalysisProvider:
         raise RuntimeError("GEMINI_API_KEY is not set")
     return GoogleAudioAnalysisProvider(api_key=s.gemini_api_key, model_name=s.llm_pronunciation_model)
 
+def get_conversation_provider() -> GoogleConversationProvider:
+    s = get_settings()
+    if not s.gemini_api_key:
+        raise RuntimeError("GEMINI_API_KEY is not set")
+    return GoogleConversationProvider(api_key=s.gemini_api_key, model_name=s.llm_conversation_model)
+
 def get_transcription_provider() -> GoogleTranscriptionProvider:
     s = get_settings()
     if not s.gemini_api_key:
@@ -342,6 +354,20 @@ def get_shadowing_service(session: AsyncSession = Depends(get_session)) -> Shado
         audio_storage=get_file_storage(),
         audio_converter=FfmpegClient(),
         analysis_provider=get_audio_analysis_provider(),
+    )
+
+def get_conversation_service(session: AsyncSession = Depends(get_session)) -> ConversationService:
+    return ConversationService(
+        session=session,
+        thread_repo=ConversationRepository(session),
+        message_service=MessageService(session),
+        language_session_service=get_language_session_service(session),
+        track_repo=TrackRepository(session),
+        audio_storage=get_file_storage(),
+        audio_converter=FfmpegClient(),
+        conversation_provider=get_conversation_provider(),
+        pronunciation_service=get_pronunciation_service(),
+        llm_provider=get_llm_provider(),
     )
 
 # Dependencies shortcuts
@@ -387,4 +413,5 @@ LanguageSessionServiceDep = Annotated[LanguageSessionService, Depends(get_langua
 FileStorageDep = Annotated[LocalFileStorage, Depends(get_file_storage)]
 ShadowingServiceDep = Annotated[ShadowingService, Depends(get_shadowing_service)]
 ProductionServiceDep = Annotated[ProductionService, Depends(get_production_service)]
+ConversationServiceDep = Annotated[ConversationService, Depends(get_conversation_service)]
 TranscriptionServiceDep = Annotated[TranscriptionService, Depends(get_transcription_service)]

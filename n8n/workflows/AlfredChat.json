@@ -1299,6 +1299,238 @@
             ],
             "id": "431a58d8-f190-416d-9bf3-fb6a8452cd91",
             "name": "Decide Next Practice Mode"
+        },
+        {
+            "parameters": {
+                "rules": {
+                    "values": [
+                        {
+                            "conditions": {
+                                "options": {
+                                    "caseSensitive": true,
+                                    "leftValue": "",
+                                    "typeValidation": "strict",
+                                    "version": 3
+                                },
+                                "conditions": [
+                                    {
+                                        "id": "dc6d94b3-c253-4634-b7bd-b45ec1164d27",
+                                        "leftValue": "={{ $('Get Working Memory').item.json.value?.parseJson()?.mode }}",
+                                        "rightValue": "conversation",
+                                        "operator": {
+                                            "type": "string",
+                                            "operation": "equals"
+                                        }
+                                    }
+                                ],
+                                "combinator": "and"
+                            },
+                            "renameOutput": true,
+                            "outputKey": "Conversation"
+                        },
+                        {
+                            "conditions": {
+                                "options": {
+                                    "caseSensitive": true,
+                                    "leftValue": "",
+                                    "typeValidation": "strict",
+                                    "version": 3
+                                },
+                                "conditions": [
+                                    {
+                                        "id": "90d2d74a-16eb-45f1-8cf8-bf0dd5f630ee",
+                                        "leftValue": "={{ $('Get Working Memory').item.json.value?.parseJson()?.mode }}",
+                                        "rightValue": "roleplay",
+                                        "operator": {
+                                            "type": "string",
+                                            "operation": "equals"
+                                        }
+                                    }
+                                ],
+                                "combinator": "and"
+                            },
+                            "renameOutput": true,
+                            "outputKey": "Roleplay"
+                        }
+                    ]
+                },
+                "options": {
+                    "fallbackOutput": "extra"
+                }
+            },
+            "type": "n8n-nodes-base.switch",
+            "typeVersion": 3.4,
+            "position": [
+                112,
+                750
+            ],
+            "id": "6e0d6270-d357-4baf-86ce-c4e1ffd38137",
+            "name": "Decide Audio Mode"
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "http://api:8000/core/chats/audio",
+                "authentication": "genericCredentialType",
+                "genericAuthType": "httpBearerAuth",
+                "sendBody": true,
+                "contentType": "multipart-form-data",
+                "bodyParameters": {
+                    "parameters": [
+                        {
+                            "name": "source",
+                            "value": "telegram"
+                        },
+                        {
+                            "name": "external_id",
+                            "value": "={{ $('Message Trigger').item.json.message?.chat?.id?.toString() || $('Message Trigger').item.json.callback_query?.message?.chat?.id?.toString() }}"
+                        },
+                        {
+                            "name": "audio",
+                            "parameterType": "formBinaryData",
+                            "inputDataFieldName": "data"
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.4,
+            "position": [
+                368,
+                680
+            ],
+            "id": "75ed77c9-8820-4557-b0e5-4ca12f9fcb6c",
+            "name": "Send Conversation Audio",
+            "credentials": {
+                "httpBearerAuth": {
+                    "id": "oj5Yf1MhLsryeSrX",
+                    "name": "Bearer Auth account"
+                }
+            },
+            "onError": "continueErrorOutput"
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "http://api:8000/language/conversation/turns/audio",
+                "authentication": "genericCredentialType",
+                "genericAuthType": "httpBearerAuth",
+                "sendBody": true,
+                "contentType": "multipart-form-data",
+                "bodyParameters": {
+                    "parameters": [
+                        {
+                            "name": "thread_id",
+                            "value": "={{ $('Get Working Memory').item.json.value.parseJson().thread_id }}"
+                        },
+                        {
+                            "name": "audio",
+                            "parameterType": "formBinaryData",
+                            "inputDataFieldName": "data"
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.4,
+            "position": [
+                368,
+                820
+            ],
+            "id": "250ad3e3-efe8-4dcd-9f02-bd408f777286",
+            "name": "Record Roleplay Turn Audio",
+            "credentials": {
+                "httpBearerAuth": {
+                    "id": "oj5Yf1MhLsryeSrX",
+                    "name": "Bearer Auth account"
+                }
+            },
+            "onError": "continueErrorOutput"
+        },
+        {
+            "parameters": {
+                "conditions": {
+                    "options": {
+                        "caseSensitive": true,
+                        "leftValue": "",
+                        "typeValidation": "strict",
+                        "version": 3
+                    },
+                    "conditions": [
+                        {
+                            "id": "29dd176d-8a1f-46e2-a84c-734b53b1c605",
+                            "leftValue": "={{ !!$json.reply_audio_base64 }}",
+                            "rightValue": true,
+                            "operator": {
+                                "type": "boolean",
+                                "operation": "equals"
+                            }
+                        }
+                    ],
+                    "combinator": "and"
+                },
+                "options": {}
+            },
+            "type": "n8n-nodes-base.if",
+            "typeVersion": 2.3,
+            "position": [
+                640,
+                750
+            ],
+            "id": "0eb785f0-75e6-4c45-b68e-eab51581cd5b",
+            "name": "Has Reply Audio"
+        },
+        {
+            "parameters": {
+                "operation": "toBinary",
+                "sourceProperty": "reply_audio_base64",
+                "binaryPropertyName": "audio",
+                "options": {
+                    "mimeType": "audio/ogg",
+                    "fileName": "reply.ogg"
+                }
+            },
+            "type": "n8n-nodes-base.convertToFile",
+            "typeVersion": 1.1,
+            "position": [
+                880,
+                750
+            ],
+            "id": "cd3711fd-0863-4a57-bd35-d83e78ce2a49",
+            "name": "Convert Reply Audio to Binary"
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "=https://api.telegram.org/bot{{ $env.TELEGRAM_BOT_TOKEN }}/sendVoice",
+                "sendBody": true,
+                "contentType": "multipart-form-data",
+                "bodyParameters": {
+                    "parameters": [
+                        {
+                            "name": "chat_id",
+                            "value": "={{ $('Message Trigger').item.json.message?.chat?.id?.toString() || $('Message Trigger').item.json.callback_query?.message?.chat?.id?.toString() }}"
+                        },
+                        {
+                            "name": "voice",
+                            "parameterType": "formBinaryData",
+                            "inputDataFieldName": "audio"
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.4,
+            "position": [
+                1120,
+                750
+            ],
+            "id": "64aaf9e5-82cc-4749-ac27-591e7f6e9c7d",
+            "name": "Send Conversation Voice Reply",
+            "onError": "continueErrorOutput"
         }
     ],
     "pinData": {},
@@ -1601,7 +1833,7 @@
                 ],
                 [
                     {
-                        "node": "Transcribe a recording",
+                        "node": "Decide Audio Mode",
                         "type": "main",
                         "index": 0
                     }
@@ -1851,6 +2083,112 @@
                 [
                     {
                         "node": "Normalize Review Prompt",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Decide Audio Mode": {
+            "main": [
+                [
+                    {
+                        "node": "Send Conversation Audio",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "Record Roleplay Turn Audio",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "Transcribe a recording",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Send Conversation Audio": {
+            "main": [
+                [
+                    {
+                        "node": "Send Message",
+                        "type": "main",
+                        "index": 0
+                    },
+                    {
+                        "node": "Has Reply Audio",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "Set Error Message",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Record Roleplay Turn Audio": {
+            "main": [
+                [
+                    {
+                        "node": "Send Message",
+                        "type": "main",
+                        "index": 0
+                    },
+                    {
+                        "node": "Has Reply Audio",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "Set Error Message",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Has Reply Audio": {
+            "main": [
+                [
+                    {
+                        "node": "Convert Reply Audio to Binary",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                []
+            ]
+        },
+        "Convert Reply Audio to Binary": {
+            "main": [
+                [
+                    {
+                        "node": "Send Conversation Voice Reply",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Send Conversation Voice Reply": {
+            "main": [
+                [],
+                [
+                    {
+                        "node": "Set Error Message",
                         "type": "main",
                         "index": 0
                     }

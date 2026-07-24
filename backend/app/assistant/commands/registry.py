@@ -280,9 +280,28 @@ COMMAND_DEFINITIONS = {
             "requires_args": True,
             "arg_keys": ["language_code", "task_type", "count"],
         },
+        "conversation": {
+            "description": "Start a free-form spoken conversation practice session for a language "
+            "(add 'roleplay <scenario>' for a scripted roleplay instead)",
+            "aliases": ["/conversation", "/talk"],
+            "flags": {},
+            "requires_args": True,
+            "arg_keys": ["language_code", "rest"],
+        },
+        # Convenience alias: /roleplay <lang> <scenario> is equivalent to
+        # /conversation <lang> roleplay <scenario>. Both resolve to action="conversation".
+        "conversation_roleplay": {
+            "description": "Start a roleplay conversation practice session for a language",
+            "action": "conversation",
+            "aliases": ["/roleplay"],
+            "flags": {},
+            "requires_args": True,
+            "arg_keys": ["language_code", "rest"],
+            "implicit_flags": {"mode": "roleplay"},
+        },
         "stop": {
-            "description": "Stop the active language practice, review, or production session",
-            "aliases": ["/stop", "/stop-practice", "/stop-review"],
+            "description": "Stop the active language practice, review, production, or conversation session",
+            "aliases": ["/stop", "/stop-practice", "/stop-review", "/stop-conversation"],
             "flags": {},
         },
     },

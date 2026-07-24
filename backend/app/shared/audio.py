@@ -97,3 +97,40 @@ class TranscriptionProvider(Protocol):
     def model(self) -> str: ...
 
     async def transcribe(self, audio: bytes, mime_type: str) -> TranscriptionResult: ...
+
+
+@dataclass
+class AudioConversationResult:
+    """One conversational turn: what was heard, how Alfred replied, and an optional
+    pronunciation/grammar tip — plus the raw LLM call metadata, for llm_calls logging."""
+
+    transcript: str
+    reply: str
+    tip: str | None
+    raw_response: str
+    tokens_input: int | None
+    tokens_output: int | None
+
+
+class AudioConversationProvider(Protocol):
+    """Async interface for a multi-turn audio conversation with an AI.
+
+    Only the newest turn carries raw audio; `history` carries prior turns as
+    plain text so payload size stays bounded across a long conversation.
+    Swap the implementation (Google Gemini, …) without touching the chat or
+    conversation service layers.
+    """
+
+    @property
+    def provider(self) -> str: ...
+
+    @property
+    def model(self) -> str: ...
+
+    async def reply(
+        self,
+        history: list[dict[str, str]],
+        current_audio: bytes,
+        mime_type: str,
+        system: str,
+    ) -> AudioConversationResult: ...

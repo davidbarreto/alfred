@@ -1,12 +1,13 @@
+import base64
 import json
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile, status
 from fastapi.responses import StreamingResponse
 
 from app.api.auth import require_auth
 from app.config import get_settings
 from app.dependencies import ChatServiceDep, SessionServiceDep
-from app.features.core.chats.schemas import ChatRequest, ChatResponse
+from app.features.core.chats.schemas import ChatAudioResponse, ChatRequest, ChatResponse
 
 router = APIRouter(
     prefix="/core/chats",
@@ -32,6 +33,22 @@ async def chat(
         source=session.source if session else None,
         external_id=session.external_id if session else None,
         next_practice=next_practice,
+    )
+
+
+@router.post("/audio", response_model=ChatAudioResponse)
+async def chat_audio(
+    service: ChatServiceDep,
+    source: str = Form(...),
+    external_id: str = Form(...),
+    audio: UploadFile = File(...),
+) -> ChatAudioResponse:
+    audio_bytes = await audio.read()
+    mime_type = audio.content_type or "audio/ogg"
+    reply_text, reply_audio = await service.chat_with_audio(source, external_id, audio_bytes, mime_type)
+    return ChatAudioResponse(
+        response=reply_text,
+        reply_audio_base64=base64.b64encode(reply_audio).decode("ascii") if reply_audio else None,
     )
 
 

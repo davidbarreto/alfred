@@ -70,6 +70,7 @@ class ShadowingService:
                         tokens_input=call_result.tokens_input,
                         tokens_output=call_result.tokens_output,
                         latency_ms=latency_ms,
+                        is_audio=True,
                     )
 
         result = await self._session_service.record_shadowing(

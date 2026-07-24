@@ -1,11 +1,11 @@
 import json
 import pytest
 from datetime import datetime, timezone
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, MagicMock
 
 from fastapi import HTTPException
 
-from app.assistant.commands.handlers.language import handle_language
+from app.assistant.commands.handlers.language import _parse_conversation_args, handle_language
 from app.features.core.working_memory.schemas import WorkingMemoryRead
 from app.features.language.chunks.schemas import ChunkRead, DailyBatchRead
 from app.features.language.tracks.schemas import TrackRead
@@ -569,3 +569,195 @@ class TestLanguageCommandRegistry:
         commands = await detect_commands("/stop-review")
         assert len(commands) == 1
         assert commands[0].command == "stop"
+
+    async def test_detect_conversation_command(self):
+        from app.assistant.commands.resolver import detect_commands
+        commands = await detect_commands("/conversation fr talking about food")
+        assert len(commands) == 1
+        assert commands[0].type == "language"
+        assert commands[0].command == "conversation"
+        assert commands[0].args["language_code"] == "fr"
+        assert commands[0].args["rest"] == "talking about food"
+
+    async def test_detect_roleplay_alias_sets_implicit_mode(self):
+        from app.assistant.commands.resolver import detect_commands
+        commands = await detect_commands("/roleplay fr ordering coffee")
+        assert len(commands) == 1
+        assert commands[0].type == "language"
+        assert commands[0].command == "conversation"
+        assert commands[0].args["mode"] == "roleplay"
+        assert commands[0].args["language_code"] == "fr"
+        assert commands[0].args["rest"] == "ordering coffee"
+
+    async def test_detect_stop_conversation_alias(self):
+        from app.assistant.commands.resolver import detect_commands
+        commands = await detect_commands("/stop-conversation")
+        assert len(commands) == 1
+        assert commands[0].command == "stop"
+
+
+class TestParseConversationArgs:
+    def test_defaults_to_free_conversation_with_voice_on(self):
+        mode, topic, voice_reply = _parse_conversation_args("talking about food", None)
+        assert mode == "conversation"
+        assert topic == "talking about food"
+        assert voice_reply is True
+
+    def test_no_topic_is_empty_string(self):
+        mode, topic, voice_reply = _parse_conversation_args("", None)
+        assert mode == "conversation"
+        assert topic == ""
+        assert voice_reply is True
+
+    def test_text_keyword_opts_out_of_voice(self):
+        mode, topic, voice_reply = _parse_conversation_args("talking about food text", None)
+        assert mode == "conversation"
+        assert topic == "talking about food"
+        assert voice_reply is False
+
+    def test_leading_roleplay_keyword_switches_mode(self):
+        mode, scenario, voice_reply = _parse_conversation_args("roleplay ordering coffee", None)
+        assert mode == "roleplay"
+        assert scenario == "ordering coffee"
+        assert voice_reply is False
+
+    def test_roleplay_voice_keyword_opts_in(self):
+        mode, scenario, voice_reply = _parse_conversation_args("roleplay ordering coffee voice", None)
+        assert mode == "roleplay"
+        assert scenario == "ordering coffee"
+        assert voice_reply is True
+
+    def test_forced_mode_from_roleplay_alias_treats_rest_as_scenario(self):
+        mode, scenario, voice_reply = _parse_conversation_args("ordering coffee", "roleplay")
+        assert mode == "roleplay"
+        assert scenario == "ordering coffee"
+        assert voice_reply is False
+
+
+def _make_conversation_service(**kwargs):
+    service = AsyncMock()
+    start_result = kwargs.get("start_result") or MagicMock(
+        thread_id=99, track_code="fr", language_name="French", opening_text="Bonjour!", opening_audio_ref=None,
+    )
+    service.start = AsyncMock(return_value=start_result)
+    end_result = kwargs.get("end_result") or MagicMock(tip="Great job!", turn_count=3)
+    service.end = AsyncMock(return_value=end_result)
+    return service
+
+
+def _make_language_session_service():
+    service = AsyncMock()
+    service.record_session = AsyncMock(return_value=MagicMock(id=1))
+    return service
+
+
+class TestHandleStartConversation:
+    async def test_free_conversation_stores_topic_and_no_thread(self):
+        track_svc, chunk_svc, wm_svc = _make_services()
+        conversation_svc = _make_conversation_service()
+
+        result = await handle_language(
+            "conversation", {"language_code": "fr", "rest": "talking about food"},
+            track_svc, chunk_svc, wm_svc,
+            conversation_service=conversation_svc, message_id=1,
+        )
+
+        assert result["mode"] == "conversation"
+        assert result["topic"] == "talking about food"
+        conversation_svc.start.assert_not_awaited()
+        wm_value = json.loads(wm_svc.create.call_args[0][0].value)
+        assert wm_value["mode"] == "conversation"
+        assert wm_value["voice_reply"] is True
+
+    async def test_roleplay_starts_thread_via_service(self):
+        track_svc, chunk_svc, wm_svc = _make_services()
+        conversation_svc = _make_conversation_service()
+
+        result = await handle_language(
+            "conversation", {"language_code": "fr", "rest": "roleplay ordering coffee"},
+            track_svc, chunk_svc, wm_svc,
+            conversation_service=conversation_svc, message_id=7,
+        )
+
+        conversation_svc.start.assert_awaited_once_with(3, 7, "ordering coffee", False)
+        assert result["mode"] == "roleplay"
+        assert result["thread_id"] == 99
+        assert result["opening_text"] == "Bonjour!"
+
+    async def test_roleplay_without_scenario_raises_400(self):
+        track_svc, chunk_svc, wm_svc = _make_services()
+        conversation_svc = _make_conversation_service()
+
+        with pytest.raises(HTTPException) as exc_info:
+            await handle_language(
+                "conversation", {"language_code": "fr", "rest": "roleplay"},
+                track_svc, chunk_svc, wm_svc,
+                conversation_service=conversation_svc, message_id=7,
+            )
+        assert exc_info.value.status_code == 400
+
+    async def test_missing_message_id_raises_400(self):
+        track_svc, chunk_svc, wm_svc = _make_services()
+        conversation_svc = _make_conversation_service()
+
+        with pytest.raises(HTTPException) as exc_info:
+            await handle_language(
+                "conversation", {"language_code": "fr", "rest": "hello"},
+                track_svc, chunk_svc, wm_svc,
+                conversation_service=conversation_svc, message_id=None,
+            )
+        assert exc_info.value.status_code == 400
+
+    async def test_missing_conversation_service_raises_503(self):
+        track_svc, chunk_svc, wm_svc = _make_services()
+        with pytest.raises(HTTPException) as exc_info:
+            await handle_language(
+                "conversation", {"language_code": "fr", "rest": "hello"},
+                track_svc, chunk_svc, wm_svc,
+                message_id=1,
+            )
+        assert exc_info.value.status_code == 503
+
+
+class TestHandleStopConversationModes:
+    async def test_stop_ends_roleplay_thread(self):
+        wm = WorkingMemoryRead(
+            id=8, key="language:pending",
+            value=json.dumps({"mode": "roleplay", "track_id": 3, "thread_id": 99}),
+            importance=1.0, expires_at=None, session_id=None,
+            created_at=datetime(2026, 1, 1, tzinfo=timezone.utc),
+        )
+        track_svc, chunk_svc, wm_svc = _make_services(existing_wm=[wm])
+        conversation_svc = _make_conversation_service()
+
+        result = await handle_language(
+            "stop", {}, track_svc, chunk_svc, wm_svc, conversation_service=conversation_svc,
+        )
+
+        conversation_svc.end.assert_awaited_once_with(99)
+        assert result["mode"] == "stopped"
+        assert result["tip"] == "Great job!"
+        assert result["turn_count"] == 3
+        wm_svc.delete.assert_called_once_with(8)
+
+    async def test_stop_records_lightweight_session_for_free_conversation(self):
+        wm = WorkingMemoryRead(
+            id=9, key="language:pending",
+            value=json.dumps({"mode": "conversation", "track_id": 3, "topic": "food"}),
+            importance=1.0, expires_at=None, session_id=None,
+            created_at=datetime(2026, 1, 1, tzinfo=timezone.utc),
+        )
+        track_svc, chunk_svc, wm_svc = _make_services(existing_wm=[wm])
+        language_session_svc = _make_language_session_service()
+
+        result = await handle_language(
+            "stop", {}, track_svc, chunk_svc, wm_svc, language_session_service=language_session_svc,
+        )
+
+        language_session_svc.record_session.assert_awaited_once()
+        session_create = language_session_svc.record_session.call_args.args[0]
+        assert session_create.session_type == "conversation"
+        assert session_create.transcript_or_notes == "food"
+        assert result["mode"] == "stopped"
+        assert result["topic"] == "food"
+        wm_svc.delete.assert_called_once_with(9)

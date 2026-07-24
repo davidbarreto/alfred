@@ -23,6 +23,7 @@ async def read_llm_calls(
     q: str | None = Query(default=None, description="Search in response text"),
     after: datetime | None = Query(default=None, description="Return calls created after this timestamp"),
     before: datetime | None = Query(default=None, description="Return calls created before this timestamp"),
+    is_audio: bool | None = Query(default=None, description="Filter by whether the call included audio input"),
     skip: int = Query(default=0, ge=0),
     limit: int = Query(default=50, ge=1, le=200),
     session: AsyncSession = Depends(get_session),
@@ -35,6 +36,7 @@ async def read_llm_calls(
         q=q,
         after=after,
         before=before,
+        is_audio=is_audio,
         skip=skip,
         limit=limit,
     )

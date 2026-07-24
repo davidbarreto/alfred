@@ -22,7 +22,9 @@ from app.features.finance.categories.service import CategoryService
 from app.features.finance.recurring_transactions.service import RecurringTransactionService
 from app.features.finance.transactions.service import TransactionService
 from app.features.language.chunks.service import ChunkService
+from app.features.language.conversation.service import ConversationService
 from app.features.language.production.service import ProductionService
+from app.features.language.sessions.service import SessionService as LanguageSessionService
 from app.features.language.tracks.service import TrackService
 from app.features.organizer.calendar_events.service import CalendarEventService
 from app.features.organizer.notes.service import NoteService
@@ -50,6 +52,9 @@ async def execute(
     working_memory_service: WorkingMemoryService | None = None,
     embedding_service: EmbeddingService | None = None,
     production_service: ProductionService | None = None,
+    conversation_service: ConversationService | None = None,
+    language_session_service: LanguageSessionService | None = None,
+    message_id: int | None = None,
 ) -> Any:
     logger.info("Execute: %s.%s args_keys=%s", cmd_type, command, list(arguments.keys()))
 
@@ -94,6 +99,9 @@ async def execute(
         return await handle_language(
             command, arguments, track_service, chunk_service, working_memory_service,
             production_service=production_service,
+            conversation_service=conversation_service,
+            language_session_service=language_session_service,
+            message_id=message_id,
         )
 
     if cmd_type == "recall":

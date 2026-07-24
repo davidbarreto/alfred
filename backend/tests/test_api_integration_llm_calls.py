@@ -19,6 +19,7 @@ def _llm_call_read(**kwargs):
         tokens_input=20,
         tokens_output=15,
         latency_ms=312,
+        is_audio=False,
         created_at=datetime(2026, 6, 16, 10, 0, 0, tzinfo=timezone.utc),
     )
     defaults.update(kwargs)

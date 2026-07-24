@@ -54,6 +54,7 @@ from app.api.routes.language.grammar_scope import router as language_grammar_sco
 from app.api.routes.language.chunks import router as language_chunks_router
 from app.api.routes.language.sessions import router as language_sessions_router
 from app.api.routes.language.production import router as language_production_router
+from app.api.routes.language.conversation import router as language_conversation_router
 from app.config import get_settings
 from app.db.session import async_session
 from app.dependencies import get_notion_client
@@ -135,6 +136,7 @@ app.include_router(language_grammar_scope_router)
 app.include_router(language_chunks_router)
 app.include_router(language_sessions_router)
 app.include_router(language_production_router)
+app.include_router(language_conversation_router)
 
 @app.exception_handler(RequestValidationError)
 async def _validation_error_handler(request: Request, exc: RequestValidationError) -> JSONResponse:

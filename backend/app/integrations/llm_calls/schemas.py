@@ -18,4 +18,5 @@ class LlmCallRead(BaseModel):
     tokens_input: int | None
     tokens_output: int | None
     latency_ms: int | None
+    is_audio: bool
     created_at: datetime

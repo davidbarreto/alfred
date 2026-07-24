@@ -31,6 +31,7 @@ class TranscriptionService:
             tokens_input=result.tokens_input,
             tokens_output=result.tokens_output,
             latency_ms=latency_ms,
+            is_audio=True,
         )
         logger.info("Audio transcribed: chars=%d latency_ms=%d", len(result.text), latency_ms)
         return TranscriptionRead(text=result.text)

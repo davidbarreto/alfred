@@ -1100,31 +1100,6 @@
         },
         {
             "parameters": {
-                "chatId": "={{ $('Message Trigger').item.json.message.chat.id }}",
-                "text": "Listening to your audio... \ud83c\udfa7 Just a second!",
-                "additionalFields": {
-                    "appendAttribution": false
-                }
-            },
-            "type": "n8n-nodes-base.telegram",
-            "typeVersion": 1.2,
-            "position": [
-                -656,
-                256
-            ],
-            "id": "4f85f141-d528-4b8a-93b0-40b21d3d65f5",
-            "name": "Waiting Analyzing Msg",
-            "webhookId": "27a358c6-6086-4358-87bf-aa2940c651d6",
-            "credentials": {
-                "telegramApi": {
-                    "id": "t63z4EHeYTEZtFAR",
-                    "name": "Telegram account"
-                }
-            },
-            "onError": "continueErrorOutput"
-        },
-        {
-            "parameters": {
                 "method": "GET",
                 "url": "http://api:8000/language/chunks/pronunciation",
                 "authentication": "genericCredentialType",
@@ -1557,7 +1532,7 @@
                 ],
                 [
                     {
-                        "node": "Waiting Analyzing Msg",
+                        "node": "Get Working Memory",
                         "type": "main",
                         "index": 0
                     }
@@ -1965,24 +1940,6 @@
                 [
                     {
                         "node": "Aggregate Texts",
-                        "type": "main",
-                        "index": 0
-                    }
-                ]
-            ]
-        },
-        "Waiting Analyzing Msg": {
-            "main": [
-                [
-                    {
-                        "node": "Get Working Memory",
-                        "type": "main",
-                        "index": 0
-                    }
-                ],
-                [
-                    {
-                        "node": "Set Error Message",
                         "type": "main",
                         "index": 0
                     }

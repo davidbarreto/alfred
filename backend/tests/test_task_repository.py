@@ -81,15 +81,19 @@ class TestGetTasks:
         assert len(result) == 3
         session.execute.assert_called_once()
 
-    async def test_orders_by_most_recent_first(self):
+    async def test_orders_by_urgency_then_priority_then_most_recent(self):
         session = _make_session()
         session.execute.return_value = _scalar_all([])
 
         repo = TaskRepository(session)
         await repo.get_tasks(TaskFilters())
 
-        query = session.execute.call_args[0][0]
-        assert "ORDER BY organizer.tasks.id DESC" in str(query)
+        query = str(session.execute.call_args[0][0])
+        order_by = query.split("ORDER BY", 1)[1]
+        urgency_pos = order_by.index("organizer.tasks.urgency")
+        priority_pos = order_by.index("organizer.tasks.priority")
+        id_desc_pos = order_by.index("organizer.tasks.id DESC")
+        assert urgency_pos < priority_pos < id_desc_pos
 
     async def test_empty_list(self):
         session = _make_session()

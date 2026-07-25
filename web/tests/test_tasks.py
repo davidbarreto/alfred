@@ -33,6 +33,53 @@ class TestTasksPageFilters:
         assert "due_today" not in params
 
 
+class TestRecurrenceFilters:
+    def test_habits_filter_keeps_only_recurring_tasks(self, client, mock_api):
+        mock_api["get"].return_value = [
+            _task(id=1, title="Water plants", recurrence_rule="FREQ=DAILY"),
+            _task(id=2, title="Buy milk", recurrence_rule=None),
+        ]
+
+        resp = client.get("/tasks/?filter=habits")
+
+        assert resp.status_code == 200
+        assert "Water plants" in resp.text
+        assert "Buy milk" not in resp.text
+
+    def test_one_off_filter_keeps_only_non_recurring_tasks(self, client, mock_api):
+        mock_api["get"].return_value = [
+            _task(id=1, title="Water plants", recurrence_rule="FREQ=DAILY"),
+            _task(id=2, title="Buy milk", recurrence_rule=None),
+        ]
+
+        resp = client.get("/tasks/?filter=one_off")
+
+        assert resp.status_code == 200
+        assert "Buy milk" in resp.text
+        assert "Water plants" not in resp.text
+
+    def test_one_off_filter_fetches_full_batch(self, client, mock_api):
+        mock_api["get"].return_value = [_task(id=1)]
+
+        resp = client.get("/tasks/?filter=one_off")
+
+        assert resp.status_code == 200
+        params = mock_api["get"].call_args.kwargs["params"]
+        assert params["limit"] == 200
+
+    def test_all_filter_does_not_apply_recurrence_filtering(self, client, mock_api):
+        mock_api["get"].return_value = [
+            _task(id=1, title="Water plants", recurrence_rule="FREQ=DAILY"),
+            _task(id=2, title="Buy milk", recurrence_rule=None),
+        ]
+
+        resp = client.get("/tasks/?filter=all")
+
+        assert resp.status_code == 200
+        assert "Water plants" in resp.text
+        assert "Buy milk" in resp.text
+
+
 class TestUpdateTask:
     def test_updates_task_and_renders_filtered_list(self, client, mock_api):
         mock_api["patch"].return_value = _task(id=3, title="Buy oat milk", priority="HIGH")

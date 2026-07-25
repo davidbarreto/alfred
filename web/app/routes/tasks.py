@@ -15,6 +15,7 @@ _FILTER_DEFS = {
     "today":     {"label": "Today",     "status": "TODO"},
     "this_week": {"label": "This week", "status": "TODO"},
     "habits":    {"label": "Habits",    "status": "ACTIVE"},
+    "one_off":   {"label": "One-off",   "status": "ACTIVE"},
     "work":      {"label": "Work",      "status": "ACTIVE", "tags": ["work"]},
     "personal":  {"label": "Personal",  "status": "ACTIVE", "tags": ["personal"]},
     "completed": {"label": "Completed", "status": "DONE"},
@@ -32,14 +33,22 @@ def _build_params(active_filter: str) -> dict:
         params["deadline_from"] = today.isoformat()
         params["deadline_to"] = (today + timedelta(days=6)).isoformat()
         params["include_recurring"] = "true"
-    elif active_filter == "habits":
-        # Fetch all; filter recurring-only in the route handler
+    elif active_filter in ("habits", "one_off"):
+        # Fetch all; filter recurring/non-recurring in the route handler
         params["limit"] = 200
 
     if "tags" in defn:
         params["tags"] = defn["tags"]
 
     return params
+
+
+def _apply_recurrence_filter(tasks: list[dict], active_filter: str) -> list[dict]:
+    if active_filter == "habits":
+        return [t for t in tasks if t.get("recurrence_rule")]
+    if active_filter == "one_off":
+        return [t for t in tasks if not t.get("recurrence_rule")]
+    return tasks
 
 
 @router.get("/", response_class=HTMLResponse)
@@ -50,8 +59,7 @@ async def tasks_page(request: Request):
     api_error: str | None = None
     try:
         tasks = await api.get("/organizer/tasks", params=params)
-        if active_filter == "habits":
-            tasks = [t for t in tasks if t.get("recurrence_rule")]
+        tasks = _apply_recurrence_filter(tasks, active_filter)
     except httpx.HTTPStatusError as e:
         tasks = []
         api_error = f"API error {e.response.status_code}: {e.response.text[:200]}"
@@ -76,8 +84,7 @@ async def tasks_list_fragment(request: Request):
 
     try:
         tasks = await api.get("/organizer/tasks", params=params)
-        if active_filter == "habits":
-            tasks = [t for t in tasks if t.get("recurrence_rule")]
+        tasks = _apply_recurrence_filter(tasks, active_filter)
     except httpx.HTTPError:
         tasks = []
 
@@ -171,8 +178,7 @@ async def update_task(
     tasks = []
     try:
         tasks = await api.get("/organizer/tasks", params=params)
-        if active_filter == "habits":
-            tasks = [t for t in tasks if t.get("recurrence_rule")]
+        tasks = _apply_recurrence_filter(tasks, active_filter)
     except httpx.HTTPError:
         pass
     return templates.TemplateResponse(request, "_tasks_list.html", {

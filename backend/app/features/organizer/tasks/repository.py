@@ -1,5 +1,5 @@
 from datetime import date, datetime, time, timedelta, timezone
-from sqlalchemy import and_, or_, select, update
+from sqlalchemy import and_, case, or_, select, update
 from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -8,6 +8,14 @@ from app.features.organizer.tasks.tables import Task, TaskCompletion
 from app.features.organizer.tasks.schemas import TaskCreate, TaskUpdate, TaskFilters
 
 _TASK_EXCLUDE = {"tags"}
+
+_URGENCY_ORDER = case((Task.urgency == "URGENT", 0), else_=1)
+_PRIORITY_ORDER = case(
+    (Task.priority == "HIGH", 0),
+    (Task.priority == "MEDIUM", 1),
+    (Task.priority == "LOW", 2),
+    else_=3,
+)
 
 
 class TaskRepository:
@@ -58,7 +66,7 @@ class TaskRepository:
                     query = query.where(deadline_cond)
         if task_filter.tags:
             query = query.where(Task.tags.any(Tag.name.in_(task_filter.tags)))
-        query = query.order_by(Task.id.desc()).limit(task_filter.limit)
+        query = query.order_by(_URGENCY_ORDER, _PRIORITY_ORDER, Task.id.desc()).limit(task_filter.limit)
         result = await self._session.execute(query)
         return list(result.scalars().all())
 

@@ -235,9 +235,9 @@ def get_weather_provider() -> OpenMeteoProvider:
 
 def get_holiday_client() -> GooglePublicHolidayClient | None:
     s = get_settings()
-    if not s.google_api_key:
+    if not s.gcp_api_key:
         return None
-    return GooglePublicHolidayClient(api_key=s.google_api_key)
+    return GooglePublicHolidayClient(api_key=s.gcp_api_key)
 
 def get_holiday_provider() -> GooglePublicHolidayProvider | None:
     client = get_holiday_client()

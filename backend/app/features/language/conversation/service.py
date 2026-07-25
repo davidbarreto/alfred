@@ -8,7 +8,7 @@ from uuid import uuid4
 from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.features.core.messages.schemas import MessageCreate
+from app.features.core.messages.schemas import MessageCreate, MessageFilters
 from app.features.core.messages.service import MessageService
 from app.features.language.chunks.pronunciation_service import PronunciationService
 from app.features.language.conversation.prompts import (
@@ -238,11 +238,18 @@ class ConversationService:
         language_name = track.name if track else "the target language"
 
         turns = await self._thread_repo.get_turns_with_messages(thread_id)
-        transcript = "\n".join(f"{message.role}: {message.content}" for _, message in turns)
         tips = [turn.tip for turn, _ in turns if turn.tip]
 
+        # Build the transcript from the full chat history, not just tracked (audio) turns —
+        # /roleplay only creates a ConversationTurn for audio input, so a typed exchange would
+        # otherwise be invisible to the wrap-up even though it's a real part of the roleplay.
+        session_messages = await self._message_service.list(MessageFilters(session_id=thread.chat_session_id))
+        conversation_messages = [m for m in session_messages if m.created_at >= thread.started_at]
+        transcript = "\n".join(f"{m.role}: {m.content}" for m in conversation_messages)
+        turn_count = sum(1 for m in conversation_messages if m.role == "user")
+
         tip: str | None = None
-        if turns:
+        if conversation_messages:
             prompt = ROLEPLAY_SUMMARY_PROMPT.format(
                 language_name=language_name,
                 scenario=thread.scenario,
@@ -275,5 +282,5 @@ class ConversationService:
             SessionCreate(track_id=thread.track_id, session_type="correction", transcript_or_notes=tip)
         )
 
-        logger.info("Conversation ended: thread_id=%d turns=%d has_tip=%s", thread_id, len(turns), bool(tip))
-        return ConversationEndRead(tip=tip, turn_count=len(turns))
+        logger.info("Conversation ended: thread_id=%d turns=%d has_tip=%s", thread_id, turn_count, bool(tip))
+        return ConversationEndRead(tip=tip, turn_count=turn_count)

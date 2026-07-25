@@ -1,8 +1,11 @@
+from datetime import datetime, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 
 from app.features.language.conversation.service import ConversationService
 from app.shared.audio import AudioConversationResult
 from app.shared.llm import LlmResponse
+
+_THREAD_STARTED_AT = datetime(2020, 1, 1, tzinfo=timezone.utc)
 
 
 def _make_track(**kwargs):
@@ -21,7 +24,16 @@ def _make_thread(**kwargs):
     thread.scenario = kwargs.get("scenario", "Ordering coffee")
     thread.voice_reply = kwargs.get("voice_reply", False)
     thread.ended_at = kwargs.get("ended_at", None)
+    thread.started_at = kwargs.get("started_at", _THREAD_STARTED_AT)
     return thread
+
+
+def _make_history_message(role: str, content: str, created_at: datetime | None = None):
+    message = MagicMock()
+    message.role = role
+    message.content = content
+    message.created_at = created_at or datetime(2026, 1, 1, tzinfo=timezone.utc)
+    return message
 
 
 def _make_result(**kwargs) -> AudioConversationResult:
@@ -41,6 +53,7 @@ def _make_service(**kwargs):
     thread_repo = kwargs.get("thread_repo") or AsyncMock()
     message_service = kwargs.get("message_service") or AsyncMock()
     message_service.create = AsyncMock(return_value=MagicMock(id=99, role="user", content="hi"))
+    message_service.list = AsyncMock(return_value=kwargs.get("session_messages", []))
     language_session_service = kwargs.get("language_session_service") or AsyncMock()
     track_repo = kwargs.get("track_repo") or AsyncMock()
     audio_storage = kwargs.get("audio_storage") or AsyncMock()
@@ -199,7 +212,10 @@ class TestRecordAudioTurn:
 
 class TestEnd:
     async def test_generates_summary_and_records_correction_session(self):
-        parts = _make_service()
+        parts = _make_service(session_messages=[
+            _make_history_message("assistant", "Bonjour! Que puis-je vous servir?"),
+            _make_history_message("user", "Un cafe"),
+        ])
         thread = _make_thread()
         parts["thread_repo"].get_thread = AsyncMock(return_value=thread)
         parts["track_repo"].get_track = AsyncMock(return_value=_make_track())
@@ -225,8 +241,12 @@ class TestEnd:
         assert session_create.session_type == "correction"
         assert session_create.transcript_or_notes == "Great effort! Watch your r sounds."
 
-    async def test_no_turns_skips_summary_call(self):
-        parts = _make_service()
+        prompt_text = parts["llm_provider"].complete.call_args.args[0][0]["content"]
+        assert "Un cafe" in prompt_text
+        assert "Watch your 'r'" in prompt_text
+
+    async def test_no_messages_skips_summary_call(self):
+        parts = _make_service(session_messages=[])
         thread = _make_thread()
         parts["thread_repo"].get_thread = AsyncMock(return_value=thread)
         parts["track_repo"].get_track = AsyncMock(return_value=_make_track())
@@ -237,3 +257,50 @@ class TestEnd:
         parts["llm_provider"].complete.assert_not_awaited()
         assert result.tip is None
         assert result.turn_count == 0
+
+    async def test_text_only_turns_still_feed_the_summary(self):
+        # No ConversationTurn records at all (the user typed every reply instead of
+        # sending audio) — the wrap-up must still see the full exchange via message history.
+        parts = _make_service(session_messages=[
+            _make_history_message("assistant", "Bonjour! Bienvenue dans notre boulangerie."),
+            _make_history_message("user", "Je voudrais un croissant"),
+            _make_history_message("assistant", "Bien sur! Ce sera tout?"),
+            _make_history_message("user", "Oui, merci"),
+        ])
+        thread = _make_thread()
+        parts["thread_repo"].get_thread = AsyncMock(return_value=thread)
+        parts["track_repo"].get_track = AsyncMock(return_value=_make_track())
+        parts["thread_repo"].get_turns_with_messages = AsyncMock(return_value=[])
+        parts["llm_provider"].complete = AsyncMock(
+            return_value=LlmResponse(text="Solid vocabulary! Watch verb agreement.", tokens_input=30, tokens_output=15)
+        )
+
+        with patch("app.features.language.conversation.service.create_llm_call", AsyncMock()):
+            result = await parts["service"].end(thread_id=10)
+
+        assert result.tip == "Solid vocabulary! Watch verb agreement."
+        assert result.turn_count == 2
+        prompt_text = parts["llm_provider"].complete.call_args.args[0][0]["content"]
+        assert "Je voudrais un croissant" in prompt_text
+        assert "Oui, merci" in prompt_text
+
+    async def test_messages_before_thread_started_are_excluded(self):
+        parts = _make_service(session_messages=[
+            _make_history_message("user", "unrelated earlier chat", created_at=datetime(2019, 1, 1, tzinfo=timezone.utc)),
+            _make_history_message("user", "Un cafe", created_at=datetime(2026, 1, 1, tzinfo=timezone.utc)),
+        ])
+        thread = _make_thread(started_at=datetime(2020, 1, 1, tzinfo=timezone.utc))
+        parts["thread_repo"].get_thread = AsyncMock(return_value=thread)
+        parts["track_repo"].get_track = AsyncMock(return_value=_make_track())
+        parts["thread_repo"].get_turns_with_messages = AsyncMock(return_value=[])
+        parts["llm_provider"].complete = AsyncMock(
+            return_value=LlmResponse(text="Nice work.", tokens_input=10, tokens_output=5)
+        )
+
+        with patch("app.features.language.conversation.service.create_llm_call", AsyncMock()):
+            result = await parts["service"].end(thread_id=10)
+
+        assert result.turn_count == 1
+        prompt_text = parts["llm_provider"].complete.call_args.args[0][0]["content"]
+        assert "unrelated earlier chat" not in prompt_text
+        assert "Un cafe" in prompt_text

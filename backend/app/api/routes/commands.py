@@ -101,10 +101,11 @@ async def execute_command(
     production_service: ProductionServiceDep,
     conversation_service: ConversationServiceDep,
 ):
-    logger.info("POST /commands/execute %s.%s", request.type, request.command)
+    logger.info("POST /commands/execute %s.%s source=%s", request.type, request.command, request.source)
     execution = await cmd_execution_service.create(
         CommandExecutionCreate(
             message_id=request.message_id,
+            source=request.source,
             command_name=f"{request.type}.{request.command}",
             entities=request.args,
         )

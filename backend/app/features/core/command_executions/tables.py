@@ -18,6 +18,7 @@ class CommandExecution(Base):
     message_id: Mapped[Optional[int]] = mapped_column(
         Integer, ForeignKey("core.messages.id", ondelete="CASCADE"), nullable=True, index=True
     )
+    source: Mapped[Optional[str]] = mapped_column(String(30), nullable=True)
     command_name: Mapped[str] = mapped_column(String(100), nullable=False, index=True)
     entities: Mapped[Optional[dict]] = mapped_column(JSONB, nullable=True)
     status: Mapped[str] = mapped_column(String(20), nullable=False, default="pending")

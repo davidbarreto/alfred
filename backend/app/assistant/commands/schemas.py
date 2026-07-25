@@ -1,4 +1,4 @@
-from typing import Any, List, NamedTuple, Dict
+from typing import Any, List, NamedTuple, Dict, Optional
 from pydantic import BaseModel, model_validator
 
 class CommandMetadata(NamedTuple):
@@ -48,7 +48,8 @@ class CommandExtractResponse(BaseModel):
 
 
 class CommandExecuteRequest(BaseModel):
-    message_id: int
+    message_id: Optional[int] = None
+    source: Optional[str] = None
     type: str
     command: str
     args: dict[str, Any]

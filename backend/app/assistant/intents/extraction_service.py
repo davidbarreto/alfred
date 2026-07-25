@@ -20,6 +20,14 @@ class CreateTaskArgs(BaseModel):
     title: str
     due_date: str | None = Field(default=None)
     priority: Literal["low", "medium", "high"] | None = Field(default=None)
+    recurrence: str | None = Field(
+        default=None,
+        description=(
+            "Recurrence rule if the task repeats, as an RFC 5545 RRULE fragment: "
+            "'FREQ=DAILY', 'FREQ=WEEKLY', 'FREQ=WEEKLY;BYDAY=MO,WE,FR', or 'FREQ=MONTHLY'. "
+            "Map phrasing like 'once a week' or 'every week' to 'FREQ=WEEKLY'. Omit for one-off tasks."
+        ),
+    )
 
 
 class GetTasksArgs(BaseModel):

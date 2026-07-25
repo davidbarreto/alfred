@@ -37,10 +37,16 @@ class TestExtractArgs:
         assert result == {}
 
     async def test_task_add_returns_create_task_args(self):
-        payload = json.dumps({"title": "Buy milk", "due_date": "tomorrow", "priority": "high"})
+        payload = json.dumps({"title": "Buy milk", "due_date": "tomorrow", "priority": "high", "recurrence": None})
         provider = _make_provider(payload)
         result = await extract_args("task.add", "Buy milk tomorrow, high priority", llm_provider=provider)
-        assert result == {"title": "Buy milk", "due_date": "tomorrow", "priority": "high"}
+        assert result == {"title": "Buy milk", "due_date": "tomorrow", "priority": "high", "recurrence": None}
+
+    async def test_task_add_extracts_weekly_recurrence(self):
+        payload = json.dumps({"title": "Take out the trash", "due_date": None, "priority": None, "recurrence": "FREQ=WEEKLY"})
+        provider = _make_provider(payload)
+        result = await extract_args("task.add", "Create the task Take out the trash, once a week", llm_provider=provider)
+        assert result["recurrence"] == "FREQ=WEEKLY"
 
     async def test_task_list_returns_get_tasks_args(self):
         payload = json.dumps({"filter": "overdue"})

@@ -67,5 +67,8 @@ jobs:
             echo "==> Building MCP..."
             $COMPOSE build mcp
 
+            echo "==> Ensuring shared network exists..."
+            docker network inspect mcp-shared >/dev/null 2>&1 || docker network create mcp-shared
+
             echo "==> Restarting MCP..."
             $COMPOSE up -d mcp

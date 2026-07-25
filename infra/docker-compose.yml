@@ -77,6 +77,9 @@ services:
     environment:
       - BACKEND_URL=http://api:8000
       - ALFRED_API_TOKEN=${ALFRED_API_TOKEN}
+    networks:
+      - default
+      - mcp-shared
 
   web:
     build: ../web
@@ -122,3 +125,11 @@ services:
       - N8N_BLOCK_ENV_ACCESS_IN_NODE=false
     volumes:
       - ${N8N_DATA_DIR}:/home/node/.n8n
+
+networks:
+  # Pre-created once on the host with `docker network create mcp-shared`,
+  # not owned by this compose project — other same-VPS stacks (Hermes,
+  # OpenClaw) attach to it as external to reach the mcp service by name,
+  # without joining Alfred's default network (api/db/web/n8n stay off it).
+  mcp-shared:
+    external: true

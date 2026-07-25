@@ -46,6 +46,7 @@ from app.shared.audio import AudioConversationProvider, AudioConverter, styled_f
 from app.shared.llm import LlmProvider, StreamMeta
 
 _LANGUAGE_PENDING_KEY = "language:pending"
+_CHUNK_LOOP_MODES = {"practice", "review"}
 
 _PERSONA_PATH = pathlib.Path(__file__).parents[3] / "assistant" / "persona.md"
 _HISTORY_LIMIT = 10
@@ -464,9 +465,11 @@ class ChatService:
         )
 
         next_practice: NextPracticePrompt | None = None
-        if pending_wm and pending_mode != "produce":
-            # Produce loops advance inside _handle_production_turn; the coaching reply
-            # already carries the next exercise, so there is no next_practice to emit.
+        if pending_wm and pending_mode in _CHUNK_LOOP_MODES:
+            # Only practice/review are chunk-based loops. Produce advances inside
+            # _handle_production_turn instead (the coaching reply already carries the next
+            # exercise). Conversation/roleplay aren't chunk loops at all — a typed message
+            # during one of those sessions must not advance/end it via this path.
             next_practice = await self._advance_language_loop(pending_wm)
 
         if pending_wm is None:

@@ -591,6 +591,22 @@ class TestChatServiceLanguageLoop:
         service._working_memory_service.create.assert_not_called()
         assert next_practice is None
 
+    @pytest.mark.parametrize("mode", ["conversation", "roleplay"])
+    async def test_does_not_advance_or_delete_wm_for_non_chunk_modes(self, mock_language_session_repository, mode):
+        service, _, _, message_service, _ = _make_service()
+        wm = _make_wm("language:pending", json.dumps({
+            "mode": mode, "track_id": 3, "track_code": "fr", "language_name": "French",
+        }))
+        wm = WorkingMemoryRead(id=99, key=wm.key, value=wm.value, importance=None,
+                               expires_at=None, session_id=None, created_at=wm.created_at)
+        service._working_memory_service.list.return_value = [wm]
+        message_service.list.return_value = [_make_message("tell me about guitars")]
+
+        _, next_practice = await service.chat(ChatRequest(session_id=1))
+
+        service._working_memory_service.delete.assert_not_called()
+        assert next_practice is None
+
 
 class TestChatServiceLanguageCommandDuringPending:
     """A message that itself resolves to a language.* command (e.g. /stop, /produce)

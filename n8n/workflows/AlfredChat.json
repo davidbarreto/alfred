@@ -1858,11 +1858,6 @@
                         "node": "Split Commands",
                         "type": "main",
                         "index": 0
-                    },
-                    {
-                        "node": "Set Intents",
-                        "type": "main",
-                        "index": 0
                     }
                 ],
                 [

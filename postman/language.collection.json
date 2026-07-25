@@ -2097,6 +2097,165 @@
       }
     },
     {
+      "name": "49 - List Conversation Threads",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Returns thread list with mode and scenario', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json).to.be.an('array');",
+              "    if (json.length) {",
+              "        pm.expect(json[0]).to.have.property('mode');",
+              "        pm.expect(json[0]).to.have.property('scenario');",
+              "        pm.expect(json[0]).to.have.property('started_at');",
+              "        pm.environment.set('conversation_thread_id', json[0].id);",
+              "    }",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/language/conversation/threads?limit=10&offset=0",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "language",
+            "conversation",
+            "threads"
+          ],
+          "query": [
+            {
+              "key": "limit",
+              "value": "10"
+            },
+            {
+              "key": "offset",
+              "value": "0"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "50 - List Conversation Threads (mode filter)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Only roleplay threads returned', () => {",
+              "    pm.response.json().forEach(t => pm.expect(t.mode).to.eql('roleplay'));",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/language/conversation/threads?mode=roleplay",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "language",
+            "conversation",
+            "threads"
+          ],
+          "query": [
+            {
+              "key": "mode",
+              "value": "roleplay"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "51 - Get Conversation Turns (with tips)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Turns carry role, content and tip', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json).to.be.an('array');",
+              "    if (json.length) {",
+              "        pm.expect(json[0]).to.have.property('role');",
+              "        pm.expect(json[0]).to.have.property('content');",
+              "        pm.expect(json[0]).to.have.property('tip');",
+              "        pm.expect(json[0]).to.have.property('is_audio');",
+              "    }",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/language/conversation/threads/{{conversation_thread_id}}/turns",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "language",
+            "conversation",
+            "threads",
+            "{{conversation_thread_id}}",
+            "turns"
+          ]
+        }
+      }
+    },
+    {
+      "name": "52 - Get Turns For Missing Thread Returns 404",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 404', () => pm.response.to.have.status(404));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/language/conversation/threads/999999/turns",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "language",
+            "conversation",
+            "threads",
+            "999999",
+            "turns"
+          ]
+        }
+      }
+    },
+    {
       "name": "40 - Delete Grammar Scope",
       "event": [
         {

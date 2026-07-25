@@ -4,7 +4,7 @@ from collections import Counter, defaultdict
 from datetime import date, timedelta
 
 import httpx
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse, Response
 
 import app.client as api
@@ -506,6 +506,83 @@ async def all_sessions(request: Request):
         "has_next": has_next,
         "has_prev": has_prev,
         "page_size": _ALL_SESSIONS_PAGE_SIZE,
+    })
+
+
+# ── Practice chats (roleplay + free conversation) ────────────────────────────
+
+_CHATS_PAGE_SIZE = 20
+_CHAT_MODES = ("roleplay", "conversation")
+
+
+@router.get("/chats", response_class=HTMLResponse)
+async def practice_chats(request: Request):
+    """Roleplay and free-conversation sessions, with the per-turn coaching tips that
+    are captured mid-session but never sent to Telegram."""
+    tracks = await _safe_get("/language/tracks", {"active_only": "false"})
+
+    qp = request.query_params
+    active_lang = qp.get("lang", "")
+    active_mode = qp.get("mode", "") if qp.get("mode", "") in _CHAT_MODES else ""
+    offset = max(0, int(qp.get("offset", "0")))
+
+    active_track = next((t for t in tracks if t["code"] == active_lang), None)
+    if active_track is None:
+        active_lang = ""
+
+    params: dict = {"limit": _CHATS_PAGE_SIZE + 1, "offset": offset}
+    if active_track:
+        params["track_id"] = active_track["id"]
+    if active_mode:
+        params["mode"] = active_mode
+
+    raw = await _safe_get("/language/conversation/threads", params)
+    threads, has_next, has_prev = _pagination(raw, offset, _CHATS_PAGE_SIZE)
+
+    track_by_id = {t["id"]: t for t in tracks}
+    for thread in threads:
+        t = track_by_id.get(thread["track_id"])
+        thread["track_code"] = t["code"] if t else ""
+        thread["track_name"] = t["name"] if t else f"Track #{thread['track_id']}"
+        thread["flag"] = _flag(t["code"]) if t else "🌐"
+
+    for t in tracks:
+        t["flag"] = _flag(t["code"])
+
+    return templates.TemplateResponse(request, "language_chats.html", {
+        "tracks": tracks,
+        "active_track": active_track,
+        "threads": threads,
+        "active_lang": active_lang,
+        "active_mode": active_mode,
+        "chat_modes": _CHAT_MODES,
+        "offset": offset,
+        "has_next": has_next,
+        "has_prev": has_prev,
+        "page_size": _CHATS_PAGE_SIZE,
+    })
+
+
+@router.get("/chats/{thread_id}", response_class=HTMLResponse)
+async def practice_chat_detail(request: Request, thread_id: int):
+    threads = await _safe_get("/language/conversation/threads", {"limit": 200})
+    thread = next((t for t in threads if t["id"] == thread_id), None)
+    if thread is None:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+
+    tracks = await _safe_get("/language/tracks", {"active_only": "false"})
+    track = next((t for t in tracks if t["id"] == thread["track_id"]), None)
+    thread["track_code"] = track["code"] if track else ""
+    thread["track_name"] = track["name"] if track else f"Track #{thread['track_id']}"
+    thread["flag"] = _flag(track["code"]) if track else "🌐"
+
+    turns = await _safe_get(f"/language/conversation/threads/{thread_id}/turns")
+    tip_count = sum(1 for turn in turns if turn.get("tip"))
+
+    return templates.TemplateResponse(request, "language_chat_detail.html", {
+        "thread": thread,
+        "turns": turns,
+        "tip_count": tip_count,
     })
 
 

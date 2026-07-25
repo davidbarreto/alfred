@@ -22,6 +22,9 @@ from app.features.language.conversation.repository import ConversationRepository
 from app.features.language.conversation.schemas import (
     ConversationEndRead,
     ConversationStartRead,
+    ConversationThreadFilters,
+    ConversationThreadRead,
+    ConversationTurnRead,
     ConversationTurnResultRead,
 )
 from app.features.language.sessions.schemas import SessionCreate
@@ -71,6 +74,33 @@ class ConversationService:
     async def get_turn_audio_ref(self, turn_id: int) -> str | None:
         turn = await self._thread_repo.get_turn(turn_id)
         return turn.audio_ref if turn else None
+
+    async def get_threads(self, filters: ConversationThreadFilters) -> list[ConversationThreadRead]:
+        threads = await self._thread_repo.get_threads(filters)
+        logger.debug("Conversation: %d threads listed", len(threads))
+        return [ConversationThreadRead.model_validate(t) for t in threads]
+
+    async def get_thread_turns(self, thread_id: int) -> list[ConversationTurnRead]:
+        thread = await self._thread_repo.get_thread(thread_id)
+        if thread is None:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="Conversation thread not found"
+            )
+        turns = await self._thread_repo.get_turns_with_messages(thread_id)
+        return [
+            ConversationTurnRead(
+                id=turn.id,
+                thread_id=turn.thread_id,
+                message_id=turn.message_id,
+                role=message.role,
+                content=message.content,
+                is_audio=turn.is_audio,
+                audio_ref=turn.audio_ref,
+                tip=turn.tip,
+                created_at=turn.created_at,
+            )
+            for turn, message in turns
+        ]
 
     async def _synthesize_and_save(
         self, text: str, track_code: str, tone: str | None = None

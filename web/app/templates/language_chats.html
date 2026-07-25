@@ -1,0 +1,115 @@
+{% extends "base.html" %}
+{% set active_page = "languages" %}
+{% block title %}Practice Chats{% endblock %}
+
+{% block content %}
+<div class="p-6 space-y-5">
+
+  <!-- Breadcrumb -->
+  <div class="flex items-center gap-2 text-xs text-gray-400">
+    <a href="/languages" class="hover:text-gray-600">Languages</a>
+    <i class="ti ti-chevron-right text-gray-300"></i>
+    <span class="text-gray-700 font-medium">Practice Chats</span>
+  </div>
+
+  <div class="flex items-center justify-between">
+    <h1 class="text-base font-semibold text-gray-900">Practice Chats</h1>
+    <p class="text-xs text-gray-400">
+      {% if threads %}{{ offset + 1 }}–{{ offset + threads|length }}{% else %}0 conversations{% endif %}
+    </p>
+  </div>
+
+  <!-- Filters -->
+  <form method="get" class="flex flex-wrap items-center gap-2">
+    <select name="lang" onchange="this.form.submit()"
+            class="border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-[#378ADD]">
+      <option value="" {% if not active_lang %}selected{% endif %}>All languages</option>
+      {% for t in tracks %}
+      <option value="{{ t.code }}" {% if active_lang == t.code %}selected{% endif %}>{{ t.flag }} {{ t.name }}</option>
+      {% endfor %}
+    </select>
+
+    <select name="mode" onchange="this.form.submit()"
+            class="border border-gray-200 rounded-lg px-2.5 py-1.5 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-[#378ADD]">
+      <option value="" {% if not active_mode %}selected{% endif %}>All modes</option>
+      {% for m in chat_modes %}
+      <option value="{{ m }}" {% if active_mode == m %}selected{% endif %}>{{ m }}</option>
+      {% endfor %}
+    </select>
+
+    {% if active_lang or active_mode %}
+    <a href="/languages/chats" class="text-xs text-gray-400 hover:text-gray-600 px-1">Clear filters</a>
+    {% endif %}
+  </form>
+
+  <!-- Conversations -->
+  <div class="bg-white border border-gray-100 rounded-xl overflow-hidden">
+    {% if threads %}
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead class="bg-gray-50/60 text-xs text-gray-400">
+          <tr>
+            <th class="text-left px-4 py-2.5 font-medium">Started</th>
+            <th class="text-left px-4 py-2.5 font-medium hidden sm:table-cell">Language</th>
+            <th class="text-left px-4 py-2.5 font-medium">Mode</th>
+            <th class="text-left px-4 py-2.5 font-medium">Scenario / Topic</th>
+            <th class="text-left px-4 py-2.5 font-medium">Status</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-50">
+          {% for thread in threads %}
+          {% set mode_style = {
+            'roleplay': 'bg-indigo-50 text-indigo-600',
+            'conversation': 'bg-green-50 text-green-600'
+          } %}
+          <tr class="hover:bg-gray-50/60 transition-colors cursor-pointer"
+              onclick="window.location='/languages/chats/{{ thread.id }}'">
+            <td class="px-4 py-2.5 text-xs text-gray-500 whitespace-nowrap">{{ thread.started_at[:10] }}</td>
+            <td class="px-4 py-2.5 hidden sm:table-cell">
+              <span class="text-xs text-gray-600">{{ thread.flag }} {{ thread.track_name }}</span>
+            </td>
+            <td class="px-4 py-2.5">
+              <span class="px-1.5 py-0.5 rounded text-xs whitespace-nowrap {{ mode_style.get(thread.mode, 'bg-gray-100 text-gray-500') }}">
+                {{ thread.mode }}
+              </span>
+            </td>
+            <td class="px-4 py-2.5 max-w-0 w-full">
+              {% if thread.scenario %}
+              <span class="text-xs text-gray-600 truncate block">{{ thread.scenario }}</span>
+              {% else %}
+              <span class="text-xs text-gray-400">no topic</span>
+              {% endif %}
+            </td>
+            <td class="px-4 py-2.5 whitespace-nowrap">
+              {% if thread.ended_at %}
+              <span class="text-xs text-gray-400">ended</span>
+              {% else %}
+              <span class="px-1.5 py-0.5 rounded text-xs bg-blue-50 text-blue-600">active</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <p class="px-4 py-8 text-sm text-gray-400 text-center">
+      No practice chats yet. Start one with <code class="text-gray-500">/roleplay</code> or <code class="text-gray-500">/conversation</code>.
+    </p>
+    {% endif %}
+
+    {% if has_prev or has_next %}
+    <div class="flex justify-between items-center px-4 py-2 border-t border-gray-50">
+      {% if has_prev %}
+      <a href="?lang={{ active_lang }}&mode={{ active_mode }}&offset={{ offset - page_size }}"
+         class="px-3 py-1 rounded text-xs font-medium text-gray-600 bg-white border border-gray-200 hover:border-gray-300">← Prev</a>
+      {% else %}<span></span>{% endif %}
+      {% if has_next %}
+      <a href="?lang={{ active_lang }}&mode={{ active_mode }}&offset={{ offset + page_size }}"
+         class="px-3 py-1 rounded text-xs font-medium text-gray-600 bg-white border border-gray-200 hover:border-gray-300">Next →</a>
+      {% else %}<span></span>{% endif %}
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

@@ -9,10 +9,26 @@ from app.features.language.conversation.schemas import (
     ConversationStartCreate,
     ConversationStartRead,
     ConversationTextTurnCreate,
+    ConversationThreadFilters,
+    ConversationThreadRead,
+    ConversationTurnRead,
     ConversationTurnResultRead,
 )
 
 router = APIRouter(prefix="/language/conversation", tags=["language"], dependencies=[Depends(require_auth)])
+
+
+@router.get("/threads", response_model=list[ConversationThreadRead])
+async def get_threads(
+    service: ConversationServiceDep,
+    filters: ConversationThreadFilters = Depends(),
+):
+    return await service.get_threads(filters)
+
+
+@router.get("/threads/{thread_id}/turns", response_model=list[ConversationTurnRead])
+async def get_thread_turns(thread_id: int, service: ConversationServiceDep):
+    return await service.get_thread_turns(thread_id)
 
 
 @router.post("/start", response_model=ConversationStartRead, status_code=status.HTTP_201_CREATED)

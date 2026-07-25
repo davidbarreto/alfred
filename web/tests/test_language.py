@@ -250,3 +250,95 @@ class TestShadowSession:
         resp = client.get("/languages/xx/shadow")
 
         assert resp.status_code == 404
+
+
+def _thread(**kwargs) -> dict:
+    return {
+        "id": kwargs.get("id", 1),
+        "track_id": kwargs.get("track_id", 3),
+        "chat_session_id": 5,
+        "mode": kwargs.get("mode", "roleplay"),
+        "scenario": kwargs.get("scenario", "Ordering coffee"),
+        "voice_reply": kwargs.get("voice_reply", False),
+        "started_at": kwargs.get("started_at", "2026-07-25T10:00:00+00:00"),
+        "ended_at": kwargs.get("ended_at"),
+        "tip": kwargs.get("tip"),
+    }
+
+
+def _turn(**kwargs) -> dict:
+    return {
+        "id": kwargs.get("id", 1),
+        "thread_id": 1,
+        "message_id": 10,
+        "role": kwargs.get("role", "user"),
+        "content": kwargs.get("content", "Un cafe"),
+        "is_audio": kwargs.get("is_audio", False),
+        "audio_ref": None,
+        "tip": kwargs.get("tip"),
+        "created_at": "2026-07-25T10:05:00+00:00",
+    }
+
+
+_TRACKS = [{"id": 3, "code": "fr", "name": "French"}]
+
+
+class TestPracticeChatsList:
+    def test_renders_threads(self, client, mock_api):
+        mock_api["get"].side_effect = [_TRACKS, [_thread(scenario="Ordering coffee")]]
+
+        resp = client.get("/languages/chats")
+
+        assert resp.status_code == 200
+        assert "Ordering coffee" in resp.text
+        assert "roleplay" in resp.text
+
+    def test_passes_language_and_mode_filters(self, client, mock_api):
+        mock_api["get"].side_effect = [_TRACKS, []]
+
+        resp = client.get("/languages/chats?lang=fr&mode=conversation")
+
+        assert resp.status_code == 200
+        params = mock_api["get"].await_args_list[1].kwargs["params"]
+        assert params["track_id"] == 3
+        assert params["mode"] == "conversation"
+
+    def test_ignores_unknown_mode(self, client, mock_api):
+        mock_api["get"].side_effect = [_TRACKS, []]
+
+        client.get("/languages/chats?mode=bogus")
+
+        assert "mode" not in mock_api["get"].await_args_list[1].kwargs["params"]
+
+    def test_empty_state(self, client, mock_api):
+        mock_api["get"].side_effect = [_TRACKS, []]
+
+        resp = client.get("/languages/chats")
+
+        assert "No practice chats yet" in resp.text
+
+
+class TestPracticeChatDetail:
+    def test_renders_turns_and_tips(self, client, mock_api):
+        mock_api["get"].side_effect = [
+            [_thread(id=1, tip="Great effort! Watch your r sounds.")],
+            _TRACKS,
+            [
+                _turn(id=1, role="assistant", content="Bonjour!"),
+                _turn(id=2, role="user", content="Un cafe", is_audio=True, tip="Watch your 'r'"),
+            ],
+        ]
+
+        resp = client.get("/languages/chats/1")
+
+        assert resp.status_code == 200
+        # Per-turn coaching tips are only ever visible here, never sent to Telegram.
+        assert "Watch your &#39;r&#39;" in resp.text or "Watch your 'r'" in resp.text
+        assert "Great effort! Watch your r sounds." in resp.text
+        assert "Bonjour!" in resp.text
+        assert "1 tip" in resp.text
+
+    def test_missing_thread_returns_404(self, client, mock_api):
+        mock_api["get"].side_effect = [[], _TRACKS, []]
+
+        assert client.get("/languages/chats/999").status_code == 404

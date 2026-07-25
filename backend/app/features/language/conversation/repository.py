@@ -4,6 +4,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.features.core.messages.tables import Message
+from app.features.language.conversation.schemas import ConversationThreadFilters
 from app.features.language.conversation.tables import ConversationThread, ConversationTurn
 
 
@@ -59,6 +60,22 @@ class ConversationRepository:
     async def get_turn(self, turn_id: int) -> ConversationTurn | None:
         result = await self._session.execute(select(ConversationTurn).where(ConversationTurn.id == turn_id))
         return result.scalars().first()
+
+    async def get_threads(self, filters: ConversationThreadFilters) -> list[ConversationThread]:
+        query = select(ConversationThread)
+        if filters.track_id is not None:
+            query = query.where(ConversationThread.track_id == filters.track_id)
+        if filters.mode is not None:
+            query = query.where(ConversationThread.mode == filters.mode)
+        if filters.active_only:
+            query = query.where(ConversationThread.ended_at.is_(None))
+        query = (
+            query.order_by(ConversationThread.started_at.desc())
+            .limit(filters.limit)
+            .offset(filters.offset)
+        )
+        result = await self._session.execute(query)
+        return list(result.scalars().all())
 
     async def get_turns_with_messages(self, thread_id: int) -> list[tuple[ConversationTurn, Message]]:
         result = await self._session.execute(

@@ -16,10 +16,10 @@ def _mock_response(pcm: bytes) -> MagicMock:
 class TestProviderIdentity:
 
     def test_exposes_provider_and_model(self):
-        provider = GoogleTtsProvider(api_key="test-key", model_name="gemini-2.5-flash-preview-tts", voice_name="Enceladus")
+        provider = GoogleTtsProvider(api_key="test-key", model_name="gemini-2.5-flash-tts", voice_name="Enceladus")
 
         assert provider.provider == "google"
-        assert provider.model == "gemini-2.5-flash-preview-tts"
+        assert provider.model == "gemini-2.5-flash-tts"
 
 
 class TestGetAudio:
@@ -31,11 +31,11 @@ class TestGetAudio:
             mock_client.aio.models.generate_content = AsyncMock(return_value=_mock_response(b"\x00\x01\x02\x03"))
             mock_client_cls.return_value = mock_client
 
-            provider = GoogleTtsProvider(api_key="test-key", model_name="gemini-2.5-flash-preview-tts", voice_name="Enceladus")
+            provider = GoogleTtsProvider(api_key="test-key", model_name="gemini-2.5-flash-tts", voice_name="Enceladus")
             await provider.get_audio("Bonjour", "fr")
 
         call_kwargs = mock_client.aio.models.generate_content.call_args.kwargs
-        assert call_kwargs["model"] == "gemini-2.5-flash-preview-tts"
+        assert call_kwargs["model"] == "gemini-2.5-flash-tts"
         assert call_kwargs["contents"] == "Bonjour"
         speech_config = call_kwargs["config"].speech_config
         assert speech_config.voice_config.prebuilt_voice_config.voice_name == "Enceladus"
@@ -49,7 +49,7 @@ class TestGetAudio:
             mock_client.aio.models.generate_content = AsyncMock(return_value=_mock_response(pcm))
             mock_client_cls.return_value = mock_client
 
-            provider = GoogleTtsProvider(api_key="test-key", model_name="gemini-2.5-flash-preview-tts", voice_name="Enceladus")
+            provider = GoogleTtsProvider(api_key="test-key", model_name="gemini-2.5-flash-tts", voice_name="Enceladus")
             result = await provider.get_audio("hello", "en")
 
         with wave.open(BytesIO(result), "rb") as wav_file:

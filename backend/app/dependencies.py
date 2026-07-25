@@ -49,6 +49,8 @@ from app.features.language.chunks.pronunciation_service import PronunciationServ
 from app.integrations.google_translate_tts.client import GoogleTranslateTtsClient
 from app.integrations.ffmpeg.client import FfmpegClient
 from app.integrations.file_storage.client import LocalFileStorage
+from app.integrations.file_storage.null_client import NullFileStorage
+from app.shared.audio import FileStorage
 from app.integrations.google.audio_analysis_provider import GoogleAudioAnalysisProvider
 from app.integrations.google.transcription_provider import GoogleTranscriptionProvider
 from app.integrations.google.conversation_provider import GoogleConversationProvider
@@ -305,6 +307,11 @@ def get_language_chunk_service(session: AsyncSession = Depends(get_session)) -> 
 def get_file_storage() -> LocalFileStorage:
     return LocalFileStorage(get_settings().audio_storage_dir)
 
+def get_conversation_audio_storage() -> FileStorage:
+    if get_settings().persist_conversation_audio:
+        return get_file_storage()
+    return NullFileStorage()
+
 def get_pronunciation_service() -> PronunciationService:
     return PronunciationService(GoogleTranslateTtsClient(), FfmpegClient(), get_file_storage())
 
@@ -316,7 +323,7 @@ def get_conversation_tts_service() -> PronunciationService:
         api_key=s.gemini_api_key, model_name=s.llm_conversation_tts_model, voice_name=s.conversation_tts_voice
     )
     return PronunciationService(
-        provider, FfmpegClient(), get_file_storage(), cache_namespace="conversation_tts_cache"
+        provider, FfmpegClient(), get_conversation_audio_storage(), cache_namespace="conversation_tts_cache"
     )
 
 def get_language_session_service(session: AsyncSession = Depends(get_session)) -> LanguageSessionService:
@@ -375,7 +382,7 @@ def get_conversation_service(session: AsyncSession = Depends(get_session)) -> Co
         message_service=MessageService(session),
         language_session_service=get_language_session_service(session),
         track_repo=TrackRepository(session),
-        audio_storage=get_file_storage(),
+        audio_storage=get_conversation_audio_storage(),
         audio_converter=FfmpegClient(),
         conversation_provider=get_conversation_provider(),
         pronunciation_service=get_conversation_tts_service(),

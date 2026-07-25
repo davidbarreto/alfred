@@ -45,10 +45,16 @@ class Settings(BaseSettings):
     llm_transcription_model: str = Field(default="gemini-2.5-flash", validation_alias="LLM_TRANSCRIPTION_MODEL")
     llm_conversation_model: str = Field(default="gemini-2.5-flash", validation_alias="LLM_CONVERSATION_MODEL")
     llm_conversation_tts_model: str = Field(
-        default="gemini-2.5-flash-preview-tts", validation_alias="LLM_CONVERSATION_TTS_MODEL"
+        default="gemini-2.5-flash-tts", validation_alias="LLM_CONVERSATION_TTS_MODEL"
     )
     conversation_tts_voice: str = Field(default="Enceladus", validation_alias="CONVERSATION_TTS_VOICE")
     intent_threshold: float = Field(default=0.75, validation_alias="INTENT_THRESHOLD")
+
+    # Conversation/roleplay TTS audio (user recordings + synthesized replies) is not
+    # persisted to disk by default — it's LLM-generated free text that's effectively
+    # never repeated, so caching/storing it just grows disk with no reuse benefit.
+    # Flip this on once there's an actual need to replay past turns.
+    persist_conversation_audio: bool = Field(default=False, validation_alias="PERSIST_CONVERSATION_AUDIO")
 
     # Telegram
     telegram_bot_token: str | None = Field(default=None, validation_alias="TELEGRAM_BOT_TOKEN")

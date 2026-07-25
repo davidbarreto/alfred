@@ -78,6 +78,7 @@ class TestAnalyzePronunciation:
         assert result.tokens_output == 50
         call_kwargs = mock_client.aio.models.generate_content.call_args.kwargs
         assert call_kwargs["model"] == "gemini-2.5-flash"
+        assert call_kwargs["config"].response_mime_type == "application/json"
         prompt = call_kwargs["contents"][1]
         assert "bonjour" in prompt
         assert "French" in prompt

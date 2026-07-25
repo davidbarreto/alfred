@@ -45,12 +45,27 @@ class TestReply:
         assert result.tokens_output == 50
         call_kwargs = mock_client.aio.models.generate_content.call_args.kwargs
         assert call_kwargs["model"] == "gemini-2.5-flash"
+        assert call_kwargs["config"].response_mime_type == "application/json"
         contents = call_kwargs["contents"]
         # Only the final turn carries audio; history stays plain text.
         assert contents[-1].role == "user"
         assert contents[-1].parts[0].inline_data.mime_type == "audio/ogg"
         assert contents[-1].parts[0].inline_data.data == b"fake-audio"
         assert contents[0].parts[0].text == "Bonjour"
+
+    @pytest.mark.asyncio
+    async def test_empty_response_raises_json_decode_error(self):
+        with patch("app.integrations.google.conversation_provider.genai.Client") as mock_client_cls:
+            mock_client = MagicMock()
+            resp = MagicMock()
+            resp.text = ""
+            resp.usage_metadata = None
+            mock_client.aio.models.generate_content = AsyncMock(return_value=resp)
+            mock_client_cls.return_value = mock_client
+
+            provider = GoogleConversationProvider(api_key="test-key", model_name="gemini-2.5-flash")
+            with pytest.raises(json.JSONDecodeError):
+                await provider.reply(history=[], current_audio=b"x", mime_type="audio/ogg", system="sys")
 
     @pytest.mark.asyncio
     async def test_parses_tone(self):

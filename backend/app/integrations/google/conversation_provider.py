@@ -68,7 +68,7 @@ class GoogleConversationProvider:
         response = await self._client.aio.models.generate_content(
             model=self._model_name,
             contents=contents,
-            config=types.GenerateContentConfig(system_instruction=system),
+            config=types.GenerateContentConfig(system_instruction=system, response_mime_type="application/json"),
         )
         raw_response = response.text or ""
         usage = response.usage_metadata
@@ -88,4 +88,8 @@ def _parse_response(raw: str) -> dict:
     text = raw.strip()
     if text.startswith("```"):
         text = text.split("\n", 1)[-1].rsplit("```", 1)[0].strip()
-    return json.loads(text)
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError:
+        logger.error("GoogleConversationProvider: non-JSON response: %r", raw[:500])
+        raise

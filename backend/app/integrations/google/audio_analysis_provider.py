@@ -44,6 +44,7 @@ class GoogleAudioAnalysisProvider:
                 types.Part.from_bytes(data=audio, mime_type=mime_type),
                 prompt,
             ],
+            config=types.GenerateContentConfig(response_mime_type="application/json"),
         )
         raw_response = response.text or ""
         usage = response.usage_metadata
@@ -60,7 +61,11 @@ def _parse_response(raw: str) -> PronunciationAnalysis:
     if text.startswith("```"):
         text = text.split("\n", 1)[-1].rsplit("```", 1)[0].strip()
 
-    data = json.loads(text)
+    try:
+        data = json.loads(text)
+    except json.JSONDecodeError:
+        logger.error("GoogleAudioAnalysisProvider: non-JSON response: %r", raw[:500])
+        raise
     return PronunciationAnalysis(
         transcription=data["transcription"],
         score=float(data["score"]),

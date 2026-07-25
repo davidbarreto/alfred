@@ -258,44 +258,44 @@ COMMAND_DEFINITIONS = {
     },
     "language": {
         "practice": {
-            "description": "Start a shadowing/pronunciation practice session for a language",
+            "description": "Start a shadowing/pronunciation practice session for a language "
+            "(language_code defaults to English if omitted)",
             # /practice is a legacy alias for /shadow; kept for one release.
             "aliases": ["/shadow", "/practice", "/pr"],
             "flags": {},
-            "requires_args": True,
             "arg_keys": ["language_code", "count"],
         },
         "review": {
-            "description": "Start an SRS review session for a language",
+            "description": "Start an SRS review session for a language "
+            "(language_code defaults to English if omitted)",
             "aliases": ["/review", "/rv"],
             "flags": {},
-            "requires_args": True,
             "arg_keys": ["language_code", "count"],
         },
         "produce": {
             "description": "Start a production practice session for a language "
-            "(sentence, translate, journal, timed writing, or spoken speak/retell)",
+            "(sentence, translate, journal, timed writing, or spoken speak/retell; "
+            "language_code defaults to English if omitted)",
             "aliases": ["/produce", "/prod"],
             "flags": {},
-            "requires_args": True,
             "arg_keys": ["language_code", "task_type", "count"],
         },
         "conversation": {
             "description": "Start a free-form spoken conversation practice session for a language "
-            "(add 'roleplay <scenario>' for a scripted roleplay instead)",
+            "(add 'roleplay <scenario>' for a scripted roleplay instead; "
+            "language_code defaults to English if omitted)",
             "aliases": ["/conversation", "/talk"],
             "flags": {},
-            "requires_args": True,
             "arg_keys": ["language_code", "rest"],
         },
         # Convenience alias: /roleplay <lang> <scenario> is equivalent to
         # /conversation <lang> roleplay <scenario>. Both resolve to action="conversation".
         "conversation_roleplay": {
-            "description": "Start a roleplay conversation practice session for a language",
+            "description": "Start a roleplay conversation practice session for a language "
+            "(language_code defaults to English if omitted)",
             "action": "conversation",
             "aliases": ["/roleplay"],
             "flags": {},
-            "requires_args": True,
             "arg_keys": ["language_code", "rest"],
             "implicit_flags": {"mode": "roleplay"},
         },

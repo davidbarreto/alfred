@@ -19,6 +19,12 @@ logger = logging.getLogger(__name__)
 
 _WM_KEY = "language:pending"
 _DEFAULT_ROUND_COUNT = 5
+_DEFAULT_LANGUAGE_CODE = "en"
+
+
+def _resolve_language_code(arguments: dict[str, Any]) -> str:
+    """Return the requested language code, defaulting to English when omitted."""
+    return str(arguments.get("language_code", "")).strip().lower() or _DEFAULT_LANGUAGE_CODE
 
 
 def _parse_count(arguments: dict[str, Any], default: int = _DEFAULT_ROUND_COUNT) -> int:
@@ -106,9 +112,7 @@ async def _handle_start_conversation(
     working_memory_service: WorkingMemoryService,
     message_id: int | None,
 ) -> dict[str, Any]:
-    language_code = str(arguments.get("language_code", "")).strip().lower()
-    if not language_code:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Language code is required")
+    language_code = _resolve_language_code(arguments)
     if message_id is None:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail="message_id is required to start a conversation"
@@ -222,9 +226,7 @@ async def _handle_practice(
     chunk_service: ChunkService,
     working_memory_service: WorkingMemoryService,
 ) -> dict[str, Any]:
-    language_code = str(arguments.get("language_code", "")).strip().lower()
-    if not language_code:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Language code is required")
+    language_code = _resolve_language_code(arguments)
 
     track, chunk = await _resolve_track_and_chunk(language_code, track_service, chunk_service)
     await _clear_pending(working_memory_service)
@@ -268,9 +270,7 @@ async def _handle_review(
     chunk_service: ChunkService,
     working_memory_service: WorkingMemoryService,
 ) -> dict[str, Any]:
-    language_code = str(arguments.get("language_code", "")).strip().lower()
-    if not language_code:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Language code is required")
+    language_code = _resolve_language_code(arguments)
 
     track, chunk = await _resolve_track_and_chunk(language_code, track_service, chunk_service)
     await _clear_pending(working_memory_service)
@@ -331,9 +331,7 @@ async def _handle_produce(
     production_service: ProductionService,
     working_memory_service: WorkingMemoryService,
 ) -> dict[str, Any]:
-    language_code = str(arguments.get("language_code", "")).strip().lower()
-    if not language_code:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Language code is required")
+    language_code = _resolve_language_code(arguments)
 
     task_type = _parse_produce_task_type(arguments)
     # Chunk-less tasks (journal, timed, speak, retell) are one whole response each;

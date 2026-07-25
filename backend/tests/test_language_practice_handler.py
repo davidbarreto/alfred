@@ -178,11 +178,12 @@ class TestHandleLanguagePractice:
             await handle_language("bogus", {}, track_svc, chunk_svc, wm_svc)
         assert exc_info.value.status_code == 400
 
-    async def test_raises_400_when_language_code_missing(self):
+    async def test_defaults_to_english_when_language_code_missing(self):
         track_svc, chunk_svc, wm_svc = _make_services()
-        with pytest.raises(HTTPException) as exc_info:
-            await handle_language("practice", {}, track_svc, chunk_svc, wm_svc)
-        assert exc_info.value.status_code == 400
+        result = await handle_language("practice", {}, track_svc, chunk_svc, wm_svc)
+        assert result["track_code"] == "en"
+        filters = track_svc.get_tracks.call_args[0][0]
+        assert filters.code == "en"
 
 
 class TestHandleLanguageReview:
@@ -228,11 +229,12 @@ class TestHandleLanguageReview:
             await handle_language("review", {"language_code": "en"}, track_svc, chunk_svc, wm_svc)
         assert exc_info.value.status_code == 404
 
-    async def test_raises_400_when_language_code_missing(self):
+    async def test_defaults_to_english_when_language_code_missing(self):
         track_svc, chunk_svc, wm_svc = _make_services()
-        with pytest.raises(HTTPException) as exc_info:
-            await handle_language("review", {}, track_svc, chunk_svc, wm_svc)
-        assert exc_info.value.status_code == 400
+        result = await handle_language("review", {}, track_svc, chunk_svc, wm_svc)
+        assert result["track_code"] == "en"
+        filters = track_svc.get_tracks.call_args[0][0]
+        assert filters.code == "en"
 
 
 def _make_production_task(**kwargs):
@@ -430,14 +432,15 @@ class TestHandleLanguageProduce:
         wm_svc.delete.assert_called_once_with(5)
         wm_svc.create.assert_called_once()
 
-    async def test_raises_400_when_language_code_missing(self):
+    async def test_defaults_to_english_when_language_code_missing(self):
         track_svc, chunk_svc, wm_svc = _make_services()
         production_svc = _make_production_service()
-        with pytest.raises(HTTPException) as exc_info:
-            await handle_language(
-                "produce", {}, track_svc, chunk_svc, wm_svc, production_service=production_svc
-            )
-        assert exc_info.value.status_code == 400
+        result = await handle_language(
+            "produce", {}, track_svc, chunk_svc, wm_svc, production_service=production_svc
+        )
+        assert result["track_code"] == "en"
+        filters = track_svc.get_tracks.call_args[0][0]
+        assert filters.code == "en"
 
 
 class TestHandleLanguageStop:
@@ -486,15 +489,19 @@ class TestLanguageCommandRegistry:
         assert commands[0].command == "review"
         assert commands[0].args["language_code"] == "es"
 
-    async def test_practice_requires_language_arg(self):
+    async def test_practice_resolves_without_language_arg(self):
         from app.assistant.commands.resolver import detect_commands
         commands = await detect_commands("/practice")
-        assert commands == []
+        assert len(commands) == 1
+        assert commands[0].command == "practice"
+        assert "language_code" not in commands[0].args
 
-    async def test_review_requires_language_arg(self):
+    async def test_review_resolves_without_language_arg(self):
         from app.assistant.commands.resolver import detect_commands
         commands = await detect_commands("/review")
-        assert commands == []
+        assert len(commands) == 1
+        assert commands[0].command == "review"
+        assert "language_code" not in commands[0].args
 
     async def test_practice_parses_optional_count(self):
         from app.assistant.commands.resolver import detect_commands
@@ -546,10 +553,12 @@ class TestLanguageCommandRegistry:
         assert commands[0].args["task_type"] == "translate"
         assert commands[0].args["count"] == "3"
 
-    async def test_produce_requires_language_arg(self):
+    async def test_produce_resolves_without_language_arg(self):
         from app.assistant.commands.resolver import detect_commands
         commands = await detect_commands("/produce")
-        assert commands == []
+        assert len(commands) == 1
+        assert commands[0].command == "produce"
+        assert "language_code" not in commands[0].args
 
     async def test_detect_stop_command(self):
         from app.assistant.commands.resolver import detect_commands
@@ -578,6 +587,13 @@ class TestLanguageCommandRegistry:
         assert commands[0].command == "conversation"
         assert commands[0].args["language_code"] == "fr"
         assert commands[0].args["rest"] == "talking about food"
+
+    async def test_conversation_resolves_without_language_arg(self):
+        from app.assistant.commands.resolver import detect_commands
+        commands = await detect_commands("/conversation")
+        assert len(commands) == 1
+        assert commands[0].command == "conversation"
+        assert "language_code" not in commands[0].args
 
     async def test_detect_roleplay_alias_sets_implicit_mode(self):
         from app.assistant.commands.resolver import detect_commands
@@ -695,6 +711,20 @@ class TestHandleStartConversation:
                 conversation_service=conversation_svc, message_id=7,
             )
         assert exc_info.value.status_code == 400
+
+    async def test_defaults_to_english_when_language_code_missing(self):
+        track_svc, chunk_svc, wm_svc = _make_services()
+        conversation_svc = _make_conversation_service()
+
+        result = await handle_language(
+            "conversation", {"rest": "talking about food"},
+            track_svc, chunk_svc, wm_svc,
+            conversation_service=conversation_svc, message_id=1,
+        )
+
+        assert result["track_code"] == "en"
+        filters = track_svc.get_tracks.call_args[0][0]
+        assert filters.code == "en"
 
     async def test_missing_message_id_raises_400(self):
         track_svc, chunk_svc, wm_svc = _make_services()

@@ -11,20 +11,27 @@ AudioFormat = Literal["mp3", "ogg"]
 _CONTENT_TYPES: dict[str, str] = {"mp3": "audio/mpeg", "ogg": "audio/ogg"}
 
 
-def _cache_key(text: str, lang: str, audio_format: str) -> str:
+def _cache_key(namespace: str, text: str, lang: str, audio_format: str) -> str:
     digest = hashlib.sha256(text.encode()).hexdigest()
-    return f"pronunciation_cache/{lang}/{digest}.{audio_format}"
+    return f"{namespace}/{lang}/{digest}.{audio_format}"
 
 
 class PronunciationService:
 
-    def __init__(self, client: PronunciationProvider, converter: AudioConverter, storage: FileStorage) -> None:
+    def __init__(
+        self,
+        client: PronunciationProvider,
+        converter: AudioConverter,
+        storage: FileStorage,
+        cache_namespace: str = "pronunciation_cache",
+    ) -> None:
         self._client = client
         self._converter = converter
         self._storage = storage
+        self._cache_namespace = cache_namespace
 
     async def get_audio(self, text: str, lang: str, audio_format: AudioFormat = "mp3") -> tuple[bytes, str]:
-        cache_key = _cache_key(text, lang, audio_format)
+        cache_key = _cache_key(self._cache_namespace, text, lang, audio_format)
         cached = await self._storage.read(cache_key)
         if cached is not None:
             logger.debug("Pronunciation audio cache hit: lang=%s format=%s", lang, audio_format)

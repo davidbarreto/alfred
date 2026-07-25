@@ -1,0 +1,63 @@
+from __future__ import annotations
+
+import io
+import logging
+import wave
+
+from google import genai
+from google.genai import types
+
+logger = logging.getLogger(__name__)
+
+_SAMPLE_RATE_HZ = 24000
+_SAMPLE_WIDTH_BYTES = 2
+_CHANNELS = 1
+
+
+def _wrap_pcm_as_wav(pcm: bytes) -> bytes:
+    """Gemini TTS returns headerless 16-bit/24kHz/mono PCM; wrap it in a WAV
+    container so downstream ffmpeg conversion can decode it directly."""
+    buffer = io.BytesIO()
+    with wave.open(buffer, "wb") as wav_file:
+        wav_file.setnchannels(_CHANNELS)
+        wav_file.setsampwidth(_SAMPLE_WIDTH_BYTES)
+        wav_file.setframerate(_SAMPLE_RATE_HZ)
+        wav_file.writeframes(pcm)
+    return buffer.getvalue()
+
+
+class GoogleTtsProvider:
+    """PronunciationProvider implementation backed by Gemini's native TTS via google-genai SDK."""
+
+    def __init__(self, api_key: str, model_name: str, voice_name: str) -> None:
+        self._model_name = model_name
+        self._voice_name = voice_name
+        self._client = genai.Client(api_key=api_key)
+
+    @property
+    def provider(self) -> str:
+        return "google"
+
+    @property
+    def model(self) -> str:
+        return self._model_name
+
+    async def get_audio(self, text: str, lang: str) -> bytes:
+        response = await self._client.aio.models.generate_content(
+            model=self._model_name,
+            contents=text,
+            config=types.GenerateContentConfig(
+                response_modalities=["AUDIO"],
+                speech_config=types.SpeechConfig(
+                    voice_config=types.VoiceConfig(
+                        prebuilt_voice_config=types.PrebuiltVoiceConfig(voice_name=self._voice_name)
+                    )
+                ),
+            ),
+        )
+        pcm = response.candidates[0].content.parts[0].inline_data.data
+        logger.debug(
+            "Gemini TTS synthesized: lang=%s voice=%s text_len=%d pcm_bytes=%d",
+            lang, self._voice_name, len(text), len(pcm),
+        )
+        return _wrap_pcm_as_wav(pcm)

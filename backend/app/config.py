@@ -44,6 +44,10 @@ class Settings(BaseSettings):
     llm_pronunciation_model: str = Field(default="gemini-2.5-flash", validation_alias="LLM_PRONUNCIATION_MODEL")
     llm_transcription_model: str = Field(default="gemini-2.5-flash", validation_alias="LLM_TRANSCRIPTION_MODEL")
     llm_conversation_model: str = Field(default="gemini-2.5-flash", validation_alias="LLM_CONVERSATION_MODEL")
+    llm_conversation_tts_model: str = Field(
+        default="gemini-2.5-flash-preview-tts", validation_alias="LLM_CONVERSATION_TTS_MODEL"
+    )
+    conversation_tts_voice: str = Field(default="Enceladus", validation_alias="CONVERSATION_TTS_VOICE")
     intent_threshold: float = Field(default=0.75, validation_alias="INTENT_THRESHOLD")
 
     # Telegram

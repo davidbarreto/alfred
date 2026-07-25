@@ -11,7 +11,8 @@ def _make_service(**kwargs):
     client.get_audio.return_value = kwargs.get("fetched_audio", b"fake-mp3-bytes")
     converter.to_ogg_opus.return_value = kwargs.get("converted_audio", b"fake-ogg-bytes")
     storage.read.return_value = kwargs.get("cached_audio", None)
-    return PronunciationService(client, converter, storage), client, converter, storage
+    service = PronunciationService(client, converter, storage, cache_namespace=kwargs.get("cache_namespace", "pronunciation_cache"))
+    return service, client, converter, storage
 
 
 class TestGetAudio:
@@ -81,3 +82,12 @@ class TestGetAudio:
         second_key = storage.read.call_args.args[0]
 
         assert first_key == second_key
+
+    @pytest.mark.asyncio
+    async def test_custom_cache_namespace_keeps_providers_from_colliding(self):
+        service, client, converter, storage = _make_service(cache_namespace="conversation_tts_cache")
+
+        await service.get_audio("bonjour", "fr", audio_format="ogg")
+
+        cache_key = storage.read.call_args.args[0]
+        assert cache_key.startswith("conversation_tts_cache/fr/")

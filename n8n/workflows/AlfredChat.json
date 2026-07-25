@@ -2118,11 +2118,6 @@
             "main": [
                 [
                     {
-                        "node": "Send Message",
-                        "type": "main",
-                        "index": 0
-                    },
-                    {
                         "node": "Has Reply Audio",
                         "type": "main",
                         "index": 0
@@ -2140,11 +2135,6 @@
         "Record Roleplay Turn Audio": {
             "main": [
                 [
-                    {
-                        "node": "Send Message",
-                        "type": "main",
-                        "index": 0
-                    },
                     {
                         "node": "Has Reply Audio",
                         "type": "main",
@@ -2169,7 +2159,13 @@
                         "index": 0
                     }
                 ],
-                []
+                [
+                    {
+                        "node": "Send Message",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
             ]
         },
         "Convert Reply Audio to Binary": {

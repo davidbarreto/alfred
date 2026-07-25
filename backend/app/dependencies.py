@@ -52,6 +52,7 @@ from app.integrations.file_storage.client import LocalFileStorage
 from app.integrations.google.audio_analysis_provider import GoogleAudioAnalysisProvider
 from app.integrations.google.transcription_provider import GoogleTranscriptionProvider
 from app.integrations.google.conversation_provider import GoogleConversationProvider
+from app.integrations.google.tts_provider import GoogleTtsProvider
 from app.features.core.transcription.service import TranscriptionService
 from app.features.language.chunks.repository import ChunkRepository as LanguageChunkRepository
 from app.features.language.tracks.repository import TrackRepository
@@ -222,7 +223,7 @@ def get_chat_service(session: AsyncSession = Depends(get_session)) -> ChatServic
         production_service=get_production_service(session),
         audio_converter=FfmpegClient(),
         conversation_provider=get_conversation_provider(),
-        pronunciation_service=get_pronunciation_service(),
+        pronunciation_service=get_conversation_tts_service(),
     )
 
 @lru_cache
@@ -307,6 +308,17 @@ def get_file_storage() -> LocalFileStorage:
 def get_pronunciation_service() -> PronunciationService:
     return PronunciationService(GoogleTranslateTtsClient(), FfmpegClient(), get_file_storage())
 
+def get_conversation_tts_service() -> PronunciationService:
+    s = get_settings()
+    if not s.gemini_api_key:
+        raise RuntimeError("GEMINI_API_KEY is not set")
+    provider = GoogleTtsProvider(
+        api_key=s.gemini_api_key, model_name=s.llm_conversation_tts_model, voice_name=s.conversation_tts_voice
+    )
+    return PronunciationService(
+        provider, FfmpegClient(), get_file_storage(), cache_namespace="conversation_tts_cache"
+    )
+
 def get_language_session_service(session: AsyncSession = Depends(get_session)) -> LanguageSessionService:
     return LanguageSessionService(session)
 
@@ -366,7 +378,7 @@ def get_conversation_service(session: AsyncSession = Depends(get_session)) -> Co
         audio_storage=get_file_storage(),
         audio_converter=FfmpegClient(),
         conversation_provider=get_conversation_provider(),
-        pronunciation_service=get_pronunciation_service(),
+        pronunciation_service=get_conversation_tts_service(),
         llm_provider=get_llm_provider(),
     )
 

@@ -36,6 +36,12 @@ INTENT_EXAMPLES: list[IntentExample] = [
     IntentExample(id=170, text="I want to buy a new book", intent="shopping.add"),
     IntentExample(id=171, text="Need to pick up vegetables at the market", intent="shopping.add"),
     IntentExample(id=172, text="I want to buy beans at Pingo Doce", intent="shopping.add"),
+    IntentExample(id=276, text="Create the task Take out the trash, once a week", intent="task.add"),
+    IntentExample(id=277, text="Add a recurring task to water the plants every week", intent="task.add"),
+    IntentExample(id=278, text="Remind me to take out the trash every week", intent="task.add"),
+    IntentExample(id=279, text="Create a weekly task to clean the kitchen", intent="task.add"),
+    IntentExample(id=280, text="Add a task to pay rent every month", intent="task.add"),
+    IntentExample(id=281, text="I need to do laundry every week", intent="task.add"),
 
     # --- task.list ---
     IntentExample(id=11, text="What are my pending tasks?", intent="task.list"),

@@ -24,11 +24,12 @@ def _make_task(
     return task
 
 
-def _make_event(id=1, title="Team sync", start_datetime=None):
+def _make_event(id=1, title="Team sync", start_datetime=None, all_day=False):
     event = MagicMock()
     event.id = id
     event.title = title
     event.start_datetime = start_datetime or datetime(2026, 7, 11, 14, 30)
+    event.all_day = all_day
     return event
 
 
@@ -57,12 +58,12 @@ class TestBuildDueDigestTasks:
         mock_task_service.get_tasks.return_value = [task]
 
         with (
-            patch("app.features.core.reminders.service.CalendarEventRepository") as MockEventRepo,
+            patch("app.features.core.reminders.service.CalendarEventService") as MockEventService,
             patch("app.features.core.reminders.service.ShoppingRepository") as MockShoppingRepo,
             patch("app.features.core.reminders.service.WorkingMemoryRepository") as MockWMRepo,
             patch("app.features.core.reminders.service.local_now", return_value=NOW),
         ):
-            MockEventRepo.return_value.get_events = AsyncMock(return_value=[])
+            MockEventService.return_value.get_events = AsyncMock(return_value=[])
             MockShoppingRepo.return_value.list = AsyncMock(return_value=[])
             MockWMRepo.return_value.list = AsyncMock(return_value=[])
             MockWMRepo.return_value.upsert = AsyncMock()
@@ -82,12 +83,12 @@ class TestBuildDueDigestTasks:
         mock_task_service.get_tasks.return_value = [task]
 
         with (
-            patch("app.features.core.reminders.service.CalendarEventRepository") as MockEventRepo,
+            patch("app.features.core.reminders.service.CalendarEventService") as MockEventService,
             patch("app.features.core.reminders.service.ShoppingRepository") as MockShoppingRepo,
             patch("app.features.core.reminders.service.WorkingMemoryRepository") as MockWMRepo,
             patch("app.features.core.reminders.service.local_now", return_value=NOW),
         ):
-            MockEventRepo.return_value.get_events = AsyncMock(return_value=[])
+            MockEventService.return_value.get_events = AsyncMock(return_value=[])
             MockShoppingRepo.return_value.list = AsyncMock(return_value=[])
             MockWMRepo.return_value.list = AsyncMock(return_value=[])
             MockWMRepo.return_value.upsert = AsyncMock()
@@ -103,12 +104,12 @@ class TestBuildDueDigestTasks:
         mock_task_service.get_tasks.return_value = [task]
 
         with (
-            patch("app.features.core.reminders.service.CalendarEventRepository") as MockEventRepo,
+            patch("app.features.core.reminders.service.CalendarEventService") as MockEventService,
             patch("app.features.core.reminders.service.ShoppingRepository") as MockShoppingRepo,
             patch("app.features.core.reminders.service.WorkingMemoryRepository") as MockWMRepo,
             patch("app.features.core.reminders.service.local_now", return_value=NOW),
         ):
-            MockEventRepo.return_value.get_events = AsyncMock(return_value=[])
+            MockEventService.return_value.get_events = AsyncMock(return_value=[])
             MockShoppingRepo.return_value.list = AsyncMock(return_value=[])
             MockWMRepo.return_value.list = AsyncMock(return_value=[])
             MockWMRepo.return_value.upsert = AsyncMock()
@@ -122,12 +123,12 @@ class TestBuildDueDigestTasks:
         mock_task_service.get_tasks.return_value = [task]
 
         with (
-            patch("app.features.core.reminders.service.CalendarEventRepository") as MockEventRepo,
+            patch("app.features.core.reminders.service.CalendarEventService") as MockEventService,
             patch("app.features.core.reminders.service.ShoppingRepository") as MockShoppingRepo,
             patch("app.features.core.reminders.service.WorkingMemoryRepository") as MockWMRepo,
             patch("app.features.core.reminders.service.local_now", return_value=NOW),
         ):
-            MockEventRepo.return_value.get_events = AsyncMock(return_value=[])
+            MockEventService.return_value.get_events = AsyncMock(return_value=[])
             MockShoppingRepo.return_value.list = AsyncMock(return_value=[])
             MockWMRepo.return_value.list = AsyncMock(return_value=[MagicMock()])
             MockWMRepo.return_value.upsert = AsyncMock()
@@ -144,12 +145,12 @@ class TestBuildDueDigestTasks:
         mock_task_service.get_tasks.return_value = [task]
 
         with (
-            patch("app.features.core.reminders.service.CalendarEventRepository") as MockEventRepo,
+            patch("app.features.core.reminders.service.CalendarEventService") as MockEventService,
             patch("app.features.core.reminders.service.ShoppingRepository") as MockShoppingRepo,
             patch("app.features.core.reminders.service.WorkingMemoryRepository") as MockWMRepo,
             patch("app.features.core.reminders.service.local_now", return_value=NOW),
         ):
-            MockEventRepo.return_value.get_events = AsyncMock(return_value=[])
+            MockEventService.return_value.get_events = AsyncMock(return_value=[])
             MockShoppingRepo.return_value.list = AsyncMock(return_value=[])
             MockWMRepo.return_value.list = AsyncMock(return_value=[])
             MockWMRepo.return_value.upsert = AsyncMock()
@@ -173,12 +174,12 @@ class TestBuildDueDigestTasks:
         mock_task_service.get_tasks.return_value = [task]
 
         with (
-            patch("app.features.core.reminders.service.CalendarEventRepository") as MockEventRepo,
+            patch("app.features.core.reminders.service.CalendarEventService") as MockEventService,
             patch("app.features.core.reminders.service.ShoppingRepository") as MockShoppingRepo,
             patch("app.features.core.reminders.service.WorkingMemoryRepository") as MockWMRepo,
             patch("app.features.core.reminders.service.local_now", return_value=NOW),
         ):
-            MockEventRepo.return_value.get_events = AsyncMock(return_value=[])
+            MockEventService.return_value.get_events = AsyncMock(return_value=[])
             MockShoppingRepo.return_value.list = AsyncMock(return_value=[])
             MockWMRepo.return_value.list = AsyncMock(return_value=[])
             MockWMRepo.return_value.upsert = AsyncMock()
@@ -196,12 +197,12 @@ class TestBuildDueDigestTasks:
         mock_task_service.get_tasks.return_value = [task]
 
         with (
-            patch("app.features.core.reminders.service.CalendarEventRepository") as MockEventRepo,
+            patch("app.features.core.reminders.service.CalendarEventService") as MockEventService,
             patch("app.features.core.reminders.service.ShoppingRepository") as MockShoppingRepo,
             patch("app.features.core.reminders.service.WorkingMemoryRepository") as MockWMRepo,
             patch("app.features.core.reminders.service.local_now", return_value=NOW),
         ):
-            MockEventRepo.return_value.get_events = AsyncMock(return_value=[])
+            MockEventService.return_value.get_events = AsyncMock(return_value=[])
             MockShoppingRepo.return_value.list = AsyncMock(return_value=[])
             MockWMRepo.return_value.list = AsyncMock(return_value=[])
             MockWMRepo.return_value.upsert = AsyncMock()
@@ -221,12 +222,12 @@ class TestBuildDueDigestTasks:
         mock_task_service.get_tasks.return_value = [task]
 
         with (
-            patch("app.features.core.reminders.service.CalendarEventRepository") as MockEventRepo,
+            patch("app.features.core.reminders.service.CalendarEventService") as MockEventService,
             patch("app.features.core.reminders.service.ShoppingRepository") as MockShoppingRepo,
             patch("app.features.core.reminders.service.WorkingMemoryRepository") as MockWMRepo,
             patch("app.features.core.reminders.service.local_now", return_value=NOW),
         ):
-            MockEventRepo.return_value.get_events = AsyncMock(return_value=[])
+            MockEventService.return_value.get_events = AsyncMock(return_value=[])
             MockShoppingRepo.return_value.list = AsyncMock(return_value=[])
             MockWMRepo.return_value.list = AsyncMock(return_value=[])
             MockWMRepo.return_value.upsert = AsyncMock()
@@ -246,12 +247,12 @@ class TestBuildDueDigestTasks:
         mock_task_service.get_tasks.return_value = [task]
 
         with (
-            patch("app.features.core.reminders.service.CalendarEventRepository") as MockEventRepo,
+            patch("app.features.core.reminders.service.CalendarEventService") as MockEventService,
             patch("app.features.core.reminders.service.ShoppingRepository") as MockShoppingRepo,
             patch("app.features.core.reminders.service.WorkingMemoryRepository") as MockWMRepo,
             patch("app.features.core.reminders.service.local_now", return_value=NOW),
         ):
-            MockEventRepo.return_value.get_events = AsyncMock(return_value=[])
+            MockEventService.return_value.get_events = AsyncMock(return_value=[])
             MockShoppingRepo.return_value.list = AsyncMock(return_value=[])
             MockWMRepo.return_value.list = AsyncMock(return_value=[])
             MockWMRepo.return_value.upsert = AsyncMock()
@@ -273,12 +274,12 @@ class TestBuildDueDigestTasks:
         mock_task_service.get_tasks.return_value = [task]
 
         with (
-            patch("app.features.core.reminders.service.CalendarEventRepository") as MockEventRepo,
+            patch("app.features.core.reminders.service.CalendarEventService") as MockEventService,
             patch("app.features.core.reminders.service.ShoppingRepository") as MockShoppingRepo,
             patch("app.features.core.reminders.service.WorkingMemoryRepository") as MockWMRepo,
             patch("app.features.core.reminders.service.local_now", return_value=NOW),
         ):
-            MockEventRepo.return_value.get_events = AsyncMock(return_value=[])
+            MockEventService.return_value.get_events = AsyncMock(return_value=[])
             MockShoppingRepo.return_value.list = AsyncMock(return_value=[])
             MockWMRepo.return_value.list = AsyncMock(return_value=[])
             MockWMRepo.return_value.upsert = AsyncMock()
@@ -299,12 +300,12 @@ class TestBuildDueDigestTasks:
         mock_task_service.get_tasks.return_value = [task]
 
         with (
-            patch("app.features.core.reminders.service.CalendarEventRepository") as MockEventRepo,
+            patch("app.features.core.reminders.service.CalendarEventService") as MockEventService,
             patch("app.features.core.reminders.service.ShoppingRepository") as MockShoppingRepo,
             patch("app.features.core.reminders.service.WorkingMemoryRepository") as MockWMRepo,
             patch("app.features.core.reminders.service.local_now", return_value=NOW),
         ):
-            MockEventRepo.return_value.get_events = AsyncMock(return_value=[])
+            MockEventService.return_value.get_events = AsyncMock(return_value=[])
             MockShoppingRepo.return_value.list = AsyncMock(return_value=[])
             MockWMRepo.return_value.list = AsyncMock(return_value=[])
             MockWMRepo.return_value.upsert = AsyncMock()
@@ -320,12 +321,12 @@ class TestBuildDueDigestTasks:
         mock_task_service.get_tasks.return_value = [task]
 
         with (
-            patch("app.features.core.reminders.service.CalendarEventRepository") as MockEventRepo,
+            patch("app.features.core.reminders.service.CalendarEventService") as MockEventService,
             patch("app.features.core.reminders.service.ShoppingRepository") as MockShoppingRepo,
             patch("app.features.core.reminders.service.WorkingMemoryRepository") as MockWMRepo,
             patch("app.features.core.reminders.service.local_now", return_value=NOW),
         ):
-            MockEventRepo.return_value.get_events = AsyncMock(return_value=[])
+            MockEventService.return_value.get_events = AsyncMock(return_value=[])
             MockShoppingRepo.return_value.list = AsyncMock(return_value=[])
             MockWMRepo.return_value.list = AsyncMock(return_value=[])
             MockWMRepo.return_value.upsert = AsyncMock()
@@ -340,12 +341,12 @@ class TestBuildDueDigestTasks:
         mock_task_service.get_tasks.return_value = [task]
 
         with (
-            patch("app.features.core.reminders.service.CalendarEventRepository") as MockEventRepo,
+            patch("app.features.core.reminders.service.CalendarEventService") as MockEventService,
             patch("app.features.core.reminders.service.ShoppingRepository") as MockShoppingRepo,
             patch("app.features.core.reminders.service.WorkingMemoryRepository") as MockWMRepo,
             patch("app.features.core.reminders.service.local_now", return_value=NOW),
         ):
-            MockEventRepo.return_value.get_events = AsyncMock(return_value=[])
+            MockEventService.return_value.get_events = AsyncMock(return_value=[])
             MockShoppingRepo.return_value.list = AsyncMock(return_value=[])
             MockWMRepo.return_value.list = AsyncMock(return_value=[])
             MockWMRepo.return_value.upsert = AsyncMock()
@@ -361,12 +362,12 @@ class TestBuildDueDigestTasks:
         mock_task_service.get_tasks.return_value = [task]
 
         with (
-            patch("app.features.core.reminders.service.CalendarEventRepository") as MockEventRepo,
+            patch("app.features.core.reminders.service.CalendarEventService") as MockEventService,
             patch("app.features.core.reminders.service.ShoppingRepository") as MockShoppingRepo,
             patch("app.features.core.reminders.service.WorkingMemoryRepository") as MockWMRepo,
             patch("app.features.core.reminders.service.local_now", return_value=NOW),
         ):
-            MockEventRepo.return_value.get_events = AsyncMock(return_value=[])
+            MockEventService.return_value.get_events = AsyncMock(return_value=[])
             MockShoppingRepo.return_value.list = AsyncMock(return_value=[])
             MockWMRepo.return_value.list = AsyncMock(return_value=[MagicMock()])
             MockWMRepo.return_value.upsert = AsyncMock()
@@ -381,12 +382,12 @@ class TestBuildDueDigestTasks:
         mock_task_service.get_tasks.return_value = [task]
 
         with (
-            patch("app.features.core.reminders.service.CalendarEventRepository") as MockEventRepo,
+            patch("app.features.core.reminders.service.CalendarEventService") as MockEventService,
             patch("app.features.core.reminders.service.ShoppingRepository") as MockShoppingRepo,
             patch("app.features.core.reminders.service.WorkingMemoryRepository") as MockWMRepo,
             patch("app.features.core.reminders.service.local_now", return_value=NOW),
         ):
-            MockEventRepo.return_value.get_events = AsyncMock(return_value=[])
+            MockEventService.return_value.get_events = AsyncMock(return_value=[])
             MockShoppingRepo.return_value.list = AsyncMock(return_value=[])
             MockWMRepo.return_value.list = AsyncMock(return_value=[])
             MockWMRepo.return_value.upsert = AsyncMock()
@@ -411,12 +412,12 @@ class TestBuildDueDigestTasks:
         mock_task_service.update_task.return_value = updated_task
 
         with (
-            patch("app.features.core.reminders.service.CalendarEventRepository") as MockEventRepo,
+            patch("app.features.core.reminders.service.CalendarEventService") as MockEventService,
             patch("app.features.core.reminders.service.ShoppingRepository") as MockShoppingRepo,
             patch("app.features.core.reminders.service.WorkingMemoryRepository") as MockWMRepo,
             patch("app.features.core.reminders.service.local_now", return_value=NOW),
         ):
-            MockEventRepo.return_value.get_events = AsyncMock(return_value=[])
+            MockEventService.return_value.get_events = AsyncMock(return_value=[])
             MockShoppingRepo.return_value.list = AsyncMock(return_value=[])
             MockWMRepo.return_value.list = AsyncMock(return_value=[])
             MockWMRepo.return_value.upsert = AsyncMock()
@@ -435,12 +436,12 @@ class TestBuildDueDigestTasks:
         mock_task_service.get_tasks.return_value = [task]
 
         with (
-            patch("app.features.core.reminders.service.CalendarEventRepository") as MockEventRepo,
+            patch("app.features.core.reminders.service.CalendarEventService") as MockEventService,
             patch("app.features.core.reminders.service.ShoppingRepository") as MockShoppingRepo,
             patch("app.features.core.reminders.service.WorkingMemoryRepository") as MockWMRepo,
             patch("app.features.core.reminders.service.local_now", return_value=NOW),
         ):
-            MockEventRepo.return_value.get_events = AsyncMock(return_value=[])
+            MockEventService.return_value.get_events = AsyncMock(return_value=[])
             MockShoppingRepo.return_value.list = AsyncMock(return_value=[])
             MockWMRepo.return_value.list = AsyncMock(return_value=[])
             MockWMRepo.return_value.upsert = AsyncMock()
@@ -468,12 +469,12 @@ class TestDigestGrouping:
         mock_task_service.get_tasks.return_value = tasks
 
         with (
-            patch("app.features.core.reminders.service.CalendarEventRepository") as MockEventRepo,
+            patch("app.features.core.reminders.service.CalendarEventService") as MockEventService,
             patch("app.features.core.reminders.service.ShoppingRepository") as MockShoppingRepo,
             patch("app.features.core.reminders.service.WorkingMemoryRepository") as MockWMRepo,
             patch("app.features.core.reminders.service.local_now", return_value=NOW),
         ):
-            MockEventRepo.return_value.get_events = AsyncMock(return_value=[])
+            MockEventService.return_value.get_events = AsyncMock(return_value=[])
             MockShoppingRepo.return_value.list = AsyncMock(return_value=[])
             MockWMRepo.return_value.list = AsyncMock(return_value=[])
             MockWMRepo.return_value.upsert = AsyncMock()
@@ -503,12 +504,12 @@ class TestDigestGrouping:
         mock_task_service.get_tasks.return_value = tasks
 
         with (
-            patch("app.features.core.reminders.service.CalendarEventRepository") as MockEventRepo,
+            patch("app.features.core.reminders.service.CalendarEventService") as MockEventService,
             patch("app.features.core.reminders.service.ShoppingRepository") as MockShoppingRepo,
             patch("app.features.core.reminders.service.WorkingMemoryRepository") as MockWMRepo,
             patch("app.features.core.reminders.service.local_now", return_value=NOW),
         ):
-            MockEventRepo.return_value.get_events = AsyncMock(return_value=[])
+            MockEventService.return_value.get_events = AsyncMock(return_value=[])
             MockShoppingRepo.return_value.list = AsyncMock(return_value=[])
             MockWMRepo.return_value.list = AsyncMock(return_value=[])
             MockWMRepo.return_value.upsert = AsyncMock()
@@ -525,12 +526,12 @@ class TestDigestGrouping:
         mock_task_service.get_tasks.return_value = [task]
 
         with (
-            patch("app.features.core.reminders.service.CalendarEventRepository") as MockEventRepo,
+            patch("app.features.core.reminders.service.CalendarEventService") as MockEventService,
             patch("app.features.core.reminders.service.ShoppingRepository") as MockShoppingRepo,
             patch("app.features.core.reminders.service.WorkingMemoryRepository") as MockWMRepo,
             patch("app.features.core.reminders.service.local_now", return_value=NOW),
         ):
-            MockEventRepo.return_value.get_events = AsyncMock(return_value=[])
+            MockEventService.return_value.get_events = AsyncMock(return_value=[])
             MockShoppingRepo.return_value.list = AsyncMock(return_value=[])
             MockWMRepo.return_value.list = AsyncMock(return_value=[])
             MockWMRepo.return_value.upsert = AsyncMock()
@@ -578,12 +579,12 @@ class TestReminderFrequency:
         mock_task_service.get_tasks.return_value = [task]
 
         with (
-            patch("app.features.core.reminders.service.CalendarEventRepository") as MockEventRepo,
+            patch("app.features.core.reminders.service.CalendarEventService") as MockEventService,
             patch("app.features.core.reminders.service.ShoppingRepository") as MockShoppingRepo,
             patch("app.features.core.reminders.service.WorkingMemoryRepository") as MockWMRepo,
             patch("app.features.core.reminders.service.local_now", return_value=NOW),
         ):
-            MockEventRepo.return_value.get_events = AsyncMock(return_value=[])
+            MockEventService.return_value.get_events = AsyncMock(return_value=[])
             MockShoppingRepo.return_value.list = AsyncMock(return_value=[])
             MockWMRepo.return_value.list = AsyncMock(return_value=[])
             MockWMRepo.return_value.upsert = AsyncMock()
@@ -647,13 +648,13 @@ class TestUndatedTaskEscalationConfigAndSnooze:
         settings = MagicMock(undated_task_escalation_days=7)
 
         with (
-            patch("app.features.core.reminders.service.CalendarEventRepository") as MockEventRepo,
+            patch("app.features.core.reminders.service.CalendarEventService") as MockEventService,
             patch("app.features.core.reminders.service.ShoppingRepository") as MockShoppingRepo,
             patch("app.features.core.reminders.service.WorkingMemoryRepository") as MockWMRepo,
             patch("app.features.core.reminders.service.local_now", return_value=NOW),
             patch("app.features.core.reminders.service.get_settings", return_value=settings),
         ):
-            MockEventRepo.return_value.get_events = AsyncMock(return_value=[])
+            MockEventService.return_value.get_events = AsyncMock(return_value=[])
             MockShoppingRepo.return_value.list = AsyncMock(return_value=[])
             MockWMRepo.return_value.list = AsyncMock(return_value=[])
             MockWMRepo.return_value.upsert = AsyncMock()
@@ -672,12 +673,12 @@ class TestUndatedTaskEscalationConfigAndSnooze:
         mock_task_service.get_tasks.return_value = [task]
 
         with (
-            patch("app.features.core.reminders.service.CalendarEventRepository") as MockEventRepo,
+            patch("app.features.core.reminders.service.CalendarEventService") as MockEventService,
             patch("app.features.core.reminders.service.ShoppingRepository") as MockShoppingRepo,
             patch("app.features.core.reminders.service.WorkingMemoryRepository") as MockWMRepo,
             patch("app.features.core.reminders.service.local_now", return_value=NOW),
         ):
-            MockEventRepo.return_value.get_events = AsyncMock(return_value=[])
+            MockEventService.return_value.get_events = AsyncMock(return_value=[])
             MockShoppingRepo.return_value.list = AsyncMock(return_value=[])
             MockWMRepo.return_value.list = AsyncMock(side_effect=_snooze_list_side_effect(21))
             MockWMRepo.return_value.upsert = AsyncMock()
@@ -693,12 +694,12 @@ class TestUndatedTaskEscalationConfigAndSnooze:
         mock_task_service.get_tasks.return_value = [task]
 
         with (
-            patch("app.features.core.reminders.service.CalendarEventRepository") as MockEventRepo,
+            patch("app.features.core.reminders.service.CalendarEventService") as MockEventService,
             patch("app.features.core.reminders.service.ShoppingRepository") as MockShoppingRepo,
             patch("app.features.core.reminders.service.WorkingMemoryRepository") as MockWMRepo,
             patch("app.features.core.reminders.service.local_now", return_value=NOW),
         ):
-            MockEventRepo.return_value.get_events = AsyncMock(return_value=[])
+            MockEventService.return_value.get_events = AsyncMock(return_value=[])
             MockShoppingRepo.return_value.list = AsyncMock(return_value=[])
             MockWMRepo.return_value.list = AsyncMock(side_effect=_snooze_list_side_effect(22))
             MockWMRepo.return_value.upsert = AsyncMock()
@@ -714,12 +715,12 @@ class TestBuildDueDigestEventsAndShopping:
         event = _make_event(id=5, start_datetime=NOW + timedelta(hours=1))
 
         with (
-            patch("app.features.core.reminders.service.CalendarEventRepository") as MockEventRepo,
+            patch("app.features.core.reminders.service.CalendarEventService") as MockEventService,
             patch("app.features.core.reminders.service.ShoppingRepository") as MockShoppingRepo,
             patch("app.features.core.reminders.service.WorkingMemoryRepository") as MockWMRepo,
             patch("app.features.core.reminders.service.local_now", return_value=NOW),
         ):
-            MockEventRepo.return_value.get_events = AsyncMock(return_value=[event])
+            MockEventService.return_value.get_events = AsyncMock(return_value=[event])
             MockShoppingRepo.return_value.list = AsyncMock(return_value=[])
             MockWMRepo.return_value.list = AsyncMock(return_value=[])
             MockWMRepo.return_value.upsert = AsyncMock()
@@ -728,14 +729,61 @@ class TestBuildDueDigestEventsAndShopping:
 
         assert "Starting soon (11:00): Team sync" in digest.text
 
-    async def test_pending_shopping_items_reported_once(self, mock_session, mock_task_service):
+    async def test_all_day_event_shows_all_day_not_midnight(self, mock_session, mock_task_service):
+        event = _make_event(id=6, title="Schedule tax dates", start_datetime=NOW, all_day=True)
+
         with (
-            patch("app.features.core.reminders.service.CalendarEventRepository") as MockEventRepo,
+            patch("app.features.core.reminders.service.CalendarEventService") as MockEventService,
             patch("app.features.core.reminders.service.ShoppingRepository") as MockShoppingRepo,
             patch("app.features.core.reminders.service.WorkingMemoryRepository") as MockWMRepo,
             patch("app.features.core.reminders.service.local_now", return_value=NOW),
         ):
-            MockEventRepo.return_value.get_events = AsyncMock(return_value=[])
+            MockEventService.return_value.get_events = AsyncMock(return_value=[event])
+            MockShoppingRepo.return_value.list = AsyncMock(return_value=[])
+            MockWMRepo.return_value.list = AsyncMock(return_value=[])
+            MockWMRepo.return_value.upsert = AsyncMock()
+
+            digest = await _service(mock_session, mock_task_service).build_due_digest()
+
+        assert "Starting soon (All day): Schedule tax dates" in digest.text
+        assert "00:00" not in digest.text
+
+    async def test_event_lines_use_recurrence_expanding_service_not_raw_repository(
+        self, mock_session, mock_task_service
+    ):
+        # ReminderService must call CalendarEventService.get_events (which expands RRULEs
+        # into real next-occurrence spans) rather than querying CalendarEventRepository
+        # directly, otherwise a recurring event's stale original start_datetime is reused
+        # for every reminder regardless of when the next occurrence actually falls.
+        event = _make_event(id=7, start_datetime=NOW + timedelta(hours=1))
+
+        with (
+            patch("app.features.core.reminders.service.CalendarEventService") as MockEventService,
+            patch("app.features.core.reminders.service.ShoppingRepository") as MockShoppingRepo,
+            patch("app.features.core.reminders.service.WorkingMemoryRepository") as MockWMRepo,
+            patch("app.features.core.reminders.service.local_now", return_value=NOW),
+        ):
+            MockEventService.return_value.get_events = AsyncMock(return_value=[event])
+            MockShoppingRepo.return_value.list = AsyncMock(return_value=[])
+            MockWMRepo.return_value.list = AsyncMock(return_value=[])
+            MockWMRepo.return_value.upsert = AsyncMock()
+
+            await _service(mock_session, mock_task_service).build_due_digest()
+
+        MockEventService.assert_called_once_with(provider=None, session=mock_session)
+        MockEventService.return_value.get_events.assert_awaited_once()
+        filters = MockEventService.return_value.get_events.call_args.args[0]
+        assert filters.start_from == NOW
+        assert filters.start_to == NOW + timedelta(hours=2)
+
+    async def test_pending_shopping_items_reported_once(self, mock_session, mock_task_service):
+        with (
+            patch("app.features.core.reminders.service.CalendarEventService") as MockEventService,
+            patch("app.features.core.reminders.service.ShoppingRepository") as MockShoppingRepo,
+            patch("app.features.core.reminders.service.WorkingMemoryRepository") as MockWMRepo,
+            patch("app.features.core.reminders.service.local_now", return_value=NOW),
+        ):
+            MockEventService.return_value.get_events = AsyncMock(return_value=[])
             MockShoppingRepo.return_value.list = AsyncMock(return_value=[MagicMock(), MagicMock()])
             MockWMRepo.return_value.list = AsyncMock(return_value=[])
             MockWMRepo.return_value.upsert = AsyncMock()
@@ -746,12 +794,12 @@ class TestBuildDueDigestEventsAndShopping:
 
     async def test_no_content_returns_empty_text(self, mock_session, mock_task_service):
         with (
-            patch("app.features.core.reminders.service.CalendarEventRepository") as MockEventRepo,
+            patch("app.features.core.reminders.service.CalendarEventService") as MockEventService,
             patch("app.features.core.reminders.service.ShoppingRepository") as MockShoppingRepo,
             patch("app.features.core.reminders.service.WorkingMemoryRepository") as MockWMRepo,
             patch("app.features.core.reminders.service.local_now", return_value=NOW),
         ):
-            MockEventRepo.return_value.get_events = AsyncMock(return_value=[])
+            MockEventService.return_value.get_events = AsyncMock(return_value=[])
             MockShoppingRepo.return_value.list = AsyncMock(return_value=[])
             MockWMRepo.return_value.list = AsyncMock(return_value=[])
             MockWMRepo.return_value.upsert = AsyncMock()

@@ -10,8 +10,8 @@ from app.features.core.reminders.schemas import ReminderDigest
 from app.features.core.working_memory.repository import WorkingMemoryRepository
 from app.features.core.working_memory.schemas import WorkingMemoryCreate, WorkingMemoryFilters
 from app.features.core.working_memory.service import WorkingMemoryService
-from app.features.organizer.calendar_events.repository import CalendarEventRepository
 from app.features.organizer.calendar_events.schemas import EventFilters
+from app.features.organizer.calendar_events.service import CalendarEventService
 from app.features.organizer.shopping.repository import ShoppingRepository
 from app.features.organizer.shopping.schemas import ShoppingItemFilters
 from app.features.organizer.tasks.recurrence import is_due_today
@@ -91,7 +91,7 @@ class ReminderService:
     def __init__(self, session: AsyncSession, task_service: TaskService) -> None:
         self._session = session
         self._task_service = task_service
-        self._event_repo = CalendarEventRepository(session)
+        self._event_service = CalendarEventService(provider=None, session=session)
         self._shopping_repo = ShoppingRepository(session)
         self._working_memory_repo = WorkingMemoryRepository(session)
 
@@ -206,14 +206,15 @@ class ReminderService:
         return entries, summary_lines
 
     async def _collect_event_lines(self, now: datetime, today) -> list[str]:
-        events = await self._event_repo.get_events(
+        events = await self._event_service.get_events(
             EventFilters(start_from=now, start_to=now + _EVENT_LOOKAHEAD, limit=50)
         )
         lines: list[str] = []
         for event in events:
             if await self._already_reminded("event", event.id, today):
                 continue
-            lines.append(f"Starting soon ({event.start_datetime.strftime('%H:%M')}): {event.title}")
+            start_time = "All day" if event.all_day else event.start_datetime.strftime("%H:%M")
+            lines.append(f"Starting soon ({start_time}): {event.title}")
             await self._mark_reminded("event", event.id, today, _DAILY_DEDUP_TTL)
         return lines
 

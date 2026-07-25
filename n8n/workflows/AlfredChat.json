@@ -1345,49 +1345,6 @@
         {
             "parameters": {
                 "method": "POST",
-                "url": "http://api:8000/core/chats/audio",
-                "authentication": "genericCredentialType",
-                "genericAuthType": "httpBearerAuth",
-                "sendBody": true,
-                "contentType": "multipart-form-data",
-                "bodyParameters": {
-                    "parameters": [
-                        {
-                            "name": "source",
-                            "value": "telegram"
-                        },
-                        {
-                            "name": "external_id",
-                            "value": "={{ $('Message Trigger').item.json.message?.chat?.id?.toString() || $('Message Trigger').item.json.callback_query?.message?.chat?.id?.toString() }}"
-                        },
-                        {
-                            "name": "audio",
-                            "parameterType": "formBinaryData",
-                            "inputDataFieldName": "data"
-                        }
-                    ]
-                },
-                "options": {}
-            },
-            "type": "n8n-nodes-base.httpRequest",
-            "typeVersion": 4.4,
-            "position": [
-                368,
-                680
-            ],
-            "id": "75ed77c9-8820-4557-b0e5-4ca12f9fcb6c",
-            "name": "Send Conversation Audio",
-            "credentials": {
-                "httpBearerAuth": {
-                    "id": "oj5Yf1MhLsryeSrX",
-                    "name": "Bearer Auth account"
-                }
-            },
-            "onError": "continueErrorOutput"
-        },
-        {
-            "parameters": {
-                "method": "POST",
                 "url": "http://api:8000/language/conversation/turns/audio",
                 "authentication": "genericCredentialType",
                 "genericAuthType": "httpBearerAuth",
@@ -1415,7 +1372,7 @@
                 820
             ],
             "id": "250ad3e3-efe8-4dcd-9f02-bd408f777286",
-            "name": "Record Roleplay Turn Audio",
+            "name": "Record Conversation Turn Audio",
             "credentials": {
                 "httpBearerAuth": {
                     "id": "oj5Yf1MhLsryeSrX",
@@ -1506,6 +1463,133 @@
             "id": "64aaf9e5-82cc-4749-ac27-591e7f6e9c7d",
             "name": "Send Conversation Voice Reply",
             "onError": "continueErrorOutput"
+        },
+        {
+            "parameters": {
+                "url": "http://api:8000/core/working-memory",
+                "authentication": "genericCredentialType",
+                "genericAuthType": "httpBearerAuth",
+                "sendQuery": true,
+                "queryParameters": {
+                    "parameters": [
+                        {
+                            "name": "key",
+                            "value": "language:pending"
+                        },
+                        {
+                            "name": "active_only",
+                            "value": "true"
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.4,
+            "position": [
+                -704,
+                -180
+            ],
+            "id": "b1f0c2a4-7d31-4a55-9c62-2e5a1f0d7a01",
+            "name": "Get Working Memory (Text)",
+            "alwaysOutputData": true,
+            "credentials": {
+                "httpBearerAuth": {
+                    "id": "oj5Yf1MhLsryeSrX",
+                    "name": "Bearer Auth account"
+                }
+            },
+            "onError": "continueErrorOutput"
+        },
+        {
+            "parameters": {
+                "conditions": {
+                    "options": {
+                        "caseSensitive": true,
+                        "leftValue": "",
+                        "typeValidation": "strict",
+                        "version": 3
+                    },
+                    "conditions": [
+                        {
+                            "id": "3a1c9e70-5b42-4c18-9f03-6d7b8e2a4c11",
+                            "leftValue": "={{ $('Get Working Memory (Text)').item.json.key }}",
+                            "rightValue": "language:pending",
+                            "operator": {
+                                "type": "string",
+                                "operation": "equals"
+                            }
+                        },
+                        {
+                            "id": "4b2da081-6c53-4d29-8a14-7e8c9f3b5d22",
+                            "leftValue": "={{ ['roleplay','conversation'].includes($('Get Working Memory (Text)').item.json.value?.parseJson()?.mode) }}",
+                            "rightValue": true,
+                            "operator": {
+                                "type": "boolean",
+                                "operation": "true",
+                                "singleValue": true
+                            }
+                        },
+                        {
+                            "id": "5c3eb192-7d64-4e3a-9b25-8f9daf4c6e33",
+                            "leftValue": "={{ $('Route Chat Output').item.json.message.text.startsWith('/') }}",
+                            "rightValue": false,
+                            "operator": {
+                                "type": "boolean",
+                                "operation": "false",
+                                "singleValue": true
+                            }
+                        }
+                    ],
+                    "combinator": "and"
+                },
+                "options": {}
+            },
+            "type": "n8n-nodes-base.if",
+            "typeVersion": 2.3,
+            "position": [
+                -464,
+                -180
+            ],
+            "id": "6d4fc2a3-8e75-4f4b-ac36-9a0bc05d7f44",
+            "name": "Is Language Chat Active"
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "http://api:8000/language/conversation/turns",
+                "authentication": "genericCredentialType",
+                "genericAuthType": "httpBearerAuth",
+                "sendBody": true,
+                "bodyParameters": {
+                    "parameters": [
+                        {
+                            "name": "thread_id",
+                            "value": "={{ $('Get Working Memory (Text)').item.json.value.parseJson().thread_id }}"
+                        },
+                        {
+                            "name": "text",
+                            "value": "={{ $('Route Chat Output').item.json.message.text }}"
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.4,
+            "position": [
+                -224,
+                -300
+            ],
+            "id": "7e5adb34-9f86-4a5c-bd47-ab1cd16e8055",
+            "name": "Record Conversation Text Turn",
+            "credentials": {
+                "httpBearerAuth": {
+                    "id": "oj5Yf1MhLsryeSrX",
+                    "name": "Bearer Auth account"
+                }
+            },
+            "onError": "continueErrorOutput"
         }
     ],
     "pinData": {},
@@ -1525,7 +1609,7 @@
             "main": [
                 [
                     {
-                        "node": "Define Message from Text",
+                        "node": "Get Working Memory (Text)",
                         "type": "main",
                         "index": 0
                     }
@@ -2045,14 +2129,14 @@
             "main": [
                 [
                     {
-                        "node": "Send Conversation Audio",
+                        "node": "Record Conversation Turn Audio",
                         "type": "main",
                         "index": 0
                     }
                 ],
                 [
                     {
-                        "node": "Record Roleplay Turn Audio",
+                        "node": "Record Conversation Turn Audio",
                         "type": "main",
                         "index": 0
                     }
@@ -2060,42 +2144,6 @@
                 [
                     {
                         "node": "Transcribe a recording",
-                        "type": "main",
-                        "index": 0
-                    }
-                ]
-            ]
-        },
-        "Send Conversation Audio": {
-            "main": [
-                [
-                    {
-                        "node": "Has Reply Audio",
-                        "type": "main",
-                        "index": 0
-                    }
-                ],
-                [
-                    {
-                        "node": "Set Error Message",
-                        "type": "main",
-                        "index": 0
-                    }
-                ]
-            ]
-        },
-        "Record Roleplay Turn Audio": {
-            "main": [
-                [
-                    {
-                        "node": "Has Reply Audio",
-                        "type": "main",
-                        "index": 0
-                    }
-                ],
-                [
-                    {
-                        "node": "Set Error Message",
                         "type": "main",
                         "index": 0
                     }
@@ -2134,6 +2182,78 @@
         "Send Conversation Voice Reply": {
             "main": [
                 [],
+                [
+                    {
+                        "node": "Set Error Message",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Record Conversation Turn Audio": {
+            "main": [
+                [
+                    {
+                        "node": "Has Reply Audio",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "Set Error Message",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Get Working Memory (Text)": {
+            "main": [
+                [
+                    {
+                        "node": "Is Language Chat Active",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "Set Error Message",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Is Language Chat Active": {
+            "main": [
+                [
+                    {
+                        "node": "Record Conversation Text Turn",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "Define Message from Text",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Record Conversation Text Turn": {
+            "main": [
+                [
+                    {
+                        "node": "Has Reply Audio",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
                 [
                     {
                         "node": "Set Error Message",

@@ -116,6 +116,8 @@
             </a>
             {% elif session.prompt_text %}
             <span class="text-xs text-gray-500 truncate block">{{ session.prompt_text }}</span>
+            {% elif session.transcript_or_notes %}
+            <span class="text-xs text-gray-500 truncate block" title="{{ session.transcript_or_notes }}">{{ session.transcript_or_notes }}</span>
             {% else %}
             <span class="text-xs text-gray-400">free session</span>
             {% endif %}

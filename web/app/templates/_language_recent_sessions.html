@@ -22,6 +22,14 @@
           chunk #{{ session.chunk_id }}
         {% endif %}
       </a>
+      {% elif session.prompt_text %}
+      <span class="text-xs text-gray-500 truncate" title="{{ session.prompt_text }}">
+        {{ session.prompt_text[:50] }}{% if session.prompt_text|length > 50 %}…{% endif %}
+      </span>
+      {% elif session.transcript_or_notes %}
+      <span class="text-xs text-gray-500 truncate" title="{{ session.transcript_or_notes }}">
+        {{ session.transcript_or_notes[:50] }}{% if session.transcript_or_notes|length > 50 %}…{% endif %}
+      </span>
       {% else %}
       <span class="text-xs text-gray-400">free session</span>
       {% endif %}

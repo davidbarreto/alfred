@@ -26,7 +26,7 @@ from app.features.language.sessions.schemas import SessionCreate
 from app.features.language.sessions.service import SessionService as LanguageSessionService
 from app.features.language.tracks.repository import TrackRepository
 from app.integrations.llm_calls.repository import create_llm_call
-from app.shared.audio import AudioConversationProvider, AudioConverter, FileStorage
+from app.shared.audio import AudioConversationProvider, AudioConverter, FileStorage, styled_for_tts
 from app.shared.llm import LlmProvider
 
 logger = logging.getLogger(__name__)
@@ -66,8 +66,11 @@ class ConversationService:
         turn = await self._thread_repo.get_turn(turn_id)
         return turn.audio_ref if turn else None
 
-    async def _synthesize_and_save(self, text: str, track_code: str) -> tuple[bytes, str]:
-        audio, _ = await self._pronunciation_service.get_audio(text, track_code, audio_format="ogg")
+    async def _synthesize_and_save(
+        self, text: str, track_code: str, tone: str | None = None
+    ) -> tuple[bytes, str]:
+        tts_text = styled_for_tts(text, tone)
+        audio, _ = await self._pronunciation_service.get_audio(tts_text, track_code, audio_format="ogg")
         audio_ref = f"conversation/{uuid4()}.ogg"
         await self._audio_storage.save(audio, audio_ref)
         return audio, audio_ref
@@ -201,7 +204,7 @@ class ConversationService:
         reply_audio: bytes | None = None
         reply_audio_ref: str | None = None
         if thread.voice_reply:
-            reply_audio, reply_audio_ref = await self._synthesize_and_save(result.reply, track.code)
+            reply_audio, reply_audio_ref = await self._synthesize_and_save(result.reply, track.code, result.tone)
 
         assistant_message = await self._message_service.create(
             MessageCreate(

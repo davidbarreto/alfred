@@ -32,6 +32,7 @@ def _make_result(**kwargs) -> AudioConversationResult:
         raw_response=kwargs.get("raw_response", "{}"),
         tokens_input=kwargs.get("tokens_input", 50),
         tokens_output=kwargs.get("tokens_output", 20),
+        tone=kwargs.get("tone"),
     )
 
 
@@ -165,6 +166,23 @@ class TestRecordAudioTurn:
 
         assert result.reply_audio_base64 is not None
         parts["pronunciation_service"].get_audio.assert_awaited_once()
+
+    async def test_tone_styles_the_synthesized_reply(self):
+        parts = _make_service()
+        thread = _make_thread(voice_reply=True)
+        parts["thread_repo"].get_thread = AsyncMock(return_value=thread)
+        parts["track_repo"].get_track = AsyncMock(return_value=_make_track())
+        parts["thread_repo"].get_turns_with_messages = AsyncMock(return_value=[])
+        parts["conversation_provider"].reply = AsyncMock(
+            return_value=_make_result(reply="Bien sur!", tone="cheerful")
+        )
+
+        with patch("app.features.language.conversation.service.create_llm_call", AsyncMock()):
+            await parts["service"].record_audio_turn(thread_id=10, audio=b"raw-audio")
+
+        parts["pronunciation_service"].get_audio.assert_awaited_once_with(
+            "Say in a cheerful tone: Bien sur!", "fr", audio_format="ogg"
+        )
 
     async def test_missing_thread_raises_404(self):
         from fastapi import HTTPException

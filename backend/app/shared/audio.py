@@ -110,6 +110,16 @@ class AudioConversationResult:
     raw_response: str
     tokens_input: int | None
     tokens_output: int | None
+    tone: str | None = None
+
+
+def styled_for_tts(text: str, tone: str | None) -> str:
+    """Prefix text with a natural-language delivery instruction a style-steerable TTS
+    provider can act on (it speaks only `text`, not the instruction itself).
+    No-op when tone is unset."""
+    if not tone:
+        return text
+    return f"Say in a {tone} tone: {text}"
 
 
 class AudioConversationProvider(Protocol):

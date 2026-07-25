@@ -1075,6 +1075,32 @@ class TestChatServiceAudio:
         assert reply_audio == b"tts-bytes"
         service._pronunciation_service.get_audio.assert_awaited_once_with("Salut!", "fr", audio_format="ogg")
 
+    async def test_tone_styles_the_synthesized_reply(self, mock_session_repository):
+        service, _, _, message_service, _ = _make_service()
+        message_service.list.return_value = []
+        service._working_memory_service.list.return_value = [
+            _make_wm("language:pending", json.dumps({
+                "mode": "conversation", "track_id": 3, "track_code": "fr",
+                "language_name": "French", "topic": None, "voice_reply": True,
+            }))
+        ]
+        service._conversation_provider.reply = AsyncMock(return_value=AudioConversationResult(
+            transcript="Bonjour", reply="Salut!", tip=None, raw_response="{}",
+            tokens_input=10, tokens_output=5, tone="cheerful",
+        ))
+        service._pronunciation_service.get_audio = AsyncMock(return_value=(b"tts-bytes", "audio/ogg"))
+
+        with patch("app.features.core.chats.service.SessionService") as mock_session_service_cls, \
+             patch("app.features.core.chats.service.create_llm_call", AsyncMock()):
+            mock_session_service_cls.return_value.get_or_create_active = AsyncMock(
+                return_value=(_make_session_read(), False)
+            )
+            await service.chat_with_audio("telegram", "user_123", b"raw-audio", "audio/ogg")
+
+        service._pronunciation_service.get_audio.assert_awaited_once_with(
+            "Say in a cheerful tone: Salut!", "fr", audio_format="ogg"
+        )
+
     async def test_provider_failure_raises_503(self, mock_session_repository):
         service, _, _, message_service, _ = _make_service()
         message_service.list.return_value = []

@@ -14,7 +14,7 @@ If David's turn has a clear pronunciation or grammar issue worth flagging, note 
 not every turn, only when there's something genuinely useful to point out. Otherwise leave "tip" null.
 
 Return ONLY a valid JSON object with no explanation or markdown:
-{{"transcript": "<verbatim transcription of what David said>", "reply": "<your in-character reply, in {language_name}>", "tip": "<brief pronunciation/grammar note, or null>"}}"""
+{{"transcript": "<verbatim transcription of what David said>", "reply": "<your in-character reply, in {language_name}>", "tip": "<brief pronunciation/grammar note, or null>", "tone": "<one or two words describing how this line should be spoken, e.g. cheerful, sympathetic, serious, playful, apologetic, excited, calm>"}}"""
 
 ROLEPLAY_SUMMARY_PROMPT = """\
 This roleplay conversation practice in {language_name} has ended. Scenario: {scenario}

@@ -53,6 +53,32 @@ class TestReply:
         assert contents[0].parts[0].text == "Bonjour"
 
     @pytest.mark.asyncio
+    async def test_parses_tone(self):
+        payload = {"transcript": "Un cafe", "reply": "Bien sur!", "tip": None, "tone": "cheerful"}
+        with patch("app.integrations.google.conversation_provider.genai.Client") as mock_client_cls:
+            mock_client = MagicMock()
+            mock_client.aio.models.generate_content = AsyncMock(return_value=_mock_response(payload))
+            mock_client_cls.return_value = mock_client
+
+            provider = GoogleConversationProvider(api_key="test-key", model_name="gemini-2.5-flash")
+            result = await provider.reply(history=[], current_audio=b"x", mime_type="audio/ogg", system="sys")
+
+        assert result.tone == "cheerful"
+
+    @pytest.mark.asyncio
+    async def test_missing_tone_becomes_none(self):
+        payload = {"transcript": "hi", "reply": "hello", "tip": None}
+        with patch("app.integrations.google.conversation_provider.genai.Client") as mock_client_cls:
+            mock_client = MagicMock()
+            mock_client.aio.models.generate_content = AsyncMock(return_value=_mock_response(payload))
+            mock_client_cls.return_value = mock_client
+
+            provider = GoogleConversationProvider(api_key="test-key", model_name="gemini-2.5-flash")
+            result = await provider.reply(history=[], current_audio=b"x", mime_type="audio/ogg", system="sys")
+
+        assert result.tone is None
+
+    @pytest.mark.asyncio
     async def test_null_tip_becomes_none(self):
         payload = {"transcript": "hi", "reply": "hello", "tip": None}
         with patch("app.integrations.google.conversation_provider.genai.Client") as mock_client_cls:

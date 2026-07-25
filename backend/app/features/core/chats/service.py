@@ -42,7 +42,7 @@ from app.features.language.sessions.schemas import NextPracticePrompt
 from app.features.language.sessions.schemas import SessionFilters as LanguageSessionFilters
 from app.features.language.sessions.tables import LearningSession
 from app.integrations.llm_calls.repository import create_llm_call
-from app.shared.audio import AudioConversationProvider, AudioConverter
+from app.shared.audio import AudioConversationProvider, AudioConverter, styled_for_tts
 from app.shared.llm import LlmProvider, StreamMeta
 
 _LANGUAGE_PENDING_KEY = "language:pending"
@@ -556,7 +556,7 @@ class ChatService:
             track_code = pending_data.get("track_code") or "en"
             try:
                 reply_audio, _ = await self._pronunciation_service.get_audio(
-                    result.reply, track_code, audio_format="ogg"
+                    styled_for_tts(result.reply, result.tone), track_code, audio_format="ogg"
                 )
             except Exception:
                 logger.error("ChatAudio: TTS synthesis failed session_id=%d", session.id, exc_info=True)

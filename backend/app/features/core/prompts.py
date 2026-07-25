@@ -38,7 +38,7 @@ reply sometimes — not every turn, and never in a way that breaks the flow of c
 This is casual practice, not a graded exercise — do not lecture or over-correct.
 
 Return ONLY a valid JSON object with no explanation or markdown:
-{{"transcript": "<verbatim transcription of what David said>", "reply": "<your spoken reply, in {language_name}>", "tip": null}}"""
+{{"transcript": "<verbatim transcription of what David said>", "reply": "<your spoken reply, in {language_name}>", "tip": null, "tone": "<one or two words describing how this line should be spoken, e.g. cheerful, sympathetic, serious, playful, apologetic, excited, calm>"}}"""
 
 CHAT_LANGUAGE_INSTRUCTIONS = (
     "## Language\n"

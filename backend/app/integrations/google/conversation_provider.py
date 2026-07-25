@@ -80,6 +80,7 @@ class GoogleConversationProvider:
             raw_response=raw_response,
             tokens_input=usage.prompt_token_count if usage else None,
             tokens_output=usage.candidates_token_count if usage else None,
+            tone=parsed.get("tone") or None,
         )
 
 

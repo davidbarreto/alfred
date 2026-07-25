@@ -223,6 +223,7 @@ def get_chat_service(session: AsyncSession = Depends(get_session)) -> ChatServic
         working_memory_service=WorkingMemoryService(session),
         chunk_service=LanguageChunkService(session),
         production_service=get_production_service(session),
+        language_session_service=get_language_session_service(session),
     )
 
 @lru_cache
@@ -324,7 +325,7 @@ def get_conversation_tts_service() -> PronunciationService:
     )
 
 def get_language_session_service(session: AsyncSession = Depends(get_session)) -> LanguageSessionService:
-    return LanguageSessionService(session)
+    return LanguageSessionService(session, WorkingMemoryService(session))
 
 def get_audio_analysis_provider() -> GoogleAudioAnalysisProvider:
     s = get_settings()

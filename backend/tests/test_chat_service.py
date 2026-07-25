@@ -17,6 +17,7 @@ from app.features.core.messages.schemas import MessageRead
 from app.features.core.sessions.tables import Session
 from app.features.core.working_memory.schemas import WorkingMemoryRead
 from app.features.language.chunks.schemas import ChunkRead, DailyBatchRead
+from app.features.language.sessions.schemas import LoopAdvanceRead, NextPracticePrompt
 from app.features.language.sessions.tables import LearningSession
 from app.shared.llm import LlmResponse
 
@@ -143,6 +144,8 @@ def _make_service(llm_text: str = "ok") -> tuple[ChatService, MagicMock, AsyncMo
     chunk_service.get_daily_batch = AsyncMock(return_value=[])
     production_service = AsyncMock()
     production_service.get_next_task = AsyncMock(return_value=None)
+    language_session_service = AsyncMock()
+    language_session_service.advance_loop = AsyncMock(return_value=LoopAdvanceRead(status="completed"))
     service = ChatService(
         session=session,
         llm_provider=llm_provider,
@@ -153,6 +156,7 @@ def _make_service(llm_text: str = "ok") -> tuple[ChatService, MagicMock, AsyncMo
         working_memory_service=working_memory_service,
         chunk_service=chunk_service,
         production_service=production_service,
+        language_session_service=language_session_service,
     )
     return service, llm_provider, embedding_service, message_service, memory_extraction_service
 
@@ -451,7 +455,9 @@ class TestChatServiceWorkingMemory:
         await service.chat(ChatRequest(session_id=1))
         embedding_service.search.assert_called_once()
 
-    async def test_deletes_practice_wm_after_chat(self):
+    async def test_advances_practice_loop_after_chat(self):
+        # Actual WM cleanup now happens inside SessionService.advance_loop (see
+        # test_language_session_service.py); here we just verify ChatService delegates.
         service, _, _, message_service, _ = _make_service()
         wm = _make_wm("language:pending", '{"chunk_id": 42}')
         wm = WorkingMemoryRead(id=99, key=wm.key, value=wm.value, importance=None,
@@ -459,7 +465,8 @@ class TestChatServiceWorkingMemory:
         service._working_memory_service.list.return_value = [wm]
         message_service.list.return_value = [_make_message("a chuva caiu")]
         await service.chat(ChatRequest(session_id=1))
-        service._working_memory_service.delete.assert_called_once_with(99)
+        service._language_session_service.advance_loop.assert_called_once()
+        assert service._language_session_service.advance_loop.call_args[0][0].chunk_id == 42
 
     async def test_does_not_delete_non_practice_wm(self):
         service, _, _, message_service, _ = _make_service()
@@ -526,18 +533,22 @@ class TestChatServiceLanguageLoop:
         wm = WorkingMemoryRead(id=99, key=wm.key, value=wm.value, importance=None,
                                expires_at=None, session_id=None, created_at=wm.created_at)
         service._working_memory_service.list.return_value = [wm]
-        service._chunk_service.get_daily_batch.return_value = [
-            _make_batch(3, [_make_chunk(42), _make_chunk(43, text="outra frase", translation="another phrase")])
-        ]
+        service._language_session_service.advance_loop.return_value = LoopAdvanceRead(
+            status="advanced",
+            next_practice=NextPracticePrompt(
+                mode="practice", track_id=3, track_code="pt", chunk_id=43,
+                text="outra frase", translation="another phrase",
+                language_name="Portuguese", remaining=2,
+            ),
+        )
         message_service.list.return_value = [_make_message("a chuva caiu")]
 
         _, next_practice = await service.chat(ChatRequest(session_id=1))
 
-        service._working_memory_service.delete.assert_called_once_with(99)
-        service._working_memory_service.create.assert_called_once()
-        created_value = json.loads(service._working_memory_service.create.call_args[0][0].value)
-        assert created_value["chunk_id"] == 43
-        assert created_value["remaining"] == 2
+        service._language_session_service.advance_loop.assert_called_once()
+        request = service._language_session_service.advance_loop.call_args[0][0]
+        assert request.track_id == 3
+        assert request.chunk_id == 42
         assert next_practice is not None
         assert next_practice.chunk_id == 43
         assert next_practice.remaining == 2
@@ -554,13 +565,12 @@ class TestChatServiceLanguageLoop:
         wm = WorkingMemoryRead(id=99, key=wm.key, value=wm.value, importance=None,
                                expires_at=None, session_id=None, created_at=wm.created_at)
         service._working_memory_service.list.return_value = [wm]
+        service._language_session_service.advance_loop.return_value = LoopAdvanceRead(status="completed")
         message_service.list.return_value = [_make_message("a chuva caiu")]
 
         _, next_practice = await service.chat(ChatRequest(session_id=1))
 
-        service._working_memory_service.delete.assert_called_once_with(99)
-        service._working_memory_service.create.assert_not_called()
-        service._chunk_service.get_daily_batch.assert_not_called()
+        service._language_session_service.advance_loop.assert_called_once()
         assert next_practice is None
 
     async def test_ends_loop_when_no_more_due_chunks(self, mock_language_session_repository):
@@ -573,13 +583,12 @@ class TestChatServiceLanguageLoop:
         wm = WorkingMemoryRead(id=99, key=wm.key, value=wm.value, importance=None,
                                expires_at=None, session_id=None, created_at=wm.created_at)
         service._working_memory_service.list.return_value = [wm]
-        service._chunk_service.get_daily_batch.return_value = [_make_batch(3, [_make_chunk(42)])]
+        service._language_session_service.advance_loop.return_value = LoopAdvanceRead(status="completed")
         message_service.list.return_value = [_make_message("yes I know it")]
 
         _, next_practice = await service.chat(ChatRequest(session_id=1))
 
-        service._working_memory_service.delete.assert_called_once_with(99)
-        service._working_memory_service.create.assert_not_called()
+        service._language_session_service.advance_loop.assert_called_once()
         assert next_practice is None
 
     @pytest.mark.parametrize("mode", ["conversation", "roleplay"])
@@ -620,7 +629,7 @@ class TestChatServiceLanguageCommandDuringPending:
 
         service._working_memory_service.delete.assert_not_called()
         service._working_memory_service.create.assert_not_called()
-        service._chunk_service.get_daily_batch.assert_not_called()
+        service._language_session_service.advance_loop.assert_not_called()
         assert next_practice is None
 
     async def test_stop_command_does_not_grade_produce_attempt(self, mock_language_session_repository):

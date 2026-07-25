@@ -10,6 +10,7 @@ from app.features.language.chunks.service import ChunkService
 from app.features.language.conversation.service import ConversationService
 from app.features.language.production.schemas import ALL_TASK_TYPES, CHUNKLESS_TASK_TYPES
 from app.features.language.production.service import ProductionService
+from app.features.language.sessions.service import format_feedback_summary
 from app.features.language.tracks.schemas import TrackFilters
 from app.features.language.tracks.service import TrackService
 
@@ -226,6 +227,7 @@ async def _handle_practice(
             "text": chunk.text,
             "translation": chunk.translation,
             "remaining": count,
+            "feedback_history": [],
         }),
         importance=1.0,
     ))
@@ -395,6 +397,8 @@ async def _handle_stop(
         if mode in _CHAT_MODES and conversation_service is not None and data.get("thread_id") is not None:
             end = await conversation_service.end(data["thread_id"])
             result = {"mode": "stopped", "tip": end.tip, "turn_count": end.turn_count}
+        elif mode == "practice" and data.get("feedback_history"):
+            result = {"mode": "stopped", "summary": format_feedback_summary(data["feedback_history"])}
 
         await working_memory_service.delete(item.id)
         logger.debug("handle_language: cleared stale pending WM id=%d", item.id)

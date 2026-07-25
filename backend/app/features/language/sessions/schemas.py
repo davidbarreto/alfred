@@ -109,3 +109,23 @@ class NextPracticePrompt(BaseModel):
     translation: str | None
     language_name: str
     remaining: int
+
+
+class LoopAdvanceRequest(BaseModel):
+    """One turn in an active practice/review loop (a review button tap or a shadowing
+    attempt), submitted directly by n8n without going through chat/intent detection.
+    track_id is informational only — the pending working-memory row is the source of
+    truth for which track/chunk the loop is actually on. feedback_score/feedback_summary
+    are flat (rather than a nested object) to match n8n's flat body-parameter convention;
+    only practice/shadowing turns set them."""
+    track_id: int | None = None
+    chunk_id: int
+    quality_score: float | None = None
+    feedback_score: float | None = None
+    feedback_summary: str | None = None
+
+
+class LoopAdvanceRead(BaseModel):
+    status: Literal["advanced", "completed", "stale"]
+    next_practice: NextPracticePrompt | None = None
+    summary_text: str | None = None

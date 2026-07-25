@@ -36,8 +36,9 @@ from app.features.language.chunks.service import ChunkService
 from app.features.language.production.schemas import CHUNKLESS_TASK_TYPES, ProductionAttemptCreate
 from app.features.language.production.service import ProductionService
 from app.features.language.sessions.repository import SessionRepository as LanguageSessionRepository
-from app.features.language.sessions.schemas import NextPracticePrompt
+from app.features.language.sessions.schemas import LoopAdvanceRequest, NextPracticePrompt
 from app.features.language.sessions.schemas import SessionFilters as LanguageSessionFilters
+from app.features.language.sessions.service import SessionService as LanguageSessionService
 from app.features.language.sessions.tables import LearningSession
 from app.integrations.llm_calls.repository import create_llm_call
 from app.shared.llm import LlmProvider, StreamMeta
@@ -193,6 +194,7 @@ class ChatService:
         working_memory_service: WorkingMemoryService,
         chunk_service: ChunkService,
         production_service: ProductionService,
+        language_session_service: LanguageSessionService,
     ) -> None:
         self._session = session
         self._llm_provider = llm_provider
@@ -203,6 +205,7 @@ class ChatService:
         self._working_memory_service = working_memory_service
         self._chunk_service = chunk_service
         self._production_service = production_service
+        self._language_session_service = language_session_service
 
     async def _fetch_history(self, session_id: int) -> list[MessageRead]:
         session = await SessionRepository(self._session).get(session_id)
@@ -217,51 +220,21 @@ class ChatService:
     async def _advance_language_loop(self, pending_wm: WorkingMemoryRead) -> NextPracticePrompt | None:
         """Decrement the pending practice/review loop and either move it to the next due
         chunk or end it. Must run after the coaching reply is generated — the WM still has
-        to point at the just-completed chunk while `chat()` builds that reply."""
+        to point at the just-completed chunk while `chat()` builds that reply. Delegates to
+        the shared, deterministic loop-advance logic also used by the button/audio n8n paths
+        (`SessionService.advance_loop`); this free-text path never sets quality_score or
+        feedback_entry since grading already happened earlier in this same chat turn."""
         try:
             data = json.loads(pending_wm.value)
         except (json.JSONDecodeError, AttributeError):
             await self._working_memory_service.delete(pending_wm.id)
             return None
 
-        remaining = int(data.get("remaining", 1)) - 1
-        next_chunk = None
-        if remaining > 0:
-            batches = await self._chunk_service.get_daily_batch(data.get("track_id"))
-            due = [c for batch in batches for c in batch.chunks if c.id != data.get("chunk_id")]
-            if due:
-                next_chunk = due[0]
-
-        await self._working_memory_service.delete(pending_wm.id)
-
-        if next_chunk is None:
-            logger.info("Chat: language loop ended wm_id=%d remaining=%d", pending_wm.id, max(remaining, 0))
-            return None
-
-        new_data = {
-            **data,
-            "chunk_id": next_chunk.id,
-            "text": next_chunk.text,
-            "translation": next_chunk.translation,
-            "remaining": remaining,
-        }
-        await self._working_memory_service.create(WorkingMemoryCreate(
-            key=_LANGUAGE_PENDING_KEY, value=json.dumps(new_data), importance=1.0,
+        result = await self._language_session_service.advance_loop(LoopAdvanceRequest(
+            track_id=data.get("track_id"),
+            chunk_id=data.get("chunk_id"),
         ))
-        logger.info(
-            "Chat: language loop advanced wm_id=%d next_chunk_id=%d remaining=%d",
-            pending_wm.id, next_chunk.id, remaining,
-        )
-        return NextPracticePrompt(
-            mode=data.get("mode", "practice"),
-            track_id=data["track_id"],
-            track_code=data.get("track_code", ""),
-            chunk_id=next_chunk.id,
-            text=next_chunk.text,
-            translation=next_chunk.translation,
-            language_name=data.get("language_name", ""),
-            remaining=remaining,
-        )
+        return result.next_practice
 
     async def _handle_production_turn(
         self,

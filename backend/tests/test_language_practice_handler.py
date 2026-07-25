@@ -119,6 +119,7 @@ class TestHandleLanguagePractice:
         assert payload["text"] == "The rain fell all night long"
         assert payload["translation"] == "A chuva caiu durante a noite toda"
         assert payload["remaining"] == 5
+        assert payload["feedback_history"] == []
 
     async def test_default_round_count_when_not_specified(self):
         track_svc, chunk_svc, wm_svc = _make_services()
@@ -456,6 +457,29 @@ class TestHandleLanguageStop:
         result = await handle_language("stop", {}, track_svc, chunk_svc, wm_svc)
         wm_svc.delete.assert_not_called()
         assert result["mode"] == "stopped"
+
+    async def test_stop_mid_shadowing_returns_feedback_summary(self):
+        wm = WorkingMemoryRead(
+            id=5, key="language:pending",
+            value=json.dumps({
+                "mode": "practice", "chunk_id": 10, "track_id": 3,
+                "feedback_history": [{"quality_score": 80.0, "summary": "Good"}],
+            }),
+            importance=1.0, expires_at=None, session_id=None,
+            created_at=datetime(2026, 1, 1, tzinfo=timezone.utc),
+        )
+        track_svc, chunk_svc, wm_svc = _make_services(existing_wm=[wm])
+        result = await handle_language("stop", {}, track_svc, chunk_svc, wm_svc)
+        wm_svc.delete.assert_called_once_with(5)
+        assert result["mode"] == "stopped"
+        assert "Good" in result["summary"]
+
+    async def test_stop_mid_shadowing_without_attempts_has_no_summary(self):
+        wm = _make_wm_read(id=5, chunk_id=10, mode="practice")
+        track_svc, chunk_svc, wm_svc = _make_services(existing_wm=[wm])
+        result = await handle_language("stop", {}, track_svc, chunk_svc, wm_svc)
+        wm_svc.delete.assert_called_once_with(5)
+        assert result == {"mode": "stopped"}
 
 
 class TestLanguageCommandRegistry:

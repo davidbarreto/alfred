@@ -1835,6 +1835,149 @@
       }
     },
     {
+      "name": "53 - Advance Loop (no pending, returns stale)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Status is stale with no next_practice', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json.status).to.eql('stale');",
+              "    pm.expect(json.next_practice).to.be.null;",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"track_id\": {{language_track_id}},\n  \"chunk_id\": {{language_chunk_id}}\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{base_url}}/language/sessions/advance",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "language",
+            "sessions",
+            "advance"
+          ]
+        }
+      }
+    },
+    {
+      "name": "54 - Seed Pending Review Loop (working memory)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+              "pm.test('Response has id', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json).to.have.property('id');",
+              "    pm.environment.set('language_pending_wm_id', json.id);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"key\": \"language:pending\",\n  \"value\": \"{\\\"mode\\\": \\\"review\\\", \\\"chunk_id\\\": {{language_chunk_id}}, \\\"track_id\\\": {{language_track_id}}, \\\"track_code\\\": \\\"fr\\\", \\\"language_name\\\": \\\"French\\\", \\\"remaining\\\": 1}\",\n  \"importance\": 1.0\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{base_url}}/core/working-memory",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "core",
+            "working-memory"
+          ]
+        }
+      }
+    },
+    {
+      "name": "55 - Advance Loop (review tap completes, applies SRS)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Loop completes since remaining was 1', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json.status).to.eql('completed');",
+              "    pm.expect(json.next_practice).to.be.null;",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"track_id\": {{language_track_id}},\n  \"chunk_id\": {{language_chunk_id}},\n  \"quality_score\": 90\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{base_url}}/language/sessions/advance",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "language",
+            "sessions",
+            "advance"
+          ]
+        }
+      }
+    },
+    {
       "name": "43 - Start Roleplay Conversation",
       "event": [
         {

@@ -1,9 +1,13 @@
+import json
 import pytest
 from unittest.mock import AsyncMock, MagicMock
 from datetime import datetime, timezone
 
+from app.features.core.working_memory.schemas import WorkingMemoryRead
+from app.features.language.chunks.schemas import ChunkRead, DailyBatchRead
 from app.features.language.sessions.service import SessionService
 from app.features.language.sessions.schemas import (
+    LoopAdvanceRequest,
     ProductionSessionCreate,
     SrsReviewCreate,
     ShadowingSessionCreate,
@@ -38,6 +42,27 @@ def _make_track_orm(**kwargs):
     return orm
 
 
+def _make_wm(wm_id: int, value: dict) -> WorkingMemoryRead:
+    return WorkingMemoryRead(
+        id=wm_id, key="language:pending", value=json.dumps(value), importance=None,
+        expires_at=None, session_id=None, created_at=datetime(2026, 6, 25, tzinfo=timezone.utc),
+    )
+
+
+def _make_chunk(chunk_id: int, text: str = "next phrase", translation: str = "next translation") -> ChunkRead:
+    now = datetime(2026, 1, 1, tzinfo=timezone.utc)
+    return ChunkRead(
+        id=chunk_id, track_id=1, grammar_scope_id=None, chunk_type="word",
+        text=text, translation=translation, example_sentence=None, example_translation=None,
+        cefr_level=None, frequency_rank=None, frequency_source=None,
+        stability=1.0, difficulty=1.0, due_at=now, last_review_at=None,
+        repetitions=0, lapses=0, consecutive_failures=0, state="new",
+        prod_stability=0.0, prod_difficulty=5.0, prod_due_at=None, prod_last_review_at=None,
+        prod_repetitions=0, prod_lapses=0, prod_consecutive_failures=0, prod_state="new",
+        status="active", is_leech=False, created_at=now, updated_at=now,
+    )
+
+
 @pytest.fixture
 def mock_session():
     return AsyncMock()
@@ -45,7 +70,7 @@ def mock_session():
 
 @pytest.fixture
 def service(mock_session):
-    svc = SessionService(session=mock_session)
+    svc = SessionService(session=mock_session, working_memory_service=AsyncMock())
     svc._repo = AsyncMock()
     svc._track_repo = AsyncMock()
     svc._chunk_service = AsyncMock()
@@ -196,6 +221,80 @@ class TestRecordSession:
         await service.record_session(data)
 
         service._chunk_service.apply_srs_review.assert_not_called()
+
+
+class TestAdvanceLoop:
+    async def test_returns_stale_when_no_pending_loop(self, service):
+        service._working_memory_service.list.return_value = []
+
+        result = await service.advance_loop(LoopAdvanceRequest(track_id=1, chunk_id=42))
+
+        assert result.status == "stale"
+        service._working_memory_service.delete.assert_not_called()
+
+    async def test_returns_stale_when_chunk_id_does_not_match_pending(self, service):
+        service._working_memory_service.list.return_value = [
+            _make_wm(99, {"mode": "review", "chunk_id": 43, "track_id": 1, "remaining": 2})
+        ]
+
+        result = await service.advance_loop(LoopAdvanceRequest(track_id=1, chunk_id=42, quality_score=90.0))
+
+        assert result.status == "stale"
+        service._working_memory_service.delete.assert_not_called()
+        service._chunk_service.apply_srs_review.assert_not_called()
+
+    async def test_advances_to_next_chunk_and_applies_srs_review(self, service):
+        service._working_memory_service.list.return_value = [
+            _make_wm(99, {
+                "mode": "review", "chunk_id": 42, "track_id": 1, "track_code": "fr",
+                "language_name": "French", "remaining": 3,
+            })
+        ]
+        service._repo.create_session.return_value = _make_session_orm(chunk_id=42)
+        service._chunk_service.get_daily_batch.return_value = [
+            DailyBatchRead(track_id=1, track_code="fr", chunks=[_make_chunk(42), _make_chunk(43)], total_due=2)
+        ]
+
+        result = await service.advance_loop(
+            LoopAdvanceRequest(track_id=1, chunk_id=42, quality_score=90.0)
+        )
+
+        service._chunk_service.apply_srs_review.assert_called_once_with(42, 90.0)
+        service._working_memory_service.delete.assert_called_once_with(99)
+        service._working_memory_service.create.assert_called_once()
+        assert result.status == "advanced"
+        assert result.next_practice.chunk_id == 43
+        assert result.next_practice.remaining == 2
+
+    async def test_completes_with_summary_from_feedback_history(self, service):
+        service._working_memory_service.list.return_value = [
+            _make_wm(99, {
+                "mode": "practice", "chunk_id": 42, "track_id": 1, "track_code": "fr",
+                "language_name": "French", "remaining": 1,
+                "feedback_history": [{"quality_score": 80.0, "summary": "Good"}],
+            })
+        ]
+
+        result = await service.advance_loop(LoopAdvanceRequest(
+            track_id=1, chunk_id=42, feedback_score=60.0, feedback_summary="Needs work",
+        ))
+
+        assert result.status == "completed"
+        assert result.next_practice is None
+        assert "2 rep(s)" in result.summary_text
+        assert "Good" in result.summary_text
+        assert "Needs work" in result.summary_text
+
+    async def test_completes_without_summary_when_review_mode(self, service):
+        service._working_memory_service.list.return_value = [
+            _make_wm(99, {"mode": "review", "chunk_id": 42, "track_id": 1, "remaining": 1})
+        ]
+        service._repo.create_session.return_value = _make_session_orm(chunk_id=42)
+
+        result = await service.advance_loop(LoopAdvanceRequest(track_id=1, chunk_id=42, quality_score=90.0))
+
+        assert result.status == "completed"
+        assert result.summary_text is None
 
 
 class TestGetDailyProgress:

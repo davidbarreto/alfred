@@ -748,29 +748,6 @@
         },
         {
             "parameters": {
-                "assignments": {
-                    "assignments": [
-                        {
-                            "id": "6df50a29-f49a-4128-807c-6841a2cbaab7",
-                            "name": "text",
-                            "value": "={{ $json.ai_feedback_json.transcription }}",
-                            "type": "string"
-                        }
-                    ]
-                },
-                "options": {}
-            },
-            "type": "n8n-nodes-base.set",
-            "typeVersion": 3.4,
-            "position": [
-                560,
-                368
-            ],
-            "id": "442e30aa-eee8-4107-8d66-e61804c5faa6",
-            "name": "Define Message from Practice"
-        },
-        {
-            "parameters": {
                 "rules": {
                     "values": [
                         {
@@ -953,31 +930,8 @@
         },
         {
             "parameters": {
-                "assignments": {
-                    "assignments": [
-                        {
-                            "id": "4f2509e4-151b-4b05-a50b-7b462cd50953",
-                            "name": "text",
-                            "value": "={{ $('Message Trigger').item.json.callback_query.data.split(\";\")[0] }}",
-                            "type": "string"
-                        }
-                    ]
-                },
-                "options": {}
-            },
-            "type": "n8n-nodes-base.set",
-            "typeVersion": 3.4,
-            "position": [
-                560,
-                576
-            ],
-            "id": "2de5ba64-913e-4369-a3be-10e1227e968d",
-            "name": "Define Message from Callback"
-        },
-        {
-            "parameters": {
                 "method": "POST",
-                "url": "http://api:8000/language/sessions/srs-review",
+                "url": "http://api:8000/language/sessions/advance",
                 "authentication": "genericCredentialType",
                 "genericAuthType": "httpBearerAuth",
                 "sendBody": true,
@@ -1006,7 +960,7 @@
                 576
             ],
             "id": "a4709237-65e3-46a3-80b9-531daacdef4b",
-            "name": "Push SRS Review",
+            "name": "Advance Review Loop",
             "credentials": {
                 "httpBearerAuth": {
                     "id": "oj5Yf1MhLsryeSrX",
@@ -1590,6 +1544,307 @@
                 }
             },
             "onError": "continueErrorOutput"
+        },
+        {
+            "parameters": {
+                "rules": {
+                    "values": [
+                        {
+                            "conditions": {
+                                "options": {
+                                    "caseSensitive": true,
+                                    "leftValue": "",
+                                    "typeValidation": "strict",
+                                    "version": 3
+                                },
+                                "conditions": [
+                                    {
+                                        "id": "8acc881b-6534-4202-98db-3d1bc3803a0a",
+                                        "leftValue": "={{ $json.status }}",
+                                        "rightValue": "advanced",
+                                        "operator": {
+                                            "type": "string",
+                                            "operation": "equals"
+                                        }
+                                    }
+                                ],
+                                "combinator": "and"
+                            },
+                            "renameOutput": true,
+                            "outputKey": "Advanced"
+                        },
+                        {
+                            "conditions": {
+                                "options": {
+                                    "caseSensitive": true,
+                                    "leftValue": "",
+                                    "typeValidation": "strict",
+                                    "version": 3
+                                },
+                                "conditions": [
+                                    {
+                                        "id": "171f9585-ba63-4cd3-adf5-ce3d4ef73713",
+                                        "leftValue": "={{ $json.status }}",
+                                        "rightValue": "completed",
+                                        "operator": {
+                                            "type": "string",
+                                            "operation": "equals"
+                                        }
+                                    }
+                                ],
+                                "combinator": "and"
+                            },
+                            "renameOutput": true,
+                            "outputKey": "Completed"
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "type": "n8n-nodes-base.switch",
+            "typeVersion": 3.4,
+            "position": [
+                -320,
+                576
+            ],
+            "id": "105c41e2-bd1d-4ab6-a874-04c89c55ce66",
+            "name": "Route Review Loop Status"
+        },
+        {
+            "parameters": {
+                "chatId": "={{ $('Message Trigger').item.json.message?.chat?.id?.toString() || $('Message Trigger').item.json.callback_query?.message?.chat?.id?.toString() }}",
+                "text": "=Review session complete. \ud83c\udf89",
+                "additionalFields": {
+                    "appendAttribution": false
+                }
+            },
+            "type": "n8n-nodes-base.telegram",
+            "typeVersion": 1.2,
+            "position": [
+                -160,
+                696
+            ],
+            "id": "b2b15e75-9bd8-46b6-b421-26746ce7a415",
+            "name": "Send Review Complete",
+            "webhookId": "bb28deaf-cd94-4445-917c-530a80920080",
+            "credentials": {
+                "telegramApi": {
+                    "id": "t63z4EHeYTEZtFAR",
+                    "name": "Telegram account"
+                }
+            },
+            "onError": "continueErrorOutput"
+        },
+        {
+            "parameters": {
+                "resource": "message",
+                "operation": "editMessageReplyMarkup",
+                "chatId": "={{ $('Message Trigger').item.json.callback_query.message.chat.id.toString() }}",
+                "messageId": "={{ $('Message Trigger').item.json.callback_query.message.message_id }}",
+                "replyMarkup": "inlineKeyboard",
+                "inlineKeyboard": {
+                    "rows": []
+                }
+            },
+            "type": "n8n-nodes-base.telegram",
+            "typeVersion": 1.2,
+            "position": [
+                -640,
+                696
+            ],
+            "id": "00303589-d774-446f-a0a5-0c9991b8429d",
+            "name": "Edit Review Keyboard",
+            "webhookId": "6710fe49-1aa5-4e93-9ee1-623be24edbf0",
+            "credentials": {
+                "telegramApi": {
+                    "id": "t63z4EHeYTEZtFAR",
+                    "name": "Telegram account"
+                }
+            },
+            "onError": "continueErrorOutput"
+        },
+        {
+            "parameters": {
+                "assignments": {
+                    "assignments": [
+                        {
+                            "id": "cad0b558-9e3f-4838-b4ac-144423bc5f15",
+                            "name": "feedback_text",
+                            "value": "={{ ($json.quality_score != null ? 'Score: ' + Math.round($json.quality_score) + '/100\\n' : '') + ($json.ai_feedback_json?.summary || 'Got it \u2014 nice work.') + ($json.ai_feedback_json?.tip ? '\\nTip: ' + $json.ai_feedback_json.tip : '') }}",
+                            "type": "string"
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "type": "n8n-nodes-base.set",
+            "typeVersion": 3.4,
+            "position": [
+                576,
+                368
+            ],
+            "id": "83ac5bad-10c1-4fb6-a0a3-80612351b909",
+            "name": "Build Shadowing Feedback Message"
+        },
+        {
+            "parameters": {
+                "chatId": "={{ $('Message Trigger').item.json.message?.chat?.id?.toString() || $('Message Trigger').item.json.callback_query?.message?.chat?.id?.toString() }}",
+                "text": "={{ $json.feedback_text }}",
+                "additionalFields": {
+                    "appendAttribution": false
+                }
+            },
+            "type": "n8n-nodes-base.telegram",
+            "typeVersion": 1.2,
+            "position": [
+                736,
+                368
+            ],
+            "id": "2c626178-6943-47ed-af82-1f18da42a47e",
+            "name": "Send Shadowing Feedback",
+            "webhookId": "fca112d9-f7df-4c4e-bf30-59fad0551e50",
+            "credentials": {
+                "telegramApi": {
+                    "id": "t63z4EHeYTEZtFAR",
+                    "name": "Telegram account"
+                }
+            },
+            "onError": "continueErrorOutput"
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "http://api:8000/language/sessions/advance",
+                "authentication": "genericCredentialType",
+                "genericAuthType": "httpBearerAuth",
+                "sendBody": true,
+                "bodyParameters": {
+                    "parameters": [
+                        {
+                            "name": "track_id",
+                            "value": "={{ $('Get Working Memory').item.json.value.parseJson().track_id }}"
+                        },
+                        {
+                            "name": "chunk_id",
+                            "value": "={{ $('Get Working Memory').item.json.value.parseJson().chunk_id }}"
+                        },
+                        {
+                            "name": "feedback_score",
+                            "value": "={{ $('Record Shadowing Audio').item.json.quality_score }}"
+                        },
+                        {
+                            "name": "feedback_summary",
+                            "value": "={{ $('Record Shadowing Audio').item.json.ai_feedback_json?.summary }}"
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.4,
+            "position": [
+                896,
+                368
+            ],
+            "id": "234f5963-8620-40e2-a81c-a45a9aef5798",
+            "name": "Advance Shadowing Loop",
+            "credentials": {
+                "httpBearerAuth": {
+                    "id": "oj5Yf1MhLsryeSrX",
+                    "name": "Bearer Auth account"
+                }
+            },
+            "onError": "continueErrorOutput"
+        },
+        {
+            "parameters": {
+                "rules": {
+                    "values": [
+                        {
+                            "conditions": {
+                                "options": {
+                                    "caseSensitive": true,
+                                    "leftValue": "",
+                                    "typeValidation": "strict",
+                                    "version": 3
+                                },
+                                "conditions": [
+                                    {
+                                        "id": "438468bd-5075-4e3e-a7a9-ae1e2222b9b9",
+                                        "leftValue": "={{ $json.status }}",
+                                        "rightValue": "advanced",
+                                        "operator": {
+                                            "type": "string",
+                                            "operation": "equals"
+                                        }
+                                    }
+                                ],
+                                "combinator": "and"
+                            },
+                            "renameOutput": true,
+                            "outputKey": "Advanced"
+                        },
+                        {
+                            "conditions": {
+                                "options": {
+                                    "caseSensitive": true,
+                                    "leftValue": "",
+                                    "typeValidation": "strict",
+                                    "version": 3
+                                },
+                                "conditions": [
+                                    {
+                                        "id": "1c7f764f-fd3d-41d4-939d-48574de24e3a",
+                                        "leftValue": "={{ $json.status }}",
+                                        "rightValue": "completed",
+                                        "operator": {
+                                            "type": "string",
+                                            "operation": "equals"
+                                        }
+                                    }
+                                ],
+                                "combinator": "and"
+                            },
+                            "renameOutput": true,
+                            "outputKey": "Completed"
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "type": "n8n-nodes-base.switch",
+            "typeVersion": 3.4,
+            "position": [
+                1056,
+                368
+            ],
+            "id": "566bab71-a1b5-433c-967c-9b697c1d196d",
+            "name": "Route Shadowing Loop Status"
+        },
+        {
+            "parameters": {
+                "chatId": "={{ $('Message Trigger').item.json.message?.chat?.id?.toString() || $('Message Trigger').item.json.callback_query?.message?.chat?.id?.toString() }}",
+                "text": "={{ $json.summary_text }}",
+                "additionalFields": {
+                    "appendAttribution": false
+                }
+            },
+            "type": "n8n-nodes-base.telegram",
+            "typeVersion": 1.2,
+            "position": [
+                1216,
+                488
+            ],
+            "id": "d5217acd-ec2b-4bb7-9be9-e70f3b8d2497",
+            "name": "Send Shadowing Summary",
+            "webhookId": "65f9af88-a24e-4feb-9240-a4c8fbdaf61c",
+            "credentials": {
+                "telegramApi": {
+                    "id": "t63z4EHeYTEZtFAR",
+                    "name": "Telegram account"
+                }
+            },
+            "onError": "continueErrorOutput"
         }
     ],
     "pinData": {},
@@ -1917,17 +2172,6 @@
                 ]
             ]
         },
-        "Define Message from Practice": {
-            "main": [
-                [
-                    {
-                        "node": "Aggregate Texts",
-                        "type": "main",
-                        "index": 0
-                    }
-                ]
-            ]
-        },
         "Decide Response Flow": {
             "main": [
                 [
@@ -1982,7 +2226,12 @@
             "main": [
                 [
                     {
-                        "node": "Push SRS Review",
+                        "node": "Advance Review Loop",
+                        "type": "main",
+                        "index": 0
+                    },
+                    {
+                        "node": "Edit Review Keyboard",
                         "type": "main",
                         "index": 0
                     }
@@ -1990,35 +2239,6 @@
                 [
                     {
                         "node": "Set Error Message",
-                        "type": "main",
-                        "index": 0
-                    }
-                ]
-            ]
-        },
-        "Push SRS Review": {
-            "main": [
-                [
-                    {
-                        "node": "Define Message from Callback",
-                        "type": "main",
-                        "index": 0
-                    }
-                ],
-                [
-                    {
-                        "node": "Set Error Message",
-                        "type": "main",
-                        "index": 0
-                    }
-                ]
-            ]
-        },
-        "Define Message from Callback": {
-            "main": [
-                [
-                    {
-                        "node": "Aggregate Texts",
                         "type": "main",
                         "index": 0
                     }
@@ -2029,7 +2249,7 @@
             "main": [
                 [
                     {
-                        "node": "Define Message from Practice",
+                        "node": "Build Shadowing Feedback Message",
                         "type": "main",
                         "index": 0
                     }
@@ -2254,6 +2474,137 @@
                         "index": 0
                     }
                 ],
+                [
+                    {
+                        "node": "Set Error Message",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Advance Review Loop": {
+            "main": [
+                [
+                    {
+                        "node": "Route Review Loop Status",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "Set Error Message",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Route Review Loop Status": {
+            "main": [
+                [
+                    {
+                        "node": "Normalize Review Prompt",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "Send Review Complete",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Edit Review Keyboard": {
+            "main": [
+                [],
+                []
+            ]
+        },
+        "Send Review Complete": {
+            "main": [
+                [],
+                [
+                    {
+                        "node": "Set Error Message",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Build Shadowing Feedback Message": {
+            "main": [
+                [
+                    {
+                        "node": "Send Shadowing Feedback",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Send Shadowing Feedback": {
+            "main": [
+                [
+                    {
+                        "node": "Advance Shadowing Loop",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "Set Error Message",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Advance Shadowing Loop": {
+            "main": [
+                [
+                    {
+                        "node": "Route Shadowing Loop Status",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "Set Error Message",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Route Shadowing Loop Status": {
+            "main": [
+                [
+                    {
+                        "node": "Normalize Practice Prompt",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "Send Shadowing Summary",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Send Shadowing Summary": {
+            "main": [
+                [],
                 [
                     {
                         "node": "Set Error Message",

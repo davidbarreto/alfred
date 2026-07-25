@@ -6,6 +6,8 @@ from app.api.auth import require_auth
 from app.dependencies import FileStorageDep, LanguageSessionServiceDep, ShadowingServiceDep
 from app.features.language.sessions.schemas import (
     DailyProgressRead,
+    LoopAdvanceRead,
+    LoopAdvanceRequest,
     SessionCreate,
     SessionFilters,
     SessionRead,
@@ -32,6 +34,11 @@ async def record_srs_review(request: SrsReviewCreate, service: LanguageSessionSe
 @router.post("/shadowing", response_model=SessionRead, status_code=status.HTTP_201_CREATED)
 async def record_shadowing(request: ShadowingSessionCreate, service: LanguageSessionServiceDep):
     return await service.record_shadowing(request)
+
+
+@router.post("/advance", response_model=LoopAdvanceRead)
+async def advance_loop(request: LoopAdvanceRequest, service: LanguageSessionServiceDep):
+    return await service.advance_loop(request)
 
 
 @router.post("/shadowing/audio", response_model=SessionRead, status_code=status.HTTP_201_CREATED)

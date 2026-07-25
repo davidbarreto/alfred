@@ -140,11 +140,17 @@ app.include_router(language_conversation_router)
 
 @app.exception_handler(RequestValidationError)
 async def _validation_error_handler(request: Request, exc: RequestValidationError) -> JSONResponse:
+    try:
+        body = await request.body()
+    except RuntimeError:
+        # Form/multipart bodies are already consumed by FastAPI's form parsing
+        # before validation runs, so re-reading the stream here would raise.
+        body = b"<unavailable: form/multipart body already consumed>"
     logger.warning(
         "Request validation error %s %s body=%s errors=%s",
         request.method,
         request.url.path,
-        await request.body(),
+        body,
         exc.errors(),
     )
     return JSONResponse(status_code=422, content={"detail": exc.errors()})

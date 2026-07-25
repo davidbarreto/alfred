@@ -35,3 +35,28 @@ class TestGoogleTokenExpiredHandler:
         assert "/integration/google-contacts/oauth/url" in response.json()["detail"]
         mock_delete.assert_awaited_once()
         assert mock_delete.call_args.args[1] == "google_contacts"
+
+
+class TestValidationErrorHandler:
+
+    @pytest.fixture
+    def client(self):
+        from app.main import app
+        from app.dependencies import get_conversation_service
+        app.dependency_overrides[get_conversation_service] = lambda: AsyncMock()
+        yield TestClient(app)
+        app.dependency_overrides.clear()
+
+    def test_multipart_body_validation_error_returns_422(self, client):
+        # Regression test: the request body (a multipart form) is already
+        # consumed by FastAPI's form parsing by the time this fails validation,
+        # so the handler must not try to re-read it via request.body().
+        response = client.post(
+            "/language/conversation/turns/audio",
+            headers=AUTH,
+            data={"thread_id": "undefined"},
+            files={"audio": ("clip.ogg", b"fake-audio-bytes", "audio/ogg")},
+        )
+
+        assert response.status_code == 422
+        assert response.json()["detail"][0]["loc"] == ["body", "thread_id"]

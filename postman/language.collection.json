@@ -2,7 +2,7 @@
   "info": {
     "name": "Alfred - Language API",
     "_postman_id": "alfred-language-v1",
-    "description": "Run in order: Health Check → Create Track → Create Grammar Scope → Bulk Create Scopes → Create Chunk → Approve Chunk → Get Daily Batch → Record SRS Review → Production (Mastery/Next Task/Attempt/Spoken Audio) → Record Shadowing → Get Daily Progress → List Sessions → Get Pronunciation (mp3/ogg) → Upload/Get Shadowing Audio → Cleanup",
+    "description": "Run in order: Health Check \u2192 Create Track \u2192 Create Grammar Scope \u2192 Bulk Create Scopes \u2192 Create Chunk \u2192 Approve Chunk \u2192 Get Daily Batch \u2192 Record SRS Review \u2192 Production (Mastery/Next Task/Attempt/Spoken Audio) \u2192 Record Shadowing \u2192 Get Daily Progress \u2192 List Sessions \u2192 Get Pronunciation (mp3/ogg) \u2192 Upload/Get Shadowing Audio \u2192 Cleanup",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -417,7 +417,7 @@
               "pm.test('Response has id and saves it', () => {",
               "    const json = pm.response.json();",
               "    pm.expect(json).to.have.property('id');",
-              "    pm.expect(json.text).to.eql('falar com alguém');",
+              "    pm.expect(json.text).to.eql('falar com algu\u00e9m');",
               "    pm.expect(json.chunk_type).to.eql('collocation');",
               "    pm.expect(json.status).to.eql('pending_triage');",
               "    pm.expect(json.state).to.eql('new');",
@@ -439,7 +439,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"track_id\": {{language_track_id}},\n  \"grammar_scope_id\": {{language_scope_id}},\n  \"chunk_type\": \"collocation\",\n  \"text\": \"falar com alguém\",\n  \"translation\": \"to talk to someone\",\n  \"example_sentence\": \"Preciso de falar com alguém sobre isto.\",\n  \"example_translation\": \"I need to talk to someone about this.\",\n  \"cefr_level\": \"B1\",\n  \"frequency_rank\": 42,\n  \"frequency_source\": \"pareto_list\"\n}",
+          "raw": "{\n  \"track_id\": {{language_track_id}},\n  \"grammar_scope_id\": {{language_scope_id}},\n  \"chunk_type\": \"collocation\",\n  \"text\": \"falar com algu\u00e9m\",\n  \"translation\": \"to talk to someone\",\n  \"example_sentence\": \"Preciso de falar com algu\u00e9m sobre isto.\",\n  \"example_translation\": \"I need to talk to someone about this.\",\n  \"cefr_level\": \"B1\",\n  \"frequency_rank\": 42,\n  \"frequency_source\": \"pareto_list\"\n}",
           "options": {
             "raw": {
               "language": "json"
@@ -1379,7 +1379,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"track_id\": {{language_track_id}},\n  \"session_type\": \"conversation\",\n  \"transcript_or_notes\": \"Free conversation about weekend plans — used subjunctive naturally twice\"\n}",
+          "raw": "{\n  \"track_id\": {{language_track_id}},\n  \"session_type\": \"conversation\",\n  \"transcript_or_notes\": \"Free conversation about weekend plans \u2014 used subjunctive naturally twice\"\n}",
           "options": {
             "raw": {
               "language": "json"
@@ -1831,6 +1831,268 @@
             "{{language_shadowing_session_id}}",
             "audio"
           ]
+        }
+      }
+    },
+    {
+      "name": "43 - Start Roleplay Conversation",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+              "pm.test('Roleplay opens in character and saves thread id', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json).to.have.property('thread_id');",
+              "    pm.expect(json.opening_text).to.be.a('string').and.not.empty;",
+              "    pm.environment.set('conversation_thread_id', json.thread_id);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/language/conversation/start",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "language",
+            "conversation",
+            "start"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"track_id\": \"{{language_track_id}}\",\n  \"message_id\": \"{{message_id}}\",\n  \"mode\": \"roleplay\",\n  \"scenario\": \"Ordering coffee at a bakery\",\n  \"voice_reply\": false\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "44 - Record Text Turn",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+              "pm.test('Returns an in-character reply', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json.response).to.be.a('string').and.not.empty;",
+              "    pm.expect(json).to.have.property('tip');",
+              "});",
+              "pm.test('No audio when voice_reply is off', () => {",
+              "    pm.expect(pm.response.json().reply_audio_base64).to.be.null;",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/language/conversation/turns",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "language",
+            "conversation",
+            "turns"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"thread_id\": \"{{conversation_thread_id}}\",\n  \"text\": \"Je voudrais un croissant, s'il vous plait\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "45 - End Roleplay Conversation",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Returns wrap-up feedback and turn count', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json).to.have.property('tip');",
+              "    pm.expect(json.turn_count).to.be.a('number');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/language/conversation/{{conversation_thread_id}}/end",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "language",
+            "conversation",
+            "{{conversation_thread_id}}",
+            "end"
+          ]
+        }
+      }
+    },
+    {
+      "name": "46 - Start Free Conversation (no opening line)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+              "pm.test('Free conversation waits for the user to speak first', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json).to.have.property('thread_id');",
+              "    pm.expect(json.opening_text).to.be.null;",
+              "    pm.environment.set('conversation_thread_id', json.thread_id);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/language/conversation/start",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "language",
+            "conversation",
+            "start"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"track_id\": \"{{language_track_id}}\",\n  \"message_id\": \"{{message_id}}\",\n  \"mode\": \"conversation\",\n  \"scenario\": \"weekend plans\",\n  \"voice_reply\": false\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "47 - End Free Conversation (feedback for both modes)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Free conversation also gets end-of-session feedback', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json).to.have.property('tip');",
+              "    pm.expect(json.turn_count).to.be.a('number');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/language/conversation/{{conversation_thread_id}}/end",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "language",
+            "conversation",
+            "{{conversation_thread_id}}",
+            "end"
+          ]
+        }
+      }
+    },
+    {
+      "name": "48 - Text Turn On Ended Thread Returns 404",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 404', () => pm.response.to.have.status(404));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/language/conversation/turns",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "language",
+            "conversation",
+            "turns"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"thread_id\": \"{{conversation_thread_id}}\",\n  \"text\": \"hello\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
         }
       }
     },

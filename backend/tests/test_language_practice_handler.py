@@ -668,7 +668,9 @@ def _make_language_session_service():
 
 
 class TestHandleStartConversation:
-    async def test_free_conversation_stores_topic_and_no_thread(self):
+    async def test_free_conversation_starts_a_thread_too(self):
+        # Both modes run as tracked threads so turns and end-of-session feedback work
+        # the same way for each.
         track_svc, chunk_svc, wm_svc = _make_services()
         conversation_svc = _make_conversation_service()
 
@@ -680,10 +682,25 @@ class TestHandleStartConversation:
 
         assert result["mode"] == "conversation"
         assert result["topic"] == "talking about food"
-        conversation_svc.start.assert_not_awaited()
+        assert result["thread_id"] == 99
+        conversation_svc.start.assert_awaited_once_with(3, 1, "conversation", "talking about food", True)
         wm_value = json.loads(wm_svc.create.call_args[0][0].value)
         assert wm_value["mode"] == "conversation"
+        assert wm_value["thread_id"] == 99
         assert wm_value["voice_reply"] is True
+
+    async def test_topicless_conversation_passes_no_topic(self):
+        track_svc, chunk_svc, wm_svc = _make_services()
+        conversation_svc = _make_conversation_service()
+
+        result = await handle_language(
+            "conversation", {"language_code": "fr", "rest": ""},
+            track_svc, chunk_svc, wm_svc,
+            conversation_service=conversation_svc, message_id=1,
+        )
+
+        assert result["topic"] is None
+        conversation_svc.start.assert_awaited_once_with(3, 1, "conversation", None, True)
 
     async def test_roleplay_starts_thread_via_service(self):
         track_svc, chunk_svc, wm_svc = _make_services()
@@ -695,7 +712,7 @@ class TestHandleStartConversation:
             conversation_service=conversation_svc, message_id=7,
         )
 
-        conversation_svc.start.assert_awaited_once_with(3, 7, "ordering coffee", False)
+        conversation_svc.start.assert_awaited_once_with(3, 7, "roleplay", "ordering coffee", False)
         assert result["mode"] == "roleplay"
         assert result["thread_id"] == 99
         assert result["opening_text"] == "Bonjour!"
@@ -770,24 +787,23 @@ class TestHandleStopConversationModes:
         assert result["turn_count"] == 3
         wm_svc.delete.assert_called_once_with(8)
 
-    async def test_stop_records_lightweight_session_for_free_conversation(self):
+    async def test_stop_ends_free_conversation_thread_with_feedback(self):
+        # Free conversation gets the same end-of-session coaching feedback as roleplay.
         wm = WorkingMemoryRead(
             id=9, key="language:pending",
-            value=json.dumps({"mode": "conversation", "track_id": 3, "topic": "food"}),
+            value=json.dumps({"mode": "conversation", "track_id": 3, "thread_id": 77}),
             importance=1.0, expires_at=None, session_id=None,
             created_at=datetime(2026, 1, 1, tzinfo=timezone.utc),
         )
         track_svc, chunk_svc, wm_svc = _make_services(existing_wm=[wm])
-        language_session_svc = _make_language_session_service()
+        conversation_svc = _make_conversation_service()
 
         result = await handle_language(
-            "stop", {}, track_svc, chunk_svc, wm_svc, language_session_service=language_session_svc,
+            "stop", {}, track_svc, chunk_svc, wm_svc, conversation_service=conversation_svc,
         )
 
-        language_session_svc.record_session.assert_awaited_once()
-        session_create = language_session_svc.record_session.call_args.args[0]
-        assert session_create.session_type == "conversation"
-        assert session_create.transcript_or_notes == "food"
+        conversation_svc.end.assert_awaited_once_with(77)
         assert result["mode"] == "stopped"
-        assert result["topic"] == "food"
+        assert result["tip"] == "Great job!"
+        assert result["turn_count"] == 3
         wm_svc.delete.assert_called_once_with(9)

@@ -8,6 +8,7 @@ from app.features.language.conversation.schemas import (
     ConversationEndRead,
     ConversationStartCreate,
     ConversationStartRead,
+    ConversationTextTurnCreate,
     ConversationTurnResultRead,
 )
 
@@ -16,7 +17,14 @@ router = APIRouter(prefix="/language/conversation", tags=["language"], dependenc
 
 @router.post("/start", response_model=ConversationStartRead, status_code=status.HTTP_201_CREATED)
 async def start_conversation(request: ConversationStartCreate, service: ConversationServiceDep):
-    return await service.start(request.track_id, request.message_id, request.scenario, request.voice_reply)
+    return await service.start(
+        request.track_id, request.message_id, request.mode, request.scenario, request.voice_reply
+    )
+
+
+@router.post("/turns", response_model=ConversationTurnResultRead, status_code=status.HTTP_201_CREATED)
+async def record_text_turn(request: ConversationTextTurnCreate, service: ConversationServiceDep):
+    return await service.record_text_turn(request.thread_id, request.text)
 
 
 @router.post("/turns/audio", response_model=ConversationTurnResultRead, status_code=status.HTTP_201_CREATED)

@@ -35,7 +35,6 @@ from app.dependencies import (
     DbSessionDep,
     EmbeddingServiceDep,
     ExtractionLlmProviderDep,
-    LanguageSessionServiceDep,
     NoteServiceDep,
     ProductionServiceDep,
     RecurringTransactionServiceDep,
@@ -101,7 +100,6 @@ async def execute_command(
     embedding_service: EmbeddingServiceDep,
     production_service: ProductionServiceDep,
     conversation_service: ConversationServiceDep,
-    language_session_service: LanguageSessionServiceDep,
 ):
     logger.info("POST /commands/execute %s.%s", request.type, request.command)
     execution = await cmd_execution_service.create(
@@ -132,7 +130,6 @@ async def execute_command(
             embedding_service=embedding_service,
             production_service=production_service,
             conversation_service=conversation_service,
-            language_session_service=language_session_service,
             message_id=request.message_id,
         )
         entity_id = result.get("id") if isinstance(result, dict) else None

@@ -223,9 +223,6 @@ def get_chat_service(session: AsyncSession = Depends(get_session)) -> ChatServic
         working_memory_service=WorkingMemoryService(session),
         chunk_service=LanguageChunkService(session),
         production_service=get_production_service(session),
-        audio_converter=FfmpegClient(),
-        conversation_provider=get_conversation_provider(),
-        pronunciation_service=get_conversation_tts_service(),
     )
 
 @lru_cache

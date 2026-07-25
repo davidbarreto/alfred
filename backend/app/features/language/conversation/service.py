@@ -8,10 +8,12 @@ from uuid import uuid4
 from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.features.core.messages.schemas import MessageCreate, MessageFilters
+from app.features.core.messages.schemas import MessageCreate
 from app.features.core.messages.service import MessageService
 from app.features.language.chunks.pronunciation_service import PronunciationService
 from app.features.language.conversation.prompts import (
+    CONVERSATION_SUMMARY_PROMPT,
+    CONVERSATION_TURN_PROMPT,
     ROLEPLAY_OPENING_PROMPT,
     ROLEPLAY_SUMMARY_PROMPT,
     ROLEPLAY_TURN_PROMPT,
@@ -26,17 +28,21 @@ from app.features.language.sessions.schemas import SessionCreate
 from app.features.language.sessions.service import SessionService as LanguageSessionService
 from app.features.language.tracks.repository import TrackRepository
 from app.integrations.llm_calls.repository import create_llm_call
-from app.shared.audio import AudioConversationProvider, AudioConverter, FileStorage, styled_for_tts
+from app.shared.audio import AudioConverter, FileStorage, styled_for_tts
+from app.shared.conversation import ConversationProvider, ConversationTurnResult
 from app.shared.llm import LlmProvider
 
 logger = logging.getLogger(__name__)
 
 
 class ConversationService:
-    """Roleplay conversation practice: scoped thread → turn-by-turn → wrap-up summary.
+    """Language practice chat: scoped thread → turn-by-turn → wrap-up summary.
 
-    Free conversation (mode="conversation") does NOT use this service — it rides the
-    normal chat pipeline via ChatService.chat_with_audio instead (see chats/service.py)."""
+    Covers both modes — "roleplay" (scripted scenario, opens in character) and
+    "conversation" (free chat on an optional topic) — and both modalities. Audio turns
+    go to the model natively so it can judge pronunciation; text turns skip that step.
+    Either way a turn is recorded identically, carrying an optional coaching tip, and
+    every session ends with generated feedback."""
 
     def __init__(
         self,
@@ -47,7 +53,7 @@ class ConversationService:
         track_repo: TrackRepository,
         audio_storage: FileStorage,
         audio_converter: AudioConverter,
-        conversation_provider: AudioConversationProvider,
+        conversation_provider: ConversationProvider,
         pronunciation_service: PronunciationService,
         llm_provider: LlmProvider,
     ) -> None:
@@ -76,8 +82,11 @@ class ConversationService:
         return audio, audio_ref
 
     async def start(
-        self, track_id: int, message_id: int, scenario: str, voice_reply: bool
+        self, track_id: int, message_id: int, mode: str, scenario: str | None, voice_reply: bool
     ) -> ConversationStartRead:
+        """Open a practice thread. Roleplay needs a scenario and gets an in-character
+        opening line; free conversation takes an optional topic and waits for David to
+        speak first."""
         track = await self._track_repo.get_track(track_id)
         if track is None:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Track not found")
@@ -87,9 +96,46 @@ class ConversationService:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Message not found")
         chat_session_id = origin_message.session_id
 
-        thread = await self._thread_repo.create_thread(track_id, chat_session_id, scenario, voice_reply)
+        thread = await self._thread_repo.create_thread(
+            track_id, chat_session_id, mode, scenario, voice_reply
+        )
 
-        prompt = ROLEPLAY_OPENING_PROMPT.format(language_name=track.name, scenario=scenario)
+        opening_text: str | None = None
+        opening_audio_ref: str | None = None
+        if mode == "roleplay":
+            opening_text = await self._generate_opening(track_id, track.name, scenario or "")
+            message = await self._message_service.create(
+                MessageCreate(
+                    session_id=chat_session_id,
+                    role="assistant",
+                    content=opening_text,
+                    meta={"conversation_thread_id": thread.id},
+                )
+            )
+            if voice_reply:
+                _, opening_audio_ref = await self._synthesize_and_save(opening_text, track.code)
+            await self._thread_repo.create_turn(
+                thread_id=thread.id,
+                message_id=message.id,
+                is_audio=False,
+                audio_ref=opening_audio_ref,
+                tip=None,
+            )
+
+        logger.info(
+            "Conversation started: thread_id=%d track_id=%d mode=%s scenario=%r",
+            thread.id, track_id, mode, scenario,
+        )
+        return ConversationStartRead(
+            thread_id=thread.id,
+            track_code=track.code,
+            language_name=track.name,
+            opening_text=opening_text,
+            opening_audio_ref=opening_audio_ref,
+        )
+
+    async def _generate_opening(self, track_id: int, language_name: str, scenario: str) -> str:
+        prompt = ROLEPLAY_OPENING_PROMPT.format(language_name=language_name, scenario=scenario)
         messages = [{"role": "user", "content": prompt}]
         t0 = time.monotonic()
         try:
@@ -114,55 +160,78 @@ class ConversationService:
             tokens_output=llm_response.tokens_output,
             latency_ms=latency_ms,
         )
+        return opening_text
 
-        message = await self._message_service.create(
-            MessageCreate(
-                session_id=chat_session_id,
-                role="assistant",
-                content=opening_text,
-                meta={"conversation_thread_id": thread.id},
-            )
+    def _turn_system_prompt(self, thread, language_name: str) -> str:
+        if thread.mode == "roleplay":
+            return ROLEPLAY_TURN_PROMPT.format(language_name=language_name, scenario=thread.scenario)
+        topic_line = (
+            f"Talk about: {thread.scenario}." if thread.scenario else "Talk about whatever comes up naturally."
         )
+        return CONVERSATION_TURN_PROMPT.format(language_name=language_name, topic_line=topic_line)
 
-        opening_audio_ref: str | None = None
-        if voice_reply:
-            _, opening_audio_ref = await self._synthesize_and_save(opening_text, track.code)
-
-        await self._thread_repo.create_turn(
-            thread_id=thread.id, message_id=message.id, is_audio=False, audio_ref=opening_audio_ref, tip=None
-        )
-
-        logger.info(
-            "Conversation started: thread_id=%d track_id=%d scenario=%r", thread.id, track_id, scenario
-        )
-        return ConversationStartRead(
-            thread_id=thread.id,
-            track_code=track.code,
-            language_name=track.name,
-            opening_text=opening_text,
-            opening_audio_ref=opening_audio_ref,
-        )
-
-    async def record_audio_turn(self, thread_id: int, audio: bytes) -> ConversationTurnResultRead:
+    async def _load_active_thread(self, thread_id: int):
         thread = await self._thread_repo.get_thread(thread_id)
         if thread is None or thread.ended_at is not None:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="No active roleplay session")
-
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail="No active conversation session"
+            )
         track = await self._track_repo.get_track(thread.track_id)
         if track is None:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Track not found")
+        return thread, track
 
-        turns = await self._thread_repo.get_turns_with_messages(thread_id)
-        history = [{"role": message.role, "content": message.content} for _, message in turns]
+    async def record_audio_turn(self, thread_id: int, audio: bytes) -> ConversationTurnResultRead:
+        thread, track = await self._load_active_thread(thread_id)
+        history, system_prompt = await self._turn_context(thread, track)
 
         ogg_audio = await self._audio_converter.to_ogg_opus(audio)
-        system_prompt = ROLEPLAY_TURN_PROMPT.format(language_name=track.name, scenario=thread.scenario)
+        result = await self._generate_turn(
+            thread_id,
+            lambda: self._conversation_provider.reply_audio(history, ogg_audio, "audio/ogg", system_prompt),
+            thread.mode,
+            history,
+            system_prompt,
+            is_audio=True,
+        )
 
+        user_audio_ref = f"conversation/{uuid4()}.ogg"
+        await self._audio_storage.save(ogg_audio, user_audio_ref)
+        return await self._persist_turn(thread, track, result, is_audio=True, user_audio_ref=user_audio_ref)
+
+    async def record_text_turn(self, thread_id: int, text: str) -> ConversationTurnResultRead:
+        thread, track = await self._load_active_thread(thread_id)
+        history, system_prompt = await self._turn_context(thread, track)
+
+        result = await self._generate_turn(
+            thread_id,
+            lambda: self._conversation_provider.reply_text(history, text, system_prompt),
+            thread.mode,
+            history,
+            system_prompt,
+            is_audio=False,
+        )
+        return await self._persist_turn(thread, track, result, is_audio=False, user_audio_ref=None)
+
+    async def _turn_context(self, thread, track) -> tuple[list[dict[str, str]], str]:
+        turns = await self._thread_repo.get_turns_with_messages(thread.id)
+        history = [{"role": message.role, "content": message.content} for _, message in turns]
+        return history, self._turn_system_prompt(thread, track.name)
+
+    async def _generate_turn(
+        self,
+        thread_id: int,
+        call,
+        mode: str,
+        history: list[dict[str, str]],
+        system_prompt: str,
+        is_audio: bool,
+    ) -> ConversationTurnResult:
         t0 = time.monotonic()
         try:
-            result = await self._conversation_provider.reply(history, ogg_audio, "audio/ogg", system_prompt)
+            result = await call()
         except Exception as exc:
-            logger.error("Conversation: roleplay turn failed thread_id=%d error=%s", thread_id, exc)
+            logger.error("Conversation: turn failed thread_id=%d mode=%s error=%s", thread_id, mode, exc)
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                 detail="AI service temporarily unavailable. Please try again in a moment.",
@@ -173,30 +242,36 @@ class ConversationService:
             self._session,
             provider=self._conversation_provider.provider,
             model=self._conversation_provider.model,
-            feature="conversation_roleplay",
+            feature=f"conversation_{mode}",
             prompt=[{"role": "system", "content": system_prompt}] + history,
             response=result.raw_response,
             tokens_input=result.tokens_input,
             tokens_output=result.tokens_output,
             latency_ms=latency_ms,
-            is_audio=True,
+            is_audio=is_audio,
         )
+        return result
 
-        user_audio_ref = f"conversation/{uuid4()}.ogg"
-        await self._audio_storage.save(ogg_audio, user_audio_ref)
-
+    async def _persist_turn(
+        self,
+        thread,
+        track,
+        result: ConversationTurnResult,
+        is_audio: bool,
+        user_audio_ref: str | None,
+    ) -> ConversationTurnResultRead:
         user_message = await self._message_service.create(
             MessageCreate(
                 session_id=thread.chat_session_id,
                 role="user",
                 content=result.transcript,
-                meta={"conversation_thread_id": thread_id, "is_audio": True},
+                meta={"conversation_thread_id": thread.id, "is_audio": is_audio},
             )
         )
         await self._thread_repo.create_turn(
-            thread_id=thread_id,
+            thread_id=thread.id,
             message_id=user_message.id,
-            is_audio=True,
+            is_audio=is_audio,
             audio_ref=user_audio_ref,
             tip=result.tip,
         )
@@ -204,30 +279,47 @@ class ConversationService:
         reply_audio: bytes | None = None
         reply_audio_ref: str | None = None
         if thread.voice_reply:
-            reply_audio, reply_audio_ref = await self._synthesize_and_save(result.reply, track.code, result.tone)
+            reply_audio, reply_audio_ref = await self._synthesize_and_save(
+                result.reply, track.code, result.tone
+            )
 
         assistant_message = await self._message_service.create(
             MessageCreate(
                 session_id=thread.chat_session_id,
                 role="assistant",
                 content=result.reply,
-                meta={"conversation_thread_id": thread_id},
+                meta={"conversation_thread_id": thread.id},
             )
         )
         await self._thread_repo.create_turn(
-            thread_id=thread_id,
+            thread_id=thread.id,
             message_id=assistant_message.id,
             is_audio=bool(thread.voice_reply),
             audio_ref=reply_audio_ref,
             tip=None,
         )
 
-        logger.info("Conversation turn recorded: thread_id=%d tip=%s", thread_id, bool(result.tip))
+        logger.info(
+            "Conversation turn recorded: thread_id=%d mode=%s is_audio=%s tip=%s",
+            thread.id, thread.mode, is_audio, bool(result.tip),
+        )
         return ConversationTurnResultRead(
             response=result.reply,
             reply_audio_base64=base64.b64encode(reply_audio).decode("ascii") if reply_audio else None,
             tip=result.tip,
         )
+
+    def _summary_prompt(self, thread, language_name: str, transcript: str, tips: list[str]) -> str:
+        """End-of-session coaching feedback — generated for both modes."""
+        common = {
+            "language_name": language_name,
+            "transcript": transcript or "(no turns recorded)",
+            "tips": "\n".join(f"- {t}" for t in tips) if tips else "(none)",
+        }
+        if thread.mode == "roleplay":
+            return ROLEPLAY_SUMMARY_PROMPT.format(scenario=thread.scenario, **common)
+        topic_line = f"Topic: {thread.scenario}" if thread.scenario else "No set topic."
+        return CONVERSATION_SUMMARY_PROMPT.format(topic_line=topic_line, **common)
 
     async def end(self, thread_id: int) -> ConversationEndRead:
         thread = await self._thread_repo.get_thread(thread_id)
@@ -237,25 +329,16 @@ class ConversationService:
         track = await self._track_repo.get_track(thread.track_id)
         language_name = track.name if track else "the target language"
 
+        # Every turn — text or audio, either mode — is a tracked ConversationTurn, so the
+        # thread's own turns are the complete record of the session.
         turns = await self._thread_repo.get_turns_with_messages(thread_id)
         tips = [turn.tip for turn, _ in turns if turn.tip]
-
-        # Build the transcript from the full chat history, not just tracked (audio) turns —
-        # /roleplay only creates a ConversationTurn for audio input, so a typed exchange would
-        # otherwise be invisible to the wrap-up even though it's a real part of the roleplay.
-        session_messages = await self._message_service.list(MessageFilters(session_id=thread.chat_session_id))
-        conversation_messages = [m for m in session_messages if m.created_at >= thread.started_at]
-        transcript = "\n".join(f"{m.role}: {m.content}" for m in conversation_messages)
-        turn_count = sum(1 for m in conversation_messages if m.role == "user")
+        transcript = "\n".join(f"{message.role}: {message.content}" for _, message in turns)
+        turn_count = sum(1 for _, message in turns if message.role == "user")
 
         tip: str | None = None
-        if conversation_messages:
-            prompt = ROLEPLAY_SUMMARY_PROMPT.format(
-                language_name=language_name,
-                scenario=thread.scenario,
-                transcript=transcript or "(no turns recorded)",
-                tips="\n".join(f"- {t}" for t in tips) if tips else "(none)",
-            )
+        if turns:
+            prompt = self._summary_prompt(thread, language_name, transcript, tips)
             messages = [{"role": "user", "content": prompt}]
             t0 = time.monotonic()
             try:

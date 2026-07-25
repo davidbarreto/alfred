@@ -10,8 +10,6 @@ from app.features.language.chunks.service import ChunkService
 from app.features.language.conversation.service import ConversationService
 from app.features.language.production.schemas import ALL_TASK_TYPES, CHUNKLESS_TASK_TYPES
 from app.features.language.production.service import ProductionService
-from app.features.language.sessions.schemas import SessionCreate
-from app.features.language.sessions.service import SessionService as LanguageSessionService
 from app.features.language.tracks.schemas import TrackFilters
 from app.features.language.tracks.service import TrackService
 
@@ -20,6 +18,8 @@ logger = logging.getLogger(__name__)
 _WM_KEY = "language:pending"
 _DEFAULT_ROUND_COUNT = 5
 _DEFAULT_LANGUAGE_CODE = "en"
+# Practice-chat modes — threaded, turn-by-turn, with end-of-session feedback.
+_CHAT_MODES = {"roleplay", "conversation"}
 
 
 def _resolve_language_code(arguments: dict[str, Any]) -> str:
@@ -46,7 +46,6 @@ async def handle_language(
     working_memory_service: WorkingMemoryService,
     production_service: ProductionService | None = None,
     conversation_service: ConversationService | None = None,
-    language_session_service: LanguageSessionService | None = None,
     message_id: int | None = None,
 ) -> Any:
     logger.debug("handle_language: command=%s args_keys=%s", command, list(arguments.keys()))
@@ -72,7 +71,7 @@ async def handle_language(
             arguments, track_service, conversation_service, working_memory_service, message_id
         )
     if command == "stop":
-        return await _handle_stop(working_memory_service, conversation_service, language_session_service)
+        return await _handle_stop(working_memory_service, conversation_service)
 
     raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Unknown language command: {command}")
 
@@ -129,65 +128,49 @@ async def _handle_start_conversation(
         )
     track = tracks[0]
 
+    if mode == "roleplay" and not scenario_or_topic:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="A scenario is required for roleplay, e.g. /roleplay pt ordering coffee",
+        )
+
     await _clear_pending(working_memory_service)
 
-    if mode == "roleplay":
-        if not scenario_or_topic:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="A scenario is required for roleplay, e.g. /roleplay pt ordering coffee",
-            )
-        start = await conversation_service.start(track.id, message_id, scenario_or_topic, voice_reply)
-        wm = await working_memory_service.create(WorkingMemoryCreate(
-            key=_WM_KEY,
-            value=json.dumps({
-                "mode": "roleplay",
-                "track_id": track.id,
-                "track_code": track.code,
-                "language_name": track.name,
-                "thread_id": start.thread_id,
-            }),
-            importance=1.0,
-        ))
-        logger.info(
-            "handle_language: roleplay started track=%s thread_id=%d wm_id=%d",
-            language_code, start.thread_id, wm.id,
-        )
-        return {
-            "mode": "roleplay",
-            "wm_id": wm.id,
-            "thread_id": start.thread_id,
-            "track_id": track.id,
-            "track_code": track.code,
-            "language_name": track.name,
-            "scenario": scenario_or_topic,
-            "opening_text": start.opening_text,
-        }
-
+    # Both modes run as a tracked thread, so turns and end-of-session feedback work the
+    # same either way.
+    start = await conversation_service.start(
+        track.id, message_id, mode, scenario_or_topic or None, voice_reply
+    )
     wm = await working_memory_service.create(WorkingMemoryCreate(
         key=_WM_KEY,
         value=json.dumps({
-            "mode": "conversation",
+            "mode": mode,
             "track_id": track.id,
             "track_code": track.code,
             "language_name": track.name,
-            "topic": scenario_or_topic or None,
+            "thread_id": start.thread_id,
             "voice_reply": voice_reply,
         }),
         importance=1.0,
     ))
     logger.info(
-        "handle_language: conversation started track=%s wm_id=%d topic=%r",
-        language_code, wm.id, scenario_or_topic,
+        "handle_language: %s started track=%s thread_id=%d wm_id=%d topic=%r",
+        mode, language_code, start.thread_id, wm.id, scenario_or_topic,
     )
-    return {
-        "mode": "conversation",
+    result = {
+        "mode": mode,
         "wm_id": wm.id,
+        "thread_id": start.thread_id,
         "track_id": track.id,
         "track_code": track.code,
         "language_name": track.name,
-        "topic": scenario_or_topic or None,
     }
+    if mode == "roleplay":
+        result["scenario"] = scenario_or_topic
+        result["opening_text"] = start.opening_text
+    else:
+        result["topic"] = scenario_or_topic or None
+    return result
 
 
 async def _resolve_track_and_chunk(
@@ -397,7 +380,6 @@ async def _handle_produce(
 async def _handle_stop(
     working_memory_service: WorkingMemoryService,
     conversation_service: ConversationService | None = None,
-    language_session_service: LanguageSessionService | None = None,
 ) -> dict[str, Any]:
     existing = await working_memory_service.list(WorkingMemoryFilters(key=_WM_KEY, active_only=True))
     result: dict[str, Any] = {"mode": "stopped"}
@@ -407,17 +389,12 @@ async def _handle_stop(
         except (json.JSONDecodeError, TypeError):
             data = {}
 
+        # Both practice-chat modes end the same way: close the thread and generate
+        # end-of-session coaching feedback from its turns.
         mode = data.get("mode")
-        if mode == "roleplay" and conversation_service is not None and data.get("thread_id") is not None:
+        if mode in _CHAT_MODES and conversation_service is not None and data.get("thread_id") is not None:
             end = await conversation_service.end(data["thread_id"])
             result = {"mode": "stopped", "tip": end.tip, "turn_count": end.turn_count}
-        elif mode == "conversation" and language_session_service is not None:
-            await language_session_service.record_session(SessionCreate(
-                track_id=data.get("track_id"),
-                session_type="conversation",
-                transcript_or_notes=data.get("topic"),
-            ))
-            result = {"mode": "stopped", "topic": data.get("topic")}
 
         await working_memory_service.delete(item.id)
         logger.debug("handle_language: cleared stale pending WM id=%d", item.id)

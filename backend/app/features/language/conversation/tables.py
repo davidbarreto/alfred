@@ -20,7 +20,10 @@ class ConversationThread(Base):
     chat_session_id: Mapped[int] = mapped_column(
         Integer, ForeignKey("core.sessions.id", ondelete="CASCADE"), nullable=False
     )
-    scenario: Mapped[str] = mapped_column(Text, nullable=False)
+    # "roleplay" (scripted scenario) or "conversation" (free chat on an optional topic).
+    mode: Mapped[str] = mapped_column(String(20), nullable=False, default="roleplay")
+    # The roleplay scenario or the free-conversation topic; absent for a topic-less chat.
+    scenario: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     voice_reply: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     started_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False

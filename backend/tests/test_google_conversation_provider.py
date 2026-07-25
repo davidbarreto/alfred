@@ -31,7 +31,7 @@ class TestReply:
             mock_client_cls.return_value = mock_client
 
             provider = GoogleConversationProvider(api_key="test-key", model_name="gemini-2.5-flash")
-            result = await provider.reply(
+            result = await provider.reply_audio(
                 history=[{"role": "user", "content": "Bonjour"}, {"role": "assistant", "content": "Salut!"}],
                 current_audio=b"fake-audio",
                 mime_type="audio/ogg",
@@ -54,6 +54,33 @@ class TestReply:
         assert contents[0].parts[0].text == "Bonjour"
 
     @pytest.mark.asyncio
+    async def test_reply_text_sends_text_and_keeps_the_users_own_words(self):
+        # A typed turn needs no transcription, so the model's "transcript" is ignored in
+        # favour of exactly what the user wrote.
+        payload = {"transcript": "hallucinated", "reply": "Bien sur!", "tip": None, "tone": "warm"}
+        with patch("app.integrations.google.conversation_provider.genai.Client") as mock_client_cls:
+            mock_client = MagicMock()
+            mock_client.aio.models.generate_content = AsyncMock(return_value=_mock_response(payload))
+            mock_client_cls.return_value = mock_client
+
+            provider = GoogleConversationProvider(api_key="test-key", model_name="gemini-2.5-flash")
+            result = await provider.reply_text(
+                history=[{"role": "assistant", "content": "Bonjour!"}],
+                current_text="Un cafe s'il vous plait",
+                system="Roleplay a cafe scene.",
+            )
+
+        assert result.transcript == "Un cafe s'il vous plait"
+        assert result.reply == "Bien sur!"
+        assert result.tone == "warm"
+        call_kwargs = mock_client.aio.models.generate_content.call_args.kwargs
+        assert call_kwargs["config"].response_mime_type == "application/json"
+        contents = call_kwargs["contents"]
+        assert contents[-1].role == "user"
+        assert contents[-1].parts[0].text == "Un cafe s'il vous plait"
+        assert contents[-1].parts[0].inline_data is None
+
+    @pytest.mark.asyncio
     async def test_empty_response_raises_json_decode_error(self):
         with patch("app.integrations.google.conversation_provider.genai.Client") as mock_client_cls:
             mock_client = MagicMock()
@@ -65,7 +92,7 @@ class TestReply:
 
             provider = GoogleConversationProvider(api_key="test-key", model_name="gemini-2.5-flash")
             with pytest.raises(json.JSONDecodeError):
-                await provider.reply(history=[], current_audio=b"x", mime_type="audio/ogg", system="sys")
+                await provider.reply_audio(history=[], current_audio=b"x", mime_type="audio/ogg", system="sys")
 
     @pytest.mark.asyncio
     async def test_parses_tone(self):
@@ -76,7 +103,7 @@ class TestReply:
             mock_client_cls.return_value = mock_client
 
             provider = GoogleConversationProvider(api_key="test-key", model_name="gemini-2.5-flash")
-            result = await provider.reply(history=[], current_audio=b"x", mime_type="audio/ogg", system="sys")
+            result = await provider.reply_audio(history=[], current_audio=b"x", mime_type="audio/ogg", system="sys")
 
         assert result.tone == "cheerful"
 
@@ -89,7 +116,7 @@ class TestReply:
             mock_client_cls.return_value = mock_client
 
             provider = GoogleConversationProvider(api_key="test-key", model_name="gemini-2.5-flash")
-            result = await provider.reply(history=[], current_audio=b"x", mime_type="audio/ogg", system="sys")
+            result = await provider.reply_audio(history=[], current_audio=b"x", mime_type="audio/ogg", system="sys")
 
         assert result.tone is None
 
@@ -102,7 +129,7 @@ class TestReply:
             mock_client_cls.return_value = mock_client
 
             provider = GoogleConversationProvider(api_key="test-key", model_name="gemini-2.5-flash")
-            result = await provider.reply(history=[], current_audio=b"x", mime_type="audio/ogg", system="sys")
+            result = await provider.reply_audio(history=[], current_audio=b"x", mime_type="audio/ogg", system="sys")
 
         assert result.tip is None
 
@@ -118,7 +145,7 @@ class TestReply:
             mock_client_cls.return_value = mock_client
 
             provider = GoogleConversationProvider(api_key="test-key", model_name="gemini-2.5-flash")
-            result = await provider.reply(history=[], current_audio=b"x", mime_type="audio/ogg", system="sys")
+            result = await provider.reply_audio(history=[], current_audio=b"x", mime_type="audio/ogg", system="sys")
 
         assert result.reply == "hello"
         assert result.tokens_input is None

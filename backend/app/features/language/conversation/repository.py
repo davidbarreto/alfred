@@ -12,10 +12,14 @@ class ConversationRepository:
         self._session = session
 
     async def create_thread(
-        self, track_id: int, chat_session_id: int, scenario: str, voice_reply: bool
+        self, track_id: int, chat_session_id: int, mode: str, scenario: str | None, voice_reply: bool
     ) -> ConversationThread:
         thread = ConversationThread(
-            track_id=track_id, chat_session_id=chat_session_id, scenario=scenario, voice_reply=voice_reply
+            track_id=track_id,
+            chat_session_id=chat_session_id,
+            mode=mode,
+            scenario=scenario,
+            voice_reply=voice_reply,
         )
         self._session.add(thread)
         await self._session.commit()

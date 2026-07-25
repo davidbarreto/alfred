@@ -303,7 +303,7 @@ logger.warning("Auth failed: invalid token")
 - **Migrations** — run `alembic upgrade head` as part of container startup, not manually
 - **nginx** — shared snippets for SSL termination and proxy headers; do not duplicate config per service
 - **File layout on VPS** — application in `/opt/stacks/alfred/`, persistent data in `/srv/data/alfred/`
-- **Do not start/rebuild the local Docker stack (`infra/docker-compose.yml`) to test changes.** The local `api` image build is broken (silently falls back to the legacy Docker builder, which doesn't support the `--mount=type=cache` in `backend/Dockerfile`, leaving a stale image with old migrations that crash-loops on startup). Verify changes with unit tests and code review instead; the user tests in production themselves.
+- **The local Docker stack (`infra/docker-compose.yml`) build issue has been fixed** — it's runnable again, but default to unit tests and code review to verify changes; the user tests in production themselves. Only start/rebuild the local stack when a change genuinely needs it and isn't covered by unit tests (e.g. verifying real container/DB/migration behavior) — don't reach for it as a routine step on every change.
 
 ---
 

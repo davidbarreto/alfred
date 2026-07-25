@@ -35,6 +35,35 @@ def client():
     app.dependency_overrides.clear()
 
 
+class TestCommandCatalog:
+    def test_returns_all_domains(self, client):
+        response = client.get("/commands/catalog", headers=AUTH)
+        assert response.status_code == 200
+        domains = response.json()["domains"]
+        assert "task" in domains
+        assert "finance" in domains
+        assert "help" in domains
+
+    def test_task_add_shape(self, client):
+        response = client.get("/commands/catalog", headers=AUTH)
+        task_add = response.json()["domains"]["task"]["add"]
+        assert task_add["action"] == "add"
+        assert task_add["requires_args"] is True
+        assert task_add["arg_keys"] == ["title"]
+        assert set(task_add["flags"]) == {"deadline", "priority", "tags", "recurrence"}
+        assert task_add["implicit_flags"] == {}
+
+    def test_convenience_alias_resolves_actual_action_and_implicit_flags(self, client):
+        response = client.get("/commands/catalog", headers=AUTH)
+        expense = response.json()["domains"]["finance"]["transaction_add_expense"]
+        assert expense["action"] == "transaction_add"
+        assert expense["implicit_flags"] == {"type": "expense"}
+
+    def test_requires_auth(self, client):
+        response = client.get("/commands/catalog")
+        assert response.status_code == 403
+
+
 class TestDetectCommand:
     def test_slash_command_returns_full_parse(self, client):
         response = client.post("/commands/detect", json={"text": "/taskadd Do the laundry"}, headers=AUTH)

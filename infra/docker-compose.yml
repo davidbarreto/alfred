@@ -67,6 +67,17 @@ services:
       - STATEMENT_STORAGE_DIR=${STATEMENT_STORAGE_DIR}
       - TIMEZONE=${TIMEZONE}
 
+  mcp:
+    build: ../mcp
+    ports:
+      - "127.0.0.1:${MCP_PORT:-9000}:9000"
+    depends_on:
+      - api
+    restart: unless-stopped
+    environment:
+      - BACKEND_URL=http://api:8000
+      - ALFRED_API_TOKEN=${ALFRED_API_TOKEN}
+
   web:
     build: ../web
     ports:

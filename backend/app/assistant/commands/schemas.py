@@ -69,3 +69,16 @@ class CommandRespondRequest(BaseModel):
 
 class CommandRespondResponse(BaseModel):
     response: str
+
+
+class CommandCatalogAction(BaseModel):
+    action: str
+    description: str
+    requires_args: bool = False
+    arg_keys: List[str] = []
+    flags: List[str] = []
+    implicit_flags: Dict[str, Any] = {}
+
+
+class CommandCatalogResponse(BaseModel):
+    domains: Dict[str, Dict[str, CommandCatalogAction]]

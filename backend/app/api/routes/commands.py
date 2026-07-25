@@ -8,8 +8,11 @@ from fastapi import APIRouter, Depends
 logger = logging.getLogger(__name__)
 
 from app.assistant.commands.executor import execute
+from app.assistant.commands.registry import COMMAND_DEFINITIONS
 from app.assistant.commands.resolver import detect_commands
 from app.assistant.commands.schemas import (
+    CommandCatalogAction,
+    CommandCatalogResponse,
     CommandDetectRequest,
     CommandDetectResponse,
     CommandExecuteRequest,
@@ -48,6 +51,29 @@ from app.features.core.command_executions.schemas import CommandExecutionCreate,
 from app.integrations.llm_calls.repository import create_llm_call
 
 router = APIRouter(prefix="/commands", tags=["commands"], dependencies=[Depends(require_auth)])
+
+
+@router.get("/catalog", response_model=CommandCatalogResponse)
+async def get_command_catalog() -> CommandCatalogResponse:
+    """Machine-readable command catalog, generated live from COMMAND_DEFINITIONS.
+
+    Lets non-Telegram callers (e.g. an MCP server) build their own tool
+    definitions without hand-duplicating the command registry.
+    """
+    domains: dict[str, dict[str, CommandCatalogAction]] = {}
+    for cmd_type, actions in COMMAND_DEFINITIONS.items():
+        domains[cmd_type] = {
+            action_key: CommandCatalogAction(
+                action=config.get("action", action_key),
+                description=config.get("description", ""),
+                requires_args=config.get("requires_args", False),
+                arg_keys=config.get("arg_keys", []),
+                flags=sorted(set(config.get("flags", {}).values())),
+                implicit_flags=config.get("implicit_flags", {}),
+            )
+            for action_key, config in actions.items()
+        }
+    return CommandCatalogResponse(domains=domains)
 
 
 @router.post("/detect", response_model=CommandDetectResponse)

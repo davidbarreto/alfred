@@ -5,7 +5,11 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.dependencies import get_conversation_service
-from app.features.language.conversation.schemas import ConversationThreadRead, ConversationTurnRead
+from app.features.language.conversation.schemas import (
+    ConversationStartRead,
+    ConversationThreadRead,
+    ConversationTurnRead,
+)
 
 AUTH = {"Authorization": "Bearer test-api-token"}
 _NOW = datetime(2026, 7, 25, 10, 0, tzinfo=timezone.utc)
@@ -30,9 +34,20 @@ def _thread(**kwargs) -> ConversationThreadRead:
         mode=kwargs.get("mode", "roleplay"),
         scenario=kwargs.get("scenario", "Ordering coffee"),
         voice_reply=kwargs.get("voice_reply", False),
+        level_override=kwargs.get("level_override"),
         started_at=_NOW,
         ended_at=kwargs.get("ended_at"),
         tip=kwargs.get("tip"),
+    )
+
+
+def _StartRead(**kwargs) -> ConversationStartRead:
+    return ConversationStartRead(
+        thread_id=kwargs.get("thread_id", 1),
+        track_code=kwargs.get("track_code", "fr"),
+        language_name=kwargs.get("language_name", "French"),
+        opening_text=kwargs.get("opening_text"),
+        opening_audio_ref=kwargs.get("opening_audio_ref"),
     )
 
 
@@ -89,6 +104,37 @@ class TestGetThreads:
         c, _ = client
         # No bearer header at all — FastAPI's security dependency rejects with 403.
         assert c.get("/language/conversation/threads").status_code == 403
+
+
+class TestStartConversation:
+    def test_passes_level_override_through_to_service(self, client):
+        c, service = client
+        service.start.return_value = _StartRead(thread_id=5, track_code="fr", language_name="French")
+
+        resp = c.post(
+            "/language/conversation/start",
+            headers=AUTH,
+            json={
+                "track_id": 3, "message_id": 1, "mode": "roleplay",
+                "scenario": "Ordering coffee", "voice_reply": False, "level_override": "A0",
+            },
+        )
+
+        assert resp.status_code == 201
+        service.start.assert_awaited_once_with(3, 1, "roleplay", "Ordering coffee", False, level_override="A0")
+
+    def test_level_override_defaults_to_none(self, client):
+        c, service = client
+        service.start.return_value = _StartRead(thread_id=5, track_code="fr", language_name="French")
+
+        resp = c.post(
+            "/language/conversation/start",
+            headers=AUTH,
+            json={"track_id": 3, "message_id": 1, "mode": "roleplay", "scenario": "Ordering coffee"},
+        )
+
+        assert resp.status_code == 201
+        assert service.start.call_args.kwargs["level_override"] is None
 
 
 class TestGetThreadTurns:

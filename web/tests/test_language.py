@@ -251,6 +251,60 @@ class TestShadowSession:
 
         assert resp.status_code == 404
 
+    def test_words_param_force_creates_chunks_instead_of_daily_batch(self, client, mock_api):
+        mock_api["get"].side_effect = [
+            [{"id": 5, "code": "fr", "name": "French", "daily_quota": 10}],
+        ]
+        mock_api["post"].return_value = [{"id": 99, "text": "chien", "translation": "dog"}]
+
+        resp = client.get("/languages/fr/shadow?words=chien")
+
+        assert resp.status_code == 200
+        assert "chien" in resp.text
+        mock_api["post"].assert_awaited_once_with(
+            "/language/chunks/force-practice", json={"track_id": 5, "texts": ["chien"]}
+        )
+        mock_api["get"].assert_called_once()  # only the track lookup, no daily-batch fetch
+
+
+class TestReviewSession:
+    def test_renders_due_chunks_from_daily_batch(self, client, mock_api):
+        mock_api["get"].side_effect = [
+            [{"id": 5, "code": "fr", "name": "French", "daily_quota": 10}],
+            [{"track_id": 5, "track_code": "fr", "total_due": 2,
+              "chunks": [{"id": 42, "text": "bonjour", "translation": "hello"}]}],
+            [{"track_id": 5, "completed_today": 1, "quota_met": False, "daily_quota": 10}],
+        ]
+
+        resp = client.get("/languages/fr/review")
+
+        assert resp.status_code == 200
+        assert "bonjour" in resp.text
+
+    def test_words_param_force_creates_chunks_with_multiple_words(self, client, mock_api):
+        mock_api["get"].side_effect = [
+            [{"id": 5, "code": "fr", "name": "French", "daily_quota": 10}],
+            [{"track_id": 5, "completed_today": 0, "quota_met": False, "daily_quota": 10}],
+        ]
+        mock_api["post"].return_value = [
+            {"id": 99, "text": "chien", "translation": "dog"},
+            {"id": 100, "text": "chat", "translation": "cat"},
+        ]
+
+        resp = client.get("/languages/fr/review?words=chien,%20chat")
+
+        assert resp.status_code == 200
+        mock_api["post"].assert_awaited_once_with(
+            "/language/chunks/force-practice", json={"track_id": 5, "texts": ["chien", "chat"]}
+        )
+
+    def test_returns_404_when_track_not_found(self, client, mock_api):
+        mock_api["get"].return_value = []
+
+        resp = client.get("/languages/xx/review")
+
+        assert resp.status_code == 404
+
 
 def _thread(**kwargs) -> dict:
     return {

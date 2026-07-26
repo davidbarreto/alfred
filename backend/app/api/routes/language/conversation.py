@@ -34,7 +34,8 @@ async def get_thread_turns(thread_id: int, service: ConversationServiceDep):
 @router.post("/start", response_model=ConversationStartRead, status_code=status.HTTP_201_CREATED)
 async def start_conversation(request: ConversationStartCreate, service: ConversationServiceDep):
     return await service.start(
-        request.track_id, request.message_id, request.mode, request.scenario, request.voice_reply
+        request.track_id, request.message_id, request.mode, request.scenario, request.voice_reply,
+        level_override=request.level_override,
     )
 
 

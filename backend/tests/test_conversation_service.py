@@ -1,3 +1,4 @@
+import json
 from datetime import datetime, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -8,11 +9,16 @@ from app.shared.llm import LlmResponse
 _THREAD_STARTED_AT = datetime(2020, 1, 1, tzinfo=timezone.utc)
 
 
+def _summary_json(summary: str = "Great effort!", new_vocabulary: list | None = None) -> str:
+    return json.dumps({"summary": summary, "new_vocabulary": new_vocabulary or []})
+
+
 def _make_track(**kwargs):
     track = MagicMock()
     track.id = kwargs.get("id", 1)
     track.code = kwargs.get("code", "fr")
     track.name = kwargs.get("name", "French")
+    track.level = kwargs.get("level", "A1")
     return track
 
 
@@ -24,6 +30,7 @@ def _make_thread(**kwargs):
     thread.mode = kwargs.get("mode", "roleplay")
     thread.scenario = kwargs.get("scenario", "Ordering coffee")
     thread.voice_reply = kwargs.get("voice_reply", False)
+    thread.level_override = kwargs.get("level_override", None)
     thread.ended_at = kwargs.get("ended_at", None)
     thread.started_at = kwargs.get("started_at", _THREAD_STARTED_AT)
     return thread
@@ -57,6 +64,7 @@ def _make_service(**kwargs):
     message_service.list = AsyncMock(return_value=kwargs.get("session_messages", []))
     language_session_service = kwargs.get("language_session_service") or AsyncMock()
     track_repo = kwargs.get("track_repo") or AsyncMock()
+    chunk_service = kwargs.get("chunk_service") or AsyncMock()
     audio_storage = kwargs.get("audio_storage") or AsyncMock()
     audio_converter = kwargs.get("audio_converter") or AsyncMock()
     audio_converter.to_ogg_opus = AsyncMock(return_value=b"ogg-bytes")
@@ -75,6 +83,7 @@ def _make_service(**kwargs):
         message_service=message_service,
         language_session_service=language_session_service,
         track_repo=track_repo,
+        chunk_service=chunk_service,
         audio_storage=audio_storage,
         audio_converter=audio_converter,
         conversation_provider=conversation_provider,
@@ -88,6 +97,7 @@ def _make_service(**kwargs):
         "message_service": message_service,
         "language_session_service": language_session_service,
         "track_repo": track_repo,
+        "chunk_service": chunk_service,
         "audio_storage": audio_storage,
         "audio_converter": audio_converter,
         "conversation_provider": conversation_provider,
@@ -109,7 +119,9 @@ class TestStart:
         with patch("app.features.language.conversation.service.create_llm_call", AsyncMock()):
             result = await parts["service"].start(track_id=1, message_id=42, mode="roleplay", scenario="Ordering coffee", voice_reply=False)
 
-        parts["thread_repo"].create_thread.assert_awaited_once_with(1, 5, "roleplay", "Ordering coffee", False)
+        parts["thread_repo"].create_thread.assert_awaited_once_with(
+            1, 5, "roleplay", "Ordering coffee", False, None
+        )
         assert result.opening_text == "Bonjour! Que puis-je vous servir?"
         assert result.opening_audio_ref is None
         parts["pronunciation_service"].get_audio.assert_not_awaited()
@@ -148,11 +160,51 @@ class TestStart:
         )
 
         # Free conversation waits for David to speak first — no opener, no LLM call, no turn.
-        parts["thread_repo"].create_thread.assert_awaited_once_with(1, 5, "conversation", None, True)
+        parts["thread_repo"].create_thread.assert_awaited_once_with(
+            1, 5, "conversation", None, True, None
+        )
         assert result.opening_text is None
         assert result.opening_audio_ref is None
         parts["llm_provider"].complete.assert_not_awaited()
         parts["thread_repo"].create_turn.assert_not_awaited()
+
+    async def test_level_override_passed_through_to_create_thread(self):
+        parts = _make_service()
+        parts["track_repo"].get_track = AsyncMock(return_value=_make_track())
+        parts["thread_repo"].create_thread = AsyncMock(return_value=_make_thread(level_override="A0"))
+        parts["message_service"].get = AsyncMock(return_value=MagicMock(session_id=5))
+        parts["llm_provider"].complete = AsyncMock(
+            return_value=LlmResponse(text="Bonjour!", tokens_input=10, tokens_output=8)
+        )
+
+        with patch("app.features.language.conversation.service.create_llm_call", AsyncMock()):
+            await parts["service"].start(
+                track_id=1, message_id=42, mode="roleplay", scenario="Ordering coffee",
+                voice_reply=False, level_override="A0",
+            )
+
+        parts["thread_repo"].create_thread.assert_awaited_once_with(
+            1, 5, "roleplay", "Ordering coffee", False, "A0"
+        )
+        opening_prompt = parts["llm_provider"].complete.call_args.args[0][0]["content"]
+        assert "A0" in opening_prompt
+
+    async def test_no_level_override_falls_back_to_track_level(self):
+        parts = _make_service()
+        parts["track_repo"].get_track = AsyncMock(return_value=_make_track(level="B2"))
+        parts["thread_repo"].create_thread = AsyncMock(return_value=_make_thread())
+        parts["message_service"].get = AsyncMock(return_value=MagicMock(session_id=5))
+        parts["llm_provider"].complete = AsyncMock(
+            return_value=LlmResponse(text="Bonjour!", tokens_input=10, tokens_output=8)
+        )
+
+        with patch("app.features.language.conversation.service.create_llm_call", AsyncMock()):
+            await parts["service"].start(
+                track_id=1, message_id=42, mode="roleplay", scenario="Ordering coffee", voice_reply=False,
+            )
+
+        opening_prompt = parts["llm_provider"].complete.call_args.args[0][0]["content"]
+        assert "B2" in opening_prompt
 
 
 class TestRecordAudioTurn:
@@ -303,6 +355,22 @@ class TestRecordTextTurn:
         assert "Talk about: food." in system_prompt
         assert mock_log.call_args.kwargs["feature"] == "conversation_conversation"
 
+    async def test_turn_prompt_uses_thread_level_override_not_track_level(self):
+        parts = _make_service()
+        parts["thread_repo"].get_thread = AsyncMock(
+            return_value=_make_thread(mode="conversation", scenario="food", level_override="A0")
+        )
+        parts["track_repo"].get_track = AsyncMock(return_value=_make_track(level="C1"))
+        parts["thread_repo"].get_turns_with_messages = AsyncMock(return_value=[])
+        parts["conversation_provider"].reply_text = AsyncMock(return_value=_make_result())
+
+        with patch("app.features.language.conversation.service.create_llm_call", AsyncMock()):
+            await parts["service"].record_text_turn(thread_id=10, text="J'aime le fromage")
+
+        system_prompt = parts["conversation_provider"].reply_text.call_args.args[2]
+        assert "A0" in system_prompt
+        assert "C1" not in system_prompt
+
     async def test_ended_thread_raises_404(self):
         from fastapi import HTTPException
 
@@ -328,7 +396,9 @@ class TestEnd:
             _make_turn("user", "Un cafe", tip="Watch your 'r'"),
         ])
         parts["llm_provider"].complete = AsyncMock(
-            return_value=LlmResponse(text="Great effort! Watch your r sounds.", tokens_input=30, tokens_output=15)
+            return_value=LlmResponse(
+                text=_summary_json("Great effort! Watch your r sounds."), tokens_input=30, tokens_output=15
+            )
         )
 
         with patch("app.features.language.conversation.service.create_llm_call", AsyncMock()):
@@ -359,7 +429,7 @@ class TestEnd:
             _make_turn("user", "Oui, merci"),
         ])
         parts["llm_provider"].complete = AsyncMock(
-            return_value=LlmResponse(text="Solid vocabulary!", tokens_input=30, tokens_output=15)
+            return_value=LlmResponse(text=_summary_json("Solid vocabulary!"), tokens_input=30, tokens_output=15)
         )
 
         with patch("app.features.language.conversation.service.create_llm_call", AsyncMock()):
@@ -380,7 +450,9 @@ class TestEnd:
             _make_turn("user", "J'aime la guitare", tip="Verb agreement"),
         ])
         parts["llm_provider"].complete = AsyncMock(
-            return_value=LlmResponse(text="Nice chat! Watch agreement.", tokens_input=30, tokens_output=15)
+            return_value=LlmResponse(
+                text=_summary_json("Nice chat! Watch agreement."), tokens_input=30, tokens_output=15
+            )
         )
 
         with patch("app.features.language.conversation.service.create_llm_call", AsyncMock()):
@@ -391,6 +463,48 @@ class TestEnd:
         assert "free conversation practice session" in prompt_text
         assert "Topic: guitars" in prompt_text
         assert "J'aime la guitare" in prompt_text
+
+    async def test_queues_vocabulary_candidates_from_summary(self):
+        parts = _make_service()
+        parts["thread_repo"].get_thread = AsyncMock(return_value=_make_thread())
+        parts["track_repo"].get_track = AsyncMock(return_value=_make_track())
+        parts["thread_repo"].get_turns_with_messages = AsyncMock(return_value=[
+            _make_turn("user", "Je vou au marché", tip="Should be 'Je vais au marché'"),
+        ])
+        parts["llm_provider"].complete = AsyncMock(
+            return_value=LlmResponse(
+                text=_summary_json("Watch your verb conjugation.", [
+                    {"text": "je vais", "translation": "I go", "cefr_level": "A1"},
+                ]),
+                tokens_input=30, tokens_output=15,
+            )
+        )
+
+        with patch("app.features.language.conversation.service.create_llm_call", AsyncMock()):
+            await parts["service"].end(thread_id=10)
+
+        parts["chunk_service"].queue_vocabulary_candidates.assert_awaited_once()
+        call_args = parts["chunk_service"].queue_vocabulary_candidates.call_args.args
+        assert call_args[0] == 1
+        assert call_args[1][0].text == "je vais"
+        assert call_args[1][0].cefr_level == "A1"
+
+    async def test_malformed_summary_json_falls_back_to_raw_text(self):
+        parts = _make_service()
+        parts["thread_repo"].get_thread = AsyncMock(return_value=_make_thread())
+        parts["track_repo"].get_track = AsyncMock(return_value=_make_track())
+        parts["thread_repo"].get_turns_with_messages = AsyncMock(return_value=[
+            _make_turn("user", "Un cafe"),
+        ])
+        parts["llm_provider"].complete = AsyncMock(
+            return_value=LlmResponse(text="Not JSON at all, just a nice note.", tokens_input=30, tokens_output=15)
+        )
+
+        with patch("app.features.language.conversation.service.create_llm_call", AsyncMock()):
+            result = await parts["service"].end(thread_id=10)
+
+        assert result.tip == "Not JSON at all, just a nice note."
+        parts["chunk_service"].queue_vocabulary_candidates.assert_not_awaited()
 
     async def test_no_turns_skips_summary_call(self):
         parts = _make_service()

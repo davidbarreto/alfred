@@ -8,6 +8,7 @@ from app.features.core.working_memory.schemas import WorkingMemoryCreate, Workin
 from app.features.core.working_memory.service import WorkingMemoryService
 from app.features.language.chunks.service import ChunkService
 from app.features.language.conversation.service import ConversationService
+from app.features.language.level_guidance import CEFR_LEVELS
 from app.features.language.production.schemas import ALL_TASK_TYPES, CHUNKLESS_TASK_TYPES
 from app.features.language.production.service import ProductionService
 from app.features.language.sessions.service import format_feedback_summary
@@ -37,6 +38,36 @@ def _parse_count(arguments: dict[str, Any], default: int = _DEFAULT_ROUND_COUNT)
     except ValueError:
         return default
     return count if count > 0 else default
+
+
+def _parse_count_or_words(arguments: dict[str, Any], default: int = _DEFAULT_ROUND_COUNT) -> tuple[int, list[str] | None]:
+    """Like `_parse_count`, but non-numeric input is treated as a comma-separated list of
+    words/phrases to force-practice instead of being silently discarded, e.g.
+    '/review pt cão, gato' -> (default, ["cão", "gato"])."""
+    raw = arguments.get("count")
+    if raw is None:
+        return default, None
+    text = str(raw).strip()
+    if not text:
+        return default, None
+    try:
+        count = int(text)
+    except ValueError:
+        words = [w.strip() for w in text.split(",") if w.strip()]
+        return default, (words or None)
+    return (count if count > 0 else default), None
+
+
+def _resolve_level(arguments: dict[str, Any]) -> str | None:
+    """Return the requested CEFR level override (e.g. 'level:a0'), or None if absent/invalid."""
+    raw = arguments.get("level")
+    if raw is None:
+        return None
+    level = str(raw).strip().upper()
+    if level not in CEFR_LEVELS:
+        logger.debug("handle_language: ignoring invalid level override %r", raw)
+        return None
+    return level
 
 
 async def handle_language(
@@ -137,10 +168,12 @@ async def _handle_start_conversation(
 
     await _clear_pending(working_memory_service)
 
+    level_override = _resolve_level(arguments)
     # Both modes run as a tracked thread, so turns and end-of-session feedback work the
     # same either way.
     start = await conversation_service.start(
-        track.id, message_id, mode, scenario_or_topic or None, voice_reply
+        track.id, message_id, mode, scenario_or_topic or None, voice_reply,
+        level_override=level_override,
     )
     wm = await working_memory_service.create(WorkingMemoryCreate(
         key=_WM_KEY,
@@ -174,18 +207,22 @@ async def _handle_start_conversation(
     return result
 
 
-async def _resolve_track_and_chunk(
-    language_code: str,
-    track_service: TrackService,
-    chunk_service: ChunkService,
-) -> tuple:
+async def _resolve_track(language_code: str, track_service: TrackService):
     tracks = await track_service.get_tracks(TrackFilters(code=language_code, active_only=True))
     if not tracks:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"No active track found for language: {language_code!r}",
         )
-    track = tracks[0]
+    return tracks[0]
+
+
+async def _resolve_track_and_chunk(
+    language_code: str,
+    track_service: TrackService,
+    chunk_service: ChunkService,
+) -> tuple:
+    track = await _resolve_track(language_code, track_service)
 
     batches = await chunk_service.get_daily_batch(track.id)
     if not batches or not batches[0].chunks:
@@ -204,6 +241,35 @@ async def _clear_pending(working_memory_service: WorkingMemoryService) -> None:
         logger.debug("handle_language: cleared stale pending WM id=%d", item.id)
 
 
+async def _forced_practice_wm_payload(
+    mode: str,
+    arguments: dict[str, Any],
+    words: list[str],
+    track,
+    chunk_service: ChunkService,
+) -> dict[str, Any]:
+    """Force-create/resolve the requested chunks and shape them into a wm payload: the
+    first chunk seeds the usual chunk_id/text/translation fields, the rest go into
+    'forced_queue' for `advance_loop` to pop from instead of the daily due-batch."""
+    level_override = _resolve_level(arguments)
+    chunks = await chunk_service.force_practice_chunks(track.id, words, level_override=level_override)
+    first, rest = chunks[0], chunks[1:]
+    payload: dict[str, Any] = {
+        "mode": mode,
+        "chunk_id": first.id,
+        "track_id": track.id,
+        "track_code": track.code,
+        "language_name": track.name,
+        "text": first.text,
+        "translation": first.translation,
+        "remaining": len(chunks),
+        "forced_queue": [{"chunk_id": c.id, "text": c.text, "translation": c.translation} for c in rest],
+    }
+    if mode == "practice":
+        payload["feedback_history"] = []
+    return payload
+
+
 async def _handle_practice(
     arguments: dict[str, Any],
     track_service: TrackService,
@@ -211,14 +277,16 @@ async def _handle_practice(
     working_memory_service: WorkingMemoryService,
 ) -> dict[str, Any]:
     language_code = _resolve_language_code(arguments)
+    count, words = _parse_count_or_words(arguments)
 
-    track, chunk = await _resolve_track_and_chunk(language_code, track_service, chunk_service)
-    await _clear_pending(working_memory_service)
-    count = _parse_count(arguments)
-
-    wm = await working_memory_service.create(WorkingMemoryCreate(
-        key=_WM_KEY,
-        value=json.dumps({
+    if words:
+        track = await _resolve_track(language_code, track_service)
+        await _clear_pending(working_memory_service)
+        wm_data = await _forced_practice_wm_payload("practice", arguments, words, track, chunk_service)
+    else:
+        track, chunk = await _resolve_track_and_chunk(language_code, track_service, chunk_service)
+        await _clear_pending(working_memory_service)
+        wm_data = {
             "mode": "practice",
             "chunk_id": chunk.id,
             "track_id": track.id,
@@ -228,24 +296,26 @@ async def _handle_practice(
             "translation": chunk.translation,
             "remaining": count,
             "feedback_history": [],
-        }),
-        importance=1.0,
+        }
+
+    wm = await working_memory_service.create(WorkingMemoryCreate(
+        key=_WM_KEY, value=json.dumps(wm_data), importance=1.0,
     ))
     logger.info(
-        "handle_language: practice started track=%s chunk_id=%d wm_id=%d rounds=%d",
-        language_code, chunk.id, wm.id, count,
+        "handle_language: practice started track=%s chunk_id=%d wm_id=%d rounds=%d forced=%s",
+        language_code, wm_data["chunk_id"], wm.id, wm_data["remaining"], bool(words),
     )
 
     return {
         "mode": "practice",
         "wm_id": wm.id,
-        "chunk_id": chunk.id,
-        "track_id": track.id,
-        "track_code": track.code,
-        "language_name": track.name,
-        "text": chunk.text,
-        "translation": chunk.translation,
-        "remaining": count,
+        "chunk_id": wm_data["chunk_id"],
+        "track_id": wm_data["track_id"],
+        "track_code": wm_data["track_code"],
+        "language_name": wm_data["language_name"],
+        "text": wm_data["text"],
+        "translation": wm_data["translation"],
+        "remaining": wm_data["remaining"],
     }
 
 
@@ -256,14 +326,16 @@ async def _handle_review(
     working_memory_service: WorkingMemoryService,
 ) -> dict[str, Any]:
     language_code = _resolve_language_code(arguments)
+    count, words = _parse_count_or_words(arguments)
 
-    track, chunk = await _resolve_track_and_chunk(language_code, track_service, chunk_service)
-    await _clear_pending(working_memory_service)
-    count = _parse_count(arguments)
-
-    wm = await working_memory_service.create(WorkingMemoryCreate(
-        key=_WM_KEY,
-        value=json.dumps({
+    if words:
+        track = await _resolve_track(language_code, track_service)
+        await _clear_pending(working_memory_service)
+        wm_data = await _forced_practice_wm_payload("review", arguments, words, track, chunk_service)
+    else:
+        track, chunk = await _resolve_track_and_chunk(language_code, track_service, chunk_service)
+        await _clear_pending(working_memory_service)
+        wm_data = {
             "mode": "review",
             "chunk_id": chunk.id,
             "track_id": track.id,
@@ -272,24 +344,26 @@ async def _handle_review(
             "text": chunk.text,
             "translation": chunk.translation,
             "remaining": count,
-        }),
-        importance=1.0,
+        }
+
+    wm = await working_memory_service.create(WorkingMemoryCreate(
+        key=_WM_KEY, value=json.dumps(wm_data), importance=1.0,
     ))
     logger.info(
-        "handle_language: review started track=%s chunk_id=%d wm_id=%d rounds=%d",
-        language_code, chunk.id, wm.id, count,
+        "handle_language: review started track=%s chunk_id=%d wm_id=%d rounds=%d forced=%s",
+        language_code, wm_data["chunk_id"], wm.id, wm_data["remaining"], bool(words),
     )
 
     return {
         "mode": "review",
         "wm_id": wm.id,
-        "chunk_id": chunk.id,
-        "track_id": track.id,
-        "track_code": track.code,
-        "language_name": track.name,
-        "text": chunk.text,
-        "translation": chunk.translation,
-        "remaining": count,
+        "chunk_id": wm_data["chunk_id"],
+        "track_id": wm_data["track_id"],
+        "track_code": wm_data["track_code"],
+        "language_name": wm_data["language_name"],
+        "text": wm_data["text"],
+        "translation": wm_data["translation"],
+        "remaining": wm_data["remaining"],
     }
 
 
@@ -332,7 +406,8 @@ async def _handle_produce(
         )
     track = tracks[0]
 
-    task = await production_service.get_next_task(track.id, task_type)
+    level_override = _resolve_level(arguments)
+    task = await production_service.get_next_task(track.id, task_type, level_override=level_override)
     if task is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

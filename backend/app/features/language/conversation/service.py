@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import base64
+import json
 import logging
 import time
 from uuid import uuid4
@@ -11,6 +12,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.features.core.messages.schemas import MessageCreate
 from app.features.core.messages.service import MessageService
 from app.features.language.chunks.pronunciation_service import PronunciationService
+from app.features.language.chunks.schemas import NewVocabularyCandidate
+from app.features.language.chunks.service import ChunkService
 from app.features.language.conversation.prompts import (
     CONVERSATION_SUMMARY_PROMPT,
     CONVERSATION_TURN_PROMPT,
@@ -27,6 +30,7 @@ from app.features.language.conversation.schemas import (
     ConversationTurnRead,
     ConversationTurnResultRead,
 )
+from app.features.language.level_guidance import level_guidance
 from app.features.language.sessions.schemas import SessionCreate
 from app.features.language.sessions.service import SessionService as LanguageSessionService
 from app.features.language.tracks.repository import TrackRepository
@@ -36,6 +40,29 @@ from app.shared.conversation import ConversationProvider, ConversationTurnResult
 from app.shared.llm import LlmProvider
 
 logger = logging.getLogger(__name__)
+
+_MAX_VOCABULARY_CANDIDATES = 3
+
+
+def _parse_summary_json(raw: str) -> tuple[str, list[NewVocabularyCandidate]]:
+    text = raw.strip()
+    if text.startswith("```"):
+        text = text.strip("`")
+        if text.startswith("json"):
+            text = text[4:]
+        text = text.strip()
+    data = json.loads(text)
+    summary = str(data.get("summary") or "").strip()
+    candidates = [
+        NewVocabularyCandidate(
+            text=str(v.get("text", "")),
+            translation=str(v.get("translation", "")),
+            cefr_level=v.get("cefr_level") or None,
+        )
+        for v in data.get("new_vocabulary") or []
+        if isinstance(v, dict) and v.get("text")
+    ]
+    return summary, candidates
 
 
 class ConversationService:
@@ -54,6 +81,7 @@ class ConversationService:
         message_service: MessageService,
         language_session_service: LanguageSessionService,
         track_repo: TrackRepository,
+        chunk_service: ChunkService,
         audio_storage: FileStorage,
         audio_converter: AudioConverter,
         conversation_provider: ConversationProvider,
@@ -65,6 +93,7 @@ class ConversationService:
         self._message_service = message_service
         self._language_session_service = language_session_service
         self._track_repo = track_repo
+        self._chunk_service = chunk_service
         self._audio_storage = audio_storage
         self._audio_converter = audio_converter
         self._conversation_provider = conversation_provider
@@ -111,12 +140,24 @@ class ConversationService:
         await self._audio_storage.save(audio, audio_ref)
         return audio, audio_ref
 
+    @staticmethod
+    def _effective_level(override: str | None, track) -> str:
+        return override or track.level
+
     async def start(
-        self, track_id: int, message_id: int, mode: str, scenario: str | None, voice_reply: bool
+        self,
+        track_id: int,
+        message_id: int,
+        mode: str,
+        scenario: str | None,
+        voice_reply: bool,
+        level_override: str | None = None,
     ) -> ConversationStartRead:
         """Open a practice thread. Roleplay needs a scenario and gets an in-character
         opening line; free conversation takes an optional topic and waits for David to
-        speak first."""
+        speak first. level_override is a punctual per-session CEFR override (e.g. "A0"
+        for a total-beginner register); it falls back to the track's own level and is
+        never written back to the track."""
         track = await self._track_repo.get_track(track_id)
         if track is None:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Track not found")
@@ -127,13 +168,15 @@ class ConversationService:
         chat_session_id = origin_message.session_id
 
         thread = await self._thread_repo.create_thread(
-            track_id, chat_session_id, mode, scenario, voice_reply
+            track_id, chat_session_id, mode, scenario, voice_reply, level_override
         )
 
         opening_text: str | None = None
         opening_audio_ref: str | None = None
         if mode == "roleplay":
-            opening_text = await self._generate_opening(track_id, track.name, scenario or "")
+            opening_text = await self._generate_opening(
+                track_id, track.name, scenario or "", self._effective_level(level_override, track)
+            )
             message = await self._message_service.create(
                 MessageCreate(
                     session_id=chat_session_id,
@@ -164,8 +207,13 @@ class ConversationService:
             opening_audio_ref=opening_audio_ref,
         )
 
-    async def _generate_opening(self, track_id: int, language_name: str, scenario: str) -> str:
-        prompt = ROLEPLAY_OPENING_PROMPT.format(language_name=language_name, scenario=scenario)
+    async def _generate_opening(self, track_id: int, language_name: str, scenario: str, cefr_level: str) -> str:
+        prompt = ROLEPLAY_OPENING_PROMPT.format(
+            language_name=language_name,
+            scenario=scenario,
+            cefr_level=cefr_level,
+            level_guidance=level_guidance(cefr_level, language_name),
+        )
         messages = [{"role": "user", "content": prompt}]
         t0 = time.monotonic()
         try:
@@ -192,13 +240,22 @@ class ConversationService:
         )
         return opening_text
 
-    def _turn_system_prompt(self, thread, language_name: str) -> str:
+    def _turn_system_prompt(self, thread, track) -> str:
+        language_name = track.name
+        cefr_level = self._effective_level(thread.level_override, track)
+        guidance = level_guidance(cefr_level, language_name)
         if thread.mode == "roleplay":
-            return ROLEPLAY_TURN_PROMPT.format(language_name=language_name, scenario=thread.scenario)
+            return ROLEPLAY_TURN_PROMPT.format(
+                language_name=language_name, scenario=thread.scenario,
+                cefr_level=cefr_level, level_guidance=guidance,
+            )
         topic_line = (
             f"Talk about: {thread.scenario}." if thread.scenario else "Talk about whatever comes up naturally."
         )
-        return CONVERSATION_TURN_PROMPT.format(language_name=language_name, topic_line=topic_line)
+        return CONVERSATION_TURN_PROMPT.format(
+            language_name=language_name, topic_line=topic_line,
+            cefr_level=cefr_level, level_guidance=guidance,
+        )
 
     async def _load_active_thread(self, thread_id: int):
         thread = await self._thread_repo.get_thread(thread_id)
@@ -246,7 +303,7 @@ class ConversationService:
     async def _turn_context(self, thread, track) -> tuple[list[dict[str, str]], str]:
         turns = await self._thread_repo.get_turns_with_messages(thread.id)
         history = [{"role": message.role, "content": message.content} for _, message in turns]
-        return history, self._turn_system_prompt(thread, track.name)
+        return history, self._turn_system_prompt(thread, track)
 
     async def _generate_turn(
         self,
@@ -367,13 +424,16 @@ class ConversationService:
         turn_count = sum(1 for _, message in turns if message.role == "user")
 
         tip: str | None = None
+        candidates: list[NewVocabularyCandidate] = []
         if turns:
             prompt = self._summary_prompt(thread, language_name, transcript, tips)
             messages = [{"role": "user", "content": prompt}]
             t0 = time.monotonic()
             try:
                 llm_response = await self._llm_provider.complete(messages)
-                tip = llm_response.text.strip()
+            except Exception:
+                logger.error("Conversation: summary generation failed thread_id=%d", thread_id, exc_info=True)
+            else:
                 latency_ms = int((time.monotonic() - t0) * 1000)
                 await create_llm_call(
                     self._session,
@@ -381,19 +441,31 @@ class ConversationService:
                     model=self._llm_provider.model,
                     feature="conversation_summary",
                     prompt=messages,
-                    response=tip,
+                    response=llm_response.text,
                     tokens_input=llm_response.tokens_input,
                     tokens_output=llm_response.tokens_output,
                     latency_ms=latency_ms,
                 )
-            except Exception:
-                logger.error("Conversation: summary generation failed thread_id=%d", thread_id, exc_info=True)
-                tip = None
+                try:
+                    tip, candidates = _parse_summary_json(llm_response.text)
+                except (json.JSONDecodeError, ValueError, TypeError):
+                    logger.error(
+                        "Conversation: summary JSON unparseable thread_id=%d", thread_id, exc_info=True
+                    )
+                if not tip:
+                    tip = llm_response.text.strip()
 
         await self._thread_repo.end_thread(thread_id, tip)
         await self._language_session_service.record_session(
             SessionCreate(track_id=thread.track_id, session_type="correction", transcript_or_notes=tip)
         )
+        if candidates:
+            await self._chunk_service.queue_vocabulary_candidates(
+                thread.track_id, candidates, max_candidates=_MAX_VOCABULARY_CANDIDATES
+            )
 
-        logger.info("Conversation ended: thread_id=%d turns=%d has_tip=%s", thread_id, turn_count, bool(tip))
+        logger.info(
+            "Conversation ended: thread_id=%d turns=%d has_tip=%s vocab_candidates=%d",
+            thread_id, turn_count, bool(tip), len(candidates),
+        )
         return ConversationEndRead(tip=tip, turn_count=turn_count)

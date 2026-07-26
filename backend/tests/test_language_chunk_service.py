@@ -2,8 +2,10 @@ import pytest
 from unittest.mock import AsyncMock, MagicMock, patch, call
 from datetime import datetime, timezone
 
+from fastapi import HTTPException
+
 from app.features.language.chunks.service import ChunkService
-from app.features.language.chunks.schemas import ChunkCreate, ChunkFilters, ChunkUpdate
+from app.features.language.chunks.schemas import ChunkCreate, ChunkFilters, ChunkUpdate, NewVocabularyCandidate
 
 
 def _make_chunk_orm(**kwargs):
@@ -46,9 +48,27 @@ def _make_track_orm(**kwargs):
     orm = MagicMock()
     orm.id = kwargs.get("id", 1)
     orm.code = kwargs.get("code", "fr")
+    orm.name = kwargs.get("name", "French")
+    orm.level = kwargs.get("level", "B1")
     orm.daily_quota = kwargs.get("daily_quota", 10)
     orm.active = kwargs.get("active", True)
     return orm
+
+
+_ENRICHMENT_JSON = '{"chunk_type": "word", "translation": "dog", "example_sentence": "Le chien court.", ' \
+    '"example_translation": "The dog runs.", "cefr_level": "A1"}'
+
+
+def _make_llm_provider(text: str = _ENRICHMENT_JSON):
+    provider = MagicMock()
+    provider.provider = "google"
+    provider.model = "gemini-2.0-flash"
+    response = MagicMock()
+    response.text = text
+    response.tokens_input = 20
+    response.tokens_output = 10
+    provider.complete = AsyncMock(return_value=response)
+    return provider
 
 
 @pytest.fixture
@@ -279,3 +299,148 @@ class TestGetProductionDailyBatch:
 
         assert len(result) == 1
         assert result[0].track_id == 2
+
+
+class TestForcePracticeChunks:
+    async def test_returns_existing_chunk_without_llm_call(self, service):
+        service._track_repo.get_track.return_value = _make_track_orm()
+        service._repo.get_chunk_by_text.return_value = _make_chunk_orm(text="chien", translation="dog")
+
+        result = await service.force_practice_chunks(1, ["chien"])
+
+        assert result[0].text == "chien"
+        service._repo.create_chunk.assert_not_called()
+
+    async def test_creates_new_chunk_via_llm_enrichment(self, service):
+        service._llm_provider = _make_llm_provider()
+        service._track_repo.get_track.return_value = _make_track_orm()
+        service._repo.get_chunk_by_text.return_value = None
+        service._repo.create_chunk.return_value = _make_chunk_orm(text="chien", translation="dog")
+
+        with patch("app.features.language.chunks.service.create_llm_call", AsyncMock()):
+            result = await service.force_practice_chunks(1, ["chien"])
+
+        assert result[0].text == "chien"
+        created = service._repo.create_chunk.call_args.args[0]
+        assert created.text == "chien"
+        assert created.translation == "dog"
+        assert created.status == "active"
+        assert created.frequency_source == "user_requested"
+        assert created.cefr_level == "A1"
+
+    async def test_missing_cefr_level_falls_back_to_track_level(self, service):
+        service._llm_provider = _make_llm_provider(
+            '{"chunk_type": "word", "translation": "dog"}'
+        )
+        service._track_repo.get_track.return_value = _make_track_orm(level="B2")
+        service._repo.get_chunk_by_text.return_value = None
+        service._repo.create_chunk.return_value = _make_chunk_orm()
+
+        with patch("app.features.language.chunks.service.create_llm_call", AsyncMock()):
+            await service.force_practice_chunks(1, ["chien"])
+
+        created = service._repo.create_chunk.call_args.args[0]
+        assert created.cefr_level == "B2"
+
+    async def test_level_override_steers_enrichment_prompt(self, service):
+        llm = _make_llm_provider()
+        service._llm_provider = llm
+        service._track_repo.get_track.return_value = _make_track_orm(level="B1")
+        service._repo.get_chunk_by_text.return_value = None
+        service._repo.create_chunk.return_value = _make_chunk_orm()
+
+        with patch("app.features.language.chunks.service.create_llm_call", AsyncMock()):
+            await service.force_practice_chunks(1, ["chien"], level_override="A0")
+
+        prompt = llm.complete.call_args.args[0][0]["content"]
+        assert "essentially no French yet" in prompt  # A0 guidance line, not B1's
+
+    async def test_raises_503_when_llm_unavailable_and_chunk_missing(self, service):
+        service._llm_provider = None
+        service._track_repo.get_track.return_value = _make_track_orm()
+        service._repo.get_chunk_by_text.return_value = None
+
+        with pytest.raises(HTTPException) as exc_info:
+            await service.force_practice_chunks(1, ["chien"])
+        assert exc_info.value.status_code == 503
+
+    async def test_raises_404_when_track_not_found(self, service):
+        service._track_repo.get_track.return_value = None
+
+        with pytest.raises(HTTPException) as exc_info:
+            await service.force_practice_chunks(1, ["chien"])
+        assert exc_info.value.status_code == 404
+
+    async def test_dedupes_case_insensitively(self, service):
+        service._track_repo.get_track.return_value = _make_track_orm()
+        service._repo.get_chunk_by_text.return_value = _make_chunk_orm()
+
+        await service.force_practice_chunks(1, ["Chien", "chien", " chien "])
+
+        assert service._repo.get_chunk_by_text.await_count == 1
+
+    async def test_raises_400_when_no_valid_texts(self, service):
+        service._track_repo.get_track.return_value = _make_track_orm()
+
+        with pytest.raises(HTTPException) as exc_info:
+            await service.force_practice_chunks(1, ["", "  "])
+        assert exc_info.value.status_code == 400
+
+
+class TestQueueVocabularyCandidates:
+    async def test_creates_pending_triage_chunk_per_candidate(self, service):
+        service._track_repo.get_track.return_value = _make_track_orm(level="B1")
+        service._repo.create_chunk.return_value = _make_chunk_orm()
+
+        await service.queue_vocabulary_candidates(
+            1, [NewVocabularyCandidate(text="chien", translation="dog", cefr_level="A1")], max_candidates=3
+        )
+
+        created = service._repo.create_chunk.call_args.args[0]
+        assert created.text == "chien"
+        assert created.status == "pending_triage"
+        assert created.frequency_source == "llm_suggested"
+        assert created.cefr_level == "A1"
+
+    async def test_missing_candidate_level_falls_back_to_track_level(self, service):
+        service._track_repo.get_track.return_value = _make_track_orm(level="B2")
+        service._repo.create_chunk.return_value = _make_chunk_orm()
+
+        await service.queue_vocabulary_candidates(
+            1, [NewVocabularyCandidate(text="chien", translation="dog")], max_candidates=3
+        )
+
+        created = service._repo.create_chunk.call_args.args[0]
+        assert created.cefr_level == "B2"
+
+    async def test_respects_max_candidates(self, service):
+        service._track_repo.get_track.return_value = _make_track_orm()
+        service._repo.create_chunk.return_value = _make_chunk_orm()
+        candidates = [NewVocabularyCandidate(text=f"mot{i}", translation=f"word{i}") for i in range(5)]
+
+        await service.queue_vocabulary_candidates(1, candidates, max_candidates=2)
+
+        assert service._repo.create_chunk.await_count == 2
+
+    async def test_skips_candidates_with_blank_text_or_translation(self, service):
+        service._track_repo.get_track.return_value = _make_track_orm()
+        candidates = [
+            NewVocabularyCandidate(text="", translation="dog"),
+            NewVocabularyCandidate(text="chien", translation=""),
+        ]
+
+        await service.queue_vocabulary_candidates(1, candidates, max_candidates=5)
+
+        service._repo.create_chunk.assert_not_called()
+
+    async def test_individual_failure_does_not_stop_remaining_candidates(self, service):
+        service._track_repo.get_track.return_value = _make_track_orm()
+        service._repo.create_chunk.side_effect = [RuntimeError("db boom"), _make_chunk_orm()]
+        candidates = [
+            NewVocabularyCandidate(text="chien", translation="dog"),
+            NewVocabularyCandidate(text="chat", translation="cat"),
+        ]
+
+        await service.queue_vocabulary_candidates(1, candidates, max_candidates=5)
+
+        assert service._repo.create_chunk.await_count == 2

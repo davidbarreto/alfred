@@ -633,6 +633,25 @@ async def sessions_section(code: str, request: Request):
     })
 
 
+async def _resolve_chunks_for_session(track: dict, words_param: str | None) -> tuple[list, int]:
+    """Normal due-batch chunks, unless `words` (comma-separated) is set — then force-create/
+    resolve those specific chunks instead, ignoring due dates entirely."""
+    if words_param:
+        texts = [w.strip() for w in words_param.split(",") if w.strip()]
+        if texts:
+            try:
+                chunks = await api.post("/language/chunks/force-practice", json={
+                    "track_id": track["id"], "texts": texts,
+                })
+            except httpx.HTTPError:
+                chunks = []
+            return chunks, len(chunks)
+
+    daily_batch = await _safe_get("/language/chunks/daily-batch", {"track_id": track["id"]})
+    due_batch = daily_batch[0] if daily_batch else {"chunks": [], "total_due": 0}
+    return due_batch.get("chunks", []), due_batch.get("total_due", 0)
+
+
 @router.get("/{code}/review", response_class=HTMLResponse)
 async def review_session(code: str, request: Request):
     tracks = await _safe_get("/language/tracks", {"active_only": "false"})
@@ -640,9 +659,7 @@ async def review_session(code: str, request: Request):
     if not track:
         return HTMLResponse("<p>Track not found.</p>", status_code=404)
 
-    daily_batch = await _safe_get("/language/chunks/daily-batch", {"track_id": track["id"]})
-    due_batch = daily_batch[0] if daily_batch else {"chunks": [], "total_due": 0}
-    chunks = due_batch.get("chunks", [])
+    chunks, total_due = await _resolve_chunks_for_session(track, request.query_params.get("words"))
 
     progress = await _safe_get("/language/sessions/daily-progress", {"track_id": track["id"]})
     prog = progress[0] if progress else {"completed_today": 0, "quota_met": False, "daily_quota": track["daily_quota"]}
@@ -651,7 +668,7 @@ async def review_session(code: str, request: Request):
         "track": track,
         "flag": _flag(track["code"]),
         "chunks_json": json.dumps(chunks),
-        "total_due": due_batch.get("total_due", 0),
+        "total_due": total_due,
         "completed_today": prog["completed_today"],
         "daily_quota": prog["daily_quota"],
     })
@@ -664,15 +681,13 @@ async def shadow_session(code: str, request: Request):
     if not track:
         return HTMLResponse("<p>Track not found.</p>", status_code=404)
 
-    daily_batch = await _safe_get("/language/chunks/daily-batch", {"track_id": track["id"]})
-    due_batch = daily_batch[0] if daily_batch else {"chunks": [], "total_due": 0}
-    chunks = due_batch.get("chunks", [])
+    chunks, total_due = await _resolve_chunks_for_session(track, request.query_params.get("words"))
 
     return templates.TemplateResponse(request, "language_shadow.html", {
         "track": track,
         "flag": _flag(track["code"]),
         "chunks_json": json.dumps(chunks),
-        "total_due": due_batch.get("total_due", 0),
+        "total_due": total_due,
     })
 
 

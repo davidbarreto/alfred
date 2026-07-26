@@ -5,7 +5,12 @@ from unittest.mock import AsyncMock, MagicMock
 
 from fastapi import HTTPException
 
-from app.assistant.commands.handlers.language import _parse_conversation_args, handle_language
+from app.assistant.commands.handlers.language import (
+    _parse_conversation_args,
+    _parse_count_or_words,
+    _resolve_level,
+    handle_language,
+)
 from app.features.core.working_memory.schemas import WorkingMemoryRead
 from app.features.language.chunks.schemas import ChunkRead, DailyBatchRead
 from app.features.language.tracks.schemas import TrackRead
@@ -133,12 +138,18 @@ class TestHandleLanguagePractice:
         )
         assert result["remaining"] == 3
 
-    async def test_falls_back_to_default_on_invalid_count(self):
+    async def test_non_numeric_count_is_treated_as_forced_words(self):
+        # A non-numeric "count" (positional slot after language_code) is force-practice
+        # word(s), not silently discarded — e.g. '/practice en some phrase'.
         track_svc, chunk_svc, wm_svc = _make_services()
+        forced_chunk = _make_chunk(id=99, text="some phrase", translation="uma frase")
+        chunk_svc.force_practice_chunks = AsyncMock(return_value=[forced_chunk])
         result = await handle_language(
-            "practice", {"language_code": "en", "count": "not-a-number"}, track_svc, chunk_svc, wm_svc
+            "practice", {"language_code": "en", "count": "some phrase"}, track_svc, chunk_svc, wm_svc
         )
-        assert result["remaining"] == 5
+        chunk_svc.force_practice_chunks.assert_awaited_once_with(3, ["some phrase"], level_override=None)
+        assert result["chunk_id"] == 99
+        assert result["remaining"] == 1
 
     async def test_clears_existing_pending_wm_before_creating_new(self):
         old_wm = _make_wm_read(id=5, chunk_id=10)
@@ -185,6 +196,59 @@ class TestHandleLanguagePractice:
         assert result["track_code"] == "en"
         filters = track_svc.get_tracks.call_args[0][0]
         assert filters.code == "en"
+
+
+class TestForcedPractice:
+    async def test_review_with_multiple_comma_separated_words(self):
+        track_svc, chunk_svc, wm_svc = _make_services()
+        chunks = [
+            _make_chunk(id=101, text="cão", translation="dog"),
+            _make_chunk(id=102, text="gato", translation="cat"),
+        ]
+        chunk_svc.force_practice_chunks = AsyncMock(return_value=chunks)
+
+        result = await handle_language(
+            "review", {"language_code": "en", "count": "cão, gato"}, track_svc, chunk_svc, wm_svc
+        )
+
+        chunk_svc.force_practice_chunks.assert_awaited_once_with(3, ["cão", "gato"], level_override=None)
+        assert result["mode"] == "review"
+        assert result["chunk_id"] == 101
+        assert result["remaining"] == 2
+
+        wm_value = json.loads(wm_svc.create.call_args[0][0].value)
+        assert wm_value["forced_queue"] == [{"chunk_id": 102, "text": "gato", "translation": "cat"}]
+
+    async def test_review_with_words_and_level_override(self):
+        track_svc, chunk_svc, wm_svc = _make_services()
+        chunk_svc.force_practice_chunks = AsyncMock(return_value=[_make_chunk(id=101, text="cão")])
+
+        await handle_language(
+            "review", {"language_code": "en", "count": "cão", "level": "a0"}, track_svc, chunk_svc, wm_svc
+        )
+
+        chunk_svc.force_practice_chunks.assert_awaited_once_with(3, ["cão"], level_override="A0")
+
+    async def test_practice_forced_words_seeds_empty_feedback_history(self):
+        track_svc, chunk_svc, wm_svc = _make_services()
+        chunk_svc.force_practice_chunks = AsyncMock(return_value=[_make_chunk(id=101, text="cão")])
+
+        await handle_language(
+            "practice", {"language_code": "en", "count": "cão"}, track_svc, chunk_svc, wm_svc
+        )
+
+        wm_value = json.loads(wm_svc.create.call_args[0][0].value)
+        assert wm_value["feedback_history"] == []
+
+    async def test_invalid_level_is_ignored(self):
+        track_svc, chunk_svc, wm_svc = _make_services()
+        chunk_svc.force_practice_chunks = AsyncMock(return_value=[_make_chunk(id=101, text="cão")])
+
+        await handle_language(
+            "review", {"language_code": "en", "count": "cão", "level": "z9"}, track_svc, chunk_svc, wm_svc
+        )
+
+        chunk_svc.force_practice_chunks.assert_awaited_once_with(3, ["cão"], level_override=None)
 
 
 class TestHandleLanguageReview:
@@ -422,6 +486,24 @@ class TestHandleLanguageProduce:
             await handle_language("produce", {"language_code": "en"}, track_svc, chunk_svc, wm_svc)
         assert exc_info.value.status_code == 503
 
+    async def test_passes_level_override_to_get_next_task(self):
+        track_svc, chunk_svc, wm_svc = _make_services()
+        production_svc = _make_production_service()
+        await handle_language(
+            "produce", {"language_code": "en", "task_type": "retell", "level": "a0"},
+            track_svc, chunk_svc, wm_svc, production_service=production_svc,
+        )
+        assert production_svc.get_next_task.call_args.kwargs["level_override"] == "A0"
+
+    async def test_no_level_arg_passes_none(self):
+        track_svc, chunk_svc, wm_svc = _make_services()
+        production_svc = _make_production_service()
+        await handle_language(
+            "produce", {"language_code": "en"}, track_svc, chunk_svc, wm_svc,
+            production_service=production_svc,
+        )
+        assert production_svc.get_next_task.call_args.kwargs["level_override"] is None
+
     async def test_clears_existing_pending_wm_before_creating_new(self):
         old_wm = _make_wm_read(id=5, chunk_id=10, mode="practice")
         track_svc, chunk_svc, wm_svc = _make_services(existing_wm=[old_wm])
@@ -636,6 +718,41 @@ class TestLanguageCommandRegistry:
         assert commands[0].command == "stop"
 
 
+class TestParseCountOrWords:
+    def test_numeric_count(self):
+        count, words = _parse_count_or_words({"count": "7"})
+        assert count == 7
+        assert words is None
+
+    def test_missing_count_uses_default(self):
+        count, words = _parse_count_or_words({})
+        assert count == 5
+        assert words is None
+
+    def test_single_word(self):
+        count, words = _parse_count_or_words({"count": "cão"})
+        assert words == ["cão"]
+
+    def test_multiple_comma_separated_words_are_stripped(self):
+        count, words = _parse_count_or_words({"count": "cão,  gato ,peixe"})
+        assert words == ["cão", "gato", "peixe"]
+
+    def test_blank_entries_are_dropped(self):
+        count, words = _parse_count_or_words({"count": "cão,,gato"})
+        assert words == ["cão", "gato"]
+
+
+class TestResolveLevel:
+    def test_valid_level_uppercased(self):
+        assert _resolve_level({"level": "a0"}) == "A0"
+
+    def test_missing_level_returns_none(self):
+        assert _resolve_level({}) is None
+
+    def test_invalid_level_returns_none(self):
+        assert _resolve_level({"level": "z9"}) is None
+
+
 class TestParseConversationArgs:
     def test_defaults_to_free_conversation_with_voice_on(self):
         mode, topic, voice_reply = _parse_conversation_args("talking about food", None)
@@ -707,7 +824,9 @@ class TestHandleStartConversation:
         assert result["mode"] == "conversation"
         assert result["topic"] == "talking about food"
         assert result["thread_id"] == 99
-        conversation_svc.start.assert_awaited_once_with(3, 1, "conversation", "talking about food", True)
+        conversation_svc.start.assert_awaited_once_with(
+            3, 1, "conversation", "talking about food", True, level_override=None
+        )
         wm_value = json.loads(wm_svc.create.call_args[0][0].value)
         assert wm_value["mode"] == "conversation"
         assert wm_value["thread_id"] == 99
@@ -724,7 +843,7 @@ class TestHandleStartConversation:
         )
 
         assert result["topic"] is None
-        conversation_svc.start.assert_awaited_once_with(3, 1, "conversation", None, True)
+        conversation_svc.start.assert_awaited_once_with(3, 1, "conversation", None, True, level_override=None)
 
     async def test_roleplay_starts_thread_via_service(self):
         track_svc, chunk_svc, wm_svc = _make_services()
@@ -736,10 +855,26 @@ class TestHandleStartConversation:
             conversation_service=conversation_svc, message_id=7,
         )
 
-        conversation_svc.start.assert_awaited_once_with(3, 7, "roleplay", "ordering coffee", False)
+        conversation_svc.start.assert_awaited_once_with(
+            3, 7, "roleplay", "ordering coffee", False, level_override=None
+        )
         assert result["mode"] == "roleplay"
         assert result["thread_id"] == 99
         assert result["opening_text"] == "Bonjour!"
+
+    async def test_roleplay_with_level_override(self):
+        track_svc, chunk_svc, wm_svc = _make_services()
+        conversation_svc = _make_conversation_service()
+
+        await handle_language(
+            "conversation", {"language_code": "fr", "rest": "roleplay ordering coffee", "level": "a0"},
+            track_svc, chunk_svc, wm_svc,
+            conversation_service=conversation_svc, message_id=7,
+        )
+
+        conversation_svc.start.assert_awaited_once_with(
+            3, 7, "roleplay", "ordering coffee", False, level_override="A0"
+        )
 
     async def test_roleplay_without_scenario_raises_400(self):
         track_svc, chunk_svc, wm_svc = _make_services()

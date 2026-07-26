@@ -68,6 +68,7 @@ RETELL_TOPICS: tuple[str, ...] = (
 )
 
 RETELL_PASSAGE_PROMPT = """Write a short passage in {language_name} at CEFR level {cefr_level} about {topic}.
+{level_guidance}
 Use 3-4 simple sentences with everyday vocabulary, in the past tense where natural.
 It must be a small self-contained story or anecdote that is easy to retell.
 Respond ONLY with the passage text — no title, no translation, no quotes, no markdown."""
@@ -87,12 +88,13 @@ Respond ONLY with JSON (no markdown fences, even to format text as json):
   "errors": ["..."],
   "corrected_text": "...",
   "feedback": "...",
-  "new_vocabulary": [{{"text": "...", "translation": "..."}}]
+  "new_vocabulary": [{{"text": "...", "translation": "...", "cefr_level": "..."}}]
 }}
 "score" is 0-100. "errors" lists concrete mistakes (empty if none). "corrected_text" is the
 answer rewritten naturally (or the answer unchanged if already correct). "feedback" is one or
 two short encouraging sentences. "new_vocabulary" holds up to 3 useful {language_name} words or
-expressions the student struggled with or should learn next (empty if none)."""
+expressions the student struggled with or should learn next (empty if none), each with your
+best estimate of its own CEFR level (A1-C2)."""
 
 OPEN_ENDED_GRADING_PROMPT = """You are grading a {language_name} free-writing exercise (CEFR level {cefr_level}).
 Task type: {task_type}
@@ -108,12 +110,13 @@ Respond ONLY with JSON (no markdown fences, even to format text as json):
   "errors": ["..."],
   "corrected_text": "...",
   "feedback": "...",
-  "new_vocabulary": [{{"text": "...", "translation": "..."}}]
+  "new_vocabulary": [{{"text": "...", "translation": "...", "cefr_level": "..."}}]
 }}
 "score" is 0-100. "errors" lists concrete mistakes (empty if none). "corrected_text" is the
 full text rewritten naturally (or unchanged if already correct). "feedback" is one or two short
 encouraging sentences. "new_vocabulary" holds up to 5 useful {language_name} words or expressions
-the student struggled with, worked around, or should learn next (empty if none)."""
+the student struggled with, worked around, or should learn next (empty if none), each with your
+best estimate of its own CEFR level (A1-C2)."""
 
 SPOKEN_GRADING_PROMPT = """You are grading a spoken {language_name} production exercise (CEFR level {cefr_level}).
 Task type: {task_type}
@@ -131,9 +134,10 @@ Respond ONLY with JSON (no markdown fences, even to format text as json):
   "errors": ["..."],
   "corrected_text": "...",
   "feedback": "...",
-  "new_vocabulary": [{{"text": "...", "translation": "..."}}]
+  "new_vocabulary": [{{"text": "...", "translation": "...", "cefr_level": "..."}}]
 }}
 "score" is 0-100. "errors" lists concrete mistakes (empty if none). "corrected_text" is the
 transcript rewritten naturally (or unchanged if already correct). "feedback" is one or two short
 encouraging sentences. "new_vocabulary" holds up to 5 useful {language_name} words or expressions
-the student struggled with, worked around, or should learn next (empty if none)."""
+the student struggled with, worked around, or should learn next (empty if none), each with your
+best estimate of its own CEFR level (A1-C2)."""

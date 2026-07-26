@@ -8,6 +8,7 @@ from app.features.language.chunks.schemas import (
     ChunkCountRead,
     ChunkCreate,
     ChunkFilters,
+    ChunkForcePracticeCreate,
     ChunkRead,
     ChunkUpdate,
     DailyBatchRead,
@@ -22,6 +23,11 @@ async def get_daily_batch(
     track_id: int | None = None,
 ):
     return await service.get_daily_batch(track_id)
+
+
+@router.post("/force-practice", response_model=list[ChunkRead])
+async def force_practice_chunks(request: ChunkForcePracticeCreate, service: ChunkServiceDep):
+    return await service.force_practice_chunks(request.track_id, request.texts, request.level_override)
 
 
 @router.get("/pronunciation")

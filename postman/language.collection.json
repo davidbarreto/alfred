@@ -1835,6 +1835,107 @@
       }
     },
     {
+      "name": "56 - Force Practice Chunks (existing chunk, matched by text)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Returns the existing chunk unchanged, no duplicate created', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json).to.be.an('array').with.lengthOf(1);",
+              "    pm.expect(json[0].id).to.eql(parseInt(pm.environment.get('language_chunk_id')));",
+              "    pm.expect(json[0].text).to.eql('falar com algu\u00e9m');",
+              "    pm.expect(json[0].status).to.eql('active');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"track_id\": {{language_track_id}},\n  \"texts\": [\"falar com algu\u00e9m\"]\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{base_url}}/language/chunks/force-practice",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "language",
+            "chunks",
+            "force-practice"
+          ]
+        }
+      }
+    },
+    {
+      "name": "57 - Force Practice Chunks (new word, LLM-enriched)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Creates an active, immediately-due chunk with an AI-filled level', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json).to.be.an('array').with.lengthOf(1);",
+              "    pm.expect(json[0].text).to.eql('um encontro inesperado');",
+              "    pm.expect(json[0].status).to.eql('active');",
+              "    pm.expect(json[0].frequency_source).to.eql('user_requested');",
+              "    pm.expect(json[0].cefr_level).to.be.a('string').and.not.empty;",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"track_id\": {{language_track_id}},\n  \"texts\": [\"um encontro inesperado\"],\n  \"level_override\": \"A0\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{base_url}}/language/chunks/force-practice",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "language",
+            "chunks",
+            "force-practice"
+          ]
+        }
+      }
+    },
+    {
       "name": "53 - Advance Loop (no pending, returns stale)",
       "event": [
         {
@@ -2193,6 +2294,54 @@
             "{{conversation_thread_id}}",
             "end"
           ]
+        }
+      }
+    },
+    {
+      "name": "58 - Start Roleplay Conversation (level override)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+              "pm.test('A0 override produces a beginner-register opening line', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json).to.have.property('thread_id');",
+              "    pm.expect(json.opening_text).to.be.a('string').and.not.empty;",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/language/conversation/start",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "language",
+            "conversation",
+            "start"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"track_id\": \"{{language_track_id}}\",\n  \"message_id\": \"{{message_id}}\",\n  \"mode\": \"roleplay\",\n  \"scenario\": \"Ordering coffee at a bakery\",\n  \"voice_reply\": false,\n  \"level_override\": \"A0\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
         }
       }
     },

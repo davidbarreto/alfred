@@ -300,7 +300,11 @@ def get_grammar_scope_service(session: AsyncSession = Depends(get_session)) -> G
     return GrammarScopeService(session)
 
 def get_language_chunk_service(session: AsyncSession = Depends(get_session)) -> LanguageChunkService:
-    return LanguageChunkService(session)
+    try:
+        llm_provider = get_llm_provider()
+    except RuntimeError:
+        llm_provider = None
+    return LanguageChunkService(session, llm_provider=llm_provider)
 
 def get_file_storage() -> LocalFileStorage:
     return LocalFileStorage(get_settings().audio_storage_dir)
@@ -380,6 +384,7 @@ def get_conversation_service(session: AsyncSession = Depends(get_session)) -> Co
         message_service=MessageService(session),
         language_session_service=get_language_session_service(session),
         track_repo=TrackRepository(session),
+        chunk_service=get_language_chunk_service(session),
         audio_storage=get_conversation_audio_storage(),
         audio_converter=FfmpegClient(),
         conversation_provider=get_conversation_provider(),

@@ -259,43 +259,50 @@ COMMAND_DEFINITIONS = {
     "language": {
         "practice": {
             "description": "Start a shadowing/pronunciation practice session for a language "
-            "(language_code defaults to English if omitted)",
+            "(language_code defaults to English if omitted). Pass one or more comma-separated "
+            "words/phrases instead of a count to force-practice those specific chunks, "
+            "optionally with level:<CEFR> to steer a newly created chunk's difficulty",
             # /practice is a legacy alias for /shadow; kept for one release.
             "aliases": ["/shadow", "/practice", "/pr"],
-            "flags": {},
+            "flags": {"--level": "level", "-l": "level"},
             "arg_keys": ["language_code", "count"],
         },
         "review": {
             "description": "Start an SRS review session for a language "
-            "(language_code defaults to English if omitted)",
+            "(language_code defaults to English if omitted). Pass one or more comma-separated "
+            "words/phrases instead of a count to force-practice those specific chunks, "
+            "optionally with level:<CEFR> to steer a newly created chunk's difficulty",
             "aliases": ["/review", "/rv"],
-            "flags": {},
+            "flags": {"--level": "level", "-l": "level"},
             "arg_keys": ["language_code", "count"],
         },
         "produce": {
             "description": "Start a production practice session for a language "
             "(sentence, translate, journal, timed writing, or spoken speak/retell; "
-            "language_code defaults to English if omitted)",
+            "language_code defaults to English if omitted; level:<CEFR> steers a generated "
+            "retell passage's difficulty)",
             "aliases": ["/produce", "/prod"],
-            "flags": {},
+            "flags": {"--level": "level", "-l": "level"},
             "arg_keys": ["language_code", "task_type", "count"],
         },
         "conversation": {
             "description": "Start a free-form spoken conversation practice session for a language "
             "(add 'roleplay <scenario>' for a scripted roleplay instead; "
-            "language_code defaults to English if omitted)",
+            "language_code defaults to English if omitted; level:<CEFR> (e.g. level:a0 for a "
+            "total-beginner register) steers the whole session's difficulty)",
             "aliases": ["/conversation", "/talk"],
-            "flags": {},
+            "flags": {"--level": "level", "-l": "level"},
             "arg_keys": ["language_code", "rest"],
         },
         # Convenience alias: /roleplay <lang> <scenario> is equivalent to
         # /conversation <lang> roleplay <scenario>. Both resolve to action="conversation".
         "conversation_roleplay": {
             "description": "Start a roleplay conversation practice session for a language "
-            "(language_code defaults to English if omitted)",
+            "(language_code defaults to English if omitted; level:<CEFR> (e.g. level:a0 for a "
+            "total-beginner register) steers the whole session's difficulty)",
             "action": "conversation",
             "aliases": ["/roleplay"],
-            "flags": {},
+            "flags": {"--level": "level", "-l": "level"},
             "arg_keys": ["language_code", "rest"],
             "implicit_flags": {"mode": "roleplay"},
         },

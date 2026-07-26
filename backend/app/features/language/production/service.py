@@ -9,8 +9,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.features.core.transcription.service import TranscriptionService
 from app.features.language.chunks.repository import ChunkRepository
-from app.features.language.chunks.schemas import ChunkCreate
+from app.features.language.chunks.schemas import NewVocabularyCandidate
 from app.features.language.chunks.service import ChunkService
+from app.features.language.level_guidance import level_guidance
 from app.features.language.production.prompts import (
     JOURNAL_TASK_TEMPLATE,
     JOURNAL_TOPICS,
@@ -33,7 +34,6 @@ from app.features.language.production.schemas import (
     OPEN_ENDED_TASK_TYPES,
     PRODUCTION_TASK_TYPES,
     SPOKEN_TASK_TYPES,
-    NewVocabularyCandidate,
     ProductionAttemptCreate,
     ProductionAttemptRead,
     ProductionGradingRead,
@@ -121,7 +121,11 @@ def _parse_grading_json(raw: str) -> ProductionGradingRead:
         corrected_text=str(data.get("corrected_text") or ""),
         feedback=str(data.get("feedback") or ""),
         new_vocabulary=[
-            NewVocabularyCandidate(text=str(v.get("text", "")), translation=str(v.get("translation", "")))
+            NewVocabularyCandidate(
+                text=str(v.get("text", "")),
+                translation=str(v.get("translation", "")),
+                cefr_level=v.get("cefr_level") or None,
+            )
             for v in data.get("new_vocabulary") or []
             if isinstance(v, dict) and v.get("text")
         ],
@@ -159,18 +163,22 @@ class ProductionService:
         track_id: int,
         task_type: str | None = None,
         exclude_chunk_id: int | None = None,
+        level_override: str | None = None,
     ) -> ProductionTaskRead | None:
         """Pick the next production-due chunk and build the exercise for it.
 
         Chunk-less types (journal, timed, speak, retell) are not chunk-anchored: they
-        are always available and only use due chunks as optional "try to use" suggestions."""
+        are always available and only use due chunks as optional "try to use" suggestions.
+        level_override only affects "retell" (its passage is LLM-generated); the other
+        task types just echo a chunk's own text or plain template text, with nothing to
+        steer at generation time."""
         track = await self._track_repo.get_track(track_id)
         if track is None:
             return None
 
         batches = await self._chunk_service.get_production_daily_batch(track_id)
         if task_type in SPOKEN_TASK_TYPES:
-            return await self._build_spoken_task(track, task_type, batches)
+            return await self._build_spoken_task(track, task_type, batches, level_override)
         if task_type in OPEN_ENDED_TASK_TYPES:
             return self._build_open_ended_task(track, task_type, batches)
         if not batches:
@@ -216,10 +224,12 @@ class ProductionService:
             time_limit_seconds=_TIMED_TASK_SECONDS if task_type == "timed" else None,
         )
 
-    async def _build_spoken_task(self, track, task_type: str, batches: list) -> ProductionTaskRead:
+    async def _build_spoken_task(
+        self, track, task_type: str, batches: list, level_override: str | None = None
+    ) -> ProductionTaskRead:
         passage_text = None
         if task_type == "retell":
-            passage_text = await self._generate_retell_passage(track)
+            passage_text = await self._generate_retell_passage(track, level_override)
             prompt_text = RETELL_TASK_TEMPLATE.format(language_name=track.name, passage=passage_text)
         else:
             suggested = batches[0].chunks[:_MAX_SUGGESTED_CHUNKS] if batches else []
@@ -237,10 +247,12 @@ class ProductionService:
             passage_text=passage_text,
         )
 
-    async def _generate_retell_passage(self, track) -> str:
+    async def _generate_retell_passage(self, track, level_override: str | None = None) -> str:
+        cefr_level = level_override or track.level
         prompt = RETELL_PASSAGE_PROMPT.format(
             language_name=track.name,
-            cefr_level=track.level,
+            cefr_level=cefr_level,
+            level_guidance=level_guidance(cefr_level, track.name),
             topic=random.choice(RETELL_TOPICS),
         )
         messages = [{"role": "user", "content": prompt}]
@@ -377,7 +389,14 @@ class ProductionService:
             if data.task_type in CHUNKLESS_TASK_TYPES
             else _MAX_VOCABULARY_CANDIDATES
         )
-        await self._queue_new_vocabulary(data.track_id, grading.new_vocabulary, max_vocabulary)
+        try:
+            await self._chunk_service.queue_vocabulary_candidates(
+                data.track_id, grading.new_vocabulary, max_vocabulary
+            )
+        except Exception:
+            logger.error(
+                "Failed to queue vocabulary candidates: track_id=%d", data.track_id, exc_info=True
+            )
 
         logger.info(
             "Production attempt graded: session_id=%d chunk_id=%s task=%s score=%.0f",
@@ -445,31 +464,6 @@ class ProductionService:
             ),
             audio_ref=audio_ref,
         )
-
-    async def _queue_new_vocabulary(
-        self,
-        track_id: int,
-        candidates: list[NewVocabularyCandidate],
-        max_candidates: int = _MAX_VOCABULARY_CANDIDATES,
-    ) -> None:
-        """Push graded-out vocabulary into the existing triage/approval queue."""
-        for candidate in candidates[:max_candidates]:
-            if not candidate.text.strip() or not candidate.translation.strip():
-                continue
-            try:
-                await self._chunk_service.create_chunk(ChunkCreate(
-                    track_id=track_id,
-                    chunk_type="word",
-                    text=candidate.text.strip(),
-                    translation=candidate.translation.strip(),
-                    frequency_source="llm_suggested",
-                    status="pending_triage",
-                ))
-            except Exception:
-                logger.error(
-                    "Failed to queue vocabulary candidate: track_id=%d text=%r",
-                    track_id, candidate.text, exc_info=True,
-                )
 
     async def get_mastery(self, track_id: int | None = None) -> list[ProductionMasteryRead]:
         """Recognition vs. production mastery split per active track."""

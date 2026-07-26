@@ -1,8 +1,12 @@
+import json
 import logging
+import time
 from datetime import datetime, timezone
 
+from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.features.language.chunks.prompts import CHUNK_ENRICHMENT_PROMPT
 from app.features.language.chunks.repository import ChunkRepository
 from app.features.language.chunks.schemas import (
     ChunkCreate,
@@ -10,12 +14,18 @@ from app.features.language.chunks.schemas import (
     ChunkRead,
     ChunkUpdate,
     DailyBatchRead,
+    NewVocabularyCandidate,
 )
+from app.features.language.level_guidance import level_guidance
 from app.features.language.tracks.repository import TrackRepository
 from app.features.language.tracks.schemas import TrackFilters
 from app.features.language.srs import CardState, Rating, next_card_state, quality_to_rating, is_leech
+from app.integrations.llm_calls.repository import create_llm_call
+from app.shared.llm import LlmProvider
 
 logger = logging.getLogger(__name__)
+
+_MAX_FORCE_PRACTICE_TEXTS = 8
 
 
 def _recognition_card(orm) -> CardState:
@@ -29,6 +39,16 @@ def _recognition_card(orm) -> CardState:
         consecutive_failures=orm.consecutive_failures,
         state=orm.state,
     )
+
+
+def _parse_enrichment_json(raw: str) -> dict:
+    text = raw.strip()
+    if text.startswith("```"):
+        text = text.strip("`")
+        if text.startswith("json"):
+            text = text[4:]
+        text = text.strip()
+    return json.loads(text)
 
 
 def _production_card(orm) -> CardState:
@@ -46,9 +66,11 @@ def _production_card(orm) -> CardState:
 
 class ChunkService:
 
-    def __init__(self, session: AsyncSession) -> None:
+    def __init__(self, session: AsyncSession, llm_provider: LlmProvider | None = None) -> None:
+        self._session = session
         self._repo = ChunkRepository(session)
         self._track_repo = TrackRepository(session)
+        self._llm_provider = llm_provider
 
     async def get_chunk(self, chunk_id: int) -> ChunkRead | None:
         orm = await self._repo.get_chunk(chunk_id)
@@ -171,6 +193,123 @@ class ChunkService:
                 total_due=total_due,
             ))
         return batches
+
+    async def force_practice_chunks(
+        self, track_id: int, texts: list[str], level_override: str | None = None
+    ) -> list[ChunkRead]:
+        """Resolve or create chunks for the given texts so they can be practiced right away,
+        regardless of SRS due date. Existing chunks are matched by exact (case-insensitive)
+        text; new ones are LLM-enriched and created active/immediately due."""
+        track = await self._track_repo.get_track(track_id)
+        if track is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Track not found")
+
+        seen: set[str] = set()
+        deduped: list[str] = []
+        for text in texts:
+            cleaned = text.strip()
+            key = cleaned.lower()
+            if cleaned and key not in seen:
+                seen.add(key)
+                deduped.append(cleaned)
+        deduped = deduped[:_MAX_FORCE_PRACTICE_TEXTS]
+        if not deduped:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No words/phrases provided")
+
+        results: list[ChunkRead] = []
+        for text in deduped:
+            orm = await self._repo.get_chunk_by_text(track_id, text)
+            if orm is None:
+                if self._llm_provider is None:
+                    raise HTTPException(
+                        status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                        detail="AI enrichment is not available to create a new chunk",
+                    )
+                enrichment = await self._enrich_chunk_via_llm(track, text, level_override)
+                orm = await self._repo.create_chunk(ChunkCreate(
+                    track_id=track_id,
+                    chunk_type=enrichment.get("chunk_type") or "word",
+                    text=text,
+                    translation=enrichment.get("translation") or "",
+                    example_sentence=enrichment.get("example_sentence") or None,
+                    example_translation=enrichment.get("example_translation") or None,
+                    cefr_level=enrichment.get("cefr_level") or track.level,
+                    frequency_source="user_requested",
+                    status="active",
+                ))
+                logger.info(
+                    "Chunk force-created for practice: id=%d track_id=%d text=%r",
+                    orm.id, track_id, text,
+                )
+            results.append(ChunkRead.model_validate(orm))
+        return results
+
+    async def _enrich_chunk_via_llm(self, track, text: str, level_override: str | None) -> dict:
+        prompt = CHUNK_ENRICHMENT_PROMPT.format(
+            language_name=track.name,
+            level_guidance=level_guidance(level_override or track.level, track.name),
+            text=text,
+        )
+        messages = [{"role": "user", "content": prompt}]
+        t0 = time.monotonic()
+        try:
+            llm_response = await self._llm_provider.complete(messages)
+        except Exception as exc:
+            logger.error("Chunk enrichment LLM call failed: text=%r error=%s", text, exc)
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Could not look up that word/phrase. Please try again in a moment.",
+            ) from exc
+        latency_ms = int((time.monotonic() - t0) * 1000)
+
+        await create_llm_call(
+            self._session,
+            provider=self._llm_provider.provider,
+            model=self._llm_provider.model,
+            feature="chunk_enrichment",
+            prompt=messages,
+            response=llm_response.text,
+            tokens_input=llm_response.tokens_input,
+            tokens_output=llm_response.tokens_output,
+            latency_ms=latency_ms,
+        )
+
+        try:
+            return _parse_enrichment_json(llm_response.text)
+        except (json.JSONDecodeError, ValueError, TypeError) as exc:
+            logger.error("Chunk enrichment returned invalid JSON: text=%r error=%s", text, exc)
+            raise HTTPException(
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                detail="AI enrichment returned an unreadable result. Please try again.",
+            ) from exc
+
+    async def queue_vocabulary_candidates(
+        self,
+        track_id: int,
+        candidates: list[NewVocabularyCandidate],
+        max_candidates: int,
+    ) -> None:
+        """Push LLM-suggested vocabulary/corrections into the existing triage/approval queue."""
+        track = await self._track_repo.get_track(track_id)
+        default_level = track.level if track else None
+        for candidate in candidates[:max_candidates]:
+            if not candidate.text.strip() or not candidate.translation.strip():
+                continue
+            try:
+                await self.create_chunk(ChunkCreate(
+                    track_id=track_id,
+                    chunk_type="word",
+                    text=candidate.text.strip(),
+                    translation=candidate.translation.strip(),
+                    cefr_level=candidate.cefr_level or default_level,
+                    frequency_source="llm_suggested",
+                    status="pending_triage",
+                ))
+            except Exception:
+                logger.error(
+                    "Failed to queue vocabulary candidate: track_id=%d text=%r",
+                    track_id, candidate.text, exc_info=True,
+                )
 
     async def get_production_daily_batch(self, track_id: int | None = None) -> list[DailyBatchRead]:
         """Return today's production-due batches per active track, Pareto-weighted."""

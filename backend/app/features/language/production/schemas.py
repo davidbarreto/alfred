@@ -3,6 +3,7 @@ from typing import Annotated
 from fastapi import Query
 from pydantic import BaseModel
 
+from app.features.language.chunks.schemas import NewVocabularyCandidate
 from app.features.language.sessions.schemas import ProductionTaskType
 
 PRODUCTION_TASK_TYPES: tuple[str, ...] = ("sentence", "translate")
@@ -36,11 +37,6 @@ class ProductionAttemptCreate(BaseModel):
     task_type: ProductionTaskType
     prompt_text: str
     response_text: str
-
-
-class NewVocabularyCandidate(BaseModel):
-    text: str
-    translation: str
 
 
 class ProductionGradingRead(BaseModel):

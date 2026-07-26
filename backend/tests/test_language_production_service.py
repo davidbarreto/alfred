@@ -197,6 +197,18 @@ class TestParseGradingJson:
         assert grading.corrected_text == "Je parle de la musique."
         assert grading.new_vocabulary[0].text == "la musique"
 
+    def test_parses_cefr_level_for_vocabulary_candidates(self):
+        raw = json.dumps({
+            "score": 80,
+            "new_vocabulary": [{"text": "la musique", "translation": "music", "cefr_level": "A2"}],
+        })
+        grading = _parse_grading_json(raw)
+        assert grading.new_vocabulary[0].cefr_level == "A2"
+
+    def test_missing_cefr_level_defaults_to_none(self):
+        grading = _parse_grading_json(_GRADING_JSON)
+        assert grading.new_vocabulary[0].cefr_level is None
+
     def test_parses_json_wrapped_in_markdown_fences(self):
         grading = _parse_grading_json(f"```json\n{_GRADING_JSON}\n```")
         assert grading.score == 80
@@ -369,6 +381,30 @@ class TestGetNextTask:
         mock_log.assert_awaited_once()
         assert mock_log.call_args.kwargs["feature"] == "production_task_generation"
 
+    async def test_retell_task_uses_level_override_instead_of_track_level(self):
+        passage = "Hier, Marie a perdu ses clés."
+        service, llm_provider, _, chunk_service, _, track_repo, _ = _make_service(llm_text=passage)
+        track_repo.get_track.return_value = _make_track_orm(level="B1")
+        chunk_service.get_production_daily_batch.return_value = []
+
+        with patch("app.features.language.production.service.create_llm_call", AsyncMock()):
+            await service.get_next_task(1, task_type="retell", level_override="A0")
+
+        generation_prompt = llm_provider.complete.call_args.args[0][0]["content"]
+        assert "A0" in generation_prompt
+        assert "B1" not in generation_prompt
+
+    async def test_sentence_task_ignores_level_override(self):
+        """sentence/translate tasks just echo the chunk's own text — nothing to steer."""
+        service, _, _, chunk_service, _, track_repo, _ = _make_service()
+        track_repo.get_track.return_value = _make_track_orm()
+        chunk_service.get_production_daily_batch.return_value = [_make_batch([_make_chunk_read()])]
+
+        task = await service.get_next_task(1, task_type="sentence", level_override="A0")
+
+        assert task.task_type == "sentence"
+        assert "A0" not in task.prompt_text
+
     async def test_retell_raises_503_when_passage_generation_fails(self):
         service, llm_provider, _, chunk_service, _, track_repo, _ = _make_service()
         track_repo.get_track.return_value = _make_track_orm()
@@ -414,12 +450,12 @@ class TestGradeAttempt:
         with patch("app.features.language.production.service.create_llm_call", AsyncMock()):
             await service.grade_attempt(_make_attempt())
 
-        chunk_service.create_chunk.assert_awaited_once()
-        created = chunk_service.create_chunk.call_args.args[0]
-        assert created.text == "la musique"
-        assert created.translation == "music"
-        assert created.status == "pending_triage"
-        assert created.frequency_source == "llm_suggested"
+        chunk_service.queue_vocabulary_candidates.assert_awaited_once()
+        call_args = chunk_service.queue_vocabulary_candidates.call_args.args
+        assert call_args[0] == 1
+        assert call_args[1][0].text == "la musique"
+        assert call_args[1][0].translation == "music"
+        assert call_args[2] == 3  # _MAX_VOCABULARY_CANDIDATES
 
     async def test_limits_vocabulary_candidates_to_three(self):
         vocab = [{"text": f"mot{i}", "translation": f"word{i}"} for i in range(5)]
@@ -431,13 +467,15 @@ class TestGradeAttempt:
         with patch("app.features.language.production.service.create_llm_call", AsyncMock()):
             await service.grade_attempt(_make_attempt())
 
-        assert chunk_service.create_chunk.await_count == 3
+        call_args = chunk_service.queue_vocabulary_candidates.call_args.args
+        assert len(call_args[1]) == 5
+        assert call_args[2] == 3
 
     async def test_vocabulary_failure_does_not_fail_attempt(self):
         service, _, _, chunk_service, chunk_repo, track_repo, _ = _make_service()
         chunk_repo.get_chunk.return_value = _make_chunk_orm()
         track_repo.get_track.return_value = _make_track_orm()
-        chunk_service.create_chunk.side_effect = RuntimeError("db boom")
+        chunk_service.queue_vocabulary_candidates.side_effect = RuntimeError("db boom")
 
         with patch("app.features.language.production.service.create_llm_call", AsyncMock()):
             result = await service.grade_attempt(_make_attempt())
@@ -512,7 +550,8 @@ class TestGradeAttempt:
         with patch("app.features.language.production.service.create_llm_call", AsyncMock()):
             await service.grade_attempt(_make_attempt(chunk_id=None, task_type="retell"))
 
-        assert chunk_service.create_chunk.await_count == 5
+        call_args = chunk_service.queue_vocabulary_candidates.call_args.args
+        assert call_args[2] == 5
 
     async def test_anchored_task_without_chunk_id_raises_400(self):
         service, _, _, _, chunk_repo, _, _ = _make_service()
@@ -531,7 +570,8 @@ class TestGradeAttempt:
         with patch("app.features.language.production.service.create_llm_call", AsyncMock()):
             await service.grade_attempt(_make_attempt(chunk_id=None, task_type="timed"))
 
-        assert chunk_service.create_chunk.await_count == 5
+        call_args = chunk_service.queue_vocabulary_candidates.call_args.args
+        assert call_args[2] == 5
 
     async def test_raises_404_when_chunk_missing(self):
         service, _, _, _, chunk_repo, _, _ = _make_service()

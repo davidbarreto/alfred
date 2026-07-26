@@ -6,7 +6,7 @@ from pydantic import BaseModel, field_validator
 ChunkType: TypeAlias = Literal["word", "collocation", "verb_form", "sentence_pattern"]
 ChunkStatus: TypeAlias = Literal["pending_triage", "active", "suspended"]
 ChunkStatusFilter: TypeAlias = Literal["pending_triage", "active", "suspended", "ALL"]
-FrequencySource: TypeAlias = Literal["pareto_list", "mistake", "llm_suggested", "reading"]
+FrequencySource: TypeAlias = Literal["pareto_list", "mistake", "llm_suggested", "reading", "user_requested"]
 SrsState: TypeAlias = Literal["new", "learning", "review", "relearning"]
 
 
@@ -109,3 +109,17 @@ class DailyBatchRead(BaseModel):
     track_code: str
     chunks: list[ChunkRead]
     total_due: int
+
+
+class NewVocabularyCandidate(BaseModel):
+    """A word/phrase an LLM (grading or conversation summary) flagged as worth practicing
+    next, with its own estimated CEFR difficulty."""
+    text: str
+    translation: str
+    cefr_level: str | None = None
+
+
+class ChunkForcePracticeCreate(BaseModel):
+    track_id: int
+    texts: list[str]
+    level_override: str | None = None

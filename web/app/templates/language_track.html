@@ -55,6 +55,16 @@
     </div>
   </div>
 
+  <!-- Force-practice a specific word/phrase -->
+  <form action="/languages/{{ track.code }}/review" method="get"
+        class="flex items-center gap-2 max-w-md">
+    <input type="text" name="words" placeholder="Practice a specific word or phrase (comma-separated)"
+           class="input input-sm input-bordered flex-1 text-xs" />
+    <button type="submit" class="btn btn-sm bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 text-xs">
+      <i class="ti ti-target-arrow text-sm"></i>Practice now
+    </button>
+  </form>
+
   <!-- Stats strip -->
   <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
     <div class="card bg-white"><div class="card-body p-4">

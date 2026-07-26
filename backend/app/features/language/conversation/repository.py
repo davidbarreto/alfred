@@ -13,7 +13,13 @@ class ConversationRepository:
         self._session = session
 
     async def create_thread(
-        self, track_id: int, chat_session_id: int, mode: str, scenario: str | None, voice_reply: bool
+        self,
+        track_id: int,
+        chat_session_id: int,
+        mode: str,
+        scenario: str | None,
+        voice_reply: bool,
+        level_override: str | None = None,
     ) -> ConversationThread:
         thread = ConversationThread(
             track_id=track_id,
@@ -21,6 +27,7 @@ class ConversationRepository:
             mode=mode,
             scenario=scenario,
             voice_reply=voice_reply,
+            level_override=level_override,
         )
         self._session.add(thread)
         await self._session.commit()

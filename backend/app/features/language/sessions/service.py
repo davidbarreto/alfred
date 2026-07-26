@@ -179,12 +179,16 @@ class SessionService:
             feedback_history.append({"quality_score": data.feedback_score, "summary": data.feedback_summary})
 
         remaining = int(wm_data.get("remaining", 1)) - 1
-        next_chunk = None
+        forced_queue = list(wm_data.get("forced_queue", []))
+        next_chunk: dict | None = None
         if remaining > 0:
-            batches = await self._chunk_service.get_daily_batch(wm_data.get("track_id"))
-            due = [c for batch in batches for c in batch.chunks if c.id != data.chunk_id]
-            if due:
-                next_chunk = due[0]
+            if forced_queue:
+                next_chunk = forced_queue.pop(0)
+            else:
+                batches = await self._chunk_service.get_daily_batch(wm_data.get("track_id"))
+                due = [c for batch in batches for c in batch.chunks if c.id != data.chunk_id]
+                if due:
+                    next_chunk = {"chunk_id": due[0].id, "text": due[0].text, "translation": due[0].translation}
 
         await self._working_memory_service.delete(pending_wm.id)
 
@@ -198,10 +202,11 @@ class SessionService:
 
         new_wm_data = {
             **wm_data,
-            "chunk_id": next_chunk.id,
-            "text": next_chunk.text,
-            "translation": next_chunk.translation,
+            "chunk_id": next_chunk["chunk_id"],
+            "text": next_chunk["text"],
+            "translation": next_chunk["translation"],
             "remaining": remaining,
+            "forced_queue": forced_queue,
             "feedback_history": feedback_history,
         }
         await self._working_memory_service.create(WorkingMemoryCreate(
@@ -209,7 +214,7 @@ class SessionService:
         ))
         logger.info(
             "advance_loop: loop advanced wm_id=%d next_chunk_id=%d remaining=%d",
-            pending_wm.id, next_chunk.id, remaining,
+            pending_wm.id, next_chunk["chunk_id"], remaining,
         )
         return LoopAdvanceRead(
             status="advanced",
@@ -217,9 +222,9 @@ class SessionService:
                 mode=mode,
                 track_id=wm_data["track_id"],
                 track_code=wm_data.get("track_code", ""),
-                chunk_id=next_chunk.id,
-                text=next_chunk.text,
-                translation=next_chunk.translation,
+                chunk_id=next_chunk["chunk_id"],
+                text=next_chunk["text"],
+                translation=next_chunk["translation"],
                 language_name=wm_data.get("language_name", ""),
                 remaining=remaining,
             ),

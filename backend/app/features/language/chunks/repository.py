@@ -16,6 +16,15 @@ class ChunkRepository:
         result = await self._session.execute(select(Chunk).where(Chunk.id == chunk_id))
         return result.scalars().first()
 
+    async def get_chunk_by_text(self, track_id: int, text: str) -> Chunk | None:
+        result = await self._session.execute(
+            select(Chunk).where(
+                Chunk.track_id == track_id,
+                func.lower(Chunk.text) == text.lower(),
+            )
+        )
+        return result.scalars().first()
+
     def _apply_filters(self, query, filters: ChunkFilters):
         if filters.track_id is not None:
             query = query.where(Chunk.track_id == filters.track_id)

@@ -25,6 +25,9 @@ class ConversationThread(Base):
     # The roleplay scenario or the free-conversation topic; absent for a topic-less chat.
     scenario: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     voice_reply: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    # Punctual CEFR override for this session only (e.g. "A0"); never written back to
+    # tracks.level. Falls back to the track's own level when unset.
+    level_override: Mapped[Optional[str]] = mapped_column(String(5), nullable=True)
     started_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )

@@ -14,6 +14,9 @@ class ConversationStartCreate(BaseModel):
     # Roleplay scenario or free-conversation topic; optional for a topic-less chat.
     scenario: str | None = None
     voice_reply: bool = False
+    # Punctual CEFR override for this session only (e.g. "A0"); falls back to the track's
+    # own level when unset. Never written back to the track.
+    level_override: str | None = None
 
 
 class ConversationStartRead(BaseModel):
@@ -52,6 +55,7 @@ class ConversationThreadRead(BaseModel):
     mode: str
     scenario: str | None
     voice_reply: bool
+    level_override: str | None
     started_at: datetime
     ended_at: datetime | None
     tip: str | None

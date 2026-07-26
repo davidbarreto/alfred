@@ -266,6 +266,50 @@ class TestAdvanceLoop:
         assert result.next_practice.chunk_id == 43
         assert result.next_practice.remaining == 2
 
+    async def test_advances_from_forced_queue_without_touching_daily_batch(self, service):
+        service._working_memory_service.list.return_value = [
+            _make_wm(99, {
+                "mode": "review", "chunk_id": 42, "track_id": 1, "track_code": "fr",
+                "language_name": "French", "remaining": 2,
+                "forced_queue": [{"chunk_id": 77, "text": "gato", "translation": "cat"}],
+            })
+        ]
+        service._repo.create_session.return_value = _make_session_orm(chunk_id=42)
+
+        result = await service.advance_loop(
+            LoopAdvanceRequest(track_id=1, chunk_id=42, quality_score=90.0)
+        )
+
+        service._chunk_service.get_daily_batch.assert_not_called()
+        assert result.status == "advanced"
+        assert result.next_practice.chunk_id == 77
+        assert result.next_practice.text == "gato"
+        assert result.next_practice.translation == "cat"
+        assert result.next_practice.remaining == 1
+
+        new_wm_value = json.loads(service._working_memory_service.create.call_args.args[0].value)
+        assert new_wm_value["forced_queue"] == []
+
+    async def test_forced_queue_falls_back_to_daily_batch_once_exhausted(self, service):
+        service._working_memory_service.list.return_value = [
+            _make_wm(99, {
+                "mode": "review", "chunk_id": 42, "track_id": 1, "track_code": "fr",
+                "language_name": "French", "remaining": 2,
+                "forced_queue": [],
+            })
+        ]
+        service._repo.create_session.return_value = _make_session_orm(chunk_id=42)
+        service._chunk_service.get_daily_batch.return_value = [
+            DailyBatchRead(track_id=1, track_code="fr", chunks=[_make_chunk(42), _make_chunk(55)], total_due=2)
+        ]
+
+        result = await service.advance_loop(
+            LoopAdvanceRequest(track_id=1, chunk_id=42, quality_score=90.0)
+        )
+
+        service._chunk_service.get_daily_batch.assert_called_once()
+        assert result.next_practice.chunk_id == 55
+
     async def test_completes_with_summary_from_feedback_history(self, service):
         service._working_memory_service.list.return_value = [
             _make_wm(99, {

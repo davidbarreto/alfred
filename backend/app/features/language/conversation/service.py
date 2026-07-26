@@ -15,6 +15,7 @@ from app.features.language.chunks.pronunciation_service import PronunciationServ
 from app.features.language.chunks.schemas import NewVocabularyCandidate
 from app.features.language.chunks.service import ChunkService
 from app.features.language.conversation.prompts import (
+    CONVERSATION_OPENING_PROMPT,
     CONVERSATION_SUMMARY_PROMPT,
     CONVERSATION_TURN_PROMPT,
     ROLEPLAY_OPENING_PROMPT,
@@ -42,6 +43,9 @@ from app.shared.llm import LlmProvider
 logger = logging.getLogger(__name__)
 
 _MAX_VOCABULARY_CANDIDATES = 3
+# Free conversation otherwise waits for David to speak first; at total-beginner level that
+# leaves him with no scaffolding, so this is the one level that also gets an opening line.
+_BEGINNER_LEVEL = "A0"
 
 
 def _parse_summary_json(raw: str) -> tuple[str, list[NewVocabularyCandidate]]:
@@ -154,10 +158,11 @@ class ConversationService:
         level_override: str | None = None,
     ) -> ConversationStartRead:
         """Open a practice thread. Roleplay needs a scenario and gets an in-character
-        opening line; free conversation takes an optional topic and waits for David to
-        speak first. level_override is a punctual per-session CEFR override (e.g. "A0"
-        for a total-beginner register); it falls back to the track's own level and is
-        never written back to the track."""
+        opening line; free conversation takes an optional topic and normally waits for
+        David to speak first, except at A0 where he has no scaffolding to draw on, so it
+        gets an English-led opening line too. level_override is a punctual per-session
+        CEFR override (e.g. "A0" for a total-beginner register); it falls back to the
+        track's own level and is never written back to the track."""
         track = await self._track_repo.get_track(track_id)
         if track is None:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Track not found")
@@ -171,12 +176,19 @@ class ConversationService:
             track_id, chat_session_id, mode, scenario, voice_reply, level_override
         )
 
+        effective_level = self._effective_level(level_override, track)
         opening_text: str | None = None
         opening_audio_ref: str | None = None
         if mode == "roleplay":
             opening_text = await self._generate_opening(
-                track_id, track.name, scenario or "", self._effective_level(level_override, track)
+                track_id, track.name, scenario or "", effective_level
             )
+        elif effective_level == _BEGINNER_LEVEL:
+            opening_text = await self._generate_beginner_opening(
+                track_id, track.name, effective_level, scenario
+            )
+
+        if opening_text is not None:
             message = await self._message_service.create(
                 MessageCreate(
                     session_id=chat_session_id,
@@ -214,15 +226,30 @@ class ConversationService:
             cefr_level=cefr_level,
             level_guidance=level_guidance(cefr_level, language_name),
         )
+        return await self._run_opening_prompt(track_id, prompt)
+
+    async def _generate_beginner_opening(
+        self, track_id: int, language_name: str, cefr_level: str, topic: str | None
+    ) -> str:
+        topic_line = f"Topic: {topic}." if topic else "No set topic — keep it open-ended."
+        prompt = CONVERSATION_OPENING_PROMPT.format(
+            language_name=language_name,
+            topic_line=topic_line,
+            cefr_level=cefr_level,
+            level_guidance=level_guidance(cefr_level, language_name),
+        )
+        return await self._run_opening_prompt(track_id, prompt)
+
+    async def _run_opening_prompt(self, track_id: int, prompt: str) -> str:
         messages = [{"role": "user", "content": prompt}]
         t0 = time.monotonic()
         try:
             llm_response = await self._llm_provider.complete(messages)
         except Exception as exc:
-            logger.error("Conversation: roleplay opener failed track_id=%d error=%s", track_id, exc)
+            logger.error("Conversation: opener failed track_id=%d error=%s", track_id, exc)
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail="Could not start the roleplay. Please try again in a moment.",
+                detail="Could not start the session. Please try again in a moment.",
             ) from exc
         latency_ms = int((time.monotonic() - t0) * 1000)
         opening_text = llm_response.text.strip()

@@ -6,6 +6,17 @@ David's level: CEFR {cefr_level}. {level_guidance}
 Write a short opening line, entirely in {language_name}, that sets the scene and stays in \
 character to kick off the roleplay. 1-2 sentences. Return only the line, no explanation, no quotes."""
 
+# Only used for free conversation at total-beginner level (A0) — regular levels are expected
+# to start the exchange themselves, so this is the one opening free conversation ever gets.
+CONVERSATION_OPENING_PROMPT = """\
+You are about to start a free conversation practice session with David in {language_name}. {topic_line}
+David's level: CEFR {cefr_level}. {level_guidance}
+
+Write a short opening message for him, mostly in English since he's a total beginner. Briefly explain \
+that he'll practice responding in {language_name}, then end with one very short {language_name} phrase \
+or question for him to try answering, with its English translation in parentheses. 2-4 sentences total. \
+Return only the message, no explanation, no quotes."""
+
 # Both turn prompts share the same JSON contract so a turn can be recorded identically
 # regardless of mode or modality. Corrections go in "tip" (stored per turn, shown in the
 # portal and folded into the wrap-up) rather than into the reply, so the conversation

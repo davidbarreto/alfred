@@ -168,6 +168,64 @@ class TestStart:
         parts["llm_provider"].complete.assert_not_awaited()
         parts["thread_repo"].create_turn.assert_not_awaited()
 
+    async def test_free_conversation_at_a0_gets_a_beginner_opening(self):
+        parts = _make_service()
+        parts["track_repo"].get_track = AsyncMock(return_value=_make_track())
+        parts["thread_repo"].create_thread = AsyncMock(
+            return_value=_make_thread(mode="conversation", scenario="food", level_override="A0", voice_reply=True)
+        )
+        parts["message_service"].get = AsyncMock(return_value=MagicMock(session_id=5))
+        parts["llm_provider"].complete = AsyncMock(
+            return_value=LlmResponse(text="Let's practice! Try saying 'Bonjour' (Hello).", tokens_input=10, tokens_output=8)
+        )
+
+        with patch("app.features.language.conversation.service.create_llm_call", AsyncMock()):
+            result = await parts["service"].start(
+                track_id=1, message_id=42, mode="conversation", scenario="food",
+                voice_reply=True, level_override="A0",
+            )
+
+        opening_prompt = parts["llm_provider"].complete.call_args.args[0][0]["content"]
+        assert "total beginner" in opening_prompt
+        assert "Topic: food." in opening_prompt
+        assert result.opening_text == "Let's practice! Try saying 'Bonjour' (Hello)."
+        parts["thread_repo"].create_turn.assert_awaited_once()
+
+    async def test_free_conversation_at_a0_falls_back_to_track_level(self):
+        parts = _make_service()
+        parts["track_repo"].get_track = AsyncMock(return_value=_make_track(level="A0"))
+        parts["thread_repo"].create_thread = AsyncMock(
+            return_value=_make_thread(mode="conversation", scenario=None)
+        )
+        parts["message_service"].get = AsyncMock(return_value=MagicMock(session_id=5))
+        parts["llm_provider"].complete = AsyncMock(
+            return_value=LlmResponse(text="Let's get started!", tokens_input=10, tokens_output=8)
+        )
+
+        with patch("app.features.language.conversation.service.create_llm_call", AsyncMock()):
+            result = await parts["service"].start(
+                track_id=1, message_id=42, mode="conversation", scenario=None, voice_reply=False,
+            )
+
+        opening_prompt = parts["llm_provider"].complete.call_args.args[0][0]["content"]
+        assert "No set topic" in opening_prompt
+        assert result.opening_text == "Let's get started!"
+
+    async def test_free_conversation_at_a1_still_opens_without_a_line(self):
+        parts = _make_service()
+        parts["track_repo"].get_track = AsyncMock(return_value=_make_track(level="A1"))
+        parts["thread_repo"].create_thread = AsyncMock(
+            return_value=_make_thread(mode="conversation", scenario=None)
+        )
+        parts["message_service"].get = AsyncMock(return_value=MagicMock(session_id=5))
+
+        result = await parts["service"].start(
+            track_id=1, message_id=42, mode="conversation", scenario=None, voice_reply=False,
+        )
+
+        assert result.opening_text is None
+        parts["llm_provider"].complete.assert_not_awaited()
+
     async def test_level_override_passed_through_to_create_thread(self):
         parts = _make_service()
         parts["track_repo"].get_track = AsyncMock(return_value=_make_track())

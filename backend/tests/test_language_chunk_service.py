@@ -402,6 +402,7 @@ class TestForcePracticeChunks:
 class TestQueueVocabularyCandidates:
     async def test_creates_pending_triage_chunk_per_candidate(self, service):
         service._track_repo.get_track.return_value = _make_track_orm(level="B1")
+        service._repo.get_chunk_by_text.return_value = None
         service._repo.create_chunk.return_value = _make_chunk_orm()
 
         await service.queue_vocabulary_candidates(
@@ -416,6 +417,7 @@ class TestQueueVocabularyCandidates:
 
     async def test_missing_candidate_level_falls_back_to_track_level(self, service):
         service._track_repo.get_track.return_value = _make_track_orm(level="B2")
+        service._repo.get_chunk_by_text.return_value = None
         service._repo.create_chunk.return_value = _make_chunk_orm()
 
         await service.queue_vocabulary_candidates(
@@ -427,6 +429,7 @@ class TestQueueVocabularyCandidates:
 
     async def test_respects_max_candidates(self, service):
         service._track_repo.get_track.return_value = _make_track_orm()
+        service._repo.get_chunk_by_text.return_value = None
         service._repo.create_chunk.return_value = _make_chunk_orm()
         candidates = [NewVocabularyCandidate(text=f"mot{i}", translation=f"word{i}") for i in range(5)]
 
@@ -447,6 +450,7 @@ class TestQueueVocabularyCandidates:
 
     async def test_individual_failure_does_not_stop_remaining_candidates(self, service):
         service._track_repo.get_track.return_value = _make_track_orm()
+        service._repo.get_chunk_by_text.return_value = None
         service._repo.create_chunk.side_effect = [RuntimeError("db boom"), _make_chunk_orm()]
         candidates = [
             NewVocabularyCandidate(text="chien", translation="dog"),
@@ -456,3 +460,46 @@ class TestQueueVocabularyCandidates:
         await service.queue_vocabulary_candidates(1, candidates, max_candidates=5)
 
         assert service._repo.create_chunk.await_count == 2
+
+    async def test_skips_candidate_matching_existing_active_chunk(self, service):
+        service._track_repo.get_track.return_value = _make_track_orm()
+        service._repo.get_chunk_by_text.return_value = _make_chunk_orm(
+            id=42, text="chien", status="active"
+        )
+
+        await service.queue_vocabulary_candidates(
+            1, [NewVocabularyCandidate(text="chien", translation="dog")], max_candidates=5
+        )
+
+        service._repo.get_chunk_by_text.assert_awaited_once_with(1, "chien")
+        service._repo.create_chunk.assert_not_called()
+
+    async def test_skips_candidate_already_pending_triage(self, service):
+        service._track_repo.get_track.return_value = _make_track_orm()
+        service._repo.get_chunk_by_text.return_value = _make_chunk_orm(
+            id=42, text="chien", status="pending_triage"
+        )
+
+        await service.queue_vocabulary_candidates(
+            1, [NewVocabularyCandidate(text="chien", translation="dog")], max_candidates=5
+        )
+
+        service._repo.create_chunk.assert_not_called()
+
+    async def test_creates_remaining_candidates_when_only_one_is_duplicate(self, service):
+        service._track_repo.get_track.return_value = _make_track_orm()
+        service._repo.get_chunk_by_text.side_effect = [
+            _make_chunk_orm(id=42, text="chien", status="active"),
+            None,
+        ]
+        service._repo.create_chunk.return_value = _make_chunk_orm(text="chat")
+        candidates = [
+            NewVocabularyCandidate(text="chien", translation="dog"),
+            NewVocabularyCandidate(text="chat", translation="cat"),
+        ]
+
+        await service.queue_vocabulary_candidates(1, candidates, max_candidates=5)
+
+        assert service._repo.create_chunk.await_count == 1
+        created = service._repo.create_chunk.call_args.args[0]
+        assert created.text == "chat"

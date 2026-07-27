@@ -294,13 +294,21 @@ class ChunkService:
         track = await self._track_repo.get_track(track_id)
         default_level = track.level if track else None
         for candidate in candidates[:max_candidates]:
-            if not candidate.text.strip() or not candidate.translation.strip():
+            text = candidate.text.strip()
+            if not text or not candidate.translation.strip():
                 continue
             try:
+                existing = await self._repo.get_chunk_by_text(track_id, text)
+                if existing is not None:
+                    logger.debug(
+                        "Skipping duplicate vocabulary candidate: track_id=%d text=%r existing_id=%d status=%r",
+                        track_id, text, existing.id, existing.status,
+                    )
+                    continue
                 await self.create_chunk(ChunkCreate(
                     track_id=track_id,
                     chunk_type="word",
-                    text=candidate.text.strip(),
+                    text=text,
                     translation=candidate.translation.strip(),
                     cefr_level=candidate.cefr_level or default_level,
                     frequency_source="llm_suggested",

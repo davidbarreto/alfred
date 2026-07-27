@@ -2,9 +2,10 @@ CEFR_LEVELS: tuple[str, ...] = ("A0", "A1", "A2", "B1", "B2", "C1", "C2")
 
 _GUIDANCE: dict[str, str] = {
     "A0": (
-        "David knows essentially no {language_name} yet — treat this as his very first lesson. "
-        "Keep it to very short, simple phrases he can repeat or recognize, translate key words "
-        "in parentheses, and don't expect free-form replies."
+        "David knows essentially no {language_name} yet. Keep it to very short, simple phrases "
+        "he can repeat or recognize, translate key words in parentheses, and don't expect "
+        "free-form replies. Pick the phrase/vocabulary to fit whatever topic or scenario is "
+        "given rather than defaulting to generic greetings."
     ),
     "A1": "Keep vocabulary and grammar very basic: short sentences, present tense, everyday words.",
     "A2": "Keep sentences short and grammar simple; everyday vocabulary, mostly present/past tense.",

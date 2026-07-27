@@ -14,8 +14,9 @@ David's level: CEFR {cefr_level}. {level_guidance}
 
 Write a short opening message for him, mostly in English since he's a total beginner. Briefly explain \
 that he'll practice responding in {language_name}, then end with one very short {language_name} phrase \
-or question for him to try answering, with its English translation in parentheses. 2-4 sentences total. \
-Return only the message, no explanation, no quotes."""
+or question for him to try answering, with its English translation in parentheses — if a topic is set \
+above, draw that phrase from the topic's own vocabulary instead of a generic greeting. 2-4 sentences \
+total. Return only the message, no explanation, no quotes."""
 
 # Both turn prompts share the same JSON contract so a turn can be recorded identically
 # regardless of mode or modality. Corrections go in "tip" (stored per turn, shown in the

@@ -143,7 +143,9 @@ class TestStart:
         with patch("app.features.language.conversation.service.create_llm_call", AsyncMock()):
             result = await parts["service"].start(track_id=1, message_id=42, mode="roleplay", scenario="Ordering coffee", voice_reply=True)
 
-        parts["pronunciation_service"].get_audio.assert_awaited_once_with("Bonjour!", "fr", audio_format="ogg")
+        parts["pronunciation_service"].get_audio.assert_awaited_once_with(
+            "Say exactly as written: Bonjour!", "fr", audio_format="ogg"
+        )
         assert result.opening_audio_ref is not None
         assert result.opening_audio_base64 == base64.b64encode(b"tts-bytes").decode("ascii")
         parts["audio_storage"].save.assert_awaited_once()

@@ -102,9 +102,14 @@ class TranscriptionProvider(Protocol):
 def styled_for_tts(text: str, tone: str | None) -> str:
     """Prefix text with a natural-language delivery instruction a style-steerable TTS
     provider can act on (it speaks only `text`, not the instruction itself).
-    No-op when tone is unset."""
-    if not tone:
-        return text
-    return f"Say in a {tone} tone: {text}"
+
+    Always wraps, even without a tone: bare text handed straight to Gemini's native TTS
+    can get misread as a chat prompt rather than a script to read verbatim — e.g. an A0
+    conversation opening like `Try saying: "Bonjour" (Hello)` made the model try to
+    answer it in text instead of voicing it, which the API rejects outright since that
+    endpoint only ever returns audio."""
+    if tone:
+        return f"Say in a {tone} tone: {text}"
+    return f"Say exactly as written: {text}"
 
 

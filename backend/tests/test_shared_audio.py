@@ -29,3 +29,11 @@ class TestStyledForTts:
         result = styled_for_tts("Привет (Hi)", "cheerful", language_name="Russian")
         assert "This text mixes English and Russian" in result
         assert "Text: Привет (Hi)" in result
+
+    def test_always_forbids_skipping_any_part_of_the_text(self):
+        result = styled_for_tts("hello there", None)
+        assert "Read the entire text below verbatim, word for word, omitting nothing" in result
+
+    def test_language_name_forbids_omitting_parenthetical_asides(self):
+        result = styled_for_tts("Привет (Hi)", "cheerful", language_name="Russian")
+        assert "do not skip, omit, or summarize any part of it, including anything in parentheses" in result

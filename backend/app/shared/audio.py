@@ -114,20 +114,21 @@ def styled_for_tts(text: str, tone: str | None, language_name: str | None = None
     Also pins the voice/pitch and flags English/target-language mixing explicitly: left
     to its own devices, the model has been observed drifting to a noticeably different
     pitch per tone word (occasionally reading as a different speaker entirely), and
-    reading English asides — e.g. parenthetical translations in A0 replies — with the
-    target language's phonetics instead of switching properly, which made bilingual
-    replies come out sounding like solid Russian/French/etc. to the listener."""
+    outright dropping English asides — e.g. parenthetical translations in A0 replies —
+    instead of voicing them, which left bilingual replies audibly missing the English
+    half entirely rather than just mispronouncing it."""
     delivery = f"in a {tone} tone" if tone else "exactly as written"
     mix_note = (
-        f" This text mixes English and {language_name} — pronounce each language's words "
-        f"natively, switching properly between them rather than reading everything as one "
-        f"language."
+        f" This text mixes English and {language_name} — read every single word of both "
+        f"languages aloud, in order, pronouncing each natively; do not skip, omit, or "
+        f"summarize any part of it, including anything in parentheses."
         if language_name
         else ""
     )
     return (
         f"Say {delivery}, in the same steady voice and pitch throughout — vary only energy "
-        f"and pacing for the tone, never the pitch or voice itself.{mix_note} Text: {text}"
+        f"and pacing for the tone, never the pitch or voice itself. Read the entire text "
+        f"below verbatim, word for word, omitting nothing.{mix_note} Text: {text}"
     )
 
 

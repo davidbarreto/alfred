@@ -101,7 +101,7 @@ class TranscriptionProvider(Protocol):
     async def transcribe(self, audio: bytes, mime_type: str) -> TranscriptionResult: ...
 
 
-def styled_for_tts(text: str, tone: str | None) -> str:
+def styled_for_tts(text: str, tone: str | None, language_name: str | None = None) -> str:
     """Prefix text with a natural-language delivery instruction a style-steerable TTS
     provider can act on (it speaks only `text`, not the instruction itself).
 
@@ -109,9 +109,25 @@ def styled_for_tts(text: str, tone: str | None) -> str:
     can get misread as a chat prompt rather than a script to read verbatim — e.g. an A0
     conversation opening like `Try saying: "Bonjour" (Hello)` made the model try to
     answer it in text instead of voicing it, which the API rejects outright since that
-    endpoint only ever returns audio."""
-    if tone:
-        return f"Say in a {tone} tone: {text}"
-    return f"Say exactly as written: {text}"
+    endpoint only ever returns audio.
+
+    Also pins the voice/pitch and flags English/target-language mixing explicitly: left
+    to its own devices, the model has been observed drifting to a noticeably different
+    pitch per tone word (occasionally reading as a different speaker entirely), and
+    reading English asides — e.g. parenthetical translations in A0 replies — with the
+    target language's phonetics instead of switching properly, which made bilingual
+    replies come out sounding like solid Russian/French/etc. to the listener."""
+    delivery = f"in a {tone} tone" if tone else "exactly as written"
+    mix_note = (
+        f" This text mixes English and {language_name} — pronounce each language's words "
+        f"natively, switching properly between them rather than reading everything as one "
+        f"language."
+        if language_name
+        else ""
+    )
+    return (
+        f"Say {delivery}, in the same steady voice and pitch throughout — vary only energy "
+        f"and pacing for the tone, never the pitch or voice itself.{mix_note} Text: {text}"
+    )
 
 

@@ -166,9 +166,11 @@ class TestStart:
         with patch("app.features.language.conversation.service.create_llm_call", AsyncMock()):
             result = await parts["service"].start(track_id=1, message_id=42, mode="roleplay", scenario="Ordering coffee", voice_reply=True)
 
-        parts["pronunciation_service"].get_audio.assert_awaited_once_with(
-            "Say exactly as written: Bonjour!", "fr", audio_format="ogg"
-        )
+        tts_text = parts["pronunciation_service"].get_audio.call_args.args[0]
+        assert tts_text.startswith("Say exactly as written, in the same steady voice and pitch")
+        assert "This text mixes English and French" in tts_text
+        assert tts_text.endswith("Text: Bonjour!")
+        assert parts["pronunciation_service"].get_audio.call_args.args[1] == "fr"
         assert result.opening_audio_ref is not None
         assert result.opening_audio_base64 == base64.b64encode(b"tts-bytes").decode("ascii")
         parts["audio_storage"].save.assert_awaited_once()
@@ -434,9 +436,11 @@ class TestRecordAudioTurn:
         with patch("app.features.language.conversation.service.create_llm_call", AsyncMock()):
             await parts["service"].record_audio_turn(thread_id=10, audio=b"raw-audio")
 
-        parts["pronunciation_service"].get_audio.assert_awaited_once_with(
-            "Say in a cheerful tone: Bien sur!", "fr", audio_format="ogg"
-        )
+        tts_text = parts["pronunciation_service"].get_audio.call_args.args[0]
+        assert tts_text.startswith("Say in a cheerful tone, in the same steady voice and pitch")
+        assert "This text mixes English and French" in tts_text
+        assert tts_text.endswith("Text: Bien sur!")
+        assert parts["pronunciation_service"].get_audio.call_args.args[1] == "fr"
 
     async def test_missing_thread_raises_404(self):
         from fastapi import HTTPException

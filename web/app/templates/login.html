@@ -1,6 +1,14 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+  <script>
+    (function () {
+      var stored = localStorage.getItem('theme');
+      var theme = stored || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+      document.documentElement.setAttribute('data-theme', theme);
+    })();
+  </script>
+
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Alfred — Sign in</title>
@@ -12,7 +20,40 @@
       --p: 58% 0.14 236; --pc: 100% 0 0;
       --er: 55% 0.2 27; --erc: 100% 0 0;
       --rounded-btn: 0.375rem;
+
+      --gray-50: #F9FAFB; --gray-100: #F3F4F6; --gray-200: #E5E7EB; --gray-300: #D1D5DB;
+      --gray-400: #9CA3AF; --gray-500: #6B7280; --gray-600: #4B5563; --gray-700: #374151;
+      --gray-800: #1F2937; --gray-900: #111827;
+      --surface-page: #FAFAF9; --surface-card: #FFFFFF;
+      --tint-red-bg: #FCEBEB; --tint-red-text: #E24B4A;
     }
+
+    html[data-theme="dark"] {
+      --b1: 20% 0 0; --b2: 13% 0 0; --bc: 92% 0 0;
+      --p: 62% 0.15 236; --pc: 12% 0 0;
+      --er: 62% 0.2 27; --erc: 12% 0 0;
+
+      --gray-50: #1C1D20; --gray-100: #212226; --gray-200: #2C2D31; --gray-300: #3A3B40;
+      --gray-400: #71727A; --gray-500: #8B8D95; --gray-600: #A6A8B0; --gray-700: #C1C3CA;
+      --gray-800: #DDDEE3; --gray-900: #F3F4F6;
+      --surface-page: #121214; --surface-card: #1E1F23;
+      --tint-red-bg: #3A1C1C; --tint-red-text: #F0716F;
+    }
+
+    html[data-theme="dark"] .bg-\[\#FAFAF9\] { background-color: var(--surface-page) !important; }
+    html[data-theme="dark"] .bg-white { background-color: var(--surface-card) !important; }
+    html[data-theme="dark"] .bg-\[\#FCEBEB\] { background-color: var(--tint-red-bg) !important; }
+    html[data-theme="dark"] .text-\[\#E24B4A\] { color: var(--tint-red-text) !important; }
+    html[data-theme="dark"] .border-\[\#E24B4A\]\/20 { border-color: var(--tint-red-text) !important; }
+
+    html[data-theme="dark"] .text-gray-200 { color: var(--gray-200) !important; }
+    html[data-theme="dark"] .text-gray-300 { color: var(--gray-300) !important; }
+    html[data-theme="dark"] .text-gray-400 { color: var(--gray-400) !important; }
+    html[data-theme="dark"] .text-gray-500 { color: var(--gray-500) !important; }
+    html[data-theme="dark"] .text-gray-600 { color: var(--gray-600) !important; }
+    html[data-theme="dark"] .text-gray-700 { color: var(--gray-700) !important; }
+    html[data-theme="dark"] .text-gray-900 { color: var(--gray-900) !important; }
+    html[data-theme="dark"] .border-gray-200 { border-color: var(--gray-200) !important; }
   </style>
 </head>
 <body class="min-h-screen bg-[#FAFAF9] flex items-center justify-center">

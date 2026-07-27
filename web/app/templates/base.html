@@ -1,6 +1,15 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+  <!-- Theme init: must run before first paint to avoid a light-mode flash -->
+  <script>
+    (function () {
+      var stored = localStorage.getItem('theme');
+      var theme = stored || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+      document.documentElement.setAttribute('data-theme', theme);
+    })();
+  </script>
+
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>{% block title %}Alfred{% endblock %} — Alfred Portal</title>
@@ -33,6 +42,9 @@
     /*
      * DaisyUI 4 uses oklch variables in the format "L% C H" (no function wrapper).
      * Override :root so all DaisyUI components pick up our neutral palette.
+     * The gray scale and the app's semantic hex colors are also exposed as
+     * CSS variables here so a single [data-theme="dark"] block can retheme
+     * every template without editing them individually.
      */
     :root {
       --b1:  100% 0 0;          /* white — card/input surfaces */
@@ -59,6 +71,84 @@
       --rounded-btn: 0.375rem;
       --rounded-badge: 1rem;
       --border-btn: 1px;
+
+      /* Tailwind gray scale (light) */
+      --gray-50:  #F9FAFB;
+      --gray-100: #F3F4F6;
+      --gray-200: #E5E7EB;
+      --gray-300: #D1D5DB;
+      --gray-400: #9CA3AF;
+      --gray-500: #6B7280;
+      --gray-600: #4B5563;
+      --gray-700: #374151;
+      --gray-800: #1F2937;
+      --gray-900: #111827;
+
+      /* Neutral surfaces used as raw hex in templates (light) */
+      --surface-page:    #FAFAF9;
+      --surface-sidebar: #F5F4F0;
+      --surface-hover:   #ECEAE4;
+      --surface-card:    #FFFFFF;
+      --surface-border:  #E5E7EB;
+
+      /* Tinted badge/pill backgrounds + their paired text (light) */
+      --tint-blue-bg:   #E6F1FB; --tint-blue-text:   #0C447C;
+      --tint-red-bg:    #FCEBEB; --tint-red-text:    #E24B4A;
+      --tint-amber-bg:  #FAEEDA; --tint-amber-text:  #BA7517; --tint-amber-text-2: #8A5A00;
+      --tint-green-bg:  #EAF3DE; --tint-green-text:  #639922; --tint-green-text-2: #3E9C42; --tint-green-text-3: #2E7D32;
+      --tint-orange-bg-1: #FCE8CC;
+      --tint-orange-bg-2: #FDF1E2;
+      --tint-orange-bg-3: #FDF3E7;
+      --tint-green-bg-2:  #E9F5E9;
+    }
+
+    html[data-theme="dark"] {
+      --b1:  20% 0 0;
+      --b2:  13% 0 0;
+      --b3:  16% 0 0;
+      --bc:  92% 0 0;
+      --p:   62% 0.15 236;
+      --pc:  12% 0 0;
+      --s:   62% 0.15 236;
+      --sc:  12% 0 0;
+      --a:   62% 0.15 236;
+      --ac:  12% 0 0;
+      --n:   85% 0 0;
+      --nc:  15% 0 0;
+      --in:  62% 0.15 236;
+      --inc: 12% 0 0;
+      --su:  65% 0.17 135;
+      --suc: 12% 0 0;
+      --wa:  68% 0.16 65;
+      --wac: 12% 0 0;
+      --er:  62% 0.2 27;
+      --erc: 12% 0 0;
+
+      --gray-50:  #1C1D20;
+      --gray-100: #212226;
+      --gray-200: #2C2D31;
+      --gray-300: #3A3B40;
+      --gray-400: #71727A;
+      --gray-500: #8B8D95;
+      --gray-600: #A6A8B0;
+      --gray-700: #C1C3CA;
+      --gray-800: #DDDEE3;
+      --gray-900: #F3F4F6;
+
+      --surface-page:    #121214;
+      --surface-sidebar: #1A1B1E;
+      --surface-hover:   #26272B;
+      --surface-card:    #1E1F23;
+      --surface-border:  #2C2D31;
+
+      --tint-blue-bg:   #1C3A5C; --tint-blue-text:   #9CC7F2;
+      --tint-red-bg:    #3A1C1C; --tint-red-text:    #F0716F;
+      --tint-amber-bg:  #3A2A10; --tint-amber-text:  #E3A542; --tint-amber-text-2: #D99A3D;
+      --tint-green-bg:  #1E2C14; --tint-green-text:  #8FC93F; --tint-green-text-2: #5FC363; --tint-green-text-3: #66BB6A;
+      --tint-orange-bg-1: #3D2A12;
+      --tint-orange-bg-2: #362711;
+      --tint-orange-bg-3: #362711;
+      --tint-green-bg-2:  #17251A;
     }
 
     /* Sidebar nav links */
@@ -69,22 +159,100 @@
       padding: 0.375rem 0.625rem;
       border-radius: 0.375rem;
       font-size: 0.8125rem;
-      color: #4B5563;
+      color: var(--gray-600);
       text-decoration: none;
       transition: background 0.1s, color 0.1s;
     }
-    .nav-link:hover { background: #ECEAE4; color: #111827; }
-    .nav-link.active { background: #E6F1FB; color: #0C447C; font-weight: 500; }
+    .nav-link:hover { background: var(--surface-hover); color: var(--gray-900); }
+    .nav-link.active { background: var(--tint-blue-bg); color: var(--tint-blue-text); font-weight: 500; }
     .nav-link .ti { font-size: 1rem; width: 1.125rem; text-align: center; flex-shrink: 0; }
 
     /* Global card: thin border, no shadow */
-    .card { box-shadow: none !important; border: 1px solid #E5E7EB; }
+    .card { box-shadow: none !important; border: 1px solid var(--surface-border); }
     /* Inputs: minimal ring */
     .input, .select, .textarea {
-      border-color: #E5E7EB;
-      background-color: #fff;
+      border-color: var(--surface-border);
+      background-color: var(--surface-card);
+      color: var(--gray-900);
     }
-    .input:focus, .select:focus { outline: none; border-color: #378ADD; box-shadow: 0 0 0 2px #E6F1FB; }
+    .input:focus, .select:focus { outline: none; border-color: #378ADD; box-shadow: 0 0 0 2px var(--tint-blue-bg); }
+
+    /*
+     * The rules below retheme Tailwind utilities that templates use directly
+     * (gray-scale text/bg/border/divide, bg-white, and raw hex arbitrary
+     * values like bg-[#FAFAF9]) instead of a semantic color name.
+     *
+     * These can't be handled by remapping the Tailwind config's gray palette
+     * to CSS variables: the CDN's in-browser JIT compiler resolves each
+     * color to a static rgb() at generation time (to support the /opacity
+     * modifier), which bakes in whatever the variable evaluates to at that
+     * moment rather than tracking it live — so config-level var()s silently
+     * freeze at the light-mode value. Overriding the generated utility
+     * classes directly (with !important, since source order vs. Tailwind's
+     * injected stylesheet isn't guaranteed) avoids that.
+     */
+    html[data-theme="dark"] .text-gray-200 { color: var(--gray-200) !important; }
+    html[data-theme="dark"] .text-gray-300 { color: var(--gray-300) !important; }
+    html[data-theme="dark"] .text-gray-400 { color: var(--gray-400) !important; }
+    html[data-theme="dark"] .text-gray-500 { color: var(--gray-500) !important; }
+    html[data-theme="dark"] .text-gray-600 { color: var(--gray-600) !important; }
+    html[data-theme="dark"] .text-gray-700 { color: var(--gray-700) !important; }
+    html[data-theme="dark"] .text-gray-800 { color: var(--gray-800) !important; }
+    html[data-theme="dark"] .text-gray-900 { color: var(--gray-900) !important; }
+    html[data-theme="dark"] .hover\:text-gray-500:hover { color: var(--gray-500) !important; }
+    html[data-theme="dark"] .hover\:text-gray-600:hover { color: var(--gray-600) !important; }
+    html[data-theme="dark"] .hover\:text-gray-700:hover { color: var(--gray-700) !important; }
+    html[data-theme="dark"] .hover\:text-gray-900:hover { color: var(--gray-900) !important; }
+    html[data-theme="dark"] .group:hover .group-hover\:text-gray-500 { color: var(--gray-500) !important; }
+
+    html[data-theme="dark"] .bg-gray-50  { background-color: var(--gray-50) !important; }
+    html[data-theme="dark"] .bg-gray-100 { background-color: var(--gray-100) !important; }
+    html[data-theme="dark"] .bg-gray-200 { background-color: var(--gray-200) !important; }
+    html[data-theme="dark"] .bg-gray-300 { background-color: var(--gray-300) !important; }
+    html[data-theme="dark"] .bg-gray-400 { background-color: var(--gray-400) !important; }
+    html[data-theme="dark"] .bg-gray-900 { background-color: var(--gray-900) !important; }
+    html[data-theme="dark"] .hover\:bg-gray-50:hover  { background-color: var(--gray-50) !important; }
+    html[data-theme="dark"] .hover\:bg-gray-100:hover { background-color: var(--gray-100) !important; }
+    html[data-theme="dark"] .hover\:bg-gray-200:hover { background-color: var(--gray-200) !important; }
+
+    html[data-theme="dark"] .border-gray-50  { border-color: var(--gray-50) !important; }
+    html[data-theme="dark"] .border-gray-100 { border-color: var(--gray-100) !important; }
+    html[data-theme="dark"] .border-gray-200 { border-color: var(--gray-200) !important; }
+    html[data-theme="dark"] .border-gray-300 { border-color: var(--gray-300) !important; }
+    html[data-theme="dark"] .hover\:border-gray-300:hover { border-color: var(--gray-300) !important; }
+    html[data-theme="dark"] .divide-gray-50  > :not([hidden]) ~ :not([hidden]) { border-color: var(--gray-50) !important; }
+    html[data-theme="dark"] .divide-gray-100 > :not([hidden]) ~ :not([hidden]) { border-color: var(--gray-100) !important; }
+
+    html[data-theme="dark"] .bg-white  { background-color: var(--surface-card) !important; }
+    html[data-theme="dark"] .bg-\[\#FAFAF9\]  { background-color: var(--surface-page) !important; }
+    html[data-theme="dark"] .bg-\[\#F5F4F0\]  { background-color: var(--surface-sidebar) !important; }
+    html[data-theme="dark"] .bg-\[\#ECEAE4\]  { background-color: var(--surface-hover) !important; }
+
+    html[data-theme="dark"] .bg-\[\#E6F1FB\]  { background-color: var(--tint-blue-bg) !important; }
+    html[data-theme="dark"] .text-\[\#0C447C\] { color: var(--tint-blue-text) !important; }
+
+    html[data-theme="dark"] .bg-\[\#FCEBEB\]  { background-color: var(--tint-red-bg) !important; }
+    html[data-theme="dark"] .bg-\[\#E24B4A\]  { background-color: var(--tint-red-text) !important; }
+    html[data-theme="dark"] .text-\[\#E24B4A\] { color: var(--tint-red-text) !important; }
+    html[data-theme="dark"] .border-\[\#E24B4A\] { border-color: var(--tint-red-text) !important; }
+
+    html[data-theme="dark"] .bg-\[\#FAEEDA\]  { background-color: var(--tint-amber-bg) !important; }
+    html[data-theme="dark"] .bg-\[\#BA7517\]  { background-color: var(--tint-amber-text) !important; }
+    html[data-theme="dark"] .text-\[\#BA7517\] { color: var(--tint-amber-text) !important; }
+    html[data-theme="dark"] .text-\[\#8A5A00\] { color: var(--tint-amber-text-2) !important; }
+    html[data-theme="dark"] .text-\[\#8A5A0B\] { color: var(--tint-amber-text-2) !important; }
+    html[data-theme="dark"] .bg-\[\#FCE8CC\]  { background-color: var(--tint-orange-bg-1) !important; }
+    html[data-theme="dark"] .bg-\[\#FDF1E2\]  { background-color: var(--tint-orange-bg-2) !important; }
+    html[data-theme="dark"] .bg-\[\#FDF3E7\]  { background-color: var(--tint-orange-bg-3) !important; }
+
+    html[data-theme="dark"] .bg-\[\#EAF3DE\]  { background-color: var(--tint-green-bg) !important; }
+    html[data-theme="dark"] .bg-\[\#639922\]  { background-color: var(--tint-green-text) !important; }
+    html[data-theme="dark"] .text-\[\#639922\] { color: var(--tint-green-text) !important; }
+    html[data-theme="dark"] .bg-\[\#3E9C42\]  { background-color: var(--tint-green-text-2) !important; }
+    html[data-theme="dark"] .text-\[\#3E9C42\] { color: var(--tint-green-text-2) !important; }
+    html[data-theme="dark"] .border-\[\#3E9C42\] { border-color: var(--tint-green-text-2) !important; }
+    html[data-theme="dark"] .text-\[\#2E7D32\] { color: var(--tint-green-text-3) !important; }
+    html[data-theme="dark"] .bg-\[\#E9F5E9\]  { background-color: var(--tint-green-bg-2) !important; }
   </style>
 </head>
 <body class="bg-[#FAFAF9] text-gray-900 antialiased">
@@ -149,6 +317,9 @@
         <a href="/chat" class="nav-link {% if active_page == 'chat' %}active{% endif %}">
           <i class="ti ti-message-circle-2"></i>Chat
         </a>
+        <button id="theme-toggle" type="button" class="nav-link w-full">
+          <i class="ti ti-moon" id="theme-toggle-icon"></i><span id="theme-toggle-label">Dark mode</span>
+        </button>
         <a href="/logout" class="nav-link text-gray-400 hover:text-gray-600">
           <i class="ti ti-logout"></i>Sign out
         </a>
@@ -188,6 +359,37 @@
       });
 
       backdrop.addEventListener('click', closeSidebar);
+    })();
+  </script>
+
+  <script>
+    (function () {
+      var toggle = document.getElementById('theme-toggle');
+      var icon = document.getElementById('theme-toggle-icon');
+      var label = document.getElementById('theme-toggle-label');
+      var root = document.documentElement;
+
+      function applyIcon(theme) {
+        icon.classList.toggle('ti-moon', theme !== 'dark');
+        icon.classList.toggle('ti-sun', theme === 'dark');
+        label.textContent = theme === 'dark' ? 'Light mode' : 'Dark mode';
+      }
+
+      applyIcon(root.getAttribute('data-theme'));
+
+      toggle.addEventListener('click', function () {
+        var next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+        root.setAttribute('data-theme', next);
+        localStorage.setItem('theme', next);
+        applyIcon(next);
+      });
+
+      window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function (e) {
+        if (localStorage.getItem('theme')) return;
+        var theme = e.matches ? 'dark' : 'light';
+        root.setAttribute('data-theme', theme);
+        applyIcon(theme);
+      });
     })();
   </script>
 

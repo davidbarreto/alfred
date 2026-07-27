@@ -152,6 +152,29 @@ class TestStart:
         create_turn_kwargs = parts["thread_repo"].create_turn.call_args.kwargs
         assert create_turn_kwargs["is_audio"] is True
 
+    async def test_opening_falls_back_to_text_when_tts_fails(self):
+        parts = _make_service()
+        parts["pronunciation_service"].get_audio = AsyncMock(side_effect=RuntimeError("no audio content"))
+        parts["track_repo"].get_track = AsyncMock(return_value=_make_track())
+        parts["thread_repo"].create_thread = AsyncMock(return_value=_make_thread(voice_reply=True))
+        parts["message_service"].get = AsyncMock(return_value=MagicMock(session_id=5))
+        parts["llm_provider"].complete = AsyncMock(
+            return_value=LlmResponse(text="Bonjour!", tokens_input=10, tokens_output=8)
+        )
+
+        with patch("app.features.language.conversation.service.create_llm_call", AsyncMock()):
+            result = await parts["service"].start(
+                track_id=1, message_id=42, mode="roleplay", scenario="Ordering coffee", voice_reply=True
+            )
+
+        assert result.opening_text == "Bonjour!"
+        assert result.opening_audio_ref is None
+        assert result.opening_audio_base64 is None
+        parts["audio_storage"].save.assert_not_awaited()
+        create_turn_kwargs = parts["thread_repo"].create_turn.call_args.kwargs
+        assert create_turn_kwargs["is_audio"] is False
+        assert create_turn_kwargs["audio_ref"] is None
+
 
     async def test_free_conversation_opens_without_a_line(self):
         parts = _make_service()
@@ -317,6 +340,24 @@ class TestRecordAudioTurn:
 
         assert result.reply_audio_base64 is not None
         parts["pronunciation_service"].get_audio.assert_awaited_once()
+
+    async def test_turn_falls_back_to_text_when_tts_fails(self):
+        parts = _make_service()
+        parts["pronunciation_service"].get_audio = AsyncMock(side_effect=RuntimeError("no audio content"))
+        thread = _make_thread(voice_reply=True)
+        parts["thread_repo"].get_thread = AsyncMock(return_value=thread)
+        parts["track_repo"].get_track = AsyncMock(return_value=_make_track())
+        parts["thread_repo"].get_turns_with_messages = AsyncMock(return_value=[])
+        parts["conversation_provider"].reply_audio = AsyncMock(return_value=_make_result())
+
+        with patch("app.features.language.conversation.service.create_llm_call", AsyncMock()):
+            result = await parts["service"].record_audio_turn(thread_id=10, audio=b"raw-audio")
+
+        assert result.response == "Bien sur! Autre chose?"
+        assert result.reply_audio_base64 is None
+        assistant_turn_kwargs = parts["thread_repo"].create_turn.call_args.kwargs
+        assert assistant_turn_kwargs["is_audio"] is False
+        assert assistant_turn_kwargs["audio_ref"] is None
 
     async def test_tone_styles_the_synthesized_reply(self):
         parts = _make_service()

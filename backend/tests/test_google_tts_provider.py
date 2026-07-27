@@ -42,6 +42,33 @@ class TestGetAudio:
         assert call_kwargs["config"].response_modalities == ["AUDIO"]
 
     @pytest.mark.asyncio
+    async def test_raises_clear_error_when_candidate_content_is_empty(self):
+        with patch("app.integrations.google.tts_provider.genai.Client") as mock_client_cls:
+            mock_client = MagicMock()
+            resp = MagicMock()
+            resp.candidates[0].content = None
+            resp.candidates[0].finish_reason = "SAFETY"
+            mock_client.aio.models.generate_content = AsyncMock(return_value=resp)
+            mock_client_cls.return_value = mock_client
+
+            provider = GoogleTtsProvider(api_key="test-key", model_name="gemini-2.5-flash-tts", voice_name="Enceladus")
+            with pytest.raises(RuntimeError, match="no audio content"):
+                await provider.get_audio("some text", "fr")
+
+    @pytest.mark.asyncio
+    async def test_raises_clear_error_when_no_candidates(self):
+        with patch("app.integrations.google.tts_provider.genai.Client") as mock_client_cls:
+            mock_client = MagicMock()
+            resp = MagicMock()
+            resp.candidates = []
+            mock_client.aio.models.generate_content = AsyncMock(return_value=resp)
+            mock_client_cls.return_value = mock_client
+
+            provider = GoogleTtsProvider(api_key="test-key", model_name="gemini-2.5-flash-tts", voice_name="Enceladus")
+            with pytest.raises(RuntimeError, match="no audio content"):
+                await provider.get_audio("some text", "fr")
+
+    @pytest.mark.asyncio
     async def test_wraps_pcm_in_valid_wav_container(self):
         pcm = b"\x01\x02\x03\x04"
         with patch("app.integrations.google.tts_provider.genai.Client") as mock_client_cls:

@@ -55,7 +55,19 @@ class GoogleTtsProvider:
                 ),
             ),
         )
-        pcm = response.candidates[0].content.parts[0].inline_data.data
+        candidate = response.candidates[0] if response.candidates else None
+        if candidate is None or candidate.content is None:
+            # Seen with no explicit API error: the model apparently tried to respond to the
+            # text as a chat prompt instead of voicing it, and the candidate comes back empty
+            # rather than raising. finish_reason/prompt_feedback carry the closest thing to why.
+            logger.error(
+                "Gemini TTS returned no content: lang=%s text_len=%d finish_reason=%s prompt_feedback=%s",
+                lang, len(text),
+                candidate.finish_reason if candidate else None,
+                response.prompt_feedback,
+            )
+            raise RuntimeError("Gemini TTS returned no audio content")
+        pcm = candidate.content.parts[0].inline_data.data
         logger.debug(
             "Gemini TTS synthesized: lang=%s voice=%s text_len=%d pcm_bytes=%d",
             lang, self._voice_name, len(text), len(pcm),

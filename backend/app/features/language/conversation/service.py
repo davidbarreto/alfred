@@ -137,9 +137,16 @@ class ConversationService:
 
     async def _synthesize_and_save(
         self, text: str, track_code: str, tone: str | None = None
-    ) -> tuple[bytes, str]:
+    ) -> tuple[bytes | None, str | None]:
+        """Best-effort: voice replies are a nice-to-have on top of the text reply, which has
+        already succeeded by the time this runs. A synthesis failure shouldn't take the whole
+        turn down with it — fall back to text-only instead."""
         tts_text = styled_for_tts(text, tone)
-        audio, _ = await self._pronunciation_service.get_audio(tts_text, track_code, audio_format="ogg")
+        try:
+            audio, _ = await self._pronunciation_service.get_audio(tts_text, track_code, audio_format="ogg")
+        except Exception as exc:
+            logger.error("Conversation: TTS synthesis failed track_code=%s error=%s", track_code, exc)
+            return None, None
         audio_ref = f"conversation/{uuid4()}.ogg"
         await self._audio_storage.save(audio, audio_ref)
         return audio, audio_ref
@@ -200,11 +207,12 @@ class ConversationService:
             )
             if voice_reply:
                 opening_audio, opening_audio_ref = await self._synthesize_and_save(opening_text, track.code)
-                opening_audio_base64 = base64.b64encode(opening_audio).decode("ascii")
+                if opening_audio is not None:
+                    opening_audio_base64 = base64.b64encode(opening_audio).decode("ascii")
             await self._thread_repo.create_turn(
                 thread_id=thread.id,
                 message_id=message.id,
-                is_audio=bool(voice_reply),
+                is_audio=opening_audio_ref is not None,
                 audio_ref=opening_audio_ref,
                 tip=None,
             )
@@ -411,7 +419,7 @@ class ConversationService:
         await self._thread_repo.create_turn(
             thread_id=thread.id,
             message_id=assistant_message.id,
-            is_audio=bool(thread.voice_reply),
+            is_audio=reply_audio_ref is not None,
             audio_ref=reply_audio_ref,
             tip=None,
         )

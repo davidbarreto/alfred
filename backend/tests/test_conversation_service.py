@@ -56,6 +56,7 @@ def _make_result(**kwargs) -> ConversationTurnResult:
         tokens_input=kwargs.get("tokens_input", 50),
         tokens_output=kwargs.get("tokens_output", 20),
         tone=kwargs.get("tone"),
+        finish_reason=kwargs.get("finish_reason", "STOP"),
     )
 
 
@@ -136,6 +137,22 @@ class TestStart:
         create_turn_kwargs = parts["thread_repo"].create_turn.call_args.kwargs
         assert create_turn_kwargs["is_audio"] is False
         assert create_turn_kwargs["audio_ref"] is None
+
+    async def test_opening_logs_finish_reason_to_llm_calls(self):
+        parts = _make_service()
+        parts["track_repo"].get_track = AsyncMock(return_value=_make_track())
+        parts["thread_repo"].create_thread = AsyncMock(return_value=_make_thread())
+        parts["message_service"].get = AsyncMock(return_value=MagicMock(session_id=5))
+        parts["llm_provider"].complete = AsyncMock(
+            return_value=LlmResponse(text="Bonjour!", tokens_input=10, tokens_output=8, finish_reason="MAX_TOKENS")
+        )
+
+        with patch("app.features.language.conversation.service.create_llm_call", AsyncMock()) as mock_log:
+            await parts["service"].start(
+                track_id=1, message_id=42, mode="roleplay", scenario="Ordering coffee", voice_reply=False
+            )
+
+        assert mock_log.call_args.kwargs["finish_reason"] == "MAX_TOKENS"
 
     async def test_voice_reply_synthesizes_opening_audio(self):
         parts = _make_service()
@@ -332,6 +349,7 @@ class TestRecordAudioTurn:
         log_kwargs = mock_log.call_args.kwargs
         assert log_kwargs["is_audio"] is True
         assert log_kwargs["feature"] == "conversation_roleplay"
+        assert log_kwargs["finish_reason"] == "STOP"
 
     async def test_voice_reply_synthesizes_assistant_audio(self):
         parts = _make_service()
@@ -565,6 +583,25 @@ class TestEnd:
         assert "Un cafe" in prompt_text
         assert "Watch your 'r'" in prompt_text
         assert "Ordering coffee" in prompt_text
+
+    async def test_summary_logs_finish_reason_to_llm_calls(self):
+        parts = _make_service()
+        parts["thread_repo"].get_thread = AsyncMock(return_value=_make_thread())
+        parts["track_repo"].get_track = AsyncMock(return_value=_make_track())
+        parts["thread_repo"].get_turns_with_messages = AsyncMock(return_value=[
+            _make_turn("assistant", "Bonjour!"),
+            _make_turn("user", "Un cafe"),
+        ])
+        parts["llm_provider"].complete = AsyncMock(
+            return_value=LlmResponse(
+                text=_summary_json("Great effort!"), tokens_input=30, tokens_output=15, finish_reason="SAFETY"
+            )
+        )
+
+        with patch("app.features.language.conversation.service.create_llm_call", AsyncMock()) as mock_log:
+            await parts["service"].end(thread_id=10)
+
+        assert mock_log.call_args.kwargs["finish_reason"] == "SAFETY"
 
     async def test_text_turns_feed_the_summary(self):
         # A fully typed roleplay: every turn is still a tracked ConversationTurn, so the

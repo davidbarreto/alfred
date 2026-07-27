@@ -20,6 +20,7 @@ class ConversationTurnResult:
     tokens_input: int | None
     tokens_output: int | None
     tone: str | None = None
+    finish_reason: str | None = None
 
 
 class ConversationProvider(Protocol):

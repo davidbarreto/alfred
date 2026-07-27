@@ -83,6 +83,11 @@ class GoogleConversationProvider:
         )
         raw_response = response.text or ""
         usage = response.usage_metadata
+        finish_reason = (
+            str(response.candidates[0].finish_reason.name)
+            if response.candidates and response.candidates[0].finish_reason
+            else None
+        )
         parsed = _parse_response(raw_response)
         return ConversationTurnResult(
             # A text turn needs no transcription — the user's own words are the transcript.
@@ -93,6 +98,7 @@ class GoogleConversationProvider:
             tokens_input=usage.prompt_token_count if usage else None,
             tokens_output=usage.candidates_token_count if usage else None,
             tone=parsed.get("tone") or None,
+            finish_reason=finish_reason,
         )
 
     async def reply_audio(

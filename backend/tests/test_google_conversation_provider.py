@@ -6,11 +6,14 @@ import pytest
 from app.integrations.google.conversation_provider import GoogleConversationProvider
 
 
-def _mock_response(payload: dict, tokens_input: int = 100, tokens_output: int = 50) -> MagicMock:
+def _mock_response(
+    payload: dict, tokens_input: int = 100, tokens_output: int = 50, finish_reason: str = "STOP"
+) -> MagicMock:
     resp = MagicMock()
     resp.text = json.dumps(payload)
     resp.usage_metadata.prompt_token_count = tokens_input
     resp.usage_metadata.candidates_token_count = tokens_output
+    resp.candidates[0].finish_reason.name = finish_reason
     return resp
 
 
@@ -106,6 +109,21 @@ class TestReply:
             result = await provider.reply_audio(history=[], current_audio=b"x", mime_type="audio/ogg", system="sys")
 
         assert result.tone == "cheerful"
+
+    @pytest.mark.asyncio
+    async def test_captures_finish_reason(self):
+        payload = {"transcript": "Un cafe", "reply": "Bien sur!", "tip": None}
+        with patch("app.integrations.google.conversation_provider.genai.Client") as mock_client_cls:
+            mock_client = MagicMock()
+            mock_client.aio.models.generate_content = AsyncMock(
+                return_value=_mock_response(payload, finish_reason="MAX_TOKENS")
+            )
+            mock_client_cls.return_value = mock_client
+
+            provider = GoogleConversationProvider(api_key="test-key", model_name="gemini-2.5-flash")
+            result = await provider.reply_audio(history=[], current_audio=b"x", mime_type="audio/ogg", system="sys")
+
+        assert result.finish_reason == "MAX_TOKENS"
 
     @pytest.mark.asyncio
     async def test_missing_tone_becomes_none(self):

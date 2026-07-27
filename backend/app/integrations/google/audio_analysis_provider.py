@@ -11,6 +11,23 @@ from app.shared.audio import PronunciationAnalysis, PronunciationAnalysisResult
 
 logger = logging.getLogger(__name__)
 
+# response_mime_type alone only prompts the model to *format* its answer as JSON; without a
+# schema it can still emit syntactically invalid JSON (e.g. unescaped quotes inside a string
+# value — seen in production for the conversation feature's own JSON contract). response_schema
+# switches Gemini to grammar-constrained decoding, which guarantees valid JSON.
+_ANALYSIS_RESPONSE_SCHEMA = types.Schema(
+    type="OBJECT",
+    properties={
+        "transcription": types.Schema(type="STRING"),
+        "score": types.Schema(type="NUMBER"),
+        "summary": types.Schema(type="STRING"),
+        "strengths": types.Schema(type="ARRAY", items=types.Schema(type="STRING")),
+        "issues": types.Schema(type="ARRAY", items=types.Schema(type="STRING")),
+        "tip": types.Schema(type="STRING"),
+    },
+    required=["transcription", "score", "summary"],
+)
+
 
 class GoogleAudioAnalysisProvider:
     """AudioAnalysisProvider implementation backed by Google Gemini via google-genai SDK."""
@@ -44,7 +61,10 @@ class GoogleAudioAnalysisProvider:
                 types.Part.from_bytes(data=audio, mime_type=mime_type),
                 prompt,
             ],
-            config=types.GenerateContentConfig(response_mime_type="application/json"),
+            config=types.GenerateContentConfig(
+                response_mime_type="application/json",
+                response_schema=_ANALYSIS_RESPONSE_SCHEMA,
+            ),
         )
         raw_response = response.text or ""
         usage = response.usage_metadata

@@ -5,7 +5,10 @@ _GUIDANCE: dict[str, str] = {
         "David knows essentially no {language_name} yet. Keep it to very short, simple phrases "
         "he can repeat or recognize, translate key words in parentheses, and don't expect "
         "free-form replies. Pick the phrase/vocabulary to fit whatever topic or scenario is "
-        "given rather than defaulting to generic greetings."
+        "given rather than defaulting to generic greetings. After he repeats or answers, briefly "
+        "confirm whether he got it right, then always hand him exactly one new short phrase or "
+        "question to try next — keep this repeat-and-confirm drill going every turn, don't drift "
+        "into free-flowing conversation just because he got one right."
     ),
     "A1": "Keep vocabulary and grammar very basic: short sentences, present tense, everyday words.",
     "A2": "Keep sentences short and grammar simple; everyday vocabulary, mostly present/past tense.",

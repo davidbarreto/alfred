@@ -246,6 +246,9 @@ class TestStart:
         assert result.opening_audio_base64 == base64.b64encode(b"tts-bytes").decode("ascii")
         parts["thread_repo"].create_turn.assert_awaited_once()
 
+        tts_text = parts["pronunciation_service"].get_audio.call_args.args[0]
+        assert "Speak slowly and clearly, at a pace a total beginner can follow." in tts_text
+
     async def test_free_conversation_at_a0_falls_back_to_track_level(self):
         parts = _make_service()
         parts["track_repo"].get_track = AsyncMock(return_value=_make_track(level="A0"))
@@ -366,6 +369,34 @@ class TestRecordAudioTurn:
 
         assert result.reply_audio_base64 is not None
         parts["pronunciation_service"].get_audio.assert_awaited_once()
+
+    async def test_a0_turn_reply_synthesized_with_slow_pace(self):
+        parts = _make_service()
+        thread = _make_thread(voice_reply=True, level_override="A0")
+        parts["thread_repo"].get_thread = AsyncMock(return_value=thread)
+        parts["track_repo"].get_track = AsyncMock(return_value=_make_track())
+        parts["thread_repo"].get_turns_with_messages = AsyncMock(return_value=[])
+        parts["conversation_provider"].reply_audio = AsyncMock(return_value=_make_result())
+
+        with patch("app.features.language.conversation.service.create_llm_call", AsyncMock()):
+            await parts["service"].record_audio_turn(thread_id=10, audio=b"raw-audio")
+
+        tts_text = parts["pronunciation_service"].get_audio.call_args.args[0]
+        assert "Speak slowly and clearly, at a pace a total beginner can follow." in tts_text
+
+    async def test_non_a0_turn_reply_not_slowed(self):
+        parts = _make_service()
+        thread = _make_thread(voice_reply=True)
+        parts["thread_repo"].get_thread = AsyncMock(return_value=thread)
+        parts["track_repo"].get_track = AsyncMock(return_value=_make_track(level="A1"))
+        parts["thread_repo"].get_turns_with_messages = AsyncMock(return_value=[])
+        parts["conversation_provider"].reply_audio = AsyncMock(return_value=_make_result())
+
+        with patch("app.features.language.conversation.service.create_llm_call", AsyncMock()):
+            await parts["service"].record_audio_turn(thread_id=10, audio=b"raw-audio")
+
+        tts_text = parts["pronunciation_service"].get_audio.call_args.args[0]
+        assert "Speak slowly" not in tts_text
 
     async def test_successful_tts_synthesis_is_logged_to_llm_calls(self):
         parts = _make_service()

@@ -101,7 +101,9 @@ class TranscriptionProvider(Protocol):
     async def transcribe(self, audio: bytes, mime_type: str) -> TranscriptionResult: ...
 
 
-def styled_for_tts(text: str, tone: str | None, language_name: str | None = None) -> str:
+def styled_for_tts(
+    text: str, tone: str | None, language_name: str | None = None, slow: bool = False
+) -> str:
     """Prefix text with a natural-language delivery instruction a style-steerable TTS
     provider can act on (it speaks only `text`, not the instruction itself).
 
@@ -116,8 +118,12 @@ def styled_for_tts(text: str, tone: str | None, language_name: str | None = None
     pitch per tone word (occasionally reading as a different speaker entirely), and
     outright dropping English asides — e.g. parenthetical translations in A0 replies —
     instead of voicing them, which left bilingual replies audibly missing the English
-    half entirely rather than just mispronouncing it."""
+    half entirely rather than just mispronouncing it.
+
+    `slow` asks for a beginner-friendly pace (used for CEFR A0, where David is hearing
+    the target language for close to the first time)."""
     delivery = f"in a {tone} tone" if tone else "exactly as written"
+    pace_note = " Speak slowly and clearly, at a pace a total beginner can follow." if slow else ""
     mix_note = (
         f" This text mixes English and {language_name} — read every single word of both "
         f"languages aloud, in order, pronouncing each natively; do not skip, omit, or "
@@ -128,7 +134,7 @@ def styled_for_tts(text: str, tone: str | None, language_name: str | None = None
     return (
         f"Say {delivery}, in the same steady voice and pitch throughout — vary only energy "
         f"and pacing for the tone, never the pitch or voice itself. Read the entire text "
-        f"below verbatim, word for word, omitting nothing.{mix_note} Text: {text}"
+        f"below verbatim, word for word, omitting nothing.{pace_note}{mix_note} Text: {text}"
     )
 
 

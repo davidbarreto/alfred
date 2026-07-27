@@ -37,3 +37,11 @@ class TestStyledForTts:
     def test_language_name_forbids_omitting_parenthetical_asides(self):
         result = styled_for_tts("Привет (Hi)", "cheerful", language_name="Russian")
         assert "do not skip, omit, or summarize any part of it, including anything in parentheses" in result
+
+    def test_slow_adds_a_beginner_pace_note(self):
+        result = styled_for_tts("hello there", None, slow=True)
+        assert "Speak slowly and clearly, at a pace a total beginner can follow." in result
+
+    def test_not_slow_by_default(self):
+        result = styled_for_tts("hello there", None)
+        assert "Speak slowly" not in result

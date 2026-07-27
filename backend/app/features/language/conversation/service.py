@@ -136,14 +136,19 @@ class ConversationService:
         ]
 
     async def _synthesize_and_save(
-        self, text: str, track_code: str, tone: str | None = None, language_name: str | None = None
+        self,
+        text: str,
+        track_code: str,
+        tone: str | None = None,
+        language_name: str | None = None,
+        slow: bool = False,
     ) -> tuple[bytes | None, str | None]:
         """Best-effort: voice replies are a nice-to-have on top of the text reply, which has
         already succeeded by the time this runs. A synthesis failure shouldn't take the whole
         turn down with it — fall back to text-only instead. Every attempt (success or failure)
         is logged to llm_calls, same as the text-generation call, so TTS issues are queryable
         the same way instead of only visible in container logs."""
-        tts_text = styled_for_tts(text, tone, language_name)
+        tts_text = styled_for_tts(text, tone, language_name, slow)
         t0 = time.monotonic()
         try:
             result, _ = await self._pronunciation_service.get_audio(tts_text, track_code, audio_format="ogg")
@@ -237,7 +242,10 @@ class ConversationService:
             )
             if voice_reply:
                 opening_audio, opening_audio_ref = await self._synthesize_and_save(
-                    opening_text, track.code, language_name=track.name
+                    opening_text,
+                    track.code,
+                    language_name=track.name,
+                    slow=effective_level == _BEGINNER_LEVEL,
                 )
                 if opening_audio is not None:
                     opening_audio_base64 = base64.b64encode(opening_audio).decode("ascii")
@@ -438,8 +446,9 @@ class ConversationService:
         reply_audio: bytes | None = None
         reply_audio_ref: str | None = None
         if thread.voice_reply:
+            cefr_level = self._effective_level(thread.level_override, track)
             reply_audio, reply_audio_ref = await self._synthesize_and_save(
-                result.reply, track.code, result.tone, track.name
+                result.reply, track.code, result.tone, track.name, slow=cefr_level == _BEGINNER_LEVEL
             )
 
         assistant_message = await self._message_service.create(

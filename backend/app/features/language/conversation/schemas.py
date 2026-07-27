@@ -23,9 +23,13 @@ class ConversationStartRead(BaseModel):
     thread_id: int
     track_code: str
     language_name: str
-    # Only roleplay opens with a line; free conversation waits for the user to speak first.
+    # Roleplay always opens with a line; free conversation only does at A0, where David
+    # has no scaffolding to start from otherwise.
     opening_text: str | None = None
     opening_audio_ref: str | None = None
+    # Populated alongside opening_audio_ref when voice_reply is set, so n8n can send the
+    # opening as a voice message the same way it does for later turns (reply_audio_base64).
+    opening_audio_base64: str | None = None
 
 
 class ConversationTextTurnCreate(BaseModel):

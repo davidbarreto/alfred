@@ -1845,6 +1845,89 @@
                 }
             },
             "onError": "continueErrorOutput"
+        },
+        {
+            "parameters": {
+                "conditions": {
+                    "options": {
+                        "caseSensitive": true,
+                        "leftValue": "",
+                        "typeValidation": "strict",
+                        "version": 3
+                    },
+                    "conditions": [
+                        {
+                            "id": "6b6f6a9a-9f2b-4a34-8c53-6a2c9a1f4d10",
+                            "leftValue": "={{ !!$json.result.opening_audio_base64 }}",
+                            "rightValue": true,
+                            "operator": {
+                                "type": "boolean",
+                                "operation": "equals"
+                            }
+                        }
+                    ],
+                    "combinator": "and"
+                },
+                "options": {}
+            },
+            "type": "n8n-nodes-base.if",
+            "typeVersion": 2.3,
+            "position": [
+                2528,
+                700
+            ],
+            "id": "9a2c6e3d-4b1f-4a7e-9d5c-2f8b6a1e3c70",
+            "name": "Has Opening Audio"
+        },
+        {
+            "parameters": {
+                "operation": "toBinary",
+                "sourceProperty": "result.opening_audio_base64",
+                "binaryPropertyName": "audio",
+                "options": {
+                    "mimeType": "audio/ogg",
+                    "fileName": "opening.ogg"
+                }
+            },
+            "type": "n8n-nodes-base.convertToFile",
+            "typeVersion": 1.1,
+            "position": [
+                2704,
+                700
+            ],
+            "id": "4d1e7a5c-8f3b-4a2d-9e6c-1b7d5a3f9c40",
+            "name": "Convert Opening Audio to Binary"
+        },
+        {
+            "parameters": {
+                "method": "POST",
+                "url": "=https://api.telegram.org/bot{{ $env.TELEGRAM_BOT_TOKEN }}/sendVoice",
+                "sendBody": true,
+                "contentType": "multipart-form-data",
+                "bodyParameters": {
+                    "parameters": [
+                        {
+                            "name": "chat_id",
+                            "value": "={{ $('Message Trigger').item.json.message?.chat?.id?.toString() || $('Message Trigger').item.json.callback_query?.message?.chat?.id?.toString() }}"
+                        },
+                        {
+                            "name": "voice",
+                            "parameterType": "formBinaryData",
+                            "inputDataFieldName": "audio"
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "type": "n8n-nodes-base.httpRequest",
+            "typeVersion": 4.4,
+            "position": [
+                2880,
+                700
+            ],
+            "id": "7c3f9b2e-6a4d-4c1f-8b5e-3d9a7c2f6e80",
+            "name": "Send Opening Voice",
+            "onError": "continueErrorOutput"
         }
     ],
     "pinData": {},
@@ -1944,6 +2027,11 @@
                 [
                     {
                         "node": "Decide Lang Flow",
+                        "type": "main",
+                        "index": 0
+                    },
+                    {
+                        "node": "Has Opening Audio",
                         "type": "main",
                         "index": 0
                     }
@@ -2603,6 +2691,41 @@
             ]
         },
         "Send Shadowing Summary": {
+            "main": [
+                [],
+                [
+                    {
+                        "node": "Set Error Message",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Has Opening Audio": {
+            "main": [
+                [
+                    {
+                        "node": "Convert Opening Audio to Binary",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                []
+            ]
+        },
+        "Convert Opening Audio to Binary": {
+            "main": [
+                [
+                    {
+                        "node": "Send Opening Voice",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Send Opening Voice": {
             "main": [
                 [],
                 [

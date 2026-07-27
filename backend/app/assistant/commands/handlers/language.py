@@ -201,9 +201,12 @@ async def _handle_start_conversation(
     }
     if mode == "roleplay":
         result["scenario"] = scenario_or_topic
-        result["opening_text"] = start.opening_text
     else:
         result["topic"] = scenario_or_topic or None
+    # Roleplay always has an opening line; free conversation only does at A0.
+    if start.opening_text is not None:
+        result["opening_text"] = start.opening_text
+        result["opening_audio_base64"] = start.opening_audio_base64
     return result
 
 

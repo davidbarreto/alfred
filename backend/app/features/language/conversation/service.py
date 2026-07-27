@@ -179,6 +179,7 @@ class ConversationService:
         effective_level = self._effective_level(level_override, track)
         opening_text: str | None = None
         opening_audio_ref: str | None = None
+        opening_audio_base64: str | None = None
         if mode == "roleplay":
             opening_text = await self._generate_opening(
                 track_id, track.name, scenario or "", effective_level
@@ -198,11 +199,12 @@ class ConversationService:
                 )
             )
             if voice_reply:
-                _, opening_audio_ref = await self._synthesize_and_save(opening_text, track.code)
+                opening_audio, opening_audio_ref = await self._synthesize_and_save(opening_text, track.code)
+                opening_audio_base64 = base64.b64encode(opening_audio).decode("ascii")
             await self._thread_repo.create_turn(
                 thread_id=thread.id,
                 message_id=message.id,
-                is_audio=False,
+                is_audio=bool(voice_reply),
                 audio_ref=opening_audio_ref,
                 tip=None,
             )
@@ -217,6 +219,7 @@ class ConversationService:
             language_name=track.name,
             opening_text=opening_text,
             opening_audio_ref=opening_audio_ref,
+            opening_audio_base64=opening_audio_base64,
         )
 
     async def _generate_opening(self, track_id: int, language_name: str, scenario: str, cefr_level: str) -> str:

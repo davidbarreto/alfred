@@ -1,3 +1,4 @@
+import base64
 import json
 from datetime import datetime, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -144,7 +145,10 @@ class TestStart:
 
         parts["pronunciation_service"].get_audio.assert_awaited_once_with("Bonjour!", "fr", audio_format="ogg")
         assert result.opening_audio_ref is not None
+        assert result.opening_audio_base64 == base64.b64encode(b"tts-bytes").decode("ascii")
         parts["audio_storage"].save.assert_awaited_once()
+        create_turn_kwargs = parts["thread_repo"].create_turn.call_args.kwargs
+        assert create_turn_kwargs["is_audio"] is True
 
 
     async def test_free_conversation_opens_without_a_line(self):
@@ -189,6 +193,7 @@ class TestStart:
         assert "total beginner" in opening_prompt
         assert "Topic: food." in opening_prompt
         assert result.opening_text == "Let's practice! Try saying 'Bonjour' (Hello)."
+        assert result.opening_audio_base64 == base64.b64encode(b"tts-bytes").decode("ascii")
         parts["thread_repo"].create_turn.assert_awaited_once()
 
     async def test_free_conversation_at_a0_falls_back_to_track_level(self):

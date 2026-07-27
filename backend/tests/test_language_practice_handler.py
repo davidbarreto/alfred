@@ -794,7 +794,8 @@ class TestParseConversationArgs:
 def _make_conversation_service(**kwargs):
     service = AsyncMock()
     start_result = kwargs.get("start_result") or MagicMock(
-        thread_id=99, track_code="fr", language_name="French", opening_text="Bonjour!", opening_audio_ref=None,
+        thread_id=99, track_code="fr", language_name="French", opening_text="Bonjour!",
+        opening_audio_ref=None, opening_audio_base64=None,
     )
     service.start = AsyncMock(return_value=start_result)
     end_result = kwargs.get("end_result") or MagicMock(tip="Great job!", turn_count=3)
@@ -861,6 +862,41 @@ class TestHandleStartConversation:
         assert result["mode"] == "roleplay"
         assert result["thread_id"] == 99
         assert result["opening_text"] == "Bonjour!"
+        assert result["opening_audio_base64"] is None
+
+    async def test_roleplay_forwards_opening_audio_when_present(self):
+        track_svc, chunk_svc, wm_svc = _make_services()
+        start_result = MagicMock(
+            thread_id=99, track_code="fr", language_name="French",
+            opening_text="Bonjour!", opening_audio_ref="conversation/x.ogg", opening_audio_base64="AUDIO_B64",
+        )
+        conversation_svc = _make_conversation_service(start_result=start_result)
+
+        result = await handle_language(
+            "conversation", {"language_code": "fr", "rest": "roleplay ordering coffee"},
+            track_svc, chunk_svc, wm_svc,
+            conversation_service=conversation_svc, message_id=7,
+        )
+
+        assert result["opening_audio_base64"] == "AUDIO_B64"
+
+    async def test_free_conversation_without_opening_omits_opening_fields(self):
+        # Non-A0 free conversation: the service returns no opening line at all.
+        track_svc, chunk_svc, wm_svc = _make_services()
+        start_result = MagicMock(
+            thread_id=99, track_code="fr", language_name="French",
+            opening_text=None, opening_audio_ref=None, opening_audio_base64=None,
+        )
+        conversation_svc = _make_conversation_service(start_result=start_result)
+
+        result = await handle_language(
+            "conversation", {"language_code": "fr", "rest": "talking about food"},
+            track_svc, chunk_svc, wm_svc,
+            conversation_service=conversation_svc, message_id=1,
+        )
+
+        assert "opening_text" not in result
+        assert "opening_audio_base64" not in result
 
     async def test_roleplay_with_level_override(self):
         track_svc, chunk_svc, wm_svc = _make_services()

@@ -67,6 +67,7 @@ def _make_llm_provider(text: str = _ENRICHMENT_JSON):
     response.text = text
     response.tokens_input = 20
     response.tokens_output = 10
+    response.finish_reason = "STOP"
     provider.complete = AsyncMock(return_value=response)
     return provider
 
@@ -327,6 +328,17 @@ class TestForcePracticeChunks:
         assert created.status == "active"
         assert created.frequency_source == "user_requested"
         assert created.cefr_level == "A1"
+
+    async def test_logs_finish_reason_to_llm_calls(self, service):
+        service._llm_provider = _make_llm_provider()
+        service._track_repo.get_track.return_value = _make_track_orm()
+        service._repo.get_chunk_by_text.return_value = None
+        service._repo.create_chunk.return_value = _make_chunk_orm(text="chien", translation="dog")
+
+        with patch("app.features.language.chunks.service.create_llm_call", AsyncMock()) as mock_log:
+            await service.force_practice_chunks(1, ["chien"])
+
+        assert mock_log.call_args.kwargs["finish_reason"] == "STOP"
 
     async def test_missing_cefr_level_falls_back_to_track_level(self, service):
         service._llm_provider = _make_llm_provider(

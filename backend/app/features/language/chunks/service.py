@@ -271,6 +271,7 @@ class ChunkService:
             response=llm_response.text,
             tokens_input=llm_response.tokens_input,
             tokens_output=llm_response.tokens_output,
+            finish_reason=llm_response.finish_reason,
             latency_ms=latency_ms,
         )
 

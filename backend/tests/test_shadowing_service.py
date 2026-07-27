@@ -37,6 +37,7 @@ def _make_analysis_result(**kwargs) -> PronunciationAnalysisResult:
         raw_response=kwargs.get("raw_response", '{"score": 85}'),
         tokens_input=kwargs.get("tokens_input", 100),
         tokens_output=kwargs.get("tokens_output", 50),
+        finish_reason=kwargs.get("finish_reason", "STOP"),
     )
 
 
@@ -114,6 +115,7 @@ class TestRecordShadowingWithAudio:
         assert log_call.kwargs["response"] == '{"score": 85}'
         assert log_call.kwargs["tokens_input"] == 100
         assert log_call.kwargs["tokens_output"] == 50
+        assert log_call.kwargs["finish_reason"] == "STOP"
         assert log_call.kwargs["latency_ms"] >= 0
 
     @pytest.mark.asyncio

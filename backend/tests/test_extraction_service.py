@@ -1,6 +1,6 @@
 import json
 import pytest
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 from app.assistant.intents.extraction_service import (
     AddShoppingItemArgs,
@@ -35,6 +35,21 @@ class TestExtractArgs:
         provider = _make_provider("{}")
         result = await extract_args("unknown", "tell me a joke", llm_provider=provider)
         assert result == {}
+
+    async def test_logs_finish_reason_when_session_given(self):
+        payload = json.dumps({"title": "Buy milk", "due_date": None, "priority": None, "recurrence": None})
+        provider = MagicMock()
+        provider.provider = "google"
+        provider.model = "gemini-2.0-flash"
+        provider.complete = AsyncMock(
+            return_value=LlmResponse(text=payload, tokens_input=10, tokens_output=5, finish_reason="MAX_TOKENS")
+        )
+        session = AsyncMock()
+
+        with patch("app.assistant.intents.extraction_service.create_llm_call", AsyncMock()) as mock_log:
+            await extract_args("task.add", "Buy milk", llm_provider=provider, session=session)
+
+        assert mock_log.call_args.kwargs["finish_reason"] == "MAX_TOKENS"
 
     async def test_task_add_returns_create_task_args(self):
         payload = json.dumps({"title": "Buy milk", "due_date": "tomorrow", "priority": "high", "recurrence": None})

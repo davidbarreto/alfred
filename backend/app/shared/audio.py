@@ -49,6 +49,7 @@ class PronunciationAnalysisResult:
     raw_response: str
     tokens_input: int | None
     tokens_output: int | None
+    finish_reason: str | None = None
 
 
 class AudioAnalysisProvider(Protocol):
@@ -81,6 +82,7 @@ class TranscriptionResult:
     text: str
     tokens_input: int | None
     tokens_output: int | None
+    finish_reason: str | None = None
 
 
 class TranscriptionProvider(Protocol):

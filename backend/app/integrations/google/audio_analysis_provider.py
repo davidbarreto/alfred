@@ -48,11 +48,17 @@ class GoogleAudioAnalysisProvider:
         )
         raw_response = response.text or ""
         usage = response.usage_metadata
+        finish_reason = (
+            str(response.candidates[0].finish_reason.name)
+            if response.candidates and response.candidates[0].finish_reason
+            else None
+        )
         return PronunciationAnalysisResult(
             analysis=_parse_response(raw_response),
             raw_response=raw_response,
             tokens_input=usage.prompt_token_count if usage else None,
             tokens_output=usage.candidates_token_count if usage else None,
+            finish_reason=finish_reason,
         )
 
 

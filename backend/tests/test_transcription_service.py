@@ -12,7 +12,8 @@ def _make_service(**kwargs):
     provider.provider = "google"
     provider.model = "gemini-2.5-flash"
     provider.transcribe.return_value = kwargs.get(
-        "result", TranscriptionResult(text="hello there", tokens_input=100, tokens_output=50),
+        "result",
+        TranscriptionResult(text="hello there", tokens_input=100, tokens_output=50, finish_reason="STOP"),
     )
     service = TranscriptionService(provider=provider, session=session)
     return service, session, provider
@@ -39,4 +40,5 @@ class TestTranscribe:
         assert log_call.kwargs["response"] == "hello there"
         assert log_call.kwargs["tokens_input"] == 100
         assert log_call.kwargs["tokens_output"] == 50
+        assert log_call.kwargs["finish_reason"] == "STOP"
         assert log_call.kwargs["latency_ms"] >= 0

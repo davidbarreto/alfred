@@ -69,6 +69,7 @@ class ShadowingService:
                         response=call_result.raw_response,
                         tokens_input=call_result.tokens_input,
                         tokens_output=call_result.tokens_output,
+                        finish_reason=call_result.finish_reason,
                         latency_ms=latency_ms,
                         is_audio=True,
                     )

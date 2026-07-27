@@ -75,6 +75,7 @@ def _make_llm_provider(text: str = _GRADING_JSON):
     response.text = text
     response.tokens_input = 100
     response.tokens_output = 50
+    response.finish_reason = "STOP"
     provider.complete = AsyncMock(return_value=response)
     return provider
 
@@ -380,6 +381,7 @@ class TestGetNextTask:
         assert "B1" in generation_prompt
         mock_log.assert_awaited_once()
         assert mock_log.call_args.kwargs["feature"] == "production_task_generation"
+        assert mock_log.call_args.kwargs["finish_reason"] == "STOP"
 
     async def test_retell_task_uses_level_override_instead_of_track_level(self):
         passage = "Hier, Marie a perdu ses clés."
@@ -441,6 +443,7 @@ class TestGradeAttempt:
 
         mock_log.assert_awaited_once()
         assert mock_log.call_args.kwargs["feature"] == "production_grading"
+        assert mock_log.call_args.kwargs["finish_reason"] == "STOP"
 
     async def test_queues_new_vocabulary_for_triage(self):
         service, _, _, chunk_service, chunk_repo, track_repo, _ = _make_service()

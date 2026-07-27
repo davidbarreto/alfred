@@ -30,6 +30,7 @@ class TranscriptionService:
             response=result.text,
             tokens_input=result.tokens_input,
             tokens_output=result.tokens_output,
+            finish_reason=result.finish_reason,
             latency_ms=latency_ms,
             is_audio=True,
         )

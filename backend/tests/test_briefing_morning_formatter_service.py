@@ -316,6 +316,7 @@ class TestMorningBriefingFormatterService:
         call_kwargs = mock_log.call_args[1]
         assert call_kwargs["feature"] == "morning_briefing"
         assert call_kwargs["provider"] == "google"
+        assert call_kwargs["finish_reason"] == "STOP"
 
     @pytest.mark.asyncio
     async def test_strips_whitespace_from_llm_response(self, service, mock_llm):

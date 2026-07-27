@@ -92,6 +92,33 @@ class TestMemoryExtractionService:
         assert created.origin_message_id == 1
         embedding_service.embed.assert_called_once()
 
+    async def test_logs_finish_reason_to_llm_calls(self):
+        candidates = [{"category": "preference", "content": "Prefers dark mode", "importance": 0.7, "confidence": 0.9}]
+        service, llm_provider, _ = _make_service()
+        llm_provider.complete.return_value = LlmResponse(
+            text=json.dumps(candidates), tokens_input=10, tokens_output=5, finish_reason="STOP"
+        )
+
+        memory_service = AsyncMock()
+        memory_service.get = AsyncMock(return_value=None)
+        memory_service.create = AsyncMock(return_value=_make_memory_read(99))
+        embedding_service = AsyncMock()
+        embedding_service.search = AsyncMock(return_value=[])
+        embedding_service.embed = AsyncMock()
+
+        with patch("app.features.core.memories.extraction_service.async_session") as mock_session_ctx:
+            mock_session = AsyncMock()
+            mock_session_ctx.return_value.__aenter__ = AsyncMock(return_value=mock_session)
+            mock_session_ctx.return_value.__aexit__ = AsyncMock(return_value=False)
+            with (
+                patch("app.features.core.memories.extraction_service.MemoryService", return_value=memory_service),
+                patch("app.features.core.memories.extraction_service.EmbeddingService", return_value=embedding_service),
+                patch("app.features.core.memories.extraction_service.create_llm_call", AsyncMock()) as mock_log,
+            ):
+                await service.extract_and_save("I prefer dark mode", message_id=1)
+
+        assert mock_log.call_args.kwargs["finish_reason"] == "STOP"
+
     async def test_skips_extraction_when_llm_returns_empty(self):
         service, llm_provider, _ = _make_service()
         llm_provider.complete.return_value = LlmResponse(text="[]", tokens_input=10, tokens_output=5)

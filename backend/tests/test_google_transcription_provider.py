@@ -5,11 +5,14 @@ import pytest
 from app.integrations.google.transcription_provider import GoogleTranscriptionProvider
 
 
-def _mock_response(text: str, tokens_input: int = 100, tokens_output: int = 50) -> MagicMock:
+def _mock_response(
+    text: str, tokens_input: int = 100, tokens_output: int = 50, finish_reason: str = "STOP"
+) -> MagicMock:
     resp = MagicMock()
     resp.text = text
     resp.usage_metadata.prompt_token_count = tokens_input
     resp.usage_metadata.candidates_token_count = tokens_output
+    resp.candidates[0].finish_reason.name = finish_reason
     return resp
 
 
@@ -37,6 +40,7 @@ class TestTranscribe:
         assert result.text == "hello there"
         assert result.tokens_input == 100
         assert result.tokens_output == 50
+        assert result.finish_reason == "STOP"
         call_kwargs = mock_client.aio.models.generate_content.call_args.kwargs
         assert call_kwargs["model"] == "gemini-2.5-flash"
 
@@ -47,6 +51,7 @@ class TestTranscribe:
             resp = MagicMock()
             resp.text = None
             resp.usage_metadata = None
+            resp.candidates = []
             mock_client.aio.models.generate_content = AsyncMock(return_value=resp)
             mock_client_cls.return_value = mock_client
 
@@ -56,3 +61,4 @@ class TestTranscribe:
         assert result.text == ""
         assert result.tokens_input is None
         assert result.tokens_output is None
+        assert result.finish_reason is None

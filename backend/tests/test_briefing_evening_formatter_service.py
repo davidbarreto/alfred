@@ -134,6 +134,7 @@ class TestEveningDigestFormatterService:
             await service.format(_make_digest())
 
         assert mock_log.call_args[1]["feature"] == "evening_digest"
+        assert mock_log.call_args[1]["finish_reason"] == "STOP"
 
     @pytest.mark.asyncio
     async def test_get_saved_returns_none_when_not_found(self, service):

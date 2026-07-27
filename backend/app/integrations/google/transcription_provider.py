@@ -36,8 +36,14 @@ class GoogleTranscriptionProvider:
             ],
         )
         usage = response.usage_metadata
+        finish_reason = (
+            str(response.candidates[0].finish_reason.name)
+            if response.candidates and response.candidates[0].finish_reason
+            else None
+        )
         return TranscriptionResult(
             text=(response.text or "").strip(),
             tokens_input=usage.prompt_token_count if usage else None,
             tokens_output=usage.candidates_token_count if usage else None,
+            finish_reason=finish_reason,
         )

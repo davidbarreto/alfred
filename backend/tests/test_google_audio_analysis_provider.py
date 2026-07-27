@@ -16,11 +16,14 @@ _VALID_JSON = json.dumps({
 })
 
 
-def _mock_response(text: str, tokens_input: int = 100, tokens_output: int = 50) -> MagicMock:
+def _mock_response(
+    text: str, tokens_input: int = 100, tokens_output: int = 50, finish_reason: str = "STOP"
+) -> MagicMock:
     resp = MagicMock()
     resp.text = text
     resp.usage_metadata.prompt_token_count = tokens_input
     resp.usage_metadata.candidates_token_count = tokens_output
+    resp.candidates[0].finish_reason.name = finish_reason
     return resp
 
 
@@ -76,6 +79,7 @@ class TestAnalyzePronunciation:
         assert result.raw_response == _VALID_JSON
         assert result.tokens_input == 100
         assert result.tokens_output == 50
+        assert result.finish_reason == "STOP"
         call_kwargs = mock_client.aio.models.generate_content.call_args.kwargs
         assert call_kwargs["model"] == "gemini-2.5-flash"
         assert call_kwargs["config"].response_mime_type == "application/json"

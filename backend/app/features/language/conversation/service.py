@@ -140,16 +140,46 @@ class ConversationService:
     ) -> tuple[bytes | None, str | None]:
         """Best-effort: voice replies are a nice-to-have on top of the text reply, which has
         already succeeded by the time this runs. A synthesis failure shouldn't take the whole
-        turn down with it — fall back to text-only instead."""
+        turn down with it — fall back to text-only instead. Every attempt (success or failure)
+        is logged to llm_calls, same as the text-generation call, so TTS issues are queryable
+        the same way instead of only visible in container logs."""
         tts_text = styled_for_tts(text, tone)
+        t0 = time.monotonic()
         try:
-            audio, _ = await self._pronunciation_service.get_audio(tts_text, track_code, audio_format="ogg")
+            result, _ = await self._pronunciation_service.get_audio(tts_text, track_code, audio_format="ogg")
         except Exception as exc:
             logger.error("Conversation: TTS synthesis failed track_code=%s error=%s", track_code, exc)
+            await create_llm_call(
+                self._session,
+                provider=self._pronunciation_service.provider,
+                model=self._pronunciation_service.model,
+                feature="conversation_tts",
+                prompt=[{"role": "user", "content": tts_text}],
+                response=str(exc),
+                tokens_input=None,
+                tokens_output=None,
+                finish_reason=getattr(exc, "finish_reason", None),
+                latency_ms=int((time.monotonic() - t0) * 1000),
+                is_audio=True,
+            )
             return None, None
+
+        await create_llm_call(
+            self._session,
+            provider=self._pronunciation_service.provider,
+            model=self._pronunciation_service.model,
+            feature="conversation_tts",
+            prompt=[{"role": "user", "content": tts_text}],
+            response=f"<audio: {len(result.audio)} bytes>",
+            tokens_input=result.tokens_input,
+            tokens_output=result.tokens_output,
+            finish_reason=result.finish_reason,
+            latency_ms=int((time.monotonic() - t0) * 1000),
+            is_audio=True,
+        )
         audio_ref = f"conversation/{uuid4()}.ogg"
-        await self._audio_storage.save(audio, audio_ref)
-        return audio, audio_ref
+        await self._audio_storage.save(result.audio, audio_ref)
+        return result.audio, audio_ref
 
     @staticmethod
     def _effective_level(override: str | None, track) -> str:

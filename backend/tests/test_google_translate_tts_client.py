@@ -17,6 +17,15 @@ def _mock_response(content: bytes = b"", status_code: int = 200) -> MagicMock:
     return resp
 
 
+class TestProviderIdentity:
+
+    def test_exposes_provider_and_model(self):
+        client = GoogleTranslateTtsClient()
+
+        assert client.provider == "google_translate"
+        assert client.model == "translate_tts"
+
+
 class TestGetAudio:
 
     @pytest.mark.asyncio
@@ -29,7 +38,9 @@ class TestGetAudio:
             )
             result = await client.get_audio("bonjour", "fr")
 
-        assert result == b"fake-mp3-bytes"
+        assert result.audio == b"fake-mp3-bytes"
+        assert result.tokens_input is None
+        assert result.finish_reason is None
 
     @pytest.mark.asyncio
     async def test_sends_text_and_lang_as_params(self):

@@ -4,8 +4,10 @@ from datetime import datetime, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 
 from app.features.language.conversation.service import ConversationService
+from app.integrations.google.tts_provider import TtsSynthesisError
 from app.shared.conversation import ConversationTurnResult
 from app.shared.llm import LlmResponse
+from app.shared.pronunciation import TtsAudioResult
 
 _THREAD_STARTED_AT = datetime(2020, 1, 1, tzinfo=timezone.utc)
 
@@ -73,7 +75,11 @@ def _make_service(**kwargs):
     conversation_provider.provider = "google"
     conversation_provider.model = "gemini-2.5-flash"
     pronunciation_service = kwargs.get("pronunciation_service") or AsyncMock()
-    pronunciation_service.get_audio = AsyncMock(return_value=(b"tts-bytes", "audio/ogg"))
+    pronunciation_service.provider = "google"
+    pronunciation_service.model = "gemini-2.5-flash-preview-tts"
+    pronunciation_service.get_audio = AsyncMock(
+        return_value=(TtsAudioResult(audio=b"tts-bytes", tokens_input=10, tokens_output=5, finish_reason="STOP"), "audio/ogg")
+    )
     llm_provider = kwargs.get("llm_provider") or AsyncMock()
     llm_provider.provider = "google"
     llm_provider.model = "gemini-2.5-flash"
@@ -341,6 +347,25 @@ class TestRecordAudioTurn:
         assert result.reply_audio_base64 is not None
         parts["pronunciation_service"].get_audio.assert_awaited_once()
 
+    async def test_successful_tts_synthesis_is_logged_to_llm_calls(self):
+        parts = _make_service()
+        thread = _make_thread(voice_reply=True)
+        parts["thread_repo"].get_thread = AsyncMock(return_value=thread)
+        parts["track_repo"].get_track = AsyncMock(return_value=_make_track())
+        parts["thread_repo"].get_turns_with_messages = AsyncMock(return_value=[])
+        parts["conversation_provider"].reply_audio = AsyncMock(return_value=_make_result())
+
+        with patch("app.features.language.conversation.service.create_llm_call", AsyncMock()) as mock_log:
+            await parts["service"].record_audio_turn(thread_id=10, audio=b"raw-audio")
+
+        tts_call = next(c for c in mock_log.call_args_list if c.kwargs["feature"] == "conversation_tts")
+        assert tts_call.kwargs["provider"] == "google"
+        assert tts_call.kwargs["model"] == "gemini-2.5-flash-preview-tts"
+        assert tts_call.kwargs["tokens_input"] == 10
+        assert tts_call.kwargs["tokens_output"] == 5
+        assert tts_call.kwargs["finish_reason"] == "STOP"
+        assert tts_call.kwargs["is_audio"] is True
+
     async def test_turn_falls_back_to_text_when_tts_fails(self):
         parts = _make_service()
         parts["pronunciation_service"].get_audio = AsyncMock(side_effect=RuntimeError("no audio content"))
@@ -358,6 +383,25 @@ class TestRecordAudioTurn:
         assistant_turn_kwargs = parts["thread_repo"].create_turn.call_args.kwargs
         assert assistant_turn_kwargs["is_audio"] is False
         assert assistant_turn_kwargs["audio_ref"] is None
+
+    async def test_failed_tts_synthesis_is_logged_to_llm_calls(self):
+        parts = _make_service()
+        parts["pronunciation_service"].get_audio = AsyncMock(
+            side_effect=TtsSynthesisError("Gemini TTS returned no audio content", finish_reason="SAFETY")
+        )
+        thread = _make_thread(voice_reply=True)
+        parts["thread_repo"].get_thread = AsyncMock(return_value=thread)
+        parts["track_repo"].get_track = AsyncMock(return_value=_make_track())
+        parts["thread_repo"].get_turns_with_messages = AsyncMock(return_value=[])
+        parts["conversation_provider"].reply_audio = AsyncMock(return_value=_make_result())
+
+        with patch("app.features.language.conversation.service.create_llm_call", AsyncMock()) as mock_log:
+            await parts["service"].record_audio_turn(thread_id=10, audio=b"raw-audio")
+
+        tts_call = next(c for c in mock_log.call_args_list if c.kwargs["feature"] == "conversation_tts")
+        assert tts_call.kwargs["finish_reason"] == "SAFETY"
+        assert "no audio content" in tts_call.kwargs["response"]
+        assert tts_call.kwargs["tokens_input"] is None
 
     async def test_tone_styles_the_synthesized_reply(self):
         parts = _make_service()

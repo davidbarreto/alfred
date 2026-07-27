@@ -4,12 +4,21 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from app.integrations.google.tts_provider import GoogleTtsProvider
+from app.integrations.google.tts_provider import GoogleTtsProvider, TtsSynthesisError
 
 
-def _mock_response(pcm: bytes) -> MagicMock:
+def _mock_finish_reason(name: str) -> MagicMock:
+    reason = MagicMock()
+    reason.name = name
+    return reason
+
+
+def _mock_response(pcm: bytes, tokens_input: int = 10, tokens_output: int = 5) -> MagicMock:
     resp = MagicMock()
     resp.candidates[0].content.parts[0].inline_data.data = pcm
+    resp.candidates[0].finish_reason = _mock_finish_reason("STOP")
+    resp.usage_metadata.prompt_token_count = tokens_input
+    resp.usage_metadata.candidates_token_count = tokens_output
     return resp
 
 
@@ -47,13 +56,15 @@ class TestGetAudio:
             mock_client = MagicMock()
             resp = MagicMock()
             resp.candidates[0].content = None
-            resp.candidates[0].finish_reason = "SAFETY"
+            resp.candidates[0].finish_reason = _mock_finish_reason("SAFETY")
             mock_client.aio.models.generate_content = AsyncMock(return_value=resp)
             mock_client_cls.return_value = mock_client
 
             provider = GoogleTtsProvider(api_key="test-key", model_name="gemini-2.5-flash-tts", voice_name="Enceladus")
-            with pytest.raises(RuntimeError, match="no audio content"):
+            with pytest.raises(TtsSynthesisError, match="no audio content") as exc_info:
                 await provider.get_audio("some text", "fr")
+
+        assert exc_info.value.finish_reason == "SAFETY"
 
     @pytest.mark.asyncio
     async def test_raises_clear_error_when_no_candidates(self):
@@ -79,8 +90,24 @@ class TestGetAudio:
             provider = GoogleTtsProvider(api_key="test-key", model_name="gemini-2.5-flash-tts", voice_name="Enceladus")
             result = await provider.get_audio("hello", "en")
 
-        with wave.open(BytesIO(result), "rb") as wav_file:
+        with wave.open(BytesIO(result.audio), "rb") as wav_file:
             assert wav_file.getnchannels() == 1
             assert wav_file.getsampwidth() == 2
             assert wav_file.getframerate() == 24000
             assert wav_file.readframes(wav_file.getnframes()) == pcm
+
+    @pytest.mark.asyncio
+    async def test_returns_tokens_and_finish_reason_on_success(self):
+        with patch("app.integrations.google.tts_provider.genai.Client") as mock_client_cls:
+            mock_client = MagicMock()
+            mock_client.aio.models.generate_content = AsyncMock(
+                return_value=_mock_response(b"\x01\x02", tokens_input=12, tokens_output=7)
+            )
+            mock_client_cls.return_value = mock_client
+
+            provider = GoogleTtsProvider(api_key="test-key", model_name="gemini-2.5-flash-tts", voice_name="Enceladus")
+            result = await provider.get_audio("hello", "en")
+
+        assert result.tokens_input == 12
+        assert result.tokens_output == 7
+        assert result.finish_reason == "STOP"

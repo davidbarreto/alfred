@@ -3,7 +3,7 @@ import logging
 from typing import Literal
 
 from app.shared.audio import AudioConverter, FileStorage
-from app.shared.pronunciation import PronunciationProvider
+from app.shared.pronunciation import PronunciationProvider, TtsAudioResult
 
 logger = logging.getLogger(__name__)
 
@@ -30,18 +30,28 @@ class PronunciationService:
         self._storage = storage
         self._cache_namespace = cache_namespace
 
-    async def get_audio(self, text: str, lang: str, audio_format: AudioFormat = "mp3") -> tuple[bytes, str]:
+    @property
+    def provider(self) -> str:
+        return getattr(self._client, "provider", "unknown")
+
+    @property
+    def model(self) -> str:
+        return getattr(self._client, "model", "unknown")
+
+    async def get_audio(self, text: str, lang: str, audio_format: AudioFormat = "mp3") -> tuple[TtsAudioResult, str]:
         cache_key = _cache_key(self._cache_namespace, text, lang, audio_format)
         cached = await self._storage.read(cache_key)
         if cached is not None:
             logger.debug("Pronunciation audio cache hit: lang=%s format=%s", lang, audio_format)
-            return cached, _CONTENT_TYPES[audio_format]
+            return TtsAudioResult(audio=cached), _CONTENT_TYPES[audio_format]
 
-        audio = await self._client.get_audio(text, lang)
+        result = await self._client.get_audio(text, lang)
         logger.debug("Pronunciation audio fetched: lang=%s text_len=%d format=%s", lang, len(text), audio_format)
 
+        audio = result.audio
         if audio_format == "ogg":
             audio = await self._converter.to_ogg_opus(audio)
 
         await self._storage.save(audio, cache_key)
-        return audio, _CONTENT_TYPES[audio_format]
+        result.audio = audio
+        return result, _CONTENT_TYPES[audio_format]

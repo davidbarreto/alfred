@@ -2,6 +2,8 @@ import logging
 
 import httpx
 
+from app.shared.pronunciation import TtsAudioResult
+
 logger = logging.getLogger(__name__)
 
 _BASE_URL = "https://translate.google.com/translate_tts"
@@ -12,7 +14,15 @@ _USER_AGENT = (
 
 
 class GoogleTranslateTtsClient:
-    async def get_audio(self, text: str, lang: str) -> bytes:
+    @property
+    def provider(self) -> str:
+        return "google_translate"
+
+    @property
+    def model(self) -> str:
+        return "translate_tts"
+
+    async def get_audio(self, text: str, lang: str) -> TtsAudioResult:
         params = {"ie": "UTF-8", "client": "tw-ob", "q": text, "tl": lang}
         async with httpx.AsyncClient() as http:
             resp = await http.get(
@@ -21,4 +31,4 @@ class GoogleTranslateTtsClient:
             if resp.is_error:
                 logger.error("Google Translate TTS error %s: text=%r lang=%s", resp.status_code, text, lang)
                 resp.raise_for_status()
-            return resp.content
+            return TtsAudioResult(audio=resp.content)

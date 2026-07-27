@@ -37,8 +37,8 @@ async def get_pronunciation(
     service: PronunciationServiceDep,
     format: Literal["mp3", "ogg"] = "mp3",
 ):
-    audio, content_type = await service.get_audio(text, lang, format)
-    return Response(content=audio, media_type=content_type)
+    result, content_type = await service.get_audio(text, lang, format)
+    return Response(content=result.audio, media_type=content_type)
 
 
 @router.post("", response_model=ChunkRead, status_code=status.HTTP_201_CREATED)

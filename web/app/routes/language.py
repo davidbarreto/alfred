@@ -12,7 +12,7 @@ from app.templates_config import templates
 
 router = APIRouter(prefix="/languages")
 
-_FLAG = {"fr": "🇫🇷", "ru": "🇷🇺", "es": "🇪🇸", "it": "🇮🇹", "de": "🇩🇪"}
+_FLAG = {"fr": "🇫🇷", "ru": "🇷🇺", "es": "🇪🇸", "it": "🇮🇹", "de": "🇩🇪", "en": "🇺🇸"}
 _LEVEL_COLOR = {
     "A1": "bg-gray-100 text-gray-500",
     "A2": "bg-gray-100 text-gray-600",

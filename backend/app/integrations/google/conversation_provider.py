@@ -10,6 +10,21 @@ from app.shared.conversation import ConversationTurnResult
 
 logger = logging.getLogger(__name__)
 
+# response_mime_type alone only prompts the model to *format* its answer as JSON; without a
+# schema it can still emit syntactically invalid JSON (e.g. unescaped quotes inside a string
+# value, as seen in production — a reply quoting a word broke the parser). response_schema
+# switches Gemini to grammar-constrained decoding, which guarantees valid JSON.
+_TURN_RESPONSE_SCHEMA = types.Schema(
+    type="OBJECT",
+    properties={
+        "transcript": types.Schema(type="STRING"),
+        "reply": types.Schema(type="STRING"),
+        "tip": types.Schema(type="STRING", nullable=True),
+        "tone": types.Schema(type="STRING", nullable=True),
+    },
+    required=["transcript", "reply"],
+)
+
 
 class GoogleConversationProvider:
     """ConversationProvider implementation backed by Google Gemini via google-genai SDK."""
@@ -60,7 +75,11 @@ class GoogleConversationProvider:
         response = await self._client.aio.models.generate_content(
             model=self._model_name,
             contents=self._build_contents(history, current),
-            config=types.GenerateContentConfig(system_instruction=system, response_mime_type="application/json"),
+            config=types.GenerateContentConfig(
+                system_instruction=system,
+                response_mime_type="application/json",
+                response_schema=_TURN_RESPONSE_SCHEMA,
+            ),
         )
         raw_response = response.text or ""
         usage = response.usage_metadata

@@ -3,7 +3,16 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from app.features.briefing.morning_formatter_service import MorningBriefingFormatterService, _build_context
+from app.features.briefing.morning_formatter_service import (
+    _MAX_EVENTS_TODAY,
+    _MAX_EVENTS_UPCOMING,
+    _MAX_RECURRING_ITEMS,
+    _MAX_SHOPPING_ITEMS,
+    _MAX_TASKS_TODAY,
+    _MAX_TASKS_UPCOMING,
+    MorningBriefingFormatterService,
+    _build_context,
+)
 from app.features.briefing.schemas import (
     BirthdayItem,
     EventBriefItem,
@@ -11,6 +20,7 @@ from app.features.briefing.schemas import (
     HolidayItem,
     LanguageBriefItem,
     MorningBriefing,
+    RecurringBriefItem,
     ShoppingBriefItem,
     TaskBriefItem,
     WeatherForecast,
@@ -83,6 +93,83 @@ def _make_shopping_item(**kwargs) -> ShoppingBriefItem:
     )
     defaults.update(kwargs)
     return ShoppingBriefItem(**defaults)
+
+
+def _make_recurring_item(**kwargs) -> RecurringBriefItem:
+    defaults = dict(id=1, name="Water the plants")
+    defaults.update(kwargs)
+    return RecurringBriefItem(**defaults)
+
+
+class TestSectionCaps:
+    def test_today_tasks_capped_with_overflow_note(self):
+        tasks = [_make_task_item(id=i, title=f"Task {i}", is_today=True) for i in range(_MAX_TASKS_TODAY + 3)]
+        briefing = _make_briefing(tasks=tasks)
+        context = _build_context(briefing)
+        assert f"Tasks due today or overdue ({len(tasks)}):" in context
+        for i in range(_MAX_TASKS_TODAY):
+            assert f"Task {i}" in context
+        for i in range(_MAX_TASKS_TODAY, len(tasks)):
+            assert f"Task {i}" not in context
+        assert "... and 3 more tasks due today" in context
+
+    def test_today_tasks_not_capped_when_under_limit(self):
+        tasks = [_make_task_item(id=i, title=f"Task {i}", is_today=True) for i in range(3)]
+        briefing = _make_briefing(tasks=tasks)
+        context = _build_context(briefing)
+        assert "... and" not in context
+
+    def test_upcoming_tasks_capped_with_overflow_note(self):
+        tasks = [
+            _make_task_item(id=i, title=f"Upcoming {i}", is_today=False, is_overdue=False, deadline=None)
+            for i in range(_MAX_TASKS_UPCOMING + 2)
+        ]
+        briefing = _make_briefing(tasks=tasks)
+        context = _build_context(briefing)
+        for i in range(_MAX_TASKS_UPCOMING):
+            assert f"Upcoming {i}" in context
+        for i in range(_MAX_TASKS_UPCOMING, len(tasks)):
+            assert f"Upcoming {i}" not in context
+        assert "... and 2 more upcoming tasks" in context
+
+    def test_today_events_capped_with_overflow_note(self):
+        events = [_make_event_item(id=i, title=f"Event {i}", is_today=True) for i in range(_MAX_EVENTS_TODAY + 1)]
+        briefing = _make_briefing(events=events)
+        context = _build_context(briefing)
+        assert "... and 1 more events today" in context
+
+    def test_upcoming_events_capped_with_overflow_note(self):
+        events = [
+            _make_event_item(id=i, title=f"Later {i}", is_today=False, days_until=2)
+            for i in range(_MAX_EVENTS_UPCOMING + 2)
+        ]
+        briefing = _make_briefing(events=events)
+        context = _build_context(briefing)
+        for i in range(_MAX_EVENTS_UPCOMING):
+            assert f"Later {i}" in context
+        for i in range(_MAX_EVENTS_UPCOMING, len(events)):
+            assert f"Later {i}" not in context
+        assert "... and 2 more upcoming events" in context
+
+    def test_shopping_capped_with_overflow_note(self):
+        items = [_make_shopping_item(id=i, name=f"Item {i}") for i in range(_MAX_SHOPPING_ITEMS + 4)]
+        briefing = _make_briefing(shopping=items)
+        context = _build_context(briefing)
+        for i in range(_MAX_SHOPPING_ITEMS):
+            assert f"Item {i}" in context
+        for i in range(_MAX_SHOPPING_ITEMS, len(items)):
+            assert f"Item {i}" not in context
+        assert "... and 4 more items" in context
+
+    def test_recurring_capped_with_overflow_note(self):
+        items = [_make_recurring_item(id=i, name=f"Chore {i}") for i in range(_MAX_RECURRING_ITEMS + 2)]
+        briefing = _make_briefing(recurring=items)
+        context = _build_context(briefing)
+        for i in range(_MAX_RECURRING_ITEMS):
+            assert f"Chore {i}" in context
+        for i in range(_MAX_RECURRING_ITEMS, len(items)):
+            assert f"Chore {i}" not in context
+        assert "... and 2 more items" in context
 
 
 class TestBuildContext:

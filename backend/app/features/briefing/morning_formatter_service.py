@@ -18,6 +18,23 @@ logger = logging.getLogger(__name__)
 _BRIEFING_TYPE = "morning"
 _HEADER = "☀️ Morning Briefing"
 
+# These cap how many individual items get spelled out per section so a busy
+# day (many tasks/events) can't make the LLM context -- and therefore the
+# briefing -- grow without bound. Full counts are still shown in each header;
+# only the itemised detail is truncated, with a "+N more" tail.
+_MAX_TASKS_TODAY = 8
+_MAX_TASKS_UPCOMING = 4
+_MAX_EVENTS_TODAY = 8
+_MAX_EVENTS_UPCOMING = 4
+_MAX_SHOPPING_ITEMS = 6
+_MAX_RECURRING_ITEMS = 5
+
+
+def _append_overflow_note(lines: list[str], total: int, shown: int, noun: str) -> None:
+    remaining = total - shown
+    if remaining > 0:
+        lines.append(f"  ... and {remaining} more {noun}")
+
 
 def _build_context(briefing: MorningBriefing) -> str:
     lines = [f"Date: {briefing.date.strftime('%A, %d %B %Y')}"]
@@ -28,21 +45,23 @@ def _build_context(briefing: MorningBriefing) -> str:
     lines.append("")
     lines.append(f"Tasks due today or overdue ({len(today_tasks)}):")
     if today_tasks:
-        for task in today_tasks:
+        for task in today_tasks[:_MAX_TASKS_TODAY]:
             deadline_str = task.deadline.strftime("%d %b") if task.deadline else "no deadline"
             overdue = " [OVERDUE]" if task.is_overdue else ""
             tags = f" [{', '.join(task.tags)}]" if task.tags else ""
             lines.append(f"  {task.title} | {task.priority} priority | due {deadline_str}{overdue}{tags}")
+        _append_overflow_note(lines, len(today_tasks), _MAX_TASKS_TODAY, "tasks due today")
     else:
         lines.append("  No tasks due today.")
 
     if upcoming_tasks:
         lines.append("")
         lines.append(f"Tasks due in the next {briefing.lookahead_days} days ({len(upcoming_tasks)}):")
-        for task in upcoming_tasks:
+        for task in upcoming_tasks[:_MAX_TASKS_UPCOMING]:
             deadline_str = task.deadline.strftime("%a %d %b") if task.deadline else "no deadline"
             tags = f" [{', '.join(task.tags)}]" if task.tags else ""
             lines.append(f"  {task.title} | {task.priority} priority | due {deadline_str}{tags}")
+        _append_overflow_note(lines, len(upcoming_tasks), _MAX_TASKS_UPCOMING, "upcoming tasks")
 
     today_events = [e for e in briefing.events if e.is_today]
     upcoming_events = [e for e in briefing.events if not e.is_today]
@@ -50,21 +69,23 @@ def _build_context(briefing: MorningBriefing) -> str:
     lines.append("")
     lines.append(f"Events today ({len(today_events)}):")
     if today_events:
-        for event in today_events:
+        for event in today_events[:_MAX_EVENTS_TODAY]:
             time_str = event.start_time if event.all_day else f"{event.start_time} - {event.end_time}"
             location = f" at {event.location}" if event.location else ""
             lines.append(f"  {event.title} | {time_str}{location}")
+        _append_overflow_note(lines, len(today_events), _MAX_EVENTS_TODAY, "events today")
     else:
         lines.append("  No events today.")
 
     if upcoming_events:
         lines.append("")
         lines.append(f"Events in the next {briefing.lookahead_days} days ({len(upcoming_events)}):")
-        for event in upcoming_events:
+        for event in upcoming_events[:_MAX_EVENTS_UPCOMING]:
             day_str = event.date.strftime("%a %d %b")
             time_str = event.start_time if event.all_day else f"{event.start_time} - {event.end_time}"
             location = f" at {event.location}" if event.location else ""
             lines.append(f"  {event.title} | {day_str}, {time_str}{location}")
+        _append_overflow_note(lines, len(upcoming_events), _MAX_EVENTS_UPCOMING, "upcoming events")
 
     w = briefing.weather
     lines.append("")
@@ -111,19 +132,21 @@ def _build_context(briefing: MorningBriefing) -> str:
     if briefing.shopping:
         lines.append("")
         lines.append(f"Shopping list — pending items ({len(briefing.shopping)}):")
-        for item in briefing.shopping:
+        for item in briefing.shopping[:_MAX_SHOPPING_ITEMS]:
             qty = ""
             if item.quantity is not None:
                 amount = f"{item.quantity:g}"
                 qty = f" x{amount} {item.unit}" if item.unit else f" x{amount}"
             store = f" at {item.store}" if item.store else ""
             lines.append(f"  {item.name}{qty} | {item.category} | {item.priority}{store}")
+        _append_overflow_note(lines, len(briefing.shopping), _MAX_SHOPPING_ITEMS, "items")
 
     if briefing.recurring:
         lines.append("")
         lines.append(f"Recurring items due ({len(briefing.recurring)}):")
-        for r in briefing.recurring:
+        for r in briefing.recurring[:_MAX_RECURRING_ITEMS]:
             lines.append(f"  {r.name}")
+        _append_overflow_note(lines, len(briefing.recurring), _MAX_RECURRING_ITEMS, "items")
 
     active_language = [t for t in briefing.language if t.due_count > 0 or t.completed_today > 0]
     if active_language:

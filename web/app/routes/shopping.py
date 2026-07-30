@@ -138,12 +138,10 @@ async def add_shopping_item(
     if notes:
         payload["notes"] = notes
     try:
-        item = await api.post("/organizer/shopping", json=payload)
+        await api.post("/organizer/shopping", json=payload)
     except httpx.HTTPError as e:
         logger.error("Failed to create shopping item: name=%r error=%s", name, e)
         return HTMLResponse("", status_code=422)
-
-    await api.log_command("shopping.add", {"name": name, "category_id": category_id, "priority": priority}, "shopping_item", item.get("id"))
 
     status = request.query_params.get("status", "pending")
     list_category_id = request.query_params.get("category_id")

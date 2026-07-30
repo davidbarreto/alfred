@@ -116,7 +116,7 @@ async def create_note(
 ):
     tag_list = [t.strip() for t in tags.split(",") if t.strip()]
     try:
-        note = await api.post(
+        await api.post(
             "/organizer/notes",
             json={"title": title, "content": content, "tags": tag_list},
             timeout=_WRITE_TIMEOUT,
@@ -131,7 +131,6 @@ async def create_note(
     except httpx.HTTPError:
         return Response("Failed to save note.", status_code=422, media_type="text/plain")
 
-    await api.log_command("note.add", {"title": title, "tags": tag_list}, "note", note.get("id"))
     context = await _grid_context([], "created", False, 0)
     return templates.TemplateResponse(request, "_notes_grid.html", context)
 
@@ -146,7 +145,7 @@ async def update_note(
 ):
     tag_list = [t.strip() for t in tags.split(",") if t.strip()]
     try:
-        note = await api.patch(
+        await api.patch(
             f"/organizer/notes/{note_id}",
             json={"title": title, "content": content, "tags": tag_list},
             timeout=_WRITE_TIMEOUT,
@@ -161,7 +160,6 @@ async def update_note(
     except httpx.HTTPError:
         return Response("Failed to update note.", status_code=422, media_type="text/plain")
 
-    await api.log_command("note.update", {"title": title, "tags": tag_list}, "note", note.get("id"))
     tags_q, sort, offset = _parse_query(request)
     context = await _grid_context(tags_q, sort, _parse_archived(request), offset)
     return templates.TemplateResponse(request, "_notes_grid.html", context)

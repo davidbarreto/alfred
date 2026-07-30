@@ -112,7 +112,7 @@ async def create_task(
     if recurrence_rule:
         payload["recurrence_rule"] = recurrence_rule
     try:
-        task = await api.post("/organizer/tasks", json=payload)
+        await api.post("/organizer/tasks", json=payload)
     except httpx.HTTPStatusError as exc:
         detail = "Failed to save task."
         try:
@@ -122,8 +122,6 @@ async def create_task(
         return Response(detail, status_code=422, media_type="text/plain")
     except httpx.HTTPError:
         return Response("Failed to save task.", status_code=422, media_type="text/plain")
-
-    await api.log_command("task.add", {"title": title}, "task", task.get("id"))
 
     active_filter = request.query_params.get("filter", "all")
     params = _build_params(active_filter)
@@ -160,7 +158,7 @@ async def update_task(
         "recurrence_rule": recurrence_rule or None,
     }
     try:
-        task = await api.patch(f"/organizer/tasks/{task_id}", json=payload)
+        await api.patch(f"/organizer/tasks/{task_id}", json=payload)
     except httpx.HTTPStatusError as exc:
         detail = "Failed to update task."
         try:
@@ -170,8 +168,6 @@ async def update_task(
         return Response(detail, status_code=422, media_type="text/plain")
     except httpx.HTTPError:
         return Response("Failed to update task.", status_code=422, media_type="text/plain")
-
-    await api.log_command("task.update", {"title": title}, "task", task.get("id"))
 
     active_filter = request.query_params.get("filter", "all")
     params = _build_params(active_filter)
@@ -192,7 +188,6 @@ async def update_task(
 async def mark_task_done(task_id: int, request: Request):
     try:
         task = await api.post(f"/organizer/tasks/{task_id}/complete")
-        await api.log_command("task.done", {"task_id": task_id}, "task", task_id)
     except httpx.HTTPError:
         task = {"id": task_id, "title": "—", "status": "DONE", "priority": "LOW",
                 "urgency": "NORMAL", "deadline": None, "tags": [], "is_done_today": True}
@@ -207,7 +202,6 @@ async def mark_task_done(task_id: int, request: Request):
 async def mark_task_doing(task_id: int, request: Request):
     try:
         task = await api.patch(f"/organizer/tasks/{task_id}", json={"status": "DOING"})
-        await api.log_command("task.doing", {"task_id": task_id}, "task", task_id)
     except httpx.HTTPError:
         task = {"id": task_id, "title": "—", "status": "DOING", "priority": "LOW",
                 "urgency": "NORMAL", "deadline": None, "tags": []}
@@ -222,7 +216,6 @@ async def mark_task_doing(task_id: int, request: Request):
 async def snooze_task(task_id: int, request: Request):
     try:
         await api.post(f"/organizer/tasks/{task_id}/snooze")
-        await api.log_command("task.snooze", {"task_id": task_id}, "task", task_id)
         task = await api.get(f"/organizer/tasks/{task_id}")
     except httpx.HTTPError:
         return Response("Failed to snooze task.", status_code=422, media_type="text/plain")

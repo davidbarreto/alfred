@@ -189,7 +189,7 @@ async def create_event(
 ):
     payload = _event_payload(title, start_date, start_time, end_time, location, all_day, recurrence_rule, timezone)
     try:
-        event = await api.post("/organizer/calendar-events", json=payload)
+        await api.post("/organizer/calendar-events", json=payload)
     except httpx.HTTPStatusError as e:
         try:
             detail = e.response.json().get("detail", "Failed to create event.")
@@ -199,7 +199,6 @@ async def create_event(
     except httpx.HTTPError:
         return HTMLResponse("Failed to create event.", status_code=422)
 
-    await api.log_command("event.add", {"title": title}, "event", event.get("id"))
     return HTMLResponse("", status_code=204)
 
 
@@ -218,7 +217,7 @@ async def update_event(
 ):
     payload = _event_payload(title, start_date, start_time, end_time, location, all_day, recurrence_rule, timezone)
     try:
-        event = await api.patch(f"/organizer/calendar-events/{event_id}", json=payload)
+        await api.patch(f"/organizer/calendar-events/{event_id}", json=payload)
     except httpx.HTTPStatusError as e:
         try:
             detail = e.response.json().get("detail", "Failed to update event.")
@@ -228,7 +227,6 @@ async def update_event(
     except httpx.HTTPError:
         return HTMLResponse("Failed to update event.", status_code=422)
 
-    await api.log_command("event.update", {"title": title}, "event", event.get("id"))
     return HTMLResponse("", status_code=204)
 
 
@@ -245,5 +243,4 @@ async def delete_event(event_id: int):
     except httpx.HTTPError:
         return HTMLResponse("Failed to delete event.", status_code=422)
 
-    await api.log_command("event.delete", {}, "event", event_id)
     return HTMLResponse("", status_code=204)

@@ -72,6 +72,16 @@ from app.integrations.google.llm_provider import GoogleLlmProvider
 from app.shared.llm import LlmProvider
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.session import get_session
+from app.features.cs.platforms.service import PlatformService
+from app.features.cs.platforms.codeforces_sync_service import CodeforcesSyncService
+from app.features.cs.platforms.leetcode_sync_service import LeetCodeSyncService
+from app.features.cs.problems.service import ProblemService as CsProblemService
+from app.features.cs.submissions.service import SubmissionService as CsSubmissionService
+from app.features.cs.stats.service import StatsService as CsStatsService
+from app.features.cs.study_plans.service import StudyPlanService as CsStudyPlanService
+from app.features.cs.recommendations.service import RecommendationService as CsRecommendationService
+from app.integrations.codeforces.client import CodeforcesClient
+from app.integrations.leetcode.client import LeetCodeClient
 
 @lru_cache
 def get_notion_client() -> NotionClient:
@@ -377,6 +387,37 @@ def get_shadowing_service(session: AsyncSession = Depends(get_session)) -> Shado
         analysis_provider=get_audio_analysis_provider(),
     )
 
+def get_cs_platform_service(session: AsyncSession = Depends(get_session)) -> PlatformService:
+    return PlatformService(session)
+
+def get_cs_problem_service(session: AsyncSession = Depends(get_session)) -> CsProblemService:
+    return CsProblemService(session)
+
+def get_cs_submission_service(session: AsyncSession = Depends(get_session)) -> CsSubmissionService:
+    return CsSubmissionService(session)
+
+def get_cs_stats_service(session: AsyncSession = Depends(get_session)) -> CsStatsService:
+    return CsStatsService(session)
+
+def get_cs_study_plan_service(session: AsyncSession = Depends(get_session)) -> CsStudyPlanService:
+    return CsStudyPlanService(session)
+
+def get_cs_recommendation_service(session: AsyncSession = Depends(get_session)) -> CsRecommendationService:
+    return CsRecommendationService(llm_provider=get_extraction_llm_provider(), session=session)
+
+def get_codeforces_sync_service(session: AsyncSession = Depends(get_session)) -> CodeforcesSyncService:
+    return CodeforcesSyncService(session, CodeforcesClient())
+
+def get_leetcode_sync_service(session: AsyncSession = Depends(get_session)) -> LeetCodeSyncService:
+    s = get_settings()
+    if not s.leetcode_session or not s.leetcode_csrf_token:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="LeetCode not configured. Set LEETCODE_SESSION and LEETCODE_CSRF_TOKEN.",
+        )
+    client = LeetCodeClient(session_cookie=s.leetcode_session, csrf_token=s.leetcode_csrf_token)
+    return LeetCodeSyncService(session, client)
+
 def get_conversation_service(session: AsyncSession = Depends(get_session)) -> ConversationService:
     return ConversationService(
         session=session,
@@ -437,3 +478,11 @@ ShadowingServiceDep = Annotated[ShadowingService, Depends(get_shadowing_service)
 ProductionServiceDep = Annotated[ProductionService, Depends(get_production_service)]
 ConversationServiceDep = Annotated[ConversationService, Depends(get_conversation_service)]
 TranscriptionServiceDep = Annotated[TranscriptionService, Depends(get_transcription_service)]
+CsPlatformServiceDep = Annotated[PlatformService, Depends(get_cs_platform_service)]
+CsProblemServiceDep = Annotated[CsProblemService, Depends(get_cs_problem_service)]
+CsSubmissionServiceDep = Annotated[CsSubmissionService, Depends(get_cs_submission_service)]
+CsStatsServiceDep = Annotated[CsStatsService, Depends(get_cs_stats_service)]
+CsStudyPlanServiceDep = Annotated[CsStudyPlanService, Depends(get_cs_study_plan_service)]
+CsRecommendationServiceDep = Annotated[CsRecommendationService, Depends(get_cs_recommendation_service)]
+CodeforcesSyncServiceDep = Annotated[CodeforcesSyncService, Depends(get_codeforces_sync_service)]
+LeetCodeSyncServiceDep = Annotated[LeetCodeSyncService, Depends(get_leetcode_sync_service)]

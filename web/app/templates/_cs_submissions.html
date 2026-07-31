@@ -1,0 +1,42 @@
+{% if not submissions %}
+<p class="text-sm text-gray-400 py-4">No submissions yet.</p>
+{% else %}
+<div class="divide-y divide-gray-100">
+  {% for s in submissions %}
+  <div class="flex items-center justify-between py-2.5 text-sm">
+    <div class="min-w-0">
+      {% if s.problem_url %}
+      <a href="{{ s.problem_url }}" target="_blank" rel="noopener" class="font-medium text-gray-900 hover:text-[#378ADD] truncate">{{ s.problem_name }}</a>
+      {% else %}
+      <span class="font-medium text-gray-900">{{ s.problem_name }}</span>
+      {% endif %}
+      <div class="text-xs text-gray-400 mt-0.5">
+        {{ s.platform_code }} · {{ s.language or "unknown language" }} · {{ s.submitted_at[:10] }}
+      </div>
+    </div>
+    <span class="px-2 py-0.5 rounded-full text-xs font-medium {{ s.verdict_color }} shrink-0 ml-3">
+      {{ s.verdict | replace('_', ' ') }}
+    </span>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+<div class="flex items-center justify-between pt-3 mt-1 border-t border-gray-100">
+  <button
+    {% if not submissions_has_prev %}disabled{% endif %}
+    hx-get="/cs/submissions-section?offset={{ [submissions_offset - 20, 0] | max }}"
+    hx-target="#cs-submissions"
+    hx-swap="innerHTML"
+    class="btn btn-sm btn-ghost text-xs disabled:opacity-30">
+    <i class="ti ti-chevron-left text-sm"></i>Prev
+  </button>
+  <button
+    {% if not submissions_has_next %}disabled{% endif %}
+    hx-get="/cs/submissions-section?offset={{ submissions_offset + 20 }}"
+    hx-target="#cs-submissions"
+    hx-swap="innerHTML"
+    class="btn btn-sm btn-ghost text-xs disabled:opacity-30">
+    Next<i class="ti ti-chevron-right text-sm"></i>
+  </button>
+</div>

@@ -1,0 +1,202 @@
+{% extends "base.html" %}
+{% set active_page = "cs" %}
+{% block title %}CS Coach{% endblock %}
+
+{% block content %}
+<div class="p-6 space-y-6">
+
+  <div class="flex items-center justify-between">
+    <h1 class="text-base font-semibold text-gray-900">CS Coach</h1>
+    <div class="flex items-center gap-2">
+      <button onclick="syncPlatform('codeforces')" id="sync-codeforces"
+              class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 text-xs font-medium text-gray-500 hover:bg-gray-50 transition-colors">
+        <i class="ti ti-refresh text-sm"></i>Sync Codeforces
+      </button>
+      <button onclick="syncPlatform('leetcode')" id="sync-leetcode"
+              class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 text-xs font-medium text-gray-500 hover:bg-gray-50 transition-colors">
+        <i class="ti ti-refresh text-sm"></i>Sync LeetCode
+      </button>
+      <button onclick="generatePlan('weekly')" id="generate-plan"
+              class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#378ADD] text-xs font-medium text-white hover:bg-[#2f7bc4] transition-colors">
+        <i class="ti ti-sparkles text-sm"></i>Generate weekly plan
+      </button>
+    </div>
+  </div>
+
+  <!-- Stat cards -->
+  <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+    <div class="card bg-white">
+      <div class="card-body p-5">
+        <p class="text-xs text-gray-400">Current streak</p>
+        <p class="text-2xl font-semibold text-gray-900 mt-1">{{ summary.current_streak if summary else 0 }}<span class="text-sm font-normal text-gray-400"> days</span></p>
+      </div>
+    </div>
+    <div class="card bg-white">
+      <div class="card-body p-5">
+        <p class="text-xs text-gray-400">Longest streak</p>
+        <p class="text-2xl font-semibold text-gray-900 mt-1">{{ summary.longest_streak if summary else 0 }}<span class="text-sm font-normal text-gray-400"> days</span></p>
+      </div>
+    </div>
+    <div class="card bg-white">
+      <div class="card-body p-5">
+        <p class="text-xs text-gray-400">Total solved</p>
+        <p class="text-2xl font-semibold text-gray-900 mt-1">{{ summary.total_solved if summary else 0 }}</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+
+    <!-- Live recommendation -->
+    <div class="card bg-white">
+      <div class="card-body p-5 space-y-3">
+        <p class="text-sm font-semibold text-gray-900">Right now</p>
+        {% if live_recommendation %}
+        <p class="text-sm text-gray-600">{{ live_recommendation.reason }}</p>
+        <div class="divide-y divide-gray-100">
+          {% for c in live_recommendation.candidates %}
+          <div class="flex items-center justify-between py-2 text-sm">
+            {% if c.url %}
+            <a href="{{ c.url }}" target="_blank" rel="noopener" class="text-gray-900 hover:text-[#378ADD]">{{ c.name }}</a>
+            {% else %}
+            <span class="text-gray-900">{{ c.name }}</span>
+            {% endif %}
+            {% if c.difficulty %}
+            <span class="px-2 py-0.5 rounded-full text-xs font-medium {{ difficulty_color.get(c.difficulty, 'text-gray-500 bg-gray-50') }}">{{ c.difficulty }}</span>
+            {% endif %}
+          </div>
+          {% endfor %}
+        </div>
+        {% else %}
+        <p class="text-sm text-gray-400">Not enough submission history yet.</p>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Weekly plan -->
+    <div class="card bg-white">
+      <div class="card-body p-5 space-y-3">
+        <p class="text-sm font-semibold text-gray-900">This week's plan</p>
+        {% if weekly_plan %}
+        {% if weekly_plan.rationale %}
+        <p class="text-sm text-gray-600">{{ weekly_plan.rationale }}</p>
+        {% endif %}
+        <div class="divide-y divide-gray-100" id="plan-items">
+          {% for item in weekly_plan.items %}
+          <label class="flex items-start gap-2.5 py-2 text-sm cursor-pointer {% if item.is_done %}opacity-50{% endif %}" id="plan-item-{{ item.id }}">
+            <input type="checkbox" {% if item.is_done %}checked disabled{% endif %}
+                   onchange="completeItem({{ item.id }})"
+                   class="mt-0.5 checkbox checkbox-sm">
+            <span class="{% if item.is_done %}line-through{% endif %}">
+              {{ item.description }}
+              {% if item.url %}<a href="{{ item.url }}" target="_blank" rel="noopener" class="text-[#378ADD] ml-1"><i class="ti ti-external-link text-xs"></i></a>{% endif %}
+            </span>
+          </label>
+          {% endfor %}
+        </div>
+        {% else %}
+        <p class="text-sm text-gray-400">No active plan yet — generate one above.</p>
+        {% endif %}
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Weakest tags -->
+  {% if summary and summary.weakest_tags %}
+  <div class="card bg-white">
+    <div class="card-body p-5 space-y-3">
+      <p class="text-sm font-semibold text-gray-900">Weakest tags</p>
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+        {% for t in summary.weakest_tags %}
+        <div class="border border-gray-100 rounded-lg p-3">
+          <p class="text-sm font-medium text-gray-900">{{ t.tag }}</p>
+          <p class="text-xs text-gray-400 mt-0.5">{{ t.solved }}/{{ t.attempted }} solved ({{ (t.solve_rate * 100) | round | int }}%)</p>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Platforms -->
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+    {% for p in platforms %}
+    <div class="card bg-white">
+      <div class="card-body p-4">
+        <p class="text-sm font-semibold text-gray-900">{{ p.code | title }}</p>
+        <p class="text-xs text-gray-400 mt-0.5">{{ p.handle or "not configured" }}</p>
+        {% if p.rating %}
+        <p class="text-xs text-gray-400">Rating: {{ p.rating }} (max {{ p.max_rating }})</p>
+        {% endif %}
+        <p class="text-xs text-gray-400 mt-1">
+          {% if p.last_synced_at %}Last synced {{ p.last_synced_at[:16] | replace('T', ' ') }}{% else %}Never synced{% endif %}
+        </p>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <!-- Recent submissions -->
+  <div class="card bg-white">
+    <div class="card-body p-5">
+      <p class="text-sm font-semibold text-gray-900 mb-2">Recent submissions</p>
+      <div id="cs-submissions">
+        {% include "_cs_submissions.html" %}
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+async function syncPlatform(code) {
+  const btn = document.getElementById(`sync-${code}`);
+  btn.disabled = true;
+  try {
+    const res = await fetch(`/cs/sync/${code}`, { method: 'POST' });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      alert(body.error || 'Sync failed.');
+      return;
+    }
+    location.reload();
+  } catch (e) {
+    alert('Sync failed.');
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+async function generatePlan(cadence) {
+  const btn = document.getElementById('generate-plan');
+  btn.disabled = true;
+  try {
+    const res = await fetch(`/cs/plans/${cadence}/generate`, { method: 'POST' });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      alert(body.error || 'Could not generate a plan.');
+      return;
+    }
+    location.reload();
+  } catch (e) {
+    alert('Could not generate a plan.');
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+async function completeItem(itemId) {
+  const row = document.getElementById(`plan-item-${itemId}`);
+  try {
+    const res = await fetch(`/cs/plans/items/${itemId}/complete`, { method: 'POST' });
+    if (!res.ok) throw new Error();
+    row.classList.add('opacity-50');
+    row.querySelector('span').classList.add('line-through');
+    row.querySelector('input').disabled = true;
+  } catch (e) {
+    alert('Could not update item.');
+  }
+}
+</script>
+{% endblock %}

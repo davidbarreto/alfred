@@ -55,6 +55,12 @@ from app.api.routes.language.chunks import router as language_chunks_router
 from app.api.routes.language.sessions import router as language_sessions_router
 from app.api.routes.language.production import router as language_production_router
 from app.api.routes.language.conversation import router as language_conversation_router
+from app.api.routes.cs.platforms import router as cs_platforms_router
+from app.api.routes.cs.problems import router as cs_problems_router
+from app.api.routes.cs.submissions import router as cs_submissions_router
+from app.api.routes.cs.stats import router as cs_stats_router
+from app.api.routes.cs.recommendations import router as cs_recommendations_router
+from app.api.routes.cs.study_plans import router as cs_study_plans_router
 from app.config import get_settings
 from app.db.session import async_session
 from app.dependencies import get_notion_client
@@ -137,6 +143,12 @@ app.include_router(language_chunks_router)
 app.include_router(language_sessions_router)
 app.include_router(language_production_router)
 app.include_router(language_conversation_router)
+app.include_router(cs_platforms_router)
+app.include_router(cs_problems_router)
+app.include_router(cs_submissions_router)
+app.include_router(cs_stats_router)
+app.include_router(cs_recommendations_router)
+app.include_router(cs_study_plans_router)
 
 @app.exception_handler(RequestValidationError)
 async def _validation_error_handler(request: Request, exc: RequestValidationError) -> JSONResponse:

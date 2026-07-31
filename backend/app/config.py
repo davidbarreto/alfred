@@ -76,6 +76,12 @@ class Settings(BaseSettings):
     undated_task_escalation_days: int = Field(default=30, validation_alias="UNDATED_TASK_ESCALATION_DAYS")
     undated_task_snooze_days: int = Field(default=7, validation_alias="UNDATED_TASK_SNOOZE_DAYS")
 
+    # CS coach — LeetCode auth is a static session cookie (not a refreshable OAuth
+    # token), copied from a logged-in browser session; it needs manual renewal in
+    # the .env when it expires and sync starts failing auth.
+    leetcode_session: str | None = Field(default=None, validation_alias="LEETCODE_SESSION")
+    leetcode_csrf_token: str | None = Field(default=None, validation_alias="LEETCODE_CSRF_TOKEN")
+
 @lru_cache()
 def get_settings() -> Settings:
     return Settings() # type: ignore[call-arg]

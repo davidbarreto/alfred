@@ -151,6 +151,60 @@
       "value": "",
       "type": "default",
       "enabled": true
+    },
+    {
+      "key": "cs_platform_id",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "cs_problem_a_id",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "cs_problem_b_id",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "cs_problem_c_id",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "cs_submission_a_id",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "cs_submission_b_id",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "cs_submission_c_id",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "cs_plan_id",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "cs_plan_item_id",
+      "value": "",
+      "type": "default",
+      "enabled": true
     }
   ],
   "_postman_variable_scope": "environment"

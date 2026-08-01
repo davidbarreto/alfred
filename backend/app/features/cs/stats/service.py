@@ -3,6 +3,7 @@ import logging
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.features.cs.normalization import ALL_KNOWN_TAGS
 from app.features.cs.stats.repository import StatsRepository
 from app.features.cs.stats.schemas import (
     CandidateProblem,
@@ -69,17 +70,27 @@ class StatsService:
             for difficulty, attempted, solved in await self._repo.get_difficulty_breakdown()
         ]
         by_tag = [
-            TagBreakdown(tag=tag, attempted=attempted, solved=solved, solve_rate=solved / attempted)
-            for tag, attempted, solved in await self._repo.get_tag_breakdown()
+            TagBreakdown(
+                tag=tag,
+                attempted=attempted,
+                solved=solved,
+                solve_rate=solved / attempted,
+                submissions=submissions,
+                avg_attempts_per_solve=submissions / solved if solved else None,
+            )
+            for tag, attempted, solved, submissions in await self._repo.get_tag_breakdown()
         ]
         by_language = [
             LanguageBreakdown(language=language, solved=solved)
             for language, solved in await self._repo.get_language_breakdown()
         ]
+        # Primary: lowest solve rate first. Tiebreak: more submissions per solve (more
+        # struggle to get there) ranks weaker among tags with the same solve rate.
         weakest_tags = sorted(
             (t for t in by_tag if t.attempted >= _MIN_ATTEMPTS_FOR_WEAK_TAG),
-            key=lambda t: t.solve_rate,
+            key=lambda t: (t.solve_rate, -(t.avg_attempts_per_solve or 0)),
         )[:_WEAKEST_TAGS_LIMIT]
+        untried_tags = sorted(set(ALL_KNOWN_TAGS) - {t.tag for t in by_tag})
 
         logger.debug(
             "Stats summary computed: total_solved=%d current_streak=%d longest_streak=%d",
@@ -93,4 +104,5 @@ class StatsService:
             by_tag=by_tag,
             by_language=by_language,
             weakest_tags=weakest_tags,
+            untried_tags=untried_tags,
         )

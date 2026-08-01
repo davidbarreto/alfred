@@ -714,6 +714,11 @@
                   "    pm.expect(json.total_solved).to.be.at.least(1);",
                   "    pm.expect(json.by_tag.map(t => t.tag)).to.include('dynamic programming');",
                   "    pm.expect(json.weakest_tags).to.be.an('array');",
+                  "    pm.expect(json.untried_tags).to.be.an('array');",
+                  "    json.by_tag.forEach(t => {",
+                  "        pm.expect(t).to.have.property('submissions');",
+                  "        pm.expect(t).to.have.property('avg_attempts_per_solve');",
+                  "    });",
                   "});"
                 ],
                 "type": "text/javascript"

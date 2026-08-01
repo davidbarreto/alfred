@@ -9,7 +9,7 @@ from app.features.cs.study_plans.schemas import StudyPlanRead
 from app.shared.llm import LlmResponse
 
 
-def _summary(weakest_tags=None, by_tag=None):
+def _summary(weakest_tags=None, by_tag=None, untried_tags=None):
     return StatsSummary(
         current_streak=1,
         longest_streak=2,
@@ -18,6 +18,19 @@ def _summary(weakest_tags=None, by_tag=None):
         by_tag=by_tag or [],
         by_language=[],
         weakest_tags=weakest_tags or [],
+        untried_tags=untried_tags or [],
+    )
+
+
+def _tag_breakdown(tag, attempted, solved, submissions=None):
+    submissions = attempted if submissions is None else submissions
+    return TagBreakdown(
+        tag=tag,
+        attempted=attempted,
+        solved=solved,
+        solve_rate=solved / attempted,
+        submissions=submissions,
+        avg_attempts_per_solve=submissions / solved if solved else None,
     )
 
 
@@ -66,7 +79,7 @@ class TestGetLiveRecommendation:
         assert result is None
 
     async def test_returns_recommendation_for_weakest_tag(self, service):
-        weak = TagBreakdown(tag="dp", attempted=5, solved=1, solve_rate=0.2)
+        weak = _tag_breakdown("dp", attempted=5, solved=1)
         service._stats.get_summary.return_value = _summary(weakest_tags=[weak])
         service._stats.get_candidate_problems.return_value = [_candidate()]
         result = await service.get_live_recommendation()
@@ -77,7 +90,7 @@ class TestGetLiveRecommendation:
 
 class TestGeneratePlan:
     async def test_skips_problem_item_with_unknown_candidate_id(self, service, mock_llm):
-        weak = TagBreakdown(tag="dp", attempted=5, solved=1, solve_rate=0.2)
+        weak = _tag_breakdown("dp", attempted=5, solved=1)
         service._stats.get_summary.return_value = _summary(weakest_tags=[weak])
         service._stats.get_candidate_problems.return_value = [_candidate(external_id="1A", id=1)]
         mock_llm.complete.return_value = LlmResponse(
@@ -100,7 +113,7 @@ class TestGeneratePlan:
         assert created_data.items[0].item_type == "topic_review"
 
     async def test_resolves_problem_id_for_known_candidate(self, service, mock_llm):
-        weak = TagBreakdown(tag="dp", attempted=5, solved=1, solve_rate=0.2)
+        weak = _tag_breakdown("dp", attempted=5, solved=1)
         service._stats.get_summary.return_value = _summary(weakest_tags=[weak])
         service._stats.get_candidate_problems.return_value = [_candidate(external_id="1A", id=42)]
         mock_llm.complete.return_value = LlmResponse(

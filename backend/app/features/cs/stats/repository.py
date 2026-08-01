@@ -32,13 +32,14 @@ class StatsRepository:
         result = await self._session.execute(query)
         return result.scalar_one()
 
-    async def get_tag_breakdown(self) -> list[tuple[str, int, int]]:
+    async def get_tag_breakdown(self) -> list[tuple[str, int, int, int]]:
         solved_case = case((Submission.verdict == "accepted", Problem.id))
         query = (
             select(
                 CsTag.name,
                 func.count(func.distinct(Problem.id)),
                 func.count(func.distinct(solved_case)),
+                func.count(Submission.id),
             )
             .select_from(CsTag)
             .join(problems_tags, problems_tags.c.tag_id == CsTag.id)
@@ -48,7 +49,10 @@ class StatsRepository:
             .order_by(CsTag.name)
         )
         result = await self._session.execute(query)
-        return [(name, attempted, solved) for name, attempted, solved in result.all()]
+        return [
+            (name, attempted, solved, submissions)
+            for name, attempted, solved, submissions in result.all()
+        ]
 
     async def get_difficulty_breakdown(self) -> list[tuple[str, int, int]]:
         solved_case = case((Submission.verdict == "accepted", Problem.id))

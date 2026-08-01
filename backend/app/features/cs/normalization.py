@@ -80,6 +80,8 @@ _TAG_ALIASES: dict[str, str] = {
     "simulation": "simulation",
 }
 
+ALL_KNOWN_TAGS: tuple[str, ...] = tuple(sorted(set(_TAG_ALIASES.values())))
+
 _VERDICT_ALIASES: dict[str, str] = {
     "ok": "accepted",
     "accepted": "accepted",

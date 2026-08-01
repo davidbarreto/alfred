@@ -70,9 +70,9 @@ class TestGetSummary:
         service._repo.get_difficulty_breakdown.return_value = []
         service._repo.get_language_breakdown.return_value = []
         service._repo.get_tag_breakdown.return_value = [
-            ("graph", 2, 0),  # below min-attempts threshold, excluded
-            ("dp", 5, 1),
-            ("greedy", 4, 3),
+            ("graph", 2, 0, 5),  # below min-attempts threshold, excluded
+            ("dp", 5, 1, 6),
+            ("greedy", 4, 3, 4),
         ]
         summary = await service.get_summary()
         weak_names = [t.tag for t in summary.weakest_tags]
@@ -85,9 +85,43 @@ class TestGetSummary:
         service._repo.get_difficulty_breakdown.return_value = []
         service._repo.get_language_breakdown.return_value = []
         service._repo.get_tag_breakdown.return_value = [
-            ("dp", 4, 3),
-            ("greedy", 4, 1),
-            ("graph", 4, 2),
+            ("dp", 4, 3, 5),
+            ("greedy", 4, 1, 2),
+            ("graph", 4, 2, 3),
         ]
         summary = await service.get_summary()
         assert [t.tag for t in summary.weakest_tags] == ["greedy", "graph", "dp"]
+
+    async def test_weakest_tags_tiebreak_by_avg_attempts_per_solve(self, service):
+        service._repo.get_solved_dates.return_value = []
+        service._repo.get_total_solved.return_value = 0
+        service._repo.get_difficulty_breakdown.return_value = []
+        service._repo.get_language_breakdown.return_value = []
+        # Both tags have solve_rate 0.5 (2/4). "greedy" took more submissions to
+        # land those solves, so it should rank as weaker despite the tied rate.
+        service._repo.get_tag_breakdown.return_value = [
+            ("dp", 4, 2, 3),
+            ("greedy", 4, 2, 8),
+        ]
+        summary = await service.get_summary()
+        assert [t.tag for t in summary.weakest_tags] == ["greedy", "dp"]
+
+    async def test_avg_attempts_per_solve_none_when_never_solved(self, service):
+        service._repo.get_solved_dates.return_value = []
+        service._repo.get_total_solved.return_value = 0
+        service._repo.get_difficulty_breakdown.return_value = []
+        service._repo.get_language_breakdown.return_value = []
+        service._repo.get_tag_breakdown.return_value = [("dp", 4, 0, 6)]
+        summary = await service.get_summary()
+        assert summary.by_tag[0].avg_attempts_per_solve is None
+
+    async def test_untried_tags_excludes_attempted_and_uses_canonical_list(self, service):
+        service._repo.get_solved_dates.return_value = []
+        service._repo.get_total_solved.return_value = 0
+        service._repo.get_difficulty_breakdown.return_value = []
+        service._repo.get_language_breakdown.return_value = []
+        service._repo.get_tag_breakdown.return_value = [("dynamic programming", 4, 2, 5)]
+        summary = await service.get_summary()
+        assert "dynamic programming" not in summary.untried_tags
+        assert "graph" in summary.untried_tags
+        assert "backtracking" in summary.untried_tags

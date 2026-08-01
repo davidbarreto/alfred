@@ -18,6 +18,8 @@ class TagBreakdown(BaseModel):
     attempted: int
     solved: int
     solve_rate: float
+    submissions: int
+    avg_attempts_per_solve: float | None
 
 
 class DifficultyBreakdown(BaseModel):
@@ -39,3 +41,4 @@ class StatsSummary(BaseModel):
     by_tag: list[TagBreakdown]
     by_language: list[LanguageBreakdown]
     weakest_tags: list[TagBreakdown]
+    untried_tags: list[str]

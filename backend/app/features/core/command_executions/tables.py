@@ -26,6 +26,7 @@ class CommandExecution(Base):
     error: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     entity_type: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
     entity_id: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    duration_ms: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
     executed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False

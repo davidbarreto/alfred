@@ -193,36 +193,6 @@
               ]
             }
           }
-        },
-        {
-          "name": "05 - Delete Account",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('Status is 204', () => pm.response.to.have.status(204));",
-                  "pm.environment.unset('finance_account_id');"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
-          "request": {
-            "method": "DELETE",
-            "header": [],
-            "url": {
-              "raw": "{{base_url}}/finance/accounts/{{finance_account_id}}",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "finance",
-                "accounts",
-                "{{finance_account_id}}"
-              ]
-            }
-          }
         }
       ]
     },
@@ -380,36 +350,6 @@
                 }
               }
             },
-            "url": {
-              "raw": "{{base_url}}/finance/categories/{{finance_category_id}}",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "finance",
-                "categories",
-                "{{finance_category_id}}"
-              ]
-            }
-          }
-        },
-        {
-          "name": "05 - Delete Category",
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "pm.test('Status is 204', () => pm.response.to.have.status(204));",
-                  "pm.environment.unset('finance_category_id');"
-                ],
-                "type": "text/javascript"
-              }
-            }
-          ],
-          "request": {
-            "method": "DELETE",
-            "header": [],
             "url": {
               "raw": "{{base_url}}/finance/categories/{{finance_category_id}}",
               "host": [
@@ -2419,6 +2359,71 @@
               ]
             },
             "description": "Populate rows[] manually from the preview-grouped response (each row needs date_posted, bank_description, amount, type, currency, deduplication_hash) -- left empty here since row content is specific to the uploaded fixture."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Cleanup",
+      "item": [
+        {
+          "name": "01 - Delete Account",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 204', () => pm.response.to.have.status(204));",
+                  "pm.environment.unset('finance_account_id');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/finance/accounts/{{finance_account_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "finance",
+                "accounts",
+                "{{finance_account_id}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "02 - Delete Category",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 204', () => pm.response.to.have.status(204));",
+                  "pm.environment.unset('finance_category_id');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/finance/categories/{{finance_category_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "finance",
+                "categories",
+                "{{finance_category_id}}"
+              ]
+            }
           }
         }
       ]

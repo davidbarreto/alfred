@@ -66,7 +66,7 @@ class WatcherService:
         )
 
         soup = BeautifulSoup(response.text, "html.parser")
-        elements = soup.select(selector)
+        elements = [soup] if not selector else soup.select(selector)
 
         logger.debug("Selector '%s' matched %d elements for %s", selector, len(elements), url)
 
@@ -127,7 +127,11 @@ class WatcherService:
                             "Timeout waiting for selector '%s': %s", selector_to_wait, wait_exc
                         )
 
-                elements = driver.find_elements(By.CSS_SELECTOR, selector)
+                elements = (
+                    driver.find_elements(By.TAG_NAME, "html")
+                    if not selector
+                    else driver.find_elements(By.CSS_SELECTOR, selector)
+                )
                 logger.debug(
                     "Selector '%s' matched %d elements for %s (JS-rendered)",
                     selector,

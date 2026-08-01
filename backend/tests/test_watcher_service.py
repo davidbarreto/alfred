@@ -132,6 +132,17 @@ class TestCheckHtmlStatic:
         assert result["found"] is True
         assert len(result["matched_content"]) <= 500
 
+    @patch("app.features.watcher.service.requests.get")
+    def test_empty_selector_searches_whole_page(self, mock_get):
+        mock_get.return_value.text = "<html><body><div>Target Text here</div></body></html>"
+        mock_get.return_value.status_code = 200
+
+        result = WatcherService.check_html_static(
+            url="http://example.com", selector="", target="Target Text"
+        )
+        assert result["found"] is True
+        assert result["error"] is None
+
 
 # ── check_api ─────────────────────────────────────────────────────────────────
 

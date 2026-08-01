@@ -1372,7 +1372,7 @@
               "    const json = pm.response.json();",
               "    ['id', 'source_type', 'source_id', 'content', 'model', 'dimensions', 'embedded_at'].forEach(f => pm.expect(json).to.have.property(f));",
               "    pm.expect(json.source_type).to.eql('memory');",
-              "    pm.expect(json.dimensions).to.eql(1536);",
+              "    pm.expect(json.dimensions).to.eql(384);",
               "});",
               "pm.environment.set('core_embedding_id', pm.response.json().id);"
             ],

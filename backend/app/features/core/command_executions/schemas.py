@@ -20,6 +20,7 @@ class CommandExecutionUpdate(BaseModel):
     error: Optional[str] = None
     entity_type: Optional[str] = None
     entity_id: Optional[int] = None
+    duration_ms: Optional[int] = None
     executed_at: Optional[datetime] = None
 
 
@@ -36,6 +37,7 @@ class CommandExecutionRead(BaseModel):
     error: Optional[str] = None
     entity_type: Optional[str] = None
     entity_id: Optional[int] = None
+    duration_ms: Optional[int] = None
     executed_at: Optional[datetime] = None
     created_at: datetime
 

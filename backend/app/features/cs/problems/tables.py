@@ -53,7 +53,7 @@ class Problem(Base):
     platform_id: Mapped[int] = mapped_column(
         ForeignKey("cs.platforms.id", ondelete="CASCADE"), nullable=False, index=True
     )
-    external_id: Mapped[str] = mapped_column(String(50), nullable=False)
+    external_id: Mapped[str] = mapped_column(String(255), nullable=False)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     url: Mapped[str | None] = mapped_column(String(500), nullable=True)
     difficulty_raw: Mapped[str | None] = mapped_column(String(50), nullable=True)

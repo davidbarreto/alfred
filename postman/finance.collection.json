@@ -438,8 +438,8 @@
                   "pm.test('Status is 201', () => pm.response.to.have.status(201));",
                   "pm.test('Response has code and saves it', () => {",
                   "    const json = pm.response.json();",
-                  "    pm.expect(json.code).to.eql('PLN');",
-                  "    pm.expect(json.symbol).to.eql('z\u0142');",
+                  "    pm.expect(json.code).to.eql('SEK');",
+                  "    pm.expect(json.symbol).to.eql('kr');",
                   "    pm.environment.set('finance_currency_code', json.code);",
                   "});"
                 ],
@@ -457,7 +457,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"code\": \"PLN\",\n  \"symbol\": \"z\u0142\",\n  \"name\": \"Polish Zloty\"\n}",
+              "raw": "{\n  \"code\": \"SEK\",\n  \"symbol\": \"kr\",\n  \"name\": \"Swedish Krona\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -522,7 +522,7 @@
                   "pm.test('Response matches created currency', () => {",
                   "    const json = pm.response.json();",
                   "    pm.expect(json.code).to.eql(pm.environment.get('finance_currency_code'));",
-                  "    pm.expect(json.name).to.eql('Polish Zloty');",
+                  "    pm.expect(json.name).to.eql('Swedish Krona');",
                   "});"
                 ],
                 "type": "text/javascript"
@@ -554,7 +554,7 @@
                 "exec": [
                   "pm.test('Status is 200', () => pm.response.to.have.status(200));",
                   "pm.test('Name was updated', () => {",
-                  "    pm.expect(pm.response.json().name).to.eql('Polish Z\u0142oty');",
+                  "    pm.expect(pm.response.json().name).to.eql('Swedish Crown');",
                   "});"
                 ],
                 "type": "text/javascript"
@@ -571,7 +571,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Polish Z\u0142oty\"\n}",
+              "raw": "{\n  \"name\": \"Swedish Crown\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -2355,7 +2355,7 @@
                   "key": "account_map",
                   "value": "{{revolut_account_map}}",
                   "type": "text",
-                  "description": "Set this environment variable to e.g. {\"EUR\": <account_id>, \"PLN\": <account_id>, \"USD\": <account_id>, \"CZK\": <account_id>} using accounts created in the Accounts folder first."
+                  "description": "Set this environment variable to e.g. {\"EUR\": <account_id>, \"SEK\": <account_id>, \"USD\": <account_id>, \"CZK\": <account_id>} using accounts created in the Accounts folder first."
                 }
               ]
             },

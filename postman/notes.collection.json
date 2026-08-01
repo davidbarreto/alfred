@@ -61,7 +61,7 @@
               "    const json = pm.response.json();",
               "    pm.expect(json).to.have.property('id');",
               "    pm.expect(json.title).to.eql('Q4 Planning Notes');",
-              "    pm.expect(json.description).to.eql('Key discussion points from the Q4 planning session.');",
+              "    pm.expect(json.content).to.eql('Key discussion points from the Q4 planning session.');",
               "    pm.expect(json.tags).to.include('work');",
               "    pm.environment.set('note_id', json.id);",
               "});"
@@ -80,7 +80,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"title\": \"Q4 Planning Notes\",\n  \"description\": \"Key discussion points from the Q4 planning session.\",\n  \"tags\": [\n    \"work\",\n    \"planning\"\n  ]\n}",
+          "raw": "{\n  \"title\": \"Q4 Planning Notes\",\n  \"content\": \"Key discussion points from the Q4 planning session.\",\n  \"tags\": [\n    \"work\",\n    \"planning\"\n  ]\n}",
           "options": {
             "raw": {
               "language": "json"
@@ -183,7 +183,7 @@
               "pm.test('Title and description were updated', () => {",
               "    const json = pm.response.json();",
               "    pm.expect(json.title).to.eql('Q4 Planning Notes - Final');",
-              "    pm.expect(json.description).to.eql('Updated with action items after the session.');",
+              "    pm.expect(json.content).to.eql('Updated with action items after the session.');",
               "});"
             ],
             "type": "text/javascript"
@@ -200,7 +200,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"title\": \"Q4 Planning Notes - Final\",\n  \"description\": \"Updated with action items after the session.\"\n}",
+          "raw": "{\n  \"title\": \"Q4 Planning Notes - Final\",\n  \"content\": \"Updated with action items after the session.\"\n}",
           "options": {
             "raw": {
               "language": "json"

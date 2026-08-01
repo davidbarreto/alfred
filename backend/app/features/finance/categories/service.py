@@ -61,13 +61,18 @@ class CategoryService:
         if category is None:
             logger.debug("Category delete: id=%d not found", category_id)
             return False
+        category_name = category.name
         try:
             await self._repo.delete(category_id)
         except IntegrityError:
+            # repo.delete() rolled back on failure, which expires `category` -- read
+            # category_name (captured above, before the attempt) rather than the ORM
+            # attribute here, since re-fetching it now would require IO the async
+            # session can't perform implicitly outside an awaited call.
             budget_count = await self._budget_repo.count_by_category(category_id)
             logger.warning(
                 "Category delete blocked: id=%d name=%r budget_count=%d",
-                category_id, category.name, budget_count,
+                category_id, category_name, budget_count,
             )
             raise CategoryDeletionBlockedError(category_id, budget_count)
         logger.info("Category deleted: id=%d", category_id)

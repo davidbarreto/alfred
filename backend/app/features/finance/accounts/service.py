@@ -62,14 +62,19 @@ class AccountService:
         if account is None:
             logger.debug("Account delete: id=%d not found", account_id)
             return False
+        account_name = account.name
         try:
             await self._repo.delete(account_id)
         except IntegrityError:
+            # repo.delete() rolled back on failure, which expires `account` -- read
+            # account_name (captured above, before the attempt) rather than the ORM
+            # attribute here, since re-fetching it now would require IO the async
+            # session can't perform implicitly outside an awaited call.
             transaction_count = await self._txn_repo.count_by_account(account_id)
             logger.warning(
                 "Account delete blocked: id=%d name=%r transaction_count=%d",
-                account_id, account.name, transaction_count,
+                account_id, account_name, transaction_count,
             )
             raise AccountDeletionBlockedError(account_id, transaction_count)
-        logger.info("Account deleted: id=%d name=%r", account_id, account.name)
+        logger.info("Account deleted: id=%d name=%r", account_id, account_name)
         return True

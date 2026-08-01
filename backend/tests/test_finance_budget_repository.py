@@ -64,6 +64,22 @@ class TestListEffective:
         session.execute.assert_called_once()
 
 
+class TestCountByCategory:
+    async def test_returns_count(self):
+        session = _make_session()
+        r = MagicMock()
+        r.scalar_one.return_value = 3
+        session.execute.return_value = r
+        assert await BudgetTargetRepository(session).count_by_category(1) == 3
+
+    async def test_returns_zero_when_none(self):
+        session = _make_session()
+        r = MagicMock()
+        r.scalar_one.return_value = 0
+        session.execute.return_value = r
+        assert await BudgetTargetRepository(session).count_by_category(1) == 0
+
+
 class TestAdd:
     def test_adds_to_session_without_committing(self):
         session = _make_session()

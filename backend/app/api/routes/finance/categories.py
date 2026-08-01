@@ -3,6 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException, Response, status
 from app.api.auth import require_auth
 from app.dependencies import CategoryServiceDep
 from app.features.finance.categories.schemas import CategoryCreate, CategoryRead, CategoryUpdate
+from app.features.finance.categories.service import CategoryDeletionBlockedError
 
 router = APIRouter(prefix="/finance/categories", tags=["finance"], dependencies=[Depends(require_auth)])
 
@@ -35,7 +36,14 @@ async def update_category(category_id: int, request: CategoryUpdate, service: Ca
 
 @router.delete("/{category_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_category(category_id: int, service: CategoryServiceDep):
-    deleted = await service.delete(category_id)
+    try:
+        deleted = await service.delete(category_id)
+    except CategoryDeletionBlockedError as exc:
+        detail = (
+            f"Cannot delete this category: it still has {exc.budget_count} budget target(s). "
+            "Clear its budget target first."
+        )
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=detail)
     if not deleted:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Category not found")
     return Response(status_code=status.HTTP_204_NO_CONTENT)

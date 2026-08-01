@@ -2213,6 +2213,10 @@
                   "    pm.expect(json.provider).to.eql('revolut');",
                   "    pm.expect(json.currencies).to.be.an('array');",
                   "    pm.expect(json.currencies.length).to.be.at.least(1);",
+                  "    const accountId = Number(pm.environment.get('finance_account_id'));",
+                  "    const accountMap = {};",
+                  "    json.currencies.forEach(c => { accountMap[c.currency] = accountId; });",
+                  "    pm.environment.set('revolut_account_map', JSON.stringify(accountMap));",
                   "});"
                 ],
                 "type": "text/javascript"
@@ -2263,11 +2267,11 @@
                   "    const json = pm.response.json();",
                   "    pm.expect(json.groups).to.be.an('array');",
                   "    pm.expect(json.groups.length).to.be.at.least(1);",
-                  "    let allRows = [];",
-                  "    json.groups.forEach(g => allRows = allRows.concat(g.rows));",
-                  "    pm.environment.set('revolut_commit_rows', JSON.stringify(allRows.map((r, i) => ({",
-                  "        row: r, currency: json.groups.find(g => g.rows.includes(r)).currency",
-                  "    }))));",
+                  "    let rows = [];",
+                  "    json.groups.forEach(g => {",
+                  "        g.rows.forEach(r => rows.push(Object.assign({}, r, { currency: g.currency })));",
+                  "    });",
+                  "    pm.environment.set('revolut_commit_rows', JSON.stringify(rows));",
                   "    pm.environment.set('revolut_groups', JSON.stringify(json.groups.map(g => ({currency: g.currency, account_id: g.account_id}))));",
                   "});"
                 ],
@@ -2295,7 +2299,7 @@
                   "key": "account_map",
                   "value": "{{revolut_account_map}}",
                   "type": "text",
-                  "description": "Set this environment variable to e.g. {\"EUR\": <account_id>, \"SEK\": <account_id>, \"USD\": <account_id>, \"CZK\": <account_id>} using accounts created in the Accounts folder first."
+                  "description": "Populated by '15 - Detect Currencies' from the currencies it found, all mapped to finance_account_id."
                 }
               ]
             },
@@ -2323,7 +2327,9 @@
                   "pm.test('Inserts across at least one batch', () => {",
                   "    const json = pm.response.json();",
                   "    pm.expect(json.batches).to.be.an('array');",
+                  "    pm.expect(json.batches.length).to.be.at.least(1);",
                   "    pm.expect(json.total_inserted).to.be.at.least(0);",
+                  "    pm.environment.set('revolut_batch_ids', JSON.stringify(json.batches.map(b => b.batch_id)));",
                   "});"
                 ],
                 "type": "text/javascript"
@@ -2340,7 +2346,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"provider\": \"revolut\",\n  \"source_file\": \"revolut_sample.csv\",\n  \"account_map\": {{revolut_account_map}},\n  \"rows\": []\n}",
+              "raw": "{\n  \"provider\": \"revolut\",\n  \"source_file\": \"revolut_sample.csv\",\n  \"account_map\": {{revolut_account_map}},\n  \"rows\": {{revolut_commit_rows}}\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -2358,7 +2364,58 @@
                 "commit-grouped"
               ]
             },
-            "description": "Populate rows[] manually from the preview-grouped response (each row needs date_posted, bank_description, amount, type, currency, deduplication_hash) -- left empty here since row content is specific to the uploaded fixture."
+            "description": "rows/account_map are populated by '16 - Preview Grouped' from the actual preview response."
+          }
+        },
+        {
+          "name": "18 - Delete Grouped Batches",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "const ids = JSON.parse(pm.environment.get('revolut_batch_ids') || '[]');",
+                  "const id = ids.shift();",
+                  "pm.environment.set('revolut_batch_ids', JSON.stringify(ids));",
+                  "pm.variables.set('revolut_current_batch_id', id);"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 204', () => pm.response.to.have.status(204));",
+                  "const remaining = JSON.parse(pm.environment.get('revolut_batch_ids') || '[]');",
+                  "if (remaining.length > 0) {",
+                  "    postman.setNextRequest('18 - Delete Grouped Batches');",
+                  "} else {",
+                  "    pm.environment.unset('revolut_batch_ids');",
+                  "    pm.environment.unset('revolut_account_map');",
+                  "    pm.environment.unset('revolut_commit_rows');",
+                  "    pm.environment.unset('revolut_groups');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/finance/imports/{{revolut_current_batch_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "finance",
+                "imports",
+                "{{revolut_current_batch_id}}"
+              ]
+            },
+            "description": "Deletes each batch produced by '17 - Commit Grouped' (one per currency) so Cleanup can delete the account/category afterwards. Loops via setNextRequest until revolut_batch_ids is empty."
           }
         }
       ]
@@ -2397,13 +2454,13 @@
           }
         },
         {
-          "name": "02 - Delete Category",
+          "name": "02 - Delete Category (blocked by budget history)",
           "event": [
             {
               "listen": "test",
               "script": {
                 "exec": [
-                  "pm.test('Status is 204', () => pm.response.to.have.status(204));",
+                  "pm.test('Status is 409 - budget targets still reference this category', () => pm.response.to.have.status(409));",
                   "pm.environment.unset('finance_category_id');"
                 ],
                 "type": "text/javascript"

@@ -1,5 +1,6 @@
 import pytest
 from unittest.mock import AsyncMock, MagicMock
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.features.finance.categories.repository import CategoryRepository
 from app.features.finance.categories.schemas import CategoryCreate, CategoryUpdate
@@ -95,3 +96,12 @@ class TestDelete:
         assert result is True
         session.delete.assert_called_once_with(category)
         session.commit.assert_called_once()
+
+    async def test_rolls_back_and_reraises_on_integrity_error(self):
+        session = _make_session()
+        category = _make_category_orm()
+        session.execute.return_value = _scalar_first(category)
+        session.commit.side_effect = IntegrityError("", "", Exception("fk violation"))
+        with pytest.raises(IntegrityError):
+            await CategoryRepository(session).delete(1)
+        session.rollback.assert_called_once()

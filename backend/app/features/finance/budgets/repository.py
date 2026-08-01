@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 from decimal import Decimal
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.features.finance.budgets.tables import BudgetTarget
@@ -43,6 +43,12 @@ class BudgetTargetRepository:
             .order_by(BudgetTarget.category_id, BudgetTarget.effective_from.desc())
         )
         return list(result.scalars().all())
+
+    async def count_by_category(self, category_id: int) -> int:
+        result = await self._session.execute(
+            select(func.count()).select_from(BudgetTarget).where(BudgetTarget.category_id == category_id)
+        )
+        return result.scalar_one()
 
     def add(self, category_id: int, amount: Decimal, effective_from: datetime) -> BudgetTarget:
         """Add a new open target to the session without committing."""

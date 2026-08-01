@@ -2,6 +2,7 @@ import pytest
 from fastapi.testclient import TestClient
 from unittest.mock import AsyncMock
 from app.features.finance.categories.schemas import CategoryRead
+from app.features.finance.categories.service import CategoryDeletionBlockedError
 
 AUTH = {"Authorization": "Bearer test-api-token"}
 
@@ -105,3 +106,9 @@ class TestDeleteCategory:
     def test_service_called_with_correct_id(self, client, mock_service):
         client.delete("/finance/categories/5", headers=AUTH)
         mock_service.delete.assert_called_once_with(5)
+
+    def test_blocked_by_budget_targets_returns_409_with_count(self, client, mock_service):
+        mock_service.delete.side_effect = CategoryDeletionBlockedError(1, 3)
+        response = client.delete("/finance/categories/1", headers=AUTH)
+        assert response.status_code == 409
+        assert "3" in response.json()["detail"]

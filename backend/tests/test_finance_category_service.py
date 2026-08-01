@@ -1,6 +1,7 @@
 import pytest
 from unittest.mock import AsyncMock, MagicMock
-from app.features.finance.categories.service import CategoryService
+from sqlalchemy.exc import IntegrityError
+from app.features.finance.categories.service import CategoryDeletionBlockedError, CategoryService
 from app.features.finance.categories.schemas import CategoryCreate, CategoryUpdate, CategoryRead
 
 
@@ -16,6 +17,7 @@ def _make_category_orm(**kwargs):
 def service():
     svc = CategoryService.__new__(CategoryService)
     svc._repo = AsyncMock()
+    svc._budget_repo = AsyncMock()
     return svc
 
 
@@ -64,9 +66,37 @@ class TestUpdate:
 
 class TestDelete:
     async def test_returns_true_when_deleted(self, service):
+        service._repo.get.return_value = _make_category_orm(id=1)
         service._repo.delete.return_value = True
         assert await service.delete(1) is True
 
     async def test_returns_false_when_not_found(self, service):
-        service._repo.delete.return_value = False
+        service._repo.get.return_value = None
         assert await service.delete(999) is False
+        service._repo.delete.assert_not_awaited()
+
+    async def test_raises_blocked_error_with_budget_count(self, service):
+        service._repo.get.return_value = _make_category_orm(id=1, name="Groceries")
+        service._repo.delete.side_effect = IntegrityError("", "", Exception("fk violation"))
+        service._budget_repo.count_by_category.return_value = 3
+
+        with pytest.raises(CategoryDeletionBlockedError) as exc_info:
+            await service.delete(1)
+
+        assert exc_info.value.category_id == 1
+        assert exc_info.value.budget_count == 3
+        service._budget_repo.count_by_category.assert_awaited_once_with(1)
+
+    async def test_blocked_error_logs_warning_with_evidence(self, service, caplog):
+        service._repo.get.return_value = _make_category_orm(id=1, name="Groceries")
+        service._repo.delete.side_effect = IntegrityError("", "", Exception("fk violation"))
+        service._budget_repo.count_by_category.return_value = 3
+
+        with caplog.at_level("WARNING"):
+            with pytest.raises(CategoryDeletionBlockedError):
+                await service.delete(1)
+
+        assert any(
+            "Category delete blocked" in m and "3" in m and "Groceries" in m
+            for m in caplog.messages
+        )

@@ -1,4 +1,5 @@
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.features.finance.categories.tables import Category
@@ -42,5 +43,9 @@ class CategoryRepository:
         if category is None:
             return False
         await self._session.delete(category)
-        await self._session.commit()
+        try:
+            await self._session.commit()
+        except IntegrityError:
+            await self._session.rollback()
+            raise
         return True

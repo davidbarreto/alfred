@@ -1,0 +1,37 @@
+services:
+  db:
+    image: pgvector/pgvector:pg17
+    environment:
+      POSTGRES_USER: alfred_app
+      POSTGRES_PASSWORD: alfred_app_password
+      POSTGRES_DB: alfred_db
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U alfred_app -d alfred_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build: ../backend
+    ports:
+      - "127.0.0.1:8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      ENV: local
+      LOG_LEVEL: INFO
+      DATABASE_URL: postgresql+asyncpg://alfred_app:alfred_app_password@db:5432/alfred_db
+      DATABASE_ADMIN_URL: postgresql+asyncpg://alfred_app:alfred_app_password@db:5432/alfred_db
+      ALFRED_API_TOKEN: ci-smoke-test-token
+      VECTOR_EXTENSION: pgvector
+      DISABLE_INTEGRATIONS: "true"
+      # Still required by pydantic-settings even though DISABLE_INTEGRATIONS
+      # swaps out the actual Notion calls — plain placeholders are fine.
+      NOTION_API_KEY: unused
+      NOTION_TASKS_DATABASE_ID: unused
+      NOTION_NOTES_DATABASE_ID: unused
+      GOOGLE_CLIENT_ID: unused
+      GOOGLE_CLIENT_SECRET: unused
+      GOOGLE_CALENDAR_OAUTH_REDIRECT_URI: http://localhost:8000/integration/google-calendar/oauth/callback
+      EMBEDDING_MODEL: all-MiniLM-L6-v2

@@ -1,0 +1,126 @@
+name: API Smoke Test
+
+# Builds the API container fresh (with all real integrations disabled — see
+# DISABLE_INTEGRATIONS in backend/app/config.py) and runs the Postman
+# collections against it with newman. Catches breakage that unit tests miss:
+# migrations, container build, route wiring, cross-feature request chains.
+#
+# Deliberately excluded from the default collection set below:
+#   - integration_google_calendar / integration_google_contacts: require a
+#     real OAuth refresh token, which this job never has.
+#   - integration_telegram: hits the real Telegram Bot API.
+#   - cs.collection.json: items 24/25 trigger real Codeforces/LeetCode sync
+#     calls, and item 19 (study plan generation) expects the LLM to return
+#     parseable JSON, which the null LLM provider's canned text is not.
+#   - language.collection.json: production/conversation/shadowing endpoints
+#     need real audio (TTS/transcription/pronunciation analysis via Gemini)
+#     and aren't covered by a null provider yet.
+# Endpoints that fall back gracefully to an empty result on invalid LLM JSON
+# (memory extraction, command intent extraction, import auto-categorization)
+# are included — those degrade to empty/uncategorized rather than erroring,
+# so most of their Postman tests should still pass; a few assertions that
+# expect real LLM output will legitimately fail and can be pruned later.
+
+on:
+  schedule:
+    - cron: '0 6 * * 1' # Monday 06:00 UTC
+  workflow_dispatch:
+
+jobs:
+  smoke-test:
+    name: Build + Postman smoke test
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build and start API + DB
+        working-directory: infra
+        run: docker compose -f docker-compose.ci.yml up -d --build
+
+      - name: Wait for API to be ready
+        working-directory: infra
+        run: |
+          set -euo pipefail
+          for i in $(seq 1 60); do
+            if docker compose -f docker-compose.ci.yml exec -T api \
+                python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=3)" 2>/dev/null; then
+              echo "API is ready"
+              exit 0
+            fi
+            sleep 3
+          done
+          echo "Error: API failed to start within 180s"
+          docker compose -f docker-compose.ci.yml logs api
+          exit 1
+
+      - name: Install newman
+        run: npm install -g newman
+
+      - name: Run Postman collections
+        working-directory: postman
+        run: |
+          set -e
+          collections=(
+            briefing.collection.json
+            commands.collection.json
+            core.collection.json
+            calendar_events.collection.json
+            contacts.collection.json
+            finance.collection.json
+            notes.collection.json
+            shopping.collection.json
+            tasks.collection.json
+            watchers.collection.json
+            integration_llm_calls.collection.json
+            integration_provider_calls.collection.json
+          )
+          status=0
+          for collection in "${collections[@]}"; do
+            echo "==> $collection"
+            newman run "$collection" \
+              -e environment.json \
+              --env-var "base_url=http://localhost:8000" \
+              --env-var "api_token=ci-smoke-test-token" \
+              || status=1
+          done
+          exit $status
+
+      - name: Dump API logs on failure
+        if: failure()
+        working-directory: infra
+        run: docker compose -f docker-compose.ci.yml logs api
+
+      # Postman assertions only catch what the collections happen to check. A
+      # request can return a response that satisfies every assertion while the
+      # API logged an unrelated ERROR (e.g. a background task failing, a caught
+      # exception logged but swallowed). This step fails the job on any
+      # ERROR-level log line regardless of newman's own result, and surfaces
+      # WARNING-level lines as visible (but non-failing) annotations so they
+      # don't go unnoticed.
+      - name: Check API logs for errors/warnings
+        if: always()
+        working-directory: infra
+        run: |
+          docker compose -f docker-compose.ci.yml logs api > api.log 2>&1
+
+          if grep -q "WARNING:" api.log; then
+            echo "WARNING-level log lines found (not failing the job):"
+            grep -n "WARNING:" api.log | while IFS= read -r line; do
+              echo "::warning::${line#*:}"
+            done
+          fi
+
+          if grep -q "ERROR:" api.log; then
+            echo "ERROR-level log lines found:"
+            grep -n "ERROR:" api.log
+            echo "::error::API logs contain ERROR-level line(s) — failing the job"
+            exit 1
+          fi
+
+          echo "No ERROR-level log lines found."
+
+      - name: Tear down
+        if: always()
+        working-directory: infra
+        run: docker compose -f docker-compose.ci.yml down -v

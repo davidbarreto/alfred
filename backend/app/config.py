@@ -82,6 +82,11 @@ class Settings(BaseSettings):
     leetcode_session: str | None = Field(default=None, validation_alias="LEETCODE_SESSION")
     leetcode_csrf_token: str | None = Field(default=None, validation_alias="LEETCODE_CSRF_TOKEN")
 
+    # CI / smoke-test mode — swaps external-provider dependencies (LLM, Notion) for
+    # deterministic null implementations so the API can boot and be exercised by
+    # Postman tests without real third-party credentials.
+    disable_integrations: bool = Field(default=False, validation_alias="DISABLE_INTEGRATIONS")
+
 @lru_cache()
 def get_settings() -> Settings:
     return Settings() # type: ignore[call-arg]

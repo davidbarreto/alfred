@@ -69,7 +69,23 @@ from app.integrations.google_contacts.client import GoogleContactsClient
 from app.integrations.google_contacts.provider import GoogleContactsProvider
 from app.integrations.sentence_transformers.provider import SentenceTransformerEmbeddingProvider
 from app.integrations.google.llm_provider import GoogleLlmProvider
+from app.integrations.null.llm_provider import NullLlmProvider
+from app.integrations.null.storage_provider import NullStorageProvider
+from app.integrations.null.exchange_rate_provider import NullExchangeRateProvider
+from app.integrations.null.weather_provider import NullWeatherProvider
+from app.integrations.null.holiday_provider import NullHolidayProvider
+from app.integrations.null.pronunciation_provider import NullPronunciationProvider
+from app.integrations.null.conversation_provider import NullConversationProvider
+from app.integrations.null.audio_analysis_provider import NullAudioAnalysisProvider
+from app.integrations.null.transcription_provider import NullTranscriptionProvider
 from app.shared.llm import LlmProvider
+from app.shared.storage import StorageProvider
+from app.shared.exchange_rate import ExchangeRateProvider
+from app.shared.weather import WeatherProvider
+from app.shared.holiday import HolidayProvider
+from app.shared.pronunciation import PronunciationProvider
+from app.shared.conversation import ConversationProvider
+from app.shared.audio import AudioAnalysisProvider, TranscriptionProvider
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.session import get_session
 from app.features.cs.platforms.service import PlatformService
@@ -89,11 +105,15 @@ def get_notion_client() -> NotionClient:
     return NotionClient(api_key=s.notion_api_key, base_url=s.notion_base_url, api_version=s.notion_api_version)
 
 @lru_cache
-def get_task_provider() -> NotionProvider:
+def get_task_provider() -> StorageProvider:
+    if get_settings().disable_integrations:
+        return NullStorageProvider()
     return NotionProvider(get_notion_client(), get_settings().notion_tasks_database_id, entity_type="task")
 
 @lru_cache
-def get_note_provider() -> NotionProvider:
+def get_note_provider() -> StorageProvider:
+    if get_settings().disable_integrations:
+        return NullStorageProvider()
     return NotionProvider(get_notion_client(), get_settings().notion_notes_database_id, content_field="content", entity_type="note")
 
 def get_task_service(session: AsyncSession = Depends(get_session)) -> TaskService:
@@ -101,6 +121,14 @@ def get_task_service(session: AsyncSession = Depends(get_session)) -> TaskServic
 
 def get_note_service(session: AsyncSession = Depends(get_session)) -> NoteService:
     return NoteService(get_note_provider(), session, EmbeddingService(session, get_embedding_provider()))
+
+@lru_cache
+def get_null_calendar_provider() -> NullStorageProvider:
+    return NullStorageProvider()
+
+@lru_cache
+def get_null_contacts_provider() -> NullStorageProvider:
+    return NullStorageProvider()
 
 async def get_google_calendar_client(session: AsyncSession = Depends(get_session)) -> GoogleCalendarClient:
     s = get_settings()
@@ -117,9 +145,11 @@ async def get_google_calendar_client(session: AsyncSession = Depends(get_session
     )
 
 async def get_calendar_event_service(session: AsyncSession = Depends(get_session)) -> CalendarEventService:
+    if get_settings().disable_integrations:
+        return CalendarEventService(get_null_calendar_provider(), session)
     try:
         client = await get_google_calendar_client(session)
-        provider: GoogleCalendarProvider | None = GoogleCalendarProvider(
+        provider: StorageProvider | None = GoogleCalendarProvider(
             client, get_settings().google_calendar_id, entity_type="calendar_event"
         )
     except HTTPException:
@@ -146,11 +176,13 @@ def get_frankfurter_client() -> FrankfurterClient:
     return FrankfurterClient()
 
 @lru_cache
-def get_frankfurter_provider() -> FrankfurterProvider:
+def get_exchange_rate_provider() -> ExchangeRateProvider:
+    if get_settings().disable_integrations:
+        return NullExchangeRateProvider()
     return FrankfurterProvider(get_frankfurter_client())
 
 def get_exchange_rate_service(session: AsyncSession = Depends(get_session)) -> ExchangeRateService:
-    return ExchangeRateService(session, get_frankfurter_provider())
+    return ExchangeRateService(session, get_exchange_rate_provider())
 
 def get_transaction_service(session: AsyncSession = Depends(get_session)) -> TransactionService:
     return TransactionService(session, get_exchange_rate_service(session))
@@ -183,6 +215,8 @@ def get_embedding_provider() -> SentenceTransformerEmbeddingProvider:
 @lru_cache
 def get_llm_provider() -> LlmProvider:
     s = get_settings()
+    if s.disable_integrations:
+        return NullLlmProvider()
     if not s.gemini_api_key:
         raise RuntimeError("GEMINI_API_KEY is not set")
     return GoogleLlmProvider(api_key=s.gemini_api_key, model_name=s.llm_chat_model, temperature=s.llm_chat_temperature)
@@ -190,6 +224,8 @@ def get_llm_provider() -> LlmProvider:
 @lru_cache
 def get_extraction_llm_provider() -> LlmProvider:
     s = get_settings()
+    if s.disable_integrations:
+        return NullLlmProvider()
     if not s.gemini_api_key:
         raise RuntimeError("GEMINI_API_KEY is not set")
     return GoogleLlmProvider(api_key=s.gemini_api_key, model_name=s.llm_extraction_model)
@@ -241,7 +277,9 @@ def get_weather_client() -> OpenMeteoClient:
     return OpenMeteoClient()
 
 @lru_cache
-def get_weather_provider() -> OpenMeteoProvider:
+def get_weather_provider() -> WeatherProvider:
+    if get_settings().disable_integrations:
+        return NullWeatherProvider()
     return OpenMeteoProvider(get_weather_client())
 
 def get_holiday_client() -> GooglePublicHolidayClient | None:
@@ -250,7 +288,9 @@ def get_holiday_client() -> GooglePublicHolidayClient | None:
         return None
     return GooglePublicHolidayClient(api_key=s.gcp_api_key)
 
-def get_holiday_provider() -> GooglePublicHolidayProvider | None:
+def get_holiday_provider() -> HolidayProvider | None:
+    if get_settings().disable_integrations:
+        return NullHolidayProvider()
     client = get_holiday_client()
     if client is None:
         return None
@@ -268,6 +308,8 @@ async def get_google_contacts_client(session: AsyncSession = Depends(get_session
     )
 
 async def get_contact_service(session: AsyncSession = Depends(get_session)) -> ContactService | None:
+    if get_settings().disable_integrations:
+        return ContactService(session=session, client=None, provider=get_null_contacts_provider())
     client = await get_google_contacts_client(session)
     if not client:
         return None
@@ -275,6 +317,8 @@ async def get_contact_service(session: AsyncSession = Depends(get_session)) -> C
     return ContactService(session=session, client=client, provider=provider)
 
 async def get_contacts_crud_service(session: AsyncSession = Depends(get_session)) -> ContactService:
+    if get_settings().disable_integrations:
+        return ContactService(session=session, client=None, provider=get_null_contacts_provider())
     client = await get_google_contacts_client(session)
     provider = GoogleContactsProvider(client, entity_type="contact") if client else None
     return ContactService(session=session, client=client, provider=provider)
@@ -325,10 +369,17 @@ def get_conversation_audio_storage() -> FileStorage:
     return NullFileStorage()
 
 def get_pronunciation_service() -> PronunciationService:
+    if get_settings().disable_integrations:
+        return PronunciationService(NullPronunciationProvider(), FfmpegClient(), get_file_storage())
     return PronunciationService(GoogleTranslateTtsClient(), FfmpegClient(), get_file_storage())
 
 def get_conversation_tts_service() -> PronunciationService:
     s = get_settings()
+    if s.disable_integrations:
+        return PronunciationService(
+            NullPronunciationProvider(), FfmpegClient(), get_conversation_audio_storage(),
+            cache_namespace="conversation_tts_cache",
+        )
     if not s.gemini_api_key:
         raise RuntimeError("GEMINI_API_KEY is not set")
     provider = GoogleTtsProvider(
@@ -341,20 +392,26 @@ def get_conversation_tts_service() -> PronunciationService:
 def get_language_session_service(session: AsyncSession = Depends(get_session)) -> LanguageSessionService:
     return LanguageSessionService(session, WorkingMemoryService(session))
 
-def get_audio_analysis_provider() -> GoogleAudioAnalysisProvider:
+def get_audio_analysis_provider() -> AudioAnalysisProvider:
     s = get_settings()
+    if s.disable_integrations:
+        return NullAudioAnalysisProvider()
     if not s.gemini_api_key:
         raise RuntimeError("GEMINI_API_KEY is not set")
     return GoogleAudioAnalysisProvider(api_key=s.gemini_api_key, model_name=s.llm_pronunciation_model)
 
-def get_conversation_provider() -> GoogleConversationProvider:
+def get_conversation_provider() -> ConversationProvider:
     s = get_settings()
+    if s.disable_integrations:
+        return NullConversationProvider()
     if not s.gemini_api_key:
         raise RuntimeError("GEMINI_API_KEY is not set")
     return GoogleConversationProvider(api_key=s.gemini_api_key, model_name=s.llm_conversation_model)
 
-def get_transcription_provider() -> GoogleTranscriptionProvider:
+def get_transcription_provider() -> TranscriptionProvider:
     s = get_settings()
+    if s.disable_integrations:
+        return NullTranscriptionProvider()
     if not s.gemini_api_key:
         raise RuntimeError("GEMINI_API_KEY is not set")
     return GoogleTranscriptionProvider(api_key=s.gemini_api_key, model_name=s.llm_transcription_model)

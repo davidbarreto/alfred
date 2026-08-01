@@ -9,7 +9,9 @@ try:
 except ValueError:
     numeric_level = getattr(logging, level_name, logging.INFO)
 
-logging.basicConfig(level=numeric_level, force=True)
+_LOG_FORMAT = "%(asctime)s %(levelname)s:%(name)s:%(message)s"
+
+logging.basicConfig(level=numeric_level, format=_LOG_FORMAT, force=True)
 
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
@@ -75,7 +77,7 @@ def configure_logging() -> None:
     root_logger = logging.getLogger()
     root_logger.setLevel(numeric_level)
     if not root_logger.handlers:
-        logging.basicConfig(level=numeric_level, force=True)
+        logging.basicConfig(level=numeric_level, format=_LOG_FORMAT, force=True)
     for handler in root_logger.handlers:
         handler.setLevel(numeric_level)
     for logger_name in ("uvicorn", "uvicorn.error", "uvicorn.access"):

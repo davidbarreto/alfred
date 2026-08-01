@@ -12,6 +12,8 @@ class TestNormalizeLanguage:
         assert normalize_language("GNU C++17") == "cpp"
         assert normalize_language("python3") == "python"
         assert normalize_language("PyPy3") == "python"
+        assert normalize_language("Python 3") == "python"
+        assert normalize_language("Java 21") == "java"
 
     def test_returns_none_for_unknown(self):
         assert normalize_language("brainfuck") is None

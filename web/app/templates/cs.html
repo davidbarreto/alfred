@@ -152,7 +152,9 @@
 <script>
 async function syncPlatform(code) {
   const btn = document.getElementById(`sync-${code}`);
+  const originalHtml = btn.innerHTML;
   btn.disabled = true;
+  btn.innerHTML = '<span class="loading loading-spinner loading-xs"></span>Syncing…';
   try {
     const res = await fetch(`/cs/sync/${code}`, { method: 'POST' });
     if (!res.ok) {
@@ -165,6 +167,7 @@ async function syncPlatform(code) {
     alert('Sync failed.');
   } finally {
     btn.disabled = false;
+    btn.innerHTML = originalHtml;
   }
 }
 

@@ -2,11 +2,24 @@ services:
   db:
     image: pgvector/pgvector:pg17
     environment:
-      POSTGRES_USER: alfred_app
-      POSTGRES_PASSWORD: alfred_app_password
+      # Mirrors infra/docker-compose.yml's prod role split: POSTGRES_USER owns
+      # the schemas (migrations run as this user via DATABASE_ADMIN_URL), and
+      # postgres-init/init.sh creates a separate restricted DB_USER that the
+      # API actually connects as (DATABASE_URL). Using a single shared role
+      # here would hide any migration that forgets to GRANT the app user
+      # access to a new schema — see the cs-schema permission bug.
+      POSTGRES_USER: alfred_admin
+      POSTGRES_PASSWORD: alfred_admin_password
       POSTGRES_DB: alfred_db
+      DB_USER: alfred_app
+      DB_PASSWORD: alfred_app_password
+      N8N_DB_USER: alfred_n8n
+      N8N_DB_PASSWORD: alfred_n8n_password
+      N8N_DB_NAME: n8n_db
+    volumes:
+      - ./postgres-init:/docker-entrypoint-initdb.d
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U alfred_app -d alfred_db"]
+      test: ["CMD-SHELL", "pg_isready -U alfred_admin -d alfred_db"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -22,7 +35,7 @@ services:
       ENV: local
       LOG_LEVEL: INFO
       DATABASE_URL: postgresql+asyncpg://alfred_app:alfred_app_password@db:5432/alfred_db
-      DATABASE_ADMIN_URL: postgresql+asyncpg://alfred_app:alfred_app_password@db:5432/alfred_db
+      DATABASE_ADMIN_URL: postgresql+asyncpg://alfred_admin:alfred_admin_password@db:5432/alfred_db
       ALFRED_API_TOKEN: ci-smoke-test-token
       VECTOR_EXTENSION: pgvector
       DISABLE_INTEGRATIONS: "true"

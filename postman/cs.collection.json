@@ -2,7 +2,7 @@
   "info": {
     "name": "Alfred - CS Coach API",
     "_postman_id": "alfred-cs-v1",
-    "description": "Run in order: Health Check → Create Platform → List/Get/Update Platform → Create Problems (with tags) → List/Get/Filter Problems → Create Submissions (manual import) → List/Get Submissions → Stats Summary → Live Recommendation → Generate Study Plan → Get Active Plan → Complete Plan Item → Trigger Platform Sync",
+    "description": "Run in order: Health Check \u2192 Create Platform \u2192 List/Get/Update Platform \u2192 Create Problems (with tags) \u2192 List/Get/Filter Problems \u2192 Create Submissions (manual import) \u2192 List/Get Submissions \u2192 Stats Summary \u2192 Live Recommendation \u2192 Generate Study Plan \u2192 Get Active Plan \u2192 Complete Plan Item \u2192 Trigger Platform Sync",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -17,776 +17,1001 @@
   },
   "item": [
     {
-      "name": "01 - Health Check",
-      "event": [
+      "name": "ci-safe",
+      "description": "No LLM calls, no external network calls (Codeforces/LeetCode). Safe to run against the null-integration CI container.",
+      "item": [
         {
-          "listen": "test",
-          "script": {
-            "exec": [
-              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
-              "pm.test('Status is ok', () => {",
-              "    pm.expect(pm.response.json().status).to.eql('ok');",
-              "});"
-            ],
-            "type": "text/javascript"
+          "name": "01 - Health Check",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Status is ok', () => {",
+                  "    pm.expect(pm.response.json().status).to.eql('ok');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/health",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "health"
+              ]
+            }
           }
-        }
-      ],
-      "request": {
-        "auth": {
-          "type": "noauth"
         },
-        "method": "GET",
-        "header": [],
-        "url": {
-          "raw": "{{base_url}}/health",
-          "host": ["{{base_url}}"],
-          "path": ["health"]
-        }
-      }
-    },
-    {
-      "name": "02 - Create Platform (Codeforces)",
-      "event": [
         {
-          "listen": "test",
-          "script": {
-            "exec": [
-              "pm.test('Status is 201', () => pm.response.to.have.status(201));",
-              "pm.test('Response has id and saves it', () => {",
-              "    const json = pm.response.json();",
-              "    pm.expect(json).to.have.property('id');",
-              "    pm.expect(json.code).to.eql('codeforces');",
-              "    pm.expect(json.handle).to.eql('tourist');",
-              "    pm.expect(json.sync_enabled).to.be.true;",
-              "    pm.environment.set('cs_platform_id', json.id);",
-              "});"
+          "name": "02 - Create Platform (Codeforces)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+                  "pm.test('Response has id and saves it', () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.have.property('id');",
+                  "    pm.expect(json.code).to.eql('codeforces');",
+                  "    pm.expect(json.handle).to.eql('tourist');",
+                  "    pm.expect(json.sync_enabled).to.be.true;",
+                  "    pm.environment.set('cs_platform_id', json.id);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
-            "type": "text/javascript"
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"codeforces\",\n  \"handle\": \"tourist\",\n  \"sync_enabled\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/cs/platforms",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "cs",
+                "platforms"
+              ]
+            }
           }
-        }
-      ],
-      "request": {
-        "method": "POST",
-        "header": [
-          { "key": "Content-Type", "value": "application/json" }
-        ],
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"code\": \"codeforces\",\n  \"handle\": \"tourist\",\n  \"sync_enabled\": true\n}",
-          "options": { "raw": { "language": "json" } }
         },
-        "url": {
-          "raw": "{{base_url}}/cs/platforms",
-          "host": ["{{base_url}}"],
-          "path": ["cs", "platforms"]
-        }
-      }
-    },
-    {
-      "name": "03 - List Platforms",
-      "event": [
         {
-          "listen": "test",
-          "script": {
-            "exec": [
-              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
-              "pm.test('Response is an array with at least one platform', () => {",
-              "    const json = pm.response.json();",
-              "    pm.expect(json).to.be.an('array');",
-              "    pm.expect(json.length).to.be.at.least(1);",
-              "});"
-            ],
-            "type": "text/javascript"
+          "name": "03 - List Platforms",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Response is an array with at least one platform', () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.be.an('array');",
+                  "    pm.expect(json.length).to.be.at.least(1);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/cs/platforms",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "cs",
+                "platforms"
+              ]
+            }
           }
-        }
-      ],
-      "request": {
-        "method": "GET",
-        "header": [],
-        "url": {
-          "raw": "{{base_url}}/cs/platforms",
-          "host": ["{{base_url}}"],
-          "path": ["cs", "platforms"]
-        }
-      }
-    },
-    {
-      "name": "04 - Get Platform",
-      "event": [
-        {
-          "listen": "test",
-          "script": {
-            "exec": [
-              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
-              "pm.test('Returns correct platform', () => {",
-              "    const json = pm.response.json();",
-              "    pm.expect(json.id).to.eql(parseInt(pm.environment.get('cs_platform_id')));",
-              "    pm.expect(json.code).to.eql('codeforces');",
-              "});"
-            ],
-            "type": "text/javascript"
-          }
-        }
-      ],
-      "request": {
-        "method": "GET",
-        "header": [],
-        "url": {
-          "raw": "{{base_url}}/cs/platforms/{{cs_platform_id}}",
-          "host": ["{{base_url}}"],
-          "path": ["cs", "platforms", "{{cs_platform_id}}"]
-        }
-      }
-    },
-    {
-      "name": "05 - Update Platform",
-      "event": [
-        {
-          "listen": "test",
-          "script": {
-            "exec": [
-              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
-              "pm.test('Rating updated', () => {",
-              "    const json = pm.response.json();",
-              "    pm.expect(json.rating).to.eql(3500);",
-              "    pm.expect(json.rank).to.eql('legendary grandmaster');",
-              "});"
-            ],
-            "type": "text/javascript"
-          }
-        }
-      ],
-      "request": {
-        "method": "PATCH",
-        "header": [
-          { "key": "Content-Type", "value": "application/json" }
-        ],
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"rating\": 3500,\n  \"max_rating\": 3600,\n  \"rank\": \"legendary grandmaster\"\n}",
-          "options": { "raw": { "language": "json" } }
         },
-        "url": {
-          "raw": "{{base_url}}/cs/platforms/{{cs_platform_id}}",
-          "host": ["{{base_url}}"],
-          "path": ["cs", "platforms", "{{cs_platform_id}}"]
-        }
-      }
-    },
-    {
-      "name": "06 - Create Problem A (easy, dp)",
-      "event": [
         {
-          "listen": "test",
-          "script": {
-            "exec": [
-              "pm.test('Status is 201', () => pm.response.to.have.status(201));",
-              "pm.test('Response has id and normalized difficulty/tags', () => {",
-              "    const json = pm.response.json();",
-              "    pm.expect(json).to.have.property('id');",
-              "    pm.expect(json.external_id).to.eql('100A');",
-              "    pm.expect(json.difficulty).to.eql('easy');",
-              "    pm.expect(json.tags.map(t => t.name)).to.include('dynamic programming');",
-              "    pm.environment.set('cs_problem_a_id', json.id);",
-              "});"
-            ],
-            "type": "text/javascript"
+          "name": "04 - Get Platform",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Returns correct platform', () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.id).to.eql(parseInt(pm.environment.get('cs_platform_id')));",
+                  "    pm.expect(json.code).to.eql('codeforces');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/cs/platforms/{{cs_platform_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "cs",
+                "platforms",
+                "{{cs_platform_id}}"
+              ]
+            }
           }
-        }
-      ],
-      "request": {
-        "method": "POST",
-        "header": [
-          { "key": "Content-Type", "value": "application/json" }
-        ],
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"platform_id\": {{cs_platform_id}},\n  \"external_id\": \"100A\",\n  \"name\": \"Easy DP Problem\",\n  \"url\": \"https://codeforces.com/problemset/problem/100/A\",\n  \"difficulty_raw\": \"900\",\n  \"difficulty\": \"easy\",\n  \"tags_raw\": [\"dp\"],\n  \"tags\": [\"dp\"]\n}",
-          "options": { "raw": { "language": "json" } }
         },
-        "url": {
-          "raw": "{{base_url}}/cs/problems",
-          "host": ["{{base_url}}"],
-          "path": ["cs", "problems"]
-        }
-      }
-    },
-    {
-      "name": "07 - Create Problem B (medium, dp)",
-      "event": [
         {
-          "listen": "test",
-          "script": {
-            "exec": [
-              "pm.test('Status is 201', () => pm.response.to.have.status(201));",
-              "pm.test('Response has id', () => {",
-              "    const json = pm.response.json();",
-              "    pm.expect(json).to.have.property('id');",
-              "    pm.expect(json.difficulty).to.eql('medium');",
-              "    pm.environment.set('cs_problem_b_id', json.id);",
-              "});"
+          "name": "05 - Update Platform",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Rating updated', () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.rating).to.eql(3500);",
+                  "    pm.expect(json.rank).to.eql('legendary grandmaster');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
-            "type": "text/javascript"
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"rating\": 3500,\n  \"max_rating\": 3600,\n  \"rank\": \"legendary grandmaster\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/cs/platforms/{{cs_platform_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "cs",
+                "platforms",
+                "{{cs_platform_id}}"
+              ]
+            }
           }
-        }
-      ],
-      "request": {
-        "method": "POST",
-        "header": [
-          { "key": "Content-Type", "value": "application/json" }
-        ],
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"platform_id\": {{cs_platform_id}},\n  \"external_id\": \"100B\",\n  \"name\": \"Medium DP Problem\",\n  \"url\": \"https://codeforces.com/problemset/problem/100/B\",\n  \"difficulty_raw\": \"1400\",\n  \"difficulty\": \"medium\",\n  \"tags_raw\": [\"dp\"],\n  \"tags\": [\"dp\"]\n}",
-          "options": { "raw": { "language": "json" } }
         },
-        "url": {
-          "raw": "{{base_url}}/cs/problems",
-          "host": ["{{base_url}}"],
-          "path": ["cs", "problems"]
-        }
-      }
-    },
-    {
-      "name": "08 - Create Problem C (hard, dp, will be solved)",
-      "event": [
         {
-          "listen": "test",
-          "script": {
-            "exec": [
-              "pm.test('Status is 201', () => pm.response.to.have.status(201));",
-              "pm.test('Response has id', () => {",
-              "    const json = pm.response.json();",
-              "    pm.expect(json).to.have.property('id');",
-              "    pm.expect(json.difficulty).to.eql('hard');",
-              "    pm.environment.set('cs_problem_c_id', json.id);",
-              "});"
+          "name": "06 - Create Problem A (easy, dp)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+                  "pm.test('Response has id and normalized difficulty/tags', () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.have.property('id');",
+                  "    pm.expect(json.external_id).to.eql('100A');",
+                  "    pm.expect(json.difficulty).to.eql('easy');",
+                  "    pm.expect(json.tags.map(t => t.name)).to.include('dynamic programming');",
+                  "    pm.environment.set('cs_problem_a_id', json.id);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
-            "type": "text/javascript"
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"platform_id\": {{cs_platform_id}},\n  \"external_id\": \"100A\",\n  \"name\": \"Easy DP Problem\",\n  \"url\": \"https://codeforces.com/problemset/problem/100/A\",\n  \"difficulty_raw\": \"900\",\n  \"difficulty\": \"easy\",\n  \"tags_raw\": [\"dp\"],\n  \"tags\": [\"dp\"]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/cs/problems",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "cs",
+                "problems"
+              ]
+            }
           }
-        }
-      ],
-      "request": {
-        "method": "POST",
-        "header": [
-          { "key": "Content-Type", "value": "application/json" }
-        ],
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"platform_id\": {{cs_platform_id}},\n  \"external_id\": \"100C\",\n  \"name\": \"Hard DP Problem\",\n  \"url\": \"https://codeforces.com/problemset/problem/100/C\",\n  \"difficulty_raw\": \"2100\",\n  \"difficulty\": \"hard\",\n  \"tags_raw\": [\"dp\"],\n  \"tags\": [\"dp\"]\n}",
-          "options": { "raw": { "language": "json" } }
         },
-        "url": {
-          "raw": "{{base_url}}/cs/problems",
-          "host": ["{{base_url}}"],
-          "path": ["cs", "problems"]
-        }
-      }
-    },
-    {
-      "name": "09 - List Problems (filter by platform)",
-      "event": [
         {
-          "listen": "test",
-          "script": {
-            "exec": [
-              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
-              "pm.test('Returns at least the 3 seeded problems', () => {",
-              "    const json = pm.response.json();",
-              "    pm.expect(json).to.be.an('array');",
-              "    pm.expect(json.length).to.be.at.least(3);",
-              "});"
+          "name": "07 - Create Problem B (medium, dp)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+                  "pm.test('Response has id', () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.have.property('id');",
+                  "    pm.expect(json.difficulty).to.eql('medium');",
+                  "    pm.environment.set('cs_problem_b_id', json.id);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
-            "type": "text/javascript"
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"platform_id\": {{cs_platform_id}},\n  \"external_id\": \"100B\",\n  \"name\": \"Medium DP Problem\",\n  \"url\": \"https://codeforces.com/problemset/problem/100/B\",\n  \"difficulty_raw\": \"1400\",\n  \"difficulty\": \"medium\",\n  \"tags_raw\": [\"dp\"],\n  \"tags\": [\"dp\"]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/cs/problems",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "cs",
+                "problems"
+              ]
+            }
           }
-        }
-      ],
-      "request": {
-        "method": "GET",
-        "header": [],
-        "url": {
-          "raw": "{{base_url}}/cs/problems?platform_id={{cs_platform_id}}",
-          "host": ["{{base_url}}"],
-          "path": ["cs", "problems"],
-          "query": [
-            { "key": "platform_id", "value": "{{cs_platform_id}}" }
-          ]
-        }
-      }
-    },
-    {
-      "name": "10 - List Problems (filter by tag)",
-      "event": [
-        {
-          "listen": "test",
-          "script": {
-            "exec": [
-              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
-              "pm.test('All results have the dynamic programming tag', () => {",
-              "    const json = pm.response.json();",
-              "    pm.expect(json).to.be.an('array');",
-              "    pm.expect(json.length).to.be.at.least(3);",
-              "    json.forEach(p => {",
-              "        pm.expect(p.tags.map(t => t.name)).to.include('dynamic programming');",
-              "    });",
-              "});"
-            ],
-            "type": "text/javascript"
-          }
-        }
-      ],
-      "request": {
-        "method": "GET",
-        "header": [],
-        "url": {
-          "raw": "{{base_url}}/cs/problems?tag=dynamic%20programming",
-          "host": ["{{base_url}}"],
-          "path": ["cs", "problems"],
-          "query": [
-            { "key": "tag", "value": "dynamic programming" }
-          ]
-        }
-      }
-    },
-    {
-      "name": "11 - Get Problem",
-      "event": [
-        {
-          "listen": "test",
-          "script": {
-            "exec": [
-              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
-              "pm.test('Returns correct problem', () => {",
-              "    const json = pm.response.json();",
-              "    pm.expect(json.id).to.eql(parseInt(pm.environment.get('cs_problem_a_id')));",
-              "    pm.expect(json.external_id).to.eql('100A');",
-              "});"
-            ],
-            "type": "text/javascript"
-          }
-        }
-      ],
-      "request": {
-        "method": "GET",
-        "header": [],
-        "url": {
-          "raw": "{{base_url}}/cs/problems/{{cs_problem_a_id}}",
-          "host": ["{{base_url}}"],
-          "path": ["cs", "problems", "{{cs_problem_a_id}}"]
-        }
-      }
-    },
-    {
-      "name": "12 - Create Submission (Problem A, Wrong Answer, manual import)",
-      "event": [
-        {
-          "listen": "test",
-          "script": {
-            "exec": [
-              "pm.test('Status is 201', () => pm.response.to.have.status(201));",
-              "pm.test('Response has id and normalized fields', () => {",
-              "    const json = pm.response.json();",
-              "    pm.expect(json).to.have.property('id');",
-              "    pm.expect(json.verdict).to.eql('wrong_answer');",
-              "    pm.expect(json.source_method).to.eql('manual_import');",
-              "    pm.environment.set('cs_submission_a_id', json.id);",
-              "});"
-            ],
-            "type": "text/javascript"
-          }
-        }
-      ],
-      "request": {
-        "method": "POST",
-        "header": [
-          { "key": "Content-Type", "value": "application/json" }
-        ],
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"platform_id\": {{cs_platform_id}},\n  \"problem_id\": {{cs_problem_a_id}},\n  \"external_id\": \"9001\",\n  \"verdict\": \"wrong_answer\",\n  \"verdict_raw\": \"WRONG_ANSWER\",\n  \"language\": \"cpp\",\n  \"language_raw\": \"GNU C++17\",\n  \"source_method\": \"manual_import\",\n  \"submitted_at\": \"2026-07-28T10:00:00Z\"\n}",
-          "options": { "raw": { "language": "json" } }
         },
-        "url": {
-          "raw": "{{base_url}}/cs/submissions",
-          "host": ["{{base_url}}"],
-          "path": ["cs", "submissions"]
-        }
-      }
-    },
-    {
-      "name": "13 - Create Submission (Problem B, Wrong Answer, manual import)",
-      "event": [
         {
-          "listen": "test",
-          "script": {
-            "exec": [
-              "pm.test('Status is 201', () => pm.response.to.have.status(201));",
-              "pm.test('Response has id', () => {",
-              "    const json = pm.response.json();",
-              "    pm.expect(json).to.have.property('id');",
-              "    pm.expect(json.verdict).to.eql('wrong_answer');",
-              "    pm.environment.set('cs_submission_b_id', json.id);",
-              "});"
+          "name": "08 - Create Problem C (hard, dp, will be solved)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+                  "pm.test('Response has id', () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.have.property('id');",
+                  "    pm.expect(json.difficulty).to.eql('hard');",
+                  "    pm.environment.set('cs_problem_c_id', json.id);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
-            "type": "text/javascript"
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"platform_id\": {{cs_platform_id}},\n  \"external_id\": \"100C\",\n  \"name\": \"Hard DP Problem\",\n  \"url\": \"https://codeforces.com/problemset/problem/100/C\",\n  \"difficulty_raw\": \"2100\",\n  \"difficulty\": \"hard\",\n  \"tags_raw\": [\"dp\"],\n  \"tags\": [\"dp\"]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/cs/problems",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "cs",
+                "problems"
+              ]
+            }
           }
-        }
-      ],
-      "request": {
-        "method": "POST",
-        "header": [
-          { "key": "Content-Type", "value": "application/json" }
-        ],
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"platform_id\": {{cs_platform_id}},\n  \"problem_id\": {{cs_problem_b_id}},\n  \"external_id\": \"9002\",\n  \"verdict\": \"wrong_answer\",\n  \"verdict_raw\": \"WRONG_ANSWER\",\n  \"language\": \"cpp\",\n  \"language_raw\": \"GNU C++17\",\n  \"source_method\": \"manual_import\",\n  \"submitted_at\": \"2026-07-29T10:00:00Z\"\n}",
-          "options": { "raw": { "language": "json" } }
         },
-        "url": {
-          "raw": "{{base_url}}/cs/submissions",
-          "host": ["{{base_url}}"],
-          "path": ["cs", "submissions"]
-        }
-      }
-    },
-    {
-      "name": "14 - Create Submission (Problem C, Accepted, manual import)",
-      "event": [
         {
-          "listen": "test",
-          "script": {
-            "exec": [
-              "pm.test('Status is 201', () => pm.response.to.have.status(201));",
-              "pm.test('Response has id and accepted verdict', () => {",
-              "    const json = pm.response.json();",
-              "    pm.expect(json).to.have.property('id');",
-              "    pm.expect(json.verdict).to.eql('accepted');",
-              "    pm.environment.set('cs_submission_c_id', json.id);",
-              "});"
-            ],
-            "type": "text/javascript"
+          "name": "09 - List Problems (filter by platform)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Returns at least the 3 seeded problems', () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.be.an('array');",
+                  "    pm.expect(json.length).to.be.at.least(3);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/cs/problems?platform_id={{cs_platform_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "cs",
+                "problems"
+              ],
+              "query": [
+                {
+                  "key": "platform_id",
+                  "value": "{{cs_platform_id}}"
+                }
+              ]
+            }
           }
-        }
-      ],
-      "request": {
-        "method": "POST",
-        "header": [
-          { "key": "Content-Type", "value": "application/json" }
-        ],
-        "body": {
-          "mode": "raw",
-          "raw": "{\n  \"platform_id\": {{cs_platform_id}},\n  \"problem_id\": {{cs_problem_c_id}},\n  \"external_id\": \"9003\",\n  \"verdict\": \"accepted\",\n  \"verdict_raw\": \"OK\",\n  \"language\": \"cpp\",\n  \"language_raw\": \"GNU C++17\",\n  \"source_method\": \"manual_import\",\n  \"submitted_at\": \"2026-07-30T10:00:00Z\"\n}",
-          "options": { "raw": { "language": "json" } }
         },
-        "url": {
-          "raw": "{{base_url}}/cs/submissions",
-          "host": ["{{base_url}}"],
-          "path": ["cs", "submissions"]
-        }
-      }
-    },
-    {
-      "name": "15 - List Submissions (filter by verdict)",
-      "event": [
         {
-          "listen": "test",
-          "script": {
-            "exec": [
-              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
-              "pm.test('All results are accepted', () => {",
-              "    const json = pm.response.json();",
-              "    pm.expect(json).to.be.an('array');",
-              "    json.forEach(s => pm.expect(s.verdict).to.eql('accepted'));",
-              "});"
+          "name": "10 - List Problems (filter by tag)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('All results have the dynamic programming tag', () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.be.an('array');",
+                  "    pm.expect(json.length).to.be.at.least(3);",
+                  "    json.forEach(p => {",
+                  "        pm.expect(p.tags.map(t => t.name)).to.include('dynamic programming');",
+                  "    });",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/cs/problems?tag=dynamic%20programming",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "cs",
+                "problems"
+              ],
+              "query": [
+                {
+                  "key": "tag",
+                  "value": "dynamic programming"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "11 - Get Problem",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Returns correct problem', () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.id).to.eql(parseInt(pm.environment.get('cs_problem_a_id')));",
+                  "    pm.expect(json.external_id).to.eql('100A');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/cs/problems/{{cs_problem_a_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "cs",
+                "problems",
+                "{{cs_problem_a_id}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "12 - Create Submission (Problem A, Wrong Answer, manual import)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+                  "pm.test('Response has id and normalized fields', () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.have.property('id');",
+                  "    pm.expect(json.verdict).to.eql('wrong_answer');",
+                  "    pm.expect(json.source_method).to.eql('manual_import');",
+                  "    pm.environment.set('cs_submission_a_id', json.id);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
-            "type": "text/javascript"
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"platform_id\": {{cs_platform_id}},\n  \"problem_id\": {{cs_problem_a_id}},\n  \"external_id\": \"9001\",\n  \"verdict\": \"wrong_answer\",\n  \"verdict_raw\": \"WRONG_ANSWER\",\n  \"language\": \"cpp\",\n  \"language_raw\": \"GNU C++17\",\n  \"source_method\": \"manual_import\",\n  \"submitted_at\": \"2026-07-28T10:00:00Z\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/cs/submissions",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "cs",
+                "submissions"
+              ]
+            }
+          }
+        },
+        {
+          "name": "13 - Create Submission (Problem B, Wrong Answer, manual import)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+                  "pm.test('Response has id', () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.have.property('id');",
+                  "    pm.expect(json.verdict).to.eql('wrong_answer');",
+                  "    pm.environment.set('cs_submission_b_id', json.id);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"platform_id\": {{cs_platform_id}},\n  \"problem_id\": {{cs_problem_b_id}},\n  \"external_id\": \"9002\",\n  \"verdict\": \"wrong_answer\",\n  \"verdict_raw\": \"WRONG_ANSWER\",\n  \"language\": \"cpp\",\n  \"language_raw\": \"GNU C++17\",\n  \"source_method\": \"manual_import\",\n  \"submitted_at\": \"2026-07-29T10:00:00Z\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/cs/submissions",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "cs",
+                "submissions"
+              ]
+            }
+          }
+        },
+        {
+          "name": "14 - Create Submission (Problem C, Accepted, manual import)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+                  "pm.test('Response has id and accepted verdict', () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.have.property('id');",
+                  "    pm.expect(json.verdict).to.eql('accepted');",
+                  "    pm.environment.set('cs_submission_c_id', json.id);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"platform_id\": {{cs_platform_id}},\n  \"problem_id\": {{cs_problem_c_id}},\n  \"external_id\": \"9003\",\n  \"verdict\": \"accepted\",\n  \"verdict_raw\": \"OK\",\n  \"language\": \"cpp\",\n  \"language_raw\": \"GNU C++17\",\n  \"source_method\": \"manual_import\",\n  \"submitted_at\": \"2026-07-30T10:00:00Z\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/cs/submissions",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "cs",
+                "submissions"
+              ]
+            }
+          }
+        },
+        {
+          "name": "15 - List Submissions (filter by verdict)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('All results are accepted', () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.be.an('array');",
+                  "    json.forEach(s => pm.expect(s.verdict).to.eql('accepted'));",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/cs/submissions?platform_id={{cs_platform_id}}&verdict=accepted",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "cs",
+                "submissions"
+              ],
+              "query": [
+                {
+                  "key": "platform_id",
+                  "value": "{{cs_platform_id}}"
+                },
+                {
+                  "key": "verdict",
+                  "value": "accepted"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "16 - Get Submission",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Returns correct submission', () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.id).to.eql(parseInt(pm.environment.get('cs_submission_c_id')));",
+                  "    pm.expect(json.verdict).to.eql('accepted');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/cs/submissions/{{cs_submission_c_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "cs",
+                "submissions",
+                "{{cs_submission_c_id}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "17 - Get Stats Summary",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Reflects seeded submissions', () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.total_solved).to.be.at.least(1);",
+                  "    pm.expect(json.by_tag.map(t => t.tag)).to.include('dynamic programming');",
+                  "    pm.expect(json.weakest_tags).to.be.an('array');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/cs/stats/summary",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "cs",
+                "stats",
+                "summary"
+              ]
+            }
+          }
+        },
+        {
+          "name": "18 - Get Live Recommendation",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Recommends the weak dp tag with unsolved candidates', () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.tag).to.eql('dynamic programming');",
+                  "    pm.expect(json.candidates).to.be.an('array');",
+                  "    pm.expect(json.candidates.length).to.be.at.least(1);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/cs/recommendations/live",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "cs",
+                "recommendations",
+                "live"
+              ]
+            }
           }
         }
-      ],
-      "request": {
-        "method": "GET",
-        "header": [],
-        "url": {
-          "raw": "{{base_url}}/cs/submissions?platform_id={{cs_platform_id}}&verdict=accepted",
-          "host": ["{{base_url}}"],
-          "path": ["cs", "submissions"],
-          "query": [
-            { "key": "platform_id", "value": "{{cs_platform_id}}" },
-            { "key": "verdict", "value": "accepted" }
-          ]
-        }
-      }
+      ]
     },
     {
-      "name": "16 - Get Submission",
-      "event": [
+      "name": "excluded-from-ci",
+      "description": "Item 19 requires the LLM to return parseable JSON (the null provider does not); items 20-23 depend on the plan it creates; items 24-25 make real Codeforces/LeetCode network calls.",
+      "item": [
         {
-          "listen": "test",
-          "script": {
-            "exec": [
-              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
-              "pm.test('Returns correct submission', () => {",
-              "    const json = pm.response.json();",
-              "    pm.expect(json.id).to.eql(parseInt(pm.environment.get('cs_submission_c_id')));",
-              "    pm.expect(json.verdict).to.eql('accepted');",
-              "});"
-            ],
-            "type": "text/javascript"
+          "name": "19 - Generate Weekly Study Plan (calls LLM, requires GEMINI_API_KEY)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+                  "pm.test('Plan has rationale and items', () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.have.property('id');",
+                  "    pm.expect(json.cadence).to.eql('weekly');",
+                  "    pm.expect(json.status).to.eql('active');",
+                  "    pm.expect(json.items).to.be.an('array').with.length.above(0);",
+                  "    pm.environment.set('cs_plan_id', json.id);",
+                  "    pm.environment.set('cs_plan_item_id', json.items[0].id);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/cs/recommendations/plans/weekly",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "cs",
+                "recommendations",
+                "plans",
+                "weekly"
+              ]
+            }
+          }
+        },
+        {
+          "name": "20 - Get Active Weekly Plan",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Returns the plan just generated', () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.id).to.eql(parseInt(pm.environment.get('cs_plan_id')));",
+                  "    pm.expect(json.cadence).to.eql('weekly');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/cs/study-plans/active/weekly",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "cs",
+                "study-plans",
+                "active",
+                "weekly"
+              ]
+            }
+          }
+        },
+        {
+          "name": "21 - Get Plan by Id",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Returns correct plan', () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.id).to.eql(parseInt(pm.environment.get('cs_plan_id')));",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/cs/study-plans/{{cs_plan_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "cs",
+                "study-plans",
+                "{{cs_plan_id}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "22 - Complete Plan Item",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 204', () => pm.response.to.have.status(204));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/cs/study-plans/items/{{cs_plan_item_id}}/complete",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "cs",
+                "study-plans",
+                "items",
+                "{{cs_plan_item_id}}",
+                "complete"
+              ]
+            }
+          }
+        },
+        {
+          "name": "23 - Complete Plan Item (unknown id, 404)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 404', () => pm.response.to.have.status(404));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/cs/study-plans/items/999999/complete",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "cs",
+                "study-plans",
+                "items",
+                "999999",
+                "complete"
+              ]
+            }
+          }
+        },
+        {
+          "name": "24 - Trigger Codeforces Sync (real API call, uses seeded handle)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Response reports a synced count', () => {",
+                  "    pm.expect(pm.response.json()).to.have.property('synced');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/cs/platforms/codeforces/sync",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "cs",
+                "platforms",
+                "codeforces",
+                "sync"
+              ]
+            }
+          }
+        },
+        {
+          "name": "25 - Trigger LeetCode Sync (requires LEETCODE_SESSION/LEETCODE_CSRF_TOKEN, else 503)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200 (configured) or 503 (not configured)', () => {",
+                  "    pm.expect([200, 503]).to.include(pm.response.code);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/cs/platforms/leetcode/sync",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "cs",
+                "platforms",
+                "leetcode",
+                "sync"
+              ]
+            }
           }
         }
-      ],
-      "request": {
-        "method": "GET",
-        "header": [],
-        "url": {
-          "raw": "{{base_url}}/cs/submissions/{{cs_submission_c_id}}",
-          "host": ["{{base_url}}"],
-          "path": ["cs", "submissions", "{{cs_submission_c_id}}"]
-        }
-      }
-    },
-    {
-      "name": "17 - Get Stats Summary",
-      "event": [
-        {
-          "listen": "test",
-          "script": {
-            "exec": [
-              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
-              "pm.test('Reflects seeded submissions', () => {",
-              "    const json = pm.response.json();",
-              "    pm.expect(json.total_solved).to.be.at.least(1);",
-              "    pm.expect(json.by_tag.map(t => t.tag)).to.include('dynamic programming');",
-              "    pm.expect(json.weakest_tags).to.be.an('array');",
-              "});"
-            ],
-            "type": "text/javascript"
-          }
-        }
-      ],
-      "request": {
-        "method": "GET",
-        "header": [],
-        "url": {
-          "raw": "{{base_url}}/cs/stats/summary",
-          "host": ["{{base_url}}"],
-          "path": ["cs", "stats", "summary"]
-        }
-      }
-    },
-    {
-      "name": "18 - Get Live Recommendation",
-      "event": [
-        {
-          "listen": "test",
-          "script": {
-            "exec": [
-              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
-              "pm.test('Recommends the weak dp tag with unsolved candidates', () => {",
-              "    const json = pm.response.json();",
-              "    pm.expect(json.tag).to.eql('dynamic programming');",
-              "    pm.expect(json.candidates).to.be.an('array');",
-              "    pm.expect(json.candidates.length).to.be.at.least(1);",
-              "});"
-            ],
-            "type": "text/javascript"
-          }
-        }
-      ],
-      "request": {
-        "method": "GET",
-        "header": [],
-        "url": {
-          "raw": "{{base_url}}/cs/recommendations/live",
-          "host": ["{{base_url}}"],
-          "path": ["cs", "recommendations", "live"]
-        }
-      }
-    },
-    {
-      "name": "19 - Generate Weekly Study Plan (calls LLM, requires GEMINI_API_KEY)",
-      "event": [
-        {
-          "listen": "test",
-          "script": {
-            "exec": [
-              "pm.test('Status is 201', () => pm.response.to.have.status(201));",
-              "pm.test('Plan has rationale and items', () => {",
-              "    const json = pm.response.json();",
-              "    pm.expect(json).to.have.property('id');",
-              "    pm.expect(json.cadence).to.eql('weekly');",
-              "    pm.expect(json.status).to.eql('active');",
-              "    pm.expect(json.items).to.be.an('array').with.length.above(0);",
-              "    pm.environment.set('cs_plan_id', json.id);",
-              "    pm.environment.set('cs_plan_item_id', json.items[0].id);",
-              "});"
-            ],
-            "type": "text/javascript"
-          }
-        }
-      ],
-      "request": {
-        "method": "POST",
-        "header": [],
-        "url": {
-          "raw": "{{base_url}}/cs/recommendations/plans/weekly",
-          "host": ["{{base_url}}"],
-          "path": ["cs", "recommendations", "plans", "weekly"]
-        }
-      }
-    },
-    {
-      "name": "20 - Get Active Weekly Plan",
-      "event": [
-        {
-          "listen": "test",
-          "script": {
-            "exec": [
-              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
-              "pm.test('Returns the plan just generated', () => {",
-              "    const json = pm.response.json();",
-              "    pm.expect(json.id).to.eql(parseInt(pm.environment.get('cs_plan_id')));",
-              "    pm.expect(json.cadence).to.eql('weekly');",
-              "});"
-            ],
-            "type": "text/javascript"
-          }
-        }
-      ],
-      "request": {
-        "method": "GET",
-        "header": [],
-        "url": {
-          "raw": "{{base_url}}/cs/study-plans/active/weekly",
-          "host": ["{{base_url}}"],
-          "path": ["cs", "study-plans", "active", "weekly"]
-        }
-      }
-    },
-    {
-      "name": "21 - Get Plan by Id",
-      "event": [
-        {
-          "listen": "test",
-          "script": {
-            "exec": [
-              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
-              "pm.test('Returns correct plan', () => {",
-              "    const json = pm.response.json();",
-              "    pm.expect(json.id).to.eql(parseInt(pm.environment.get('cs_plan_id')));",
-              "});"
-            ],
-            "type": "text/javascript"
-          }
-        }
-      ],
-      "request": {
-        "method": "GET",
-        "header": [],
-        "url": {
-          "raw": "{{base_url}}/cs/study-plans/{{cs_plan_id}}",
-          "host": ["{{base_url}}"],
-          "path": ["cs", "study-plans", "{{cs_plan_id}}"]
-        }
-      }
-    },
-    {
-      "name": "22 - Complete Plan Item",
-      "event": [
-        {
-          "listen": "test",
-          "script": {
-            "exec": [
-              "pm.test('Status is 204', () => pm.response.to.have.status(204));"
-            ],
-            "type": "text/javascript"
-          }
-        }
-      ],
-      "request": {
-        "method": "POST",
-        "header": [],
-        "url": {
-          "raw": "{{base_url}}/cs/study-plans/items/{{cs_plan_item_id}}/complete",
-          "host": ["{{base_url}}"],
-          "path": ["cs", "study-plans", "items", "{{cs_plan_item_id}}", "complete"]
-        }
-      }
-    },
-    {
-      "name": "23 - Complete Plan Item (unknown id, 404)",
-      "event": [
-        {
-          "listen": "test",
-          "script": {
-            "exec": [
-              "pm.test('Status is 404', () => pm.response.to.have.status(404));"
-            ],
-            "type": "text/javascript"
-          }
-        }
-      ],
-      "request": {
-        "method": "POST",
-        "header": [],
-        "url": {
-          "raw": "{{base_url}}/cs/study-plans/items/999999/complete",
-          "host": ["{{base_url}}"],
-          "path": ["cs", "study-plans", "items", "999999", "complete"]
-        }
-      }
-    },
-    {
-      "name": "24 - Trigger Codeforces Sync (real API call, uses seeded handle)",
-      "event": [
-        {
-          "listen": "test",
-          "script": {
-            "exec": [
-              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
-              "pm.test('Response reports a synced count', () => {",
-              "    pm.expect(pm.response.json()).to.have.property('synced');",
-              "});"
-            ],
-            "type": "text/javascript"
-          }
-        }
-      ],
-      "request": {
-        "method": "POST",
-        "header": [],
-        "url": {
-          "raw": "{{base_url}}/cs/platforms/codeforces/sync",
-          "host": ["{{base_url}}"],
-          "path": ["cs", "platforms", "codeforces", "sync"]
-        }
-      }
-    },
-    {
-      "name": "25 - Trigger LeetCode Sync (requires LEETCODE_SESSION/LEETCODE_CSRF_TOKEN, else 503)",
-      "event": [
-        {
-          "listen": "test",
-          "script": {
-            "exec": [
-              "pm.test('Status is 200 (configured) or 503 (not configured)', () => {",
-              "    pm.expect([200, 503]).to.include(pm.response.code);",
-              "});"
-            ],
-            "type": "text/javascript"
-          }
-        }
-      ],
-      "request": {
-        "method": "POST",
-        "header": [],
-        "url": {
-          "raw": "{{base_url}}/cs/platforms/leetcode/sync",
-          "host": ["{{base_url}}"],
-          "path": ["cs", "platforms", "leetcode", "sync"]
-        }
-      }
+      ]
     }
   ]
 }

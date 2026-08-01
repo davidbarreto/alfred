@@ -9,9 +9,12 @@ name: API Smoke Test
 #   - integration_google_calendar / integration_google_contacts: require a
 #     real OAuth refresh token, which this job never has.
 #   - integration_telegram: hits the real Telegram Bot API.
-#   - cs.collection.json: items 24/25 trigger real Codeforces/LeetCode sync
-#     calls, and item 19 (study plan generation) expects the LLM to return
-#     parseable JSON, which the null LLM provider's canned text is not.
+#   - cs.collection.json: only the "ci-safe" folder runs (platforms/problems/
+#     submissions/stats/recommendations CRUD). The "excluded-from-ci" folder
+#     is skipped — item 19 (study plan generation) expects the LLM to return
+#     parseable JSON, which the null LLM provider's canned text is not; items
+#     20-23 depend on the plan it creates; items 24/25 trigger real
+#     Codeforces/LeetCode sync calls.
 #   - language.collection.json: production/conversation/shadowing endpoints
 #     need real audio (TTS/transcription/pronunciation analysis via Gemini)
 #     and aren't covered by a null provider yet.
@@ -84,6 +87,15 @@ jobs:
               --env-var "api_token=ci-smoke-test-token" \
               || status=1
           done
+
+          echo "==> cs.collection.json (ci-safe folder only)"
+          newman run cs.collection.json \
+            --folder ci-safe \
+            -e environment.json \
+            --env-var "base_url=http://localhost:8000" \
+            --env-var "api_token=ci-smoke-test-token" \
+            || status=1
+
           exit $status
 
       - name: Dump API logs on failure

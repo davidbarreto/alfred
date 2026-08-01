@@ -16,8 +16,11 @@ class ShoppingItem(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
-    category_id: Mapped[int] = mapped_column(
-        Integer, ForeignKey("organizer.shopping_categories.id", ondelete="RESTRICT"), nullable=False
+    # Nullable so a soft-delete (see delete()) can clear it, releasing the RESTRICT FK —
+    # otherwise a category could never be deleted once any item, even a deleted one,
+    # had ever referenced it.
+    category_id: Mapped[Optional[int]] = mapped_column(
+        Integer, ForeignKey("organizer.shopping_categories.id", ondelete="RESTRICT"), nullable=True
     )
     priority: Mapped[str] = mapped_column(String(10), nullable=False, default="need")
     quantity: Mapped[Optional[Decimal]] = mapped_column(Numeric(10, 2), nullable=True)
@@ -45,8 +48,11 @@ class WishlistItem(Base):
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
-    category_id: Mapped[int] = mapped_column(
-        Integer, ForeignKey("organizer.shopping_categories.id", ondelete="RESTRICT"), nullable=False
+    # Nullable so a soft-delete (see delete()) can clear it, releasing the RESTRICT FK —
+    # otherwise a category could never be deleted once any item, even a deleted one,
+    # had ever referenced it.
+    category_id: Mapped[Optional[int]] = mapped_column(
+        Integer, ForeignKey("organizer.shopping_categories.id", ondelete="RESTRICT"), nullable=True
     )
     estimated_price: Mapped[Optional[Decimal]] = mapped_column(Numeric(10, 2), nullable=True)
     brand: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)

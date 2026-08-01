@@ -64,7 +64,9 @@ class ShoppingRepository:
     async def delete(self, item_id: int) -> None:
         now = datetime.now(timezone.utc)
         await self._session.execute(
-            update(ShoppingItem).where(ShoppingItem.id == item_id).values(deleted_at=now, updated_at=now)
+            update(ShoppingItem)
+            .where(ShoppingItem.id == item_id)
+            .values(deleted_at=now, updated_at=now, category_id=None)
         )
         await self._session.commit()
 
@@ -136,7 +138,11 @@ class WishlistRepository:
 
     async def get(self, item_id: int) -> WishlistItem | None:
         result = await self._session.execute(
-            select(WishlistItem).where(WishlistItem.id == item_id)
+            select(WishlistItem).where(
+                WishlistItem.id == item_id,
+                WishlistItem.deleted_at.is_(None),
+                WishlistItem.promoted_at.is_(None),
+            )
         )
         return result.scalars().first()
 
@@ -173,7 +179,9 @@ class WishlistRepository:
     async def delete(self, item_id: int) -> None:
         now = datetime.now(timezone.utc)
         await self._session.execute(
-            update(WishlistItem).where(WishlistItem.id == item_id).values(deleted_at=now, updated_at=now)
+            update(WishlistItem)
+            .where(WishlistItem.id == item_id)
+            .values(deleted_at=now, updated_at=now, category_id=None)
         )
         await self._session.commit()
 

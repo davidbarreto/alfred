@@ -72,6 +72,11 @@ class ShoppingCategoryService:
         if category is None:
             logger.debug("Shopping category delete: id=%d not found", category_id)
             return False
+        # Capture the name before attempting the delete: a failed delete rolls back the
+        # session (see repository.delete), which expires this ORM instance — any attribute
+        # access on it afterwards would trigger a lazy reload that can't run in this
+        # synchronous logging call (sqlalchemy.exc.MissingGreenlet).
+        category_name = category.name
         try:
             await self._repo.delete(category_id)
         except IntegrityError:
@@ -80,8 +85,8 @@ class ShoppingCategoryService:
             recurrence_count = await self._recurrence_repo.count_by_category(category_id)
             logger.warning(
                 "Shopping category delete blocked: id=%d name=%r shopping=%d wishlist=%d recurrence=%d",
-                category_id, category.name, shopping_count, wishlist_count, recurrence_count,
+                category_id, category_name, shopping_count, wishlist_count, recurrence_count,
             )
             raise ShoppingCategoryDeletionBlockedError(category_id, shopping_count, wishlist_count, recurrence_count)
-        logger.info("Shopping category deleted: id=%d name=%r", category_id, category.name)
+        logger.info("Shopping category deleted: id=%d name=%r", category_id, category_name)
         return True

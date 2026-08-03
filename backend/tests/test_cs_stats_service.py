@@ -3,6 +3,7 @@ import datetime
 import pytest
 from unittest.mock import AsyncMock
 
+from app.features.cs.stats.schemas import DailyActivity
 from app.features.cs.stats.service import StatsService, compute_streaks
 
 
@@ -62,6 +63,19 @@ def service(mock_session):
     svc._repo = AsyncMock()
     svc._repo.get_daily_activity.return_value = []
     return svc
+
+
+class TestGetActivity:
+    async def test_maps_repo_rows_and_forwards_days(self, service):
+        service._repo.get_daily_activity.return_value = [(_d(2026, 8, 1), 3, 2)]
+        result = await service.get_activity(30)
+        service._repo.get_daily_activity.assert_called_once_with(30)
+        assert result == [DailyActivity(date=_d(2026, 8, 1), attempts=3, solved=2)]
+
+    async def test_none_days_means_unbounded(self, service):
+        service._repo.get_daily_activity.return_value = []
+        await service.get_activity(None)
+        service._repo.get_daily_activity.assert_called_once_with(None)
 
 
 class TestGetSummary:

@@ -92,6 +92,12 @@ class StatsService:
             for p in problems
         ]
 
+    async def get_activity(self, days: int | None) -> list[DailyActivity]:
+        return [
+            DailyActivity(date=day, attempts=attempts, solved=solved)
+            for day, attempts, solved in await self._repo.get_daily_activity(days)
+        ]
+
     async def get_summary(self) -> StatsSummary:
         solved_dates = await self._repo.get_solved_dates()
         current_streak, longest_streak = compute_streaks(solved_dates)
@@ -117,10 +123,7 @@ class StatsService:
             LanguageBreakdown(language=language, solved=solved)
             for language, solved in await self._repo.get_language_breakdown()
         ]
-        by_day = [
-            DailyActivity(date=day, attempts=attempts, solved=solved)
-            for day, attempts, solved in await self._repo.get_daily_activity(_DAILY_ACTIVITY_DAYS)
-        ]
+        by_day = await self.get_activity(_DAILY_ACTIVITY_DAYS)
         # Rank by the Wilson lower bound (confidence-adjusted solve rate), not raw
         # solve_rate, so a low-attempt tag with a lucky 100% isn't ranked "strong".
         # A tag only qualifies as "weakest" if it's both below your own overall

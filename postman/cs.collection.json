@@ -786,6 +786,82 @@
           }
         },
         {
+          "name": "17a - Get Activity (last 30 days)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Returns a list of daily activity entries', () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.be.an('array');",
+                  "    json.forEach(d => {",
+                  "        pm.expect(d).to.have.property('date');",
+                  "        pm.expect(d).to.have.property('attempts');",
+                  "        pm.expect(d).to.have.property('solved');",
+                  "    });",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/cs/stats/activity?days=30",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "cs",
+                "stats",
+                "activity"
+              ],
+              "query": [
+                {
+                  "key": "days",
+                  "value": "30"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "17b - Get Activity (always, unbounded)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Returns a list', () => {",
+                  "    pm.expect(pm.response.json()).to.be.an('array');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/cs/stats/activity",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "cs",
+                "stats",
+                "activity"
+              ]
+            }
+          }
+        },
+        {
           "name": "18 - Get Live Recommendation",
           "event": [
             {

@@ -20,7 +20,6 @@ class Platform(Base):
     handle: Mapped[str | None] = mapped_column(String(100), nullable=True)
     sync_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     last_synced_at: Mapped[datetime.datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
-    metrics_refreshed_at: Mapped[datetime.datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     last_submission_external_id: Mapped[str | None] = mapped_column(String(50), nullable=True)
     rating: Mapped[int | None] = mapped_column(Integer, nullable=True)
     max_rating: Mapped[int | None] = mapped_column(Integer, nullable=True)

@@ -23,11 +23,6 @@ class ProblemUpdate(BaseModel):
     difficulty: str | None = None
     tags_raw: list[str] | None = None
     tags: list[str] | None = None
-    acceptance_rate: float | None = None
-    solved_count: int | None = None
-    likes: int | None = None
-    dislikes: int | None = None
-    metrics_updated_at: datetime | None = None
 
 
 class TagRead(BaseModel):
@@ -47,11 +42,6 @@ class ProblemRead(BaseModel):
     difficulty: str | None
     tags_raw: list[str] | None
     tags: list[TagRead]
-    acceptance_rate: float | None
-    solved_count: int | None
-    likes: int | None
-    dislikes: int | None
-    metrics_updated_at: datetime | None
     created_at: datetime
     updated_at: datetime
 

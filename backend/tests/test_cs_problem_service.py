@@ -25,11 +25,6 @@ def _make_problem_orm(**kwargs):
     orm.difficulty = kwargs.get("difficulty", "medium")
     orm.tags_raw = kwargs.get("tags_raw", ["dp"])
     orm.tags = kwargs.get("tags", [_make_tag("dynamic programming")])
-    orm.acceptance_rate = kwargs.get("acceptance_rate", None)
-    orm.solved_count = kwargs.get("solved_count", None)
-    orm.likes = kwargs.get("likes", None)
-    orm.dislikes = kwargs.get("dislikes", None)
-    orm.metrics_updated_at = kwargs.get("metrics_updated_at", None)
     orm.created_at = kwargs.get("created_at", datetime(2026, 1, 1, tzinfo=timezone.utc))
     orm.updated_at = kwargs.get("updated_at", datetime(2026, 1, 1, tzinfo=timezone.utc))
     return orm

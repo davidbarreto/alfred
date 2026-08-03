@@ -28,6 +28,9 @@ class ProblemService:
         problems = await self._repo.get_problems(filters)
         return [ProblemRead.model_validate(p) for p in problems]
 
+    async def get_all_tag_names(self) -> list[str]:
+        return await self._repo.get_all_tag_names()
+
     async def get_problems_by_platform(self, platform_id: int) -> list[ProblemRead]:
         problems = await self._repo.get_problems_by_platform(platform_id)
         return [ProblemRead.model_validate(p) for p in problems]

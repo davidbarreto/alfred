@@ -45,6 +45,10 @@ class ProblemRepository:
         result = await self._session.execute(query)
         return list(result.scalars().all())
 
+    async def get_all_tag_names(self) -> list[str]:
+        result = await self._session.execute(select(CsTag.name).order_by(CsTag.name))
+        return list(result.scalars().all())
+
     async def get_problems_by_platform(self, platform_id: int) -> list[Problem]:
         """Unpaginated -- for internal bulk operations like a metrics refresh, not for API listing."""
         result = await self._session.execute(
@@ -77,6 +81,8 @@ class ProblemRepository:
             query = query.where(Problem.difficulty == filters.difficulty)
         if filters.tag is not None:
             query = query.where(Problem.tags.any(CsTag.name == normalize_tag_name(filters.tag)))
+        if filters.status is not None:
+            query = query.where(agg.c.solved == (filters.status == "solved"))
         if filters.q is not None:
             query = query.where(Problem.name.ilike(f"%{filters.q}%"))
         query = query.order_by(agg.c.last_attempted_at.desc()).limit(filters.limit).offset(filters.offset)

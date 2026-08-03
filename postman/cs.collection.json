@@ -625,6 +625,40 @@
           }
         },
         {
+          "name": "13a - List All Tag Names",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Returns a list of tag name strings', () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.be.an('array');",
+                  "    if (json.length) pm.expect(json[0]).to.be.a('string');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/cs/problems/tags",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "cs",
+                "problems",
+                "tags"
+              ]
+            }
+          }
+        },
+        {
           "name": "14a - List Attempted Problems (dedup by problem)",
           "event": [
             {
@@ -659,6 +693,50 @@
                 "attempted"
               ],
               "query": [
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "14b - List Attempted Problems (filter by status=unsolved)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('All results are unsolved', () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.be.an('array');",
+                  "    json.forEach(p => pm.expect(p.solved).to.be.false);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/cs/problems/attempted?status=unsolved&limit=10",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "cs",
+                "problems",
+                "attempted"
+              ],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "unsolved"
+                },
                 {
                   "key": "limit",
                   "value": "10"

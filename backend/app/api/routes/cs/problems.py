@@ -29,6 +29,11 @@ async def get_attempted_problems(service: CsProblemServiceDep, filters: Attempte
     return await service.get_attempted_problems(filters)
 
 
+@router.get("/tags", response_model=list[str])
+async def get_all_tag_names(service: CsProblemServiceDep):
+    return await service.get_all_tag_names()
+
+
 @router.get("/{problem_id}", response_model=ProblemRead)
 async def get_problem(problem_id: int, service: CsProblemServiceDep):
     problem = await service.get_problem(problem_id)

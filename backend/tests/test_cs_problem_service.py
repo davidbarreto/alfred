@@ -70,6 +70,13 @@ class TestGetAttemptedProblems:
         assert result[0].last_attempted_at == last_attempted
 
 
+class TestGetAllTagNames:
+    async def test_returns_list_from_repo(self, service):
+        service._repo.get_all_tag_names.return_value = ["dynamic programming", "graph"]
+        result = await service.get_all_tag_names()
+        assert result == ["dynamic programming", "graph"]
+
+
 class TestGetProblemsByPlatform:
     async def test_returns_list(self, service):
         service._repo.get_problems_by_platform.return_value = [_make_problem_orm(id=1), _make_problem_orm(id=2)]

@@ -1,8 +1,10 @@
 from datetime import datetime
-from typing import Annotated
+from typing import Annotated, Literal
 
 from fastapi import Query
 from pydantic import BaseModel
+
+AttemptedStatus = Literal["solved", "unsolved"]
 
 
 class ProblemCreate(BaseModel):
@@ -81,6 +83,7 @@ class AttemptedProblemFilters:
         platform_id: Annotated[int | None, Query()] = None,
         difficulty: Annotated[str | None, Query()] = None,
         tag: Annotated[str | None, Query()] = None,
+        status: Annotated[AttemptedStatus | None, Query()] = None,
         q: Annotated[str | None, Query()] = None,
         limit: Annotated[int, Query(ge=1, le=200)] = _DEFAULT_PAGE_SIZE,
         offset: Annotated[int, Query(ge=0)] = 0,
@@ -88,6 +91,7 @@ class AttemptedProblemFilters:
         self.platform_id = platform_id
         self.difficulty = difficulty
         self.tag = tag
+        self.status = status
         self.q = q
         self.limit = limit
         self.offset = offset

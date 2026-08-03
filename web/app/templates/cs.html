@@ -87,7 +87,7 @@
         <p class="text-sm text-gray-600">{{ weekly_plan.rationale }}</p>
         {% endif %}
         <div class="divide-y divide-gray-100" id="plan-items">
-          {% for item in weekly_plan.items %}
+          {% for item in weekly_plan['items'] %}
           <label class="flex items-start gap-2.5 py-2 text-sm cursor-pointer {% if item.is_done %}opacity-50{% endif %}" id="plan-item-{{ item.id }}">
             <input type="checkbox" {% if item.is_done %}checked disabled{% endif %}
                    onchange="completeItem({{ item.id }})"

@@ -26,12 +26,60 @@ name: API Smoke Test
 
 on:
   schedule:
-    - cron: '0 6 * * 1' # Monday 06:00 UTC
+    - cron: '0 6 * * *' # every day 06:00 UTC
   workflow_dispatch:
 
 jobs:
+  check-changes:
+    name: Check for changes since last run
+    runs-on: ubuntu-latest
+    outputs:
+      should_run: ${{ steps.check.outputs.should_run }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # Scheduled runs fire every day regardless of activity; workflow_dispatch
+      # is an explicit manual request and always runs. Only the schedule
+      # trigger is gated on "did anything change since the last run". This
+      # compares against the last run of any outcome (not just success) — if
+      # nothing changed since a failed run, it would just fail the same way
+      # again, so there's no point re-running it.
+      - name: Determine if there have been changes since the last run
+        id: check
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+
+          if [ "${{ github.event_name }}" != "schedule" ]; then
+            echo "Non-schedule trigger (${{ github.event_name }}); running."
+            echo "should_run=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          last_sha=$(gh run list --workflow=api-smoke-test.yml \
+            --branch="${{ github.ref_name }}" --limit=2 --json headSha,databaseId \
+            --jq '[.[] | select(.databaseId != ${{ github.run_id }})][0].headSha')
+          current_sha=$(git rev-parse HEAD)
+
+          if [ -z "$last_sha" ]; then
+            echo "No previous run found; running."
+            echo "should_run=true" >> "$GITHUB_OUTPUT"
+          elif [ "$last_sha" != "$current_sha" ]; then
+            echo "Changes found since last run ($last_sha -> $current_sha); running."
+            echo "should_run=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "No changes since last run ($last_sha); skipping."
+            echo "should_run=false" >> "$GITHUB_OUTPUT"
+          fi
+
   smoke-test:
     name: Build + Postman smoke test
+    needs: check-changes
+    if: needs.check-changes.outputs.should_run == 'true'
     runs-on: ubuntu-latest
 
     steps:

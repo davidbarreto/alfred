@@ -6,6 +6,7 @@ def _summary():
         "current_streak": 3,
         "longest_streak": 10,
         "total_solved": 42,
+        "total_attempted": 50,
         "by_difficulty": [{"difficulty": "easy", "attempted": 10, "solved": 8}],
         "by_tag": [{"tag": "dp", "attempted": 5, "solved": 1, "solve_rate": 0.2, "submissions": 6, "avg_attempts_per_solve": 6.0}],
         "by_language": [{"language": "cpp", "solved": 20}],
@@ -31,7 +32,7 @@ def _submission():
 
 
 def _problem():
-    return {"id": 7, "name": "Two Sum", "url": "https://codeforces.com/problemset/problem/1/A"}
+    return {"id": 7, "name": "Two Sum", "url": "https://codeforces.com/problemset/problem/1/A", "tags": [{"id": 1, "name": "dp"}]}
 
 
 def _attempted_problem():
@@ -40,8 +41,6 @@ def _attempted_problem():
         "url": "https://codeforces.com/problemset/problem/1/A",
         "difficulty_raw": "1200", "difficulty": "easy",
         "tags_raw": ["dp"], "tags": [{"id": 1, "name": "dp"}],
-        "acceptance_rate": None, "solved_count": None, "likes": None, "dislikes": None,
-        "metrics_updated_at": None,
         "created_at": "2026-01-01T00:00:00", "updated_at": "2026-01-01T00:00:00",
         "attempts": 2, "solved": True, "last_attempted_at": "2026-07-30T09:00:00",
     }
@@ -62,6 +61,10 @@ def _get_side_effect(path, params=None):
         return _problem()
     if path == "/cs/problems/attempted":
         return [_attempted_problem()]
+    if path == "/cs/problems/tags":
+        return ["dp", "graph"]
+    if path == "/cs/stats/activity":
+        return [{"date": "2026-07-30", "attempts": 2, "solved": 1}]
     return None
 
 
@@ -74,12 +77,21 @@ class TestDashboard:
         assert resp.status_code == 200
         assert "CS Coach" in resp.text
         assert "42" in resp.text  # total solved
-        assert "Codeforces" in resp.text
         assert "Two Sum" in resp.text
         assert "Problems tried" in resp.text
         assert "Codeforces synced" in resp.text
         assert "LeetCode synced" in resp.text
         assert "View all" in resp.text
+        assert 'href="/cs/submissions"' in resp.text
+        assert 'href="/cs/problems"' in resp.text
+
+    def test_does_not_render_platform_cards(self, client, mock_api):
+        mock_api["get"].side_effect = _get_side_effect
+
+        resp = client.get("/cs/")
+
+        assert resp.status_code == 200
+        assert "not configured" not in resp.text  # leetcode platform card handle placeholder
 
     def test_renders_empty_state_when_no_data(self, client, mock_api):
         mock_api["get"].side_effect = lambda path, params=None: None
@@ -110,24 +122,71 @@ class TestSubmissionsSection:
         assert "CS Coach" not in resp.text  # partial, not full page
 
 
-class TestProblemsPage:
-    def test_renders_full_page_and_triggers_metrics_refresh(self, client, mock_api):
+class TestActivityChartData:
+    def test_maps_range_to_days(self, client, mock_api):
         mock_api["get"].side_effect = _get_side_effect
-        mock_api["post"].return_value = {"updated": 0, "skipped": True}
+
+        resp = client.get("/cs/activity-chart-data?range=30")
+
+        assert resp.status_code == 200
+        assert resp.json() == {"solved": {"2026-07-30": 1}, "attempts": {"2026-07-30": 2}}
+        activity_calls = [
+            call for call in mock_api["get"].await_args_list if call.args[0] == "/cs/stats/activity"
+        ]
+        assert len(activity_calls) == 1
+        assert activity_calls[0].kwargs["params"] == {"days": 30}
+
+    def test_always_range_omits_days_param(self, client, mock_api):
+        mock_api["get"].side_effect = _get_side_effect
+
+        resp = client.get("/cs/activity-chart-data?range=always")
+
+        assert resp.status_code == 200
+        activity_calls = [
+            call for call in mock_api["get"].await_args_list if call.args[0] == "/cs/stats/activity"
+        ]
+        assert activity_calls[0].kwargs["params"] == {}
+
+    def test_defaults_to_90_days(self, client, mock_api):
+        mock_api["get"].side_effect = _get_side_effect
+
+        resp = client.get("/cs/activity-chart-data")
+
+        assert resp.status_code == 200
+        activity_calls = [
+            call for call in mock_api["get"].await_args_list if call.args[0] == "/cs/stats/activity"
+        ]
+        assert activity_calls[0].kwargs["params"] == {"days": 90}
+
+
+class TestProblemsPage:
+    def test_renders_shell_without_blocking_on_data(self, client, mock_api):
+        mock_api["get"].side_effect = _get_side_effect
 
         resp = client.get("/cs/problems")
 
         assert resp.status_code == 200
-        assert "Two Sum" in resp.text
-        refreshed_paths = {call.args[0] for call in mock_api["post"].await_args_list}
-        assert "/cs/platforms/codeforces/refresh-metrics" in refreshed_paths
-        assert "/cs/platforms/leetcode/refresh-metrics" in refreshed_paths
+        assert "Problems tried" in resp.text
+        assert "hx-trigger=\"load\"" in resp.text
+        # the shell doesn't fetch attempted problems itself -- the section route does
+        attempted_calls = [
+            call for call in mock_api["get"].await_args_list if call.args[0] == "/cs/problems/attempted"
+        ]
+        assert len(attempted_calls) == 0
 
-    def test_passes_filters_through_to_attempted_problems_query(self, client, mock_api):
+    def test_renders_tag_dropdown_options(self, client, mock_api):
         mock_api["get"].side_effect = _get_side_effect
-        mock_api["post"].return_value = {"updated": 0, "skipped": True}
 
-        resp = client.get("/cs/problems?platform_id=1&difficulty=easy&q=Two")
+        resp = client.get("/cs/problems")
+
+        assert resp.status_code == 200
+        assert ">Dp<" in resp.text
+        assert ">Graph<" in resp.text
+
+    def test_passes_filters_through_to_section_query(self, client, mock_api):
+        mock_api["get"].side_effect = _get_side_effect
+
+        resp = client.get("/cs/problems-section?platform_id=1&difficulty=easy&status=unsolved&q=Two")
 
         assert resp.status_code == 200
         attempted_calls = [
@@ -137,6 +196,7 @@ class TestProblemsPage:
         params = attempted_calls[0].kwargs["params"]
         assert params["platform_id"] == "1"
         assert params["difficulty"] == "easy"
+        assert params["status"] == "unsolved"
         assert params["q"] == "Two"
 
     def test_returns_partial_for_htmx_pagination(self, client, mock_api):
@@ -146,6 +206,57 @@ class TestProblemsPage:
 
         assert resp.status_code == 200
         assert "Two Sum" in resp.text
+        assert "CS Coach" not in resp.text  # partial, not full page
+
+    def test_shows_tags_in_list(self, client, mock_api):
+        mock_api["get"].side_effect = _get_side_effect
+
+        resp = client.get("/cs/problems-section?offset=0")
+
+        assert resp.status_code == 200
+        assert "dp" in resp.text
+
+
+class TestSubmissionsPage:
+    def test_renders_shell_without_blocking_on_data(self, client, mock_api):
+        mock_api["get"].side_effect = _get_side_effect
+
+        resp = client.get("/cs/submissions")
+
+        assert resp.status_code == 200
+        assert "Submissions" in resp.text
+        assert "hx-trigger=\"load\"" in resp.text
+        submission_calls = [
+            call for call in mock_api["get"].await_args_list if call.args[0] == "/cs/submissions"
+        ]
+        assert len(submission_calls) == 0
+
+    def test_passes_filters_through_to_section_query(self, client, mock_api):
+        mock_api["get"].side_effect = _get_side_effect
+
+        resp = client.get(
+            "/cs/submissions-list-section?platform_id=1&verdict=accepted&tag=dp&q=Two"
+        )
+
+        assert resp.status_code == 200
+        submission_calls = [
+            call for call in mock_api["get"].await_args_list if call.args[0] == "/cs/submissions"
+        ]
+        assert len(submission_calls) == 1
+        params = submission_calls[0].kwargs["params"]
+        assert params["platform_id"] == "1"
+        assert params["verdict"] == "accepted"
+        assert params["tag"] == "dp"
+        assert params["q"] == "Two"
+
+    def test_returns_partial_with_tags_for_htmx_pagination(self, client, mock_api):
+        mock_api["get"].side_effect = _get_side_effect
+
+        resp = client.get("/cs/submissions-list-section?offset=0")
+
+        assert resp.status_code == 200
+        assert "Two Sum" in resp.text
+        assert "dp" in resp.text
         assert "CS Coach" not in resp.text  # partial, not full page
 
 

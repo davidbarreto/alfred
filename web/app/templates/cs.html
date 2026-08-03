@@ -141,31 +141,28 @@
   </div>
   {% endif %}
 
-  <!-- Platforms -->
-  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-    {% for p in platforms %}
-    <div class="card bg-white">
-      <div class="card-body p-4">
-        <p class="text-sm font-semibold text-gray-900">{{ p.code | title }}</p>
-        <p class="text-xs text-gray-400 mt-0.5">{{ p.handle or "not configured" }}</p>
-        {% if p.rating %}
-        <p class="text-xs text-gray-400">Rating: {{ p.rating }} (max {{ p.max_rating }})</p>
-        {% endif %}
-      </div>
-    </div>
-    {% endfor %}
-  </div>
-
   <!-- Charts -->
   <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
     <div class="card bg-white">
       <div class="card-body p-4">
-        <p class="text-xs text-gray-400 uppercase tracking-wide mb-3">Activity (last 90 days)</p>
-        {% if activity_solved %}
-        <div class="relative h-48"><canvas id="chart-activity"></canvas></div>
-        {% else %}
-        <p class="text-sm text-gray-300 py-10 text-center">No data yet</p>
-        {% endif %}
+        <div class="flex items-center justify-between mb-3">
+          <p class="text-xs text-gray-400 uppercase tracking-wide">Activity</p>
+          <div class="flex items-center gap-1" id="activity-range-buttons">
+            {% for key, label in [("30", "30d"), ("60", "60d"), ("90", "90d"), ("1y", "1y"), ("always", "Always")] %}
+            <button type="button" onclick="setActivityRange('{{ key }}')" data-range="{{ key }}"
+                    class="activity-range-btn px-2 py-0.5 rounded text-xs font-medium {% if key == '90' %}bg-[#378ADD] text-white{% else %}text-gray-400 hover:bg-gray-50{% endif %}">
+              {{ label }}
+            </button>
+            {% endfor %}
+          </div>
+        </div>
+        <div class="relative h-48" id="chart-activity-wrap">
+          {% if activity_solved %}
+          <canvas id="chart-activity"></canvas>
+          {% else %}
+          <p class="text-sm text-gray-300 py-10 text-center">No data yet</p>
+          {% endif %}
+        </div>
       </div>
     </div>
     <div class="card bg-white">
@@ -180,7 +177,7 @@
     </div>
     <div class="card bg-white">
       <div class="card-body p-4">
-        <p class="text-xs text-gray-400 uppercase tracking-wide mb-3">Tag solve rate</p>
+        <p class="text-xs text-gray-400 uppercase tracking-wide mb-3">Tag share of problems tried</p>
         {% if tag_strength_chart %}
         <div class="relative h-48"><canvas id="chart-tags"></canvas></div>
         {% else %}
@@ -221,6 +218,7 @@
             {% endif %}
             <div class="text-xs text-gray-400 mt-0.5">
               {{ p.platform_code }} · {{ p.attempts }} attempt{{ "s" if p.attempts != 1 }} · {{ p.last_attempted_at[:10] }}
+              {% if p.tag_names %} · {{ p.tag_names | join(", ") }}{% endif %}
             </div>
           </div>
           <div class="flex items-center gap-2 shrink-0 ml-3">
@@ -243,7 +241,10 @@
   <!-- Recent submissions -->
   <div class="card bg-white">
     <div class="card-body p-5">
-      <p class="text-sm font-semibold text-gray-900 mb-2">Recent submissions</p>
+      <div class="flex items-center justify-between mb-2">
+        <p class="text-sm font-semibold text-gray-900">Recent submissions</p>
+        <a href="/cs/submissions" class="text-xs text-[#378ADD] hover:underline">View all →</a>
+      </div>
       <div id="cs-submissions">
         {% include "_cs_submissions.html" %}
       </div>
@@ -320,22 +321,57 @@ const csCommonOptions = {
   },
 };
 
-const csActivitySolved = {{ activity_solved | tojson }};
-const csActivityAttempts = {{ activity_attempts | tojson }};
-if (Object.keys(csActivitySolved).length) {
-  const labels = Object.keys(csActivitySolved);
-  new Chart(document.getElementById("chart-activity"), {
+let csActivityChart = null;
+
+function renderActivityChart(solved, attempts) {
+  const wrap = document.getElementById("chart-activity-wrap");
+  const labels = Object.keys(solved);
+  if (!labels.length) {
+    if (csActivityChart) { csActivityChart.destroy(); csActivityChart = null; }
+    wrap.innerHTML = '<p class="text-sm text-gray-300 py-10 text-center">No data yet</p>';
+    return;
+  }
+  if (!document.getElementById("chart-activity")) {
+    wrap.innerHTML = '<canvas id="chart-activity"></canvas>';
+  }
+  const data = {
+    labels,
+    datasets: [
+      { label: "Attempts", data: labels.map(d => attempts[d] || 0), borderColor: "#9CA3AF", backgroundColor: "transparent", tension: 0.3, pointRadius: 0, borderDash: [4, 3] },
+      { label: "Solved", data: labels.map(d => solved[d] || 0), borderColor: "#378ADD", backgroundColor: "rgba(55,138,221,0.08)", fill: true, tension: 0.3, pointRadius: 0 },
+    ],
+  };
+  if (csActivityChart) {
+    csActivityChart.data = data;
+    csActivityChart.update();
+    return;
+  }
+  csActivityChart = new Chart(document.getElementById("chart-activity"), {
     type: "line",
-    data: {
-      labels,
-      datasets: [
-        { label: "Attempts", data: labels.map(d => csActivityAttempts[d] || 0), borderColor: "#9CA3AF", backgroundColor: "transparent", tension: 0.3, pointRadius: 0, borderDash: [4, 3] },
-        { label: "Solved", data: labels.map(d => csActivitySolved[d] || 0), borderColor: "#378ADD", backgroundColor: "rgba(55,138,221,0.08)", fill: true, tension: 0.3, pointRadius: 0 },
-      ],
-    },
+    data,
     options: { ...csCommonOptions, plugins: { legend: { display: true, position: "bottom", labels: { boxWidth: 10, font: { size: 11 } } } } },
   });
 }
+
+async function setActivityRange(range) {
+  document.querySelectorAll(".activity-range-btn").forEach(btn => {
+    const active = btn.dataset.range === range;
+    btn.classList.toggle("bg-[#378ADD]", active);
+    btn.classList.toggle("text-white", active);
+    btn.classList.toggle("text-gray-400", !active);
+  });
+  try {
+    const res = await fetch(`/cs/activity-chart-data?range=${range}`);
+    const json = await res.json();
+    renderActivityChart(json.solved, json.attempts);
+  } catch (e) {
+    // leave the chart as-is if the range fetch fails
+  }
+}
+
+const csActivitySolved = {{ activity_solved | tojson }};
+const csActivityAttempts = {{ activity_attempts | tojson }};
+renderActivityChart(csActivitySolved, csActivityAttempts);
 
 const csDifficultyChart = {{ difficulty_chart | tojson }};
 if (Object.keys(csDifficultyChart).length) {

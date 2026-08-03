@@ -1,5 +1,6 @@
+{% set qs = filters | urlencode %}
 {% if not submissions %}
-<p class="text-sm text-gray-400 py-4">No submissions yet.</p>
+<p class="text-sm text-gray-400 py-10 text-center">No submissions match these filters.</p>
 {% else %}
 <div class="divide-y divide-gray-100">
   {% for s in submissions %}
@@ -26,16 +27,16 @@
 <div class="flex items-center justify-between pt-3 mt-1 border-t border-gray-100">
   <button
     {% if not submissions_has_prev %}disabled{% endif %}
-    hx-get="/cs/submissions-section?offset={{ [submissions_offset - 20, 0] | max }}"
-    hx-target="#cs-submissions"
+    hx-get="/cs/submissions-list-section?{{ qs }}&offset={{ [submissions_offset - 20, 0] | max }}"
+    hx-target="#submissions-list"
     hx-swap="innerHTML"
     class="btn btn-sm btn-ghost text-xs disabled:opacity-30">
     <i class="ti ti-chevron-left text-sm"></i>Prev
   </button>
   <button
     {% if not submissions_has_next %}disabled{% endif %}
-    hx-get="/cs/submissions-section?offset={{ submissions_offset + 20 }}"
-    hx-target="#cs-submissions"
+    hx-get="/cs/submissions-list-section?{{ qs }}&offset={{ submissions_offset + 20 }}"
+    hx-target="#submissions-list"
     hx-swap="innerHTML"
     class="btn btn-sm btn-ghost text-xs disabled:opacity-30">
     Next<i class="ti ti-chevron-right text-sm"></i>

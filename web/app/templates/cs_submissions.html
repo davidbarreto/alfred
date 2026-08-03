@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% set active_page = "cs" %}
-{% block title %}CS Coach — Problems{% endblock %}
+{% block title %}CS Coach — Submissions{% endblock %}
 
 {% block content %}
 <div class="p-6 space-y-4">
@@ -9,17 +9,17 @@
   <div class="flex items-center gap-2 text-xs text-gray-400">
     <a href="/cs" class="hover:text-gray-600">CS Coach</a>
     <i class="ti ti-chevron-right text-gray-300"></i>
-    <span class="text-gray-700 font-medium">Problems</span>
+    <span class="text-gray-700 font-medium">Submissions</span>
   </div>
 
-  <h1 class="text-base font-semibold text-gray-900">Problems tried</h1>
+  <h1 class="text-base font-semibold text-gray-900">Submissions</h1>
 
   <!-- Filters -->
-  <form method="get" action="/cs/problems" class="card bg-white">
+  <form method="get" action="/cs/submissions" class="card bg-white">
     <div class="card-body p-4">
       <div class="flex flex-row flex-wrap items-end gap-3">
         <div>
-          <label class="block text-xs text-gray-400 mb-1">Name</label>
+          <label class="block text-xs text-gray-400 mb-1">Problem name</label>
           <input type="text" name="q" value="{{ filters.q or '' }}" placeholder="Search by name"
                  class="input input-sm input-bordered text-sm w-48">
         </div>
@@ -29,15 +29,6 @@
             <option value="">All</option>
             {% for p in platforms %}
             <option value="{{ p.id }}" {% if filters.platform_id == p.id | string %}selected{% endif %}>{{ p.code | title }}</option>
-            {% endfor %}
-          </select>
-        </div>
-        <div>
-          <label class="block text-xs text-gray-400 mb-1">Difficulty</label>
-          <select name="difficulty" class="select select-sm select-bordered text-sm">
-            <option value="">All</option>
-            {% for d in ["easy", "medium", "hard"] %}
-            <option value="{{ d }}" {% if filters.difficulty == d %}selected{% endif %}>{{ d | title }}</option>
             {% endfor %}
           </select>
         </div>
@@ -52,23 +43,24 @@
         </div>
         <div>
           <label class="block text-xs text-gray-400 mb-1">Status</label>
-          <select name="status" class="select select-sm select-bordered text-sm">
+          <select name="verdict" class="select select-sm select-bordered text-sm">
             <option value="">All</option>
-            <option value="unsolved" {% if filters.status == "unsolved" %}selected{% endif %}>Unsolved</option>
-            <option value="solved" {% if filters.status == "solved" %}selected{% endif %}>Solved</option>
+            {% for v in ["accepted", "wrong_answer", "time_limit_exceeded", "memory_limit_exceeded", "runtime_error", "compile_error", "other"] %}
+            <option value="{{ v }}" {% if filters.verdict == v %}selected{% endif %}>{{ v | replace('_', ' ') | title }}</option>
+            {% endfor %}
           </select>
         </div>
         <button type="submit" class="btn btn-sm bg-[#378ADD] text-white hover:bg-[#2f7bc4] border-none">Apply</button>
         {% if filters %}
-        <a href="/cs/problems" class="text-xs text-gray-400 hover:text-gray-600">Clear filters</a>
+        <a href="/cs/submissions" class="text-xs text-gray-400 hover:text-gray-600">Clear filters</a>
         {% endif %}
       </div>
     </div>
   </form>
 
   <div class="card bg-white">
-    <div class="card-body p-0" id="problems-list"
-         hx-get="/cs/problems-section?{{ filters | urlencode }}"
+    <div class="card-body p-5" id="submissions-list"
+         hx-get="/cs/submissions-list-section?{{ filters | urlencode }}"
          hx-trigger="load"
          hx-swap="innerHTML">
       <div class="flex items-center justify-center py-16">

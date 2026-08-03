@@ -10,8 +10,17 @@ from app.templates_config import templates
 router = APIRouter(prefix="/cs")
 
 _SUBMISSIONS_PAGE_SIZE = 10
+_SUBMISSIONS_LIST_PAGE_SIZE = 20
 _PROBLEMS_PREVIEW_SIZE = 10
 _PROBLEMS_PAGE_SIZE = 20
+
+_ACTIVITY_RANGE_DAYS = {
+    "30": 30,
+    "60": 60,
+    "90": 90,
+    "1y": 365,
+    "always": None,
+}
 
 _DIFFICULTY_COLOR = {
     "easy": "text-green-600 bg-green-50",
@@ -35,13 +44,6 @@ async def _safe_get(path: str, params: dict | None = None):
         return None
 
 
-async def _safe_post(path: str, timeout: float = 10.0):
-    try:
-        return await api.post(path, timeout=timeout)
-    except httpx.HTTPError:
-        return None
-
-
 async def _platform_lookup() -> dict[int, dict]:
     platforms = await _safe_get("/cs/platforms") or []
     return {p["id"]: p for p in platforms}
@@ -60,6 +62,7 @@ async def _enrich_submissions(submissions: list, platform_by_id: dict) -> None:
         problem = problems.get(s["problem_id"])
         s["problem_name"] = problem["name"] if problem else f"#{s['problem_id']}"
         s["problem_url"] = problem["url"] if problem else None
+        s["tags"] = [t["name"] for t in problem["tags"]] if problem else []
         s["verdict_color"] = _VERDICT_COLOR.get(s["verdict"], "text-gray-500 bg-gray-50")
 
 
@@ -88,15 +91,23 @@ def _sync_status_text(platforms: list) -> str:
     return " · ".join(parts)
 
 
-def _by_tag_strength(by_tag: list, limit: int = 10) -> dict:
+def _by_tag_share(by_tag: list, total_attempted: int, limit: int = 10) -> dict:
+    """Share of all problems tried that fall under each tag, not solve rate.
+
+    Problems carry multiple tags, so shares don't sum to 100% -- that's expected,
+    it's meant to show which categories are over/under-represented in practice.
+    """
+    if not total_attempted:
+        return {}
     top = sorted(by_tag, key=lambda t: -t["attempted"])[:limit]
-    return {t["tag"]: round(t["solve_rate"] * 100) for t in top}
+    return {t["tag"]: round(t["attempted"] / total_attempted * 100) for t in top}
 
 
 def _enrich_attempted_problems(problems: list, platform_by_id: dict) -> None:
     for p in problems:
         platform = platform_by_id.get(p["platform_id"])
         p["platform_code"] = platform["code"] if platform else "?"
+        p["tag_names"] = [t["name"] for t in p["tags"]]
 
 
 @router.get("/", response_class=HTMLResponse)
@@ -123,17 +134,13 @@ async def dashboard(request: Request):
         activity_solved = {d["date"]: d["solved"] for d in summary["by_day"]}
         activity_attempts = {d["date"]: d["attempts"] for d in summary["by_day"]}
         difficulty_chart = {d["difficulty"]: d["solved"] for d in summary["by_difficulty"]}
-        tag_strength_chart = _by_tag_strength(summary["by_tag"])
+        tag_strength_chart = _by_tag_share(summary["by_tag"], summary["total_attempted"])
         language_chart = {l["language"]: l["solved"] for l in summary["by_language"]}
-
-    for p in platforms:
-        p["difficulty_color"] = _DIFFICULTY_COLOR
 
     return templates.TemplateResponse(request, "cs.html", {
         "summary": summary,
         "live_recommendation": live_recommendation,
         "weekly_plan": weekly_plan,
-        "platforms": platforms,
         "sync_status_text": _sync_status_text(platforms),
         "submissions": submissions,
         "submissions_offset": 0,
@@ -166,9 +173,64 @@ async def submissions_section(request: Request):
     })
 
 
+def _submission_filters_from_request(request: Request) -> dict:
+    filters = {}
+    for key in ("platform_id", "verdict", "tag", "q"):
+        value = request.query_params.get(key)
+        if value:
+            filters[key] = value
+    return filters
+
+
+@router.get("/submissions", response_class=HTMLResponse)
+async def submissions_page(request: Request):
+    filters = _submission_filters_from_request(request)
+    platforms = await _safe_get("/cs/platforms") or []
+    tags = await _safe_get("/cs/problems/tags") or []
+
+    return templates.TemplateResponse(request, "cs_submissions.html", {
+        "platforms": platforms,
+        "tags": tags,
+        "filters": filters,
+    })
+
+
+@router.get("/submissions-list-section", response_class=HTMLResponse)
+async def submissions_list_section(request: Request):
+    offset = max(0, int(request.query_params.get("offset", "0")))
+    filters = _submission_filters_from_request(request)
+    platform_by_id = await _platform_lookup()
+
+    raw = await _safe_get(
+        "/cs/submissions", {**filters, "limit": _SUBMISSIONS_LIST_PAGE_SIZE + 1, "offset": offset}
+    ) or []
+    submissions, has_next, has_prev = _pagination(raw, offset, _SUBMISSIONS_LIST_PAGE_SIZE)
+    await _enrich_submissions(submissions, platform_by_id)
+
+    return templates.TemplateResponse(request, "_cs_submissions_list.html", {
+        "submissions": submissions,
+        "filters": filters,
+        "submissions_offset": offset,
+        "submissions_has_next": has_next,
+        "submissions_has_prev": has_prev,
+    })
+
+
+@router.get("/activity-chart-data")
+async def activity_chart_data(request: Request):
+    range_key = request.query_params.get("range", "90")
+    days = _ACTIVITY_RANGE_DAYS.get(range_key, 90)
+
+    raw = await _safe_get("/cs/stats/activity", {"days": days} if days is not None else {}) or []
+    return JSONResponse({
+        "solved": {d["date"]: d["solved"] for d in raw},
+        "attempts": {d["date"]: d["attempts"] for d in raw},
+    })
+
+
 def _problem_filters_from_request(request: Request) -> dict:
     filters = {}
-    for key in ("platform_id", "difficulty", "tag", "q"):
+    for key in ("platform_id", "difficulty", "tag", "status", "q"):
         value = request.query_params.get(key)
         if value:
             filters[key] = value
@@ -177,26 +239,14 @@ def _problem_filters_from_request(request: Request) -> dict:
 
 @router.get("/problems", response_class=HTMLResponse)
 async def problems_page(request: Request):
-    for code in ("codeforces", "leetcode"):
-        await _safe_post(f"/cs/platforms/{code}/refresh-metrics", timeout=30.0)
-
-    offset = max(0, int(request.query_params.get("offset", "0")))
     filters = _problem_filters_from_request(request)
-    platform_by_id = await _platform_lookup()
-
-    raw = await _safe_get(
-        "/cs/problems/attempted", {**filters, "limit": _PROBLEMS_PAGE_SIZE + 1, "offset": offset}
-    ) or []
-    problems, has_next, has_prev = _pagination(raw, offset, _PROBLEMS_PAGE_SIZE)
-    _enrich_attempted_problems(problems, platform_by_id)
+    platforms = await _safe_get("/cs/platforms") or []
+    tags = await _safe_get("/cs/problems/tags") or []
 
     return templates.TemplateResponse(request, "cs_problems.html", {
-        "problems": problems,
-        "platforms": list(platform_by_id.values()),
+        "platforms": platforms,
+        "tags": tags,
         "filters": filters,
-        "problems_offset": offset,
-        "problems_has_next": has_next,
-        "problems_has_prev": has_prev,
         "difficulty_color": _DIFFICULTY_COLOR,
     })
 

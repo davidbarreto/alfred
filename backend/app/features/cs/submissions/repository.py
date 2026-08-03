@@ -1,6 +1,8 @@
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.features.cs.normalization import normalize_tag_name
+from app.features.cs.problems.tables import CsTag, Problem, problems_tags
 from app.features.cs.submissions.schemas import SubmissionCreate, SubmissionFilters
 from app.features.cs.submissions.tables import Submission
 
@@ -32,6 +34,16 @@ class SubmissionRepository:
             query = query.where(Submission.verdict == filters.verdict)
         if filters.language is not None:
             query = query.where(Submission.language == filters.language)
+        if filters.q is not None:
+            query = query.join(Problem, Problem.id == Submission.problem_id).where(
+                Problem.name.ilike(f"%{filters.q}%")
+            )
+        if filters.tag is not None:
+            query = (
+                query.join(problems_tags, problems_tags.c.problem_id == Submission.problem_id)
+                .join(CsTag, CsTag.id == problems_tags.c.tag_id)
+                .where(CsTag.name == normalize_tag_name(filters.tag))
+            )
         query = query.order_by(Submission.submitted_at.desc()).limit(filters.limit).offset(filters.offset)
         result = await self._session.execute(query)
         return list(result.scalars().all())

@@ -789,6 +789,44 @@
           }
         },
         {
+          "name": "15a - List Submissions (filter by name substring, case-insensitive)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Returns a list', () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.be.an('array');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/cs/submissions?q=two",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "cs",
+                "submissions"
+              ],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "two"
+                }
+              ]
+            }
+          }
+        },
+        {
           "name": "16 - Get Submission",
           "event": [
             {

@@ -17,6 +17,9 @@ Rules:
 problem that isn't in it
 - For "resource" items, only include a url if you're citing a well-known, stable resource (e.g. a widely known \
 YouTube channel or article series on the topic) -- omit url rather than guess one
+- For "topic_review" and "resource" items, the topic must be one of the tags listed above or a tag that \
+appears on a candidate problem -- never introduce an algorithm or data structure that isn't named in this data \
+(e.g. don't suggest segment trees or Kadane's algorithm unless one of those tags is actually present)
 - Propose 3-6 items total, mixing problem practice with at least one topic_review or resource item
 - Be specific: name the actual weak tag/topic in each description, don't write generic filler
 - Keep each description to one short sentence"""

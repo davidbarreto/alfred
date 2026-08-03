@@ -21,8 +21,14 @@ _LIVE_CANDIDATE_LIMIT = 5
 _PLAN_CANDIDATE_LIMIT = 15
 
 
-def _build_plan_context(weakest_tags: list, candidates: list) -> str:
-    lines = ["Weakest tags (name, solve rate, attempted):"]
+def _build_plan_context(weakest_tags: list, candidates: list, low_confidence: bool) -> str:
+    if low_confidence:
+        lines = [
+            "No tag has enough attempts yet to confidently call it a weakness. "
+            "Least-practiced tags so far (name, solve rate, attempted):"
+        ]
+    else:
+        lines = ["Weakest tags (name, solve rate, attempted):"]
     for t in weakest_tags:
         lines.append(f"  {t.tag} | solve_rate={t.solve_rate:.0%} | attempted={t.attempted}")
 
@@ -79,12 +85,20 @@ class RecommendationService:
 
     async def generate_plan(self, cadence: str) -> StudyPlanRead:
         summary = await self._stats.get_summary()
-        weakest_tags = summary.weakest_tags or summary.by_tag[:3]
+        low_confidence = not summary.weakest_tags
+        if low_confidence:
+            # No tag cleared the weakness bar (not enough attempts, or solve rates are
+            # uniformly healthy). Fall back to the least-practiced tags -- ranked by
+            # fewest attempts, then lowest solve rate -- so the plan targets genuine
+            # gaps in evidence instead of whatever tags sort first alphabetically.
+            weakest_tags = sorted(summary.by_tag, key=lambda t: (t.attempted, t.solve_rate))[:3]
+        else:
+            weakest_tags = summary.weakest_tags
         tag_names = [t.tag for t in weakest_tags] or None
         candidates = await self._stats.get_candidate_problems(tag_names, limit=_PLAN_CANDIDATE_LIMIT)
         candidate_by_external_id = {c.external_id: c.id for c in candidates}
 
-        context = _build_plan_context(weakest_tags, candidates)
+        context = _build_plan_context(weakest_tags, candidates, low_confidence)
         messages = [{"role": "user", "content": context}]
 
         t0 = time_module.monotonic()

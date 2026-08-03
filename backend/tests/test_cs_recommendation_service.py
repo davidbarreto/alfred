@@ -158,6 +158,25 @@ class TestGeneratePlan:
             with pytest.raises(ValueError):
                 await service.generate_plan("weekly")
 
+    async def test_falls_back_to_least_practiced_tags_when_no_weak_tag_qualifies(self, service, mock_llm):
+        # No tag clears the weakness bar, but the user has attempted some tags.
+        # The fallback must rank by fewest attempts (not alphabetically) so it
+        # reflects genuine gaps in evidence, not an arbitrary tag-name sort order.
+        b_tag = _tag_breakdown("binary search", attempted=10, solved=9)
+        z_tag = _tag_breakdown("zigzag", attempted=2, solved=1)
+        service._stats.get_summary.return_value = _summary(weakest_tags=[], by_tag=[b_tag, z_tag])
+        service._stats.get_candidate_problems.return_value = []
+        mock_llm.complete.return_value = LlmResponse(
+            text=json.dumps({"rationale": "r", "items": []}), tokens_input=1, tokens_output=1,
+        )
+        service._plans.create_plan.return_value = _plan_orm()
+
+        with patch("app.features.cs.recommendations.service.create_llm_call", new_callable=AsyncMock):
+            await service.generate_plan("weekly")
+
+        candidate_call_args = service._stats.get_candidate_problems.call_args[0]
+        assert candidate_call_args[0] == ["zigzag", "binary search"]
+
     async def test_strips_markdown_fences_before_parsing(self, service, mock_llm):
         service._stats.get_summary.return_value = _summary(weakest_tags=[])
         service._stats.get_candidate_problems.return_value = []

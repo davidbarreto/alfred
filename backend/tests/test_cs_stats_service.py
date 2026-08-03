@@ -115,6 +115,37 @@ class TestGetSummary:
         summary = await service.get_summary()
         assert summary.by_tag[0].avg_attempts_per_solve is None
 
+    async def test_weakest_tags_excludes_high_solve_rate_even_if_relative_minimum(self, service):
+        service._repo.get_solved_dates.return_value = []
+        service._repo.get_total_solved.return_value = 0
+        service._repo.get_difficulty_breakdown.return_value = []
+        service._repo.get_language_breakdown.return_value = []
+        # All tags solve well; "math" is only the relative minimum, not weak in
+        # absolute terms, and shouldn't be reported as a weakest tag.
+        service._repo.get_tag_breakdown.return_value = [
+            ("math", 18, 17, 20),  # 94%
+            ("string", 30, 29, 32),  # 97%
+            ("graph theory", 5, 5, 5),  # 100%
+        ]
+        summary = await service.get_summary()
+        assert summary.weakest_tags == []
+
+    async def test_weakest_tags_low_volume_higher_raw_rate_ranks_weaker_than_high_volume_lower_rate(self, service):
+        service._repo.get_solved_dates.return_value = []
+        service._repo.get_total_solved.return_value = 0
+        service._repo.get_difficulty_breakdown.return_value = []
+        service._repo.get_language_breakdown.return_value = []
+        # "trie" is 4/5 (80%) on very little evidence; "dp" is 26/40 (65%) on a lot
+        # of evidence. Raw solve_rate alone would call dp weaker (65% < 80%), but
+        # the confidence-adjusted score should rank trie weaker since its 80% is
+        # far less certain than dp's well-established 65%.
+        service._repo.get_tag_breakdown.return_value = [
+            ("trie", 5, 4, 6),
+            ("dp", 40, 26, 45),
+        ]
+        summary = await service.get_summary()
+        assert [t.tag for t in summary.weakest_tags] == ["trie", "dp"]
+
     async def test_untried_tags_excludes_attempted_and_uses_canonical_list(self, service):
         service._repo.get_solved_dates.return_value = []
         service._repo.get_total_solved.return_value = 0

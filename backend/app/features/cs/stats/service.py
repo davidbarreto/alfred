@@ -1,5 +1,6 @@
 import datetime
 import logging
+import math
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -17,6 +18,35 @@ logger = logging.getLogger(__name__)
 
 _MIN_ATTEMPTS_FOR_WEAK_TAG = 3
 _WEAKEST_TAGS_LIMIT = 5
+_WILSON_Z = 1.96  # 95% confidence
+# Backstop so a tightly-clustered set of strong tags can't manufacture a fake
+# "weakest" outlier just for being someone's relative minimum.
+_MAX_SOLVE_RATE_FOR_WEAK_TAG = 0.85
+
+
+def _wilson_lower_bound(solved: int, attempted: int, z: float = _WILSON_Z) -> float:
+    """Lower bound of the Wilson score interval for a solve rate.
+
+    A binomial proportion confidence interval: instead of trusting the raw
+    solved/attempted ratio, this asks "what's the worst this rate is plausibly
+    likely to be, given how much evidence backs it, at 95% confidence?". A 3/3
+    tag (100% raw) has wide uncertainty and gets pulled down toward ~0.44; a
+    30/30 tag (also 100%) has narrow uncertainty and stays close to 1.0. This
+    is what lets low-attempt tags stop being ranked as confidently "strong"
+    just because they haven't been tested enough to be wrong yet.
+
+    Same formula Reddit used for comment ranking ("best" sort) and that's
+    commonly recommended over raw ratios or normal-approximation intervals for
+    small-n proportions:
+    - https://en.wikipedia.org/wiki/Binomial_proportion_confidence_interval#Wilson_score_interval
+    - https://www.evanmiller.org/how-not-to-sort-by-average-rating.html
+    """
+    if attempted == 0:
+        return 0.0
+    phat = solved / attempted
+    margin = z * math.sqrt((phat * (1 - phat) + z**2 / (4 * attempted)) / attempted)
+    center = phat + z**2 / (2 * attempted)
+    return (center - margin) / (1 + z**2 / attempted)
 
 
 def compute_streaks(solved_dates: list[datetime.date]) -> tuple[int, int]:
@@ -84,11 +114,28 @@ class StatsService:
             LanguageBreakdown(language=language, solved=solved)
             for language, solved in await self._repo.get_language_breakdown()
         ]
-        # Primary: lowest solve rate first. Tiebreak: more submissions per solve (more
-        # struggle to get there) ranks weaker among tags with the same solve rate.
+        # Rank by the Wilson lower bound (confidence-adjusted solve rate), not raw
+        # solve_rate, so a low-attempt tag with a lucky 100% isn't ranked "strong".
+        # A tag only qualifies as "weakest" if it's both below your own overall
+        # average and below an absolute competence floor — otherwise a tightly
+        # clustered set of 90%+ tags would fill the list just for being the
+        # relative minimum among otherwise-strong tags.
+        eligible_tags = [t for t in by_tag if t.attempted >= _MIN_ATTEMPTS_FOR_WEAK_TAG]
+        total_attempted = sum(t.attempted for t in eligible_tags)
+        overall_solve_rate = (
+            sum(t.solved for t in eligible_tags) / total_attempted if total_attempted else 0.0
+        )
         weakest_tags = sorted(
-            (t for t in by_tag if t.attempted >= _MIN_ATTEMPTS_FOR_WEAK_TAG),
-            key=lambda t: (t.solve_rate, -(t.avg_attempts_per_solve or 0)),
+            (
+                t
+                for t in eligible_tags
+                if t.solve_rate < _MAX_SOLVE_RATE_FOR_WEAK_TAG
+                and _wilson_lower_bound(t.solved, t.attempted) < overall_solve_rate
+            ),
+            key=lambda t: (
+                _wilson_lower_bound(t.solved, t.attempted),
+                -(t.avg_attempts_per_solve or 0),
+            ),
         )[:_WEAKEST_TAGS_LIMIT]
         untried_tags = sorted(set(ALL_KNOWN_TAGS) - {t.tag for t in by_tag})
 

@@ -2,7 +2,13 @@ from fastapi import APIRouter, Depends, HTTPException, status
 
 from app.api.auth import require_auth
 from app.dependencies import CsProblemServiceDep
-from app.features.cs.problems.schemas import ProblemCreate, ProblemFilters, ProblemRead
+from app.features.cs.problems.schemas import (
+    AttemptedProblemFilters,
+    AttemptedProblemRead,
+    ProblemCreate,
+    ProblemFilters,
+    ProblemRead,
+)
 
 router = APIRouter(prefix="/cs/problems", tags=["cs"], dependencies=[Depends(require_auth)])
 
@@ -16,6 +22,11 @@ async def upsert_problem(request: ProblemCreate, service: CsProblemServiceDep):
 @router.get("", response_model=list[ProblemRead])
 async def get_problems(service: CsProblemServiceDep, filters: ProblemFilters = Depends()):
     return await service.get_problems(filters)
+
+
+@router.get("/attempted", response_model=list[AttemptedProblemRead])
+async def get_attempted_problems(service: CsProblemServiceDep, filters: AttemptedProblemFilters = Depends()):
+    return await service.get_attempted_problems(filters)
 
 
 @router.get("/{problem_id}", response_model=ProblemRead)

@@ -23,6 +23,11 @@ class ProblemUpdate(BaseModel):
     difficulty: str | None = None
     tags_raw: list[str] | None = None
     tags: list[str] | None = None
+    acceptance_rate: float | None = None
+    solved_count: int | None = None
+    likes: int | None = None
+    dislikes: int | None = None
+    metrics_updated_at: datetime | None = None
 
 
 class TagRead(BaseModel):
@@ -42,10 +47,24 @@ class ProblemRead(BaseModel):
     difficulty: str | None
     tags_raw: list[str] | None
     tags: list[TagRead]
+    acceptance_rate: float | None
+    solved_count: int | None
+    likes: int | None
+    dislikes: int | None
+    metrics_updated_at: datetime | None
     created_at: datetime
     updated_at: datetime
 
     model_config = {"from_attributes": True}
+
+
+class AttemptedProblemRead(ProblemRead):
+    attempts: int
+    solved: bool
+    last_attempted_at: datetime
+
+
+_DEFAULT_PAGE_SIZE = 20
 
 
 class ProblemFilters:
@@ -54,7 +73,31 @@ class ProblemFilters:
         platform_id: Annotated[int | None, Query()] = None,
         difficulty: Annotated[str | None, Query()] = None,
         tag: Annotated[str | None, Query()] = None,
+        q: Annotated[str | None, Query()] = None,
+        limit: Annotated[int, Query(ge=1, le=200)] = _DEFAULT_PAGE_SIZE,
+        offset: Annotated[int, Query(ge=0)] = 0,
     ) -> None:
         self.platform_id = platform_id
         self.difficulty = difficulty
         self.tag = tag
+        self.q = q
+        self.limit = limit
+        self.offset = offset
+
+
+class AttemptedProblemFilters:
+    def __init__(
+        self,
+        platform_id: Annotated[int | None, Query()] = None,
+        difficulty: Annotated[str | None, Query()] = None,
+        tag: Annotated[str | None, Query()] = None,
+        q: Annotated[str | None, Query()] = None,
+        limit: Annotated[int, Query(ge=1, le=200)] = _DEFAULT_PAGE_SIZE,
+        offset: Annotated[int, Query(ge=0)] = 0,
+    ) -> None:
+        self.platform_id = platform_id
+        self.difficulty = difficulty
+        self.tag = tag
+        self.q = q
+        self.limit = limit
+        self.offset = offset

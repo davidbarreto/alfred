@@ -7,19 +7,24 @@
 
   <div class="flex items-center justify-between">
     <h1 class="text-base font-semibold text-gray-900">CS Coach</h1>
-    <div class="flex items-center gap-2">
-      <button onclick="syncPlatform('codeforces')" id="sync-codeforces"
-              class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 text-xs font-medium text-gray-500 hover:bg-gray-50 transition-colors">
-        <i class="ti ti-refresh text-sm"></i>Sync Codeforces
-      </button>
-      <button onclick="syncPlatform('leetcode')" id="sync-leetcode"
-              class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 text-xs font-medium text-gray-500 hover:bg-gray-50 transition-colors">
-        <i class="ti ti-refresh text-sm"></i>Sync LeetCode
-      </button>
-      <button onclick="generatePlan('weekly')" id="generate-plan"
-              class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#378ADD] text-xs font-medium text-white hover:bg-[#2f7bc4] transition-colors">
-        <i class="ti ti-sparkles text-sm"></i>Generate weekly plan
-      </button>
+    <div class="flex flex-col items-end gap-1">
+      {% if sync_status_text %}
+      <p class="text-xs text-gray-400" id="sync-status-text">{{ sync_status_text }}</p>
+      {% endif %}
+      <div class="flex items-center gap-2">
+        <button onclick="syncPlatform('codeforces')" id="sync-codeforces"
+                class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 text-xs font-medium text-gray-500 hover:bg-gray-50 transition-colors">
+          <i class="ti ti-refresh text-sm"></i>Sync Codeforces
+        </button>
+        <button onclick="syncPlatform('leetcode')" id="sync-leetcode"
+                class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 text-xs font-medium text-gray-500 hover:bg-gray-50 transition-colors">
+          <i class="ti ti-refresh text-sm"></i>Sync LeetCode
+        </button>
+        <button onclick="generatePlan('weekly')" id="generate-plan"
+                class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#378ADD] text-xs font-medium text-white hover:bg-[#2f7bc4] transition-colors">
+          <i class="ti ti-sparkles text-sm"></i>Generate weekly plan
+        </button>
+      </div>
     </div>
   </div>
 
@@ -146,12 +151,93 @@
         {% if p.rating %}
         <p class="text-xs text-gray-400">Rating: {{ p.rating }} (max {{ p.max_rating }})</p>
         {% endif %}
-        <p class="text-xs text-gray-400 mt-1">
-          {% if p.last_synced_at %}Last synced {{ p.last_synced_at[:16] | replace('T', ' ') }}{% else %}Never synced{% endif %}
-        </p>
       </div>
     </div>
     {% endfor %}
+  </div>
+
+  <!-- Charts -->
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+    <div class="card bg-white">
+      <div class="card-body p-4">
+        <p class="text-xs text-gray-400 uppercase tracking-wide mb-3">Activity (last 90 days)</p>
+        {% if activity_solved %}
+        <div class="relative h-48"><canvas id="chart-activity"></canvas></div>
+        {% else %}
+        <p class="text-sm text-gray-300 py-10 text-center">No data yet</p>
+        {% endif %}
+      </div>
+    </div>
+    <div class="card bg-white">
+      <div class="card-body p-4">
+        <p class="text-xs text-gray-400 uppercase tracking-wide mb-3">Difficulty breakdown</p>
+        {% if difficulty_chart %}
+        <div class="relative h-48"><canvas id="chart-difficulty"></canvas></div>
+        {% else %}
+        <p class="text-sm text-gray-300 py-10 text-center">No data yet</p>
+        {% endif %}
+      </div>
+    </div>
+    <div class="card bg-white">
+      <div class="card-body p-4">
+        <p class="text-xs text-gray-400 uppercase tracking-wide mb-3">Tag solve rate</p>
+        {% if tag_strength_chart %}
+        <div class="relative h-48"><canvas id="chart-tags"></canvas></div>
+        {% else %}
+        <p class="text-sm text-gray-300 py-10 text-center">No data yet</p>
+        {% endif %}
+      </div>
+    </div>
+    <div class="card bg-white">
+      <div class="card-body p-4">
+        <p class="text-xs text-gray-400 uppercase tracking-wide mb-3">Language usage</p>
+        {% if language_chart %}
+        <div class="relative h-48"><canvas id="chart-language"></canvas></div>
+        {% else %}
+        <p class="text-sm text-gray-300 py-10 text-center">No data yet</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Problems tried -->
+  <div class="card bg-white">
+    <div class="card-body p-5">
+      <div class="flex items-center justify-between mb-2">
+        <p class="text-sm font-semibold text-gray-900">Problems tried</p>
+        <a href="/cs/problems" class="text-xs text-[#378ADD] hover:underline">View all →</a>
+      </div>
+      {% if not attempted_problems %}
+      <p class="text-sm text-gray-400 py-4">No problems attempted yet.</p>
+      {% else %}
+      <div class="divide-y divide-gray-100">
+        {% for p in attempted_problems %}
+        <div class="flex items-center justify-between py-2.5 text-sm">
+          <div class="min-w-0">
+            {% if p.url %}
+            <a href="{{ p.url }}" target="_blank" rel="noopener" class="font-medium text-gray-900 hover:text-[#378ADD] truncate">{{ p.name }}</a>
+            {% else %}
+            <span class="font-medium text-gray-900">{{ p.name }}</span>
+            {% endif %}
+            <div class="text-xs text-gray-400 mt-0.5">
+              {{ p.platform_code }} · {{ p.attempts }} attempt{{ "s" if p.attempts != 1 }} · {{ p.last_attempted_at[:10] }}
+            </div>
+          </div>
+          <div class="flex items-center gap-2 shrink-0 ml-3">
+            {% if p.difficulty %}
+            <span class="px-2 py-0.5 rounded-full text-xs font-medium {{ difficulty_color.get(p.difficulty, 'text-gray-500 bg-gray-50') }}">{{ p.difficulty }}</span>
+            {% endif %}
+            {% if p.solved %}
+            <span class="px-2 py-0.5 rounded-full text-xs font-medium text-green-600 bg-green-50">solved</span>
+            {% else %}
+            <span class="px-2 py-0.5 rounded-full text-xs font-medium text-gray-500 bg-gray-50">attempted</span>
+            {% endif %}
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+    </div>
   </div>
 
   <!-- Recent submissions -->
@@ -217,6 +303,73 @@ async function completeItem(itemId) {
   } catch (e) {
     alert('Could not update item.');
   }
+}
+</script>
+
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+<script>
+const CS_PALETTE = ["#378ADD","#BA7517","#639922","#E24B4A","#6366F1","#EC4899","#14B8A6","#F97316"];
+const CS_DIFFICULTY_COLORS = { easy: "#639922", medium: "#BA7517", hard: "#E24B4A" };
+const csCommonOptions = {
+  maintainAspectRatio: false,
+  plugins: { legend: { display: false } },
+  scales: {
+    x: { grid: { display: false }, ticks: { font: { size: 10 } } },
+    y: { grid: { color: "#F3F4F6" }, ticks: { font: { size: 10 }, precision: 0 } },
+  },
+};
+
+const csActivitySolved = {{ activity_solved | tojson }};
+const csActivityAttempts = {{ activity_attempts | tojson }};
+if (Object.keys(csActivitySolved).length) {
+  const labels = Object.keys(csActivitySolved);
+  new Chart(document.getElementById("chart-activity"), {
+    type: "line",
+    data: {
+      labels,
+      datasets: [
+        { label: "Attempts", data: labels.map(d => csActivityAttempts[d] || 0), borderColor: "#9CA3AF", backgroundColor: "transparent", tension: 0.3, pointRadius: 0, borderDash: [4, 3] },
+        { label: "Solved", data: labels.map(d => csActivitySolved[d] || 0), borderColor: "#378ADD", backgroundColor: "rgba(55,138,221,0.08)", fill: true, tension: 0.3, pointRadius: 0 },
+      ],
+    },
+    options: { ...csCommonOptions, plugins: { legend: { display: true, position: "bottom", labels: { boxWidth: 10, font: { size: 11 } } } } },
+  });
+}
+
+const csDifficultyChart = {{ difficulty_chart | tojson }};
+if (Object.keys(csDifficultyChart).length) {
+  const labels = Object.keys(csDifficultyChart);
+  new Chart(document.getElementById("chart-difficulty"), {
+    type: "bar",
+    data: {
+      labels,
+      datasets: [{ data: Object.values(csDifficultyChart), backgroundColor: labels.map(l => CS_DIFFICULTY_COLORS[l] || "#9CA3AF"), borderRadius: 4 }],
+    },
+    options: csCommonOptions,
+  });
+}
+
+const csTagStrengthChart = {{ tag_strength_chart | tojson }};
+if (Object.keys(csTagStrengthChart).length) {
+  new Chart(document.getElementById("chart-tags"), {
+    type: "bar",
+    data: {
+      labels: Object.keys(csTagStrengthChart),
+      datasets: [{ data: Object.values(csTagStrengthChart), backgroundColor: "#378ADD", borderRadius: 4 }],
+    },
+    options: { ...csCommonOptions, indexAxis: "y", scales: { x: { grid: { color: "#F3F4F6" }, ticks: { font: { size: 10 } }, max: 100 }, y: { grid: { display: false }, ticks: { font: { size: 10 } } } } },
+  });
+}
+
+const csLanguageChart = {{ language_chart | tojson }};
+if (Object.keys(csLanguageChart).length) {
+  const keys = Object.keys(csLanguageChart);
+  new Chart(document.getElementById("chart-language"), {
+    type: "doughnut",
+    data: { labels: keys, datasets: [{ data: Object.values(csLanguageChart), backgroundColor: CS_PALETTE.slice(0, keys.length), borderWidth: 0 }] },
+    options: { maintainAspectRatio: false, plugins: { legend: { position: "bottom", labels: { boxWidth: 10, font: { size: 11 } } } }, cutout: "65%" },
+  });
 }
 </script>
 {% endblock %}

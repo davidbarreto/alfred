@@ -8,6 +8,7 @@ from app.features.cs.normalization import ALL_KNOWN_TAGS
 from app.features.cs.stats.repository import StatsRepository
 from app.features.cs.stats.schemas import (
     CandidateProblem,
+    DailyActivity,
     DifficultyBreakdown,
     LanguageBreakdown,
     StatsSummary,
@@ -16,6 +17,7 @@ from app.features.cs.stats.schemas import (
 
 logger = logging.getLogger(__name__)
 
+_DAILY_ACTIVITY_DAYS = 90
 _MIN_ATTEMPTS_FOR_WEAK_TAG = 3
 _WEAKEST_TAGS_LIMIT = 5
 _WILSON_Z = 1.96  # 95% confidence
@@ -114,6 +116,10 @@ class StatsService:
             LanguageBreakdown(language=language, solved=solved)
             for language, solved in await self._repo.get_language_breakdown()
         ]
+        by_day = [
+            DailyActivity(date=day, attempts=attempts, solved=solved)
+            for day, attempts, solved in await self._repo.get_daily_activity(_DAILY_ACTIVITY_DAYS)
+        ]
         # Rank by the Wilson lower bound (confidence-adjusted solve rate), not raw
         # solve_rate, so a low-attempt tag with a lucky 100% isn't ranked "strong".
         # A tag only qualifies as "weakest" if it's both below your own overall
@@ -150,6 +156,7 @@ class StatsService:
             by_difficulty=by_difficulty,
             by_tag=by_tag,
             by_language=by_language,
+            by_day=by_day,
             weakest_tags=weakest_tags,
             untried_tags=untried_tags,
         )

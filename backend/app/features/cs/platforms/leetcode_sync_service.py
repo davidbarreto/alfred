@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import datetime
 import logging
 
@@ -8,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.features.cs.normalization import normalize_language, normalize_leetcode_difficulty, normalize_verdict
 from app.features.cs.platforms.repository import PlatformRepository
 from app.features.cs.platforms.schemas import PlatformUpdate
-from app.features.cs.problems.schemas import ProblemCreate
+from app.features.cs.problems.schemas import ProblemCreate, ProblemUpdate
 from app.features.cs.problems.service import ProblemService
 from app.features.cs.study_plans.service import StudyPlanService
 from app.features.cs.submissions.schemas import SubmissionCreate
@@ -18,6 +19,7 @@ from app.integrations.leetcode.client import LeetCodeClient
 logger = logging.getLogger(__name__)
 
 _PLATFORM_CODE = "leetcode"
+_METRICS_REQUEST_DELAY_SECONDS = 1.0
 
 
 class LeetCodeSyncService:
@@ -94,3 +96,31 @@ class LeetCodeSyncService:
         )
         logger.info("LeetCode sync completed: new_submissions=%d", count)
         return count
+
+    async def refresh_metrics(self) -> int:
+        """Refetch acceptance rate/likes/dislikes for every previously-synced LeetCode problem."""
+        platform = await self._platforms.get_platform_by_code(_PLATFORM_CODE)
+        if platform is None:
+            logger.warning("LeetCode metrics refresh skipped: platform not configured")
+            return 0
+
+        problems = await self._problems.get_problems_by_platform(platform.id)
+        updated = 0
+        now = datetime.datetime.now(datetime.timezone.utc)
+        for problem in problems:
+            question = await self._client.get_question_data(problem.external_id)
+            await self._problems.update_problem(
+                problem.id,
+                ProblemUpdate(
+                    acceptance_rate=question.get("acRate"),
+                    likes=question.get("likes"),
+                    dislikes=question.get("dislikes"),
+                    metrics_updated_at=now,
+                ),
+            )
+            updated += 1
+            await asyncio.sleep(_METRICS_REQUEST_DELAY_SECONDS)
+
+        await self._platforms.update_platform(platform.id, PlatformUpdate(metrics_refreshed_at=now))
+        logger.info("LeetCode metrics refresh completed: updated=%d", updated)
+        return updated

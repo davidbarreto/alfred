@@ -1,0 +1,70 @@
+{% set qs = filters | urlencode %}
+{% if not problems %}
+<p class="text-sm text-gray-400 py-10 text-center">No problems match these filters.</p>
+{% else %}
+<table class="w-full text-sm">
+  <thead>
+    <tr class="border-b border-gray-100 text-xs text-gray-400 uppercase tracking-wide">
+      <th class="text-left px-4 py-3 font-medium">Problem</th>
+      <th class="text-left px-4 py-3 font-medium hidden sm:table-cell">Provider</th>
+      <th class="text-left px-4 py-3 font-medium">Difficulty</th>
+      <th class="text-center px-4 py-3 font-medium">Attempts</th>
+      <th class="text-center px-4 py-3 font-medium">Status</th>
+      <th class="text-right px-4 py-3 font-medium hidden md:table-cell">Metrics</th>
+      <th class="text-right px-4 py-3 font-medium hidden sm:table-cell">Last attempt</th>
+    </tr>
+  </thead>
+  <tbody class="divide-y divide-gray-50">
+    {% for p in problems %}
+    <tr class="hover:bg-gray-50">
+      <td class="px-4 py-2.5 font-medium text-gray-800 max-w-xs truncate">
+        {% if p.url %}
+        <a href="{{ p.url }}" target="_blank" rel="noopener" class="hover:text-[#378ADD] transition-colors">{{ p.name }}<i class="ti ti-external-link text-xs text-gray-300 ml-1"></i></a>
+        {% else %}
+        {{ p.name }}
+        {% endif %}
+      </td>
+      <td class="px-4 py-2.5 text-gray-500 hidden sm:table-cell">{{ p.platform_code }}</td>
+      <td class="px-4 py-2.5">
+        {% if p.difficulty %}
+        <span class="px-2 py-0.5 rounded-full text-xs font-medium {{ difficulty_color.get(p.difficulty, 'text-gray-500 bg-gray-50') }}">{{ p.difficulty }}</span>
+        {% else %}—{% endif %}
+      </td>
+      <td class="px-4 py-2.5 text-center text-gray-500">{{ p.attempts }}</td>
+      <td class="px-4 py-2.5 text-center">
+        {% if p.solved %}
+        <span class="px-2 py-0.5 rounded-full text-xs font-medium text-green-600 bg-green-50">solved</span>
+        {% else %}
+        <span class="px-2 py-0.5 rounded-full text-xs font-medium text-gray-500 bg-gray-50">attempted</span>
+        {% endif %}
+      </td>
+      <td class="px-4 py-2.5 text-right text-gray-400 text-xs hidden md:table-cell">
+        {% if p.solved_count is not none %}{{ p.solved_count }} solved
+        {% elif p.acceptance_rate is not none %}{{ p.acceptance_rate | round(1) }}% AC{% if p.likes is not none %} · {{ p.likes }}👍{% endif %}
+        {% else %}—{% endif %}
+      </td>
+      <td class="px-4 py-2.5 text-right text-gray-400 text-xs hidden sm:table-cell">{{ p.last_attempted_at[:10] }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endif %}
+
+<div class="flex items-center justify-between p-4 border-t border-gray-100">
+  <button
+    {% if not problems_has_prev %}disabled{% endif %}
+    hx-get="/cs/problems-section?{{ qs }}&offset={{ [problems_offset - 20, 0] | max }}"
+    hx-target="#problems-list"
+    hx-swap="innerHTML"
+    class="btn btn-sm btn-ghost text-xs disabled:opacity-30">
+    <i class="ti ti-chevron-left text-sm"></i>Prev
+  </button>
+  <button
+    {% if not problems_has_next %}disabled{% endif %}
+    hx-get="/cs/problems-section?{{ qs }}&offset={{ problems_offset + 20 }}"
+    hx-target="#problems-list"
+    hx-swap="innerHTML"
+    class="btn btn-sm btn-ghost text-xs disabled:opacity-30">
+    Next<i class="ti ti-chevron-right text-sm"></i>
+  </button>
+</div>

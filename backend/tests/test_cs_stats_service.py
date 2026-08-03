@@ -60,6 +60,7 @@ def mock_session():
 def service(mock_session):
     svc = StatsService(session=mock_session)
     svc._repo = AsyncMock()
+    svc._repo.get_daily_activity.return_value = []
     return svc
 
 
@@ -156,3 +157,16 @@ class TestGetSummary:
         assert "dynamic programming" not in summary.untried_tags
         assert "graph" in summary.untried_tags
         assert "backtracking" in summary.untried_tags
+
+    async def test_by_day_maps_daily_activity_from_repo(self, service):
+        service._repo.get_solved_dates.return_value = []
+        service._repo.get_total_solved.return_value = 0
+        service._repo.get_difficulty_breakdown.return_value = []
+        service._repo.get_language_breakdown.return_value = []
+        service._repo.get_tag_breakdown.return_value = []
+        service._repo.get_daily_activity.return_value = [(_d(2026, 8, 1), 3, 2)]
+        summary = await service.get_summary()
+        assert len(summary.by_day) == 1
+        assert summary.by_day[0].date == _d(2026, 8, 1)
+        assert summary.by_day[0].attempts == 3
+        assert summary.by_day[0].solved == 2

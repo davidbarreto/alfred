@@ -80,6 +80,22 @@ class StatsRepository:
         result = await self._session.execute(query)
         return [(language, solved) for language, solved in result.all()]
 
+    async def get_daily_activity(self, days: int) -> list[tuple[datetime.date, int, int]]:
+        since = datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(days=days)
+        solved_case = case((Submission.verdict == "accepted", 1))
+        query = (
+            select(
+                func.date(Submission.submitted_at),
+                func.count(Submission.id),
+                func.count(solved_case),
+            )
+            .where(Submission.submitted_at >= since)
+            .group_by(func.date(Submission.submitted_at))
+            .order_by(func.date(Submission.submitted_at))
+        )
+        result = await self._session.execute(query)
+        return [(day, attempts, solved) for day, attempts, solved in result.all()]
+
     async def get_unsolved_candidate_problems(
         self, tag_names: list[str] | None, limit: int
     ) -> list[Problem]:

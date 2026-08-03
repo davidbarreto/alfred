@@ -17,6 +17,7 @@ class PlatformUpdate(BaseModel):
     handle: str | None = None
     sync_enabled: bool | None = None
     last_synced_at: datetime | None = None
+    metrics_refreshed_at: datetime | None = None
     last_submission_external_id: str | None = None
     rating: int | None = None
     max_rating: int | None = None
@@ -29,6 +30,7 @@ class PlatformRead(BaseModel):
     handle: str | None
     sync_enabled: bool
     last_synced_at: datetime | None
+    metrics_refreshed_at: datetime | None
     last_submission_external_id: str | None
     rating: int | None
     max_rating: int | None

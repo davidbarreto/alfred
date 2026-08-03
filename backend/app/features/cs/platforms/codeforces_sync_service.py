@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.features.cs.normalization import normalize_cf_difficulty, normalize_language, normalize_verdict
 from app.features.cs.platforms.repository import PlatformRepository
 from app.features.cs.platforms.schemas import PlatformUpdate
-from app.features.cs.problems.schemas import ProblemCreate
+from app.features.cs.problems.schemas import ProblemCreate, ProblemUpdate
 from app.features.cs.problems.service import ProblemService
 from app.features.cs.study_plans.service import StudyPlanService
 from app.features.cs.submissions.schemas import SubmissionCreate
@@ -104,3 +104,27 @@ class CodeforcesSyncService:
             "Codeforces sync completed: handle=%s new_submissions=%d", platform.handle, count
         )
         return count
+
+    async def refresh_metrics(self) -> int:
+        """Bulk-refresh solvedCount for every previously-synced Codeforces problem."""
+        platform = await self._platforms.get_platform_by_code(_PLATFORM_CODE)
+        if platform is None:
+            logger.warning("Codeforces metrics refresh skipped: platform not configured")
+            return 0
+
+        stats = await self._client.get_problemset_statistics()
+        problems = await self._problems.get_problems_by_platform(platform.id)
+        now = datetime.datetime.now(datetime.timezone.utc)
+        updated = 0
+        for problem in problems:
+            solved_count = stats.get(problem.external_id)
+            if solved_count is None:
+                continue
+            await self._problems.update_problem(
+                problem.id, ProblemUpdate(solved_count=solved_count, metrics_updated_at=now)
+            )
+            updated += 1
+
+        await self._platforms.update_platform(platform.id, PlatformUpdate(metrics_refreshed_at=now))
+        logger.info("Codeforces metrics refresh completed: updated=%d", updated)
+        return updated

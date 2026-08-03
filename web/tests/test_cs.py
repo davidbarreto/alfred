@@ -6,9 +6,10 @@ def _summary():
         "current_streak": 3,
         "longest_streak": 10,
         "total_solved": 42,
-        "by_difficulty": [],
-        "by_tag": [],
-        "by_language": [],
+        "by_difficulty": [{"difficulty": "easy", "attempted": 10, "solved": 8}],
+        "by_tag": [{"tag": "dp", "attempted": 5, "solved": 1, "solve_rate": 0.2, "submissions": 6, "avg_attempts_per_solve": 6.0}],
+        "by_language": [{"language": "cpp", "solved": 20}],
+        "by_day": [{"date": "2026-07-30", "attempts": 2, "solved": 1}],
         "weakest_tags": [{"tag": "dp", "attempted": 5, "solved": 1, "solve_rate": 0.2}],
     }
 
@@ -33,6 +34,19 @@ def _problem():
     return {"id": 7, "name": "Two Sum", "url": "https://codeforces.com/problemset/problem/1/A"}
 
 
+def _attempted_problem():
+    return {
+        "id": 7, "platform_id": 1, "external_id": "1A", "name": "Two Sum",
+        "url": "https://codeforces.com/problemset/problem/1/A",
+        "difficulty_raw": "1200", "difficulty": "easy",
+        "tags_raw": ["dp"], "tags": [{"id": 1, "name": "dp"}],
+        "acceptance_rate": None, "solved_count": None, "likes": None, "dislikes": None,
+        "metrics_updated_at": None,
+        "created_at": "2026-01-01T00:00:00", "updated_at": "2026-01-01T00:00:00",
+        "attempts": 2, "solved": True, "last_attempted_at": "2026-07-30T09:00:00",
+    }
+
+
 def _get_side_effect(path, params=None):
     if path == "/cs/stats/summary":
         return _summary()
@@ -46,6 +60,8 @@ def _get_side_effect(path, params=None):
         return [_submission()]
     if path == "/cs/problems/7":
         return _problem()
+    if path == "/cs/problems/attempted":
+        return [_attempted_problem()]
     return None
 
 
@@ -60,6 +76,10 @@ class TestDashboard:
         assert "42" in resp.text  # total solved
         assert "Codeforces" in resp.text
         assert "Two Sum" in resp.text
+        assert "Problems tried" in resp.text
+        assert "Codeforces synced" in resp.text
+        assert "LeetCode synced" in resp.text
+        assert "View all" in resp.text
 
     def test_renders_empty_state_when_no_data(self, client, mock_api):
         mock_api["get"].side_effect = lambda path, params=None: None
@@ -84,6 +104,45 @@ class TestSubmissionsSection:
         mock_api["get"].side_effect = _get_side_effect
 
         resp = client.get("/cs/submissions-section?offset=0")
+
+        assert resp.status_code == 200
+        assert "Two Sum" in resp.text
+        assert "CS Coach" not in resp.text  # partial, not full page
+
+
+class TestProblemsPage:
+    def test_renders_full_page_and_triggers_metrics_refresh(self, client, mock_api):
+        mock_api["get"].side_effect = _get_side_effect
+        mock_api["post"].return_value = {"updated": 0, "skipped": True}
+
+        resp = client.get("/cs/problems")
+
+        assert resp.status_code == 200
+        assert "Two Sum" in resp.text
+        refreshed_paths = {call.args[0] for call in mock_api["post"].await_args_list}
+        assert "/cs/platforms/codeforces/refresh-metrics" in refreshed_paths
+        assert "/cs/platforms/leetcode/refresh-metrics" in refreshed_paths
+
+    def test_passes_filters_through_to_attempted_problems_query(self, client, mock_api):
+        mock_api["get"].side_effect = _get_side_effect
+        mock_api["post"].return_value = {"updated": 0, "skipped": True}
+
+        resp = client.get("/cs/problems?platform_id=1&difficulty=easy&q=Two")
+
+        assert resp.status_code == 200
+        attempted_calls = [
+            call for call in mock_api["get"].await_args_list if call.args[0] == "/cs/problems/attempted"
+        ]
+        assert len(attempted_calls) == 1
+        params = attempted_calls[0].kwargs["params"]
+        assert params["platform_id"] == "1"
+        assert params["difficulty"] == "easy"
+        assert params["q"] == "Two"
+
+    def test_returns_partial_for_htmx_pagination(self, client, mock_api):
+        mock_api["get"].side_effect = _get_side_effect
+
+        resp = client.get("/cs/problems-section?offset=0")
 
         assert resp.status_code == 200
         assert "Two Sum" in resp.text

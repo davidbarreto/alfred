@@ -1,3 +1,5 @@
+from datetime import datetime, timezone
+
 import httpx
 from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse, JSONResponse
@@ -7,7 +9,9 @@ from app.templates_config import templates
 
 router = APIRouter(prefix="/cs")
 
-_SUBMISSIONS_PAGE_SIZE = 20
+_SUBMISSIONS_PAGE_SIZE = 10
+_PROBLEMS_PREVIEW_SIZE = 10
+_PROBLEMS_PAGE_SIZE = 20
 
 _DIFFICULTY_COLOR = {
     "easy": "text-green-600 bg-green-50",
@@ -19,14 +23,21 @@ _VERDICT_COLOR = {
 }
 
 
-def _pagination(items: list, offset: int) -> tuple[list, bool, bool]:
-    has_next = len(items) > _SUBMISSIONS_PAGE_SIZE
-    return items[:_SUBMISSIONS_PAGE_SIZE], has_next, offset > 0
+def _pagination(items: list, offset: int, page_size: int) -> tuple[list, bool, bool]:
+    has_next = len(items) > page_size
+    return items[:page_size], has_next, offset > 0
 
 
 async def _safe_get(path: str, params: dict | None = None):
     try:
         return await api.get(path, params=params or {})
+    except httpx.HTTPError:
+        return None
+
+
+async def _safe_post(path: str, timeout: float = 10.0):
+    try:
+        return await api.post(path, timeout=timeout)
     except httpx.HTTPError:
         return None
 
@@ -52,6 +63,42 @@ async def _enrich_submissions(submissions: list, platform_by_id: dict) -> None:
         s["verdict_color"] = _VERDICT_COLOR.get(s["verdict"], "text-gray-500 bg-gray-50")
 
 
+def _relative_time(iso_timestamp: str | None) -> str:
+    if not iso_timestamp:
+        return "never synced"
+    then = datetime.fromisoformat(iso_timestamp.replace("Z", "+00:00"))
+    if then.tzinfo is None:
+        then = then.replace(tzinfo=timezone.utc)
+    delta = datetime.now(timezone.utc) - then
+    seconds = delta.total_seconds()
+    if seconds < 3600:
+        return f"{max(1, int(seconds // 60))}m ago"
+    if seconds < 86400:
+        return f"{int(seconds // 3600)}h ago"
+    return f"{int(seconds // 86400)}d ago"
+
+
+def _sync_status_text(platforms: list) -> str:
+    parts = []
+    for p in platforms:
+        if p["code"] not in ("codeforces", "leetcode"):
+            continue
+        label = p["code"].title() if p["code"] == "codeforces" else "LeetCode"
+        parts.append(f"{label} synced {_relative_time(p.get('last_synced_at'))}")
+    return " · ".join(parts)
+
+
+def _by_tag_strength(by_tag: list, limit: int = 10) -> dict:
+    top = sorted(by_tag, key=lambda t: -t["attempted"])[:limit]
+    return {t["tag"]: round(t["solve_rate"] * 100) for t in top}
+
+
+def _enrich_attempted_problems(problems: list, platform_by_id: dict) -> None:
+    for p in problems:
+        platform = platform_by_id.get(p["platform_id"])
+        p["platform_code"] = platform["code"] if platform else "?"
+
+
 @router.get("/", response_class=HTMLResponse)
 async def dashboard(request: Request):
     summary = await _safe_get("/cs/stats/summary")
@@ -61,8 +108,23 @@ async def dashboard(request: Request):
     platform_by_id = {p["id"]: p for p in platforms}
 
     raw = await _safe_get("/cs/submissions", {"limit": _SUBMISSIONS_PAGE_SIZE + 1}) or []
-    submissions, has_next, has_prev = _pagination(raw, 0)
+    submissions, has_next, has_prev = _pagination(raw, 0, _SUBMISSIONS_PAGE_SIZE)
     await _enrich_submissions(submissions, platform_by_id)
+
+    attempted_raw = await _safe_get("/cs/problems/attempted", {"limit": _PROBLEMS_PREVIEW_SIZE}) or []
+    _enrich_attempted_problems(attempted_raw, platform_by_id)
+
+    activity_solved: dict = {}
+    activity_attempts: dict = {}
+    difficulty_chart: dict = {}
+    tag_strength_chart: dict = {}
+    language_chart: dict = {}
+    if summary:
+        activity_solved = {d["date"]: d["solved"] for d in summary["by_day"]}
+        activity_attempts = {d["date"]: d["attempts"] for d in summary["by_day"]}
+        difficulty_chart = {d["difficulty"]: d["solved"] for d in summary["by_difficulty"]}
+        tag_strength_chart = _by_tag_strength(summary["by_tag"])
+        language_chart = {l["language"]: l["solved"] for l in summary["by_language"]}
 
     for p in platforms:
         p["difficulty_color"] = _DIFFICULTY_COLOR
@@ -72,11 +134,18 @@ async def dashboard(request: Request):
         "live_recommendation": live_recommendation,
         "weekly_plan": weekly_plan,
         "platforms": platforms,
+        "sync_status_text": _sync_status_text(platforms),
         "submissions": submissions,
         "submissions_offset": 0,
         "submissions_has_next": has_next,
         "submissions_has_prev": has_prev,
+        "attempted_problems": attempted_raw,
         "difficulty_color": _DIFFICULTY_COLOR,
+        "activity_solved": activity_solved,
+        "activity_attempts": activity_attempts,
+        "difficulty_chart": difficulty_chart,
+        "tag_strength_chart": tag_strength_chart,
+        "language_chart": language_chart,
     })
 
 
@@ -86,7 +155,7 @@ async def submissions_section(request: Request):
     platform_by_id = await _platform_lookup()
 
     raw = await _safe_get("/cs/submissions", {"limit": _SUBMISSIONS_PAGE_SIZE + 1, "offset": offset}) or []
-    submissions, has_next, has_prev = _pagination(raw, offset)
+    submissions, has_next, has_prev = _pagination(raw, offset, _SUBMISSIONS_PAGE_SIZE)
     await _enrich_submissions(submissions, platform_by_id)
 
     return templates.TemplateResponse(request, "_cs_submissions.html", {
@@ -94,6 +163,63 @@ async def submissions_section(request: Request):
         "submissions_offset": offset,
         "submissions_has_next": has_next,
         "submissions_has_prev": has_prev,
+    })
+
+
+def _problem_filters_from_request(request: Request) -> dict:
+    filters = {}
+    for key in ("platform_id", "difficulty", "tag", "q"):
+        value = request.query_params.get(key)
+        if value:
+            filters[key] = value
+    return filters
+
+
+@router.get("/problems", response_class=HTMLResponse)
+async def problems_page(request: Request):
+    for code in ("codeforces", "leetcode"):
+        await _safe_post(f"/cs/platforms/{code}/refresh-metrics", timeout=30.0)
+
+    offset = max(0, int(request.query_params.get("offset", "0")))
+    filters = _problem_filters_from_request(request)
+    platform_by_id = await _platform_lookup()
+
+    raw = await _safe_get(
+        "/cs/problems/attempted", {**filters, "limit": _PROBLEMS_PAGE_SIZE + 1, "offset": offset}
+    ) or []
+    problems, has_next, has_prev = _pagination(raw, offset, _PROBLEMS_PAGE_SIZE)
+    _enrich_attempted_problems(problems, platform_by_id)
+
+    return templates.TemplateResponse(request, "cs_problems.html", {
+        "problems": problems,
+        "platforms": list(platform_by_id.values()),
+        "filters": filters,
+        "problems_offset": offset,
+        "problems_has_next": has_next,
+        "problems_has_prev": has_prev,
+        "difficulty_color": _DIFFICULTY_COLOR,
+    })
+
+
+@router.get("/problems-section", response_class=HTMLResponse)
+async def problems_section(request: Request):
+    offset = max(0, int(request.query_params.get("offset", "0")))
+    filters = _problem_filters_from_request(request)
+    platform_by_id = await _platform_lookup()
+
+    raw = await _safe_get(
+        "/cs/problems/attempted", {**filters, "limit": _PROBLEMS_PAGE_SIZE + 1, "offset": offset}
+    ) or []
+    problems, has_next, has_prev = _pagination(raw, offset, _PROBLEMS_PAGE_SIZE)
+    _enrich_attempted_problems(problems, platform_by_id)
+
+    return templates.TemplateResponse(request, "_cs_problems_list.html", {
+        "problems": problems,
+        "filters": filters,
+        "problems_offset": offset,
+        "problems_has_next": has_next,
+        "problems_has_prev": has_prev,
+        "difficulty_color": _DIFFICULTY_COLOR,
     })
 
 

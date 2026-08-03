@@ -52,8 +52,12 @@ class SubmissionFilters:
         problem_id: Annotated[int | None, Query()] = None,
         verdict: Annotated[str | None, Query()] = None,
         language: Annotated[str | None, Query()] = None,
+        limit: Annotated[int, Query(ge=1, le=200)] = 20,
+        offset: Annotated[int, Query(ge=0)] = 0,
     ) -> None:
         self.platform_id = platform_id
         self.problem_id = problem_id
         self.verdict = verdict
         self.language = language
+        self.limit = limit
+        self.offset = offset

@@ -33,6 +33,9 @@ query questionData($titleSlug: String!) {
     title
     difficulty
     topicTags { name }
+    acRate
+    likes
+    dislikes
   }
 }
 """

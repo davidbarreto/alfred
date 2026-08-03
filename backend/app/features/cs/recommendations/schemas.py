@@ -4,7 +4,7 @@ from app.features.cs.stats.schemas import CandidateProblem
 
 
 class LiveRecommendation(BaseModel):
-    tag: str
-    solve_rate: float
+    tag: str | None
+    solve_rate: float | None
     reason: str
     candidates: list[CandidateProblem]

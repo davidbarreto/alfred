@@ -32,7 +32,7 @@ class SubmissionRepository:
             query = query.where(Submission.verdict == filters.verdict)
         if filters.language is not None:
             query = query.where(Submission.language == filters.language)
-        query = query.order_by(Submission.submitted_at.desc())
+        query = query.order_by(Submission.submitted_at.desc()).limit(filters.limit).offset(filters.offset)
         result = await self._session.execute(query)
         return list(result.scalars().all())
 

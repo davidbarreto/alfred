@@ -1,3 +1,5 @@
+import datetime
+
 from pydantic import BaseModel
 
 
@@ -33,6 +35,12 @@ class LanguageBreakdown(BaseModel):
     solved: int
 
 
+class DailyActivity(BaseModel):
+    date: datetime.date
+    attempts: int
+    solved: int
+
+
 class StatsSummary(BaseModel):
     current_streak: int
     longest_streak: int
@@ -40,5 +48,6 @@ class StatsSummary(BaseModel):
     by_difficulty: list[DifficultyBreakdown]
     by_tag: list[TagBreakdown]
     by_language: list[LanguageBreakdown]
+    by_day: list[DailyActivity]
     weakest_tags: list[TagBreakdown]
     untried_tags: list[str]

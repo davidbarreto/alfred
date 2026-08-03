@@ -28,6 +28,14 @@ class CodeforcesClient:
         result = await self._get("user.info", {"handles": handle})
         return result[0]
 
+    async def get_problemset_statistics(self) -> dict[str, int]:
+        """Bulk solvedCount per problem, keyed by f"{contestId}{index}" (matches Problem.external_id)."""
+        result = await self._get("problemset.problems", {})
+        return {
+            f"{problem['contestId']}{problem['index']}": stats.get("solvedCount")
+            for problem, stats in zip(result["problems"], result["problemStatistics"])
+        }
+
     async def get_submissions_since(self, handle: str, last_external_id: str | None) -> list[dict]:
         """Paginate user.status (newest first) until the stored watermark is reached."""
         watermark = int(last_external_id) if last_external_id else None

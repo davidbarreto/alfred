@@ -3,7 +3,14 @@ import logging
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.features.cs.problems.repository import ProblemRepository
-from app.features.cs.problems.schemas import ProblemCreate, ProblemFilters, ProblemRead, ProblemUpdate
+from app.features.cs.problems.schemas import (
+    AttemptedProblemFilters,
+    AttemptedProblemRead,
+    ProblemCreate,
+    ProblemFilters,
+    ProblemRead,
+    ProblemUpdate,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -20,6 +27,22 @@ class ProblemService:
     async def get_problems(self, filters: ProblemFilters) -> list[ProblemRead]:
         problems = await self._repo.get_problems(filters)
         return [ProblemRead.model_validate(p) for p in problems]
+
+    async def get_problems_by_platform(self, platform_id: int) -> list[ProblemRead]:
+        problems = await self._repo.get_problems_by_platform(platform_id)
+        return [ProblemRead.model_validate(p) for p in problems]
+
+    async def get_attempted_problems(self, filters: AttemptedProblemFilters) -> list[AttemptedProblemRead]:
+        rows = await self._repo.get_attempted_problems(filters)
+        return [
+            AttemptedProblemRead(
+                **ProblemRead.model_validate(problem).model_dump(),
+                attempts=attempts,
+                solved=solved,
+                last_attempted_at=last_attempted_at,
+            )
+            for problem, attempts, solved, last_attempted_at in rows
+        ]
 
     async def create_problem(self, data: ProblemCreate) -> ProblemRead:
         orm = await self._repo.create_problem(data)

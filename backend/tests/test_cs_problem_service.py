@@ -3,7 +3,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
-from app.features.cs.problems.schemas import ProblemCreate, ProblemFilters
+from app.features.cs.problems.schemas import AttemptedProblemFilters, ProblemCreate, ProblemFilters
 from app.features.cs.problems.service import ProblemService
 
 
@@ -25,6 +25,11 @@ def _make_problem_orm(**kwargs):
     orm.difficulty = kwargs.get("difficulty", "medium")
     orm.tags_raw = kwargs.get("tags_raw", ["dp"])
     orm.tags = kwargs.get("tags", [_make_tag("dynamic programming")])
+    orm.acceptance_rate = kwargs.get("acceptance_rate", None)
+    orm.solved_count = kwargs.get("solved_count", None)
+    orm.likes = kwargs.get("likes", None)
+    orm.dislikes = kwargs.get("dislikes", None)
+    orm.metrics_updated_at = kwargs.get("metrics_updated_at", None)
     orm.created_at = kwargs.get("created_at", datetime(2026, 1, 1, tzinfo=timezone.utc))
     orm.updated_at = kwargs.get("updated_at", datetime(2026, 1, 1, tzinfo=timezone.utc))
     return orm
@@ -54,6 +59,26 @@ class TestGetProblems:
     async def test_returns_list(self, service):
         service._repo.get_problems.return_value = [_make_problem_orm(id=1), _make_problem_orm(id=2)]
         result = await service.get_problems(ProblemFilters())
+        assert len(result) == 2
+
+
+class TestGetAttemptedProblems:
+    async def test_maps_attempts_and_solved_onto_problem(self, service):
+        last_attempted = datetime(2026, 8, 1, tzinfo=timezone.utc)
+        service._repo.get_attempted_problems.return_value = [
+            (_make_problem_orm(id=1), 3, True, last_attempted),
+        ]
+        result = await service.get_attempted_problems(AttemptedProblemFilters())
+        assert len(result) == 1
+        assert result[0].attempts == 3
+        assert result[0].solved is True
+        assert result[0].last_attempted_at == last_attempted
+
+
+class TestGetProblemsByPlatform:
+    async def test_returns_list(self, service):
+        service._repo.get_problems_by_platform.return_value = [_make_problem_orm(id=1), _make_problem_orm(id=2)]
+        result = await service.get_problems_by_platform(1)
         assert len(result) == 2
 
 

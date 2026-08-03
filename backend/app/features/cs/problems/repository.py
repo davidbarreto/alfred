@@ -1,10 +1,13 @@
-from sqlalchemy import select
+import datetime
+
+from sqlalchemy import func, select
 from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.features.cs.normalization import normalize_tag_name
-from app.features.cs.problems.schemas import ProblemCreate, ProblemFilters, ProblemUpdate
+from app.features.cs.problems.schemas import AttemptedProblemFilters, ProblemCreate, ProblemFilters, ProblemUpdate
 from app.features.cs.problems.tables import CsTag, Problem
+from app.features.cs.submissions.tables import Submission
 
 _PROBLEM_EXCLUDE = {"tags"}
 
@@ -36,9 +39,49 @@ class ProblemRepository:
             query = query.where(Problem.difficulty == filters.difficulty)
         if filters.tag is not None:
             query = query.where(Problem.tags.any(CsTag.name == normalize_tag_name(filters.tag)))
-        query = query.order_by(Problem.id)
+        if filters.q is not None:
+            query = query.where(Problem.name.ilike(f"%{filters.q}%"))
+        query = query.order_by(Problem.id).limit(filters.limit).offset(filters.offset)
         result = await self._session.execute(query)
         return list(result.scalars().all())
+
+    async def get_problems_by_platform(self, platform_id: int) -> list[Problem]:
+        """Unpaginated -- for internal bulk operations like a metrics refresh, not for API listing."""
+        result = await self._session.execute(
+            select(Problem).options(selectinload(Problem.tags)).where(Problem.platform_id == platform_id)
+        )
+        return list(result.scalars().all())
+
+    async def get_attempted_problems(
+        self, filters: AttemptedProblemFilters
+    ) -> list[tuple[Problem, int, bool, datetime.datetime]]:
+        """Distinct problems with at least one submission, newest-attempted first."""
+        agg = (
+            select(
+                Submission.problem_id.label("problem_id"),
+                func.count(Submission.id).label("attempts"),
+                func.bool_or(Submission.verdict == "accepted").label("solved"),
+                func.max(Submission.submitted_at).label("last_attempted_at"),
+            )
+            .group_by(Submission.problem_id)
+            .subquery()
+        )
+        query = (
+            select(Problem, agg.c.attempts, agg.c.solved, agg.c.last_attempted_at)
+            .join(agg, agg.c.problem_id == Problem.id)
+            .options(selectinload(Problem.tags))
+        )
+        if filters.platform_id is not None:
+            query = query.where(Problem.platform_id == filters.platform_id)
+        if filters.difficulty is not None:
+            query = query.where(Problem.difficulty == filters.difficulty)
+        if filters.tag is not None:
+            query = query.where(Problem.tags.any(CsTag.name == normalize_tag_name(filters.tag)))
+        if filters.q is not None:
+            query = query.where(Problem.name.ilike(f"%{filters.q}%"))
+        query = query.order_by(agg.c.last_attempted_at.desc()).limit(filters.limit).offset(filters.offset)
+        result = await self._session.execute(query)
+        return [(row[0], row[1], row[2], row[3]) for row in result.all()]
 
     async def _resolve_tags(self, tag_names: list[str]) -> list[CsTag]:
         tags = []

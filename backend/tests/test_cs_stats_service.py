@@ -67,6 +67,7 @@ def service(mock_session):
 class TestGetSummary:
     async def test_weakest_tags_excludes_low_attempt_tags(self, service):
         service._repo.get_solved_dates.return_value = []
+        service._repo.get_total_attempted.return_value = 0
         service._repo.get_total_solved.return_value = 10
         service._repo.get_difficulty_breakdown.return_value = []
         service._repo.get_language_breakdown.return_value = []
@@ -82,6 +83,7 @@ class TestGetSummary:
 
     async def test_weakest_tags_sorted_ascending_by_solve_rate(self, service):
         service._repo.get_solved_dates.return_value = []
+        service._repo.get_total_attempted.return_value = 0
         service._repo.get_total_solved.return_value = 0
         service._repo.get_difficulty_breakdown.return_value = []
         service._repo.get_language_breakdown.return_value = []
@@ -95,6 +97,7 @@ class TestGetSummary:
 
     async def test_weakest_tags_tiebreak_by_avg_attempts_per_solve(self, service):
         service._repo.get_solved_dates.return_value = []
+        service._repo.get_total_attempted.return_value = 0
         service._repo.get_total_solved.return_value = 0
         service._repo.get_difficulty_breakdown.return_value = []
         service._repo.get_language_breakdown.return_value = []
@@ -109,6 +112,7 @@ class TestGetSummary:
 
     async def test_avg_attempts_per_solve_none_when_never_solved(self, service):
         service._repo.get_solved_dates.return_value = []
+        service._repo.get_total_attempted.return_value = 0
         service._repo.get_total_solved.return_value = 0
         service._repo.get_difficulty_breakdown.return_value = []
         service._repo.get_language_breakdown.return_value = []
@@ -118,6 +122,7 @@ class TestGetSummary:
 
     async def test_weakest_tags_excludes_high_solve_rate_even_if_relative_minimum(self, service):
         service._repo.get_solved_dates.return_value = []
+        service._repo.get_total_attempted.return_value = 0
         service._repo.get_total_solved.return_value = 0
         service._repo.get_difficulty_breakdown.return_value = []
         service._repo.get_language_breakdown.return_value = []
@@ -133,6 +138,7 @@ class TestGetSummary:
 
     async def test_weakest_tags_low_volume_higher_raw_rate_ranks_weaker_than_high_volume_lower_rate(self, service):
         service._repo.get_solved_dates.return_value = []
+        service._repo.get_total_attempted.return_value = 0
         service._repo.get_total_solved.return_value = 0
         service._repo.get_difficulty_breakdown.return_value = []
         service._repo.get_language_breakdown.return_value = []
@@ -149,6 +155,7 @@ class TestGetSummary:
 
     async def test_untried_tags_excludes_attempted_and_uses_canonical_list(self, service):
         service._repo.get_solved_dates.return_value = []
+        service._repo.get_total_attempted.return_value = 0
         service._repo.get_total_solved.return_value = 0
         service._repo.get_difficulty_breakdown.return_value = []
         service._repo.get_language_breakdown.return_value = []
@@ -158,8 +165,19 @@ class TestGetSummary:
         assert "graph" in summary.untried_tags
         assert "backtracking" in summary.untried_tags
 
+    async def test_total_attempted_maps_from_repo(self, service):
+        service._repo.get_solved_dates.return_value = []
+        service._repo.get_total_solved.return_value = 0
+        service._repo.get_total_attempted.return_value = 42
+        service._repo.get_difficulty_breakdown.return_value = []
+        service._repo.get_language_breakdown.return_value = []
+        service._repo.get_tag_breakdown.return_value = []
+        summary = await service.get_summary()
+        assert summary.total_attempted == 42
+
     async def test_by_day_maps_daily_activity_from_repo(self, service):
         service._repo.get_solved_dates.return_value = []
+        service._repo.get_total_attempted.return_value = 0
         service._repo.get_total_solved.return_value = 0
         service._repo.get_difficulty_breakdown.return_value = []
         service._repo.get_language_breakdown.return_value = []

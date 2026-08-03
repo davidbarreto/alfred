@@ -96,6 +96,7 @@ class StatsService:
         solved_dates = await self._repo.get_solved_dates()
         current_streak, longest_streak = compute_streaks(solved_dates)
         total_solved = await self._repo.get_total_solved()
+        total_attempted = await self._repo.get_total_attempted()
 
         by_difficulty = [
             DifficultyBreakdown(difficulty=difficulty, attempted=attempted, solved=solved)
@@ -127,9 +128,9 @@ class StatsService:
         # clustered set of 90%+ tags would fill the list just for being the
         # relative minimum among otherwise-strong tags.
         eligible_tags = [t for t in by_tag if t.attempted >= _MIN_ATTEMPTS_FOR_WEAK_TAG]
-        total_attempted = sum(t.attempted for t in eligible_tags)
+        eligible_attempted = sum(t.attempted for t in eligible_tags)
         overall_solve_rate = (
-            sum(t.solved for t in eligible_tags) / total_attempted if total_attempted else 0.0
+            sum(t.solved for t in eligible_tags) / eligible_attempted if eligible_attempted else 0.0
         )
         weakest_tags = sorted(
             (
@@ -153,6 +154,7 @@ class StatsService:
             current_streak=current_streak,
             longest_streak=longest_streak,
             total_solved=total_solved,
+            total_attempted=total_attempted,
             by_difficulty=by_difficulty,
             by_tag=by_tag,
             by_language=by_language,

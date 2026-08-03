@@ -45,6 +45,7 @@ class StatsSummary(BaseModel):
     current_streak: int
     longest_streak: int
     total_solved: int
+    total_attempted: int
     by_difficulty: list[DifficultyBreakdown]
     by_tag: list[TagBreakdown]
     by_language: list[LanguageBreakdown]

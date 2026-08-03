@@ -32,6 +32,11 @@ class StatsRepository:
         result = await self._session.execute(query)
         return result.scalar_one()
 
+    async def get_total_attempted(self) -> int:
+        query = select(func.count(func.distinct(Submission.problem_id)))
+        result = await self._session.execute(query)
+        return result.scalar_one()
+
     async def get_tag_breakdown(self) -> list[tuple[str, int, int, int]]:
         solved_case = case((Submission.verdict == "accepted", Problem.id))
         query = (

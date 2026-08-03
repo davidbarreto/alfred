@@ -755,6 +755,7 @@
                   "pm.test('Reflects seeded submissions', () => {",
                   "    const json = pm.response.json();",
                   "    pm.expect(json.total_solved).to.be.at.least(1);",
+                  "    pm.expect(json.total_attempted).to.be.at.least(json.total_solved);",
                   "    pm.expect(json.by_tag.map(t => t.tag)).to.include('dynamic programming');",
                   "    pm.expect(json.weakest_tags).to.be.an('array');",
                   "    pm.expect(json.untried_tags).to.be.an('array');",

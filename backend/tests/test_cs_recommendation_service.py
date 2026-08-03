@@ -14,6 +14,7 @@ def _summary(weakest_tags=None, by_tag=None, untried_tags=None, total_solved=10)
         current_streak=1,
         longest_streak=2,
         total_solved=total_solved,
+        total_attempted=total_solved,
         by_difficulty=[],
         by_tag=by_tag or [],
         by_language=[],

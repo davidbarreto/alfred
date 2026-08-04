@@ -312,6 +312,14 @@ COMMAND_DEFINITIONS = {
             "flags": {},
         },
     },
+    "cs": {
+        "context": {
+            "description": "Load your CS practice weak spots (weakest tags, streak, untried tags) "
+            "into chat context for the next few hours",
+            "aliases": ["/csmentor", "/cscontext", "/csstudy"],
+            "flags": {},
+        }
+    },
     "recall": {
         "search": {
             "description": "Search your memories semantically by keyword",

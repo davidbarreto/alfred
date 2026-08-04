@@ -51,6 +51,22 @@ def _wilson_lower_bound(solved: int, attempted: int, z: float = _WILSON_Z) -> fl
     return (center - margin) / (1 + z**2 / attempted)
 
 
+def format_context_summary(summary: StatsSummary) -> str:
+    """Pure function: render a StatsSummary as a compact one-line blurb for chat context."""
+    parts = [f"{summary.total_solved} solved, current streak {summary.current_streak}d (longest {summary.longest_streak}d)"]
+
+    if summary.weakest_tags:
+        tags = ", ".join(
+            f"{t.tag} ({t.solved}/{t.attempted}, {t.solve_rate:.0%})" for t in summary.weakest_tags
+        )
+        parts.append(f"weakest tags: {tags}")
+
+    if summary.untried_tags:
+        parts.append(f"untried tags: {', '.join(summary.untried_tags[:5])}")
+
+    return "; ".join(parts)
+
+
 def compute_streaks(solved_dates: list[datetime.date]) -> tuple[int, int]:
     """Pure function: consecutive-day streaks over sorted, deduped solve dates."""
     if not solved_dates:

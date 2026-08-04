@@ -35,6 +35,7 @@ from app.dependencies import (
     ChunkServiceDep,
     CommandExecutionServiceDep,
     ConversationServiceDep,
+    CsStatsServiceDep,
     DbSessionDep,
     EmbeddingServiceDep,
     ExtractionLlmProviderDep,
@@ -126,6 +127,7 @@ async def execute_command(
     embedding_service: EmbeddingServiceDep,
     production_service: ProductionServiceDep,
     conversation_service: ConversationServiceDep,
+    cs_stats_service: CsStatsServiceDep,
 ):
     logger.info("POST /commands/execute %s.%s source=%s", request.type, request.command, request.source)
     execution = await cmd_execution_service.create(
@@ -157,6 +159,7 @@ async def execute_command(
             embedding_service=embedding_service,
             production_service=production_service,
             conversation_service=conversation_service,
+            cs_stats_service=cs_stats_service,
             message_id=request.message_id,
         )
         entity_id = result.get("id") if isinstance(result, dict) else None

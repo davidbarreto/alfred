@@ -340,6 +340,14 @@ INTENT_EXAMPLES: list[IntentExample] = [
     IntentExample(id=259, text="Set an alert for the meeting in 45 minutes", intent="reminder.set"),
     IntentExample(id=260, text="Remind me about the invoice deadline at 5pm", intent="reminder.set"),
 
+    # --- cs.context ---
+    IntentExample(id=282, text="Load my CS practice context", intent="cs.context"),
+    IntentExample(id=283, text="Let's work on CS today", intent="cs.context"),
+    IntentExample(id=284, text="Help me study for coding interviews", intent="cs.context"),
+    IntentExample(id=285, text="Pull up my weak spots in competitive programming", intent="cs.context"),
+    IntentExample(id=286, text="I want to practice algorithms, what should I focus on?", intent="cs.context"),
+    IntentExample(id=287, text="Get my coding practice stats ready for this chat", intent="cs.context"),
+
     # --- recall.search ---
     IntentExample(id=216, text="What did I say about the deployment?", intent="recall.search"),
     IntentExample(id=217, text="Do you remember what I noted about the API migration?", intent="recall.search"),

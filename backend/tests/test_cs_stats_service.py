@@ -3,8 +3,8 @@ import datetime
 import pytest
 from unittest.mock import AsyncMock
 
-from app.features.cs.stats.schemas import DailyActivity
-from app.features.cs.stats.service import StatsService, compute_streaks
+from app.features.cs.stats.schemas import DailyActivity, StatsSummary, TagBreakdown
+from app.features.cs.stats.service import StatsService, compute_streaks, format_context_summary
 
 
 def _d(*args):
@@ -202,3 +202,46 @@ class TestGetSummary:
         assert summary.by_day[0].date == _d(2026, 8, 1)
         assert summary.by_day[0].attempts == 3
         assert summary.by_day[0].solved == 2
+
+
+def _make_summary(**overrides) -> StatsSummary:
+    defaults = dict(
+        current_streak=2,
+        longest_streak=5,
+        total_solved=42,
+        total_attempted=60,
+        by_difficulty=[],
+        by_tag=[],
+        by_language=[],
+        by_day=[],
+        weakest_tags=[],
+        untried_tags=[],
+    )
+    defaults.update(overrides)
+    return StatsSummary(**defaults)
+
+
+class TestFormatContextSummary:
+    def test_includes_totals_and_streak(self):
+        text = format_context_summary(_make_summary())
+        assert "42 solved" in text
+        assert "streak 2d" in text
+        assert "longest 5d" in text
+
+    def test_includes_weakest_tags(self):
+        summary = _make_summary(weakest_tags=[
+            TagBreakdown(tag="dp", attempted=10, solved=3, solve_rate=0.3, submissions=15, avg_attempts_per_solve=5.0),
+        ])
+        text = format_context_summary(summary)
+        assert "weakest tags: dp (3/10, 30%)" in text
+
+    def test_includes_untried_tags_capped_at_five(self):
+        summary = _make_summary(untried_tags=["a", "b", "c", "d", "e", "f"])
+        text = format_context_summary(summary)
+        assert "untried tags: a, b, c, d, e" in text
+        assert "f" not in text.split("untried tags: ")[1]
+
+    def test_omits_empty_sections(self):
+        text = format_context_summary(_make_summary())
+        assert "weakest tags" not in text
+        assert "untried tags" not in text

@@ -494,6 +494,43 @@
           "path": ["commands", "respond"]
         }
       }
+    },
+    {
+      "name": "14 - Execute: cs context",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Execute response has correct shape', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json.status).to.eql('ok');",
+              "    pm.expect(json.type).to.eql('cs');",
+              "    pm.expect(json.command).to.eql('context');",
+              "    pm.expect(json.result).to.have.property('wm_id');",
+              "    pm.expect(json.result).to.have.property('summary');",
+              "    pm.expect(json.result).to.have.property('expires_at');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"message_id\": {{core_message_id}},\n  \"type\": \"cs\",\n  \"command\": \"context\",\n  \"args\": {}\n}",
+          "options": { "raw": { "language": "json" } }
+        },
+        "url": {
+          "raw": "{{base_url}}/commands/execute",
+          "host": ["{{base_url}}"],
+          "path": ["commands", "execute"]
+        }
+      }
     }
   ]
 }

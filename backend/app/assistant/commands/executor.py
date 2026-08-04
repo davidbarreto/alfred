@@ -4,6 +4,7 @@ from typing import Any
 from fastapi import HTTPException, status
 
 from app.assistant.commands.handlers.assistant import handle_assistant
+from app.assistant.commands.handlers.cs import handle_cs
 from app.assistant.commands.handlers.event import handle_event
 from app.assistant.commands.handlers.finance import handle_finance
 from app.assistant.commands.handlers.help import handle_help
@@ -16,6 +17,7 @@ from app.assistant.commands.handlers.task import handle_task
 from app.assistant.commands.handlers.weather import handle_weather
 from app.features.core.embeddings.service import EmbeddingService
 from app.features.core.working_memory.service import WorkingMemoryService
+from app.features.cs.stats.service import StatsService as CsStatsService
 from app.features.finance.accounts.service import AccountService
 from app.features.finance.budgets.service import BudgetTargetService
 from app.features.finance.categories.service import CategoryService
@@ -52,6 +54,7 @@ async def execute(
     embedding_service: EmbeddingService | None = None,
     production_service: ProductionService | None = None,
     conversation_service: ConversationService | None = None,
+    cs_stats_service: CsStatsService | None = None,
     message_id: int | None = None,
 ) -> Any:
     logger.info("Execute: %s.%s args_keys=%s", cmd_type, command, list(arguments.keys()))
@@ -100,6 +103,14 @@ async def execute(
             conversation_service=conversation_service,
             message_id=message_id,
         )
+
+    if cmd_type == "cs":
+        if cs_stats_service is None or working_memory_service is None:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="CS service not available",
+            )
+        return await handle_cs(command, arguments, cs_stats_service, working_memory_service)
 
     if cmd_type == "recall":
         if embedding_service is None:

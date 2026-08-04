@@ -33,6 +33,7 @@ _KNOWN_INTENTS = {
     "wishlist.delete",
     "wishlist.promote",
     "recall.search",
+    "cs.context",
     "task.search",
     "task.pending",
     "assistant.focus",

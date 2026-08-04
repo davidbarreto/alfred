@@ -6,10 +6,13 @@
 <div class="p-6 space-y-4">
   <div class="flex items-center justify-between">
     <h1 class="text-base font-semibold text-gray-900">Tasks</h1>
-    <button onclick="openNewTask()"
-            class="btn btn-sm btn-primary gap-1">
-      <i class="ti ti-plus text-sm"></i>New task
-    </button>
+    <div class="flex items-center gap-3">
+      <a href="/tasks/insights" class="text-xs text-[#378ADD] hover:underline">View insights →</a>
+      <button onclick="openNewTask()"
+              class="btn btn-sm btn-primary gap-1">
+        <i class="ti ti-plus text-sm"></i>New task
+      </button>
+    </div>
   </div>
 
   {% if api_error %}

@@ -3,9 +3,22 @@ import logging
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.features.cs.study_plans.repository import StudyPlanRepository
-from app.features.cs.study_plans.schemas import StudyPlanCreate, StudyPlanRead
+from app.features.cs.study_plans.schemas import StudyPlanCreate, StudyPlanFilters, StudyPlanRead
 
 logger = logging.getLogger(__name__)
+
+_STATUS_COMPLETED = "completed"
+_STATUS_ABANDONED = "abandoned"
+
+
+class ActivePlanIncompleteError(Exception):
+    """Raised when generating a new plan would replace an active plan that still has
+    unfinished items -- the caller must confirm (force=True) before it's abandoned."""
+
+    def __init__(self, plan: StudyPlanRead) -> None:
+        self.plan = plan
+        incomplete = sum(1 for item in plan.items if not item.is_done)
+        super().__init__(f"Active plan {plan.id} has {incomplete} incomplete item(s)")
 
 
 class StudyPlanService:
@@ -21,8 +34,19 @@ class StudyPlanService:
         orm = await self._repo.get_active_plan(cadence)
         return StudyPlanRead.model_validate(orm) if orm else None
 
-    async def create_plan(self, data: StudyPlanCreate) -> StudyPlanRead:
-        orm = await self._repo.create_plan(data)
+    async def get_plans(self, filters: StudyPlanFilters) -> list[StudyPlanRead]:
+        orms = await self._repo.get_plans(filters)
+        return [StudyPlanRead.model_validate(orm) for orm in orms]
+
+    async def create_plan(self, data: StudyPlanCreate, force: bool = False) -> StudyPlanRead:
+        existing = await self._repo.get_active_plan(data.cadence)
+        previous_status = _STATUS_COMPLETED
+        if existing is not None and any(not item.is_done for item in existing.items):
+            if not force:
+                raise ActivePlanIncompleteError(StudyPlanRead.model_validate(existing))
+            previous_status = _STATUS_ABANDONED
+
+        orm = await self._repo.create_plan(data, previous_status=previous_status)
         logger.info(
             "Study plan created: id=%d cadence=%s items=%d", orm.id, orm.cadence, len(orm.items)
         )

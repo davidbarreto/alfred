@@ -22,7 +22,7 @@
         </button>
         <button onclick="generatePlan('weekly')" id="generate-plan"
                 class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#378ADD] text-xs font-medium text-white hover:bg-[#2f7bc4] transition-colors">
-          <i class="ti ti-sparkles text-sm"></i>Generate weekly plan
+          <i class="ti ti-sparkles text-sm"></i>Generate plan
         </button>
       </div>
     </div>
@@ -78,16 +78,19 @@
       </div>
     </div>
 
-    <!-- Weekly plan -->
+    <!-- Study plan -->
     <div class="card bg-white">
       <div class="card-body p-5 space-y-3">
-        <p class="text-sm font-semibold text-gray-900">This week's plan</p>
-        {% if weekly_plan %}
-        {% if weekly_plan.rationale %}
-        <p class="text-sm text-gray-600">{{ weekly_plan.rationale }}</p>
+        <div class="flex items-center justify-between">
+          <p class="text-sm font-semibold text-gray-900">Study plan</p>
+          <a href="/cs/plans" class="text-xs text-[#378ADD] hover:underline">History →</a>
+        </div>
+        {% if active_plan %}
+        {% if active_plan.rationale %}
+        <p class="text-sm text-gray-600">{{ active_plan.rationale }}</p>
         {% endif %}
         <div class="divide-y divide-gray-100" id="plan-items">
-          {% for item in weekly_plan['items'] %}
+          {% for item in active_plan['items'] %}
           <label class="flex items-start gap-2.5 py-2 text-sm cursor-pointer {% if item.is_done %}opacity-50{% endif %}" id="plan-item-{{ item.id }}">
             <input type="checkbox" {% if item.is_done %}checked disabled{% endif %}
                    onchange="completeItem({{ item.id }})"
@@ -275,13 +278,21 @@ async function syncPlatform(code) {
   }
 }
 
-async function generatePlan(cadence) {
+async function generatePlan(cadence, force = false) {
   const btn = document.getElementById('generate-plan');
   btn.disabled = true;
   try {
-    const res = await fetch(`/cs/plans/${cadence}/generate`, { method: 'POST' });
+    const url = `/cs/plans/${cadence}/generate` + (force ? '?force=true' : '');
+    const res = await fetch(url, { method: 'POST' });
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));
+      if (res.status === 409 && body.incomplete && !force) {
+        btn.disabled = false;
+        if (confirm(`${body.error} This will mark the current plan as won't-do.`)) {
+          await generatePlan(cadence, true);
+        }
+        return;
+      }
       alert(body.error || 'Could not generate a plan.');
       return;
     }

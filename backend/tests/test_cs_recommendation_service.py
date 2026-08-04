@@ -1,11 +1,13 @@
 import json
+from datetime import date, datetime, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
 from app.features.cs.recommendations.service import RecommendationService
 from app.features.cs.stats.schemas import CandidateProblem, StatsSummary, TagBreakdown
-from app.features.cs.study_plans.schemas import StudyPlanRead
+from app.features.cs.study_plans.schemas import StudyPlanItemRead, StudyPlanRead
+from app.features.cs.study_plans.service import ActivePlanIncompleteError
 from app.shared.llm import LlmResponse
 
 
@@ -71,6 +73,7 @@ def service(mock_llm, mock_session):
     svc = RecommendationService(llm_provider=mock_llm, session=mock_session)
     svc._stats = AsyncMock()
     svc._plans = AsyncMock()
+    svc._plans.get_active_plan.return_value = None
     return svc
 
 
@@ -176,6 +179,66 @@ class TestGeneratePlan:
 
         candidate_call_args = service._stats.get_candidate_problems.call_args[0]
         assert candidate_call_args[0] == ["zigzag", "binary search"]
+
+    async def test_raises_when_active_plan_has_incomplete_items_and_not_forced(self, service, mock_llm):
+        existing = StudyPlanRead(
+            id=7, cadence="weekly", period_start=date(2026, 7, 31), status="active", rationale=None,
+            items=[StudyPlanItemRead(
+                id=1, item_type="problem", description="x", problem_id=None, url=None,
+                is_done=False, completed_at=None, position=0,
+            )],
+            created_at=datetime(2026, 1, 1, tzinfo=timezone.utc), updated_at=datetime(2026, 1, 1, tzinfo=timezone.utc),
+        )
+        service._plans.get_active_plan.return_value = existing
+
+        with pytest.raises(ActivePlanIncompleteError):
+            await service.generate_plan("weekly")
+
+        mock_llm.complete.assert_not_called()
+
+    async def test_generates_when_active_plan_fully_done(self, service, mock_llm):
+        existing = StudyPlanRead(
+            id=7, cadence="weekly", period_start=date(2026, 7, 31), status="active", rationale=None,
+            items=[StudyPlanItemRead(
+                id=1, item_type="problem", description="x", problem_id=None, url=None,
+                is_done=True, completed_at=None, position=0,
+            )],
+            created_at=datetime(2026, 1, 1, tzinfo=timezone.utc), updated_at=datetime(2026, 1, 1, tzinfo=timezone.utc),
+        )
+        service._plans.get_active_plan.return_value = existing
+        service._stats.get_summary.return_value = _summary(weakest_tags=[])
+        service._stats.get_candidate_problems.return_value = []
+        mock_llm.complete.return_value = LlmResponse(
+            text=json.dumps({"rationale": "r", "items": []}), tokens_input=1, tokens_output=1,
+        )
+        service._plans.create_plan.return_value = _plan_orm()
+
+        with patch("app.features.cs.recommendations.service.create_llm_call", new_callable=AsyncMock):
+            await service.generate_plan("weekly")
+
+        mock_llm.complete.assert_called_once()
+
+    async def test_generates_when_forced_despite_incomplete_items(self, service, mock_llm):
+        existing = StudyPlanRead(
+            id=7, cadence="weekly", period_start=date(2026, 7, 31), status="active", rationale=None,
+            items=[StudyPlanItemRead(
+                id=1, item_type="problem", description="x", problem_id=None, url=None,
+                is_done=False, completed_at=None, position=0,
+            )],
+            created_at=datetime(2026, 1, 1, tzinfo=timezone.utc), updated_at=datetime(2026, 1, 1, tzinfo=timezone.utc),
+        )
+        service._plans.get_active_plan.return_value = existing
+        service._stats.get_summary.return_value = _summary(weakest_tags=[])
+        service._stats.get_candidate_problems.return_value = []
+        mock_llm.complete.return_value = LlmResponse(
+            text=json.dumps({"rationale": "r", "items": []}), tokens_input=1, tokens_output=1,
+        )
+        service._plans.create_plan.return_value = _plan_orm()
+
+        with patch("app.features.cs.recommendations.service.create_llm_call", new_callable=AsyncMock):
+            await service.generate_plan("weekly", force=True)
+
+        assert service._plans.create_plan.call_args.kwargs["force"] is True
 
     async def test_strips_markdown_fences_before_parsing(self, service, mock_llm):
         service._stats.get_summary.return_value = _summary(weakest_tags=[])

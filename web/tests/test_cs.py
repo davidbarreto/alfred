@@ -260,6 +260,47 @@ class TestSubmissionsPage:
         assert "CS Coach" not in resp.text  # partial, not full page
 
 
+class TestStudyPlansPage:
+    def test_renders_shell_without_blocking_on_data(self, client, mock_api):
+        mock_api["get"].side_effect = _get_side_effect
+
+        resp = client.get("/cs/plans")
+
+        assert resp.status_code == 200
+        assert "Study plans" in resp.text
+        assert "hx-trigger=\"load\"" in resp.text
+
+    def test_list_section_renders_plans(self, client, mock_api):
+        def side_effect(path, params=None):
+            if path == "/cs/study-plans":
+                return [{
+                    "id": 1, "cadence": "weekly", "period_start": "2026-07-28", "status": "abandoned",
+                    "rationale": "focus on dp",
+                    "items": [{
+                        "id": 1, "item_type": "topic_review", "description": "review dp basics",
+                        "problem_id": None, "url": None, "is_done": False, "completed_at": None, "position": 0,
+                    }],
+                    "created_at": "2026-07-28T00:00:00", "updated_at": "2026-07-28T00:00:00",
+                }]
+            return None
+        mock_api["get"].side_effect = side_effect
+
+        resp = client.get("/cs/plans-list-section")
+
+        assert resp.status_code == 200
+        assert "review dp basics" in resp.text
+        assert "abandoned" in resp.text
+        assert "CS Coach" not in resp.text  # partial, not full page
+
+    def test_list_section_handles_no_plans(self, client, mock_api):
+        mock_api["get"].side_effect = _get_side_effect
+
+        resp = client.get("/cs/plans-list-section")
+
+        assert resp.status_code == 200
+        assert "No study plans yet." in resp.text
+
+
 class TestSyncTrigger:
     def test_rejects_unknown_platform(self, client, mock_api):
         resp = client.post("/cs/sync/hackerrank")
@@ -297,6 +338,29 @@ class TestGeneratePlan:
 
         assert resp.status_code == 200
         mock_api["post"].assert_awaited_once_with("/cs/recommendations/plans/weekly", timeout=60.0)
+
+    def test_passes_force_flag_through(self, client, mock_api):
+        mock_api["post"].return_value = {"id": 2, "cadence": "weekly", "items": []}
+
+        resp = client.post("/cs/plans/weekly/generate?force=true")
+
+        assert resp.status_code == 200
+        mock_api["post"].assert_awaited_once_with("/cs/recommendations/plans/weekly?force=true", timeout=60.0)
+
+    def test_reports_incomplete_plan_conflict(self, client, mock_api):
+        request = httpx.Request("POST", "http://api/cs/recommendations/plans/weekly")
+        response = httpx.Response(
+            409, request=request,
+            json={"detail": {"message": "The current plan still has 2 unfinished item(s). Generate a new one anyway?", "plan_id": 1, "incomplete_count": 2}},
+        )
+        mock_api["post"].side_effect = httpx.HTTPStatusError("error", request=request, response=response)
+
+        resp = client.post("/cs/plans/weekly/generate")
+
+        assert resp.status_code == 409
+        body = resp.json()
+        assert body["incomplete"] is True
+        assert "unfinished" in body["error"]
 
 
 class TestCompleteItem:

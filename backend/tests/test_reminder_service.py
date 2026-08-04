@@ -826,11 +826,13 @@ def _make_plan_item(is_done=False):
     return item
 
 
-def _make_plan(id=1, period_start=None, items=None):
+def _make_plan(id=1, period_start=None, items=None, cadence="weekly", rationale="focus on dp"):
     plan = MagicMock()
     plan.id = id
     plan.period_start = period_start or NOW.date()
     plan.items = items if items is not None else [_make_plan_item()]
+    plan.cadence = cadence
+    plan.rationale = rationale
     return plan
 
 
@@ -855,7 +857,8 @@ class TestBuildDueDigestStudyPlan:
             digest = await _service(mock_session, mock_task_service).build_due_digest()
 
         assert "This week's CS study plan still has 1 item(s) left" in digest.text
-        MockWMRepo.return_value.upsert.assert_awaited_once()
+        assert "New weekly study plan generated" in digest.text
+        assert MockWMRepo.return_value.upsert.await_count == 2
 
     async def test_before_midweek_window_is_not_reported(
         self, mock_session, mock_task_service, mock_study_plan_service
@@ -919,4 +922,69 @@ class TestBuildDueDigestStudyPlan:
             digest = await _service(mock_session, mock_task_service).build_due_digest()
 
         assert "CS study plan" not in digest.text
+
+
+class TestBuildDueDigestStudyPlanCreated:
+    async def test_new_active_plan_is_reported_once(
+        self, mock_session, mock_task_service, mock_study_plan_service
+    ):
+        plan = _make_plan(period_start=NOW.date(), cadence="weekly", rationale="focus on dp")
+        mock_study_plan_service.return_value.get_active_plan = AsyncMock(return_value=plan)
+
+        with (
+            patch("app.features.core.reminders.service.CalendarEventService") as MockEventService,
+            patch("app.features.core.reminders.service.ShoppingRepository") as MockShoppingRepo,
+            patch("app.features.core.reminders.service.WorkingMemoryRepository") as MockWMRepo,
+            patch("app.features.core.reminders.service.local_now", return_value=NOW),
+        ):
+            MockEventService.return_value.get_events = AsyncMock(return_value=[])
+            MockShoppingRepo.return_value.list = AsyncMock(return_value=[])
+            MockWMRepo.return_value.list = AsyncMock(return_value=[])
+            MockWMRepo.return_value.upsert = AsyncMock()
+
+            digest = await _service(mock_session, mock_task_service).build_due_digest()
+
+        assert "New weekly study plan generated (1 item(s)): focus on dp" in digest.text
+
+    async def test_no_active_plan_reports_nothing(
+        self, mock_session, mock_task_service, mock_study_plan_service
+    ):
+        mock_study_plan_service.return_value.get_active_plan = AsyncMock(return_value=None)
+
+        with (
+            patch("app.features.core.reminders.service.CalendarEventService") as MockEventService,
+            patch("app.features.core.reminders.service.ShoppingRepository") as MockShoppingRepo,
+            patch("app.features.core.reminders.service.WorkingMemoryRepository") as MockWMRepo,
+            patch("app.features.core.reminders.service.local_now", return_value=NOW),
+        ):
+            MockEventService.return_value.get_events = AsyncMock(return_value=[])
+            MockShoppingRepo.return_value.list = AsyncMock(return_value=[])
+            MockWMRepo.return_value.list = AsyncMock(return_value=[])
+            MockWMRepo.return_value.upsert = AsyncMock()
+
+            digest = await _service(mock_session, mock_task_service).build_due_digest()
+
+        assert "New weekly study plan generated" not in digest.text
+        MockWMRepo.return_value.upsert.assert_not_awaited()
+
+    async def test_already_notified_plan_is_not_reported_again(
+        self, mock_session, mock_task_service, mock_study_plan_service
+    ):
+        plan = _make_plan(period_start=NOW.date() - timedelta(days=3))
+        mock_study_plan_service.return_value.get_active_plan = AsyncMock(return_value=plan)
+
+        with (
+            patch("app.features.core.reminders.service.CalendarEventService") as MockEventService,
+            patch("app.features.core.reminders.service.ShoppingRepository") as MockShoppingRepo,
+            patch("app.features.core.reminders.service.WorkingMemoryRepository") as MockWMRepo,
+            patch("app.features.core.reminders.service.local_now", return_value=NOW),
+        ):
+            MockEventService.return_value.get_events = AsyncMock(return_value=[])
+            MockShoppingRepo.return_value.list = AsyncMock(return_value=[])
+            MockWMRepo.return_value.list = AsyncMock(return_value=[MagicMock()])
+            MockWMRepo.return_value.upsert = AsyncMock()
+
+            digest = await _service(mock_session, mock_task_service).build_due_digest()
+
+        assert "New weekly study plan generated" not in digest.text
         MockWMRepo.return_value.upsert.assert_not_awaited()

@@ -1,0 +1,54 @@
+{% if not plans %}
+<p class="text-sm text-gray-400 py-10 text-center">No study plans yet.</p>
+{% else %}
+<div class="divide-y divide-gray-100">
+  {% for plan in plans %}
+  <div class="py-4">
+    <div class="flex items-center justify-between">
+      <div class="text-sm">
+        <span class="font-medium text-gray-900">{{ plan.cadence | title }} plan</span>
+        <span class="text-gray-400"> · {{ plan.period_start }}</span>
+      </div>
+      <span class="px-2 py-0.5 rounded-full text-xs font-medium {{ plan_status_color.get(plan.status, 'text-gray-500 bg-gray-50') }}">
+        {{ plan.status }}
+      </span>
+    </div>
+    {% if plan.rationale %}
+    <p class="text-sm text-gray-600 mt-1">{{ plan.rationale }}</p>
+    {% endif %}
+    {% if plan['items'] %}
+    <div class="divide-y divide-gray-100 mt-2">
+      {% for item in plan['items'] %}
+      <div class="flex items-start gap-2.5 py-1.5 text-sm {% if item.is_done %}opacity-50{% endif %}">
+        <i class="ti {% if item.is_done %}ti-square-check-filled text-green-500{% else %}ti-square text-gray-300{% endif %} mt-0.5"></i>
+        <span class="{% if item.is_done %}line-through{% endif %}">
+          {{ item.description }}
+          {% if item.url %}<a href="{{ item.url }}" target="_blank" rel="noopener" class="text-[#378ADD] ml-1"><i class="ti ti-external-link text-xs"></i></a>{% endif %}
+        </span>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+<div class="flex items-center justify-between pt-3 mt-1 border-t border-gray-100">
+  <button
+    {% if not plans_has_prev %}disabled{% endif %}
+    hx-get="/cs/plans-list-section?offset={{ [plans_offset - 10, 0] | max }}"
+    hx-target="#study-plans-list"
+    hx-swap="innerHTML"
+    class="btn btn-sm btn-ghost text-xs disabled:opacity-30">
+    <i class="ti ti-chevron-left text-sm"></i>Prev
+  </button>
+  <button
+    {% if not plans_has_next %}disabled{% endif %}
+    hx-get="/cs/plans-list-section?offset={{ plans_offset + 10 }}"
+    hx-target="#study-plans-list"
+    hx-swap="innerHTML"
+    class="btn btn-sm btn-ghost text-xs disabled:opacity-30">
+    Next<i class="ti ti-chevron-right text-sm"></i>
+  </button>
+</div>

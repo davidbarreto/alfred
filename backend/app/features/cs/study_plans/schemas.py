@@ -1,6 +1,7 @@
 from datetime import date, datetime
-from typing import Literal, TypeAlias
+from typing import Annotated, Literal, TypeAlias
 
+from fastapi import Query
 from pydantic import BaseModel
 
 Cadence: TypeAlias = Literal["weekly", "monthly"]
@@ -46,3 +47,16 @@ class StudyPlanRead(BaseModel):
     updated_at: datetime
 
     model_config = {"from_attributes": True}
+
+
+class StudyPlanFilters:
+
+    def __init__(
+        self,
+        cadence: Annotated[str | None, Query()] = None,
+        limit: Annotated[int, Query(ge=1, le=100)] = 20,
+        offset: Annotated[int, Query(ge=0)] = 0,
+    ) -> None:
+        self.cadence = cadence
+        self.limit = limit
+        self.offset = offset

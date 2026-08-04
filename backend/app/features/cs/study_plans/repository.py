@@ -4,7 +4,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.features.cs.study_plans.schemas import StudyPlanCreate
+from app.features.cs.study_plans.schemas import StudyPlanCreate, StudyPlanFilters
 from app.features.cs.study_plans.tables import StudyPlan, StudyPlanItem
 
 
@@ -27,10 +27,18 @@ class StudyPlanRepository:
         )
         return result.scalars().first()
 
-    async def create_plan(self, data: StudyPlanCreate) -> StudyPlan:
+    async def get_plans(self, filters: StudyPlanFilters) -> list[StudyPlan]:
+        stmt = select(StudyPlan).options(selectinload(StudyPlan.items)).order_by(StudyPlan.created_at.desc())
+        if filters.cadence:
+            stmt = stmt.where(StudyPlan.cadence == filters.cadence)
+        stmt = stmt.limit(filters.limit).offset(filters.offset)
+        result = await self._session.execute(stmt)
+        return list(result.scalars().all())
+
+    async def create_plan(self, data: StudyPlanCreate, previous_status: str = "superseded") -> StudyPlan:
         existing_active = await self.get_active_plan(data.cadence)
         if existing_active is not None:
-            existing_active.status = "superseded"
+            existing_active.status = previous_status
 
         plan = StudyPlan(cadence=data.cadence, period_start=data.period_start, rationale=data.rationale)
         plan.items = [

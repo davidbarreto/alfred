@@ -11,7 +11,7 @@ from app.features.cs.recommendations.prompts import STUDY_PLAN_SYSTEM_PROMPT
 from app.features.cs.recommendations.schemas import LiveRecommendation
 from app.features.cs.stats.service import StatsService
 from app.features.cs.study_plans.schemas import StudyPlanCreate, StudyPlanItemCreate, StudyPlanRead
-from app.features.cs.study_plans.service import StudyPlanService
+from app.features.cs.study_plans.service import ActivePlanIncompleteError, StudyPlanService
 from app.integrations.llm_calls.repository import create_llm_call
 from app.shared.llm import LlmProvider
 
@@ -87,7 +87,12 @@ class RecommendationService:
             candidates=[],
         )
 
-    async def generate_plan(self, cadence: str) -> StudyPlanRead:
+    async def generate_plan(self, cadence: str, force: bool = False) -> StudyPlanRead:
+        if not force:
+            existing = await self._plans.get_active_plan(cadence)
+            if existing is not None and any(not item.is_done for item in existing.items):
+                raise ActivePlanIncompleteError(existing)
+
         summary = await self._stats.get_summary()
         low_confidence = not summary.weakest_tags
         if low_confidence:
@@ -162,7 +167,8 @@ class RecommendationService:
                 period_start=datetime.datetime.now(datetime.timezone.utc).date(),
                 rationale=parsed.get("rationale"),
                 items=items,
-            )
+            ),
+            force=force,
         )
         logger.info("Study plan generated: cadence=%s items=%d", cadence, len(items))
         return plan

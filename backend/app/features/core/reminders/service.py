@@ -40,6 +40,9 @@ _DAILY_DEDUP_TTL = timedelta(hours=24)  # once a day (marker keys are date-scope
 _STUDY_PLAN_MIDWEEK_MIN_DAY = 3
 _STUDY_PLAN_MIDWEEK_MAX_DAY = 5
 _STUDY_PLAN_DEDUP_TTL = timedelta(days=7)
+# "Plan created" is a one-shot notice per plan id, not date-scoped -- the TTL just
+# needs to outlive how long a plan can plausibly stay active so it never re-fires.
+_STUDY_PLAN_CREATED_DEDUP_TTL = timedelta(days=30)
 
 
 _PRIORITY_ORDER = {"HIGH": 0, "MEDIUM": 1, "LOW": 2}
@@ -114,6 +117,7 @@ class ReminderService:
         lines.extend(await self._collect_task_lines(now, today))
         lines.extend(await self._collect_event_lines(now, today))
         lines.extend(await self._collect_shopping_lines(today))
+        lines.extend(await self._collect_study_plan_created_lines())
         lines.extend(await self._collect_study_plan_lines(today))
 
         text = "\n".join(["⏰ Reminders", *lines]) if lines else ""
@@ -238,6 +242,27 @@ class ReminderService:
             return []
         await self._mark_reminded("shopping", 0, today, _DAILY_DEDUP_TTL)
         return [f"Shopping list still has {len(items)} pending item(s)"]
+
+    async def _collect_study_plan_created_lines(self) -> list[str]:
+        plan = await self._study_plan_service.get_active_plan("weekly")
+        if plan is None:
+            return []
+        key = f"reminder:study_plan_created:{plan.id}"
+        existing = await self._working_memory_repo.list(
+            WorkingMemoryFilters(key=key, active_only=True, limit=1)
+        )
+        if existing:
+            return []
+        await self._working_memory_repo.upsert(
+            WorkingMemoryCreate(
+                key=key, value="reminded",
+                expires_at=datetime.now(timezone.utc) + _STUDY_PLAN_CREATED_DEDUP_TTL,
+            )
+        )
+        return [
+            f"New {plan.cadence} study plan generated ({len(plan.items)} item(s)): "
+            f"{plan.rationale or 'no rationale given'}"
+        ]
 
     async def _collect_study_plan_lines(self, today) -> list[str]:
         plan = await self._study_plan_service.get_active_plan("weekly")

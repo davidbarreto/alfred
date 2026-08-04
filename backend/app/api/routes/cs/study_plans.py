@@ -4,9 +4,14 @@ from fastapi import APIRouter, Depends, HTTPException, Response, status
 
 from app.api.auth import require_auth
 from app.dependencies import CsStudyPlanServiceDep
-from app.features.cs.study_plans.schemas import StudyPlanRead
+from app.features.cs.study_plans.schemas import StudyPlanFilters, StudyPlanRead
 
 router = APIRouter(prefix="/cs/study-plans", tags=["cs"], dependencies=[Depends(require_auth)])
+
+
+@router.get("", response_model=list[StudyPlanRead])
+async def list_plans(service: CsStudyPlanServiceDep, filters: StudyPlanFilters = Depends()):
+    return await service.get_plans(filters)
 
 
 @router.get("/active/{cadence}", response_model=StudyPlanRead)

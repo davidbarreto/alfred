@@ -348,8 +348,8 @@ function renderActivityChart(solved, attempts) {
   const data = {
     labels,
     datasets: [
-      { label: "Attempts", data: labels.map(d => attempts[d] || 0), borderColor: "#9CA3AF", backgroundColor: "transparent", tension: 0.3, pointRadius: 0, borderDash: [4, 3] },
-      { label: "Solved", data: labels.map(d => solved[d] || 0), borderColor: "#378ADD", backgroundColor: "rgba(55,138,221,0.08)", fill: true, tension: 0.3, pointRadius: 0 },
+      { label: "Attempts", data: labels.map(d => attempts[d] || 0), borderColor: "#9CA3AF", backgroundColor: "#9CA3AF", tension: 0.3, pointRadius: 2, pointHoverRadius: 4, borderDash: [4, 3] },
+      { label: "Solved", data: labels.map(d => solved[d] || 0), borderColor: "#378ADD", backgroundColor: "rgba(55,138,221,0.08)", fill: true, tension: 0.3, pointRadius: 2, pointHoverRadius: 4, pointBackgroundColor: "#378ADD" },
     ],
   };
   if (csActivityChart) {

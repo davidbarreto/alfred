@@ -21,14 +21,18 @@ _LIVE_CANDIDATE_LIMIT = 5
 _PLAN_CANDIDATE_LIMIT = 15
 
 
-def _build_plan_context(weakest_tags: list, candidates: list, low_confidence: bool) -> str:
+def _build_plan_context(
+    total_solved: int, total_attempted: int, weakest_tags: list, candidates: list, low_confidence: bool
+) -> str:
+    lines = [f"Overall: {total_solved} problems solved across {total_attempted} attempts."]
     if low_confidence:
-        lines = [
-            "No tag has enough attempts yet to confidently call it a weakness. "
+        lines.append(
+            "No single tag has enough attempts yet to confidently call it a weakness -- "
+            "this reflects thin per-tag coverage, not a lack of overall practice. "
             "Least-practiced tags so far (name, solve rate, attempted):"
-        ]
+        )
     else:
-        lines = ["Weakest tags (name, solve rate, attempted):"]
+        lines.append("Weakest tags (name, solve rate, attempted):")
     for t in weakest_tags:
         lines.append(f"  {t.tag} | solve_rate={t.solve_rate:.0%} | attempted={t.attempted}")
 
@@ -98,7 +102,9 @@ class RecommendationService:
         candidates = await self._stats.get_candidate_problems(tag_names, limit=_PLAN_CANDIDATE_LIMIT)
         candidate_by_external_id = {c.external_id: c.id for c in candidates}
 
-        context = _build_plan_context(weakest_tags, candidates, low_confidence)
+        context = _build_plan_context(
+            summary.total_solved, summary.total_attempted, weakest_tags, candidates, low_confidence
+        )
         messages = [{"role": "user", "content": context}]
 
         t0 = time_module.monotonic()

@@ -21,5 +21,9 @@ YouTube channel or article series on the topic) -- omit url rather than guess on
 appears on a candidate problem -- never introduce an algorithm or data structure that isn't named in this data \
 (e.g. don't suggest segment trees or Kadane's algorithm unless one of those tags is actually present)
 - Propose 3-6 items total, mixing problem practice with at least one topic_review or resource item
-- Be specific: name the actual weak tag/topic in each description, don't write generic filler
+- Be specific: name the actual weak tag/topic in each description and in the rationale, don't write generic \
+filler like "sparse data" or "basic implementation details"
+- The rationale must name the specific least-practiced tags this plan targets, not just describe the situation \
+abstractly. If overall attempts are high but per-tag coverage is thin, say so plainly instead of implying \
+David is a beginner overall
 - Keep each description to one short sentence"""

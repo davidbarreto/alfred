@@ -336,7 +336,7 @@ class ChatService:
         current_message = messages[-1]
         history = _to_message_dicts(messages[:-1])
 
-        working_memories = await self._working_memory_service.list(WorkingMemoryFilters(active_only=True))
+        working_memories = await self._working_memory_service.list(WorkingMemoryFilters(expired="active"))
         logger.debug("Chat: %d active working memory entries loaded", len(working_memories))
 
         language_session: LearningSession | None = None
@@ -460,7 +460,7 @@ class ChatService:
         current_message = messages[-1]
         history = _to_message_dicts(messages[:-1])
 
-        working_memories = await self._working_memory_service.list(WorkingMemoryFilters(active_only=True))
+        working_memories = await self._working_memory_service.list(WorkingMemoryFilters(expired="active"))
 
         language_session: LearningSession | None = None
         production_section: str | None = None

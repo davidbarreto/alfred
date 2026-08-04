@@ -24,7 +24,13 @@ class MemoryRepository:
             query = query.where(Memory.category == filters.category)
         if filters.active is not None:
             query = query.where(Memory.active == filters.active)
-        query = query.order_by(Memory.created_at.desc()).limit(filters.limit).offset(filters.offset)
+        if filters.q:
+            query = query.where(Memory.content.ilike(f"%{filters.q}%"))
+        if filters.sort == "importance":
+            query = query.order_by(Memory.importance.desc(), Memory.created_at.desc())
+        else:
+            query = query.order_by(Memory.created_at.desc())
+        query = query.limit(filters.limit).offset(filters.offset)
         result = await self._session.execute(query)
         return list(result.scalars().all())
 

@@ -148,7 +148,7 @@ class SessionService:
         duplicate taps: a request for a chunk_id that no longer matches the pending loop state
         is a stale no-op, since each real advance replaces the pending row with the next chunk."""
         pending = await self._working_memory_service.list(
-            WorkingMemoryFilters(key=_LANGUAGE_PENDING_KEY, active_only=True)
+            WorkingMemoryFilters(key=_LANGUAGE_PENDING_KEY, expired="active")
         )
         pending_wm = pending[0] if pending else None
         if pending_wm is None:

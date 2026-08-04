@@ -68,6 +68,21 @@ class TestListMemories:
         filters = mock_service.list.call_args[0][0]
         assert filters.active is True
 
+    def test_q_filter_passed_to_service(self, client, mock_service):
+        client.get("/core/memories/?q=Paris", headers=AUTH)
+        filters = mock_service.list.call_args[0][0]
+        assert filters.q == "Paris"
+
+    def test_sort_defaults_to_created_at(self, client, mock_service):
+        client.get("/core/memories/", headers=AUTH)
+        filters = mock_service.list.call_args[0][0]
+        assert filters.sort == "created_at"
+
+    def test_sort_by_importance_passed_to_service(self, client, mock_service):
+        client.get("/core/memories/?sort=importance", headers=AUTH)
+        filters = mock_service.list.call_args[0][0]
+        assert filters.sort == "importance"
+
 
 class TestGetMemory:
     def test_returns_memory(self, client):

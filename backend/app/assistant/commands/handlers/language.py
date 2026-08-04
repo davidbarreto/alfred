@@ -238,7 +238,7 @@ async def _resolve_track_and_chunk(
 
 
 async def _clear_pending(working_memory_service: WorkingMemoryService) -> None:
-    existing = await working_memory_service.list(WorkingMemoryFilters(key=_WM_KEY, active_only=True))
+    existing = await working_memory_service.list(WorkingMemoryFilters(key=_WM_KEY, expired="active"))
     for item in existing:
         await working_memory_service.delete(item.id)
         logger.debug("handle_language: cleared stale pending WM id=%d", item.id)
@@ -461,7 +461,7 @@ async def _handle_stop(
     working_memory_service: WorkingMemoryService,
     conversation_service: ConversationService | None = None,
 ) -> dict[str, Any]:
-    existing = await working_memory_service.list(WorkingMemoryFilters(key=_WM_KEY, active_only=True))
+    existing = await working_memory_service.list(WorkingMemoryFilters(key=_WM_KEY, expired="active"))
     result: dict[str, Any] = {"mode": "stopped"}
     for item in existing:
         try:

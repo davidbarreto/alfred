@@ -1,5 +1,3 @@
-from datetime import date, timedelta
-
 import httpx
 
 
@@ -37,25 +35,13 @@ def _provider_call(id=1, provider="notion", operation="sync", entity_type="task"
 
 
 class TestDeleteMemory:
-    def test_deletes_memory_and_renders_updated_list(self, client, mock_api):
-        mock_api["get"].return_value = [_memory(id=2, content="Remaining memory")]
-
+    def test_deletes_and_returns_empty_body(self, client, mock_api):
         resp = client.delete("/insights/memories/1")
 
         assert resp.status_code == 200
-        assert "Remaining memory" in resp.text
+        assert resp.text == ""
         mock_api["delete"].assert_awaited_once_with("/core/memories/1")
-        mock_api["get"].assert_awaited_once_with("/core/memories", params={"limit": 21, "offset": 0})
-
-    def test_preserves_category_filter_on_reload(self, client, mock_api):
-        mock_api["get"].return_value = []
-
-        resp = client.delete("/insights/memories/1?category=fact")
-
-        assert resp.status_code == 200
-        mock_api["get"].assert_awaited_once_with(
-            "/core/memories", params={"limit": 21, "offset": 0, "category": "fact"}
-        )
+        mock_api["get"].assert_not_awaited()
 
     def test_returns_422_when_backend_delete_fails(self, client, mock_api):
         request = httpx.Request("DELETE", "http://api/core/memories/1")
@@ -66,122 +52,29 @@ class TestDeleteMemory:
         assert resp.status_code == 422
 
 
-class TestWorkingMemorySection:
-    def test_resolves_task_reminder_to_readable_label(self, client, mock_api):
-        async def fake_get(path, params=None):
-            if path == "/core/working-memory":
-                return [_wm(id=1, key="reminder:task:42:2026-07-11", value="reminded")]
-            if path == "/organizer/tasks/42":
-                return {"id": 42, "title": "Pay rent"}
-            raise AssertionError(f"unexpected path {path}")
-
-        mock_api["get"].side_effect = fake_get
-
-        resp = client.get("/insights/working-memory-section")
+class TestDeleteWorkingMemory:
+    def test_deletes_and_returns_empty_body(self, client, mock_api):
+        resp = client.delete("/insights/working-memory/1")
 
         assert resp.status_code == 200
-        assert "Task: Pay rent" in resp.text
-        assert "reminded 2026-07-11" in resp.text
-
-    def test_resolves_shopping_reminder_without_entity_lookup(self, client, mock_api):
-        mock_api["get"].return_value = [
-            _wm(id=1, key="reminder:shopping:0:2026-07-11", value="reminded"),
-        ]
-
-        resp = client.get("/insights/working-memory-section")
-
-        assert resp.status_code == 200
-        assert "Shopping list: pending items reminder" in resp.text
-        mock_api["get"].assert_awaited_once()
-
-    def test_falls_back_to_placeholder_when_entity_deleted(self, client, mock_api):
-        async def fake_get(path, params=None):
-            if path == "/core/working-memory":
-                return [_wm(id=1, key="reminder:task:99:2026-07-11", value="reminded")]
-            raise httpx.HTTPStatusError(
-                "not found", request=httpx.Request("GET", "http://api/organizer/tasks/99"),
-                response=httpx.Response(404, request=httpx.Request("GET", "http://api/organizer/tasks/99")),
-            )
-
-        mock_api["get"].side_effect = fake_get
-
-        resp = client.get("/insights/working-memory-section")
-
-        assert resp.status_code == 200
-        assert "Task: #99 (deleted)" in resp.text
-
-    def test_non_reminder_entries_display_unchanged(self, client, mock_api):
-        mock_api["get"].return_value = [
-            _wm(id=1, key="travel_context", value="Belgium next week"),
-        ]
-
-        resp = client.get("/insights/working-memory-section")
-
-        assert resp.status_code == 200
-        assert "travel_context" in resp.text
-        assert "Belgium next week" in resp.text
-
-
-class TestWorkingMemoryExpiredFilter:
-    def test_hides_expired_by_default(self, client, mock_api):
-        yesterday = (date.today() - timedelta(days=1)).isoformat()
-        tomorrow = (date.today() + timedelta(days=1)).isoformat()
-        mock_api["get"].return_value = [
-            _wm(id=1, key="transient:a", value="Old fact", expires_at=f"{yesterday}T00:00:00"),
-            _wm(id=2, key="transient:b", value="Fresh fact", expires_at=f"{tomorrow}T00:00:00"),
-        ]
-
-        resp = client.get("/insights/working-memory-section")
-
-        assert resp.status_code == 200
-        assert "Fresh fact" in resp.text
-        assert "Old fact" not in resp.text
-        assert "Show 1 expired" in resp.text
-
-    def test_shows_expired_when_toggled_on(self, client, mock_api):
-        yesterday = (date.today() - timedelta(days=1)).isoformat()
-        mock_api["get"].return_value = [
-            _wm(id=1, key="transient:a", value="Old fact", expires_at=f"{yesterday}T00:00:00"),
-        ]
-
-        resp = client.get("/insights/working-memory-section?show_expired=true")
-
-        assert resp.status_code == 200
-        assert "Old fact" in resp.text
-        assert "Hide expired" in resp.text
-
-    def test_no_toggle_button_when_nothing_expired(self, client, mock_api):
-        tomorrow = (date.today() + timedelta(days=1)).isoformat()
-        mock_api["get"].return_value = [
-            _wm(id=1, key="transient:a", value="Fresh fact", expires_at=f"{tomorrow}T00:00:00"),
-        ]
-
-        resp = client.get("/insights/working-memory-section")
-
-        assert resp.status_code == 200
-        assert "Show" not in resp.text
-        assert "Hide expired" not in resp.text
-        assert ">expired<" not in resp.text
-
-    def test_delete_preserves_show_expired_state(self, client, mock_api):
-        yesterday = (date.today() - timedelta(days=1)).isoformat()
-        mock_api["get"].return_value = [
-            _wm(id=2, key="transient:a", value="Old fact", expires_at=f"{yesterday}T00:00:00"),
-        ]
-
-        resp = client.delete("/insights/working-memory/1?show_expired=true")
-
-        assert resp.status_code == 200
-        assert "Old fact" in resp.text
-        assert "Hide expired" in resp.text
+        assert resp.text == ""
         mock_api["delete"].assert_awaited_once_with("/core/working-memory/1")
+        mock_api["get"].assert_not_awaited()
 
-    def test_main_page_hides_expired_by_default_and_shows_toggle(self, client, mock_api):
-        yesterday = (date.today() - timedelta(days=1)).isoformat()
+    def test_returns_422_when_backend_delete_fails(self, client, mock_api):
+        request = httpx.Request("DELETE", "http://api/core/working-memory/1")
+        mock_api["delete"].side_effect = httpx.ConnectError("connection refused", request=request)
 
+        resp = client.delete("/insights/working-memory/1")
+
+        assert resp.status_code == 422
+
+
+class TestInsightsPageWorkingMemoryPreview:
+    def test_shows_up_to_five_entries_with_view_all_link(self, client, mock_api):
         async def fake_get(path, params=None):
             if path == "/core/working-memory":
-                return [_wm(id=1, key="transient:a", value="Old fact", expires_at=f"{yesterday}T00:00:00")]
+                return [_wm(id=i, key=f"travel_context_{i}") for i in range(1, 8)]
             return []
 
         mock_api["get"].side_effect = fake_get
@@ -189,9 +82,72 @@ class TestWorkingMemoryExpiredFilter:
         resp = client.get("/insights/")
 
         assert resp.status_code == 200
-        assert "Old fact" not in resp.text
-        assert "Show 1 expired" in resp.text
-        assert "0 entries" in resp.text
+        assert "travel_context_5" in resp.text
+        assert "travel_context_6" not in resp.text
+        assert "travel_context_7" not in resp.text
+        assert '/insights/working-memory" class="text-xs text-[#378ADD] hover:underline">View all' in resp.text
+        assert "Prev" not in resp.text
+        assert "Hide expired" not in resp.text
+
+    def test_fetches_only_active_entries(self, client, mock_api):
+        mock_api["get"].return_value = []
+
+        client.get("/insights/")
+
+        wm_call = next(
+            c for c in mock_api["get"].call_args_list if c.args and c.args[0] == "/core/working-memory"
+        )
+        assert wm_call.kwargs["params"]["expired"] == "active"
+
+    def test_resolves_task_reminder_to_readable_label(self, client, mock_api):
+        async def fake_get(path, params=None):
+            if path == "/core/working-memory":
+                return [_wm(id=1, key="reminder:task:42:2026-07-11", value="reminded")]
+            if path == "/organizer/tasks/42":
+                return {"id": 42, "title": "Pay rent"}
+            return []
+
+        mock_api["get"].side_effect = fake_get
+
+        resp = client.get("/insights/")
+
+        assert resp.status_code == 200
+        assert "Task: Pay rent" in resp.text
+        assert "reminded 2026-07-11" in resp.text
+
+    def test_no_view_all_link_when_empty(self, client, mock_api):
+        mock_api["get"].return_value = []
+
+        resp = client.get("/insights/")
+
+        assert resp.status_code == 200
+        assert "No working memory entries." in resp.text
+
+
+class TestInsightsPageMemoriesPreview:
+    def test_shows_up_to_five_entries_with_view_all_link(self, client, mock_api):
+        async def fake_get(path, params=None):
+            if path == "/core/memories":
+                return [_memory(id=i, content=f"memory {i}") for i in range(1, 8)]
+            return []
+
+        mock_api["get"].side_effect = fake_get
+
+        resp = client.get("/insights/")
+
+        assert resp.status_code == 200
+        assert "memory 5" in resp.text
+        assert "memory 6" not in resp.text
+        assert "memory 7" not in resp.text
+        assert '/insights/memories" class="text-xs text-[#378ADD] hover:underline">View all' in resp.text
+
+    def test_no_view_all_link_when_empty(self, client, mock_api):
+        mock_api["get"].return_value = []
+
+        resp = client.get("/insights/")
+
+        assert resp.status_code == 200
+        assert "No memories yet." in resp.text
 
 
 class TestInsightsPageLlmCharts:
@@ -355,6 +311,148 @@ class TestProviderCallsPage:
         mock_api["get"].side_effect = fake_get
 
         resp = client.get("/insights/provider-calls")
+
+        assert resp.status_code == 200
+        assert "Next →" in resp.text
+        assert "offset=20" in resp.text
+
+
+class TestWorkingMemoryPage:
+    def test_lists_items_and_filter_dropdown_options(self, client, mock_api):
+        async def fake_get(path, params=None):
+            if params.get("expired") == "all":
+                return [_wm(id=1, key="transient:a"), _wm(id=2, key="language:b")]
+            return [_wm(id=1, key="transient:a", value="Fresh fact")]
+
+        mock_api["get"].side_effect = fake_get
+
+        resp = client.get("/insights/working-memory")
+
+        assert resp.status_code == 200
+        assert "Fresh fact" in resp.text
+        assert 'value="transient"' in resp.text  # only present via the type filter dropdown
+        assert 'value="language"' in resp.text
+
+    def test_defaults_to_active_expiry_filter(self, client, mock_api):
+        seen_params = []
+
+        async def fake_get(path, params=None):
+            seen_params.append(params)
+            return []
+
+        mock_api["get"].side_effect = fake_get
+
+        resp = client.get("/insights/working-memory")
+
+        assert resp.status_code == 200
+        main_call_params = next(p for p in seen_params if "limit" in p and p["limit"] != 200)
+        assert main_call_params["expired"] == "active"
+
+    def test_applies_filters_as_backend_query_params(self, client, mock_api):
+        seen_params = []
+
+        async def fake_get(path, params=None):
+            seen_params.append(params)
+            return []
+
+        mock_api["get"].side_effect = fake_get
+
+        resp = client.get("/insights/working-memory?key_contains=travel&type=transient&expired=expired")
+
+        assert resp.status_code == 200
+        main_call_params = next(p for p in seen_params if p.get("expired") == "expired")
+        assert main_call_params["key_contains"] == "travel"
+        assert main_call_params["key_prefix"] == "transient"
+        assert main_call_params["offset"] == 0
+
+    def test_resolves_reminder_labels(self, client, mock_api):
+        async def fake_get(path, params=None):
+            if path == "/core/working-memory":
+                return [_wm(id=1, key="reminder:task:42:2026-07-11", value="reminded")]
+            if path == "/organizer/tasks/42":
+                return {"id": 42, "title": "Pay rent"}
+            return []
+
+        mock_api["get"].side_effect = fake_get
+
+        resp = client.get("/insights/working-memory")
+
+        assert resp.status_code == 200
+        assert "Task: Pay rent" in resp.text
+        assert "reminded 2026-07-11" in resp.text
+
+    def test_shows_next_link_when_more_than_a_page(self, client, mock_api):
+        async def fake_get(path, params=None):
+            if params.get("expired") == "all":
+                return []
+            return [_wm(id=i, key=f"transient:{i}") for i in range(21)]
+
+        mock_api["get"].side_effect = fake_get
+
+        resp = client.get("/insights/working-memory")
+
+        assert resp.status_code == 200
+        assert "Next →" in resp.text
+        assert "offset=20" in resp.text
+
+
+class TestMemoriesPage:
+    def test_lists_items_and_filter_dropdown_options(self, client, mock_api):
+        async def fake_get(path, params=None):
+            if params.get("limit") == 200:
+                return [_memory(id=1, category="fact"), _memory(id=2, category="goal")]
+            return [_memory(id=1, category="fact", content="Likes coffee")]
+
+        mock_api["get"].side_effect = fake_get
+
+        resp = client.get("/insights/memories")
+
+        assert resp.status_code == 200
+        assert "Likes coffee" in resp.text
+        assert 'value="fact"' in resp.text
+        assert 'value="goal"' in resp.text  # only present via the category filter dropdown
+
+    def test_defaults_to_importance_sort(self, client, mock_api):
+        seen_params = []
+
+        async def fake_get(path, params=None):
+            seen_params.append(params)
+            return []
+
+        mock_api["get"].side_effect = fake_get
+
+        resp = client.get("/insights/memories")
+
+        assert resp.status_code == 200
+        main_call_params = next(p for p in seen_params if p.get("limit") != 200)
+        assert main_call_params["sort"] == "importance"
+
+    def test_applies_filters_as_backend_query_params(self, client, mock_api):
+        seen_params = []
+
+        async def fake_get(path, params=None):
+            seen_params.append(params)
+            return []
+
+        mock_api["get"].side_effect = fake_get
+
+        resp = client.get("/insights/memories?category=fact&q=coffee&sort=created_at")
+
+        assert resp.status_code == 200
+        main_call_params = next(p for p in seen_params if p.get("sort") == "created_at")
+        assert main_call_params["category"] == "fact"
+        assert main_call_params["q"] == "coffee"
+        assert main_call_params["offset"] == 0
+
+    def test_shows_next_link_when_more_than_a_page(self, client, mock_api):
+        async def fake_get(path, params=None):
+            if params.get("limit") == 200:
+                return []
+            return [_memory(id=i) for i in range(21)]
+
+        mock_api["get"].side_effect = fake_get
+
+        resp = client.get("/insights/memories")
 
         assert resp.status_code == 200
         assert "Next →" in resp.text

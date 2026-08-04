@@ -46,7 +46,7 @@ class TestList:
     async def test_returns_active_items_by_default(self, service):
         service._repo.list.return_value = [_make_wm_orm()]
         filters = WorkingMemoryFilters()
-        assert filters.active_only is True
+        assert filters.expired == "all"
         result = await service.list(filters)
         assert len(result) == 1
         assert all(isinstance(w, WorkingMemoryRead) for w in result)

@@ -20,16 +20,26 @@ class WorkingMemoryRepository:
 
     async def list(self, filters: WorkingMemoryFilters) -> list[WorkingMemory]:
         query = select(WorkingMemory)
-        if filters.active_only:
-            now = datetime.now(timezone.utc)
+        now = datetime.now(timezone.utc)
+        if filters.expired == "active":
             query = query.where(
                 (WorkingMemory.expires_at.is_(None)) | (WorkingMemory.expires_at > now)
             )
+        elif filters.expired == "expired":
+            query = query.where(
+                WorkingMemory.expires_at.is_not(None), WorkingMemory.expires_at <= now
+            )
         if filters.key is not None:
             query = query.where(WorkingMemory.key == filters.key)
+        if filters.key_contains:
+            query = query.where(WorkingMemory.key.ilike(f"%{filters.key_contains}%"))
+        if filters.key_prefix:
+            query = query.where(WorkingMemory.key.like(f"{filters.key_prefix}:%"))
         if filters.session_id is not None:
             query = query.where(WorkingMemory.session_id == filters.session_id)
-        query = query.order_by(WorkingMemory.created_at.desc()).limit(filters.limit).offset(filters.offset)
+        query = query.order_by(
+            WorkingMemory.expires_at.asc().nulls_first(), WorkingMemory.created_at.desc()
+        ).limit(filters.limit).offset(filters.offset)
         result = await self._session.execute(query)
         return list(result.scalars().all())
 

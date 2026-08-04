@@ -249,7 +249,7 @@ class ReminderService:
             return []
         key = f"reminder:study_plan_created:{plan.id}"
         existing = await self._working_memory_repo.list(
-            WorkingMemoryFilters(key=key, active_only=True, limit=1)
+            WorkingMemoryFilters(key=key, expired="active", limit=1)
         )
         if existing:
             return []
@@ -279,7 +279,7 @@ class ReminderService:
         # plan), not on today's date (which would re-fire once per day in the window).
         key = f"reminder:study_plan_midweek:{plan.id}"
         existing = await self._working_memory_repo.list(
-            WorkingMemoryFilters(key=key, active_only=True, limit=1)
+            WorkingMemoryFilters(key=key, expired="active", limit=1)
         )
         if existing:
             return []
@@ -293,14 +293,14 @@ class ReminderService:
 
     async def _is_escalation_snoozed(self, task_id: int) -> bool:
         existing = await self._working_memory_repo.list(
-            WorkingMemoryFilters(key=undated_escalation_snooze_key(task_id), active_only=True, limit=1)
+            WorkingMemoryFilters(key=undated_escalation_snooze_key(task_id), expired="active", limit=1)
         )
         return bool(existing)
 
     async def _already_reminded(self, kind: str, entity_id: int, today) -> bool:
         key = f"reminder:{kind}:{entity_id}:{today.isoformat()}"
         existing = await self._working_memory_repo.list(
-            WorkingMemoryFilters(key=key, active_only=True, limit=1)
+            WorkingMemoryFilters(key=key, expired="active", limit=1)
         )
         return bool(existing)
 

@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+{% block title %}Working Memory{% endblock %}
+
+{% block content %}
+<div class="p-6 space-y-4">
+  <a href="/insights" class="text-xs text-[#378ADD] hover:underline">← Insights</a>
+  <h1 class="text-base font-semibold text-gray-900">Working Memory</h1>
+
+  <!-- Filters — full navigation so active state re-renders server-side -->
+  <form method="get" action="/insights/working-memory" class="flex flex-wrap gap-3 items-end border-b border-gray-200 pb-4">
+    <div>
+      <label class="text-xs text-gray-500 mb-1 block">Type</label>
+      <select name="type" onchange="this.form.submit()"
+        class="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-[#378ADD]">
+        <option value="">All types</option>
+        {% for t in key_prefix_options %}
+        <option value="{{ t }}" {% if t == key_prefix %}selected{% endif %}>{{ t }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <label class="text-xs text-gray-500 mb-1 block">Expiry</label>
+      <select name="expired" onchange="this.form.submit()"
+        class="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-[#378ADD]">
+        <option value="active" {% if expired == "active" %}selected{% endif %}>Active only</option>
+        <option value="expired" {% if expired == "expired" %}selected{% endif %}>Expired only</option>
+        <option value="all" {% if expired == "all" %}selected{% endif %}>All</option>
+      </select>
+    </div>
+    <div class="flex-1 min-w-[180px]">
+      <label class="text-xs text-gray-500 mb-1 block">Search key</label>
+      <input type="text" name="key_contains" value="{{ key_contains }}" placeholder="Search key…"
+        class="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white w-full focus:outline-none focus:ring-1 focus:ring-[#378ADD]" />
+    </div>
+    <div class="flex gap-2">
+      <button type="submit" class="btn btn-sm btn-primary">Filter</button>
+      {% if key_contains or key_prefix or expired != "active" %}
+      <a href="/insights/working-memory" class="btn btn-sm btn-ghost text-gray-500">Clear</a>
+      {% endif %}
+    </div>
+  </form>
+
+  {% if items %}
+  <div class="card bg-white"><div class="card-body p-4">
+    <div class="divide-y divide-gray-100">
+      {% for wm in items %}
+      <div class="flex items-start gap-3 py-3 group">
+        <div class="flex-1 min-w-0">
+          <div class="flex items-center gap-2 mb-0.5">
+            <span class="text-[10px] px-1.5 py-0.5 rounded font-medium
+              {% if wm.key.startswith('transient:') %}bg-amber-50 text-amber-700
+              {% elif wm.key.startswith('language:') %}bg-purple-50 text-purple-700
+              {% elif wm.key.startswith('reminder:') %}bg-blue-50 text-blue-700
+              {% else %}bg-gray-100 text-gray-500{% endif %}">
+              {{ wm.key.split(':')[0] if ':' in wm.key else wm.key }}
+            </span>
+            {% if wm.expires_at %}
+            <span class="text-[10px] text-gray-400">expires {{ wm.expires_at[:10] }}</span>
+            {% endif %}
+            {% if wm.display_meta %}
+            <span class="text-[10px] text-gray-400">{{ wm.display_meta }}</span>
+            {% endif %}
+          </div>
+          <p class="text-sm text-gray-700 leading-relaxed">{{ wm.display_text or wm.value }}</p>
+        </div>
+        <button
+          class="text-gray-200 hover:text-[#E24B4A] opacity-0 group-hover:opacity-100 transition-all flex-shrink-0 mt-0.5"
+          hx-delete="/insights/working-memory/{{ wm.id }}"
+          hx-target="closest div.group"
+          hx-swap="delete"
+          hx-confirm="Delete this working memory entry?"
+          title="Delete"
+        ><i class="ti ti-trash text-sm"></i></button>
+      </div>
+      {% endfor %}
+    </div>
+  </div></div>
+
+  <div class="flex justify-between items-center">
+    {% if has_prev %}
+    <a href="/insights/working-memory?offset={{ offset - 20 }}{% if filter_qs %}&{{ filter_qs }}{% endif %}"
+      class="px-3 py-1.5 rounded text-xs font-medium text-gray-600 bg-white border border-gray-200 hover:border-gray-300">← Prev</a>
+    {% else %}<span></span>{% endif %}
+    {% if has_next %}
+    <a href="/insights/working-memory?offset={{ offset + 20 }}{% if filter_qs %}&{{ filter_qs }}{% endif %}"
+      class="px-3 py-1.5 rounded text-xs font-medium text-gray-600 bg-white border border-gray-200 hover:border-gray-300">Next →</a>
+    {% else %}<span></span>{% endif %}
+  </div>
+  {% else %}
+  <div class="card bg-white"><div class="card-body p-6 text-center text-sm text-gray-400">No working memory entries found.</div></div>
+  {% endif %}
+</div>
+{% endblock %}

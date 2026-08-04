@@ -7,11 +7,10 @@
   "goal":         "bg-[#FCEBEB] text-[#E24B4A]",
   "transient":    "bg-amber-50 text-amber-700"
 } %}
-{% if memories %}
-<div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3" id="memories-grid">
-  {% for m in memories %}
-  <div class="bg-white border border-gray-200 rounded-lg p-4 hover:border-gray-300 transition-colors group relative"
-       data-category="{{ m.category }}">
+{% if memories_preview %}
+<div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+  {% for m in memories_preview %}
+  <div class="bg-white border border-gray-200 rounded-lg p-4 hover:border-gray-300 transition-colors group relative">
     <div class="flex items-start justify-between gap-2 mb-2">
       <span class="text-[10px] px-1.5 py-0.5 rounded font-medium {{ cat_styles.get(m.category, 'bg-gray-100 text-gray-500') }}">
         {{ m.category }}
@@ -23,8 +22,8 @@
         <button
           class="text-gray-200 hover:text-[#E24B4A] opacity-0 group-hover:opacity-100 transition-all flex-shrink-0"
           hx-delete="/insights/memories/{{ m.id }}"
-          hx-target="#memories-section"
-          hx-swap="innerHTML"
+          hx-target="closest div.group"
+          hx-swap="delete"
           hx-confirm="Delete this memory?"
           title="Delete"
         ><i class="ti ti-trash text-sm"></i></button>
@@ -46,29 +45,4 @@
 </div>
 {% else %}
 <div class="card bg-white"><div class="card-body p-6 text-center text-sm text-gray-400">No memories yet.</div></div>
-{% endif %}
-
-{% if memories_has_prev or memories_has_next %}
-<div class="flex justify-between items-center mt-4">
-  {% if memories_has_prev %}
-  <button
-    class="px-3 py-1.5 rounded text-xs font-medium text-gray-600 bg-white border border-gray-200 hover:border-gray-300"
-    hx-get="/insights/memories-section?offset={{ memories_offset - 20 }}&category={{ memories_category }}"
-    hx-target="#memories-section"
-    hx-swap="innerHTML"
-  >← Prev</button>
-  {% else %}
-  <span></span>
-  {% endif %}
-  {% if memories_has_next %}
-  <button
-    class="px-3 py-1.5 rounded text-xs font-medium text-gray-600 bg-white border border-gray-200 hover:border-gray-300"
-    hx-get="/insights/memories-section?offset={{ memories_offset + 20 }}&category={{ memories_category }}"
-    hx-target="#memories-section"
-    hx-swap="innerHTML"
-  >Next →</button>
-  {% else %}
-  <span></span>
-  {% endif %}
-</div>
 {% endif %}

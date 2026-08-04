@@ -1106,6 +1106,83 @@
       }
     },
     {
+      "name": "41 - Memories - Search by Text",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Response is an array', () => pm.expect(pm.response.json()).to.be.an('array'));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/core/memories/?q=fact",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "core",
+            "memories",
+            ""
+          ],
+          "query": [
+            {
+              "key": "q",
+              "value": "fact"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "42 - Memories - Sort by Importance",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Results are sorted by importance descending', () => {",
+              "    const importances = pm.response.json().map(m => m.importance);",
+              "    for (let i = 1; i < importances.length; i++) {",
+              "        pm.expect(importances[i]).to.be.at.most(importances[i - 1]);",
+              "    }",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/core/memories/?sort=importance",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "core",
+            "memories",
+            ""
+          ],
+          "query": [
+            {
+              "key": "sort",
+              "value": "importance"
+            }
+          ]
+        }
+      }
+    },
+    {
       "name": "50 - Working Memory - Create",
       "event": [
         {
@@ -1268,7 +1345,86 @@
       }
     },
     {
-      "name": "54 - Working Memory - Get by ID",
+      "name": "54 - Working Memory - Filter by Key Contains",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('All keys contain substring', () => {",
+              "    pm.response.json().forEach(w => pm.expect(w.key).to.include('travel'));",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/core/working-memory/?key_contains=travel",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "core",
+            "working-memory",
+            ""
+          ],
+          "query": [
+            {
+              "key": "key_contains",
+              "value": "travel"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "55 - Working Memory - Filter Not Expired",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('No item is expired', () => {",
+              "    const now = new Date();",
+              "    pm.response.json().forEach(w => {",
+              "        if (w.expires_at) pm.expect(new Date(w.expires_at)).to.be.above(now);",
+              "    });",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/core/working-memory/?expired=active",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "core",
+            "working-memory",
+            ""
+          ],
+          "query": [
+            {
+              "key": "expired",
+              "value": "active"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "56 - Working Memory - Get by ID",
       "event": [
         {
           "listen": "test",
@@ -1302,7 +1458,7 @@
       }
     },
     {
-      "name": "55 - Working Memory - Delete",
+      "name": "57 - Working Memory - Delete",
       "event": [
         {
           "listen": "test",
@@ -1331,7 +1487,7 @@
       }
     },
     {
-      "name": "56 - Working Memory - Get 404 After Delete",
+      "name": "58 - Working Memory - Get 404 After Delete",
       "event": [
         {
           "listen": "test",

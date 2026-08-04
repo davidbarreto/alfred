@@ -9,8 +9,8 @@ from starlette.middleware.sessions import SessionMiddleware
 
 from app.config import get_settings
 from app.routes import (
-    auth, briefing, contacts, dashboard, tasks, tasks_insights, shopping, calendar, notes,
-    finance, chat, insights, language, watcher, cs,
+    auth, briefing, contacts, dashboard, tasks, tasks_insights, shopping, shopping_insights,
+    calendar, notes, finance, chat, insights, language, watcher, cs,
 )
 
 logging.basicConfig(level=logging.INFO)
@@ -42,6 +42,7 @@ app.include_router(auth.router)
 app.include_router(dashboard.router)
 app.include_router(tasks_insights.router)
 app.include_router(tasks.router)
+app.include_router(shopping_insights.router)
 app.include_router(shopping.router)
 app.include_router(calendar.router)
 app.include_router(contacts.router)

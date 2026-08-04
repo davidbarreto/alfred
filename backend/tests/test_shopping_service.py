@@ -8,8 +8,11 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 
 from app.features.organizer.shopping.schemas import (
+    CategoryPurchaseRead,
     FrequentItemFilters,
     FrequentItemRead,
+    MonthlyPurchaseRead,
+    PriorityCountRead,
     RecurrenceItemCreate,
     RecurrenceItemRead,
     ShoppingItemCreate,
@@ -17,6 +20,7 @@ from app.features.organizer.shopping.schemas import (
     ShoppingItemRead,
     ShoppingItemUpdate,
     ShoppingNameSuggestion,
+    StorePurchaseRead,
     WishlistItemCreate,
     WishlistItemRead,
     WishlistItemFilters,
@@ -259,6 +263,58 @@ class TestListFrequentItems:
         filters = FrequentItemFilters(category_id=_GROCERY_ID, limit=5)
         await service.list_frequent_items(filters)
         service._shopping.get_frequent.assert_called_once_with(filters)
+
+
+class TestListPurchasesByCategory:
+    async def test_returns_list_of_reads(self, service):
+        row = SimpleNamespace(category_id=_GROCERY_ID, purchase_count=5)
+        service._shopping.get_purchases_by_category.return_value = [row]
+
+        result = await service.list_purchases_by_category()
+
+        assert len(result) == 1
+        assert isinstance(result[0], CategoryPurchaseRead)
+        assert result[0].category_id == _GROCERY_ID
+        assert result[0].purchase_count == 5
+
+
+class TestListPurchasesByMonth:
+    async def test_returns_list_of_reads(self, service):
+        row = SimpleNamespace(month="2026-06", purchase_count=3)
+        service._shopping.get_purchases_by_month.return_value = [row]
+
+        result = await service.list_purchases_by_month(months=3)
+
+        assert len(result) == 1
+        assert isinstance(result[0], MonthlyPurchaseRead)
+        assert result[0].month == "2026-06"
+        service._shopping.get_purchases_by_month.assert_called_once_with(3)
+
+
+class TestListPriorityCounts:
+    async def test_returns_list_of_reads(self, service):
+        row = SimpleNamespace(priority="need", item_count=7)
+        service._shopping.get_priority_counts.return_value = [row]
+
+        result = await service.list_priority_counts()
+
+        assert len(result) == 1
+        assert isinstance(result[0], PriorityCountRead)
+        assert result[0].priority == "need"
+        assert result[0].item_count == 7
+
+
+class TestListPurchasesByStore:
+    async def test_returns_list_of_reads(self, service):
+        row = SimpleNamespace(store="Aldi", purchase_count=2)
+        service._shopping.get_purchases_by_store.return_value = [row]
+
+        result = await service.list_purchases_by_store()
+
+        assert len(result) == 1
+        assert isinstance(result[0], StorePurchaseRead)
+        assert result[0].store == "Aldi"
+        assert result[0].purchase_count == 2
 
 
 # --- Wishlist ---

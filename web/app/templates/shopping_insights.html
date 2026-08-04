@@ -1,0 +1,244 @@
+{% extends "base.html" %}
+{% set active_page = "shopping" %}
+{% block title %}Shopping Insights{% endblock %}
+
+{% block content %}
+<div class="p-6 space-y-8">
+  <a href="/shopping" class="text-xs text-[#378ADD] hover:underline">← Shopping</a>
+  <h1 class="text-base font-semibold text-gray-900">Shopping Insights</h1>
+
+  <!-- ── Most-bought products ──────────────────────────────── -->
+  <section>
+    <h2 class="text-sm font-medium text-gray-900 mb-3">Most-bought products</h2>
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div class="card bg-white">
+        {% if frequent_chart %}
+        <div class="card-body p-4 cursor-pointer relative group" onclick="openChartModal('frequent')">
+          <i class="ti ti-arrows-maximize text-gray-300 group-hover:text-gray-500 absolute top-3 right-3 text-sm"></i>
+          <p class="text-xs text-gray-400 uppercase tracking-wide mb-3 grow-0">By purchase count</p>
+          <div class="relative h-56">
+            <canvas id="chart-frequent"></canvas>
+          </div>
+        </div>
+        {% else %}
+        <div class="card-body p-4">
+          <p class="text-xs text-gray-400 uppercase tracking-wide mb-3">By purchase count</p>
+          <p class="text-sm text-gray-300 py-6 text-center">No data</p>
+        </div>
+        {% endif %}
+      </div>
+
+      {% if frequent_items %}
+      <div class="card bg-white"><div class="card-body p-0 overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead>
+            <tr class="border-b border-gray-100 text-xs text-gray-400 uppercase tracking-wide">
+              <th class="text-left px-4 py-3 font-medium">Item</th>
+              <th class="text-right px-4 py-3 font-medium">Times bought</th>
+              <th class="text-right px-4 py-3 font-medium hidden sm:table-cell">Last bought</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-50">
+            {% for i in frequent_items %}
+            <tr class="hover:bg-gray-50">
+              <td class="px-4 py-2.5 font-medium text-gray-800">{{ i.name }}</td>
+              <td class="px-4 py-2.5 text-right text-gray-500">{{ i.purchase_count }}</td>
+              <td class="px-4 py-2.5 text-right text-gray-400 text-xs hidden sm:table-cell">
+                {{ i.last_bought_at[:10] if i.last_bought_at else "—" }}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div></div>
+      {% endif %}
+    </div>
+  </section>
+
+  <!-- ── Patterns ───────────────────────────────────────────── -->
+  <section>
+    <h2 class="text-sm font-medium text-gray-900 mb-3">Patterns</h2>
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+
+      <!-- By category -->
+      <div class="card bg-white">
+        {% if by_category_chart %}
+        <div class="card-body p-4 cursor-pointer relative group" onclick="openChartModal('by-category')">
+          <i class="ti ti-arrows-maximize text-gray-300 group-hover:text-gray-500 absolute top-3 right-3 text-sm"></i>
+          <p class="text-xs text-gray-400 uppercase tracking-wide mb-3 grow-0">By category</p>
+          <div class="relative h-44">
+            <canvas id="chart-by-category"></canvas>
+          </div>
+        </div>
+        {% else %}
+        <div class="card-body p-4">
+          <p class="text-xs text-gray-400 uppercase tracking-wide mb-3">By category</p>
+          <p class="text-sm text-gray-300 py-6 text-center">No data</p>
+        </div>
+        {% endif %}
+      </div>
+
+      <!-- Need vs want -->
+      <div class="card bg-white">
+        {% if priority_chart %}
+        <div class="card-body p-4 cursor-pointer relative group" onclick="openChartModal('priority')">
+          <i class="ti ti-arrows-maximize text-gray-300 group-hover:text-gray-500 absolute top-3 right-3 text-sm"></i>
+          <p class="text-xs text-gray-400 uppercase tracking-wide mb-3 grow-0">Need vs want</p>
+          <div class="relative h-44">
+            <canvas id="chart-priority"></canvas>
+          </div>
+        </div>
+        {% else %}
+        <div class="card-body p-4">
+          <p class="text-xs text-gray-400 uppercase tracking-wide mb-3">Need vs want</p>
+          <p class="text-sm text-gray-300 py-6 text-center">No data</p>
+        </div>
+        {% endif %}
+      </div>
+
+      <!-- By store -->
+      {% if by_store_chart %}
+      <div class="card bg-white">
+        <div class="card-body p-4 cursor-pointer relative group" onclick="openChartModal('by-store')">
+          <i class="ti ti-arrows-maximize text-gray-300 group-hover:text-gray-500 absolute top-3 right-3 text-sm"></i>
+          <p class="text-xs text-gray-400 uppercase tracking-wide mb-3 grow-0">By store</p>
+          <div class="relative h-44">
+            <canvas id="chart-by-store"></canvas>
+          </div>
+        </div>
+      </div>
+      {% endif %}
+    </div>
+  </section>
+
+  <!-- ── Purchase frequency over time ───────────────────────── -->
+  <section>
+    <h2 class="text-sm font-medium text-gray-900 mb-3">Purchase frequency over time</h2>
+    <div class="card bg-white">
+      {% if by_month_chart %}
+      <div class="card-body p-4 cursor-pointer relative group" onclick="openChartModal('by-month')">
+        <i class="ti ti-arrows-maximize text-gray-300 group-hover:text-gray-500 absolute top-3 right-3 text-sm"></i>
+        <p class="text-xs text-gray-400 uppercase tracking-wide mb-3 grow-0">Purchases per month</p>
+        <div class="relative h-52">
+          <canvas id="chart-by-month"></canvas>
+        </div>
+      </div>
+      {% else %}
+      <div class="card-body p-4">
+        <p class="text-xs text-gray-400 uppercase tracking-wide mb-3">Purchases per month</p>
+        <p class="text-sm text-gray-300 py-6 text-center">No data</p>
+      </div>
+      {% endif %}
+    </div>
+  </section>
+
+</div>
+
+<!-- Chart expand modal -->
+<div id="chart-modal" class="hidden fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4" onclick="closeChartModal()">
+  <div class="bg-white rounded-lg p-6 w-full max-w-2xl" onclick="event.stopPropagation()">
+    <div class="flex items-center justify-between mb-4">
+      <h3 id="chart-modal-title" class="text-sm font-medium text-gray-900"></h3>
+      <button onclick="closeChartModal()" class="text-gray-400 hover:text-gray-600">
+        <i class="ti ti-x text-lg"></i>
+      </button>
+    </div>
+    <div class="relative h-[60vh] max-h-[420px]">
+      <canvas id="chart-modal-canvas"></canvas>
+    </div>
+  </div>
+</div>
+
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+<script>
+const PALETTE = ["#378ADD","#BA7517","#639922","#E24B4A","#6366F1","#EC4899","#14B8A6","#F97316","#8B5CF6","#06B6D4"];
+const CHART_REGISTRY = {};
+let modalChart = null;
+
+function registerChart(key, title, type, data, colors) {
+  CHART_REGISTRY[key] = { title, type, data, colors };
+}
+
+function openChartModal(key) {
+  const cfg = CHART_REGISTRY[key];
+  if (!cfg) return;
+  document.getElementById("chart-modal-title").textContent = cfg.title;
+  document.getElementById("chart-modal").classList.remove("hidden");
+  if (modalChart) modalChart.destroy();
+  const keys = Object.keys(cfg.data), vals = Object.values(cfg.data);
+  const isDonut = cfg.type === "doughnut";
+  modalChart = new Chart(document.getElementById("chart-modal-canvas"), {
+    type: cfg.type,
+    data: {
+      labels: keys,
+      datasets: [{
+        data: vals,
+        backgroundColor: cfg.colors,
+        borderWidth: isDonut ? 0 : undefined,
+        borderRadius: isDonut ? undefined : 4
+      }]
+    },
+    options: isDonut
+      ? { maintainAspectRatio: false, plugins: { legend: { position: "bottom", labels: { boxWidth: 10, font: { size: 12 } } } }, cutout: "65%" }
+      : {
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { grid: { display: false } },
+            y: { grid: { color: "#F3F4F6" }, ticks: { precision: 0 } }
+          }
+        }
+  });
+}
+
+function closeChartModal() {
+  document.getElementById("chart-modal").classList.add("hidden");
+  if (modalChart) { modalChart.destroy(); modalChart = null; }
+}
+
+function donut(id, data, key, title) {
+  const keys = Object.keys(data), vals = Object.values(data);
+  const colors = PALETTE.slice(0, keys.length);
+  new Chart(document.getElementById(id), {
+    type: "doughnut",
+    data: {
+      labels: keys,
+      datasets: [{ data: vals, backgroundColor: colors, borderWidth: 0 }]
+    },
+    options: {
+      maintainAspectRatio: false,
+      plugins: { legend: { position: "bottom", labels: { boxWidth: 10, font: { size: 11 } } } },
+      cutout: "65%"
+    }
+  });
+  registerChart(key, title, "doughnut", data, colors);
+}
+
+function bar(id, data, key, title) {
+  const keys = Object.keys(data), vals = Object.values(data);
+  new Chart(document.getElementById(id), {
+    type: "bar",
+    data: {
+      labels: keys,
+      datasets: [{ data: vals, backgroundColor: "#378ADD", borderRadius: 4 }]
+    },
+    options: {
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { grid: { display: false }, ticks: { font: { size: 10 } } },
+        y: { grid: { color: "#F3F4F6" }, ticks: { font: { size: 10 }, precision: 0 } }
+      }
+    }
+  });
+  registerChart(key, title, "bar", data, "#378ADD");
+}
+
+{% if frequent_chart %}bar("chart-frequent", {{ frequent_chart | tojson }}, "frequent", "Most-bought products");{% endif %}
+{% if by_category_chart %}donut("chart-by-category", {{ by_category_chart | tojson }}, "by-category", "By category");{% endif %}
+{% if priority_chart %}donut("chart-priority", {{ priority_chart | tojson }}, "priority", "Need vs want");{% endif %}
+{% if by_store_chart %}donut("chart-by-store", {{ by_store_chart | tojson }}, "by-store", "By store");{% endif %}
+{% if by_month_chart %}bar("chart-by-month", {{ by_month_chart | tojson }}, "by-month", "Purchases per month");{% endif %}
+</script>
+{% endblock %}

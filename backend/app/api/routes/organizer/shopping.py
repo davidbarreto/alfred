@@ -4,8 +4,11 @@ from pydantic import BaseModel
 from app.api.auth import require_auth
 from app.dependencies import ShoppingServiceDep
 from app.features.organizer.shopping.schemas import (
+    CategoryPurchaseRead,
     FrequentItemFilters,
     FrequentItemRead,
+    MonthlyPurchaseRead,
+    PriorityCountRead,
     RecurrenceItemCreate,
     RecurrenceItemRead,
     RecurrenceItemUpdate,
@@ -16,6 +19,7 @@ from app.features.organizer.shopping.schemas import (
     ShoppingNameSuggestion,
     ShoppingNameSuggestionFilters,
     ShoppingPriority,
+    StorePurchaseRead,
     WishlistItemCreate,
     WishlistItemFilters,
     WishlistItemRead,
@@ -49,6 +53,26 @@ async def list_frequent_shopping_items(service: ShoppingServiceDep, filters: Fre
 @shopping_router.get("/names", response_model=list[ShoppingNameSuggestion])
 async def suggest_shopping_names(service: ShoppingServiceDep, filters: ShoppingNameSuggestionFilters = Depends()):
     return await service.suggest_names(filters.q, limit=filters.limit)
+
+
+@shopping_router.get("/insights/by-category", response_model=list[CategoryPurchaseRead])
+async def list_shopping_purchases_by_category(service: ShoppingServiceDep):
+    return await service.list_purchases_by_category()
+
+
+@shopping_router.get("/insights/by-month", response_model=list[MonthlyPurchaseRead])
+async def list_shopping_purchases_by_month(service: ShoppingServiceDep, months: int = 6):
+    return await service.list_purchases_by_month(months)
+
+
+@shopping_router.get("/insights/priority-split", response_model=list[PriorityCountRead])
+async def list_shopping_priority_split(service: ShoppingServiceDep):
+    return await service.list_priority_counts()
+
+
+@shopping_router.get("/insights/by-store", response_model=list[StorePurchaseRead])
+async def list_shopping_purchases_by_store(service: ShoppingServiceDep):
+    return await service.list_purchases_by_store()
 
 
 @shopping_router.get("/{item_id}", response_model=ShoppingItemRead)

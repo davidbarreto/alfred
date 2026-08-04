@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from sqlalchemy import delete, func, select, update
 from sqlalchemy.engine import Row
@@ -128,6 +128,56 @@ class ShoppingRepository:
             .where(ShoppingItem.deleted_at.is_(None), ShoppingItem.name.ilike(f"%{query}%"))
             .order_by(ShoppingItem.updated_at.desc())
             .limit(limit)
+        )
+        return list(result.all())
+
+    async def get_purchases_by_category(self) -> list[Row]:
+        result = await self._session.execute(
+            select(ShoppingItem.category_id, func.count().label("purchase_count"))
+            .where(
+                ShoppingItem.status == "bought",
+                ShoppingItem.deleted_at.is_(None),
+                ShoppingItem.category_id.is_not(None),
+            )
+            .group_by(ShoppingItem.category_id)
+            .order_by(func.count().desc())
+        )
+        return list(result.all())
+
+    async def get_purchases_by_month(self, months: int) -> list[Row]:
+        since = datetime.now(timezone.utc) - timedelta(days=30 * months)
+        month = func.to_char(ShoppingItem.last_bought_at, "YYYY-MM").label("month")
+        result = await self._session.execute(
+            select(month, func.count().label("purchase_count"))
+            .where(
+                ShoppingItem.status == "bought",
+                ShoppingItem.deleted_at.is_(None),
+                ShoppingItem.last_bought_at.is_not(None),
+                ShoppingItem.last_bought_at >= since,
+            )
+            .group_by(month)
+            .order_by(month)
+        )
+        return list(result.all())
+
+    async def get_priority_counts(self) -> list[Row]:
+        result = await self._session.execute(
+            select(ShoppingItem.priority, func.count().label("item_count"))
+            .where(ShoppingItem.deleted_at.is_(None))
+            .group_by(ShoppingItem.priority)
+        )
+        return list(result.all())
+
+    async def get_purchases_by_store(self) -> list[Row]:
+        result = await self._session.execute(
+            select(ShoppingItem.store, func.count().label("purchase_count"))
+            .where(
+                ShoppingItem.status == "bought",
+                ShoppingItem.deleted_at.is_(None),
+                ShoppingItem.store.is_not(None),
+            )
+            .group_by(ShoppingItem.store)
+            .order_by(func.count().desc())
         )
         return list(result.all())
 

@@ -554,6 +554,126 @@
           }
         },
         {
+          "name": "08c - List Purchases By Category",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Grocery category appears with a positive purchase count', () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.be.an('array');",
+                  "    const grocery = json.find((r) => String(r.category_id) === String(pm.environment.get('shopping_grocery_category_id')));",
+                  "    pm.expect(grocery).to.exist;",
+                  "    pm.expect(grocery.purchase_count).to.be.at.least(1);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/organizer/shopping/insights/by-category",
+              "host": ["{{base_url}}"],
+              "path": ["organizer", "shopping", "insights", "by-category"]
+            }
+          }
+        },
+        {
+          "name": "08d - List Purchases By Month",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Response is an array of month buckets', () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.be.an('array');",
+                  "    json.forEach((r) => {",
+                  "        pm.expect(r).to.have.property('month');",
+                  "        pm.expect(r).to.have.property('purchase_count');",
+                  "    });",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/organizer/shopping/insights/by-month?months=6",
+              "host": ["{{base_url}}"],
+              "path": ["organizer", "shopping", "insights", "by-month"],
+              "query": [{ "key": "months", "value": "6" }]
+            }
+          }
+        },
+        {
+          "name": "08e - List Priority Split",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Need priority appears with a positive item count', () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.be.an('array');",
+                  "    const need = json.find((r) => r.priority === 'need');",
+                  "    pm.expect(need).to.exist;",
+                  "    pm.expect(need.item_count).to.be.at.least(1);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/organizer/shopping/insights/priority-split",
+              "host": ["{{base_url}}"],
+              "path": ["organizer", "shopping", "insights", "priority-split"]
+            }
+          }
+        },
+        {
+          "name": "08f - List Purchases By Store",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Response is an array with no null stores', () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.be.an('array');",
+                  "    json.forEach((r) => pm.expect(r.store).to.not.be.null);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/organizer/shopping/insights/by-store",
+              "host": ["{{base_url}}"],
+              "path": ["organizer", "shopping", "insights", "by-store"]
+            }
+          }
+        },
+        {
           "name": "09 - Create Shopping Item (for skipped test)",
           "event": [
             {

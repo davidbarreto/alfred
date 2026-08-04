@@ -102,6 +102,28 @@ class FrequentItemFilters:
         return f"FrequentItemFilters(category_id={self.category_id!r}, limit={self.limit})"
 
 
+# --- Purchase insights (derived aggregates, no filters — small result sets) ---
+
+class CategoryPurchaseRead(BaseModel):
+    category_id: int
+    purchase_count: int
+
+
+class MonthlyPurchaseRead(BaseModel):
+    month: str
+    purchase_count: int
+
+
+class PriorityCountRead(BaseModel):
+    priority: ShoppingPriority
+    item_count: int
+
+
+class StorePurchaseRead(BaseModel):
+    store: str
+    purchase_count: int
+
+
 # --- Name suggestion (typeahead across shopping/wishlist/recurrence names) ---
 
 class ShoppingNameSuggestion(BaseModel):

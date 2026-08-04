@@ -12,8 +12,11 @@ from app.features.organizer.shopping.repository import (
     WishlistRepository,
 )
 from app.features.organizer.shopping.schemas import (
+    CategoryPurchaseRead,
     FrequentItemFilters,
     FrequentItemRead,
+    MonthlyPurchaseRead,
+    PriorityCountRead,
     RecurrenceItemCreate,
     RecurrenceItemRead,
     RecurrenceItemUpdate,
@@ -23,6 +26,7 @@ from app.features.organizer.shopping.schemas import (
     ShoppingItemUpdate,
     ShoppingNameSuggestion,
     ShoppingPriority,
+    StorePurchaseRead,
     WishlistItemCreate,
     WishlistItemFilters,
     WishlistItemRead,
@@ -108,6 +112,22 @@ class ShoppingService:
             )
             for row in rows
         ]
+
+    async def list_purchases_by_category(self) -> list[CategoryPurchaseRead]:
+        rows = await self._shopping.get_purchases_by_category()
+        return [CategoryPurchaseRead(category_id=row.category_id, purchase_count=row.purchase_count) for row in rows]
+
+    async def list_purchases_by_month(self, months: int = 6) -> list[MonthlyPurchaseRead]:
+        rows = await self._shopping.get_purchases_by_month(months)
+        return [MonthlyPurchaseRead(month=row.month, purchase_count=row.purchase_count) for row in rows]
+
+    async def list_priority_counts(self) -> list[PriorityCountRead]:
+        rows = await self._shopping.get_priority_counts()
+        return [PriorityCountRead(priority=row.priority, item_count=row.item_count) for row in rows]
+
+    async def list_purchases_by_store(self) -> list[StorePurchaseRead]:
+        rows = await self._shopping.get_purchases_by_store()
+        return [StorePurchaseRead(store=row.store, purchase_count=row.purchase_count) for row in rows]
 
     async def suggest_names(self, query: str, limit: int = 8) -> list[ShoppingNameSuggestion]:
         shopping_rows = await self._shopping.search_names(query, limit)

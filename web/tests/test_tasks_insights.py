@@ -34,7 +34,7 @@ class TestHabitStats:
         tasks = [_task(id=1, title="Water plants", recurrence_rule="FREQ=DAILY", streak=5, missed_count=0)]
         mock_api["get"].side_effect = _fake_get(tasks=tasks, history=[_completion(1, "2026-08-01")])
 
-        resp = client.get("/tasks/insights/")
+        resp = client.get("/tasks/insights")
 
         assert resp.status_code == 200
         assert "Water plants" in resp.text
@@ -47,7 +47,7 @@ class TestHabitStats:
         ]
         mock_api["get"].side_effect = _fake_get(tasks=tasks)
 
-        resp = client.get("/tasks/insights/")
+        resp = client.get("/tasks/insights")
 
         assert resp.status_code == 200
         assert "Behind" in resp.text
@@ -58,7 +58,7 @@ class TestMissedOneOffTasks:
         tasks = [_task(id=1, title="Pay rent", deadline="2020-01-01T00:00:00", status="TODO")]
         mock_api["get"].side_effect = _fake_get(tasks=tasks)
 
-        resp = client.get("/tasks/insights/")
+        resp = client.get("/tasks/insights")
 
         assert resp.status_code == 200
         assert "Pay rent" in resp.text
@@ -68,7 +68,7 @@ class TestMissedOneOffTasks:
         tasks = [_task(id=1, title="Pay rent", deadline="2020-01-01T00:00:00", status="DONE")]
         mock_api["get"].side_effect = _fake_get(tasks=tasks)
 
-        resp = client.get("/tasks/insights/")
+        resp = client.get("/tasks/insights")
 
         assert resp.status_code == 200
         assert "No overdue one-off tasks." in resp.text
@@ -77,7 +77,7 @@ class TestMissedOneOffTasks:
         tasks = [_task(id=1, title="Future task", deadline="2099-01-01T00:00:00", status="TODO")]
         mock_api["get"].side_effect = _fake_get(tasks=tasks)
 
-        resp = client.get("/tasks/insights/")
+        resp = client.get("/tasks/insights")
 
         assert resp.status_code == 200
         assert "No overdue one-off tasks." in resp.text
@@ -89,7 +89,7 @@ class TestMissedOneOffTasks:
         )]
         mock_api["get"].side_effect = _fake_get(tasks=tasks)
 
-        resp = client.get("/tasks/insights/")
+        resp = client.get("/tasks/insights")
 
         assert resp.status_code == 200
         assert "No overdue one-off tasks." in resp.text
@@ -104,7 +104,7 @@ class TestProductivityByWeekday:
         ]
         mock_api["get"].side_effect = _fake_get(tasks=tasks)
 
-        resp = client.get("/tasks/insights/")
+        resp = client.get("/tasks/insights")
 
         assert resp.status_code == 200
         mon_pos = resp.text.index('"Mon"')
@@ -122,7 +122,7 @@ class TestCompletionRateByPriority:
         ]
         mock_api["get"].side_effect = _fake_get(tasks=tasks)
 
-        resp = client.get("/tasks/insights/")
+        resp = client.get("/tasks/insights")
 
         assert resp.status_code == 200
         assert "Completion rate by priority" in resp.text
@@ -137,7 +137,7 @@ class TestTimeToComplete:
         ]
         mock_api["get"].side_effect = _fake_get(tasks=tasks)
 
-        resp = client.get("/tasks/insights/")
+        resp = client.get("/tasks/insights")
 
         assert resp.status_code == 200
         # tojson HTML-escapes "<"/">" for safe embedding inside <script>
@@ -151,7 +151,7 @@ class TestTimeToComplete:
         ]
         mock_api["get"].side_effect = _fake_get(tasks=tasks)
 
-        resp = client.get("/tasks/insights/")
+        resp = client.get("/tasks/insights")
 
         assert resp.status_code == 200
         assert "No data" in resp.text

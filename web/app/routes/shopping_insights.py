@@ -22,7 +22,7 @@ async def _get_categories() -> list[dict]:
         return []
 
 
-@router.get("/", response_class=HTMLResponse)
+@router.get("", response_class=HTMLResponse)
 async def shopping_insights_page(request: Request):
     frequent_items, by_category, by_month, priority_split, by_store = [], [], [], [], []
 

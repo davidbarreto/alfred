@@ -66,7 +66,7 @@ def _time_to_complete_bucket(delta: timedelta) -> str:
     return _TIME_TO_COMPLETE_OVERFLOW
 
 
-@router.get("/", response_class=HTMLResponse)
+@router.get("", response_class=HTMLResponse)
 async def tasks_insights_page(request: Request):
     all_tasks, task_history = [], []
 

@@ -38,7 +38,7 @@ class TestFrequentProducts:
             frequent=[_frequent_item(name="Beans", purchase_count=8), _frequent_item(name="Milk", purchase_count=3)],
         )
 
-        resp = client.get("/shopping/insights/")
+        resp = client.get("/shopping/insights")
 
         assert resp.status_code == 200
         assert "Beans" in resp.text
@@ -47,7 +47,7 @@ class TestFrequentProducts:
     def test_no_data_message_when_empty(self, client, mock_api):
         mock_api["get"].side_effect = _fake_get()
 
-        resp = client.get("/shopping/insights/")
+        resp = client.get("/shopping/insights")
 
         assert resp.status_code == 200
         assert "No data" in resp.text
@@ -60,7 +60,7 @@ class TestByCategoryChart:
             categories=[_category(id=1, name="Grocery")],
         )
 
-        resp = client.get("/shopping/insights/")
+        resp = client.get("/shopping/insights")
 
         assert resp.status_code == 200
         assert "Grocery" in resp.text
@@ -71,7 +71,7 @@ class TestByCategoryChart:
             categories=[],
         )
 
-        resp = client.get("/shopping/insights/")
+        resp = client.get("/shopping/insights")
 
         assert resp.status_code == 200
         assert "#99" in resp.text
@@ -86,7 +86,7 @@ class TestByMonthChart:
             ],
         )
 
-        resp = client.get("/shopping/insights/")
+        resp = client.get("/shopping/insights")
 
         assert resp.status_code == 200
         may_pos = resp.text.index('"2026-05"')
@@ -103,7 +103,7 @@ class TestByMonthChart:
 
         mock_api["get"].side_effect = fake_get
 
-        resp = client.get("/shopping/insights/")
+        resp = client.get("/shopping/insights")
 
         assert resp.status_code == 200
         assert seen_params[0]["months"] == 6
@@ -115,7 +115,7 @@ class TestPrioritySplit:
             priority_split=[{"priority": "need", "item_count": 5}, {"priority": "want", "item_count": 2}],
         )
 
-        resp = client.get("/shopping/insights/")
+        resp = client.get("/shopping/insights")
 
         assert resp.status_code == 200
         assert "Need vs want" in resp.text
@@ -126,7 +126,7 @@ class TestByStoreConditional:
     def test_omitted_when_empty(self, client, mock_api):
         mock_api["get"].side_effect = _fake_get(by_store=[])
 
-        resp = client.get("/shopping/insights/")
+        resp = client.get("/shopping/insights")
 
         assert resp.status_code == 200
         assert 'id="chart-by-store"' not in resp.text
@@ -134,7 +134,7 @@ class TestByStoreConditional:
     def test_rendered_when_populated(self, client, mock_api):
         mock_api["get"].side_effect = _fake_get(by_store=[{"store": "Aldi", "purchase_count": 4}])
 
-        resp = client.get("/shopping/insights/")
+        resp = client.get("/shopping/insights")
 
         assert resp.status_code == 200
         assert 'id="chart-by-store"' in resp.text

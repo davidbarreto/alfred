@@ -616,6 +616,35 @@
           }
         },
         {
+          "name": "08e-setup - Create Shopping Item (priority need, for priority split test)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+                  "pm.environment.set('shopping_item_id3', pm.response.json().id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Toothpaste\",\n  \"category_id\": {{shopping_grocery_category_id}},\n  \"priority\": \"need\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/organizer/shopping/",
+              "host": ["{{base_url}}"],
+              "path": ["organizer", "shopping", ""]
+            }
+          }
+        },
+        {
           "name": "08e - List Priority Split",
           "event": [
             {
@@ -642,6 +671,30 @@
               "raw": "{{base_url}}/organizer/shopping/insights/priority-split",
               "host": ["{{base_url}}"],
               "path": ["organizer", "shopping", "insights", "priority-split"]
+            }
+          }
+        },
+        {
+          "name": "08e-cleanup - Delete Shopping Item (priority split cleanup)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 204', () => pm.response.to.have.status(204));",
+                  "pm.environment.unset('shopping_item_id3');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/organizer/shopping/{{shopping_item_id3}}",
+              "host": ["{{base_url}}"],
+              "path": ["organizer", "shopping", "{{shopping_item_id3}}"]
             }
           }
         },

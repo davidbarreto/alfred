@@ -198,7 +198,7 @@
                         },
                         {
                             "name": "meta",
-                            "value": "={{ $('Message Trigger').item.json }}"
+                            "value": "={{ Object.assign({}, $('Message Trigger').item.json, { language_mode: $json.data[0].language_mode || null }) }}"
                         }
                     ]
                 },
@@ -317,6 +317,12 @@
                             "name": "text",
                             "value": "={{ $json.text }}",
                             "type": "string"
+                        },
+                        {
+                            "id": "2f3a4b5c-6d7e-4f8a-9b0c-1d2e3f4a5b6c",
+                            "name": "language_mode",
+                            "value": "={{ $('Get Working Memory').item.json.value?.parseJson()?.mode || '' }}",
+                            "type": "string"
                         }
                     ]
                 },
@@ -340,6 +346,12 @@
                             "name": "text",
                             "value": "={{ $('Route Chat Output').item.json.message.text }}",
                             "type": "string"
+                        },
+                        {
+                            "id": "9a1e2b3c-4d5f-4a6b-8c7d-1e2f3a4b5c6d",
+                            "name": "language_mode",
+                            "value": "={{ $('Get Working Memory (Text)').item.json.value?.parseJson()?.mode || '' }}",
+                            "type": "string"
                         }
                     ]
                 },
@@ -358,7 +370,7 @@
             "parameters": {
                 "aggregate": "aggregateAllItemData",
                 "include": "specifiedFields",
-                "fieldsToInclude": "text",
+                "fieldsToInclude": "text,language_mode",
                 "options": {}
             },
             "type": "n8n-nodes-base.aggregate",
@@ -1944,17 +1956,8 @@
                     },
                     "conditions": [
                         {
-                            "id": "ef262ee2-34a3-497d-a642-ca7ba058e1f6",
-                            "leftValue": "={{ $('Get Working Memory (Text)').item.json.key }}",
-                            "rightValue": "language:pending",
-                            "operator": {
-                                "type": "string",
-                                "operation": "equals"
-                            }
-                        },
-                        {
                             "id": "f347b45f-a9f2-4e82-ac51-0242ab9986c1",
-                            "leftValue": "={{ ['practice','review','produce'].includes($('Get Working Memory (Text)').item.json.value?.parseJson()?.mode) }}",
+                            "leftValue": "={{ ['practice','review','produce'].includes($('Aggregate Texts').item.json.data[0].language_mode) }}",
                             "rightValue": true,
                             "operator": {
                                 "type": "boolean",
@@ -1964,7 +1967,7 @@
                         },
                         {
                             "id": "dd5af2bc-d02b-408d-b676-8ec5974a1faf",
-                            "leftValue": "={{ $('Route Chat Output').item.json.message.text.startsWith('/') }}",
+                            "leftValue": "={{ ($('Route Chat Output').item.json.message.text || '').startsWith('/') }}",
                             "rightValue": false,
                             "operator": {
                                 "type": "boolean",

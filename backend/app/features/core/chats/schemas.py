@@ -6,6 +6,7 @@ from app.features.language.sessions.schemas import NextPracticePrompt
 class ChatRequest(BaseModel):
     session_id: int
     detected_intents: list[str] | None = None
+    escape_html: bool = False
 
 
 class ChatResponse(BaseModel):

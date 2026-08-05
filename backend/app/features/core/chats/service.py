@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import html
 import json
 import logging
 import pathlib
@@ -448,7 +449,11 @@ class ChatService:
             # about the user — never mine them for memories.
             logger.debug("Chat: language pending mode — skipping memory extraction")
 
-        return response_text, next_practice
+        # Stored/logged content stays raw; only the value handed back to the caller is
+        # escaped, since callers like Telegram (parse_mode=HTML) need it but the portal
+        # (which reads this same text back from /core/messages) renders it as plain text.
+        output_text = html.escape(response_text, quote=False) if request.escape_html else response_text
+        return output_text, next_practice
 
     async def stream_chat(self, request: ChatRequest) -> AsyncGenerator[str, None]:
         logger.info("StreamChat: session_id=%s", request.session_id)

@@ -1835,6 +1835,49 @@
       }
     },
     {
+      "name": "71b - Chats - With escape_html (Telegram HTML parse_mode safety)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Response has non-empty text', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json).to.have.property('response');",
+              "    pm.expect(json.response).to.be.a('string').and.not.empty;",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"session_id\": {{core_session_id}},\n  \"escape_html\": true\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/core/chats/",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "core",
+            "chats",
+            ""
+          ]
+        }
+      }
+    },
+    {
       "name": "72 - Chats - Missing session_id (validation error)",
       "event": [
         {

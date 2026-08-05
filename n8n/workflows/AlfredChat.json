@@ -283,6 +283,10 @@
                         {
                             "name": "detected_intents",
                             "value": "={{ $json.detected_intents }}"
+                        },
+                        {
+                            "name": "escape_html",
+                            "value": "true"
                         }
                     ]
                 },
@@ -544,7 +548,7 @@
         {
             "parameters": {
                 "chatId": "={{ $('Message Trigger').item.json.message?.chat?.id?.toString() || $('Message Trigger').item.json.callback_query?.message?.chat?.id?.toString() }}",
-                "text": "={{ $json.response.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;') }}",
+                "text": "={{ $json.response }}",
                 "additionalFields": {
                     "appendAttribution": false,
                     "parse_mode": "HTML"

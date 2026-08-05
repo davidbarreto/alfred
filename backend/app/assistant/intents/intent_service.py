@@ -74,3 +74,22 @@ async def detect_intent(text: str, session: AsyncSession) -> IntentResult:
     intent = _INTENT_BY_ID.get(embedding.source_id, "unknown")
     logger.debug("Intent detected: intent=%s confidence=%.4f source_id=%d", intent, similarity, embedding.source_id)
     return IntentResult(intent=intent, confidence=round(similarity, 4))
+
+
+async def get_top_intent_candidates(text: str, session: AsyncSession, limit: int) -> list[IntentResult]:
+    """Top-N distinct intents by embedding similarity (best-scoring example per intent),
+    for the shortlist+LLM fallback when no single intent clears the confidence threshold."""
+    vector = await _provider.embed(text)
+    repo = EmbeddingRepository(session)
+    results = await repo.search(
+        query_vector=vector, source_types=["intent_example"], limit=limit * 3, threshold=0.0
+    )
+    best_by_intent: dict[str, float] = {}
+    for embedding, similarity in results:
+        intent = _INTENT_BY_ID.get(embedding.source_id, "unknown")
+        if intent == "unknown":
+            continue
+        if intent not in best_by_intent or similarity > best_by_intent[intent]:
+            best_by_intent[intent] = similarity
+    ranked = sorted(best_by_intent.items(), key=lambda pair: -pair[1])[:limit]
+    return [IntentResult(intent=i, confidence=round(s, 4)) for i, s in ranked]

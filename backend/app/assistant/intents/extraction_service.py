@@ -133,6 +133,10 @@ _INTENT_SCHEMAS: dict[str, type[BaseModel]] = {
 _INTENTS_WITH_DATES = {"task.add", "event.add", "event.list", "finance.transaction_add", "weather.current", "reminder.set"}
 
 
+def get_schema_for_intent(intent: str) -> type[BaseModel] | None:
+    return _INTENT_SCHEMAS.get(intent)
+
+
 
 async def extract_args(
     intent: str,

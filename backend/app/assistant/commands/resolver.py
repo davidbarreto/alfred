@@ -8,10 +8,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.assistant.commands.registry import COMMAND_REGISTRY, NL_TRIGGER_INDEX
 from app.assistant.commands.schemas import CommandDetail
-from app.assistant.intents.intent_service import detect_intent
+from app.assistant.intents.intent_service import detect_intent, get_top_intent_candidates
+from app.assistant.intents.shortlist_service import resolve_via_shortlist
 from app.config import get_settings
 from app.nlp.normalizer import normalize_date, normalize_priority, clean_text
 from app.nlp.extractor import extract_entities, extract_finance_entities, extract_time_range
+from app.shared.llm import LlmProvider
 
 logger = logging.getLogger(__name__)
 
@@ -240,14 +242,17 @@ async def detect_commands(
     command: str | None = None,
     args: str | None = None,
     session: AsyncSession | None = None,
+    llm_provider: LlmProvider | None = None,
 ) -> list[CommandDetail]:
     """
-    Detect and parse commands without LLM arg extraction.
+    Detect and parse commands without LLM arg extraction (except the shortlist fallback below).
 
     With command/args hint: deterministic parse of a pre-extracted command (e.g. Telegram entity).
-    Without hint: tries deterministic slash-command parsing across all fragments, then falls back
-    to intent detection if no slash commands are found.
-    For NL intent commands, returns CommandDetail with args={} — caller must call extract_args separately.
+    Without hint: tries deterministic slash-command parsing, then fixed nl_triggers, then
+    embedding-based intent detection. When embeddings don't clear intent_threshold but score
+    above intent_shortlist_floor (and llm_provider is given), the top candidate intents are
+    handed to an LLM to classify + extract in one call — returned CommandDetail already has
+    args populated (source="llm_shortlist"), unlike the plain "intent_detection" path.
     """
     if command:
         logger.debug("detect_commands: hint command=%s args=%r", command, args)
@@ -298,6 +303,23 @@ async def detect_commands(
             source="intent_detection",
             args={},
         )]
+
+    settings = get_settings()
+    if llm_provider is not None and intent_result.confidence >= settings.intent_shortlist_floor:
+        candidates = await get_top_intent_candidates(text, session, limit=settings.intent_shortlist_k)
+        candidates = [c for c in candidates if c.confidence >= settings.intent_shortlist_floor]
+        if candidates:
+            logger.debug(
+                "detect_commands: shortlisting %d candidate(s) for text=%r: %s",
+                len(candidates), text[:100], [(c.intent, c.confidence) for c in candidates],
+            )
+            resolved = await resolve_via_shortlist(text, candidates, llm_provider, session)
+            if resolved:
+                logger.info(
+                    "detect_commands: shortlist resolved intent=%s confidence=%.4f",
+                    resolved.intent, resolved.confidence,
+                )
+                return [resolved]
 
     logger.info(
         "detect_commands: intent=%s confidence=%.4f below threshold=%.4f or unknown, no command",

@@ -2,7 +2,12 @@ import pytest
 from datetime import datetime, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from app.assistant.intents.intent_service import IntentResult, detect_intent, get_operation_type
+from app.assistant.intents.intent_service import (
+    IntentResult,
+    detect_intent,
+    get_operation_type,
+    get_top_intent_candidates,
+)
 
 
 def _make_embedding(source_id: int = 2):
@@ -90,6 +95,65 @@ class TestDetectIntent:
 
         assert isinstance(result, IntentResult)
         assert result.intent == "unknown"
+
+
+class TestGetTopIntentCandidates:
+    @pytest.mark.asyncio
+    async def test_ranks_by_similarity_descending(self, mock_provider, mock_repo):
+        # id=216 -> recall.search, id=50 -> note.list, id=1 -> task.add
+        mock_repo.search = AsyncMock(return_value=[
+            (_make_embedding(source_id=50), 0.40),
+            (_make_embedding(source_id=216), 0.55),
+            (_make_embedding(source_id=1), 0.35),
+        ])
+
+        results = await get_top_intent_candidates("some text", AsyncMock(), limit=5)
+
+        assert [r.intent for r in results] == ["recall.search", "note.list", "task.add"]
+        assert results[0].confidence == 0.55
+
+    @pytest.mark.asyncio
+    async def test_dedupes_same_intent_keeping_best_score(self, mock_provider, mock_repo):
+        # id=1 and id=2 are both task.add
+        mock_repo.search = AsyncMock(return_value=[
+            (_make_embedding(source_id=1), 0.30),
+            (_make_embedding(source_id=2), 0.50),
+        ])
+
+        results = await get_top_intent_candidates("some text", AsyncMock(), limit=5)
+
+        assert len(results) == 1
+        assert results[0].intent == "task.add"
+        assert results[0].confidence == 0.50
+
+    @pytest.mark.asyncio
+    async def test_excludes_unknown(self, mock_provider, mock_repo):
+        # id=142 -> unknown
+        mock_repo.search = AsyncMock(return_value=[(_make_embedding(source_id=142), 0.60)])
+
+        results = await get_top_intent_candidates("some text", AsyncMock(), limit=5)
+
+        assert results == []
+
+    @pytest.mark.asyncio
+    async def test_respects_limit(self, mock_provider, mock_repo):
+        mock_repo.search = AsyncMock(return_value=[
+            (_make_embedding(source_id=1), 0.50),   # task.add
+            (_make_embedding(source_id=216), 0.45),  # recall.search
+            (_make_embedding(source_id=50), 0.40),   # note.list
+        ])
+
+        results = await get_top_intent_candidates("some text", AsyncMock(), limit=2)
+
+        assert len(results) == 2
+
+    @pytest.mark.asyncio
+    async def test_no_results_returns_empty_list(self, mock_provider, mock_repo):
+        mock_repo.search = AsyncMock(return_value=[])
+
+        results = await get_top_intent_candidates("some text", AsyncMock(), limit=5)
+
+        assert results == []
 
 
 class TestGetOperationType:

@@ -48,7 +48,13 @@ class Settings(BaseSettings):
         default="gemini-2.5-flash-tts", validation_alias="LLM_CONVERSATION_TTS_MODEL"
     )
     conversation_tts_voice: str = Field(default="Enceladus", validation_alias="CONVERSATION_TTS_VOICE")
-    intent_threshold: float = Field(default=0.75, validation_alias="INTENT_THRESHOLD")
+    intent_threshold: float = Field(default=0.7, validation_alias="INTENT_THRESHOLD")
+    # Below intent_threshold but at/above this floor, top candidate intents are shortlisted
+    # and handed to an LLM to classify + extract in one call, instead of dropping straight
+    # to unknown/chat. Below the floor, embeddings carry no useful signal (confirmed against
+    # real usage logs) so it's not worth the LLM round trip.
+    intent_shortlist_floor: float = Field(default=0.4, validation_alias="INTENT_SHORTLIST_FLOOR")
+    intent_shortlist_k: int = Field(default=5, validation_alias="INTENT_SHORTLIST_K")
 
     # Conversation/roleplay TTS audio (user recordings + synthesized replies) is not
     # persisted to disk by default — it's LLM-generated free text that's effectively

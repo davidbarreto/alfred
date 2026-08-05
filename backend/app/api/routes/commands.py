@@ -82,6 +82,7 @@ async def get_command_catalog() -> CommandCatalogResponse:
 async def detect_command(
     request: CommandDetectRequest,
     session: DbSessionDep,
+    llm_provider: ExtractionLlmProviderDep,
 ) -> CommandDetectResponse:
     logger.info("POST /commands/detect text=%r command=%s", request.text[:80], request.command)
     commands = await detect_commands(
@@ -89,6 +90,7 @@ async def detect_command(
         command=request.command,
         args=request.args,
         session=session,
+        llm_provider=llm_provider,
     )
     intents = [f"{c.type}.{c.command}" for c in commands]
     return CommandDetectResponse(

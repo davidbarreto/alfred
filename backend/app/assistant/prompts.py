@@ -4,6 +4,19 @@ INTENT_EXTRACTION_PROMPT_TEMPLATE = (
     "Return ONLY a valid JSON object matching this schema — no explanation or commentary:\n{schema}"
 )
 
+INTENT_SHORTLIST_PROMPT_TEMPLATE = (
+    "The user sent a message that a fast similarity search couldn't confidently classify. "
+    "Below is a shortlist of the intents it's most likely to be, each with its description and, "
+    "if applicable, the JSON schema for the arguments that intent needs. "
+    "{date_context}"
+    "Decide whether the message is genuinely requesting ONE of these intents, or whether it's "
+    "unrelated (small talk, a question, general conversation) and none of them apply. "
+    "Return ONLY a valid JSON object, no explanation or commentary:\n"
+    '{{"intent": "<one of the candidate intent names, or null if none apply>", '
+    '"args": {{...fields per that intent\'s schema, or {{}} if it has none or intent is null}}}}\n\n'
+    "Candidates:\n{catalog}"
+)
+
 DATE_CONTEXT_TEMPLATE = (
     "The current date and time is {now}. "
     "Use it to resolve relative date expressions like 'next Sunday' or 'tomorrow'. "

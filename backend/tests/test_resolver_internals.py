@@ -14,6 +14,7 @@ from app.assistant.commands.resolver import (
     detect_commands,
 )
 from app.assistant.intents.intent_service import IntentResult
+from app.assistant.commands.schemas import CommandDetail
 
 
 FIXED_NOW = datetime(2024, 5, 20)  # Monday
@@ -665,5 +666,59 @@ class TestDetectCommandsWithIntent:
 
         with patch("app.assistant.commands.resolver.detect_intent", new=AsyncMock(return_value=intent_result)):
             commands = await detect_commands("some random text", session=mock_session)
+
+        assert commands == []
+
+    async def test_shortlist_skipped_without_llm_provider(self):
+        # Below threshold but above the shortlist floor — without an llm_provider, no shortlist
+        # attempt should happen at all (verifies the fallback stays opt-in for callers/tests
+        # that don't pass one).
+        mock_session = AsyncMock()
+        intent_result = IntentResult(intent="recall.search", confidence=0.45)
+
+        with patch("app.assistant.commands.resolver.detect_intent", new=AsyncMock(return_value=intent_result)), \
+             patch("app.assistant.commands.resolver.get_top_intent_candidates") as mock_candidates:
+            commands = await detect_commands("ambiguous text", session=mock_session)
+
+        mock_candidates.assert_not_called()
+        assert commands == []
+
+    async def test_shortlist_below_floor_skips_llm_call(self):
+        mock_session = AsyncMock()
+        mock_llm = AsyncMock()
+        intent_result = IntentResult(intent="recall.search", confidence=0.2)
+
+        with patch("app.assistant.commands.resolver.detect_intent", new=AsyncMock(return_value=intent_result)), \
+             patch("app.assistant.commands.resolver.resolve_via_shortlist") as mock_resolve:
+            commands = await detect_commands("ambiguous text", session=mock_session, llm_provider=mock_llm)
+
+        mock_resolve.assert_not_called()
+        assert commands == []
+
+    async def test_shortlist_resolves_command(self):
+        mock_session = AsyncMock()
+        mock_llm = AsyncMock()
+        intent_result = IntentResult(intent="recall.search", confidence=0.45)
+        candidates = [IntentResult(intent="recall.search", confidence=0.45), IntentResult(intent="note.list", confidence=0.40)]
+        resolved = CommandDetail(type="recall", command="search", confidence=0.45, source="llm_shortlist", args={"query": "golang"})
+
+        with patch("app.assistant.commands.resolver.detect_intent", new=AsyncMock(return_value=intent_result)), \
+             patch("app.assistant.commands.resolver.get_top_intent_candidates", new=AsyncMock(return_value=candidates)), \
+             patch("app.assistant.commands.resolver.resolve_via_shortlist", new=AsyncMock(return_value=resolved)):
+            # No nl_trigger prefix here — must fall through to the embedding/shortlist path.
+            commands = await detect_commands("Something ambiguous about golang stuff", session=mock_session, llm_provider=mock_llm)
+
+        assert commands == [resolved]
+
+    async def test_shortlist_unresolved_returns_empty(self):
+        mock_session = AsyncMock()
+        mock_llm = AsyncMock()
+        intent_result = IntentResult(intent="recall.search", confidence=0.45)
+        candidates = [IntentResult(intent="recall.search", confidence=0.45)]
+
+        with patch("app.assistant.commands.resolver.detect_intent", new=AsyncMock(return_value=intent_result)), \
+             patch("app.assistant.commands.resolver.get_top_intent_candidates", new=AsyncMock(return_value=candidates)), \
+             patch("app.assistant.commands.resolver.resolve_via_shortlist", new=AsyncMock(return_value=None)):
+            commands = await detect_commands("ambiguous chat", session=mock_session, llm_provider=mock_llm)
 
         assert commands == []

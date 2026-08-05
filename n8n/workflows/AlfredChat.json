@@ -1932,6 +1932,82 @@
             "id": "7c3f9b2e-6a4d-4c1f-8b5e-3d9a7c2f6e80",
             "name": "Send Opening Voice",
             "onError": "continueErrorOutput"
+        },
+        {
+            "parameters": {
+                "conditions": {
+                    "options": {
+                        "caseSensitive": true,
+                        "leftValue": "",
+                        "typeValidation": "strict",
+                        "version": 3
+                    },
+                    "conditions": [
+                        {
+                            "id": "ef262ee2-34a3-497d-a642-ca7ba058e1f6",
+                            "leftValue": "={{ $('Get Working Memory (Text)').item.json.key }}",
+                            "rightValue": "language:pending",
+                            "operator": {
+                                "type": "string",
+                                "operation": "equals"
+                            }
+                        },
+                        {
+                            "id": "f347b45f-a9f2-4e82-ac51-0242ab9986c1",
+                            "leftValue": "={{ ['practice','review','produce'].includes($('Get Working Memory (Text)').item.json.value?.parseJson()?.mode) }}",
+                            "rightValue": true,
+                            "operator": {
+                                "type": "boolean",
+                                "operation": "true",
+                                "singleValue": true
+                            }
+                        },
+                        {
+                            "id": "dd5af2bc-d02b-408d-b676-8ec5974a1faf",
+                            "leftValue": "={{ $('Route Chat Output').item.json.message.text.startsWith('/') }}",
+                            "rightValue": false,
+                            "operator": {
+                                "type": "boolean",
+                                "operation": "false",
+                                "singleValue": true
+                            }
+                        }
+                    ],
+                    "combinator": "and"
+                },
+                "options": {}
+            },
+            "type": "n8n-nodes-base.if",
+            "typeVersion": 2.3,
+            "position": [
+                1272,
+                220
+            ],
+            "id": "f7038df7-0c90-4f80-9d2e-12d7902e3427",
+            "name": "Is Language Loop Active"
+        },
+        {
+            "parameters": {
+                "assignments": {
+                    "assignments": [
+                        {
+                            "id": "afcfe639-54e6-4bee-9325-9d374fe82494",
+                            "name": "detected_intents",
+                            "value": "={{ [] }}",
+                            "type": "array"
+                        }
+                    ]
+                },
+                "options": {}
+            },
+            "type": "n8n-nodes-base.set",
+            "typeVersion": 3.4,
+            "position": [
+                1568,
+                220
+            ],
+            "id": "45bb04fe-9673-42f4-947e-e4a002eb1e6c",
+            "name": "Set Intents (Empty)"
         }
     ],
     "pinData": {},
@@ -2012,7 +2088,7 @@
             "main": [
                 [
                     {
-                        "node": "Detect Intents",
+                        "node": "Is Language Loop Active",
                         "type": "main",
                         "index": 0
                     }
@@ -2735,6 +2811,35 @@
                 [
                     {
                         "node": "Set Error Message",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Is Language Loop Active": {
+            "main": [
+                [
+                    {
+                        "node": "Set Intents (Empty)",
+                        "type": "main",
+                        "index": 0
+                    }
+                ],
+                [
+                    {
+                        "node": "Detect Intents",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Set Intents (Empty)": {
+            "main": [
+                [
+                    {
+                        "node": "Chat Alfred",
                         "type": "main",
                         "index": 0
                     }

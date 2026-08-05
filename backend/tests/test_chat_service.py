@@ -184,16 +184,16 @@ class TestChatServiceResponse:
             await service.chat(ChatRequest(session_id=1))
         assert exc_info.value.status_code == 422
 
-    async def test_does_not_escape_html_by_default(self):
+    async def test_does_not_escape_by_default(self):
         service, _, _, message_service, _ = _make_service("if n <= 1 { return n }")
         message_service.list.return_value = [_make_message("hi")]
         result, _ = await service.chat(ChatRequest(session_id=1))
         assert result == "if n <= 1 { return n }"
 
-    async def test_escapes_html_when_requested(self):
+    async def test_escapes_html_when_parse_mode_html(self):
         service, _, _, message_service, _ = _make_service("if n <= 1 { return n }")
         message_service.list.return_value = [_make_message("hi")]
-        result, _ = await service.chat(ChatRequest(session_id=1, escape_html=True))
+        result, _ = await service.chat(ChatRequest(session_id=1, parse_mode="html"))
         assert result == "if n &lt;= 1 { return n }"
 
 
@@ -277,10 +277,10 @@ class TestChatServiceMessageSaving:
         created = message_service.create.call_args[0][0]
         assert created.meta is None
 
-    async def test_stores_unescaped_content_even_when_escape_html_requested(self):
+    async def test_stores_unescaped_content_even_when_parse_mode_html(self):
         service, _, _, message_service, _ = _make_service("if n <= 1 { return n }")
         message_service.list.return_value = [_make_message("hi")]
-        await service.chat(ChatRequest(session_id=1, escape_html=True))
+        await service.chat(ChatRequest(session_id=1, parse_mode="html"))
         created = message_service.create.call_args[0][0]
         assert created.content == "if n <= 1 { return n }"
 

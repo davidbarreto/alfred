@@ -285,8 +285,8 @@
                             "value": "={{ $json.detected_intents }}"
                         },
                         {
-                            "name": "escape_html",
-                            "value": "true"
+                            "name": "parse_mode",
+                            "value": "html"
                         }
                     ]
                 },

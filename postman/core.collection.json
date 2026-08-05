@@ -1835,7 +1835,7 @@
       }
     },
     {
-      "name": "71b - Chats - With escape_html (Telegram HTML parse_mode safety)",
+      "name": "71b - Chats - With parse_mode html (Telegram HTML parse_mode safety)",
       "event": [
         {
           "listen": "test",
@@ -1862,7 +1862,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"session_id\": {{core_session_id}},\n  \"escape_html\": true\n}"
+          "raw": "{\n  \"session_id\": {{core_session_id}},\n  \"parse_mode\": \"html\"\n}"
         },
         "url": {
           "raw": "{{base_url}}/core/chats/",

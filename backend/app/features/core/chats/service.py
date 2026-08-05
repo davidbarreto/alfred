@@ -16,7 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 logger = logging.getLogger(__name__)
 
 from app.features.core.chats.context import build_daily_context
-from app.features.core.chats.schemas import ChatRequest
+from app.features.core.chats.schemas import ChatParseMode, ChatRequest
 from app.features.core.prompts import (
     CHAT_COMMAND_BOUNDARY_INSTRUCTIONS,
     CHAT_FOCUS_INSTRUCTIONS,
@@ -177,6 +177,12 @@ def _strip_markdown(text: str) -> str:
     for pattern, replacement in _MD_PATTERNS:
         text = pattern.sub(replacement, text)
     return text.strip()
+
+
+def _escape_for_parse_mode(text: str, parse_mode: ChatParseMode | None) -> str:
+    if parse_mode == "html":
+        return html.escape(text, quote=False)
+    return text
 
 
 def _to_message_dicts(messages: list[MessageRead]) -> list[dict[str, str]]:
@@ -452,7 +458,7 @@ class ChatService:
         # Stored/logged content stays raw; only the value handed back to the caller is
         # escaped, since callers like Telegram (parse_mode=HTML) need it but the portal
         # (which reads this same text back from /core/messages) renders it as plain text.
-        output_text = html.escape(response_text, quote=False) if request.escape_html else response_text
+        output_text = _escape_for_parse_mode(response_text, request.parse_mode)
         return output_text, next_practice
 
     async def stream_chat(self, request: ChatRequest) -> AsyncGenerator[str, None]:

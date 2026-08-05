@@ -5,6 +5,8 @@ from typing import Any
 
 import httpx
 
+from app.integrations.http.retry import request_with_retry
+
 _BASE_URL = "https://api.open-meteo.com/v1/forecast"
 _GEOCODING_URL = "https://geocoding-api.open-meteo.com/v1/search"
 
@@ -35,6 +37,5 @@ class OpenMeteoClient:
             "end_date": for_date.isoformat(),
         }
         async with httpx.AsyncClient(timeout=10.0) as client:
-            response = await client.get(_BASE_URL, params=params)
-            response.raise_for_status()
+            response = await request_with_retry(client, "GET", _BASE_URL, params=params)
         return response.json()["daily"]

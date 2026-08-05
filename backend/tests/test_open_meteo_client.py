@@ -10,6 +10,7 @@ class TestFetchDaily:
     @pytest.fixture
     def mock_response(self):
         response = MagicMock()
+        response.status_code = 200
         response.raise_for_status = MagicMock()
         response.json.return_value = {
             "daily": {
@@ -28,7 +29,7 @@ class TestFetchDaily:
     async def test_returns_daily_block(self, mock_response):
         client = OpenMeteoClient()
         with patch("app.integrations.open_meteo.client.httpx.AsyncClient") as mock_http:
-            mock_http.return_value.__aenter__.return_value.get = AsyncMock(return_value=mock_response)
+            mock_http.return_value.__aenter__.return_value.request = AsyncMock(return_value=mock_response)
             result = await client.fetch_daily(41.1579, -8.6291, "Europe/Lisbon", date(2026, 6, 23))
 
         assert result["temperature_2m_max"] == [22.5]
@@ -37,11 +38,11 @@ class TestFetchDaily:
     async def test_requests_correct_params(self, mock_response):
         client = OpenMeteoClient()
         with patch("app.integrations.open_meteo.client.httpx.AsyncClient") as mock_http:
-            get_mock = AsyncMock(return_value=mock_response)
-            mock_http.return_value.__aenter__.return_value.get = get_mock
+            request_mock = AsyncMock(return_value=mock_response)
+            mock_http.return_value.__aenter__.return_value.request = request_mock
             await client.fetch_daily(41.1579, -8.6291, "Europe/Lisbon", date(2026, 6, 23))
 
-        params = get_mock.call_args[1]["params"]
+        params = request_mock.call_args[1]["params"]
         assert params["latitude"] == 41.1579
         assert params["longitude"] == -8.6291
         assert params["start_date"] == "2026-06-23"

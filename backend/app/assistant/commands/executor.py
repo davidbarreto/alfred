@@ -123,7 +123,7 @@ async def execute(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                 detail="Recall service not available",
             )
-        return await handle_recall(command, arguments, embedding_service)
+        return await handle_recall(command, arguments, embedding_service, note_service=note_service)
 
     if cmd_type == "weather":
         return await handle_weather(command, arguments)

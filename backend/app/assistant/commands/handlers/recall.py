@@ -5,6 +5,7 @@ from fastapi import HTTPException, status
 
 from app.features.core.embeddings.schemas import EmbeddingSearchRequest
 from app.features.core.embeddings.service import EmbeddingService
+from app.features.organizer.notes.service import NoteService
 
 logger = logging.getLogger(__name__)
 
@@ -23,6 +24,7 @@ async def handle_recall(
     command: str,
     arguments: dict[str, Any],
     embedding_service: EmbeddingService,
+    note_service: NoteService | None = None,
 ) -> Any:
     logger.debug("handle_recall: command=%s args_keys=%s", command, list(arguments.keys()))
 
@@ -46,7 +48,13 @@ async def handle_recall(
     )
     logger.debug("handle_recall: query=%r results=%d", query, len(results))
 
-    return _dedupe_results(results)[:_RECALL_LIMIT]
+    deduped = _dedupe_results(results)[:_RECALL_LIMIT]
+    if note_service is not None:
+        await _fill_missing_note_content(deduped, note_service)
+    else:
+        for item in deduped:
+            item.pop("_has_full_content", None)
+    return deduped
 
 
 def _dedupe_results(results: list) -> list[dict[str, Any]]:
@@ -67,7 +75,26 @@ def _dedupe_results(results: list) -> list[dict[str, Any]]:
                 "source_id": r.source_id,
                 "content": r.content,
                 "similarity": r.similarity,
+                "_has_full_content": r.source_type != "note_title",
             }
         elif r.source_type != "note_title":
             existing["content"] = r.content
+            existing["_has_full_content"] = True
     return sorted(merged.values(), key=lambda item: item["similarity"], reverse=True)
+
+
+async def _fill_missing_note_content(items: list[dict[str, Any]], note_service: NoteService) -> None:
+    """Backfill full note content when a result only ever matched the title embedding.
+
+    A title-shaped query (e.g. "find my Go project note") can score above the
+    recall threshold against the "note_title" embedding while the full "note"
+    embedding (title + body) falls short, since the body dilutes the match.
+    In that case `content` would otherwise be just the title.
+    """
+    for item in items:
+        has_full_content = item.pop("_has_full_content", True)
+        if item["type"] != "note" or has_full_content:
+            continue
+        note = await note_service.get_note(item["source_id"])
+        if note is not None:
+            item["content"] = f"{note.title}: {note.content}" if note.content else note.title

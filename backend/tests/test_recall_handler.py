@@ -117,3 +117,32 @@ class TestHandleRecall:
         result = await handle_recall("search", {"query": "note"}, mock_embedding_service)
 
         assert len(result) == 2
+
+    async def test_backfills_full_content_when_only_title_matched(self, mock_embedding_service):
+        # Only the title embedding scored above threshold; the full "note" embedding
+        # never showed up in the results at all.
+        mock_embedding_service.search.return_value = [
+            _make_result(source_type="note_title", source_id=7, content="Go project", similarity=0.72),
+        ]
+        note_service = AsyncMock()
+        note = AsyncMock(title="Go project", content="Build a Redis-compatible cache in Go")
+        note_service.get_note = AsyncMock(return_value=note)
+
+        result = await handle_recall(
+            "search", {"query": "Go project"}, mock_embedding_service, note_service=note_service
+        )
+
+        assert len(result) == 1
+        assert result[0]["content"] == "Go project: Build a Redis-compatible cache in Go"
+        assert "_has_full_content" not in result[0]
+        note_service.get_note.assert_awaited_once_with(7)
+
+    async def test_leaves_title_only_content_when_note_service_not_provided(self, mock_embedding_service):
+        mock_embedding_service.search.return_value = [
+            _make_result(source_type="note_title", source_id=7, content="Go project", similarity=0.72),
+        ]
+
+        result = await handle_recall("search", {"query": "Go project"}, mock_embedding_service)
+
+        assert result[0]["content"] == "Go project"
+        assert "_has_full_content" not in result[0]

@@ -23,7 +23,17 @@ class SessionRepository:
         query = select(Session)
         if filters.active_only:
             query = query.where(Session.finished_at.is_(None))
+        if filters.source is not None:
+            query = query.where(Session.source == filters.source)
+        if filters.external_id is not None:
+            query = query.where(Session.external_id == filters.external_id)
+        if filters.q is not None:
+            query = query.where(Session.summary.ilike(f"%{filters.q}%"))
         query = query.order_by(Session.created_at.desc())
+        if filters.skip is not None:
+            query = query.offset(filters.skip)
+        if filters.limit is not None:
+            query = query.limit(filters.limit)
         result = await self._session.execute(query)
         return list(result.scalars().all())
 

@@ -1,0 +1,43 @@
+{% if session %}
+<div class="space-y-4">
+  <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs">
+    <div>
+      <p class="text-gray-400 uppercase tracking-wide">Source</p>
+      <p class="text-gray-800 font-medium mt-0.5">{{ session.source or "—" }}</p>
+    </div>
+    <div>
+      <p class="text-gray-400 uppercase tracking-wide">External ID</p>
+      <p class="text-gray-800 font-medium mt-0.5">{{ session.external_id or "—" }}</p>
+    </div>
+    <div>
+      <p class="text-gray-400 uppercase tracking-wide">Status</p>
+      <p class="text-gray-800 font-medium mt-0.5">{{ "finished" if session.finished_at else "active" }}</p>
+    </div>
+    <div>
+      <p class="text-gray-400 uppercase tracking-wide">Created</p>
+      <p class="text-gray-800 font-medium mt-0.5">{{ session.created_at[:19].replace("T", " ") }}</p>
+    </div>
+    <div>
+      <p class="text-gray-400 uppercase tracking-wide">Last interaction</p>
+      <p class="text-gray-800 font-medium mt-0.5">{{ session.last_interaction_at[:19].replace("T", " ") }}</p>
+    </div>
+    <div>
+      <p class="text-gray-400 uppercase tracking-wide">Finished</p>
+      <p class="text-gray-800 font-medium mt-0.5">{{ session.finished_at[:19].replace("T", " ") if session.finished_at else "—" }}</p>
+    </div>
+  </div>
+
+  {% if session.summary %}
+  <div>
+    <p class="text-xs text-gray-400 uppercase tracking-wide mb-1.5">Summary</p>
+    <div class="bg-gray-50 border border-gray-100 rounded-lg p-2.5">
+      <p class="text-xs text-gray-700 whitespace-pre-wrap">{{ session.summary }}</p>
+    </div>
+  </div>
+  {% endif %}
+
+  <a href="/insights/messages?session_id={{ session.id }}" class="text-xs text-[#378ADD] hover:underline">View messages in this session →</a>
+</div>
+{% else %}
+<p class="text-sm text-gray-400 py-3 text-center">Failed to load session.</p>
+{% endif %}

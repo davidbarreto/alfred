@@ -18,7 +18,12 @@ _PROVIDER_CALLS_PREVIEW_SIZE = 5
 _PROVIDER_CALL_OPTIONS_LIMIT = 500
 _EMBEDDING_CALLS_PREVIEW_SIZE = 5
 _EMBEDDING_CALL_OPTIONS_LIMIT = 500
+_MESSAGES_PREVIEW_SIZE = 5
+_SESSIONS_PREVIEW_SIZE = 5
 _FILTER_OPTIONS_SAMPLE_LIMIT = 200
+_MESSAGE_ROLES = ["user", "assistant"]
+_MESSAGE_SOURCES = ["telegram", "api", "web"]
+_SESSION_SOURCES = ["telegram", "api", "web"]
 
 
 def _pagination(items: list, offset: int) -> tuple[list, bool, bool]:
@@ -82,6 +87,7 @@ async def delete_working_memory(item_id: int):
 @router.get("/", response_class=HTMLResponse)
 async def insights_page(request: Request):
     memories_raw, working_memories_raw, llm_calls, provider_calls, cmd_executions, embedding_calls = [], [], [], [], [], []
+    messages, sessions = [], []
 
     for path, params, target in [
         ("/core/memories", {"limit": 200}, "memories"),
@@ -90,6 +96,8 @@ async def insights_page(request: Request):
         ("/integration/provider-calls", {"limit": 200}, "provider_calls"),
         ("/core/command-executions", {"limit": 200}, "cmd_executions"),
         ("/integration/embedding-calls", {"limit": 200}, "embedding_calls"),
+        ("/core/messages", {"skip": 0, "limit": 200}, "messages"),
+        ("/core/sessions", {"skip": 0, "limit": 200}, "sessions"),
     ]:
         try:
             result = await api.get(path, params=params)
@@ -99,6 +107,8 @@ async def insights_page(request: Request):
             elif target == "provider_calls":  provider_calls = result
             elif target == "cmd_executions":  cmd_executions = result
             elif target == "embedding_calls": embedding_calls = result
+            elif target == "messages":        messages = result
+            elif target == "sessions":        sessions = result
         except httpx.HTTPError:
             pass
 
@@ -127,6 +137,10 @@ async def insights_page(request: Request):
     # ── Embedding call aggregations ───────────────────────────────
     embedding_calls_by_feature = dict(Counter(c["feature"] for c in embedding_calls).most_common(10))
 
+    # ── Messages/sessions aggregations ────────────────────────────
+    messages_by_role = dict(Counter(m["role"] for m in messages).most_common())
+    sessions_by_source = dict(Counter(s["source"] or "unknown" for s in sessions).most_common())
+
     # ── Previews ────────────────────────────────────────────────
     wm_preview = await _resolve_working_memory(working_memories_raw[:_PREVIEW_SIZE])
     memories_preview = memories_raw[:_PREVIEW_SIZE]
@@ -148,6 +162,11 @@ async def insights_page(request: Request):
         # embedding calls
         "embedding_calls": embedding_calls[:_EMBEDDING_CALLS_PREVIEW_SIZE],
         "total_embedding_calls": len(embedding_calls),
+        # messages/sessions (preview)
+        "messages_preview": messages[:_MESSAGES_PREVIEW_SIZE],
+        "total_messages": len(messages),
+        "sessions_preview": sessions[:_SESSIONS_PREVIEW_SIZE],
+        "total_sessions": len(sessions),
         # chart data
         "llm_by_model": llm_by_model,
         "llm_by_feature": llm_by_feature,
@@ -157,6 +176,8 @@ async def insights_page(request: Request):
         "cmd_by_name": cmd_by_name,
         "cmd_by_status": cmd_by_status,
         "embedding_calls_by_feature": embedding_calls_by_feature,
+        "messages_by_role": messages_by_role,
+        "sessions_by_source": sessions_by_source,
     })
 
 
@@ -485,3 +506,102 @@ async def embeddings_page(request: Request):
         "source_types": source_types,
         "filter_qs": filter_qs,
     })
+
+
+@router.get("/messages", response_class=HTMLResponse)
+async def messages_page(request: Request):
+    offset = max(0, int(request.query_params.get("offset", "0")))
+    role = request.query_params.get("role", "").strip()
+    source = request.query_params.get("source", "").strip()
+    q = request.query_params.get("q", "").strip()
+    session_id = request.query_params.get("session_id", "").strip()
+
+    params: dict = {"skip": offset, "limit": _PAGE_SIZE + 1}
+    if role:
+        params["role"] = role
+    if source:
+        params["source"] = source
+    if q:
+        params["q"] = q
+    if session_id:
+        params["session_id"] = session_id
+
+    try:
+        raw = await api.get("/core/messages", params=params)
+    except httpx.HTTPError:
+        raw = []
+
+    items, has_next, has_prev = _pagination(raw, offset)
+    filter_qs = urlencode(
+        {k: v for k, v in {"role": role, "source": source, "q": q, "session_id": session_id}.items() if v}
+    )
+
+    return templates.TemplateResponse(request, "messages.html", {
+        "items": items,
+        "offset": offset,
+        "has_next": has_next,
+        "has_prev": has_prev,
+        "role": role,
+        "source": source,
+        "q": q,
+        "session_id": session_id,
+        "roles": _MESSAGE_ROLES,
+        "sources": _MESSAGE_SOURCES,
+        "filter_qs": filter_qs,
+    })
+
+
+@router.get("/messages/{message_id}/detail", response_class=HTMLResponse)
+async def message_detail(message_id: int, request: Request):
+    try:
+        message = await api.get(f"/core/messages/{message_id}")
+    except httpx.HTTPError:
+        return HTMLResponse('<p class="text-[#E24B4A] text-sm">Failed to load message.</p>', status_code=422)
+    return templates.TemplateResponse(request, "_message_detail.html", {"message": message})
+
+
+@router.get("/sessions", response_class=HTMLResponse)
+async def sessions_page(request: Request):
+    offset = max(0, int(request.query_params.get("offset", "0")))
+    source = request.query_params.get("source", "").strip()
+    active_only = request.query_params.get("active_only", "").strip() == "true"
+    q = request.query_params.get("q", "").strip()
+
+    params: dict = {"skip": offset, "limit": _PAGE_SIZE + 1}
+    if source:
+        params["source"] = source
+    if active_only:
+        params["active_only"] = True
+    if q:
+        params["q"] = q
+
+    try:
+        raw = await api.get("/core/sessions", params=params)
+    except httpx.HTTPError:
+        raw = []
+
+    items, has_next, has_prev = _pagination(raw, offset)
+    filter_qs = urlencode({
+        k: v for k, v in {"source": source, "active_only": "true" if active_only else "", "q": q}.items() if v
+    })
+
+    return templates.TemplateResponse(request, "sessions.html", {
+        "items": items,
+        "offset": offset,
+        "has_next": has_next,
+        "has_prev": has_prev,
+        "source": source,
+        "active_only": active_only,
+        "q": q,
+        "sources": _SESSION_SOURCES,
+        "filter_qs": filter_qs,
+    })
+
+
+@router.get("/sessions/{session_id}/detail", response_class=HTMLResponse)
+async def session_detail(session_id: int, request: Request):
+    try:
+        session_obj = await api.get(f"/core/sessions/{session_id}")
+    except httpx.HTTPError:
+        return HTMLResponse('<p class="text-[#E24B4A] text-sm">Failed to load session.</p>', status_code=422)
+    return templates.TemplateResponse(request, "_session_detail.html", {"session": session_obj})

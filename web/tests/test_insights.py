@@ -34,6 +34,21 @@ def _provider_call(id=1, provider="notion", operation="sync", entity_type="task"
     }
 
 
+def _message(id=1, session_id=1, role="user", content="hello", meta=None):
+    return {
+        "id": id, "session_id": session_id, "role": role, "content": content,
+        "meta": meta, "created_at": "2026-07-01T00:00:00",
+    }
+
+
+def _session(id=1, source="telegram", external_id="chat_1", summary=None, finished_at=None):
+    return {
+        "id": id, "source": source, "external_id": external_id, "summary": summary,
+        "last_interaction_at": "2026-07-01T00:00:00", "created_at": "2026-07-01T00:00:00",
+        "finished_at": finished_at,
+    }
+
+
 class TestDeleteMemory:
     def test_deletes_and_returns_empty_body(self, client, mock_api):
         resp = client.delete("/insights/memories/1")
@@ -457,3 +472,150 @@ class TestMemoriesPage:
         assert resp.status_code == 200
         assert "Next →" in resp.text
         assert "offset=20" in resp.text
+
+
+class TestInsightsPageMessagesPreview:
+    def test_limits_recent_messages_preview_to_five(self, client, mock_api):
+        async def fake_get(path, params=None):
+            if path == "/core/messages":
+                return [_message(id=i, content=f"msg {i}") for i in range(1, 8)]
+            return []
+
+        mock_api["get"].side_effect = fake_get
+
+        resp = client.get("/insights/")
+
+        assert resp.status_code == 200
+        assert "msg 5" in resp.text
+        assert "msg 6" not in resp.text
+        assert "msg 7" not in resp.text
+        assert '/insights/messages" class="text-xs text-[#378ADD] hover:underline">View all' in resp.text
+
+
+class TestInsightsPageSessionsPreview:
+    def test_limits_recent_sessions_preview_to_five(self, client, mock_api):
+        async def fake_get(path, params=None):
+            if path == "/core/sessions":
+                return [_session(id=i, summary=f"session {i}") for i in range(1, 8)]
+            return []
+
+        mock_api["get"].side_effect = fake_get
+
+        resp = client.get("/insights/")
+
+        assert resp.status_code == 200
+        assert "session 5" in resp.text
+        assert "session 6" not in resp.text
+        assert "session 7" not in resp.text
+        assert '/insights/sessions" class="text-xs text-[#378ADD] hover:underline">View all' in resp.text
+
+
+class TestMessagesPage:
+    def test_lists_messages(self, client, mock_api):
+        mock_api["get"].return_value = [_message(id=1, content="hello there")]
+
+        resp = client.get("/insights/messages")
+
+        assert resp.status_code == 200
+        assert "hello there" in resp.text
+
+    def test_applies_filters_as_backend_query_params(self, client, mock_api):
+        seen_params = []
+
+        async def fake_get(path, params=None):
+            seen_params.append(params)
+            return [_message(id=1)]
+
+        mock_api["get"].side_effect = fake_get
+
+        resp = client.get("/insights/messages?role=assistant&source=web&q=hello&session_id=42")
+
+        assert resp.status_code == 200
+        params = seen_params[0]
+        assert params["role"] == "assistant"
+        assert params["source"] == "web"
+        assert params["q"] == "hello"
+        assert params["session_id"] == "42"
+        assert params["skip"] == 0
+
+    def test_shows_next_link_when_more_than_a_page(self, client, mock_api):
+        mock_api["get"].return_value = [_message(id=i) for i in range(21)]
+
+        resp = client.get("/insights/messages")
+
+        assert resp.status_code == 200
+        assert "Next →" in resp.text
+        assert "offset=20" in resp.text
+
+
+class TestMessageDetail:
+    def test_returns_detail_partial(self, client, mock_api):
+        mock_api["get"].return_value = _message(id=1, content="the full content")
+
+        resp = client.get("/insights/messages/1/detail")
+
+        assert resp.status_code == 200
+        assert "the full content" in resp.text
+
+    def test_returns_422_when_backend_fails(self, client, mock_api):
+        request = httpx.Request("GET", "http://api/core/messages/1")
+        mock_api["get"].side_effect = httpx.ConnectError("connection refused", request=request)
+
+        resp = client.get("/insights/messages/1/detail")
+
+        assert resp.status_code == 422
+
+
+class TestSessionsPage:
+    def test_lists_sessions(self, client, mock_api):
+        mock_api["get"].return_value = [_session(id=1, summary="Morning briefing")]
+
+        resp = client.get("/insights/sessions")
+
+        assert resp.status_code == 200
+        assert "Morning briefing" in resp.text
+
+    def test_applies_filters_as_backend_query_params(self, client, mock_api):
+        seen_params = []
+
+        async def fake_get(path, params=None):
+            seen_params.append(params)
+            return [_session(id=1)]
+
+        mock_api["get"].side_effect = fake_get
+
+        resp = client.get("/insights/sessions?source=telegram&active_only=true&q=briefing")
+
+        assert resp.status_code == 200
+        params = seen_params[0]
+        assert params["source"] == "telegram"
+        assert params["active_only"] is True
+        assert params["q"] == "briefing"
+        assert params["skip"] == 0
+
+    def test_shows_next_link_when_more_than_a_page(self, client, mock_api):
+        mock_api["get"].return_value = [_session(id=i) for i in range(21)]
+
+        resp = client.get("/insights/sessions")
+
+        assert resp.status_code == 200
+        assert "Next →" in resp.text
+        assert "offset=20" in resp.text
+
+
+class TestSessionDetail:
+    def test_returns_detail_partial(self, client, mock_api):
+        mock_api["get"].return_value = _session(id=1, summary="Detailed summary")
+
+        resp = client.get("/insights/sessions/1/detail")
+
+        assert resp.status_code == 200
+        assert "Detailed summary" in resp.text
+
+    def test_returns_422_when_backend_fails(self, client, mock_api):
+        request = httpx.Request("GET", "http://api/core/sessions/1")
+        mock_api["get"].side_effect = httpx.ConnectError("connection refused", request=request)
+
+        resp = client.get("/insights/sessions/1/detail")
+
+        assert resp.status_code == 422

@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+{% block title %}Sessions{% endblock %}
+
+{% block content %}
+<div class="p-6 space-y-4">
+  <a href="/insights" class="text-xs text-[#378ADD] hover:underline">← Insights</a>
+  <h1 class="text-base font-semibold text-gray-900">Sessions</h1>
+
+  <!-- Filters — full navigation so active state re-renders server-side -->
+  <form method="get" action="/insights/sessions" class="flex flex-wrap gap-3 items-end border-b border-gray-200 pb-4">
+    <div>
+      <label class="text-xs text-gray-500 mb-1 block">Source</label>
+      <select name="source" onchange="this.form.submit()"
+        class="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-[#378ADD]">
+        <option value="">All sources</option>
+        {% for s in sources %}
+        <option value="{{ s }}" {% if s == source %}selected{% endif %}>{{ s }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <label class="text-xs text-gray-500 mb-1 block">Status</label>
+      <select name="active_only" onchange="this.form.submit()"
+        class="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-[#378ADD]">
+        <option value="" {% if not active_only %}selected{% endif %}>All</option>
+        <option value="true" {% if active_only %}selected{% endif %}>Active only</option>
+      </select>
+    </div>
+    <div class="flex-1 min-w-[180px]">
+      <label class="text-xs text-gray-500 mb-1 block">Search summary</label>
+      <input type="text" name="q" value="{{ q }}" placeholder="Search summaries…"
+        class="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white w-full focus:outline-none focus:ring-1 focus:ring-[#378ADD]" />
+    </div>
+    <div class="flex gap-2">
+      <button type="submit" class="btn btn-sm btn-primary">Filter</button>
+      {% if source or active_only or q %}
+      <a href="/insights/sessions" class="btn btn-sm btn-ghost text-gray-500">Clear</a>
+      {% endif %}
+    </div>
+  </form>
+
+  {% if items %}
+  <div class="card bg-white"><div class="card-body p-0 overflow-x-auto">
+    <table class="w-full text-sm">
+      <thead>
+        <tr class="border-b border-gray-100 text-xs text-gray-400 uppercase tracking-wide">
+          <th class="text-left px-4 py-3 font-medium">Source</th>
+          <th class="text-left px-4 py-3 font-medium">Summary</th>
+          <th class="text-left px-4 py-3 font-medium">Status</th>
+          <th class="text-right px-4 py-3 font-medium">Last interaction</th>
+          <th class="text-right px-4 py-3 font-medium">Created</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-gray-50">
+        {% for s in items %}
+        <tr class="hover:bg-gray-50 cursor-pointer"
+            hx-get="/insights/sessions/{{ s.id }}/detail"
+            hx-target="#session-detail-content"
+            hx-swap="innerHTML"
+            hx-on::after-request="document.getElementById('session-detail-modal').showModal()">
+          <td class="px-4 py-2.5 text-gray-700 font-medium">{{ s.source or "—" }}</td>
+          <td class="px-4 py-2.5 text-gray-700 max-w-md truncate">{{ s.summary or "—" }}</td>
+          <td class="px-4 py-2.5">
+            {% if s.finished_at %}
+            <span class="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-500">finished</span>
+            {% else %}
+            <span class="text-[10px] px-1.5 py-0.5 rounded bg-[#EAF3DE] text-[#639922]">active</span>
+            {% endif %}
+          </td>
+          <td class="px-4 py-2.5 text-right text-gray-400 text-xs">{{ s.last_interaction_at[:16].replace("T", " ") }}</td>
+          <td class="px-4 py-2.5 text-right text-gray-400 text-xs">{{ s.created_at[:16].replace("T", " ") }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div></div>
+
+  <div class="flex justify-between items-center">
+    {% if has_prev %}
+    <a href="/insights/sessions?offset={{ offset - 20 }}{% if filter_qs %}&{{ filter_qs }}{% endif %}"
+      class="px-3 py-1.5 rounded text-xs font-medium text-gray-600 bg-white border border-gray-200 hover:border-gray-300">← Prev</a>
+    {% else %}<span></span>{% endif %}
+    {% if has_next %}
+    <a href="/insights/sessions?offset={{ offset + 20 }}{% if filter_qs %}&{{ filter_qs }}{% endif %}"
+      class="px-3 py-1.5 rounded text-xs font-medium text-gray-600 bg-white border border-gray-200 hover:border-gray-300">Next →</a>
+    {% else %}<span></span>{% endif %}
+  </div>
+  {% else %}
+  <div class="card bg-white"><div class="card-body p-6 text-center text-sm text-gray-400">No sessions found.</div></div>
+  {% endif %}
+</div>
+
+<!-- Session detail modal -->
+<dialog id="session-detail-modal" class="modal">
+  <div class="modal-box bg-white rounded-xl border border-gray-200 shadow-lg max-w-2xl w-full p-4 sm:p-6 max-h-[85vh] overflow-y-auto">
+    <div class="flex items-center justify-between mb-4">
+      <h3 class="text-sm font-semibold text-gray-900">Session detail</h3>
+      <button onclick="document.getElementById('session-detail-modal').close()" class="text-gray-400 hover:text-gray-600"><i class="ti ti-x"></i></button>
+    </div>
+    <div id="session-detail-content"></div>
+  </div>
+  <form method="dialog" class="modal-backdrop"><button>close</button></form>
+</dialog>
+{% endblock %}

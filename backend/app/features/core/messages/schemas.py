@@ -30,6 +30,8 @@ class MessageFilters(BaseModel):
     source: Optional[str] = None
     external_id: Optional[str] = None
     role: Optional[str] = None
+    q: Optional[str] = None
+    skip: Optional[int] = None
     limit: Optional[int] = None
 
 

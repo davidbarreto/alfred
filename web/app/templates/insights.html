@@ -28,6 +28,14 @@
       <p class="text-xs text-gray-400 uppercase tracking-wide">Provider calls</p>
       <p class="text-2xl font-semibold text-gray-900 mt-1">{{ total_provider_calls }}</p>
     </div></div>
+    <div class="card bg-white"><div class="card-body p-4">
+      <p class="text-xs text-gray-400 uppercase tracking-wide">Messages</p>
+      <p class="text-2xl font-semibold text-gray-900 mt-1">{{ total_messages }}</p>
+    </div></div>
+    <div class="card bg-white"><div class="card-body p-4">
+      <p class="text-xs text-gray-400 uppercase tracking-wide">Sessions</p>
+      <p class="text-2xl font-semibold text-gray-900 mt-1">{{ total_sessions }}</p>
+    </div></div>
   </div>
 
   <!-- ── LLM Usage ──────────────────────────────────────────── -->
@@ -220,6 +228,121 @@
               {% endif %}
             </td>
             <td class="px-4 py-2.5 text-right text-gray-400 text-xs hidden sm:table-cell">{{ c.created_at[:16].replace("T", " ") }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div></div>
+    {% endif %}
+  </section>
+
+  <!-- ── Chats (Messages & Sessions) ───────────────────────────── -->
+  <section>
+    <h2 class="text-sm font-medium text-gray-900 mb-3">Chats</h2>
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+
+      <!-- Messages by role -->
+      <div class="card bg-white">
+        {% if messages_by_role %}
+        <div class="card-body p-4 cursor-pointer relative group" onclick="openChartModal('messages-role')">
+          <i class="ti ti-arrows-maximize text-gray-300 group-hover:text-gray-500 absolute top-3 right-3 text-sm"></i>
+          <p class="text-xs text-gray-400 uppercase tracking-wide mb-3 grow-0">Messages by role</p>
+          <div class="relative h-44">
+            <canvas id="chart-messages-role"></canvas>
+          </div>
+        </div>
+        {% else %}
+        <div class="card-body p-4">
+          <p class="text-xs text-gray-400 uppercase tracking-wide mb-3">Messages by role</p>
+          <p class="text-sm text-gray-300 py-6 text-center">No data</p>
+        </div>
+        {% endif %}
+      </div>
+
+      <!-- Sessions by source -->
+      <div class="card bg-white">
+        {% if sessions_by_source %}
+        <div class="card-body p-4 cursor-pointer relative group" onclick="openChartModal('sessions-source')">
+          <i class="ti ti-arrows-maximize text-gray-300 group-hover:text-gray-500 absolute top-3 right-3 text-sm"></i>
+          <p class="text-xs text-gray-400 uppercase tracking-wide mb-3 grow-0">Sessions by source</p>
+          <div class="relative h-44">
+            <canvas id="chart-sessions-source"></canvas>
+          </div>
+        </div>
+        {% else %}
+        <div class="card-body p-4">
+          <p class="text-xs text-gray-400 uppercase tracking-wide mb-3">Sessions by source</p>
+          <p class="text-sm text-gray-300 py-6 text-center">No data</p>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Recent messages preview -->
+    {% if messages_preview %}
+    <div class="flex items-center justify-between mt-4 mb-2">
+      <p class="text-xs text-gray-400 uppercase tracking-wide">Recent messages</p>
+      <a href="/insights/messages" class="text-xs text-[#378ADD] hover:underline">View all →</a>
+    </div>
+    <div class="card bg-white"><div class="card-body p-0 overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="border-b border-gray-100 text-xs text-gray-400 uppercase tracking-wide">
+            <th class="text-left px-4 py-3 font-medium">Role</th>
+            <th class="text-left px-4 py-3 font-medium">Content</th>
+            <th class="text-right px-4 py-3 font-medium hidden sm:table-cell">Session</th>
+            <th class="text-right px-4 py-3 font-medium hidden sm:table-cell">When</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-50">
+          {% for m in messages_preview %}
+          <tr class="hover:bg-gray-50">
+            <td class="px-4 py-2.5">
+              {% if m.role == "user" %}
+              <span class="text-[10px] px-1.5 py-0.5 rounded bg-[#E6F1FB] text-[#0C447C]">{{ m.role }}</span>
+              {% else %}
+              <span class="text-[10px] px-1.5 py-0.5 rounded bg-[#F1EAFB] text-[#5B21B6]">{{ m.role }}</span>
+              {% endif %}
+            </td>
+            <td class="px-4 py-2.5 text-gray-700 max-w-xs truncate">{{ m.content }}</td>
+            <td class="px-4 py-2.5 text-right text-gray-400 hidden sm:table-cell">#{{ m.session_id }}</td>
+            <td class="px-4 py-2.5 text-right text-gray-400 text-xs hidden sm:table-cell">{{ m.created_at[:16].replace("T", " ") }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div></div>
+    {% endif %}
+
+    <!-- Recent sessions preview -->
+    {% if sessions_preview %}
+    <div class="flex items-center justify-between mt-4 mb-2">
+      <p class="text-xs text-gray-400 uppercase tracking-wide">Recent sessions</p>
+      <a href="/insights/sessions" class="text-xs text-[#378ADD] hover:underline">View all →</a>
+    </div>
+    <div class="card bg-white"><div class="card-body p-0 overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="border-b border-gray-100 text-xs text-gray-400 uppercase tracking-wide">
+            <th class="text-left px-4 py-3 font-medium">Source</th>
+            <th class="text-left px-4 py-3 font-medium">Summary</th>
+            <th class="text-left px-4 py-3 font-medium">Status</th>
+            <th class="text-right px-4 py-3 font-medium hidden sm:table-cell">Last interaction</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-50">
+          {% for s in sessions_preview %}
+          <tr class="hover:bg-gray-50">
+            <td class="px-4 py-2.5 text-gray-700 font-medium">{{ s.source or "—" }}</td>
+            <td class="px-4 py-2.5 text-gray-500 max-w-xs truncate">{{ s.summary or "—" }}</td>
+            <td class="px-4 py-2.5">
+              {% if s.finished_at %}
+              <span class="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-500">finished</span>
+              {% else %}
+              <span class="text-[10px] px-1.5 py-0.5 rounded bg-[#EAF3DE] text-[#639922]">active</span>
+              {% endif %}
+            </td>
+            <td class="px-4 py-2.5 text-right text-gray-400 text-xs hidden sm:table-cell">{{ s.last_interaction_at[:16].replace("T", " ") }}</td>
           </tr>
           {% endfor %}
         </tbody>
@@ -453,5 +576,7 @@ function bar(id, data, key, title) {
 {% endif %}
 {% if cmd_by_name %}bar("chart-cmd-name", {{ cmd_by_name | tojson }}, "cmd-name", "Commands");{% endif %}
 {% if embedding_calls_by_feature %}bar("chart-embedding-feature", {{ embedding_calls_by_feature | tojson }}, "embedding-feature", "By feature");{% endif %}
+{% if messages_by_role %}donut("chart-messages-role", {{ messages_by_role | tojson }}, "messages-role", "Messages by role");{% endif %}
+{% if sessions_by_source %}donut("chart-sessions-source", {{ sessions_by_source | tojson }}, "sessions-source", "Sessions by source");{% endif %}
 </script>
 {% endblock %}

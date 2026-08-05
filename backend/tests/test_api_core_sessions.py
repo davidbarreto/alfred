@@ -57,6 +57,14 @@ class TestListSessions:
         filters = mock_service.list.call_args[0][0]
         assert filters.active_only is True
 
+    def test_passes_source_q_skip_and_limit_filters(self, client, mock_service):
+        client.get("/core/sessions/?source=telegram&q=briefing&skip=20&limit=21", headers=AUTH)
+        filters = mock_service.list.call_args[0][0]
+        assert filters.source == "telegram"
+        assert filters.q == "briefing"
+        assert filters.skip == 20
+        assert filters.limit == 21
+
 
 class TestGetSession:
     def test_returns_session(self, client):

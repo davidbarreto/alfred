@@ -166,6 +166,128 @@
       }
     },
     {
+      "name": "03a - Sessions - Filter by Source",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('All sessions have source telegram', () => {",
+              "    pm.response.json().forEach(s => pm.expect(s.source).to.eql('telegram'));",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/core/sessions/?source=telegram",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "core",
+            "sessions",
+            ""
+          ],
+          "query": [
+            {
+              "key": "source",
+              "value": "telegram"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "03b - Sessions - Search Summary",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('All sessions have a summary containing the search text', () => {",
+              "    pm.response.json().forEach(s => pm.expect((s.summary || '').toLowerCase()).to.include('briefing'));",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/core/sessions/?q=briefing",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "core",
+            "sessions",
+            ""
+          ],
+          "query": [
+            {
+              "key": "q",
+              "value": "briefing"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "03c - Sessions - Pagination with Skip",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Returns at most the requested page size, newest first', () => {",
+              "    const body = pm.response.json();",
+              "    pm.expect(body.length).to.be.at.most(2);",
+              "    for (let i = 1; i < body.length; i++) {",
+              "        pm.expect(new Date(body[i - 1].created_at).getTime()).to.be.at.least(new Date(body[i].created_at).getTime());",
+              "    }",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/core/sessions/?skip=0&limit=2",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "core",
+            "sessions",
+            ""
+          ],
+          "query": [
+            {
+              "key": "skip",
+              "value": "0"
+            },
+            {
+              "key": "limit",
+              "value": "2"
+            }
+          ]
+        }
+      }
+    },
+    {
       "name": "04 - Sessions - Get by ID",
       "event": [
         {
@@ -371,6 +493,128 @@
             {
               "key": "session_id",
               "value": "{{core_session_id}}"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "12a - Messages - Filter by Role",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('All messages have role user', () => {",
+              "    pm.response.json().forEach(m => pm.expect(m.role).to.eql('user'));",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/core/messages/?role=user",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "core",
+            "messages",
+            ""
+          ],
+          "query": [
+            {
+              "key": "role",
+              "value": "user"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "12b - Messages - Search Content",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('All messages contain the search text', () => {",
+              "    pm.response.json().forEach(m => pm.expect(m.content.toLowerCase()).to.include('hello'));",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/core/messages/?q=hello",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "core",
+            "messages",
+            ""
+          ],
+          "query": [
+            {
+              "key": "q",
+              "value": "hello"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "12c - Messages - Pagination with Skip",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Returns at most the requested page size, newest first', () => {",
+              "    const body = pm.response.json();",
+              "    pm.expect(body.length).to.be.at.most(2);",
+              "    for (let i = 1; i < body.length; i++) {",
+              "        pm.expect(new Date(body[i - 1].created_at).getTime()).to.be.at.least(new Date(body[i].created_at).getTime());",
+              "    }",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/core/messages/?skip=0&limit=2",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "core",
+            "messages",
+            ""
+          ],
+          "query": [
+            {
+              "key": "skip",
+              "value": "0"
+            },
+            {
+              "key": "limit",
+              "value": "2"
             }
           ]
         }
@@ -1551,8 +1795,14 @@
             ""
           ],
           "query": [
-            { "key": "skip", "value": "0" },
-            { "key": "limit", "value": "50" }
+            {
+              "key": "skip",
+              "value": "0"
+            },
+            {
+              "key": "limit",
+              "value": "50"
+            }
           ]
         }
       }

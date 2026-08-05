@@ -28,3 +28,8 @@ class SessionUpdate(BaseModel):
 
 class SessionFilters(BaseModel):
     active_only: bool = False
+    source: Optional[str] = None
+    external_id: Optional[str] = None
+    q: Optional[str] = None
+    skip: Optional[int] = None
+    limit: Optional[int] = None

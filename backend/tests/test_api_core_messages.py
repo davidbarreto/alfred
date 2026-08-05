@@ -138,6 +138,14 @@ class TestListMessages:
         assert filters.source == "web"
         assert filters.external_id == "portal"
 
+    def test_passes_role_q_skip_and_limit_filters(self, client, mock_message_service):
+        client.get("/core/messages/?role=assistant&q=milk&skip=20&limit=21", headers=AUTH)
+        filters = mock_message_service.list.call_args[0][0]
+        assert filters.role == "assistant"
+        assert filters.q == "milk"
+        assert filters.skip == 20
+        assert filters.limit == 21
+
     def test_requires_auth(self, client):
         assert client.get("/core/messages/").status_code == 403
 

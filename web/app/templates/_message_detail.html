@@ -1,0 +1,36 @@
+{% if message %}
+<div class="space-y-4">
+  <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs">
+    <div>
+      <p class="text-gray-400 uppercase tracking-wide">Role</p>
+      <p class="text-gray-800 font-medium mt-0.5">{{ message.role }}</p>
+    </div>
+    <div>
+      <p class="text-gray-400 uppercase tracking-wide">Session</p>
+      <p class="text-gray-800 font-medium mt-0.5">#{{ message.session_id }}</p>
+    </div>
+    <div>
+      <p class="text-gray-400 uppercase tracking-wide">Created</p>
+      <p class="text-gray-800 font-medium mt-0.5">{{ message.created_at[:19].replace("T", " ") }}</p>
+    </div>
+  </div>
+
+  <div>
+    <p class="text-xs text-gray-400 uppercase tracking-wide mb-1.5">Content</p>
+    <div class="bg-gray-50 border border-gray-100 rounded-lg p-2.5">
+      <p class="text-xs text-gray-700 whitespace-pre-wrap">{{ message.content }}</p>
+    </div>
+  </div>
+
+  {% if message.meta %}
+  <div>
+    <p class="text-xs text-gray-400 uppercase tracking-wide mb-1.5">Metadata</p>
+    <pre class="bg-gray-50 border border-gray-100 rounded-lg p-2.5 text-xs text-gray-700 overflow-x-auto whitespace-pre-wrap">{{ message.meta | tojson(indent=2) }}</pre>
+  </div>
+  {% endif %}
+
+  <a href="/insights/messages?session_id={{ message.session_id }}" class="text-xs text-[#378ADD] hover:underline">View all messages in this session →</a>
+</div>
+{% else %}
+<p class="text-sm text-gray-400 py-3 text-center">Failed to load message.</p>
+{% endif %}

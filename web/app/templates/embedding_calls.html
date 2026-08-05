@@ -1,23 +1,14 @@
 {% extends "base.html" %}
-{% block title %}LLM Calls{% endblock %}
+{% block title %}Embedding Calls{% endblock %}
 
 {% block content %}
 <div class="p-6 space-y-4">
   <a href="/insights" class="text-xs text-[#378ADD] hover:underline">← Insights</a>
-  <h1 class="text-base font-semibold text-gray-900">LLM Calls</h1>
+  <h1 class="text-base font-semibold text-gray-900">Embedding Calls</h1>
+  <p class="text-xs text-gray-400">Every vector search: what was embedded, the top_k/threshold used, and the cosine similarity of each result. Click a row for the full breakdown.</p>
 
   <!-- Filters — full navigation so active state re-renders server-side -->
-  <form method="get" action="/insights/llm-calls" class="flex flex-wrap gap-3 items-end border-b border-gray-200 pb-4">
-    <div>
-      <label class="text-xs text-gray-500 mb-1 block">Model</label>
-      <select name="model" onchange="this.form.submit()"
-        class="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-[#378ADD]">
-        <option value="">All models</option>
-        {% for m in models %}
-        <option value="{{ m }}" {% if m == model %}selected{% endif %}>{{ m }}</option>
-        {% endfor %}
-      </select>
-    </div>
+  <form method="get" action="/insights/embedding-calls" class="flex flex-wrap gap-3 items-end border-b border-gray-200 pb-4">
     <div>
       <label class="text-xs text-gray-500 mb-1 block">Feature</label>
       <select name="feature" onchange="this.form.submit()"
@@ -29,14 +20,14 @@
       </select>
     </div>
     <div class="flex-1 min-w-[180px]">
-      <label class="text-xs text-gray-500 mb-1 block">Search response</label>
-      <input type="text" name="q" value="{{ q }}" placeholder="Search response text…"
+      <label class="text-xs text-gray-500 mb-1 block">Search query text</label>
+      <input type="text" name="q" value="{{ q }}" placeholder="Search queries…"
         class="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white w-full focus:outline-none focus:ring-1 focus:ring-[#378ADD]" />
     </div>
     <div class="flex gap-2">
       <button type="submit" class="btn btn-sm btn-primary">Filter</button>
-      {% if model or feature or q %}
-      <a href="/insights/llm-calls" class="btn btn-sm btn-ghost text-gray-500">Clear</a>
+      {% if feature or q %}
+      <a href="/insights/embedding-calls" class="btn btn-sm btn-ghost text-gray-500">Clear</a>
       {% endif %}
     </div>
   </form>
@@ -46,10 +37,12 @@
     <table class="w-full text-sm">
       <thead>
         <tr class="border-b border-gray-100 text-xs text-gray-400 uppercase tracking-wide">
-          <th class="text-left px-4 py-3 font-medium">Model</th>
           <th class="text-left px-4 py-3 font-medium">Feature</th>
-          <th class="text-right px-4 py-3 font-medium">Tokens in</th>
-          <th class="text-right px-4 py-3 font-medium">Tokens out</th>
+          <th class="text-left px-4 py-3 font-medium">Query</th>
+          <th class="text-right px-4 py-3 font-medium">top_k</th>
+          <th class="text-right px-4 py-3 font-medium">Threshold</th>
+          <th class="text-right px-4 py-3 font-medium">Results</th>
+          <th class="text-right px-4 py-3 font-medium">Top similarity</th>
           <th class="text-right px-4 py-3 font-medium">Latency</th>
           <th class="text-right px-4 py-3 font-medium">When</th>
         </tr>
@@ -57,16 +50,20 @@
       <tbody class="divide-y divide-gray-50">
         {% for c in calls %}
         <tr class="hover:bg-gray-50 cursor-pointer"
-            hx-get="/insights/llm-calls/{{ c.id }}/detail"
-            hx-target="#llm-call-detail-content"
+            hx-get="/insights/embedding-calls/{{ c.id }}/detail"
+            hx-target="#embedding-call-detail-content"
             hx-swap="innerHTML"
-            hx-on::after-request="document.getElementById('llm-call-detail-modal').showModal()">
-          <td class="px-4 py-2.5 text-gray-700 font-medium">{{ c.model }}</td>
+            hx-on::after-request="document.getElementById('embedding-call-detail-modal').showModal()">
           <td class="px-4 py-2.5">
             <span class="text-[10px] px-1.5 py-0.5 rounded bg-[#E6F1FB] text-[#0C447C]">{{ c.feature }}</span>
           </td>
-          <td class="px-4 py-2.5 text-right text-gray-500">{{ c.tokens_input or "—" }}</td>
-          <td class="px-4 py-2.5 text-right text-gray-500">{{ c.tokens_output or "—" }}</td>
+          <td class="px-4 py-2.5 text-gray-700 max-w-xs truncate">{{ c.query_text }}</td>
+          <td class="px-4 py-2.5 text-right text-gray-500">{{ c.top_k }}</td>
+          <td class="px-4 py-2.5 text-right text-gray-500">{{ c.threshold }}</td>
+          <td class="px-4 py-2.5 text-right text-gray-500">{{ c.result_count }}</td>
+          <td class="px-4 py-2.5 text-right text-gray-500">
+            {% if c.results %}{{ "%.4f" | format(c.results[0].similarity) }}{% else %}—{% endif %}
+          </td>
           <td class="px-4 py-2.5 text-right text-gray-400">
             {% if c.latency_ms %}{{ c.latency_ms }} ms{% else %}—{% endif %}
           </td>
@@ -79,27 +76,27 @@
 
   <div class="flex justify-between items-center">
     {% if has_prev %}
-    <a href="/insights/llm-calls?offset={{ offset - 20 }}{% if filter_qs %}&{{ filter_qs }}{% endif %}"
+    <a href="/insights/embedding-calls?offset={{ offset - 20 }}{% if filter_qs %}&{{ filter_qs }}{% endif %}"
       class="px-3 py-1.5 rounded text-xs font-medium text-gray-600 bg-white border border-gray-200 hover:border-gray-300">← Prev</a>
     {% else %}<span></span>{% endif %}
     {% if has_next %}
-    <a href="/insights/llm-calls?offset={{ offset + 20 }}{% if filter_qs %}&{{ filter_qs }}{% endif %}"
+    <a href="/insights/embedding-calls?offset={{ offset + 20 }}{% if filter_qs %}&{{ filter_qs }}{% endif %}"
       class="px-3 py-1.5 rounded text-xs font-medium text-gray-600 bg-white border border-gray-200 hover:border-gray-300">Next →</a>
     {% else %}<span></span>{% endif %}
   </div>
   {% else %}
-  <div class="card bg-white"><div class="card-body p-6 text-center text-sm text-gray-400">No LLM calls found.</div></div>
+  <div class="card bg-white"><div class="card-body p-6 text-center text-sm text-gray-400">No embedding calls found.</div></div>
   {% endif %}
 </div>
 
-<!-- LLM call detail modal -->
-<dialog id="llm-call-detail-modal" class="modal">
+<!-- Embedding call detail modal -->
+<dialog id="embedding-call-detail-modal" class="modal">
   <div class="modal-box bg-white rounded-xl border border-gray-200 shadow-lg max-w-2xl w-full p-4 sm:p-6 max-h-[85vh] overflow-y-auto">
     <div class="flex items-center justify-between mb-4">
-      <h3 class="text-sm font-semibold text-gray-900">LLM call detail</h3>
-      <button onclick="document.getElementById('llm-call-detail-modal').close()" class="text-gray-400 hover:text-gray-600"><i class="ti ti-x"></i></button>
+      <h3 class="text-sm font-semibold text-gray-900">Embedding call detail</h3>
+      <button onclick="document.getElementById('embedding-call-detail-modal').close()" class="text-gray-400 hover:text-gray-600"><i class="ti ti-x"></i></button>
     </div>
-    <div id="llm-call-detail-content"></div>
+    <div id="embedding-call-detail-content"></div>
   </div>
   <form method="dialog" class="modal-backdrop"><button>close</button></form>
 </dialog>

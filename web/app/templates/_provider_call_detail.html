@@ -1,0 +1,53 @@
+{% if call %}
+<div class="space-y-4">
+  <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs">
+    <div>
+      <p class="text-gray-400 uppercase tracking-wide">Provider</p>
+      <p class="text-gray-800 font-medium mt-0.5">{{ call.provider }}</p>
+    </div>
+    <div>
+      <p class="text-gray-400 uppercase tracking-wide">Operation</p>
+      <p class="text-gray-800 font-medium mt-0.5">{{ call.operation }}</p>
+    </div>
+    <div>
+      <p class="text-gray-400 uppercase tracking-wide">Status</p>
+      <p class="text-gray-800 font-medium mt-0.5">{{ call.status }}</p>
+    </div>
+    <div>
+      <p class="text-gray-400 uppercase tracking-wide">Entity type</p>
+      <p class="text-gray-800 font-medium mt-0.5">{{ call.entity_type }}</p>
+    </div>
+    <div>
+      <p class="text-gray-400 uppercase tracking-wide">Entity ID</p>
+      <p class="text-gray-800 font-medium mt-0.5">{{ call.provider_entity_id or "—" }}</p>
+    </div>
+  </div>
+
+  {% if call.error %}
+  <div>
+    <p class="text-xs text-gray-400 uppercase tracking-wide mb-1.5">Error</p>
+    <div class="bg-[#FCEBEB] border border-[#E24B4A]/20 rounded-lg p-2.5">
+      <p class="text-xs text-[#E24B4A] whitespace-pre-wrap">{{ call.error }}</p>
+    </div>
+  </div>
+  {% endif %}
+
+  {% if call.request_payload %}
+  <div>
+    <p class="text-xs text-gray-400 uppercase tracking-wide mb-1.5">Request payload</p>
+    <pre class="bg-gray-50 border border-gray-100 rounded-lg p-2.5 text-xs text-gray-700 overflow-x-auto whitespace-pre-wrap">{{ call.request_payload | tojson(indent=2) }}</pre>
+  </div>
+  {% endif %}
+
+  {% if call.response_payload %}
+  <div>
+    <p class="text-xs text-gray-400 uppercase tracking-wide mb-1.5">Response payload</p>
+    <pre class="bg-gray-50 border border-gray-100 rounded-lg p-2.5 text-xs text-gray-700 overflow-x-auto whitespace-pre-wrap">{{ call.response_payload | tojson(indent=2) }}</pre>
+  </div>
+  {% endif %}
+
+  <p class="text-[10px] text-gray-300">{{ call.created_at[:19].replace("T", " ") }}</p>
+</div>
+{% else %}
+<p class="text-sm text-gray-400 py-3 text-center">Failed to load call.</p>
+{% endif %}

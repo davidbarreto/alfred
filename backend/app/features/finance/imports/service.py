@@ -383,6 +383,7 @@ class ImportService:
                         source_types=[TRANSACTION_SOURCE_TYPE],
                         limit=_KNN_LIMIT,
                         threshold=_KNN_THRESHOLD,
+                        feature="finance_category_match",
                     )
                 )
             except Exception as exc:

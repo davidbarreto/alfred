@@ -27,6 +27,7 @@ class EmbeddingSearchRequest(BaseModel):
     source_types: Optional[list[str]] = None
     limit: int = Field(default=10, ge=1, le=100)
     threshold: float = Field(default=0.7, ge=0.0, le=1.0)
+    feature: str = "api"
 
 
 class EmbeddingSearchResult(BaseModel):

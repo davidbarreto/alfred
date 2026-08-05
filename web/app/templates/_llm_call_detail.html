@@ -1,0 +1,61 @@
+{% if call %}
+<div class="space-y-4">
+  <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+    <div>
+      <p class="text-gray-400 uppercase tracking-wide">Provider</p>
+      <p class="text-gray-800 font-medium mt-0.5">{{ call.provider }}</p>
+    </div>
+    <div>
+      <p class="text-gray-400 uppercase tracking-wide">Model</p>
+      <p class="text-gray-800 font-medium mt-0.5">{{ call.model }}</p>
+    </div>
+    <div>
+      <p class="text-gray-400 uppercase tracking-wide">Feature</p>
+      <p class="text-gray-800 font-medium mt-0.5">{{ call.feature }}</p>
+    </div>
+    <div>
+      <p class="text-gray-400 uppercase tracking-wide">Latency</p>
+      <p class="text-gray-800 font-medium mt-0.5">{% if call.latency_ms %}{{ call.latency_ms }} ms{% else %}—{% endif %}</p>
+    </div>
+    <div>
+      <p class="text-gray-400 uppercase tracking-wide">Tokens in</p>
+      <p class="text-gray-800 font-medium mt-0.5">{{ call.tokens_input or "—" }}</p>
+    </div>
+    <div>
+      <p class="text-gray-400 uppercase tracking-wide">Tokens out</p>
+      <p class="text-gray-800 font-medium mt-0.5">{{ call.tokens_output or "—" }}</p>
+    </div>
+    <div>
+      <p class="text-gray-400 uppercase tracking-wide">Finish reason</p>
+      <p class="text-gray-800 font-medium mt-0.5">{{ call.finish_reason or "—" }}</p>
+    </div>
+    <div>
+      <p class="text-gray-400 uppercase tracking-wide">Audio</p>
+      <p class="text-gray-800 font-medium mt-0.5">{{ "yes" if call.is_audio else "no" }}</p>
+    </div>
+  </div>
+
+  <div>
+    <p class="text-xs text-gray-400 uppercase tracking-wide mb-1.5">Prompt</p>
+    <div class="space-y-1.5">
+      {% for msg in call.prompt %}
+      <div class="bg-gray-50 border border-gray-100 rounded-lg p-2.5">
+        <p class="text-[10px] text-gray-400 uppercase tracking-wide mb-1">{{ msg.role if msg is mapping else "message" }}</p>
+        <p class="text-xs text-gray-700 whitespace-pre-wrap">{{ msg.content if msg is mapping else msg }}</p>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div>
+    <p class="text-xs text-gray-400 uppercase tracking-wide mb-1.5">Response</p>
+    <div class="bg-gray-50 border border-gray-100 rounded-lg p-2.5">
+      <p class="text-xs text-gray-700 whitespace-pre-wrap">{{ call.response }}</p>
+    </div>
+  </div>
+
+  <p class="text-[10px] text-gray-300">{{ call.created_at[:19].replace("T", " ") }}</p>
+</div>
+{% else %}
+<p class="text-sm text-gray-400 py-3 text-center">Failed to load call.</p>
+{% endif %}

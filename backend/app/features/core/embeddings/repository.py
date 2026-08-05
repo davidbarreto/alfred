@@ -58,6 +58,22 @@ class EmbeddingRepository:
         await self._session.refresh(embedding)
         return embedding
 
+    async def get_many(
+        self,
+        source_type: str | None = None,
+        q: str | None = None,
+        skip: int = 0,
+        limit: int = 50,
+    ) -> list[Embedding]:
+        query = select(Embedding).order_by(Embedding.embedded_at.desc())
+        if source_type:
+            query = query.where(Embedding.source_type == source_type)
+        if q:
+            query = query.where(Embedding.content.ilike(f"%{q}%"))
+        query = query.offset(skip).limit(limit)
+        result = await self._session.execute(query)
+        return list(result.scalars().all())
+
     async def search(
         self,
         query_vector: list[float],

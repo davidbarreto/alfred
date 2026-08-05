@@ -41,6 +41,7 @@ async def handle_recall(
             # (full note + title) that collapse into one result below.
             limit=_RECALL_LIMIT * 2,
             threshold=_RECALL_THRESHOLD,
+            feature="recall",
         )
     )
     logger.debug("handle_recall: query=%r results=%d", query, len(results))

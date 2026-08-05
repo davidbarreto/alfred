@@ -114,6 +114,7 @@ class MemoryExtractionService:
                 source_types=["memory"],
                 limit=1,
                 threshold=_DEDUP_THRESHOLD,
+                feature="memory_dedup",
             )
         )
 

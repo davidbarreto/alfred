@@ -390,6 +390,7 @@ class ChatService:
                     source_types=["memory", "note", "task"],
                     limit=_MEMORY_LIMIT,
                     threshold=_MEMORY_THRESHOLD,
+                    feature="chat",
                 )
             )
             logger.debug("Chat: %d memory items retrieved", len(memories))
@@ -509,6 +510,7 @@ class ChatService:
                     source_types=["memory", "note", "task"],
                     limit=_MEMORY_LIMIT,
                     threshold=_MEMORY_THRESHOLD,
+                    feature="chat_stream",
                 )
             )
             recent_summaries = await self._session_summary_service.get_recent_summaries(request.session_id)

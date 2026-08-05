@@ -1,0 +1,67 @@
+{% if call %}
+<div class="space-y-4">
+  <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+    <div>
+      <p class="text-gray-400 uppercase tracking-wide">Feature</p>
+      <p class="text-gray-800 font-medium mt-0.5">{{ call.feature }}</p>
+    </div>
+    <div>
+      <p class="text-gray-400 uppercase tracking-wide">top_k</p>
+      <p class="text-gray-800 font-medium mt-0.5">{{ call.top_k }}</p>
+    </div>
+    <div>
+      <p class="text-gray-400 uppercase tracking-wide">Threshold</p>
+      <p class="text-gray-800 font-medium mt-0.5">{{ call.threshold }}</p>
+    </div>
+    <div>
+      <p class="text-gray-400 uppercase tracking-wide">Latency</p>
+      <p class="text-gray-800 font-medium mt-0.5">{% if call.latency_ms %}{{ call.latency_ms }} ms{% else %}—{% endif %}</p>
+    </div>
+    <div class="col-span-2 sm:col-span-4">
+      <p class="text-gray-400 uppercase tracking-wide">Source types</p>
+      <p class="text-gray-800 font-medium mt-0.5">
+        {% if call.source_types %}{{ call.source_types | join(", ") }}{% else %}any{% endif %}
+      </p>
+    </div>
+  </div>
+
+  <div>
+    <p class="text-xs text-gray-400 uppercase tracking-wide mb-1.5">Query</p>
+    <div class="bg-gray-50 border border-gray-100 rounded-lg p-2.5">
+      <p class="text-xs text-gray-700 whitespace-pre-wrap">{{ call.query_text }}</p>
+    </div>
+  </div>
+
+  <div>
+    <p class="text-xs text-gray-400 uppercase tracking-wide mb-1.5">Results ({{ call.result_count }})</p>
+    {% if call.results %}
+    <div class="overflow-x-auto border border-gray-100 rounded-lg">
+      <table class="w-full text-xs">
+        <thead>
+          <tr class="border-b border-gray-100 text-[10px] text-gray-400 uppercase tracking-wide">
+            <th class="text-left px-3 py-2 font-medium">Source</th>
+            <th class="text-left px-3 py-2 font-medium">Content</th>
+            <th class="text-right px-3 py-2 font-medium">Cosine similarity</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-50">
+          {% for r in call.results %}
+          <tr>
+            <td class="px-3 py-2 text-gray-500 whitespace-nowrap">{{ r.source_type }} #{{ r.source_id }}</td>
+            <td class="px-3 py-2 text-gray-700">{{ r.content }}</td>
+            <td class="px-3 py-2 text-right text-gray-700 font-medium">{{ "%.4f" | format(r.similarity) }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+    <p class="text-xs text-gray-400 py-2">No results matched the threshold.</p>
+    {% endif %}
+  </div>
+
+  <p class="text-[10px] text-gray-300">{{ call.created_at[:19].replace("T", " ") }}</p>
+</div>
+{% else %}
+<p class="text-sm text-gray-400 py-3 text-center">Failed to load call.</p>
+{% endif %}

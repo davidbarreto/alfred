@@ -16,6 +16,8 @@ _LLM_CALLS_PREVIEW_SIZE = 5
 _LLM_CALL_OPTIONS_LIMIT = 500
 _PROVIDER_CALLS_PREVIEW_SIZE = 5
 _PROVIDER_CALL_OPTIONS_LIMIT = 500
+_EMBEDDING_CALLS_PREVIEW_SIZE = 5
+_EMBEDDING_CALL_OPTIONS_LIMIT = 500
 _FILTER_OPTIONS_SAMPLE_LIMIT = 200
 
 
@@ -79,7 +81,7 @@ async def delete_working_memory(item_id: int):
 
 @router.get("/", response_class=HTMLResponse)
 async def insights_page(request: Request):
-    memories_raw, working_memories_raw, llm_calls, provider_calls, cmd_executions = [], [], [], [], []
+    memories_raw, working_memories_raw, llm_calls, provider_calls, cmd_executions, embedding_calls = [], [], [], [], [], []
 
     for path, params, target in [
         ("/core/memories", {"limit": 200}, "memories"),
@@ -87,6 +89,7 @@ async def insights_page(request: Request):
         ("/integration/llm-calls", {"limit": 200}, "llm_calls"),
         ("/integration/provider-calls", {"limit": 200}, "provider_calls"),
         ("/core/command-executions", {"limit": 200}, "cmd_executions"),
+        ("/integration/embedding-calls", {"limit": 200}, "embedding_calls"),
     ]:
         try:
             result = await api.get(path, params=params)
@@ -95,6 +98,7 @@ async def insights_page(request: Request):
             elif target == "llm_calls":       llm_calls = result
             elif target == "provider_calls":  provider_calls = result
             elif target == "cmd_executions":  cmd_executions = result
+            elif target == "embedding_calls": embedding_calls = result
         except httpx.HTTPError:
             pass
 
@@ -120,6 +124,9 @@ async def insights_page(request: Request):
     cmd_by_name = dict(Counter(c["command_name"] for c in cmd_executions).most_common(10))
     cmd_by_status = dict(Counter(c["status"] for c in cmd_executions).most_common())
 
+    # ── Embedding call aggregations ───────────────────────────────
+    embedding_calls_by_feature = dict(Counter(c["feature"] for c in embedding_calls).most_common(10))
+
     # ── Previews ────────────────────────────────────────────────
     wm_preview = await _resolve_working_memory(working_memories_raw[:_PREVIEW_SIZE])
     memories_preview = memories_raw[:_PREVIEW_SIZE]
@@ -138,6 +145,9 @@ async def insights_page(request: Request):
         "total_tokens": total_tokens_in + total_tokens_out,
         "total_provider_calls": len(provider_calls),
         "avg_latency_ms": round(avg_latency),
+        # embedding calls
+        "embedding_calls": embedding_calls[:_EMBEDDING_CALLS_PREVIEW_SIZE],
+        "total_embedding_calls": len(embedding_calls),
         # chart data
         "llm_by_model": llm_by_model,
         "llm_by_feature": llm_by_feature,
@@ -146,6 +156,7 @@ async def insights_page(request: Request):
         "provider_by_status": provider_by_status,
         "cmd_by_name": cmd_by_name,
         "cmd_by_status": cmd_by_status,
+        "embedding_calls_by_feature": embedding_calls_by_feature,
     })
 
 
@@ -352,5 +363,125 @@ async def provider_calls_page(request: Request):
         "operations": operations,
         "entity_types": entity_types,
         "statuses": statuses,
+        "filter_qs": filter_qs,
+    })
+
+
+@router.get("/llm-calls/{call_id}/detail", response_class=HTMLResponse)
+async def llm_call_detail(call_id: int, request: Request):
+    try:
+        call = await api.get(f"/integration/llm-calls/{call_id}")
+    except httpx.HTTPError:
+        return HTMLResponse('<p class="text-[#E24B4A] text-sm">Failed to load call.</p>', status_code=422)
+    return templates.TemplateResponse(request, "_llm_call_detail.html", {"call": call})
+
+
+@router.get("/provider-calls/{call_id}/detail", response_class=HTMLResponse)
+async def provider_call_detail(call_id: int, request: Request):
+    try:
+        call = await api.get(f"/integration/provider-calls/{call_id}")
+    except httpx.HTTPError:
+        return HTMLResponse('<p class="text-[#E24B4A] text-sm">Failed to load call.</p>', status_code=422)
+    return templates.TemplateResponse(request, "_provider_call_detail.html", {"call": call})
+
+
+async def _embedding_call_filter_options() -> list[str]:
+    """Distinct features for the filter dropdown, from a recent sample of calls."""
+    try:
+        raw = await api.get("/integration/embedding-calls", params={"limit": _EMBEDDING_CALL_OPTIONS_LIMIT})
+    except httpx.HTTPError:
+        raw = []
+    return sorted({c["feature"] for c in raw})
+
+
+@router.get("/embedding-calls", response_class=HTMLResponse)
+async def embedding_calls_page(request: Request):
+    offset = max(0, int(request.query_params.get("offset", "0")))
+    feature = request.query_params.get("feature", "").strip()
+    q = request.query_params.get("q", "").strip()
+
+    params: dict = {"limit": _PAGE_SIZE + 1, "skip": offset}
+    if feature:
+        params["feature"] = feature
+    if q:
+        params["q"] = q
+
+    try:
+        raw = await api.get("/integration/embedding-calls", params=params)
+    except httpx.HTTPError:
+        raw = []
+
+    calls, has_next, has_prev = _pagination(raw, offset)
+    features = await _embedding_call_filter_options()
+    filter_qs = urlencode({k: v for k, v in {"feature": feature, "q": q}.items() if v})
+
+    return templates.TemplateResponse(request, "embedding_calls.html", {
+        "calls": calls,
+        "offset": offset,
+        "has_next": has_next,
+        "has_prev": has_prev,
+        "feature": feature,
+        "q": q,
+        "features": features,
+        "filter_qs": filter_qs,
+    })
+
+
+@router.get("/embedding-calls/{call_id}/detail", response_class=HTMLResponse)
+async def embedding_call_detail(call_id: int, request: Request):
+    try:
+        call = await api.get(f"/integration/embedding-calls/{call_id}")
+    except httpx.HTTPError:
+        return HTMLResponse('<p class="text-[#E24B4A] text-sm">Failed to load call.</p>', status_code=422)
+    return templates.TemplateResponse(request, "_embedding_call_detail.html", {"call": call})
+
+
+async def _embedding_source_type_options() -> list[str]:
+    """Distinct source types for the filter dropdown, from a recent sample of embeddings."""
+    try:
+        raw = await api.get("/core/embeddings", params={"limit": _FILTER_OPTIONS_SAMPLE_LIMIT})
+    except httpx.HTTPError:
+        raw = []
+    return sorted({e["source_type"] for e in raw})
+
+
+@router.delete("/embeddings/{embedding_id}", response_class=HTMLResponse)
+async def delete_embedding(embedding_id: int):
+    try:
+        await api.delete(f"/core/embeddings/{embedding_id}")
+    except httpx.HTTPError:
+        return HTMLResponse('<p class="text-[#E24B4A] text-sm">Failed to delete embedding.</p>', status_code=422)
+    return HTMLResponse("")
+
+
+@router.get("/embeddings", response_class=HTMLResponse)
+async def embeddings_page(request: Request):
+    offset = max(0, int(request.query_params.get("offset", "0")))
+    source_type = request.query_params.get("source_type", "").strip()
+    q = request.query_params.get("q", "").strip()
+
+    params: dict = {"limit": _PAGE_SIZE + 1, "skip": offset}
+    if source_type:
+        params["source_type"] = source_type
+    if q:
+        params["q"] = q
+
+    try:
+        raw = await api.get("/core/embeddings", params=params)
+    except httpx.HTTPError:
+        raw = []
+
+    items, has_next, has_prev = _pagination(raw, offset)
+    source_types = await _embedding_source_type_options()
+    filter_qs = urlencode({k: v for k, v in {"source_type": source_type, "q": q}.items() if v})
+
+    return templates.TemplateResponse(request, "embeddings.html", {
+        "items": items,
+        "offset": offset,
+        "has_next": has_next,
+        "has_prev": has_prev,
+        "source_type": source_type,
+        "q": q,
+        "source_types": source_types,
         "filter_qs": filter_qs,
     })

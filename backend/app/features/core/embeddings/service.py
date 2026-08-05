@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import time
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -13,6 +14,7 @@ from app.features.core.embeddings.schemas import (
     EmbeddingSearchRequest,
     EmbeddingSearchResult,
 )
+from app.integrations.embedding_calls.repository import create_embedding_call
 from app.shared.embedding import EmbeddingProvider
 
 logger = logging.getLogger(__name__)
@@ -27,6 +29,7 @@ _background_tasks: set[asyncio.Task] = set()
 
 class EmbeddingService:
     def __init__(self, session: AsyncSession, provider: EmbeddingProvider) -> None:
+        self._session = session
         self._repo = EmbeddingRepository(session)
         self._provider = provider
 
@@ -113,6 +116,7 @@ class EmbeddingService:
         return results
 
     async def search(self, request: EmbeddingSearchRequest) -> list[EmbeddingSearchResult]:
+        t0 = time.monotonic()
         query_vector = await self._provider.embed(request.query)
         rows = await self._repo.search(
             query_vector=query_vector,
@@ -127,8 +131,30 @@ class EmbeddingService:
             )
             for obj, similarity in rows
         ]
+        latency_ms = int((time.monotonic() - t0) * 1000)
         logger.debug("Embedding search: source_types=%s limit=%d threshold=%s results=%d", request.source_types, request.limit, request.threshold, len(results))
+        await create_embedding_call(
+            self._session,
+            feature=request.feature,
+            query_text=request.query,
+            source_types=request.source_types,
+            top_k=request.limit,
+            threshold=request.threshold,
+            results=[r.model_dump(mode="json") for r in results],
+            result_count=len(results),
+            latency_ms=latency_ms,
+        )
         return results
+
+    async def list(
+        self,
+        source_type: str | None = None,
+        q: str | None = None,
+        skip: int = 0,
+        limit: int = 50,
+    ) -> list[EmbeddingRead]:
+        objs = await self._repo.get_many(source_type=source_type, q=q, skip=skip, limit=limit)
+        return [EmbeddingRead.model_validate(obj) for obj in objs]
 
     async def delete(self, embedding_id: int) -> bool:
         deleted = await self._repo.delete(embedding_id)

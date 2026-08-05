@@ -228,6 +228,71 @@
     {% endif %}
   </section>
 
+  <!-- ── Embedding Calls ────────────────────────────────────── -->
+  <section>
+    <div class="flex items-center justify-between mb-3">
+      <h2 class="text-sm font-medium text-gray-900">Embedding Calls</h2>
+      <div class="flex items-center gap-3">
+        <a href="/insights/embeddings" class="text-xs text-[#378ADD] hover:underline">Browse embeddings →</a>
+        <span class="text-xs text-gray-400">{{ total_embedding_calls }} total</span>
+      </div>
+    </div>
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div class="card bg-white sm:col-span-1">
+        {% if embedding_calls_by_feature %}
+        <div class="card-body p-4 cursor-pointer relative group" onclick="openChartModal('embedding-feature')">
+          <i class="ti ti-arrows-maximize text-gray-300 group-hover:text-gray-500 absolute top-3 right-3 text-sm"></i>
+          <p class="text-xs text-gray-400 uppercase tracking-wide mb-3 grow-0">By feature</p>
+          <div class="relative h-44">
+            <canvas id="chart-embedding-feature"></canvas>
+          </div>
+        </div>
+        {% else %}
+        <div class="card-body p-4">
+          <p class="text-xs text-gray-400 uppercase tracking-wide mb-3">By feature</p>
+          <p class="text-sm text-gray-300 py-6 text-center">No data</p>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Recent embedding calls preview -->
+    {% if embedding_calls %}
+    <div class="flex items-center justify-between mt-4 mb-2">
+      <p class="text-xs text-gray-400 uppercase tracking-wide">Recent calls</p>
+      <a href="/insights/embedding-calls" class="text-xs text-[#378ADD] hover:underline">View all →</a>
+    </div>
+    <div class="card bg-white"><div class="card-body p-0 overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="border-b border-gray-100 text-xs text-gray-400 uppercase tracking-wide">
+            <th class="text-left px-4 py-3 font-medium">Feature</th>
+            <th class="text-left px-4 py-3 font-medium">Query</th>
+            <th class="text-right px-4 py-3 font-medium">Results</th>
+            <th class="text-right px-4 py-3 font-medium hidden sm:table-cell">Top similarity</th>
+            <th class="text-right px-4 py-3 font-medium hidden sm:table-cell">When</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-50">
+          {% for c in embedding_calls %}
+          <tr class="hover:bg-gray-50">
+            <td class="px-4 py-2.5">
+              <span class="text-[10px] px-1.5 py-0.5 rounded bg-[#E6F1FB] text-[#0C447C]">{{ c.feature }}</span>
+            </td>
+            <td class="px-4 py-2.5 text-gray-700 max-w-xs truncate">{{ c.query_text }}</td>
+            <td class="px-4 py-2.5 text-right text-gray-500">{{ c.result_count }}</td>
+            <td class="px-4 py-2.5 text-right text-gray-500 hidden sm:table-cell">
+              {% if c.results %}{{ "%.4f" | format(c.results[0].similarity) }}{% else %}—{% endif %}
+            </td>
+            <td class="px-4 py-2.5 text-right text-gray-400 text-xs hidden sm:table-cell">{{ c.created_at[:16].replace("T", " ") }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div></div>
+    {% endif %}
+  </section>
+
   <!-- ── Working Memory ──────────────────────────────────────── -->
   <section>
     <div class="flex items-center justify-between mb-3">
@@ -387,5 +452,6 @@ function bar(id, data, key, title) {
   registerChart("provider-status", "By status", "doughnut", statusData, statusColors);
 {% endif %}
 {% if cmd_by_name %}bar("chart-cmd-name", {{ cmd_by_name | tojson }}, "cmd-name", "Commands");{% endif %}
+{% if embedding_calls_by_feature %}bar("chart-embedding-feature", {{ embedding_calls_by_feature | tojson }}, "embedding-feature", "By feature");{% endif %}
 </script>
 {% endblock %}

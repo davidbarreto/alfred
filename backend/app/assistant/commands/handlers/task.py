@@ -60,7 +60,7 @@ async def handle_task(
         if embedding_service is None:
             raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Embedding service not available")
         results = await embedding_service.search(
-            EmbeddingSearchRequest(query=query, source_types=["task"], limit=10, threshold=0.4)
+            EmbeddingSearchRequest(query=query, source_types=["task"], limit=10, threshold=0.4, feature="task_search")
         )
         logger.debug("handle_task search: query=%r results=%d", query, len(results))
         return [{"source_id": r.source_id, "content": r.content, "similarity": r.similarity} for r in results]

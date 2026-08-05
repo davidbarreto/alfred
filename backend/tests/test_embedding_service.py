@@ -284,6 +284,65 @@ class TestSearchMethod:
         assert results == []
 
 
+class TestSearchMethodLogging:
+    @pytest.mark.asyncio
+    async def test_logs_embedding_call_with_params_and_results(self):
+        orm_obj = _make_embedding_orm()
+        session = AsyncMock()
+        provider = _make_provider()
+
+        with patch(
+            "app.features.core.embeddings.service.EmbeddingRepository"
+        ) as MockRepo, patch(
+            "app.features.core.embeddings.service.create_embedding_call"
+        ) as mock_create_call:
+            mock_create_call.return_value = AsyncMock()
+            repo_instance = MockRepo.return_value
+            repo_instance.search = AsyncMock(return_value=[(orm_obj, 0.92)])
+
+            service = EmbeddingService(session, provider)
+            await service.search(
+                EmbeddingSearchRequest(
+                    query="test query",
+                    source_types=["memory"],
+                    limit=5,
+                    threshold=0.7,
+                    feature="chat",
+                )
+            )
+
+        mock_create_call.assert_awaited_once()
+        _, kwargs = mock_create_call.call_args
+        assert kwargs["feature"] == "chat"
+        assert kwargs["query_text"] == "test query"
+        assert kwargs["source_types"] == ["memory"]
+        assert kwargs["top_k"] == 5
+        assert kwargs["threshold"] == 0.7
+        assert kwargs["result_count"] == 1
+        assert kwargs["results"][0]["similarity"] == 0.92
+        assert kwargs["latency_ms"] is not None
+
+    @pytest.mark.asyncio
+    async def test_defaults_feature_to_api(self):
+        session = AsyncMock()
+        provider = _make_provider()
+
+        with patch(
+            "app.features.core.embeddings.service.EmbeddingRepository"
+        ) as MockRepo, patch(
+            "app.features.core.embeddings.service.create_embedding_call"
+        ) as mock_create_call:
+            mock_create_call.return_value = AsyncMock()
+            repo_instance = MockRepo.return_value
+            repo_instance.search = AsyncMock(return_value=[])
+
+            service = EmbeddingService(session, provider)
+            await service.search(EmbeddingSearchRequest(query="q"))
+
+        _, kwargs = mock_create_call.call_args
+        assert kwargs["feature"] == "api"
+
+
 class TestDeleteMethod:
     @pytest.mark.asyncio
     async def test_returns_true_when_found(self):

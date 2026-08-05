@@ -1,6 +1,6 @@
 import logging
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel
 
 from app.api.auth import require_auth
@@ -13,6 +13,7 @@ from app.features.core.embeddings.schemas import (
 )
 from app.features.organizer.notes.repository import NoteRepository
 from app.features.organizer.notes.schemas import NoteFilters
+from app.features.organizer.notes.service import _has_distinct_title, _note_embed_content
 from app.features.organizer.tasks.repository import TaskRepository
 from app.features.organizer.tasks.schemas import TaskFilters
 
@@ -23,8 +24,20 @@ router = APIRouter(prefix="/core/embeddings", tags=["core"], dependencies=[Depen
 
 class BackfillResponse(BaseModel):
     notes_embedded: int
+    note_titles_embedded: int
     tasks_embedded: int
     errors: int
+
+
+@router.get("", response_model=list[EmbeddingRead])
+async def read_embeddings(
+    service: EmbeddingServiceDep,
+    source_type: str | None = Query(default=None),
+    q: str | None = Query(default=None, description="Search in content"),
+    skip: int = Query(default=0, ge=0),
+    limit: int = Query(default=50, ge=1, le=200),
+):
+    return await service.list(source_type=source_type, q=q, skip=skip, limit=limit)
 
 
 @router.post("", response_model=EmbeddingRead, status_code=status.HTTP_201_CREATED)
@@ -41,15 +54,23 @@ async def search_embeddings(request: EmbeddingSearchRequest, service: EmbeddingS
 async def backfill_embeddings(service: EmbeddingServiceDep, session: DbSessionDep):
     """Embed all existing notes and tasks that are missing embeddings. Safe to re-run (upserts)."""
     notes_embedded = 0
+    note_titles_embedded = 0
     tasks_embedded = 0
     errors = 0
 
-    notes = await NoteRepository(session).get_notes(NoteFilters(limit=10_000))
+    note_repo = NoteRepository(session)
+    notes = [
+        *await note_repo.get_notes(NoteFilters(limit=10_000, archived=False)),
+        *await note_repo.get_notes(NoteFilters(limit=10_000, archived=True)),
+    ]
     for note in notes:
         try:
-            content = f"{note.title}: {note.content}" if note.content and note.content != note.title else note.title
+            content = _note_embed_content(note.title, note.content)
             await service.embed(EmbeddingCreate(source_type="note", source_id=note.id, content=content))
             notes_embedded += 1
+            if _has_distinct_title(note.title, note.content):
+                await service.embed(EmbeddingCreate(source_type="note_title", source_id=note.id, content=note.title))
+                note_titles_embedded += 1
         except Exception as exc:
             logger.warning("Backfill note embed failed: id=%d error=%s", note.id, exc)
             errors += 1
@@ -63,8 +84,16 @@ async def backfill_embeddings(service: EmbeddingServiceDep, session: DbSessionDe
             logger.warning("Backfill task embed failed: id=%d error=%s", task.id, exc)
             errors += 1
 
-    logger.info("Backfill complete: notes=%d tasks=%d errors=%d", notes_embedded, tasks_embedded, errors)
-    return BackfillResponse(notes_embedded=notes_embedded, tasks_embedded=tasks_embedded, errors=errors)
+    logger.info(
+        "Backfill complete: notes=%d note_titles=%d tasks=%d errors=%d",
+        notes_embedded, note_titles_embedded, tasks_embedded, errors,
+    )
+    return BackfillResponse(
+        notes_embedded=notes_embedded,
+        note_titles_embedded=note_titles_embedded,
+        tasks_embedded=tasks_embedded,
+        errors=errors,
+    )
 
 
 @router.delete("/{embedding_id}", status_code=status.HTTP_204_NO_CONTENT)

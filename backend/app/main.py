@@ -24,6 +24,7 @@ from app.api.routes.watcher.alerts import router as alerts_router
 from app.api.routes.watcher.executions import router as executions_router
 from app.api.routes.integrations.provider_calls import router as provider_calls_router
 from app.api.routes.integrations.llm_calls import router as llm_calls_router
+from app.api.routes.integrations.embedding_calls import router as embedding_calls_router
 from app.api.routes.integrations.google_calendar import router as google_calendar_oauth_router
 from app.api.routes.integrations.google_contacts import router as google_contacts_router
 from app.api.routes.integrations.telegram import router as telegram_router
@@ -109,6 +110,7 @@ app.include_router(alerts_router)
 app.include_router(executions_router)
 app.include_router(provider_calls_router)
 app.include_router(llm_calls_router)
+app.include_router(embedding_calls_router)
 app.include_router(google_calendar_oauth_router)
 app.include_router(google_contacts_router)
 app.include_router(telegram_router)

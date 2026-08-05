@@ -254,10 +254,39 @@ class TestNoteEmbedding:
 
         await service_with_embeddings.create_note(NoteCreate(title="T", content="C"))
 
+        call_args = mock_embedding_service.embed_background.call_args_list
+        note_call = next(c[0][0] for c in call_args if c[0][0].source_type == "note")
+        assert note_call.source_id == 5
+
+    async def test_embed_title_separately_on_create_when_distinct(self, service_with_embeddings, mock_provider, mock_embedding_service):
+        mock_provider.create.return_value = {"id": "provider-1"}
+        service_with_embeddings._repo.create_note.return_value = _make_note_orm(id=5, title="T", content="C")
+
+        await service_with_embeddings.create_note(NoteCreate(title="T", content="C"))
+
+        call_args = mock_embedding_service.embed_background.call_args_list
+        assert len(call_args) == 2
+        title_call = next(c[0][0] for c in call_args if c[0][0].source_type == "note_title")
+        assert title_call.source_id == 5
+        assert title_call.content == "T"
+
+    async def test_skips_title_embedding_when_no_content(self, service_with_embeddings, mock_provider, mock_embedding_service):
+        mock_provider.create.return_value = {"id": "provider-1"}
+        service_with_embeddings._repo.create_note.return_value = _make_note_orm(id=5, title="T", content="")
+
+        await service_with_embeddings.create_note(NoteCreate(title="T"))
+
         mock_embedding_service.embed_background.assert_called_once()
-        call_arg = mock_embedding_service.embed_background.call_args[0][0]
-        assert call_arg.source_type == "note"
-        assert call_arg.source_id == 5
+        assert mock_embedding_service.embed_background.call_args[0][0].source_type == "note"
+
+    async def test_skips_title_embedding_when_content_equals_title(self, service_with_embeddings, mock_provider, mock_embedding_service):
+        mock_provider.create.return_value = {"id": "provider-1"}
+        service_with_embeddings._repo.create_note.return_value = _make_note_orm(id=5, title="Same", content="Same")
+
+        await service_with_embeddings.create_note(NoteCreate(title="Same", content="Same"))
+
+        mock_embedding_service.embed_background.assert_called_once()
+        assert mock_embedding_service.embed_background.call_args[0][0].source_type == "note"
 
     async def test_embed_not_called_without_embedding_service(self, service, mock_provider):
         mock_provider.create.return_value = {"id": "provider-1"}
@@ -273,14 +302,27 @@ class TestNoteEmbedding:
 
         await service_with_embeddings.update_note(1, NoteUpdate(title="New"))
 
+        call_args = service_with_embeddings._embedding_service.embed_background.call_args_list
+        assert len(call_args) == 2
+        assert {c[0][0].source_type for c in call_args} == {"note", "note_title"}
+
+    async def test_update_cleans_up_title_embedding_when_no_longer_distinct(self, service_with_embeddings, mock_embedding_service):
+        service_with_embeddings._repo.get_note.return_value = _make_note_orm()
+        service_with_embeddings._repo.update_note.return_value = _make_note_orm(title="Same", content="Same")
+
+        await service_with_embeddings.update_note(1, NoteUpdate(title="Same"))
+
         mock_embedding_service.embed_background.assert_called_once()
+        assert mock_embedding_service.embed_background.call_args[0][0].source_type == "note"
+        mock_embedding_service.delete_by_source.assert_called_once_with("note_title", 1)
 
     async def test_delete_by_source_called_on_delete(self, service_with_embeddings, mock_provider, mock_embedding_service):
         service_with_embeddings._repo.get_note.return_value = _make_note_orm(id=3)
 
         await service_with_embeddings.delete_note(3)
 
-        mock_embedding_service.delete_by_source.assert_called_once_with("note", 3)
+        mock_embedding_service.delete_by_source.assert_any_call("note", 3)
+        mock_embedding_service.delete_by_source.assert_any_call("note_title", 3)
 
     async def test_create_does_not_use_the_blocking_embed_call(self, service_with_embeddings, mock_provider, mock_embedding_service):
         mock_provider.create.return_value = {"id": "provider-1"}

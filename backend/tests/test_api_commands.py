@@ -239,6 +239,13 @@ class TestSummarizeList:
         result = _summarize_list([1, 2, 3])
         assert "3 item(s)" in result
 
+    def test_embedded_newlines_are_collapsed_not_escaped(self):
+        items = [{"id": 1, "content": "Line one\nLine two\n\nLine three"}]
+        result = _summarize_list(items)
+        assert "\\n" not in result
+        assert "\n" not in result
+        assert "Line one Line two Line three" in result
+
 
 class TestFormatResult:
     def test_none_result(self):

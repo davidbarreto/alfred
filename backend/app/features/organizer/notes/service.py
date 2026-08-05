@@ -12,10 +12,21 @@ from app.features.core.embeddings.service import EmbeddingService
 logger = logging.getLogger(__name__)
 
 _SOURCE_TYPE = "note"
+_TITLE_SOURCE_TYPE = "note_title"
 
 
 def _note_embed_content(title: str, content: str | None) -> str:
     return f"{title}: {content}" if content and content != title else title
+
+
+def _has_distinct_title(title: str, content: str | None) -> bool:
+    """Whether the title carries information beyond what's already in the full-note embedding.
+
+    When content is empty or identical to the title, the full-note embedding
+    already *is* the title — a separate title-only embedding would just be a
+    duplicate row pointing at the same note.
+    """
+    return bool(content) and content != title
 
 
 class NoteService:
@@ -50,6 +61,10 @@ class NoteService:
             self._embedding_service.embed_background(
                 EmbeddingCreate(source_type=_SOURCE_TYPE, source_id=note_orm.id, content=content)
             )
+            if _has_distinct_title(note_orm.title, note_orm.content):
+                self._embedding_service.embed_background(
+                    EmbeddingCreate(source_type=_TITLE_SOURCE_TYPE, source_id=note_orm.id, content=note_orm.title)
+                )
         return NoteRead.model_validate(note_orm)
 
     async def update_note(self, note_id: int, note_update: NoteUpdate) -> NoteRead | None:
@@ -69,6 +84,15 @@ class NoteService:
             self._embedding_service.embed_background(
                 EmbeddingCreate(source_type=_SOURCE_TYPE, source_id=note_id, content=content)
             )
+            if _has_distinct_title(note_orm.title, note_orm.content):
+                self._embedding_service.embed_background(
+                    EmbeddingCreate(source_type=_TITLE_SOURCE_TYPE, source_id=note_id, content=note_orm.title)
+                )
+            else:
+                try:
+                    await self._embedding_service.delete_by_source(_TITLE_SOURCE_TYPE, note_id)
+                except Exception as exc:
+                    logger.warning("Note title embedding cleanup failed: id=%d error=%s", note_id, exc)
         return NoteRead.model_validate(note_orm)
 
     async def delete_note(self, note_id: int) -> None:
@@ -80,6 +104,7 @@ class NoteService:
             if self._embedding_service:
                 try:
                     await self._embedding_service.delete_by_source(_SOURCE_TYPE, note_id)
+                    await self._embedding_service.delete_by_source(_TITLE_SOURCE_TYPE, note_id)
                 except Exception as exc:
                     logger.warning("Note embedding delete failed: id=%d error=%s", note_id, exc)
         else:

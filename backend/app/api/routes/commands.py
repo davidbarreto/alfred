@@ -210,13 +210,17 @@ async def execute_command(
 # wraps our summary in its own prose.
 _MAX_RESPONSE_CHARS = 3500
 _LIST_DISPLAY_LIMIT = 10
-_TEXT_FIELD_MAX = 160
+_TEXT_FIELD_MAX = 240
 
 
 def _truncate_text(value: str) -> str:
-    if len(value) <= _TEXT_FIELD_MAX:
-        return value
-    return value[:_TEXT_FIELD_MAX].rstrip() + "…"
+    # Collapse embedded newlines/whitespace first so multi-line content (e.g. note
+    # bodies) can't leak literal "\n" sequences into the LLM prompt via repr-like
+    # formatting further down the pipeline.
+    collapsed = " ".join(value.split())
+    if len(collapsed) <= _TEXT_FIELD_MAX:
+        return collapsed
+    return collapsed[:_TEXT_FIELD_MAX].rstrip() + "…"
 
 
 def _summarize_item(item: Any) -> Any:
@@ -225,18 +229,26 @@ def _summarize_item(item: Any) -> Any:
     return {k: (_truncate_text(v) if isinstance(v, str) else v) for k, v in item.items()}
 
 
+def _format_item(item: Any) -> str:
+    if not isinstance(item, dict):
+        return str(item)
+    fields = ", ".join(f"{k}={v}" for k, v in item.items())
+    return f"{{{fields}}}"
+
+
 def _summarize_list(items: list[Any]) -> str:
     total = len(items)
     if total == 0:
         return "(empty — no items found)"
     shown = [_summarize_item(item) for item in items[:_LIST_DISPLAY_LIMIT]]
+    shown_text = "; ".join(_format_item(item) for item in shown)
     if total <= _LIST_DISPLAY_LIMIT:
-        return f"{total} item(s): {shown!r}"
+        return f"{total} item(s): {shown_text}"
     omitted = items[_LIST_DISPLAY_LIMIT:]
     omitted_ids = [item.get("id") for item in omitted if isinstance(item, dict) and item.get("id") is not None]
     ids_note = f" IDs not shown: {omitted_ids}." if omitted_ids else ""
     return (
-        f"{total} item(s) total, showing {_LIST_DISPLAY_LIMIT} most recent: {shown!r}. "
+        f"{total} item(s) total, showing {_LIST_DISPLAY_LIMIT} most recent: {shown_text}. "
         f"{total - _LIST_DISPLAY_LIMIT} more not shown.{ids_note}"
     )
 

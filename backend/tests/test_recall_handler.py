@@ -83,3 +83,37 @@ class TestHandleRecall:
         result = await handle_recall("search", {"query": "bug"}, mock_embedding_service)
 
         assert result[0].keys() == {"type", "source_id", "content", "similarity"}
+
+    async def test_includes_note_title_in_search_scope(self, mock_embedding_service):
+        mock_embedding_service.search.return_value = []
+
+        await handle_recall("search", {"query": "deployment notes"}, mock_embedding_service)
+
+        call_arg = mock_embedding_service.search.call_args[0][0]
+        assert "note_title" in call_arg.source_types
+
+    async def test_collapses_note_and_note_title_hits_into_one_result(self, mock_embedding_service):
+        mock_embedding_service.search.return_value = [
+            _make_result(source_type="note_title", source_id=7, content="Go project", similarity=0.72),
+            _make_result(source_type="note", source_id=7, content="Go project: build a Redis-compatible cache", similarity=0.48),
+        ]
+
+        result = await handle_recall("search", {"query": "Go Project"}, mock_embedding_service)
+
+        assert len(result) == 1
+        assert result[0]["type"] == "note"
+        assert result[0]["source_id"] == 7
+        # Best similarity across both embeddings wins the ranking...
+        assert result[0]["similarity"] == 0.72
+        # ...but the full note content is shown, not just the title.
+        assert result[0]["content"] == "Go project: build a Redis-compatible cache"
+
+    async def test_does_not_collapse_notes_with_different_ids(self, mock_embedding_service):
+        mock_embedding_service.search.return_value = [
+            _make_result(source_type="note", source_id=1, content="Note one", similarity=0.9),
+            _make_result(source_type="note", source_id=2, content="Note two", similarity=0.8),
+        ]
+
+        result = await handle_recall("search", {"query": "note"}, mock_embedding_service)
+
+        assert len(result) == 2

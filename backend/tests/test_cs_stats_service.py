@@ -4,7 +4,14 @@ import pytest
 from unittest.mock import AsyncMock
 
 from app.features.cs.stats.schemas import DailyActivity, StatsSummary, TagBreakdown
-from app.features.cs.stats.service import StatsService, compute_streaks, format_context_summary
+from app.features.cs.stats.service import (
+    StatsService,
+    compute_streaks,
+    format_context_summary,
+    format_plan_summary,
+    format_recent_activity,
+)
+from app.features.cs.study_plans.schemas import StudyPlanItemRead, StudyPlanRead
 
 
 def _d(*args):
@@ -245,3 +252,59 @@ class TestFormatContextSummary:
         text = format_context_summary(_make_summary())
         assert "weakest tags" not in text
         assert "untried tags" not in text
+
+
+class TestFormatRecentActivity:
+    def test_no_activity_in_window(self):
+        text = format_recent_activity([], days=7)
+        assert text == "no activity in the last 7d"
+
+    def test_counts_active_days_and_gap(self, monkeypatch):
+        today = datetime.datetime.now(datetime.timezone.utc).date()
+        by_day = [
+            DailyActivity(date=today - datetime.timedelta(days=5), attempts=2, solved=1),
+            DailyActivity(date=today - datetime.timedelta(days=2), attempts=1, solved=1),
+        ]
+        text = format_recent_activity(by_day, days=7)
+        assert text == "2/7d active recently, last activity 2d ago"
+
+    def test_ignores_activity_outside_window(self):
+        today = datetime.datetime.now(datetime.timezone.utc).date()
+        by_day = [DailyActivity(date=today - datetime.timedelta(days=30), attempts=2, solved=1)]
+        text = format_recent_activity(by_day, days=7)
+        assert text == "no activity in the last 7d"
+
+
+def _plan_item(description: str, is_done: bool = False) -> StudyPlanItemRead:
+    return StudyPlanItemRead(
+        id=1, item_type="problem", description=description, problem_id=None,
+        url=None, is_done=is_done, completed_at=None, position=0,
+    )
+
+
+def _plan(cadence: str = "weekly", items: list[StudyPlanItemRead] | None = None) -> StudyPlanRead:
+    return StudyPlanRead(
+        id=1, cadence=cadence, period_start=datetime.date(2026, 8, 1), status="active",
+        rationale=None, items=items or [],
+        created_at=datetime.datetime.now(datetime.timezone.utc),
+        updated_at=datetime.datetime.now(datetime.timezone.utc),
+    )
+
+
+class TestFormatPlanSummary:
+    def test_none_plan_returns_none(self):
+        assert format_plan_summary(None) is None
+
+    def test_no_pending_items_returns_none(self):
+        plan = _plan(items=[_plan_item("solved one", is_done=True)])
+        assert format_plan_summary(plan) is None
+
+    def test_lists_pending_items(self):
+        plan = _plan(items=[_plan_item("do DP problem"), _plan_item("review union-find", is_done=True)])
+        text = format_plan_summary(plan)
+        assert text == "weekly plan pending: do DP problem"
+
+    def test_caps_at_five_items(self):
+        items = [_plan_item(f"item {i}") for i in range(7)]
+        text = format_plan_summary(_plan(items=items))
+        assert text.count(",") == 4

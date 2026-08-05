@@ -18,6 +18,7 @@ from app.assistant.commands.handlers.weather import handle_weather
 from app.features.core.embeddings.service import EmbeddingService
 from app.features.core.working_memory.service import WorkingMemoryService
 from app.features.cs.stats.service import StatsService as CsStatsService
+from app.features.cs.study_plans.service import StudyPlanService as CsStudyPlanService
 from app.features.finance.accounts.service import AccountService
 from app.features.finance.budgets.service import BudgetTargetService
 from app.features.finance.categories.service import CategoryService
@@ -55,6 +56,7 @@ async def execute(
     production_service: ProductionService | None = None,
     conversation_service: ConversationService | None = None,
     cs_stats_service: CsStatsService | None = None,
+    cs_study_plan_service: CsStudyPlanService | None = None,
     message_id: int | None = None,
 ) -> Any:
     logger.info("Execute: %s.%s args_keys=%s", cmd_type, command, list(arguments.keys()))
@@ -110,7 +112,10 @@ async def execute(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                 detail="CS service not available",
             )
-        return await handle_cs(command, arguments, cs_stats_service, working_memory_service)
+        return await handle_cs(
+            command, arguments, cs_stats_service, working_memory_service,
+            study_plan_service=cs_study_plan_service,
+        )
 
     if cmd_type == "recall":
         if embedding_service is None:

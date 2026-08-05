@@ -83,6 +83,7 @@ INTENT_EXAMPLES: list[IntentExample] = [
     IntentExample(id=205, text="Make a note to review the deployment pipeline", intent="note.add"),
     IntentExample(id=206, text="Make a note: switch the database to async connections", intent="note.add"),
     IntentExample(id=207, text="Create a note to migrate the worker jobs to the new queue", intent="note.add"),
+    IntentExample(id=288, text="Add a note: redo the language review exercise, not just the web portal version, and re-record the shadowing practice", intent="note.add"),
 
     # --- note.search ---
     IntentExample(id=44, text="Find my note about the API", intent="note.search"),

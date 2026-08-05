@@ -73,6 +73,10 @@ COMMAND_DEFINITIONS = {
         "add": {
             "description": "Create a new task with optional deadline, priority, tags, or recurrence",
             "aliases": ["/taskadd", "/t", "/ta", "/task"],
+            "nl_triggers": [
+                "add a task to", "add a task:", "create a task to", "create a task:",
+                "create the task", "new task:", "task:",
+            ],
             "flags": TASK_ADD_FLAGS,
             "requires_args": True,
             "arg_keys": ["title"]
@@ -80,11 +84,20 @@ COMMAND_DEFINITIONS = {
         "list": {
             "description": "List tasks with optional filters by status, priority, tags, or deadline",
             "aliases": ["/tasklist", "/tl", "/list", "/tasks"],
+            "nl_triggers": [
+                "what are my pending tasks", "show me my to-do list", "show my to-do list",
+                "what do i have to do today", "list my tasks", "show all my open tasks",
+                "what's on my task list", "whats on my task list",
+            ],
             "flags": TASK_LIST_FLAGS
         },
         "search": {
             "description": "Search tasks by keyword",
             "aliases": ["/tasksearch", "/ts", "/taskfind"],
+            "nl_triggers": [
+                "do i have any tasks about", "find tasks related to", "do i have anything to do about",
+                "search my tasks for", "any tasks related to", "look up tasks about",
+            ],
             "flags": {},
             "requires_args": True,
             "arg_keys": ["query"]
@@ -92,6 +105,11 @@ COMMAND_DEFINITIONS = {
         "pending": {
             "description": "Show all overdue and today's pending tasks",
             "aliases": ["/pending", "/pd", "/overdue"],
+            "nl_triggers": [
+                "what's pending", "whats pending", "what am i behind on", "what's overdue",
+                "whats overdue", "what do i still need to do today", "show me what's due today",
+                "what tasks are past their deadline", "what haven't i done yet",
+            ],
             "flags": {},
         },
         "update": {
@@ -141,6 +159,11 @@ COMMAND_DEFINITIONS = {
         "search": {
             "description": "Search notes by keyword",
             "aliases": ["/notesearch", "/ns", "/notefind"],
+            "nl_triggers": [
+                "find my note about", "find note about", "search my notes for", "search for notes on",
+                "do i have a note about", "find notes about", "find notes mentioning",
+                "look for notes about", "look for notes mentioning",
+            ],
             "flags": {},
             "requires_args": True,
             "arg_keys": ["query"]
@@ -148,6 +171,10 @@ COMMAND_DEFINITIONS = {
         "list": {
             "description": "List all saved notes",
             "aliases": ["/notelist", "/nl", "/notes"],
+            "nl_triggers": [
+                "show all my notes", "show my notes", "list my notes", "list recent notes",
+                "what notes do i have", "display my saved notes", "give me all my notes",
+            ],
             "flags": {}
         },
         "update": {
@@ -176,6 +203,11 @@ COMMAND_DEFINITIONS = {
         "list": {
             "description": "List upcoming calendar events",
             "aliases": ["/eventlist", "/el", "/events"],
+            "nl_triggers": [
+                "what's on my calendar", "whats on my calendar", "show my schedule",
+                "what events do i have", "what meetings do i have", "show my upcoming events",
+                "what does my calendar look like",
+            ],
             "flags": {}
         },
         "update": {
@@ -204,6 +236,7 @@ COMMAND_DEFINITIONS = {
         "list": {
             "description": "List shopping items with optional filters by status, category, or priority",
             "aliases": ["/shoplist", "/sl", "/shoppinglist"],
+            "nl_triggers": ["show my shopping list", "what do i need to buy", "what's on my grocery list", "whats on my grocery list"],
             "flags": SHOPPING_LIST_FLAGS,
         },
         "complete": {
@@ -239,6 +272,7 @@ COMMAND_DEFINITIONS = {
         "list": {
             "description": "List wishlist items",
             "aliases": ["/wishlist", "/wl"],
+            "nl_triggers": ["show my wishlist", "what's on my wish list", "whats on my wish list", "list everything on my wishlist"],
             "flags": WISHLIST_LIST_FLAGS,
         },
         "delete": {
@@ -324,6 +358,11 @@ COMMAND_DEFINITIONS = {
         "search": {
             "description": "Search your memories semantically by keyword",
             "aliases": ["/recall", "/rc", "/remember"],
+            "nl_triggers": [
+                "what did i say about", "do i have anything about", "do i have anything saved about",
+                "what do i know about", "recall what i said about", "recall what i wrote about",
+                "find anything i have about", "pull up what i know about", "what have i said about",
+            ],
             "flags": {},
             "requires_args": True,
             "arg_keys": ["query"],
@@ -333,6 +372,7 @@ COMMAND_DEFINITIONS = {
         "current": {
             "description": "Get current weather for a location",
             "aliases": ["/weather", "/wx"],
+            "nl_triggers": ["what's the weather", "whats the weather", "how is the weather", "what's the forecast", "whats the forecast"],
             "flags": {"-d": "date", "--date": "date"},
             "arg_keys": ["location"]
         }
@@ -341,6 +381,10 @@ COMMAND_DEFINITIONS = {
         "focus": {
             "description": "Get a recommendation on what to focus on right now",
             "aliases": ["/focus", "/next", "/whatnow"],
+            "nl_triggers": [
+                "what should i work on", "what's my next focus", "whats my next focus",
+                "what should i tackle next", "give me a focus suggestion",
+            ],
             "flags": {},
         }
     },
@@ -469,9 +513,25 @@ def _build_registry() -> Dict[str, CommandMetadata]:
                 arg_keys=config.get("arg_keys", []),
                 implicit_flags=config.get("implicit_flags", {}),
                 description=config.get("description", ""),
+                nl_triggers=config.get("nl_triggers", []),
             )
             for alias in config["aliases"]:
                 registry[alias.lower()] = meta
     return registry
 
 COMMAND_REGISTRY = _build_registry()
+
+
+def _build_nl_trigger_index() -> List[tuple]:
+    """Flat list of (trigger_phrase, primary_alias), longest phrase first so a more
+    specific trigger always wins over a shorter, more generic one that also matches."""
+    index = []
+    for actions in COMMAND_DEFINITIONS.values():
+        for config in actions.values():
+            primary_alias = config["aliases"][0]
+            for trigger in config.get("nl_triggers", []):
+                index.append((trigger.lower(), primary_alias))
+    index.sort(key=lambda pair: len(pair[0]), reverse=True)
+    return index
+
+NL_TRIGGER_INDEX = _build_nl_trigger_index()

@@ -6,7 +6,7 @@ from typing import List, Dict, Any, Tuple
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.assistant.commands.registry import COMMAND_REGISTRY
+from app.assistant.commands.registry import COMMAND_REGISTRY, NL_TRIGGER_INDEX
 from app.assistant.commands.schemas import CommandDetail
 from app.assistant.intents.intent_service import detect_intent
 from app.config import get_settings
@@ -217,6 +217,24 @@ def _resolve_fragment(cmd_alias: str, remaining_tokens: List[str]) -> CommandDet
     )
 
 
+def _resolve_nl_trigger(text: str) -> CommandDetail | None:
+    """Match a fixed natural-language trigger phrase (e.g. "what did i say about") against the
+    start of the text and resolve it exactly like the equivalent slash command, reusing arg
+    parsing/enrichment. Exists because embedding similarity is dominated by topic words, not
+    sentence structure, so phrase-pattern intents (e.g. recall.search, task.add) can score below
+    the embedding threshold even for near-identical phrasing to a known example."""
+    stripped = text.strip()
+    normalized = stripped.lower()
+    for trigger, alias in NL_TRIGGER_INDEX:
+        if normalized.startswith(trigger):
+            remainder = stripped[len(trigger):].strip(" :,.!?")
+            tokens = _parse_tokens(remainder)
+            cmd = _resolve_fragment(alias, tokens)
+            if cmd:
+                return cmd
+    return None
+
+
 async def detect_commands(
     text: str,
     command: str | None = None,
@@ -255,10 +273,15 @@ async def detect_commands(
         logger.info("detect_commands: %d deterministic command(s) parsed from text", len(commands))
         return commands
 
+    nl_cmd = _resolve_nl_trigger(text)
+    if nl_cmd:
+        logger.info("detect_commands: nl_trigger matched -> %s.%s", nl_cmd.type, nl_cmd.command)
+        return [nl_cmd]
+
     if session is None or not text.strip():
         return []
 
-    logger.debug("detect_commands: no slash commands, falling back to intent detection text=%r", text[:100])
+    logger.debug("detect_commands: no slash commands or nl triggers, falling back to intent detection text=%r", text[:100])
     intent_result = await detect_intent(text, session)
     threshold = get_settings().intent_threshold
     cmd_type, cmd_action = _split_intent(intent_result.intent)

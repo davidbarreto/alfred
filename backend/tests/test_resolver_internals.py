@@ -303,6 +303,62 @@ class TestDetectCommandsEdgeCases:
         assert commands[0].confidence == 1.0
 
 
+# ── nl_triggers ────────────────────────────────────────────────────────────────
+
+class TestDetectCommandsNlTriggers:
+    async def test_recall_search_trigger(self):
+        commands = await detect_commands("What did I say about voice commands?")
+        assert len(commands) == 1
+        assert commands[0].type == "recall"
+        assert commands[0].command == "search"
+        assert commands[0].source == "deterministic"
+        assert commands[0].confidence == 1.0
+        assert commands[0].args["query"] == "voice commands"
+
+    async def test_recall_search_trigger_strips_question_mark(self):
+        commands = await detect_commands("What did I say about golang?")
+        assert commands[0].args["query"] == "golang"
+
+    async def test_task_add_trigger(self):
+        commands = await detect_commands("Add a task to hug Kesia")
+        assert commands[0].type == "task"
+        assert commands[0].command == "add"
+        assert commands[0].args["title"] == "hug Kesia"
+
+    async def test_task_list_trigger_no_args(self):
+        commands = await detect_commands("What are my pending tasks?")
+        assert commands[0].type == "task"
+        assert commands[0].command == "list"
+
+    async def test_shopping_list_trigger(self):
+        commands = await detect_commands("Show my shopping list")
+        assert commands[0].type == "shopping"
+        assert commands[0].command == "list"
+
+    async def test_trigger_requiring_args_with_nothing_after_falls_through(self):
+        # "What did I say about" with no query should NOT resolve deterministically —
+        # requires_args=True and there's nothing left to search for.
+        with patch(
+            "app.assistant.commands.resolver.detect_intent",
+            new=AsyncMock(return_value=IntentResult(intent="unknown", confidence=0.0)),
+        ):
+            commands = await detect_commands("What did I say about", session=AsyncMock())
+        assert commands == []
+
+    async def test_no_trigger_match_falls_through_to_intent_detection(self):
+        with patch(
+            "app.assistant.commands.resolver.detect_intent",
+            new=AsyncMock(return_value=IntentResult(intent="unknown", confidence=0.0)),
+        ):
+            commands = await detect_commands("This is just a normal chat message", session=AsyncMock())
+        assert commands == []
+
+    async def test_trigger_case_insensitive(self):
+        commands = await detect_commands("WHAT DID I SAY ABOUT the deployment")
+        assert commands[0].type == "recall"
+        assert commands[0].args["query"] == "the deployment"
+
+
 # ── _enrich_finance ───────────────────────────────────────────────────────────
 
 class TestEnrichFinance:

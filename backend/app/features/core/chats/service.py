@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import asyncio
-import html
 import json
 import logging
 import pathlib
@@ -176,10 +175,7 @@ _MD_PATTERNS = [
 def _strip_markdown(text: str) -> str:
     for pattern, replacement in _MD_PATTERNS:
         text = pattern.sub(replacement, text)
-    text = text.strip()
-    # Telegram sends this text with parse_mode=HTML; escape so literal
-    # code snippets (e.g. "n <= 1") aren't parsed as (invalid) HTML tags.
-    return html.escape(text, quote=False)
+    return text.strip()
 
 
 def _to_message_dicts(messages: list[MessageRead]) -> list[dict[str, str]]:

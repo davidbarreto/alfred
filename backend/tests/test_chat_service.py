@@ -980,12 +980,6 @@ class TestStripMarkdown:
         assert "**" not in result
         assert "Batizado Capoeira" in result
 
-    def test_escapes_html_special_chars(self):
-        assert _strip_markdown("if n <= 1 { return n }") == "if n &lt;= 1 { return n }"
-
-    def test_escapes_ampersand(self):
-        assert _strip_markdown("cats & dogs") == "cats &amp; dogs"
-
 
 class TestToMessageDicts:
     def test_maps_user_message(self):

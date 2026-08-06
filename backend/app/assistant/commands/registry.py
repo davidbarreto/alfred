@@ -177,6 +177,13 @@ COMMAND_DEFINITIONS = {
             ],
             "flags": {}
         },
+        "get": {
+            "description": "Get a single note by ID",
+            "aliases": ["/noteget", "/ng"],
+            "flags": {},
+            "requires_args": True,
+            "arg_keys": ["id"]
+        },
         "update": {
             "description": "Update a note's content by ID",
             "aliases": ["/noteupdate", "/nu", "/noteupd"],

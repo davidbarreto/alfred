@@ -286,6 +286,12 @@ class TestDetectCommandsEdgeCases:
         commands = await detect_commands("/nl")
         assert commands[0].command == "list"
 
+    async def test_note_get(self):
+        commands = await detect_commands("/noteget 29")
+        assert commands[0].type == "note"
+        assert commands[0].command == "get"
+        assert commands[0].args["id"] == "29"
+
     async def test_task_list_with_unexpected_positional_arg(self):
         commands = await detect_commands("/tasklist unexpected-arg")
         assert len(commands) == 1

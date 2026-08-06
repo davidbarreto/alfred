@@ -376,6 +376,7 @@
               "    pm.expect(json.status).to.eql('ok');",
               "    pm.expect(json.type).to.eql('note');",
               "    pm.expect(json.command).to.eql('add');",
+              "    pm.environment.set('cmd_note_id', json.result.id);",
               "});"
             ],
             "type": "text/javascript"
@@ -388,6 +389,97 @@
         "body": {
           "mode": "raw",
           "raw": "{\n  \"message_id\": {{core_message_id}},\n  \"type\": \"note\",\n  \"command\": \"add\",\n  \"args\": {\n    \"content\": \"My girlfriend likes oat milk\",\n    \"tags\": \"personal\"\n  }\n}",
+          "options": { "raw": { "language": "json" } }
+        },
+        "url": {
+          "raw": "{{base_url}}/commands/execute",
+          "host": ["{{base_url}}"],
+          "path": ["commands", "execute"]
+        }
+      }
+    },
+    {
+      "name": "10a - Execute: note get",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Note get returns the created note', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json.status).to.eql('ok');",
+              "    pm.expect(json.type).to.eql('note');",
+              "    pm.expect(json.command).to.eql('get');",
+              "    pm.expect(json.result.id).to.eql(parseInt(pm.environment.get('cmd_note_id')));",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"message_id\": {{core_message_id}},\n  \"type\": \"note\",\n  \"command\": \"get\",\n  \"args\": {\n    \"id\": \"{{cmd_note_id}}\"\n  }\n}",
+          "options": { "raw": { "language": "json" } }
+        },
+        "url": {
+          "raw": "{{base_url}}/commands/execute",
+          "host": ["{{base_url}}"],
+          "path": ["commands", "execute"]
+        }
+      }
+    },
+    {
+      "name": "10b - Execute: note get not found",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 404', () => pm.response.to.have.status(404));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"message_id\": {{core_message_id}},\n  \"type\": \"note\",\n  \"command\": \"get\",\n  \"args\": {\n    \"id\": \"999999\"\n  }\n}",
+          "options": { "raw": { "language": "json" } }
+        },
+        "url": {
+          "raw": "{{base_url}}/commands/execute",
+          "host": ["{{base_url}}"],
+          "path": ["commands", "execute"]
+        }
+      }
+    },
+    {
+      "name": "10c - Execute: note list rejects unexpected argument",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 400', () => pm.response.to.have.status(400));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"message_id\": {{core_message_id}},\n  \"type\": \"note\",\n  \"command\": \"list\",\n  \"args\": {\n    \"task\": \"29\"\n  }\n}",
           "options": { "raw": { "language": "json" } }
         },
         "url": {

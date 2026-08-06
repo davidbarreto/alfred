@@ -144,6 +144,14 @@ class TestCommandRegistryNotes:
         assert meta.type == "note"
         assert meta.action == "search"
 
+    @pytest.mark.parametrize("alias", ["/noteget", "/ng"])
+    def test_note_get_aliases(self, alias):
+        meta = COMMAND_REGISTRY[alias]
+        assert meta.type == "note"
+        assert meta.action == "get"
+        assert meta.requires_args is True
+        assert meta.arg_keys == ["id"]
+
     @pytest.mark.parametrize("alias", ["/notedelete", "/nd", "/nrm", "/noterm"])
     def test_note_delete_aliases(self, alias):
         meta = COMMAND_REGISTRY[alias]

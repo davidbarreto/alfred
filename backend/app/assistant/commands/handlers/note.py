@@ -37,12 +37,26 @@ async def handle_note(command: str, arguments: dict[str, Any], service: NoteServ
         return result.model_dump(mode='json')
 
     if command == "list":
+        # "list" has no arg_keys, so any bare positional text (e.g. "/notelist 29") lands here
+        # as the resolver's generic leftover-args field rather than being silently dropped.
+        if arguments.get("task"):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="note.list takes no arguments — use /noteget <id> to view a single note.",
+            )
         filters = NoteFilters(
             limit=int(arguments.get("limit", 100)),
             tags=parse_tags(arguments.get("tags")) or None,
         )
         results = await service.get_notes(filters)
         return [r.model_dump(mode='json') for r in results]
+
+    if command == "get":
+        note_id = int(arguments["id"])
+        result = await service.get_note(note_id)
+        if result is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Note {note_id} not found")
+        return result.model_dump(mode='json')
 
     if command == "search":
         query = str(arguments.get("query", "")).lower()

@@ -61,8 +61,10 @@
           <td class="px-4 py-2.5 text-gray-700 font-medium">{{ s.source or "—" }}</td>
           <td class="px-4 py-2.5 text-gray-700 max-w-md truncate">{{ s.summary or "—" }}</td>
           <td class="px-4 py-2.5">
-            {% if s.finished_at %}
+            {% if s.status == "finished" %}
             <span class="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-500">finished</span>
+            {% elif s.status == "expired" %}
+            <span class="text-[10px] px-1.5 py-0.5 rounded bg-[#FDF0E1] text-[#BA7517]">expired</span>
             {% else %}
             <span class="text-[10px] px-1.5 py-0.5 rounded bg-[#EAF3DE] text-[#639922]">active</span>
             {% endif %}

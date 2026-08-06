@@ -5,10 +5,9 @@ from datetime import datetime, timedelta, timezone
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.config import get_settings
 from app.features.core.sessions.schemas import SessionCreate, SessionFilters
 from app.features.core.sessions.tables import Session
-
-_SESSION_EXPIRY_HOURS = 4
 
 
 class SessionRepository:
@@ -45,7 +44,7 @@ class SessionRepository:
         return session_obj
 
     async def get_active_by_source(self, source: str, external_id: str) -> Session | None:
-        expiry_cutoff = datetime.now(timezone.utc) - timedelta(hours=_SESSION_EXPIRY_HOURS)
+        expiry_cutoff = datetime.now(timezone.utc) - timedelta(hours=get_settings().session_expiry_hours)
         result = await self._session.execute(
             select(Session).where(
                 Session.source == source,

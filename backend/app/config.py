@@ -68,6 +68,11 @@ class Settings(BaseSettings):
     # Local timezone (IANA name) — also mapped to n8n's GENERIC_TIMEZONE in docker-compose
     timezone: str = Field(default="Europe/Lisbon", validation_alias="TIMEZONE")
 
+    # How long a chat session stays reusable after its last message before a new one is
+    # started for the same source/external_id. Also shared with the web portal (which has
+    # no other way to know a session is stale) to render an "expired" status in Insights.
+    session_expiry_hours: int = Field(default=4, validation_alias="SESSION_EXPIRY_HOURS")
+
     # Audio storage — shadowing recordings + pronunciation TTS cache
     audio_storage_dir: str = Field(default="/data/audio", validation_alias="AUDIO_STORAGE_DIR")
 

@@ -1,4 +1,5 @@
 from collections import Counter, defaultdict
+from datetime import datetime, timedelta, timezone
 from urllib.parse import urlencode
 
 import httpx
@@ -6,6 +7,7 @@ from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse
 
 import app.client as api
+from app.config import get_settings
 from app.templates_config import templates
 
 router = APIRouter(prefix="/insights")
@@ -24,6 +26,23 @@ _FILTER_OPTIONS_SAMPLE_LIMIT = 200
 _MESSAGE_ROLES = ["user", "assistant"]
 _MESSAGE_SOURCES = ["telegram", "api", "web"]
 _SESSION_SOURCES = ["telegram", "api", "web"]
+
+
+def _session_status(session: dict) -> str:
+    if session.get("finished_at"):
+        return "finished"
+    last_interaction = datetime.fromisoformat(session["last_interaction_at"].replace("Z", "+00:00"))
+    # SESSION_EXPIRY_HOURS must match the backend's setting of the same name — past this
+    # age (by last_interaction_at) get_or_create_active no longer reuses the session, so
+    # it reads as expired here even though the backend never flips a "finished" flag on it.
+    cutoff = datetime.now(timezone.utc) - timedelta(hours=get_settings().session_expiry_hours)
+    return "expired" if last_interaction < cutoff else "active"
+
+
+def _annotate_session_status(sessions: list[dict]) -> list[dict]:
+    for session in sessions:
+        session["status"] = _session_status(session)
+    return sessions
 
 
 def _pagination(items: list, offset: int) -> tuple[list, bool, bool]:
@@ -138,6 +157,7 @@ async def insights_page(request: Request):
     embedding_calls_by_feature = dict(Counter(c["feature"] for c in embedding_calls).most_common(10))
 
     # ── Messages/sessions aggregations ────────────────────────────
+    sessions = _annotate_session_status(sessions)
     messages_by_role = dict(Counter(m["role"] for m in messages).most_common())
     sessions_by_source = dict(Counter(s["source"] or "unknown" for s in sessions).most_common())
 
@@ -581,6 +601,7 @@ async def sessions_page(request: Request):
         raw = []
 
     items, has_next, has_prev = _pagination(raw, offset)
+    items = _annotate_session_status(items)
     filter_qs = urlencode({
         k: v for k, v in {"source": source, "active_only": "true" if active_only else "", "q": q}.items() if v
     })
@@ -604,4 +625,5 @@ async def session_detail(session_id: int, request: Request):
         session_obj = await api.get(f"/core/sessions/{session_id}")
     except httpx.HTTPError:
         return HTMLResponse('<p class="text-[#E24B4A] text-sm">Failed to load session.</p>', status_code=422)
+    session_obj["status"] = _session_status(session_obj)
     return templates.TemplateResponse(request, "_session_detail.html", {"session": session_obj})

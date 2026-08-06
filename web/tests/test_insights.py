@@ -1,3 +1,5 @@
+from datetime import datetime, timedelta, timezone
+
 import httpx
 
 
@@ -41,10 +43,12 @@ def _message(id=1, session_id=1, role="user", content="hello", meta=None):
     }
 
 
-def _session(id=1, source="telegram", external_id="chat_1", summary=None, finished_at=None):
+def _session(id=1, source="telegram", external_id="chat_1", summary=None, finished_at=None, last_interaction_at=None):
+    if last_interaction_at is None:
+        last_interaction_at = (datetime.now(timezone.utc) - timedelta(hours=1)).isoformat()
     return {
         "id": id, "source": source, "external_id": external_id, "summary": summary,
-        "last_interaction_at": "2026-07-01T00:00:00", "created_at": "2026-07-01T00:00:00",
+        "last_interaction_at": last_interaction_at, "created_at": "2026-07-01T00:00:00",
         "finished_at": finished_at,
     }
 
@@ -601,6 +605,39 @@ class TestSessionsPage:
         assert resp.status_code == 200
         assert "Next →" in resp.text
         assert "offset=20" in resp.text
+
+
+class TestSessionExpiryStatus:
+    def test_recent_session_shows_active(self, client, mock_api):
+        recent = (datetime.now(timezone.utc) - timedelta(hours=1)).isoformat()
+        mock_api["get"].return_value = [_session(id=1, last_interaction_at=recent)]
+
+        resp = client.get("/insights/sessions")
+
+        assert resp.status_code == 200
+        assert ">active<" in resp.text
+        assert ">expired<" not in resp.text
+
+    def test_session_past_expiry_hours_shows_expired(self, client, mock_api):
+        old = (datetime.now(timezone.utc) - timedelta(hours=5)).isoformat()
+        mock_api["get"].return_value = [_session(id=1, last_interaction_at=old)]
+
+        resp = client.get("/insights/sessions")
+
+        assert resp.status_code == 200
+        assert ">expired<" in resp.text
+        assert ">active<" not in resp.text
+
+    def test_finished_session_shows_finished_even_if_recent(self, client, mock_api):
+        recent = (datetime.now(timezone.utc) - timedelta(minutes=5)).isoformat()
+        mock_api["get"].return_value = [_session(id=1, last_interaction_at=recent, finished_at=recent)]
+
+        resp = client.get("/insights/sessions")
+
+        assert resp.status_code == 200
+        assert ">finished<" in resp.text
+        assert ">active<" not in resp.text
+        assert ">expired<" not in resp.text
 
 
 class TestSessionDetail:

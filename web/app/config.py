@@ -15,6 +15,9 @@ class Settings(BaseSettings):
     # Local timezone (IANA name) — must match the backend's TIMEZONE, since it's the
     # zone the backend normalizes all stored calendar/task datetimes to.
     timezone: str = Field(default="Europe/Lisbon", validation_alias="TIMEZONE")
+    # Must match the backend's SESSION_EXPIRY_HOURS — used only to render a session's
+    # "expired" status in Insights (the backend never persists that as a flag).
+    session_expiry_hours: int = Field(default=4, validation_alias="SESSION_EXPIRY_HOURS")
 
 
 @lru_cache

@@ -27,6 +27,7 @@ class LearningSession(Base):
     ai_feedback_json: Mapped[Optional[dict]] = mapped_column(JSONB, nullable=True)
     quality_score: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
     transcript_or_notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    grading_status: Mapped[str] = mapped_column(String(20), nullable=False, default="done", server_default="done")
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False, index=True
     )

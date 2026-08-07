@@ -794,6 +794,16 @@ async def session_audio(code: str, session_id: int):
     return Response(content=audio, media_type=content_type)
 
 
+@router.get("/{code}/sessions/{session_id}")
+async def session_status(code: str, session_id: int):
+    """Polled by the shadow session UI to learn when a background grading result is ready."""
+    try:
+        session = await api.get(f"/language/sessions/{session_id}")
+    except httpx.HTTPError:
+        return JSONResponse({"error": "Could not fetch session."}, status_code=502)
+    return JSONResponse(session)
+
+
 @router.post("/{code}/chunks/{chunk_id}/shadow")
 async def submit_shadowing(code: str, chunk_id: int, request: Request):
     tracks = await _safe_get("/language/tracks", {"active_only": "false"})

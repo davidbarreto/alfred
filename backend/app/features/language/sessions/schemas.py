@@ -5,6 +5,7 @@ from pydantic import BaseModel
 
 SessionType: TypeAlias = Literal["srs_review", "shadowing", "production", "conversation", "correction"]
 ProductionTaskType: TypeAlias = Literal["sentence", "translate", "journal", "timed", "speak", "retell"]
+GradingStatus: TypeAlias = Literal["pending", "done", "failed", "skipped"]
 _SRS_FEEDING_TYPES = {"srs_review", "shadowing"}
 
 
@@ -65,6 +66,7 @@ class SessionRead(BaseModel):
     ai_feedback_json: dict[str, Any] | None
     quality_score: float | None
     transcript_or_notes: str | None
+    grading_status: GradingStatus
     created_at: datetime
 
     model_config = {"from_attributes": True}

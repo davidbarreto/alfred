@@ -437,8 +437,6 @@ def get_shadowing_service(session: AsyncSession = Depends(get_session)) -> Shado
     return ShadowingService(
         session=session,
         session_service=get_language_session_service(session),
-        chunk_repo=LanguageChunkRepository(session),
-        track_repo=TrackRepository(session),
         audio_storage=get_file_storage(),
         audio_converter=FfmpegClient(),
         analysis_provider=get_audio_analysis_provider(),

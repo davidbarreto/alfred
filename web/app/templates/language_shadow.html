@@ -18,6 +18,9 @@
   <div>
     <div class="flex items-center justify-between text-xs text-gray-400 mb-1.5">
       <span id="progress-label">0 / {{ total_due }} shadowed</span>
+      <button type="button" id="finish-btn" onclick="finishSession()" class="hidden inline-flex items-center gap-1 text-gray-400 hover:text-purple-600">
+        Finish now <i class="ti ti-flag"></i>
+      </button>
     </div>
     <div class="w-full bg-gray-100 rounded-full h-1.5">
       <div id="progress-bar" class="h-1.5 rounded-full bg-purple-600 transition-all duration-300" style="width: 0%"></div>
@@ -53,30 +56,43 @@
 
     <!-- Record -->
     <div id="record-card" class="card bg-white p-4 space-y-3 mt-4">
-      <p id="shadow-status" class="text-xs text-gray-400">Record yourself saying it and get instant feedback.</p>
-      <button type="button" id="record-btn" onclick="toggleRecording()" class="btn btn-sm btn-primary gap-1.5 w-fit">
-        <i class="ti ti-microphone"></i> Record
-      </button>
-      <div id="feedback-area" class="hidden space-y-2 pt-2 border-t border-gray-100">
-        <div class="flex items-center gap-3">
-          <div class="text-center">
-            <p class="text-lg font-semibold" id="feedback-score">—</p>
-            <p class="text-[10px] text-gray-400">score</p>
-          </div>
-          <p class="text-xs text-gray-500 flex-1" id="feedback-summary"></p>
-        </div>
-        <button type="button" id="next-btn" onclick="nextCard()" class="btn btn-sm bg-purple-600 border-purple-600 text-white hover:bg-purple-700">
-          Next <i class="ti ti-arrow-right"></i>
+      <p id="shadow-status" class="text-xs text-gray-400">Record yourself saying it, listen back, then submit when you're happy with it.</p>
+
+      <div id="record-controls">
+        <button type="button" id="record-btn" onclick="toggleRecording()" class="btn btn-sm btn-primary gap-1.5 w-fit">
+          <i class="ti ti-microphone"></i> Record
         </button>
       </div>
+
+      <div id="review-controls" class="hidden space-y-2">
+        <audio id="review-audio" controls class="w-full h-10"></audio>
+        <div class="flex gap-2">
+          <button type="button" onclick="reRecord()" class="btn btn-sm btn-ghost gap-1.5">
+            <i class="ti ti-repeat"></i> Re-record
+          </button>
+          <button type="button" id="submit-btn" onclick="submitCurrentRecording()"
+            class="btn btn-sm bg-purple-600 border-purple-600 text-white hover:bg-purple-700 gap-1.5">
+            <i class="ti ti-send"></i> Submit
+          </button>
+        </div>
+      </div>
+
+      <div id="turn-strip" class="hidden flex flex-wrap gap-1.5 pt-2 border-t border-gray-100"></div>
     </div>
 
     <!-- Completion (hidden until done) -->
-    <div id="completion" class="hidden card bg-white p-10 text-center space-y-3">
-      <i class="ti ti-circle-check text-4xl text-green-400"></i>
-      <p class="text-sm font-medium text-gray-700">Session complete!</p>
-      <p class="text-xs text-gray-400" id="completion-stats"></p>
-      <a href="/languages/{{ track.code }}" class="btn btn-sm btn-primary mt-2">Back to {{ track.name }}</a>
+    <div id="completion" class="hidden card bg-white p-10 text-center space-y-4">
+      <div id="completion-waiting" class="hidden space-y-3">
+        <span class="loading loading-spinner loading-md text-purple-600"></span>
+        <p class="text-sm font-medium text-gray-700" id="completion-waiting-text">Grading recordings…</p>
+      </div>
+      <div id="completion-done" class="hidden space-y-3">
+        <i class="ti ti-circle-check text-4xl text-green-400"></i>
+        <p class="text-sm font-medium text-gray-700">Session complete!</p>
+        <p class="text-xs text-gray-400" id="completion-stats"></p>
+        <div id="completion-results" class="text-left space-y-2 max-h-72 overflow-y-auto"></div>
+        <a href="/languages/{{ track.code }}" class="btn btn-sm btn-primary mt-2">Back to {{ track.name }}</a>
+      </div>
     </div>
 
     {% endif %}
@@ -92,21 +108,28 @@ let shadowed = 0;
 const total = chunks.length;
 let mediaRecorder = null;
 let recordedChunks = [];
+let currentBlob = null;
+let currentBlobUrl = null;
 let currentAudio = null;
 
+let pendingAttempts = [];
+let pollTimer = null;
+let finishing = false;
+
+function scoreColorClass(score) {
+  if (score == null) return "text-gray-400";
+  return score >= 80 ? "text-green-600" : score >= 55 ? "text-gray-700" : "text-red-600";
+}
+
 function showCard(i) {
-  if (i >= total) { showCompletion(); return; }
+  if (i >= total) { finishSession(); return; }
   const c = chunks[i];
   document.getElementById("card-text").textContent = c.text;
   const levelEl = document.getElementById("card-level");
   levelEl.textContent = c.cefr_level || "";
   levelEl.classList.toggle("hidden", !c.cefr_level);
   document.getElementById("card-translation").textContent = c.translation || "";
-  document.getElementById("feedback-area").classList.add("hidden");
-  document.getElementById("shadow-status").textContent = "Record yourself saying it and get instant feedback.";
-  const btn = document.getElementById("record-btn");
-  btn.classList.remove("hidden");
-  btn.disabled = false;
+  resetRecordingUI();
 }
 
 function playReference() {
@@ -115,6 +138,24 @@ function playReference() {
   if (currentAudio) currentAudio.pause();
   currentAudio = new Audio(`/languages/${TRACK_CODE}/pronounce?text=${encodeURIComponent(c.text)}`);
   currentAudio.play().catch(() => {});
+}
+
+function resetRecordingUI() {
+  discardCurrentBlob();
+  document.getElementById("record-controls").classList.remove("hidden");
+  document.getElementById("review-controls").classList.add("hidden");
+  document.getElementById("shadow-status").textContent = "Record yourself saying it, listen back, then submit when you're happy with it.";
+  const btn = document.getElementById("record-btn");
+  btn.disabled = false;
+  btn.innerHTML = '<i class="ti ti-microphone"></i> Record';
+  btn.classList.remove("btn-error");
+  btn.classList.add("btn-primary");
+}
+
+function discardCurrentBlob() {
+  if (currentBlobUrl) URL.revokeObjectURL(currentBlobUrl);
+  currentBlobUrl = null;
+  currentBlob = null;
 }
 
 async function toggleRecording() {
@@ -131,7 +172,7 @@ async function toggleRecording() {
     mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) recordedChunks.push(e.data); };
     mediaRecorder.onstop = () => {
       stream.getTracks().forEach((t) => t.stop());
-      uploadRecording();
+      enterReviewState();
     };
     mediaRecorder.start();
     btn.innerHTML = '<i class="ti ti-player-stop"></i> Stop';
@@ -143,17 +184,30 @@ async function toggleRecording() {
   }
 }
 
-async function uploadRecording() {
-  const c = chunks[idx];
-  const btn = document.getElementById("record-btn");
-  const status = document.getElementById("shadow-status");
-  btn.disabled = true;
-  btn.innerHTML = '<i class="ti ti-microphone"></i> Record';
-  btn.classList.remove("btn-error");
-  btn.classList.add("btn-primary");
-  status.textContent = "Analyzing your pronunciation…";
+function enterReviewState() {
+  currentBlob = new Blob(recordedChunks, { type: mediaRecorder.mimeType || "audio/webm" });
+  currentBlobUrl = URL.createObjectURL(currentBlob);
+  document.getElementById("review-audio").src = currentBlobUrl;
+  document.getElementById("record-controls").classList.add("hidden");
+  document.getElementById("review-controls").classList.remove("hidden");
+  document.getElementById("shadow-status").textContent = "Listen back — re-record if you want another take, or submit it.";
+}
 
-  const blob = new Blob(recordedChunks, { type: mediaRecorder.mimeType || "audio/webm" });
+function reRecord() {
+  discardCurrentBlob();
+  document.getElementById("review-controls").classList.add("hidden");
+  document.getElementById("record-controls").classList.remove("hidden");
+  document.getElementById("shadow-status").textContent = "Record yourself saying it, listen back, then submit when you're happy with it.";
+}
+
+async function submitCurrentRecording() {
+  const c = chunks[idx];
+  const blob = currentBlob;
+  if (!blob) return;
+  const submitBtn = document.getElementById("submit-btn");
+  submitBtn.disabled = true;
+  document.getElementById("shadow-status").textContent = "Submitting…";
+
   const formData = new FormData();
   formData.append("audio", blob, "recording.webm");
 
@@ -164,44 +218,140 @@ async function uploadRecording() {
     });
     if (!resp.ok) throw new Error("upload failed");
     const result = await resp.json();
-    showFeedback(result);
+    trackAttempt(c, result);
+    discardCurrentBlob();
+    shadowed++;
+    updateProgress();
+    idx++;
+    showCard(idx);
   } catch (err) {
-    status.textContent = "Could not analyze recording. Please try again.";
-    btn.disabled = false;
+    document.getElementById("shadow-status").textContent = "Could not submit recording. Please try again.";
+    submitBtn.disabled = false;
   }
 }
 
-function showFeedback(result) {
-  const feedback = result.ai_feedback_json || {};
-  const score = feedback.score ?? result.quality_score;
-  document.getElementById("shadow-status").textContent = "Recorded.";
-  document.getElementById("record-btn").classList.add("hidden");
-  document.getElementById("feedback-area").classList.remove("hidden");
-  const scoreEl = document.getElementById("feedback-score");
-  scoreEl.textContent = score != null ? Math.round(score) : "—";
-  scoreEl.className = "text-lg font-semibold " + (score >= 80 ? "text-green-600" : score >= 55 ? "text-gray-700" : "text-red-600");
-  document.getElementById("feedback-summary").textContent = feedback.summary || "";
-  shadowed++;
-  updateProgress();
+function trackAttempt(chunk, result) {
+  const strip = document.getElementById("turn-strip");
+  strip.classList.remove("hidden");
+  const chip = document.createElement("div");
+  chip.className = "w-6 h-6 rounded-full flex items-center justify-center bg-gray-50 border border-gray-100";
+  chip.title = chunk.text;
+  chip.innerHTML = '<span class="loading loading-spinner loading-xs text-gray-400"></span>';
+  strip.appendChild(chip);
+
+  const attempt = {
+    sessionId: result.id,
+    chunkText: chunk.text,
+    translation: chunk.translation,
+    status: result.grading_status || "pending",
+    quality_score: result.quality_score ?? null,
+    ai_feedback_json: result.ai_feedback_json || null,
+    chipEl: chip,
+  };
+  pendingAttempts.push(attempt);
+  if (attempt.status !== "pending") {
+    updateChip(attempt);
+  } else {
+    ensurePolling();
+  }
 }
 
-function nextCard() {
-  idx++;
-  showCard(idx);
+function updateChip(attempt) {
+  const chip = attempt.chipEl;
+  if (attempt.status === "pending") {
+    chip.innerHTML = '<span class="loading loading-spinner loading-xs text-gray-400"></span>';
+    return;
+  }
+  if (attempt.status === "failed" || attempt.status === "skipped" || attempt.quality_score == null) {
+    chip.className = "w-6 h-6 rounded-full flex items-center justify-center bg-gray-50 border border-gray-100 text-gray-300";
+    chip.innerHTML = '<i class="ti ti-minus text-[10px]"></i>';
+    return;
+  }
+  const displayScore = attempt.ai_feedback_json && attempt.ai_feedback_json.score != null
+    ? Math.round(attempt.ai_feedback_json.score) : null;
+  const colorClass = scoreColorClass(displayScore);
+  chip.className = `w-6 h-6 rounded-full flex items-center justify-center bg-gray-50 border border-gray-100 text-[10px] font-semibold ${colorClass}`;
+  chip.textContent = displayScore != null ? displayScore : "✓";
+}
+
+function ensurePolling() {
+  if (pollTimer) return;
+  pollTimer = setInterval(pollPendingAttempts, 2000);
+}
+
+async function pollPendingAttempts() {
+  const pending = pendingAttempts.filter((a) => a.status === "pending");
+  if (pending.length === 0) {
+    clearInterval(pollTimer);
+    pollTimer = null;
+    if (finishing) renderCompletionIfReady();
+    return;
+  }
+  await Promise.all(pending.map(async (attempt) => {
+    try {
+      const resp = await fetch(`/languages/${TRACK_CODE}/sessions/${attempt.sessionId}`);
+      if (!resp.ok) return;
+      const data = await resp.json();
+      if (data.grading_status && data.grading_status !== "pending") {
+        attempt.status = data.grading_status;
+        attempt.quality_score = data.quality_score;
+        attempt.ai_feedback_json = data.ai_feedback_json;
+        updateChip(attempt);
+      }
+    } catch (err) {
+      // ignore transient errors, retry next tick
+    }
+  }));
+  if (finishing) renderCompletionIfReady();
 }
 
 function updateProgress() {
   const pct = total > 0 ? Math.round(shadowed / total * 100) : 0;
   document.getElementById("progress-label").textContent = `${shadowed} / ${total} shadowed`;
   document.getElementById("progress-bar").style.width = pct + "%";
+  document.getElementById("finish-btn").classList.toggle("hidden", shadowed === 0);
 }
 
-function showCompletion() {
+function finishSession() {
+  if (finishing) return;
+  finishing = true;
+  if (mediaRecorder && mediaRecorder.state === "recording") mediaRecorder.stop();
+  discardCurrentBlob();
   document.getElementById("shadow-card").classList.add("hidden");
   document.getElementById("record-card").classList.add("hidden");
   document.getElementById("completion").classList.remove("hidden");
+  ensurePolling();
+  renderCompletionIfReady();
+}
+
+function renderCompletionIfReady() {
+  const stillPending = pendingAttempts.filter((a) => a.status === "pending").length;
+  if (stillPending > 0) {
+    document.getElementById("completion-waiting").classList.remove("hidden");
+    document.getElementById("completion-done").classList.add("hidden");
+    document.getElementById("completion-waiting-text").innerHTML =
+      `<span class="loading loading-spinner loading-xs"></span> Grading ${stillPending} recording${stillPending !== 1 ? "s" : ""}…`;
+    return;
+  }
+  document.getElementById("completion-waiting").classList.add("hidden");
+  document.getElementById("completion-done").classList.remove("hidden");
   document.getElementById("completion-stats").textContent =
     `Shadowed ${shadowed} chunk${shadowed !== 1 ? "s" : ""} this session.`;
+
+  const resultsEl = document.getElementById("completion-results");
+  resultsEl.innerHTML = "";
+  pendingAttempts.forEach((a) => {
+    const score = a.ai_feedback_json && a.ai_feedback_json.score != null ? Math.round(a.ai_feedback_json.score) : null;
+    const row = document.createElement("div");
+    row.className = "flex items-start gap-3 text-xs border-b border-gray-50 pb-2";
+    row.innerHTML = `
+      <span class="font-semibold w-8 shrink-0 ${scoreColorClass(score)}">${score != null ? score : "—"}</span>
+      <div class="flex-1">
+        <p class="text-gray-700">${a.chunkText}</p>
+        <p class="text-gray-400">${(a.ai_feedback_json && a.ai_feedback_json.summary) || (a.status === "failed" ? "Grading failed." : "")}</p>
+      </div>`;
+    resultsEl.appendChild(row);
+  });
 }
 
 if (total > 0) showCard(0);

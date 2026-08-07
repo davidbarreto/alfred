@@ -79,8 +79,10 @@ class SessionService:
         self,
         data: ShadowingSessionCreate,
         audio_ref: str | None = None,
+        grading_status: str = "done",
     ) -> SessionRead:
-        """Record a shadowing session. quality_score may come from Gemini (set externally)."""
+        """Record a shadowing session. quality_score may come from Gemini (set externally),
+        or be left unset with grading_status="pending" when grading happens asynchronously."""
         feeds_srs = data.quality_score is not None
         orm = await self._repo.create_session(
             track_id=data.track_id,
@@ -91,12 +93,41 @@ class SessionService:
             ai_feedback_json=data.ai_feedback_json,
             quality_score=data.quality_score,
             transcript_or_notes=data.transcript_or_notes,
+            grading_status=grading_status,
         )
         if data.chunk_id is not None and data.quality_score is not None:
             await self._chunk_service.apply_srs_review(data.chunk_id, data.quality_score)
         logger.info(
-            "Shadowing session recorded: session_id=%d chunk_id=%s score=%s",
-            orm.id, data.chunk_id, data.quality_score,
+            "Shadowing session recorded: session_id=%d chunk_id=%s score=%s grading_status=%s",
+            orm.id, data.chunk_id, data.quality_score, grading_status,
+        )
+        return SessionRead.model_validate(orm)
+
+    async def update_shadowing_grading(
+        self,
+        session_id: int,
+        quality_score: float | None,
+        ai_feedback_json: dict | None,
+        transcript_or_notes: str | None,
+        grading_status: str,
+    ) -> SessionRead | None:
+        """Apply a background grading result to a previously-created pending shadowing session."""
+        orm = await self._repo.update_grading_result(
+            session_id,
+            quality_score=quality_score,
+            ai_feedback_json=ai_feedback_json,
+            transcript_or_notes=transcript_or_notes,
+            grading_status=grading_status,
+            feeds_srs=quality_score is not None,
+        )
+        if orm is None:
+            logger.warning("update_shadowing_grading: session not found id=%d", session_id)
+            return None
+        if orm.chunk_id is not None and quality_score is not None:
+            await self._chunk_service.apply_srs_review(orm.chunk_id, quality_score)
+        logger.info(
+            "Shadowing grading updated: session_id=%d status=%s score=%s",
+            session_id, grading_status, quality_score,
         )
         return SessionRead.model_validate(orm)
 

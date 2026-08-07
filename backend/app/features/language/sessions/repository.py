@@ -49,6 +49,7 @@ class SessionRepository:
         ai_feedback_json: dict | None = None,
         quality_score: float | None = None,
         transcript_or_notes: str | None = None,
+        grading_status: str = "done",
     ) -> LearningSession:
         ls = LearningSession(
             track_id=track_id,
@@ -61,8 +62,30 @@ class SessionRepository:
             ai_feedback_json=ai_feedback_json,
             quality_score=quality_score,
             transcript_or_notes=transcript_or_notes,
+            grading_status=grading_status,
         )
         self._session.add(ls)
+        await self._session.commit()
+        await self._session.refresh(ls)
+        return ls
+
+    async def update_grading_result(
+        self,
+        session_id: int,
+        quality_score: float | None,
+        ai_feedback_json: dict | None,
+        transcript_or_notes: str | None,
+        grading_status: str,
+        feeds_srs: bool,
+    ) -> LearningSession | None:
+        ls = await self.get_session(session_id)
+        if ls is None:
+            return None
+        ls.quality_score = quality_score
+        ls.ai_feedback_json = ai_feedback_json
+        ls.transcript_or_notes = transcript_or_notes
+        ls.grading_status = grading_status
+        ls.feeds_srs = feeds_srs
         await self._session.commit()
         await self._session.refresh(ls)
         return ls

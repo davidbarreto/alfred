@@ -161,6 +161,31 @@ class TestSessionAudio:
         assert resp.headers["location"].startswith("/login")
 
 
+class TestSessionStatus:
+    def test_returns_session_from_backend(self, client, mock_api):
+        mock_api["get"].return_value = {"id": 7, "grading_status": "done", "quality_score": 3.5}
+
+        resp = client.get("/languages/fr/sessions/7")
+
+        assert resp.status_code == 200
+        assert resp.json() == {"id": 7, "grading_status": "done", "quality_score": 3.5}
+        mock_api["get"].assert_awaited_once_with("/language/sessions/7")
+
+    def test_returns_502_when_backend_unreachable(self, client, mock_api):
+        request = httpx.Request("GET", "http://api/language/sessions/7")
+        mock_api["get"].side_effect = httpx.ConnectError("connection refused", request=request)
+
+        resp = client.get("/languages/fr/sessions/7")
+
+        assert resp.status_code == 502
+
+    def test_requires_authentication(self, anon_client):
+        resp = anon_client.get("/languages/fr/sessions/7", follow_redirects=False)
+
+        assert resp.status_code == 302
+        assert resp.headers["location"].startswith("/login")
+
+
 class TestSubmitShadowing:
     def test_uploads_audio_and_returns_result(self, client, mock_api):
         mock_api["get"].return_value = [{"id": 5, "code": "fr", "name": "French"}]

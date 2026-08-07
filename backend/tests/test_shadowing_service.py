@@ -45,8 +45,6 @@ def _make_service(**kwargs):
     session = kwargs.get("session") or AsyncMock()
     session_service = kwargs.get("session_service") or AsyncMock()
     session_service.record_shadowing.return_value = MagicMock(id=1)
-    chunk_repo = kwargs.get("chunk_repo") or AsyncMock()
-    track_repo = kwargs.get("track_repo") or AsyncMock()
     audio_storage = kwargs.get("audio_storage") or AsyncMock()
     audio_converter = kwargs.get("audio_converter") or AsyncMock()
     audio_converter.to_ogg_opus.return_value = kwargs.get("ogg_audio", b"ogg-bytes")
@@ -55,10 +53,10 @@ def _make_service(**kwargs):
     analysis_provider.model = "gemini-2.5-flash"
 
     service = ShadowingService(
-        session=session, session_service=session_service, chunk_repo=chunk_repo, track_repo=track_repo,
+        session=session, session_service=session_service,
         audio_storage=audio_storage, audio_converter=audio_converter, analysis_provider=analysis_provider,
     )
-    return service, session, session_service, chunk_repo, track_repo, audio_storage, audio_converter, analysis_provider
+    return service, session, session_service, audio_storage, audio_converter, analysis_provider
 
 
 class TestScoreToQuality:
@@ -78,16 +76,17 @@ class TestScoreToQuality:
 
 
 class TestRecordShadowingWithAudio:
+    """Fast path: save audio, create a pending/skipped session, and hand grading off to the
+    background — no LLM call happens inline."""
 
     @pytest.mark.asyncio
-    async def test_with_chunk_runs_analysis_and_derives_quality_score(self):
-        service, session, session_service, chunk_repo, track_repo, audio_storage, audio_converter, analysis_provider = _make_service()
-        chunk_repo.get_chunk.return_value = _make_chunk()
-        track_repo.get_track.return_value = _make_track()
-        analysis_provider.analyze_pronunciation.return_value = _make_analysis_result(score=85.0)
+    async def test_with_chunk_saves_audio_and_schedules_grading(self):
+        service, session, session_service, audio_storage, audio_converter, analysis_provider = _make_service()
+        background_tasks = MagicMock()
 
-        with patch("app.features.language.sessions.shadowing_service.create_llm_call", AsyncMock()) as mock_log:
-            await service.record_shadowing_with_audio(track_id=1, chunk_id=42, audio=b"raw-audio")
+        result = await service.record_shadowing_with_audio(
+            track_id=1, chunk_id=42, audio=b"raw-audio", background_tasks=background_tasks,
+        )
 
         audio_converter.to_ogg_opus.assert_awaited_once_with(b"raw-audio")
         audio_storage.save.assert_awaited_once()
@@ -95,70 +94,118 @@ class TestRecordShadowingWithAudio:
         assert saved_bytes == b"ogg-bytes"
         assert saved_ref.startswith("shadowing/") and saved_ref.endswith(".ogg")
 
-        analysis_provider.analyze_pronunciation.assert_awaited_once_with(
-            b"ogg-bytes", "audio/ogg", "bonjour", "hello", "French",
+        create_call = session_service.record_shadowing.call_args
+        data = create_call.args[0]
+        assert data.track_id == 1
+        assert data.chunk_id == 42
+        assert data.quality_score is None
+        assert data.ai_feedback_json is None
+        assert create_call.kwargs["audio_ref"] == saved_ref
+        assert create_call.kwargs["grading_status"] == "pending"
+
+        analysis_provider.analyze_pronunciation.assert_not_awaited()
+        background_tasks.add_task.assert_called_once_with(
+            service._grade_shadowing_in_background, result.id, 42, 1, b"ogg-bytes",
+        )
+
+    @pytest.mark.asyncio
+    async def test_without_chunk_id_skips_grading(self):
+        service, session, session_service, audio_storage, audio_converter, analysis_provider = _make_service()
+        background_tasks = MagicMock()
+
+        await service.record_shadowing_with_audio(
+            track_id=1, chunk_id=None, audio=b"raw-audio", background_tasks=background_tasks,
         )
 
         create_call = session_service.record_shadowing.call_args
-        data = create_call.args[0]
-        assert data.quality_score == score_to_quality(85.0)
-        assert data.ai_feedback_json["transcription"] == "bonjour"
-        assert data.transcript_or_notes == "Clear and natural."
-        assert create_call.kwargs["audio_ref"] == saved_ref
-
-        mock_log.assert_awaited_once()
-        log_call = mock_log.call_args
-        assert log_call.args[0] is session
-        assert log_call.kwargs["provider"] == "google"
-        assert log_call.kwargs["model"] == "gemini-2.5-flash"
-        assert log_call.kwargs["feature"] == "pronunciation_analysis"
-        assert log_call.kwargs["response"] == '{"score": 85}'
-        assert log_call.kwargs["tokens_input"] == 100
-        assert log_call.kwargs["tokens_output"] == 50
-        assert log_call.kwargs["finish_reason"] == "STOP"
-        assert log_call.kwargs["latency_ms"] >= 0
-
-    @pytest.mark.asyncio
-    async def test_without_chunk_id_skips_analysis(self):
-        service, session, session_service, chunk_repo, track_repo, audio_storage, audio_converter, analysis_provider = _make_service()
-
-        with patch("app.features.language.sessions.shadowing_service.create_llm_call", AsyncMock()) as mock_log:
-            await service.record_shadowing_with_audio(track_id=1, chunk_id=None, audio=b"raw-audio")
-
-        chunk_repo.get_chunk.assert_not_awaited()
-        analysis_provider.analyze_pronunciation.assert_not_awaited()
-        mock_log.assert_not_awaited()
-        data = session_service.record_shadowing.call_args.args[0]
-        assert data.quality_score is None
-        assert data.ai_feedback_json is None
+        assert create_call.kwargs["grading_status"] == "skipped"
+        background_tasks.add_task.assert_not_called()
         audio_storage.save.assert_awaited_once()
 
-    @pytest.mark.asyncio
-    async def test_missing_chunk_skips_analysis(self):
-        service, session, session_service, chunk_repo, track_repo, audio_storage, audio_converter, analysis_provider = _make_service()
-        chunk_repo.get_chunk.return_value = None
 
-        with patch("app.features.language.sessions.shadowing_service.create_llm_call", AsyncMock()) as mock_log:
-            await service.record_shadowing_with_audio(track_id=1, chunk_id=42, audio=b"raw-audio")
-
-        analysis_provider.analyze_pronunciation.assert_not_awaited()
-        mock_log.assert_not_awaited()
-        data = session_service.record_shadowing.call_args.args[0]
-        assert data.quality_score is None
+class TestGradeShadowingInBackground:
+    """The deferred grading step: opens its own DB session and updates the pending row."""
 
     @pytest.mark.asyncio
-    async def test_analysis_failure_still_saves_audio_and_session(self):
-        service, session, session_service, chunk_repo, track_repo, audio_storage, audio_converter, analysis_provider = _make_service()
+    async def test_success_updates_session_as_done(self):
+        service, _, _, _, _, analysis_provider = _make_service()
+        chunk_repo = AsyncMock()
         chunk_repo.get_chunk.return_value = _make_chunk()
+        track_repo = AsyncMock()
         track_repo.get_track.return_value = _make_track()
+        session_service = AsyncMock()
+        analysis_provider.analyze_pronunciation.return_value = _make_analysis_result(score=85.0)
+
+        db_session = AsyncMock()
+        async_session_cm = AsyncMock()
+        async_session_cm.__aenter__.return_value = db_session
+
+        with patch("app.features.language.sessions.shadowing_service.async_session", return_value=async_session_cm), \
+             patch("app.features.language.sessions.shadowing_service.ChunkRepository", return_value=chunk_repo), \
+             patch("app.features.language.sessions.shadowing_service.TrackRepository", return_value=track_repo), \
+             patch("app.features.language.sessions.shadowing_service.SessionService", return_value=session_service), \
+             patch("app.features.language.sessions.shadowing_service.create_llm_call", AsyncMock()) as mock_log:
+            await service._grade_shadowing_in_background(
+                session_id=7, chunk_id=42, track_id=1, ogg_audio=b"ogg-bytes",
+            )
+
+        analysis_provider.analyze_pronunciation.assert_awaited_once_with(
+            b"ogg-bytes", "audio/ogg", "bonjour", "hello", "French",
+        )
+        mock_log.assert_awaited_once()
+        assert mock_log.call_args.args[0] is db_session
+
+        session_service.update_shadowing_grading.assert_awaited_once()
+        call = session_service.update_shadowing_grading.call_args
+        assert call.args[0] == 7
+        assert call.kwargs["quality_score"] == score_to_quality(85.0)
+        assert call.kwargs["ai_feedback_json"]["transcription"] == "bonjour"
+        assert call.kwargs["transcript_or_notes"] == "Clear and natural."
+        assert call.kwargs["grading_status"] == "done"
+
+    @pytest.mark.asyncio
+    async def test_analysis_failure_marks_grading_failed(self):
+        service, _, _, _, _, analysis_provider = _make_service()
+        chunk_repo = AsyncMock()
+        chunk_repo.get_chunk.return_value = _make_chunk()
+        track_repo = AsyncMock()
+        track_repo.get_track.return_value = _make_track()
+        session_service = AsyncMock()
         analysis_provider.analyze_pronunciation.side_effect = RuntimeError("gemini boom")
 
-        with patch("app.features.language.sessions.shadowing_service.create_llm_call", AsyncMock()) as mock_log:
-            await service.record_shadowing_with_audio(track_id=1, chunk_id=42, audio=b"raw-audio")
+        async_session_cm = AsyncMock()
+        async_session_cm.__aenter__.return_value = AsyncMock()
 
-        audio_storage.save.assert_awaited_once()
+        with patch("app.features.language.sessions.shadowing_service.async_session", return_value=async_session_cm), \
+             patch("app.features.language.sessions.shadowing_service.ChunkRepository", return_value=chunk_repo), \
+             patch("app.features.language.sessions.shadowing_service.TrackRepository", return_value=track_repo), \
+             patch("app.features.language.sessions.shadowing_service.SessionService", return_value=session_service), \
+             patch("app.features.language.sessions.shadowing_service.create_llm_call", AsyncMock()) as mock_log:
+            await service._grade_shadowing_in_background(
+                session_id=7, chunk_id=42, track_id=1, ogg_audio=b"ogg-bytes",
+            )
+
         mock_log.assert_not_awaited()
-        data = session_service.record_shadowing.call_args.args[0]
-        assert data.quality_score is None
-        assert data.ai_feedback_json is None
-        assert session_service.record_shadowing.call_args.kwargs["audio_ref"] is not None
+        session_service.update_shadowing_grading.assert_awaited_once_with(7, None, None, None, "failed")
+
+    @pytest.mark.asyncio
+    async def test_missing_chunk_marks_grading_failed(self):
+        service, _, _, _, _, analysis_provider = _make_service()
+        chunk_repo = AsyncMock()
+        chunk_repo.get_chunk.return_value = None
+        track_repo = AsyncMock()
+        session_service = AsyncMock()
+
+        async_session_cm = AsyncMock()
+        async_session_cm.__aenter__.return_value = AsyncMock()
+
+        with patch("app.features.language.sessions.shadowing_service.async_session", return_value=async_session_cm), \
+             patch("app.features.language.sessions.shadowing_service.ChunkRepository", return_value=chunk_repo), \
+             patch("app.features.language.sessions.shadowing_service.TrackRepository", return_value=track_repo), \
+             patch("app.features.language.sessions.shadowing_service.SessionService", return_value=session_service):
+            await service._grade_shadowing_in_background(
+                session_id=7, chunk_id=42, track_id=1, ogg_audio=b"ogg-bytes",
+            )
+
+        analysis_provider.analyze_pronunciation.assert_not_awaited()
+        session_service.update_shadowing_grading.assert_awaited_once_with(7, None, None, None, "failed")

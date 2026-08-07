@@ -29,6 +29,7 @@ def _make_session_orm(**kwargs):
     orm.ai_feedback_json = kwargs.get("ai_feedback_json", None)
     orm.quality_score = kwargs.get("quality_score", 3.5)
     orm.transcript_or_notes = kwargs.get("transcript_or_notes", None)
+    orm.grading_status = kwargs.get("grading_status", "done")
     orm.created_at = kwargs.get("created_at", datetime(2026, 6, 25, tzinfo=timezone.utc))
     return orm
 
@@ -127,6 +128,58 @@ class TestRecordShadowing:
 
         await service.record_shadowing(data)
 
+        service._chunk_service.apply_srs_review.assert_not_called()
+
+    async def test_passes_grading_status_through_to_repo(self, service):
+        service._repo.create_session.return_value = _make_session_orm(
+            session_type="shadowing", grading_status="pending", quality_score=None,
+        )
+        data = ShadowingSessionCreate(track_id=1, chunk_id=10)
+
+        result = await service.record_shadowing(data, grading_status="pending")
+
+        call_kwargs = service._repo.create_session.call_args[1]
+        assert call_kwargs["grading_status"] == "pending"
+        assert result.grading_status == "pending"
+
+
+class TestUpdateShadowingGrading:
+    async def test_success_updates_row_and_applies_srs_review(self, service):
+        service._repo.update_grading_result.return_value = _make_session_orm(
+            session_type="shadowing", quality_score=3.0, grading_status="done",
+        )
+
+        result = await service.update_shadowing_grading(
+            session_id=1, quality_score=3.0, ai_feedback_json={"score": 75}, transcript_or_notes="ok", grading_status="done",
+        )
+
+        call_kwargs = service._repo.update_grading_result.call_args[1]
+        assert call_kwargs["quality_score"] == 3.0
+        assert call_kwargs["grading_status"] == "done"
+        assert call_kwargs["feeds_srs"] is True
+        service._chunk_service.apply_srs_review.assert_called_once_with(10, 3.0)
+        assert result.grading_status == "done"
+
+    async def test_failed_grading_skips_srs_review(self, service):
+        service._repo.update_grading_result.return_value = _make_session_orm(
+            session_type="shadowing", quality_score=None, grading_status="failed",
+        )
+
+        result = await service.update_shadowing_grading(
+            session_id=1, quality_score=None, ai_feedback_json=None, transcript_or_notes=None, grading_status="failed",
+        )
+
+        service._chunk_service.apply_srs_review.assert_not_called()
+        assert result.grading_status == "failed"
+
+    async def test_returns_none_when_session_not_found(self, service):
+        service._repo.update_grading_result.return_value = None
+
+        result = await service.update_shadowing_grading(
+            session_id=999, quality_score=None, ai_feedback_json=None, transcript_or_notes=None, grading_status="failed",
+        )
+
+        assert result is None
         service._chunk_service.apply_srs_review.assert_not_called()
 
 

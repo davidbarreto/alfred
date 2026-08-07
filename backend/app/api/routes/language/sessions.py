@@ -1,6 +1,6 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, Response, UploadFile, status
+from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPException, Response, UploadFile, status
 
 from app.api.auth import require_auth
 from app.dependencies import FileStorageDep, LanguageSessionServiceDep, ShadowingServiceDep
@@ -44,12 +44,13 @@ async def advance_loop(request: LoopAdvanceRequest, service: LanguageSessionServ
 @router.post("/shadowing/audio", response_model=SessionRead, status_code=status.HTTP_201_CREATED)
 async def record_shadowing_audio(
     service: ShadowingServiceDep,
+    background_tasks: BackgroundTasks,
     track_id: Annotated[int, Form()],
     chunk_id: Annotated[int | None, Form()] = None,
     audio: UploadFile = File(...),
 ):
     audio_bytes = await audio.read()
-    return await service.record_shadowing_with_audio(track_id, chunk_id, audio_bytes)
+    return await service.record_shadowing_with_audio(track_id, chunk_id, audio_bytes, background_tasks)
 
 
 @router.post("", response_model=SessionRead, status_code=status.HTTP_201_CREATED)

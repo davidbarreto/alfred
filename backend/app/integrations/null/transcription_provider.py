@@ -18,5 +18,5 @@ class NullTranscriptionProvider:
     def model(self) -> str:
         return "null"
 
-    async def transcribe(self, audio: bytes, mime_type: str) -> TranscriptionResult:
+    async def transcribe(self, audio: bytes, mime_type: str, context: str | None = None) -> TranscriptionResult:
         return TranscriptionResult(text=_CANNED_TEXT, tokens_input=0, tokens_output=0, finish_reason="STOP")

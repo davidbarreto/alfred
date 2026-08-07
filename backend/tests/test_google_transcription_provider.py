@@ -62,3 +62,17 @@ class TestTranscribe:
         assert result.tokens_input is None
         assert result.tokens_output is None
         assert result.finish_reason is None
+
+    @pytest.mark.asyncio
+    async def test_appends_context_to_prompt(self):
+        with patch("app.integrations.google.transcription_provider.genai.Client") as mock_client_cls:
+            mock_client = MagicMock()
+            mock_client.aio.models.generate_content = AsyncMock(return_value=_mock_response("hello there"))
+            mock_client_cls.return_value = mock_client
+
+            provider = GoogleTranscriptionProvider(api_key="test-key", model_name="gemini-2.5-flash")
+            await provider.transcribe(audio=b"fake-audio", mime_type="audio/ogg", context="Known names: Kenai.")
+
+        call_kwargs = mock_client.aio.models.generate_content.call_args.kwargs
+        prompt = call_kwargs["contents"][1]
+        assert "Known names: Kenai." in prompt

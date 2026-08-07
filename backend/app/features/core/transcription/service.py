@@ -3,11 +3,16 @@ import time
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.assistant.commands.registry import NL_TRIGGER_INDEX
 from app.features.core.transcription.schemas import TranscriptionRead
+from app.features.organizer.contacts.repository import ContactRepository
+from app.features.organizer.contacts.schemas import ContactFilters
 from app.integrations.llm_calls.repository import create_llm_call
 from app.shared.audio import TranscriptionProvider
 
 logger = logging.getLogger(__name__)
+
+_COMMAND_PHRASES = ", ".join(sorted({trigger for trigger, _ in NL_TRIGGER_INDEX}))
 
 
 class TranscriptionService:
@@ -16,9 +21,20 @@ class TranscriptionService:
         self._provider = provider
         self._session = session
 
+    async def _build_context(self) -> str:
+        contacts = await ContactRepository(self._session).get_contacts(
+            ContactFilters(relationship="family", limit=1000)
+        )
+        hints = [f"Known commands the speaker may start with: {_COMMAND_PHRASES}."]
+        if contacts:
+            names = ", ".join(sorted(c.name for c in contacts))
+            hints.append(f"Family member names that may be mentioned: {names}.")
+        return " ".join(hints)
+
     async def transcribe(self, audio: bytes, mime_type: str) -> TranscriptionRead:
         t0 = time.monotonic()
-        result = await self._provider.transcribe(audio, mime_type)
+        context = await self._build_context()
+        result = await self._provider.transcribe(audio, mime_type, context=context)
         latency_ms = int((time.monotonic() - t0) * 1000)
 
         await create_llm_call(

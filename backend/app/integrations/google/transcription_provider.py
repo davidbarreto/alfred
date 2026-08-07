@@ -27,12 +27,13 @@ class GoogleTranscriptionProvider:
     def model(self) -> str:
         return self._model_name
 
-    async def transcribe(self, audio: bytes, mime_type: str) -> TranscriptionResult:
+    async def transcribe(self, audio: bytes, mime_type: str, context: str | None = None) -> TranscriptionResult:
+        prompt = f"{_TRANSCRIBE_PROMPT} {context}" if context else _TRANSCRIBE_PROMPT
         response = await self._client.aio.models.generate_content(
             model=self._model_name,
             contents=[
                 types.Part.from_bytes(data=audio, mime_type=mime_type),
-                _TRANSCRIBE_PROMPT,
+                prompt,
             ],
         )
         usage = response.usage_metadata

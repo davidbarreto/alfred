@@ -1,4 +1,4 @@
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -19,16 +19,30 @@ def _make_service(**kwargs):
     return service, session, provider
 
 
+def _patch_family_contacts(names: list[str]):
+    contacts = [MagicMock(name=n) for n in names]
+    for contact, n in zip(contacts, names):
+        contact.name = n
+    repo = MagicMock()
+    repo.get_contacts = AsyncMock(return_value=contacts)
+    return patch("app.features.core.transcription.service.ContactRepository", return_value=repo)
+
+
 class TestTranscribe:
 
     @pytest.mark.asyncio
     async def test_transcribes_and_logs_llm_call(self):
         service, session, provider = _make_service()
 
-        with patch("app.features.core.transcription.service.create_llm_call", AsyncMock()) as mock_log:
+        with _patch_family_contacts([]), patch(
+            "app.features.core.transcription.service.create_llm_call", AsyncMock()
+        ) as mock_log:
             result = await service.transcribe(b"raw-audio", "audio/ogg")
 
-        provider.transcribe.assert_awaited_once_with(b"raw-audio", "audio/ogg")
+        provider.transcribe.assert_awaited_once()
+        call_args = provider.transcribe.call_args
+        assert call_args.args == (b"raw-audio", "audio/ogg")
+        assert "commands the speaker may start with" in call_args.kwargs["context"]
         assert result.text == "hello there"
 
         mock_log.assert_awaited_once()
@@ -42,3 +56,28 @@ class TestTranscribe:
         assert log_call.kwargs["tokens_output"] == 50
         assert log_call.kwargs["finish_reason"] == "STOP"
         assert log_call.kwargs["latency_ms"] >= 0
+
+    @pytest.mark.asyncio
+    async def test_context_includes_family_contact_names(self):
+        service, session, provider = _make_service()
+
+        with _patch_family_contacts(["Kenai", "Maria"]), patch(
+            "app.features.core.transcription.service.create_llm_call", AsyncMock()
+        ):
+            await service.transcribe(b"raw-audio", "audio/ogg")
+
+        context = provider.transcribe.call_args.kwargs["context"]
+        assert "Kenai" in context
+        assert "Maria" in context
+
+    @pytest.mark.asyncio
+    async def test_context_omits_family_hint_when_no_family_contacts(self):
+        service, session, provider = _make_service()
+
+        with _patch_family_contacts([]), patch(
+            "app.features.core.transcription.service.create_llm_call", AsyncMock()
+        ):
+            await service.transcribe(b"raw-audio", "audio/ogg")
+
+        context = provider.transcribe.call_args.kwargs["context"]
+        assert "Family member names" not in context

@@ -140,16 +140,20 @@ function playReference() {
   currentAudio.play().catch(() => {});
 }
 
-function resetRecordingUI() {
-  discardCurrentBlob();
-  document.getElementById("record-controls").classList.remove("hidden");
-  document.getElementById("review-controls").classList.add("hidden");
-  document.getElementById("shadow-status").textContent = "Record yourself saying it, listen back, then submit when you're happy with it.";
+function resetRecordButton() {
   const btn = document.getElementById("record-btn");
   btn.disabled = false;
   btn.innerHTML = '<i class="ti ti-microphone"></i> Record';
   btn.classList.remove("btn-error");
   btn.classList.add("btn-primary");
+}
+
+function resetRecordingUI() {
+  discardCurrentBlob();
+  document.getElementById("record-controls").classList.remove("hidden");
+  document.getElementById("review-controls").classList.add("hidden");
+  document.getElementById("shadow-status").textContent = "Record yourself saying it, listen back, then submit when you're happy with it.";
+  resetRecordButton();
 }
 
 function discardCurrentBlob() {
@@ -190,6 +194,7 @@ function enterReviewState() {
   document.getElementById("review-audio").src = currentBlobUrl;
   document.getElementById("record-controls").classList.add("hidden");
   document.getElementById("review-controls").classList.remove("hidden");
+  document.getElementById("submit-btn").disabled = false;
   document.getElementById("shadow-status").textContent = "Listen back — re-record if you want another take, or submit it.";
 }
 
@@ -197,6 +202,7 @@ function reRecord() {
   discardCurrentBlob();
   document.getElementById("review-controls").classList.add("hidden");
   document.getElementById("record-controls").classList.remove("hidden");
+  resetRecordButton();
   document.getElementById("shadow-status").textContent = "Record yourself saying it, listen back, then submit when you're happy with it.";
 }
 

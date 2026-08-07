@@ -91,7 +91,10 @@
         <p class="text-sm font-medium text-gray-700">Session complete!</p>
         <p class="text-xs text-gray-400" id="completion-stats"></p>
         <div id="completion-results" class="text-left space-y-2 max-h-72 overflow-y-auto"></div>
-        <a href="/languages/{{ track.code }}" class="btn btn-sm btn-primary mt-2">Back to {{ track.name }}</a>
+        <div class="flex items-center justify-center gap-2 mt-2">
+          <a href="/languages/{{ track.code }}/shadow" class="btn btn-sm btn-primary">Shadow again</a>
+          <a href="/languages/{{ track.code }}" class="btn btn-sm btn-ghost">Back to {{ track.name }}</a>
+        </div>
       </div>
     </div>
 

@@ -21,8 +21,7 @@ def client():
 
     service = AsyncMock()
     app.dependency_overrides[get_conversation_service] = lambda: service
-    with TestClient(app) as c:
-        yield c, service
+    yield TestClient(app), service
     app.dependency_overrides.clear()
 
 

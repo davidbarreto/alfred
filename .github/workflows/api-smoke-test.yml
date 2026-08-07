@@ -93,7 +93,7 @@ jobs:
         working-directory: infra
         run: |
           set -euo pipefail
-          for i in $(seq 1 60); do
+          for i in $(seq 1 100); do
             if docker compose -f docker-compose.ci.yml exec -T api \
                 python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=3)" 2>/dev/null; then
               echo "API is ready"
@@ -101,7 +101,7 @@ jobs:
             fi
             sleep 3
           done
-          echo "Error: API failed to start within 180s"
+          echo "Error: API failed to start within 300s"
           docker compose -f docker-compose.ci.yml logs api
           exit 1
 

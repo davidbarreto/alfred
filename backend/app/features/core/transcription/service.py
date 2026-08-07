@@ -23,7 +23,15 @@ class TranscriptionService:
 
     async def _build_context(self) -> str:
         contacts = await ContactRepository(self._session).get_contacts(
-            ContactFilters(relationship="family", limit=1000)
+            ContactFilters(
+                limit=1000,
+                offset=0,
+                name=None,
+                email=None,
+                letter=None,
+                has_birthday=None,
+                relationship="family",
+            )
         )
         hints = [f"Known commands the speaker may start with: {_COMMAND_PHRASES}."]
         if contacts:

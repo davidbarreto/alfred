@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import os
 from contextlib import asynccontextmanager
@@ -66,7 +67,7 @@ from app.api.routes.cs.recommendations import router as cs_recommendations_route
 from app.api.routes.cs.study_plans import router as cs_study_plans_router
 from app.config import get_settings
 from app.db.session import async_session
-from app.dependencies import get_notion_client
+from app.dependencies import get_embedding_provider, get_notion_client
 from app.integrations.google_oauth.client import GoogleTokenExpiredError
 from app.integrations.oauth_tokens.repository import delete_oauth_token
 
@@ -90,6 +91,9 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     configure_logging()
     logger.info("Startup logging configured: LOG_LEVEL=%s, root_level=%s", level_name, logging.getLogger().getEffectiveLevel())
     app.state.settings = settings
+    loop = asyncio.get_event_loop()
+    await loop.run_in_executor(None, get_embedding_provider().warm_up)
+    logger.info("Embedding model warmed up")
     yield
     await get_notion_client().aclose()
 

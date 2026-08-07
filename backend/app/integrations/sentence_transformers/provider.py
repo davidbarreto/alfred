@@ -30,6 +30,10 @@ class SentenceTransformerEmbeddingProvider:
             model_kwargs={"device_map": None},
         )
 
+    def warm_up(self) -> None:
+        """Force model construction; call once at startup to avoid a lazy-load race on first use."""
+        self._model  # noqa: B018
+
     async def embed(self, text: str) -> list[float]:
         logger.debug("SentenceTransformer: embedding text len=%d", len(text))
         loop = asyncio.get_event_loop()

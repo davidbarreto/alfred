@@ -163,8 +163,17 @@
       </div>
       <div class="flex items-center gap-2">
         <input id="event-all-day" name="all_day" type="checkbox" value="1" class="checkbox checkbox-sm"
-               onchange="document.getElementById('event-time-row').classList.toggle('hidden', this.checked)"/>
+               onchange="document.getElementById('event-time-row').classList.toggle('hidden', this.checked);
+                         document.getElementById('event-end-date-row').classList.toggle('hidden', !this.checked);"/>
         <label for="event-all-day" class="text-xs text-gray-500">All day</label>
+      </div>
+      <div id="event-end-date-row" class="hidden">
+        <label class="text-xs text-gray-500 mb-1 block">End date</label>
+        <input
+          name="end_date"
+          type="date"
+          class="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white w-full focus:outline-none focus:ring-1 focus:ring-[#378ADD]"
+        />
       </div>
       <div id="event-time-row" class="grid grid-cols-2 gap-3">
         <div>
@@ -322,6 +331,7 @@ function openNewEvent(prefillDate) {
   document.getElementById("new-event-form").reset();
   document.getElementById("event-form-title").textContent = "New event";
   document.getElementById("event-time-row").classList.remove("hidden");
+  document.getElementById("event-end-date-row").classList.add("hidden");
   document.getElementById("event-recurrence-custom").value = "";
   _setEventRecurrenceChip("");
   const viewerTzKnown = KNOWN_TIMEZONES.includes(VIEWER_TZ);
@@ -356,7 +366,10 @@ function openEditEvent(ev) {
 
   form.querySelector('[name="all_day"]').checked = ev.all_day;
   document.getElementById("event-time-row").classList.toggle("hidden", ev.all_day);
-  if (!ev.all_day) {
+  document.getElementById("event-end-date-row").classList.toggle("hidden", !ev.all_day);
+  if (ev.all_day) {
+    form.querySelector('[name="end_date"]').value = ev.end_datetime.slice(0, 10);
+  } else {
     form.querySelector('[name="start_time"]').value = ev.start_datetime.slice(11, 16);
     form.querySelector('[name="end_time"]').value = ev.end_datetime.slice(11, 16);
   }

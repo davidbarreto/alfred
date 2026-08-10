@@ -89,11 +89,20 @@ async def calendar_page(request: Request):
     weeks = cal_lib.monthcalendar(year, month)
     month_name = date(year, month, 1).strftime("%B %Y")
 
-    # Group events by date string (in the viewer's timezone) for quick lookup in template
+    # Group events by date string (in the viewer's timezone) for quick lookup in template.
+    # All-day events span every day between display_start and display_end (inclusive), so
+    # they need to be bucketed under each of those dates, not just the start date.
     events_by_date: dict[str, list] = {}
     for ev in events:
-        ev_date = ev["display_start"][:10]
-        events_by_date.setdefault(ev_date, []).append(ev)
+        if ev["all_day"]:
+            d = date.fromisoformat(ev["display_start"][:10])
+            end_d = date.fromisoformat(ev["display_end"][:10])
+            while d <= end_d:
+                events_by_date.setdefault(d.isoformat(), []).append(ev)
+                d += timedelta(days=1)
+        else:
+            ev_date = ev["display_start"][:10]
+            events_by_date.setdefault(ev_date, []).append(ev)
     for day_events in events_by_date.values():
         day_events.sort(key=lambda e: (not e["all_day"], e["display_start"]))
 
@@ -142,7 +151,13 @@ async def calendar_day(date_str: str, request: Request):
         return HTMLResponse('<p class="text-sm text-gray-400 p-4">Could not load events.</p>')
 
     _add_display_times(events, _viewer_timezone(request))
-    events = [e for e in events if e["display_start"][:10] == date_str]
+
+    def _covers_day(ev: dict) -> bool:
+        if ev["all_day"]:
+            return ev["display_start"][:10] <= date_str <= ev["display_end"][:10]
+        return ev["display_start"][:10] == date_str
+
+    events = [e for e in events if _covers_day(e)]
     events.sort(key=lambda e: (not e["all_day"], e["display_start"]))
 
     return templates.TemplateResponse(request, "_calendar_day.html", {
@@ -154,12 +169,12 @@ async def calendar_day(date_str: str, request: Request):
 
 def _event_payload(
     title: str, start_date: str, start_time: str, end_time: str, location: str, all_day: str,
-    recurrence_rule: str | None = None, timezone: str | None = None,
+    recurrence_rule: str | None = None, timezone: str | None = None, end_date: str | None = None,
 ) -> dict:
     is_all_day = bool(all_day)
     if is_all_day:
         start_iso = f"{start_date}T00:00:00"
-        end_iso = f"{start_date}T23:59:59"
+        end_iso = f"{end_date or start_date}T23:59:59"
     else:
         start_iso = f"{start_date}T{start_time}:00"
         end_iso = f"{start_date}T{end_time}:00"
@@ -186,8 +201,9 @@ async def create_event(
     all_day: Annotated[str, Form()] = "",
     recurrence_rule: Annotated[str | None, Form()] = None,
     timezone: Annotated[str | None, Form()] = None,
+    end_date: Annotated[str | None, Form()] = None,
 ):
-    payload = _event_payload(title, start_date, start_time, end_time, location, all_day, recurrence_rule, timezone)
+    payload = _event_payload(title, start_date, start_time, end_time, location, all_day, recurrence_rule, timezone, end_date)
     try:
         await api.post("/organizer/calendar-events", json=payload)
     except httpx.HTTPStatusError as e:
@@ -214,8 +230,9 @@ async def update_event(
     all_day: Annotated[str, Form()] = "",
     recurrence_rule: Annotated[str | None, Form()] = None,
     timezone: Annotated[str | None, Form()] = None,
+    end_date: Annotated[str | None, Form()] = None,
 ):
-    payload = _event_payload(title, start_date, start_time, end_time, location, all_day, recurrence_rule, timezone)
+    payload = _event_payload(title, start_date, start_time, end_time, location, all_day, recurrence_rule, timezone, end_date)
     try:
         await api.patch(f"/organizer/calendar-events/{event_id}", json=payload)
     except httpx.HTTPStatusError as e:

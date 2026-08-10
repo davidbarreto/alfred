@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -48,7 +48,10 @@ class GoogleCalendarProvider:
             dt = record["end_datetime"]
             if isinstance(dt, str):
                 dt = datetime.fromisoformat(dt)
-            event["end"] = {"date": dt.date().isoformat()} if all_day else {"dateTime": dt.isoformat(), "timeZone": event_timezone}
+            # Alfred stores all-day end dates inclusively (last day at 23:59:59), but
+            # Google's API treats an all-day event's end.date as exclusive (the day after
+            # the last day), so it must be advanced by one day here.
+            event["end"] = {"date": (dt.date() + timedelta(days=1)).isoformat()} if all_day else {"dateTime": dt.isoformat(), "timeZone": event_timezone}
 
         if record.get("recurrence_rule"):
             event["recurrence"] = [f"RRULE:{record['recurrence_rule']}"]
@@ -70,7 +73,9 @@ class GoogleCalendarProvider:
 
         if all_day:
             start_dt: datetime = datetime.fromisoformat(start["date"])
-            end_dt: datetime = datetime.fromisoformat(end["date"])
+            # Convert Google's exclusive end.date back to Alfred's inclusive convention
+            # (last day at 23:59:59) -- the mirror of the +1 day adjustment in _to_google_event.
+            end_dt = (datetime.fromisoformat(end["date"]) - timedelta(days=1)).replace(hour=23, minute=59, second=59)
         else:
             event_timezone = start.get("timeZone") or local_timezone_name()
             # Google's dateTime carries the event's own UTC offset (e.g. Central Time),

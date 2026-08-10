@@ -47,7 +47,19 @@ class TestToGoogleEvent:
         })
 
         assert event["start"] == {"date": "2026-03-15"}
-        assert event["end"] == {"date": "2026-03-15"}
+        # Google's end.date is exclusive, so a single-day event ending 3/15 sends 3/16.
+        assert event["end"] == {"date": "2026-03-16"}
+
+    def test_all_day_multi_day_event_advances_exclusive_end_date(self):
+        provider = _make_provider()
+        event = provider._to_google_event({
+            "start_datetime": datetime(2026, 3, 15, 0, 0),
+            "end_datetime": datetime(2026, 3, 17, 23, 59, 59),
+            "all_day": True,
+        })
+
+        assert event["start"] == {"date": "2026-03-15"}
+        assert event["end"] == {"date": "2026-03-18"}
 
 
 class TestFromGoogleEvent:
@@ -93,6 +105,21 @@ class TestFromGoogleEvent:
 
         assert record["all_day"] is True
         assert record["timezone"] is None
+        # Google's exclusive end.date (3/16) converts back to Alfred's inclusive
+        # last-day convention: still 3/15, at end of day.
+        assert record["end_datetime"] == datetime(2026, 3, 15, 23, 59, 59)
+
+    def test_all_day_multi_day_event_converts_exclusive_end_date(self):
+        provider = _make_provider()
+        record = provider._from_google_event({
+            "id": "gc-1",
+            "summary": "Trip",
+            "start": {"date": "2026-03-15"},
+            "end": {"date": "2026-03-18"},
+        })
+
+        assert record["start_datetime"] == datetime(2026, 3, 15, 0, 0)
+        assert record["end_datetime"] == datetime(2026, 3, 17, 23, 59, 59)
 
 
 class TestList:

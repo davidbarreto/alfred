@@ -1,3 +1,5 @@
+import re
+
 import httpx
 
 
@@ -30,6 +32,17 @@ class TestCalendarPage:
 
         assert resp.status_code == 200
         assert "+2 more" in resp.text
+
+    def test_multi_day_all_day_event_renders_on_every_spanned_day(self, client, mock_api):
+        mock_api["get"].return_value = [
+            _event(title="Vacation", start="2026-07-14T00:00:00", end="2026-07-16T23:59:59", all_day=True),
+        ]
+
+        resp = client.get("/calendar?year=2026&month=7")
+
+        assert resp.status_code == 200
+        grid_html = resp.text.split('<!-- Upcoming events list -->')[0]
+        assert len(re.findall("Vacation", grid_html)) == 3
 
     def test_day_cells_are_clickable_to_open_day_view(self, client, mock_api):
         mock_api["get"].return_value = [_event()]
@@ -65,6 +78,17 @@ class TestCalendarDay:
             "start_to": "2026-07-15T23:59:59",
             "limit": 200,
         })
+
+    def test_renders_multi_day_all_day_event_on_middle_and_last_day(self, client, mock_api):
+        mock_api["get"].return_value = [
+            _event(id=1, title="Vacation", start="2026-07-14T00:00:00", end="2026-07-16T23:59:59", all_day=True),
+        ]
+
+        resp_middle = client.get("/calendar/day/2026-07-15")
+        resp_last = client.get("/calendar/day/2026-07-16")
+
+        assert "Vacation" in resp_middle.text
+        assert "Vacation" in resp_last.text
 
     def test_renders_empty_state_when_no_events(self, client, mock_api):
         mock_api["get"].return_value = []
@@ -195,6 +219,47 @@ class TestCreateEvent:
             "timezone": "America/Chicago",
         })
 
+    def test_creates_multi_day_all_day_event(self, client, mock_api):
+        mock_api["post"].return_value = _event(id=5, title="Vacation", all_day=True)
+
+        resp = client.post("/calendar/", data={
+            "title": "Vacation",
+            "start_date": "2026-07-14",
+            "end_date": "2026-07-16",
+            "all_day": "1",
+        })
+
+        assert resp.status_code == 204
+        mock_api["post"].assert_any_await("/organizer/calendar-events", json={
+            "title": "Vacation",
+            "start_datetime": "2026-07-14T00:00:00",
+            "end_datetime": "2026-07-16T23:59:59",
+            "all_day": True,
+            "location": None,
+            "recurrence_rule": None,
+            "timezone": None,
+        })
+
+    def test_creates_all_day_event_defaults_end_date_to_start_date(self, client, mock_api):
+        mock_api["post"].return_value = _event(id=5, title="Holiday", all_day=True)
+
+        resp = client.post("/calendar/", data={
+            "title": "Holiday",
+            "start_date": "2026-07-14",
+            "all_day": "1",
+        })
+
+        assert resp.status_code == 204
+        mock_api["post"].assert_any_await("/organizer/calendar-events", json={
+            "title": "Holiday",
+            "start_datetime": "2026-07-14T00:00:00",
+            "end_datetime": "2026-07-14T23:59:59",
+            "all_day": True,
+            "location": None,
+            "recurrence_rule": None,
+            "timezone": None,
+        })
+
     def test_returns_422_when_backend_create_fails(self, client, mock_api):
         request = httpx.Request("POST", "http://api/organizer/calendar-events")
         response = httpx.Response(422, json={"detail": "Invalid event"}, request=request)
@@ -246,6 +311,27 @@ class TestUpdateEvent:
             "title": "Marriage Anniversary",
             "start_datetime": "2026-07-14T00:00:00",
             "end_datetime": "2026-07-14T23:59:59",
+            "all_day": True,
+            "location": None,
+            "recurrence_rule": None,
+            "timezone": None,
+        })
+
+    def test_updates_all_day_event_to_span_multiple_days(self, client, mock_api):
+        mock_api["patch"].return_value = _event(id=1, all_day=True)
+
+        resp = client.patch("/calendar/1", data={
+            "title": "Marriage Anniversary",
+            "start_date": "2026-07-14",
+            "end_date": "2026-07-16",
+            "all_day": "1",
+        })
+
+        assert resp.status_code == 204
+        mock_api["patch"].assert_any_await("/organizer/calendar-events/1", json={
+            "title": "Marriage Anniversary",
+            "start_datetime": "2026-07-14T00:00:00",
+            "end_datetime": "2026-07-16T23:59:59",
             "all_day": True,
             "location": None,
             "recurrence_rule": None,

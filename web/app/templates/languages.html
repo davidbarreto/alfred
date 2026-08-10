@@ -116,6 +116,14 @@
              class="flex-1 btn btn-sm btn-ghost text-gray-600 text-xs">
             <i class="ti ti-cards text-sm"></i>Chunks
           </a>
+          <button
+            data-track-code="{{ track.code }}"
+            data-paused="{{ 'true' if track.paused_at else 'false' }}"
+            onclick="event.stopPropagation(); quickTogglePause(this)"
+            title="{{ 'Resume track' if track.paused_at else 'Pause track' }}"
+            class="btn btn-sm btn-ghost btn-square text-gray-500 hover:text-gray-700">
+            <i class="ti {{ 'ti-player-play' if track.paused_at else 'ti-player-pause' }} text-sm"></i>
+          </button>
         </div>
 
       </div>
@@ -159,6 +167,22 @@ async function quickUpdateLevel(selectEl) {
     alert('Failed to update level.');
   } finally {
     selectEl.disabled = false;
+  }
+}
+
+async function quickTogglePause(btn) {
+  const code = btn.dataset.trackCode;
+  const paused = btn.dataset.paused === "true";
+  const endpoint = paused ? "resume" : "pause";
+  btn.disabled = true;
+
+  try {
+    const res = await fetch(`/languages/${code}/${endpoint}`, { method: 'POST' });
+    if (!res.ok) throw new Error();
+    window.location.reload();
+  } catch (e) {
+    btn.disabled = false;
+    alert(`Failed to ${endpoint} track.`);
   }
 }
 </script>

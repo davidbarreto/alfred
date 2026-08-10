@@ -408,10 +408,29 @@ async function uploadRecording() {
       body: formData,
     });
     if (!resp.ok) throw new Error("upload failed");
+    const result = await resp.json();
+    if (result.grading_status === "pending") {
+      await pollUntilGraded(result.id);
+    }
     location.reload();
   } catch (err) {
     status.textContent = "Could not analyze recording. Please try again.";
     btn.disabled = false;
+  }
+}
+
+async function pollUntilGraded(sessionId, maxAttempts = 30) {
+  for (let i = 0; i < maxAttempts; i++) {
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+    try {
+      const resp = await fetch(`/languages/${TRACK_CODE}/sessions/${sessionId}`);
+      if (resp.ok) {
+        const data = await resp.json();
+        if (data.grading_status && data.grading_status !== "pending") return;
+      }
+    } catch (err) {
+      // ignore transient errors, retry next tick
+    }
   }
 }
 </script>

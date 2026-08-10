@@ -20,6 +20,7 @@ class Track(Base):
     daily_quota: Mapped[int] = mapped_column(Integer, nullable=False, default=10)
     review_mode: Mapped[str] = mapped_column(String(20), nullable=False, default="balanced")
     active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    paused_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )

@@ -30,6 +30,13 @@
     </div>
   </div>
 
+  {% if paused_count > 0 %}
+  <p class="text-xs text-gray-400 flex items-center gap-1.5">
+    <i class="ti ti-player-pause text-xs"></i>
+    {{ paused_count }} language{{ "s" if paused_count != 1 else "" }} paused
+  </p>
+  {% endif %}
+
   {% if not tracks %}
   <div class="card bg-white p-8 text-center">
     <p class="text-sm text-gray-400">No language tracks yet. Add one via the API to get started.</p>
@@ -63,8 +70,12 @@
               <option value="{{ lvl }}" {% if track.level == lvl %}selected{% endif %}>{{ lvl }}</option>
               {% endfor %}
             </select>
-            {% if not track.active %}
-            <span class="px-2 py-0.5 rounded-full text-xs bg-gray-100 text-gray-400">Paused</span>
+            {% if track.paused_at %}
+            <span class="px-2 py-0.5 rounded-full text-xs bg-gray-100 text-gray-400">
+              <i class="ti ti-player-pause text-xs"></i> Paused
+            </span>
+            {% elif not track.active %}
+            <span class="px-2 py-0.5 rounded-full text-xs bg-gray-100 text-gray-400">Disabled</span>
             {% endif %}
           </div>
         </div>

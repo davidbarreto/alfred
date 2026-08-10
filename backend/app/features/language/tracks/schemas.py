@@ -32,6 +32,7 @@ class TrackRead(BaseModel):
     daily_quota: int
     review_mode: str
     active: bool
+    paused_at: datetime | None = None
     created_at: datetime
     updated_at: datetime
 
@@ -42,7 +43,9 @@ class TrackFilters:
     def __init__(
         self,
         active_only: Annotated[bool, Query()] = True,
+        exclude_paused: Annotated[bool, Query()] = True,
         code: Annotated[str | None, Query()] = None,
     ) -> None:
         self.active_only = active_only
+        self.exclude_paused = exclude_paused
         self.code = code

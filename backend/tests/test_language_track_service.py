@@ -2,6 +2,8 @@ import pytest
 from unittest.mock import AsyncMock, MagicMock
 from datetime import datetime, timezone
 
+from fastapi import HTTPException
+
 from app.features.language.tracks.service import TrackService
 from app.features.language.tracks.schemas import TrackCreate, TrackRead, TrackUpdate, TrackFilters
 
@@ -15,6 +17,7 @@ def _make_track_orm(**kwargs):
     orm.daily_quota = kwargs.get("daily_quota", 10)
     orm.review_mode = kwargs.get("review_mode", "balanced")
     orm.active = kwargs.get("active", True)
+    orm.paused_at = kwargs.get("paused_at", None)
     orm.created_at = kwargs.get("created_at", datetime(2026, 1, 1, tzinfo=timezone.utc))
     orm.updated_at = kwargs.get("updated_at", datetime(2026, 1, 1, tzinfo=timezone.utc))
     return orm
@@ -29,6 +32,7 @@ def mock_session():
 def service(mock_session):
     svc = TrackService(session=mock_session)
     svc._repo = AsyncMock()
+    svc._chunk_service = AsyncMock()
     return svc
 
 
@@ -103,3 +107,48 @@ class TestDeleteTrack:
     async def test_delegates_to_repo(self, service):
         await service.delete_track(1)
         service._repo.delete_track.assert_called_once_with(1)
+
+
+class TestPauseTrack:
+    async def test_returns_paused_track(self, service):
+        service._repo.pause_track.return_value = _make_track_orm(paused_at=datetime.now(timezone.utc))
+        result = await service.pause_track(1)
+        assert result.paused_at is not None
+        service._repo.pause_track.assert_called_once_with(1)
+
+    async def test_raises_404_when_not_found(self, service):
+        service._repo.pause_track.return_value = None
+        with pytest.raises(HTTPException) as exc_info:
+            await service.pause_track(999)
+        assert exc_info.value.status_code == 404
+
+
+class TestResumeTrack:
+    async def test_shifts_due_dates_by_paused_duration_and_clears_paused_at(self, service):
+        paused_at = datetime(2026, 8, 1, tzinfo=timezone.utc)
+        service._repo.get_track.return_value = _make_track_orm(paused_at=paused_at)
+        service._repo.resume_track.return_value = _make_track_orm(paused_at=None)
+
+        result = await service.resume_track(1)
+
+        assert result.paused_at is None
+        service._chunk_service.shift_due_dates.assert_called_once()
+        call_args = service._chunk_service.shift_due_dates.call_args
+        assert call_args.args[0] == 1
+        delta = call_args.args[1]
+        assert delta.total_seconds() > 0
+        service._repo.resume_track.assert_called_once_with(1)
+
+    async def test_raises_404_when_track_not_found(self, service):
+        service._repo.get_track.return_value = None
+        with pytest.raises(HTTPException) as exc_info:
+            await service.resume_track(999)
+        assert exc_info.value.status_code == 404
+        service._chunk_service.shift_due_dates.assert_not_called()
+
+    async def test_raises_400_when_track_not_paused(self, service):
+        service._repo.get_track.return_value = _make_track_orm(paused_at=None)
+        with pytest.raises(HTTPException) as exc_info:
+            await service.resume_track(1)
+        assert exc_info.value.status_code == 400
+        service._chunk_service.shift_due_dates.assert_not_called()

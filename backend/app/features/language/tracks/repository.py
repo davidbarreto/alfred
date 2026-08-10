@@ -1,4 +1,6 @@
-from sqlalchemy import select
+from datetime import datetime
+
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.features.language.tracks.tables import Track
@@ -22,6 +24,8 @@ class TrackRepository:
         query = select(Track)
         if filters.active_only:
             query = query.where(Track.active.is_(True))
+        if filters.exclude_paused:
+            query = query.where(Track.paused_at.is_(None))
         if filters.code is not None:
             query = query.where(Track.code == filters.code)
         query = query.order_by(Track.code)
@@ -41,6 +45,24 @@ class TrackRepository:
             return None
         for field, value in data.model_dump(exclude_unset=True).items():
             setattr(track, field, value)
+        await self._session.commit()
+        await self._session.refresh(track)
+        return track
+
+    async def pause_track(self, track_id: int) -> Track | None:
+        track = await self.get_track(track_id)
+        if track is None:
+            return None
+        track.paused_at = func.now()
+        await self._session.commit()
+        await self._session.refresh(track)
+        return track
+
+    async def resume_track(self, track_id: int) -> Track | None:
+        track = await self.get_track(track_id)
+        if track is None:
+            return None
+        track.paused_at = None
         await self._session.commit()
         await self._session.refresh(track)
         return track

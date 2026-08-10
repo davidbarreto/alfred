@@ -37,3 +37,13 @@ async def update_track(track_id: int, request: TrackUpdate, service: TrackServic
 async def delete_track(track_id: int, service: TrackServiceDep):
     await service.delete_track(track_id)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.post("/{track_id}/pause", response_model=TrackRead)
+async def pause_track(track_id: int, service: TrackServiceDep):
+    return await service.pause_track(track_id)
+
+
+@router.post("/{track_id}/resume", response_model=TrackRead)
+async def resume_track(track_id: int, service: TrackServiceDep):
+    return await service.resume_track(track_id)

@@ -21,6 +21,11 @@
         <p class="text-xs text-gray-400">{{ track.code | upper }} · {{ track.review_mode | replace('_', ' ') | title }}</p>
       </div>
       <span class="px-2 py-0.5 rounded-full text-xs font-medium {{ level_color }}">{{ track.level }}</span>
+      {% if track.paused_at %}
+      <span class="px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-500">
+        <i class="ti ti-player-pause text-xs"></i> Paused
+      </span>
+      {% endif %}
       <button onclick="openEditTrack()"
               class="inline-flex items-center justify-center w-6 h-6 rounded-full text-gray-300 hover:text-gray-600 hover:bg-gray-100 transition-colors"
               title="Edit track">
@@ -32,6 +37,17 @@
          class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-amber-50 border border-amber-200 text-xs font-medium text-amber-700 hover:bg-amber-100 transition-colors">
         <i class="ti ti-inbox text-sm"></i>Triage
       </a>
+      {% if track.paused_at %}
+      <button id="pause-resume-btn" onclick="resumeTrack()"
+              class="btn btn-sm bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 text-xs">
+        <i class="ti ti-player-play text-sm"></i>Resume
+      </button>
+      {% else %}
+      <button id="pause-resume-btn" onclick="pauseTrack()"
+              class="btn btn-sm bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 text-xs">
+        <i class="ti ti-player-pause text-sm"></i>Pause
+      </button>
+      {% endif %}
       {% if due_batch.total_due > 0 %}
       <a href="/languages/{{ track.code }}/review"
          class="btn btn-sm btn-primary text-xs">
@@ -262,6 +278,32 @@ async function updateScopeStatus(scopeId, status) {
     });
   } catch (e) {
     console.error('Failed to update scope:', e);
+  }
+}
+
+async function pauseTrack() {
+  const btn = document.getElementById("pause-resume-btn");
+  btn.disabled = true;
+  try {
+    const res = await fetch(`/languages/{{ track.code }}/pause`, { method: 'POST' });
+    if (!res.ok) throw new Error();
+    window.location.reload();
+  } catch (e) {
+    btn.disabled = false;
+    alert("Failed to pause track.");
+  }
+}
+
+async function resumeTrack() {
+  const btn = document.getElementById("pause-resume-btn");
+  btn.disabled = true;
+  try {
+    const res = await fetch(`/languages/{{ track.code }}/resume`, { method: 'POST' });
+    if (!res.ok) throw new Error();
+    window.location.reload();
+  } catch (e) {
+    btn.disabled = false;
+    alert("Failed to resume track.");
   }
 }
 

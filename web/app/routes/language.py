@@ -284,7 +284,7 @@ async def _safe_get(path: str, params: dict | None = None) -> list | dict:
 
 @router.get("/", response_class=HTMLResponse)
 async def hub(request: Request):
-    tracks = await _safe_get("/language/tracks", {"active_only": "false"})
+    tracks = await _safe_get("/language/tracks", {"active_only": "false", "exclude_paused": "false"})
     progress = await _safe_get("/language/sessions/daily-progress")
     progress_by_track = {p["track_id"]: p for p in progress}
 
@@ -305,9 +305,13 @@ async def hub(request: Request):
         t["quota_met"] = p["quota_met"] if p else False
         t["triage_count"] = triage_counts.get(t["id"], 0)
 
+    tracks.sort(key=lambda t: t["paused_at"] is not None)
+    paused_count = sum(1 for t in tracks if t["paused_at"])
+
     return templates.TemplateResponse(request, "languages.html", {
         "tracks": tracks,
         "total_triage": total_triage,
+        "paused_count": paused_count,
     })
 
 
@@ -315,7 +319,7 @@ async def hub(request: Request):
 
 @router.get("/triage", response_class=HTMLResponse)
 async def triage_page(request: Request):
-    tracks = await _safe_get("/language/tracks", {"active_only": "false"})
+    tracks = await _safe_get("/language/tracks", {"active_only": "false", "exclude_paused": "false"})
     active_code = request.query_params.get("lang")
 
     all_chunks = []
@@ -378,7 +382,7 @@ async def reject_chunk(chunk_id: int, request: Request):
 
 @router.get("/insights", response_class=HTMLResponse)
 async def insights_page(request: Request):
-    tracks = await _safe_get("/language/tracks", {"active_only": "false"})
+    tracks = await _safe_get("/language/tracks", {"active_only": "false", "exclude_paused": "false"})
     today = date.today()
 
     track_stats = []
@@ -452,7 +456,7 @@ _CEFR_LEVELS = ("A1", "A2", "B1", "B2", "C1", "C2")
 
 @router.get("/sessions", response_class=HTMLResponse)
 async def all_sessions(request: Request):
-    tracks = await _safe_get("/language/tracks", {"active_only": "false"})
+    tracks = await _safe_get("/language/tracks", {"active_only": "false", "exclude_paused": "false"})
 
     qp = request.query_params
     active_lang = qp.get("lang", "")
@@ -519,7 +523,7 @@ _CHAT_MODES = ("roleplay", "conversation")
 async def practice_chats(request: Request):
     """Roleplay and free-conversation sessions, with the per-turn coaching tips that
     are captured mid-session but never sent to Telegram."""
-    tracks = await _safe_get("/language/tracks", {"active_only": "false"})
+    tracks = await _safe_get("/language/tracks", {"active_only": "false", "exclude_paused": "false"})
 
     qp = request.query_params
     active_lang = qp.get("lang", "")
@@ -570,7 +574,7 @@ async def practice_chat_detail(request: Request, thread_id: int):
     if thread is None:
         raise HTTPException(status_code=404, detail="Conversation not found")
 
-    tracks = await _safe_get("/language/tracks", {"active_only": "false"})
+    tracks = await _safe_get("/language/tracks", {"active_only": "false", "exclude_paused": "false"})
     track = next((t for t in tracks if t["id"] == thread["track_id"]), None)
     thread["track_code"] = track["code"] if track else ""
     thread["track_name"] = track["name"] if track else f"Track #{thread['track_id']}"
@@ -588,7 +592,7 @@ async def practice_chat_detail(request: Request, thread_id: int):
 
 @router.get("/{code}/grammar-section", response_class=HTMLResponse)
 async def grammar_section(code: str, request: Request):
-    tracks = await _safe_get("/language/tracks", {"active_only": "false"})
+    tracks = await _safe_get("/language/tracks", {"active_only": "false", "exclude_paused": "false"})
     track = next((t for t in tracks if t["code"] == code), None)
     if not track:
         return HTMLResponse("<p>Track not found.</p>", status_code=404)
@@ -611,7 +615,7 @@ async def grammar_section(code: str, request: Request):
 
 @router.get("/{code}/sessions-section", response_class=HTMLResponse)
 async def sessions_section(code: str, request: Request):
-    tracks = await _safe_get("/language/tracks", {"active_only": "false"})
+    tracks = await _safe_get("/language/tracks", {"active_only": "false", "exclude_paused": "false"})
     track = next((t for t in tracks if t["code"] == code), None)
     if not track:
         return HTMLResponse("<p>Track not found.</p>", status_code=404)
@@ -654,7 +658,7 @@ async def _resolve_chunks_for_session(track: dict, words_param: str | None) -> t
 
 @router.get("/{code}/review", response_class=HTMLResponse)
 async def review_session(code: str, request: Request):
-    tracks = await _safe_get("/language/tracks", {"active_only": "false"})
+    tracks = await _safe_get("/language/tracks", {"active_only": "false", "exclude_paused": "false"})
     track = next((t for t in tracks if t["code"] == code), None)
     if not track:
         return HTMLResponse("<p>Track not found.</p>", status_code=404)
@@ -676,7 +680,7 @@ async def review_session(code: str, request: Request):
 
 @router.get("/{code}/shadow", response_class=HTMLResponse)
 async def shadow_session(code: str, request: Request):
-    tracks = await _safe_get("/language/tracks", {"active_only": "false"})
+    tracks = await _safe_get("/language/tracks", {"active_only": "false", "exclude_paused": "false"})
     track = next((t for t in tracks if t["code"] == code), None)
     if not track:
         return HTMLResponse("<p>Track not found.</p>", status_code=404)
@@ -707,7 +711,7 @@ async def _next_production_task(track_id: int, task_type: str | None = None) -> 
 
 @router.get("/{code}/produce", response_class=HTMLResponse)
 async def produce_session(code: str, request: Request):
-    tracks = await _safe_get("/language/tracks", {"active_only": "false"})
+    tracks = await _safe_get("/language/tracks", {"active_only": "false", "exclude_paused": "false"})
     track = next((t for t in tracks if t["code"] == code), None)
     if not track:
         return HTMLResponse("<p>Track not found.</p>", status_code=404)
@@ -726,7 +730,7 @@ async def produce_session(code: str, request: Request):
 
 @router.get("/{code}/produce/next")
 async def produce_next(code: str, request: Request):
-    tracks = await _safe_get("/language/tracks", {"active_only": "false"})
+    tracks = await _safe_get("/language/tracks", {"active_only": "false", "exclude_paused": "false"})
     track = next((t for t in tracks if t["code"] == code), None)
     if not track:
         return JSONResponse({"error": "Track not found."}, status_code=404)
@@ -806,7 +810,7 @@ async def session_status(code: str, session_id: int):
 
 @router.post("/{code}/chunks/{chunk_id}/shadow")
 async def submit_shadowing(code: str, chunk_id: int, request: Request):
-    tracks = await _safe_get("/language/tracks", {"active_only": "false"})
+    tracks = await _safe_get("/language/tracks", {"active_only": "false", "exclude_paused": "false"})
     track = next((t for t in tracks if t["code"] == code), None)
     if not track:
         return JSONResponse({"error": "Track not found."}, status_code=404)
@@ -847,7 +851,7 @@ _TRACK_UPDATE_FIELDS = ("name", "level", "daily_quota", "review_mode", "active")
 
 @router.patch("/{code}")
 async def update_track(code: str, request: Request):
-    tracks = await _safe_get("/language/tracks", {"active_only": "false"})
+    tracks = await _safe_get("/language/tracks", {"active_only": "false", "exclude_paused": "false"})
     track = next((t for t in tracks if t["code"] == code), None)
     if not track:
         return JSONResponse({"error": "Track not found."}, status_code=404)
@@ -870,9 +874,46 @@ async def update_track(code: str, request: Request):
     return JSONResponse(updated)
 
 
+@router.post("/{code}/pause")
+async def pause_track(code: str, request: Request):
+    tracks = await _safe_get("/language/tracks", {"active_only": "false", "exclude_paused": "false"})
+    track = next((t for t in tracks if t["code"] == code), None)
+    if not track:
+        return JSONResponse({"error": "Track not found."}, status_code=404)
+
+    try:
+        updated = await api.post(f"/language/tracks/{track['id']}/pause")
+    except httpx.HTTPError:
+        return JSONResponse({"error": "Failed to pause track."}, status_code=502)
+
+    return JSONResponse(updated)
+
+
+@router.post("/{code}/resume")
+async def resume_track(code: str, request: Request):
+    tracks = await _safe_get("/language/tracks", {"active_only": "false", "exclude_paused": "false"})
+    track = next((t for t in tracks if t["code"] == code), None)
+    if not track:
+        return JSONResponse({"error": "Track not found."}, status_code=404)
+
+    try:
+        updated = await api.post(f"/language/tracks/{track['id']}/resume")
+    except httpx.HTTPStatusError as exc:
+        detail = "Failed to resume track."
+        try:
+            detail = exc.response.json().get("detail", detail)
+        except Exception:
+            pass
+        return JSONResponse({"error": detail}, status_code=422)
+    except httpx.HTTPError:
+        return JSONResponse({"error": "Failed to resume track."}, status_code=502)
+
+    return JSONResponse(updated)
+
+
 @router.get("/{code}", response_class=HTMLResponse)
 async def track_detail(code: str, request: Request):
-    tracks = await _safe_get("/language/tracks", {"active_only": "false"})
+    tracks = await _safe_get("/language/tracks", {"active_only": "false", "exclude_paused": "false"})
     track = next((t for t in tracks if t["code"] == code), None)
     if not track:
         return HTMLResponse("<p>Track not found.</p>", status_code=404)
@@ -924,7 +965,7 @@ _DIFFICULTY_BUCKETS: dict[str, tuple[float, float]] = {
 
 @router.get("/{code}/chunks", response_class=HTMLResponse)
 async def chunk_browser(code: str, request: Request):
-    tracks = await _safe_get("/language/tracks", {"active_only": "false"})
+    tracks = await _safe_get("/language/tracks", {"active_only": "false", "exclude_paused": "false"})
     track = next((t for t in tracks if t["code"] == code), None)
     if not track:
         return HTMLResponse("<p>Track not found.</p>", status_code=404)
@@ -986,7 +1027,7 @@ async def chunk_browser(code: str, request: Request):
 
 @router.get("/{code}/chunks/{chunk_id}", response_class=HTMLResponse)
 async def chunk_detail(code: str, chunk_id: int, request: Request):
-    tracks = await _safe_get("/language/tracks", {"active_only": "false"})
+    tracks = await _safe_get("/language/tracks", {"active_only": "false", "exclude_paused": "false"})
     track = next((t for t in tracks if t["code"] == code), None)
     if not track:
         return HTMLResponse("<p>Track not found.</p>", status_code=404)

@@ -1,7 +1,7 @@
 import json
 import logging
 import time
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -173,6 +173,10 @@ class ChunkService:
 
         updated = await self._repo.get_chunk(chunk_id)
         return ChunkRead.model_validate(updated)
+
+    async def shift_due_dates(self, track_id: int, delta: timedelta) -> None:
+        await self._repo.shift_due_dates(track_id, delta)
+        logger.info("Chunk due dates shifted: track_id=%d delta_days=%.2f", track_id, delta.total_seconds() / 86400)
 
     async def get_daily_batch(self, track_id: int | None = None) -> list[DailyBatchRead]:
         """Return today's review batches per active track, Pareto-weighted."""

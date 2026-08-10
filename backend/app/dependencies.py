@@ -348,7 +348,7 @@ def get_reminder_service(session: AsyncSession = Depends(get_session)) -> Remind
     return ReminderService(session=session, task_service=get_task_service(session))
 
 def get_track_service(session: AsyncSession = Depends(get_session)) -> TrackService:
-    return TrackService(session)
+    return TrackService(session, chunk_service=get_language_chunk_service(session))
 
 def get_grammar_scope_service(session: AsyncSession = Depends(get_session)) -> GrammarScopeService:
     return GrammarScopeService(session)

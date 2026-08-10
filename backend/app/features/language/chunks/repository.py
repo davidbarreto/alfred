@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -216,6 +216,15 @@ class ChunkRepository:
         """Make a chunk eligible for production practice (sets its first prod_due_at)."""
         await self._session.execute(
             update(Chunk).where(Chunk.id == chunk_id).values(prod_due_at=due_at)
+        )
+        await self._session.commit()
+
+    async def shift_due_dates(self, track_id: int, delta: timedelta) -> None:
+        """Push every active chunk's due_at/prod_due_at forward by delta (e.g. a paused duration)."""
+        await self._session.execute(
+            update(Chunk)
+            .where(Chunk.track_id == track_id, Chunk.status == "active")
+            .values(due_at=Chunk.due_at + delta, prod_due_at=Chunk.prod_due_at + delta)
         )
         await self._session.commit()
 

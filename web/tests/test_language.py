@@ -421,3 +421,106 @@ class TestPracticeChatDetail:
         mock_api["get"].side_effect = [[], _TRACKS, []]
 
         assert client.get("/languages/chats/999").status_code == 404
+
+
+class TestPauseTrackRoute:
+    def test_posts_pause_and_returns_updated_track(self, client, mock_api):
+        mock_api["get"].return_value = [{"id": 5, "code": "fr", "name": "French"}]
+        mock_api["post"].return_value = {"id": 5, "code": "fr", "paused_at": "2026-08-10T00:00:00Z"}
+
+        resp = client.post("/languages/fr/pause")
+
+        assert resp.status_code == 200
+        mock_api["post"].assert_awaited_once_with("/language/tracks/5/pause")
+        assert resp.json()["paused_at"] is not None
+
+    def test_returns_404_when_track_not_found(self, client, mock_api):
+        mock_api["get"].return_value = []
+
+        resp = client.post("/languages/xx/pause")
+
+        assert resp.status_code == 404
+        mock_api["post"].assert_not_awaited()
+
+    def test_returns_502_when_backend_unreachable(self, client, mock_api):
+        mock_api["get"].return_value = [{"id": 5, "code": "fr", "name": "French"}]
+        request = httpx.Request("POST", "http://backend/language/tracks/5/pause")
+        mock_api["post"].side_effect = httpx.ConnectError("connection refused", request=request)
+
+        resp = client.post("/languages/fr/pause")
+
+        assert resp.status_code == 502
+
+
+class TestResumeTrackRoute:
+    def test_posts_resume_and_returns_updated_track(self, client, mock_api):
+        mock_api["get"].return_value = [{"id": 5, "code": "fr", "name": "French"}]
+        mock_api["post"].return_value = {"id": 5, "code": "fr", "paused_at": None}
+
+        resp = client.post("/languages/fr/resume")
+
+        assert resp.status_code == 200
+        mock_api["post"].assert_awaited_once_with("/language/tracks/5/resume")
+        assert resp.json()["paused_at"] is None
+
+    def test_returns_404_when_track_not_found(self, client, mock_api):
+        mock_api["get"].return_value = []
+
+        resp = client.post("/languages/xx/resume")
+
+        assert resp.status_code == 404
+
+    def test_returns_422_with_detail_when_track_not_paused(self, client, mock_api):
+        mock_api["get"].return_value = [{"id": 5, "code": "fr", "name": "French"}]
+        request = httpx.Request("POST", "http://backend/language/tracks/5/resume")
+        response = httpx.Response(400, json={"detail": "Track is not paused"}, request=request)
+        mock_api["post"].side_effect = httpx.HTTPStatusError("bad request", request=request, response=response)
+
+        resp = client.post("/languages/fr/resume")
+
+        assert resp.status_code == 422
+        assert resp.json()["error"] == "Track is not paused"
+
+
+class TestLanguagesHub:
+    def test_sorts_paused_tracks_after_active_ones(self, client, mock_api):
+        mock_api["get"].side_effect = [
+            [
+                {"id": 1, "code": "fr", "name": "French", "level": "B1", "daily_quota": 10, "paused_at": "2026-08-01T00:00:00Z"},
+                {"id": 2, "code": "ru", "name": "Russian", "level": "A2", "daily_quota": 10, "paused_at": None},
+            ],
+            [],
+            {"count": 0},
+            {"count": 0},
+        ]
+
+        resp = client.get("/languages")
+
+        assert resp.status_code == 200
+        assert resp.text.index("Russian") < resp.text.index("French")
+
+    def test_shows_paused_count_banner(self, client, mock_api):
+        mock_api["get"].side_effect = [
+            [
+                {"id": 1, "code": "fr", "name": "French", "level": "B1", "daily_quota": 10, "paused_at": "2026-08-01T00:00:00Z"},
+            ],
+            [],
+            {"count": 0},
+        ]
+
+        resp = client.get("/languages")
+
+        assert "1 language paused" in resp.text
+
+    def test_no_banner_when_nothing_paused(self, client, mock_api):
+        mock_api["get"].side_effect = [
+            [
+                {"id": 1, "code": "fr", "name": "French", "level": "B1", "daily_quota": 10, "paused_at": None},
+            ],
+            [],
+            {"count": 0},
+        ]
+
+        resp = client.get("/languages")
+
+        assert "language paused" not in resp.text

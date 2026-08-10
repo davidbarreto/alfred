@@ -1,6 +1,6 @@
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch, call
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from fastapi import HTTPException
 
@@ -241,6 +241,13 @@ class TestCountChunks:
         filters = ChunkFilters(track_id=99, status="active")
         result = await service.count_chunks(filters)
         assert result == 0
+
+
+class TestShiftDueDates:
+    async def test_delegates_to_repo(self, service):
+        delta = timedelta(days=2)
+        await service.shift_due_dates(1, delta)
+        service._repo.shift_due_dates.assert_called_once_with(1, delta)
 
 
 class TestGetDailyBatch:

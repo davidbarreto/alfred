@@ -240,6 +240,18 @@
         </div>
       </div>
       <div>
+        <label class="text-xs text-gray-500 mb-1 block">New chunks per day</label>
+        <input
+          id="edit-track-new-cards"
+          name="new_cards_per_day"
+          type="number"
+          min="0"
+          required
+          class="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white w-full focus:outline-none focus:ring-1 focus:ring-[#378ADD]"
+        />
+        <p class="text-[11px] text-gray-400 mt-1">Caps how many never-reviewed chunks enter rotation per day, separate from the daily review quota.</p>
+      </div>
+      <div>
         <label class="text-xs text-gray-500 mb-1 block">Review mode</label>
         <select
           id="edit-track-review-mode"
@@ -312,6 +324,7 @@ function openEditTrack() {
   document.getElementById("edit-track-name").value = {{ track.name | tojson }};
   document.getElementById("edit-track-level").value = {{ track.level | tojson }};
   document.getElementById("edit-track-quota").value = {{ track.daily_quota | tojson }};
+  document.getElementById("edit-track-new-cards").value = {{ track.new_cards_per_day | tojson }};
   document.getElementById("edit-track-review-mode").value = {{ track.review_mode | tojson }};
   document.getElementById("edit-track-active").checked = {{ track.active | tojson }};
   document.getElementById("edit-track-modal").showModal();
@@ -329,6 +342,7 @@ async function submitEditTrack(e) {
     name: document.getElementById("edit-track-name").value,
     level: document.getElementById("edit-track-level").value,
     daily_quota: parseInt(document.getElementById("edit-track-quota").value, 10),
+    new_cards_per_day: parseInt(document.getElementById("edit-track-new-cards").value, 10),
     review_mode: document.getElementById("edit-track-review-mode").value,
     active: document.getElementById("edit-track-active").checked,
   };

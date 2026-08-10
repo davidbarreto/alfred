@@ -25,6 +25,7 @@ def _make_chunk_orm(**kwargs):
     orm.difficulty = kwargs.get("difficulty", 5.0)
     orm.due_at = kwargs.get("due_at", datetime(2026, 6, 25, tzinfo=timezone.utc))
     orm.last_review_at = kwargs.get("last_review_at", None)
+    orm.first_reviewed_at = kwargs.get("first_reviewed_at", None)
     orm.repetitions = kwargs.get("repetitions", 0)
     orm.lapses = kwargs.get("lapses", 0)
     orm.consecutive_failures = kwargs.get("consecutive_failures", 0)
@@ -41,6 +42,7 @@ def _make_chunk_orm(**kwargs):
     orm.is_leech = kwargs.get("is_leech", False)
     orm.created_at = kwargs.get("created_at", datetime(2026, 1, 1, tzinfo=timezone.utc))
     orm.updated_at = kwargs.get("updated_at", datetime(2026, 1, 1, tzinfo=timezone.utc))
+    orm.preview_intervals = kwargs.get("preview_intervals", None)
     return orm
 
 
@@ -51,6 +53,7 @@ def _make_track_orm(**kwargs):
     orm.name = kwargs.get("name", "French")
     orm.level = kwargs.get("level", "B1")
     orm.daily_quota = kwargs.get("daily_quota", 10)
+    orm.new_cards_per_day = kwargs.get("new_cards_per_day", 10)
     orm.active = kwargs.get("active", True)
     return orm
 
@@ -170,6 +173,24 @@ class TestApplySrsReview:
         await service.apply_srs_review(1, quality_score=1.0)
         service._repo.unlock_production.assert_not_called()
 
+    async def test_sets_first_reviewed_at_when_chunk_was_new(self, service):
+        chunk = _make_chunk_orm(state="new", first_reviewed_at=None)
+        service._repo.get_chunk.side_effect = [chunk, _make_chunk_orm(state="learning")]
+        await service.apply_srs_review(1, quality_score=3.0)
+        update_kwargs = service._repo.update_srs_fields.call_args[1]
+        assert update_kwargs["first_reviewed_at"] is not None
+
+    async def test_leaves_first_reviewed_at_unset_on_later_review(self, service):
+        chunk = _make_chunk_orm(
+            state="review",
+            stability=5.0,
+            first_reviewed_at=datetime(2026, 5, 1, tzinfo=timezone.utc),
+        )
+        service._repo.get_chunk.side_effect = [chunk, _make_chunk_orm(state="review")]
+        await service.apply_srs_review(1, quality_score=3.0)
+        update_kwargs = service._repo.update_srs_fields.call_args[1]
+        assert update_kwargs["first_reviewed_at"] is None
+
     async def test_does_not_unlock_production_when_already_unlocked(self, service):
         chunk = _make_chunk_orm(
             state="review",
@@ -257,6 +278,7 @@ class TestGetDailyBatch:
             _make_track_orm(id=2, code="ru", daily_quota=5),
         ]
         service._repo.count_due_for_track.return_value = 3
+        service._repo.count_new_started_today_for_track.return_value = 0
         service._repo.get_due_chunks_for_track.return_value = [_make_chunk_orm()] * 3
 
         result = await service.get_daily_batch()
@@ -272,12 +294,51 @@ class TestGetDailyBatch:
             _make_track_orm(id=2, code="ru"),
         ]
         service._repo.count_due_for_track.return_value = 2
+        service._repo.count_new_started_today_for_track.return_value = 0
         service._repo.get_due_chunks_for_track.return_value = []
 
         result = await service.get_daily_batch(track_id=1)
 
         assert len(result) == 1
         assert result[0].track_id == 1
+
+    async def test_new_cards_limit_is_quota_minus_already_started_today(self, service):
+        service._track_repo.get_tracks.return_value = [
+            _make_track_orm(id=1, code="fr", daily_quota=10, new_cards_per_day=8),
+        ]
+        service._repo.count_due_for_track.return_value = 0
+        service._repo.count_new_started_today_for_track.return_value = 3
+        service._repo.get_due_chunks_for_track.return_value = []
+
+        await service.get_daily_batch()
+
+        service._repo.get_due_chunks_for_track.assert_called_once_with(1, 10, 5)
+
+    async def test_new_cards_limit_never_goes_negative(self, service):
+        service._track_repo.get_tracks.return_value = [
+            _make_track_orm(id=1, code="fr", daily_quota=10, new_cards_per_day=5),
+        ]
+        service._repo.count_due_for_track.return_value = 0
+        service._repo.count_new_started_today_for_track.return_value = 20
+        service._repo.get_due_chunks_for_track.return_value = []
+
+        await service.get_daily_batch()
+
+        service._repo.get_due_chunks_for_track.assert_called_once_with(1, 10, 0)
+
+    async def test_populates_preview_intervals_on_returned_chunks(self, service):
+        service._track_repo.get_tracks.return_value = [
+            _make_track_orm(id=1, code="fr", daily_quota=5),
+        ]
+        service._repo.count_due_for_track.return_value = 1
+        service._repo.count_new_started_today_for_track.return_value = 0
+        service._repo.get_due_chunks_for_track.return_value = [_make_chunk_orm(state="new")]
+
+        result = await service.get_daily_batch()
+
+        preview = result[0].chunks[0].preview_intervals
+        assert preview is not None
+        assert set(preview.keys()) == {"again", "hard", "good", "easy"}
 
 
 class TestGetProductionDailyBatch:
@@ -317,6 +378,7 @@ class TestForcePracticeChunks:
         result = await service.force_practice_chunks(1, ["chien"])
 
         assert result[0].text == "chien"
+        assert result[0].preview_intervals is not None
         service._repo.create_chunk.assert_not_called()
 
     async def test_creates_new_chunk_via_llm_enrichment(self, service):

@@ -57,23 +57,64 @@ class ChunkRepository:
         result = await self._session.execute(query)
         return result.scalar_one()
 
-    async def get_due_chunks_for_track(self, track_id: int, limit: int) -> list[Chunk]:
-        """Return active due chunks ordered by Pareto priority (NULL rank first, then ASC)."""
+    async def get_due_chunks_for_track(
+        self, track_id: int, limit: int, new_cards_limit: int | None = None
+    ) -> list[Chunk]:
+        """Return active due chunks ordered by Pareto priority (NULL rank first, then ASC).
+
+        Chunks still in state="new" are capped at `new_cards_limit` (when given) so that a
+        large batch of freshly-created chunks can't crowd out scheduled reviews or dump an
+        entire backlog into a single day; already-scheduled reviews are never throttled by
+        this limit, only by the overall `limit`.
+        """
         now = datetime.now(timezone.utc)
-        result = await self._session.execute(
-            select(Chunk)
-            .where(
-                Chunk.track_id == track_id,
-                Chunk.status == "active",
-                Chunk.due_at <= now,
-            )
-            .order_by(
+
+        def _ordered(query):
+            return query.order_by(
                 Chunk.frequency_rank.asc().nulls_first(),
                 Chunk.due_at.asc(),
             )
-            .limit(limit)
+
+        base = select(Chunk).where(
+            Chunk.track_id == track_id,
+            Chunk.status == "active",
+            Chunk.due_at <= now,
         )
-        return list(result.scalars().all())
+
+        review_result = await self._session.execute(
+            _ordered(base.where(Chunk.state != "new")).limit(limit)
+        )
+        review_chunks = list(review_result.scalars().all())
+
+        remaining = limit - len(review_chunks)
+        new_chunks: list[Chunk] = []
+        if remaining > 0:
+            new_limit = remaining if new_cards_limit is None else min(remaining, new_cards_limit)
+            if new_limit > 0:
+                new_result = await self._session.execute(
+                    _ordered(base.where(Chunk.state == "new")).limit(new_limit)
+                )
+                new_chunks = list(new_result.scalars().all())
+
+        combined = review_chunks + new_chunks
+        combined.sort(key=lambda c: (
+            c.frequency_rank if c.frequency_rank is not None else float("inf"),
+            c.due_at,
+        ))
+        return combined
+
+    async def count_new_started_today_for_track(self, track_id: int) -> int:
+        """Count chunks that left state="new" for the first time today (UTC calendar day)."""
+        now = datetime.now(timezone.utc)
+        start_of_day = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        result = await self._session.execute(
+            select(func.count(Chunk.id)).where(
+                Chunk.track_id == track_id,
+                Chunk.first_reviewed_at.is_not(None),
+                Chunk.first_reviewed_at >= start_of_day,
+            )
+        )
+        return result.scalar_one()
 
     async def count_due_for_track(self, track_id: int) -> int:
         now = datetime.now(timezone.utc)
@@ -166,21 +207,23 @@ class ChunkRepository:
         consecutive_failures: int,
         state: str,
         is_leech: bool,
+        first_reviewed_at: datetime | None = None,
     ) -> None:
+        values = dict(
+            stability=stability,
+            difficulty=difficulty,
+            due_at=due_at,
+            last_review_at=last_review_at,
+            repetitions=repetitions,
+            lapses=lapses,
+            consecutive_failures=consecutive_failures,
+            state=state,
+            is_leech=is_leech,
+        )
+        if first_reviewed_at is not None:
+            values["first_reviewed_at"] = first_reviewed_at
         await self._session.execute(
-            update(Chunk)
-            .where(Chunk.id == chunk_id)
-            .values(
-                stability=stability,
-                difficulty=difficulty,
-                due_at=due_at,
-                last_review_at=last_review_at,
-                repetitions=repetitions,
-                lapses=lapses,
-                consecutive_failures=consecutive_failures,
-                state=state,
-                is_leech=is_leech,
-            )
+            update(Chunk).where(Chunk.id == chunk_id).values(**values)
         )
         await self._session.commit()
 

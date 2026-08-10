@@ -19,7 +19,14 @@ from app.features.language.chunks.schemas import (
 from app.features.language.level_guidance import level_guidance
 from app.features.language.tracks.repository import TrackRepository
 from app.features.language.tracks.schemas import TrackFilters
-from app.features.language.srs import CardState, Rating, next_card_state, quality_to_rating, is_leech
+from app.features.language.srs import (
+    CardState,
+    Rating,
+    next_card_state,
+    preview_next_intervals,
+    quality_to_rating,
+    is_leech,
+)
 from app.integrations.llm_calls.repository import create_llm_call
 from app.shared.llm import LlmProvider
 
@@ -39,6 +46,14 @@ def _recognition_card(orm) -> CardState:
         consecutive_failures=orm.consecutive_failures,
         state=orm.state,
     )
+
+
+def _chunk_read_with_preview(orm) -> ChunkRead:
+    """Recognition ChunkRead with real FSRS-derived interval previews attached, for the
+    review UI's Again/Hard/Good/Easy button labels."""
+    read = ChunkRead.model_validate(orm)
+    read.preview_intervals = preview_next_intervals(_recognition_card(orm))
+    return read
 
 
 def _parse_enrichment_json(raw: str) -> dict:
@@ -115,6 +130,7 @@ class ChunkService:
 
         rating = quality_to_rating(quality_score)
         now = datetime.now(timezone.utc)
+        was_new = orm.state == "new"
         new_card = next_card_state(_recognition_card(orm), rating, now)
         leech = is_leech(new_card.consecutive_failures)
 
@@ -129,6 +145,7 @@ class ChunkService:
             consecutive_failures=new_card.consecutive_failures,
             state=new_card.state,
             is_leech=leech,
+            first_reviewed_at=now if was_new else None,
         )
 
         if leech and not orm.is_leech:
@@ -189,11 +206,15 @@ class ChunkService:
         batches = []
         for track in tracks_query:
             total_due = await self._repo.count_due_for_track(track.id)
-            chunks_orm = await self._repo.get_due_chunks_for_track(track.id, track.daily_quota)
+            new_started_today = await self._repo.count_new_started_today_for_track(track.id)
+            new_cards_limit = max(0, track.new_cards_per_day - new_started_today)
+            chunks_orm = await self._repo.get_due_chunks_for_track(
+                track.id, track.daily_quota, new_cards_limit
+            )
             batches.append(DailyBatchRead(
                 track_id=track.id,
                 track_code=track.code,
-                chunks=[ChunkRead.model_validate(c) for c in chunks_orm],
+                chunks=[_chunk_read_with_preview(c) for c in chunks_orm],
                 total_due=total_due,
             ))
         return batches
@@ -245,7 +266,7 @@ class ChunkService:
                     "Chunk force-created for practice: id=%d track_id=%d text=%r",
                     orm.id, track_id, text,
                 )
-            results.append(ChunkRead.model_validate(orm))
+            results.append(_chunk_read_with_preview(orm))
         return results
 
     async def _enrich_chunk_via_llm(self, track, text: str, level_override: str | None) -> dict:

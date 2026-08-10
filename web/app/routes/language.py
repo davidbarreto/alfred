@@ -846,7 +846,7 @@ async def score_review(code: str, request: Request):
     return {}
 
 
-_TRACK_UPDATE_FIELDS = ("name", "level", "daily_quota", "review_mode", "active")
+_TRACK_UPDATE_FIELDS = ("name", "level", "daily_quota", "new_cards_per_day", "review_mode", "active")
 
 
 @router.patch("/{code}")

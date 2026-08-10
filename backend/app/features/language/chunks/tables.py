@@ -36,6 +36,9 @@ class Chunk(Base):
         DateTime(timezone=True), nullable=False, server_default=func.now(), index=True
     )
     last_review_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    first_reviewed_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True), nullable=True, index=True
+    )
     repetitions: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     lapses: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     consecutive_failures: Mapped[int] = mapped_column(Integer, nullable=False, default=0)

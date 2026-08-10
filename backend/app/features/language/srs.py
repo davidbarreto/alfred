@@ -173,3 +173,12 @@ def next_card_state(card: CardState, rating: Rating, now: datetime | None = None
 
 def is_leech(consecutive_failures: int) -> bool:
     return consecutive_failures >= _LEECH_THRESHOLD
+
+
+def preview_next_intervals(card: CardState, now: datetime | None = None) -> dict[str, int]:
+    """Days until due for each rating, without persisting any state change."""
+    now = now or datetime.now(timezone.utc)
+    return {
+        rating.name.lower(): max(0, round((next_card_state(card, rating, now).due_at - now).total_seconds() / 86400))
+        for rating in Rating
+    }

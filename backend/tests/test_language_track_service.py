@@ -15,6 +15,7 @@ def _make_track_orm(**kwargs):
     orm.name = kwargs.get("name", "French")
     orm.level = kwargs.get("level", "B1")
     orm.daily_quota = kwargs.get("daily_quota", 10)
+    orm.new_cards_per_day = kwargs.get("new_cards_per_day", 10)
     orm.review_mode = kwargs.get("review_mode", "balanced")
     orm.active = kwargs.get("active", True)
     orm.paused_at = kwargs.get("paused_at", None)
@@ -96,6 +97,12 @@ class TestUpdateTrack:
         result = await service.update_track(1, TrackUpdate(daily_quota=20))
         assert result is not None
         assert result.daily_quota == 20
+
+    async def test_updates_new_cards_per_day(self, service):
+        service._repo.update_track.return_value = _make_track_orm(new_cards_per_day=3)
+        result = await service.update_track(1, TrackUpdate(new_cards_per_day=3))
+        assert result is not None
+        assert result.new_cards_per_day == 3
 
     async def test_returns_none_when_not_found(self, service):
         service._repo.update_track.return_value = None

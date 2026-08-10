@@ -12,6 +12,7 @@ class TrackCreate(BaseModel):
     name: str
     level: CefrLevel = "A1"
     daily_quota: int = 10
+    new_cards_per_day: int = 10
     review_mode: ReviewMode = "balanced"
     active: bool = True
 
@@ -20,6 +21,7 @@ class TrackUpdate(BaseModel):
     name: str | None = None
     level: CefrLevel | None = None
     daily_quota: int | None = None
+    new_cards_per_day: int | None = None
     review_mode: ReviewMode | None = None
     active: bool | None = None
 
@@ -30,6 +32,7 @@ class TrackRead(BaseModel):
     name: str
     level: str
     daily_quota: int
+    new_cards_per_day: int = 10
     review_mode: str
     active: bool
     paused_at: datetime | None = None

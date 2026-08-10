@@ -52,6 +52,7 @@ class ChunkRead(BaseModel):
     difficulty: float
     due_at: datetime
     last_review_at: datetime | None
+    first_reviewed_at: datetime | None = None
     repetitions: int
     lapses: int
     consecutive_failures: int
@@ -68,6 +69,7 @@ class ChunkRead(BaseModel):
     is_leech: bool
     created_at: datetime
     updated_at: datetime
+    preview_intervals: dict[str, int] | None = None
 
     model_config = {"from_attributes": True}
 

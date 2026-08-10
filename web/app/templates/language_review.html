@@ -117,11 +117,12 @@ let reviewed = 0;
 let flipped = false;
 const total = chunks.length;
 
-function _fmtInterval(stability) {
-  if (!stability || stability < 1) return "today";
-  if (stability < 30) return Math.round(stability) + "d";
-  if (stability < 365) return Math.round(stability / 30) + "mo";
-  return (stability / 365).toFixed(1) + "y";
+function _fmtInterval(days) {
+  if (days === undefined || days === null) return "—";
+  if (days < 1) return "today";
+  if (days < 30) return Math.round(days) + "d";
+  if (days < 365) return Math.round(days / 30) + "mo";
+  return (days / 365).toFixed(1) + "y";
 }
 
 function showCard(i) {
@@ -138,9 +139,10 @@ function showCard(i) {
   ex.textContent = c.example_sentence || "";
   ex.classList.toggle("hidden", !c.example_sentence);
 
-  document.getElementById("interval-hard").textContent = _fmtInterval(c.stability * 0.8);
-  document.getElementById("interval-good").textContent = _fmtInterval(c.stability * 1.2);
-  document.getElementById("interval-easy").textContent = _fmtInterval(c.stability * 2.5);
+  const preview = c.preview_intervals || {};
+  document.getElementById("interval-hard").textContent = _fmtInterval(preview.hard);
+  document.getElementById("interval-good").textContent = _fmtInterval(preview.good);
+  document.getElementById("interval-easy").textContent = _fmtInterval(preview.easy);
 
   document.querySelectorAll("#score-buttons button").forEach(b => b.disabled = false);
   document.getElementById("card-scene").style.cursor = "pointer";

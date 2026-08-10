@@ -7,6 +7,7 @@ from app.features.language.srs import (
     State,
     is_leech,
     next_card_state,
+    preview_next_intervals,
     quality_to_rating,
 )
 
@@ -133,6 +134,32 @@ class TestLeechDetection:
     def test_leech_at_threshold(self):
         assert is_leech(8)
         assert is_leech(15)
+
+
+class TestPreviewNextIntervals:
+    def test_new_card_preview_matches_actual_next_card_state(self):
+        card = _new_card()
+        preview = preview_next_intervals(card, _NOW)
+        for rating in Rating:
+            actual = next_card_state(card, rating, _NOW)
+            expected_days = max(0, round((actual.due_at - _NOW).total_seconds() / 86400))
+            assert preview[rating.name.lower()] == expected_days
+
+    def test_new_card_preview_is_not_all_today(self):
+        preview = preview_next_intervals(_new_card(), _NOW)
+        assert preview["good"] > 0
+        assert preview["easy"] > preview["good"]
+
+    def test_preview_does_not_mutate_input_card(self):
+        card = _new_card()
+        preview_next_intervals(card, _NOW)
+        assert card.stability == 0.0
+        assert card.state == State.NEW
+
+    def test_review_card_preview_keys(self):
+        card = TestReviewCard()._make_review_card()
+        preview = preview_next_intervals(card, _NOW)
+        assert set(preview.keys()) == {"again", "hard", "good", "easy"}
 
 
 class TestIntervalGrowth:

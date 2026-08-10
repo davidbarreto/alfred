@@ -16,11 +16,18 @@
 
   <div class="flex items-center justify-between">
     <h1 class="text-base font-semibold text-gray-900">{{ flag }} {{ track.name }} — Chunks</h1>
-    <p class="text-xs text-gray-400">
-      {% set from = (page - 1) * page_size + 1 %}
-      {% set to = [page * page_size, total_count] | min %}
-      {% if total_count > 0 %}{{ from }}–{{ to }} of {{ total_count }}{% else %}0 chunks{% endif %}
-    </p>
+    <div class="flex items-center gap-3">
+      <span id="suggest-tags-status" class="text-xs text-gray-400"></span>
+      <button type="button" onclick="suggestTags()" id="suggest-tags-btn"
+              class="btn btn-sm bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 text-xs">
+        <i class="ti ti-sparkles text-sm"></i>Suggest tags for backlog
+      </button>
+      <p class="text-xs text-gray-400">
+        {% set from = (page - 1) * page_size + 1 %}
+        {% set to = [page * page_size, total_count] | min %}
+        {% if total_count > 0 %}{{ from }}–{{ to }} of {{ total_count }}{% else %}0 chunks{% endif %}
+      </p>
+    </div>
   </div>
 
   <!-- Filters -->
@@ -230,6 +237,23 @@
 function toggleExpand(chunkId) {
   const row = document.getElementById('expand-' + chunkId);
   row.classList.toggle('hidden');
+}
+
+async function suggestTags() {
+  const btn = document.getElementById("suggest-tags-btn");
+  const status = document.getElementById("suggest-tags-status");
+  btn.disabled = true;
+  status.textContent = "Suggesting…";
+  try {
+    const res = await fetch(`/languages/{{ track.code }}/chunks/suggest-tags`, { method: "POST" });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Failed");
+    status.textContent = data.tagged > 0 ? `Tagged ${data.tagged} chunk${data.tagged !== 1 ? "s" : ""}` : "No untagged chunks left";
+  } catch (e) {
+    status.textContent = "Failed to suggest tags";
+  } finally {
+    btn.disabled = false;
+  }
 }
 </script>
 {% endblock %}

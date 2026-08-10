@@ -1,10 +1,36 @@
 from datetime import datetime
 from typing import Optional
 
-from sqlalchemy import Boolean, DateTime, Float, ForeignKey, Integer, String, Text, func
+from sqlalchemy import Boolean, Column, DateTime, Float, ForeignKey, Integer, String, Table, Text, UniqueConstraint, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
+
+# Alfred has no external write-through provider for chunks and is single-tenant,
+# so unlike organizer.tags, tag names here are just globally unique (no provider_id
+# scoping column).
+chunks_tags = Table(
+    "chunks_tags",
+    Base.metadata,
+    Column("chunk_id", Integer, ForeignKey("language.chunks.id", ondelete="CASCADE"), primary_key=True),
+    Column("tag_id", Integer, ForeignKey("language.tags.id", ondelete="CASCADE"), primary_key=True),
+    schema="language",
+)
+
+
+class LanguageTag(Base):
+    __tablename__ = "tags"
+    __table_args__ = (
+        UniqueConstraint("name", name="uq_language_tags_name"),
+        {"schema": "language"},
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    name: Mapped[str] = mapped_column(String(100), nullable=False)
+
+    chunks: Mapped[list["Chunk"]] = relationship(
+        "Chunk", secondary=chunks_tags, back_populates="tags"
+    )
 
 
 class Chunk(Base):
@@ -67,6 +93,11 @@ class Chunk(Base):
 
     track: Mapped["Track"] = relationship("Track")
     grammar_scope: Mapped[Optional["GrammarScope"]] = relationship("GrammarScope")
+    # eager (not the codebase's usual per-query selectinload) because Chunk is read from
+    # many call sites across services/repositories, and ChunkRead always serializes tags
+    tags: Mapped[list["LanguageTag"]] = relationship(
+        "LanguageTag", secondary=chunks_tags, back_populates="chunks", lazy="selectin"
+    )
 
 
 from app.features.language.tracks.tables import Track  # noqa: E402

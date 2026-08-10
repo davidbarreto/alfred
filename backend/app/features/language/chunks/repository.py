@@ -3,14 +3,27 @@ from datetime import datetime, timedelta, timezone
 from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.features.language.chunks.tables import Chunk
+from app.features.language.chunks.tables import Chunk, LanguageTag
 from app.features.language.chunks.schemas import ChunkCreate, ChunkUpdate, ChunkFilters
+
+_CHUNK_CREATE_EXCLUDE = {"tags"}
 
 
 class ChunkRepository:
 
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
+
+    async def _resolve_tags(self, tag_names: list[str]) -> list[LanguageTag]:
+        tags = []
+        for name in tag_names:
+            result = await self._session.execute(select(LanguageTag).where(LanguageTag.name == name))
+            tag = result.scalars().first()
+            if tag is None:
+                tag = LanguageTag(name=name)
+                self._session.add(tag)
+            tags.append(tag)
+        return tags
 
     async def get_chunk(self, chunk_id: int) -> Chunk | None:
         result = await self._session.execute(select(Chunk).where(Chunk.id == chunk_id))
@@ -44,6 +57,10 @@ class ChunkRepository:
             query = query.where(Chunk.difficulty >= filters.difficulty_min)
         if filters.difficulty_max is not None:
             query = query.where(Chunk.difficulty < filters.difficulty_max)
+        if filters.tags:
+            query = query.where(Chunk.tags.any(LanguageTag.name.in_(filters.tags)))
+        if filters.untagged_only:
+            query = query.where(~Chunk.tags.any())
         return query
 
     async def get_chunks(self, filters: ChunkFilters) -> list[Chunk]:
@@ -58,14 +75,21 @@ class ChunkRepository:
         return result.scalar_one()
 
     async def get_due_chunks_for_track(
-        self, track_id: int, limit: int, new_cards_limit: int | None = None
+        self,
+        track_id: int,
+        limit: int,
+        new_cards_limit: int | None = None,
+        tag_names: list[str] | None = None,
+        states: list[str] | None = None,
     ) -> list[Chunk]:
         """Return active due chunks ordered by Pareto priority (NULL rank first, then ASC).
 
         Chunks still in state="new" are capped at `new_cards_limit` (when given) so that a
         large batch of freshly-created chunks can't crowd out scheduled reviews or dump an
         entire backlog into a single day; already-scheduled reviews are never throttled by
-        this limit, only by the overall `limit`.
+        this limit, only by the overall `limit`. `tag_names` narrows to a practice group
+        (any-match); `states` is an ad hoc maturity filter (e.g. only "new", or only
+        "review") layered on top, independent of the group selection.
         """
         now = datetime.now(timezone.utc)
 
@@ -80,6 +104,10 @@ class ChunkRepository:
             Chunk.status == "active",
             Chunk.due_at <= now,
         )
+        if tag_names:
+            base = base.where(Chunk.tags.any(LanguageTag.name.in_(tag_names)))
+        if states:
+            base = base.where(Chunk.state.in_(states))
 
         review_result = await self._session.execute(
             _ordered(base.where(Chunk.state != "new")).limit(limit)
@@ -116,15 +144,20 @@ class ChunkRepository:
         )
         return result.scalar_one()
 
-    async def count_due_for_track(self, track_id: int) -> int:
+    async def count_due_for_track(
+        self, track_id: int, tag_names: list[str] | None = None, states: list[str] | None = None
+    ) -> int:
         now = datetime.now(timezone.utc)
-        result = await self._session.execute(
-            select(func.count(Chunk.id)).where(
-                Chunk.track_id == track_id,
-                Chunk.status == "active",
-                Chunk.due_at <= now,
-            )
+        query = select(func.count(Chunk.id)).where(
+            Chunk.track_id == track_id,
+            Chunk.status == "active",
+            Chunk.due_at <= now,
         )
+        if tag_names:
+            query = query.where(Chunk.tags.any(LanguageTag.name.in_(tag_names)))
+        if states:
+            query = query.where(Chunk.state.in_(states))
+        result = await self._session.execute(query)
         return result.scalar_one()
 
     async def get_production_due_chunks_for_track(self, track_id: int, limit: int) -> list[Chunk]:
@@ -168,6 +201,46 @@ class ChunkRepository:
         )
         return result.scalar_one()
 
+    async def get_tag_names_for_track(self, track_id: int) -> list[str]:
+        """Distinct tag names in use by any chunk in a track, for the group picker and the
+        LLM tag-suggestion vocabulary."""
+        result = await self._session.execute(
+            select(LanguageTag.name)
+            .join(Chunk.tags)
+            .where(Chunk.track_id == track_id)
+            .distinct()
+            .order_by(LanguageTag.name.asc())
+        )
+        return list(result.scalars().all())
+
+    async def get_tag_stats_for_track(self, track_id: int) -> list[dict]:
+        """Per-tag {name, chunk_count, due_count, avg_difficulty, leech_count} for a track,
+        used to power "weakest group" suggestions."""
+        now = datetime.now(timezone.utc)
+        result = await self._session.execute(
+            select(
+                LanguageTag.name,
+                func.count(Chunk.id).label("chunk_count"),
+                func.count(Chunk.id).filter(Chunk.due_at <= now).label("due_count"),
+                func.avg(Chunk.difficulty).label("avg_difficulty"),
+                func.count(Chunk.id).filter(Chunk.is_leech.is_(True)).label("leech_count"),
+            )
+            .join(Chunk.tags)
+            .where(Chunk.track_id == track_id, Chunk.status == "active")
+            .group_by(LanguageTag.name)
+            .order_by(LanguageTag.name.asc())
+        )
+        return [
+            {
+                "name": name,
+                "chunk_count": chunk_count,
+                "due_count": due_count,
+                "avg_difficulty": round(float(avg_difficulty), 2) if avg_difficulty is not None else 0.0,
+                "leech_count": leech_count,
+            }
+            for name, chunk_count, due_count, avg_difficulty, leech_count in result.all()
+        ]
+
     async def count_by_state_for_track(self, track_id: int, production: bool = False) -> dict[str, int]:
         """Return {srs_state: count} over active chunks for one SRS track."""
         state_col = Chunk.prod_state if production else Chunk.state
@@ -179,7 +252,8 @@ class ChunkRepository:
         return {state: count for state, count in result.all()}
 
     async def create_chunk(self, data: ChunkCreate) -> Chunk:
-        chunk = Chunk(**data.model_dump())
+        chunk = Chunk(**data.model_dump(exclude=_CHUNK_CREATE_EXCLUDE))
+        chunk.tags = await self._resolve_tags(data.tags)
         self._session.add(chunk)
         await self._session.commit()
         await self._session.refresh(chunk)
@@ -189,7 +263,10 @@ class ChunkRepository:
         chunk = await self.get_chunk(chunk_id)
         if chunk is None:
             return None
-        for field, value in data.model_dump(exclude_unset=True).items():
+        update_data = data.model_dump(exclude_unset=True)
+        if "tags" in update_data:
+            chunk.tags = await self._resolve_tags(update_data.pop("tags"))
+        for field, value in update_data.items():
             setattr(chunk, field, value)
         await self._session.commit()
         await self._session.refresh(chunk)

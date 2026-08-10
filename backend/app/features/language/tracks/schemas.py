@@ -24,6 +24,7 @@ class TrackUpdate(BaseModel):
     new_cards_per_day: int | None = None
     review_mode: ReviewMode | None = None
     active: bool | None = None
+    active_tags: list[str] | None = None
 
 
 class TrackRead(BaseModel):
@@ -35,6 +36,7 @@ class TrackRead(BaseModel):
     new_cards_per_day: int = 10
     review_mode: str
     active: bool
+    active_tags: list[str] = []
     paused_at: datetime | None = None
     created_at: datetime
     updated_at: datetime

@@ -43,6 +43,7 @@ def _make_chunk_orm(**kwargs):
     orm.created_at = kwargs.get("created_at", datetime(2026, 1, 1, tzinfo=timezone.utc))
     orm.updated_at = kwargs.get("updated_at", datetime(2026, 1, 1, tzinfo=timezone.utc))
     orm.preview_intervals = kwargs.get("preview_intervals", None)
+    orm.tags = kwargs.get("tags", [])
     return orm
 
 
@@ -55,6 +56,7 @@ def _make_track_orm(**kwargs):
     orm.daily_quota = kwargs.get("daily_quota", 10)
     orm.new_cards_per_day = kwargs.get("new_cards_per_day", 10)
     orm.active = kwargs.get("active", True)
+    orm.active_tags = kwargs.get("active_tags", [])
     return orm
 
 
@@ -312,7 +314,7 @@ class TestGetDailyBatch:
 
         await service.get_daily_batch()
 
-        service._repo.get_due_chunks_for_track.assert_called_once_with(1, 10, 5)
+        service._repo.get_due_chunks_for_track.assert_called_once_with(1, 10, 5, None, None)
 
     async def test_new_cards_limit_never_goes_negative(self, service):
         service._track_repo.get_tracks.return_value = [
@@ -324,7 +326,7 @@ class TestGetDailyBatch:
 
         await service.get_daily_batch()
 
-        service._repo.get_due_chunks_for_track.assert_called_once_with(1, 10, 0)
+        service._repo.get_due_chunks_for_track.assert_called_once_with(1, 10, 0, None, None)
 
     async def test_populates_preview_intervals_on_returned_chunks(self, service):
         service._track_repo.get_tracks.return_value = [
@@ -572,3 +574,88 @@ class TestQueueVocabularyCandidates:
         assert service._repo.create_chunk.await_count == 1
         created = service._repo.create_chunk.call_args.args[0]
         assert created.text == "chat"
+
+
+class TestGetTagNamesAndStats:
+    async def test_get_tag_names_delegates_to_repo(self, service):
+        service._repo.get_tag_names_for_track.return_value = ["Food", "Work"]
+        result = await service.get_tag_names(1)
+        service._repo.get_tag_names_for_track.assert_called_once_with(1)
+        assert result == ["Food", "Work"]
+
+    async def test_get_tag_stats_wraps_repo_rows_in_schema(self, service):
+        service._repo.get_tag_stats_for_track.return_value = [
+            {"name": "Food", "chunk_count": 10, "due_count": 3, "avg_difficulty": 4.5, "leech_count": 1},
+        ]
+        result = await service.get_tag_stats(1)
+        assert len(result) == 1
+        assert result[0].name == "Food"
+        assert result[0].avg_difficulty == 4.5
+
+
+class TestSuggestTagsForUntagged:
+    async def test_raises_503_when_llm_unavailable(self, service):
+        service._llm_provider = None
+        with pytest.raises(HTTPException) as exc_info:
+            await service.suggest_tags_for_untagged(1)
+        assert exc_info.value.status_code == 503
+
+    async def test_raises_404_when_track_not_found(self, service):
+        service._llm_provider = _make_llm_provider()
+        service._track_repo.get_track.return_value = None
+        with pytest.raises(HTTPException) as exc_info:
+            await service.suggest_tags_for_untagged(1)
+        assert exc_info.value.status_code == 404
+
+    async def test_returns_empty_when_no_untagged_chunks(self, service):
+        service._llm_provider = _make_llm_provider()
+        service._track_repo.get_track.return_value = _make_track_orm()
+        service._repo.get_chunks.return_value = []
+
+        result = await service.suggest_tags_for_untagged(1)
+
+        assert result == []
+        service._llm_provider.complete.assert_not_called()
+
+    async def test_applies_suggested_tags_to_matching_chunks(self, service):
+        chunk_a = _make_chunk_orm(id=10, text="chien", tags=[])
+        chunk_b = _make_chunk_orm(id=11, text="chat", tags=[])
+        service._llm_provider = _make_llm_provider('{"10": ["Animals"], "11": ["Animals", "Home"]}')
+        service._track_repo.get_track.return_value = _make_track_orm()
+        service._repo.get_chunks.return_value = [chunk_a, chunk_b]
+        service._repo.get_tag_names_for_track.return_value = []
+        service._repo.update_chunk.side_effect = [
+            _make_chunk_orm(id=10, tags=["Animals"]),
+            _make_chunk_orm(id=11, tags=["Animals", "Home"]),
+        ]
+
+        with patch("app.features.language.chunks.service.create_llm_call", AsyncMock()):
+            result = await service.suggest_tags_for_untagged(1)
+
+        assert len(result) == 2
+        assert service._repo.update_chunk.await_count == 2
+
+    async def test_skips_chunks_without_a_suggestion(self, service):
+        chunk_a = _make_chunk_orm(id=10, text="chien", tags=[])
+        service._llm_provider = _make_llm_provider('{}')
+        service._track_repo.get_track.return_value = _make_track_orm()
+        service._repo.get_chunks.return_value = [chunk_a]
+        service._repo.get_tag_names_for_track.return_value = []
+
+        with patch("app.features.language.chunks.service.create_llm_call", AsyncMock()):
+            result = await service.suggest_tags_for_untagged(1)
+
+        assert result == []
+        service._repo.update_chunk.assert_not_called()
+
+    async def test_raises_502_on_malformed_llm_json(self, service):
+        chunk_a = _make_chunk_orm(id=10, text="chien", tags=[])
+        service._llm_provider = _make_llm_provider("not json")
+        service._track_repo.get_track.return_value = _make_track_orm()
+        service._repo.get_chunks.return_value = [chunk_a]
+        service._repo.get_tag_names_for_track.return_value = []
+
+        with patch("app.features.language.chunks.service.create_llm_call", AsyncMock()):
+            with pytest.raises(HTTPException) as exc_info:
+                await service.suggest_tags_for_untagged(1)
+        assert exc_info.value.status_code == 502

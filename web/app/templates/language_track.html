@@ -49,7 +49,14 @@
       </button>
       {% endif %}
       {% if due_batch.total_due > 0 %}
-      <a href="/languages/{{ track.code }}/review"
+      <select id="review-states-filter" onchange="updateReviewLink()"
+              class="select select-sm select-bordered text-xs" title="Only include chunks at this maturity">
+        <option value="">All maturities</option>
+        <option value="new">New only</option>
+        <option value="learning,relearning">Learning only</option>
+        <option value="review">Already learned (review) only</option>
+      </select>
+      <a id="review-link" href="/languages/{{ track.code }}/review"
          class="btn btn-sm btn-primary text-xs">
         <i class="ti ti-brain text-sm"></i>Review
       </a>
@@ -123,6 +130,36 @@
     <p class="text-xs text-gray-400 mt-1.5">{{ due_batch.total_due }} chunks due now</p>
     {% endif %}
   </div></div>
+
+  <!-- Practice groups (tags) -->
+  {% if tag_stats %}
+  <div class="card bg-white"><div class="card-body p-4">
+    <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+      <p class="text-xs font-medium text-gray-600">Practice groups</p>
+      <div class="flex items-center gap-2 text-[11px] text-gray-400">
+        <button type="button" onclick="selectAllTags()" class="hover:text-gray-700">Select all</button>
+        <span class="text-gray-200">·</span>
+        <button type="button" onclick="clearTags()" class="hover:text-gray-700">Clear</button>
+        <span class="text-gray-200">·</span>
+        <button type="button" onclick="randomTags()" class="hover:text-gray-700">🎲 Random</button>
+        <span class="text-gray-200">·</span>
+        <button type="button" onclick="weakestTags()" class="hover:text-gray-700">⚠️ Weakest</button>
+      </div>
+    </div>
+    <div id="tag-chip-list" class="flex flex-wrap gap-1.5">
+      {% for t in tag_stats %}
+      <button type="button"
+              class="tag-chip px-2 py-1 rounded-full text-[11px] border transition-colors {% if t.name in track.active_tags %}bg-[#E6F1FB] border-[#378ADD] text-[#0C447C] active{% else %}bg-white border-gray-200 text-gray-500 hover:bg-gray-50{% endif %}"
+              data-tag="{{ t.name }}"
+              data-avg-difficulty="{{ t.avg_difficulty }}"
+              onclick="toggleTag(this)">
+        {{ t.name }} <span class="opacity-60">{{ t.due_count }}/{{ t.chunk_count }}</span>
+      </button>
+      {% endfor %}
+    </div>
+    <p class="text-[11px] text-gray-400 mt-2">Selected groups narrow review sessions to just those tags (union of all selected). None selected = whole deck.</p>
+  </div></div>
+  {% endif %}
 
   {% if mastery %}
   <!-- Mastery split: recognition vs production -->
@@ -281,6 +318,82 @@
 </dialog>
 
 <script>
+function updateReviewLink() {
+  const link = document.getElementById("review-link");
+  if (!link) return;
+  const states = document.getElementById("review-states-filter").value;
+  link.href = states
+    ? `/languages/{{ track.code }}/review?states=${encodeURIComponent(states)}`
+    : `/languages/{{ track.code }}/review`;
+}
+
+async function patchActiveTags(tags) {
+  try {
+    await fetch(`/languages/{{ track.code }}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ active_tags: tags }),
+    });
+  } catch (e) {
+    console.error("Failed to update active tags:", e);
+  }
+}
+
+function _tagChips() {
+  return Array.from(document.querySelectorAll(".tag-chip"));
+}
+
+function _setChipActive(el, active) {
+  el.classList.toggle("active", active);
+  el.classList.toggle("bg-[#E6F1FB]", active);
+  el.classList.toggle("border-[#378ADD]", active);
+  el.classList.toggle("text-[#0C447C]", active);
+  el.classList.toggle("bg-white", !active);
+  el.classList.toggle("border-gray-200", !active);
+  el.classList.toggle("text-gray-500", !active);
+}
+
+function _setActiveChips(tagNames) {
+  _tagChips().forEach(el => _setChipActive(el, tagNames.includes(el.dataset.tag)));
+}
+
+async function toggleTag(el) {
+  _setChipActive(el, !el.classList.contains("active"));
+  await patchActiveTags(_tagChips().filter(c => c.classList.contains("active")).map(c => c.dataset.tag));
+}
+
+async function selectAllTags() {
+  const all = _tagChips().map(el => el.dataset.tag);
+  _setActiveChips(all);
+  await patchActiveTags(all);
+}
+
+async function clearTags() {
+  _setActiveChips([]);
+  await patchActiveTags([]);
+}
+
+async function randomTags() {
+  const chips = _tagChips();
+  if (!chips.length) return;
+  const n = Math.max(1, Math.min(3, chips.length));
+  const picked = chips.slice().sort(() => Math.random() - 0.5).slice(0, n).map(el => el.dataset.tag);
+  _setActiveChips(picked);
+  await patchActiveTags(picked);
+}
+
+async function weakestTags() {
+  const chips = _tagChips();
+  if (!chips.length) return;
+  const n = Math.max(1, Math.min(3, chips.length));
+  const picked = chips.slice()
+    .sort((a, b) => parseFloat(b.dataset.avgDifficulty) - parseFloat(a.dataset.avgDifficulty))
+    .slice(0, n)
+    .map(el => el.dataset.tag);
+  _setActiveChips(picked);
+  await patchActiveTags(picked);
+}
+
 async function updateScopeStatus(scopeId, status) {
   try {
     await fetch(`/languages/grammar-scope/${scopeId}/status`, {

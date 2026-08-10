@@ -1,6 +1,6 @@
 from typing import Literal
 
-from fastapi import APIRouter, Depends, HTTPException, Response, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 
 from app.api.auth import require_auth
 from app.dependencies import ChunkServiceDep, PronunciationServiceDep
@@ -10,8 +10,10 @@ from app.features.language.chunks.schemas import (
     ChunkFilters,
     ChunkForcePracticeCreate,
     ChunkRead,
+    ChunkTagSuggestionRequest,
     ChunkUpdate,
     DailyBatchRead,
+    TagStatsRead,
 )
 
 router = APIRouter(prefix="/language/chunks", tags=["language"], dependencies=[Depends(require_auth)])
@@ -21,13 +23,29 @@ router = APIRouter(prefix="/language/chunks", tags=["language"], dependencies=[D
 async def get_daily_batch(
     service: ChunkServiceDep,
     track_id: int | None = None,
+    states: list[str] | None = Query(None),
 ):
-    return await service.get_daily_batch(track_id)
+    return await service.get_daily_batch(track_id, states)
+
+
+@router.get("/tags", response_model=list[str])
+async def get_tag_names(service: ChunkServiceDep, track_id: int):
+    return await service.get_tag_names(track_id)
+
+
+@router.get("/tag-stats", response_model=list[TagStatsRead])
+async def get_tag_stats(service: ChunkServiceDep, track_id: int):
+    return await service.get_tag_stats(track_id)
 
 
 @router.post("/force-practice", response_model=list[ChunkRead])
 async def force_practice_chunks(request: ChunkForcePracticeCreate, service: ChunkServiceDep):
     return await service.force_practice_chunks(request.track_id, request.texts, request.level_override)
+
+
+@router.post("/suggest-tags", response_model=list[ChunkRead])
+async def suggest_tags(request: ChunkTagSuggestionRequest, service: ChunkServiceDep):
+    return await service.suggest_tags_for_untagged(request.track_id, request.limit)
 
 
 @router.get("/pronunciation")

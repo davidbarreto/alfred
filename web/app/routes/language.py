@@ -637,9 +637,12 @@ async def sessions_section(code: str, request: Request):
     })
 
 
-async def _resolve_chunks_for_session(track: dict, words_param: str | None) -> tuple[list, int]:
+async def _resolve_chunks_for_session(
+    track: dict, words_param: str | None, states_param: str | None = None
+) -> tuple[list, int]:
     """Normal due-batch chunks, unless `words` (comma-separated) is set — then force-create/
-    resolve those specific chunks instead, ignoring due dates entirely."""
+    resolve those specific chunks instead, ignoring due dates entirely. `states_param` is an
+    ad hoc maturity filter (comma-separated SRS states, e.g. "new" or "learning,review")."""
     if words_param:
         texts = [w.strip() for w in words_param.split(",") if w.strip()]
         if texts:
@@ -651,7 +654,10 @@ async def _resolve_chunks_for_session(track: dict, words_param: str | None) -> t
                 chunks = []
             return chunks, len(chunks)
 
-    daily_batch = await _safe_get("/language/chunks/daily-batch", {"track_id": track["id"]})
+    params: dict = {"track_id": track["id"]}
+    if states_param:
+        params["states"] = [s.strip() for s in states_param.split(",") if s.strip()]
+    daily_batch = await _safe_get("/language/chunks/daily-batch", params)
     due_batch = daily_batch[0] if daily_batch else {"chunks": [], "total_due": 0}
     return due_batch.get("chunks", []), due_batch.get("total_due", 0)
 
@@ -663,7 +669,9 @@ async def review_session(code: str, request: Request):
     if not track:
         return HTMLResponse("<p>Track not found.</p>", status_code=404)
 
-    chunks, total_due = await _resolve_chunks_for_session(track, request.query_params.get("words"))
+    chunks, total_due = await _resolve_chunks_for_session(
+        track, request.query_params.get("words"), request.query_params.get("states")
+    )
 
     progress = await _safe_get("/language/sessions/daily-progress", {"track_id": track["id"]})
     prog = progress[0] if progress else {"completed_today": 0, "quota_met": False, "daily_quota": track["daily_quota"]}
@@ -846,7 +854,9 @@ async def score_review(code: str, request: Request):
     return {}
 
 
-_TRACK_UPDATE_FIELDS = ("name", "level", "daily_quota", "new_cards_per_day", "review_mode", "active")
+_TRACK_UPDATE_FIELDS = (
+    "name", "level", "daily_quota", "new_cards_per_day", "review_mode", "active", "active_tags",
+)
 
 
 @router.patch("/{code}")
@@ -929,6 +939,8 @@ async def track_detail(code: str, request: Request):
     mastery_list = await _safe_get("/language/production/mastery", {"track_id": track["id"]})
     mastery = mastery_list[0] if mastery_list else None
 
+    tag_stats = await _safe_get("/language/chunks/tag-stats", {"track_id": track["id"]})
+
     scopes_page, scope_has_next, scope_has_prev = _pagination(scopes_all, 0, _GRAMMAR_PAGE_SIZE)
     sessions_page, sessions_has_next, sessions_has_prev = _pagination(sessions_all, 0, _SESSIONS_PAGE_SIZE)
     await _enrich_with_chunk_text(sessions_page)
@@ -951,6 +963,7 @@ async def track_detail(code: str, request: Request):
         "progress": prog,
         "retention": retention,
         "mastery": mastery,
+        "tag_stats": tag_stats,
     })
 
 
@@ -1025,6 +1038,28 @@ async def chunk_browser(code: str, request: Request):
     })
 
 
+@router.post("/{code}/chunks/suggest-tags")
+async def suggest_chunk_tags(code: str, request: Request):
+    tracks = await _safe_get("/language/tracks", {"active_only": "false", "exclude_paused": "false"})
+    track = next((t for t in tracks if t["code"] == code), None)
+    if not track:
+        return JSONResponse({"error": "Track not found."}, status_code=404)
+
+    try:
+        updated = await api.post("/language/chunks/suggest-tags", json={"track_id": track["id"]})
+    except httpx.HTTPStatusError as exc:
+        detail = "Failed to suggest tags."
+        try:
+            detail = exc.response.json().get("detail", detail)
+        except Exception:
+            pass
+        return JSONResponse({"error": detail}, status_code=422)
+    except httpx.HTTPError:
+        return JSONResponse({"error": "Failed to suggest tags."}, status_code=502)
+
+    return JSONResponse({"tagged": len(updated)})
+
+
 @router.get("/{code}/chunks/{chunk_id}", response_class=HTMLResponse)
 async def chunk_detail(code: str, chunk_id: int, request: Request):
     tracks = await _safe_get("/language/tracks", {"active_only": "false", "exclude_paused": "false"})
@@ -1056,6 +1091,29 @@ async def chunk_detail(code: str, chunk_id: int, request: Request):
         "production_sessions": production,
         "shadowing_chart": _build_shadowing_chart(shadowing),
     })
+
+
+_CHUNK_UPDATE_FIELDS = ("tags",)
+
+
+@router.patch("/{code}/chunks/{chunk_id}")
+async def update_chunk(code: str, chunk_id: int, request: Request):
+    body = await request.json()
+    update_data = {field: body[field] for field in _CHUNK_UPDATE_FIELDS if field in body}
+
+    try:
+        updated = await api.patch(f"/language/chunks/{chunk_id}", json=update_data)
+    except httpx.HTTPStatusError as exc:
+        detail = "Failed to update chunk."
+        try:
+            detail = exc.response.json().get("detail", detail)
+        except Exception:
+            pass
+        return JSONResponse({"error": detail}, status_code=422)
+    except httpx.HTTPError:
+        return JSONResponse({"error": "Failed to update chunk."}, status_code=502)
+
+    return JSONResponse(updated)
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────

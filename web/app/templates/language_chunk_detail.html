@@ -75,6 +75,22 @@
               <p class="font-medium {{ st_color.get(chunk.status, 'text-gray-600') }}">{{ chunk.status | replace('_', ' ') | title }}</p>
             </div>
           </div>
+
+          <!-- Tags / practice groups -->
+          <div>
+            <p class="text-xs text-gray-400 mb-1.5">Groups</p>
+            <div id="chunk-tag-list" class="flex flex-wrap items-center gap-1.5">
+              {% for t in chunk.tags %}
+              <span class="chunk-tag inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] bg-[#E6F1FB] text-[#0C447C]" data-tag="{{ t }}">
+                {{ t }}
+                <button type="button" onclick="removeChunkTag(this)" class="hover:text-red-600" title="Remove">&times;</button>
+              </span>
+              {% endfor %}
+              <input type="text" id="chunk-tag-input" placeholder="add group…"
+                     class="input input-xs input-bordered text-[11px] w-24"
+                     onkeydown="if(event.key==='Enter'){event.preventDefault();addChunkTag();}" />
+            </div>
+          </div>
         </div>
       </div>
 
@@ -322,6 +338,45 @@
 const TRACK_CODE = "{{ track.code }}";
 const CHUNK_ID = {{ chunk.id }};
 const CHUNK_TEXT = {{ chunk.text | tojson }};
+
+function _currentChunkTags() {
+  return Array.from(document.querySelectorAll(".chunk-tag")).map(el => el.dataset.tag);
+}
+
+async function _patchChunkTags(tags) {
+  try {
+    await fetch(`/languages/${TRACK_CODE}/chunks/${CHUNK_ID}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ tags }),
+    });
+  } catch (e) {
+    console.error("Failed to update chunk tags:", e);
+  }
+}
+
+async function addChunkTag() {
+  const input = document.getElementById("chunk-tag-input");
+  const name = input.value.trim();
+  if (!name) return;
+  const tags = _currentChunkTags();
+  if (!tags.includes(name)) tags.push(name);
+  input.value = "";
+
+  const chip = document.createElement("span");
+  chip.className = "chunk-tag inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] bg-[#E6F1FB] text-[#0C447C]";
+  chip.dataset.tag = name;
+  chip.innerHTML = `${name} <button type="button" onclick="removeChunkTag(this)" class="hover:text-red-600" title="Remove">&times;</button>`;
+  input.parentElement.insertBefore(chip, input);
+
+  await _patchChunkTags(tags);
+}
+
+async function removeChunkTag(button) {
+  const chip = button.closest(".chunk-tag");
+  chip.remove();
+  await _patchChunkTags(_currentChunkTags());
+}
 
 let currentAudio = null;
 function _playAudio(url) {

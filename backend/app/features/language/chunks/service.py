@@ -6,7 +6,7 @@ from datetime import datetime, timedelta, timezone
 from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.features.language.chunks.prompts import CHUNK_ENRICHMENT_PROMPT
+from app.features.language.chunks.prompts import CHUNK_ENRICHMENT_PROMPT, CHUNK_TAG_SUGGESTION_PROMPT
 from app.features.language.chunks.repository import ChunkRepository
 from app.features.language.chunks.schemas import (
     ChunkCreate,
@@ -15,6 +15,7 @@ from app.features.language.chunks.schemas import (
     ChunkUpdate,
     DailyBatchRead,
     NewVocabularyCandidate,
+    TagStatsRead,
 )
 from app.features.language.level_guidance import level_guidance
 from app.features.language.tracks.repository import TrackRepository
@@ -33,6 +34,7 @@ from app.shared.llm import LlmProvider
 logger = logging.getLogger(__name__)
 
 _MAX_FORCE_PRACTICE_TEXTS = 8
+_MAX_TAG_SUGGESTION_BATCH = 30
 
 
 def _recognition_card(orm) -> CardState:
@@ -191,12 +193,109 @@ class ChunkService:
         updated = await self._repo.get_chunk(chunk_id)
         return ChunkRead.model_validate(updated)
 
+    async def suggest_tags_for_untagged(
+        self, track_id: int, limit: int = _MAX_TAG_SUGGESTION_BATCH
+    ) -> list[ChunkRead]:
+        """LLM-assisted bulk tagging for the existing untagged backlog. Applies suggestions
+        directly rather than through a separate preview/commit step — tags are a one-field
+        edit to correct if a suggestion misses, the same risk level as approve_chunk triage."""
+        if self._llm_provider is None:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="AI tag suggestion is not available",
+            )
+
+        track = await self._track_repo.get_track(track_id)
+        if track is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Track not found")
+
+        chunks = await self._repo.get_chunks(ChunkFilters(
+            track_id=track_id,
+            status="active",
+            untagged_only=True,
+            limit=min(limit, _MAX_TAG_SUGGESTION_BATCH),
+        ))
+        if not chunks:
+            return []
+
+        existing_tags = await self._repo.get_tag_names_for_track(track_id)
+        chunks_block = "\n".join(
+            f'- id={c.id}: "{c.text}" ({c.translation}), {c.chunk_type}, {c.cefr_level or "?"}'
+            for c in chunks
+        )
+        prompt = CHUNK_TAG_SUGGESTION_PROMPT.format(
+            language_name=track.name,
+            existing_tags=", ".join(existing_tags) if existing_tags else "(none yet)",
+            chunks_block=chunks_block,
+        )
+        messages = [{"role": "user", "content": prompt}]
+        t0 = time.monotonic()
+        try:
+            llm_response = await self._llm_provider.complete(messages)
+        except Exception as exc:
+            logger.error("Chunk tag suggestion LLM call failed: track_id=%d error=%s", track_id, exc)
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Could not suggest tags. Please try again in a moment.",
+            ) from exc
+        latency_ms = int((time.monotonic() - t0) * 1000)
+
+        await create_llm_call(
+            self._session,
+            provider=self._llm_provider.provider,
+            model=self._llm_provider.model,
+            feature="chunk_tag_suggestion",
+            prompt=messages,
+            response=llm_response.text,
+            tokens_input=llm_response.tokens_input,
+            tokens_output=llm_response.tokens_output,
+            finish_reason=llm_response.finish_reason,
+            latency_ms=latency_ms,
+        )
+
+        try:
+            suggestions = _parse_enrichment_json(llm_response.text)
+        except (json.JSONDecodeError, ValueError, TypeError) as exc:
+            logger.error("Chunk tag suggestion returned invalid JSON: track_id=%d error=%s", track_id, exc)
+            raise HTTPException(
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                detail="AI tag suggestion returned an unreadable result. Please try again.",
+            ) from exc
+
+        updated: list[ChunkRead] = []
+        for chunk in chunks:
+            tag_names = suggestions.get(str(chunk.id))
+            if not tag_names:
+                continue
+            result = await self.update_chunk(chunk.id, ChunkUpdate(tags=tag_names))
+            if result is not None:
+                updated.append(result)
+        logger.info(
+            "Chunk tags suggested via LLM: track_id=%d candidates=%d applied=%d",
+            track_id, len(chunks), len(updated),
+        )
+        return updated
+
+    async def get_tag_names(self, track_id: int) -> list[str]:
+        return await self._repo.get_tag_names_for_track(track_id)
+
+    async def get_tag_stats(self, track_id: int) -> list[TagStatsRead]:
+        stats = await self._repo.get_tag_stats_for_track(track_id)
+        return [TagStatsRead(**row) for row in stats]
+
     async def shift_due_dates(self, track_id: int, delta: timedelta) -> None:
         await self._repo.shift_due_dates(track_id, delta)
         logger.info("Chunk due dates shifted: track_id=%d delta_days=%.2f", track_id, delta.total_seconds() / 86400)
 
-    async def get_daily_batch(self, track_id: int | None = None) -> list[DailyBatchRead]:
-        """Return today's review batches per active track, Pareto-weighted."""
+    async def get_daily_batch(
+        self, track_id: int | None = None, states: list[str] | None = None
+    ) -> list[DailyBatchRead]:
+        """Return today's review batches per active track, Pareto-weighted.
+
+        `track.active_tags` (persisted, multi-select "practice groups") narrows the batch
+        when set; `states` is an ad hoc, non-persisted maturity filter passed in per-request
+        (e.g. "only new" or "only review") that layers on top of it.
+        """
         tracks_query = await self._track_repo.get_tracks(
             TrackFilters(active_only=True)
         )
@@ -205,11 +304,12 @@ class ChunkService:
 
         batches = []
         for track in tracks_query:
-            total_due = await self._repo.count_due_for_track(track.id)
+            tag_names = track.active_tags or None
+            total_due = await self._repo.count_due_for_track(track.id, tag_names, states)
             new_started_today = await self._repo.count_new_started_today_for_track(track.id)
             new_cards_limit = max(0, track.new_cards_per_day - new_started_today)
             chunks_orm = await self._repo.get_due_chunks_for_track(
-                track.id, track.daily_quota, new_cards_limit
+                track.id, track.daily_quota, new_cards_limit, tag_names, states
             )
             batches.append(DailyBatchRead(
                 track_id=track.id,

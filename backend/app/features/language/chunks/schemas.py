@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Annotated, Literal, Optional, TypeAlias
+from typing import Annotated, Any, Literal, Optional, TypeAlias
 from fastapi import Query
 from pydantic import BaseModel, field_validator
 
@@ -22,6 +22,7 @@ class ChunkCreate(BaseModel):
     frequency_rank: int | None = None
     frequency_source: FrequencySource | None = None
     status: ChunkStatus = "pending_triage"
+    tags: list[str] = []
 
 
 class ChunkUpdate(BaseModel):
@@ -34,6 +35,7 @@ class ChunkUpdate(BaseModel):
     frequency_rank: int | None = None
     frequency_source: FrequencySource | None = None
     status: ChunkStatus | None = None
+    tags: list[str] | None = None
 
 
 class ChunkRead(BaseModel):
@@ -70,8 +72,14 @@ class ChunkRead(BaseModel):
     created_at: datetime
     updated_at: datetime
     preview_intervals: dict[str, int] | None = None
+    tags: list[str] = []
 
     model_config = {"from_attributes": True}
+
+    @field_validator("tags", mode="before")
+    @classmethod
+    def coerce_tags(cls, v: Any) -> list[str]:
+        return [item.name if hasattr(item, "name") else item for item in v]
 
 
 class ChunkFilters:
@@ -86,6 +94,8 @@ class ChunkFilters:
         cefr_level: Annotated[str | None, Query()] = None,
         difficulty_min: Annotated[float | None, Query(ge=0.0, le=10.0)] = None,
         difficulty_max: Annotated[float | None, Query(ge=0.0, le=10.0)] = None,
+        tags: Annotated[list[str] | None, Query()] = None,
+        untagged_only: Annotated[bool, Query()] = False,
         limit: Annotated[int, Query(ge=1, le=500)] = 100,
         offset: Annotated[int, Query(ge=0)] = 0,
     ) -> None:
@@ -98,12 +108,22 @@ class ChunkFilters:
         self.cefr_level = cefr_level
         self.difficulty_min = difficulty_min
         self.difficulty_max = difficulty_max
+        self.tags = tags
+        self.untagged_only = untagged_only
         self.limit = limit
         self.offset = offset
 
 
 class ChunkCountRead(BaseModel):
     count: int
+
+
+class TagStatsRead(BaseModel):
+    name: str
+    chunk_count: int
+    due_count: int
+    avg_difficulty: float
+    leech_count: int
 
 
 class DailyBatchRead(BaseModel):
@@ -125,3 +145,8 @@ class ChunkForcePracticeCreate(BaseModel):
     track_id: int
     texts: list[str]
     level_override: str | None = None
+
+
+class ChunkTagSuggestionRequest(BaseModel):
+    track_id: int
+    limit: int = 30

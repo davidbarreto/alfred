@@ -188,18 +188,25 @@ def _escape_for_parse_mode(text: str, parse_mode: ChatParseMode | None) -> str:
 def split_message(text: str, max_length: int) -> list[str]:
     """Split text into chunks no longer than max_length, breaking on paragraph or
     line boundaries where possible so transports with a hard message-size limit
-    (e.g. Telegram's 4096 chars) can send it as several messages instead of one."""
+    (e.g. Telegram's 4096 chars) can send it as several messages instead of one.
+
+    Chunk size is balanced across the whole text (rather than greedily filling each
+    chunk to max_length) so a message just over the limit doesn't produce one
+    near-full chunk followed by a tiny leftover one."""
     if len(text) <= max_length:
         return [text]
 
+    num_chunks = -(-len(text) // max_length)  # ceil division
+    target_length = -(-len(text) // num_chunks)  # ceil division, always <= max_length
+
     chunks: list[str] = []
     remaining = text
-    while len(remaining) > max_length:
-        split_at = remaining.rfind("\n\n", 0, max_length)
-        if split_at < max_length * 0.5:
-            split_at = remaining.rfind("\n", 0, max_length)
-        if split_at < max_length * 0.5:
-            split_at = max_length
+    while len(remaining) > target_length:
+        split_at = remaining.rfind("\n\n", 0, target_length)
+        if split_at < target_length * 0.5:
+            split_at = remaining.rfind("\n", 0, target_length)
+        if split_at < target_length * 0.5:
+            split_at = target_length
         chunks.append(remaining[:split_at].strip())
         remaining = remaining[split_at:].strip()
     if remaining:

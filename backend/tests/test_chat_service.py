@@ -1048,7 +1048,15 @@ class TestSplitMessage:
     def test_hard_splits_when_no_break_available(self):
         text = "a" * 250
         result = split_message(text, 100)
-        assert result == ["a" * 100, "a" * 100, "a" * 50]
+        assert result == ["a" * 84, "a" * 84, "a" * 82]
+
+    def test_balances_chunk_sizes_instead_of_greedily_filling(self):
+        # 4200 chars over a 4000 limit should become two ~2100-char messages,
+        # not one near-full 4000-char message followed by a tiny 200-char one.
+        text = "a" * 4200
+        result = split_message(text, 4000)
+        assert len(result) == 2
+        assert result == ["a" * 2100, "a" * 2100]
 
     def test_preserves_all_content_and_respects_max_length(self):
         text = "\n\n".join(f"paragraph {i} " + "x" * 30 for i in range(10))

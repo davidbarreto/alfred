@@ -185,6 +185,28 @@ def _escape_for_parse_mode(text: str, parse_mode: ChatParseMode | None) -> str:
     return text
 
 
+def split_message(text: str, max_length: int) -> list[str]:
+    """Split text into chunks no longer than max_length, breaking on paragraph or
+    line boundaries where possible so transports with a hard message-size limit
+    (e.g. Telegram's 4096 chars) can send it as several messages instead of one."""
+    if len(text) <= max_length:
+        return [text]
+
+    chunks: list[str] = []
+    remaining = text
+    while len(remaining) > max_length:
+        split_at = remaining.rfind("\n\n", 0, max_length)
+        if split_at < max_length * 0.5:
+            split_at = remaining.rfind("\n", 0, max_length)
+        if split_at < max_length * 0.5:
+            split_at = max_length
+        chunks.append(remaining[:split_at].strip())
+        remaining = remaining[split_at:].strip()
+    if remaining:
+        chunks.append(remaining)
+    return chunks
+
+
 def _to_message_dicts(messages: list[MessageRead]) -> list[dict[str, str]]:
     return [{"role": msg.role, "content": msg.content} for msg in messages]
 

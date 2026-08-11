@@ -7,6 +7,7 @@ from app.api.auth import require_auth
 from app.config import get_settings
 from app.dependencies import ChatServiceDep, SessionServiceDep
 from app.features.core.chats.schemas import ChatRequest, ChatResponse
+from app.features.core.chats.service import split_message
 
 router = APIRouter(
     prefix="/core/chats",
@@ -27,8 +28,10 @@ async def chat(
 ) -> ChatResponse:
     reply, next_practice = await service.chat(request)
     session = await session_service.get(request.session_id)
+    messages = split_message(reply, request.max_message_length) if request.max_message_length else [reply]
     return ChatResponse(
         response=reply,
+        messages=messages,
         source=session.source if session else None,
         external_id=session.external_id if session else None,
         next_practice=next_practice,

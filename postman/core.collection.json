@@ -2169,6 +2169,51 @@
       }
     },
     {
+      "name": "71c - Chats - With max_message_length (splits into multiple messages)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('messages array present and each chunk respects the limit', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json).to.have.property('messages');",
+              "    pm.expect(json.messages).to.be.an('array').and.not.empty;",
+              "    json.messages.forEach((chunk) => pm.expect(chunk.length).to.be.at.most(80));",
+              "    pm.expect(json.messages.join('')).to.have.length.greaterThan(0);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"session_id\": {{core_session_id}},\n  \"max_message_length\": 80\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/core/chats/",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "core",
+            "chats",
+            ""
+          ]
+        }
+      }
+    },
+    {
       "name": "72 - Chats - Missing session_id (validation error)",
       "event": [
         {

@@ -11,10 +11,12 @@ class ChatRequest(BaseModel):
     session_id: int
     detected_intents: list[str] | None = None
     parse_mode: ChatParseMode | None = None
+    max_message_length: int | None = None
 
 
 class ChatResponse(BaseModel):
     response: str
+    messages: list[str]
     source: str | None = None
     external_id: str | None = None
     next_practice: NextPracticePrompt | None = None

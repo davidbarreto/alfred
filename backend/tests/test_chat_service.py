@@ -11,6 +11,7 @@ from app.features.core.chats.service import (
     _build_system_prompt,
     _strip_markdown,
     _to_message_dicts,
+    split_message,
 )
 from app.features.core.embeddings.schemas import EmbeddingSearchResult
 from app.features.core.messages.schemas import MessageRead
@@ -1024,3 +1025,34 @@ class TestToMessageDicts:
 
     def test_empty_list(self):
         assert _to_message_dicts([]) == []
+
+
+class TestSplitMessage:
+    def test_under_limit_returns_single_chunk(self):
+        assert split_message("short text", 100) == ["short text"]
+
+    def test_exactly_at_limit_returns_single_chunk(self):
+        text = "a" * 100
+        assert split_message(text, 100) == [text]
+
+    def test_splits_on_paragraph_boundary(self):
+        text = "a" * 40 + "\n\n" + "b" * 40
+        result = split_message(text, 50)
+        assert result == ["a" * 40, "b" * 40]
+
+    def test_splits_on_line_boundary_when_no_paragraph_break(self):
+        text = "a" * 40 + "\n" + "b" * 40
+        result = split_message(text, 50)
+        assert result == ["a" * 40, "b" * 40]
+
+    def test_hard_splits_when_no_break_available(self):
+        text = "a" * 250
+        result = split_message(text, 100)
+        assert result == ["a" * 100, "a" * 100, "a" * 50]
+
+    def test_preserves_all_content_and_respects_max_length(self):
+        text = "\n\n".join(f"paragraph {i} " + "x" * 30 for i in range(10))
+        result = split_message(text, 80)
+        assert all(len(chunk) <= 80 for chunk in result)
+        for i in range(10):
+            assert any(f"paragraph {i} " in chunk for chunk in result)

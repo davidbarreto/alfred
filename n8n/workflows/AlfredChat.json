@@ -287,6 +287,10 @@
                         {
                             "name": "parse_mode",
                             "value": "html"
+                        },
+                        {
+                            "name": "max_message_length",
+                            "value": 4000
                         }
                     ]
                 },
@@ -559,6 +563,19 @@
         },
         {
             "parameters": {
+                "jsCode": "// Backend already splits long replies into Telegram-safe chunks (messages[]) when\n// max_message_length is sent. Fan each chunk out to its own item so \"Send Message\"\n// sends one Telegram message per chunk. Branches without a messages[] array (e.g.\n// the fixed error-message path) pass through unchanged.\nconst results = [];\n\nfor (const item of $input.all()) {\n  if (Array.isArray(item.json.messages) && item.json.messages.length) {\n    for (const chunk of item.json.messages) {\n      results.push({ json: { ...item.json, response: chunk } });\n    }\n  } else {\n    results.push({ json: item.json });\n  }\n}\n\nreturn results;"
+            },
+            "type": "n8n-nodes-base.code",
+            "typeVersion": 2,
+            "position": [
+                4384,
+                -352
+            ],
+            "id": "9a3b1e5c-7c4e-4b6b-9e2a-2f5c8d1a6b3f",
+            "name": "Split Long Message"
+        },
+        {
+            "parameters": {
                 "chatId": "={{ $('Message Trigger').item.json.message?.chat?.id?.toString() || $('Message Trigger').item.json.callback_query?.message?.chat?.id?.toString() }}",
                 "text": "={{ $json.response }}",
                 "additionalFields": {
@@ -580,7 +597,8 @@
                     "id": "t63z4EHeYTEZtFAR",
                     "name": "Telegram account"
                 }
-            }
+            },
+            "onError": "continueErrorOutput"
         },
         {
             "parameters": {
@@ -2132,7 +2150,7 @@
             "main": [
                 [
                     {
-                        "node": "Send Message",
+                        "node": "Split Long Message",
                         "type": "main",
                         "index": 0
                     },
@@ -2282,7 +2300,7 @@
             "main": [
                 [
                     {
-                        "node": "Send Message",
+                        "node": "Split Long Message",
                         "type": "main",
                         "index": 0
                     }
@@ -2293,7 +2311,7 @@
             "main": [
                 [
                     {
-                        "node": "Send Message",
+                        "node": "Split Long Message",
                         "type": "main",
                         "index": 0
                     }
@@ -2552,7 +2570,7 @@
                 ],
                 [
                     {
-                        "node": "Send Message",
+                        "node": "Split Long Message",
                         "type": "main",
                         "index": 0
                     }
@@ -2843,6 +2861,17 @@
                 [
                     {
                         "node": "Chat Alfred",
+                        "type": "main",
+                        "index": 0
+                    }
+                ]
+            ]
+        },
+        "Split Long Message": {
+            "main": [
+                [
+                    {
+                        "node": "Send Message",
                         "type": "main",
                         "index": 0
                     }

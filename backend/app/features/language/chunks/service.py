@@ -276,6 +276,14 @@ class ChunkService:
         )
         return updated
 
+    async def bulk_tag_chunks(self, chunk_ids: list[int], tag_name: str, action: str) -> int:
+        changed = await self._repo.bulk_tag_chunks(chunk_ids, tag_name, action)
+        logger.info(
+            "Chunks bulk-tagged: tag=%r action=%s requested=%d changed=%d",
+            tag_name, action, len(chunk_ids), changed,
+        )
+        return changed
+
     async def get_tag_names(self, track_id: int) -> list[str]:
         return await self._repo.get_tag_names_for_track(track_id)
 

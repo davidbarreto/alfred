@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta, timezone
 
-from sqlalchemy import func, select, update
+from sqlalchemy import func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.features.language.chunks.tables import Chunk, LanguageTag
@@ -61,6 +61,9 @@ class ChunkRepository:
             query = query.where(Chunk.tags.any(LanguageTag.name.in_(filters.tags)))
         if filters.untagged_only:
             query = query.where(~Chunk.tags.any())
+        if filters.search:
+            pattern = f"%{filters.search}%"
+            query = query.where(or_(Chunk.text.ilike(pattern), Chunk.translation.ilike(pattern)))
         return query
 
     async def get_chunks(self, filters: ChunkFilters) -> list[Chunk]:
@@ -271,6 +274,37 @@ class ChunkRepository:
         await self._session.commit()
         await self._session.refresh(chunk)
         return chunk
+
+    async def bulk_tag_chunks(self, chunk_ids: list[int], tag_name: str, action: str) -> int:
+        """Add or remove one tag across many chunks at once (additive/subtractive, unlike
+        update_chunk's per-chunk tag replace). Returns the number of chunks actually changed."""
+        result = await self._session.execute(
+            select(Chunk).where(Chunk.id.in_(chunk_ids))
+        )
+        chunks = list(result.scalars().all())
+        if not chunks:
+            return 0
+
+        if action == "add":
+            tag = (await self._resolve_tags([tag_name]))[0]
+            changed = 0
+            for chunk in chunks:
+                if tag not in chunk.tags:
+                    chunk.tags.append(tag)
+                    changed += 1
+        else:
+            tag_result = await self._session.execute(select(LanguageTag).where(LanguageTag.name == tag_name))
+            tag = tag_result.scalars().first()
+            changed = 0
+            if tag is not None:
+                for chunk in chunks:
+                    if tag in chunk.tags:
+                        chunk.tags.remove(tag)
+                        changed += 1
+
+        if changed:
+            await self._session.commit()
+        return changed
 
     async def update_srs_fields(
         self,

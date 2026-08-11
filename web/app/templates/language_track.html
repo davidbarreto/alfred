@@ -75,6 +75,10 @@
          class="btn btn-sm bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 text-xs">
         <i class="ti ti-cards text-sm"></i>Chunks
       </a>
+      <a href="/languages/{{ track.code }}/tags"
+         class="btn btn-sm bg-white border border-gray-200 text-gray-700 hover:bg-gray-50 text-xs">
+        <i class="ti ti-tags text-sm"></i>Manage tags
+      </a>
     </div>
   </div>
 
@@ -137,6 +141,8 @@
     <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
       <p class="text-xs font-medium text-gray-600">Practice groups</p>
       <div class="flex items-center gap-2 text-[11px] text-gray-400">
+        <a href="/languages/{{ track.code }}/tags" class="hover:text-gray-700">Manage</a>
+        <span class="text-gray-200">·</span>
         <button type="button" onclick="selectAllTags()" class="hover:text-gray-700">Select all</button>
         <span class="text-gray-200">·</span>
         <button type="button" onclick="clearTags()" class="hover:text-gray-700">Clear</button>

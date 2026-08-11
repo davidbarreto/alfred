@@ -201,6 +201,84 @@ class TestApplyFiltersTags:
         )
         assert "NOT (EXISTS" in str(query) or "NOT EXISTS" in str(query)
 
+    def test_search_matches_text_or_translation_case_insensitively(self):
+        session = _make_session()
+        query = ChunkRepository(session)._apply_filters(
+            select(Chunk), ChunkFilters(search="Привет")
+        )
+        sql = str(query)
+        assert "lower(language.chunks.text)" in sql
+        assert "lower(language.chunks.translation)" in sql
+
+    def test_no_search_omits_ilike(self):
+        session = _make_session()
+        query = ChunkRepository(session)._apply_filters(select(Chunk), ChunkFilters())
+        assert "LIKE" not in str(query).upper()
+
+
+class TestBulkTagChunks:
+    async def test_add_appends_tag_to_chunks_missing_it(self):
+        session = _make_session()
+        tag = LanguageTag(id=1, name="Food")
+        chunk_with_tag = MagicMock(tags=[tag])
+        chunk_without_tag = MagicMock(tags=[])
+        session.execute.side_effect = [
+            _result_with_chunks([chunk_with_tag, chunk_without_tag]),
+            _scalar_first(tag),
+        ]
+
+        changed = await ChunkRepository(session).bulk_tag_chunks([1, 2], "Food", "add")
+
+        assert changed == 1
+        assert tag in chunk_without_tag.tags
+        session.commit.assert_awaited_once()
+
+    async def test_add_is_idempotent_when_all_chunks_already_tagged(self):
+        session = _make_session()
+        tag = LanguageTag(id=1, name="Food")
+        chunk = MagicMock(tags=[tag])
+        session.execute.side_effect = [_result_with_chunks([chunk]), _scalar_first(tag)]
+
+        changed = await ChunkRepository(session).bulk_tag_chunks([1], "Food", "add")
+
+        assert changed == 0
+        session.commit.assert_not_awaited()
+
+    async def test_remove_strips_tag_from_chunks_that_have_it(self):
+        session = _make_session()
+        tag = LanguageTag(id=1, name="Food")
+        chunk_with_tag = MagicMock(tags=[tag])
+        chunk_without_tag = MagicMock(tags=[])
+        session.execute.side_effect = [
+            _result_with_chunks([chunk_with_tag, chunk_without_tag]),
+            _scalar_first(tag),
+        ]
+
+        changed = await ChunkRepository(session).bulk_tag_chunks([1, 2], "Food", "remove")
+
+        assert changed == 1
+        assert tag not in chunk_with_tag.tags
+        session.commit.assert_awaited_once()
+
+    async def test_remove_unknown_tag_is_noop(self):
+        session = _make_session()
+        chunk = MagicMock(tags=[])
+        session.execute.side_effect = [_result_with_chunks([chunk]), _scalar_first(None)]
+
+        changed = await ChunkRepository(session).bulk_tag_chunks([1], "Ghost", "remove")
+
+        assert changed == 0
+        session.commit.assert_not_awaited()
+
+    async def test_no_matching_chunks_returns_zero_without_querying_tag(self):
+        session = _make_session()
+        session.execute.return_value = _result_with_chunks([])
+
+        changed = await ChunkRepository(session).bulk_tag_chunks([999], "Food", "add")
+
+        assert changed == 0
+        assert session.execute.await_count == 1
+
 
 class TestTagAwareDueBatch:
     async def test_get_due_chunks_for_track_applies_tag_filter(self):

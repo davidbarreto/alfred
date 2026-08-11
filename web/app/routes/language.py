@@ -1060,6 +1060,84 @@ async def suggest_chunk_tags(code: str, request: Request):
     return JSONResponse({"tagged": len(updated)})
 
 
+_TAG_CHUNKS_LIMIT = 300
+_TAG_SEARCH_LIMIT = 100
+
+
+@router.get("/{code}/tags", response_class=HTMLResponse)
+async def tag_manager(code: str, request: Request):
+    tracks = await _safe_get("/language/tracks", {"active_only": "false", "exclude_paused": "false"})
+    track = next((t for t in tracks if t["code"] == code), None)
+    if not track:
+        return HTMLResponse("<p>Track not found.</p>", status_code=404)
+
+    qp = request.query_params
+    selected_tag = qp.get("tag", "").strip()
+    search = qp.get("search", "").strip()
+
+    tag_stats = await _safe_get("/language/chunks/tag-stats", {"track_id": track["id"]})
+
+    chunks: list = []
+    if selected_tag:
+        merged: dict[int, dict] = {}
+        tagged_chunks = await _safe_get("/language/chunks", {
+            "track_id": track["id"], "status": "ALL", "tags": selected_tag, "limit": _TAG_CHUNKS_LIMIT,
+        })
+        for c in tagged_chunks:
+            merged[c["id"]] = c
+        if search:
+            search_chunks = await _safe_get("/language/chunks", {
+                "track_id": track["id"], "status": "ALL", "search": search, "limit": _TAG_SEARCH_LIMIT,
+            })
+            for c in search_chunks:
+                merged.setdefault(c["id"], c)
+        chunks = sorted(merged.values(), key=lambda c: c["text"])
+
+    return templates.TemplateResponse(request, "language_tags.html", {
+        "track": track,
+        "flag": _flag(track["code"]),
+        "tag_stats": tag_stats,
+        "selected_tag": selected_tag,
+        "search": search,
+        "chunks": chunks,
+    })
+
+
+@router.post("/{code}/tags/assign")
+async def assign_tag(code: str, request: Request):
+    body = await request.json()
+    tag_name = (body.get("tag_name") or "").strip()
+    add_ids = body.get("add_ids") or []
+    remove_ids = body.get("remove_ids") or []
+    if not tag_name:
+        return JSONResponse({"error": "Tag name is required."}, status_code=400)
+
+    try:
+        added = 0
+        removed = 0
+        if add_ids:
+            result = await api.post("/language/chunks/bulk-tag", json={
+                "chunk_ids": add_ids, "tag_name": tag_name, "action": "add",
+            })
+            added = result.get("updated_count", 0)
+        if remove_ids:
+            result = await api.post("/language/chunks/bulk-tag", json={
+                "chunk_ids": remove_ids, "tag_name": tag_name, "action": "remove",
+            })
+            removed = result.get("updated_count", 0)
+    except httpx.HTTPStatusError as exc:
+        detail = "Failed to update tags."
+        try:
+            detail = exc.response.json().get("detail", detail)
+        except Exception:
+            pass
+        return JSONResponse({"error": detail}, status_code=422)
+    except httpx.HTTPError:
+        return JSONResponse({"error": "Failed to update tags."}, status_code=502)
+
+    return JSONResponse({"added": added, "removed": removed})
+
+
 @router.get("/{code}/chunks/{chunk_id}", response_class=HTMLResponse)
 async def chunk_detail(code: str, chunk_id: int, request: Request):
     tracks = await _safe_get("/language/tracks", {"active_only": "false", "exclude_paused": "false"})

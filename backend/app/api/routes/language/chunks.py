@@ -5,6 +5,8 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from app.api.auth import require_auth
 from app.dependencies import ChunkServiceDep, PronunciationServiceDep
 from app.features.language.chunks.schemas import (
+    ChunkBulkTagRequest,
+    ChunkBulkTagResponse,
     ChunkCountRead,
     ChunkCreate,
     ChunkFilters,
@@ -46,6 +48,12 @@ async def force_practice_chunks(request: ChunkForcePracticeCreate, service: Chun
 @router.post("/suggest-tags", response_model=list[ChunkRead])
 async def suggest_tags(request: ChunkTagSuggestionRequest, service: ChunkServiceDep):
     return await service.suggest_tags_for_untagged(request.track_id, request.limit)
+
+
+@router.post("/bulk-tag", response_model=ChunkBulkTagResponse)
+async def bulk_tag_chunks(request: ChunkBulkTagRequest, service: ChunkServiceDep):
+    changed = await service.bulk_tag_chunks(request.chunk_ids, request.tag_name, request.action)
+    return ChunkBulkTagResponse(updated_count=changed)
 
 
 @router.get("/pronunciation")

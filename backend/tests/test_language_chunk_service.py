@@ -593,6 +593,20 @@ class TestGetTagNamesAndStats:
         assert result[0].avg_difficulty == 4.5
 
 
+class TestBulkTagChunks:
+    async def test_delegates_to_repo_and_returns_changed_count(self, service):
+        service._repo.bulk_tag_chunks.return_value = 2
+        result = await service.bulk_tag_chunks([1, 2, 3], "Food", "add")
+        service._repo.bulk_tag_chunks.assert_called_once_with([1, 2, 3], "Food", "add")
+        assert result == 2
+
+    async def test_remove_action_passed_through(self, service):
+        service._repo.bulk_tag_chunks.return_value = 0
+        result = await service.bulk_tag_chunks([1], "Food", "remove")
+        service._repo.bulk_tag_chunks.assert_called_once_with([1], "Food", "remove")
+        assert result == 0
+
+
 class TestSuggestTagsForUntagged:
     async def test_raises_503_when_llm_unavailable(self, service):
         service._llm_provider = None

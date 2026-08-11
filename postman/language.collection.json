@@ -2633,6 +2633,146 @@
           ]
         }
       }
+    },
+    {
+      "name": "59 - List Chunks (search filter)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/language/chunks?track_id={{language_track_id}}&search=chunk",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "language",
+            "chunks"
+          ],
+          "query": [
+            {
+              "key": "track_id",
+              "value": "{{language_track_id}}"
+            },
+            {
+              "key": "search",
+              "value": "chunk"
+            }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Every result matches search text or translation', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json).to.be.an('array');",
+              "    json.forEach(c => {",
+              "        const hay = (c.text + ' ' + c.translation).toLowerCase();",
+              "        pm.expect(hay).to.include('chunk');",
+              "    });",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "60 - Bulk Tag Chunks (add)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/language/chunks/bulk-tag",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "language",
+            "chunks",
+            "bulk-tag"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"chunk_ids\": [\n    \"{{language_chunk_id}}\"\n  ],\n  \"tag_name\": \"BulkTagTest\",\n  \"action\": \"add\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Reports one chunk updated', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json.updated_count).to.eql(1);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "61 - Bulk Tag Chunks (remove)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/language/chunks/bulk-tag",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "language",
+            "chunks",
+            "bulk-tag"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"chunk_ids\": [\n    \"{{language_chunk_id}}\"\n  ],\n  \"tag_name\": \"BulkTagTest\",\n  \"action\": \"remove\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Reports one chunk updated', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json.updated_count).to.eql(1);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
     }
   ]
 }

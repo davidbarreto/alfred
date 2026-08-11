@@ -96,6 +96,7 @@ class ChunkFilters:
         difficulty_max: Annotated[float | None, Query(ge=0.0, le=10.0)] = None,
         tags: Annotated[list[str] | None, Query()] = None,
         untagged_only: Annotated[bool, Query()] = False,
+        search: Annotated[str | None, Query()] = None,
         limit: Annotated[int, Query(ge=1, le=500)] = 100,
         offset: Annotated[int, Query(ge=0)] = 0,
     ) -> None:
@@ -110,6 +111,7 @@ class ChunkFilters:
         self.difficulty_max = difficulty_max
         self.tags = tags
         self.untagged_only = untagged_only
+        self.search = search
         self.limit = limit
         self.offset = offset
 
@@ -150,3 +152,13 @@ class ChunkForcePracticeCreate(BaseModel):
 class ChunkTagSuggestionRequest(BaseModel):
     track_id: int
     limit: int = 30
+
+
+class ChunkBulkTagRequest(BaseModel):
+    chunk_ids: list[int]
+    tag_name: str
+    action: Literal["add", "remove"] = "add"
+
+
+class ChunkBulkTagResponse(BaseModel):
+    updated_count: int

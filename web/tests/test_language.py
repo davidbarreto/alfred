@@ -524,3 +524,93 @@ class TestLanguagesHub:
         resp = client.get("/languages")
 
         assert "language paused" not in resp.text
+
+
+class TestTagManagerPage:
+    def test_no_tag_selected_shows_picker_only(self, client, mock_api):
+        mock_api["get"].side_effect = [
+            [{"id": 1, "code": "ru", "name": "Russian"}],
+            [{"name": "Food", "chunk_count": 3, "due_count": 1, "avg_difficulty": 4.0, "leech_count": 0}],
+        ]
+
+        resp = client.get("/languages/ru/tags")
+
+        assert resp.status_code == 200
+        assert "Food" in resp.text
+        assert "Assigning chunks to" not in resp.text
+
+    def test_selected_tag_shows_current_members(self, client, mock_api):
+        mock_api["get"].side_effect = [
+            [{"id": 1, "code": "ru", "name": "Russian"}],
+            [{"name": "Food", "chunk_count": 1, "due_count": 0, "avg_difficulty": 3.0, "leech_count": 0}],
+            [{"id": 10, "text": "хлеб", "translation": "bread", "chunk_type": "word", "tags": ["Food"]}],
+        ]
+
+        resp = client.get("/languages/ru/tags?tag=Food")
+
+        assert resp.status_code == 200
+        assert "хлеб" in resp.text
+        mock_api["get"].assert_any_call("/language/chunks", params={
+            "track_id": 1, "status": "ALL", "tags": "Food", "limit": 300,
+        })
+
+    def test_search_merges_matches_with_current_members(self, client, mock_api):
+        mock_api["get"].side_effect = [
+            [{"id": 1, "code": "ru", "name": "Russian"}],
+            [{"name": "Food", "chunk_count": 1, "due_count": 0, "avg_difficulty": 3.0, "leech_count": 0}],
+            [{"id": 10, "text": "хлеб", "translation": "bread", "chunk_type": "word", "tags": ["Food"]}],
+            [{"id": 11, "text": "молоко", "translation": "milk", "chunk_type": "word", "tags": []}],
+        ]
+
+        resp = client.get("/languages/ru/tags?tag=Food&search=milk")
+
+        assert resp.status_code == 200
+        assert "хлеб" in resp.text
+        assert "молоко" in resp.text
+        mock_api["get"].assert_any_call("/language/chunks", params={
+            "track_id": 1, "status": "ALL", "search": "milk", "limit": 100,
+        })
+
+    def test_returns_404_when_track_not_found(self, client, mock_api):
+        mock_api["get"].return_value = []
+
+        resp = client.get("/languages/xx/tags")
+
+        assert resp.status_code == 404
+
+
+class TestAssignTagRoute:
+    def test_adds_and_removes_via_bulk_tag_endpoint(self, client, mock_api):
+        mock_api["post"].side_effect = [
+            {"updated_count": 2},
+            {"updated_count": 1},
+        ]
+
+        resp = client.post("/languages/ru/tags/assign", json={
+            "tag_name": "Food", "add_ids": [1, 2], "remove_ids": [3],
+        })
+
+        assert resp.status_code == 200
+        assert resp.json() == {"added": 2, "removed": 1}
+        mock_api["post"].assert_any_call("/language/chunks/bulk-tag", json={
+            "chunk_ids": [1, 2], "tag_name": "Food", "action": "add",
+        })
+        mock_api["post"].assert_any_call("/language/chunks/bulk-tag", json={
+            "chunk_ids": [3], "tag_name": "Food", "action": "remove",
+        })
+
+    def test_requires_tag_name(self, client, mock_api):
+        resp = client.post("/languages/ru/tags/assign", json={"add_ids": [1], "remove_ids": []})
+
+        assert resp.status_code == 400
+        mock_api["post"].assert_not_awaited()
+
+    def test_returns_502_when_backend_unreachable(self, client, mock_api):
+        request = httpx.Request("POST", "http://backend/language/chunks/bulk-tag")
+        mock_api["post"].side_effect = httpx.ConnectError("connection refused", request=request)
+
+        resp = client.post("/languages/ru/tags/assign", json={
+            "tag_name": "Food", "add_ids": [1], "remove_ids": [],
+        })
+
+        assert resp.status_code == 502

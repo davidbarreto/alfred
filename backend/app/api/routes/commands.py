@@ -1,3 +1,4 @@
+import html
 import logging
 import time
 from datetime import datetime, timezone
@@ -318,7 +319,10 @@ async def respond_to_commands(
         finish_reason=llm_response.finish_reason,
         latency_ms=latency_ms,
     )
-    response_text = llm_response.text.strip()
+    # This response is always sent to Telegram with parse_mode=HTML (see the n8n "Send
+    # Message" node), so raw '<'/'>'/'&' from command descriptions or user data (e.g.
+    # 'roleplay <scenario>') must be escaped or Telegram rejects the message as invalid HTML.
+    response_text = html.escape(llm_response.text.strip(), quote=False)
     capped_text = _cap_response_length(response_text)
     if capped_text != response_text:
         logger.warning(

@@ -1,3 +1,5 @@
+from types import SimpleNamespace
+
 import pytest
 from fastapi.testclient import TestClient
 from unittest.mock import AsyncMock, patch
@@ -286,6 +288,48 @@ class TestCapResponseLength:
         result = _cap_response_length(text)
         assert len(result) <= _MAX_RESPONSE_CHARS
         assert result.endswith("(message truncated — too long to send)")
+
+
+class TestRespondToCommands:
+    def _respond(self, client, *, llm_text, executions):
+        from app.main import app
+        from app.dependencies import get_command_execution_service, get_extraction_llm_provider
+        from app.shared.llm import LlmResponse
+
+        mock_cmd_service = AsyncMock()
+        mock_cmd_service.list = AsyncMock(return_value=executions)
+        mock_llm = AsyncMock()
+        mock_llm.provider = "mock"
+        mock_llm.model = "mock-model"
+        mock_llm.complete = AsyncMock(return_value=LlmResponse(text=llm_text, tokens_input=0, tokens_output=0))
+
+        original_llm_override = app.dependency_overrides[get_extraction_llm_provider]
+        app.dependency_overrides[get_command_execution_service] = lambda: mock_cmd_service
+        app.dependency_overrides[get_extraction_llm_provider] = lambda: mock_llm
+        try:
+            return client.post("/commands/respond", json={"message_id": 1}, headers=AUTH)
+        finally:
+            app.dependency_overrides[get_extraction_llm_provider] = original_llm_override
+            del app.dependency_overrides[get_command_execution_service]
+
+    def test_escapes_html_special_chars_from_llm_response(self, client):
+        execution = SimpleNamespace(status="success", command_name="help.help", result={"a": 1}, error=None)
+        response = self._respond(
+            client, llm_text="Try /roleplay pt <scenario> here", executions=[execution]
+        )
+        assert response.status_code == 200
+        assert response.json()["response"] == "Try /roleplay pt &lt;scenario&gt; here"
+
+    def test_plain_text_response_unaffected(self, client):
+        execution = SimpleNamespace(status="success", command_name="task.pending", result={"count": 0}, error=None)
+        response = self._respond(client, llm_text="You're all caught up.", executions=[execution])
+        assert response.status_code == 200
+        assert response.json()["response"] == "You're all caught up."
+
+    def test_no_executions_returns_empty_response(self, client):
+        response = self._respond(client, llm_text="unused", executions=[])
+        assert response.status_code == 200
+        assert response.json()["response"] == ""
 
     def test_result_never_exceeds_telegram_limit(self):
         text = "z" * 10000

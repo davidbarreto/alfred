@@ -118,6 +118,7 @@ alfred/
 - All sub-workflows return a consistent `{ success, message }` envelope
 - Data passed between nodes follows the `alfred` envelope pattern
 - HTTP Request nodes call the FastAPI backend; do not embed business logic in n8n directly
+- Telegram's `setMyCommands` API hard-limits each command `description` to 256 characters (BadRequest 400 otherwise, which fails `POST /integration/telegram/set-commands` for *all* commands, not just the offending one). When adding or editing a command in `COMMAND_DEFINITIONS` (`app/assistant/commands/registry.py`), keep `description` at 200 characters or less to leave headroom.
 
 ---
 

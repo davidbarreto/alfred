@@ -299,20 +299,20 @@ COMMAND_DEFINITIONS = {
     },
     "language": {
         "practice": {
-            "description": "Start a shadowing/pronunciation practice session for a language "
-            "(language_code defaults to English if omitted). Pass one or more comma-separated "
-            "words/phrases instead of a count to force-practice those specific chunks, "
-            "optionally with level:<CEFR> to steer a newly created chunk's difficulty",
+            "description": "Start a shadowing/pronunciation session "
+            "(language_code defaults to English). Pass comma-separated words/phrases instead "
+            "of a count to force-practice those chunks; optionally add level:<CEFR> to steer "
+            "a newly created chunk's difficulty",
             # /practice is a legacy alias for /shadow; kept for one release.
             "aliases": ["/shadow", "/practice", "/pr"],
             "flags": {"--level": "level", "-l": "level"},
             "arg_keys": ["language_code", "count"],
         },
         "review": {
-            "description": "Start an SRS review session for a language "
-            "(language_code defaults to English if omitted). Pass one or more comma-separated "
-            "words/phrases instead of a count to force-practice those specific chunks, "
-            "optionally with level:<CEFR> to steer a newly created chunk's difficulty",
+            "description": "Start an SRS review session "
+            "(language_code defaults to English). Pass comma-separated words/phrases instead "
+            "of a count to force-practice those chunks; optionally add level:<CEFR> to steer "
+            "a newly created chunk's difficulty",
             "aliases": ["/review", "/rv"],
             "flags": {"--level": "level", "-l": "level"},
             "arg_keys": ["language_code", "count"],
@@ -327,10 +327,10 @@ COMMAND_DEFINITIONS = {
             "arg_keys": ["language_code", "task_type", "count"],
         },
         "conversation": {
-            "description": "Start a free-form spoken conversation practice session for a language "
-            "(add 'roleplay <scenario>' for a scripted roleplay instead; "
-            "language_code defaults to English if omitted; level:<CEFR> (e.g. level:a0 for a "
-            "total-beginner register) steers the whole session's difficulty)",
+            "description": "Start a free-form spoken conversation session "
+            "(language_code defaults to English). Add 'roleplay <scenario>' for a scripted "
+            "roleplay instead. level:<CEFR> (e.g. level:a0 for total beginner) sets the "
+            "session's difficulty",
             "aliases": ["/conversation", "/talk"],
             "flags": {"--level": "level", "-l": "level"},
             "arg_keys": ["language_code", "rest"],

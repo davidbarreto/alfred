@@ -45,7 +45,7 @@
 
   <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
     {% for track in tracks %}
-    <div class="card bg-white hover:shadow-sm transition-shadow">
+    <div class="card {% if track.paused_at %}bg-gray-50 opacity-60{% else %}bg-white hover:shadow-sm{% endif %} transition-shadow">
       <div class="card-body p-5 space-y-4">
 
         <!-- Header -->

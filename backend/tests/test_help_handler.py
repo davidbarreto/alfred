@@ -123,9 +123,37 @@ class TestHelpCommandDetail:
 
 class TestHelpNotFound:
     def test_returns_not_found_for_unknown_command(self):
-        result = handle_help({"query": "unknowncmd"})
+        result = handle_help({"query": "xqzwv"})
         assert result["type"] == "not_found"
 
     def test_not_found_includes_query(self):
-        result = handle_help({"query": "fakecommand"})
-        assert result["query"] == "fakecommand"
+        result = handle_help({"query": "xqzwv"})
+        assert result["query"] == "xqzwv"
+
+
+class TestHelpSearchResults:
+    def test_returns_search_results_for_free_text_query(self):
+        result = handle_help({"query": "voice conversation a0"})
+        assert result["type"] == "search_results"
+        assert result["query"] == "voice conversation a0"
+
+    def test_search_results_surface_conversation_and_roleplay(self):
+        result = handle_help({"query": "voice conversation a0"})
+        commands = [r["command"] for r in result["results"]]
+        assert "language.conversation" in commands
+        assert "language.conversation_roleplay" in commands
+
+    def test_search_result_entries_have_command_aliases_description(self):
+        result = handle_help({"query": "roleplay voice a0"})
+        for entry in result["results"]:
+            assert "command" in entry
+            assert "aliases" in entry
+            assert "description" in entry
+
+    def test_search_results_capped_at_limit(self):
+        result = handle_help({"query": "language level a0 session code"})
+        assert len(result["results"]) <= 3
+
+    def test_no_search_results_falls_back_to_not_found(self):
+        result = handle_help({"query": "xqzwv"})
+        assert result["type"] == "not_found"

@@ -64,5 +64,10 @@ RESPOND_SYSTEM_PROMPT = (
     "details on any specific command.\n"
     "- help.help with type='command': Describe the command naturally in one sentence, then list all its aliases "
     "on one line, then explain each flag (key and short/long forms) with its purpose. Be concise but complete.\n"
+    "- help.help with type='search_results': The query didn't match a command name exactly, but these are the "
+    "closest matches by keyword. For each result, give its primary alias and description, and if the description "
+    "mentions inline modifiers (like level:<CEFR> or a 'roleplay'/'voice'/'text' keyword), show a concrete example "
+    "command using the user's own query terms where they fit (e.g. for 'voice conversation a0' -> "
+    "'/talk pt level:a0'). Keep it short — one line per result.\n"
     "- help.help with type='not_found': Say you couldn't find that command and suggest typing /help for the full list."
 )

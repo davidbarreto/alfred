@@ -153,7 +153,7 @@ fr:
   cefr_level: A1
   frequency_rank: 17
   grammar_scope: null
-  tags: [Transportation]
+  tags: [Travel & Transport]
 - type: word
   text: Livre
   translation: Book
@@ -639,7 +639,7 @@ fr:
   cefr_level: A1
   frequency_rank: 71
   grammar_scope: null
-  tags: [Travel]
+  tags: [Travel & Transport]
 - type: word
   text: Moi
   translation: Me / I (stressed pronoun)
@@ -756,7 +756,7 @@ fr:
   cefr_level: A1
   frequency_rank: 84
   grammar_scope: null
-  tags: [Transportation]
+  tags: [Travel & Transport]
 - type: collocation
   text: Avoir un rendez-vous
   translation: To have an appointment
@@ -891,7 +891,7 @@ fr:
   cefr_level: A1
   frequency_rank: 99
   grammar_scope: prepositions
-  tags: [Travel]
+  tags: [Travel & Transport]
 - type: sentence_pattern
   text: Ça coûte combien ?
   translation: How much does it cost?
@@ -1098,7 +1098,7 @@ fr:
   cefr_level: A1
   frequency_rank: 122
   grammar_scope: null
-  tags: [Travel]
+  tags: [Travel & Transport]
 - type: word
   text: Restaurant
   translation: Restaurant
@@ -1305,7 +1305,7 @@ fr:
   cefr_level: A1
   frequency_rank: 145
   grammar_scope: present tense
-  tags: [Travel]
+  tags: [Travel & Transport]
 - type: sentence_pattern
   text: Est-ce que... ?
   translation: Is it that...? (Question marker)
@@ -1602,7 +1602,7 @@ fr:
   cefr_level: A1
   frequency_rank: 178
   grammar_scope: null
-  tags: [Transportation]
+  tags: [Travel & Transport]
 - type: collocation
   text: De rien
   translation: You're welcome
@@ -1638,7 +1638,7 @@ fr:
   cefr_level: A1
   frequency_rank: 182
   grammar_scope: null
-  tags: [Transportation]
+  tags: [Travel & Transport]
 - type: collocation
   text: La poste
   translation: The post office
@@ -1881,7 +1881,7 @@ fr:
   cefr_level: A1
   frequency_rank: 209
   grammar_scope: null
-  tags: [Transportation]
+  tags: [Travel & Transport]
 - type: word
   text: Train
   translation: Train
@@ -1890,7 +1890,7 @@ fr:
   cefr_level: A1
   frequency_rank: 210
   grammar_scope: null
-  tags: [Transportation]
+  tags: [Travel & Transport]
 - type: word
   text: Avion
   translation: Plane
@@ -1899,7 +1899,7 @@ fr:
   cefr_level: A1
   frequency_rank: 211
   grammar_scope: null
-  tags: [Transportation]
+  tags: [Travel & Transport]
 - type: word
   text: Billet
   translation: Ticket (for travel/event)
@@ -1908,7 +1908,7 @@ fr:
   cefr_level: A1
   frequency_rank: 212
   grammar_scope: null
-  tags: [Travel]
+  tags: [Travel & Transport]
 - type: word
   text: Passeport
   translation: Passport
@@ -1917,7 +1917,7 @@ fr:
   cefr_level: A1
   frequency_rank: 213
   grammar_scope: null
-  tags: [Travel]
+  tags: [Travel & Transport]
 - type: word
   text: Téléphone portable
   translation: Mobile phone
@@ -2142,7 +2142,7 @@ fr:
   cefr_level: A1
   frequency_rank: 238
   grammar_scope: null
-  tags: [Transportation]
+  tags: [Travel & Transport]
 - type: verb_form
   text: Je dors
   translation: I sleep
@@ -2178,7 +2178,7 @@ fr:
   cefr_level: A1
   frequency_rank: 242
   grammar_scope: present tense
-  tags: [Transportation]
+  tags: [Travel & Transport]
 - type: verb_form
   text: Nous habitons
   translation: We live
@@ -2376,7 +2376,7 @@ fr:
   cefr_level: A1
   frequency_rank: 264
   grammar_scope: null
-  tags: [Transportation]
+  tags: [Travel & Transport]
 - type: word
   text: Vieux/Vieille
   translation: Old
@@ -2493,7 +2493,7 @@ fr:
   cefr_level: A1
   frequency_rank: 277
   grammar_scope: null
-  tags: [Transportation]
+  tags: [Travel & Transport]
 - type: word
   text: Monnaie
   translation: Change, currency
@@ -2826,7 +2826,7 @@ fr:
   cefr_level: A1
   frequency_rank: 314
   grammar_scope: null
-  tags: [Travel]
+  tags: [Travel & Transport]
 - type: word
   text: Bateau
   translation: Boat
@@ -2835,7 +2835,7 @@ fr:
   cefr_level: A1
   frequency_rank: 315
   grammar_scope: null
-  tags: [Transportation]
+  tags: [Travel & Transport]
 - type: word
   text: Moto
   translation: Motorbike
@@ -2844,7 +2844,7 @@ fr:
   cefr_level: A1
   frequency_rank: 316
   grammar_scope: null
-  tags: [Transportation]
+  tags: [Travel & Transport]
 - type: word
   text: Pied
   translation: Foot
@@ -2943,7 +2943,7 @@ fr:
   cefr_level: A1
   frequency_rank: 327
   grammar_scope: null
-  tags: [Travel]
+  tags: [Travel & Transport]
 - type: word
   text: Profession
   translation: Profession / Job
@@ -3024,7 +3024,7 @@ fr:
   cefr_level: A1
   frequency_rank: 336
   grammar_scope: null
-  tags: [Travel]
+  tags: [Travel & Transport]
 - type: collocation
   text: Demander l'addition
   translation: To ask for the bill

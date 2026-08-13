@@ -414,7 +414,7 @@ ru:
   cefr_level: A1
   frequency_rank: 46
   grammar_scope: genitive case
-  tags: [Travel]
+  tags: [Travel & Transport]
 - type: sentence_pattern
   text: Это [существительное].
   translation: This is a [noun].
@@ -900,7 +900,7 @@ ru:
   cefr_level: A1
   frequency_rank: 100
   grammar_scope: accusative case
-  tags: [Travel]
+  tags: [Travel & Transport]
 - type: word
   text: Доктор
   translation: Doctor
@@ -972,7 +972,7 @@ ru:
   cefr_level: A1
   frequency_rank: 108
   grammar_scope: null
-  tags: [Transportation]
+  tags: [Travel & Transport]
 - type: word
   text: Телефон
   translation: Telephone
@@ -1215,7 +1215,7 @@ ru:
   cefr_level: A1
   frequency_rank: 135
   grammar_scope: genitive case
-  tags: [Travel]
+  tags: [Travel & Transport]
 - type: collocation
   text: Приятного аппетита!
   translation: Enjoy your meal!
@@ -1575,7 +1575,7 @@ ru:
   cefr_level: A1
   frequency_rank: 175
   grammar_scope: null
-  tags: [Travel]
+  tags: [Travel & Transport]
 - type: word
   text: Билет
   translation: Ticket
@@ -1584,7 +1584,7 @@ ru:
   cefr_level: A1
   frequency_rank: 176
   grammar_scope: null
-  tags: [Travel]
+  tags: [Travel & Transport]
 - type: word
   text: Горячий
   translation: Hot
@@ -1710,7 +1710,7 @@ ru:
   cefr_level: A1
   frequency_rank: 190
   grammar_scope: verb aspects
-  tags: [Travel]
+  tags: [Travel & Transport]
 - type: verb_form
   text: Смотреть
   translation: To watch/look
@@ -1755,7 +1755,7 @@ ru:
   cefr_level: A1
   frequency_rank: 195
   grammar_scope: verb aspects
-  tags: [Travel]
+  tags: [Travel & Transport]
 - type: sentence_pattern
   text: Мне нужно [инфинитив].
   translation: I need to [verb].
@@ -1773,7 +1773,7 @@ ru:
   cefr_level: A1
   frequency_rank: 197
   grammar_scope: question formation
-  tags: [Travel]
+  tags: [Travel & Transport]
 - type: sentence_pattern
   text: Дайте, пожалуйста, [существительное]!
   translation: Give me [noun], please!
@@ -1800,7 +1800,7 @@ ru:
   cefr_level: A1
   frequency_rank: 200
   grammar_scope: question formation
-  tags: [Directions, Transportation]
+  tags: [Directions, Travel & Transport]
 - type: word
   text: Понедельник
   translation: Monday
@@ -1926,7 +1926,7 @@ ru:
   cefr_level: A1
   frequency_rank: 214
   grammar_scope: null
-  tags: [Transportation]
+  tags: [Travel & Transport]
 - type: word
   text: Сладкий
   translation: sweet
@@ -2007,7 +2007,7 @@ ru:
   cefr_level: A1
   frequency_rank: 223
   grammar_scope: null
-  tags: [Transportation]
+  tags: [Travel & Transport]
 - type: word
   text: Аэропорт
   translation: airport
@@ -2016,7 +2016,7 @@ ru:
   cefr_level: A1
   frequency_rank: 224
   grammar_scope: null
-  tags: [Travel, Transportation]
+  tags: [Travel & Transport]
 - type: word
   text: Банк
   translation: bank
@@ -2124,7 +2124,7 @@ ru:
   cefr_level: A1
   frequency_rank: 236
   grammar_scope: null
-  tags: [Travel]
+  tags: [Travel & Transport]
 - type: collocation
   text: Работать в офисе
   translation: to work in an office
@@ -2196,7 +2196,7 @@ ru:
   cefr_level: A1
   frequency_rank: 244
   grammar_scope: present tense
-  tags: [Transportation]
+  tags: [Travel & Transport]
 - type: verb_form
   text: Я покупаю
   translation: I buy
@@ -2385,7 +2385,7 @@ ru:
   cefr_level: A1
   frequency_rank: 265
   grammar_scope: null
-  tags: [Transportation]
+  tags: [Travel & Transport]
 - type: word
   text: Поезд
   translation: Train
@@ -2394,7 +2394,7 @@ ru:
   cefr_level: A1
   frequency_rank: 266
   grammar_scope: null
-  tags: [Transportation]
+  tags: [Travel & Transport]
 - type: word
   text: Самолет
   translation: Plane
@@ -2403,7 +2403,7 @@ ru:
   cefr_level: A1
   frequency_rank: 267
   grammar_scope: null
-  tags: [Transportation]
+  tags: [Travel & Transport]
 - type: word
   text: Метро
   translation: Metro / Subway
@@ -2412,7 +2412,7 @@ ru:
   cefr_level: A1
   frequency_rank: 268
   grammar_scope: null
-  tags: [Transportation]
+  tags: [Travel & Transport]
 - type: word
   text: Красный
   translation: Red
@@ -2502,7 +2502,7 @@ ru:
   cefr_level: A1
   frequency_rank: 278
   grammar_scope: null
-  tags: [Travel]
+  tags: [Travel & Transport]
 - type: collocation
   text: Хочу пить
   translation: I want to drink / I'm thirsty
@@ -2556,7 +2556,7 @@ ru:
   cefr_level: A1
   frequency_rank: 284
   grammar_scope: accusative case
-  tags: [Transportation]
+  tags: [Travel & Transport]
 - type: collocation
   text: Играть в футбол
   translation: To play football
@@ -2619,7 +2619,7 @@ ru:
   cefr_level: A1
   frequency_rank: 291
   grammar_scope: present tense
-  tags: [Transportation]
+  tags: [Travel & Transport]
 - type: verb_form
   text: Мы берём
   translation: We take
@@ -2646,7 +2646,7 @@ ru:
   cefr_level: A1
   frequency_rank: 294
   grammar_scope: present tense
-  tags: [Travel]
+  tags: [Travel & Transport]
 - type: verb_form
   text: Они плавают
   translation: They swim
@@ -2691,7 +2691,7 @@ ru:
   cefr_level: A1
   frequency_rank: 299
   grammar_scope: genitive case
-  tags: [Travel, City]
+  tags: [Travel & Transport, City]
 - type: sentence_pattern
   text: Я устал.
   translation: I am tired. (masculine)
@@ -2736,7 +2736,7 @@ ru:
   cefr_level: A1
   frequency_rank: 304
   grammar_scope: null
-  tags: [Travel]
+  tags: [Travel & Transport]
 - type: word
   text: Площадь
   translation: Square
@@ -3006,7 +3006,7 @@ ru:
   cefr_level: A1
   frequency_rank: 334
   grammar_scope: question formation
-  tags: [Directions, Transportation]
+  tags: [Directions, Travel & Transport]
 - type: collocation
   text: Хочу есть.
   translation: I want to eat.
@@ -3393,7 +3393,7 @@ ru:
   cefr_level: A1
   frequency_rank: 382
   grammar_scope: accusative case
-  tags: [Travel]
+  tags: [Travel & Transport]
 - type: collocation
   text: Задавать вопрос
   translation: To ask a question
@@ -3483,7 +3483,7 @@ ru:
   cefr_level: A1
   frequency_rank: 392
   grammar_scope: present tense
-  tags: [Travel]
+  tags: [Travel & Transport]
 - type: verb_form
   text: Еду
   translation: I go / am going (by transport)
@@ -3492,7 +3492,7 @@ ru:
   cefr_level: A1
   frequency_rank: 393
   grammar_scope: present tense
-  tags: [Transportation]
+  tags: [Travel & Transport]
 - type: verb_form
   text: Дай
   translation: Give! (informal, singular imperative)
@@ -3762,7 +3762,7 @@ ru:
   cefr_level: A1
   frequency_rank: 422
   grammar_scope: accusative case
-  tags: [Transportation]
+  tags: [Travel & Transport]
 - type: collocation
   text: Плавать в бассейне
   translation: To swim in a pool
@@ -3807,7 +3807,7 @@ ru:
   cefr_level: A1
   frequency_rank: 427
   grammar_scope: prepositional case
-  tags: [Travel]
+  tags: [Travel & Transport]
 - type: collocation
   text: Думать о будущем
   translation: To think about the future

@@ -312,7 +312,7 @@ it:
   example_translation: I went to the supermarket early this morning.
   cefr_level: A2
   frequency_rank: 39
-  tags: [Travel]
+  tags: [Travel & Transport]
 - type: verb_form
   text: Stavo dormendo
   translation: 'I was sleeping (imperfetto progressivo: stare + gerund)'
@@ -465,7 +465,7 @@ it:
   example_translation: My car is red.
   cefr_level: A1
   frequency_rank: 58
-  tags: [Transportation]
+  tags: [Travel & Transport]
 - type: word
   text: treno
   translation: train
@@ -473,7 +473,7 @@ it:
   example_translation: The train arrives at nine.
   cefr_level: A1
   frequency_rank: 59
-  tags: [Transportation]
+  tags: [Travel & Transport]
 - type: word
   text: autobus
   translation: bus
@@ -481,7 +481,7 @@ it:
   example_translation: I take the bus every morning.
   cefr_level: A1
   frequency_rank: 60
-  tags: [Transportation]
+  tags: [Travel & Transport]
 - type: word
   text: cibo
   translation: food
@@ -761,7 +761,7 @@ it:
   example_translation: I go to work by bike.
   cefr_level: A1
   frequency_rank: 95
-  tags: [Travel]
+  tags: [Travel & Transport]
 - type: sentence_pattern
   text: Come ti chiami?
   translation: used to ask someone's name

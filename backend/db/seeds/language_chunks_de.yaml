@@ -156,7 +156,7 @@ de:
   example_translation: I go to work.
   cefr_level: A1
   frequency_rank: 19
-  tags: [Travel]
+  tags: [Travel & Transport]
 - type: word
   text: kommen
   translation: to come
@@ -164,7 +164,7 @@ de:
   example_translation: When are you coming?
   cefr_level: A1
   frequency_rank: 20
-  tags: [Travel]
+  tags: [Travel & Transport]
 - type: word
   text: sehen
   translation: to see
@@ -376,7 +376,7 @@ de:
   example_translation: Germany is my country.
   cefr_level: A1
   frequency_rank: 46
-  tags: [Travel]
+  tags: [Travel & Transport]
 # Basic nouns - food and drink
 - type: word
   text: Wasser
@@ -814,7 +814,7 @@ de:
   example_translation: Where are you from? From Germany.
   cefr_level: A1
   frequency_rank: 100
-  tags: [Travel]
+  tags: [Travel & Transport]
 - type: collocation
   text: Aus
   translation: from / out of
@@ -918,7 +918,7 @@ de:
   example_translation: I'm from Germany.
   cefr_level: A1
   frequency_rank: 113
-  tags: [Travel]
+  tags: [Travel & Transport]
 - type: sentence_pattern
   text: Ich mag
   translation: I like
@@ -1199,7 +1199,7 @@ de:
   example_translation: I prefer travelling by train rather than by car.
   cefr_level: A2
   frequency_rank: 33
-  tags: [Transportation]
+  tags: [Travel & Transport]
 - type: collocation
   text: einen Termin machen
   translation: to make an appointment
@@ -1247,7 +1247,7 @@ de:
   example_translation: I went to Munich by train yesterday.
   cefr_level: A2
   frequency_rank: 39
-  tags: [Transportation]
+  tags: [Travel & Transport]
 - type: verb_form
   text: Ich muss gehen
   translation: I have to go / I must go (müssen + infinitive)

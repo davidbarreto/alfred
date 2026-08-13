@@ -1422,7 +1422,7 @@ en:
   example_translation: A viagem leva aproximadamente duas horas.
   cefr_level: B1
   frequency_rank: 174
-  tags: [Travel]
+  tags: [Travel & Transport]
 - type: word
   text: attitude
   translation: the way someone thinks or feels about something, shown in their behaviour
@@ -1558,7 +1558,7 @@ en:
   example_translation: O voo foi atrasado em três horas.
   cefr_level: B1
   frequency_rank: 191
-  tags: [Transportation]
+  tags: [Travel & Transport]
 - type: word
   text: depend
   translation: to be influenced or decided by something else
@@ -1606,7 +1606,7 @@ en:
   example_translation: Nós nos perdemos, mas eventualmente encontramos o hotel.
   cefr_level: B1
   frequency_rank: 197
-  tags: [Travel]
+  tags: [Travel & Transport]
 - type: word
   text: exhausted
   translation: extremely tired

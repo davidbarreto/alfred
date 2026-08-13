@@ -305,7 +305,7 @@ es:
   example_translation: I hope you have a calm and safe journey.
   cefr_level: B1
   frequency_rank: 38
-  tags: [Travel]
+  tags: [Travel & Transport]
 - type: verb_form
   text: Ojalá pudiera
   translation: I wish I could... (imperfect subjunctive after ojalá)
@@ -530,7 +530,7 @@ es:
   example_translation: That car is very fast.
   cefr_level: A2
   frequency_rank: 66
-  tags: [Transportation]
+  tags: [Travel & Transport]
 - type: word
   text: lento
   translation: slow
@@ -538,7 +538,7 @@ es:
   example_translation: The train was very slow today.
   cefr_level: A2
   frequency_rank: 67
-  tags: [Transportation]
+  tags: [Travel & Transport]
 - type: word
   text: temprano
   translation: early
@@ -714,7 +714,7 @@ es:
   example_translation: I'm going to travel to Mexico in June.
   cefr_level: A2
   frequency_rank: 89
-  tags: [Travel]
+  tags: [Travel & Transport]
 - type: verb_form
   text: estoy comiendo
   translation: present continuous (estar + gerund); describes an action happening

@@ -8,6 +8,7 @@ it:
   example_translation: I always eat breakfast before going out.
   cefr_level: A2
   frequency_rank: 1
+  tags: [Connectors]
 - type: word
   text: ancora
   translation: still / yet / again
@@ -15,6 +16,7 @@ it:
   example_translation: I haven't finished my homework yet.
   cefr_level: A2
   frequency_rank: 2
+  tags: [Connectors]
 - type: word
   text: finalmente
   translation: finally / at last
@@ -22,6 +24,7 @@ it:
   example_translation: You've finally arrived, I was waiting for you!
   cefr_level: A2
   frequency_rank: 3
+  tags: [Connectors]
 - type: word
   text: purtroppo
   translation: unfortunately
@@ -29,6 +32,7 @@ it:
   example_translation: Unfortunately I can't come to the party.
   cefr_level: A2
   frequency_rank: 4
+  tags: [Connectors]
 - type: word
   text: subito
   translation: immediately / right away
@@ -36,6 +40,7 @@ it:
   example_translation: I'll be right there, wait a moment.
   cefr_level: A2
   frequency_rank: 5
+  tags: [Time]
 - type: word
   text: già
   translation: already
@@ -43,6 +48,7 @@ it:
   example_translation: I've already eaten, thank you.
   cefr_level: A2
   frequency_rank: 6
+  tags: [Time]
 - type: word
   text: presto
   translation: soon / early / quickly
@@ -50,6 +56,7 @@ it:
   example_translation: See you soon!
   cefr_level: A2
   frequency_rank: 7
+  tags: [Time]
 - type: word
   text: tardi
   translation: late
@@ -57,6 +64,7 @@ it:
   example_translation: I'm sorry, I arrived late.
   cefr_level: A2
   frequency_rank: 8
+  tags: [Time]
 - type: word
   text: insieme
   translation: together
@@ -64,6 +72,7 @@ it:
   example_translation: Shall we go out together tonight?
   cefr_level: A2
   frequency_rank: 9
+  tags: [Connectors]
 - type: word
   text: comunque
   translation: anyway / however / in any case
@@ -71,6 +80,7 @@ it:
   example_translation: Anyway, I have to go now.
   cefr_level: A2
   frequency_rank: 10
+  tags: [Connectors]
 - type: word
   text: forse
   translation: perhaps / maybe
@@ -78,6 +88,7 @@ it:
   example_translation: Maybe it will rain tomorrow.
   cefr_level: A2
   frequency_rank: 11
+  tags: [Connectors]
 - type: word
   text: però
   translation: but / however
@@ -85,6 +96,7 @@ it:
   example_translation: I like this place, but it's too expensive.
   cefr_level: A2
   frequency_rank: 12
+  tags: [Connectors]
 - type: word
   text: anche
   translation: also / too / even
@@ -92,6 +104,7 @@ it:
   example_translation: You are also invited to the dinner.
   cefr_level: A2
   frequency_rank: 13
+  tags: [Connectors]
 - type: word
   text: solo
   translation: only / just
@@ -99,6 +112,7 @@ it:
   example_translation: I only have five euros in my pocket.
   cefr_level: A2
   frequency_rank: 14
+  tags: [Connectors]
 - type: word
   text: spesso
   translation: often
@@ -106,6 +120,7 @@ it:
   example_translation: I often go to the cinema at the weekend.
   cefr_level: A2
   frequency_rank: 15
+  tags: [Time]
 - type: word
   text: tanto
   translation: so much / a lot / many
@@ -113,6 +128,7 @@ it:
   example_translation: I have so much work to do this week.
   cefr_level: A2
   frequency_rank: 16
+  tags: [Connectors]
 - type: word
   text: poco
   translation: a little / few / not much
@@ -120,6 +136,7 @@ it:
   example_translation: I slept little last night.
   cefr_level: A2
   frequency_rank: 17
+  tags: [Connectors]
 - type: word
   text: troppo
   translation: too / too much / too many
@@ -127,6 +144,7 @@ it:
   example_translation: This coffee is too strong for me.
   cefr_level: A2
   frequency_rank: 18
+  tags: [Connectors]
 - type: word
   text: abbastanza
   translation: enough / quite / rather
@@ -134,6 +152,7 @@ it:
   example_translation: Did you sleep enough last night?
   cefr_level: A2
   frequency_rank: 19
+  tags: [Connectors]
 - type: word
   text: davvero
   translation: really / truly / indeed
@@ -141,6 +160,7 @@ it:
   example_translation: You are really very good at cooking!
   cefr_level: A2
   frequency_rank: 20
+  tags: [Connectors]
 - type: word
   text: quasi
   translation: almost / nearly
@@ -148,6 +168,7 @@ it:
   example_translation: I'm almost ready, wait for me.
   cefr_level: A2
   frequency_rank: 21
+  tags: [Connectors]
 - type: word
   text: ieri
   translation: yesterday
@@ -155,6 +176,7 @@ it:
   example_translation: Yesterday I went to the market with my mother.
   cefr_level: A2
   frequency_rank: 22
+  tags: [Time]
 - type: word
   text: domani
   translation: tomorrow
@@ -162,6 +184,7 @@ it:
   example_translation: See you tomorrow morning at nine.
   cefr_level: A2
   frequency_rank: 23
+  tags: [Time]
 - type: word
   text: settimana
   translation: week
@@ -169,6 +192,7 @@ it:
   example_translation: Next week I have an important exam.
   cefr_level: A2
   frequency_rank: 24
+  tags: [Time]
 - type: word
   text: stagione
   translation: season
@@ -176,6 +200,7 @@ it:
   example_translation: What is your favourite season of the year?
   cefr_level: A2
   frequency_rank: 25
+  tags: [Weather]
 - type: word
   text: scorso
   translation: last (as in last week, last year)
@@ -183,6 +208,7 @@ it:
   example_translation: Last year I was in Rome.
   cefr_level: A2
   frequency_rank: 26
+  tags: [Time]
 - type: word
   text: prossimo
   translation: next / nearest
@@ -190,6 +216,7 @@ it:
   example_translation: The next bus arrives in ten minutes.
   cefr_level: A2
   frequency_rank: 27
+  tags: [Time]
 - type: collocation
   text: fare una passeggiata
   translation: to go for a walk
@@ -197,6 +224,7 @@ it:
   example_translation: Shall we go for a walk in the park?
   cefr_level: A2
   frequency_rank: 28
+  tags: [Daily Routine]
 - type: collocation
   text: fare la spesa
   translation: to do the grocery shopping
@@ -204,6 +232,7 @@ it:
   example_translation: I need to do the shopping before going home.
   cefr_level: A2
   frequency_rank: 29
+  tags: [Shopping, Food]
 - type: collocation
   text: avere voglia di
   translation: to feel like (doing something); to want
@@ -211,6 +240,7 @@ it:
   example_translation: I feel like eating a pizza tonight.
   cefr_level: A2
   frequency_rank: 30
+  tags: [Emotions]
 - type: collocation
   text: avere fretta
   translation: to be in a hurry
@@ -218,6 +248,7 @@ it:
   example_translation: Sorry, I'm in a hurry — I have to run!
   cefr_level: A2
   frequency_rank: 31
+  tags: [Emotions]
 - type: collocation
   text: di solito
   translation: usually / as a rule
@@ -225,6 +256,7 @@ it:
   example_translation: I usually get up at seven in the morning.
   cefr_level: A2
   frequency_rank: 32
+  tags: [Time]
 - type: collocation
   text: per esempio
   translation: for example
@@ -232,6 +264,7 @@ it:
   example_translation: I like many sports, for example swimming and tennis.
   cefr_level: A2
   frequency_rank: 33
+  tags: [Connectors]
 - type: collocation
   text: in ritardo
   translation: late / behind schedule
@@ -239,6 +272,7 @@ it:
   example_translation: The train is twenty minutes late.
   cefr_level: A2
   frequency_rank: 34
+  tags: [Time]
 - type: collocation
   text: avere bisogno di
   translation: to need (something or someone)
@@ -246,6 +280,7 @@ it:
   example_translation: I need a doctor immediately.
   cefr_level: A2
   frequency_rank: 35
+  tags: [Connectors]
 - type: collocation
   text: a volte
   translation: sometimes / at times
@@ -253,6 +288,7 @@ it:
   example_translation: Sometimes I don't understand everything they say.
   cefr_level: A2
   frequency_rank: 36
+  tags: [Time]
 - type: collocation
   text: il fine settimana
   translation: the weekend
@@ -260,6 +296,7 @@ it:
   example_translation: What are you doing this weekend?
   cefr_level: A2
   frequency_rank: 37
+  tags: [Time]
 - type: verb_form
   text: Ho mangiato
   translation: I ate / I have eaten (passato prossimo with avere)
@@ -267,6 +304,7 @@ it:
   example_translation: I ate a delicious pizza last night.
   cefr_level: A2
   frequency_rank: 38
+  tags: [Food]
 - type: verb_form
   text: Sono andato / Sono andata
   translation: I went / I have gone (passato prossimo with essere)
@@ -274,6 +312,7 @@ it:
   example_translation: I went to the supermarket early this morning.
   cefr_level: A2
   frequency_rank: 39
+  tags: [Travel]
 - type: verb_form
   text: Stavo dormendo
   translation: 'I was sleeping (imperfetto progressivo: stare + gerund)'
@@ -281,6 +320,7 @@ it:
   example_translation: I was sleeping when the phone rang.
   cefr_level: A2
   frequency_rank: 40
+  tags: [Daily Routine]
 - type: verb_form
   text: Devo andare
   translation: I have to go (dovere + infinitive)
@@ -288,6 +328,7 @@ it:
   example_translation: I'm sorry, I have to go now.
   cefr_level: A2
   frequency_rank: 41
+  tags: [Daily Routine]
 - type: verb_form
   text: Posso aiutarti?
   translation: Can I help you? (potere + infinitive)
@@ -295,6 +336,7 @@ it:
   example_translation: Can I help you with the luggage?
   cefr_level: A2
   frequency_rank: 42
+  tags: [Politeness]
 - type: verb_form
   text: Mi piace
   translation: I like it (piacere with singular subject)
@@ -302,6 +344,7 @@ it:
   example_translation: I really like classical music.
   cefr_level: A2
   frequency_rank: 43
+  tags: [Opinions]
 - type: verb_form
   text: Mi piacciono
   translation: I like them (piacere with plural subject)
@@ -309,6 +352,7 @@ it:
   example_translation: I like action and adventure films.
   cefr_level: A2
   frequency_rank: 44
+  tags: [Opinions]
 - type: verb_form
   text: Mi chiamo
   translation: My name is (chiamarsi — reflexive)
@@ -316,6 +360,7 @@ it:
   example_translation: My name is Luca. And you, what's your name?
   cefr_level: A2
   frequency_rank: 45
+  tags: [Greetings]
 - type: sentence_pattern
   text: Hai voglia di...?
   translation: Do you feel like...? / Would you like to...?
@@ -323,6 +368,7 @@ it:
   example_translation: Do you feel like going out for a coffee?
   cefr_level: A2
   frequency_rank: 46
+  tags: [Emotions]
 - type: sentence_pattern
   text: Non riesco a + infinito
   translation: I can't manage to... / I'm unable to...
@@ -331,6 +377,7 @@ it:
     to me?
   cefr_level: A2
   frequency_rank: 47
+  tags: [Connectors]
 - type: sentence_pattern
   text: Quanto tempo ci vuole?
   translation: How long does it take?
@@ -338,6 +385,7 @@ it:
   example_translation: How long does it take to get to the city centre?
   cefr_level: A2
   frequency_rank: 48
+  tags: [Time]
 - type: sentence_pattern
   text: Ci vuole / Ci vogliono
   translation: It takes / They are needed (impersonal expression of time or necessity)
@@ -345,6 +393,7 @@ it:
   example_translation: It takes two hours to go from Rome to Naples by train.
   cefr_level: A2
   frequency_rank: 49
+  tags: [Time]
 - type: sentence_pattern
   text: Spero che + congiuntivo
   translation: I hope that... (followed by subjunctive)
@@ -352,6 +401,7 @@ it:
   example_translation: I hope you are well and that everything is going well.
   cefr_level: A2
   frequency_rank: 50
+  tags: [Emotions]
 - type: word
   text: casa
   translation: house / home
@@ -359,6 +409,7 @@ it:
   example_translation: My house is near the park.
   cefr_level: A1
   frequency_rank: 51
+  tags: [Home]
 - type: word
   text: famiglia
   translation: family
@@ -366,6 +417,7 @@ it:
   example_translation: My family is very big.
   cefr_level: A1
   frequency_rank: 52
+  tags: [Family]
 - type: word
   text: amico
   translation: friend
@@ -373,6 +425,7 @@ it:
   example_translation: Marco is my best friend.
   cefr_level: A1
   frequency_rank: 53
+  tags: [Family]
 - type: word
   text: lavoro
   translation: work / job
@@ -380,6 +433,7 @@ it:
   example_translation: I have a new job at the bank.
   cefr_level: A1
   frequency_rank: 54
+  tags: [Work]
 - type: word
   text: scuola
   translation: school
@@ -387,6 +441,7 @@ it:
   example_translation: The children go to school at eight.
   cefr_level: A1
   frequency_rank: 55
+  tags: [Education]
 - type: word
   text: città
   translation: city
@@ -394,6 +449,7 @@ it:
   example_translation: Rome is a very beautiful city.
   cefr_level: A1
   frequency_rank: 56
+  tags: [City]
 - type: word
   text: strada
   translation: street / road
@@ -401,6 +457,7 @@ it:
   example_translation: There is a lot of traffic on this street.
   cefr_level: A1
   frequency_rank: 57
+  tags: [Directions]
 - type: word
   text: macchina
   translation: car
@@ -408,6 +465,7 @@ it:
   example_translation: My car is red.
   cefr_level: A1
   frequency_rank: 58
+  tags: [Transportation]
 - type: word
   text: treno
   translation: train
@@ -415,6 +473,7 @@ it:
   example_translation: The train arrives at nine.
   cefr_level: A1
   frequency_rank: 59
+  tags: [Transportation]
 - type: word
   text: autobus
   translation: bus
@@ -422,6 +481,7 @@ it:
   example_translation: I take the bus every morning.
   cefr_level: A1
   frequency_rank: 60
+  tags: [Transportation]
 - type: word
   text: cibo
   translation: food
@@ -429,6 +489,7 @@ it:
   example_translation: Italian food is delicious.
   cefr_level: A1
   frequency_rank: 61
+  tags: [Food]
 - type: word
   text: acqua
   translation: water
@@ -436,6 +497,7 @@ it:
   example_translation: I would like a glass of water, please.
   cefr_level: A1
   frequency_rank: 62
+  tags: [Food]
 - type: word
   text: pane
   translation: bread
@@ -443,6 +505,7 @@ it:
   example_translation: I buy bread every day.
   cefr_level: A1
   frequency_rank: 63
+  tags: [Food]
 - type: word
   text: latte
   translation: milk
@@ -450,6 +513,7 @@ it:
   example_translation: I drink a glass of milk at breakfast.
   cefr_level: A1
   frequency_rank: 64
+  tags: [Food]
 - type: word
   text: mela
   translation: apple
@@ -457,6 +521,7 @@ it:
   example_translation: I eat an apple every day.
   cefr_level: A1
   frequency_rank: 65
+  tags: [Food]
 - type: word
   text: libro
   translation: book
@@ -464,6 +529,7 @@ it:
   example_translation: I am reading an interesting book.
   cefr_level: A1
   frequency_rank: 66
+  tags: [Education]
 - type: word
   text: penna
   translation: pen
@@ -471,6 +537,7 @@ it:
   example_translation: Can you lend me your pen?
   cefr_level: A1
   frequency_rank: 67
+  tags: [Education]
 - type: word
   text: tavolo
   translation: table
@@ -478,6 +545,7 @@ it:
   example_translation: The plates are on the table.
   cefr_level: A1
   frequency_rank: 68
+  tags: [Home]
 - type: word
   text: sedia
   translation: chair
@@ -485,6 +553,7 @@ it:
   example_translation: This chair is very comfortable.
   cefr_level: A1
   frequency_rank: 69
+  tags: [Home]
 - type: word
   text: porta
   translation: door
@@ -492,6 +561,7 @@ it:
   example_translation: Please close the door.
   cefr_level: A1
   frequency_rank: 70
+  tags: [Home]
 - type: word
   text: finestra
   translation: window
@@ -499,6 +569,7 @@ it:
   example_translation: I open the window because it's hot.
   cefr_level: A1
   frequency_rank: 71
+  tags: [Home]
 - type: word
   text: giorno
   translation: day
@@ -506,6 +577,7 @@ it:
   example_translation: Good day! How are you?
   cefr_level: A1
   frequency_rank: 72
+  tags: [Time]
 - type: word
   text: notte
   translation: night
@@ -513,6 +585,7 @@ it:
   example_translation: Good night, see you tomorrow.
   cefr_level: A1
   frequency_rank: 73
+  tags: [Time]
 - type: word
   text: settimana
   translation: week
@@ -520,6 +593,7 @@ it:
   example_translation: I work five days a week.
   cefr_level: A1
   frequency_rank: 74
+  tags: [Time]
 - type: word
   text: mese
   translation: month
@@ -527,6 +601,7 @@ it:
   example_translation: My birthday is next month.
   cefr_level: A1
   frequency_rank: 75
+  tags: [Time]
 - type: word
   text: anno
   translation: year
@@ -534,6 +609,7 @@ it:
   example_translation: I have been studying Italian for a year.
   cefr_level: A1
   frequency_rank: 76
+  tags: [Time]
 - type: word
   text: oggi
   translation: today
@@ -541,6 +617,7 @@ it:
   example_translation: Today it's very cold.
   cefr_level: A1
   frequency_rank: 77
+  tags: [Time]
 - type: word
   text: domani
   translation: tomorrow
@@ -548,6 +625,7 @@ it:
   example_translation: Tomorrow I have an important exam.
   cefr_level: A1
   frequency_rank: 78
+  tags: [Time]
 - type: collocation
   text: avere fame
   translation: to be hungry
@@ -555,6 +633,7 @@ it:
   example_translation: I'm hungry, let's eat something.
   cefr_level: A1
   frequency_rank: 79
+  tags: [Food]
 - type: collocation
   text: avere sete
   translation: to be thirsty
@@ -562,6 +641,7 @@ it:
   example_translation: I'm thirsty, I would like some water.
   cefr_level: A1
   frequency_rank: 80
+  tags: [Food]
 - type: collocation
   text: avere fretta
   translation: to be in a hurry
@@ -569,6 +649,7 @@ it:
   example_translation: I can't talk, I'm in a hurry.
   cefr_level: A1
   frequency_rank: 81
+  tags: [Emotions]
 - type: collocation
   text: avere paura
   translation: to be afraid
@@ -576,6 +657,7 @@ it:
   example_translation: I'm afraid of big dogs.
   cefr_level: A1
   frequency_rank: 82
+  tags: [Emotions]
 - type: collocation
   text: fare colazione
   translation: to have breakfast
@@ -583,6 +665,7 @@ it:
   example_translation: I have breakfast at seven.
   cefr_level: A1
   frequency_rank: 83
+  tags: [Food, Daily Routine]
 - type: collocation
   text: fare la spesa
   translation: to do the grocery shopping
@@ -590,6 +673,7 @@ it:
   example_translation: I do the grocery shopping on Saturdays.
   cefr_level: A1
   frequency_rank: 84
+  tags: [Shopping, Food]
 - type: collocation
   text: andare a letto
   translation: to go to bed
@@ -597,6 +681,7 @@ it:
   example_translation: I'm going to bed early tonight.
   cefr_level: A1
   frequency_rank: 85
+  tags: [Daily Routine]
 - type: collocation
   text: tornare a casa
   translation: to go back home
@@ -604,6 +689,7 @@ it:
   example_translation: I go back home at six.
   cefr_level: A1
   frequency_rank: 86
+  tags: [Daily Routine]
 - type: collocation
   text: avere bisogno di
   translation: to need
@@ -611,6 +697,7 @@ it:
   example_translation: I need help, please.
   cefr_level: A1
   frequency_rank: 87
+  tags: [Connectors]
 - type: collocation
   text: fare una domanda
   translation: to ask a question
@@ -618,6 +705,7 @@ it:
   example_translation: Can I ask a question?
   cefr_level: A1
   frequency_rank: 88
+  tags: [Education]
 - type: verb_form
   text: sono
   translation: present tense of essere (to be), first person
@@ -625,6 +713,7 @@ it:
   example_translation: I am Italian.
   cefr_level: A1
   frequency_rank: 89
+  tags: [Connectors]
 - type: verb_form
   text: ho
   translation: present tense of avere (to have), first person
@@ -632,6 +721,7 @@ it:
   example_translation: I have two brothers.
   cefr_level: A1
   frequency_rank: 90
+  tags: [Connectors]
 - type: verb_form
   text: parlo
   translation: present tense of parlare (to speak), regular -are verb
@@ -639,6 +729,7 @@ it:
   example_translation: I speak a little English.
   cefr_level: A1
   frequency_rank: 91
+  tags: [Communication]
 - type: verb_form
   text: leggo
   translation: present tense of leggere (to read), regular -ere verb
@@ -646,6 +737,7 @@ it:
   example_translation: I read the newspaper every morning.
   cefr_level: A1
   frequency_rank: 92
+  tags: [Education]
 - type: verb_form
   text: dormo
   translation: present tense of dormire (to sleep), regular -ire verb
@@ -653,6 +745,7 @@ it:
   example_translation: I sleep eight hours every night.
   cefr_level: A1
   frequency_rank: 93
+  tags: [Daily Routine]
 - type: verb_form
   text: mi chiamo
   translation: reflexive verb chiamarsi (to be called), used to say one's name
@@ -660,6 +753,7 @@ it:
   example_translation: My name is Anna.
   cefr_level: A1
   frequency_rank: 94
+  tags: [Greetings]
 - type: verb_form
   text: vado
   translation: present tense of andare (to go), irregular verb
@@ -667,6 +761,7 @@ it:
   example_translation: I go to work by bike.
   cefr_level: A1
   frequency_rank: 95
+  tags: [Travel]
 - type: sentence_pattern
   text: Come ti chiami?
   translation: used to ask someone's name
@@ -674,6 +769,7 @@ it:
   example_translation: Hi, what's your name?
   cefr_level: A1
   frequency_rank: 96
+  tags: [Greetings]
 - type: sentence_pattern
   text: Quanti anni hai?
   translation: used to ask someone's age
@@ -681,6 +777,7 @@ it:
   example_translation: How old are you?
   cefr_level: A1
   frequency_rank: 97
+  tags: [Numbers]
 - type: sentence_pattern
   text: Mi piace ...
   translation: used to say what you like
@@ -688,6 +785,7 @@ it:
   example_translation: I like Italian music.
   cefr_level: A1
   frequency_rank: 98
+  tags: [Opinions]
 - type: sentence_pattern
   text: C'è / Ci sono ...
   translation: used to say that something exists or is present
@@ -695,6 +793,7 @@ it:
   example_translation: There are many people here today.
   cefr_level: A1
   frequency_rank: 99
+  tags: [Connectors]
 - type: sentence_pattern
   text: Che ora è?
   translation: used to ask the time
@@ -702,3 +801,4 @@ it:
   example_translation: Excuse me, what time is it?
   cefr_level: A1
   frequency_rank: 100
+  tags: [Time]

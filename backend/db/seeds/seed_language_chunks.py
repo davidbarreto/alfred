@@ -9,6 +9,10 @@ Also syncs grammar_scope_id for existing chunks when the YAML has a
 grammar_scope field set. Run seed_grammar_scopes.py first so the scope
 rows exist.
 
+Tags from the YAML `tags` field are applied to newly inserted chunks, and
+merged additively into existing chunks' tags (never removed) so manual/LLM
+tagging done later via the app is preserved across reseeds.
+
 Usage (from the backend/ directory):
     python db/seeds/seed_language_chunks.py
 """
@@ -25,7 +29,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from sqlalchemy import select, update as sa_update
 
 from app.db.session import async_session
-from app.features.language.chunks.tables import Chunk
+from app.features.language.chunks.tables import Chunk, LanguageTag
 from app.features.language.grammar_scope.tables import GrammarScope
 from app.features.language.tracks.tables import Track
 
@@ -42,6 +46,22 @@ def _load_all_chunks() -> dict[str, list[dict]]:
     return merged
 
 
+async def _resolve_tags(
+    session, tag_cache: dict[str, LanguageTag], tag_names: list[str]
+) -> list[LanguageTag]:
+    """Get-or-create LanguageTag rows by name, reusing a cache across the whole seed
+    run since tags are global (not track-scoped)."""
+    tags = []
+    for name in tag_names:
+        tag = tag_cache.get(name)
+        if tag is None:
+            tag = LanguageTag(name=name)
+            session.add(tag)
+            tag_cache[name] = tag
+        tags.append(tag)
+    return tags
+
+
 async def _seed() -> None:
     all_chunks = _load_all_chunks()
     if not all_chunks:
@@ -52,8 +72,12 @@ async def _seed() -> None:
         result = await session.execute(select(Track).where(Track.active == True))
         tracks_by_code: dict[str, Track] = {t.code: t for t in result.scalars()}
 
+        tag_result = await session.execute(select(LanguageTag))
+        tag_cache: dict[str, LanguageTag] = {t.name: t for t in tag_result.scalars()}
+
         total_inserted = 0
         total_scoped = 0
+        total_tagged = 0
 
         for lang_code, entries in all_chunks.items():
             track = tracks_by_code.get(lang_code)
@@ -77,11 +101,13 @@ async def _seed() -> None:
             chunk_id_by_text: dict[str, int] = {text: cid for cid, text in existing_rows}
 
             inserted = scoped = 0
+            existing_tag_sync: dict[int, list[str]] = {}
 
             for entry in entries:
                 text = str(entry["text"])
                 gs_val = entry.get("grammar_scope")
                 scope_id = scope_by_value.get(gs_val) if isinstance(gs_val, str) else None
+                tag_names = [str(t) for t in (entry.get("tags") or [])]
 
                 if text not in existing_texts:
                     example_translation = entry.get("example_translation")
@@ -100,29 +126,51 @@ async def _seed() -> None:
                             frequency_source="pareto_list",
                             grammar_scope_id=scope_id,
                             status="active",
+                            tags=await _resolve_tags(session, tag_cache, tag_names),
                         )
                     )
                     existing_texts.add(text)
                     inserted += 1
-                elif scope_id and text in chunk_id_by_text:
-                    # Sync grammar_scope_id on existing chunk (preserves all SRS state).
-                    await session.execute(
-                        sa_update(Chunk)
-                        .where(Chunk.id == chunk_id_by_text[text])
-                        .values(grammar_scope_id=scope_id)
-                    )
-                    scoped += 1
+                else:
+                    if scope_id and text in chunk_id_by_text:
+                        # Sync grammar_scope_id on existing chunk (preserves all SRS state).
+                        await session.execute(
+                            sa_update(Chunk)
+                            .where(Chunk.id == chunk_id_by_text[text])
+                            .values(grammar_scope_id=scope_id)
+                        )
+                        scoped += 1
+                    if tag_names and text in chunk_id_by_text:
+                        existing_tag_sync[chunk_id_by_text[text]] = tag_names
+
+            tagged = 0
+            if existing_tag_sync:
+                sync_result = await session.execute(
+                    select(Chunk).where(Chunk.id.in_(existing_tag_sync.keys()))
+                )
+                for chunk in sync_result.scalars():
+                    wanted = existing_tag_sync[chunk.id]
+                    have = {t.name for t in chunk.tags}
+                    missing = [name for name in wanted if name not in have]
+                    if missing:
+                        chunk.tags.extend(await _resolve_tags(session, tag_cache, missing))
+                        tagged += 1
 
             await session.commit()
             total_inserted += inserted
             total_scoped += scoped
+            total_tagged += tagged
             print(
                 f"  [{lang_code}] {track.name} ({track.level}): "
                 f"{inserted} inserted, {scoped} grammar scopes synced, "
+                f"{tagged} existing chunks tagged, "
                 f"{len(existing_texts) - inserted} already existed"
             )
 
-    print(f"\nDone — {total_inserted} new chunks seeded, {total_scoped} grammar scopes synced.")
+    print(
+        f"\nDone — {total_inserted} new chunks seeded, {total_scoped} grammar scopes synced, "
+        f"{total_tagged} existing chunks tagged."
+    )
 
 
 if __name__ == "__main__":

@@ -9,6 +9,7 @@ fr:
   cefr_level: A1
   frequency_rank: 1
   grammar_scope: null
+  tags: [Greetings]
 - type: word
   text: Merci
   translation: Thank you
@@ -17,6 +18,7 @@ fr:
   cefr_level: A1
   frequency_rank: 2
   grammar_scope: null
+  tags: [Politeness]
 - type: word
   text: Oui
   translation: 'Yes'
@@ -25,6 +27,7 @@ fr:
   cefr_level: A1
   frequency_rank: 3
   grammar_scope: null
+  tags: [Connectors]
 - type: word
   text: Non
   translation: 'No'
@@ -33,6 +36,7 @@ fr:
   cefr_level: A1
   frequency_rank: 4
   grammar_scope: null
+  tags: [Connectors]
 - type: word
   text: S'il vous plaît
   translation: Please (formal)
@@ -41,6 +45,7 @@ fr:
   cefr_level: A1
   frequency_rank: 5
   grammar_scope: null
+  tags: [Politeness]
 - type: word
   text: Au revoir
   translation: Goodbye
@@ -49,6 +54,7 @@ fr:
   cefr_level: A1
   frequency_rank: 6
   grammar_scope: null
+  tags: [Greetings]
 - type: word
   text: Madame
   translation: Madam / Mrs.
@@ -57,6 +63,7 @@ fr:
   cefr_level: A1
   frequency_rank: 7
   grammar_scope: null
+  tags: [Politeness]
 - type: word
   text: Monsieur
   translation: Sir / Mr.
@@ -65,6 +72,7 @@ fr:
   cefr_level: A1
   frequency_rank: 8
   grammar_scope: null
+  tags: [Politeness]
 - type: word
   text: Fille
   translation: Girl / Daughter
@@ -73,6 +81,7 @@ fr:
   cefr_level: A1
   frequency_rank: 9
   grammar_scope: null
+  tags: [Family]
 - type: word
   text: Garçon
   translation: Boy / Son / Waiter
@@ -81,6 +90,7 @@ fr:
   cefr_level: A1
   frequency_rank: 10
   grammar_scope: null
+  tags: [Family]
 - type: word
   text: Eau
   translation: Water
@@ -89,6 +99,7 @@ fr:
   cefr_level: A1
   frequency_rank: 11
   grammar_scope: null
+  tags: [Food]
 - type: word
   text: Pain
   translation: Bread
@@ -97,6 +108,7 @@ fr:
   cefr_level: A1
   frequency_rank: 12
   grammar_scope: null
+  tags: [Food]
 - type: word
   text: Café
   translation: Coffee
@@ -105,6 +117,7 @@ fr:
   cefr_level: A1
   frequency_rank: 13
   grammar_scope: null
+  tags: [Food]
 - type: word
   text: Maison
   translation: House / Home
@@ -113,6 +126,7 @@ fr:
   cefr_level: A1
   frequency_rank: 14
   grammar_scope: null
+  tags: [Home]
 - type: word
   text: Ville
   translation: City / Town
@@ -121,6 +135,7 @@ fr:
   cefr_level: A1
   frequency_rank: 15
   grammar_scope: null
+  tags: [City]
 - type: word
   text: Rue
   translation: Street
@@ -129,6 +144,7 @@ fr:
   cefr_level: A1
   frequency_rank: 16
   grammar_scope: null
+  tags: [City]
 - type: word
   text: Voiture
   translation: Car
@@ -137,6 +153,7 @@ fr:
   cefr_level: A1
   frequency_rank: 17
   grammar_scope: null
+  tags: [Transportation]
 - type: word
   text: Livre
   translation: Book
@@ -145,6 +162,7 @@ fr:
   cefr_level: A1
   frequency_rank: 18
   grammar_scope: null
+  tags: [Education]
 - type: word
   text: Jour
   translation: Day
@@ -153,6 +171,7 @@ fr:
   cefr_level: A1
   frequency_rank: 19
   grammar_scope: null
+  tags: [Time]
 - type: word
   text: Nuit
   translation: Night
@@ -161,6 +180,7 @@ fr:
   cefr_level: A1
   frequency_rank: 20
   grammar_scope: null
+  tags: [Time]
 - type: word
   text: Matin
   translation: Morning
@@ -169,6 +189,7 @@ fr:
   cefr_level: A1
   frequency_rank: 21
   grammar_scope: null
+  tags: [Time]
 - type: word
   text: Soir
   translation: Evening
@@ -177,6 +198,7 @@ fr:
   cefr_level: A1
   frequency_rank: 22
   grammar_scope: null
+  tags: [Time]
 - type: word
   text: Aujourd'hui
   translation: Today
@@ -185,6 +207,7 @@ fr:
   cefr_level: A1
   frequency_rank: 23
   grammar_scope: null
+  tags: [Time]
 - type: word
   text: Demain
   translation: Tomorrow
@@ -193,6 +216,7 @@ fr:
   cefr_level: A1
   frequency_rank: 24
   grammar_scope: null
+  tags: [Time]
 - type: word
   text: Hier
   translation: Yesterday
@@ -201,6 +225,7 @@ fr:
   cefr_level: A1
   frequency_rank: 25
   grammar_scope: null
+  tags: [Time]
 - type: word
   text: Grand
   translation: Big / Tall
@@ -209,6 +234,7 @@ fr:
   cefr_level: A1
   frequency_rank: 26
   grammar_scope: null
+  tags: [City]
 - type: word
   text: Petit
   translation: Small / Little
@@ -217,6 +243,7 @@ fr:
   cefr_level: A1
   frequency_rank: 27
   grammar_scope: null
+  tags: [Animals]
 - type: collocation
   text: Bonne journée
   translation: Have a good day
@@ -225,6 +252,7 @@ fr:
   cefr_level: A1
   frequency_rank: 28
   grammar_scope: adjective agreement
+  tags: [Greetings]
 - type: collocation
   text: Bonne soirée
   translation: Have a good evening
@@ -233,6 +261,7 @@ fr:
   cefr_level: A1
   frequency_rank: 29
   grammar_scope: adjective agreement
+  tags: [Greetings]
 - type: collocation
   text: Prendre un café
   translation: To have a coffee
@@ -241,6 +270,7 @@ fr:
   cefr_level: A1
   frequency_rank: 30
   grammar_scope: null
+  tags: [Food]
 - type: collocation
   text: Faire les courses
   translation: To do the shopping (groceries)
@@ -249,6 +279,7 @@ fr:
   cefr_level: A1
   frequency_rank: 31
   grammar_scope: null
+  tags: [Shopping]
 - type: collocation
   text: Parler français
   translation: To speak French
@@ -257,6 +288,7 @@ fr:
   cefr_level: A1
   frequency_rank: 32
   grammar_scope: null
+  tags: [Communication]
 - type: collocation
   text: Habiter à
   translation: To live in/at
@@ -265,6 +297,7 @@ fr:
   cefr_level: A1
   frequency_rank: 33
   grammar_scope: prepositions
+  tags: [Home]
 - type: collocation
   text: Avoir faim
   translation: To be hungry
@@ -273,6 +306,7 @@ fr:
   cefr_level: A1
   frequency_rank: 34
   grammar_scope: null
+  tags: [Food]
 - type: collocation
   text: Avoir soif
   translation: To be thirsty
@@ -281,6 +315,7 @@ fr:
   cefr_level: A1
   frequency_rank: 35
   grammar_scope: null
+  tags: [Food]
 - type: collocation
   text: Faire du sport
   translation: To do sports
@@ -289,6 +324,7 @@ fr:
   cefr_level: A1
   frequency_rank: 36
   grammar_scope: partitive article
+  tags: [Sports]
 - type: collocation
   text: Lire un livre
   translation: To read a book
@@ -297,6 +333,7 @@ fr:
   cefr_level: A1
   frequency_rank: 37
   grammar_scope: null
+  tags: [Education]
 - type: verb_form
   text: Je suis
   translation: I am
@@ -305,6 +342,7 @@ fr:
   cefr_level: A1
   frequency_rank: 38
   grammar_scope: present tense
+  tags: [Grammar]
 - type: verb_form
   text: Tu es
   translation: You are (singular, informal)
@@ -313,6 +351,7 @@ fr:
   cefr_level: A1
   frequency_rank: 39
   grammar_scope: present tense
+  tags: [Grammar]
 - type: verb_form
   text: Il est
   translation: He is
@@ -321,6 +360,7 @@ fr:
   cefr_level: A1
   frequency_rank: 40
   grammar_scope: present tense
+  tags: [Grammar]
 - type: verb_form
   text: J'ai
   translation: I have
@@ -329,6 +369,7 @@ fr:
   cefr_level: A1
   frequency_rank: 41
   grammar_scope: present tense
+  tags: [Grammar]
 - type: verb_form
   text: Tu as
   translation: You have (singular, informal)
@@ -337,6 +378,7 @@ fr:
   cefr_level: A1
   frequency_rank: 42
   grammar_scope: present tense
+  tags: [Grammar]
 - type: verb_form
   text: Il a
   translation: He has
@@ -345,6 +387,7 @@ fr:
   cefr_level: A1
   frequency_rank: 43
   grammar_scope: present tense
+  tags: [Grammar]
 - type: verb_form
   text: Je parle
   translation: I speak
@@ -353,6 +396,7 @@ fr:
   cefr_level: A1
   frequency_rank: 44
   grammar_scope: present tense
+  tags: [Communication]
 - type: verb_form
   text: Je mange
   translation: I eat
@@ -361,6 +405,7 @@ fr:
   cefr_level: A1
   frequency_rank: 45
   grammar_scope: present tense
+  tags: [Food]
 - type: sentence_pattern
   text: Comment ça va ?
   translation: How are you? / How is it going?
@@ -369,6 +414,7 @@ fr:
   cefr_level: A1
   frequency_rank: 46
   grammar_scope: question formation
+  tags: [Greetings]
 - type: sentence_pattern
   text: Je voudrais...
   translation: I would like...
@@ -377,6 +423,7 @@ fr:
   cefr_level: A1
   frequency_rank: 47
   grammar_scope: present conditional
+  tags: [Grammar]
 - type: sentence_pattern
   text: C'est...
   translation: It is... / This is...
@@ -385,6 +432,7 @@ fr:
   cefr_level: A1
   frequency_rank: 48
   grammar_scope: present tense
+  tags: [Grammar]
 - type: sentence_pattern
   text: Où est...?
   translation: Where is...?
@@ -393,6 +441,7 @@ fr:
   cefr_level: A1
   frequency_rank: 49
   grammar_scope: question formation
+  tags: [Directions]
 - type: sentence_pattern
   text: Il y a...
   translation: There is / There are
@@ -401,6 +450,7 @@ fr:
   cefr_level: A1
   frequency_rank: 50
   grammar_scope: present tense
+  tags: [Grammar]
 - type: word
   text: Chien
   translation: Dog
@@ -409,6 +459,7 @@ fr:
   cefr_level: A1
   frequency_rank: 51
   grammar_scope: null
+  tags: [Animals]
 - type: word
   text: Chat
   translation: Cat
@@ -417,6 +468,7 @@ fr:
   cefr_level: A1
   frequency_rank: 52
   grammar_scope: null
+  tags: [Animals]
 - type: word
   text: Mère
   translation: Mother
@@ -425,6 +477,7 @@ fr:
   cefr_level: A1
   frequency_rank: 53
   grammar_scope: null
+  tags: [Family]
 - type: word
   text: Père
   translation: Father
@@ -433,6 +486,7 @@ fr:
   cefr_level: A1
   frequency_rank: 54
   grammar_scope: null
+  tags: [Family]
 - type: word
   text: Famille
   translation: Family
@@ -441,6 +495,7 @@ fr:
   cefr_level: A1
   frequency_rank: 55
   grammar_scope: null
+  tags: [Family]
 - type: word
   text: Ami(e)
   translation: Friend
@@ -449,6 +504,7 @@ fr:
   cefr_level: A1
   frequency_rank: 56
   grammar_scope: null
+  tags: [Family]
 - type: word
   text: École
   translation: School
@@ -457,6 +513,7 @@ fr:
   cefr_level: A1
   frequency_rank: 57
   grammar_scope: null
+  tags: [Education]
 - type: word
   text: Travail
   translation: Work / Job
@@ -465,6 +522,7 @@ fr:
   cefr_level: A1
   frequency_rank: 58
   grammar_scope: null
+  tags: [Work]
 - type: word
   text: Manger
   translation: To eat
@@ -473,6 +531,7 @@ fr:
   cefr_level: A1
   frequency_rank: 59
   grammar_scope: null
+  tags: [Food]
 - type: word
   text: Boire
   translation: To drink
@@ -481,6 +540,7 @@ fr:
   cefr_level: A1
   frequency_rank: 60
   grammar_scope: null
+  tags: [Food]
 - type: word
   text: Pomme
   translation: Apple
@@ -489,6 +549,7 @@ fr:
   cefr_level: A1
   frequency_rank: 61
   grammar_scope: null
+  tags: [Food]
 - type: word
   text: Fromage
   translation: Cheese
@@ -497,6 +558,7 @@ fr:
   cefr_level: A1
   frequency_rank: 62
   grammar_scope: null
+  tags: [Food]
 - type: word
   text: Lait
   translation: Milk
@@ -505,6 +567,7 @@ fr:
   cefr_level: A1
   frequency_rank: 63
   grammar_scope: null
+  tags: [Food]
 - type: word
   text: Déjeuner
   translation: Lunch
@@ -513,6 +576,7 @@ fr:
   cefr_level: A1
   frequency_rank: 64
   grammar_scope: null
+  tags: [Food]
 - type: word
   text: Couleur
   translation: Color
@@ -521,6 +585,7 @@ fr:
   cefr_level: A1
   frequency_rank: 65
   grammar_scope: null
+  tags: [Colors]
 - type: word
   text: Rouge
   translation: Red
@@ -529,6 +594,7 @@ fr:
   cefr_level: A1
   frequency_rank: 66
   grammar_scope: null
+  tags: [Colors]
 - type: word
   text: Bleu
   translation: Blue
@@ -537,6 +603,7 @@ fr:
   cefr_level: A1
   frequency_rank: 67
   grammar_scope: null
+  tags: [Colors]
 - type: word
   text: Heure
   translation: Hour / Time
@@ -545,6 +612,7 @@ fr:
   cefr_level: A1
   frequency_rank: 68
   grammar_scope: null
+  tags: [Time]
 - type: word
   text: Semaine
   translation: Week
@@ -553,6 +621,7 @@ fr:
   cefr_level: A1
   frequency_rank: 69
   grammar_scope: null
+  tags: [Time]
 - type: word
   text: Année
   translation: Year
@@ -561,6 +630,7 @@ fr:
   cefr_level: A1
   frequency_rank: 70
   grammar_scope: null
+  tags: [Time]
 - type: word
   text: Pays
   translation: Country
@@ -569,6 +639,7 @@ fr:
   cefr_level: A1
   frequency_rank: 71
   grammar_scope: null
+  tags: [Travel]
 - type: word
   text: Moi
   translation: Me / I (stressed pronoun)
@@ -577,6 +648,7 @@ fr:
   cefr_level: A1
   frequency_rank: 72
   grammar_scope: null
+  tags: [Grammar]
 - type: word
   text: Nous
   translation: We / Us
@@ -585,6 +657,7 @@ fr:
   cefr_level: A1
   frequency_rank: 73
   grammar_scope: null
+  tags: [Grammar]
 - type: word
   text: Avec
   translation: With
@@ -593,6 +666,7 @@ fr:
   cefr_level: A1
   frequency_rank: 74
   grammar_scope: null
+  tags: [Connectors]
 - type: word
   text: Et
   translation: And
@@ -601,6 +675,7 @@ fr:
   cefr_level: A1
   frequency_rank: 75
   grammar_scope: null
+  tags: [Connectors]
 - type: word
   text: Un
   translation: One / A / An
@@ -609,6 +684,7 @@ fr:
   cefr_level: A1
   frequency_rank: 76
   grammar_scope: null
+  tags: [Numbers]
 - type: word
   text: Deux
   translation: Two
@@ -617,6 +693,7 @@ fr:
   cefr_level: A1
   frequency_rank: 77
   grammar_scope: null
+  tags: [Numbers]
 - type: word
   text: Maintenant
   translation: Now
@@ -625,6 +702,7 @@ fr:
   cefr_level: A1
   frequency_rank: 78
   grammar_scope: null
+  tags: [Time]
 - type: collocation
   text: Faire attention
   translation: To pay attention / To be careful
@@ -633,6 +711,7 @@ fr:
   cefr_level: A1
   frequency_rank: 79
   grammar_scope: null
+  tags: [Emergency]
 - type: collocation
   text: Parler anglais
   translation: To speak English
@@ -641,6 +720,7 @@ fr:
   cefr_level: A1
   frequency_rank: 80
   grammar_scope: null
+  tags: [Communication]
 - type: collocation
   text: Écouter de la musique
   translation: To listen to music
@@ -649,6 +729,7 @@ fr:
   cefr_level: A1
   frequency_rank: 81
   grammar_scope: partitive article
+  tags: [Entertainment]
 - type: collocation
   text: Regarder la télévision
   translation: To watch television
@@ -657,6 +738,7 @@ fr:
   cefr_level: A1
   frequency_rank: 82
   grammar_scope: null
+  tags: [Entertainment]
 - type: collocation
   text: Faire ses devoirs
   translation: To do one's homework
@@ -665,6 +747,7 @@ fr:
   cefr_level: A1
   frequency_rank: 83
   grammar_scope: null
+  tags: [Education]
 - type: collocation
   text: Prendre le bus
   translation: To take the bus
@@ -673,6 +756,7 @@ fr:
   cefr_level: A1
   frequency_rank: 84
   grammar_scope: null
+  tags: [Transportation]
 - type: collocation
   text: Avoir un rendez-vous
   translation: To have an appointment
@@ -681,6 +765,7 @@ fr:
   cefr_level: A1
   frequency_rank: 85
   grammar_scope: null
+  tags: [Health]
 - type: collocation
   text: Faire la cuisine
   translation: To cook
@@ -689,6 +774,7 @@ fr:
   cefr_level: A1
   frequency_rank: 86
   grammar_scope: null
+  tags: [Food]
 - type: collocation
   text: Aller au marché
   translation: To go to the market
@@ -697,6 +783,7 @@ fr:
   cefr_level: A1
   frequency_rank: 87
   grammar_scope: prepositions
+  tags: [Shopping]
 - type: collocation
   text: Poser une question
   translation: To ask a question
@@ -705,6 +792,7 @@ fr:
   cefr_level: A1
   frequency_rank: 88
   grammar_scope: null
+  tags: [Communication]
 - type: verb_form
   text: Je vais
   translation: I go / I am going
@@ -713,6 +801,7 @@ fr:
   cefr_level: A1
   frequency_rank: 89
   grammar_scope: present tense
+  tags: [Grammar]
 - type: verb_form
   text: Tu vas
   translation: You go / You are going (informal singular)
@@ -721,6 +810,7 @@ fr:
   cefr_level: A1
   frequency_rank: 90
   grammar_scope: present tense
+  tags: [Grammar]
 - type: verb_form
   text: Il/Elle va
   translation: He/She goes / He/She is going
@@ -729,6 +819,7 @@ fr:
   cefr_level: A1
   frequency_rank: 91
   grammar_scope: present tense
+  tags: [Grammar]
 - type: verb_form
   text: Nous allons
   translation: We go / We are going
@@ -737,6 +828,7 @@ fr:
   cefr_level: A1
   frequency_rank: 92
   grammar_scope: present tense
+  tags: [Grammar]
 - type: verb_form
   text: Je fais
   translation: I do / I make
@@ -745,6 +837,7 @@ fr:
   cefr_level: A1
   frequency_rank: 93
   grammar_scope: present tense
+  tags: [Grammar]
 - type: verb_form
   text: Je veux
   translation: I want
@@ -753,6 +846,7 @@ fr:
   cefr_level: A1
   frequency_rank: 94
   grammar_scope: present tense
+  tags: [Grammar]
 - type: verb_form
   text: Je peux
   translation: I can
@@ -761,6 +855,7 @@ fr:
   cefr_level: A1
   frequency_rank: 95
   grammar_scope: present tense
+  tags: [Grammar]
 - type: sentence_pattern
   text: Qu'est-ce que c'est ?
   translation: What is it?
@@ -769,6 +864,7 @@ fr:
   cefr_level: A1
   frequency_rank: 96
   grammar_scope: question formation
+  tags: [Grammar]
 - type: sentence_pattern
   text: Comment vous appelez-vous ?
   translation: What is your name? (formal/plural)
@@ -777,6 +873,7 @@ fr:
   cefr_level: A1
   frequency_rank: 97
   grammar_scope: question formation
+  tags: [Greetings]
 - type: sentence_pattern
   text: J'habite à...
   translation: I live in...
@@ -785,6 +882,7 @@ fr:
   cefr_level: A1
   frequency_rank: 98
   grammar_scope: prepositions
+  tags: [Home]
 - type: sentence_pattern
   text: Je suis de...
   translation: I am from...
@@ -793,6 +891,7 @@ fr:
   cefr_level: A1
   frequency_rank: 99
   grammar_scope: prepositions
+  tags: [Travel]
 - type: sentence_pattern
   text: Ça coûte combien ?
   translation: How much does it cost?
@@ -801,6 +900,7 @@ fr:
   cefr_level: A1
   frequency_rank: 100
   grammar_scope: question formation
+  tags: [Money]
 - type: word
   text: Salut
   translation: Hi / Hello / Bye
@@ -809,6 +909,7 @@ fr:
   cefr_level: A1
   frequency_rank: 101
   grammar_scope: null
+  tags: [Greetings]
 - type: word
   text: Enchanté(e)
   translation: Nice to meet you
@@ -817,6 +918,7 @@ fr:
   cefr_level: A1
   frequency_rank: 102
   grammar_scope: null
+  tags: [Greetings]
 - type: word
   text: Pardon
   translation: Excuse me / Sorry
@@ -825,6 +927,7 @@ fr:
   cefr_level: A1
   frequency_rank: 103
   grammar_scope: null
+  tags: [Politeness]
 - type: word
   text: Excusez-moi
   translation: Excuse me (formal)
@@ -833,6 +936,7 @@ fr:
   cefr_level: A1
   frequency_rank: 104
   grammar_scope: null
+  tags: [Politeness]
 - type: word
   text: Zéro
   translation: Zero
@@ -841,6 +945,7 @@ fr:
   cefr_level: A1
   frequency_rank: 105
   grammar_scope: null
+  tags: [Numbers]
 - type: word
   text: Trois
   translation: Three
@@ -849,6 +954,7 @@ fr:
   cefr_level: A1
   frequency_rank: 106
   grammar_scope: null
+  tags: [Numbers]
 - type: word
   text: Quatre
   translation: Four
@@ -857,6 +963,7 @@ fr:
   cefr_level: A1
   frequency_rank: 107
   grammar_scope: null
+  tags: [Numbers]
 - type: word
   text: Cinq
   translation: Five
@@ -865,6 +972,7 @@ fr:
   cefr_level: A1
   frequency_rank: 108
   grammar_scope: null
+  tags: [Numbers]
 - type: word
   text: Dix
   translation: Ten
@@ -873,6 +981,7 @@ fr:
   cefr_level: A1
   frequency_rank: 109
   grammar_scope: null
+  tags: [Numbers]
 - type: word
   text: Lundi
   translation: Monday
@@ -881,6 +990,7 @@ fr:
   cefr_level: A1
   frequency_rank: 110
   grammar_scope: null
+  tags: [Time]
 - type: word
   text: Mardi
   translation: Tuesday
@@ -889,6 +999,7 @@ fr:
   cefr_level: A1
   frequency_rank: 111
   grammar_scope: null
+  tags: [Time]
 - type: word
   text: Mercredi
   translation: Wednesday
@@ -897,6 +1008,7 @@ fr:
   cefr_level: A1
   frequency_rank: 112
   grammar_scope: null
+  tags: [Time]
 - type: word
   text: Dimanche
   translation: Sunday
@@ -905,6 +1017,7 @@ fr:
   cefr_level: A1
   frequency_rank: 113
   grammar_scope: null
+  tags: [Time]
 - type: word
   text: Homme
   translation: Man
@@ -913,6 +1026,7 @@ fr:
   cefr_level: A1
   frequency_rank: 114
   grammar_scope: null
+  tags: [Family]
 - type: word
   text: Femme
   translation: Woman
@@ -921,6 +1035,7 @@ fr:
   cefr_level: A1
   frequency_rank: 115
   grammar_scope: null
+  tags: [Family]
 - type: word
   text: Enfant
   translation: Child
@@ -929,6 +1044,7 @@ fr:
   cefr_level: A1
   frequency_rank: 116
   grammar_scope: null
+  tags: [Family]
 - type: word
   text: Stylo
   translation: Pen
@@ -937,6 +1053,7 @@ fr:
   cefr_level: A1
   frequency_rank: 117
   grammar_scope: null
+  tags: [Education]
 - type: word
   text: Table
   translation: Table
@@ -945,6 +1062,7 @@ fr:
   cefr_level: A1
   frequency_rank: 118
   grammar_scope: null
+  tags: [Home]
 - type: word
   text: Chaise
   translation: Chair
@@ -953,6 +1071,7 @@ fr:
   cefr_level: A1
   frequency_rank: 119
   grammar_scope: null
+  tags: [Home]
 - type: word
   text: Clé
   translation: Key
@@ -961,6 +1080,7 @@ fr:
   cefr_level: A1
   frequency_rank: 120
   grammar_scope: null
+  tags: [Home]
 - type: word
   text: Argent
   translation: Money / Silver
@@ -969,6 +1089,7 @@ fr:
   cefr_level: A1
   frequency_rank: 121
   grammar_scope: null
+  tags: [Money]
 - type: word
   text: Hôtel
   translation: Hotel
@@ -977,6 +1098,7 @@ fr:
   cefr_level: A1
   frequency_rank: 122
   grammar_scope: null
+  tags: [Travel]
 - type: word
   text: Restaurant
   translation: Restaurant
@@ -985,6 +1107,7 @@ fr:
   cefr_level: A1
   frequency_rank: 123
   grammar_scope: null
+  tags: [Food]
 - type: word
   text: Thé
   translation: Tea
@@ -993,6 +1116,7 @@ fr:
   cefr_level: A1
   frequency_rank: 124
   grammar_scope: null
+  tags: [Food]
 - type: word
   text: Jus
   translation: Juice
@@ -1001,6 +1125,7 @@ fr:
   cefr_level: A1
   frequency_rank: 125
   grammar_scope: null
+  tags: [Food]
 - type: word
   text: Fruit
   translation: Fruit
@@ -1009,6 +1134,7 @@ fr:
   cefr_level: A1
   frequency_rank: 126
   grammar_scope: null
+  tags: [Food]
 - type: word
   text: Légume
   translation: Vegetable
@@ -1017,6 +1143,7 @@ fr:
   cefr_level: A1
   frequency_rank: 127
   grammar_scope: null
+  tags: [Food]
 - type: word
   text: Ici
   translation: Here
@@ -1025,6 +1152,7 @@ fr:
   cefr_level: A1
   frequency_rank: 128
   grammar_scope: null
+  tags: [Connectors]
 - type: collocation
   text: Avoir chaud
   translation: To be hot (feeling hot)
@@ -1033,6 +1161,7 @@ fr:
   cefr_level: A1
   frequency_rank: 129
   grammar_scope: null
+  tags: [Body, Weather]
 - type: collocation
   text: Avoir froid
   translation: To be cold (feeling cold)
@@ -1041,6 +1170,7 @@ fr:
   cefr_level: A1
   frequency_rank: 130
   grammar_scope: null
+  tags: [Body, Weather]
 - type: collocation
   text: Avoir sommeil
   translation: To be sleepy
@@ -1049,6 +1179,7 @@ fr:
   cefr_level: A1
   frequency_rank: 131
   grammar_scope: null
+  tags: [Body, Daily Routine]
 - type: collocation
   text: Avoir peur
   translation: To be scared
@@ -1057,6 +1188,7 @@ fr:
   cefr_level: A1
   frequency_rank: 132
   grammar_scope: null
+  tags: [Emotions]
 - type: collocation
   text: Faire du vélo
   translation: To cycle / To ride a bike
@@ -1065,6 +1197,7 @@ fr:
   cefr_level: A1
   frequency_rank: 133
   grammar_scope: partitive article
+  tags: [Sports]
 - type: collocation
   text: Faire du shopping
   translation: To go shopping
@@ -1073,6 +1206,7 @@ fr:
   cefr_level: A1
   frequency_rank: 134
   grammar_scope: partitive article
+  tags: [Shopping]
 - type: collocation
   text: Prendre le petit-déjeuner
   translation: To have breakfast
@@ -1081,6 +1215,7 @@ fr:
   cefr_level: A1
   frequency_rank: 135
   grammar_scope: null
+  tags: [Daily Routine, Food]
 - type: collocation
   text: Aller au lit
   translation: To go to bed
@@ -1089,6 +1224,7 @@ fr:
   cefr_level: A1
   frequency_rank: 136
   grammar_scope: prepositions
+  tags: [Daily Routine]
 - type: collocation
   text: Se lever
   translation: To get up
@@ -1097,6 +1233,7 @@ fr:
   cefr_level: A1
   frequency_rank: 137
   grammar_scope: reflexive verbs
+  tags: [Daily Routine]
 - type: collocation
   text: S'appeler
   translation: To be called / To be named
@@ -1105,6 +1242,7 @@ fr:
   cefr_level: A1
   frequency_rank: 138
   grammar_scope: reflexive verbs
+  tags: [Greetings]
 - type: verb_form
   text: Je regarde
   translation: I watch / I look at
@@ -1113,6 +1251,7 @@ fr:
   cefr_level: A1
   frequency_rank: 139
   grammar_scope: present tense
+  tags: [Entertainment]
 - type: verb_form
   text: J'aime
   translation: I like / I love
@@ -1121,6 +1260,7 @@ fr:
   cefr_level: A1
   frequency_rank: 140
   grammar_scope: present tense
+  tags: [Opinions]
 - type: verb_form
   text: Je déteste
   translation: I hate
@@ -1129,6 +1269,7 @@ fr:
   cefr_level: A1
   frequency_rank: 141
   grammar_scope: present tense
+  tags: [Opinions]
 - type: verb_form
   text: Je travaille
   translation: I work
@@ -1137,6 +1278,7 @@ fr:
   cefr_level: A1
   frequency_rank: 142
   grammar_scope: present tense
+  tags: [Work]
 - type: verb_form
   text: J'étudie
   translation: I study
@@ -1145,6 +1287,7 @@ fr:
   cefr_level: A1
   frequency_rank: 143
   grammar_scope: present tense
+  tags: [Education]
 - type: verb_form
   text: J'achète
   translation: I buy
@@ -1153,6 +1296,7 @@ fr:
   cefr_level: A1
   frequency_rank: 144
   grammar_scope: present tense
+  tags: [Shopping]
 - type: verb_form
   text: Je viens
   translation: I come
@@ -1161,6 +1305,7 @@ fr:
   cefr_level: A1
   frequency_rank: 145
   grammar_scope: present tense
+  tags: [Travel]
 - type: sentence_pattern
   text: Est-ce que... ?
   translation: Is it that...? (Question marker)
@@ -1169,6 +1314,7 @@ fr:
   cefr_level: A1
   frequency_rank: 146
   grammar_scope: question formation
+  tags: [Grammar]
 - type: sentence_pattern
   text: Comment allez-vous ?
   translation: How are you? (formal)
@@ -1177,6 +1323,7 @@ fr:
   cefr_level: A1
   frequency_rank: 147
   grammar_scope: question formation
+  tags: [Greetings]
 - type: sentence_pattern
   text: Quel âge avez-vous ?
   translation: How old are you? (formal)
@@ -1185,6 +1332,7 @@ fr:
   cefr_level: A1
   frequency_rank: 148
   grammar_scope: question formation
+  tags: [Greetings]
 - type: sentence_pattern
   text: Je m'appelle...
   translation: My name is...
@@ -1193,6 +1341,7 @@ fr:
   cefr_level: A1
   frequency_rank: 149
   grammar_scope: reflexive verbs
+  tags: [Greetings]
 - type: sentence_pattern
   text: C'est combien ?
   translation: How much is it?
@@ -1201,6 +1350,7 @@ fr:
   cefr_level: A1
   frequency_rank: 150
   grammar_scope: question formation
+  tags: [Money]
 - type: word
   text: Vous
   translation: You (plural/formal)
@@ -1209,6 +1359,7 @@ fr:
   cefr_level: A1
   frequency_rank: 151
   grammar_scope: null
+  tags: [Grammar]
 - type: word
   text: Ils
   translation: They (masculine)
@@ -1217,6 +1368,7 @@ fr:
   cefr_level: A1
   frequency_rank: 152
   grammar_scope: null
+  tags: [Grammar]
 - type: word
   text: Elles
   translation: They (feminine)
@@ -1225,6 +1377,7 @@ fr:
   cefr_level: A1
   frequency_rank: 153
   grammar_scope: null
+  tags: [Grammar]
 - type: word
   text: Six
   translation: Six
@@ -1233,6 +1386,7 @@ fr:
   cefr_level: A1
   frequency_rank: 154
   grammar_scope: null
+  tags: [Numbers]
 - type: word
   text: Sept
   translation: Seven
@@ -1241,6 +1395,7 @@ fr:
   cefr_level: A1
   frequency_rank: 155
   grammar_scope: null
+  tags: [Numbers]
 - type: word
   text: Huit
   translation: Eight
@@ -1249,6 +1404,7 @@ fr:
   cefr_level: A1
   frequency_rank: 156
   grammar_scope: null
+  tags: [Numbers]
 - type: word
   text: Neuf
   translation: Nine
@@ -1257,6 +1413,7 @@ fr:
   cefr_level: A1
   frequency_rank: 157
   grammar_scope: null
+  tags: [Numbers]
 - type: word
   text: Mois
   translation: Month
@@ -1265,6 +1422,7 @@ fr:
   cefr_level: A1
   frequency_rank: 158
   grammar_scope: null
+  tags: [Time]
 - type: word
   text: Jeudi
   translation: Thursday
@@ -1273,6 +1431,7 @@ fr:
   cefr_level: A1
   frequency_rank: 159
   grammar_scope: null
+  tags: [Time]
 - type: word
   text: Vendredi
   translation: Friday
@@ -1281,6 +1440,7 @@ fr:
   cefr_level: A1
   frequency_rank: 160
   grammar_scope: null
+  tags: [Time]
 - type: word
   text: Samedi
   translation: Saturday
@@ -1289,6 +1449,7 @@ fr:
   cefr_level: A1
   frequency_rank: 161
   grammar_scope: null
+  tags: [Time]
 - type: word
   text: Minute
   translation: Minute
@@ -1297,6 +1458,7 @@ fr:
   cefr_level: A1
   frequency_rank: 162
   grammar_scope: null
+  tags: [Time]
 - type: word
   text: Téléphone
   translation: Telephone
@@ -1305,6 +1467,7 @@ fr:
   cefr_level: A1
   frequency_rank: 163
   grammar_scope: null
+  tags: [Technology]
 - type: word
   text: Ordinateur
   translation: Computer
@@ -1313,6 +1476,7 @@ fr:
   cefr_level: A1
   frequency_rank: 164
   grammar_scope: null
+  tags: [Technology]
 - type: word
   text: Sac
   translation: Bag
@@ -1321,6 +1485,7 @@ fr:
   cefr_level: A1
   frequency_rank: 165
   grammar_scope: null
+  tags: [Clothing]
 - type: word
   text: Fenêtre
   translation: Window
@@ -1329,6 +1494,7 @@ fr:
   cefr_level: A1
   frequency_rank: 166
   grammar_scope: null
+  tags: [Home]
 - type: word
   text: Dîner
   translation: Dinner (meal)
@@ -1337,6 +1503,7 @@ fr:
   cefr_level: A1
   frequency_rank: 167
   grammar_scope: null
+  tags: [Food]
 - type: word
   text: Goûter
   translation: Snack (noun)
@@ -1345,6 +1512,7 @@ fr:
   cefr_level: A1
   frequency_rank: 168
   grammar_scope: null
+  tags: [Food]
 - type: word
   text: Beau
   translation: Beautiful (masculine)
@@ -1353,6 +1521,7 @@ fr:
   cefr_level: A1
   frequency_rank: 169
   grammar_scope: null
+  tags: [Weather, Opinions]
 - type: word
   text: Belle
   translation: Beautiful (feminine)
@@ -1361,6 +1530,7 @@ fr:
   cefr_level: A1
   frequency_rank: 170
   grammar_scope: null
+  tags: [Opinions]
 - type: word
   text: Bon
   translation: Good (masculine)
@@ -1369,6 +1539,7 @@ fr:
   cefr_level: A1
   frequency_rank: 171
   grammar_scope: null
+  tags: [Opinions]
 - type: word
   text: Bonne
   translation: Good (feminine)
@@ -1377,6 +1548,7 @@ fr:
   cefr_level: A1
   frequency_rank: 172
   grammar_scope: null
+  tags: [Opinions]
 - type: word
   text: Content(e)
   translation: Happy, pleased
@@ -1385,6 +1557,7 @@ fr:
   cefr_level: A1
   frequency_rank: 173
   grammar_scope: null
+  tags: [Emotions]
 - type: word
   text: Fatigué(e)
   translation: Tired
@@ -1393,6 +1566,7 @@ fr:
   cefr_level: A1
   frequency_rank: 174
   grammar_scope: null
+  tags: [Body]
 - type: word
   text: Jeune
   translation: Young
@@ -1401,6 +1575,7 @@ fr:
   cefr_level: A1
   frequency_rank: 175
   grammar_scope: null
+  tags: [Body]
 - type: word
   text: Gentil(le)
   translation: Kind, nice
@@ -1409,6 +1584,7 @@ fr:
   cefr_level: A1
   frequency_rank: 176
   grammar_scope: null
+  tags: [Personality]
 - type: word
   text: Adresse
   translation: Address
@@ -1417,6 +1593,7 @@ fr:
   cefr_level: A1
   frequency_rank: 177
   grammar_scope: null
+  tags: [Home]
 - type: word
   text: Métro
   translation: Subway, metro
@@ -1425,6 +1602,7 @@ fr:
   cefr_level: A1
   frequency_rank: 178
   grammar_scope: null
+  tags: [Transportation]
 - type: collocation
   text: De rien
   translation: You're welcome
@@ -1433,6 +1611,7 @@ fr:
   cefr_level: A1
   frequency_rank: 179
   grammar_scope: prepositions
+  tags: [Politeness]
 - type: collocation
   text: À bientôt
   translation: See you soon
@@ -1441,6 +1620,7 @@ fr:
   cefr_level: A1
   frequency_rank: 180
   grammar_scope: prepositions
+  tags: [Greetings]
 - type: collocation
   text: Bonne nuit
   translation: Good night
@@ -1449,6 +1629,7 @@ fr:
   cefr_level: A1
   frequency_rank: 181
   grammar_scope: adjective agreement
+  tags: [Greetings]
 - type: collocation
   text: La gare
   translation: The train station
@@ -1457,6 +1638,7 @@ fr:
   cefr_level: A1
   frequency_rank: 182
   grammar_scope: null
+  tags: [Transportation]
 - type: collocation
   text: La poste
   translation: The post office
@@ -1465,6 +1647,7 @@ fr:
   cefr_level: A1
   frequency_rank: 183
   grammar_scope: null
+  tags: [City]
 - type: collocation
   text: Le supermarché
   translation: The supermarket
@@ -1473,6 +1656,7 @@ fr:
   cefr_level: A1
   frequency_rank: 184
   grammar_scope: null
+  tags: [Shopping]
 - type: collocation
   text: À gauche
   translation: To the left
@@ -1481,6 +1665,7 @@ fr:
   cefr_level: A1
   frequency_rank: 185
   grammar_scope: prepositions
+  tags: [Directions]
 - type: collocation
   text: À droite
   translation: To the right
@@ -1489,6 +1674,7 @@ fr:
   cefr_level: A1
   frequency_rank: 186
   grammar_scope: prepositions
+  tags: [Directions]
 - type: collocation
   text: Tout droit
   translation: Straight ahead
@@ -1497,6 +1683,7 @@ fr:
   cefr_level: A1
   frequency_rank: 187
   grammar_scope: null
+  tags: [Directions]
 - type: collocation
   text: Faire la fête
   translation: To party
@@ -1505,6 +1692,7 @@ fr:
   cefr_level: A1
   frequency_rank: 188
   grammar_scope: null
+  tags: [Entertainment]
 - type: verb_form
   text: Nous sommes
   translation: We are
@@ -1513,6 +1701,7 @@ fr:
   cefr_level: A1
   frequency_rank: 189
   grammar_scope: present tense
+  tags: [Grammar]
 - type: verb_form
   text: Vous êtes
   translation: You are (plural/formal)
@@ -1521,6 +1710,7 @@ fr:
   cefr_level: A1
   frequency_rank: 190
   grammar_scope: present tense
+  tags: [Grammar]
 - type: verb_form
   text: Ils sont
   translation: They are (masculine)
@@ -1529,6 +1719,7 @@ fr:
   cefr_level: A1
   frequency_rank: 191
   grammar_scope: present tense
+  tags: [Grammar]
 - type: verb_form
   text: Nous avons
   translation: We have
@@ -1537,6 +1728,7 @@ fr:
   cefr_level: A1
   frequency_rank: 192
   grammar_scope: present tense
+  tags: [Grammar]
 - type: verb_form
   text: Vous avez
   translation: You have (plural/formal)
@@ -1545,6 +1737,7 @@ fr:
   cefr_level: A1
   frequency_rank: 193
   grammar_scope: present tense
+  tags: [Grammar]
 - type: verb_form
   text: Ils ont
   translation: They have
@@ -1553,6 +1746,7 @@ fr:
   cefr_level: A1
   frequency_rank: 194
   grammar_scope: present tense
+  tags: [Grammar]
 - type: verb_form
   text: Il faut
   translation: It is necessary, one must
@@ -1561,6 +1755,7 @@ fr:
   cefr_level: A1
   frequency_rank: 195
   grammar_scope: present tense
+  tags: [Grammar]
 - type: sentence_pattern
   text: Quand...?
   translation: When...?
@@ -1569,6 +1764,7 @@ fr:
   cefr_level: A1
   frequency_rank: 196
   grammar_scope: question formation
+  tags: [Grammar]
 - type: sentence_pattern
   text: Pourquoi...?
   translation: Why...?
@@ -1577,6 +1773,7 @@ fr:
   cefr_level: A1
   frequency_rank: 197
   grammar_scope: question formation
+  tags: [Grammar]
 - type: sentence_pattern
   text: Quel/Quelle...?
   translation: Which/What...?
@@ -1585,6 +1782,7 @@ fr:
   cefr_level: A1
   frequency_rank: 198
   grammar_scope: question formation
+  tags: [Grammar]
 - type: sentence_pattern
   text: C'est + adjective
   translation: It's + adjective
@@ -1593,6 +1791,7 @@ fr:
   cefr_level: A1
   frequency_rank: 199
   grammar_scope: adjective agreement
+  tags: [Grammar]
 - type: sentence_pattern
   text: J'aimerais + verb (infinitive)
   translation: I would like to + verb
@@ -1601,6 +1800,7 @@ fr:
   cefr_level: A1
   frequency_rank: 200
   grammar_scope: present conditional
+  tags: [Grammar]
 - type: word
   text: Midi
   translation: Noon
@@ -1609,6 +1809,7 @@ fr:
   cefr_level: A1
   frequency_rank: 201
   grammar_scope: null
+  tags: [Time]
 - type: word
   text: Minuit
   translation: Midnight
@@ -1617,6 +1818,7 @@ fr:
   cefr_level: A1
   frequency_rank: 202
   grammar_scope: null
+  tags: [Time]
 - type: word
   text: Professeur
   translation: Teacher
@@ -1625,6 +1827,7 @@ fr:
   cefr_level: A1
   frequency_rank: 203
   grammar_scope: null
+  tags: [Education]
 - type: word
   text: Étudiant(e)
   translation: Student
@@ -1633,6 +1836,7 @@ fr:
   cefr_level: A1
   frequency_rank: 204
   grammar_scope: null
+  tags: [Education]
 - type: word
   text: Docteur
   translation: Doctor
@@ -1641,6 +1845,7 @@ fr:
   cefr_level: A1
   frequency_rank: 205
   grammar_scope: null
+  tags: [Health]
 - type: word
   text: Hôpital
   translation: Hospital
@@ -1649,6 +1854,7 @@ fr:
   cefr_level: A1
   frequency_rank: 206
   grammar_scope: null
+  tags: [Health]
 - type: word
   text: Boulangerie
   translation: Bakery
@@ -1657,6 +1863,7 @@ fr:
   cefr_level: A1
   frequency_rank: 207
   grammar_scope: null
+  tags: [Shopping]
 - type: word
   text: Pharmacie
   translation: Pharmacy
@@ -1665,6 +1872,7 @@ fr:
   cefr_level: A1
   frequency_rank: 208
   grammar_scope: null
+  tags: [Health]
 - type: word
   text: Bus
   translation: Bus
@@ -1673,6 +1881,7 @@ fr:
   cefr_level: A1
   frequency_rank: 209
   grammar_scope: null
+  tags: [Transportation]
 - type: word
   text: Train
   translation: Train
@@ -1681,6 +1890,7 @@ fr:
   cefr_level: A1
   frequency_rank: 210
   grammar_scope: null
+  tags: [Transportation]
 - type: word
   text: Avion
   translation: Plane
@@ -1689,6 +1899,7 @@ fr:
   cefr_level: A1
   frequency_rank: 211
   grammar_scope: null
+  tags: [Transportation]
 - type: word
   text: Billet
   translation: Ticket (for travel/event)
@@ -1697,6 +1908,7 @@ fr:
   cefr_level: A1
   frequency_rank: 212
   grammar_scope: null
+  tags: [Travel]
 - type: word
   text: Passeport
   translation: Passport
@@ -1705,6 +1917,7 @@ fr:
   cefr_level: A1
   frequency_rank: 213
   grammar_scope: null
+  tags: [Travel]
 - type: word
   text: Téléphone portable
   translation: Mobile phone
@@ -1713,6 +1926,7 @@ fr:
   cefr_level: A1
   frequency_rank: 214
   grammar_scope: null
+  tags: [Technology]
 - type: word
   text: Cahier
   translation: Notebook
@@ -1721,6 +1935,7 @@ fr:
   cefr_level: A1
   frequency_rank: 215
   grammar_scope: null
+  tags: [Education]
 - type: word
   text: Sac à dos
   translation: Backpack
@@ -1729,6 +1944,7 @@ fr:
   cefr_level: A1
   frequency_rank: 216
   grammar_scope: null
+  tags: [Clothing]
 - type: word
   text: Vêtements
   translation: Clothes
@@ -1737,6 +1953,7 @@ fr:
   cefr_level: A1
   frequency_rank: 217
   grammar_scope: null
+  tags: [Clothing]
 - type: word
   text: Chaussures
   translation: Shoes
@@ -1745,6 +1962,7 @@ fr:
   cefr_level: A1
   frequency_rank: 218
   grammar_scope: null
+  tags: [Clothing]
 - type: word
   text: Vert
   translation: Green
@@ -1753,6 +1971,7 @@ fr:
   cefr_level: A1
   frequency_rank: 219
   grammar_scope: null
+  tags: [Colors]
 - type: word
   text: Jaune
   translation: Yellow
@@ -1761,6 +1980,7 @@ fr:
   cefr_level: A1
   frequency_rank: 220
   grammar_scope: null
+  tags: [Colors]
 - type: word
   text: Noir
   translation: Black
@@ -1769,6 +1989,7 @@ fr:
   cefr_level: A1
   frequency_rank: 221
   grammar_scope: null
+  tags: [Colors]
 - type: word
   text: Riz
   translation: Rice
@@ -1777,6 +1998,7 @@ fr:
   cefr_level: A1
   frequency_rank: 222
   grammar_scope: null
+  tags: [Food]
 - type: word
   text: Pâtes
   translation: Pasta
@@ -1785,6 +2007,7 @@ fr:
   cefr_level: A1
   frequency_rank: 223
   grammar_scope: null
+  tags: [Food]
 - type: word
   text: Beurre
   translation: Butter
@@ -1793,6 +2016,7 @@ fr:
   cefr_level: A1
   frequency_rank: 224
   grammar_scope: null
+  tags: [Food]
 - type: word
   text: Œuf
   translation: Egg
@@ -1801,6 +2025,7 @@ fr:
   cefr_level: A1
   frequency_rank: 225
   grammar_scope: null
+  tags: [Food]
 - type: word
   text: Plage
   translation: Beach
@@ -1809,6 +2034,7 @@ fr:
   cefr_level: A1
   frequency_rank: 226
   grammar_scope: null
+  tags: [Nature]
 - type: word
   text: Parc
   translation: Park
@@ -1817,6 +2043,7 @@ fr:
   cefr_level: A1
   frequency_rank: 227
   grammar_scope: null
+  tags: [Nature]
 - type: word
   text: Météo
   translation: Weather
@@ -1825,6 +2052,7 @@ fr:
   cefr_level: A1
   frequency_rank: 228
   grammar_scope: null
+  tags: [Weather]
 - type: collocation
   text: Bon après-midi
   translation: Good afternoon
@@ -1833,6 +2061,7 @@ fr:
   cefr_level: A1
   frequency_rank: 229
   grammar_scope: null
+  tags: [Greetings]
 - type: collocation
   text: Avec plaisir
   translation: With pleasure / My pleasure
@@ -1841,6 +2070,7 @@ fr:
   cefr_level: A1
   frequency_rank: 230
   grammar_scope: prepositions
+  tags: [Politeness]
 - type: collocation
   text: Il fait beau
   translation: The weather is nice / It's sunny
@@ -1849,6 +2079,7 @@ fr:
   cefr_level: A1
   frequency_rank: 231
   grammar_scope: null
+  tags: [Weather]
 - type: collocation
   text: Il fait froid
   translation: It's cold (weather)
@@ -1857,6 +2088,7 @@ fr:
   cefr_level: A1
   frequency_rank: 232
   grammar_scope: null
+  tags: [Weather]
 - type: collocation
   text: Il fait chaud
   translation: It's hot (weather)
@@ -1865,6 +2097,7 @@ fr:
   cefr_level: A1
   frequency_rank: 233
   grammar_scope: null
+  tags: [Weather]
 - type: collocation
   text: Avoir besoin de
   translation: To need
@@ -1873,6 +2106,7 @@ fr:
   cefr_level: A1
   frequency_rank: 234
   grammar_scope: prepositions
+  tags: [Grammar]
 - type: collocation
   text: Pas cher
   translation: Not expensive / Cheap
@@ -1881,6 +2115,7 @@ fr:
   cefr_level: A1
   frequency_rank: 235
   grammar_scope: negation
+  tags: [Money]
 - type: collocation
   text: À demain
   translation: See you tomorrow
@@ -1889,6 +2124,7 @@ fr:
   cefr_level: A1
   frequency_rank: 236
   grammar_scope: prepositions
+  tags: [Greetings]
 - type: collocation
   text: Bonne chance
   translation: Good luck
@@ -1897,6 +2133,7 @@ fr:
   cefr_level: A1
   frequency_rank: 237
   grammar_scope: adjective agreement
+  tags: [Politeness]
 - type: collocation
   text: Prendre un taxi
   translation: To take a taxi
@@ -1905,6 +2142,7 @@ fr:
   cefr_level: A1
   frequency_rank: 238
   grammar_scope: null
+  tags: [Transportation]
 - type: verb_form
   text: Je dors
   translation: I sleep
@@ -1913,6 +2151,7 @@ fr:
   cefr_level: A1
   frequency_rank: 239
   grammar_scope: present tense
+  tags: [Daily Routine]
 - type: verb_form
   text: Tu lis
   translation: You read (informal singular)
@@ -1921,6 +2160,7 @@ fr:
   cefr_level: A1
   frequency_rank: 240
   grammar_scope: present tense
+  tags: [Education]
 - type: verb_form
   text: Il voit
   translation: He sees
@@ -1929,6 +2169,7 @@ fr:
   cefr_level: A1
   frequency_rank: 241
   grammar_scope: present tense
+  tags: [Entertainment]
 - type: verb_form
   text: Elle attend
   translation: She waits
@@ -1937,6 +2178,7 @@ fr:
   cefr_level: A1
   frequency_rank: 242
   grammar_scope: present tense
+  tags: [Transportation]
 - type: verb_form
   text: Nous habitons
   translation: We live
@@ -1945,6 +2187,7 @@ fr:
   cefr_level: A1
   frequency_rank: 243
   grammar_scope: present tense
+  tags: [Home]
 - type: verb_form
   text: Vous comprenez
   translation: You understand (formal / plural)
@@ -1953,6 +2196,7 @@ fr:
   cefr_level: A1
   frequency_rank: 244
   grammar_scope: present tense
+  tags: [Communication]
 - type: verb_form
   text: Ils disent
   translation: They say (masc. / mixed)
@@ -1961,6 +2205,7 @@ fr:
   cefr_level: A1
   frequency_rank: 245
   grammar_scope: present tense
+  tags: [Communication]
 - type: verb_form
   text: Elles écrivent
   translation: They write (fem.)
@@ -1969,6 +2214,7 @@ fr:
   cefr_level: A1
   frequency_rank: 246
   grammar_scope: present tense
+  tags: [Communication]
 - type: sentence_pattern
   text: Comment est...?
   translation: What is... like?
@@ -1977,6 +2223,7 @@ fr:
   cefr_level: A1
   frequency_rank: 247
   grammar_scope: question formation
+  tags: [Grammar]
 - type: sentence_pattern
   text: Je cherche + noun.
   translation: I am looking for + noun.
@@ -1985,6 +2232,7 @@ fr:
   cefr_level: A1
   frequency_rank: 248
   grammar_scope: present tense
+  tags: [Directions]
 - type: sentence_pattern
   text: Je ne sais pas.
   translation: I don't know.
@@ -1993,6 +2241,7 @@ fr:
   cefr_level: A1
   frequency_rank: 249
   grammar_scope: negation
+  tags: [Grammar]
 - type: sentence_pattern
   text: Où sont les toilettes ?
   translation: Where are the toilets?
@@ -2001,6 +2250,7 @@ fr:
   cefr_level: A1
   frequency_rank: 250
   grammar_scope: question formation
+  tags: [Directions]
 - type: word
   text: Bonsoir
   translation: Good evening
@@ -2009,6 +2259,7 @@ fr:
   cefr_level: A1
   frequency_rank: 251
   grammar_scope: null
+  tags: [Greetings]
 - type: word
   text: Mademoiselle
   translation: Miss
@@ -2017,6 +2268,7 @@ fr:
   cefr_level: A1
   frequency_rank: 252
   grammar_scope: null
+  tags: [Politeness]
 - type: word
   text: Désolé(e)
   translation: Sorry
@@ -2025,6 +2277,7 @@ fr:
   cefr_level: A1
   frequency_rank: 253
   grammar_scope: null
+  tags: [Politeness]
 - type: word
   text: S'il te plaît
   translation: Please (informal)
@@ -2033,6 +2286,7 @@ fr:
   cefr_level: A1
   frequency_rank: 254
   grammar_scope: null
+  tags: [Politeness]
 - type: word
   text: Peut-être
   translation: Maybe
@@ -2041,6 +2295,7 @@ fr:
   cefr_level: A1
   frequency_rank: 255
   grammar_scope: null
+  tags: [Connectors]
 - type: word
   text: Là
   translation: There
@@ -2049,6 +2304,7 @@ fr:
   cefr_level: A1
   frequency_rank: 256
   grammar_scope: null
+  tags: [Connectors]
 - type: word
   text: Après
   translation: After
@@ -2057,6 +2313,7 @@ fr:
   cefr_level: A1
   frequency_rank: 257
   grammar_scope: null
+  tags: [Connectors]
 - type: word
   text: Toujours
   translation: Always
@@ -2065,6 +2322,7 @@ fr:
   cefr_level: A1
   frequency_rank: 258
   grammar_scope: null
+  tags: [Connectors]
 - type: word
   text: Jamais
   translation: Never
@@ -2073,6 +2331,7 @@ fr:
   cefr_level: A1
   frequency_rank: 259
   grammar_scope: null
+  tags: [Connectors]
 - type: word
   text: Souvent
   translation: Often
@@ -2081,6 +2340,7 @@ fr:
   cefr_level: A1
   frequency_rank: 260
   grammar_scope: null
+  tags: [Connectors]
 - type: word
   text: Très
   translation: Very
@@ -2089,6 +2349,7 @@ fr:
   cefr_level: A1
   frequency_rank: 261
   grammar_scope: null
+  tags: [Connectors]
 - type: word
   text: Beaucoup
   translation: A lot, much
@@ -2097,6 +2358,7 @@ fr:
   cefr_level: A1
   frequency_rank: 262
   grammar_scope: null
+  tags: [Connectors]
 - type: word
   text: Un peu
   translation: A little
@@ -2105,6 +2367,7 @@ fr:
   cefr_level: A1
   frequency_rank: 263
   grammar_scope: null
+  tags: [Connectors]
 - type: word
   text: Nouveau/Nouvelle
   translation: New
@@ -2113,6 +2376,7 @@ fr:
   cefr_level: A1
   frequency_rank: 264
   grammar_scope: null
+  tags: [Transportation]
 - type: word
   text: Vieux/Vieille
   translation: Old
@@ -2121,6 +2385,7 @@ fr:
   cefr_level: A1
   frequency_rank: 265
   grammar_scope: null
+  tags: [Home]
 - type: word
   text: Facile
   translation: Easy
@@ -2129,6 +2394,7 @@ fr:
   cefr_level: A1
   frequency_rank: 266
   grammar_scope: null
+  tags: [Education]
 - type: word
   text: Difficile
   translation: Difficult
@@ -2137,6 +2403,7 @@ fr:
   cefr_level: A1
   frequency_rank: 267
   grammar_scope: null
+  tags: [Education]
 - type: word
   text: Mauvais(e)
   translation: Bad
@@ -2145,6 +2412,7 @@ fr:
   cefr_level: A1
   frequency_rank: 268
   grammar_scope: null
+  tags: [Emotions]
 - type: word
   text: Frais/Fraîche
   translation: Fresh/Cool
@@ -2153,6 +2421,7 @@ fr:
   cefr_level: A1
   frequency_rank: 269
   grammar_scope: null
+  tags: [Food]
 - type: word
   text: Blanc
   translation: White
@@ -2161,6 +2430,7 @@ fr:
   cefr_level: A1
   frequency_rank: 270
   grammar_scope: null
+  tags: [Colors]
 - type: word
   text: Marron
   translation: Brown
@@ -2169,6 +2439,7 @@ fr:
   cefr_level: A1
   frequency_rank: 271
   grammar_scope: null
+  tags: [Colors]
 - type: word
   text: Gris
   translation: Grey
@@ -2177,6 +2448,7 @@ fr:
   cefr_level: A1
   frequency_rank: 272
   grammar_scope: null
+  tags: [Colors]
 - type: word
   text: Cuisine
   translation: Kitchen
@@ -2185,6 +2457,7 @@ fr:
   cefr_level: A1
   frequency_rank: 273
   grammar_scope: null
+  tags: [Home]
 - type: word
   text: Salle de bain
   translation: Bathroom
@@ -2193,6 +2466,7 @@ fr:
   cefr_level: A1
   frequency_rank: 274
   grammar_scope: null
+  tags: [Home]
 - type: word
   text: Lit
   translation: Bed
@@ -2201,6 +2475,7 @@ fr:
   cefr_level: A1
   frequency_rank: 275
   grammar_scope: null
+  tags: [Home]
 - type: word
   text: Journal
   translation: Newspaper
@@ -2209,6 +2484,7 @@ fr:
   cefr_level: A1
   frequency_rank: 276
   grammar_scope: null
+  tags: [Communication]
 - type: word
   text: Vélo
   translation: Bicycle
@@ -2217,6 +2493,7 @@ fr:
   cefr_level: A1
   frequency_rank: 277
   grammar_scope: null
+  tags: [Transportation]
 - type: word
   text: Monnaie
   translation: Change, currency
@@ -2225,6 +2502,7 @@ fr:
   cefr_level: A1
   frequency_rank: 278
   grammar_scope: null
+  tags: [Money]
 - type: collocation
   text: Faire une promenade
   translation: To go for a walk
@@ -2233,6 +2511,7 @@ fr:
   cefr_level: A1
   frequency_rank: 279
   grammar_scope: null
+  tags: [Sports]
 - type: collocation
   text: Prendre un verre
   translation: To have a drink
@@ -2241,6 +2520,7 @@ fr:
   cefr_level: A1
   frequency_rank: 280
   grammar_scope: null
+  tags: [Food]
 - type: collocation
   text: Parler une langue
   translation: To speak a language
@@ -2249,6 +2529,7 @@ fr:
   cefr_level: A1
   frequency_rank: 281
   grammar_scope: null
+  tags: [Communication]
 - type: collocation
   text: Écouter la radio
   translation: To listen to the radio
@@ -2257,6 +2538,7 @@ fr:
   cefr_level: A1
   frequency_rank: 282
   grammar_scope: null
+  tags: [Entertainment]
 - type: collocation
   text: Regarder un film
   translation: To watch a movie
@@ -2265,6 +2547,7 @@ fr:
   cefr_level: A1
   frequency_rank: 283
   grammar_scope: null
+  tags: [Entertainment]
 - type: collocation
   text: Aller au cinéma
   translation: To go to the cinema
@@ -2273,6 +2556,7 @@ fr:
   cefr_level: A1
   frequency_rank: 284
   grammar_scope: null
+  tags: [Entertainment]
 - type: collocation
   text: Avoir de la chance
   translation: To be lucky
@@ -2281,6 +2565,7 @@ fr:
   cefr_level: A1
   frequency_rank: 285
   grammar_scope: null
+  tags: [Emotions]
 - type: collocation
   text: Demander son chemin
   translation: To ask for directions
@@ -2289,6 +2574,7 @@ fr:
   cefr_level: A1
   frequency_rank: 286
   grammar_scope: null
+  tags: [Directions]
 - type: collocation
   text: Faire des photos
   translation: To take photos
@@ -2297,6 +2583,7 @@ fr:
   cefr_level: A1
   frequency_rank: 287
   grammar_scope: null
+  tags: [Entertainment]
 - type: collocation
   text: Rendre visite à
   translation: To visit (a person)
@@ -2305,6 +2592,7 @@ fr:
   cefr_level: A1
   frequency_rank: 288
   grammar_scope: null
+  tags: [Family]
 - type: verb_form
   text: Il habite
   translation: He lives
@@ -2313,6 +2601,7 @@ fr:
   cefr_level: A1
   frequency_rank: 289
   grammar_scope: present tense
+  tags: [Home]
 - type: verb_form
   text: Je comprends
   translation: I understand
@@ -2321,6 +2610,7 @@ fr:
   cefr_level: A1
   frequency_rank: 290
   grammar_scope: present tense
+  tags: [Communication]
 - type: verb_form
   text: Tu dis
   translation: You say (informal)
@@ -2329,6 +2619,7 @@ fr:
   cefr_level: A1
   frequency_rank: 291
   grammar_scope: present tense
+  tags: [Communication]
 - type: verb_form
   text: Nous écrivons
   translation: We write
@@ -2337,6 +2628,7 @@ fr:
   cefr_level: A1
   frequency_rank: 292
   grammar_scope: present tense
+  tags: [Communication]
 - type: verb_form
   text: Il lit
   translation: He reads
@@ -2345,6 +2637,7 @@ fr:
   cefr_level: A1
   frequency_rank: 293
   grammar_scope: present tense
+  tags: [Education]
 - type: verb_form
   text: Je vois
   translation: I see
@@ -2353,6 +2646,7 @@ fr:
   cefr_level: A1
   frequency_rank: 294
   grammar_scope: present tense
+  tags: [Grammar]
 - type: verb_form
   text: Nous pouvons
   translation: We can
@@ -2361,6 +2655,7 @@ fr:
   cefr_level: A1
   frequency_rank: 295
   grammar_scope: present tense
+  tags: [Grammar]
 - type: sentence_pattern
   text: J'ai envie de + noun/infinitive
   translation: I feel like/I want to
@@ -2369,6 +2664,7 @@ fr:
   cefr_level: A1
   frequency_rank: 296
   grammar_scope: prepositions
+  tags: [Grammar]
 - type: sentence_pattern
   text: Quel est votre nom ?
   translation: What is your name? (formal)
@@ -2377,6 +2673,7 @@ fr:
   cefr_level: A1
   frequency_rank: 297
   grammar_scope: question formation
+  tags: [Greetings]
 - type: sentence_pattern
   text: Où habitez-vous ?
   translation: Where do you live? (formal)
@@ -2385,6 +2682,7 @@ fr:
   cefr_level: A1
   frequency_rank: 298
   grammar_scope: question formation
+  tags: [Home]
 - type: sentence_pattern
   text: J'aime bien + noun/infinitive
   translation: I quite like/I like to
@@ -2393,6 +2691,7 @@ fr:
   cefr_level: A1
   frequency_rank: 299
   grammar_scope: verb + infinitive
+  tags: [Opinions]
 - type: sentence_pattern
   text: Pouvez-vous répéter ?
   translation: Can you repeat? (formal)
@@ -2401,6 +2700,7 @@ fr:
   cefr_level: A1
   frequency_rank: 300
   grammar_scope: question formation
+  tags: [Communication]
 - type: word
   text: Chocolat
   translation: Chocolate
@@ -2409,6 +2709,7 @@ fr:
   cefr_level: A1
   frequency_rank: 301
   grammar_scope: null
+  tags: [Food]
 - type: word
   text: Sucre
   translation: Sugar
@@ -2417,6 +2718,7 @@ fr:
   cefr_level: A1
   frequency_rank: 302
   grammar_scope: null
+  tags: [Food]
 - type: word
   text: Sel
   translation: Salt
@@ -2425,6 +2727,7 @@ fr:
   cefr_level: A1
   frequency_rank: 303
   grammar_scope: null
+  tags: [Food]
 - type: word
   text: Poivre
   translation: Pepper
@@ -2433,6 +2736,7 @@ fr:
   cefr_level: A1
   frequency_rank: 304
   grammar_scope: null
+  tags: [Food]
 - type: word
   text: Jupe
   translation: Skirt
@@ -2441,6 +2745,7 @@ fr:
   cefr_level: A1
   frequency_rank: 305
   grammar_scope: null
+  tags: [Clothing]
 - type: word
   text: Pantalon
   translation: Trousers / Pants
@@ -2449,6 +2754,7 @@ fr:
   cefr_level: A1
   frequency_rank: 306
   grammar_scope: null
+  tags: [Clothing]
 - type: word
   text: Chemise
   translation: Shirt
@@ -2457,6 +2763,7 @@ fr:
   cefr_level: A1
   frequency_rank: 307
   grammar_scope: null
+  tags: [Clothing]
 - type: word
   text: Robe
   translation: Dress
@@ -2465,6 +2772,7 @@ fr:
   cefr_level: A1
   frequency_rank: 308
   grammar_scope: null
+  tags: [Clothing]
 - type: word
   text: Chapeau
   translation: Hat
@@ -2473,6 +2781,7 @@ fr:
   cefr_level: A1
   frequency_rank: 309
   grammar_scope: null
+  tags: [Clothing]
 - type: word
   text: Magasin
   translation: Shop / Store
@@ -2481,6 +2790,7 @@ fr:
   cefr_level: A1
   frequency_rank: 310
   grammar_scope: null
+  tags: [Shopping]
 - type: word
   text: Musée
   translation: Museum
@@ -2489,6 +2799,7 @@ fr:
   cefr_level: A1
   frequency_rank: 311
   grammar_scope: null
+  tags: [Entertainment]
 - type: word
   text: Banque
   translation: Bank
@@ -2497,6 +2808,7 @@ fr:
   cefr_level: A1
   frequency_rank: 312
   grammar_scope: null
+  tags: [Money]
 - type: word
   text: Piscine
   translation: Swimming pool
@@ -2505,6 +2817,7 @@ fr:
   cefr_level: A1
   frequency_rank: 313
   grammar_scope: null
+  tags: [Sports]
 - type: word
   text: Aéroport
   translation: Airport
@@ -2513,6 +2826,7 @@ fr:
   cefr_level: A1
   frequency_rank: 314
   grammar_scope: null
+  tags: [Travel]
 - type: word
   text: Bateau
   translation: Boat
@@ -2521,6 +2835,7 @@ fr:
   cefr_level: A1
   frequency_rank: 315
   grammar_scope: null
+  tags: [Transportation]
 - type: word
   text: Moto
   translation: Motorbike
@@ -2529,6 +2844,7 @@ fr:
   cefr_level: A1
   frequency_rank: 316
   grammar_scope: null
+  tags: [Transportation]
 - type: word
   text: Pied
   translation: Foot
@@ -2537,6 +2853,7 @@ fr:
   cefr_level: A1
   frequency_rank: 317
   grammar_scope: null
+  tags: [Body]
 - type: word
   text: Main
   translation: Hand
@@ -2545,6 +2862,7 @@ fr:
   cefr_level: A1
   frequency_rank: 318
   grammar_scope: null
+  tags: [Body]
 - type: word
   text: Tête
   translation: Head
@@ -2553,6 +2871,7 @@ fr:
   cefr_level: A1
   frequency_rank: 319
   grammar_scope: null
+  tags: [Body]
 - type: word
   text: Cheveux
   translation: Hair
@@ -2561,6 +2880,7 @@ fr:
   cefr_level: A1
   frequency_rank: 320
   grammar_scope: null
+  tags: [Body]
 - type: word
   text: Bouche
   translation: Mouth
@@ -2569,6 +2889,7 @@ fr:
   cefr_level: A1
   frequency_rank: 321
   grammar_scope: null
+  tags: [Body]
 - type: word
   text: Nez
   translation: Nose
@@ -2577,6 +2898,7 @@ fr:
   cefr_level: A1
   frequency_rank: 322
   grammar_scope: null
+  tags: [Body]
 - type: word
   text: Sœur
   translation: Sister
@@ -2585,6 +2907,7 @@ fr:
   cefr_level: A1
   frequency_rank: 323
   grammar_scope: null
+  tags: [Family]
 - type: word
   text: Frère
   translation: Brother
@@ -2593,6 +2916,7 @@ fr:
   cefr_level: A1
   frequency_rank: 324
   grammar_scope: null
+  tags: [Family]
 - type: word
   text: Nom
   translation: Last name / Name
@@ -2601,6 +2925,7 @@ fr:
   cefr_level: A1
   frequency_rank: 325
   grammar_scope: null
+  tags: [Greetings]
 - type: word
   text: Prénom
   translation: First name
@@ -2609,6 +2934,7 @@ fr:
   cefr_level: A1
   frequency_rank: 326
   grammar_scope: null
+  tags: [Greetings]
 - type: word
   text: Nationalité
   translation: Nationality
@@ -2617,6 +2943,7 @@ fr:
   cefr_level: A1
   frequency_rank: 327
   grammar_scope: null
+  tags: [Travel]
 - type: word
   text: Profession
   translation: Profession / Job
@@ -2625,6 +2952,7 @@ fr:
   cefr_level: A1
   frequency_rank: 328
   grammar_scope: null
+  tags: [Work]
 - type: collocation
   text: Être en retard
   translation: To be late
@@ -2633,6 +2961,7 @@ fr:
   cefr_level: A1
   frequency_rank: 329
   grammar_scope: null
+  tags: [Time]
 - type: collocation
   text: Être à l'heure
   translation: To be on time
@@ -2641,6 +2970,7 @@ fr:
   cefr_level: A1
   frequency_rank: 330
   grammar_scope: null
+  tags: [Time]
 - type: collocation
   text: Faire la lessive
   translation: To do the laundry
@@ -2649,6 +2979,7 @@ fr:
   cefr_level: A1
   frequency_rank: 331
   grammar_scope: null
+  tags: [Daily Routine]
 - type: collocation
   text: Faire le ménage
   translation: To do the housework
@@ -2657,6 +2988,7 @@ fr:
   cefr_level: A1
   frequency_rank: 332
   grammar_scope: null
+  tags: [Daily Routine]
 - type: collocation
   text: Payer par carte
   translation: To pay by card
@@ -2665,6 +2997,7 @@ fr:
   cefr_level: A1
   frequency_rank: 333
   grammar_scope: null
+  tags: [Money]
 - type: collocation
   text: Payer en espèces
   translation: To pay in cash
@@ -2673,6 +3006,7 @@ fr:
   cefr_level: A1
   frequency_rank: 334
   grammar_scope: null
+  tags: [Money]
 - type: collocation
   text: Prendre un repas
   translation: To have a meal
@@ -2681,6 +3015,7 @@ fr:
   cefr_level: A1
   frequency_rank: 335
   grammar_scope: null
+  tags: [Food]
 - type: collocation
   text: Venir de
   translation: To come from
@@ -2689,6 +3024,7 @@ fr:
   cefr_level: A1
   frequency_rank: 336
   grammar_scope: null
+  tags: [Travel]
 - type: collocation
   text: Demander l'addition
   translation: To ask for the bill
@@ -2697,6 +3033,7 @@ fr:
   cefr_level: A1
   frequency_rank: 337
   grammar_scope: null
+  tags: [Money, Food]
 - type: collocation
   text: Jouer au football
   translation: To play football (soccer)
@@ -2705,6 +3042,7 @@ fr:
   cefr_level: A1
   frequency_rank: 338
   grammar_scope: null
+  tags: [Sports]
 - type: verb_form
   text: Il pleut
   translation: It's raining
@@ -2713,6 +3051,7 @@ fr:
   cefr_level: A1
   frequency_rank: 339
   grammar_scope: present tense
+  tags: [Weather]
 - type: verb_form
   text: Il neige
   translation: It's snowing
@@ -2721,6 +3060,7 @@ fr:
   cefr_level: A1
   frequency_rank: 340
   grammar_scope: present tense
+  tags: [Weather]
 - type: verb_form
   text: Je dis
   translation: I say / I tell
@@ -2729,6 +3069,7 @@ fr:
   cefr_level: A1
   frequency_rank: 341
   grammar_scope: present tense
+  tags: [Communication]
 - type: verb_form
   text: Tu écoutes
   translation: You listen
@@ -2737,6 +3078,7 @@ fr:
   cefr_level: A1
   frequency_rank: 342
   grammar_scope: present tense
+  tags: [Entertainment]
 - type: verb_form
   text: Nous faisons
   translation: We do / We make
@@ -2745,6 +3087,7 @@ fr:
   cefr_level: A1
   frequency_rank: 343
   grammar_scope: present tense
+  tags: [Grammar]
 - type: verb_form
   text: Vous prenez
   translation: You take / You have (a drink/meal)
@@ -2753,6 +3096,7 @@ fr:
   cefr_level: A1
   frequency_rank: 344
   grammar_scope: present tense
+  tags: [Food]
 - type: verb_form
   text: Elles vont
   translation: They (fem.) go
@@ -2761,6 +3105,7 @@ fr:
   cefr_level: A1
   frequency_rank: 345
   grammar_scope: present tense
+  tags: [Grammar]
 - type: sentence_pattern
   text: Puis-je vous aider ?
   translation: Can I help you?
@@ -2769,6 +3114,7 @@ fr:
   cefr_level: A1
   frequency_rank: 346
   grammar_scope: null
+  tags: [Politeness]
 - type: sentence_pattern
   text: Je dois + infinitif.
   translation: I must / I have to + verb.
@@ -2777,6 +3123,7 @@ fr:
   cefr_level: A1
   frequency_rank: 347
   grammar_scope: null
+  tags: [Grammar]
 - type: sentence_pattern
   text: Qu'est-ce que vous voulez ?
   translation: What do you want?
@@ -2785,6 +3132,7 @@ fr:
   cefr_level: A1
   frequency_rank: 348
   grammar_scope: null
+  tags: [Grammar]
 - type: sentence_pattern
   text: J'adore + nom/infinitif.
   translation: I love + noun/to verb.
@@ -2793,6 +3141,7 @@ fr:
   cefr_level: A1
   frequency_rank: 349
   grammar_scope: null
+  tags: [Opinions]
 - type: sentence_pattern
   text: Comment dit-on (mot) en français ?
   translation: How do you say (word) in French?
@@ -2801,6 +3150,7 @@ fr:
   cefr_level: A1
   frequency_rank: 350
   grammar_scope: null
+  tags: [Communication]
 - type: word
   text: Vingt
   translation: Twenty
@@ -2809,6 +3159,7 @@ fr:
   cefr_level: A1
   frequency_rank: 353
   grammar_scope: null
+  tags: [Numbers]
 - type: word
   text: Janvier
   translation: January
@@ -2817,6 +3168,7 @@ fr:
   cefr_level: A1
   frequency_rank: 354
   grammar_scope: null
+  tags: [Time]
 - type: word
   text: Orange
   translation: Orange
@@ -2825,6 +3177,7 @@ fr:
   cefr_level: A1
   frequency_rank: 356
   grammar_scope: null
+  tags: [Colors]
 - type: word
   text: Rose
   translation: Pink
@@ -2833,6 +3186,7 @@ fr:
   cefr_level: A1
   frequency_rank: 357
   grammar_scope: null
+  tags: [Colors]
 - type: word
   text: Violet
   translation: Purple
@@ -2841,6 +3195,7 @@ fr:
   cefr_level: A1
   frequency_rank: 358
   grammar_scope: null
+  tags: [Colors]
 - type: word
   text: Céréales
   translation: Cereal
@@ -2849,6 +3204,7 @@ fr:
   cefr_level: A1
   frequency_rank: 359
   grammar_scope: null
+  tags: [Food]
 - type: word
   text: Viande
   translation: Meat
@@ -2857,6 +3213,7 @@ fr:
   cefr_level: A1
   frequency_rank: 361
   grammar_scope: null
+  tags: [Food]
 - type: word
   text: Poisson
   translation: Fish
@@ -2865,6 +3222,7 @@ fr:
   cefr_level: A1
   frequency_rank: 362
   grammar_scope: null
+  tags: [Food]
 - type: word
   text: Appartement
   translation: Apartment
@@ -2873,6 +3231,7 @@ fr:
   cefr_level: A1
   frequency_rank: 364
   grammar_scope: null
+  tags: [Home]
 - type: word
   text: Université
   translation: University
@@ -2881,6 +3240,7 @@ fr:
   cefr_level: A1
   frequency_rank: 366
   grammar_scope: null
+  tags: [Education]
 - type: word
   text: Bureau
   translation: Office / Desk
@@ -2889,6 +3249,7 @@ fr:
   cefr_level: A1
   frequency_rank: 367
   grammar_scope: null
+  tags: [Work]
 - type: word
   text: Bibliothèque
   translation: Library
@@ -2897,6 +3258,7 @@ fr:
   cefr_level: A1
   frequency_rank: 368
   grammar_scope: null
+  tags: [Education]
 - type: word
   text: Église
   translation: Church
@@ -2905,6 +3267,7 @@ fr:
   cefr_level: A1
   frequency_rank: 369
   grammar_scope: null
+  tags: [City]
 - type: word
   text: Voisin(e)
   translation: Neighbor
@@ -2913,6 +3276,7 @@ fr:
   cefr_level: A1
   frequency_rank: 372
   grammar_scope: null
+  tags: [Home]
 - type: word
   text: Triste
   translation: Sad
@@ -2921,6 +3285,7 @@ fr:
   cefr_level: A1
   frequency_rank: 373
   grammar_scope: null
+  tags: [Emotions]
 - type: word
   text: Heureux/Heureuse
   translation: Happy
@@ -2929,6 +3294,7 @@ fr:
   cefr_level: A1
   frequency_rank: 374
   grammar_scope: null
+  tags: [Emotions]
 - type: word
   text: Malade
   translation: Sick
@@ -2937,6 +3303,7 @@ fr:
   cefr_level: A1
   frequency_rank: 375
   grammar_scope: null
+  tags: [Health]
 - type: word
   text: Propre
   translation: Clean
@@ -2945,6 +3312,7 @@ fr:
   cefr_level: A1
   frequency_rank: 377
   grammar_scope: null
+  tags: [Home]
 - type: word
   text: Sale
   translation: Dirty
@@ -2953,6 +3321,7 @@ fr:
   cefr_level: A1
   frequency_rank: 378
   grammar_scope: null
+  tags: [Home]
 - type: collocation
   text: Faire une sieste
   translation: To take a nap
@@ -2961,6 +3330,7 @@ fr:
   cefr_level: A1
   frequency_rank: 380
   grammar_scope: null
+  tags: [Daily Routine]
 - type: collocation
   text: Ouvrir la bouteille
   translation: To open the bottle
@@ -2969,6 +3339,7 @@ fr:
   cefr_level: A1
   frequency_rank: 381
   grammar_scope: null
+  tags: [Food]
 - type: collocation
   text: Fermer la porte
   translation: To close the door
@@ -2977,6 +3348,7 @@ fr:
   cefr_level: A1
   frequency_rank: 382
   grammar_scope: null
+  tags: [Home]
 - type: collocation
   text: Chercher son chemin
   translation: To look for one's way
@@ -2985,6 +3357,7 @@ fr:
   cefr_level: A1
   frequency_rank: 383
   grammar_scope: null
+  tags: [Directions]
 - type: collocation
   text: Mettre la table
   translation: To set the table
@@ -2993,6 +3366,7 @@ fr:
   cefr_level: A1
   frequency_rank: 384
   grammar_scope: null
+  tags: [Daily Routine]
 - type: collocation
   text: Nettoyer la chambre
   translation: To clean the room
@@ -3001,6 +3375,7 @@ fr:
   cefr_level: A1
   frequency_rank: 385
   grammar_scope: null
+  tags: [Daily Routine]
 - type: collocation
   text: Préparer un repas
   translation: To prepare a meal
@@ -3009,6 +3384,7 @@ fr:
   cefr_level: A1
   frequency_rank: 386
   grammar_scope: null
+  tags: [Food]
 - type: collocation
   text: Avoir un problème
   translation: To have a problem
@@ -3017,6 +3393,7 @@ fr:
   cefr_level: A1
   frequency_rank: 387
   grammar_scope: null
+  tags: [Technology]
 - type: collocation
   text: Raconter une histoire
   translation: To tell a story
@@ -3025,6 +3402,7 @@ fr:
   cefr_level: A1
   frequency_rank: 388
   grammar_scope: null
+  tags: [Communication]
 - type: verb_form
   text: Tu parles
   translation: You speak (singular informal)
@@ -3033,6 +3411,7 @@ fr:
   cefr_level: A1
   frequency_rank: 391
   grammar_scope: null
+  tags: [Communication]
 - type: verb_form
   text: Tu manges
   translation: You eat (singular informal)
@@ -3041,6 +3420,7 @@ fr:
   cefr_level: A1
   frequency_rank: 392
   grammar_scope: null
+  tags: [Food]
 - type: verb_form
   text: Vous faites
   translation: You do/make (plural/formal)
@@ -3049,6 +3429,7 @@ fr:
   cefr_level: A1
   frequency_rank: 393
   grammar_scope: null
+  tags: [Grammar]
 - type: verb_form
   text: Vous buvez
   translation: You drink (plural/formal)
@@ -3057,6 +3438,7 @@ fr:
   cefr_level: A1
   frequency_rank: 394
   grammar_scope: null
+  tags: [Food]
 - type: verb_form
   text: Ils aiment
   translation: They like/love (masculine/mixed)
@@ -3065,6 +3447,7 @@ fr:
   cefr_level: A1
   frequency_rank: 395
   grammar_scope: null
+  tags: [Opinions]
 - type: sentence_pattern
   text: Quel temps fait-il ?
   translation: What's the weather like?
@@ -3073,6 +3456,7 @@ fr:
   cefr_level: A1
   frequency_rank: 396
   grammar_scope: null
+  tags: [Weather]
 - type: sentence_pattern
   text: Qu'est-ce que tu fais ?
   translation: What are you doing?
@@ -3081,6 +3465,7 @@ fr:
   cefr_level: A1
   frequency_rank: 397
   grammar_scope: null
+  tags: [Grammar]
 - type: sentence_pattern
   text: Je ne suis pas...
   translation: I am not...
@@ -3089,6 +3474,7 @@ fr:
   cefr_level: A1
   frequency_rank: 398
   grammar_scope: null
+  tags: [Grammar]
 - type: sentence_pattern
   text: C'est pour...
   translation: It's for...
@@ -3097,6 +3483,7 @@ fr:
   cefr_level: A1
   frequency_rank: 399
   grammar_scope: null
+  tags: [Grammar]
 - type: sentence_pattern
   text: À quelle heure...?
   translation: At what time...?
@@ -3105,6 +3492,7 @@ fr:
   cefr_level: A1
   frequency_rank: 400
   grammar_scope: null
+  tags: [Time]
 - type: word
   text: Chiffre
   translation: Number (digit)
@@ -3113,6 +3501,7 @@ fr:
   cefr_level: A1
   frequency_rank: 389
   grammar_scope: null
+  tags: [Numbers]
 - type: word
   text: Gauche
   translation: Left
@@ -3121,6 +3510,7 @@ fr:
   cefr_level: A1
   frequency_rank: 391
   grammar_scope: null
+  tags: [Directions]
 - type: word
   text: Droite
   translation: Right
@@ -3129,6 +3519,7 @@ fr:
   cefr_level: A1
   frequency_rank: 392
   grammar_scope: null
+  tags: [Directions]
 - type: word
   text: Temps
   translation: Time; weather
@@ -3137,6 +3528,7 @@ fr:
   cefr_level: A1
   frequency_rank: 393
   grammar_scope: null
+  tags: [Time, Weather]
 - type: collocation
   text: Parler de
   translation: To talk about
@@ -3145,6 +3537,7 @@ fr:
   cefr_level: A1
   frequency_rank: 396
   grammar_scope: null
+  tags: [Communication]
 - type: collocation
   text: Aller à l'école
   translation: To go to school
@@ -3153,6 +3546,7 @@ fr:
   cefr_level: A1
   frequency_rank: 397
   grammar_scope: null
+  tags: [Education]
 - type: verb_form
   text: Je donne
   translation: I give
@@ -3161,6 +3555,7 @@ fr:
   cefr_level: A1
   frequency_rank: 398
   grammar_scope: null
+  tags: [Grammar]
 - type: verb_form
   text: Tu apprends
   translation: You learn (informal singular)
@@ -3169,6 +3564,7 @@ fr:
   cefr_level: A1
   frequency_rank: 399
   grammar_scope: null
+  tags: [Education]
 - type: sentence_pattern
   text: Combien de + nom ?
   translation: How many/much + noun?
@@ -3177,6 +3573,7 @@ fr:
   cefr_level: A1
   frequency_rank: 400
   grammar_scope: null
+  tags: [Numbers]
 - type: verb_form
   text: Donner
   translation: To give
@@ -3185,6 +3582,7 @@ fr:
   cefr_level: A1
   frequency_rank: 400
   grammar_scope: null
+  tags: [Grammar]
 - type: word
   text: Acheter
   translation: To buy
@@ -3193,3 +3591,4 @@ fr:
   cefr_level: A1
   frequency_rank: 400
   grammar_scope: null
+  tags: [Shopping]

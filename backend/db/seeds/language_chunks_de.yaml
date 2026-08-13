@@ -10,6 +10,7 @@ de:
   example_translation: Hello, what is your name?
   cefr_level: A1
   frequency_rank: 1
+  tags: [Greetings]
 - type: word
   text: Guten Morgen
   translation: good morning
@@ -17,6 +18,7 @@ de:
   example_translation: Good morning! How are you?
   cefr_level: A1
   frequency_rank: 2
+  tags: [Greetings]
 - type: word
   text: Guten Abend
   translation: good evening
@@ -24,6 +26,7 @@ de:
   example_translation: Good evening, how was your day?
   cefr_level: A1
   frequency_rank: 3
+  tags: [Greetings]
 - type: word
   text: Auf Wiedersehen
   translation: goodbye
@@ -31,6 +34,7 @@ de:
   example_translation: Goodbye! See you soon!
   cefr_level: A1
   frequency_rank: 4
+  tags: [Greetings]
 - type: word
   text: Tschüss
   translation: bye (informal)
@@ -38,6 +42,7 @@ de:
   example_translation: Bye, see you tomorrow!
   cefr_level: A1
   frequency_rank: 5
+  tags: [Greetings]
 - type: word
   text: Danke
   translation: thank you
@@ -45,6 +50,7 @@ de:
   example_translation: Thanks for your help!
   cefr_level: A1
   frequency_rank: 6
+  tags: [Politeness]
 - type: word
   text: Bitte
   translation: please / you're welcome
@@ -52,6 +58,7 @@ de:
   example_translation: A coffee, please!
   cefr_level: A1
   frequency_rank: 7
+  tags: [Politeness]
 - type: word
   text: Entschuldigung
   translation: excuse me / sorry
@@ -59,6 +66,7 @@ de:
   example_translation: Excuse me, where is the train station?
   cefr_level: A1
   frequency_rank: 8
+  tags: [Politeness]
 - type: word
   text: ja
   translation: "yes"
@@ -66,6 +74,7 @@ de:
   example_translation: "Are you coming? — Yes, of course!"
   cefr_level: A1
   frequency_rank: 9
+  tags: [Connectors]
 - type: word
   text: nein
   translation: "no"
@@ -73,6 +82,7 @@ de:
   example_translation: "Do you like coffee? — No, thank you."
   cefr_level: A1
   frequency_rank: 10
+  tags: [Connectors]
 # Pronouns
 - type: word
   text: ich
@@ -81,6 +91,7 @@ de:
   example_translation: I am David.
   cefr_level: A1
   frequency_rank: 11
+  tags: [Connectors]
 - type: word
   text: du
   translation: you (informal singular)
@@ -88,6 +99,7 @@ de:
   example_translation: You are very nice.
   cefr_level: A1
   frequency_rank: 12
+  tags: [Connectors]
 - type: word
   text: er
   translation: he
@@ -95,6 +107,7 @@ de:
   example_translation: He is a doctor.
   cefr_level: A1
   frequency_rank: 13
+  tags: [Connectors]
 - type: word
   text: sie
   translation: she / they (formal you)
@@ -102,6 +115,7 @@ de:
   example_translation: She comes from Berlin.
   cefr_level: A1
   frequency_rank: 14
+  tags: [Connectors]
 - type: word
   text: es
   translation: it
@@ -109,6 +123,7 @@ de:
   example_translation: It's beautiful today.
   cefr_level: A1
   frequency_rank: 15
+  tags: [Connectors]
 - type: word
   text: wir
   translation: we
@@ -116,6 +131,7 @@ de:
   example_translation: We are going to Spain.
   cefr_level: A1
   frequency_rank: 16
+  tags: [Connectors]
 # Basic verbs (most frequent)
 - type: word
   text: sein
@@ -124,6 +140,7 @@ de:
   example_translation: I am tired.
   cefr_level: A1
   frequency_rank: 17
+  tags: [Connectors]
 - type: word
   text: haben
   translation: to have
@@ -131,6 +148,7 @@ de:
   example_translation: I have a dog.
   cefr_level: A1
   frequency_rank: 18
+  tags: [Connectors]
 - type: word
   text: gehen
   translation: to go / to walk
@@ -138,6 +156,7 @@ de:
   example_translation: I go to work.
   cefr_level: A1
   frequency_rank: 19
+  tags: [Travel]
 - type: word
   text: kommen
   translation: to come
@@ -145,6 +164,7 @@ de:
   example_translation: When are you coming?
   cefr_level: A1
   frequency_rank: 20
+  tags: [Travel]
 - type: word
   text: sehen
   translation: to see
@@ -152,6 +172,7 @@ de:
   example_translation: I see a tree.
   cefr_level: A1
   frequency_rank: 21
+  tags: [Connectors]
 - type: word
   text: machen
   translation: to do / to make
@@ -159,6 +180,7 @@ de:
   example_translation: What are you doing now?
   cefr_level: A1
   frequency_rank: 22
+  tags: [Connectors]
 - type: word
   text: sagen
   translation: to say
@@ -166,6 +188,7 @@ de:
   example_translation: I tell the truth.
   cefr_level: A1
   frequency_rank: 23
+  tags: [Communication]
 - type: word
   text: sprechen
   translation: to speak
@@ -173,6 +196,7 @@ de:
   example_translation: I speak German.
   cefr_level: A1
   frequency_rank: 24
+  tags: [Communication]
 - type: word
   text: verstehen
   translation: to understand
@@ -180,6 +204,7 @@ de:
   example_translation: I don't understand you.
   cefr_level: A1
   frequency_rank: 25
+  tags: [Communication]
 - type: word
   text: wissen
   translation: to know
@@ -187,6 +212,7 @@ de:
   example_translation: I don't know.
   cefr_level: A1
   frequency_rank: 26
+  tags: [Connectors]
 - type: word
   text: mögen
   translation: to like / to want
@@ -194,6 +220,7 @@ de:
   example_translation: I like chocolate.
   cefr_level: A1
   frequency_rank: 27
+  tags: [Opinions]
 - type: word
   text: wollen
   translation: to want
@@ -201,6 +228,7 @@ de:
   example_translation: I want a coffee.
   cefr_level: A1
   frequency_rank: 28
+  tags: [Connectors]
 - type: word
   text: können
   translation: can / to be able
@@ -208,6 +236,7 @@ de:
   example_translation: I can swim.
   cefr_level: A1
   frequency_rank: 29
+  tags: [Connectors]
 - type: word
   text: müssen
   translation: must / have to
@@ -215,6 +244,7 @@ de:
   example_translation: I have to work.
   cefr_level: A1
   frequency_rank: 30
+  tags: [Connectors]
 # Basic nouns - people
 - type: word
   text: Mann
@@ -223,6 +253,7 @@ de:
   example_translation: The man is tall.
   cefr_level: A1
   frequency_rank: 31
+  tags: [Family]
 - type: word
   text: Frau
   translation: woman
@@ -230,6 +261,7 @@ de:
   example_translation: The woman is a doctor.
   cefr_level: A1
   frequency_rank: 32
+  tags: [Family]
 - type: word
   text: Kind
   translation: child
@@ -237,6 +269,7 @@ de:
   example_translation: The child likes to play.
   cefr_level: A1
   frequency_rank: 33
+  tags: [Family]
 - type: word
   text: Junge
   translation: boy
@@ -244,6 +277,7 @@ de:
   example_translation: The boy goes to school.
   cefr_level: A1
   frequency_rank: 34
+  tags: [Family]
 - type: word
   text: Mädchen
   translation: girl
@@ -251,6 +285,7 @@ de:
   example_translation: The girl is ten years old.
   cefr_level: A1
   frequency_rank: 35
+  tags: [Family]
 # Basic nouns - family
 - type: word
   text: Mutter
@@ -259,6 +294,7 @@ de:
   example_translation: My mother's name is Anna.
   cefr_level: A1
   frequency_rank: 36
+  tags: [Family]
 - type: word
   text: Vater
   translation: father
@@ -266,6 +302,7 @@ de:
   example_translation: My father is an engineer.
   cefr_level: A1
   frequency_rank: 37
+  tags: [Family]
 - type: word
   text: Schwester
   translation: sister
@@ -273,6 +310,7 @@ de:
   example_translation: My sister studies mathematics.
   cefr_level: A1
   frequency_rank: 38
+  tags: [Family]
 - type: word
   text: Bruder
   translation: brother
@@ -280,6 +318,7 @@ de:
   example_translation: My brother is six years old.
   cefr_level: A1
   frequency_rank: 39
+  tags: [Family]
 # Basic nouns - animals
 - type: word
   text: Hund
@@ -288,6 +327,7 @@ de:
   example_translation: The dog is brown.
   cefr_level: A1
   frequency_rank: 40
+  tags: [Animals]
 - type: word
   text: Katze
   translation: cat
@@ -295,6 +335,7 @@ de:
   example_translation: The cat is sleeping.
   cefr_level: A1
   frequency_rank: 41
+  tags: [Animals]
 # Basic nouns - places
 - type: word
   text: Haus
@@ -303,6 +344,7 @@ de:
   example_translation: The house is beautiful.
   cefr_level: A1
   frequency_rank: 42
+  tags: [Home]
 - type: word
   text: Schule
   translation: school
@@ -310,6 +352,7 @@ de:
   example_translation: I go to school.
   cefr_level: A1
   frequency_rank: 43
+  tags: [Education]
 - type: word
   text: Arbeit
   translation: work
@@ -317,6 +360,7 @@ de:
   example_translation: I go to work.
   cefr_level: A1
   frequency_rank: 44
+  tags: [Work]
 - type: word
   text: Stadt
   translation: city / town
@@ -324,6 +368,7 @@ de:
   example_translation: Berlin is a big city.
   cefr_level: A1
   frequency_rank: 45
+  tags: [City]
 - type: word
   text: Land
   translation: country
@@ -331,6 +376,7 @@ de:
   example_translation: Germany is my country.
   cefr_level: A1
   frequency_rank: 46
+  tags: [Travel]
 # Basic nouns - food and drink
 - type: word
   text: Wasser
@@ -339,6 +385,7 @@ de:
   example_translation: A glass of water, please.
   cefr_level: A1
   frequency_rank: 47
+  tags: [Food]
 - type: word
   text: Kaffee
   translation: coffee
@@ -346,6 +393,7 @@ de:
   example_translation: I like drinking coffee.
   cefr_level: A1
   frequency_rank: 48
+  tags: [Food]
 - type: word
   text: Tee
   translation: tea
@@ -353,6 +401,7 @@ de:
   example_translation: A cup of tea, please.
   cefr_level: A1
   frequency_rank: 49
+  tags: [Food]
 - type: word
   text: Milch
   translation: milk
@@ -360,6 +409,7 @@ de:
   example_translation: Do you like milk in your coffee?
   cefr_level: A1
   frequency_rank: 50
+  tags: [Food]
 - type: word
   text: Brot
   translation: bread
@@ -367,6 +417,7 @@ de:
   example_translation: The bread is delicious.
   cefr_level: A1
   frequency_rank: 51
+  tags: [Food]
 - type: word
   text: Essen
   translation: food
@@ -374,6 +425,7 @@ de:
   example_translation: The food is very good.
   cefr_level: A1
   frequency_rank: 52
+  tags: [Food]
 - type: word
   text: Obst
   translation: fruit
@@ -381,6 +433,7 @@ de:
   example_translation: I like eating fruit.
   cefr_level: A1
   frequency_rank: 53
+  tags: [Food]
 # Basic nouns - time
 - type: word
   text: Tag
@@ -389,6 +442,7 @@ de:
   example_translation: The day is beautiful.
   cefr_level: A1
   frequency_rank: 54
+  tags: [Time]
 - type: word
   text: Nacht
   translation: night
@@ -396,6 +450,7 @@ de:
   example_translation: Good night!
   cefr_level: A1
   frequency_rank: 55
+  tags: [Time]
 - type: word
   text: Woche
   translation: week
@@ -403,6 +458,7 @@ de:
   example_translation: Next week I'm going on holiday.
   cefr_level: A1
   frequency_rank: 56
+  tags: [Time]
 - type: word
   text: Monat
   translation: month
@@ -410,6 +466,7 @@ de:
   example_translation: June is a warm month.
   cefr_level: A1
   frequency_rank: 57
+  tags: [Time]
 - type: word
   text: Stunde
   translation: hour
@@ -417,6 +474,7 @@ de:
   example_translation: The meeting lasts one hour.
   cefr_level: A1
   frequency_rank: 58
+  tags: [Time]
 # Basic adjectives
 - type: word
   text: groß
@@ -425,6 +483,7 @@ de:
   example_translation: The house is big.
   cefr_level: A1
   frequency_rank: 59
+  tags: [Opinions]
 - type: word
   text: klein
   translation: small / little
@@ -432,6 +491,7 @@ de:
   example_translation: A small room.
   cefr_level: A1
   frequency_rank: 60
+  tags: [Opinions]
 - type: word
   text: alt
   translation: old
@@ -439,6 +499,7 @@ de:
   example_translation: The car is old.
   cefr_level: A1
   frequency_rank: 61
+  tags: [Opinions]
 - type: word
   text: jung
   translation: young
@@ -446,6 +507,7 @@ de:
   example_translation: She is still young.
   cefr_level: A1
   frequency_rank: 62
+  tags: [Opinions]
 - type: word
   text: schön
   translation: beautiful / nice
@@ -453,6 +515,7 @@ de:
   example_translation: The weather is nice.
   cefr_level: A1
   frequency_rank: 63
+  tags: [Opinions]
 - type: word
   text: hässlich
   translation: ugly
@@ -460,6 +523,7 @@ de:
   example_translation: The film was ugly/bad.
   cefr_level: A1
   frequency_rank: 64
+  tags: [Opinions]
 - type: word
   text: gut
   translation: good
@@ -467,6 +531,7 @@ de:
   example_translation: That's a good idea.
   cefr_level: A1
   frequency_rank: 65
+  tags: [Opinions]
 - type: word
   text: schlecht
   translation: bad
@@ -474,6 +539,7 @@ de:
   example_translation: I feel bad.
   cefr_level: A1
   frequency_rank: 66
+  tags: [Opinions]
 - type: word
   text: heiß
   translation: hot
@@ -481,6 +547,7 @@ de:
   example_translation: The day is very hot.
   cefr_level: A1
   frequency_rank: 67
+  tags: [Weather]
 - type: word
   text: kalt
   translation: cold
@@ -488,6 +555,7 @@ de:
   example_translation: The water is cold.
   cefr_level: A1
   frequency_rank: 68
+  tags: [Weather]
 - type: word
   text: warm
   translation: warm
@@ -495,6 +563,7 @@ de:
   example_translation: A warm day.
   cefr_level: A1
   frequency_rank: 69
+  tags: [Weather]
 - type: word
   text: schnell
   translation: fast / quick
@@ -502,6 +571,7 @@ de:
   example_translation: The car is fast.
   cefr_level: A1
   frequency_rank: 70
+  tags: [Opinions]
 - type: word
   text: langsam
   translation: slow
@@ -509,6 +579,7 @@ de:
   example_translation: The old man walks slowly.
   cefr_level: A1
   frequency_rank: 71
+  tags: [Opinions]
 - type: word
   text: lang
   translation: long
@@ -516,6 +587,7 @@ de:
   example_translation: The film is long.
   cefr_level: A1
   frequency_rank: 72
+  tags: [Opinions]
 - type: word
   text: kurz
   translation: short
@@ -523,6 +595,7 @@ de:
   example_translation: A short book.
   cefr_level: A1
   frequency_rank: 73
+  tags: [Opinions]
 - type: word
   text: neu
   translation: new
@@ -530,6 +603,7 @@ de:
   example_translation: My car is new.
   cefr_level: A1
   frequency_rank: 74
+  tags: [Opinions]
 - type: word
   text: müde
   translation: tired
@@ -537,6 +611,7 @@ de:
   example_translation: I am tired.
   cefr_level: A1
   frequency_rank: 75
+  tags: [Emotions]
 # Numbers and colors
 - type: word
   text: eins
@@ -545,6 +620,7 @@ de:
   example_translation: One coffee, please.
   cefr_level: A1
   frequency_rank: 76
+  tags: [Numbers]
 - type: word
   text: zwei
   translation: two
@@ -552,6 +628,7 @@ de:
   example_translation: I have two brothers.
   cefr_level: A1
   frequency_rank: 77
+  tags: [Numbers]
 - type: word
   text: drei
   translation: three
@@ -559,6 +636,7 @@ de:
   example_translation: Come at three o'clock.
   cefr_level: A1
   frequency_rank: 78
+  tags: [Numbers]
 - type: word
   text: rot
   translation: red
@@ -566,6 +644,7 @@ de:
   example_translation: A red car.
   cefr_level: A1
   frequency_rank: 79
+  tags: [Colors]
 - type: word
   text: blau
   translation: blue
@@ -573,6 +652,7 @@ de:
   example_translation: The sky is blue.
   cefr_level: A1
   frequency_rank: 80
+  tags: [Colors]
 - type: word
   text: schwarz
   translation: black
@@ -580,6 +660,7 @@ de:
   example_translation: A black phone.
   cefr_level: A1
   frequency_rank: 81
+  tags: [Colors]
 - type: word
   text: weiß
   translation: white
@@ -587,6 +668,7 @@ de:
   example_translation: A white shirt.
   cefr_level: A1
   frequency_rank: 82
+  tags: [Colors]
 # Prepositions
 - type: word
   text: in
@@ -595,6 +677,7 @@ de:
   example_translation: The key is in the bag.
   cefr_level: A1
   frequency_rank: 83
+  tags: [Connectors]
 - type: word
   text: auf
   translation: on / upon
@@ -602,6 +685,7 @@ de:
   example_translation: The book is on the table.
   cefr_level: A1
   frequency_rank: 84
+  tags: [Connectors]
 - type: word
   text: an
   translation: on / at / to
@@ -609,6 +693,7 @@ de:
   example_translation: The picture hangs on the wall.
   cefr_level: A1
   frequency_rank: 85
+  tags: [Connectors]
 - type: word
   text: unter
   translation: under
@@ -616,6 +701,7 @@ de:
   example_translation: The dog sleeps under the table.
   cefr_level: A1
   frequency_rank: 86
+  tags: [Connectors]
 - type: word
   text: über
   translation: over / above
@@ -623,6 +709,7 @@ de:
   example_translation: The lamp hangs over the table.
   cefr_level: A1
   frequency_rank: 87
+  tags: [Connectors]
 - type: word
   text: vor
   translation: in front of / before
@@ -630,6 +717,7 @@ de:
   example_translation: The car is in front of the house.
   cefr_level: A1
   frequency_rank: 88
+  tags: [Connectors]
 - type: word
   text: hinter
   translation: behind
@@ -637,6 +725,7 @@ de:
   example_translation: The cat is sitting behind the door.
   cefr_level: A1
   frequency_rank: 89
+  tags: [Connectors]
 - type: word
   text: neben
   translation: next to / beside
@@ -644,6 +733,7 @@ de:
   example_translation: I'm sitting next to you.
   cefr_level: A1
   frequency_rank: 90
+  tags: [Connectors]
 - type: word
   text: zwischen
   translation: between
@@ -651,6 +741,7 @@ de:
   example_translation: The child is sitting between his parents.
   cefr_level: A1
   frequency_rank: 91
+  tags: [Connectors]
 - type: word
   text: von
   translation: of / from
@@ -658,6 +749,7 @@ de:
   example_translation: My friend's house.
   cefr_level: A1
   frequency_rank: 92
+  tags: [Connectors]
 - type: word
   text: zu
   translation: to / at
@@ -665,6 +757,7 @@ de:
   example_translation: I'm going to my mother.
   cefr_level: A1
   frequency_rank: 93
+  tags: [Connectors]
 - type: word
   text: mit
   translation: with
@@ -672,6 +765,7 @@ de:
   example_translation: I'm going with you.
   cefr_level: A1
   frequency_rank: 94
+  tags: [Connectors]
 - type: word
   text: ohne
   translation: without
@@ -679,6 +773,7 @@ de:
   example_translation: I can't live without you.
   cefr_level: A1
   frequency_rank: 95
+  tags: [Connectors]
 # Questions and answers
 - type: collocation
   text: Wie heißt du?
@@ -687,6 +782,7 @@ de:
   example_translation: What's your name? My name is David.
   cefr_level: A1
   frequency_rank: 96
+  tags: [Greetings]
 - type: collocation
   text: Ich heiße
   translation: My name is
@@ -694,6 +790,7 @@ de:
   example_translation: My name is David.
   cefr_level: A1
   frequency_rank: 97
+  tags: [Greetings]
 - type: collocation
   text: Wie geht es dir?
   translation: How are you?
@@ -701,6 +798,7 @@ de:
   example_translation: How are you? I'm fine.
   cefr_level: A1
   frequency_rank: 98
+  tags: [Greetings]
 - type: collocation
   text: Mir geht es gut.
   translation: I'm fine / I'm doing well.
@@ -708,6 +806,7 @@ de:
   example_translation: I'm fine, thanks for asking.
   cefr_level: A1
   frequency_rank: 99
+  tags: [Greetings]
 - type: collocation
   text: Woher kommst du?
   translation: Where are you from?
@@ -715,6 +814,7 @@ de:
   example_translation: Where are you from? From Germany.
   cefr_level: A1
   frequency_rank: 100
+  tags: [Travel]
 - type: collocation
   text: Aus
   translation: from / out of
@@ -722,6 +822,7 @@ de:
   example_translation: I'm from Germany.
   cefr_level: A1
   frequency_rank: 101
+  tags: [Connectors]
 - type: collocation
   text: Wie alt bist du?
   translation: How old are you?
@@ -729,6 +830,7 @@ de:
   example_translation: How old are you? I'm twenty years old.
   cefr_level: A1
   frequency_rank: 102
+  tags: [Connectors]
 - type: collocation
   text: Jahre alt
   translation: years old
@@ -736,6 +838,7 @@ de:
   example_translation: I am twenty-five years old.
   cefr_level: A1
   frequency_rank: 103
+  tags: [Connectors]
 - type: collocation
   text: Was ist das?
   translation: What is that?
@@ -743,6 +846,7 @@ de:
   example_translation: What is that? That's a pen.
   cefr_level: A1
   frequency_rank: 104
+  tags: [Connectors]
 - type: collocation
   text: Das ist
   translation: That is
@@ -750,6 +854,7 @@ de:
   example_translation: That is my book.
   cefr_level: A1
   frequency_rank: 105
+  tags: [Connectors]
 - type: verb_form
   text: Ich bin
   translation: I am
@@ -757,6 +862,7 @@ de:
   example_translation: I am happy.
   cefr_level: A1
   frequency_rank: 106
+  tags: [Connectors]
 - type: verb_form
   text: Du bist
   translation: You are (informal singular)
@@ -764,6 +870,7 @@ de:
   example_translation: You are very nice.
   cefr_level: A1
   frequency_rank: 107
+  tags: [Connectors]
 - type: verb_form
   text: Er ist
   translation: He is
@@ -771,6 +878,7 @@ de:
   example_translation: He is a teacher.
   cefr_level: A1
   frequency_rank: 108
+  tags: [Connectors]
 - type: verb_form
   text: Ich habe
   translation: I have
@@ -778,6 +886,7 @@ de:
   example_translation: I have a book.
   cefr_level: A1
   frequency_rank: 109
+  tags: [Connectors]
 - type: verb_form
   text: Du hast
   translation: You have (informal singular)
@@ -785,6 +894,7 @@ de:
   example_translation: You have a cat.
   cefr_level: A1
   frequency_rank: 110
+  tags: [Connectors]
 - type: verb_form
   text: Es gibt
   translation: There is / There are
@@ -792,6 +902,7 @@ de:
   example_translation: There are many restaurants here.
   cefr_level: A1
   frequency_rank: 111
+  tags: [Connectors]
 - type: sentence_pattern
   text: Mein Name ist
   translation: My name is
@@ -799,6 +910,7 @@ de:
   example_translation: My name is Anna.
   cefr_level: A1
   frequency_rank: 112
+  tags: [Greetings]
 - type: sentence_pattern
   text: Ich komme aus
   translation: I come from / I'm from
@@ -806,6 +918,7 @@ de:
   example_translation: I'm from Germany.
   cefr_level: A1
   frequency_rank: 113
+  tags: [Travel]
 - type: sentence_pattern
   text: Ich mag
   translation: I like
@@ -813,6 +926,7 @@ de:
   example_translation: I like chocolate and coffee.
   cefr_level: A1
   frequency_rank: 114
+  tags: [Opinions]
 - type: sentence_pattern
   text: Ich esse gern
   translation: I like eating
@@ -820,6 +934,7 @@ de:
   example_translation: I like eating fruit.
   cefr_level: A1
   frequency_rank: 115
+  tags: [Food]
 # === A2 INTERMEDIATE VOCABULARY ===
 - type: word
   text: natürlich
@@ -828,6 +943,7 @@ de:
   example_translation: Of course I'll be happy to help you!
   cefr_level: A2
   frequency_rank: 1
+  tags: [Connectors]
 - type: word
   text: eigentlich
   translation: actually / in fact / really
@@ -835,6 +951,7 @@ de:
   example_translation: I actually wanted to come earlier.
   cefr_level: A2
   frequency_rank: 2
+  tags: [Connectors]
 - type: word
   text: leider
   translation: unfortunately
@@ -842,6 +959,7 @@ de:
   example_translation: Unfortunately I can't come today.
   cefr_level: A2
   frequency_rank: 3
+  tags: [Connectors]
 - type: word
   text: trotzdem
   translation: nevertheless / anyway / still
@@ -849,6 +967,7 @@ de:
   example_translation: It's raining, but we're going for a walk anyway.
   cefr_level: A2
   frequency_rank: 4
+  tags: [Connectors]
 - type: word
   text: vielleicht
   translation: perhaps / maybe / possibly
@@ -856,6 +975,7 @@ de:
   example_translation: Perhaps I'll come by tomorrow evening.
   cefr_level: A2
   frequency_rank: 5
+  tags: [Connectors]
 - type: word
   text: ungefähr
   translation: approximately / about / around
@@ -863,6 +983,7 @@ de:
   example_translation: That costs approximately twenty euros.
   cefr_level: A2
   frequency_rank: 6
+  tags: [Connectors]
 - type: word
   text: manchmal
   translation: sometimes
@@ -870,6 +991,7 @@ de:
   example_translation: Sometimes I eat lunch in the canteen.
   cefr_level: A2
   frequency_rank: 7
+  tags: [Connectors]
 - type: word
   text: meistens
   translation: mostly / usually / most of the time
@@ -877,6 +999,7 @@ de:
   example_translation: I usually cycle to work.
   cefr_level: A2
   frequency_rank: 8
+  tags: [Connectors]
 - type: word
   text: sofort
   translation: immediately / right away / at once
@@ -884,6 +1007,7 @@ de:
   example_translation: I'll be right there, wait a moment!
   cefr_level: A2
   frequency_rank: 9
+  tags: [Connectors]
 - type: word
   text: bald
   translation: soon
@@ -891,6 +1015,7 @@ de:
   example_translation: See you soon, we'll meet next week!
   cefr_level: A2
   frequency_rank: 10
+  tags: [Connectors]
 - type: word
   text: schon
   translation: already / yet (in questions) / indeed (emphasis)
@@ -898,6 +1023,7 @@ de:
   example_translation: Have you already had dinner?
   cefr_level: A2
   frequency_rank: 11
+  tags: [Connectors]
 - type: word
   text: noch
   translation: still / yet / another / more
@@ -905,6 +1031,7 @@ de:
   example_translation: I'm not finished with work yet.
   cefr_level: A2
   frequency_rank: 12
+  tags: [Connectors]
 - type: word
   text: nur
   translation: only / just / merely
@@ -912,6 +1039,7 @@ de:
   example_translation: I only have five minutes.
   cefr_level: A2
   frequency_rank: 13
+  tags: [Connectors]
 - type: word
   text: doch
   translation: yes (contradicting a negative) / after all / but / however
@@ -919,6 +1047,7 @@ de:
   example_translation: "Aren't you coming? — Yes, I am coming!"
   cefr_level: A2
   frequency_rank: 14
+  tags: [Connectors]
 - type: word
   text: endlich
   translation: finally / at last
@@ -926,6 +1055,7 @@ de:
   example_translation: We've finally found a solution!
   cefr_level: A2
   frequency_rank: 15
+  tags: [Connectors]
 - type: word
   text: wieder
   translation: again / back
@@ -933,6 +1063,7 @@ de:
   example_translation: He has arrived home again.
   cefr_level: A2
   frequency_rank: 16
+  tags: [Connectors]
 - type: word
   text: zusammen
   translation: together
@@ -940,6 +1071,7 @@ de:
   example_translation: Let's have breakfast together.
   cefr_level: A2
   frequency_rank: 17
+  tags: [Connectors]
 - type: word
   text: deshalb
   translation: therefore / that's why / for that reason
@@ -947,6 +1079,7 @@ de:
   example_translation: He was ill, that's why he didn't come to work.
   cefr_level: A2
   frequency_rank: 18
+  tags: [Connectors]
 - type: word
   text: obwohl
   translation: although / even though
@@ -954,6 +1087,7 @@ de:
   example_translation: Although it was late, he stayed up for a long time.
   cefr_level: A2
   frequency_rank: 19
+  tags: [Connectors]
 - type: word
   text: weil
   translation: because (subordinating conjunction — verb goes to end)
@@ -961,6 +1095,7 @@ de:
   example_translation: I'm tired because I slept badly.
   cefr_level: A2
   frequency_rank: 20
+  tags: [Connectors]
 - type: word
   text: wenn
   translation: if / when / whenever (for conditions and recurring events)
@@ -968,6 +1103,7 @@ de:
   example_translation: If you're hungry, I'll be happy to make something to eat.
   cefr_level: A2
   frequency_rank: 21
+  tags: [Connectors]
 - type: word
   text: dass
   translation: that (subordinating conjunction — verb goes to end)
@@ -975,6 +1111,7 @@ de:
   example_translation: I think that he is coming tomorrow.
   cefr_level: A2
   frequency_rank: 22
+  tags: [Connectors]
 - type: word
   text: außerdem
   translation: besides / moreover / in addition
@@ -982,6 +1119,7 @@ de:
   example_translation: It's nice here and moreover very quiet.
   cefr_level: A2
   frequency_rank: 23
+  tags: [Connectors]
 - type: word
   text: danach
   translation: afterwards / after that / then
@@ -989,6 +1127,7 @@ de:
   example_translation: We'll eat first and go to the cinema afterwards.
   cefr_level: A2
   frequency_rank: 24
+  tags: [Connectors]
 - type: word
   text: zuerst
   translation: first / at first / to begin with
@@ -996,6 +1135,7 @@ de:
   example_translation: At first I was surprised, but then I was relieved.
   cefr_level: A2
   frequency_rank: 25
+  tags: [Connectors]
 - type: word
   text: übrigens
   translation: by the way / incidentally
@@ -1003,6 +1143,7 @@ de:
   example_translation: By the way, have you already met the new colleagues?
   cefr_level: A2
   frequency_rank: 26
+  tags: [Connectors]
 - type: word
   text: jedoch
   translation: however / yet / but (formal)
@@ -1010,6 +1151,7 @@ de:
   example_translation: The offer was good; however, we declined it.
   cefr_level: A2
   frequency_rank: 27
+  tags: [Connectors]
 - type: collocation
   text: Es tut mir leid.
   translation: I'm sorry. / I'm sorry to hear that.
@@ -1017,6 +1159,7 @@ de:
   example_translation: I'm really sorry to hear that.
   cefr_level: A2
   frequency_rank: 28
+  tags: [Politeness]
 - type: collocation
   text: Ich hätte gern...
   translation: I would like... (polite request using Konjunktiv II)
@@ -1024,6 +1167,7 @@ de:
   example_translation: I would like a coffee and a piece of cake, please.
   cefr_level: A2
   frequency_rank: 29
+  tags: [Politeness]
 - type: collocation
   text: Auf jeden Fall
   translation: definitely / by all means / in any case
@@ -1031,6 +1175,7 @@ de:
   example_translation: I'll definitely come to the party on Saturday.
   cefr_level: A2
   frequency_rank: 30
+  tags: [Connectors]
 - type: collocation
   text: Im Moment
   translation: at the moment / right now / currently
@@ -1038,6 +1183,7 @@ de:
   example_translation: I'm very busy at the moment, unfortunately.
   cefr_level: A2
   frequency_rank: 31
+  tags: [Time]
 - type: collocation
   text: zum Beispiel
   translation: for example / for instance
@@ -1045,6 +1191,7 @@ de:
   example_translation: I like doing sport, for example swimming and cycling.
   cefr_level: A2
   frequency_rank: 32
+  tags: [Connectors]
 - type: collocation
   text: mit dem Zug fahren
   translation: to travel by train
@@ -1052,6 +1199,7 @@ de:
   example_translation: I prefer travelling by train rather than by car.
   cefr_level: A2
   frequency_rank: 33
+  tags: [Transportation]
 - type: collocation
   text: einen Termin machen
   translation: to make an appointment
@@ -1059,6 +1207,7 @@ de:
   example_translation: I would like to make an appointment with the dentist.
   cefr_level: A2
   frequency_rank: 34
+  tags: [Health]
 - type: collocation
   text: Keine Ahnung.
   translation: No idea. / I have no idea.
@@ -1066,6 +1215,7 @@ de:
   example_translation: No idea where I left my keys.
   cefr_level: A2
   frequency_rank: 35
+  tags: [Connectors]
 - type: collocation
   text: Wie lange dauert es?
   translation: How long does it take? / How long does it last?
@@ -1073,6 +1223,7 @@ de:
   example_translation: How long does the train journey to the airport take?
   cefr_level: A2
   frequency_rank: 36
+  tags: [Time]
 - type: collocation
   text: auf der einen Seite ... auf der anderen Seite
   translation: on the one hand ... on the other hand
@@ -1080,6 +1231,7 @@ de:
   example_translation: On the one hand it's expensive, on the other very practical.
   cefr_level: A2
   frequency_rank: 37
+  tags: [Connectors]
 - type: verb_form
   text: Ich habe gegessen
   translation: I ate / I have eaten (Perfekt with haben)
@@ -1087,6 +1239,7 @@ de:
   example_translation: I haven't eaten anything yet today.
   cefr_level: A2
   frequency_rank: 38
+  tags: [Food]
 - type: verb_form
   text: Ich bin gefahren
   translation: I drove / I have driven (Perfekt with sein)
@@ -1094,6 +1247,7 @@ de:
   example_translation: I went to Munich by train yesterday.
   cefr_level: A2
   frequency_rank: 39
+  tags: [Transportation]
 - type: verb_form
   text: Ich muss gehen
   translation: I have to go / I must go (müssen + infinitive)
@@ -1101,6 +1255,7 @@ de:
   example_translation: I'm sorry, but I really have to go now.
   cefr_level: A2
   frequency_rank: 40
+  tags: [Connectors]
 - type: verb_form
   text: Ich kann ein bisschen Deutsch sprechen
   translation: I can speak a little German (können + infinitive)
@@ -1108,6 +1263,7 @@ de:
   example_translation: I can speak a little German, but not very well yet.
   cefr_level: A2
   frequency_rank: 41
+  tags: [Communication]
 - type: verb_form
   text: Ich würde gern...
   translation: 'I would like to... (Konjunktiv II: polite wish or suggestion)'
@@ -1115,6 +1271,7 @@ de:
   example_translation: I would like to have more time to travel.
   cefr_level: A2
   frequency_rank: 42
+  tags: [Politeness]
 - type: verb_form
   text: Darf ich...?
   translation: May I...? / Am I allowed to...? (dürfen for permission)
@@ -1122,6 +1279,7 @@ de:
   example_translation: May I ask where the toilet is?
   cefr_level: A2
   frequency_rank: 43
+  tags: [Politeness]
 - type: verb_form
   text: Mach das Licht aus!
   translation: 'Turn the light off! (separable verb: ausmachen — imperative)'
@@ -1129,6 +1287,7 @@ de:
   example_translation: Please turn the light off when you leave the room.
   cefr_level: A2
   frequency_rank: 44
+  tags: [Home]
 - type: verb_form
   text: Ich war sehr müde
   translation: I was very tired (Präteritum of sein)
@@ -1136,6 +1295,7 @@ de:
   example_translation: Yesterday I was so tired that I fell asleep at nine o'clock.
   cefr_level: A2
   frequency_rank: 45
+  tags: [Emotions]
 - type: sentence_pattern
   text: Ich weiß nicht, ob ...
   translation: I don't know if / whether ... (indirect question — verb to end)
@@ -1143,6 +1303,7 @@ de:
   example_translation: I don't know whether he is still coming to the office today.
   cefr_level: A2
   frequency_rank: 46
+  tags: [Connectors]
 - type: sentence_pattern
   text: Je mehr ..., desto besser
   translation: The more ..., the better (comparative correlation)
@@ -1150,6 +1311,7 @@ de:
   example_translation: The more you practise, the better your German will become.
   cefr_level: A2
   frequency_rank: 47
+  tags: [Connectors]
 - type: sentence_pattern
   text: Nachdem ich ... hatte, ...
   translation: After I had ... (temporal clause with pluperfect — verb to end)
@@ -1157,6 +1319,7 @@ de:
   example_translation: After I had eaten, I went for a short walk.
   cefr_level: A2
   frequency_rank: 48
+  tags: [Connectors]
 - type: sentence_pattern
   text: Wären Sie so freundlich, ... zu + Infinitiv?
   translation: Would you be so kind as to ...? (very polite Konjunktiv II request)
@@ -1164,6 +1327,7 @@ de:
   example_translation: Would you be so kind as to fill in the form?
   cefr_level: A2
   frequency_rank: 49
+  tags: [Politeness]
 - type: sentence_pattern
   text: Statt ... zu + Infinitiv
   translation: Instead of ... (doing something) — infinitive clause with statt
@@ -1171,3 +1335,4 @@ de:
   example_translation: Instead of watching TV, I prefer to read a good book in the evenings.
   cefr_level: A2
   frequency_rank: 50
+  tags: [Connectors]

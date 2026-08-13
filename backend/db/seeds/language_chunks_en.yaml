@@ -8,6 +8,7 @@ en:
   example_translation: O plano era ambicioso, embora arriscado.
   cefr_level: C1
   frequency_rank: 1
+  tags: [Connectors]
 - type: word
   text: conjecture
   translation: opinion or conclusion based on incomplete information; speculation
@@ -15,6 +16,7 @@ en:
   example_translation: Nessa fase era pura especulação.
   cefr_level: C1
   frequency_rank: 2
+  tags: [Opinions]
 - type: word
   text: discern
   translation: to perceive or recognise (something subtle or not immediately obvious)
@@ -22,6 +24,7 @@ en:
   example_translation: Ela conseguia perceber uma pitada de sarcasmo no tom dele.
   cefr_level: C1
   frequency_rank: 3
+  tags: [Opinions]
 - type: word
   text: eloquent
   translation: fluent and persuasive in speech or writing
@@ -29,6 +32,7 @@ en:
   example_translation: Ele fez um discurso eloquente na cerimônia.
   cefr_level: C1
   frequency_rank: 4
+  tags: [Communication]
 - type: word
   text: feasible
   translation: possible and practical to achieve
@@ -36,6 +40,7 @@ en:
   example_translation: É viável terminar isso até sexta-feira?
   cefr_level: C1
   frequency_rank: 5
+  tags: [Work]
 - type: word
   text: hitherto
   translation: until now; until this point in time (formal)
@@ -43,6 +48,7 @@ en:
   example_translation: Era uma espécie de inseto até então desconhecida.
   cefr_level: C1
   frequency_rank: 6
+  tags: [Connectors]
 - type: word
   text: implausible
   translation: not seeming reasonable or probable
@@ -50,6 +56,7 @@ en:
   example_translation: O álibi parecia muito implausível para o detetive.
   cefr_level: C1
   frequency_rank: 7
+  tags: [Opinions]
 - type: word
   text: juxtapose
   translation: to place two things together in order to highlight their contrast
@@ -57,6 +64,7 @@ en:
   example_translation: A exposição coloca em contraste a arte tradicional e a moderna.
   cefr_level: C1
   frequency_rank: 8
+  tags: [Opinions]
 - type: word
   text: lucid
   translation: clear and easy to understand; mentally alert
@@ -64,6 +72,7 @@ en:
   example_translation: Apesar da idade, ele permanecia lúcido e articulado.
   cefr_level: C1
   frequency_rank: 9
+  tags: [Personality]
 - type: word
   text: mundane
   translation: lacking interest or excitement; ordinary
@@ -71,6 +80,7 @@ en:
   example_translation: Ela achava as tarefas mundanas da vida de escritório entediantes.
   cefr_level: C1
   frequency_rank: 10
+  tags: [Daily Routine]
 - type: word
   text: nuance
   translation: a subtle difference in meaning, expression, or sound
@@ -78,6 +88,7 @@ en:
   example_translation: O tradutor teve de capturar cada nuance do texto original.
   cefr_level: C1
   frequency_rank: 11
+  tags: [Communication]
 - type: word
   text: oblivious
   translation: not aware of or concerned about what is happening around one
@@ -85,6 +96,7 @@ en:
   example_translation: Ele era completamente alheio à tensão na sala.
   cefr_level: C1
   frequency_rank: 12
+  tags: [Emotions]
 - type: word
   text: paramount
   translation: more important than anything else; supreme
@@ -92,6 +104,7 @@ en:
   example_translation: A segurança é de suma importância num canteiro de obras.
   cefr_level: C1
   frequency_rank: 13
+  tags: [Opinions]
 - type: word
   text: reconcile
   translation: to make two opposing things consistent; to restore a friendly relationship
@@ -99,6 +112,7 @@ en:
   example_translation: Era difícil conciliar suas palavras com suas ações.
   cefr_level: C1
   frequency_rank: 14
+  tags: [Emotions]
 - type: word
   text: rhetoric
   translation: persuasive language; language that sounds impressive but lacks substance
@@ -106,6 +120,7 @@ en:
   example_translation: A retórica do político não conseguiu convencer os eleitores.
   cefr_level: C1
   frequency_rank: 15
+  tags: [Communication]
 - type: word
   text: scrutinize
   translation: to examine or inspect closely and thoroughly
@@ -113,6 +128,7 @@ en:
   example_translation: O comitê examinará cada detalhe da proposta minuciosamente.
   cefr_level: C1
   frequency_rank: 16
+  tags: [Opinions]
 - type: word
   text: tenacious
   translation: very determined; refusing to give up or let go
@@ -120,6 +136,7 @@ en:
   example_translation: Ela era uma negociadora tenaz que nunca recuava.
   cefr_level: C1
   frequency_rank: 17
+  tags: [Personality]
 - type: word
   text: undermine
   translation: to weaken or damage something gradually and secretly
@@ -127,6 +144,7 @@ en:
   example_translation: A crítica constante pode minar a confiança de uma pessoa.
   cefr_level: C1
   frequency_rank: 18
+  tags: [Opinions]
 - type: word
   text: viable
   translation: capable of working successfully; feasible
@@ -135,6 +153,7 @@ en:
     carros a gasolina.
   cefr_level: C1
   frequency_rank: 19
+  tags: [Work]
 - type: word
   text: wary
   translation: feeling cautious about possible dangers or problems
@@ -142,6 +161,7 @@ en:
   example_translation: Desconfie de qualquer pessoa que prometa resultados imediatos.
   cefr_level: C1
   frequency_rank: 20
+  tags: [Emotions]
 - type: word
   text: ambiguous
   translation: open to more than one interpretation; not having one obvious meaning
@@ -149,6 +169,7 @@ en:
   example_translation: O contrato continha várias cláusulas ambíguas.
   cefr_level: C1
   frequency_rank: 21
+  tags: [Communication]
 - type: word
   text: benevolent
   translation: well meaning and kindly; generous
@@ -157,6 +178,7 @@ en:
     de caridade.
   cefr_level: C1
   frequency_rank: 22
+  tags: [Personality]
 - type: word
   text: coherent
   translation: logical and consistent; easy to understand
@@ -164,6 +186,7 @@ en:
   example_translation: O argumento era coerente e bem sustentado por evidências.
   cefr_level: C1
   frequency_rank: 23
+  tags: [Communication]
 - type: word
   text: disparity
   translation: a great difference or inequality between things
@@ -171,6 +194,7 @@ en:
   example_translation: A disparidade de renda entre as duas regiões é marcante.
   cefr_level: C1
   frequency_rank: 24
+  tags: [Opinions]
 - type: word
   text: erode
   translation: to gradually reduce or destroy the strength or effect of something
@@ -179,6 +203,7 @@ en:
     ao longo do tempo.
   cefr_level: C1
   frequency_rank: 25
+  tags: [Opinions]
 - type: word
   text: forthcoming
   translation: about to happen or appear; willing to give information
@@ -186,6 +211,7 @@ en:
   example_translation: Ele não foi muito aberto sobre os detalhes do negócio.
   cefr_level: C1
   frequency_rank: 26
+  tags: [Personality]
 - type: word
   text: hypothetical
   translation: based on a hypothesis; supposed or imagined
@@ -193,6 +219,7 @@ en:
   example_translation: Vamos considerar um cenário hipotético em que o projeto fracassa.
   cefr_level: C1
   frequency_rank: 27
+  tags: [Opinions]
 - type: collocation
   text: draw a distinction
   translation: to make a clear difference between two things
@@ -200,6 +227,7 @@ en:
   example_translation: É importante fazer uma distinção entre fato e opinião.
   cefr_level: C1
   frequency_rank: 28
+  tags: [Opinions]
 - type: collocation
   text: come to terms with
   translation: to accept a difficult or unpleasant situation
@@ -207,6 +235,7 @@ en:
   example_translation: Levou anos para ele aceitar seu diagnóstico.
   cefr_level: C1
   frequency_rank: 29
+  tags: [Emotions]
 - type: collocation
   text: bear in mind
   translation: to remember and consider a fact when making a decision
@@ -214,6 +243,7 @@ en:
   example_translation: Tenha em mente que os preços podem mudar sem aviso prévio.
   cefr_level: C1
   frequency_rank: 30
+  tags: [Connectors]
 - type: collocation
   text: at the expense of
   translation: by sacrificing or causing harm to something else
@@ -221,6 +251,7 @@ en:
   example_translation: Ela perseguiu sua carreira à custa de sua vida pessoal.
   cefr_level: C1
   frequency_rank: 31
+  tags: [Connectors]
 - type: collocation
   text: shed light on
   translation: to help explain or clarify something
@@ -228,6 +259,7 @@ en:
   example_translation: Novas evidências esclareceram a causa do acidente.
   cefr_level: C1
   frequency_rank: 32
+  tags: [Communication]
 - type: collocation
   text: take precedence over
   translation: to be more important than something else; to come first
@@ -236,6 +268,7 @@ en:
     economia de custos.
   cefr_level: C1
   frequency_rank: 33
+  tags: [Work]
 - type: collocation
   text: give rise to
   translation: to cause or produce something, often a problem
@@ -243,6 +276,7 @@ en:
   example_translation: As mudanças de política deram origem a protestos generalizados.
   cefr_level: C1
   frequency_rank: 34
+  tags: [Connectors]
 - type: collocation
   text: fall short of
   translation: to fail to reach a required level or standard
@@ -250,6 +284,7 @@ en:
   example_translation: Os resultados ficaram aquém das expectativas.
   cefr_level: C1
   frequency_rank: 35
+  tags: [Opinions]
 - type: collocation
   text: in the wake of
   translation: after and as a result of a significant event
@@ -257,6 +292,7 @@ en:
   example_translation: Na esteira do escândalo, vários funcionários renunciaram.
   cefr_level: C1
   frequency_rank: 36
+  tags: [Connectors]
 - type: collocation
   text: run counter to
   translation: to contradict or be opposed to something
@@ -264,6 +300,7 @@ en:
   example_translation: Esta decisão vai contra tudo aquilo em que acreditamos.
   cefr_level: C1
   frequency_rank: 37
+  tags: [Opinions]
 - type: verb_form
   text: should have done
   translation: used to express regret or criticism about a past action
@@ -271,6 +308,7 @@ en:
   example_translation: Eu deveria ter verificado o contrato com mais cuidado.
   cefr_level: C1
   frequency_rank: 38
+  tags: [Grammar]
 - type: verb_form
   text: be bound to
   translation: to be certain or inevitable
@@ -278,6 +316,7 @@ en:
   example_translation: É inevitável que haja alguns problemas iniciais no começo.
   cefr_level: C1
   frequency_rank: 39
+  tags: [Grammar]
 - type: verb_form
   text: be prone to
   translation: to have a tendency towards something, usually negative
@@ -285,6 +324,7 @@ en:
   example_translation: Ela tende a exagerar quando está nervosa.
   cefr_level: C1
   frequency_rank: 40
+  tags: [Grammar]
 - type: verb_form
   text: be said to
   translation: reportedly; it is claimed or believed that
@@ -292,6 +332,7 @@ en:
   example_translation: Diz-se que o novo tratamento não tem efeitos colaterais graves.
   cefr_level: C1
   frequency_rank: 41
+  tags: [Grammar]
 - type: verb_form
   text: tend to
   translation: to have a regular habit or inclination
@@ -299,6 +340,7 @@ en:
   example_translation: Os introvertidos tendem a preferir trabalhar sozinhos.
   cefr_level: C1
   frequency_rank: 42
+  tags: [Grammar]
 - type: verb_form
   text: be worth doing
   translation: to deserve the time and effort required
@@ -307,6 +349,7 @@ en:
     coisa.
   cefr_level: C1
   frequency_rank: 43
+  tags: [Grammar]
 - type: verb_form
   text: let alone
   translation: used to emphasise that something more extreme is even less likely
@@ -314,6 +357,7 @@ en:
   example_translation: Ele não pode pagar por férias, muito menos por um carro novo.
   cefr_level: C1
   frequency_rank: 44
+  tags: [Connectors]
 - type: sentence_pattern
   text: Not only ... but also ...
   translation: double emphasis structure; used to add a stronger or surprising second
@@ -323,6 +367,7 @@ en:
     novo recorde.
   cefr_level: C1
   frequency_rank: 45
+  tags: [Grammar]
 - type: sentence_pattern
   text: No sooner had ... than ...
   translation: immediately after; used to show two events in very quick succession
@@ -330,6 +375,7 @@ en:
   example_translation: Mal me sentei e o telefone tocou.
   cefr_level: C1
   frequency_rank: 46
+  tags: [Grammar]
 - type: sentence_pattern
   text: Were it not for ...
   translation: formal conditional without 'if'; if it were not for
@@ -337,6 +383,7 @@ en:
   example_translation: Se não fosse pela sua ajuda, eu teria reprovado no exame.
   cefr_level: C1
   frequency_rank: 47
+  tags: [Grammar]
 - type: sentence_pattern
   text: It is worth noting that ...
   translation: used to draw attention to an important point (formal/academic)
@@ -344,6 +391,7 @@ en:
   example_translation: Vale notar que esses números são estimativas preliminares.
   cefr_level: C1
   frequency_rank: 48
+  tags: [Grammar]
 - type: sentence_pattern
   text: Having said that, ...
   translation: used to introduce a contrasting point after what was just stated
@@ -351,6 +399,7 @@ en:
   example_translation: O filme era longo; dito isso, cada cena tinha um propósito.
   cefr_level: C1
   frequency_rank: 49
+  tags: [Grammar]
 - type: sentence_pattern
   text: The extent to which ...
   translation: used to express degree or how much something applies (formal/academic)
@@ -358,6 +407,7 @@ en:
   example_translation: Em que medida esta política nos afeta ainda está por ser visto.
   cefr_level: C1
   frequency_rank: 50
+  tags: [Grammar]
 - type: word
   text: aspect
   translation: a particular part or feature of a situation, problem, or subject
@@ -365,6 +415,7 @@ en:
   example_translation: Há vários aspectos do trabalho que eu realmente gosto.
   cefr_level: B2
   frequency_rank: 51
+  tags: [Opinions]
 - type: word
   text: assess
   translation: to judge or decide the amount, value, quality, or importance of something
@@ -372,6 +423,7 @@ en:
   example_translation: O professor avaliou o progresso dos alunos no final do trimestre.
   cefr_level: B2
   frequency_rank: 52
+  tags: [Education]
 - type: word
   text: assume
   translation: to think that something is true without having proof
@@ -379,6 +431,7 @@ en:
   example_translation: Não presuma que todos concordam com você.
   cefr_level: B2
   frequency_rank: 53
+  tags: [Opinions]
 - type: word
   text: attain
   translation: to succeed in achieving something, usually after a lot of effort
@@ -386,6 +439,7 @@ en:
   example_translation: Foram anos de trabalho árduo para ela atingir seus objetivos.
   cefr_level: B2
   frequency_rank: 54
+  tags: [Work]
 - type: word
   text: beneficial
   translation: producing good or helpful results or effects
@@ -393,6 +447,7 @@ en:
   example_translation: O exercício regular é benéfico para a sua saúde.
   cefr_level: B2
   frequency_rank: 55
+  tags: [Opinions]
 - type: word
   text: bias
   translation: a strong feeling in favour of or against one group of people, or one
@@ -401,6 +456,7 @@ en:
   example_translation: O juiz foi acusado de parcialidade em sua decisão.
   cefr_level: B2
   frequency_rank: 56
+  tags: [Opinions]
 - type: word
   text: boost
   translation: to increase or improve something
@@ -409,6 +465,7 @@ en:
     vendas.
   cefr_level: B2
   frequency_rank: 57
+  tags: [Work]
 - type: word
   text: breakthrough
   translation: an important discovery or event that helps improve a situation or solve
@@ -418,6 +475,7 @@ en:
     câncer.
   cefr_level: B2
   frequency_rank: 58
+  tags: [Health]
 - type: word
   text: capacity
   translation: the amount that something can produce, hold, or deal with
@@ -425,6 +483,7 @@ en:
   example_translation: O estádio tem capacidade para cinquenta mil lugares sentados.
   cefr_level: B2
   frequency_rank: 59
+  tags: [Sports]
 - type: word
   text: commence
   translation: to begin
@@ -432,6 +491,7 @@ en:
   example_translation: A reunião vai começar às nove horas em ponto.
   cefr_level: B2
   frequency_rank: 60
+  tags: [Work]
 - type: word
   text: compelling
   translation: very interesting, making you feel you must give it your attention
@@ -439,6 +499,7 @@ en:
   example_translation: Ela apresentou um argumento convincente para mudar a política.
   cefr_level: B2
   frequency_rank: 61
+  tags: [Opinions]
 - type: word
   text: comprehensive
   translation: complete and including everything that is necessary
@@ -446,6 +507,7 @@ en:
   example_translation: O relatório oferece uma visão abrangente das finanças da empresa.
   cefr_level: B2
   frequency_rank: 62
+  tags: [Money]
 - type: word
   text: consensus
   translation: a generally accepted opinion or decision among a group of people
@@ -453,6 +515,7 @@ en:
   example_translation: O comitê finalmente chegou a um consenso sobre as novas regras.
   cefr_level: B2
   frequency_rank: 63
+  tags: [Opinions]
 - type: word
   text: consequence
   translation: a result of a particular action or situation
@@ -461,6 +524,7 @@ en:
     empresa.
   cefr_level: B2
   frequency_rank: 64
+  tags: [Connectors]
 - type: word
   text: considerable
   translation: fairly large in amount or size
@@ -468,6 +532,7 @@ en:
   example_translation: O projeto exigiu uma quantidade considerável de tempo e dinheiro.
   cefr_level: B2
   frequency_rank: 65
+  tags: [Connectors]
 - type: word
   text: constraint
   translation: something that limits or restricts something else
@@ -475,6 +540,7 @@ en:
   example_translation: As restrições orçamentárias forçaram a equipe a adiar a viagem.
   cefr_level: B2
   frequency_rank: 66
+  tags: [Money]
 - type: word
   text: contradict
   translation: to say something that is the opposite of what someone else has said
@@ -482,6 +548,7 @@ en:
   example_translation: A afirmação dele pareceu contradizer o que ele tinha dito antes.
   cefr_level: B2
   frequency_rank: 67
+  tags: [Opinions]
 - type: word
   text: controversial
   translation: causing a lot of disagreement or discussion
@@ -489,6 +556,7 @@ en:
   example_translation: A nova lei se mostrou altamente controversa.
   cefr_level: B2
   frequency_rank: 68
+  tags: [Opinions]
 - type: word
   text: convey
   translation: to communicate an idea or feeling without saying it directly
@@ -496,6 +564,7 @@ en:
   example_translation: A música transmitia um profundo sentimento de tristeza.
   cefr_level: B2
   frequency_rank: 69
+  tags: [Communication]
 - type: word
   text: credible
   translation: able to be believed or trusted
@@ -503,6 +572,7 @@ en:
   example_translation: A testemunha deu um relato confiável do acidente.
   cefr_level: B2
   frequency_rank: 70
+  tags: [Opinions]
 - type: word
   text: crucial
   translation: extremely important, because it will affect other things
@@ -510,6 +580,7 @@ en:
   example_translation: Dormir bem à noite é crucial para a sua saúde.
   cefr_level: B2
   frequency_rank: 71
+  tags: [Health]
 - type: word
   text: cumulative
   translation: increasing steadily in amount or effect as more is added
@@ -517,6 +588,7 @@ en:
   example_translation: O efeito cumulativo de pequenas mudanças pode ser enorme.
   cefr_level: B2
   frequency_rank: 72
+  tags: [Connectors]
 - type: word
   text: demonstrate
   translation: to show clearly that something exists or is true
@@ -524,6 +596,7 @@ en:
   example_translation: O estudo demonstra uma ligação clara entre dieta e saúde.
   cefr_level: B2
   frequency_rank: 73
+  tags: [Education]
 - type: word
   text: deteriorate
   translation: to become worse
@@ -531,6 +604,7 @@ en:
   example_translation: A saúde dela começou a piorar rapidamente no inverno passado.
   cefr_level: B2
   frequency_rank: 74
+  tags: [Health]
 - type: word
   text: diminish
   translation: to reduce or be reduced in size or importance
@@ -538,6 +612,7 @@ en:
   example_translation: A influência dele dentro da empresa diminuiu com o tempo.
   cefr_level: B2
   frequency_rank: 75
+  tags: [Opinions]
 - type: word
   text: discrepancy
   translation: a difference between two things that should be the same
@@ -545,6 +620,7 @@ en:
   example_translation: Há uma discrepância entre os dois conjuntos de números.
   cefr_level: B2
   frequency_rank: 76
+  tags: [Opinions]
 - type: word
   text: distinct
   translation: clearly different or of a different kind
@@ -552,6 +628,7 @@ en:
   example_translation: As duas propostas são bem distintas uma da outra.
   cefr_level: B2
   frequency_rank: 77
+  tags: [Connectors]
 - type: word
   text: diverse
   translation: very different from each other and of various kinds
@@ -559,6 +636,7 @@ en:
   example_translation: A cidade tem uma população diversa vinda de todo o mundo.
   cefr_level: B2
   frequency_rank: 78
+  tags: [City]
 - type: word
   text: dominant
   translation: more important, powerful, or noticeable than other things
@@ -566,6 +644,7 @@ en:
   example_translation: O inglês é a língua dominante nos negócios internacionais.
   cefr_level: B2
   frequency_rank: 79
+  tags: [Communication]
 - type: word
   text: drawback
   translation: a disadvantage or the negative side of something
@@ -573,6 +652,7 @@ en:
   example_translation: A principal desvantagem do plano é o seu alto custo.
   cefr_level: B2
   frequency_rank: 80
+  tags: [Opinions]
 - type: word
   text: durable
   translation: able to last a long time without breaking or getting weaker
@@ -580,6 +660,7 @@ en:
   example_translation: Estas botas são baratas, mas muito duráveis.
   cefr_level: B2
   frequency_rank: 81
+  tags: [Shopping]
 - type: word
   text: eligible
   translation: having the right to do or receive something
@@ -587,6 +668,7 @@ en:
   example_translation: Você deve ter mais de dezoito anos para ter direito a votar.
   cefr_level: B2
   frequency_rank: 82
+  tags: [Work]
 - type: word
   text: embrace
   translation: to accept an idea, opinion, or way of life willingly
@@ -594,6 +676,7 @@ en:
   example_translation: A empresa foi rápida em adotar a nova tecnologia.
   cefr_level: B2
   frequency_rank: 83
+  tags: [Technology]
 - type: word
   text: emerge
   translation: to appear or come out from somewhere
@@ -601,6 +684,7 @@ en:
   example_translation: Novas evidências surgiram que poderiam mudar o caso.
   cefr_level: B2
   frequency_rank: 84
+  tags: [Connectors]
 - type: word
   text: emphasis
   translation: special importance given to something
@@ -608,6 +692,7 @@ en:
   example_translation: O curso dá muita ênfase às habilidades práticas.
   cefr_level: B2
   frequency_rank: 85
+  tags: [Communication]
 - type: word
   text: enhance
   translation: to improve the quality or value of something
@@ -615,6 +700,7 @@ en:
   example_translation: O novo software vai melhorar a experiência do usuário.
   cefr_level: B2
   frequency_rank: 86
+  tags: [Technology]
 - type: word
   text: enormous
   translation: extremely large
@@ -622,6 +708,7 @@ en:
   example_translation: A empresa investiu uma quantia enorme de dinheiro em pesquisa.
   cefr_level: B2
   frequency_rank: 87
+  tags: [Connectors]
 - type: word
   text: equivalent
   translation: equal in value, amount, meaning, or importance
@@ -629,6 +716,7 @@ en:
   example_translation: Um euro equivale a aproximadamente seis reais.
   cefr_level: B2
   frequency_rank: 88
+  tags: [Money]
 - type: word
   text: estimate
   translation: to guess the cost, size, or value of something
@@ -636,6 +724,7 @@ en:
   example_translation: Especialistas estimam que os reparos vão custar milhares.
   cefr_level: B2
   frequency_rank: 89
+  tags: [Money]
 - type: word
   text: evaluate
   translation: to judge the value or condition of something carefully
@@ -643,6 +732,7 @@ en:
   example_translation: Os professores avaliam regularmente o desempenho dos alunos.
   cefr_level: B2
   frequency_rank: 90
+  tags: [Education]
 - type: word
   text: eventual
   translation: happening at the end of a process or period of time
@@ -650,6 +740,7 @@ en:
   example_translation: O trabalho árduo deles levou ao sucesso final.
   cefr_level: B2
   frequency_rank: 91
+  tags: [Connectors]
 - type: word
   text: evident
   translation: easily seen or understood; obvious
@@ -657,6 +748,7 @@ en:
   example_translation: Era evidente pelo rosto dela que ela estava chateada.
   cefr_level: B2
   frequency_rank: 92
+  tags: [Opinions]
 - type: word
   text: exert
   translation: to use influence, power, or a personal quality to affect someone or
@@ -665,6 +757,7 @@ en:
   example_translation: Os pais exercem uma forte influência sobre os valores dos filhos.
   cefr_level: B2
   frequency_rank: 93
+  tags: [Family]
 - type: word
   text: exploit
   translation: to use something in a way that helps you, sometimes unfairly
@@ -672,6 +765,7 @@ en:
   example_translation: A empresa explorou uma lacuna no mercado.
   cefr_level: B2
   frequency_rank: 94
+  tags: [Money]
 - type: word
   text: extensive
   translation: covering a large area, or having a great range
@@ -679,6 +773,7 @@ en:
   example_translation: O furacão causou danos extensos ao litoral.
   cefr_level: B2
   frequency_rank: 95
+  tags: [Connectors]
 - type: word
   text: facilitate
   translation: to make an action or process possible or easier
@@ -686,6 +781,7 @@ en:
   example_translation: A nova ponte vai facilitar as viagens entre as duas cidades.
   cefr_level: B2
   frequency_rank: 96
+  tags: [Work]
 - type: word
   text: fluctuate
   translation: to change often in level or amount
@@ -693,6 +789,7 @@ en:
   example_translation: Os preços tendem a flutuar dependendo da estação.
   cefr_level: B2
   frequency_rank: 97
+  tags: [Money]
 - type: word
   text: fundamental
   translation: forming the basis or core of something; very important
@@ -700,6 +797,7 @@ en:
   example_translation: A confiança é fundamental para qualquer bom relacionamento.
   cefr_level: B2
   frequency_rank: 98
+  tags: [Opinions]
 - type: word
   text: gradual
   translation: happening slowly over a long period of time
@@ -707,6 +805,7 @@ en:
   example_translation: Houve um aumento gradual das temperaturas em todo o mundo.
   cefr_level: B2
   frequency_rank: 99
+  tags: [Connectors]
 - type: word
   text: hinder
   translation: to make it difficult for someone to do something
@@ -714,6 +813,7 @@ en:
   example_translation: O mau tempo dificultou a operação de resgate.
   cefr_level: B2
   frequency_rank: 100
+  tags: [Emergency]
 - type: word
   text: illustrate
   translation: to make the meaning of something clearer by using examples
@@ -721,6 +821,7 @@ en:
   example_translation: Deixe-me ilustrar esse ponto com um exemplo simples.
   cefr_level: B2
   frequency_rank: 101
+  tags: [Education]
 - type: word
   text: imply
   translation: to suggest that something is true without saying it directly
@@ -728,6 +829,7 @@ en:
   example_translation: O tom dela parecia sugerir que ela discordava.
   cefr_level: B2
   frequency_rank: 102
+  tags: [Communication]
 - type: word
   text: incentive
   translation: something that encourages a person to do something
@@ -735,6 +837,7 @@ en:
   example_translation: A empresa oferece incentivos financeiros aos melhores funcionários.
   cefr_level: B2
   frequency_rank: 103
+  tags: [Money]
 - type: word
   text: incorporate
   translation: to include something as part of a group, system, or plan
@@ -742,6 +845,7 @@ en:
   example_translation: O novo design incorpora vários recursos de segurança.
   cefr_level: B2
   frequency_rank: 104
+  tags: [Work]
 - type: word
   text: inevitable
   translation: certain to happen and unable to be avoided
@@ -750,6 +854,7 @@ en:
     crescimento.
   cefr_level: B2
   frequency_rank: 105
+  tags: [Opinions]
 - type: word
   text: infer
   translation: to form an opinion that something is true based on information you
@@ -758,6 +863,7 @@ en:
   example_translation: Pelo silêncio dela, inferimos que ela estava chateada.
   cefr_level: B2
   frequency_rank: 106
+  tags: [Opinions]
 - type: word
   text: inherent
   translation: existing as a natural or basic part of something
@@ -765,6 +871,7 @@ en:
   example_translation: Há riscos inerentes a qualquer investimento.
   cefr_level: B2
   frequency_rank: 107
+  tags: [Opinions]
 - type: word
   text: initiate
   translation: to cause something to begin
@@ -772,6 +879,7 @@ en:
   example_translation: O governo iniciou uma série de reformas econômicas.
   cefr_level: B2
   frequency_rank: 108
+  tags: [Work]
 - type: word
   text: innovative
   translation: introducing new ideas or methods
@@ -779,6 +887,7 @@ en:
   example_translation: A startup é conhecida por sua abordagem inovadora ao design.
   cefr_level: B2
   frequency_rank: 109
+  tags: [Technology]
 - type: word
   text: insight
   translation: a clear understanding of a complicated problem
@@ -787,6 +896,7 @@ en:
     humano.
   cefr_level: B2
   frequency_rank: 110
+  tags: [Opinions]
 - type: word
   text: integral
   translation: being an essential part of something
@@ -794,6 +904,7 @@ en:
   example_translation: O trabalho em equipe é essencial para o sucesso do projeto.
   cefr_level: B2
   frequency_rank: 111
+  tags: [Work]
 - type: word
   text: intense
   translation: very great or extreme in strength or degree
@@ -801,6 +912,7 @@ en:
   example_translation: Havia uma competição intensa pela vaga.
   cefr_level: B2
   frequency_rank: 112
+  tags: [Emotions]
 - type: word
   text: justify
   translation: to give an acceptable explanation for something
@@ -808,6 +920,7 @@ en:
   example_translation: Como você pode justificar gastar tanto dinheiro em um carro?
   cefr_level: B2
   frequency_rank: 113
+  tags: [Opinions]
 - type: word
   text: legitimate
   translation: allowed by law or acceptable according to the rules
@@ -815,6 +928,7 @@ en:
   example_translation: Ela tem um motivo legítimo para faltar à reunião.
   cefr_level: B2
   frequency_rank: 114
+  tags: [Opinions]
 - type: word
   text: leverage
   translation: to use something you already have in order to achieve something new
@@ -823,6 +937,7 @@ en:
     mercados.
   cefr_level: B2
   frequency_rank: 115
+  tags: [Work]
 - type: word
   text: likelihood
   translation: the chance of something happening
@@ -831,6 +946,7 @@ en:
     ano.
   cefr_level: B2
   frequency_rank: 116
+  tags: [Opinions]
 - type: collocation
   text: take into account
   translation: to consider particular facts or circumstances when deciding or dealing
@@ -839,6 +955,7 @@ en:
   example_translation: Você precisa levar em conta os custos extras antes de decidir.
   cefr_level: B2
   frequency_rank: 117
+  tags: [Connectors]
 - type: collocation
   text: come up with
   translation: to think of an idea or plan
@@ -846,6 +963,7 @@ en:
   example_translation: Ela apresentou uma solução brilhante para o problema.
   cefr_level: B2
   frequency_rank: 118
+  tags: [Work]
 - type: collocation
   text: get in touch with
   translation: to contact someone, for example by phone or email
@@ -853,6 +971,7 @@ en:
   example_translation: Vou entrar em contato com você assim que tiver novidades.
   cefr_level: B2
   frequency_rank: 119
+  tags: [Communication]
 - type: collocation
   text: keep track of
   translation: to stay informed about something, or continue to be aware of a changing
@@ -861,6 +980,7 @@ en:
   example_translation: É difícil manter o controle de todas essas senhas.
   cefr_level: B2
   frequency_rank: 120
+  tags: [Technology]
 - type: collocation
   text: make the most of
   translation: to use an opportunity or situation to get the greatest possible benefit
@@ -869,6 +989,7 @@ en:
   example_translation: Devemos aproveitar ao máximo o bom tempo enquanto ele durar.
   cefr_level: B2
   frequency_rank: 121
+  tags: [Connectors]
 - type: collocation
   text: put up with
   translation: to accept something unpleasant or annoying without complaining
@@ -876,6 +997,7 @@ en:
   example_translation: Não sei como ela aguenta todo aquele barulho.
   cefr_level: B2
   frequency_rank: 122
+  tags: [Emotions]
 - type: collocation
   text: rely on
   translation: to need a particular thing or the help of someone in order to survive
@@ -884,6 +1006,7 @@ en:
   example_translation: As pequenas empresas frequentemente dependem de clientes locais.
   cefr_level: B2
   frequency_rank: 123
+  tags: [Connectors]
 - type: collocation
   text: account for
   translation: to explain the cause of something
@@ -891,6 +1014,7 @@ en:
   example_translation: Como você explica a queda repentina nas vendas?
   cefr_level: B2
   frequency_rank: 124
+  tags: [Connectors]
 - type: collocation
   text: deal with
   translation: to take action in order to achieve something or solve a problem
@@ -898,6 +1022,7 @@ en:
   example_translation: O gerente teve que lidar com várias reclamações naquele dia.
   cefr_level: B2
   frequency_rank: 125
+  tags: [Work]
 - type: collocation
   text: focus on
   translation: to give most of your attention to one particular person or thing
@@ -905,6 +1030,7 @@ en:
   example_translation: Vamos nos concentrar nas tarefas mais urgentes primeiro.
   cefr_level: B2
   frequency_rank: 126
+  tags: [Work]
 - type: collocation
   text: contribute to
   translation: to be one of the causes of something, or to help make something happen
@@ -913,6 +1039,7 @@ en:
     de saúde.
   cefr_level: B2
   frequency_rank: 127
+  tags: [Connectors]
 - type: collocation
   text: result in
   translation: to make something happen
@@ -920,6 +1047,7 @@ en:
   example_translation: A greve resultou em atrasos significativos para os passageiros.
   cefr_level: B2
   frequency_rank: 128
+  tags: [Connectors]
 - type: collocation
   text: lead to
   translation: to result in something, especially something bad
@@ -927,6 +1055,7 @@ en:
   example_translation: O estresse pode levar a sérios problemas de saúde se for ignorado.
   cefr_level: B2
   frequency_rank: 129
+  tags: [Connectors]
 - type: collocation
   text: consist of
   translation: to be formed or made up from two or more things
@@ -934,6 +1063,7 @@ en:
   example_translation: O comitê é composto por dez membros eleitos.
   cefr_level: B2
   frequency_rank: 130
+  tags: [Connectors]
 - type: collocation
   text: cope with
   translation: to deal successfully with a difficult situation
@@ -941,6 +1071,7 @@ en:
   example_translation: Não foi fácil lidar com a carga extra de trabalho.
   cefr_level: B2
   frequency_rank: 131
+  tags: [Emotions]
 - type: collocation
   text: carry out
   translation: to do a particular piece of work or task
@@ -948,6 +1079,7 @@ en:
   example_translation: A equipe realizou uma extensa pesquisa antes de lançar o produto.
   cefr_level: B2
   frequency_rank: 132
+  tags: [Work]
 - type: collocation
   text: bring about
   translation: to make something happen
@@ -955,6 +1087,7 @@ en:
   example_translation: A nova lei trouxe mudanças significativas para a indústria.
   cefr_level: B2
   frequency_rank: 133
+  tags: [Connectors]
 - type: collocation
   text: set out to
   translation: to begin doing something with a particular purpose or goal in mind
@@ -962,6 +1095,7 @@ en:
   example_translation: Ela se propôs a provar que a teoria estava errada.
   cefr_level: B2
   frequency_rank: 134
+  tags: [Education]
 - type: collocation
   text: point out
   translation: to tell someone about a fact or piece of information that they had
@@ -970,6 +1104,7 @@ en:
   example_translation: Ele apontou alguns erros no relatório.
   cefr_level: B2
   frequency_rank: 135
+  tags: [Communication]
 - type: collocation
   text: rule out
   translation: to say that something is not possible or will not happen
@@ -977,6 +1112,7 @@ en:
   example_translation: Os médicos não descartaram a cirurgia como uma opção.
   cefr_level: B2
   frequency_rank: 136
+  tags: [Opinions]
 - type: collocation
   text: break down
   translation: to divide something into smaller parts to make it easier to understand
@@ -984,6 +1120,7 @@ en:
   example_translation: Vamos dividir o projeto em tarefas menores.
   cefr_level: B2
   frequency_rank: 137
+  tags: [Work]
 - type: collocation
   text: figure out
   translation: to think about a problem until you find an answer or understand something
@@ -991,6 +1128,7 @@ en:
   example_translation: Finalmente descobri como consertar a impressora.
   cefr_level: B2
   frequency_rank: 138
+  tags: [Technology]
 - type: collocation
   text: catch up on
   translation: to spend time doing something you have not had time to do
@@ -998,6 +1136,7 @@ en:
   example_translation: Preciso colocar o sono em dia neste fim de semana.
   cefr_level: B2
   frequency_rank: 139
+  tags: [Daily Routine]
 - type: collocation
   text: weigh up
   translation: to consider carefully the facts about a situation, especially advantages
@@ -1006,6 +1145,7 @@ en:
   example_translation: Você deve ponderar os prós e contras antes de decidir.
   cefr_level: B2
   frequency_rank: 140
+  tags: [Opinions]
 - type: verb_form
   text: used to
   translation: describes a habit or state that existed in the past but no longer exists
@@ -1013,6 +1153,7 @@ en:
   example_translation: Eu costumava tocar piano quando era criança.
   cefr_level: B2
   frequency_rank: 141
+  tags: [Grammar]
 - type: verb_form
   text: would rather
   translation: used to say what someone prefers to do
@@ -1020,6 +1161,7 @@ en:
   example_translation: Eu prefiro ficar em casa hoje à noite do que sair.
   cefr_level: B2
   frequency_rank: 142
+  tags: [Grammar]
 - type: verb_form
   text: be able to
   translation: to have the skill, opportunity, strength, or power to do something
@@ -1027,6 +1169,7 @@ en:
   example_translation: Ela conseguiu terminar a maratona apesar da lesão.
   cefr_level: B2
   frequency_rank: 143
+  tags: [Grammar]
 - type: verb_form
   text: have got to
   translation: used to say that something is necessary (informal)
@@ -1034,6 +1177,7 @@ en:
   example_translation: Eu tenho que ir agora ou vou perder o trem.
   cefr_level: B2
   frequency_rank: 144
+  tags: [Grammar]
 - type: verb_form
   text: be supposed to
   translation: used to say what is expected or required
@@ -1041,6 +1185,7 @@ en:
   example_translation: Você deve entregar o relatório até sexta-feira.
   cefr_level: B2
   frequency_rank: 145
+  tags: [Grammar]
 - type: verb_form
   text: be about to
   translation: used to say that something will happen very soon
@@ -1048,6 +1193,7 @@ en:
   example_translation: O filme está prestes a começar, então se apresse.
   cefr_level: B2
   frequency_rank: 146
+  tags: [Grammar]
 - type: verb_form
   text: be likely to
   translation: used to say that something will probably happen
@@ -1055,6 +1201,7 @@ en:
   example_translation: É provável que os preços subam novamente no mês que vem.
   cefr_level: B2
   frequency_rank: 147
+  tags: [Grammar]
 - type: verb_form
   text: manage to
   translation: to succeed in doing something difficult
@@ -1062,6 +1209,7 @@ en:
   example_translation: De alguma forma, eles conseguiram terminar o projeto a tempo.
   cefr_level: B2
   frequency_rank: 148
+  tags: [Grammar]
 - type: verb_form
   text: fail to
   translation: to not succeed in doing something, or to not do it
@@ -1069,6 +1217,7 @@ en:
   example_translation: Ele deixou de mencionar que o voo tinha sido cancelado.
   cefr_level: B2
   frequency_rank: 149
+  tags: [Grammar]
 - type: verb_form
   text: end up
   translation: to finally be in a particular place or situation, often without intending
@@ -1077,6 +1226,7 @@ en:
   example_translation: Se você continuar gastando assim, vai acabar ficando sem dinheiro.
   cefr_level: B2
   frequency_rank: 150
+  tags: [Grammar]
 - type: verb_form
   text: get used to
   translation: to become familiar with something so that it no longer seems strange
@@ -1084,6 +1234,7 @@ en:
   example_translation: Levou um tempo para se acostumar a viver em uma cidade grande.
   cefr_level: B2
   frequency_rank: 151
+  tags: [Grammar]
 - type: verb_form
   text: look forward to
   translation: to feel pleased and excited about something that is going to happen
@@ -1091,6 +1242,7 @@ en:
   example_translation: Estou realmente ansioso para te ver de novo.
   cefr_level: B2
   frequency_rank: 152
+  tags: [Emotions]
 - type: verb_form
   text: can't help
   translation: to be unable to stop yourself doing something
@@ -1098,6 +1250,7 @@ en:
   example_translation: Não consegui evitar rir quando ele tropeçou.
   cefr_level: B2
   frequency_rank: 153
+  tags: [Emotions]
 - type: verb_form
   text: would prefer
   translation: used to express what someone likes better than something else
@@ -1105,6 +1258,7 @@ en:
   example_translation: Eu prefereria pagar com cartão, se for possível.
   cefr_level: B2
   frequency_rank: 154
+  tags: [Grammar]
 - type: verb_form
   text: be allowed to
   translation: to have permission to do something
@@ -1112,6 +1266,7 @@ en:
   example_translation: Temos permissão para levar nossa própria comida para o evento?
   cefr_level: B2
   frequency_rank: 155
+  tags: [Grammar]
 - type: verb_form
   text: need not have
   translation: used to say that something was done but was not necessary
@@ -1119,6 +1274,7 @@ en:
   example_translation: Você não precisava ter trazido um guarda-chuva; não choveu.
   cefr_level: B2
   frequency_rank: 156
+  tags: [Grammar]
 - type: verb_form
   text: it's high time
   translation: used to say that something should happen or be done now, often because
@@ -1127,6 +1283,7 @@ en:
   example_translation: Já é hora de você pedir desculpas a ela.
   cefr_level: B2
   frequency_rank: 157
+  tags: [Grammar]
 - type: verb_form
   text: be due to
   translation: scheduled or expected to happen or arrive at a particular time
@@ -1134,6 +1291,7 @@ en:
   example_translation: O trem está previsto para chegar às seis horas.
   cefr_level: B2
   frequency_rank: 158
+  tags: [Grammar]
 - type: sentence_pattern
   text: If I were you, I would ...
   translation: used to give advice
@@ -1141,6 +1299,7 @@ en:
   example_translation: Se eu fosse você, aceitaria a oferta.
   cefr_level: B2
   frequency_rank: 159
+  tags: [Grammar]
 - type: sentence_pattern
   text: The more ..., the more ...
   translation: used to show that two things increase or change together
@@ -1148,6 +1307,7 @@ en:
   example_translation: Quanto mais você pratica, mais confiante você fica.
   cefr_level: B2
   frequency_rank: 160
+  tags: [Grammar]
 - type: sentence_pattern
   text: I wish I had ...
   translation: used to express regret about something in the past
@@ -1155,6 +1315,7 @@ en:
   example_translation: Eu gostaria de ter estudado mais para a prova.
   cefr_level: B2
   frequency_rank: 161
+  tags: [Grammar]
 - type: sentence_pattern
   text: Despite ..., ...
   translation: used to show a contrast; introduces a noun or gerund even though something
@@ -1163,6 +1324,7 @@ en:
   example_translation: Apesar de se sentir cansada, ela terminou a corrida.
   cefr_level: B2
   frequency_rank: 162
+  tags: [Grammar]
 - type: sentence_pattern
   text: Even though ...
   translation: used to introduce a contrasting clause with a full verb
@@ -1170,6 +1332,7 @@ en:
   example_translation: Embora estivesse chovendo, saímos para caminhar.
   cefr_level: B2
   frequency_rank: 163
+  tags: [Grammar]
 - type: sentence_pattern
   text: As long as ...
   translation: used to say that something is true only if a condition is met
@@ -1177,6 +1340,7 @@ en:
   example_translation: Você pode ficar fora até tarde, desde que me ligue primeiro.
   cefr_level: B2
   frequency_rank: 164
+  tags: [Grammar]
 - type: sentence_pattern
   text: Unless ...
   translation: used to say that something will happen or be true only if something
@@ -1185,6 +1349,7 @@ en:
   example_translation: Vamos nos atrasar a menos que saiamos agora mesmo.
   cefr_level: B2
   frequency_rank: 165
+  tags: [Grammar]
 - type: sentence_pattern
   text: In case ...
   translation: used to talk about things you should do in preparation for possible
@@ -1193,6 +1358,7 @@ en:
   example_translation: Leve um guarda-chuva caso chova mais tarde.
   cefr_level: B2
   frequency_rank: 166
+  tags: [Grammar]
 - type: sentence_pattern
   text: So + adjective + that ...
   translation: used to show the result of a high degree of a quality
@@ -1200,6 +1366,7 @@ en:
   example_translation: A música estava tão alta que não conseguíamos nos ouvir.
   cefr_level: B2
   frequency_rank: 167
+  tags: [Grammar]
 - type: sentence_pattern
   text: Such + noun phrase + that ...
   translation: used to show the result of something described by a noun
@@ -1207,6 +1374,7 @@ en:
   example_translation: Foi uma prova tão difícil que metade da turma foi reprovada.
   cefr_level: B2
   frequency_rank: 168
+  tags: [Grammar]
 - type: sentence_pattern
   text: What if ...?
   translation: used to ask about a possible situation, often a worry
@@ -1214,6 +1382,7 @@ en:
   example_translation: E se o voo for cancelado por causa da tempestade?
   cefr_level: B2
   frequency_rank: 169
+  tags: [Grammar]
 - type: sentence_pattern
   text: I'd rather you didn't ...
   translation: used to politely tell someone you prefer them not to do something
@@ -1221,6 +1390,7 @@ en:
   example_translation: Eu preferia que você não fumasse dentro de casa.
   cefr_level: B2
   frequency_rank: 170
+  tags: [Politeness]
 - type: word
   text: achieve
   translation: to succeed in reaching a goal through effort
@@ -1228,6 +1398,7 @@ en:
   example_translation: Ela trabalhou muito para realizar seu sonho de se tornar médica.
   cefr_level: B1
   frequency_rank: 171
+  tags: [Work]
 - type: word
   text: anxious
   translation: feeling worried or nervous about something
@@ -1235,6 +1406,7 @@ en:
   example_translation: Ele estava ansioso com os resultados do exame.
   cefr_level: B1
   frequency_rank: 172
+  tags: [Emotions]
 - type: word
   text: appropriate
   translation: suitable or right for a particular situation
@@ -1242,6 +1414,7 @@ en:
   example_translation: Por favor, use roupas apropriadas para a entrevista.
   cefr_level: B1
   frequency_rank: 173
+  tags: [Clothing]
 - type: word
   text: approximately
   translation: close to a particular number or time; roughly
@@ -1249,6 +1422,7 @@ en:
   example_translation: A viagem leva aproximadamente duas horas.
   cefr_level: B1
   frequency_rank: 174
+  tags: [Travel]
 - type: word
   text: attitude
   translation: the way someone thinks or feels about something, shown in their behaviour
@@ -1256,6 +1430,7 @@ en:
   example_translation: Ela tem uma atitude positiva em relação a novos desafios.
   cefr_level: B1
   frequency_rank: 175
+  tags: [Personality]
 - type: word
   text: average
   translation: a typical amount or standard; not especially good or bad
@@ -1263,6 +1438,7 @@ en:
   example_translation: As notas dele estão apenas na média este ano.
   cefr_level: B1
   frequency_rank: 176
+  tags: [Education]
 - type: word
   text: behave
   translation: to act in a particular way
@@ -1270,6 +1446,7 @@ en:
   example_translation: As crianças se comportaram bem durante a viagem.
   cefr_level: B1
   frequency_rank: 177
+  tags: [Personality]
 - type: word
   text: benefit
   translation: an advantage or helpful effect
@@ -1277,6 +1454,7 @@ en:
   example_translation: O exercício regular traz muitos benefícios à saúde.
   cefr_level: B1
   frequency_rank: 178
+  tags: [Health]
 - type: word
   text: career
   translation: the series of jobs someone has in their working life
@@ -1284,6 +1462,7 @@ en:
   example_translation: Ela começou sua carreira como jornalista.
   cefr_level: B1
   frequency_rank: 179
+  tags: [Work]
 - type: word
   text: challenge
   translation: a difficult task that tests someone's ability
@@ -1291,6 +1470,7 @@ en:
   example_translation: Aprender um novo idioma pode ser um verdadeiro desafio.
   cefr_level: B1
   frequency_rank: 180
+  tags: [Education]
 - type: word
   text: combine
   translation: to join or mix two or more things together
@@ -1298,6 +1478,7 @@ en:
   example_translation: Misture a farinha e o açúcar em uma tigela grande.
   cefr_level: B1
   frequency_rank: 181
+  tags: [Food]
 - type: word
   text: commercial
   translation: related to buying and selling goods or services
@@ -1305,6 +1486,7 @@ en:
   example_translation: A área é usada principalmente para fins comerciais.
   cefr_level: B1
   frequency_rank: 182
+  tags: [Money]
 - type: word
   text: community
   translation: a group of people living in the same area or sharing something in common
@@ -1312,6 +1494,7 @@ en:
   example_translation: O novo parque uniu a comunidade.
   cefr_level: B1
   frequency_rank: 183
+  tags: [City]
 - type: word
   text: compare
   translation: to examine how things are similar or different
@@ -1319,6 +1502,7 @@ en:
   example_translation: É difícil comparar as duas cidades de forma justa.
   cefr_level: B1
   frequency_rank: 184
+  tags: [City]
 - type: word
   text: complain
   translation: to say you are unhappy or dissatisfied about something
@@ -1326,6 +1510,7 @@ en:
   example_translation: Vários clientes reclamaram do atendimento lento.
   cefr_level: B1
   frequency_rank: 185
+  tags: [Communication]
 - type: word
   text: consider
   translation: to think carefully about something before deciding
@@ -1333,6 +1518,7 @@ en:
   example_translation: Por favor, considere todas as opções antes de escolher.
   cefr_level: B1
   frequency_rank: 186
+  tags: [Opinions]
 - type: word
   text: constant
   translation: happening all the time; not changing
@@ -1340,6 +1526,7 @@ en:
   example_translation: O barulho constante da rua a mantinha acordada.
   cefr_level: B1
   frequency_rank: 187
+  tags: [City]
 - type: word
   text: contain
   translation: to have something inside; to include
@@ -1347,6 +1534,7 @@ en:
   example_translation: Esta bebida contém muito açúcar.
   cefr_level: B1
   frequency_rank: 188
+  tags: [Food]
 - type: word
   text: convince
   translation: to make someone believe or agree to do something
@@ -1354,6 +1542,7 @@ en:
   example_translation: Levou um tempo para convencê-lo a vir conosco.
   cefr_level: B1
   frequency_rank: 189
+  tags: [Communication]
 - type: word
   text: curious
   translation: eager to know or learn something
@@ -1361,6 +1550,7 @@ en:
   example_translation: As crianças estavam curiosas sobre como a máquina funcionava.
   cefr_level: B1
   frequency_rank: 190
+  tags: [Personality]
 - type: word
   text: delay
   translation: a period of time when something is made later than planned
@@ -1368,6 +1558,7 @@ en:
   example_translation: O voo foi atrasado em três horas.
   cefr_level: B1
   frequency_rank: 191
+  tags: [Transportation]
 - type: word
   text: depend
   translation: to be influenced or decided by something else
@@ -1375,6 +1566,7 @@ en:
   example_translation: Nossos planos dependem do tempo amanhã.
   cefr_level: B1
   frequency_rank: 192
+  tags: [Weather]
 - type: word
   text: describe
   translation: to say what someone or something is like
@@ -1382,6 +1574,7 @@ en:
   example_translation: Você pode descrever o homem que viu?
   cefr_level: B1
   frequency_rank: 193
+  tags: [Communication]
 - type: word
   text: determine
   translation: to find out or decide something exactly
@@ -1389,6 +1582,7 @@ en:
   example_translation: O teste vai ajudar a determinar a causa do problema.
   cefr_level: B1
   frequency_rank: 194
+  tags: [Opinions]
 - type: word
   text: develop
   translation: to grow or change into something more advanced
@@ -1396,6 +1590,7 @@ en:
   example_translation: A cidade se desenvolveu rapidamente nos últimos anos.
   cefr_level: B1
   frequency_rank: 195
+  tags: [City]
 - type: word
   text: discover
   translation: to find or learn something for the first time
@@ -1403,6 +1598,7 @@ en:
   example_translation: Cientistas descobriram uma nova espécie de sapo.
   cefr_level: B1
   frequency_rank: 196
+  tags: [Nature]
 - type: word
   text: eventually
   translation: after a long time or after some difficulty; in the end
@@ -1410,6 +1606,7 @@ en:
   example_translation: Nós nos perdemos, mas eventualmente encontramos o hotel.
   cefr_level: B1
   frequency_rank: 197
+  tags: [Travel]
 - type: word
   text: exhausted
   translation: extremely tired
@@ -1417,6 +1614,7 @@ en:
   example_translation: Ela se sentiu exausta depois do longo turno de trabalho.
   cefr_level: B1
   frequency_rank: 198
+  tags: [Health]
 - type: collocation
   text: make a decision
   translation: to choose something after thinking about it
@@ -1424,6 +1622,7 @@ en:
   example_translation: Precisamos tomar uma decisão até sexta-feira.
   cefr_level: B1
   frequency_rank: 199
+  tags: [Opinions]
 - type: collocation
   text: take responsibility
   translation: to accept that something is your duty or fault
@@ -1431,6 +1630,7 @@ en:
   example_translation: Ele assumiu a responsabilidade pelo erro.
   cefr_level: B1
   frequency_rank: 200
+  tags: [Work]
 - type: collocation
   text: pay attention
   translation: to watch, listen to, or think about something carefully
@@ -1438,6 +1638,7 @@ en:
   example_translation: Por favor, prestem atenção durante a aula.
   cefr_level: B1
   frequency_rank: 201
+  tags: [Education]
 - type: collocation
   text: keep in touch
   translation: to continue to talk to or write to someone
@@ -1445,6 +1646,7 @@ en:
   example_translation: Nós prometemos manter contato depois da formatura.
   cefr_level: B1
   frequency_rank: 202
+  tags: [Communication]
 - type: collocation
   text: run out of time
   translation: to have no time left to finish something
@@ -1452,6 +1654,7 @@ en:
   example_translation: Ficamos sem tempo antes de terminar a prova.
   cefr_level: B1
   frequency_rank: 203
+  tags: [Education]
 - type: collocation
   text: take part in
   translation: to be involved in an activity with other people
@@ -1459,6 +1662,7 @@ en:
   example_translation: Mais de cem estudantes participaram do evento.
   cefr_level: B1
   frequency_rank: 204
+  tags: [Education]
 - type: collocation
   text: get used to
   translation: to become familiar with something so it feels normal
@@ -1466,6 +1670,7 @@ en:
   example_translation: Levou meses para se acostumar com o novo horário.
   cefr_level: B1
   frequency_rank: 205
+  tags: [Grammar]
 - type: collocation
   text: change your mind
   translation: to decide something different from what you decided before
@@ -1473,6 +1678,7 @@ en:
   example_translation: Ela mudou de ideia e decidiu ficar.
   cefr_level: B1
   frequency_rank: 206
+  tags: [Opinions]
 - type: collocation
   text: give up
   translation: to stop trying to do something
@@ -1480,6 +1686,7 @@ en:
   example_translation: Não desista, você já está quase terminando.
   cefr_level: B1
   frequency_rank: 207
+  tags: [Emotions]
 - type: collocation
   text: look forward to
   translation: to feel happy and excited about something that will happen
@@ -1487,6 +1694,7 @@ en:
   example_translation: Estou ansioso pelo fim de semana.
   cefr_level: B1
   frequency_rank: 208
+  tags: [Emotions]
 - type: verb_form
   text: have been working
   translation: present perfect continuous; describes an action that started in the
@@ -1495,6 +1703,7 @@ en:
   example_translation: Eu trabalho aqui desde 2019.
   cefr_level: B1
   frequency_rank: 209
+  tags: [Work]
 - type: verb_form
   text: had already left
   translation: past perfect; describes an action completed before another past action
@@ -1502,6 +1711,7 @@ en:
   example_translation: Quando cheguei, o ônibus já tinha partido.
   cefr_level: B1
   frequency_rank: 210
+  tags: [Grammar]
 - type: verb_form
   text: would have done
   translation: third conditional; describes an imagined result of a past situation
@@ -1510,6 +1720,7 @@ en:
   example_translation: Se eu soubesse, eu teria ajudado você.
   cefr_level: B1
   frequency_rank: 211
+  tags: [Grammar]
 - type: verb_form
   text: is being built
   translation: passive present continuous; describes something happening to the subject
@@ -1518,6 +1729,7 @@ en:
   example_translation: Uma nova ponte está sendo construída perto do rio.
   cefr_level: B1
   frequency_rank: 212
+  tags: [Grammar]
 - type: verb_form
   text: must have forgotten
   translation: modal perfect used to express a confident guess about the past
@@ -1525,6 +1737,7 @@ en:
   example_translation: Ela deve ter esquecido da reunião.
   cefr_level: B1
   frequency_rank: 213
+  tags: [Grammar]
 - type: verb_form
   text: used to live
   translation: describes a repeated action or state in the past that is no longer
@@ -1533,6 +1746,7 @@ en:
   example_translation: Eu costumava morar em uma vila pequena.
   cefr_level: B1
   frequency_rank: 214
+  tags: [Home]
 - type: verb_form
   text: was told that
   translation: passive reported speech; used to report information given to someone
@@ -1540,6 +1754,7 @@ en:
   example_translation: Me disseram que a loja fecha às nove.
   cefr_level: B1
   frequency_rank: 215
+  tags: [Communication]
 - type: sentence_pattern
   text: If I were you, I would ...
   translation: used to give advice by imagining yourself in someone else's situation
@@ -1547,6 +1762,7 @@ en:
   example_translation: Se eu fosse você, eu pediria desculpas a ela.
   cefr_level: B1
   frequency_rank: 216
+  tags: [Grammar]
 - type: sentence_pattern
   text: I used to ..., but now I ...
   translation: used to contrast a past habit with the present situation
@@ -1554,6 +1770,7 @@ en:
   example_translation: Eu costumava odiar vegetais, mas agora eu os amo.
   cefr_level: B1
   frequency_rank: 217
+  tags: [Grammar]
 - type: sentence_pattern
   text: Not only ... but also ...
   translation: used to add a second, often surprising, point to the first
@@ -1561,6 +1778,7 @@ en:
   example_translation: Ele não só pediu desculpas, como também trouxe flores.
   cefr_level: B1
   frequency_rank: 218
+  tags: [Grammar]
 - type: sentence_pattern
   text: The more ..., the more ...
   translation: used to show that two things increase or change together
@@ -1568,6 +1786,7 @@ en:
   example_translation: Quanto mais você pratica, mais confiante você fica.
   cefr_level: B1
   frequency_rank: 219
+  tags: [Grammar]
 - type: sentence_pattern
   text: I'd rather ... than ...
   translation: used to express a preference between two options
@@ -1575,3 +1794,4 @@ en:
   example_translation: Eu prefiro ficar em casa do que ir à festa.
   cefr_level: B1
   frequency_rank: 220
+  tags: [Grammar]

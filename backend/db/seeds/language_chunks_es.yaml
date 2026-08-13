@@ -8,6 +8,7 @@ es:
   example_translation: I studied a lot; however, I failed the exam.
   cefr_level: B1
   frequency_rank: 1
+  tags: [Connectors]
 - type: word
   text: aunque
   translation: although / even though / even if
@@ -15,6 +16,7 @@ es:
   example_translation: Even if it rains, I will go to work.
   cefr_level: B1
   frequency_rank: 2
+  tags: [Connectors]
 - type: word
   text: además
   translation: furthermore / besides / in addition
@@ -22,6 +24,7 @@ es:
   example_translation: It's cheap and, moreover, very comfortable.
   cefr_level: B1
   frequency_rank: 3
+  tags: [Connectors]
 - type: word
   text: por lo tanto
   translation: therefore / so / consequently
@@ -29,6 +32,7 @@ es:
   example_translation: He arrived late; therefore, he missed the meeting.
   cefr_level: B1
   frequency_rank: 4
+  tags: [Connectors]
 - type: word
   text: mientras tanto
   translation: meanwhile / in the meantime
@@ -36,6 +40,7 @@ es:
   example_translation: I'll cook; meanwhile, you set the table.
   cefr_level: B1
   frequency_rank: 5
+  tags: [Connectors]
 - type: word
   text: de hecho
   translation: in fact / actually / as a matter of fact
@@ -43,6 +48,7 @@ es:
   example_translation: In fact, I've never been to Paris.
   cefr_level: B1
   frequency_rank: 6
+  tags: [Connectors]
 - type: word
   text: en cambio
   translation: on the other hand / instead / whereas
@@ -50,6 +56,7 @@ es:
   example_translation: I like the cold; she, on the other hand, prefers the heat.
   cefr_level: B1
   frequency_rank: 7
+  tags: [Connectors]
 - type: word
   text: a pesar de
   translation: despite / in spite of
@@ -57,6 +64,7 @@ es:
   example_translation: Despite the tiredness, she kept working.
   cefr_level: B1
   frequency_rank: 8
+  tags: [Connectors]
 - type: word
   text: lograr
   translation: to achieve / to manage to do / to succeed in
@@ -64,6 +72,7 @@ es:
   example_translation: She finally managed to find the job she wanted.
   cefr_level: B1
   frequency_rank: 9
+  tags: [Work]
 - type: word
   text: resultar
   translation: to turn out / to prove to be / to result in
@@ -71,6 +80,7 @@ es:
   example_translation: It turned out to be harder than expected.
   cefr_level: B1
   frequency_rank: 10
+  tags: [Opinions]
 - type: word
   text: sin duda
   translation: without doubt / undoubtedly / certainly
@@ -78,6 +88,7 @@ es:
   example_translation: Without doubt, it's the best restaurant in the city.
   cefr_level: B1
   frequency_rank: 11
+  tags: [Opinions]
 - type: word
   text: de vez en cuando
   translation: from time to time / occasionally / every now and then
@@ -85,6 +96,7 @@ es:
   example_translation: From time to time I like to read poetry.
   cefr_level: B1
   frequency_rank: 12
+  tags: [Time]
 - type: word
   text: a lo largo de
   translation: throughout / over the course of / along
@@ -92,6 +104,7 @@ es:
   example_translation: Throughout her career, she won several important awards.
   cefr_level: B1
   frequency_rank: 13
+  tags: [Time]
 - type: word
   text: a partir de
   translation: from / starting from / as of
@@ -99,6 +112,7 @@ es:
   example_translation: Starting from tomorrow, the new course begins.
   cefr_level: B1
   frequency_rank: 14
+  tags: [Time]
 - type: word
   text: en cuanto a
   translation: as for / regarding / when it comes to
@@ -106,6 +120,7 @@ es:
   example_translation: As for the prices, we haven't decided yet.
   cefr_level: B1
   frequency_rank: 15
+  tags: [Connectors]
 - type: word
   text: en principio
   translation: in principle / in theory / initially
@@ -113,6 +128,7 @@ es:
   example_translation: In principle I agree, but I need more information.
   cefr_level: B1
   frequency_rank: 16
+  tags: [Opinions]
 - type: word
   text: por otro lado
   translation: on the other hand
@@ -120,6 +136,7 @@ es:
   example_translation: The project is expensive; on the other hand, it is very necessary.
   cefr_level: B1
   frequency_rank: 17
+  tags: [Connectors]
 - type: word
   text: quedarse
   translation: to stay / to remain / to become (with adjectives)
@@ -127,6 +144,7 @@ es:
   example_translation: I stayed home all weekend.
   cefr_level: B1
   frequency_rank: 18
+  tags: [Home]
 - type: word
   text: volver a + infinitivo
   translation: to do something again
@@ -134,6 +152,7 @@ es:
   example_translation: I will never make that same mistake again.
   cefr_level: B1
   frequency_rank: 19
+  tags: [Connectors]
 - type: word
   text: dejar de + infinitivo
   translation: to stop doing something
@@ -141,6 +160,7 @@ es:
   example_translation: I stopped smoking exactly two years ago.
   cefr_level: B1
   frequency_rank: 20
+  tags: [Health]
 - type: word
   text: ponerse a + infinitivo
   translation: to start doing something (suddenly or unexpectedly)
@@ -148,6 +168,7 @@ es:
   example_translation: She suddenly started crying for no apparent reason.
   cefr_level: B1
   frequency_rank: 21
+  tags: [Emotions]
 - type: word
   text: seguir + gerundio
   translation: to keep doing / to continue doing
@@ -155,6 +176,7 @@ es:
   example_translation: He kept talking despite the noise.
   cefr_level: B1
   frequency_rank: 22
+  tags: [Connectors]
 - type: word
   text: acabar de + infinitivo
   translation: to have just done something
@@ -162,6 +184,7 @@ es:
   example_translation: I've just arrived home, give me a moment.
   cefr_level: B1
   frequency_rank: 23
+  tags: [Daily Routine]
 - type: word
   text: echar de menos
   translation: to miss (someone or something)
@@ -169,6 +192,7 @@ es:
   example_translation: I really miss my family when I'm far away.
   cefr_level: B1
   frequency_rank: 24
+  tags: [Family, Emotions]
 - type: word
   text: darse cuenta de
   translation: to realise / to notice / to become aware of
@@ -176,6 +200,7 @@ es:
   example_translation: I realised I had left my keys at home.
   cefr_level: B1
   frequency_rank: 25
+  tags: [Opinions]
 - type: word
   text: a tiempo
   translation: on time / in time
@@ -183,6 +208,7 @@ es:
   example_translation: We arrived just in time for the last flight.
   cefr_level: B1
   frequency_rank: 26
+  tags: [Time]
 - type: word
   text: hacer falta
   translation: to be necessary / to be needed
@@ -190,6 +216,7 @@ es:
   example_translation: More time is needed to finish this project.
   cefr_level: B1
   frequency_rank: 27
+  tags: [Connectors]
 - type: collocation
   text: tener en cuenta
   translation: to take into account / to keep in mind / to consider
@@ -197,6 +224,7 @@ es:
   example_translation: We need to take all factors into account before deciding.
   cefr_level: B1
   frequency_rank: 28
+  tags: [Opinions]
 - type: collocation
   text: llevar a cabo
   translation: to carry out / to implement / to accomplish
@@ -204,6 +232,7 @@ es:
   example_translation: The government carried out an important reform of the system.
   cefr_level: B1
   frequency_rank: 29
+  tags: [Work]
 - type: collocation
   text: estar de acuerdo
   translation: to agree / to be in agreement
@@ -211,6 +240,7 @@ es:
   example_translation: I do not agree with that decision at all.
   cefr_level: B1
   frequency_rank: 30
+  tags: [Opinions]
 - type: collocation
   text: tomar una decisión
   translation: to make a decision
@@ -218,6 +248,7 @@ es:
   example_translation: We need to make a decision before Friday.
   cefr_level: B1
   frequency_rank: 31
+  tags: [Opinions]
 - type: collocation
   text: ponerse en contacto
   translation: to get in touch / to contact
@@ -225,6 +256,7 @@ es:
   example_translation: Please get in touch with us as soon as possible.
   cefr_level: B1
   frequency_rank: 32
+  tags: [Communication]
 - type: collocation
   text: hacerse cargo de
   translation: to take charge of / to take responsibility for
@@ -232,6 +264,7 @@ es:
   example_translation: She took charge of the situation immediately.
   cefr_level: B1
   frequency_rank: 33
+  tags: [Work]
 - type: collocation
   text: dar por sentado
   translation: to take for granted
@@ -240,6 +273,7 @@ es:
     you.
   cefr_level: B1
   frequency_rank: 34
+  tags: [Opinions]
 - type: collocation
   text: sacar provecho de
   translation: to make the most of / to take advantage of
@@ -247,6 +281,7 @@ es:
   example_translation: We should make the most of this unique opportunity.
   cefr_level: B1
   frequency_rank: 35
+  tags: [Opinions]
 - type: collocation
   text: perder el tiempo
   translation: to waste time
@@ -254,6 +289,7 @@ es:
   example_translation: Don't waste your time with that nonsense.
   cefr_level: B1
   frequency_rank: 36
+  tags: [Time]
 - type: collocation
   text: llevar + gerundio (duración)
   translation: to have been doing something for a period of time
@@ -261,6 +297,7 @@ es:
   example_translation: You've been on the phone for two hours!
   cefr_level: B1
   frequency_rank: 37
+  tags: [Time]
 - type: verb_form
   text: Espero que tengas
   translation: I hope you have... (present subjunctive after esperar que)
@@ -268,6 +305,7 @@ es:
   example_translation: I hope you have a calm and safe journey.
   cefr_level: B1
   frequency_rank: 38
+  tags: [Travel]
 - type: verb_form
   text: Ojalá pudiera
   translation: I wish I could... (imperfect subjunctive after ojalá)
@@ -275,6 +313,7 @@ es:
   example_translation: I wish I could go with you, but I have too much work.
   cefr_level: B1
   frequency_rank: 39
+  tags: [Opinions]
 - type: verb_form
   text: ¿Qué habrías hecho?
   translation: What would you have done? (conditional perfect)
@@ -282,6 +321,7 @@ es:
   example_translation: In my place, what would you have done?
   cefr_level: B1
   frequency_rank: 40
+  tags: [Opinions]
 - type: verb_form
   text: Se dice que
   translation: It is said that... / They say that... (passive with se)
@@ -289,6 +329,7 @@ es:
   example_translation: It is said that this restaurant is the best in the city.
   cefr_level: B1
   frequency_rank: 41
+  tags: [Communication]
 - type: verb_form
   text: Se lo expliqué
   translation: I explained it to him/her (combined direct and indirect object pronouns)
@@ -297,6 +338,7 @@ es:
     calmly.
   cefr_level: B1
   frequency_rank: 42
+  tags: [Communication]
 - type: verb_form
   text: Si lo hubiera sabido
   translation: If I had known... (pluperfect subjunctive in third conditional)
@@ -304,6 +346,7 @@ es:
   example_translation: If I had known earlier, I wouldn't have come.
   cefr_level: B1
   frequency_rank: 43
+  tags: [Connectors]
 - type: verb_form
   text: Para que lo entiendas
   translation: So that you understand (purpose clause with present subjunctive)
@@ -311,6 +354,7 @@ es:
   example_translation: I'll explain it slowly so that you understand it better.
   cefr_level: B1
   frequency_rank: 44
+  tags: [Communication]
 - type: verb_form
   text: Aunque sea difícil
   translation: Even though / even if it is difficult (concessive subjunctive)
@@ -318,6 +362,7 @@ es:
   example_translation: Even if it is difficult, I'm not going to give up.
   cefr_level: B1
   frequency_rank: 45
+  tags: [Connectors]
 - type: sentence_pattern
   text: Cuanto más ..., más ...
   translation: The more ..., the more ... (proportional comparison)
@@ -325,6 +370,7 @@ es:
   example_translation: The more you study, the more you learn.
   cefr_level: B1
   frequency_rank: 46
+  tags: [Connectors]
 - type: sentence_pattern
   text: No solo ..., sino también ...
   translation: Not only ..., but also ... (additive emphasis)
@@ -332,6 +378,7 @@ es:
   example_translation: She not only speaks Spanish, but also Portuguese and Italian.
   cefr_level: B1
   frequency_rank: 47
+  tags: [Connectors]
 - type: sentence_pattern
   text: Por mucho que + subjuntivo
   translation: No matter how much... (concessive clause)
@@ -339,6 +386,7 @@ es:
   example_translation: No matter how much I try, I can't manage to understand it.
   cefr_level: B1
   frequency_rank: 48
+  tags: [Connectors]
 - type: sentence_pattern
   text: Lo que más me gusta es ...
   translation: What I like most is ... (nominalized relative clause)
@@ -346,6 +394,7 @@ es:
   example_translation: What I like most about Spain is the cuisine.
   cefr_level: B1
   frequency_rank: 49
+  tags: [Opinions]
 - type: sentence_pattern
   text: Hace ... que + presente
   translation: I have been ... for ... (duration up to the present)
@@ -353,6 +402,7 @@ es:
   example_translation: I have been living in this city for three years.
   cefr_level: B1
   frequency_rank: 50
+  tags: [Time]
 - type: word
   text: barato
   translation: cheap
@@ -360,6 +410,7 @@ es:
   example_translation: This restaurant is very cheap.
   cefr_level: A2
   frequency_rank: 51
+  tags: [Shopping, Money]
 - type: word
   text: caro
   translation: expensive
@@ -367,6 +418,7 @@ es:
   example_translation: The hotel was too expensive for us.
   cefr_level: A2
   frequency_rank: 52
+  tags: [Shopping, Money]
 - type: word
   text: cerca
   translation: near / close
@@ -374,6 +426,7 @@ es:
   example_translation: The pharmacy is near my house.
   cefr_level: A2
   frequency_rank: 53
+  tags: [Directions]
 - type: word
   text: lejos
   translation: far
@@ -381,6 +434,7 @@ es:
   example_translation: The beach is far from downtown.
   cefr_level: A2
   frequency_rank: 54
+  tags: [Directions]
 - type: word
   text: cansado
   translation: tired
@@ -388,6 +442,7 @@ es:
   example_translation: I am very tired after work.
   cefr_level: A2
   frequency_rank: 55
+  tags: [Emotions]
 - type: word
   text: contento
   translation: happy / content
@@ -395,6 +450,7 @@ es:
   example_translation: She is happy with her new job.
   cefr_level: A2
   frequency_rank: 56
+  tags: [Emotions]
 - type: word
   text: enfermo
   translation: sick / ill
@@ -402,6 +458,7 @@ es:
   example_translation: My brother is sick today.
   cefr_level: A2
   frequency_rank: 57
+  tags: [Health]
 - type: word
   text: gracioso
   translation: funny
@@ -409,6 +466,7 @@ es:
   example_translation: The clown is very funny.
   cefr_level: A2
   frequency_rank: 58
+  tags: [Personality]
 - type: word
   text: limpio
   translation: clean
@@ -416,6 +474,7 @@ es:
   example_translation: The apartment is very clean.
   cefr_level: A2
   frequency_rank: 59
+  tags: [Home]
 - type: word
   text: sucio
   translation: dirty
@@ -423,6 +482,7 @@ es:
   example_translation: Your hands are dirty.
   cefr_level: A2
   frequency_rank: 60
+  tags: [Home]
 - type: word
   text: peligroso
   translation: dangerous
@@ -430,6 +490,7 @@ es:
   example_translation: Swimming here is dangerous.
   cefr_level: A2
   frequency_rank: 61
+  tags: [Emergency]
 - type: word
   text: seguro
   translation: safe / sure
@@ -437,6 +498,7 @@ es:
   example_translation: This neighborhood is very safe.
   cefr_level: A2
   frequency_rank: 62
+  tags: [Emergency]
 - type: word
   text: tranquilo
   translation: calm / quiet
@@ -444,6 +506,7 @@ es:
   example_translation: The town is very quiet at night.
   cefr_level: A2
   frequency_rank: 63
+  tags: [Emotions]
 - type: word
   text: ocupado
   translation: busy
@@ -451,6 +514,7 @@ es:
   example_translation: I am very busy at work today.
   cefr_level: A2
   frequency_rank: 64
+  tags: [Work]
 - type: word
   text: libre
   translation: free (available)
@@ -458,6 +522,7 @@ es:
   example_translation: Is this table free?
   cefr_level: A2
   frequency_rank: 65
+  tags: [Time]
 - type: word
   text: rápido
   translation: fast
@@ -465,6 +530,7 @@ es:
   example_translation: That car is very fast.
   cefr_level: A2
   frequency_rank: 66
+  tags: [Transportation]
 - type: word
   text: lento
   translation: slow
@@ -472,6 +538,7 @@ es:
   example_translation: The train was very slow today.
   cefr_level: A2
   frequency_rank: 67
+  tags: [Transportation]
 - type: word
   text: temprano
   translation: early
@@ -479,6 +546,7 @@ es:
   example_translation: I always wake up early.
   cefr_level: A2
   frequency_rank: 68
+  tags: [Time]
 - type: word
   text: tarde
   translation: late
@@ -486,6 +554,7 @@ es:
   example_translation: We arrived late to the party.
   cefr_level: A2
   frequency_rank: 69
+  tags: [Time]
 - type: word
   text: antiguo
   translation: old / ancient
@@ -493,6 +562,7 @@ es:
   example_translation: They live in an old house.
   cefr_level: A2
   frequency_rank: 70
+  tags: [Home]
 - type: word
   text: moderno
   translation: modern
@@ -500,6 +570,7 @@ es:
   example_translation: The museum has modern art.
   cefr_level: A2
   frequency_rank: 71
+  tags: [City]
 - type: word
   text: ruidoso
   translation: noisy
@@ -507,6 +578,7 @@ es:
   example_translation: The restaurant was too noisy.
   cefr_level: A2
   frequency_rank: 72
+  tags: [City]
 - type: word
   text: amable
   translation: kind
@@ -514,6 +586,7 @@ es:
   example_translation: The teacher is very kind to the students.
   cefr_level: A2
   frequency_rank: 73
+  tags: [Personality]
 - type: word
   text: maleducado
   translation: rude
@@ -521,6 +594,7 @@ es:
   example_translation: Don't be rude to your grandparents.
   cefr_level: A2
   frequency_rank: 74
+  tags: [Personality]
 - type: word
   text: inteligente
   translation: intelligent / smart
@@ -528,6 +602,7 @@ es:
   example_translation: Her daughter is very intelligent.
   cefr_level: A2
   frequency_rank: 75
+  tags: [Personality]
 - type: word
   text: tonto
   translation: silly / foolish
@@ -535,6 +610,7 @@ es:
   example_translation: Don't be silly, think before you speak.
   cefr_level: A2
   frequency_rank: 76
+  tags: [Personality]
 - type: word
   text: fuerte
   translation: strong
@@ -542,6 +618,7 @@ es:
   example_translation: My father is very strong.
   cefr_level: A2
   frequency_rank: 77
+  tags: [Body]
 - type: word
   text: débil
   translation: weak
@@ -549,6 +626,7 @@ es:
   example_translation: After the flu, I felt weak.
   cefr_level: A2
   frequency_rank: 78
+  tags: [Body]
 - type: collocation
   text: hacer la compra
   translation: to do the grocery shopping
@@ -556,6 +634,7 @@ es:
   example_translation: I'm going to do the grocery shopping this afternoon.
   cefr_level: A2
   frequency_rank: 79
+  tags: [Food, Shopping]
 - type: collocation
   text: dar un paseo
   translation: to go for a walk
@@ -563,6 +642,7 @@ es:
   example_translation: We like to go for a walk in the park.
   cefr_level: A2
   frequency_rank: 80
+  tags: [Daily Routine]
 - type: collocation
   text: tener prisa
   translation: to be in a hurry
@@ -570,6 +650,7 @@ es:
   example_translation: I can't talk now, I'm in a hurry.
   cefr_level: A2
   frequency_rank: 81
+  tags: [Daily Routine]
 - type: collocation
   text: tener razón
   translation: to be right
@@ -577,6 +658,7 @@ es:
   example_translation: I think you're right.
   cefr_level: A2
   frequency_rank: 82
+  tags: [Opinions]
 - type: collocation
   text: poner la mesa
   translation: to set the table
@@ -584,6 +666,7 @@ es:
   example_translation: Can you set the table, please?
   cefr_level: A2
   frequency_rank: 83
+  tags: [Food, Home]
 - type: collocation
   text: echar de menos
   translation: to miss (someone or something)
@@ -591,6 +674,7 @@ es:
   example_translation: I miss my family.
   cefr_level: A2
   frequency_rank: 84
+  tags: [Family, Emotions]
 - type: collocation
   text: tomar una decisión
   translation: to make a decision
@@ -598,6 +682,7 @@ es:
   example_translation: It's hard to make a decision so quickly.
   cefr_level: A2
   frequency_rank: 85
+  tags: [Opinions]
 - type: collocation
   text: pedir perdón
   translation: to apologize
@@ -605,6 +690,7 @@ es:
   example_translation: I want to apologize for being late.
   cefr_level: A2
   frequency_rank: 86
+  tags: [Politeness]
 - type: collocation
   text: hacer caso
   translation: to pay attention / to obey
@@ -612,6 +698,7 @@ es:
   example_translation: The children don't pay attention to me.
   cefr_level: A2
   frequency_rank: 87
+  tags: [Family]
 - type: collocation
   text: darse cuenta
   translation: to realize
@@ -619,6 +706,7 @@ es:
   example_translation: I didn't realize it was so late.
   cefr_level: A2
   frequency_rank: 88
+  tags: [Opinions]
 - type: verb_form
   text: voy a viajar
   translation: near future (ir a + infinitive); describes a plan for the near future
@@ -626,6 +714,7 @@ es:
   example_translation: I'm going to travel to Mexico in June.
   cefr_level: A2
   frequency_rank: 89
+  tags: [Travel]
 - type: verb_form
   text: estoy comiendo
   translation: present continuous (estar + gerund); describes an action happening
@@ -634,6 +723,7 @@ es:
   example_translation: I am eating in the garden.
   cefr_level: A2
   frequency_rank: 90
+  tags: [Food]
 - type: verb_form
   text: comí
   translation: preterite; describes a completed action in the past
@@ -641,6 +731,7 @@ es:
   example_translation: I ate fish last night.
   cefr_level: A2
   frequency_rank: 91
+  tags: [Food]
 - type: verb_form
   text: comía
   translation: imperfect; describes a repeated or ongoing past action
@@ -648,6 +739,7 @@ es:
   example_translation: When I was a child, I used to eat a lot of bread.
   cefr_level: A2
   frequency_rank: 92
+  tags: [Food]
 - type: verb_form
   text: me levanto
   translation: reflexive present; describes a routine action done to oneself
@@ -655,6 +747,7 @@ es:
   example_translation: I get up at seven every day.
   cefr_level: A2
   frequency_rank: 93
+  tags: [Daily Routine]
 - type: verb_form
   text: he comido
   translation: present perfect; describes a recent or relevant past action
@@ -662,6 +755,7 @@ es:
   example_translation: Today I have eaten too much.
   cefr_level: A2
   frequency_rank: 94
+  tags: [Food]
 - type: verb_form
   text: puedo nadar
   translation: modal with poder; expresses ability
@@ -669,6 +763,7 @@ es:
   example_translation: I can swim very well.
   cefr_level: A2
   frequency_rank: 95
+  tags: [Sports]
 - type: sentence_pattern
   text: Me gustaría ...
   translation: used to politely express a wish or desire
@@ -676,6 +771,7 @@ es:
   example_translation: I would like to book a table for two.
   cefr_level: A2
   frequency_rank: 96
+  tags: [Politeness]
 - type: sentence_pattern
   text: ¿Cuánto cuesta ...?
   translation: used to ask the price of something
@@ -683,6 +779,7 @@ es:
   example_translation: How much does this bag cost?
   cefr_level: A2
   frequency_rank: 97
+  tags: [Shopping, Money]
 - type: sentence_pattern
   text: Hace ... que ...
   translation: used to say how long ago something happened or how long something has
@@ -691,6 +788,7 @@ es:
   example_translation: I have lived here for two years.
   cefr_level: A2
   frequency_rank: 98
+  tags: [Time]
 - type: sentence_pattern
   text: Tengo que ...
   translation: used to express obligation or necessity
@@ -698,6 +796,7 @@ es:
   example_translation: I have to finish this report today.
   cefr_level: A2
   frequency_rank: 99
+  tags: [Connectors]
 - type: sentence_pattern
   text: ¿Podrías ...?
   translation: used to politely ask someone to do something
@@ -705,3 +804,4 @@ es:
   example_translation: Could you help me with the suitcases?
   cefr_level: A2
   frequency_rank: 100
+  tags: [Politeness]

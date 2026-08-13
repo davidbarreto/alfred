@@ -155,15 +155,27 @@
     <div id="tag-chip-list" class="flex flex-wrap gap-1.5">
       {% for t in tag_stats %}
       <button type="button"
-              class="tag-chip px-2 py-1 rounded-full text-[11px] border transition-colors {% if t.name in track.active_tags %}bg-[#E6F1FB] border-[#378ADD] text-[#0C447C] active{% else %}bg-white border-gray-200 text-gray-500 hover:bg-gray-50{% endif %}"
+              class="tag-chip px-2 py-1 rounded-full text-[11px] border transition-colors {% if t.name in track.active_tags %}selected{% endif %}"
               data-tag="{{ t.name }}"
               data-avg-difficulty="{{ t.avg_difficulty }}"
+              data-initial="{{ 'true' if t.name in track.active_tags else 'false' }}"
               onclick="toggleTag(this)">
         {{ t.name }} <span class="opacity-60">{{ t.due_count }}/{{ t.chunk_count }}</span>
       </button>
       {% endfor %}
     </div>
-    <p class="text-[11px] text-gray-400 mt-2">Selected groups narrow review sessions to just those tags (union of all selected). None selected = whole deck.</p>
+    <div class="flex items-center gap-3 mt-2 text-[10px] text-gray-400">
+      <span class="flex items-center gap-1"><span class="inline-block w-2 h-2 rounded-full bg-[#378ADD]"></span>Active</span>
+      <span class="flex items-center gap-1"><span class="inline-block w-2 h-2 rounded-full bg-emerald-500"></span>Will add</span>
+      <span class="flex items-center gap-1"><span class="inline-block w-2 h-2 rounded-full bg-red-400"></span>Will remove</span>
+    </div>
+    <div class="flex items-center justify-between gap-2 mt-3">
+      <p class="text-[11px] text-gray-400">Selected groups narrow review sessions to just those tags (union of all selected). None selected = whole deck.</p>
+      <button type="button" id="save-tags-btn" onclick="saveActiveTags()" disabled
+              class="shrink-0 px-3 py-1 rounded text-[11px] font-medium bg-gray-200 text-gray-400 cursor-not-allowed transition-colors">
+        Save
+      </button>
+    </div>
   </div></div>
   {% endif %}
 
@@ -334,61 +346,86 @@ function updateReviewLink() {
 }
 
 async function patchActiveTags(tags) {
-  try {
-    await fetch(`/languages/{{ track.code }}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ active_tags: tags }),
-    });
-  } catch (e) {
-    console.error("Failed to update active tags:", e);
-  }
+  await fetch(`/languages/{{ track.code }}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ active_tags: tags }),
+  });
 }
 
 function _tagChips() {
   return Array.from(document.querySelectorAll(".tag-chip"));
 }
 
-function _setChipActive(el, active) {
-  el.classList.toggle("active", active);
-  el.classList.toggle("bg-[#E6F1FB]", active);
-  el.classList.toggle("border-[#378ADD]", active);
-  el.classList.toggle("text-[#0C447C]", active);
-  el.classList.toggle("bg-white", !active);
-  el.classList.toggle("border-gray-200", !active);
-  el.classList.toggle("text-gray-500", !active);
+const _CHIP_STYLES = {
+  unselected: ["bg-white", "border-gray-200", "text-gray-500", "hover:bg-gray-50"],
+  active: ["bg-[#E6F1FB]", "border-[#378ADD]", "text-[#0C447C]"],
+  pendingAdd: ["bg-emerald-50", "border-emerald-400", "text-emerald-700"],
+  pendingRemove: ["bg-red-50", "border-red-300", "text-red-500"],
+};
+const _ALL_CHIP_STYLE_CLASSES = Object.values(_CHIP_STYLES).flat();
+
+function _paintChip(el) {
+  const selected = el.classList.contains("selected");
+  const initial = el.dataset.initial === "true";
+  let style;
+  if (selected && initial) style = _CHIP_STYLES.active;
+  else if (selected && !initial) style = _CHIP_STYLES.pendingAdd;
+  else if (!selected && initial) style = _CHIP_STYLES.pendingRemove;
+  else style = _CHIP_STYLES.unselected;
+  el.classList.remove(..._ALL_CHIP_STYLE_CLASSES);
+  el.classList.add(...style);
 }
 
-function _setActiveChips(tagNames) {
-  _tagChips().forEach(el => _setChipActive(el, tagNames.includes(el.dataset.tag)));
+function _setChipSelected(el, selected) {
+  el.classList.toggle("selected", selected);
+  _paintChip(el);
 }
 
-async function toggleTag(el) {
-  _setChipActive(el, !el.classList.contains("active"));
-  await patchActiveTags(_tagChips().filter(c => c.classList.contains("active")).map(c => c.dataset.tag));
+function _setSelectedChips(tagNames) {
+  _tagChips().forEach(el => _setChipSelected(el, tagNames.includes(el.dataset.tag)));
+  _updateSaveButtonState();
 }
 
-async function selectAllTags() {
-  const all = _tagChips().map(el => el.dataset.tag);
-  _setActiveChips(all);
-  await patchActiveTags(all);
+function _selectedTags() {
+  return _tagChips().filter(c => c.classList.contains("selected")).map(c => c.dataset.tag);
 }
 
-async function clearTags() {
-  _setActiveChips([]);
-  await patchActiveTags([]);
+function _updateSaveButtonState() {
+  const btn = document.getElementById("save-tags-btn");
+  if (!btn) return;
+  const dirty = _tagChips().some(el => el.classList.contains("selected") !== (el.dataset.initial === "true"));
+  btn.disabled = !dirty;
+  btn.classList.toggle("bg-gray-200", !dirty);
+  btn.classList.toggle("text-gray-400", !dirty);
+  btn.classList.toggle("cursor-not-allowed", !dirty);
+  btn.classList.toggle("bg-[#378ADD]", dirty);
+  btn.classList.toggle("text-white", dirty);
+  btn.classList.toggle("hover:bg-[#2f78bf]", dirty);
 }
 
-async function randomTags() {
+function toggleTag(el) {
+  _setChipSelected(el, !el.classList.contains("selected"));
+  _updateSaveButtonState();
+}
+
+function selectAllTags() {
+  _setSelectedChips(_tagChips().map(el => el.dataset.tag));
+}
+
+function clearTags() {
+  _setSelectedChips([]);
+}
+
+function randomTags() {
   const chips = _tagChips();
   if (!chips.length) return;
   const n = Math.max(1, Math.min(3, chips.length));
   const picked = chips.slice().sort(() => Math.random() - 0.5).slice(0, n).map(el => el.dataset.tag);
-  _setActiveChips(picked);
-  await patchActiveTags(picked);
+  _setSelectedChips(picked);
 }
 
-async function weakestTags() {
+function weakestTags() {
   const chips = _tagChips();
   if (!chips.length) return;
   const n = Math.max(1, Math.min(3, chips.length));
@@ -396,9 +433,22 @@ async function weakestTags() {
     .sort((a, b) => parseFloat(b.dataset.avgDifficulty) - parseFloat(a.dataset.avgDifficulty))
     .slice(0, n)
     .map(el => el.dataset.tag);
-  _setActiveChips(picked);
-  await patchActiveTags(picked);
+  _setSelectedChips(picked);
 }
+
+async function saveActiveTags() {
+  const btn = document.getElementById("save-tags-btn");
+  if (btn) btn.disabled = true;
+  try {
+    await patchActiveTags(_selectedTags());
+    location.reload();
+  } catch (e) {
+    console.error("Failed to update active tags:", e);
+    if (btn) btn.disabled = false;
+  }
+}
+
+_tagChips().forEach(_paintChip);
 
 async function updateScopeStatus(scopeId, status) {
   try {

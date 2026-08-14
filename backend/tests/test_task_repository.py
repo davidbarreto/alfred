@@ -406,3 +406,24 @@ class TestResolveTags:
 
         assert len(tags) == 2
         assert session.add.call_count == 1  # only new tag added
+
+
+class TestGetDistinctTags:
+    async def test_returns_tag_names(self):
+        session = _make_session()
+        session.execute.return_value = _scalar_all(["personal", "work"])
+
+        repo = TaskRepository(session)
+        tags = await repo.get_distinct_tags()
+
+        assert tags == ["personal", "work"]
+        session.execute.assert_called_once()
+
+    async def test_no_tags(self):
+        session = _make_session()
+        session.execute.return_value = _scalar_all([])
+
+        repo = TaskRepository(session)
+        tags = await repo.get_distinct_tags()
+
+        assert tags == []

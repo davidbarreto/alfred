@@ -222,3 +222,15 @@ class TestSnoozeTask:
     def test_requires_auth(self, client):
         response = client.post("/organizer/tasks/1/snooze")
         assert response.status_code == 403
+
+
+class TestGetTaskTags:
+    def test_returns_distinct_tags(self, client, mock_service):
+        mock_service.get_distinct_tags.return_value = ["personal", "work"]
+        response = client.get("/organizer/tasks/tags", headers=AUTH)
+        assert response.status_code == 200
+        assert response.json() == ["personal", "work"]
+
+    def test_requires_auth(self, client):
+        response = client.get("/organizer/tasks/tags")
+        assert response.status_code == 403

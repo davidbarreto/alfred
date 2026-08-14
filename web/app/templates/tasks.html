@@ -32,6 +32,20 @@
     {% endfor %}
   </div>
 
+  <!-- Tag pills — smaller than the category filters above, so those stand out -->
+  {% if tag_chips %}
+  <div class="flex flex-wrap items-center gap-1 -mt-2 pb-2">
+    <i class="ti ti-tag text-[10px] text-gray-300"></i>
+    {% for chip in tag_chips %}
+    <a
+      href="{{ chip.href }}"
+      class="px-2 py-0.5 rounded-full text-[10px] font-medium border transition-colors
+        {% if chip.active %}border-[#378ADD] bg-[#E6F1FB] text-[#378ADD]{% else %}border-gray-200 text-gray-400 hover:bg-gray-50 hover:text-gray-600{% endif %}"
+    >{{ chip.name }}</a>
+    {% endfor %}
+  </div>
+  {% endif %}
+
   <!-- Task list -->
   <div id="task-list">
     {% include "_tasks_list.html" %}

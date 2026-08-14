@@ -89,6 +89,9 @@ class TaskService:
             ]
         return task_reads
 
+    async def get_distinct_tags(self) -> list[str]:
+        return await self._repo.get_distinct_tags()
+
     async def create_task(self, task_create: TaskCreate) -> TaskRead:
         task_record = await self._provider.create(task_create.model_dump(), self._session)
         task_orm = await self._repo.create_task(task_create, task_record["id"])

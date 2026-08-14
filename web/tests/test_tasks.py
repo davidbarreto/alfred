@@ -35,10 +35,10 @@ class TestTasksPageFilters:
 
 class TestRecurrenceFilters:
     def test_habits_filter_keeps_only_recurring_tasks(self, client, mock_api):
-        mock_api["get"].return_value = [
+        mock_api["get"].side_effect = [[], [
             _task(id=1, title="Water plants", recurrence_rule="FREQ=DAILY"),
             _task(id=2, title="Buy milk", recurrence_rule=None),
-        ]
+        ]]
 
         resp = client.get("/tasks/?filter=habits")
 
@@ -47,10 +47,10 @@ class TestRecurrenceFilters:
         assert "Buy milk" not in resp.text
 
     def test_one_off_filter_keeps_only_non_recurring_tasks(self, client, mock_api):
-        mock_api["get"].return_value = [
+        mock_api["get"].side_effect = [[], [
             _task(id=1, title="Water plants", recurrence_rule="FREQ=DAILY"),
             _task(id=2, title="Buy milk", recurrence_rule=None),
-        ]
+        ]]
 
         resp = client.get("/tasks/?filter=one_off")
 
@@ -78,6 +78,43 @@ class TestRecurrenceFilters:
         assert resp.status_code == 200
         assert "Water plants" in resp.text
         assert "Buy milk" in resp.text
+
+
+class TestTagFilters:
+    def test_renders_available_tags(self, client, mock_api):
+        mock_api["get"].side_effect = [["work", "personal"], [_task(id=1)]]
+
+        resp = client.get("/tasks/?filter=all")
+
+        assert resp.status_code == 200
+        assert "work" in resp.text
+        assert "personal" in resp.text
+
+    def test_selected_tag_passed_to_api(self, client, mock_api):
+        mock_api["get"].side_effect = [["work", "personal"], [_task(id=1)]]
+
+        resp = client.get("/tasks/?filter=all&tag=work")
+
+        assert resp.status_code == 200
+        tasks_call = mock_api["get"].call_args_list[-1]
+        assert tasks_call.kwargs["params"]["tags"] == ["work"]
+
+    def test_preset_and_selected_tags_are_merged(self, client, mock_api):
+        mock_api["get"].side_effect = [["work", "urgent"], [_task(id=1)]]
+
+        resp = client.get("/tasks/?filter=work&tag=urgent")
+
+        assert resp.status_code == 200
+        tasks_call = mock_api["get"].call_args_list[-1]
+        assert tasks_call.kwargs["params"]["tags"] == ["work", "urgent"]
+
+    def test_active_tag_link_toggles_it_off(self, client, mock_api):
+        mock_api["get"].side_effect = [["work"], [_task(id=1)]]
+
+        resp = client.get("/tasks/?filter=all&tag=work")
+
+        assert resp.status_code == 200
+        assert 'href="/tasks?filter=all"' in resp.text
 
 
 class TestUpdateTask:

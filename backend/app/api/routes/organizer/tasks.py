@@ -43,6 +43,11 @@ async def get_completions_history(
     return await service.get_completions_history(days)
 
 
+@router.get("/tags", response_model=list[str])
+async def get_task_tags(service: TaskServiceDep):
+    return await service.get_distinct_tags()
+
+
 @router.get("/{task_id}", response_model=TaskRead)
 async def get_task(task_id: int, service: TaskServiceDep):
     task_read = await service.get_task(task_id)

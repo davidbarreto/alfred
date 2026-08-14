@@ -1,4 +1,5 @@
 from datetime import date, timedelta
+from urllib.parse import urlencode
 
 import httpx
 from fastapi import APIRouter, Form, Request
@@ -22,7 +23,7 @@ _FILTER_DEFS = {
 }
 
 
-def _build_params(active_filter: str) -> dict:
+def _build_params(active_filter: str, extra_tags: list[str] | None = None) -> dict:
     today = date.today()
     defn = _FILTER_DEFS.get(active_filter, _FILTER_DEFS["all"])
     params: dict = {"status": defn["status"], "limit": 200}
@@ -37,10 +38,20 @@ def _build_params(active_filter: str) -> dict:
         # Fetch all; filter recurring/non-recurring in the route handler
         params["limit"] = 200
 
-    if "tags" in defn:
-        params["tags"] = defn["tags"]
+    tags = list(defn.get("tags", []))
+    for tag in extra_tags or []:
+        if tag not in tags:
+            tags.append(tag)
+    if tags:
+        params["tags"] = tags
 
     return params
+
+
+def _tag_toggle_href(active_filter: str, selected_tags: list[str], tag: str) -> str:
+    new_tags = [t for t in selected_tags if t != tag] if tag in selected_tags else selected_tags + [tag]
+    query = [("filter", active_filter)] + [("tag", t) for t in new_tags]
+    return "/tasks?" + urlencode(query)
 
 
 def _apply_recurrence_filter(tasks: list[dict], active_filter: str) -> list[dict]:
@@ -54,7 +65,13 @@ def _apply_recurrence_filter(tasks: list[dict], active_filter: str) -> list[dict
 @router.get("/", response_class=HTMLResponse)
 async def tasks_page(request: Request):
     active_filter = request.query_params.get("filter", "all")
-    params = _build_params(active_filter)
+    selected_tags = request.query_params.getlist("tag")
+    params = _build_params(active_filter, selected_tags)
+
+    try:
+        available_tags = await api.get("/organizer/tasks/tags")
+    except httpx.HTTPError:
+        available_tags = []
 
     api_error: str | None = None
     try:
@@ -67,10 +84,20 @@ async def tasks_page(request: Request):
         tasks = []
         api_error = f"Cannot reach backend: {e}"
 
+    tag_chips = [
+        {
+            "name": tag,
+            "active": tag in selected_tags,
+            "href": _tag_toggle_href(active_filter, selected_tags, tag),
+        }
+        for tag in available_tags
+    ]
+
     return templates.TemplateResponse(request, "tasks.html", {
         "tasks": tasks,
         "active_filter": active_filter,
         "filters": _FILTER_DEFS,
+        "tag_chips": tag_chips,
         "today": date.today().isoformat(),
         "tomorrow": (date.today() + timedelta(days=1)).isoformat(),
         "api_error": api_error,

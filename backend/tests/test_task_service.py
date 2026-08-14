@@ -614,3 +614,13 @@ class TestMissedCount:
 
     def test_unknown_rule_returns_zero(self):
         assert _missed_count("FREQ=UNKNOWN", [], self._FRI) == 0
+
+
+class TestGetDistinctTags:
+    async def test_delegates_to_repository(self, service):
+        service._repo.get_distinct_tags = AsyncMock(return_value=["work", "personal"])
+
+        result = await service.get_distinct_tags()
+
+        assert result == ["work", "personal"]
+        service._repo.get_distinct_tags.assert_awaited_once()

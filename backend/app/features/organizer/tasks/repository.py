@@ -3,7 +3,7 @@ from sqlalchemy import and_, case, or_, select, update
 from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.features.organizer.tags.tables import Tag
+from app.features.organizer.tags.tables import Tag, tasks_tags
 from app.features.organizer.tasks.tables import Task, TaskCompletion
 from app.features.organizer.tasks.schemas import TaskCreate, TaskUpdate, TaskFilters
 
@@ -68,6 +68,17 @@ class TaskRepository:
             query = query.where(Task.tags.any(Tag.name.in_(task_filter.tags)))
         query = query.order_by(_URGENCY_ORDER, _PRIORITY_ORDER, Task.id.desc()).limit(task_filter.limit)
         result = await self._session.execute(query)
+        return list(result.scalars().all())
+
+    async def get_distinct_tags(self) -> list[str]:
+        result = await self._session.execute(
+            select(Tag.name)
+            .join(tasks_tags, tasks_tags.c.tag_id == Tag.id)
+            .join(Task, Task.id == tasks_tags.c.task_id)
+            .where(Task.deleted_at.is_(None))
+            .distinct()
+            .order_by(Tag.name)
+        )
         return list(result.scalars().all())
 
     async def _resolve_tags(self, tag_names: list[str], provider_id: str) -> list[Tag]:

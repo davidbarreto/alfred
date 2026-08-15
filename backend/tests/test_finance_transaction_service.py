@@ -51,6 +51,8 @@ def service():
     svc._account_repo = AsyncMock()
     svc._fx = AsyncMock()
     svc._fx.convert_to_eur.return_value = None
+    svc._settings = AsyncMock()
+    svc._settings.get_cycle_start_day.return_value = 1
     return svc
 
 
@@ -76,7 +78,7 @@ class TestList:
         service._repo.list.return_value = []
         filters = TransactionFilters(type="expense", limit=10)
         await service.list(filters)
-        service._repo.list.assert_called_once_with(filters)
+        service._repo.list.assert_called_once_with(filters, 1)
 
 
 class TestCreate:

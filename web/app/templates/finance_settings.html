@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% set active_page = "finance" %}
+{% block title %}Finance Settings{% endblock %}
+
+{% block content %}
+<div class="p-6 space-y-4 max-w-md">
+
+  <div class="flex items-center gap-2">
+    <a href="/finance" class="text-gray-400 hover:text-gray-600"><i class="ti ti-arrow-left text-sm"></i></a>
+    <h1 class="text-base font-semibold text-gray-900">Finance Settings</h1>
+  </div>
+
+  <div class="bg-white border border-gray-200 rounded-lg p-4 space-y-3">
+    <div>
+      <h2 class="text-sm font-medium text-gray-900">Month cycle</h2>
+      <p class="text-xs text-gray-500 mt-1">
+        The day of the month "this month" and budgets start on. Useful if your income
+        lands mid-month (e.g. the 25th) rather than on the 1st.
+      </p>
+    </div>
+
+    {% if error %}
+    <p class="text-xs text-[#E24B4A]">{{ error }}</p>
+    {% endif %}
+
+    <form method="post" action="/finance/settings" class="flex items-end gap-3">
+      <div>
+        <label class="text-xs text-gray-500 block mb-1" for="cycle_start_day">Cycle start day</label>
+        <input
+          type="number" id="cycle_start_day" name="cycle_start_day"
+          min="1" max="28" value="{{ cycle_start_day }}"
+          class="input input-sm input-bordered w-24"
+        />
+      </div>
+      <button type="submit" class="btn btn-sm btn-primary">Save</button>
+    </form>
+
+    {% if current_year_month %}
+    <p class="text-xs text-gray-500">Current cycle: <span class="font-medium text-gray-700">{{ current_year_month }}</span></p>
+    {% endif %}
+  </div>
+
+</div>
+{% endblock %}

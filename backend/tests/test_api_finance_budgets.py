@@ -102,9 +102,10 @@ class TestBudgetStatus:
     def test_year_month_passed_to_service(self, client, mock_service):
         client.get("/finance/budgets/status?year_month=2026-06", headers=AUTH)
         called_with = mock_service.get_status.call_args[0][0]
-        assert called_with == date(2026, 6, 1)
+        assert called_with == "2026-06"
 
-    def test_invalid_year_month_returns_422(self, client):
+    def test_invalid_year_month_returns_422(self, client, mock_service):
+        mock_service.get_status.side_effect = ValueError("year_month must be in YYYY-MM format")
         assert client.get("/finance/budgets/status?year_month=not-a-date", headers=AUTH).status_code == 422
 
     def test_requires_auth(self, client):

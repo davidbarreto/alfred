@@ -7,6 +7,7 @@ logger = logging.getLogger(__name__)
 
 from app.features.finance.accounts.repository import AccountRepository
 from app.features.finance.exchange_rates.service import ExchangeRateService
+from app.features.finance.settings.service import FinanceSettingsService
 from app.features.finance.transactions.repository import TransactionRepository
 from app.features.finance.transactions.schemas import (
     GLOBAL_CURRENCY,
@@ -44,6 +45,11 @@ class TransactionService:
         self._repo = TransactionRepository(session)
         self._account_repo = AccountRepository(session)
         self._fx = exchange_rate_service
+        self._settings = FinanceSettingsService(session)
+
+    async def _resolve_period(self, filters) -> tuple[date, date]:
+        cycle_start_day = await self._settings.get_cycle_start_day()
+        return resolve_period(filters.period, filters.from_date, filters.to_date, cycle_start_day)
 
     async def get(self, transaction_id: int) -> TransactionRead | None:
         txn = await self._repo.get(transaction_id)
@@ -52,7 +58,8 @@ class TransactionService:
         return TransactionRead.model_validate(txn)
 
     async def list(self, filters: TransactionFilters) -> list[TransactionRead]:
-        txns = await self._repo.list(filters)
+        cycle_start_day = await self._settings.get_cycle_start_day()
+        txns = await self._repo.list(filters, cycle_start_day)
         return [TransactionRead.model_validate(t) for t in txns]
 
     async def create(self, data: TransactionCreate) -> TransactionRead:
@@ -121,7 +128,8 @@ class TransactionService:
         if target is None:
             raise InvalidBulkMoveError("Target account not found")
 
-        moved = await self._repo.bulk_reassign_account(request)
+        cycle_start_day = await self._settings.get_cycle_start_day()
+        moved = await self._repo.bulk_reassign_account(request, cycle_start_day)
         logger.info(
             "Transactions bulk-moved: source_account_id=%d target_account_id=%d count=%d",
             request.account_id, request.target_account_id, moved,
@@ -129,7 +137,7 @@ class TransactionService:
         return moved
 
     async def spending_report(self, filters: AnalyticsFilters) -> SpendingReportResponse:
-        from_date, to_date = resolve_period(filters.period, filters.from_date, filters.to_date)
+        from_date, to_date = await self._resolve_period(filters)
         total, count = await self._repo.get_spending_total(
             from_date=from_date,
             to_date=to_date,
@@ -147,7 +155,7 @@ class TransactionService:
         )
 
     async def income_report(self, filters: AnalyticsFilters) -> SpendingReportResponse:
-        from_date, to_date = resolve_period(filters.period, filters.from_date, filters.to_date)
+        from_date, to_date = await self._resolve_period(filters)
         total, count = await self._repo.get_spending_total(
             from_date=from_date,
             to_date=to_date,
@@ -166,7 +174,7 @@ class TransactionService:
         )
 
     async def spending_average(self, filters: AnalyticsFilters) -> SpendingAverageResponse:
-        from_date, to_date = resolve_period(filters.period, filters.from_date, filters.to_date)
+        from_date, to_date = await self._resolve_period(filters)
         total, _ = await self._repo.get_spending_total(
             from_date=from_date,
             to_date=to_date,
@@ -184,7 +192,7 @@ class TransactionService:
         )
 
     async def spending_by_category(self, filters: AnalyticsFilters) -> SpendingByCategoryResponse:
-        from_date, to_date = resolve_period(filters.period, filters.from_date, filters.to_date)
+        from_date, to_date = await self._resolve_period(filters)
         rows = await self._repo.get_spending_by_category(
             from_date=from_date,
             to_date=to_date,
@@ -208,7 +216,7 @@ class TransactionService:
         )
 
     async def spending_over_time(self, filters: AnalyticsFilters, group_by: str) -> SpendingOverTimeResponse:
-        from_date, to_date = resolve_period(filters.period, filters.from_date, filters.to_date)
+        from_date, to_date = await self._resolve_period(filters)
         rows = await self._repo.get_spending_over_time(
             from_date=from_date,
             to_date=to_date,
@@ -226,7 +234,7 @@ class TransactionService:
         )
 
     async def spending_top(self, filters: AnalyticsFilters) -> SpendingTopResponse:
-        from_date, to_date = resolve_period(filters.period, filters.from_date, filters.to_date)
+        from_date, to_date = await self._resolve_period(filters)
         txns = await self._repo.get_top_expenses(
             from_date=from_date,
             to_date=to_date,
@@ -252,7 +260,7 @@ class TransactionService:
         to avoid a cross-service DB call inside this service.
         """
         today = date.today()
-        _, forecast_to = resolve_period(filters.period, filters.from_date, filters.to_date)
+        _, forecast_to = await self._resolve_period(filters)
 
         # Sum balances from account service is done at the route level; we accept
         # current_balance as a parameter injected by the route handler.

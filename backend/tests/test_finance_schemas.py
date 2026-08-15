@@ -153,3 +153,31 @@ class TestResolvePeriodDefault:
             start, end = resolve_period("quarterly", None, None)
         assert start == date(2026, 6, 1)
         assert end == date(2026, 6, 30)
+
+
+class TestResolvePeriodCustomCycle:
+    def test_this_month_after_cycle_start(self):
+        # Today (June 12) is after cycle_start_day=25 within June, so the active
+        # cycle started on June 25... wait, 12 < 25, so it started in May.
+        with _today():
+            start, end = resolve_period("this month", None, None, cycle_start_day=25)
+        assert start == date(2026, 5, 25)
+        assert end == date(2026, 6, 24)
+
+    def test_this_month_on_or_after_start_day(self):
+        with _today(date(2026, 6, 27)):
+            start, end = resolve_period("this month", None, None, cycle_start_day=25)
+        assert start == date(2026, 6, 25)
+        assert end == date(2026, 7, 24)
+
+    def test_last_month_custom_cycle(self):
+        with _today(date(2026, 6, 27)):
+            start, end = resolve_period("last month", None, None, cycle_start_day=25)
+        assert start == date(2026, 5, 25)
+        assert end == date(2026, 6, 24)
+
+    def test_default_cycle_start_day_matches_calendar_month(self):
+        with _today():
+            start, end = resolve_period("this month", None, None, cycle_start_day=1)
+        assert start == date(2026, 6, 1)
+        assert end == date(2026, 6, 30)

@@ -5,6 +5,7 @@ from datetime import date, datetime, timedelta
 from decimal import Decimal
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.features.finance import cycle
 from app.features.finance.budgets.repository import BudgetTargetRepository
 from app.features.finance.budgets.schemas import (
     BudgetTargetBulkSetItem,
@@ -12,18 +13,10 @@ from app.features.finance.budgets.schemas import (
     CategoryBudgetStatus,
 )
 from app.features.finance.categories.repository import CategoryRepository
+from app.features.finance.settings.service import FinanceSettingsService
 from app.features.finance.transactions.repository import TransactionRepository
 
 logger = logging.getLogger(__name__)
-
-
-def _month_range(year_month: date) -> tuple[date, date]:
-    start = year_month.replace(day=1)
-    if start.month == 12:
-        end = start.replace(year=start.year + 1, month=1, day=1) - timedelta(days=1)
-    else:
-        end = start.replace(month=start.month + 1, day=1) - timedelta(days=1)
-    return start, end
 
 
 class BudgetTargetService:
@@ -33,6 +26,7 @@ class BudgetTargetService:
         self._repo = BudgetTargetRepository(session)
         self._category_repo = CategoryRepository(session)
         self._txn_repo = TransactionRepository(session)
+        self._settings = FinanceSettingsService(session)
 
     async def list_current_targets(self) -> list[BudgetTargetRead]:
         targets = await self._repo.list_current()
@@ -78,8 +72,12 @@ class BudgetTargetService:
                 results.append(result)
         return results
 
-    async def get_status(self, year_month: date) -> list[CategoryBudgetStatus]:
-        from_date, to_date = _month_range(year_month)
+    async def get_status(self, year_month: str | None) -> list[CategoryBudgetStatus]:
+        cycle_start_day = await self._settings.get_cycle_start_day()
+        reference = cycle.parse_year_month_reference(year_month, cycle_start_day)
+        from_date, to_date = cycle.current_cycle_range(reference, cycle_start_day)
+        label = from_date.replace(day=1)
+
         next_month_start = datetime.combine(to_date + timedelta(days=1), datetime.min.time())
         targets = await self._repo.list_effective(next_month_start)
         categories = {c.id: c.name for c in await self._category_repo.list()}
@@ -95,9 +93,14 @@ class BudgetTargetService:
                 CategoryBudgetStatus(
                     category_id=target.category_id,
                     category_name=categories.get(target.category_id, ""),
-                    year_month=year_month.replace(day=1),
+                    year_month=label,
                     limit_amount=target.amount,
                     spent=spent,
                 )
             )
         return results
+
+    async def current_period_label(self) -> str:
+        cycle_start_day = await self._settings.get_cycle_start_day()
+        from_date, _ = cycle.current_cycle_range(date.today(), cycle_start_day)
+        return from_date.strftime("%Y-%m")

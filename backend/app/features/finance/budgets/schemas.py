@@ -32,3 +32,7 @@ class CategoryBudgetStatus(BaseModel):
     year_month: date
     limit_amount: Decimal | None
     spent: Decimal
+
+
+class CurrentPeriodResponse(BaseModel):
+    year_month: str

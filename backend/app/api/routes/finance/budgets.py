@@ -1,5 +1,3 @@
-from datetime import date
-
 from fastapi import APIRouter, Depends, HTTPException, status
 
 from app.api.auth import require_auth
@@ -9,19 +7,10 @@ from app.features.finance.budgets.schemas import (
     BudgetTargetRead,
     BudgetTargetSet,
     CategoryBudgetStatus,
+    CurrentPeriodResponse,
 )
 
 router = APIRouter(prefix="/finance/budgets", tags=["finance"], dependencies=[Depends(require_auth)])
-
-
-def _parse_year_month(year_month: str | None) -> date:
-    if year_month is None:
-        return date.today().replace(day=1)
-    try:
-        year, month = (int(part) for part in year_month.split("-", 1))
-        return date(year, month, 1)
-    except (ValueError, TypeError):
-        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="year_month must be in YYYY-MM format")
 
 
 @router.get("/targets", response_model=list[BudgetTargetRead])
@@ -41,4 +30,12 @@ async def set_budget_target(category_id: int, request: BudgetTargetSet, service:
 
 @router.get("/status", response_model=list[CategoryBudgetStatus])
 async def budget_status(service: BudgetTargetServiceDep, year_month: str | None = None):
-    return await service.get_status(_parse_year_month(year_month))
+    try:
+        return await service.get_status(year_month)
+    except ValueError:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="year_month must be in YYYY-MM format")
+
+
+@router.get("/current-period", response_model=CurrentPeriodResponse)
+async def current_budget_period(service: BudgetTargetServiceDep):
+    return CurrentPeriodResponse(year_month=await service.current_period_label())

@@ -37,7 +37,7 @@ def _spend_condition(transaction_type: str):
     return Transaction.type == transaction_type
 
 
-def _filter_conditions(filters: Any) -> list:
+def _filter_conditions(filters: Any, cycle_start_day: int = 1) -> list:
     """Shared WHERE-clause building for anything shaped like TransactionFilters
     (duck-typed: also used by TransactionBulkMoveRequest, which carries the same
     optional type/category/merchant/date/currency fields plus a required account_id).
@@ -61,7 +61,7 @@ def _filter_conditions(filters: Any) -> list:
         conditions.append(Transaction.date <= filters.to_date)
     elif filters.period is not None:
         from app.features.finance.transactions.schemas import resolve_period
-        from_dt, to_dt = resolve_period(filters.period, filters.from_date, filters.to_date)
+        from_dt, to_dt = resolve_period(filters.period, filters.from_date, filters.to_date, cycle_start_day)
         conditions.append(Transaction.date >= from_dt)
         conditions.append(Transaction.date <= to_dt)
     return conditions
@@ -78,22 +78,22 @@ class TransactionRepository:
         )
         return result.scalars().first()
 
-    async def list(self, filters: TransactionFilters) -> list[Transaction]:
+    async def list(self, filters: TransactionFilters, cycle_start_day: int = 1) -> list[Transaction]:
         query = select(Transaction).order_by(Transaction.date.desc())
-        for condition in _filter_conditions(filters):
+        for condition in _filter_conditions(filters, cycle_start_day):
             query = query.where(condition)
         query = query.offset(filters.offset).limit(filters.limit)
         result = await self._session.execute(query)
         return list(result.scalars().all())
 
-    async def bulk_reassign_account(self, request: TransactionBulkMoveRequest) -> int:
+    async def bulk_reassign_account(self, request: TransactionBulkMoveRequest, cycle_start_day: int = 1) -> int:
         """Move every transaction matching request's account_id + optional filters to
         target_account_id. Clears deduplication_hash on moved rows: the stored hash was
         computed against the old account_id (and the source statement's balance, which
         isn't persisted), so it can no longer be trusted to detect a future re-import.
         """
         stmt = update(Transaction).values(account_id=request.target_account_id, deduplication_hash=None)
-        for condition in _filter_conditions(request):
+        for condition in _filter_conditions(request, cycle_start_day):
             stmt = stmt.where(condition)
         result = await self._session.execute(stmt)
         await self._session.commit()

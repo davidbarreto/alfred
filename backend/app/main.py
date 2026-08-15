@@ -41,6 +41,7 @@ from app.api.routes.finance.categories import router as finance_categories_route
 from app.api.routes.finance.currencies import router as finance_currencies_router
 from app.api.routes.finance.transactions import router as finance_transactions_router
 from app.api.routes.finance.budgets import router as finance_budgets_router
+from app.api.routes.finance.settings import router as finance_settings_router
 from app.api.routes.finance.recurring_transactions import router as finance_recurring_router
 from app.api.routes.finance.imports import router as finance_imports_router
 from app.api.routes.core.sessions import router as core_sessions_router
@@ -132,6 +133,7 @@ app.include_router(finance_categories_router)
 app.include_router(finance_currencies_router)
 app.include_router(finance_transactions_router)
 app.include_router(finance_budgets_router)
+app.include_router(finance_settings_router)
 app.include_router(finance_recurring_router)
 app.include_router(finance_imports_router)
 app.include_router(core_sessions_router)

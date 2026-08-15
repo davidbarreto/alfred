@@ -22,6 +22,7 @@ from app.features.finance.transactions.service import TransactionService
 from app.features.finance.imports.service import ImportService
 from app.features.finance.imports.registry import all_parsers
 from app.features.finance.budgets.service import BudgetTargetService
+from app.features.finance.settings.service import FinanceSettingsService
 from app.features.finance.recurring_transactions.service import RecurringTransactionService
 from app.features.core.sessions.service import SessionService
 from app.features.core.messages.service import MessageService
@@ -189,6 +190,9 @@ def get_transaction_service(session: AsyncSession = Depends(get_session)) -> Tra
 
 def get_budget_target_service(session: AsyncSession = Depends(get_session)) -> BudgetTargetService:
     return BudgetTargetService(session)
+
+def get_finance_settings_service(session: AsyncSession = Depends(get_session)) -> FinanceSettingsService:
+    return FinanceSettingsService(session)
 
 def get_recurring_transaction_service(session: AsyncSession = Depends(get_session)) -> RecurringTransactionService:
     return RecurringTransactionService(session, get_exchange_rate_service(session))
@@ -504,6 +508,7 @@ CurrencyServiceDep = Annotated[CurrencyService, Depends(get_currency_service)]
 TransactionServiceDep = Annotated[TransactionService, Depends(get_transaction_service)]
 ImportServiceDep = Annotated[ImportService, Depends(get_import_service)]
 BudgetTargetServiceDep = Annotated[BudgetTargetService, Depends(get_budget_target_service)]
+FinanceSettingsServiceDep = Annotated[FinanceSettingsService, Depends(get_finance_settings_service)]
 RecurringTransactionServiceDep = Annotated[RecurringTransactionService, Depends(get_recurring_transaction_service)]
 SessionServiceDep = Annotated[SessionService, Depends(get_session_service)]
 MessageServiceDep = Annotated[MessageService, Depends(get_message_service)]

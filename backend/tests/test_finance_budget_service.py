@@ -2,7 +2,8 @@ import pytest
 from datetime import date, datetime
 from decimal import Decimal
 from unittest.mock import AsyncMock, MagicMock, patch
-from app.features.finance.budgets.service import BudgetTargetService, _month_range
+from app.features.finance.budgets.service import BudgetTargetService
+from app.features.finance.cycle import current_cycle_range
 from app.features.finance.budgets.schemas import BudgetTargetRead, CategoryBudgetStatus
 
 FIXED_NOW = datetime(2026, 7, 15, 12, 0, 0)
@@ -33,17 +34,19 @@ def service():
     svc._repo.add = MagicMock()  # add() is sync in the real repository
     svc._category_repo = AsyncMock()
     svc._txn_repo = AsyncMock()
+    svc._settings = AsyncMock()
+    svc._settings.get_cycle_start_day.return_value = 1
     return svc
 
 
 class TestMonthRange:
     def test_regular_month(self):
-        start, end = _month_range(date(2026, 7, 10))
+        start, end = current_cycle_range(date(2026, 7, 10))
         assert start == date(2026, 7, 1)
         assert end == date(2026, 7, 31)
 
     def test_december_rollover(self):
-        start, end = _month_range(date(2026, 12, 5))
+        start, end = current_cycle_range(date(2026, 12, 5))
         assert start == date(2026, 12, 1)
         assert end == date(2026, 12, 31)
 
@@ -140,7 +143,7 @@ class TestGetStatus:
         service._category_repo.list.return_value = [_make_category_orm(1, "Groceries")]
         service._txn_repo.get_category_spent.return_value = Decimal("120.00")
 
-        results = await service.get_status(date(2026, 7, 1))
+        results = await service.get_status("2026-07")
 
         assert len(results) == 1
         assert isinstance(results[0], CategoryBudgetStatus)
@@ -154,7 +157,7 @@ class TestGetStatus:
         service._repo.list_effective.return_value = []
         service._category_repo.list.return_value = []
 
-        await service.get_status(date(2026, 7, 15))
+        await service.get_status("2026-07")
 
         called_with = service._repo.list_effective.call_args[0][0]
         assert called_with == datetime(2026, 8, 1, 0, 0, 0)
@@ -162,5 +165,23 @@ class TestGetStatus:
     async def test_empty_targets_returns_empty_list(self, service):
         service._repo.list_effective.return_value = []
         service._category_repo.list.return_value = []
-        results = await service.get_status(date(2026, 7, 1))
+        results = await service.get_status("2026-07")
         assert results == []
+
+    async def test_invalid_year_month_raises_value_error(self, service):
+        with pytest.raises(ValueError):
+            await service.get_status("not-a-month")
+
+    async def test_none_year_month_uses_todays_active_cycle(self, service):
+        service._repo.list_effective.return_value = []
+        service._category_repo.list.return_value = []
+        service._settings.get_cycle_start_day.return_value = 25
+
+        with patch("app.features.finance.cycle.date") as mock_date:
+            mock_date.today.return_value = date(2026, 8, 15)
+            mock_date.side_effect = lambda *a, **kw: date(*a, **kw)
+            await service.get_status(None)
+
+        # Aug 15 with cycle_start_day=25 -> active cycle started July 25 -> ends Aug 24
+        called_with = service._repo.list_effective.call_args[0][0]
+        assert called_with == datetime(2026, 8, 25, 0, 0, 0)

@@ -4,6 +4,8 @@ from typing import Annotated, Literal, Optional, TypeAlias
 from fastapi import Query
 from pydantic import BaseModel
 
+from app.features.finance import cycle
+
 TransactionType: TypeAlias = Literal["expense", "income", "transfer"]
 
 # Sentinel AnalyticsFilters.currency value meaning "sum amount_eur across every
@@ -15,6 +17,7 @@ def resolve_period(
     period: str | None,
     from_date: date | None,
     to_date: date | None,
+    cycle_start_day: int = 1,
 ) -> tuple[date, date]:
     """Resolve a period keyword or explicit dates into a concrete [from, to] range."""
     if from_date and to_date:
@@ -25,16 +28,9 @@ def resolve_period(
     if period:
         p = period.lower().strip()
         if p in ("this month", "current month"):
-            start = today.replace(day=1)
-            if start.month == 12:
-                end = start.replace(year=start.year + 1, month=1, day=1) - timedelta(days=1)
-            else:
-                end = start.replace(month=start.month + 1, day=1) - timedelta(days=1)
-            return start, end
+            return cycle.current_cycle_range(today, cycle_start_day)
         if p in ("last month", "previous month"):
-            first_of_this = today.replace(day=1)
-            last_of_prev = first_of_this - timedelta(days=1)
-            return last_of_prev.replace(day=1), last_of_prev
+            return cycle.previous_cycle_range(today, cycle_start_day)
         if p in ("this week", "current week"):
             start = today - timedelta(days=today.weekday())
             return start, start + timedelta(days=6)
@@ -70,12 +66,7 @@ def resolve_period(
             return y, y
 
     # default: current month
-    start = today.replace(day=1)
-    if start.month == 12:
-        end = start.replace(year=start.year + 1, month=1, day=1) - timedelta(days=1)
-    else:
-        end = start.replace(month=start.month + 1, day=1) - timedelta(days=1)
-    return start, end
+    return cycle.current_cycle_range(today, cycle_start_day)
 
 
 class TransactionBase(BaseModel):

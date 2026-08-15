@@ -820,6 +820,8 @@ class TestBudgetsPage:
                 return [{"code": "EUR", "symbol": "€", "name": "Euro"}]
             if path == "/finance/budgets/status":
                 return status
+            if path == "/finance/budgets/current-period":
+                return {"year_month": "2026-07"}
             return []
         return fake
 
@@ -920,3 +922,46 @@ class TestBudgetStatusJson:
         resp = anon_client.get("/finance/budgets/status.json", follow_redirects=False)
         assert resp.status_code == 302
         assert resp.headers["location"].startswith("/login")
+
+
+class TestFinanceSettingsPage:
+    def _fake_get(self, cycle_start_day=1):
+        async def fake(path, params=None):
+            if path == "/finance/settings":
+                return {"cycle_start_day": cycle_start_day}
+            if path == "/finance/budgets/current-period":
+                return {"year_month": "2026-07"}
+            return []
+        return fake
+
+    def test_renders_current_cycle_start_day(self, client, mock_api):
+        mock_api["get"].side_effect = self._fake_get(cycle_start_day=25)
+
+        resp = client.get("/finance/settings")
+
+        assert resp.status_code == 200
+        assert 'value="25"' in resp.text
+        assert "2026-07" in resp.text
+
+    def test_requires_authentication(self, anon_client):
+        resp = anon_client.get("/finance/settings", follow_redirects=False)
+        assert resp.status_code == 302
+        assert resp.headers["location"].startswith("/login")
+
+    def test_saves_and_rerenders(self, client, mock_api):
+        mock_api["get"].side_effect = self._fake_get(cycle_start_day=25)
+        mock_api["put"].return_value = {"cycle_start_day": 25}
+
+        resp = client.post("/finance/settings", data={"cycle_start_day": "25"})
+
+        assert resp.status_code == 200
+        mock_api["put"].assert_awaited_once_with("/finance/settings", json={"cycle_start_day": 25})
+
+    def test_upstream_failure_shows_error(self, client, mock_api):
+        mock_api["get"].side_effect = self._fake_get()
+        mock_api["put"].side_effect = httpx.HTTPError("boom")
+
+        resp = client.post("/finance/settings", data={"cycle_start_day": "25"})
+
+        assert resp.status_code == 200
+        assert "Failed to save settings" in resp.text

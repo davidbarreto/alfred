@@ -6,15 +6,23 @@ from sqlalchemy.ext.asyncio import AsyncSession
 logger = logging.getLogger(__name__)
 
 from app.features.finance.accounts.repository import AccountRepository
+from app.features.finance.accounts.schemas import AccountFilters
 from app.features.finance.exchange_rates.service import ExchangeRateService
 from app.features.finance.settings.service import FinanceSettingsService
 from app.features.finance.transactions.repository import TransactionRepository
 from app.features.finance.transactions.schemas import (
     GLOBAL_CURRENCY,
+    AccountSpendingItem,
     AnalyticsFilters,
     BalanceForecastResponse,
     CategorySpendingItem,
+    IncomeExpenseOverTimeItem,
+    IncomeExpenseOverTimeResponse,
+    NetWorthFilters,
+    NetWorthHistoryItem,
+    NetWorthHistoryResponse,
     SpendingAverageResponse,
+    SpendingByAccountResponse,
     SpendingByCategoryResponse,
     SpendingOverTimeItem,
     SpendingOverTimeResponse,
@@ -229,6 +237,121 @@ class TransactionService:
             items=items,
             from_date=from_date,
             to_date=to_date,
+            currency=filters.currency,
+            group_by=group_by,
+        )
+
+    async def spending_by_account(self, filters: AnalyticsFilters) -> SpendingByAccountResponse:
+        from_date, to_date = await self._resolve_period(filters)
+        rows = await self._repo.get_spending_by_account(
+            from_date=from_date,
+            to_date=to_date,
+            category_id=filters.category_id,
+            currency=filters.currency,
+        )
+        items = [
+            AccountSpendingItem(
+                account_id=row[0],
+                account_name=row[1],
+                total=row[2],
+                transaction_count=row[3],
+            )
+            for row in rows
+        ]
+        return SpendingByAccountResponse(
+            items=items,
+            from_date=from_date,
+            to_date=to_date,
+            currency=filters.currency,
+        )
+
+    async def income_vs_expense_over_time(
+        self, filters: AnalyticsFilters, group_by: str
+    ) -> IncomeExpenseOverTimeResponse:
+        from_date, to_date = await self._resolve_period(filters)
+        expense_rows = await self._repo.get_spending_over_time(
+            from_date=from_date,
+            to_date=to_date,
+            group_by=group_by,
+            account_id=filters.account_id,
+            currency=filters.currency,
+            transaction_type="expense",
+        )
+        income_rows = await self._repo.get_spending_over_time(
+            from_date=from_date,
+            to_date=to_date,
+            group_by=group_by,
+            account_id=filters.account_id,
+            currency=filters.currency,
+            transaction_type="income",
+        )
+        expense_by_period = dict(expense_rows)
+        income_by_period = dict(income_rows)
+        periods = sorted(set(expense_by_period) | set(income_by_period))
+        items = [
+            IncomeExpenseOverTimeItem(
+                period=period,
+                income=income_by_period.get(period, Decimal("0")),
+                expense=expense_by_period.get(period, Decimal("0")),
+            )
+            for period in periods
+        ]
+        return IncomeExpenseOverTimeResponse(
+            items=items,
+            from_date=from_date,
+            to_date=to_date,
+            currency=filters.currency,
+            group_by=group_by,
+        )
+
+    async def net_worth_history(
+        self, filters: NetWorthFilters, group_by: str
+    ) -> NetWorthHistoryResponse:
+        """Reconstruct a running total-balance series from the transaction
+        ledger (see TransactionRepository.get_ledger_events) plus each
+        account's optional opening_balance anchor, rather than from
+        Account.balance -- which is a manually-edited snapshot with no
+        guaranteed link to transaction history.
+        """
+        account_filters = AccountFilters(
+            currency=None if filters.currency == GLOBAL_CURRENCY else filters.currency
+        )
+        accounts = await self._account_repo.list(account_filters)
+
+        events: list[tuple[int, date, Decimal]] = [
+            (account.id, account.opening_balance_date, account.opening_balance)
+            for account in accounts
+            if account.opening_balance_date is not None and account.opening_balance is not None
+        ]
+        events.extend(await self._repo.get_ledger_events(filters.to_date, filters.currency))
+        events.sort(key=lambda event: event[1])
+
+        key_format = "%Y-%m" if group_by == "month" else "%Y-%m-%d"
+        running_total = Decimal("0")
+        bucket_totals: dict[str, Decimal] = {}
+        total_before_from_date = Decimal("0")
+        for _account_id, event_date, delta in events:
+            running_total += delta
+            if filters.from_date is not None and event_date < filters.from_date:
+                total_before_from_date = running_total
+                continue
+            bucket_totals[event_date.strftime(key_format)] = running_total
+
+        items = [
+            NetWorthHistoryItem(period=period, total=total)
+            for period, total in sorted(bucket_totals.items())
+        ]
+        if filters.from_date is not None:
+            anchor_period = filters.from_date.strftime(key_format)
+            if not items or items[0].period != anchor_period:
+                items.insert(
+                    0, NetWorthHistoryItem(period=anchor_period, total=total_before_from_date)
+                )
+
+        return NetWorthHistoryResponse(
+            items=items,
+            from_date=filters.from_date,
+            to_date=filters.to_date,
             currency=filters.currency,
             group_by=group_by,
         )

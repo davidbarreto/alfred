@@ -16,6 +16,8 @@ def _make_account_orm(**kwargs):
     a.institution = kwargs.get("institution", None)
     a.credit_limit = kwargs.get("credit_limit", None)
     a.is_active = kwargs.get("is_active", True)
+    a.opening_balance = kwargs.get("opening_balance", None)
+    a.opening_balance_date = kwargs.get("opening_balance_date", None)
     return a
 
 

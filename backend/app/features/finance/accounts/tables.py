@@ -1,6 +1,7 @@
-from sqlalchemy import Boolean, Integer, Numeric, String
+from sqlalchemy import Boolean, Date, Integer, Numeric, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from typing import Optional, List, TYPE_CHECKING
+from datetime import date
 from decimal import Decimal
 
 from app.db.base import Base
@@ -22,6 +23,8 @@ class Account(Base):
     institution: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     credit_limit: Mapped[Optional[Decimal]] = mapped_column(Numeric(12, 2), nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    opening_balance: Mapped[Optional[Decimal]] = mapped_column(Numeric(12, 2), nullable=True)
+    opening_balance_date: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
 
     transactions: Mapped[List["Transaction"]] = relationship(
         "Transaction",

@@ -244,6 +244,52 @@ async def finance_page(request: Request):
         item["period"]: float(item["total"]) for item in (over_time or {}).get("items", [])
     }
 
+    by_account = None
+    try:
+        by_account = await api.get(
+            "/finance/transactions/by-account", params={**range_params, "currency": currency}
+        )
+    except httpx.HTTPError:
+        errors.append("by_account")
+    account_chart = {
+        (i["account_name"] or "Unknown"): float(i["total"])
+        for i in (by_account or {}).get("items", [])
+    }
+
+    income_vs_expense = None
+    try:
+        income_vs_expense = await api.get(
+            "/finance/transactions/income-vs-expense-over-time",
+            params={
+                "currency": currency,
+                "group_by": "month" if group_by_month else "day",
+                **range_params,
+            },
+        )
+    except httpx.HTTPError:
+        errors.append("income_vs_expense")
+    income_expense_chart = {
+        item["period"]: {"income": float(item["income"]), "expense": float(item["expense"])}
+        for item in (income_vs_expense or {}).get("items", [])
+    }
+
+    # Net worth is a running-balance trend, independent of the page's selected
+    # cycle/period -- always show a trailing 12 months so it reads as a trend,
+    # not a single cycle's start/end balance.
+    net_worth = None
+    try:
+        from datetime import date as _date, timedelta as _timedelta
+        net_worth_from = (_date.today() - _timedelta(days=365)).isoformat()
+        net_worth = await api.get(
+            "/finance/transactions/net-worth",
+            params={"currency": currency, "group_by": "month", "from_date": net_worth_from},
+        )
+    except httpx.HTTPError:
+        errors.append("net_worth")
+    net_worth_chart = {
+        item["period"]: float(item["total"]) for item in (net_worth or {}).get("items", [])
+    }
+
     # Category chart data
     category_chart = {
         (i["category_name"] or "Uncategorized"): float(i["total"])
@@ -282,6 +328,9 @@ async def finance_page(request: Request):
         "errors": errors,
         "time_spending": time_spending_sorted,
         "category_chart": category_chart,
+        "account_chart": account_chart,
+        "income_expense_chart": income_expense_chart,
+        "net_worth_chart": net_worth_chart,
         "budget_chart": budget_chart,
         "time_label": "Month" if group_by_month else "Day",
         "accounts": accounts,

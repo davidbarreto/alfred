@@ -5,6 +5,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from app.features.finance.transactions.service import InvalidBulkMoveError, TransactionService
 from app.features.finance.transactions.schemas import (
     AnalyticsFilters,
+    NetWorthFilters,
     TransactionBulkMoveRequest,
     TransactionCreate,
     TransactionFilters,
@@ -330,6 +331,117 @@ class TestSpendingOverTime:
 
         call_kwargs = service._repo.get_spending_over_time.call_args[1]
         assert call_kwargs["group_by"] == "month"
+
+
+class TestSpendingByAccount:
+    async def test_returns_items(self, service):
+        service._repo.get_spending_by_account.return_value = [
+            (1, "Checking", Decimal("120.00"), 3)
+        ]
+        filters = AnalyticsFilters(from_date=date(2026, 6, 1), to_date=date(2026, 6, 30))
+
+        result = await service.spending_by_account(filters)
+
+        assert result.items[0].account_id == 1
+        assert result.items[0].account_name == "Checking"
+        assert result.items[0].total == Decimal("120.00")
+        assert result.items[0].transaction_count == 3
+
+
+class TestIncomeVsExpenseOverTime:
+    async def test_merges_income_and_expense_by_period(self, service):
+        service._repo.get_spending_over_time.side_effect = [
+            [("2026-06-01", Decimal("30.00"))],
+            [("2026-06-01", Decimal("100.00")), ("2026-06-02", Decimal("50.00"))],
+        ]
+        filters = AnalyticsFilters(from_date=date(2026, 6, 1), to_date=date(2026, 6, 30))
+
+        result = await service.income_vs_expense_over_time(filters, group_by="day")
+
+        items = {i.period: i for i in result.items}
+        assert items["2026-06-01"].income == Decimal("100.00")
+        assert items["2026-06-01"].expense == Decimal("30.00")
+        assert items["2026-06-02"].income == Decimal("50.00")
+        assert items["2026-06-02"].expense == Decimal("0")
+
+    async def test_calls_repo_with_expense_then_income_type(self, service):
+        service._repo.get_spending_over_time.return_value = []
+        filters = AnalyticsFilters(from_date=date(2026, 6, 1), to_date=date(2026, 6, 30))
+
+        await service.income_vs_expense_over_time(filters, group_by="day")
+
+        call_types = [
+            c.kwargs["transaction_type"] for c in service._repo.get_spending_over_time.call_args_list
+        ]
+        assert call_types == ["expense", "income"]
+
+
+class TestNetWorthHistory:
+    async def test_computes_running_total_from_ledger(self, service):
+        service._account_repo.list.return_value = []
+        service._repo.get_ledger_events.return_value = [
+            (1, date(2026, 5, 1), Decimal("1000.00")),
+            (1, date(2026, 6, 1), Decimal("-200.00")),
+        ]
+        filters = NetWorthFilters(to_date=date(2026, 6, 30), currency="EUR")
+
+        result = await service.net_worth_history(filters, group_by="month")
+
+        totals = {i.period: i.total for i in result.items}
+        assert totals["2026-05"] == Decimal("1000.00")
+        assert totals["2026-06"] == Decimal("800.00")
+
+    async def test_includes_opening_balance_anchor(self, service):
+        account = MagicMock(id=1, opening_balance=Decimal("500.00"), opening_balance_date=date(2026, 1, 1))
+        service._account_repo.list.return_value = [account]
+        service._repo.get_ledger_events.return_value = [
+            (1, date(2026, 2, 1), Decimal("50.00")),
+        ]
+        filters = NetWorthFilters(to_date=date(2026, 6, 30), currency="EUR")
+
+        result = await service.net_worth_history(filters, group_by="month")
+
+        totals = {i.period: i.total for i in result.items}
+        assert totals["2026-01"] == Decimal("500.00")
+        assert totals["2026-02"] == Decimal("550.00")
+
+    async def test_accounts_without_opening_balance_are_ignored_as_anchors(self, service):
+        account = MagicMock(id=1, opening_balance=None, opening_balance_date=None)
+        service._account_repo.list.return_value = [account]
+        service._repo.get_ledger_events.return_value = [
+            (1, date(2026, 6, 1), Decimal("100.00")),
+        ]
+        filters = NetWorthFilters(to_date=date(2026, 6, 30), currency="EUR")
+
+        result = await service.net_worth_history(filters, group_by="month")
+
+        assert {i.period: i.total for i in result.items} == {"2026-06": Decimal("100.00")}
+
+    async def test_from_date_injects_anchor_point_for_prior_history(self, service):
+        service._account_repo.list.return_value = []
+        service._repo.get_ledger_events.return_value = [
+            (1, date(2026, 1, 1), Decimal("1000.00")),
+            (1, date(2026, 6, 1), Decimal("-200.00")),
+        ]
+        filters = NetWorthFilters(
+            from_date=date(2026, 5, 15), to_date=date(2026, 6, 30), currency="EUR"
+        )
+
+        result = await service.net_worth_history(filters, group_by="month")
+
+        assert result.items[0].period == "2026-05"
+        assert result.items[0].total == Decimal("1000.00")
+        assert result.items[-1].total == Decimal("800.00")
+
+    async def test_global_currency_passes_none_account_currency_filter(self, service):
+        service._account_repo.list.return_value = []
+        service._repo.get_ledger_events.return_value = []
+        filters = NetWorthFilters(to_date=date(2026, 6, 30), currency="GLOBAL")
+
+        await service.net_worth_history(filters, group_by="month")
+
+        account_filters = service._account_repo.list.call_args.args[0]
+        assert account_filters.currency is None
 
 
 class TestBalanceForecast:

@@ -1,3 +1,4 @@
+from datetime import date
 from decimal import Decimal
 from typing import Annotated, Literal, TypeAlias
 from fastapi import Query
@@ -14,6 +15,8 @@ class AccountBase(BaseModel):
     institution: str | None = None
     credit_limit: Decimal | None = None
     is_active: bool = True
+    opening_balance: Decimal | None = None
+    opening_balance_date: date | None = None
 
 
 class AccountCreate(AccountBase):
@@ -28,6 +31,8 @@ class AccountUpdate(BaseModel):
     institution: str | None = None
     credit_limit: Decimal | None = None
     is_active: bool | None = None
+    opening_balance: Decimal | None = None
+    opening_balance_date: date | None = None
 
 
 class AccountRead(AccountBase):

@@ -12,7 +12,11 @@ from app.features.finance.transactions.schemas import (
     GLOBAL_CURRENCY,
     AnalyticsFilters,
     BalanceForecastResponse,
+    IncomeExpenseOverTimeResponse,
+    NetWorthFilters,
+    NetWorthHistoryResponse,
     SpendingAverageResponse,
+    SpendingByAccountResponse,
     SpendingByCategoryResponse,
     SpendingOverTimeResponse,
     SpendingReportResponse,
@@ -73,6 +77,31 @@ async def spending_over_time(
     group_by: Annotated[Literal["day", "month"], Query()] = "day",
 ):
     return await service.spending_over_time(filters, group_by)
+
+
+@router.get("/by-account", response_model=SpendingByAccountResponse)
+async def spending_by_account(
+    service: TransactionServiceDep, filters: AnalyticsFilters = Depends()
+):
+    return await service.spending_by_account(filters)
+
+
+@router.get("/income-vs-expense-over-time", response_model=IncomeExpenseOverTimeResponse)
+async def income_vs_expense_over_time(
+    service: TransactionServiceDep,
+    filters: AnalyticsFilters = Depends(),
+    group_by: Annotated[Literal["day", "month"], Query()] = "day",
+):
+    return await service.income_vs_expense_over_time(filters, group_by)
+
+
+@router.get("/net-worth", response_model=NetWorthHistoryResponse)
+async def net_worth_history(
+    service: TransactionServiceDep,
+    filters: NetWorthFilters = Depends(),
+    group_by: Annotated[Literal["day", "month"], Query()] = "month",
+):
+    return await service.net_worth_history(filters, group_by)
 
 
 @router.get("/report", response_model=SpendingReportResponse)

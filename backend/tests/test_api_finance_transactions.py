@@ -5,9 +5,15 @@ from fastapi.testclient import TestClient
 from unittest.mock import AsyncMock
 from app.features.finance.accounts.schemas import AccountRead
 from app.features.finance.transactions.schemas import (
+    AccountSpendingItem,
     BalanceForecastResponse,
     CategorySpendingItem,
+    IncomeExpenseOverTimeItem,
+    IncomeExpenseOverTimeResponse,
+    NetWorthHistoryItem,
+    NetWorthHistoryResponse,
     SpendingAverageResponse,
+    SpendingByAccountResponse,
     SpendingByCategoryResponse,
     SpendingOverTimeItem,
     SpendingOverTimeResponse,
@@ -94,6 +100,40 @@ def mock_txn_service():
         to_date=date(2026, 6, 30),
         currency="EUR",
         group_by="day",
+    )
+    svc.spending_by_account.return_value = SpendingByAccountResponse(
+        items=[
+            AccountSpendingItem(
+                account_id=1,
+                account_name="Checking",
+                total=Decimal("120.00"),
+                transaction_count=3,
+            )
+        ],
+        from_date=date(2026, 6, 1),
+        to_date=date(2026, 6, 30),
+        currency="EUR",
+    )
+    svc.income_vs_expense_over_time.return_value = IncomeExpenseOverTimeResponse(
+        items=[
+            IncomeExpenseOverTimeItem(
+                period="2026-06-01", income=Decimal("100.00"), expense=Decimal("30.00")
+            ),
+        ],
+        from_date=date(2026, 6, 1),
+        to_date=date(2026, 6, 30),
+        currency="EUR",
+        group_by="day",
+    )
+    svc.net_worth_history.return_value = NetWorthHistoryResponse(
+        items=[
+            NetWorthHistoryItem(period="2026-05", total=Decimal("1000.00")),
+            NetWorthHistoryItem(period="2026-06", total=Decimal("800.00")),
+        ],
+        from_date=date(2026, 5, 1),
+        to_date=date(2026, 6, 30),
+        currency="EUR",
+        group_by="month",
     )
     return svc
 
@@ -390,6 +430,60 @@ class TestSpendingOverTime:
 
     def test_requires_auth(self, client):
         assert client.get("/finance/transactions/over-time").status_code == 403
+
+
+class TestSpendingByAccount:
+    def test_returns_200_with_items(self, client):
+        response = client.get("/finance/transactions/by-account", headers=AUTH)
+        assert response.status_code == 200
+        data = response.json()
+        assert "items" in data
+        assert data["items"][0]["account_name"] == "Checking"
+
+    def test_period_filter_forwarded(self, client, mock_txn_service):
+        client.get("/finance/transactions/by-account?period=this+month", headers=AUTH)
+        filters = mock_txn_service.spending_by_account.call_args[0][0]
+        assert filters.period == "this month"
+
+    def test_requires_auth(self, client):
+        assert client.get("/finance/transactions/by-account").status_code == 403
+
+
+class TestIncomeVsExpenseOverTime:
+    def test_returns_200_with_items(self, client):
+        response = client.get("/finance/transactions/income-vs-expense-over-time", headers=AUTH)
+        assert response.status_code == 200
+        data = response.json()
+        assert data["items"][0]["income"] == "100.00"
+        assert data["items"][0]["expense"] == "30.00"
+
+    def test_group_by_forwarded(self, client, mock_txn_service):
+        client.get("/finance/transactions/income-vs-expense-over-time?group_by=month", headers=AUTH)
+        assert mock_txn_service.income_vs_expense_over_time.call_args[0][1] == "month"
+
+    def test_requires_auth(self, client):
+        assert client.get("/finance/transactions/income-vs-expense-over-time").status_code == 403
+
+
+class TestNetWorthHistory:
+    def test_returns_200_with_items(self, client):
+        response = client.get("/finance/transactions/net-worth", headers=AUTH)
+        assert response.status_code == 200
+        data = response.json()
+        assert data["items"][0]["period"] == "2026-05"
+        assert data["items"][0]["total"] == "1000.00"
+
+    def test_defaults_to_month_grouping(self, client, mock_txn_service):
+        client.get("/finance/transactions/net-worth", headers=AUTH)
+        assert mock_txn_service.net_worth_history.call_args[0][1] == "month"
+
+    def test_from_date_forwarded(self, client, mock_txn_service):
+        client.get("/finance/transactions/net-worth?from_date=2026-01-01", headers=AUTH)
+        filters = mock_txn_service.net_worth_history.call_args[0][0]
+        assert filters.from_date == date(2026, 1, 1)
+
+    def test_requires_auth(self, client):
+        assert client.get("/finance/transactions/net-worth").status_code == 403
 
 
 class TestBalanceForecast:

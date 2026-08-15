@@ -198,6 +198,65 @@ class SpendingOverTimeResponse(BaseModel):
     group_by: str
 
 
+class AccountSpendingItem(BaseModel):
+    account_id: int | None
+    account_name: str | None
+    total: Decimal
+    transaction_count: int
+
+
+class SpendingByAccountResponse(BaseModel):
+    items: list[AccountSpendingItem]
+    from_date: date
+    to_date: date
+    currency: str
+
+
+class IncomeExpenseOverTimeItem(BaseModel):
+    period: str
+    income: Decimal
+    expense: Decimal
+
+
+class IncomeExpenseOverTimeResponse(BaseModel):
+    items: list[IncomeExpenseOverTimeItem]
+    from_date: date
+    to_date: date
+    currency: str
+    group_by: str
+
+
+class NetWorthHistoryItem(BaseModel):
+    period: str
+    total: Decimal
+
+
+class NetWorthHistoryResponse(BaseModel):
+    items: list[NetWorthHistoryItem]
+    from_date: date | None
+    to_date: date
+    currency: str
+    group_by: str
+
+
+class NetWorthFilters:
+    """Unlike AnalyticsFilters, net worth is a running balance, not a period
+    total -- from_date only trims which buckets are returned (the running
+    total itself is always reconstructed from the full transaction history up
+    to to_date), and there's no category/merchant/top_n narrowing.
+    """
+
+    def __init__(
+        self,
+        from_date: Annotated[date | None, Query()] = None,
+        to_date: Annotated[date | None, Query()] = None,
+        currency: Annotated[str, Query()] = "EUR",
+    ) -> None:
+        self.from_date = from_date
+        self.to_date = to_date or date.today()
+        self.currency = currency.upper()
+
+
 class SpendingAverageResponse(BaseModel):
     average_per_day: Decimal
     total: Decimal

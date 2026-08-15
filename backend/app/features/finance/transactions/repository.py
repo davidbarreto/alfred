@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import date
 from decimal import Decimal
 from typing import Any
-from sqlalchemy import and_, func, or_, select, update
+from sqlalchemy import and_, case, func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.features.finance.transactions.tables import Transaction
@@ -285,17 +285,18 @@ class TransactionRepository:
         group_by: str,
         account_id: int | None = None,
         currency: str = "EUR",
+        transaction_type: str = "expense",
     ) -> list[tuple[str, Decimal]]:
-        """Aggregate expense totals bucketed by day or month, entirely in SQL --
-        unlike fetching raw transactions, this scales to any date range without
-        a row cap silently dropping older buckets.
+        """Aggregate expense (or income) totals bucketed by day or month, entirely
+        in SQL -- unlike fetching raw transactions, this scales to any date range
+        without a row cap silently dropping older buckets.
         """
         amount_column = _amount_column(currency)
         bucket = func.date_trunc(group_by, Transaction.date)
         query = (
             select(bucket, func.coalesce(func.sum(amount_column), 0))
             .where(
-                _spend_condition("expense"),
+                _spend_condition(transaction_type),
                 Transaction.date >= from_date,
                 Transaction.date <= to_date,
             )
@@ -309,6 +310,79 @@ class TransactionRepository:
         result = await self._session.execute(query)
         key_format = "%Y-%m" if group_by == "month" else "%Y-%m-%d"
         return [(row[0].strftime(key_format), Decimal(str(row[1]))) for row in result.all()]
+
+    async def get_spending_by_account(
+        self,
+        from_date: date,
+        to_date: date,
+        category_id: int | None = None,
+        currency: str = "EUR",
+    ) -> list[tuple[int | None, str | None, Decimal, int]]:
+        from app.features.finance.accounts.tables import Account
+
+        amount_column = _amount_column(currency)
+        query = (
+            select(
+                Transaction.account_id,
+                Account.name,
+                func.coalesce(func.sum(amount_column), 0),
+                func.count(Transaction.id),
+            )
+            .outerjoin(Account, Transaction.account_id == Account.id)
+            .where(
+                _spend_condition("expense"),
+                Transaction.date >= from_date,
+                Transaction.date <= to_date,
+            )
+            .group_by(Transaction.account_id, Account.name)
+            .order_by(func.sum(amount_column).desc())
+        )
+        if currency != GLOBAL_CURRENCY:
+            query = query.where(Transaction.currency == currency)
+        if category_id is not None:
+            query = query.where(Transaction.category_id == category_id)
+        result = await self._session.execute(query)
+        return [
+            (row[0], row[1], Decimal(str(row[2])), row[3])
+            for row in result.all()
+        ]
+
+    async def get_ledger_events(
+        self, to_date: date, currency: str = "EUR"
+    ) -> list[tuple[int, date, Decimal]]:
+        """Every balance-affecting event across all tracked accounts, as
+        (account_id, date, signed delta) triples -- the raw material for
+        reconstructing a running per-account (and total) balance over time.
+
+        Income credits its account; expense and untracked-counterpart
+        transfers debit their account (money left the tracked system);
+        internal transfers (counterpart_account_id set) debit the source
+        *and* credit the counterpart -- two legs from one row, so those are
+        produced as a second, unioned select.
+        """
+        amount_column = _amount_column(currency)
+        delta = case((Transaction.type == "income", amount_column), else_=-amount_column)
+
+        source_legs = select(Transaction.account_id, Transaction.date, delta).where(
+            Transaction.date <= to_date
+        )
+        counterpart_legs = select(
+            Transaction.counterpart_account_id, Transaction.date, amount_column
+        ).where(
+            Transaction.type == "transfer",
+            Transaction.counterpart_account_id.is_not(None),
+            Transaction.date <= to_date,
+        )
+        if currency != GLOBAL_CURRENCY:
+            source_legs = source_legs.where(Transaction.currency == currency)
+            counterpart_legs = counterpart_legs.where(Transaction.currency == currency)
+
+        query = source_legs.union_all(counterpart_legs)
+        result = await self._session.execute(query)
+        return [
+            (row[0], row[1].date() if hasattr(row[1], "date") else row[1], Decimal(str(row[2])))
+            for row in result.all()
+        ]
 
     async def get_category_spent(
         self,

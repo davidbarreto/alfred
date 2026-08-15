@@ -390,6 +390,85 @@ class TestGetSpendingByCategory:
         assert "transactions.currency =" not in sql
 
 
+class TestGetSpendingByAccount:
+    async def test_includes_untracked_transfers(self):
+        session = _make_session()
+        result = MagicMock()
+        result.all.return_value = []
+        session.execute.return_value = result
+        await TransactionRepository(session).get_spending_by_account(
+            from_date=date(2026, 6, 1),
+            to_date=date(2026, 6, 30),
+        )
+        query = session.execute.call_args.args[0]
+        sql = str(query.compile(compile_kwargs={"literal_binds": True}))
+        assert "counterpart_account_id" in sql
+
+    async def test_global_currency_sums_amount_eur(self):
+        session = _make_session()
+        result = MagicMock()
+        result.all.return_value = []
+        session.execute.return_value = result
+        await TransactionRepository(session).get_spending_by_account(
+            from_date=date(2026, 6, 1),
+            to_date=date(2026, 6, 30),
+            currency="GLOBAL",
+        )
+        query = session.execute.call_args.args[0]
+        sql = str(query.compile(compile_kwargs={"literal_binds": True}))
+        assert "amount_eur" in sql
+        assert "transactions.currency =" not in sql
+
+    async def test_returns_rows(self):
+        session = _make_session()
+        result = MagicMock()
+        result.all.return_value = [(1, "Checking", Decimal("120.00"), 4)]
+        session.execute.return_value = result
+        rows = await TransactionRepository(session).get_spending_by_account(
+            from_date=date(2026, 6, 1),
+            to_date=date(2026, 6, 30),
+        )
+        assert rows == [(1, "Checking", Decimal("120.00"), 4)]
+
+
+class TestGetLedgerEvents:
+    async def test_returns_signed_deltas_for_income_and_expense(self):
+        session = _make_session()
+        result = MagicMock()
+        result.all.return_value = [
+            (1, datetime(2026, 6, 1), Decimal("100.00")),
+            (1, datetime(2026, 6, 2), Decimal("-30.00")),
+        ]
+        session.execute.return_value = result
+        events = await TransactionRepository(session).get_ledger_events(date(2026, 6, 30))
+        assert events == [
+            (1, date(2026, 6, 1), Decimal("100.00")),
+            (1, date(2026, 6, 2), Decimal("-30.00")),
+        ]
+
+    async def test_query_unions_counterpart_leg_for_transfers(self):
+        session = _make_session()
+        result = MagicMock()
+        result.all.return_value = []
+        session.execute.return_value = result
+        await TransactionRepository(session).get_ledger_events(date(2026, 6, 30))
+        query = session.execute.call_args.args[0]
+        sql = str(query.compile(compile_kwargs={"literal_binds": True}))
+        assert "UNION ALL" in sql.upper()
+        assert "counterpart_account_id" in sql
+
+    async def test_global_currency_uses_amount_eur(self):
+        session = _make_session()
+        result = MagicMock()
+        result.all.return_value = []
+        session.execute.return_value = result
+        await TransactionRepository(session).get_ledger_events(date(2026, 6, 30), currency="GLOBAL")
+        query = session.execute.call_args.args[0]
+        sql = str(query.compile(compile_kwargs={"literal_binds": True}))
+        assert "amount_eur" in sql
+        assert "transactions.currency =" not in sql
+
+
 class TestGetSpendingOverTime:
     async def test_formats_day_buckets(self):
         session = _make_session()
@@ -447,6 +526,21 @@ class TestGetSpendingOverTime:
         sql = str(query.compile(compile_kwargs={"literal_binds": True}))
         assert "amount_eur" in sql
         assert "transactions.currency =" not in sql
+
+    async def test_transaction_type_income_does_not_consider_transfers(self):
+        session = _make_session()
+        result = MagicMock()
+        result.all.return_value = []
+        session.execute.return_value = result
+        await TransactionRepository(session).get_spending_over_time(
+            from_date=date(2026, 6, 1),
+            to_date=date(2026, 6, 30),
+            group_by="day",
+            transaction_type="income",
+        )
+        query = session.execute.call_args.args[0]
+        sql = str(query.compile(compile_kwargs={"literal_binds": True}))
+        assert "counterpart_account_id" not in sql
 
 
 class TestGetCategorySpent:

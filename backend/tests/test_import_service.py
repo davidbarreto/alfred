@@ -116,6 +116,7 @@ def _service(statement: ParsedStatement | None = None, llm=None, files=None) -> 
     # into a coroutine-returning attribute that nothing awaits.
     service._session.add = MagicMock()
     service._txn_repo.get_existing_dedup_hashes.return_value = set()
+    service._txn_repo.get_existing_keys.return_value = set()
     service._category_repo.list.return_value = []
     service._account_repo.list.return_value = []
     service._fx.convert_to_eur.return_value = None
@@ -267,6 +268,55 @@ class TestPreview:
         assert preview.rows[1].status == "new"
         assert preview.new_count == 2
         assert preview.duplicate_count == 0
+
+    @pytest.mark.asyncio
+    async def test_card_format_row_flagged_duplicate_by_content_when_key_exists_in_db(self):
+        # No balance_after (card-format statement, e.g. ActivoBank card export) --
+        # the per-file occurrence counter isn't reproducible across separate import
+        # runs, so cross-import matching must go by (date, description, amount)
+        # content instead of hash equality.
+        rows = [_row(balance_after=None, amount=Decimal("-248.46"))]
+        service = _service(_statement(rows))
+        service._txn_repo.get_existing_keys.return_value = {
+            (date(2026, 6, 1), rows[0].raw_description, Decimal("248.46"))
+        }
+
+        preview = await service.preview(1, "x.csv", b"", provider="fakebank")
+
+        assert preview.rows[0].status == "duplicate"
+        assert preview.rows[0].duplicate_reason == "already_imported"
+        assert preview.duplicate_count == 1
+        assert preview.new_count == 0
+
+    @pytest.mark.asyncio
+    async def test_card_format_genuine_same_day_repeats_both_marked_new(self):
+        # Real bank statements can legitimately repeat the exact same (date,
+        # description, amount) within one file (e.g. two identical stamp-duty lines
+        # on the same day) -- as long as the DB has no existing match for that key,
+        # both must come through as new, not be flagged as duplicates of each other.
+        rows = [
+            _row(balance_after=None, raw_description="IMPOSTO DO SELO", amount=Decimal("-0.02")),
+            _row(balance_after=None, raw_description="IMPOSTO DO SELO", amount=Decimal("-0.02")),
+        ]
+        service = _service(_statement(rows))
+        service._txn_repo.get_existing_keys.return_value = set()
+
+        preview = await service.preview(1, "x.csv", b"", provider="fakebank")
+
+        assert preview.rows[0].status == "new"
+        assert preview.rows[1].status == "new"
+        assert preview.new_count == 2
+        assert preview.duplicate_count == 0
+
+    @pytest.mark.asyncio
+    async def test_card_format_row_not_flagged_when_key_absent_from_db(self):
+        rows = [_row(balance_after=None)]
+        service = _service(_statement(rows))
+        service._txn_repo.get_existing_keys.return_value = set()
+
+        preview = await service.preview(1, "x.csv", b"", provider="fakebank")
+
+        assert preview.rows[0].status == "new"
 
     @pytest.mark.asyncio
     async def test_auto_rule_applies_category_and_description(self):
@@ -578,6 +628,34 @@ class TestCommit:
         assert result.inserted == 2
         assert result.skipped_duplicates == 1
         assert len(service._created) == 2
+
+    @pytest.mark.asyncio
+    async def test_forced_row_bypasses_existing_hash_skip(self):
+        # A row the user explicitly confirmed as genuinely new (ticked "import
+        # anyway" on a preview-flagged duplicate) must be inserted even though its
+        # hash matches something already in the DB.
+        service = _service()
+        self._prepare(service)
+        service._txn_repo.get_existing_dedup_hashes.return_value = {"hash-dup"}
+        rows = [_commit_row(deduplication_hash="hash-dup", force=True)]
+
+        result = await service.commit(_commit_request(rows))
+
+        assert result.inserted == 1
+        assert result.skipped_duplicates == 0
+        assert len(service._created) == 1
+
+    @pytest.mark.asyncio
+    async def test_forced_row_gets_a_fresh_unique_hash(self):
+        service = _service()
+        self._prepare(service)
+        service._txn_repo.get_existing_dedup_hashes.return_value = {"hash-dup"}
+        rows = [_commit_row(deduplication_hash="hash-dup", force=True)]
+
+        await service.commit(_commit_request(rows))
+
+        assert service._created[0].deduplication_hash != "hash-dup"
+        assert service._created[0].deduplication_hash.startswith("hash-dup|forced:")
 
     @pytest.mark.asyncio
     async def test_expense_amount_stored_positive(self):

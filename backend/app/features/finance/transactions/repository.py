@@ -152,6 +152,25 @@ class TransactionRepository:
         )
         return {row for row in result.scalars().all()}
 
+    async def get_existing_keys(
+        self, account_id: int, dates: set[date]
+    ) -> set[tuple[date, str, Decimal]]:
+        """Every (date, bank_description, amount) already stored for this account on
+        the given dates -- used to flag statement-format imports with no reported
+        balance (so no reliable per-row disambiguator) as duplicates by content, since
+        a synthetic per-file occurrence counter can't stay reproducible across separate
+        import runs that don't repeat rows in the same relative order.
+        """
+        if not dates:
+            return set()
+        result = await self._session.execute(
+            select(Transaction.date, Transaction.bank_description, Transaction.amount).where(
+                Transaction.account_id == account_id,
+                func.date(Transaction.date).in_(dates),
+            )
+        )
+        return {(row[0].date(), row[1], row[2]) for row in result.all()}
+
     async def get_by_ids(self, transaction_ids: list[int]) -> list[Transaction]:
         if not transaction_ids:
             return []

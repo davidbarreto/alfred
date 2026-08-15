@@ -1154,6 +1154,8 @@ async def import_commit(request: Request):
             "type": _form_value(form, f"type_{i}"),
             "deduplication_hash": _form_value(form, f"hash_{i}"),
         }
+        if f"force_{i}" in form:
+            row["force"] = True
         for field in ("description", "merchant", "note"):
             value = _form_value(form, f"{field}_{i}").strip()
             if value:
@@ -1277,6 +1279,8 @@ async def import_commit_grouped(request: Request):
             "currency": _form_value(form, f"currency_{i}"),
             "deduplication_hash": _form_value(form, f"hash_{i}"),
         }
+        if f"force_{i}" in form:
+            row["force"] = True
         for field in ("description", "merchant", "note"):
             value = _form_value(form, f"{field}_{i}").strip()
             if value:

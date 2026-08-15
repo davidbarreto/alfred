@@ -390,6 +390,35 @@ class TestGetSpendingByCategory:
         assert "transactions.currency =" not in sql
 
 
+class TestGetExistingKeys:
+    async def test_returns_matching_keys(self):
+        session = _make_session()
+        result = MagicMock()
+        result.all.return_value = [
+            (datetime(2026, 7, 3), "COMPRA 4681 Cars on Booking Amsterdam", Decimal("248.46")),
+        ]
+        session.execute.return_value = result
+        keys = await TransactionRepository(session).get_existing_keys(5, {date(2026, 7, 3)})
+        assert keys == {(date(2026, 7, 3), "COMPRA 4681 Cars on Booking Amsterdam", Decimal("248.46"))}
+
+    async def test_empty_dates_short_circuits(self):
+        session = _make_session()
+        keys = await TransactionRepository(session).get_existing_keys(5, set())
+        assert keys == set()
+        session.execute.assert_not_called()
+
+    async def test_filters_by_account_and_date(self):
+        session = _make_session()
+        result = MagicMock()
+        result.all.return_value = []
+        session.execute.return_value = result
+        await TransactionRepository(session).get_existing_keys(5, {date(2026, 7, 3)})
+        query = session.execute.call_args.args[0]
+        sql = str(query.compile(compile_kwargs={"literal_binds": True}))
+        assert "account_id" in sql
+        assert "bank_description" in sql
+
+
 class TestGetSpendingByAccount:
     async def test_includes_untracked_transfers(self):
         session = _make_session()

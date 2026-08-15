@@ -54,6 +54,13 @@
           {% if row.status == "duplicate" %}
           <tr class="opacity-40">
             <td>
+              <input type="checkbox" name="include_{{ i }}" class="checkbox checkbox-xs" title="Import anyway" />
+              <input type="hidden" name="force_{{ i }}" value="1" />
+              <input type="hidden" name="date_{{ i }}" value="{{ row.date_posted }}" />
+              <input type="hidden" name="bank_description_{{ i }}" value="{{ row.bank_description }}" />
+              <input type="hidden" name="amount_{{ i }}" value="{{ row.amount }}" />
+              <input type="hidden" name="type_{{ i }}" value="{{ row.type }}" />
+              <input type="hidden" name="hash_{{ i }}" value="{{ row.deduplication_hash }}" />
               {% if row.duplicate_reason == "repeated_in_file" %}
               <i class="ti ti-copy text-sm text-amber-500" title="Repeated within this file"></i>
               {% else %}
@@ -64,9 +71,9 @@
             <td class="text-xs max-w-64 truncate" title="{{ row.bank_description }}">{{ row.bank_description }}</td>
             <td class="text-right text-xs whitespace-nowrap">€{{ row.amount | money }}</td>
             {% if row.duplicate_reason == "repeated_in_file" %}
-            <td colspan="5" class="text-xs text-amber-600">Skipped — repeated within this file</td>
+            <td colspan="5" class="text-xs text-amber-600">Skipped — repeated within this file <span class="text-gray-400">(tick to import anyway)</span></td>
             {% else %}
-            <td colspan="5" class="text-xs text-gray-400">Skipped — already imported</td>
+            <td colspan="5" class="text-xs text-gray-400">Skipped — already imported <span class="text-gray-400">(tick to import anyway)</span></td>
             {% endif %}
           </tr>
           {% else %}

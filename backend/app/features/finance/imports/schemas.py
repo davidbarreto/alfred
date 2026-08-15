@@ -127,6 +127,9 @@ class ImportCommitRow(BaseModel):
     rule_pattern: str | None = None
     rule_mode: RuleMode = "auto"
     rule_match_amount: bool = False
+    force: bool = False
+    """User confirmed this row (flagged as a likely duplicate at preview time) is
+    genuinely a new transaction and should be imported despite the flag."""
 
 
 class ImportCommitRequest(BaseModel):

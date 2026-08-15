@@ -6,6 +6,7 @@ import time
 from collections import defaultdict
 from datetime import datetime
 from decimal import Decimal
+from uuid import uuid4
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -204,7 +205,7 @@ class ImportService:
 
         stored_file = await self._store_file(parser.provider, filename, content)
         rows = self._build_rows(account_id, statement.rows)
-        await self._mark_duplicates(rows)
+        await self._mark_duplicates(account_id, rows)
         rules = await self._repo.list_rules()
         categories = {c.id: c.name for c in await self._category_repo.list()}
         self._apply_rules(rows, rules, categories)
@@ -323,16 +324,43 @@ class ImportService:
             )
         return rows
 
-    async def _mark_duplicates(self, rows: list[ImportPreviewRow]) -> None:
+    async def _mark_duplicates(self, account_id: int, rows: list[ImportPreviewRow]) -> None:
         """Flag rows already present in the DB, as well as rows that repeat within this
         same file (e.g. overlapping export date ranges) -- both would otherwise slip
         through preview as "new" and then get silently dropped at commit time, leaving
-        the user unable to tell why fewer rows landed than they saw on screen."""
+        the user unable to tell why fewer rows landed than they saw on screen.
+
+        Rows with no balance_after (card-format statements) are matched against the DB
+        by content -- (date, bank_description, amount) -- rather than by
+        deduplication_hash: the hash's disambiguator for these rows is a per-file
+        occurrence counter, which isn't reproducible across separate import runs that
+        don't repeat rows in the same relative order (e.g. overlapping export date
+        ranges), so hash equality alone was silently missing real duplicates. Any
+        existing match at all flags every row sharing that key as a duplicate --
+        genuinely repeated same-day/same-amount transactions split across two import
+        files are rare enough that they're left for manual force-import rather than
+        guessed at automatically.
+        """
+        no_balance_rows = [r for r in rows if r.balance_after is None]
+        existing_keys = await self._txn_repo.get_existing_keys(
+            account_id, {r.date_posted for r in no_balance_rows}
+        )
+
         existing = await self._txn_repo.get_existing_dedup_hashes(
-            [r.deduplication_hash for r in rows]
+            [r.deduplication_hash for r in rows if r.balance_after is not None]
         )
         seen: set[str] = set()
         for row in rows:
+            if row.balance_after is None:
+                key = (
+                    row.date_posted,
+                    row.bank_description,
+                    row.amount if row.type == "transfer" else abs(row.amount),
+                )
+                if key in existing_keys:
+                    row.status = "duplicate"
+                    row.duplicate_reason = "already_imported"
+                continue
             if row.deduplication_hash in existing:
                 row.status = "duplicate"
                 row.duplicate_reason = "already_imported"
@@ -492,6 +520,12 @@ class ImportService:
         seen: set[str] = set()
         to_insert = []
         for row in request.rows:
+            if row.force:
+                # User confirmed this preview-flagged duplicate is genuinely new; mint a
+                # fresh hash so it can't collide with the row it was flagged against.
+                row.deduplication_hash = f"{row.deduplication_hash}|forced:{uuid4().hex}"
+                to_insert.append(row)
+                continue
             if row.deduplication_hash in existing or row.deduplication_hash in seen:
                 continue
             seen.add(row.deduplication_hash)
@@ -758,7 +792,7 @@ class ImportService:
             parsed_rows = by_currency[currency]
             account_id = account_map[currency]
             rows = self._build_rows(account_id, parsed_rows)
-            await self._mark_duplicates(rows)
+            await self._mark_duplicates(account_id, rows)
             self._apply_rules(rows, rules, categories)
             await self._apply_knn(rows, categories)
             await self._apply_llm(rows, categories)
@@ -830,6 +864,10 @@ class ImportService:
             account_id = request.account_map[currency]
             to_insert = []
             for row in rows:
+                if row.force:
+                    row.deduplication_hash = f"{row.deduplication_hash}|forced:{uuid4().hex}"
+                    to_insert.append(row)
+                    continue
                 if row.deduplication_hash in existing or row.deduplication_hash in seen:
                     continue
                 seen.add(row.deduplication_hash)

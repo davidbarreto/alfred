@@ -64,6 +64,17 @@
         class="border border-gray-200 rounded-lg px-2 py-1.5 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-[#378ADD]"
         onchange="applyTxnFilters()" />
     </div>
+    <div>
+      <label class="text-xs text-gray-500 mb-1 block">Sort by</label>
+      <select id="txn-filter-sort" class="border border-gray-200 rounded-lg px-2 py-1.5 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-[#378ADD]" onchange="applyTxnFilters()">
+        <option value="date_desc" {% if not query_filters.sort or query_filters.sort == 'date_desc' %}selected{% endif %}>Date (newest)</option>
+        <option value="date_asc" {% if query_filters.sort == 'date_asc' %}selected{% endif %}>Date (oldest)</option>
+        <option value="amount_desc" {% if query_filters.sort == 'amount_desc' %}selected{% endif %}>Amount (highest)</option>
+        <option value="amount_asc" {% if query_filters.sort == 'amount_asc' %}selected{% endif %}>Amount (lowest)</option>
+        <option value="name_asc" {% if query_filters.sort == 'name_asc' %}selected{% endif %}>Name (A–Z)</option>
+        <option value="name_desc" {% if query_filters.sort == 'name_desc' %}selected{% endif %}>Name (Z–A)</option>
+      </select>
+    </div>
     {% if query_filters.type or query_filters.category_id or query_filters.uncategorized or query_filters.account_id or query_filters.merchant or query_filters.from_date or query_filters.to_date or query_filters.currency %}
     <button onclick="clearTxnFilters()" class="btn btn-sm btn-ghost text-gray-500 gap-1">
       <i class="ti ti-x text-xs"></i>Clear filters
@@ -215,6 +226,7 @@ function _txnQuery() {
   const merchant = document.getElementById("txn-filter-merchant").value;
   const fromDate = document.getElementById("txn-filter-from").value;
   const toDate = document.getElementById("txn-filter-to").value;
+  const sort = document.getElementById("txn-filter-sort").value;
   if (type) params.set("type", type);
   if (category === "uncategorized") params.set("uncategorized", "true");
   else if (category) params.set("category_id", category);
@@ -222,6 +234,7 @@ function _txnQuery() {
   if (merchant) params.set("merchant", merchant);
   if (fromDate) params.set("from_date", fromDate);
   if (toDate) params.set("to_date", toDate);
+  if (sort && sort !== "date_desc") params.set("sort", sort);
   if (_txnCurrency) params.set("currency", _txnCurrency);
   params.set("offset", _txnOffset);
   return params.toString();

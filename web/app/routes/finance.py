@@ -28,6 +28,7 @@ def _parse_txn_query(request: Request) -> tuple[dict, int]:
         "from_date": qp.get("from_date") or None,
         "to_date": qp.get("to_date") or None,
         "currency": qp.get("currency") or None,
+        "sort": qp.get("sort") or None,
     }
     offset = max(0, int(qp.get("offset", "0") or "0"))
     return filters, offset
@@ -59,6 +60,16 @@ async def _txn_list_context(filters: dict, offset: int) -> dict:
         raw = []
     transactions, has_next, has_prev = _pagination(raw, offset)
 
+    # Net total across every page of this exact filtered result, not just the
+    # page currently on screen -- a dedicated aggregate query, not a client sum.
+    txn_sum = None
+    try:
+        txn_sum = await api.get(
+            "/finance/transactions/sum", params={k: v for k, v in filters.items() if v}
+        )
+    except httpx.HTTPError:
+        pass
+
     categories, txn_accounts = [], []
     try:
         categories = await api.get("/finance/categories")
@@ -73,6 +84,7 @@ async def _txn_list_context(filters: dict, offset: int) -> dict:
         "transactions": transactions,
         "has_next": has_next,
         "has_prev": has_prev,
+        "txn_sum": txn_sum,
         "categories": categories,
         "accounts": txn_accounts,
         "categories_by_id": {c["id"]: c["name"] for c in categories},

@@ -33,6 +33,7 @@ from app.features.finance.transactions.schemas import (
     TransactionCreate,
     TransactionFilters,
     TransactionRead,
+    TransactionSumResponse,
     TransactionUpdate,
     resolve_period,
 )
@@ -79,6 +80,15 @@ class TransactionService:
         cycle_start_day = await self._settings.get_cycle_start_day()
         txns = await self._repo.list(filters, cycle_start_day)
         return [TransactionRead.model_validate(t) for t in txns]
+
+    async def filtered_sum(self, filters: TransactionFilters) -> TransactionSumResponse:
+        cycle_start_day = await self._settings.get_cycle_start_day()
+        total, count = await self._repo.get_filtered_sum(filters, cycle_start_day)
+        return TransactionSumResponse(
+            total=total,
+            transaction_count=count,
+            currency=filters.currency or GLOBAL_CURRENCY,
+        )
 
     async def create(self, data: TransactionCreate) -> TransactionRead:
         amount_eur = await self._fx.convert_to_eur(data.amount, data.currency, data.date.date())

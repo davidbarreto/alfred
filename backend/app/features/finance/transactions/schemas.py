@@ -115,6 +115,11 @@ class TransactionRead(TransactionBase):
     model_config = {"from_attributes": True}
 
 
+TransactionSort: TypeAlias = Literal[
+    "date_desc", "date_asc", "amount_desc", "amount_asc", "name_asc", "name_desc"
+]
+
+
 class TransactionFilters:
     def __init__(
         self,
@@ -129,6 +134,7 @@ class TransactionFilters:
         to_date: Annotated[date | None, Query()] = None,
         period: Annotated[str | None, Query()] = None,
         currency: Annotated[str | None, Query()] = None,
+        sort: Annotated[TransactionSort, Query()] = "date_desc",
     ) -> None:
         self.limit = limit
         self.offset = offset
@@ -141,6 +147,13 @@ class TransactionFilters:
         self.to_date = to_date
         self.period = period
         self.currency = currency.upper() if currency is not None else None
+        self.sort = sort
+
+
+class TransactionSumResponse(BaseModel):
+    total: Decimal
+    transaction_count: int
+    currency: str
 
 
 class TransactionBulkMoveRequest(BaseModel):

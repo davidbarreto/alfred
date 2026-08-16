@@ -140,6 +140,68 @@ class TestList:
         sql = str(query.compile(compile_kwargs={"literal_binds": True}))
         assert "transactions.currency =" not in sql
 
+    async def test_default_sort_is_date_desc(self):
+        session = _make_session()
+        session.execute.return_value = _scalar_all([])
+        await TransactionRepository(session).list(TransactionFilters())
+        query = session.execute.call_args.args[0]
+        sql = str(query.compile(compile_kwargs={"literal_binds": True})).upper()
+        assert "ORDER BY FINANCE.TRANSACTIONS.DATE DESC" in sql
+
+    async def test_sort_by_amount_asc(self):
+        session = _make_session()
+        session.execute.return_value = _scalar_all([])
+        await TransactionRepository(session).list(TransactionFilters(sort="amount_asc"))
+        query = session.execute.call_args.args[0]
+        sql = str(query.compile(compile_kwargs={"literal_binds": True})).upper()
+        assert "ORDER BY FINANCE.TRANSACTIONS.AMOUNT ASC" in sql
+
+    async def test_sort_by_name_uses_coalesce(self):
+        session = _make_session()
+        session.execute.return_value = _scalar_all([])
+        await TransactionRepository(session).list(TransactionFilters(sort="name_asc"))
+        query = session.execute.call_args.args[0]
+        sql = str(query.compile(compile_kwargs={"literal_binds": True})).upper()
+        assert "COALESCE" in sql
+        assert "ASC" in sql
+
+
+class TestGetFilteredSum:
+    async def test_returns_net_signed_total(self):
+        session = _make_session()
+        session.execute.return_value = _one_result((Decimal("120.00"), 5))
+        total, count = await TransactionRepository(session).get_filtered_sum(TransactionFilters())
+        assert total == Decimal("120.00")
+        assert count == 5
+
+    async def test_no_currency_filter_sums_amount_eur(self):
+        session = _make_session()
+        session.execute.return_value = _one_result((Decimal("0"), 0))
+        await TransactionRepository(session).get_filtered_sum(TransactionFilters(currency=None))
+        query = session.execute.call_args.args[0]
+        sql = str(query.compile(compile_kwargs={"literal_binds": True}))
+        assert "amount_eur" in sql
+
+    async def test_explicit_currency_sums_native_amount_and_filters(self):
+        session = _make_session()
+        session.execute.return_value = _one_result((Decimal("0"), 0))
+        await TransactionRepository(session).get_filtered_sum(TransactionFilters(currency="USD"))
+        query = session.execute.call_args.args[0]
+        sql = str(query.compile(compile_kwargs={"literal_binds": True}))
+        assert "amount_eur" not in sql
+        assert "transactions.currency = " in sql
+
+    async def test_applies_same_filters_as_list(self):
+        session = _make_session()
+        session.execute.return_value = _one_result((Decimal("0"), 0))
+        await TransactionRepository(session).get_filtered_sum(
+            TransactionFilters(type="expense", category_id=3)
+        )
+        query = session.execute.call_args.args[0]
+        sql = str(query.compile(compile_kwargs={"literal_binds": True}))
+        assert "expense" in sql
+        assert "transactions.category_id = " in sql
+
 
 class TestCreate:
     async def test_adds_commits_and_refreshes(self):

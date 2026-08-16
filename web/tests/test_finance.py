@@ -22,6 +22,7 @@ class TestTransactionsPage:
     def test_renders_transactions(self, client, mock_api):
         mock_api["get"].side_effect = [
             [_txn(id=1, merchant="Continente")],
+            None,
             [_category()],
             [_account()],
             [],
@@ -39,7 +40,7 @@ class TestTransactionsPage:
         assert resp.headers["location"].startswith("/login")
 
     def test_type_filter_passed_to_api(self, client, mock_api):
-        mock_api["get"].side_effect = [[], [], [], []]
+        mock_api["get"].side_effect = [[], None, [], [], []]
 
         client.get("/finance/transactions?type=income")
 
@@ -48,7 +49,7 @@ class TestTransactionsPage:
         assert txn_call.kwargs["params"]["type"] == "income"
 
     def test_merchant_filter_passed_to_api(self, client, mock_api):
-        mock_api["get"].side_effect = [[], [], [], []]
+        mock_api["get"].side_effect = [[], None, [], [], []]
 
         client.get("/finance/transactions?merchant=Continente")
 
@@ -57,7 +58,7 @@ class TestTransactionsPage:
         assert txn_call.kwargs["params"]["merchant"] == "Continente"
 
     def test_uncategorized_filter_passed_to_api(self, client, mock_api):
-        mock_api["get"].side_effect = [[], [], [], []]
+        mock_api["get"].side_effect = [[], None, [], [], []]
 
         client.get("/finance/transactions?uncategorized=true")
 
@@ -67,7 +68,7 @@ class TestTransactionsPage:
         assert "category_id" not in txn_call.kwargs["params"]
 
     def test_offset_passed_to_api(self, client, mock_api):
-        mock_api["get"].side_effect = [[], [], [], []]
+        mock_api["get"].side_effect = [[], None, [], [], []]
 
         client.get("/finance/transactions?offset=20")
 
@@ -75,11 +76,43 @@ class TestTransactionsPage:
         txn_call = next(c for c in calls if c.args[0] == "/finance/transactions")
         assert txn_call.kwargs["params"]["offset"] == 20
 
+    def test_sort_filter_passed_to_api(self, client, mock_api):
+        mock_api["get"].side_effect = [[], None, [], [], []]
+
+        client.get("/finance/transactions?sort=amount_asc")
+
+        calls = mock_api["get"].call_args_list
+        txn_call = next(c for c in calls if c.args[0] == "/finance/transactions")
+        assert txn_call.kwargs["params"]["sort"] == "amount_asc"
+
+    def test_sum_endpoint_called_with_same_filters(self, client, mock_api):
+        mock_api["get"].side_effect = [[], None, [], [], []]
+
+        client.get("/finance/transactions?type=expense")
+
+        calls = mock_api["get"].call_args_list
+        sum_call = next(c for c in calls if c.args[0] == "/finance/transactions/sum")
+        assert sum_call.kwargs["params"]["type"] == "expense"
+
+    def test_renders_net_sum_widget(self, client, mock_api):
+        mock_api["get"].side_effect = [
+            [_txn(id=1)],
+            {"total": "-45.00", "transaction_count": 3, "currency": "EUR"},
+            [],
+            [],
+            [],
+        ]
+
+        resp = client.get("/finance/transactions")
+
+        assert "3 transactions matching filters" in resp.text
+
 
 class TestTransactionsListFragment:
     def test_shows_next_when_more_than_page_size(self, client, mock_api):
         mock_api["get"].side_effect = [
             [_txn(id=i) for i in range(21)],
+            None,
             [],
             [],
             [],
@@ -91,7 +124,7 @@ class TestTransactionsListFragment:
         assert "changeTxnPage(1)" in resp.text
 
     def test_no_pagination_footer_for_short_list(self, client, mock_api):
-        mock_api["get"].side_effect = [[_txn(id=1)], [], [], []]
+        mock_api["get"].side_effect = [[_txn(id=1)], None, [], [], []]
 
         resp = client.get("/finance/transactions/list")
 
@@ -99,7 +132,7 @@ class TestTransactionsListFragment:
         assert "changeTxnPage(1)" not in resp.text
 
     def test_empty_state_message(self, client, mock_api):
-        mock_api["get"].side_effect = [[], [], [], []]
+        mock_api["get"].side_effect = [[], None, [], [], []]
 
         resp = client.get("/finance/transactions/list")
 
@@ -121,7 +154,7 @@ class TestTransactionsListFragment:
 
 class TestDeleteTransaction:
     def test_delete_with_offset_renders_list_partial(self, client, mock_api):
-        mock_api["get"].side_effect = [[_txn(id=2)], [], [], []]
+        mock_api["get"].side_effect = [[_txn(id=2)], None, [], [], []]
 
         resp = client.delete("/finance/transactions/1?offset=0")
 
@@ -778,14 +811,14 @@ class TestBulkMoveTransactions:
 
 class TestTransactionsPageBulkMoveButton:
     def test_shown_when_account_filter_set(self, client, mock_api):
-        mock_api["get"].side_effect = [[], [_account()], [], []]
+        mock_api["get"].side_effect = [[], None, [_account()], [], []]
 
         resp = client.get("/finance/transactions?account_id=1")
 
         assert "Move to account" in resp.text
 
     def test_hidden_without_account_filter(self, client, mock_api):
-        mock_api["get"].side_effect = [[], [], [], []]
+        mock_api["get"].side_effect = [[], None, [], [], []]
 
         resp = client.get("/finance/transactions")
 

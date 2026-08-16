@@ -757,6 +757,47 @@
           }
         },
         {
+          "name": "02d - Transactions Sum (filtered net total)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Response has sum fields', () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.have.property('total');",
+                  "    pm.expect(json).to.have.property('transaction_count');",
+                  "    pm.expect(json).to.have.property('currency');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/finance/transactions/sum?type=expense",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "finance",
+                "transactions",
+                "sum"
+              ],
+              "query": [
+                {
+                  "key": "type",
+                  "value": "expense"
+                }
+              ]
+            }
+          }
+        },
+        {
           "name": "03 - Get Transaction",
           "event": [
             {

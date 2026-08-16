@@ -1,7 +1,17 @@
+{% if txn_sum %}
+<div class="flex items-center justify-between text-xs text-gray-500 mb-2 pb-2 border-b border-gray-100">
+  <span>{{ txn_sum.transaction_count }} transaction{% if txn_sum.transaction_count != 1 %}s{% endif %} matching filters</span>
+  <span class="font-medium {% if txn_sum.total | float < 0 %}text-[#E24B4A]{% else %}text-[#3E9C42]{% endif %}">
+    Net: {{ "-" if txn_sum.total | float < 0 else "+" }}{{ currency_symbols.get("EUR", "€ ") if txn_sum.currency == "GLOBAL" else currency_symbols.get(txn_sum.currency, txn_sum.currency + " ") }}{{ txn_sum.total | float | abs | money }}
+  </span>
+</div>
+{% endif %}
+
 {% if transactions %}
 <ul>
   {% for txn in transactions %}
   <li class="flex items-center gap-3 py-2.5 border-b border-gray-100 last:border-0 group">
+    <div class="w-16 flex-shrink-0 text-xs text-gray-400 tabular-nums">{{ txn.date[:10] }}</div>
     <div class="w-7 h-7 rounded-full bg-gray-100 flex items-center justify-center flex-shrink-0">
       <span class="text-xs font-medium text-gray-500">
         {{ (txn.description or txn.merchant or txn.bank_description or "?")[0] | upper }}
@@ -16,8 +26,7 @@
         {% endif %}
       </div>
       <div class="text-xs text-gray-400">
-        {{ txn.date[:10] }}
-        {% if accounts_by_id.get(txn.account_id) %} · {{ accounts_by_id.get(txn.account_id) }}{% endif %}
+        {%- if accounts_by_id.get(txn.account_id) %}{{ accounts_by_id.get(txn.account_id) }}{% endif %}
         {% if txn.category_id and categories_by_id.get(txn.category_id) %} · {{ categories_by_id.get(txn.category_id) }}{% endif %}
         {% if txn.type == 'transfer' and txn.counterpart_account_id %} · → {{ accounts_by_id.get(txn.counterpart_account_id, "?") }}{% endif %}
       </div>
@@ -27,7 +36,7 @@
     </span>
     <button
       class="text-gray-300 hover:text-[#378ADD] opacity-0 group-hover:opacity-100 transition-all flex-shrink-0"
-      onclick="openEditTransaction({{ txn | tojson }}, {{ filters_qs | tojson }})"
+      onclick='openEditTransaction({{ txn | tojson }}, {{ filters_qs | tojson }})'
       title="Edit"
     ><i class="ti ti-pencil text-sm"></i></button>
     <button

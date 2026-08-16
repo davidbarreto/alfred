@@ -83,6 +83,20 @@ class TestList:
         service._repo.list.assert_called_once_with(filters, 1)
 
 
+class TestFilteredSum:
+    async def test_returns_response(self, service):
+        service._repo.get_filtered_sum.return_value = (Decimal("340.00"), 7)
+        result = await service.filtered_sum(TransactionFilters(currency="EUR"))
+        assert result.total == Decimal("340.00")
+        assert result.transaction_count == 7
+        assert result.currency == "EUR"
+
+    async def test_no_currency_defaults_to_global(self, service):
+        service._repo.get_filtered_sum.return_value = (Decimal("0"), 0)
+        result = await service.filtered_sum(TransactionFilters())
+        assert result.currency == "GLOBAL"
+
+
 class TestCreate:
     async def test_returns_transaction_read(self, service):
         service._repo.create.return_value = _make_txn_orm()

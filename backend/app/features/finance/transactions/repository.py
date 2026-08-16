@@ -37,6 +37,21 @@ def _spend_condition(transaction_type: str):
     return Transaction.type == transaction_type
 
 
+_NAME_COLUMN = func.coalesce(Transaction.description, Transaction.merchant, Transaction.bank_description)
+
+_SORT_COLUMNS = {
+    "date": Transaction.date,
+    "amount": Transaction.amount,
+    "name": _NAME_COLUMN,
+}
+
+
+def _build_order_by(sort: str):
+    column_key, _, direction = sort.rpartition("_")
+    column = _SORT_COLUMNS.get(column_key, Transaction.date)
+    return column.asc() if direction == "asc" else column.desc()
+
+
 def _filter_conditions(filters: Any, cycle_start_day: int = 1) -> list:
     """Shared WHERE-clause building for anything shaped like TransactionFilters
     (duck-typed: also used by TransactionBulkMoveRequest, which carries the same
@@ -79,12 +94,31 @@ class TransactionRepository:
         return result.scalars().first()
 
     async def list(self, filters: TransactionFilters, cycle_start_day: int = 1) -> list[Transaction]:
-        query = select(Transaction).order_by(Transaction.date.desc())
+        query = select(Transaction).order_by(_build_order_by(filters.sort))
         for condition in _filter_conditions(filters, cycle_start_day):
             query = query.where(condition)
         query = query.offset(filters.offset).limit(filters.limit)
         result = await self._session.execute(query)
         return list(result.scalars().all())
+
+    async def get_filtered_sum(self, filters: TransactionFilters, cycle_start_day: int = 1) -> tuple[Decimal, int]:
+        """Net signed total across every transaction matching filters.type (and the
+        rest of the filter set), regardless of pagination -- income credits, expense
+        and transfer debit, matching the sign convention used everywhere else
+        (_account_delta, get_ledger_events). Used for the "total across all pages of
+        this filtered result" summary on the transactions page.
+        """
+        # No currency filter means the list itself spans every currency, so the sum
+        # must be normalized (amount_eur) rather than adding raw native amounts
+        # across currencies -- same fallback GLOBAL_CURRENCY uses everywhere else.
+        amount_column = _amount_column(filters.currency or GLOBAL_CURRENCY)
+        delta = case((Transaction.type == "income", amount_column), else_=-amount_column)
+        query = select(func.coalesce(func.sum(delta), 0), func.count(Transaction.id))
+        for condition in _filter_conditions(filters, cycle_start_day):
+            query = query.where(condition)
+        result = await self._session.execute(query)
+        total, count = result.one()
+        return Decimal(str(total)), count
 
     async def bulk_reassign_account(self, request: TransactionBulkMoveRequest, cycle_start_day: int = 1) -> int:
         """Move every transaction matching request's account_id + optional filters to
@@ -141,6 +175,12 @@ class TransactionRepository:
             select(Transaction.id).where(Transaction.deduplication_hash == dedup_hash)
         )
         return result.scalar() is not None
+
+    async def get_by_dedup_hash(self, dedup_hash: str) -> Transaction | None:
+        result = await self._session.execute(
+            select(Transaction).where(Transaction.deduplication_hash == dedup_hash)
+        )
+        return result.scalars().first()
 
     async def get_existing_dedup_hashes(self, dedup_hashes: list[str]) -> set[str]:
         if not dedup_hashes:

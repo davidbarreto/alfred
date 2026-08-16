@@ -27,6 +27,7 @@ from app.features.finance.transactions.schemas import (
     TransactionCreate,
     TransactionFilters,
     TransactionRead,
+    TransactionSumResponse,
     TransactionUpdate,
 )
 from app.features.finance.transactions.service import InvalidBulkMoveError
@@ -44,6 +45,13 @@ async def list_transactions(
     service: TransactionServiceDep, filters: TransactionFilters = Depends()
 ):
     return await service.list(filters)
+
+
+@router.get("/sum", response_model=TransactionSumResponse)
+async def transactions_sum(
+    service: TransactionServiceDep, filters: TransactionFilters = Depends()
+):
+    return await service.filtered_sum(filters)
 
 
 @router.post("/bulk-move", response_model=TransactionBulkMoveResponse)

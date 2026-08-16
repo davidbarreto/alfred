@@ -21,6 +21,7 @@ from app.features.finance.transactions.schemas import (
     SpendingTopResponse,
     TransactionBackfillEurResponse,
     TransactionRead,
+    TransactionSumResponse,
 )
 from app.features.finance.transactions.service import InvalidBulkMoveError
 
@@ -124,6 +125,9 @@ def mock_txn_service():
         to_date=date(2026, 6, 30),
         currency="EUR",
         group_by="day",
+    )
+    svc.filtered_sum.return_value = TransactionSumResponse(
+        total=Decimal("340.00"), transaction_count=7, currency="EUR"
     )
     svc.net_worth_history.return_value = NetWorthHistoryResponse(
         items=[
@@ -260,6 +264,24 @@ class TestDeleteTransaction:
 
     def test_requires_auth(self, client):
         assert client.delete("/finance/transactions/1").status_code == 403
+
+
+class TestTransactionsSum:
+    def test_returns_200_with_sum_fields(self, client):
+        response = client.get("/finance/transactions/sum", headers=AUTH)
+        assert response.status_code == 200
+        data = response.json()
+        assert data["total"] == "340.00"
+        assert data["transaction_count"] == 7
+
+    def test_filters_forwarded(self, client, mock_txn_service):
+        client.get("/finance/transactions/sum?type=expense&category_id=3", headers=AUTH)
+        filters = mock_txn_service.filtered_sum.call_args[0][0]
+        assert filters.type == "expense"
+        assert filters.category_id == 3
+
+    def test_requires_auth(self, client):
+        assert client.get("/finance/transactions/sum").status_code == 403
 
 
 class TestBulkMoveTransactions:

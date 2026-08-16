@@ -73,8 +73,12 @@
                  class="input input-sm input-bordered w-full" />
         </div>
       </div>
-      <p class="text-[10px] text-gray-400 -mt-2">
+      <p id="opening_balance_hint_default" class="text-[10px] text-gray-400 -mt-2" {% if account.type == "credit" %}style="display:none"{% endif %}>
         Known-true balance on a given date — used as the anchor point for net worth history.
+      </p>
+      <p id="opening_balance_hint_credit" class="text-[10px] text-gray-400 -mt-2" {% if account.type != "credit" %}style="display:none"{% endif %}>
+        Enter as a negative number — the amount you owed on the card as of that date (e.g. <code>-450.00</code>).
+        A positive number here will make the card count as an asset instead of a debt in net worth totals.
       </p>
 
       <label class="flex items-center gap-2 text-sm text-gray-700">
@@ -100,4 +104,12 @@
   </div>
 
 </div>
+
+<script>
+document.getElementById('type').addEventListener('change', (e) => {
+  const isCredit = e.target.value === 'credit';
+  document.getElementById('opening_balance_hint_default').style.display = isCredit ? 'none' : '';
+  document.getElementById('opening_balance_hint_credit').style.display = isCredit ? '' : 'none';
+});
+</script>
 {% endblock %}

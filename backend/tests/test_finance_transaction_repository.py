@@ -112,6 +112,20 @@ class TestGetTransferMatchCandidates:
         assert "bank_description" in sql
         assert "Exchanged to PLN" in sql
 
+    async def test_description_match_requires_different_currency(self):
+        """The description-based strategy is for currency exchanges specifically --
+        it must never fire for a same-currency pair, which the amount-based strategy
+        already covers more precisely."""
+        session = _make_session()
+        session.execute.return_value = _scalar_all([])
+        source = self._source(currency="EUR", bank_description="Exchanged to PLN")
+
+        await TransactionRepository(session).get_transfer_match_candidates(source)
+
+        query = session.execute.call_args.args[0]
+        sql = str(query.compile(compile_kwargs={"literal_binds": True}))
+        assert "currency !=" in sql or "!= transactions.currency" in sql or "currency <>" in sql
+
 
 class TestList:
     async def test_no_filters(self):

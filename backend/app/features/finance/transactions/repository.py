@@ -117,16 +117,19 @@ class TransactionRepository:
         - same currency + exactly opposite amount -- a same-currency transfer split
           across separate imports (e.g. an external card charge and the Revolut top-up
           it funds).
-        - identical bank_description + opposite sign -- a currency exchange, where the
-          two legs are in different currencies with an FX-converted (not exactly
-          opposite) amount, but both sides of one Revolut "Exchange" row share the exact
-          same bank text (e.g. "Exchanged to PLN").
+        - identical bank_description + opposite sign, different currency -- a currency
+          exchange, where the two legs are in different currencies with an FX-converted
+          (not exactly opposite) amount, but both sides of one Revolut "Exchange" row
+          share the exact same bank text (e.g. "Exchanged to PLN"). Restricted to
+          different currencies so this strategy only ever fires for a genuine exchange,
+          never overlapping with the same-currency strategy above.
         """
         same_currency_opposite_amount = and_(
             Transaction.currency == transaction.currency,
             Transaction.amount == -transaction.amount,
         )
         same_description_opposite_sign = and_(
+            Transaction.currency != transaction.currency,
             Transaction.bank_description.isnot(None),
             Transaction.bank_description == transaction.bank_description,
             Transaction.amount < 0 if transaction.amount > 0 else Transaction.amount > 0,

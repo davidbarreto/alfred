@@ -303,14 +303,15 @@ class TransactionService:
 
         # Mirrors TransactionRepository.get_transfer_match_candidates' two match
         # strategies: same currency + exactly opposite amount (a plain transfer split
-        # across separate imports), or identical bank_description + opposite sign (a
-        # currency exchange, where legs are in different currencies with an
-        # FX-converted, not exactly opposite, amount).
+        # across separate imports), or identical bank_description + opposite sign +
+        # different currency (a currency exchange, where legs are in different
+        # currencies with an FX-converted, not exactly opposite, amount).
         same_currency_opposite_amount = (
             transaction.currency == counterpart.currency and transaction.amount == -counterpart.amount
         )
         same_description_opposite_sign = (
-            transaction.bank_description is not None
+            transaction.currency != counterpart.currency
+            and transaction.bank_description is not None
             and transaction.bank_description == counterpart.bank_description
             and (transaction.amount > 0) != (counterpart.amount > 0)
         )

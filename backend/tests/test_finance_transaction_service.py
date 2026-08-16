@@ -619,6 +619,28 @@ class TestLinkTransfer:
         with pytest.raises(TransferMatchError):
             await service.link_transfer(1, 2)
 
+    async def test_rejects_same_currency_matching_description(self, service):
+        """The description-based strategy is for currency exchanges specifically --
+        a same-currency pair with a matching description must still be rejected here,
+        since it isn't a genuine exchange (and the amount-based strategy already
+        covers same-currency pairs more precisely)."""
+        from datetime import datetime
+        same_date = datetime(2026, 6, 12)
+        txn = _make_txn_orm(
+            id=1, account_id=1, type="transfer", amount=Decimal("100.00"), currency="EUR",
+            date=same_date,
+        )
+        txn.bank_description = "Some transfer"
+        counterpart = _make_txn_orm(
+            id=2, account_id=2, type="transfer", amount=Decimal("-40.00"), currency="EUR",
+            date=same_date,
+        )
+        counterpart.bank_description = "Some transfer"
+        service._repo.get.side_effect = [txn, counterpart]
+
+        with pytest.raises(TransferMatchError):
+            await service.link_transfer(1, 2)
+
 
 class TestSpendingReport:
     async def test_returns_correct_response(self, service):

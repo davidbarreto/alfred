@@ -4,7 +4,7 @@ import time
 from datetime import datetime, timezone
 from typing import Any
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 
 logger = logging.getLogger(__name__)
 
@@ -184,10 +184,16 @@ async def execute_command(
             ),
         )
     except Exception as exc:
-        logger.error(
-            "Command failed: %s.%s execution_id=%d error=%s",
-            request.type, request.command, execution.id, exc,
-        )
+        if isinstance(exc, HTTPException) and 400 <= exc.status_code < 500:
+            logger.warning(
+                "Command rejected: %s.%s execution_id=%d status=%d error=%s",
+                request.type, request.command, execution.id, exc.status_code, exc.detail,
+            )
+        else:
+            logger.error(
+                "Command failed: %s.%s execution_id=%d error=%s",
+                request.type, request.command, execution.id, exc,
+            )
         await cmd_execution_service.update(
             execution.id,
             CommandExecutionUpdate(

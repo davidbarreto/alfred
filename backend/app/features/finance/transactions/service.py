@@ -274,8 +274,15 @@ class TransactionService:
         return deleted
 
     async def get_transfer_match_candidates(self, transaction_id: int) -> List[TransactionRead]:
+        """counterpart_account_id only records which account a transfer moves to/from --
+        it is not proof a specific counterpart transaction was ever found (an import rule
+        can set it as a guess with no reciprocal row). So a transaction is still eligible
+        to search here as long as it isn't itself a generated mirror row; the repo query
+        already restricts candidates to rows with counterpart_account_id unset, so an
+        already mutually-linked pair naturally yields no candidates.
+        """
         transaction = await self._repo.get(transaction_id)
-        if transaction is None or transaction.counterpart_account_id is not None:
+        if transaction is None or transaction.generated_from_transaction_id is not None:
             return []
         candidates = await self._repo.get_transfer_match_candidates(transaction)
         return [TransactionRead.model_validate(c) for c in candidates]
@@ -295,8 +302,15 @@ class TransactionService:
         counterpart = await self._repo.get(counterpart_transaction_id)
         if transaction is None or counterpart is None:
             raise TransferMatchError("Transaction not found")
-        if transaction.counterpart_account_id is not None or counterpart.counterpart_account_id is not None:
-            raise TransferMatchError("One of the transactions is already linked")
+        if transaction.generated_from_transaction_id is not None or counterpart.generated_from_transaction_id is not None:
+            raise TransferMatchError("A generated mirror row cannot be linked")
+        # transaction.counterpart_account_id may already be set from an import rule's
+        # guessed destination account (see _apply_rules) rather than a confirmed
+        # counterpart -- only the chosen candidate's own link state actually guards
+        # against double-linking, since get_transfer_match_candidates already restricts
+        # candidates to counterpart_account_id IS NULL.
+        if counterpart.counterpart_account_id is not None:
+            raise TransferMatchError("The counterpart transaction is already linked")
         if transaction.account_id == counterpart.account_id:
             raise TransferMatchError("Cannot link two legs on the same account")
         if transaction.date.date() != counterpart.date.date():

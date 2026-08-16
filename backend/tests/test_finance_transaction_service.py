@@ -499,8 +499,20 @@ class TestGetTransferMatchCandidates:
         result = await service.get_transfer_match_candidates(1)
         assert len(result) == 1
 
-    async def test_returns_empty_when_already_matched(self, service):
+    async def test_searches_even_when_counterpart_account_already_set(self, service):
+        """counterpart_account_id may only be a rule-guessed destination account with no
+        reciprocal row ever confirmed -- still worth searching for a real match."""
         service._repo.get.return_value = _make_txn_orm(type="transfer", counterpart_account_id=3)
+        service._repo.get_transfer_match_candidates.return_value = [
+            _make_txn_orm(id=2, account_id=2, type="expense", amount=Decimal("-50.00"))
+        ]
+        result = await service.get_transfer_match_candidates(1)
+        assert len(result) == 1
+
+    async def test_returns_empty_for_generated_mirror_row(self, service):
+        service._repo.get.return_value = _make_txn_orm(
+            type="transfer", generated_from_transaction_id=5
+        )
         assert await service.get_transfer_match_candidates(1) == []
         service._repo.get_transfer_match_candidates.assert_not_awaited()
 
@@ -561,13 +573,44 @@ class TestLinkTransfer:
             2, TransactionUpdate(type="transfer", counterpart_account_id=1), amount_eur=None, recompute_amount_eur=False
         )
 
-    async def test_rejects_already_linked_leg(self, service):
+    async def test_rejects_already_linked_counterpart(self, service):
         service._repo.get.side_effect = [
-            _make_txn_orm(id=1, type="transfer", counterpart_account_id=9),
-            _make_txn_orm(id=2, type="transfer"),
+            _make_txn_orm(id=1, account_id=1, type="transfer"),
+            _make_txn_orm(id=2, account_id=2, type="transfer", counterpart_account_id=9),
         ]
         with pytest.raises(TransferMatchError):
             await service.link_transfer(1, 2)
+
+    async def test_rejects_generated_mirror_row(self, service):
+        service._repo.get.side_effect = [
+            _make_txn_orm(id=1, account_id=1, type="transfer", generated_from_transaction_id=5),
+            _make_txn_orm(id=2, account_id=2, type="transfer"),
+        ]
+        with pytest.raises(TransferMatchError):
+            await service.link_transfer(1, 2)
+
+    async def test_allows_source_with_rule_guessed_counterpart_account(self, service):
+        """A source leg's counterpart_account_id may already be set by an import rule's
+        guessed destination account, with no reciprocal row ever confirmed -- linking to
+        a genuine match should still succeed and overwrite the guess."""
+        from datetime import datetime
+        same_date = datetime(2026, 6, 12)
+        txn = _make_txn_orm(
+            id=1, account_id=1, type="transfer", amount=Decimal("50.00"), date=same_date,
+            counterpart_account_id=9,
+        )
+        counterpart = _make_txn_orm(
+            id=2, account_id=2, type="transfer", amount=Decimal("-50.00"), date=same_date
+        )
+        service._repo.get.side_effect = [txn, counterpart, txn, counterpart]
+        service._repo.update.return_value = txn
+
+        result = await service.link_transfer(1, 2)
+
+        assert isinstance(result, TransactionRead)
+        service._repo.update.assert_any_await(
+            1, TransactionUpdate(type="transfer", counterpart_account_id=2), amount_eur=None, recompute_amount_eur=False
+        )
 
     async def test_rejects_same_account(self, service):
         service._repo.get.side_effect = [

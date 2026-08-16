@@ -13,8 +13,9 @@ Format notes:
 - ``Type`` classifies the row structurally, which lets us set the transaction type
   directly instead of relying on the sign-based expense/income default:
     - "Exchange": the user's own money moving between their own Revolut currency
-      balances -- always a transfer. (No counterpart account is set: reliably pairing
-      the two legs of one conversion isn't attempted here -- see the import plan notes.)
+      balances -- always a transfer. Both legs of one conversion share the same
+      Completed Date timestamp and the same Description (e.g. "Exchanged to PLN"), so
+      that pair is used as the transfer_pair_key to auto-link the two legs' accounts.
     - "Topup": money entering from an external card not tracked as an Alfred
       account -- treated as a transfer (not income) so it doesn't inflate earnings.
     - "Transfer" to "Revolut Bank UAB ...": Revolut's own entity name, most likely an
@@ -109,6 +110,7 @@ class RevolutStatementParser:
             row_type = (record.get("Type") or "").strip()
             description = (record.get("Description") or "").strip()
             suggested_type, flag_reason = _classify(row_type, description)
+            transfer_pair_key = f"{completed_raw}|{description}" if row_type == "Exchange" else None
 
             rows.append(
                 ParsedRow(
@@ -121,6 +123,7 @@ class RevolutStatementParser:
                     suggested_type=suggested_type,
                     flag_reason=flag_reason,
                     posted_at=completed_raw or None,
+                    transfer_pair_key=transfer_pair_key,
                 )
             )
 

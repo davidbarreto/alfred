@@ -30,6 +30,10 @@ def _spend_condition(transaction_type: str):
     stays excluded from spend. Only applies when reporting "expense"; other types
     (income) match the column exactly.
 
+    Only a negative amount can count as spend -- a positive-amount unmatched transfer
+    (e.g. a Revolut top-up funded from an external card) is money coming in, never an
+    outflow, regardless of counterpart state.
+
     An auto-generated mirror row (generated_from_transaction_id set, see
     Account.auto_mirror_transfers) has no counterpart_account_id of its own but is
     still a genuine internal move -- excluded from spend the same way.
@@ -41,6 +45,7 @@ def _spend_condition(transaction_type: str):
                 Transaction.type == "transfer",
                 Transaction.counterpart_account_id.is_(None),
                 Transaction.generated_from_transaction_id.is_(None),
+                Transaction.amount < 0,
             ),
         )
     return Transaction.type == transaction_type

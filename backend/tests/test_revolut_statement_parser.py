@@ -12,6 +12,7 @@ Topup,Current,2025-11-22 22:05:37,2025-11-22 22:05:38,Apple Pay top-up by *1234,
 Card Payment,Current,2025-11-22 22:10:04,2025-11-24 15:24:23,Ryanair,-347.94,0.00,EUR,COMPLETED,652.06
 Card Refund,Current,2026-04-29 07:40:57,2026-04-30 12:47:18,Some Shop,4.25,0.00,EUR,COMPLETED,656.31
 Exchange,Current,2025-12-11 13:36:40,2025-12-11 13:36:40,Exchanged to EUR,-26.78,0.00,PLN,COMPLETED,286.74
+Exchange,Current,2025-12-11 13:36:40,2025-12-11 13:36:40,Exchanged to EUR,6.10,0.00,EUR,COMPLETED,206.10
 Transfer,Current,2026-04-19 23:50:17,2026-04-19 23:50:18,Revolut Bank UAB Sucursal em Portugal,-5.32,0.00,USD,COMPLETED,154.05
 Transfer,Current,2026-04-19 02:23:52,2026-04-19 02:23:52,Transfer to SOME PERSON,-32.00,0.00,USD,COMPLETED,28.89
 Card Payment,Current,2026-02-27 12:52:27,2026-02-28 05:14:01,Starbucks,-155.00,0.00,CZK,COMPLETED,3536.18
@@ -51,8 +52,8 @@ class TestParse:
 
     def test_row_count_matches_completed_rows(self):
         statement = RevolutStatementParser().parse(_content())
-        # 10 data rows, 1 REVERTED excluded -> 9
-        assert len(statement.rows) == 9
+        # 11 data rows, 1 REVERTED excluded -> 10
+        assert len(statement.rows) == 10
 
     def test_exchange_is_always_a_transfer(self):
         statement = RevolutStatementParser().parse(_content())
@@ -63,6 +64,30 @@ class TestParse:
         assert eur_leg.suggested_type == "transfer"
         assert eur_leg.currency == "PLN"  # the outgoing leg is booked on the PLN balance
         assert eur_leg.amount == Decimal("-26.78")
+
+    def test_exchange_legs_sharing_timestamp_and_description_share_a_pair_key(self):
+        statement = RevolutStatementParser().parse(_content())
+        legs = [
+            r for r in statement.rows
+            if r.raw_description == "Exchanged to EUR" and r.posted_at == "2025-12-11 13:36:40"
+        ]
+        assert len(legs) == 2
+        assert legs[0].transfer_pair_key == legs[1].transfer_pair_key
+        assert legs[0].transfer_pair_key is not None
+
+    def test_exchange_legs_from_different_events_have_different_pair_keys(self):
+        statement = RevolutStatementParser().parse(_content())
+        pln_leg = next(r for r in statement.rows if r.raw_description == "Exchanged to PLN")
+        other_leg = next(
+            r for r in statement.rows
+            if r.raw_description == "Exchanged to EUR" and r.currency == "PLN"
+        )
+        assert pln_leg.transfer_pair_key != other_leg.transfer_pair_key
+
+    def test_non_exchange_rows_have_no_transfer_pair_key(self):
+        statement = RevolutStatementParser().parse(_content())
+        topup = next(r for r in statement.rows if "top-up" in r.raw_description)
+        assert topup.transfer_pair_key is None
 
     def test_topup_is_a_transfer_not_income(self):
         statement = RevolutStatementParser().parse(_content())

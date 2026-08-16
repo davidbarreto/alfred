@@ -355,6 +355,19 @@ class TestGetSpendingTotal:
         assert "transfer" in sql
         assert "counterpart_account_id" in sql
 
+    async def test_expense_query_excludes_positive_amount_transfers_from_spend(self):
+        """A positive-amount untracked transfer (e.g. a Revolut top-up funded from an
+        external card) is money coming in, never spend, regardless of counterpart state."""
+        session = _make_session()
+        session.execute.return_value = _one_result((Decimal("0"), 0))
+        await TransactionRepository(session).get_spending_total(
+            from_date=date(2026, 6, 1),
+            to_date=date(2026, 6, 30),
+        )
+        query = session.execute.call_args.args[0]
+        sql = str(query.compile(compile_kwargs={"literal_binds": True}))
+        assert "amount" in sql and "< 0" in sql
+
     async def test_income_query_does_not_consider_transfers(self):
         session = _make_session()
         session.execute.return_value = _one_result((Decimal("0"), 0))

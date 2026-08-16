@@ -6,7 +6,7 @@ from urllib.parse import urlencode
 
 import httpx
 from fastapi import APIRouter, File, Form, Request, UploadFile
-from fastapi.responses import HTMLResponse, Response
+from fastapi.responses import HTMLResponse, RedirectResponse, Response
 
 import app.client as api
 from app.templates_config import templates
@@ -596,8 +596,7 @@ async def update_account(
         context = await _account_edit_context(account_id, error="Failed to save account.")
         return templates.TemplateResponse(request, "finance_account_edit.html", context)
 
-    context = await _account_edit_context(account_id)
-    return templates.TemplateResponse(request, "finance_account_edit.html", context)
+    return RedirectResponse(url="/finance/accounts", status_code=303)
 
 
 @router.delete("/accounts/{account_id}", response_class=HTMLResponse)

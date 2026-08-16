@@ -552,9 +552,11 @@ class TestLinkTransfer:
             await service.link_transfer(1, 2)
 
     async def test_rejects_mismatched_amount(self, service):
+        from datetime import datetime
+        same_date = datetime(2026, 6, 12)
         service._repo.get.side_effect = [
-            _make_txn_orm(id=1, account_id=1, type="transfer", amount=Decimal("50.00")),
-            _make_txn_orm(id=2, account_id=2, type="transfer", amount=Decimal("-40.00")),
+            _make_txn_orm(id=1, account_id=1, type="transfer", amount=Decimal("50.00"), date=same_date),
+            _make_txn_orm(id=2, account_id=2, type="transfer", amount=Decimal("-40.00"), date=same_date),
         ]
         with pytest.raises(TransferMatchError):
             await service.link_transfer(1, 2)
@@ -571,6 +573,49 @@ class TestLinkTransfer:
                 date=datetime(2026, 6, 13),
             ),
         ]
+        with pytest.raises(TransferMatchError):
+            await service.link_transfer(1, 2)
+
+    async def test_links_currency_exchange_legs_via_matching_bank_description(self, service):
+        """Different currencies and an FX-converted (not exactly opposite) amount --
+        only a shared bank_description (as Revolut gives both legs of one Exchange row)
+        can link these, mirroring get_transfer_match_candidates' second strategy."""
+        from datetime import datetime
+        same_date = datetime(2026, 6, 12)
+        txn = _make_txn_orm(
+            id=1, account_id=1, type="transfer", amount=Decimal("100.00"), currency="EUR",
+            date=same_date,
+        )
+        txn.bank_description = "Exchanged to PLN"
+        counterpart = _make_txn_orm(
+            id=2, account_id=2, type="transfer", amount=Decimal("-434.09"), currency="PLN",
+            date=same_date,
+        )
+        counterpart.bank_description = "Exchanged to PLN"
+        service._repo.get.side_effect = [txn, counterpart]
+        service._repo.update.return_value = txn
+
+        result = await service.link_transfer(1, 2)
+
+        assert isinstance(result, TransactionRead)
+        service._repo.update.assert_any_await(1, TransactionUpdate(counterpart_account_id=2))
+        service._repo.update.assert_any_await(2, TransactionUpdate(counterpart_account_id=1))
+
+    async def test_rejects_currency_exchange_with_different_descriptions(self, service):
+        from datetime import datetime
+        same_date = datetime(2026, 6, 12)
+        txn = _make_txn_orm(
+            id=1, account_id=1, type="transfer", amount=Decimal("100.00"), currency="EUR",
+            date=same_date,
+        )
+        txn.bank_description = "Exchanged to PLN"
+        counterpart = _make_txn_orm(
+            id=2, account_id=2, type="transfer", amount=Decimal("-434.09"), currency="PLN",
+            date=same_date,
+        )
+        counterpart.bank_description = "Unrelated transfer"
+        service._repo.get.side_effect = [txn, counterpart]
+
         with pytest.raises(TransferMatchError):
             await service.link_transfer(1, 2)
 

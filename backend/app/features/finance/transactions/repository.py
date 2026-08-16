@@ -109,12 +109,28 @@ class TransactionRepository:
 
     async def get_transfer_match_candidates(self, transaction: Transaction) -> list[Transaction]:
         """Other accounts' unmatched transfer legs that could be this transaction's
-        missing counterpart -- same day, same currency, exactly opposite amount, not
-        already linked or a mirror row. Used to reconcile a transfer whose two legs
-        were imported from separate statement files (e.g. an external card top-up and
-        the Revolut deposit it funds), so no shared transfer_pair_key was ever set at
-        import time. Candidates are only ever suggested, never auto-linked.
+        missing counterpart, same day only, not already linked or a mirror row. Used to
+        reconcile a transfer whose two legs were imported from separate statement files
+        (or, for a same-file currency exchange, never paired at import time), so no
+        shared transfer_pair_key was ever set. Candidates are only ever suggested, never
+        auto-linked. Two independent match strategies, either sufficient:
+        - same currency + exactly opposite amount -- a same-currency transfer split
+          across separate imports (e.g. an external card charge and the Revolut top-up
+          it funds).
+        - identical bank_description + opposite sign -- a currency exchange, where the
+          two legs are in different currencies with an FX-converted (not exactly
+          opposite) amount, but both sides of one Revolut "Exchange" row share the exact
+          same bank text (e.g. "Exchanged to PLN").
         """
+        same_currency_opposite_amount = and_(
+            Transaction.currency == transaction.currency,
+            Transaction.amount == -transaction.amount,
+        )
+        same_description_opposite_sign = and_(
+            Transaction.bank_description.isnot(None),
+            Transaction.bank_description == transaction.bank_description,
+            Transaction.amount < 0 if transaction.amount > 0 else Transaction.amount > 0,
+        )
         result = await self._session.execute(
             select(Transaction).where(
                 Transaction.id != transaction.id,
@@ -122,9 +138,8 @@ class TransactionRepository:
                 Transaction.type == "transfer",
                 Transaction.counterpart_account_id.is_(None),
                 Transaction.generated_from_transaction_id.is_(None),
-                Transaction.currency == transaction.currency,
-                Transaction.amount == -transaction.amount,
                 func.date(Transaction.date) == func.date(transaction.date),
+                or_(same_currency_opposite_amount, same_description_opposite_sign),
             )
         )
         return list(result.scalars().all())

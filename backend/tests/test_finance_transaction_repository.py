@@ -64,28 +64,31 @@ class TestGet:
 
 
 class TestGetTransferMatchCandidates:
+    def _source(self, **kwargs):
+        source = _make_txn_orm(
+            id=kwargs.pop("id", 1),
+            amount=kwargs.pop("amount", Decimal("50.00")),
+            date=kwargs.pop("date", datetime(2026, 6, 12, 10, 0)),
+        )
+        source.account_id = kwargs.pop("account_id", 1)
+        source.currency = kwargs.pop("currency", "EUR")
+        source.bank_description = kwargs.pop("bank_description", None)
+        return source
+
     async def test_returns_matching_transactions(self):
         session = _make_session()
         candidate = _make_txn_orm(id=2)
         session.execute.return_value = _scalar_all([candidate])
-        source = _make_txn_orm(
-            id=1, amount=Decimal("50.00"), date=datetime(2026, 6, 12, 10, 0)
-        )
-        source.account_id = 1
-        source.currency = "EUR"
 
-        result = await TransactionRepository(session).get_transfer_match_candidates(source)
+        result = await TransactionRepository(session).get_transfer_match_candidates(self._source())
 
         assert result == [candidate]
 
     async def test_query_excludes_self_and_matches_opposite_amount_same_day(self):
         session = _make_session()
         session.execute.return_value = _scalar_all([])
-        source = _make_txn_orm(id=1, amount=Decimal("50.00"), date=datetime(2026, 6, 12, 10, 0))
-        source.account_id = 1
-        source.currency = "EUR"
 
-        await TransactionRepository(session).get_transfer_match_candidates(source)
+        await TransactionRepository(session).get_transfer_match_candidates(self._source())
 
         query = session.execute.call_args.args[0]
         sql = str(query.compile(compile_kwargs={"literal_binds": True}))
@@ -93,6 +96,21 @@ class TestGetTransferMatchCandidates:
         assert "counterpart_account_id" in sql
         assert "generated_from_transaction_id" in sql
         assert "-50.00" in sql
+
+    async def test_query_also_matches_on_identical_bank_description(self):
+        """A currency exchange has different currencies and an FX-converted (not
+        exactly opposite) amount on each leg, so it can only be found by matching the
+        identical bank_description Revolut gives both legs (e.g. "Exchanged to PLN")."""
+        session = _make_session()
+        session.execute.return_value = _scalar_all([])
+        source = self._source(amount=Decimal("100.00"), bank_description="Exchanged to PLN")
+
+        await TransactionRepository(session).get_transfer_match_candidates(source)
+
+        query = session.execute.call_args.args[0]
+        sql = str(query.compile(compile_kwargs={"literal_binds": True}))
+        assert "bank_description" in sql
+        assert "Exchanged to PLN" in sql
 
 
 class TestList:

@@ -298,10 +298,24 @@ class TransactionService:
             raise TransferMatchError("One of the transactions is already linked")
         if transaction.account_id == counterpart.account_id:
             raise TransferMatchError("Cannot link two legs on the same account")
-        if transaction.currency != counterpart.currency or transaction.amount != -counterpart.amount:
-            raise TransferMatchError("Amounts do not match")
         if transaction.date.date() != counterpart.date.date():
             raise TransferMatchError("Dates do not match")
+
+        # Mirrors TransactionRepository.get_transfer_match_candidates' two match
+        # strategies: same currency + exactly opposite amount (a plain transfer split
+        # across separate imports), or identical bank_description + opposite sign (a
+        # currency exchange, where legs are in different currencies with an
+        # FX-converted, not exactly opposite, amount).
+        same_currency_opposite_amount = (
+            transaction.currency == counterpart.currency and transaction.amount == -counterpart.amount
+        )
+        same_description_opposite_sign = (
+            transaction.bank_description is not None
+            and transaction.bank_description == counterpart.bank_description
+            and (transaction.amount > 0) != (counterpart.amount > 0)
+        )
+        if not same_currency_opposite_amount and not same_description_opposite_sign:
+            raise TransferMatchError("Amounts do not match")
 
         updated = await self._repo.update(
             transaction.id, TransactionUpdate(counterpart_account_id=counterpart.account_id)

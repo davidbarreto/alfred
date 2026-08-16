@@ -17,6 +17,7 @@ class AccountBase(BaseModel):
     is_active: bool = True
     opening_balance: Decimal | None = None
     opening_balance_date: date | None = None
+    auto_mirror_transfers: bool = False
 
 
 class AccountCreate(AccountBase):
@@ -33,6 +34,7 @@ class AccountUpdate(BaseModel):
     is_active: bool | None = None
     opening_balance: Decimal | None = None
     opening_balance_date: date | None = None
+    auto_mirror_transfers: bool | None = None
 
 
 class AccountRead(AccountBase):

@@ -82,6 +82,9 @@ class TransactionBase(BaseModel):
     merchant: str | None = None
     source: str | None = None
     counterpart_account_id: int | None = None
+    generated_from_transaction_id: int | None = None
+    """Set only on an auto-generated mirror row (see Account.auto_mirror_transfers) --
+    points back at the transfer leg that spawned it. Not user-editable."""
     balance_after: Decimal | None = None
     """The account's running balance immediately after this transaction, when the
     source statement reports one (e.g. ActivoBank checking, Banco Inter, Revolut).

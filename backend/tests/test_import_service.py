@@ -119,6 +119,7 @@ def _service(statement: ParsedStatement | None = None, llm=None, files=None) -> 
     service._txn_repo.get_existing_keys.return_value = set()
     service._category_repo.list.return_value = []
     service._account_repo.list.return_value = []
+    service._account_repo.get.return_value = None
     service._fx.convert_to_eur.return_value = None
     service._embeddings.search.return_value = []
     return service
@@ -755,6 +756,71 @@ class TestCommit:
         assert items[0].source_type == "transaction"
         assert "Pingo Doce" in items[0].content
 
+    @pytest.mark.asyncio
+    async def test_invokes_create_transfer_mirrors_with_created_transactions(self):
+        service = _service()
+        self._prepare(service)
+        service._create_transfer_mirrors = AsyncMock()
+
+        await service.commit(_commit_request([_commit_row()]))
+
+        service._create_transfer_mirrors.assert_awaited_once()
+        created = service._create_transfer_mirrors.await_args.args[0]
+        assert len(created) == 1
+
+
+class TestCreateTransferMirrors:
+    @pytest.mark.asyncio
+    async def test_creates_mirror_for_transfer_to_a_mirrored_account(self):
+        service = _service()
+        source = MagicMock(
+            id=100, type="transfer", counterpart_account_id=9,
+            amount=Decimal("100.00"), amount_eur=Decimal("100.00"), currency="EUR",
+            date="2026-06-12", description=None, bank_description="TRF POUPUP", merchant=None,
+        )
+        service._account_repo.get.return_value = MagicMock(auto_mirror_transfers=True)
+        service._txn_repo.create.return_value = MagicMock(id=200, account_id=9)
+
+        await service._create_transfer_mirrors([source])
+
+        service._account_repo.get.assert_awaited_once_with(9)
+        service._txn_repo.create.assert_awaited_once()
+        mirror_data = service._txn_repo.create.await_args.args[0]
+        assert mirror_data.account_id == 9
+        assert mirror_data.amount == Decimal("-100.00")
+        assert mirror_data.generated_from_transaction_id == 100
+        assert mirror_data.counterpart_account_id is None
+        assert service._txn_repo.create.await_args.kwargs["amount_eur"] == Decimal("-100.00")
+
+    @pytest.mark.asyncio
+    async def test_skips_when_counterpart_flag_disabled(self):
+        service = _service()
+        source = MagicMock(type="transfer", counterpart_account_id=9)
+        service._account_repo.get.return_value = MagicMock(auto_mirror_transfers=False)
+
+        await service._create_transfer_mirrors([source])
+
+        service._txn_repo.create.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_skips_non_transfer_rows(self):
+        service = _service()
+        source = MagicMock(type="expense", counterpart_account_id=None)
+
+        await service._create_transfer_mirrors([source])
+
+        service._account_repo.get.assert_not_awaited()
+        service._txn_repo.create.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_empty_transactions_list_is_a_noop(self):
+        service = _service()
+
+        await service._create_transfer_mirrors([])
+
+        service._account_repo.get.assert_not_awaited()
+        service._txn_repo.create.assert_not_awaited()
+
 
 class TestStoredFile:
     @pytest.mark.asyncio
@@ -1237,7 +1303,7 @@ class TestCommitGrouped:
             return txn
         service._txn_repo.add.side_effect = _add_txn
         service._repo.add_rule = MagicMock()
-        service._account_repo.get.return_value = MagicMock()
+        service._account_repo.get.return_value = MagicMock(auto_mirror_transfers=False)
         return created, batches
 
     @pytest.mark.asyncio

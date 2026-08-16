@@ -7,7 +7,7 @@
         {{ (txn.description or txn.merchant or txn.bank_description or "?")[0] | upper }}
       </span>
     </div>
-    {% set counts_as_spend = txn.type == 'transfer' and not txn.counterpart_account_id %}
+    {% set counts_as_spend = txn.type == 'transfer' and not txn.counterpart_account_id and not txn.generated_from_transaction_id %}
     <div class="flex-1 min-w-0">
       <div class="text-sm text-gray-800 truncate flex items-center gap-1.5">
         <span class="truncate">{{ txn.description or txn.merchant or txn.bank_description or "—" }}</span>

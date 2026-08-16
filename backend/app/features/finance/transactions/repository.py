@@ -4,6 +4,7 @@ from datetime import date
 from decimal import Decimal
 from typing import Any
 from sqlalchemy import and_, case, func, or_, select, update
+from sqlalchemy.orm import aliased
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.features.finance.transactions.tables import Transaction
@@ -28,11 +29,19 @@ def _spend_condition(transaction_type: str):
     counterpart_account_id is a genuine internal move between two tracked accounts and
     stays excluded from spend. Only applies when reporting "expense"; other types
     (income) match the column exactly.
+
+    An auto-generated mirror row (generated_from_transaction_id set, see
+    Account.auto_mirror_transfers) has no counterpart_account_id of its own but is
+    still a genuine internal move -- excluded from spend the same way.
     """
     if transaction_type == "expense":
         return or_(
             Transaction.type == "expense",
-            and_(Transaction.type == "transfer", Transaction.counterpart_account_id.is_(None)),
+            and_(
+                Transaction.type == "transfer",
+                Transaction.counterpart_account_id.is_(None),
+                Transaction.generated_from_transaction_id.is_(None),
+            ),
         )
     return Transaction.type == transaction_type
 
@@ -210,6 +219,14 @@ class TransactionRepository:
             )
         )
         return {(row[0].date(), row[1], row[2]) for row in result.all()}
+
+    async def get_mirror(self, source_transaction_id: int) -> Transaction | None:
+        result = await self._session.execute(
+            select(Transaction).where(
+                Transaction.generated_from_transaction_id == source_transaction_id
+            )
+        )
+        return result.scalars().first()
 
     async def get_by_ids(self, transaction_ids: list[int]) -> list[Transaction]:
         if not transaction_ids:
@@ -418,9 +435,19 @@ class TransactionRepository:
         internal transfers (counterpart_account_id set) debit the source
         *and* credit the counterpart -- two legs from one row, so those are
         produced as a second, unioned select.
+
+        A source leg whose counterpart account has auto_mirror_transfers enabled
+        (see Account.auto_mirror_transfers) has a real mirror Transaction row on the
+        counterpart side instead -- that mirror already contributes its own credit
+        via source_legs, so the synthetic counterpart leg is skipped for it here to
+        avoid crediting the counterpart account twice.
         """
         amount_column = _amount_column(currency)
         delta = case((Transaction.type == "income", amount_column), else_=-amount_column)
+        Mirror = aliased(Transaction)
+        has_mirror = (
+            select(Mirror.id).where(Mirror.generated_from_transaction_id == Transaction.id).exists()
+        )
 
         source_legs = select(Transaction.account_id, Transaction.date, delta).where(
             Transaction.date <= to_date
@@ -431,6 +458,7 @@ class TransactionRepository:
             Transaction.type == "transfer",
             Transaction.counterpart_account_id.is_not(None),
             Transaction.date <= to_date,
+            ~has_mirror,
         )
         if currency != GLOBAL_CURRENCY:
             source_legs = source_legs.where(Transaction.currency == currency)

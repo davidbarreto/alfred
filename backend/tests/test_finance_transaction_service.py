@@ -34,6 +34,7 @@ def _make_txn_orm(**kwargs):
     t.import_batch_id = kwargs.get("import_batch_id", None)
     t.amount_eur = kwargs.get("amount_eur", None)
     t.balance_after = kwargs.get("balance_after", None)
+    t.generated_from_transaction_id = kwargs.get("generated_from_transaction_id", None)
     t.created_at = kwargs.get("created_at", "2026-06-12T10:00:00")
     return t
 
@@ -50,7 +51,9 @@ def _make_rt(type_="expense", amount=Decimal("100.00"), rule="monthly"):
 def service():
     svc = TransactionService.__new__(TransactionService)
     svc._repo = AsyncMock()
+    svc._repo.get_mirror.return_value = None
     svc._account_repo = AsyncMock()
+    svc._account_repo.get.return_value = None
     svc._fx = AsyncMock()
     svc._fx.convert_to_eur.return_value = None
     svc._settings = AsyncMock()
@@ -158,6 +161,61 @@ class TestCreateBalanceMaintenance:
         service._account_repo.adjust_balance.assert_awaited_once_with(1, Decimal("-100"))
 
 
+class TestCreateAutoMirror:
+    async def test_creates_mirror_when_counterpart_has_auto_mirror_enabled(self, service):
+        source = _make_txn_orm(
+            id=10, account_id=1, type="transfer", amount=Decimal("100.00"),
+            counterpart_account_id=2, currency="EUR",
+        )
+        mirror = _make_txn_orm(id=11, account_id=2, type="transfer", amount=Decimal("-100.00"))
+        service._repo.create.side_effect = [source, mirror]
+        service._account_repo.get.return_value = MagicMock(auto_mirror_transfers=True)
+
+        await service.create(TransactionCreate(
+            account_id=1, date="2026-06-12T10:00:00",
+            amount=Decimal("100"), currency="EUR", type="transfer",
+            counterpart_account_id=2,
+        ))
+
+        assert service._repo.create.await_count == 2
+        mirror_data = service._repo.create.await_args_list[1].args[0]
+        assert mirror_data.account_id == 2
+        assert mirror_data.amount == Decimal("-100.00")
+        assert mirror_data.counterpart_account_id is None
+        assert mirror_data.generated_from_transaction_id == 10
+
+    async def test_phantom_counterpart_credit_still_applied_alongside_mirror(self, service):
+        source = _make_txn_orm(
+            id=10, account_id=1, type="transfer", amount=Decimal("100.00"), counterpart_account_id=2
+        )
+        mirror = _make_txn_orm(id=11, account_id=2, type="transfer", amount=Decimal("-100.00"))
+        service._repo.create.side_effect = [source, mirror]
+        service._account_repo.get.return_value = MagicMock(auto_mirror_transfers=True)
+
+        await service.create(TransactionCreate(
+            account_id=1, date="2026-06-12T10:00:00",
+            amount=Decimal("100"), currency="EUR", type="transfer",
+            counterpart_account_id=2,
+        ))
+
+        calls = service._account_repo.adjust_balance.await_args_list
+        assert calls[0].args == (1, Decimal("-100"))
+        assert calls[1].args == (2, Decimal("100"))
+        assert len(calls) == 2  # mirror creation itself never calls adjust_balance
+
+    async def test_no_mirror_when_counterpart_flag_disabled(self, service):
+        service._repo.create.return_value = _make_txn_orm(id=10, type="transfer")
+        service._account_repo.get.return_value = MagicMock(auto_mirror_transfers=False)
+
+        await service.create(TransactionCreate(
+            account_id=1, date="2026-06-12T10:00:00",
+            amount=Decimal("100"), currency="EUR", type="transfer",
+            counterpart_account_id=2,
+        ))
+
+        assert service._repo.create.await_count == 1
+
+
 class TestUpdate:
     async def test_returns_transaction_read_when_found(self, service):
         service._repo.update.return_value = _make_txn_orm(merchant="Updated")
@@ -242,6 +300,70 @@ class TestUpdateBalanceMaintenance:
         service._account_repo.adjust_balance.assert_not_awaited()
 
 
+class TestUpdateAutoMirror:
+    async def test_amount_change_syncs_existing_mirror(self, service):
+        from datetime import datetime as dt
+
+        old = _make_txn_orm(
+            id=10, account_id=1, type="transfer", amount=Decimal("100.00"), counterpart_account_id=2,
+            date=dt(2026, 6, 12),
+        )
+        new = _make_txn_orm(
+            id=10, account_id=1, type="transfer", amount=Decimal("150.00"), counterpart_account_id=2
+        )
+        service._repo.get.return_value = old
+        service._repo.update.return_value = new
+        mirror = _make_txn_orm(
+            id=11, account_id=2, type="transfer", amount=Decimal("-100.00"), generated_from_transaction_id=10
+        )
+        service._repo.get_mirror.return_value = mirror
+        service._account_repo.get.return_value = MagicMock(auto_mirror_transfers=True)
+
+        await service.update(10, TransactionUpdate(amount=Decimal("150.00")))
+
+        mirror_call = service._repo.update.await_args_list[-1]
+        assert mirror_call.args[0] == 11
+        assert mirror_call.args[1].amount == Decimal("-150.00")
+
+    async def test_disabling_mirroring_removes_the_mirror(self, service):
+        from datetime import datetime as dt
+
+        old = _make_txn_orm(
+            id=10, account_id=1, type="transfer", amount=Decimal("100.00"), counterpart_account_id=2,
+            date=dt(2026, 6, 12),
+        )
+        new = _make_txn_orm(
+            id=10, account_id=1, type="transfer", amount=Decimal("100.00"), counterpart_account_id=2
+        )
+        service._repo.get.return_value = old
+        service._repo.update.return_value = new
+        mirror = _make_txn_orm(id=11, account_id=2, generated_from_transaction_id=10)
+        service._repo.get_mirror.return_value = mirror
+        service._account_repo.get.return_value = MagicMock(auto_mirror_transfers=False)
+
+        await service.update(10, TransactionUpdate(amount=Decimal("100.00")))
+
+        service._repo.delete.assert_awaited_once_with(11)
+
+    async def test_editing_mirror_row_directly_skips_reconciliation_and_sync(self, service):
+        from datetime import datetime as dt
+
+        old = _make_txn_orm(
+            id=11, account_id=2, type="transfer", amount=Decimal("-100.00"), generated_from_transaction_id=10,
+            date=dt(2026, 6, 12),
+        )
+        new = _make_txn_orm(
+            id=11, account_id=2, type="transfer", amount=Decimal("-150.00"), generated_from_transaction_id=10
+        )
+        service._repo.get.return_value = old
+        service._repo.update.return_value = new
+
+        await service.update(11, TransactionUpdate(amount=Decimal("-150.00")))
+
+        service._repo.get_mirror.assert_not_awaited()
+        service._account_repo.adjust_balance.assert_not_awaited()
+
+
 class TestDelete:
     async def test_passes_through_true(self, service):
         service._repo.get.return_value = _make_txn_orm()
@@ -276,6 +398,31 @@ class TestDeleteBalanceMaintenance:
         service._repo.delete.return_value = True
 
         await service.delete(1)
+
+        calls = service._account_repo.adjust_balance.await_args_list
+        assert calls[0].args == (1, Decimal("100.00"))
+        assert calls[1].args == (2, Decimal("-100.00"))
+
+
+class TestDeleteAutoMirror:
+    async def test_deleting_a_mirror_row_directly_is_balance_neutral(self, service):
+        service._repo.get.return_value = _make_txn_orm(
+            id=11, account_id=2, type="transfer", amount=Decimal("-100.00"),
+            counterpart_account_id=None, generated_from_transaction_id=10,
+        )
+        service._repo.delete.return_value = True
+
+        await service.delete(11)
+
+        service._account_repo.adjust_balance.assert_not_awaited()
+
+    async def test_deleting_the_source_leg_still_reverses_normally(self, service):
+        service._repo.get.return_value = _make_txn_orm(
+            id=10, account_id=1, type="transfer", amount=Decimal("100.00"), counterpart_account_id=2
+        )
+        service._repo.delete.return_value = True
+
+        await service.delete(10)
 
         calls = service._account_repo.adjust_balance.await_args_list
         assert calls[0].args == (1, Decimal("100.00"))

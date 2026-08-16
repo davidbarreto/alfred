@@ -25,6 +25,7 @@ class Account(Base):
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     opening_balance: Mapped[Optional[Decimal]] = mapped_column(Numeric(12, 2), nullable=True)
     opening_balance_date: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
+    auto_mirror_transfers: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 
     transactions: Mapped[List["Transaction"]] = relationship(
         "Transaction",

@@ -317,6 +317,17 @@ class TestGetSpendingTotal:
         query = session.execute.call_args.args[0]
         assert "expense" in str(query.compile(compile_kwargs={"literal_binds": True}))
 
+    async def test_expense_query_excludes_auto_mirror_rows_from_spend(self):
+        session = _make_session()
+        session.execute.return_value = _one_result((Decimal("0"), 0))
+        await TransactionRepository(session).get_spending_total(
+            from_date=date(2026, 6, 1),
+            to_date=date(2026, 6, 30),
+        )
+        query = session.execute.call_args.args[0]
+        sql = str(query.compile(compile_kwargs={"literal_binds": True}))
+        assert "generated_from_transaction_id" in sql
+
     async def test_transaction_type_income_override(self):
         session = _make_session()
         session.execute.return_value = _one_result((Decimal("500.00"), 1))
@@ -558,6 +569,38 @@ class TestGetLedgerEvents:
         sql = str(query.compile(compile_kwargs={"literal_binds": True}))
         assert "amount_eur" in sql
         assert "transactions.currency =" not in sql
+
+    async def test_counterpart_leg_skipped_for_rows_that_have_a_mirror(self):
+        """A transfer whose counterpart account has auto_mirror_transfers enabled gets
+        a real mirror Transaction row on the counterpart side (see
+        TransactionService._maybe_create_mirror); that mirror already contributes its
+        own credit via the unconditional source_legs half of the union, so the
+        synthetic counterpart leg must be excluded via a NOT EXISTS guard to avoid
+        double-crediting the counterpart account.
+        """
+        session = _make_session()
+        result = MagicMock()
+        result.all.return_value = []
+        session.execute.return_value = result
+        await TransactionRepository(session).get_ledger_events(date(2026, 6, 30))
+        query = session.execute.call_args.args[0]
+        sql = str(query.compile(compile_kwargs={"literal_binds": True})).upper()
+        assert "NOT (EXISTS" in sql or "NOT EXISTS" in sql
+        assert "GENERATED_FROM_TRANSACTION_ID" in sql
+
+
+class TestGetMirror:
+    async def test_returns_mirror_row(self):
+        session = _make_session()
+        mirror = _make_txn_orm(id=11)
+        session.execute.return_value = _scalar_first(mirror)
+        result = await TransactionRepository(session).get_mirror(10)
+        assert result is mirror
+
+    async def test_returns_none_when_no_mirror_exists(self):
+        session = _make_session()
+        session.execute.return_value = _scalar_first(None)
+        assert await TransactionRepository(session).get_mirror(10) is None
 
 
 class TestGetSpendingOverTime:

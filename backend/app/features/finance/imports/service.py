@@ -41,6 +41,8 @@ from app.features.finance.imports.schemas import (
 from app.features.finance.imports.tables import ImportBatch, ImportRule
 from app.features.finance.transactions.repository import TransactionRepository
 from app.features.finance.transactions.schemas import TransactionCreate
+from app.features.finance.transactions.service import build_mirror_transaction_create
+from app.features.finance.transactions.tables import Transaction
 from app.integrations.llm_calls.repository import create_llm_call
 from app.shared.audio import FileStorage
 from app.shared.llm import LlmProvider
@@ -536,6 +538,38 @@ class ImportService:
             if row.type == "transfer" and row.counterpart_account_id is not None:
                 await self._account_repo.adjust_balance(row.counterpart_account_id, row.amount)
 
+    async def _create_transfer_mirrors(self, transactions: list[Transaction]) -> None:
+        """Give a real, visible mirror row (see build_mirror_transaction_create) to
+        every imported transfer whose counterpart account has auto_mirror_transfers
+        enabled. Runs after the batch commit so every transaction already has an id;
+        carries no balance effect of its own (see _sync_account_balance, unchanged).
+        """
+        counterpart_ids = {
+            txn.counterpart_account_id
+            for txn in transactions
+            if txn.type == "transfer" and txn.counterpart_account_id is not None
+        }
+        if not counterpart_ids:
+            return
+        mirrored_accounts = set()
+        for account_id in counterpart_ids:
+            account = await self._account_repo.get(account_id)
+            if account is not None and account.auto_mirror_transfers:
+                mirrored_accounts.add(account_id)
+        if not mirrored_accounts:
+            return
+        for txn in transactions:
+            if txn.type != "transfer" or txn.counterpart_account_id not in mirrored_accounts:
+                continue
+            mirror = await self._txn_repo.create(
+                build_mirror_transaction_create(txn),
+                amount_eur=(-txn.amount_eur if txn.amount_eur is not None else None),
+            )
+            logger.info(
+                "Auto-mirror transaction created: id=%d source_id=%d account_id=%d",
+                mirror.id, txn.id, mirror.account_id,
+            )
+
     async def commit(self, request: ImportCommitRequest) -> ImportCommitResponse:
         existing = await self._txn_repo.get_existing_dedup_hashes(
             [r.deduplication_hash for r in request.rows]
@@ -621,6 +655,7 @@ class ImportService:
 
         await self._repo.commit()
         await self._sync_account_balance(request.account_id, to_insert)
+        await self._create_transfer_mirrors(transactions)
         logger.info(
             "Import committed: batch_id=%d account_id=%d inserted=%d skipped=%d rules=%d",
             batch.id, request.account_id, len(transactions), skipped, rules_created,
@@ -977,6 +1012,7 @@ class ImportService:
         await self._repo.commit()
         for synced_account_id, synced_rows in rows_by_account.items():
             await self._sync_account_balance(synced_account_id, synced_rows)
+        await self._create_transfer_mirrors(all_transactions)
         logger.info(
             "Grouped import committed: provider=%s currencies=%s total_inserted=%d rules=%d",
             request.provider, sorted(by_currency), len(all_transactions), total_rules_created,

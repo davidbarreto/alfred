@@ -10,6 +10,7 @@ from app.features.finance.accounts.schemas import AccountFilters
 from app.features.finance.exchange_rates.service import ExchangeRateService
 from app.features.finance.settings.service import FinanceSettingsService
 from app.features.finance.transactions.repository import TransactionRepository
+from app.features.finance.transactions.tables import Transaction
 from app.features.finance.transactions.schemas import (
     GLOBAL_CURRENCY,
     AccountSpendingItem,
@@ -47,6 +48,29 @@ def _account_delta(type_: str, amount: Decimal) -> Decimal:
     ledger reconstruction never disagree.
     """
     return amount if type_ == "income" else -amount
+
+
+def build_mirror_transaction_create(source: Transaction) -> TransactionCreate:
+    """The auto-generated counterpart-account echo of a transfer whose counterpart
+    account has auto_mirror_transfers enabled (see Account.auto_mirror_transfers).
+    Carries no balance effect of its own -- the source leg's existing counterpart
+    credit (see create()/_reconcile_balance()) already moves the money; this only
+    makes the transfer visible in the counterpart account's own transaction list.
+    Shared by TransactionService and ImportService so both paths mirror identically.
+    """
+    return TransactionCreate(
+        account_id=source.counterpart_account_id,
+        date=source.date,
+        amount=-source.amount,
+        currency=source.currency,
+        type="transfer",
+        description=source.description,
+        bank_description=source.bank_description,
+        merchant=source.merchant,
+        source="auto_transfer",
+        counterpart_account_id=None,
+        generated_from_transaction_id=source.id,
+    )
 
 
 class InvalidBulkMoveError(Exception):
@@ -96,8 +120,22 @@ class TransactionService:
         await self._account_repo.adjust_balance(data.account_id, _account_delta(data.type, data.amount))
         if data.type == "transfer" and data.counterpart_account_id is not None:
             await self._account_repo.adjust_balance(data.counterpart_account_id, data.amount)
+            await self._maybe_create_mirror(txn)
         logger.info("Transaction created: id=%d merchant=%r", txn.id, data.merchant)
         return TransactionRead.model_validate(txn)
+
+    async def _maybe_create_mirror(self, source: Transaction) -> None:
+        counterpart = await self._account_repo.get(source.counterpart_account_id)
+        if counterpart is None or not counterpart.auto_mirror_transfers:
+            return
+        mirror = await self._repo.create(
+            build_mirror_transaction_create(source),
+            amount_eur=(-source.amount_eur if source.amount_eur is not None else None),
+        )
+        logger.info(
+            "Auto-mirror transaction created: id=%d source_id=%d account_id=%d",
+            mirror.id, source.id, mirror.account_id,
+        )
 
     async def update(self, transaction_id: int, data: TransactionUpdate) -> TransactionRead | None:
         current = await self._repo.get(transaction_id)
@@ -124,12 +162,18 @@ class TransactionService:
             logger.debug("Transaction update: id=%d not found", transaction_id)
             return None
         await self._reconcile_balance(old=current, new=txn)
+        await self._sync_mirror(old=current, new=txn)
         logger.info("Transaction updated: id=%d fields=%s", transaction_id, list(fields.keys()))
         return TransactionRead.model_validate(txn)
 
     async def _reconcile_balance(self, old, new) -> None:
         """Reverse a transaction's old balance effect and apply its new one -- covers
-        every field an update could change (amount, type, account, counterpart)."""
+        every field an update could change (amount, type, account, counterpart).
+        A mirror row (generated_from_transaction_id set) carries no balance effect of
+        its own -- see create()/delete() -- so editing one directly is a no-op here.
+        """
+        if old.generated_from_transaction_id is not None:
+            return
         await self._account_repo.adjust_balance(
             old.account_id, -_account_delta(old.type, old.amount)
         )
@@ -140,6 +184,44 @@ class TransactionService:
         )
         if new.type == "transfer" and new.counterpart_account_id is not None:
             await self._account_repo.adjust_balance(new.counterpart_account_id, new.amount)
+
+    async def _sync_mirror(self, old, new) -> None:
+        """Keep an auto-generated counterpart mirror row (see create()) in step with
+        edits to its source leg -- content only, never balance (mirrors carry none).
+        Creates one if the edit newly qualifies (e.g. counterpart_account_id changed
+        to a mirrored account), removes it if the edit no longer qualifies, or moves
+        it to the new counterpart account if that changed.
+        """
+        if old.generated_from_transaction_id is not None:
+            return
+        mirror = await self._repo.get_mirror(old.id)
+        counterpart = None
+        if new.type == "transfer" and new.counterpart_account_id is not None:
+            counterpart = await self._account_repo.get(new.counterpart_account_id)
+        wants_mirror = counterpart is not None and counterpart.auto_mirror_transfers
+
+        if not wants_mirror:
+            if mirror is not None:
+                await self._repo.delete(mirror.id)
+            return
+
+        if mirror is not None and mirror.account_id == new.counterpart_account_id:
+            await self._repo.update(
+                mirror.id,
+                TransactionUpdate(
+                    date=new.date, amount=-new.amount, currency=new.currency, description=new.description,
+                    merchant=new.merchant,
+                ),
+                amount_eur=(-new.amount_eur if new.amount_eur is not None else None),
+                recompute_amount_eur=True,
+            )
+        else:
+            if mirror is not None:
+                await self._repo.delete(mirror.id)
+            await self._repo.create(
+                build_mirror_transaction_create(new),
+                amount_eur=(-new.amount_eur if new.amount_eur is not None else None),
+            )
 
     async def backfill_amount_eur(self, batch_size: int = 1000) -> TransactionBackfillEurResponse:
         pending = await self._repo.list_missing_amount_eur(limit=batch_size)
@@ -167,11 +249,17 @@ class TransactionService:
             return False
         deleted = await self._repo.delete(transaction_id)
         if deleted:
-            await self._account_repo.adjust_balance(
-                txn.account_id, -_account_delta(txn.type, txn.amount)
-            )
-            if txn.type == "transfer" and txn.counterpart_account_id is not None:
-                await self._account_repo.adjust_balance(txn.counterpart_account_id, -txn.amount)
+            # A mirror row (generated_from_transaction_id set) carries no balance
+            # effect of its own -- see create() -- deleting one directly is balance-
+            # neutral. Deleting the source leg cascades its mirror row away at the DB
+            # level (ondelete="CASCADE"); the source leg's own reversal below already
+            # undoes the money movement, so nothing extra is needed for the mirror.
+            if txn.generated_from_transaction_id is None:
+                await self._account_repo.adjust_balance(
+                    txn.account_id, -_account_delta(txn.type, txn.amount)
+                )
+                if txn.type == "transfer" and txn.counterpart_account_id is not None:
+                    await self._account_repo.adjust_balance(txn.counterpart_account_id, -txn.amount)
             logger.info("Transaction deleted: id=%d", transaction_id)
         return deleted
 

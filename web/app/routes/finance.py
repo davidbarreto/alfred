@@ -1156,6 +1156,9 @@ async def import_commit(request: Request):
         }
         if f"force_{i}" in form:
             row["force"] = True
+        balance_after = _form_value(form, f"balance_after_{i}")
+        if balance_after:
+            row["balance_after"] = balance_after
         for field in ("description", "merchant", "note"):
             value = _form_value(form, f"{field}_{i}").strip()
             if value:
@@ -1281,6 +1284,9 @@ async def import_commit_grouped(request: Request):
         }
         if f"force_{i}" in form:
             row["force"] = True
+        balance_after = _form_value(form, f"balance_after_{i}")
+        if balance_after:
+            row["balance_after"] = balance_after
         for field in ("description", "merchant", "note"):
             value = _form_value(form, f"{field}_{i}").strip()
             if value:

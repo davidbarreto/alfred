@@ -33,6 +33,7 @@ def _make_txn_orm(**kwargs):
     t.counterpart_account_id = kwargs.get("counterpart_account_id", None)
     t.import_batch_id = kwargs.get("import_batch_id", None)
     t.amount_eur = kwargs.get("amount_eur", None)
+    t.balance_after = kwargs.get("balance_after", None)
     t.created_at = kwargs.get("created_at", "2026-06-12T10:00:00")
     return t
 
@@ -106,6 +107,43 @@ class TestCreate:
         assert service._repo.create.call_args.kwargs["amount_eur"] == Decimal("45.00")
 
 
+class TestCreateBalanceMaintenance:
+    async def test_expense_debits_account(self, service):
+        service._repo.create.return_value = _make_txn_orm(type="expense")
+        await service.create(TransactionCreate(
+            account_id=1, date="2026-06-12T10:00:00",
+            amount=Decimal("50"), currency="EUR", type="expense",
+        ))
+        service._account_repo.adjust_balance.assert_awaited_once_with(1, Decimal("-50"))
+
+    async def test_income_credits_account(self, service):
+        service._repo.create.return_value = _make_txn_orm(type="income")
+        await service.create(TransactionCreate(
+            account_id=1, date="2026-06-12T10:00:00",
+            amount=Decimal("2000"), currency="EUR", type="income",
+        ))
+        service._account_repo.adjust_balance.assert_awaited_once_with(1, Decimal("2000"))
+
+    async def test_transfer_debits_source_and_credits_counterpart(self, service):
+        service._repo.create.return_value = _make_txn_orm(type="transfer")
+        await service.create(TransactionCreate(
+            account_id=1, date="2026-06-12T10:00:00",
+            amount=Decimal("100"), currency="EUR", type="transfer",
+            counterpart_account_id=2,
+        ))
+        calls = service._account_repo.adjust_balance.await_args_list
+        assert calls[0].args == (1, Decimal("-100"))
+        assert calls[1].args == (2, Decimal("100"))
+
+    async def test_transfer_without_counterpart_only_debits_source(self, service):
+        service._repo.create.return_value = _make_txn_orm(type="transfer")
+        await service.create(TransactionCreate(
+            account_id=1, date="2026-06-12T10:00:00",
+            amount=Decimal("100"), currency="EUR", type="transfer",
+        ))
+        service._account_repo.adjust_balance.assert_awaited_once_with(1, Decimal("-100"))
+
+
 class TestUpdate:
     async def test_returns_transaction_read_when_found(self, service):
         service._repo.update.return_value = _make_txn_orm(merchant="Updated")
@@ -117,11 +155,11 @@ class TestUpdate:
         assert await service.update(999, TransactionUpdate()) is None
 
     async def test_field_unrelated_to_fx_skips_recompute(self, service):
+        service._repo.get.return_value = _make_txn_orm()
         service._repo.update.return_value = _make_txn_orm(merchant="Updated")
 
         await service.update(1, TransactionUpdate(merchant="Updated"))
 
-        service._repo.get.assert_not_called()
         assert service._repo.update.call_args.kwargs["recompute_amount_eur"] is False
 
     async def test_amount_change_recomputes_amount_eur(self, service):
@@ -145,14 +183,89 @@ class TestUpdate:
         assert await service.update(999, TransactionUpdate(amount=Decimal("10"))) is None
 
 
+class TestUpdateBalanceMaintenance:
+    async def test_amount_change_reverses_old_and_applies_new(self, service):
+        from datetime import datetime as dt
+
+        old = _make_txn_orm(account_id=1, type="expense", amount=Decimal("50.00"), date=dt(2026, 6, 12))
+        new = _make_txn_orm(account_id=1, type="expense", amount=Decimal("80.00"))
+        service._repo.get.return_value = old
+        service._repo.update.return_value = new
+
+        await service.update(1, TransactionUpdate(amount=Decimal("80.00")))
+
+        calls = service._account_repo.adjust_balance.await_args_list
+        assert calls[0].args == (1, Decimal("50.00"))
+        assert calls[1].args == (1, Decimal("-80.00"))
+
+    async def test_account_reassignment_moves_the_balance_effect(self, service):
+        old = _make_txn_orm(account_id=1, type="expense", amount=Decimal("50.00"))
+        new = _make_txn_orm(account_id=2, type="expense", amount=Decimal("50.00"))
+        service._repo.get.return_value = old
+        service._repo.update.return_value = new
+
+        await service.update(1, TransactionUpdate(account_id=2))
+
+        calls = service._account_repo.adjust_balance.await_args_list
+        assert calls[0].args == (1, Decimal("50.00"))
+        assert calls[1].args == (2, Decimal("-50.00"))
+
+    async def test_type_change_from_expense_to_income(self, service):
+        old = _make_txn_orm(account_id=1, type="expense", amount=Decimal("50.00"))
+        new = _make_txn_orm(account_id=1, type="income", amount=Decimal("50.00"))
+        service._repo.get.return_value = old
+        service._repo.update.return_value = new
+
+        await service.update(1, TransactionUpdate(type="income"))
+
+        calls = service._account_repo.adjust_balance.await_args_list
+        assert calls[0].args == (1, Decimal("50.00"))
+        assert calls[1].args == (1, Decimal("50.00"))
+
+    async def test_not_found_does_not_touch_balance(self, service):
+        service._repo.get.return_value = None
+        await service.update(999, TransactionUpdate(merchant="X"))
+        service._account_repo.adjust_balance.assert_not_awaited()
+
+
 class TestDelete:
     async def test_passes_through_true(self, service):
+        service._repo.get.return_value = _make_txn_orm()
         service._repo.delete.return_value = True
         assert await service.delete(1) is True
 
     async def test_passes_through_false(self, service):
         service._repo.delete.return_value = False
         assert await service.delete(999) is False
+
+    async def test_not_found_returns_false_without_touching_balance(self, service):
+        service._repo.get.return_value = None
+        assert await service.delete(999) is False
+        service._account_repo.adjust_balance.assert_not_awaited()
+
+
+class TestDeleteBalanceMaintenance:
+    async def test_expense_deletion_credits_back_the_account(self, service):
+        service._repo.get.return_value = _make_txn_orm(
+            account_id=1, type="expense", amount=Decimal("50.00")
+        )
+        service._repo.delete.return_value = True
+
+        await service.delete(1)
+
+        service._account_repo.adjust_balance.assert_awaited_once_with(1, Decimal("50.00"))
+
+    async def test_transfer_deletion_reverses_both_legs(self, service):
+        service._repo.get.return_value = _make_txn_orm(
+            account_id=1, type="transfer", amount=Decimal("100.00"), counterpart_account_id=2
+        )
+        service._repo.delete.return_value = True
+
+        await service.delete(1)
+
+        calls = service._account_repo.adjust_balance.await_args_list
+        assert calls[0].args == (1, Decimal("100.00"))
+        assert calls[1].args == (2, Decimal("-100.00"))
 
 
 class TestBulkMoveAccount:

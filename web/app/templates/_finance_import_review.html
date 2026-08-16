@@ -84,6 +84,9 @@
               <input type="hidden" name="bank_description_{{ i }}" value="{{ row.bank_description }}" />
               <input type="hidden" name="amount_{{ i }}" value="{{ row.amount }}" />
               <input type="hidden" name="hash_{{ i }}" value="{{ row.deduplication_hash }}" />
+              {% if row.balance_after is not none %}
+              <input type="hidden" name="balance_after_{{ i }}" value="{{ row.balance_after }}" />
+              {% endif %}
               {% if row.counterpart_account_id %}
               <input type="hidden" name="counterpart_{{ i }}" value="{{ row.counterpart_account_id }}" />
               {% endif %}

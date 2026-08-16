@@ -118,6 +118,32 @@ class TestUpdate:
         session.refresh.assert_called_once()
 
 
+class TestAdjustBalance:
+    async def test_commits_after_update(self):
+        session = _make_session()
+        repo = AccountRepository(session)
+        await repo.adjust_balance(1, Decimal("50.00"))
+        session.execute.assert_called_once()
+        session.commit.assert_called_once()
+
+    async def test_uses_atomic_increment_not_read_modify_write(self):
+        session = _make_session()
+        repo = AccountRepository(session)
+        await repo.adjust_balance(1, Decimal("-20.00"))
+        stmt = session.execute.call_args.args[0]
+        sql = str(stmt.compile(compile_kwargs={"literal_binds": True}))
+        assert "accounts.balance + " in sql or "balance + " in sql
+
+
+class TestSetBalance:
+    async def test_commits_after_update(self):
+        session = _make_session()
+        repo = AccountRepository(session)
+        await repo.set_balance(1, Decimal("1200.00"))
+        session.execute.assert_called_once()
+        session.commit.assert_called_once()
+
+
 class TestDelete:
     async def test_returns_false_when_not_found(self):
         session = _make_session()

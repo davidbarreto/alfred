@@ -118,6 +118,7 @@ class ImportCommitRow(BaseModel):
     amount: Decimal
     type: TransactionType
     deduplication_hash: str
+    balance_after: Decimal | None = None
     description: str | None = None
     merchant: str | None = None
     note: str | None = None

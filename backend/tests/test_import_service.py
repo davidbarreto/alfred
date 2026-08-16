@@ -630,6 +630,44 @@ class TestCommit:
         assert len(service._created) == 2
 
     @pytest.mark.asyncio
+    async def test_syncs_account_balance_from_latest_balance_after(self):
+        service = _service()
+        self._prepare(service)
+        rows = [
+            _commit_row(deduplication_hash="h1", balance_after=Decimal("500.00")),
+            _commit_row(deduplication_hash="h2", date_posted=date(2026, 6, 5), balance_after=Decimal("620.00")),
+        ]
+
+        await service.commit(_commit_request(rows))
+
+        service._account_repo.set_balance.assert_awaited_once_with(1, Decimal("620.00"))
+        service._account_repo.adjust_balance.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_syncs_account_balance_incrementally_when_no_balance_after(self):
+        service = _service()
+        self._prepare(service)
+        rows = [
+            _commit_row(deduplication_hash="h1", type="expense", amount=Decimal("-20.00")),
+            _commit_row(deduplication_hash="h2", type="income", amount=Decimal("100.00")),
+        ]
+
+        await service.commit(_commit_request(rows))
+
+        service._account_repo.adjust_balance.assert_awaited_once_with(1, Decimal("80.00"))
+        service._account_repo.set_balance.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_syncs_counterpart_account_on_transfer(self):
+        service = _service()
+        self._prepare(service)
+        rows = [_commit_row(deduplication_hash="h1", type="transfer", amount=Decimal("100.00"), counterpart_account_id=9)]
+
+        await service.commit(_commit_request(rows))
+
+        service._account_repo.adjust_balance.assert_any_call(9, Decimal("100.00"))
+
+    @pytest.mark.asyncio
     async def test_forced_row_bypasses_existing_hash_skip(self):
         # A row the user explicitly confirmed as genuinely new (ticked "import
         # anyway" on a preview-flagged duplicate) must be inserted even though its
@@ -1351,3 +1389,20 @@ class TestCommitGrouped:
 
         service._embeddings.embed_many.assert_awaited_once()
         assert len(service._embeddings.embed_many.call_args[0][0]) == 1
+
+    @pytest.mark.asyncio
+    async def test_syncs_balance_per_account_across_currency_groups(self):
+        service = _service()
+        self._prepare(service)
+        request = _grouped_commit_request(
+            [
+                _grouped_commit_row(currency="EUR", deduplication_hash="h1", balance_after=Decimal("300.00")),
+                _grouped_commit_row(currency="PLN", deduplication_hash="h2", type="income", amount=Decimal("50.00")),
+            ],
+            account_map={"EUR": 1, "PLN": 2},
+        )
+
+        await service.commit_grouped(request)
+
+        service._account_repo.set_balance.assert_awaited_once_with(1, Decimal("300.00"))
+        service._account_repo.adjust_balance.assert_awaited_once_with(2, Decimal("50.00"))

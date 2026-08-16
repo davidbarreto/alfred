@@ -1,4 +1,5 @@
-from sqlalchemy import select
+from decimal import Decimal
+from sqlalchemy import select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -42,6 +43,21 @@ class AccountRepository:
         await self._session.commit()
         await self._session.refresh(account)
         return account
+
+    async def set_balance(self, account_id: int, balance: Decimal) -> None:
+        await self._session.execute(
+            update(Account).where(Account.id == account_id).values(balance=balance)
+        )
+        await self._session.commit()
+
+    async def adjust_balance(self, account_id: int, delta: Decimal) -> None:
+        """Apply a signed delta to an account's balance in a single atomic UPDATE --
+        avoids a read-modify-write race between concurrent transaction mutations on
+        the same account."""
+        await self._session.execute(
+            update(Account).where(Account.id == account_id).values(balance=Account.balance + delta)
+        )
+        await self._session.commit()
 
     async def delete(self, account_id: int) -> bool:
         account = await self.get(account_id)

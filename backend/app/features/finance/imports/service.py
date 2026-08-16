@@ -510,6 +510,32 @@ class ImportService:
 
     # -- commit ----------------------------------------------------------
 
+    async def _sync_account_balance(self, account_id: int, rows: list) -> None:
+        """After inserting a batch of imported transactions, bring the account's
+        balance up to date. If the batch reported a running balance (ActivoBank
+        checking, Banco Inter, Revolut), trust the most recent one directly --
+        self-correcting, and cheaper than replaying the full transaction history.
+        Otherwise (card-format statements, which never report one) apply the
+        batch's net delta incrementally on top of whatever balance is already
+        stored.
+        """
+        if not rows:
+            return
+        balance_rows = [r for r in rows if r.balance_after is not None]
+        if balance_rows:
+            latest = max(balance_rows, key=lambda r: r.date_posted)
+            await self._account_repo.set_balance(account_id, latest.balance_after)
+        else:
+            delta = Decimal("0")
+            for row in rows:
+                amount = row.amount if row.type == "transfer" else abs(row.amount)
+                delta += amount if row.type == "income" else -amount
+            if delta:
+                await self._account_repo.adjust_balance(account_id, delta)
+        for row in rows:
+            if row.type == "transfer" and row.counterpart_account_id is not None:
+                await self._account_repo.adjust_balance(row.counterpart_account_id, row.amount)
+
     async def commit(self, request: ImportCommitRequest) -> ImportCommitResponse:
         existing = await self._txn_repo.get_existing_dedup_hashes(
             [r.deduplication_hash for r in request.rows]
@@ -565,6 +591,7 @@ class ImportService:
                         merchant=row.merchant,
                         source=request.provider,
                         counterpart_account_id=row.counterpart_account_id,
+                        balance_after=row.balance_after,
                         deduplication_hash=row.deduplication_hash,
                         import_batch_id=batch.id,
                     ),
@@ -593,6 +620,7 @@ class ImportService:
             rules_created += 1
 
         await self._repo.commit()
+        await self._sync_account_balance(request.account_id, to_insert)
         logger.info(
             "Import committed: batch_id=%d account_id=%d inserted=%d skipped=%d rules=%d",
             batch.id, request.account_id, len(transactions), skipped, rules_created,
@@ -856,6 +884,7 @@ class ImportService:
 
         batch_results: list[ImportCommitBatchResult] = []
         all_transactions = []
+        rows_by_account: dict[int, list] = defaultdict(list)
         total_rules_created = 0
         next_position = await self._repo.next_position()
 
@@ -874,6 +903,7 @@ class ImportService:
                 to_insert.append(row)
             skipped = len(rows) - len(to_insert)
             dates = [r.date_posted for r in rows]
+            rows_by_account[account_id].extend(to_insert)
 
             batch = await self._repo.add_batch(
                 ImportBatch(
@@ -906,6 +936,7 @@ class ImportService:
                         merchant=row.merchant,
                         source=request.provider,
                         counterpart_account_id=row.counterpart_account_id,
+                        balance_after=row.balance_after,
                         deduplication_hash=row.deduplication_hash,
                         import_batch_id=batch.id,
                     ),
@@ -944,6 +975,8 @@ class ImportService:
             )
 
         await self._repo.commit()
+        for synced_account_id, synced_rows in rows_by_account.items():
+            await self._sync_account_balance(synced_account_id, synced_rows)
         logger.info(
             "Grouped import committed: provider=%s currencies=%s total_inserted=%d rules=%d",
             request.provider, sorted(by_currency), len(all_transactions), total_rules_created,

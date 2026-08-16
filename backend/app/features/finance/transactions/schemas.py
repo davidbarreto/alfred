@@ -82,6 +82,10 @@ class TransactionBase(BaseModel):
     merchant: str | None = None
     source: str | None = None
     counterpart_account_id: int | None = None
+    balance_after: Decimal | None = None
+    """The account's running balance immediately after this transaction, when the
+    source statement reports one (e.g. ActivoBank checking, Banco Inter, Revolut).
+    Not user-editable -- set only by statement imports."""
 
 
 class TransactionCreate(TransactionBase):

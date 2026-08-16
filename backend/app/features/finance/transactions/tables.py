@@ -35,6 +35,7 @@ class Transaction(Base):
     counterpart_account_id: Mapped[Optional[int]] = mapped_column(
         Integer, ForeignKey("finance.accounts.id", ondelete="SET NULL"), nullable=True
     )
+    balance_after: Mapped[Optional[Decimal]] = mapped_column(Numeric(12, 2), nullable=True)
     import_batch_id: Mapped[Optional[int]] = mapped_column(
         Integer, ForeignKey("finance.import_batches.id", ondelete="SET NULL"), nullable=True
     )

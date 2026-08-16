@@ -38,6 +38,16 @@ from app.features.finance.transactions.schemas import (
 )
 
 
+def _account_delta(type_: str, amount: Decimal) -> Decimal:
+    """Signed effect of a transaction on its own account's balance -- income credits,
+    expense and transfer (the source leg; a transfer's counterpart leg is applied
+    separately by the caller) debit. Mirrors TransactionRepository.get_ledger_events'
+    delta convention so incremental Account.balance maintenance and the net-worth
+    ledger reconstruction never disagree.
+    """
+    return amount if type_ == "income" else -amount
+
+
 class InvalidBulkMoveError(Exception):
     """Raised when a bulk account-move request is malformed (same source/target
     account, or a target account that doesn't exist)."""
@@ -73,18 +83,22 @@ class TransactionService:
     async def create(self, data: TransactionCreate) -> TransactionRead:
         amount_eur = await self._fx.convert_to_eur(data.amount, data.currency, data.date.date())
         txn = await self._repo.create(data, amount_eur=amount_eur)
+        await self._account_repo.adjust_balance(data.account_id, _account_delta(data.type, data.amount))
+        if data.type == "transfer" and data.counterpart_account_id is not None:
+            await self._account_repo.adjust_balance(data.counterpart_account_id, data.amount)
         logger.info("Transaction created: id=%d merchant=%r", txn.id, data.merchant)
         return TransactionRead.model_validate(txn)
 
     async def update(self, transaction_id: int, data: TransactionUpdate) -> TransactionRead | None:
+        current = await self._repo.get(transaction_id)
+        if current is None:
+            logger.debug("Transaction update: id=%d not found", transaction_id)
+            return None
+
         fields = data.model_dump(exclude_unset=True)
         amount_eur: Decimal | None = None
         recompute_amount_eur = False
         if {"amount", "currency", "date"} & fields.keys():
-            current = await self._repo.get(transaction_id)
-            if current is None:
-                logger.debug("Transaction update: id=%d not found", transaction_id)
-                return None
             effective_amount = fields.get("amount", current.amount)
             effective_currency = fields.get("currency", current.currency)
             effective_date = fields.get("date", current.date)
@@ -99,8 +113,23 @@ class TransactionService:
         if txn is None:
             logger.debug("Transaction update: id=%d not found", transaction_id)
             return None
+        await self._reconcile_balance(old=current, new=txn)
         logger.info("Transaction updated: id=%d fields=%s", transaction_id, list(fields.keys()))
         return TransactionRead.model_validate(txn)
+
+    async def _reconcile_balance(self, old, new) -> None:
+        """Reverse a transaction's old balance effect and apply its new one -- covers
+        every field an update could change (amount, type, account, counterpart)."""
+        await self._account_repo.adjust_balance(
+            old.account_id, -_account_delta(old.type, old.amount)
+        )
+        if old.type == "transfer" and old.counterpart_account_id is not None:
+            await self._account_repo.adjust_balance(old.counterpart_account_id, -old.amount)
+        await self._account_repo.adjust_balance(
+            new.account_id, _account_delta(new.type, new.amount)
+        )
+        if new.type == "transfer" and new.counterpart_account_id is not None:
+            await self._account_repo.adjust_balance(new.counterpart_account_id, new.amount)
 
     async def backfill_amount_eur(self, batch_size: int = 1000) -> TransactionBackfillEurResponse:
         pending = await self._repo.list_missing_amount_eur(limit=batch_size)
@@ -122,11 +151,18 @@ class TransactionService:
         )
 
     async def delete(self, transaction_id: int) -> bool:
+        txn = await self._repo.get(transaction_id)
+        if txn is None:
+            logger.debug("Transaction delete: id=%d not found", transaction_id)
+            return False
         deleted = await self._repo.delete(transaction_id)
         if deleted:
+            await self._account_repo.adjust_balance(
+                txn.account_id, -_account_delta(txn.type, txn.amount)
+            )
+            if txn.type == "transfer" and txn.counterpart_account_id is not None:
+                await self._account_repo.adjust_balance(txn.counterpart_account_id, -txn.amount)
             logger.info("Transaction deleted: id=%d", transaction_id)
-        else:
-            logger.debug("Transaction delete: id=%d not found", transaction_id)
         return deleted
 
     async def bulk_move_account(self, request: TransactionBulkMoveRequest) -> int:

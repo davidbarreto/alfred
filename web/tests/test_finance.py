@@ -915,7 +915,11 @@ class TestTransferCandidates:
 
     def test_returns_candidates_with_account_names(self, client, mock_api):
         mock_api["get"].side_effect = [
-            [{"id": 2, "account_id": 5, "date": "2026-06-12T10:00:00", "description": "Top-up", "merchant": None, "bank_description": None}],
+            [{
+                "id": 2, "account_id": 5, "date": "2026-06-12T10:00:00", "description": "Top-up",
+                "merchant": None, "bank_description": None, "amount": "50.00", "currency": "EUR",
+                "type": "transfer", "note": None, "source": None,
+            }],
             [_account(id=5, name="Card")],
         ]
 
@@ -923,7 +927,11 @@ class TestTransferCandidates:
 
         assert resp.status_code == 200
         data = resp.json()
-        assert data == [{"id": 2, "account_name": "Card", "date": "2026-06-12T10:00:00", "description": "Top-up"}]
+        assert data == [{
+            "id": 2, "account_name": "Card", "date": "2026-06-12T10:00:00", "description": "Top-up",
+            "amount": "50.00", "currency": "EUR", "type": "transfer",
+            "bank_description": None, "merchant": None, "note": None, "source": None,
+        }]
 
     def test_falls_back_to_merchant_then_bank_description(self, client, mock_api):
         mock_api["get"].side_effect = [

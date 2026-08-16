@@ -1734,6 +1734,326 @@
               ]
             }
           }
+        },
+        {
+          "name": "10 - Create Third Account",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+                  "pm.test('Response has id and saves it', () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.have.property('id');",
+                  "    pm.environment.set('finance_account_id_3', json.id);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Transfer Matching Card 2\",\n  \"type\": \"credit_card\",\n  \"currency\": \"EUR\",\n  \"balance\": \"0.00\",\n  \"institution\": \"My Card Issuer\",\n  \"is_active\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/finance/accounts/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "finance",
+                "accounts",
+                ""
+              ]
+            }
+          }
+        },
+        {
+          "name": "11 - Create Miscategorized Transfer Leg C (as expense)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+                  "pm.test('Response has id and saves it', () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.have.property('id');",
+                  "    pm.expect(json.type).to.eql('expense');",
+                  "    pm.environment.set('finance_transfer_c_id', json.id);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"account_id\": {{finance_account_id}},\n  \"date\": \"2026-06-13T09:00:00\",\n  \"amount\": \"-75.00\",\n  \"currency\": \"EUR\",\n  \"type\": \"expense\",\n  \"description\": \"Card top-up (miscategorized on import)\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/finance/transactions/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "finance",
+                "transactions",
+                ""
+              ]
+            }
+          }
+        },
+        {
+          "name": "12 - Create Unmatched Transfer Leg D",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+                  "pm.test('Response has id and saves it', () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.have.property('id');",
+                  "    pm.expect(json.type).to.eql('transfer');",
+                  "    pm.environment.set('finance_transfer_d_id', json.id);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"account_id\": {{finance_account_id_3}},\n  \"date\": \"2026-06-13T15:00:00\",\n  \"amount\": \"75.00\",\n  \"currency\": \"EUR\",\n  \"type\": \"transfer\",\n  \"description\": \"Card top-up (miscategorized on import)\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/finance/transactions/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "finance",
+                "transactions",
+                ""
+              ]
+            }
+          }
+        },
+        {
+          "name": "13 - Get Transfer Candidates For Miscategorized Leg",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Leg D is a candidate for Leg C even though Leg C is type=expense', () => {",
+                  "    const json = pm.response.json();",
+                  "    const ids = json.map(t => t.id);",
+                  "    pm.expect(ids).to.include(parseInt(pm.environment.get('finance_transfer_d_id')));",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/finance/transactions/{{finance_transfer_c_id}}/transfer-candidates",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "finance",
+                "transactions",
+                "{{finance_transfer_c_id}}",
+                "transfer-candidates"
+              ]
+            }
+          }
+        },
+        {
+          "name": "14 - Link Transfer Converts Expense Leg To Transfer",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Leg C is now type=transfer with Leg D\\'s account as counterpart', () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.type).to.eql('transfer');",
+                  "    pm.expect(json.counterpart_account_id).to.eql(parseInt(pm.environment.get('finance_account_id_3')));",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"counterpart_transaction_id\": {{finance_transfer_d_id}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/finance/transactions/{{finance_transfer_c_id}}/link-transfer",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "finance",
+                "transactions",
+                "{{finance_transfer_c_id}}",
+                "link-transfer"
+              ]
+            }
+          }
+        },
+        {
+          "name": "15 - Cleanup - Delete Transfer Leg C",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 204', () => pm.response.to.have.status(204));",
+                  "pm.environment.unset('finance_transfer_c_id');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/finance/transactions/{{finance_transfer_c_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "finance",
+                "transactions",
+                "{{finance_transfer_c_id}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "16 - Cleanup - Delete Transfer Leg D",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 204', () => pm.response.to.have.status(204));",
+                  "pm.environment.unset('finance_transfer_d_id');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/finance/transactions/{{finance_transfer_d_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "finance",
+                "transactions",
+                "{{finance_transfer_d_id}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "17 - Cleanup - Delete Third Account",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 204', () => pm.response.to.have.status(204));",
+                  "pm.environment.unset('finance_account_id_3');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/finance/accounts/{{finance_account_id_3}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "finance",
+                "accounts",
+                "{{finance_account_id_3}}"
+              ]
+            }
+          }
         }
       ]
     },

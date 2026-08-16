@@ -480,6 +480,13 @@ async def transfer_candidates(transaction_id: int):
             "account_name": accounts_by_id.get(c["account_id"], "?"),
             "date": c["date"],
             "description": c.get("description") or c.get("merchant") or c.get("bank_description"),
+            "amount": c.get("amount"),
+            "currency": c.get("currency"),
+            "type": c.get("type"),
+            "bank_description": c.get("bank_description"),
+            "merchant": c.get("merchant"),
+            "note": c.get("note"),
+            "source": c.get("source"),
         }
         for c in candidates
     ])

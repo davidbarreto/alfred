@@ -275,7 +275,7 @@ class TransactionService:
 
     async def get_transfer_match_candidates(self, transaction_id: int) -> List[TransactionRead]:
         transaction = await self._repo.get(transaction_id)
-        if transaction is None or transaction.type != "transfer" or transaction.counterpart_account_id is not None:
+        if transaction is None or transaction.counterpart_account_id is not None:
             return []
         candidates = await self._repo.get_transfer_match_candidates(transaction)
         return [TransactionRead.model_validate(c) for c in candidates]
@@ -284,7 +284,10 @@ class TransactionService:
         """Link two independently-imported transfer legs as each other's counterpart --
         see TransferLinkRequest. Always user-confirmed (the caller already chose this
         counterpart from get_transfer_match_candidates); re-validated here since either
-        side could have changed since the candidate list was fetched.
+        side could have changed since the candidate list was fetched. Either side may
+        start out as an expense/income (a transfer miscategorized on import, with no
+        tracked destination account) -- linking always sets both legs to type='transfer'
+        so they're consistently excluded from spend/income totals afterward.
         """
         if transaction_id == counterpart_transaction_id:
             raise TransferMatchError("A transaction cannot be linked to itself")
@@ -292,8 +295,6 @@ class TransactionService:
         counterpart = await self._repo.get(counterpart_transaction_id)
         if transaction is None or counterpart is None:
             raise TransferMatchError("Transaction not found")
-        if transaction.type != "transfer" or counterpart.type != "transfer":
-            raise TransferMatchError("Both transactions must be transfers")
         if transaction.counterpart_account_id is not None or counterpart.counterpart_account_id is not None:
             raise TransferMatchError("One of the transactions is already linked")
         if transaction.account_id == counterpart.account_id:
@@ -318,14 +319,15 @@ class TransactionService:
         if not same_currency_opposite_amount and not same_description_opposite_sign:
             raise TransferMatchError("Amounts do not match")
 
-        updated = await self._repo.update(
-            transaction.id, TransactionUpdate(counterpart_account_id=counterpart.account_id)
+        updated = await self.update(
+            transaction.id, TransactionUpdate(type="transfer", counterpart_account_id=counterpart.account_id)
         )
-        await self._repo.update(
-            counterpart.id, TransactionUpdate(counterpart_account_id=transaction.account_id)
+        await self.update(
+            counterpart.id, TransactionUpdate(type="transfer", counterpart_account_id=transaction.account_id)
         )
+        assert updated is not None
         logger.info("Transfer linked: id=%d counterpart_id=%d", transaction.id, counterpart.id)
-        return TransactionRead.model_validate(updated)
+        return updated
 
     async def bulk_move_account(self, request: TransactionBulkMoveRequest) -> int:
         if request.account_id == request.target_account_id:

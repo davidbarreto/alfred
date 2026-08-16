@@ -227,6 +227,18 @@
   <form method="dialog" class="modal-backdrop"><button>close</button></form>
 </dialog>
 
+<dialog id="transfer-match-detail-modal" class="modal">
+  <div class="modal-box bg-white rounded-xl border border-gray-200 shadow-lg max-w-sm w-full p-6">
+    <h3 class="text-sm font-semibold text-gray-900 mb-4">Transaction details</h3>
+    <div id="transfer-match-detail-list" class="flex flex-col gap-2 text-sm"></div>
+    <div class="flex justify-end gap-2 mt-4">
+      <button type="button" onclick="document.getElementById('transfer-match-detail-modal').close()"
+              class="btn btn-sm btn-ghost text-gray-500">Close</button>
+    </div>
+  </div>
+  <form method="dialog" class="modal-backdrop"><button>close</button></form>
+</dialog>
+
 <script>
 const TXN_LIST_URL = "/finance/transactions/list";
 let _txnOffset = {{ query_offset }};
@@ -427,23 +439,74 @@ async function openTransferMatchModal(txnId) {
       const metaEl = document.createElement("div");
       metaEl.className = "text-xs text-gray-400 truncate";
       metaEl.textContent = `${c.description || "—"} · ${(c.date || "").slice(0, 10)}`;
+      const amountEl = document.createElement("div");
+      amountEl.className = "text-xs text-gray-600 truncate";
+      const amountNum = parseFloat(c.amount);
+      amountEl.textContent = Number.isNaN(amountNum)
+        ? "—"
+        : `${amountNum.toFixed(2)} ${c.currency || ""}`.trim();
       info.appendChild(nameEl);
+      info.appendChild(amountEl);
       info.appendChild(metaEl);
+
+      const actions = document.createElement("div");
+      actions.className = "flex items-center gap-1 flex-shrink-0";
+
+      const detailBtn = document.createElement("button");
+      detailBtn.type = "button";
+      detailBtn.className = "btn btn-xs btn-ghost";
+      detailBtn.textContent = "Details";
+      detailBtn.onclick = () => openTransferMatchDetailModal(c);
 
       const linkBtn = document.createElement("button");
       linkBtn.type = "button";
-      linkBtn.className = "btn btn-xs btn-primary flex-shrink-0";
+      linkBtn.className = "btn btn-xs btn-primary";
       linkBtn.textContent = "Link";
       linkBtn.onclick = () => linkTransferCandidate(c.id);
 
+      actions.appendChild(detailBtn);
+      actions.appendChild(linkBtn);
+
       row.appendChild(info);
-      row.appendChild(linkBtn);
+      row.appendChild(actions);
       listEl.appendChild(row);
     }
   } catch (err) {
     errEl.textContent = "Failed to search for a match.";
     errEl.classList.remove("hidden");
   }
+}
+
+function openTransferMatchDetailModal(c) {
+  const listEl = document.getElementById("transfer-match-detail-list");
+  listEl.innerHTML = "";
+  const amountNum = parseFloat(c.amount);
+  const rows = [
+    ["Account", c.account_name],
+    ["Date", (c.date || "").slice(0, 10)],
+    ["Amount", Number.isNaN(amountNum) ? "—" : `${amountNum.toFixed(2)} ${c.currency || ""}`.trim()],
+    ["Type", c.type],
+    ["Description", c.description],
+    ["Bank description", c.bank_description],
+    ["Merchant", c.merchant],
+    ["Note", c.note],
+    ["Source", c.source],
+  ];
+  for (const [label, value] of rows) {
+    if (!value) continue;
+    const rowEl = document.createElement("div");
+    rowEl.className = "flex justify-between gap-3";
+    const labelEl = document.createElement("span");
+    labelEl.className = "text-gray-400";
+    labelEl.textContent = label;
+    const valueEl = document.createElement("span");
+    valueEl.className = "text-gray-800 text-right break-words";
+    valueEl.textContent = value;
+    rowEl.appendChild(labelEl);
+    rowEl.appendChild(valueEl);
+    listEl.appendChild(rowEl);
+  }
+  document.getElementById("transfer-match-detail-modal").showModal();
 }
 
 async function linkTransferCandidate(counterpartId) {

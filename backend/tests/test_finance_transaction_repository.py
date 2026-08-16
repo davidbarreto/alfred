@@ -92,10 +92,21 @@ class TestGetTransferMatchCandidates:
 
         query = session.execute.call_args.args[0]
         sql = str(query.compile(compile_kwargs={"literal_binds": True}))
-        assert "transfer" in sql
         assert "counterpart_account_id" in sql
         assert "generated_from_transaction_id" in sql
         assert "-50.00" in sql
+
+    async def test_query_is_not_restricted_to_transfer_type(self):
+        """A leg miscategorized as expense/income on import must still be a valid
+        candidate -- that's the exact case this match is meant to catch."""
+        session = _make_session()
+        session.execute.return_value = _scalar_all([])
+
+        await TransactionRepository(session).get_transfer_match_candidates(self._source())
+
+        query = session.execute.call_args.args[0]
+        sql = str(query.compile(compile_kwargs={"literal_binds": True}))
+        assert "transactions.type = 'transfer'" not in sql
 
     async def test_query_also_matches_on_identical_bank_description(self):
         """A currency exchange has different currencies and an FX-converted (not

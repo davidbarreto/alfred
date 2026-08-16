@@ -108,12 +108,14 @@ class TransactionRepository:
         return result.scalars().first()
 
     async def get_transfer_match_candidates(self, transaction: Transaction) -> list[Transaction]:
-        """Other accounts' unmatched transfer legs that could be this transaction's
-        missing counterpart, same day only, not already linked or a mirror row. Used to
+        """Other accounts' unmatched legs that could be this transaction's missing
+        counterpart, same day only, not already linked or a mirror row. Used to
         reconcile a transfer whose two legs were imported from separate statement files
         (or, for a same-file currency exchange, never paired at import time), so no
-        shared transfer_pair_key was ever set. Candidates are only ever suggested, never
-        auto-linked. Two independent match strategies, either sufficient:
+        shared transfer_pair_key was ever set. Not restricted to type=transfer -- one or
+        both legs may have been miscategorized as expense/income on import, which is
+        exactly the case this is meant to catch. Candidates are only ever suggested,
+        never auto-linked. Two independent match strategies, either sufficient:
         - same currency + exactly opposite amount -- a same-currency transfer split
           across separate imports (e.g. an external card charge and the Revolut top-up
           it funds).
@@ -138,7 +140,6 @@ class TransactionRepository:
             select(Transaction).where(
                 Transaction.id != transaction.id,
                 Transaction.account_id != transaction.account_id,
-                Transaction.type == "transfer",
                 Transaction.counterpart_account_id.is_(None),
                 Transaction.generated_from_transaction_id.is_(None),
                 func.date(Transaction.date) == func.date(transaction.date),

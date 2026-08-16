@@ -501,6 +501,22 @@ async def bulk_move_transactions(request: Request):
 
 # --- Accounts ---
 
+@router.get("/accounts", response_class=HTMLResponse)
+async def accounts_page(request: Request):
+    accounts, currencies = [], []
+    try:
+        accounts = await api.get("/finance/accounts")
+    except httpx.HTTPError:
+        pass
+    try:
+        currencies = await api.get("/finance/currencies")
+    except httpx.HTTPError:
+        pass
+    return templates.TemplateResponse(
+        request, "finance_accounts.html", {"accounts": accounts, "currencies": currencies}
+    )
+
+
 @router.post("/accounts", response_class=HTMLResponse)
 async def create_account(
     request: Request,
@@ -526,6 +542,62 @@ async def create_account(
     except httpx.HTTPError:
         pass
     return templates.TemplateResponse(request, "_finance_accounts.html", {"accounts": accounts})
+
+
+async def _account_edit_context(account_id: int, error: Optional[str] = None) -> dict:
+    account, currencies = None, []
+    try:
+        account = await api.get(f"/finance/accounts/{account_id}")
+    except httpx.HTTPError:
+        pass
+    try:
+        currencies = await api.get("/finance/currencies")
+    except httpx.HTTPError:
+        pass
+    return {"account": account, "currencies": currencies, "error": error}
+
+
+@router.get("/accounts/{account_id}/edit", response_class=HTMLResponse)
+async def edit_account_page(account_id: int, request: Request):
+    context = await _account_edit_context(account_id)
+    if context["account"] is None:
+        return HTMLResponse("Account not found.", status_code=404)
+    return templates.TemplateResponse(request, "finance_account_edit.html", context)
+
+
+@router.post("/accounts/{account_id}/edit", response_class=HTMLResponse)
+async def update_account(
+    account_id: int,
+    request: Request,
+    name: Annotated[str, Form()],
+    type: Annotated[str, Form()],
+    currency: Annotated[str, Form()],
+    institution: Annotated[Optional[str], Form()] = None,
+    credit_limit: Annotated[Optional[str], Form()] = None,
+    opening_balance: Annotated[Optional[str], Form()] = None,
+    opening_balance_date: Annotated[Optional[str], Form()] = None,
+    is_active: Annotated[bool, Form()] = False,
+    auto_mirror_transfers: Annotated[bool, Form()] = False,
+):
+    payload: dict = {
+        "name": name,
+        "type": type,
+        "currency": currency,
+        "institution": institution or None,
+        "credit_limit": credit_limit or None,
+        "opening_balance": opening_balance or None,
+        "opening_balance_date": opening_balance_date or None,
+        "is_active": is_active,
+        "auto_mirror_transfers": auto_mirror_transfers,
+    }
+    try:
+        await api.patch(f"/finance/accounts/{account_id}", json=payload)
+    except httpx.HTTPError:
+        context = await _account_edit_context(account_id, error="Failed to save account.")
+        return templates.TemplateResponse(request, "finance_account_edit.html", context)
+
+    context = await _account_edit_context(account_id)
+    return templates.TemplateResponse(request, "finance_account_edit.html", context)
 
 
 @router.delete("/accounts/{account_id}", response_class=HTMLResponse)

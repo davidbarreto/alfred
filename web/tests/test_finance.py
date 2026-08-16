@@ -684,6 +684,104 @@ class TestFinanceSessionPersistence:
         assert report_call["currency"] == "EUR"
 
 
+def _full_account(id=1, name="PoupUP", type="savings", currency="EUR", auto_mirror_transfers=False):
+    return {
+        "id": id, "name": name, "type": type, "currency": currency, "balance": "500.00",
+        "institution": None, "credit_limit": None, "is_active": True,
+        "opening_balance": None, "opening_balance_date": None,
+        "auto_mirror_transfers": auto_mirror_transfers,
+    }
+
+
+class TestEditAccountPage:
+    def test_renders_account_fields(self, client, mock_api):
+        mock_api["get"].side_effect = [_full_account(name="PoupUP"), []]
+
+        resp = client.get("/finance/accounts/1/edit")
+
+        assert resp.status_code == 200
+        assert "PoupUP" in resp.text
+
+    def test_404_when_account_missing(self, client, mock_api):
+        mock_api["get"].side_effect = [None, []]
+
+        resp = client.get("/finance/accounts/999/edit")
+
+        assert resp.status_code == 404
+
+    def test_requires_authentication(self, anon_client):
+        resp = anon_client.get("/finance/accounts/1/edit", follow_redirects=False)
+
+        assert resp.status_code == 302
+        assert resp.headers["location"].startswith("/login")
+
+
+class TestAccountsPage:
+    def test_renders_accounts(self, client, mock_api):
+        mock_api["get"].side_effect = [[_full_account(name="PoupUP")], []]
+
+        resp = client.get("/finance/accounts")
+
+        assert resp.status_code == 200
+        assert "PoupUP" in resp.text
+
+    def test_requires_authentication(self, anon_client):
+        resp = anon_client.get("/finance/accounts", follow_redirects=False)
+
+        assert resp.status_code == 302
+        assert resp.headers["location"].startswith("/login")
+
+
+class TestUpdateAccount:
+    def test_submits_expected_payload(self, client, mock_api):
+        mock_api["patch"].return_value = _full_account()
+        mock_api["get"].side_effect = [_full_account(), []]
+
+        resp = client.post(
+            "/finance/accounts/1/edit",
+            data={
+                "name": "PoupUP", "type": "savings", "currency": "EUR",
+                "institution": "ActivoBank", "credit_limit": "",
+                "opening_balance": "1000.00", "opening_balance_date": "2026-08-01",
+                "is_active": "on", "auto_mirror_transfers": "on",
+            },
+        )
+
+        assert resp.status_code == 200
+        mock_api["patch"].assert_awaited_once()
+        call = mock_api["patch"].await_args
+        assert call.args[0] == "/finance/accounts/1"
+        payload = call.kwargs["json"]
+        assert payload["auto_mirror_transfers"] is True
+        assert payload["is_active"] is True
+        assert payload["opening_balance"] == "1000.00"
+
+    def test_unchecked_boxes_are_false(self, client, mock_api):
+        mock_api["patch"].return_value = _full_account()
+        mock_api["get"].side_effect = [_full_account(), []]
+
+        client.post(
+            "/finance/accounts/1/edit",
+            data={"name": "PoupUP", "type": "savings", "currency": "EUR"},
+        )
+
+        payload = mock_api["patch"].await_args.kwargs["json"]
+        assert payload["is_active"] is False
+        assert payload["auto_mirror_transfers"] is False
+
+    def test_api_error_shows_message(self, client, mock_api):
+        mock_api["patch"].side_effect = httpx.HTTPError("boom")
+        mock_api["get"].side_effect = [_full_account(), []]
+
+        resp = client.post(
+            "/finance/accounts/1/edit",
+            data={"name": "PoupUP", "type": "savings", "currency": "EUR"},
+        )
+
+        assert resp.status_code == 200
+        assert "Failed to save account" in resp.text
+
+
 class TestDeleteAccount:
     def _http_status_error(self, detail: str) -> httpx.HTTPStatusError:
         request = httpx.Request("DELETE", "http://backend/finance/accounts/1")

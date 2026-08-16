@@ -27,6 +27,11 @@
       </div>
       {% endif %}
     </div>
+    <a
+      href="/finance/accounts/{{ acc.id }}/edit"
+      class="text-gray-300 hover:text-[#378ADD] transition-colors flex-shrink-0"
+      title="Edit"
+    ><i class="ti ti-pencil text-base"></i></a>
     <button
       class="text-gray-300 hover:text-[#E24B4A] transition-colors flex-shrink-0"
       hx-delete="/finance/accounts/{{ acc.id }}"

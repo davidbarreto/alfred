@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+{% set active_page = "finance" %}
+{% block title %}Edit Account{% endblock %}
+
+{% block content %}
+<div class="p-6 space-y-4 max-w-md">
+
+  <div class="flex items-center gap-2">
+    <a href="/finance" class="text-gray-400 hover:text-gray-600"><i class="ti ti-arrow-left text-sm"></i></a>
+    <h1 class="text-base font-semibold text-gray-900">Edit Account</h1>
+  </div>
+
+  <div class="bg-white border border-gray-200 rounded-lg p-4 space-y-4">
+    {% if error %}
+    <p class="text-xs text-[#E24B4A]">{{ error }}</p>
+    {% endif %}
+
+    <div class="text-xs text-gray-500">
+      Current balance: <span class="font-medium text-gray-700">{{ account.balance }} {{ account.currency }}</span>
+      <span class="block text-[10px] text-gray-400 mt-0.5">Kept in sync automatically from transactions — not editable here.</span>
+    </div>
+
+    <form method="post" action="/finance/accounts/{{ account.id }}/edit" class="space-y-3">
+      <div>
+        <label class="text-xs text-gray-500 block mb-1" for="name">Name</label>
+        <input id="name" name="name" required value="{{ account.name }}"
+               class="input input-sm input-bordered w-full" />
+      </div>
+
+      <div class="flex gap-3">
+        <div class="flex-1">
+          <label class="text-xs text-gray-500 block mb-1" for="type">Type</label>
+          <select id="type" name="type" class="select select-sm select-bordered w-full">
+            {% for t in ["checking","savings","credit","cash","investment","other"] %}
+            <option value="{{ t }}" {% if account.type == t %}selected{% endif %}>{{ t | capitalize }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="flex-1">
+          <label class="text-xs text-gray-500 block mb-1" for="currency">Currency</label>
+          <select id="currency" name="currency" class="select select-sm select-bordered w-full">
+            {% for c in currencies %}
+            <option value="{{ c.code }}" {% if account.currency == c.code %}selected{% endif %}>{{ c.code }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+
+      <div>
+        <label class="text-xs text-gray-500 block mb-1" for="institution">Institution</label>
+        <input id="institution" name="institution" value="{{ account.institution or '' }}"
+               class="input input-sm input-bordered w-full" />
+      </div>
+
+      <div>
+        <label class="text-xs text-gray-500 block mb-1" for="credit_limit">Credit limit</label>
+        <input id="credit_limit" name="credit_limit" type="number" step="0.01" min="0"
+               value="{{ account.credit_limit if account.credit_limit is not none else '' }}"
+               class="input input-sm input-bordered w-full" title="Only for credit cards" />
+      </div>
+
+      <div class="flex gap-3">
+        <div class="flex-1">
+          <label class="text-xs text-gray-500 block mb-1" for="opening_balance">Opening balance</label>
+          <input id="opening_balance" name="opening_balance" type="number" step="0.01"
+                 value="{{ account.opening_balance if account.opening_balance is not none else '' }}"
+                 class="input input-sm input-bordered w-full" />
+        </div>
+        <div class="flex-1">
+          <label class="text-xs text-gray-500 block mb-1" for="opening_balance_date">as of</label>
+          <input id="opening_balance_date" name="opening_balance_date" type="date"
+                 value="{{ account.opening_balance_date or '' }}"
+                 class="input input-sm input-bordered w-full" />
+        </div>
+      </div>
+      <p class="text-[10px] text-gray-400 -mt-2">
+        Known-true balance on a given date — used as the anchor point for net worth history.
+      </p>
+
+      <label class="flex items-center gap-2 text-sm text-gray-700">
+        <input type="checkbox" name="is_active" class="checkbox checkbox-sm" {% if account.is_active %}checked{% endif %} />
+        Active
+      </label>
+
+      <label class="flex items-start gap-2 text-sm text-gray-700">
+        <input type="checkbox" name="auto_mirror_transfers" class="checkbox checkbox-sm mt-0.5"
+               {% if account.auto_mirror_transfers %}checked{% endif %} />
+        <span>
+          Auto-mirror transfers
+          <span class="block text-[10px] text-gray-400">
+            For linked sub-accounts with no statement of their own (e.g. a bank's linked savings
+            account). Any transfer that targets this account gets a matching transaction created
+            here automatically, so it shows up in this account's own history.
+          </span>
+        </span>
+      </label>
+
+      <button type="submit" class="btn btn-sm btn-primary w-full">Save</button>
+    </form>
+  </div>
+
+</div>
+{% endblock %}

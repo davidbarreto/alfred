@@ -29,8 +29,9 @@ from app.features.finance.transactions.schemas import (
     TransactionRead,
     TransactionSumResponse,
     TransactionUpdate,
+    TransferLinkRequest,
 )
-from app.features.finance.transactions.service import InvalidBulkMoveError
+from app.features.finance.transactions.service import InvalidBulkMoveError, TransferMatchError
 
 router = APIRouter(prefix="/finance/transactions", tags=["finance"], dependencies=[Depends(require_auth)])
 
@@ -183,6 +184,21 @@ async def balance_forecast(
         currency=filters.currency,
         forecast_to=forecast_to,
     )
+
+
+@router.get("/{transaction_id}/transfer-candidates", response_model=list[TransactionRead])
+async def get_transfer_candidates(transaction_id: int, service: TransactionServiceDep):
+    return await service.get_transfer_match_candidates(transaction_id)
+
+
+@router.post("/{transaction_id}/link-transfer", response_model=TransactionRead)
+async def link_transfer(
+    transaction_id: int, request: TransferLinkRequest, service: TransactionServiceDep
+):
+    try:
+        return await service.link_transfer(transaction_id, request.counterpart_transaction_id)
+    except TransferMatchError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=exc.message)
 
 
 @router.get("/{transaction_id}", response_model=TransactionRead)

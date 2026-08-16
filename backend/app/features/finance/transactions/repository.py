@@ -107,6 +107,28 @@ class TransactionRepository:
         )
         return result.scalars().first()
 
+    async def get_transfer_match_candidates(self, transaction: Transaction) -> list[Transaction]:
+        """Other accounts' unmatched transfer legs that could be this transaction's
+        missing counterpart -- same day, same currency, exactly opposite amount, not
+        already linked or a mirror row. Used to reconcile a transfer whose two legs
+        were imported from separate statement files (e.g. an external card top-up and
+        the Revolut deposit it funds), so no shared transfer_pair_key was ever set at
+        import time. Candidates are only ever suggested, never auto-linked.
+        """
+        result = await self._session.execute(
+            select(Transaction).where(
+                Transaction.id != transaction.id,
+                Transaction.account_id != transaction.account_id,
+                Transaction.type == "transfer",
+                Transaction.counterpart_account_id.is_(None),
+                Transaction.generated_from_transaction_id.is_(None),
+                Transaction.currency == transaction.currency,
+                Transaction.amount == -transaction.amount,
+                func.date(Transaction.date) == func.date(transaction.date),
+            )
+        )
+        return list(result.scalars().all())
+
     async def list(self, filters: TransactionFilters, cycle_start_day: int = 1) -> list[Transaction]:
         query = select(Transaction).order_by(_build_order_by(filters.sort))
         for condition in _filter_conditions(filters, cycle_start_day):

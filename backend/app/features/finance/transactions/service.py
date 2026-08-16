@@ -1,6 +1,7 @@
 import logging
 from datetime import date, timedelta
 from decimal import Decimal
+from typing import List
 from sqlalchemy.ext.asyncio import AsyncSession
 
 logger = logging.getLogger(__name__)
@@ -76,6 +77,15 @@ def build_mirror_transaction_create(source: Transaction) -> TransactionCreate:
 class InvalidBulkMoveError(Exception):
     """Raised when a bulk account-move request is malformed (same source/target
     account, or a target account that doesn't exist)."""
+
+    def __init__(self, message: str) -> None:
+        self.message = message
+        super().__init__(message)
+
+
+class TransferMatchError(Exception):
+    """Raised when a suggested transfer link is no longer valid at confirm time (one
+    side was edited/deleted/already linked since the candidate list was fetched)."""
 
     def __init__(self, message: str) -> None:
         self.message = message
@@ -262,6 +272,45 @@ class TransactionService:
                     await self._account_repo.adjust_balance(txn.counterpart_account_id, -txn.amount)
             logger.info("Transaction deleted: id=%d", transaction_id)
         return deleted
+
+    async def get_transfer_match_candidates(self, transaction_id: int) -> List[TransactionRead]:
+        transaction = await self._repo.get(transaction_id)
+        if transaction is None or transaction.type != "transfer" or transaction.counterpart_account_id is not None:
+            return []
+        candidates = await self._repo.get_transfer_match_candidates(transaction)
+        return [TransactionRead.model_validate(c) for c in candidates]
+
+    async def link_transfer(self, transaction_id: int, counterpart_transaction_id: int) -> TransactionRead:
+        """Link two independently-imported transfer legs as each other's counterpart --
+        see TransferLinkRequest. Always user-confirmed (the caller already chose this
+        counterpart from get_transfer_match_candidates); re-validated here since either
+        side could have changed since the candidate list was fetched.
+        """
+        if transaction_id == counterpart_transaction_id:
+            raise TransferMatchError("A transaction cannot be linked to itself")
+        transaction = await self._repo.get(transaction_id)
+        counterpart = await self._repo.get(counterpart_transaction_id)
+        if transaction is None or counterpart is None:
+            raise TransferMatchError("Transaction not found")
+        if transaction.type != "transfer" or counterpart.type != "transfer":
+            raise TransferMatchError("Both transactions must be transfers")
+        if transaction.counterpart_account_id is not None or counterpart.counterpart_account_id is not None:
+            raise TransferMatchError("One of the transactions is already linked")
+        if transaction.account_id == counterpart.account_id:
+            raise TransferMatchError("Cannot link two legs on the same account")
+        if transaction.currency != counterpart.currency or transaction.amount != -counterpart.amount:
+            raise TransferMatchError("Amounts do not match")
+        if transaction.date.date() != counterpart.date.date():
+            raise TransferMatchError("Dates do not match")
+
+        updated = await self._repo.update(
+            transaction.id, TransactionUpdate(counterpart_account_id=counterpart.account_id)
+        )
+        await self._repo.update(
+            counterpart.id, TransactionUpdate(counterpart_account_id=transaction.account_id)
+        )
+        logger.info("Transfer linked: id=%d counterpart_id=%d", transaction.id, counterpart.id)
+        return TransactionRead.model_validate(updated)
 
     async def bulk_move_account(self, request: TransactionBulkMoveRequest) -> int:
         if request.account_id == request.target_account_id:

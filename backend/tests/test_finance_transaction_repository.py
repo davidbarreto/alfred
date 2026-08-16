@@ -63,6 +63,38 @@ class TestGet:
         assert await TransactionRepository(session).get(999) is None
 
 
+class TestGetTransferMatchCandidates:
+    async def test_returns_matching_transactions(self):
+        session = _make_session()
+        candidate = _make_txn_orm(id=2)
+        session.execute.return_value = _scalar_all([candidate])
+        source = _make_txn_orm(
+            id=1, amount=Decimal("50.00"), date=datetime(2026, 6, 12, 10, 0)
+        )
+        source.account_id = 1
+        source.currency = "EUR"
+
+        result = await TransactionRepository(session).get_transfer_match_candidates(source)
+
+        assert result == [candidate]
+
+    async def test_query_excludes_self_and_matches_opposite_amount_same_day(self):
+        session = _make_session()
+        session.execute.return_value = _scalar_all([])
+        source = _make_txn_orm(id=1, amount=Decimal("50.00"), date=datetime(2026, 6, 12, 10, 0))
+        source.account_id = 1
+        source.currency = "EUR"
+
+        await TransactionRepository(session).get_transfer_match_candidates(source)
+
+        query = session.execute.call_args.args[0]
+        sql = str(query.compile(compile_kwargs={"literal_binds": True}))
+        assert "transfer" in sql
+        assert "counterpart_account_id" in sql
+        assert "generated_from_transaction_id" in sql
+        assert "-50.00" in sql
+
+
 class TestList:
     async def test_no_filters(self):
         session = _make_session()

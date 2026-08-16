@@ -6,7 +6,7 @@ from urllib.parse import urlencode
 
 import httpx
 from fastapi import APIRouter, File, Form, Request, UploadFile
-from fastapi.responses import HTMLResponse, RedirectResponse, Response
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
 
 import app.client as api
 from app.templates_config import templates
@@ -456,6 +456,52 @@ async def delete_transaction(transaction_id: int, request: Request):
     currency = _resolve_currency(request)
     context = await _dashboard_txn_list_context(range_params, currency)
     return templates.TemplateResponse(request, "_finance_transactions.html", context)
+
+
+@router.get("/transactions/{transaction_id}/transfer-candidates", response_class=Response)
+async def transfer_candidates(transaction_id: int):
+    """Other accounts' unmatched transfer legs that could be this transaction's missing
+    counterpart -- see TransactionRepository.get_transfer_match_candidates. Returned as
+    plain JSON (not a template fragment) since the modal renders rows client-side.
+    """
+    try:
+        candidates = await api.get(f"/finance/transactions/{transaction_id}/transfer-candidates")
+    except httpx.HTTPError:
+        candidates = []
+    accounts = []
+    try:
+        accounts = await api.get("/finance/accounts")
+    except httpx.HTTPError:
+        pass
+    accounts_by_id = {a["id"]: a["name"] for a in accounts}
+    return JSONResponse([
+        {
+            "id": c["id"],
+            "account_name": accounts_by_id.get(c["account_id"], "?"),
+            "date": c["date"],
+            "description": c.get("description") or c.get("merchant") or c.get("bank_description"),
+        }
+        for c in candidates
+    ])
+
+
+@router.post("/transactions/{transaction_id}/link-transfer", response_class=Response)
+async def link_transfer(transaction_id: int, request: Request):
+    body = await request.json()
+    try:
+        await api.post(
+            f"/finance/transactions/{transaction_id}/link-transfer",
+            json={"counterpart_transaction_id": int(body["counterpart_transaction_id"])},
+        )
+    except httpx.HTTPStatusError as exc:
+        try:
+            detail = exc.response.json().get("detail") or "Failed to link transfer."
+        except ValueError:
+            detail = "Failed to link transfer."
+        return HTMLResponse(detail, status_code=422)
+    except httpx.HTTPError:
+        return HTMLResponse("Failed to link transfer.", status_code=422)
+    return Response(status_code=200)
 
 
 @router.get("/transactions", response_class=HTMLResponse)

@@ -907,6 +907,84 @@ class TestBulkMoveTransactions:
         assert resp.headers["location"].startswith("/login")
 
 
+class TestTransferCandidates:
+    def _http_status_error(self, detail: str) -> httpx.HTTPStatusError:
+        request = httpx.Request("GET", "http://backend/finance/transactions/1/transfer-candidates")
+        response = httpx.Response(400, json={"detail": detail}, request=request)
+        return httpx.HTTPStatusError("Bad Request", request=request, response=response)
+
+    def test_returns_candidates_with_account_names(self, client, mock_api):
+        mock_api["get"].side_effect = [
+            [{"id": 2, "account_id": 5, "date": "2026-06-12T10:00:00", "description": "Top-up", "merchant": None, "bank_description": None}],
+            [_account(id=5, name="Card")],
+        ]
+
+        resp = client.get("/finance/transactions/1/transfer-candidates")
+
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data == [{"id": 2, "account_name": "Card", "date": "2026-06-12T10:00:00", "description": "Top-up"}]
+
+    def test_falls_back_to_merchant_then_bank_description(self, client, mock_api):
+        mock_api["get"].side_effect = [
+            [{"id": 2, "account_id": 5, "date": "2026-06-12T10:00:00", "description": None, "merchant": None, "bank_description": "APPLE PAY TOPUP"}],
+            [_account(id=5, name="Card")],
+        ]
+
+        resp = client.get("/finance/transactions/1/transfer-candidates")
+
+        assert resp.json()[0]["description"] == "APPLE PAY TOPUP"
+
+    def test_returns_empty_list_on_backend_error(self, client, mock_api):
+        mock_api["get"].side_effect = [self._http_status_error("boom"), [_account()]]
+
+        resp = client.get("/finance/transactions/1/transfer-candidates")
+
+        assert resp.status_code == 200
+        assert resp.json() == []
+
+    def test_requires_authentication(self, anon_client):
+        resp = anon_client.get("/finance/transactions/1/transfer-candidates", follow_redirects=False)
+        assert resp.status_code == 302
+        assert resp.headers["location"].startswith("/login")
+
+
+class TestLinkTransfer:
+    def test_forwards_counterpart_id(self, client, mock_api):
+        mock_api["post"].return_value = {}
+
+        resp = client.post(
+            "/finance/transactions/1/link-transfer",
+            json={"counterpart_transaction_id": "2"},
+        )
+
+        assert resp.status_code == 200
+        assert mock_api["post"].call_args.args[0] == "/finance/transactions/1/link-transfer"
+        assert mock_api["post"].call_args.kwargs["json"] == {"counterpart_transaction_id": 2}
+
+    def test_surfaces_api_error_detail(self, client, mock_api):
+        request = httpx.Request("POST", "http://backend/finance/transactions/1/link-transfer")
+        response = httpx.Response(400, json={"detail": "Amounts do not match"}, request=request)
+        mock_api["post"].side_effect = httpx.HTTPStatusError("Bad Request", request=request, response=response)
+
+        resp = client.post(
+            "/finance/transactions/1/link-transfer",
+            json={"counterpart_transaction_id": "2"},
+        )
+
+        assert resp.status_code == 422
+        assert "Amounts do not match" in resp.text
+
+    def test_requires_authentication(self, anon_client):
+        resp = anon_client.post(
+            "/finance/transactions/1/link-transfer",
+            json={"counterpart_transaction_id": "2"},
+            follow_redirects=False,
+        )
+        assert resp.status_code == 302
+        assert resp.headers["location"].startswith("/login")
+
+
 class TestTransactionsPageBulkMoveButton:
     def test_shown_when_account_filter_set(self, client, mock_api):
         mock_api["get"].side_effect = [[], None, [_account()], [], []]

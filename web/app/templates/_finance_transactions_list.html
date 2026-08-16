@@ -23,6 +23,7 @@
         <span class="truncate">{{ txn.description or txn.merchant or txn.bank_description or "—" }}</span>
         {% if counts_as_spend %}
         <span class="flex-shrink-0 px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-50 text-amber-700" title="Transfer with no tracked destination account — counted as spend">counts as spend</span>
+        <button type="button" onclick="openTransferMatchModal({{ txn.id }})" class="flex-shrink-0 px-1.5 py-0.5 rounded text-[10px] font-medium bg-blue-50 text-[#378ADD] hover:bg-blue-100" title="Look for a matching transfer leg on another account">find match</button>
         {% endif %}
       </div>
       <div class="text-xs text-gray-400">

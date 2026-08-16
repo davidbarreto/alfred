@@ -23,7 +23,7 @@ from app.features.finance.transactions.schemas import (
     TransactionRead,
     TransactionSumResponse,
 )
-from app.features.finance.transactions.service import InvalidBulkMoveError
+from app.features.finance.transactions.service import InvalidBulkMoveError, TransferMatchError
 
 AUTH = {"Authorization": "Bearer test-api-token"}
 
@@ -76,6 +76,8 @@ def mock_txn_service():
     )
     svc.balance_forecast.return_value = (Decimal("0"), Decimal("0"), date(2026, 6, 30))
     svc.bulk_move_account.return_value = 12
+    svc.get_transfer_match_candidates.return_value = [_txn_read(id=2, type="transfer", amount=Decimal("-45.50"))]
+    svc.link_transfer.return_value = _txn_read(type="transfer")
     svc.backfill_amount_eur.return_value = TransactionBackfillEurResponse(
         updated_count=3, failed_count=1, remaining_count=1,
     )
@@ -317,6 +319,51 @@ class TestBulkMoveTransactions:
     def test_requires_auth(self, client):
         response = client.post(
             "/finance/transactions/bulk-move", json={"account_id": 1, "target_account_id": 2}
+        )
+        assert response.status_code == 403
+
+
+class TestTransferCandidates:
+    def test_returns_candidates(self, client):
+        response = client.get("/finance/transactions/1/transfer-candidates", headers=AUTH)
+        assert response.status_code == 200
+        assert response.json()[0]["id"] == 2
+
+    def test_requires_auth(self, client):
+        assert client.get("/finance/transactions/1/transfer-candidates").status_code == 403
+
+
+class TestLinkTransfer:
+    def test_links_and_returns_200(self, client):
+        response = client.post(
+            "/finance/transactions/1/link-transfer",
+            json={"counterpart_transaction_id": 2},
+            headers=AUTH,
+        )
+        assert response.status_code == 200
+        assert response.json()["type"] == "transfer"
+
+    def test_passes_counterpart_id_to_service(self, client, mock_txn_service):
+        client.post(
+            "/finance/transactions/1/link-transfer",
+            json={"counterpart_transaction_id": 2},
+            headers=AUTH,
+        )
+        mock_txn_service.link_transfer.assert_called_once_with(1, 2)
+
+    def test_invalid_link_returns_400(self, client, mock_txn_service):
+        mock_txn_service.link_transfer.side_effect = TransferMatchError("Amounts do not match")
+        response = client.post(
+            "/finance/transactions/1/link-transfer",
+            json={"counterpart_transaction_id": 2},
+            headers=AUTH,
+        )
+        assert response.status_code == 400
+        assert response.json()["detail"] == "Amounts do not match"
+
+    def test_requires_auth(self, client):
+        response = client.post(
+            "/finance/transactions/1/link-transfer", json={"counterpart_transaction_id": 2}
         )
         assert response.status_code == 403
 

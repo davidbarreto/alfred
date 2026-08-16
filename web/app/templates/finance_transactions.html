@@ -212,6 +212,21 @@
   <form method="dialog" class="modal-backdrop"><button>close</button></form>
 </dialog>
 
+<dialog id="transfer-match-modal" class="modal">
+  <div class="modal-box bg-white rounded-xl border border-gray-200 shadow-lg max-w-sm w-full p-6">
+    <h3 class="text-sm font-semibold text-gray-900 mb-2">Find matching transfer</h3>
+    <p class="text-xs text-gray-500 mb-4">Other unmatched transfers on the same day with the exact opposite amount.</p>
+    <div id="transfer-match-list" class="flex flex-col gap-2"></div>
+    <p id="transfer-match-empty" class="text-xs text-gray-400 hidden">No matching transfer found.</p>
+    <p id="transfer-match-error" class="text-xs text-[#E24B4A] hidden mt-2"></p>
+    <div class="flex justify-end gap-2 mt-4">
+      <button type="button" onclick="document.getElementById('transfer-match-modal').close()"
+              class="btn btn-sm btn-ghost text-gray-500">Close</button>
+    </div>
+  </div>
+  <form method="dialog" class="modal-backdrop"><button>close</button></form>
+</dialog>
+
 <script>
 const TXN_LIST_URL = "/finance/transactions/list";
 let _txnOffset = {{ query_offset }};
@@ -377,6 +392,78 @@ async function submitBulkMove(e) {
     errEl.classList.remove("hidden");
     btn.disabled = false;
     btn.textContent = "Move";
+  }
+}
+
+let _transferMatchTxnId = null;
+
+async function openTransferMatchModal(txnId) {
+  _transferMatchTxnId = txnId;
+  const listEl = document.getElementById("transfer-match-list");
+  const emptyEl = document.getElementById("transfer-match-empty");
+  const errEl = document.getElementById("transfer-match-error");
+  listEl.innerHTML = "";
+  emptyEl.classList.add("hidden");
+  errEl.classList.add("hidden");
+  document.getElementById("transfer-match-modal").showModal();
+
+  try {
+    const res = await fetch(`/finance/transactions/${txnId}/transfer-candidates`);
+    if (!res.ok) throw new Error(`Error ${res.status}`);
+    const candidates = await res.json();
+    if (!candidates.length) {
+      emptyEl.classList.remove("hidden");
+      return;
+    }
+    for (const c of candidates) {
+      const row = document.createElement("div");
+      row.className = "flex items-center justify-between gap-2 border border-gray-100 rounded-lg px-3 py-2";
+
+      const info = document.createElement("div");
+      info.className = "min-w-0";
+      const nameEl = document.createElement("div");
+      nameEl.className = "text-sm text-gray-800 truncate";
+      nameEl.textContent = c.account_name;
+      const metaEl = document.createElement("div");
+      metaEl.className = "text-xs text-gray-400 truncate";
+      metaEl.textContent = `${c.description || "—"} · ${(c.date || "").slice(0, 10)}`;
+      info.appendChild(nameEl);
+      info.appendChild(metaEl);
+
+      const linkBtn = document.createElement("button");
+      linkBtn.type = "button";
+      linkBtn.className = "btn btn-xs btn-primary flex-shrink-0";
+      linkBtn.textContent = "Link";
+      linkBtn.onclick = () => linkTransferCandidate(c.id);
+
+      row.appendChild(info);
+      row.appendChild(linkBtn);
+      listEl.appendChild(row);
+    }
+  } catch (err) {
+    errEl.textContent = "Failed to search for a match.";
+    errEl.classList.remove("hidden");
+  }
+}
+
+async function linkTransferCandidate(counterpartId) {
+  const errEl = document.getElementById("transfer-match-error");
+  errEl.classList.add("hidden");
+  try {
+    const res = await fetch(`/finance/transactions/${_transferMatchTxnId}/link-transfer`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ counterpart_transaction_id: counterpartId }),
+    });
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(text || `Error ${res.status}`);
+    }
+    document.getElementById("transfer-match-modal").close();
+    refreshTxnList();
+  } catch (err) {
+    errEl.textContent = err.message || "Failed to link transfer.";
+    errEl.classList.remove("hidden");
   }
 }
 </script>

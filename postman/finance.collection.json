@@ -1369,6 +1369,375 @@
       ]
     },
     {
+      "name": "Transfer Matching",
+      "item": [
+        {
+          "name": "01 - Create Second Account",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+                  "pm.test('Response has id and saves it', () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.have.property('id');",
+                  "    pm.environment.set('finance_account_id_2', json.id);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Transfer Matching Card\",\n  \"type\": \"credit_card\",\n  \"currency\": \"EUR\",\n  \"balance\": \"0.00\",\n  \"institution\": \"My Card Issuer\",\n  \"is_active\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/finance/accounts/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "finance",
+                "accounts",
+                ""
+              ]
+            }
+          }
+        },
+        {
+          "name": "02 - Create Unmatched Transfer Leg A",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+                  "pm.test('Response has id and saves it', () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.have.property('id');",
+                  "    pm.expect(json.type).to.eql('transfer');",
+                  "    pm.expect(json.counterpart_account_id).to.be.null;",
+                  "    pm.environment.set('finance_transfer_a_id', json.id);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"account_id\": {{finance_account_id}},\n  \"date\": \"2026-06-12T09:00:00\",\n  \"amount\": \"100.00\",\n  \"currency\": \"EUR\",\n  \"type\": \"transfer\",\n  \"description\": \"Card top-up\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/finance/transactions/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "finance",
+                "transactions",
+                ""
+              ]
+            }
+          }
+        },
+        {
+          "name": "03 - Create Unmatched Transfer Leg B",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+                  "pm.test('Response has id and saves it', () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.have.property('id');",
+                  "    pm.expect(json.type).to.eql('transfer');",
+                  "    pm.environment.set('finance_transfer_b_id', json.id);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"account_id\": {{finance_account_id_2}},\n  \"date\": \"2026-06-12T15:00:00\",\n  \"amount\": \"-100.00\",\n  \"currency\": \"EUR\",\n  \"type\": \"transfer\",\n  \"description\": \"Card top-up\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/finance/transactions/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "finance",
+                "transactions",
+                ""
+              ]
+            }
+          }
+        },
+        {
+          "name": "04 - Get Transfer Candidates",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Leg B is a candidate for Leg A', () => {",
+                  "    const json = pm.response.json();",
+                  "    const ids = json.map(t => t.id);",
+                  "    pm.expect(ids).to.include(parseInt(pm.environment.get('finance_transfer_b_id')));",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/finance/transactions/{{finance_transfer_a_id}}/transfer-candidates",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "finance",
+                "transactions",
+                "{{finance_transfer_a_id}}",
+                "transfer-candidates"
+              ]
+            }
+          }
+        },
+        {
+          "name": "05 - Link Transfer",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Leg A now has Leg B\\'s account as counterpart', () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.counterpart_account_id).to.eql(parseInt(pm.environment.get('finance_account_id_2')));",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"counterpart_transaction_id\": {{finance_transfer_b_id}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/finance/transactions/{{finance_transfer_a_id}}/link-transfer",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "finance",
+                "transactions",
+                "{{finance_transfer_a_id}}",
+                "link-transfer"
+              ]
+            }
+          }
+        },
+        {
+          "name": "06 - Link Already-Matched Leg Returns 400",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 400', () => pm.response.to.have.status(400));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"counterpart_transaction_id\": {{finance_transfer_b_id}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/finance/transactions/{{finance_transfer_a_id}}/link-transfer",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "finance",
+                "transactions",
+                "{{finance_transfer_a_id}}",
+                "link-transfer"
+              ]
+            }
+          }
+        },
+        {
+          "name": "07 - Cleanup - Delete Transfer Leg A",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 204', () => pm.response.to.have.status(204));",
+                  "pm.environment.unset('finance_transfer_a_id');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/finance/transactions/{{finance_transfer_a_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "finance",
+                "transactions",
+                "{{finance_transfer_a_id}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "08 - Cleanup - Delete Transfer Leg B",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 204', () => pm.response.to.have.status(204));",
+                  "pm.environment.unset('finance_transfer_b_id');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/finance/transactions/{{finance_transfer_b_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "finance",
+                "transactions",
+                "{{finance_transfer_b_id}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "09 - Cleanup - Delete Second Account",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 204', () => pm.response.to.have.status(204));",
+                  "pm.environment.unset('finance_account_id_2');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/finance/accounts/{{finance_account_id_2}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "finance",
+                "accounts",
+                "{{finance_account_id_2}}"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
       "name": "Budgets",
       "item": [
         {

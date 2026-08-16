@@ -2,7 +2,11 @@ import pytest
 from datetime import date
 from decimal import Decimal
 from unittest.mock import AsyncMock, MagicMock, patch
-from app.features.finance.transactions.service import InvalidBulkMoveError, TransactionService
+from app.features.finance.transactions.service import (
+    InvalidBulkMoveError,
+    TransactionService,
+    TransferMatchError,
+)
 from app.features.finance.transactions.schemas import (
     AnalyticsFilters,
     NetWorthFilters,
@@ -469,6 +473,106 @@ class TestBulkMoveAccount:
         assert any(
             "bulk-moved" in m and "count=7" in m for m in caplog.messages
         )
+
+
+class TestGetTransferMatchCandidates:
+    async def test_returns_candidates_for_unmatched_transfer(self, service):
+        service._repo.get.return_value = _make_txn_orm(type="transfer", counterpart_account_id=None)
+        service._repo.get_transfer_match_candidates.return_value = [
+            _make_txn_orm(id=2, account_id=2, type="transfer", amount=Decimal("-50.00"))
+        ]
+        result = await service.get_transfer_match_candidates(1)
+        assert len(result) == 1
+        assert isinstance(result[0], TransactionRead)
+
+    async def test_returns_empty_when_not_found(self, service):
+        service._repo.get.return_value = None
+        assert await service.get_transfer_match_candidates(999) == []
+
+    async def test_returns_empty_when_not_a_transfer(self, service):
+        service._repo.get.return_value = _make_txn_orm(type="expense")
+        assert await service.get_transfer_match_candidates(1) == []
+        service._repo.get_transfer_match_candidates.assert_not_awaited()
+
+    async def test_returns_empty_when_already_matched(self, service):
+        service._repo.get.return_value = _make_txn_orm(type="transfer", counterpart_account_id=3)
+        assert await service.get_transfer_match_candidates(1) == []
+        service._repo.get_transfer_match_candidates.assert_not_awaited()
+
+
+class TestLinkTransfer:
+    async def test_links_both_legs(self, service):
+        from datetime import datetime
+        same_date = datetime(2026, 6, 12)
+        txn = _make_txn_orm(id=1, account_id=1, type="transfer", amount=Decimal("50.00"), date=same_date)
+        counterpart = _make_txn_orm(
+            id=2, account_id=2, type="transfer", amount=Decimal("-50.00"), date=same_date
+        )
+        service._repo.get.side_effect = [txn, counterpart]
+        service._repo.update.return_value = txn
+
+        result = await service.link_transfer(1, 2)
+
+        assert isinstance(result, TransactionRead)
+        service._repo.update.assert_any_await(1, TransactionUpdate(counterpart_account_id=2))
+        service._repo.update.assert_any_await(2, TransactionUpdate(counterpart_account_id=1))
+
+    async def test_rejects_linking_to_self(self, service):
+        with pytest.raises(TransferMatchError):
+            await service.link_transfer(1, 1)
+        service._repo.get.assert_not_awaited()
+
+    async def test_rejects_when_transaction_not_found(self, service):
+        service._repo.get.side_effect = [None, _make_txn_orm(id=2)]
+        with pytest.raises(TransferMatchError):
+            await service.link_transfer(1, 2)
+
+    async def test_rejects_non_transfer_type(self, service):
+        service._repo.get.side_effect = [
+            _make_txn_orm(id=1, type="expense"),
+            _make_txn_orm(id=2, type="transfer"),
+        ]
+        with pytest.raises(TransferMatchError):
+            await service.link_transfer(1, 2)
+
+    async def test_rejects_already_linked_leg(self, service):
+        service._repo.get.side_effect = [
+            _make_txn_orm(id=1, type="transfer", counterpart_account_id=9),
+            _make_txn_orm(id=2, type="transfer"),
+        ]
+        with pytest.raises(TransferMatchError):
+            await service.link_transfer(1, 2)
+
+    async def test_rejects_same_account(self, service):
+        service._repo.get.side_effect = [
+            _make_txn_orm(id=1, account_id=1, type="transfer"),
+            _make_txn_orm(id=2, account_id=1, type="transfer"),
+        ]
+        with pytest.raises(TransferMatchError):
+            await service.link_transfer(1, 2)
+
+    async def test_rejects_mismatched_amount(self, service):
+        service._repo.get.side_effect = [
+            _make_txn_orm(id=1, account_id=1, type="transfer", amount=Decimal("50.00")),
+            _make_txn_orm(id=2, account_id=2, type="transfer", amount=Decimal("-40.00")),
+        ]
+        with pytest.raises(TransferMatchError):
+            await service.link_transfer(1, 2)
+
+    async def test_rejects_mismatched_date(self, service):
+        from datetime import datetime
+        service._repo.get.side_effect = [
+            _make_txn_orm(
+                id=1, account_id=1, type="transfer", amount=Decimal("50.00"),
+                date=datetime(2026, 6, 12),
+            ),
+            _make_txn_orm(
+                id=2, account_id=2, type="transfer", amount=Decimal("-50.00"),
+                date=datetime(2026, 6, 13),
+            ),
+        ]
+        with pytest.raises(TransferMatchError):
+            await service.link_transfer(1, 2)
 
 
 class TestSpendingReport:

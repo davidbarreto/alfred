@@ -181,6 +181,15 @@ class TransactionBulkMoveResponse(BaseModel):
     moved_count: int
 
 
+class TransferLinkRequest(BaseModel):
+    """Links two independently-imported transfer legs as counterparts of each other
+    (see TransactionRepository.get_transfer_match_candidates) -- both transactions must
+    already exist and be unmatched; no new rows are created and no balances change,
+    since each leg already reflects its own account's true balance from its own
+    statement import."""
+    counterpart_transaction_id: int
+
+
 # --- Analytics response models ---
 
 class SpendingReportResponse(BaseModel):

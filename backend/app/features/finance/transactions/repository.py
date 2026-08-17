@@ -124,7 +124,11 @@ class TransactionRepository:
           (not exactly opposite) amount, but both sides of one Revolut "Exchange" row
           share the exact same bank text (e.g. "Exchanged to PLN"). Restricted to
           different currencies so this strategy only ever fires for a genuine exchange,
-          never overlapping with the same-currency strategy above.
+          never overlapping with the same-currency strategy above. The same generic
+          bank text can also appear on multiple same-day exchanges, so when both legs
+          have a EUR-normalized amount, their magnitudes must additionally land within
+          5% of each other -- generous enough to absorb a bank's exchange spread while
+          still ruling out an unrelated exchange that happens to share the same text.
         """
         same_currency_opposite_amount = and_(
             Transaction.currency == transaction.currency,
@@ -136,6 +140,13 @@ class TransactionRepository:
             Transaction.bank_description == transaction.bank_description,
             Transaction.amount < 0 if transaction.amount > 0 else Transaction.amount > 0,
         )
+        if transaction.amount_eur is not None:
+            same_description_opposite_sign = and_(
+                same_description_opposite_sign,
+                Transaction.amount_eur.isnot(None),
+                func.abs(func.abs(Transaction.amount_eur) - abs(transaction.amount_eur))
+                <= abs(transaction.amount_eur) * Decimal("0.05"),
+            )
         result = await self._session.execute(
             select(Transaction).where(
                 Transaction.id != transaction.id,

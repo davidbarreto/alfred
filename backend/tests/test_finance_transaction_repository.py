@@ -45,6 +45,7 @@ def _make_txn_orm(**kwargs):
     t.id = kwargs.get("id", 1)
     t.account_id = 1
     t.amount = kwargs.get("amount", Decimal("50"))
+    t.amount_eur = kwargs.get("amount_eur", None)
     t.type = kwargs.get("type", "expense")
     t.date = kwargs.get("date", "2026-06-12")
     return t
@@ -68,6 +69,7 @@ class TestGetTransferMatchCandidates:
         source = _make_txn_orm(
             id=kwargs.pop("id", 1),
             amount=kwargs.pop("amount", Decimal("50.00")),
+            amount_eur=kwargs.pop("amount_eur", None),
             date=kwargs.pop("date", datetime(2026, 6, 12, 10, 0)),
         )
         source.account_id = kwargs.pop("account_id", 1)
@@ -122,6 +124,36 @@ class TestGetTransferMatchCandidates:
         sql = str(query.compile(compile_kwargs={"literal_binds": True}))
         assert "bank_description" in sql
         assert "Exchanged to PLN" in sql
+
+    async def test_description_match_adds_amount_eur_tolerance_when_source_has_it(self):
+        """Multiple same-day exchanges can share the same generic bank text (e.g.
+        "Exchanged to PLN") -- when the source has a EUR-normalized amount, narrow
+        candidates to those within 5% of it so an unrelated same-day exchange isn't
+        offered as a false match."""
+        session = _make_session()
+        session.execute.return_value = _scalar_all([])
+        source = self._source(
+            amount=Decimal("100.00"), amount_eur=Decimal("100.00"), bank_description="Exchanged to PLN"
+        )
+
+        await TransactionRepository(session).get_transfer_match_candidates(source)
+
+        query = session.execute.call_args.args[0]
+        sql = str(query.compile(compile_kwargs={"literal_binds": True}))
+        assert "amount_eur" in sql
+        assert "5.00" in sql or "5.0000" in sql
+
+    async def test_description_match_skips_amount_eur_tolerance_when_source_lacks_it(self):
+        session = _make_session()
+        session.execute.return_value = _scalar_all([])
+        source = self._source(amount=Decimal("100.00"), amount_eur=None, bank_description="Exchanged to PLN")
+
+        await TransactionRepository(session).get_transfer_match_candidates(source)
+
+        query = session.execute.call_args.args[0]
+        sql = str(query.compile(compile_kwargs={"literal_binds": True}))
+        where_clause = sql.split("WHERE", 1)[1]
+        assert "amount_eur" not in where_clause
 
     async def test_description_match_requires_different_currency(self):
         """The description-based strategy is for currency exchanges specifically --

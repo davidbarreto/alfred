@@ -19,6 +19,7 @@ ReviewReason = Literal[
     "similarity_suggested",
     "redated_installment",
     "uncertain_transfer",
+    "installment_capital",
 ]
 
 
@@ -30,6 +31,7 @@ class ImportRuleCreate(BaseModel):
     merchant: str | None = None
     category_id: int | None = None
     transfer_account_id: int | None = None
+    installment_plan_id: int | None = None
 
 
 class ImportRuleUpdate(BaseModel):
@@ -40,6 +42,7 @@ class ImportRuleUpdate(BaseModel):
     merchant: str | None = None
     category_id: int | None = None
     transfer_account_id: int | None = None
+    installment_plan_id: int | None = None
 
 
 class ImportRuleRead(ImportRuleCreate):
@@ -94,6 +97,24 @@ class ImportPreviewRow(BaseModel):
     confidence: float | None = None
     needs_review: bool = False
     review_reasons: list[ReviewReason] = Field(default_factory=list)
+    installment_plan_id: int | None = None
+    """Set by a matching ImportRule (see _apply_rules) -- links this row's eventual
+    transaction to an installment plan. Independent of installment_juros/duty below,
+    which only ever come from the ActivoBank PDF parser's own Capital-installment rows."""
+    installment_juros: Decimal | None = None
+    installment_duty: Decimal | None = None
+
+
+class InstallmentPlanActionPreview(BaseModel):
+    """A newly-detected installment plan (ActivoBank PDF "Fracionada" purchase) this
+    import would open, shown separately from the row table since it doesn't insert a
+    row itself -- it creates a plan (+ matching rule) and, if matched, zeroes out an
+    already-imported lump-sum transaction."""
+    description: str
+    total_installments: int
+    opened_date: date
+    matched_transaction_id: int | None = None
+    matched_transaction_summary: str | None = None
 
 
 class ImportPreviewResponse(BaseModel):
@@ -110,6 +131,7 @@ class ImportPreviewResponse(BaseModel):
     new_count: int
     duplicate_count: int
     needs_review_count: int
+    installment_plan_actions: list[InstallmentPlanActionPreview] = Field(default_factory=list)
 
 
 class ImportCommitRow(BaseModel):
@@ -131,6 +153,17 @@ class ImportCommitRow(BaseModel):
     force: bool = False
     """User confirmed this row (flagged as a likely duplicate at preview time) is
     genuinely a new transaction and should be imported despite the flag."""
+    installment_plan_id: int | None = None
+    installment_juros: Decimal | None = None
+    installment_duty: Decimal | None = None
+
+
+class InstallmentPlanActionCommit(BaseModel):
+    description: str
+    total_installments: int
+    opened_date: date
+    pattern: str
+    matched_transaction_id: int | None = None
 
 
 class ImportCommitRequest(BaseModel):
@@ -143,6 +176,7 @@ class ImportCommitRequest(BaseModel):
     period_end: date | None = None
     closing_balance: Decimal | None = None
     rows: list[ImportCommitRow]
+    installment_plan_actions: list[InstallmentPlanActionCommit] = Field(default_factory=list)
 
 
 class ImportCommitResponse(BaseModel):

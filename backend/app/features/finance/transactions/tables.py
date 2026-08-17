@@ -42,6 +42,9 @@ class Transaction(Base):
     import_batch_id: Mapped[Optional[int]] = mapped_column(
         Integer, ForeignKey("finance.import_batches.id", ondelete="SET NULL"), nullable=True
     )
+    installment_plan_id: Mapped[Optional[int]] = mapped_column(
+        Integer, ForeignKey("finance.installment_plans.id", ondelete="SET NULL"), nullable=True
+    )
     deduplication_hash: Mapped[Optional[str]] = mapped_column(String(64), nullable=True, unique=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime, server_default=func.now(), nullable=False

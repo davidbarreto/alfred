@@ -20,6 +20,7 @@ from app.features.finance.imports.schemas import (
     ImportRuleUpdate,
 )
 from app.features.finance.imports.service import InvalidGroupedImportError
+from app.features.finance.installment_plans.schemas import InstallmentPlanRead
 
 router = APIRouter(prefix="/finance/imports", tags=["finance"], dependencies=[Depends(require_auth)])
 
@@ -148,6 +149,11 @@ async def delete_rule(rule_id: int, service: ImportServiceDep):
     if not deleted:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Rule not found")
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.get("/pending-installments", response_model=list[InstallmentPlanRead])
+async def list_pending_installments(account_id: int, service: ImportServiceDep):
+    return await service.list_pending_installments(account_id)
 
 
 @router.get("", response_model=list[ImportBatchRead])

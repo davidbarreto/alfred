@@ -46,6 +46,9 @@ class ImportRule(Base):
     transfer_account_id: Mapped[Optional[int]] = mapped_column(
         Integer, ForeignKey("finance.accounts.id", ondelete="CASCADE"), nullable=True
     )
+    installment_plan_id: Mapped[Optional[int]] = mapped_column(
+        Integer, ForeignKey("finance.installment_plans.id", ondelete="SET NULL"), nullable=True
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime, server_default=func.now(), nullable=False
     )

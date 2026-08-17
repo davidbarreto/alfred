@@ -73,6 +73,17 @@ class ImportRepository:
         await self._session.refresh(rule)
         return rule
 
+    async def delete_rules_by_installment_plan(self, installment_plan_id: int) -> int:
+        result = await self._session.execute(
+            select(ImportRule).where(ImportRule.installment_plan_id == installment_plan_id)
+        )
+        rules = list(result.scalars().all())
+        for rule in rules:
+            await self._session.delete(rule)
+        if rules:
+            await self._session.commit()
+        return len(rules)
+
     async def delete_rule(self, rule_id: int) -> bool:
         result = await self._session.execute(
             select(ImportRule).where(ImportRule.id == rule_id)

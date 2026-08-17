@@ -59,6 +59,23 @@ class ParsedRow:
     split conversion row). The grouped-import service uses this to auto-link both legs'
     counterpart_account_id once each leg's Alfred account is resolved, without needing
     any FX conversion -- we're only pairing rows, never converting amounts."""
+    installment_juros: Decimal | None = None
+    installment_duty: Decimal | None = None
+    """Interest / stamp duty for this specific installment, when the parser can read
+    them directly from a per-installment schedule (e.g. ActivoBank's own Capital/Juros/
+    IS breakdown). None for every other parser and for any non-installment row."""
+
+
+@dataclass
+class ParsedInstallmentPlanSignal:
+    """A newly-opened installment ("fracionado") plan detected in a statement -- not a
+    transaction itself, but a signal for the import service to create/track a plan and
+    supersede the full-price transaction it replaces (see ImportService)."""
+
+    description: str
+    amount: Decimal
+    date_posted: date
+    total_installments: int
 
 
 @dataclass
@@ -72,6 +89,7 @@ class ParsedStatement:
     period_end: date | None
     closing_balance: Decimal | None
     rows: list[ParsedRow] = field(default_factory=list)
+    installment_plans_opened: list[ParsedInstallmentPlanSignal] = field(default_factory=list)
 
 
 @runtime_checkable

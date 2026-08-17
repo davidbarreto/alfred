@@ -11,6 +11,7 @@ from app.features.finance.imports.schemas import (
     ImportCommitRow,
     ImportRuleFilters,
     ImportRuleUpdate,
+    InstallmentPlanActionCommit,
 )
 from app.features.finance.imports.service import (
     ImportService,
@@ -48,6 +49,7 @@ def _rule(**kwargs) -> ImportRule:
         merchant="Pingo Doce",
         category_id=10,
         transfer_account_id=None,
+        installment_plan_id=None,
         position=0,
     )
     defaults.update(kwargs)
@@ -110,6 +112,8 @@ def _service(statement: ParsedStatement | None = None, llm=None, files=None) -> 
     service._txn_repo = AsyncMock()
     service._category_repo = AsyncMock()
     service._account_repo = AsyncMock()
+    service._installment_plan_repo = AsyncMock()
+    service._installment_plans = AsyncMock()
     service._repo.list_rules.return_value = []
     service._repo.add_rule = MagicMock()
     # session.add() is sync on a real AsyncSession; AsyncMock would otherwise turn it
@@ -117,9 +121,11 @@ def _service(statement: ParsedStatement | None = None, llm=None, files=None) -> 
     service._session.add = MagicMock()
     service._txn_repo.get_existing_dedup_hashes.return_value = set()
     service._txn_repo.get_existing_keys.return_value = set()
+    service._txn_repo.find_by_account_date_description_amount.return_value = None
     service._category_repo.list.return_value = []
     service._account_repo.list.return_value = []
     service._account_repo.get.return_value = None
+    service._installment_plan_repo.get_open_by_account_and_description.return_value = None
     service._fx.convert_to_eur.return_value = None
     service._embeddings.search.return_value = []
     return service
@@ -547,7 +553,7 @@ def _commit_row(**kwargs) -> ImportCommitRow:
     return ImportCommitRow(**defaults)
 
 
-def _commit_request(rows: list[ImportCommitRow]) -> ImportCommitRequest:
+def _commit_request(rows: list[ImportCommitRow], installment_plan_actions=None) -> ImportCommitRequest:
     return ImportCommitRequest(
         account_id=1,
         provider="fakebank",
@@ -555,6 +561,7 @@ def _commit_request(rows: list[ImportCommitRow]) -> ImportCommitRequest:
         currency="EUR",
         closing_balance=Decimal("100.00"),
         rows=rows,
+        installment_plan_actions=installment_plan_actions or [],
     )
 
 
@@ -1472,3 +1479,141 @@ class TestCommitGrouped:
 
         service._account_repo.set_balance.assert_awaited_once_with(1, Decimal("300.00"))
         service._account_repo.adjust_balance.assert_awaited_once_with(2, Decimal("50.00"))
+
+
+class TestApplyRulesInstallmentPlan:
+    """A rule carrying installment_plan_id tags matching rows the same way category_id
+    already does -- this is the generic mechanism a manually-created Cetelem/Nubank plan
+    (or an ActivoBank-auto-created one) relies on to link future transactions."""
+
+    @pytest.mark.asyncio
+    async def test_matching_rule_tags_row_with_installment_plan_id(self):
+        rows = [_row(raw_description="COMPRA CETELEM PARC 3/12", amount=Decimal("-50.00"))]
+        service = _service(_statement(rows))
+        service._repo.list_rules.return_value = [
+            _rule(pattern="CETELEM", installment_plan_id=42, category_id=None, transfer_account_id=None)
+        ]
+
+        result = await service.preview(1, "x.csv", b"data")
+
+        assert result.rows[0].installment_plan_id == 42
+
+    @pytest.mark.asyncio
+    async def test_non_matching_rule_leaves_installment_plan_id_unset(self):
+        rows = [_row(raw_description="COMPRA CONTINENTE", amount=Decimal("-50.00"))]
+        service = _service(_statement(rows))
+        service._repo.list_rules.return_value = [
+            _rule(pattern="CETELEM", installment_plan_id=42, category_id=None, transfer_account_id=None)
+        ]
+
+        result = await service.preview(1, "x.csv", b"data")
+
+        assert result.rows[0].installment_plan_id is None
+
+
+class TestApplyInstallmentPlanActions:
+    def _prepare(self, service: ImportService) -> None:
+        batch = ImportBatch()
+        batch.id = 7
+        service._repo.add_batch.return_value = batch
+        service._txn_repo.add.side_effect = lambda data, amount_eur=None: MagicMock(
+            id=100, category_id=data.category_id, type=data.type,
+            bank_description=data.bank_description, amount=data.amount, amount_eur=amount_eur,
+        )
+        plan = MagicMock()
+        plan.id = 55
+        service._installment_plans.create_plan_with_rule.return_value = plan
+
+    @pytest.mark.asyncio
+    async def test_creates_plan_and_supersedes_matched_transaction(self):
+        service = _service()
+        self._prepare(service)
+        original = MagicMock(id=200, amount=Decimal("-248.46"), currency="EUR", note=None)
+        service._txn_repo.get.return_value = original
+        action = InstallmentPlanActionCommit(
+            description="COMPRA 4681 Cars on Booking Amsterdam",
+            total_installments=3,
+            opened_date=date(2026, 7, 3),
+            pattern="Cars on Booking Amsterdam",
+            matched_transaction_id=200,
+        )
+
+        await service.commit(_commit_request([], installment_plan_actions=[action]))
+
+        service._installment_plans.create_plan_with_rule.assert_awaited_once()
+        assert original.amount == Decimal("0.00")
+        assert "Original amount -248.46" in original.note
+        assert original.installment_plan_id == 55
+
+    @pytest.mark.asyncio
+    async def test_no_match_still_creates_plan_without_superseding(self):
+        service = _service()
+        self._prepare(service)
+        action = InstallmentPlanActionCommit(
+            description="COMPRA 4681 New Plan",
+            total_installments=3,
+            opened_date=date(2026, 7, 3),
+            pattern="New Plan",
+            matched_transaction_id=None,
+        )
+
+        await service.commit(_commit_request([], installment_plan_actions=[action]))
+
+        service._installment_plans.create_plan_with_rule.assert_awaited_once()
+        service._txn_repo.get.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_existing_open_plan_is_not_recreated(self):
+        service = _service()
+        self._prepare(service)
+        service._installment_plan_repo.get_open_by_account_and_description.return_value = MagicMock()
+        action = InstallmentPlanActionCommit(
+            description="COMPRA 4681 Cars on Booking Amsterdam",
+            total_installments=3,
+            opened_date=date(2026, 7, 3),
+            pattern="Cars on Booking Amsterdam",
+            matched_transaction_id=200,
+        )
+
+        await service.commit(_commit_request([], installment_plan_actions=[action]))
+
+        service._installment_plans.create_plan_with_rule.assert_not_awaited()
+
+
+class TestCommitRecordsInstallmentCapture:
+    def _prepare(self, service: ImportService) -> None:
+        batch = ImportBatch()
+        batch.id = 7
+        service._repo.add_batch.return_value = batch
+        service._txn_repo.add.side_effect = lambda data, amount_eur=None: MagicMock(
+            id=100, category_id=data.category_id, type=data.type,
+            bank_description=data.bank_description, amount=data.amount, amount_eur=amount_eur,
+        )
+
+    @pytest.mark.asyncio
+    async def test_row_with_installment_plan_id_triggers_record_capture(self):
+        service = _service()
+        self._prepare(service)
+        rows = [
+            _commit_row(
+                installment_plan_id=42,
+                installment_juros=Decimal("1.00"),
+                installment_duty=Decimal("0.20"),
+            )
+        ]
+
+        await service.commit(_commit_request(rows))
+
+        service._installment_plan_repo.record_capture.assert_awaited_once_with(
+            42, plan_ref=None, juros=Decimal("1.00"), imposto_selo=Decimal("0.20")
+        )
+
+    @pytest.mark.asyncio
+    async def test_row_without_installment_plan_id_does_not_call_record_capture(self):
+        service = _service()
+        self._prepare(service)
+        rows = [_commit_row()]
+
+        await service.commit(_commit_request(rows))
+
+        service._installment_plan_repo.record_capture.assert_not_awaited()

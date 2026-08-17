@@ -10,11 +10,16 @@
       <a href="/finance" class="text-gray-400 hover:text-gray-600"><i class="ti ti-arrow-left text-sm"></i></a>
       <h1 class="text-base font-semibold text-gray-900">Import bank statement</h1>
     </div>
-    {% if grouped_providers %}
-    <button onclick="openMultiCurrencyModal()" class="btn btn-sm btn-ghost gap-1 text-gray-500">
-      <i class="ti ti-currency-euro text-sm"></i>Import multi-currency…
-    </button>
-    {% endif %}
+    <div class="flex items-center gap-2">
+      <a href="/finance/installments" class="btn btn-sm btn-ghost gap-1 text-gray-500">
+        <i class="ti ti-list-check text-sm"></i>Installment plans
+      </a>
+      {% if grouped_providers %}
+      <button onclick="openMultiCurrencyModal()" class="btn btn-sm btn-ghost gap-1 text-gray-500">
+        <i class="ti ti-currency-euro text-sm"></i>Import multi-currency…
+      </button>
+      {% endif %}
+    </div>
   </div>
 
   <div class="bg-white border border-gray-200 rounded-lg p-4">
@@ -22,6 +27,8 @@
       <div>
         <label class="text-xs text-gray-500 mb-1 block">Account</label>
         <select name="account_id" required
+                hx-get="/finance/import/pending-installments" hx-trigger="change, load"
+                hx-target="#pending-installments-banner" hx-swap="innerHTML"
                 class="border border-gray-200 rounded-lg px-2 py-1.5 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-[#378ADD]">
           {% for acc in accounts %}
           <option value="{{ acc.id }}">{{ acc.name }}</option>
@@ -51,6 +58,8 @@
       Nothing is imported at this step — you review every transaction before committing.
     </p>
   </div>
+
+  <div id="pending-installments-banner"></div>
 
   <div id="import-review"></div>
 

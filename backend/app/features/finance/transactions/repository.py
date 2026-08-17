@@ -80,6 +80,8 @@ def _filter_conditions(filters: Any, cycle_start_day: int = 1) -> list:
         conditions.append(Transaction.category_id == filters.category_id)
     if getattr(filters, "account_id", None) is not None:
         conditions.append(Transaction.account_id == filters.account_id)
+    if getattr(filters, "installment_plan_id", None) is not None:
+        conditions.append(Transaction.installment_plan_id == filters.installment_plan_id)
     if filters.merchant is not None:
         conditions.append(Transaction.merchant.ilike(f"%{filters.merchant}%"))
     if filters.currency is not None and filters.currency != GLOBAL_CURRENCY:
@@ -276,6 +278,23 @@ class TransactionRepository:
             )
         )
         return {(row[0].date(), row[1], row[2]) for row in result.all()}
+
+    async def find_by_account_date_description_amount(
+        self, account_id: int, txn_date: date, description: str, amount: Decimal
+    ) -> Transaction | None:
+        """Find the already-imported lump-sum transaction a newly-detected
+        installment plan should supersede. Restricted to amount != 0 so an
+        already-superseded (zeroed) row is never matched a second time."""
+        result = await self._session.execute(
+            select(Transaction).where(
+                Transaction.account_id == account_id,
+                func.date(Transaction.date) == txn_date,
+                Transaction.bank_description == description,
+                Transaction.amount == amount,
+                Transaction.amount != 0,
+            )
+        )
+        return result.scalars().first()
 
     async def get_mirror(self, source_transaction_id: int) -> Transaction | None:
         result = await self._session.execute(

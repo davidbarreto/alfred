@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from app.integrations.activobank.card_pdf_statement_parser import ActivoBankCardPdfStatementParser
 from app.integrations.activobank.card_statement_parser import ActivoBankCardStatementParser
 from app.integrations.activobank.statement_parser import ActivoBankStatementParser
 from app.integrations.banco_inter.fatura_parser import BancoInterFaturaParser
@@ -15,6 +16,8 @@ _PARSERS: dict[str, StatementParser] = {
     for parser in (
         ActivoBankStatementParser(),
         ActivoBankCardStatementParser(),
+        ActivoBankCardPdfStatementParser(installments_only=True),
+        ActivoBankCardPdfStatementParser(installments_only=False),
         BancoInterStatementParser(),
         BancoInterFaturaParser(),
         CoverflexCardStatementParser(),

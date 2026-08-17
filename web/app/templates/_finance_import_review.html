@@ -5,6 +5,7 @@
   "similarity_suggested": "Similarity suggestion, please confirm",
   "redated_installment": "Installment date adjusted to this month",
   "uncertain_transfer": "Guessed as a transfer — please verify",
+  "installment_capital": "Installment payment (capital only)",
 } %}
 <div class="bg-white border border-gray-200 rounded-lg p-4 space-y-3">
 
@@ -32,6 +33,37 @@
     <input type="hidden" name="period_end" value="{{ preview.period_end or '' }}" />
     <input type="hidden" name="closing_balance" value="{{ preview.closing_balance if preview.closing_balance is not none else '' }}" />
     <input type="hidden" name="row_count" value="{{ preview.rows | length }}" />
+    <input type="hidden" name="plan_action_count" value="{{ preview.installment_plan_actions | length }}" />
+
+    {% if preview.installment_plan_actions %}
+    <div class="bg-amber-50/60 border border-amber-100 rounded-xl p-3 mb-3 space-y-2">
+      <p class="text-xs font-medium text-amber-700">
+        <i class="ti ti-alert-triangle"></i>
+        {{ preview.installment_plan_actions | length }} new installment plan{{ "s" if preview.installment_plan_actions | length != 1 else "" }} detected
+      </p>
+      {% for action in preview.installment_plan_actions %}
+      {% set j = loop.index0 %}
+      <div class="flex items-start gap-2 text-xs text-amber-900">
+        <input type="checkbox" name="plan_include_{{ j }}" checked class="checkbox checkbox-xs mt-0.5" />
+        <input type="hidden" name="plan_description_{{ j }}" value="{{ action.description }}" />
+        <input type="hidden" name="plan_total_installments_{{ j }}" value="{{ action.total_installments }}" />
+        <input type="hidden" name="plan_opened_date_{{ j }}" value="{{ action.opened_date }}" />
+        <input type="hidden" name="plan_pattern_{{ j }}" value="{{ action.description }}" />
+        {% if action.matched_transaction_id %}
+        <input type="hidden" name="plan_matched_transaction_id_{{ j }}" value="{{ action.matched_transaction_id }}" />
+        {% endif %}
+        <div>
+          <span class="font-medium">{{ action.description }}</span> — {{ action.total_installments }} installments
+          {% if action.matched_transaction_id %}
+          <div class="text-amber-700">Will mark existing transaction ({{ action.matched_transaction_summary }}) as split into installments.</div>
+          {% else %}
+          <div class="text-amber-700">No matching existing transaction found — the plan will still be tracked.</div>
+          {% endif %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
 
     <div class="overflow-x-auto">
       <table class="table table-xs w-full">
@@ -89,6 +121,15 @@
               {% endif %}
               {% if row.counterpart_account_id %}
               <input type="hidden" name="counterpart_{{ i }}" value="{{ row.counterpart_account_id }}" />
+              {% endif %}
+              {% if row.installment_plan_id %}
+              <input type="hidden" name="installment_plan_id_{{ i }}" value="{{ row.installment_plan_id }}" />
+              {% endif %}
+              {% if row.installment_juros is not none %}
+              <input type="hidden" name="installment_juros_{{ i }}" value="{{ row.installment_juros }}" />
+              {% endif %}
+              {% if row.installment_duty is not none %}
+              <input type="hidden" name="installment_duty_{{ i }}" value="{{ row.installment_duty }}" />
               {% endif %}
             </td>
             <td class="whitespace-nowrap text-xs">{{ row.date_posted }}</td>

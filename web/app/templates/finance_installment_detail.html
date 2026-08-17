@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% set active_page = "finance" %}
+{% block title %}{{ plan.description }}{% endblock %}
+
+{% block content %}
+<div class="p-6 space-y-4">
+
+  <div class="flex items-center justify-between gap-2">
+    <div class="flex items-center gap-2">
+      <a href="/finance/installments" class="text-gray-400 hover:text-gray-600"><i class="ti ti-arrow-left text-sm"></i></a>
+      <h1 class="text-base font-semibold text-gray-900">{{ plan.description }}</h1>
+      <span class="px-2 py-0.5 rounded-full text-xs font-medium {% if plan.status == 'closed' %}bg-gray-100 text-gray-500{% else %}bg-[#E6F1FB] text-[#0C447C]{% endif %}">
+        {{ plan.status }}
+      </span>
+    </div>
+    <form method="post" action="/finance/installments/{{ plan.id }}/delete"
+          onsubmit="return confirm('Delete this plan? Linked transactions are kept, just unlinked.');">
+      <button type="submit" class="btn btn-sm btn-ghost text-gray-400 hover:text-[#E24B4A] gap-1">
+        <i class="ti ti-trash text-sm"></i>Delete plan
+      </button>
+    </form>
+  </div>
+
+  <div class="bg-white border border-gray-200 rounded-lg p-4 grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
+    <div>
+      <div class="text-xs text-gray-400">Account</div>
+      <div class="text-gray-800">{{ accounts_by_id.get(plan.account_id, "?") }}</div>
+    </div>
+    <div>
+      <div class="text-xs text-gray-400">Progress</div>
+      <div class="text-gray-800">{{ plan.captured_installments }} / {{ plan.total_installments }}</div>
+    </div>
+    <div>
+      <div class="text-xs text-gray-400">Opened</div>
+      <div class="text-gray-800">{{ plan.opened_date }}</div>
+    </div>
+    <div>
+      <div class="text-xs text-gray-400">Interest + duty paid</div>
+      <div class="text-gray-800">€{{ (plan.total_interest_paid | float + plan.total_duty_paid | float) | money }}</div>
+    </div>
+  </div>
+
+  <div class="bg-white border border-gray-200 rounded-lg p-4">
+    <h2 class="text-sm font-semibold text-gray-900 mb-3">Transactions</h2>
+    {% if transactions %}
+    <ul>
+      {% for txn in transactions %}
+      <li class="flex items-center gap-3 py-2.5 border-b border-gray-100 last:border-0">
+        <div class="w-24 flex-shrink-0 text-xs text-gray-400 tabular-nums">{{ txn.date[:10] }}</div>
+        <div class="flex-1 min-w-0">
+          <span class="text-sm text-gray-800 truncate block">{{ txn.description or txn.bank_description or "—" }}</span>
+          {% if txn.note %}
+          <span class="text-xs text-gray-400 truncate block">{{ txn.note }}</span>
+          {% endif %}
+        </div>
+        <span class="text-sm font-medium flex-shrink-0 {% if txn.amount | float == 0 %}text-gray-400{% elif txn.type == 'income' %}text-[#639922]{% else %}text-[#E24B4A]{% endif %}">
+          {{ currency_symbols.get(txn.currency, txn.currency + " ") }}{{ txn.amount | float | abs | money }}
+        </span>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p class="text-sm text-gray-400 py-6 text-center">No transactions linked to this plan yet.</p>
+    {% endif %}
+  </div>
+
+</div>
+{% endblock %}

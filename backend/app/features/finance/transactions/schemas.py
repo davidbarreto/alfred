@@ -89,6 +89,10 @@ class TransactionBase(BaseModel):
     """The account's running balance immediately after this transaction, when the
     source statement reports one (e.g. ActivoBank checking, Banco Inter, Revolut).
     Not user-editable -- set only by statement imports."""
+    installment_plan_id: int | None = None
+    """Links this transaction to an installment plan (see finance.installment_plans),
+    set by a matching ImportRule during import. Not user-editable -- not on
+    TransactionUpdate, which is the public PATCH surface."""
 
 
 class TransactionCreate(TransactionBase):
@@ -137,6 +141,7 @@ class TransactionFilters:
         to_date: Annotated[date | None, Query()] = None,
         period: Annotated[str | None, Query()] = None,
         currency: Annotated[str | None, Query()] = None,
+        installment_plan_id: Annotated[int | None, Query()] = None,
         sort: Annotated[TransactionSort, Query()] = "date_desc",
     ) -> None:
         self.limit = limit
@@ -150,6 +155,7 @@ class TransactionFilters:
         self.to_date = to_date
         self.period = period
         self.currency = currency.upper() if currency is not None else None
+        self.installment_plan_id = installment_plan_id
         self.sort = sort
 
 

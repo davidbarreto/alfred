@@ -21,6 +21,7 @@ from app.features.finance.exchange_rates.service import ExchangeRateService
 from app.features.finance.transactions.service import TransactionService
 from app.features.finance.imports.service import ImportService
 from app.features.finance.imports.registry import all_parsers
+from app.features.finance.installment_plans.service import InstallmentPlanService
 from app.features.finance.budgets.service import BudgetTargetService
 from app.features.finance.settings.service import FinanceSettingsService
 from app.features.finance.recurring_transactions.service import RecurringTransactionService
@@ -250,6 +251,9 @@ def get_import_service(session: AsyncSession = Depends(get_session)) -> ImportSe
         llm_provider=llm_provider,
         file_storage=LocalFileStorage(get_settings().statement_storage_dir),
     )
+
+def get_installment_plan_service(session: AsyncSession = Depends(get_session)) -> InstallmentPlanService:
+    return InstallmentPlanService(session)
 
 @lru_cache
 def get_memory_extraction_service() -> MemoryExtractionService:
@@ -507,6 +511,7 @@ CategoryServiceDep = Annotated[CategoryService, Depends(get_category_service)]
 CurrencyServiceDep = Annotated[CurrencyService, Depends(get_currency_service)]
 TransactionServiceDep = Annotated[TransactionService, Depends(get_transaction_service)]
 ImportServiceDep = Annotated[ImportService, Depends(get_import_service)]
+InstallmentPlanServiceDep = Annotated[InstallmentPlanService, Depends(get_installment_plan_service)]
 BudgetTargetServiceDep = Annotated[BudgetTargetService, Depends(get_budget_target_service)]
 FinanceSettingsServiceDep = Annotated[FinanceSettingsService, Depends(get_finance_settings_service)]
 RecurringTransactionServiceDep = Annotated[RecurringTransactionService, Depends(get_recurring_transaction_service)]

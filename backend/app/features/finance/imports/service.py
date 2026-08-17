@@ -37,8 +37,12 @@ from app.features.finance.imports.schemas import (
     ImportRuleFilters,
     ImportRuleRead,
     ImportRuleUpdate,
+    InstallmentPlanActionPreview,
 )
 from app.features.finance.imports.tables import ImportBatch, ImportRule
+from app.features.finance.installment_plans.repository import InstallmentPlanRepository
+from app.features.finance.installment_plans.schemas import InstallmentPlanCreate
+from app.features.finance.installment_plans.service import InstallmentPlanService
 from app.features.finance.transactions.repository import TransactionRepository
 from app.features.finance.transactions.schemas import TransactionCreate
 from app.features.finance.transactions.service import build_mirror_transaction_create
@@ -170,6 +174,8 @@ class ImportService:
         self._txn_repo = TransactionRepository(session)
         self._category_repo = CategoryRepository(session)
         self._account_repo = AccountRepository(session)
+        self._installment_plan_repo = InstallmentPlanRepository(session)
+        self._installment_plans = InstallmentPlanService(session)
         self._parsers = parsers
         self._embeddings = embedding_service
         self._fx = exchange_rate_service
@@ -216,6 +222,10 @@ class ImportService:
 
         self._apply_review_reasons(rows, statement.rows)
 
+        installment_plan_actions = await self._build_installment_plan_actions(
+            account_id, statement.installment_plans_opened
+        )
+
         return ImportPreviewResponse(
             provider=parser.provider,
             account_id=account_id,
@@ -230,7 +240,31 @@ class ImportService:
             new_count=sum(1 for r in rows if r.status == "new"),
             duplicate_count=sum(1 for r in rows if r.status == "duplicate"),
             needs_review_count=sum(1 for r in rows if r.needs_review),
+            installment_plan_actions=installment_plan_actions,
         )
+
+    async def _build_installment_plan_actions(
+        self, account_id: int, signals: list
+    ) -> list[InstallmentPlanActionPreview]:
+        actions: list[InstallmentPlanActionPreview] = []
+        for signal in signals:
+            matched = await self._txn_repo.find_by_account_date_description_amount(
+                account_id, signal.date_posted, signal.description, signal.amount
+            )
+            actions.append(
+                InstallmentPlanActionPreview(
+                    description=signal.description,
+                    total_installments=signal.total_installments,
+                    opened_date=signal.date_posted,
+                    matched_transaction_id=matched.id if matched else None,
+                    matched_transaction_summary=(
+                        f"{matched.date.date().isoformat()} {matched.amount} {matched.bank_description or ''}".strip()
+                        if matched
+                        else None
+                    ),
+                )
+            )
+        return actions
 
     def _apply_review_reasons(
         self, rows: list[ImportPreviewRow], parsed: list[ParsedRow]
@@ -322,6 +356,8 @@ class ImportService:
                     deduplication_hash=_compute_dedup_hash(
                         account_id, parsed_row, occurrences[key]
                     ),
+                    installment_juros=parsed_row.installment_juros,
+                    installment_duty=parsed_row.installment_duty,
                 )
             )
         return rows
@@ -392,6 +428,8 @@ class ImportService:
                 if rule.category_id is not None:
                     row.category_id = rule.category_id
                     row.category_name = categories.get(rule.category_id)
+                if rule.installment_plan_id is not None:
+                    row.installment_plan_id = rule.installment_plan_id
                 row.suggestion_source = "rule_auto" if rule.mode == "auto" else "rule_suggest"
                 break
 
@@ -570,7 +608,46 @@ class ImportService:
                 mirror.id, txn.id, mirror.account_id,
             )
 
+    async def _apply_installment_plan_actions(self, request: ImportCommitRequest) -> None:
+        for action in request.installment_plan_actions:
+            existing_plan = await self._installment_plan_repo.get_open_by_account_and_description(
+                request.account_id, action.description
+            )
+            if existing_plan is not None:
+                logger.warning(
+                    "Installment plan already open, skipping duplicate: account_id=%d description=%r",
+                    request.account_id, action.description,
+                )
+                continue
+            plan = await self._installment_plans.create_plan_with_rule(
+                InstallmentPlanCreate(
+                    account_id=request.account_id,
+                    description=action.description,
+                    total_installments=action.total_installments,
+                    opened_date=action.opened_date,
+                    pattern=action.pattern,
+                    mode="auto",
+                )
+            )
+            if action.matched_transaction_id is not None:
+                matched = await self._txn_repo.get(action.matched_transaction_id)
+                if matched is not None and matched.amount != 0:
+                    original_amount = matched.amount
+                    matched.amount = Decimal("0.00")
+                    matched.note = (
+                        f"Original amount {original_amount} {matched.currency}. "
+                        f"Split into {action.total_installments} installments ({action.description})."
+                    )
+                    matched.installment_plan_id = plan.id
+                    await self._session.commit()
+                    logger.info(
+                        "Transaction superseded by installment plan: transaction_id=%d plan_id=%d",
+                        matched.id, plan.id,
+                    )
+
     async def commit(self, request: ImportCommitRequest) -> ImportCommitResponse:
+        await self._apply_installment_plan_actions(request)
+
         existing = await self._txn_repo.get_existing_dedup_hashes(
             [r.deduplication_hash for r in request.rows]
         )
@@ -610,28 +687,36 @@ class ImportService:
         for row in to_insert:
             amount = row.amount if row.type == "transfer" else abs(row.amount)
             amount_eur = await self._fx.convert_to_eur(amount, request.currency, row.date_posted)
-            transactions.append(
-                await self._txn_repo.add(
-                    TransactionCreate(
-                        account_id=request.account_id,
-                        date=datetime.combine(row.date_posted, datetime.min.time()),
-                        amount=amount,
-                        currency=request.currency,
-                        type=row.type,
-                        category_id=row.category_id,
-                        description=row.description,
-                        bank_description=row.bank_description,
-                        note=row.note,
-                        merchant=row.merchant,
-                        source=request.provider,
-                        counterpart_account_id=row.counterpart_account_id,
-                        balance_after=row.balance_after,
-                        deduplication_hash=row.deduplication_hash,
-                        import_batch_id=batch.id,
-                    ),
-                    amount_eur=amount_eur,
-                )
+            txn = await self._txn_repo.add(
+                TransactionCreate(
+                    account_id=request.account_id,
+                    date=datetime.combine(row.date_posted, datetime.min.time()),
+                    amount=amount,
+                    currency=request.currency,
+                    type=row.type,
+                    category_id=row.category_id,
+                    description=row.description,
+                    bank_description=row.bank_description,
+                    note=row.note,
+                    merchant=row.merchant,
+                    source=request.provider,
+                    counterpart_account_id=row.counterpart_account_id,
+                    balance_after=row.balance_after,
+                    deduplication_hash=row.deduplication_hash,
+                    import_batch_id=batch.id,
+                    installment_plan_id=row.installment_plan_id,
+                ),
+                amount_eur=amount_eur,
             )
+            transactions.append(txn)
+
+        await self._repo.commit()
+        for row, txn in zip(to_insert, transactions):
+            if row.installment_plan_id is not None:
+                await self._installment_plan_repo.record_capture(
+                    row.installment_plan_id, plan_ref=None,
+                    juros=row.installment_juros, imposto_selo=row.installment_duty,
+                )
 
         rules_created = 0
         next_position = await self._repo.next_position()
@@ -765,6 +850,9 @@ class ImportService:
         if deleted:
             logger.info("Import rule deleted: id=%d", rule_id)
         return deleted
+
+    async def list_pending_installments(self, account_id: int):
+        return await self._installment_plans.list(account_id=account_id, status="open")
 
     def available_providers(self) -> list[str]:
         """Single-account providers only; grouped (multi-currency) providers are offered

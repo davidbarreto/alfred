@@ -1,0 +1,16 @@
+{% if plans %}
+<div class="bg-amber-50/60 border border-amber-100 rounded-xl p-4">
+  <p class="text-xs font-medium text-amber-700 mb-1.5">
+    <i class="ti ti-alert-triangle"></i>
+    {{ plans | length }} installment plan{{ "s" if plans | length != 1 else "" }} waiting on this account
+  </p>
+  <ul class="text-sm text-amber-900 space-y-0.5">
+    {% for plan in plans %}
+    <li>
+      <a href="/finance/installments/{{ plan.id }}" class="hover:underline">{{ plan.description }}</a>
+      — {{ plan.captured_installments }} of {{ plan.total_installments }} installments captured
+    </li>
+    {% endfor %}
+  </ul>
+</div>
+{% endif %}

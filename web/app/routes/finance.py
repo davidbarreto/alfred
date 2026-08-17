@@ -1184,6 +1184,102 @@ async def import_batches_fragment(request: Request):
     return templates.TemplateResponse(request, "_finance_import_batches.html", context)
 
 
+@router.get("/import/pending-installments", response_class=HTMLResponse)
+async def pending_installments_fragment(request: Request):
+    account_id = request.query_params.get("account_id")
+    plans = []
+    if account_id:
+        try:
+            plans = await api.get("/finance/imports/pending-installments", params={"account_id": account_id})
+        except httpx.HTTPError:
+            pass
+    return templates.TemplateResponse(
+        request, "_finance_import_pending_installments.html", {"plans": plans}
+    )
+
+
+async def _installment_plan_accounts_context() -> dict:
+    accounts = []
+    try:
+        accounts = await api.get("/finance/accounts")
+    except httpx.HTTPError:
+        pass
+    return {"accounts": accounts, "accounts_by_id": {a["id"]: a["name"] for a in accounts}}
+
+
+@router.get("/installments", response_class=HTMLResponse)
+async def installment_plans_page(request: Request):
+    qp = request.query_params
+    account_id = qp.get("account_id") or None
+    status = qp.get("status") or None
+    params = {k: v for k, v in {"account_id": account_id, "status": status}.items() if v}
+    plans = []
+    try:
+        plans = await api.get("/finance/installment-plans", params=params)
+    except httpx.HTTPError:
+        pass
+    context = await _installment_plan_accounts_context()
+    context.update({"plans": plans, "query_account_id": account_id, "query_status": status})
+    return templates.TemplateResponse(request, "finance_installments.html", context)
+
+
+@router.post("/installments", response_class=HTMLResponse)
+async def create_installment_plan(
+    request: Request,
+    account_id: Annotated[int, Form()],
+    description: Annotated[str, Form()],
+    total_installments: Annotated[int, Form()],
+    opened_date: Annotated[str, Form()],
+    pattern: Annotated[str, Form()],
+    amount: Annotated[Optional[str], Form()] = None,
+    mode: Annotated[str, Form()] = "auto",
+):
+    payload: dict = {
+        "account_id": account_id,
+        "description": description,
+        "total_installments": total_installments,
+        "opened_date": opened_date,
+        "pattern": pattern,
+        "mode": mode,
+    }
+    if amount:
+        payload["amount"] = amount
+    try:
+        await api.post("/finance/installment-plans", json=payload)
+    except httpx.HTTPStatusError as exc:
+        detail = html.escape(_extract_error_detail(exc, "Could not create installment plan."))
+        return HTMLResponse(f'<p class="text-[#E24B4A] text-sm px-1">{detail}</p>', status_code=422)
+    return RedirectResponse("/finance/installments", status_code=303)
+
+
+@router.get("/installments/{plan_id}", response_class=HTMLResponse)
+async def installment_plan_detail_page(plan_id: int, request: Request):
+    try:
+        plan = await api.get(f"/finance/installment-plans/{plan_id}")
+    except httpx.HTTPStatusError:
+        return HTMLResponse("Installment plan not found", status_code=404)
+    transactions = []
+    try:
+        transactions = await api.get(
+            "/finance/transactions",
+            params={"installment_plan_id": plan_id, "sort": "date_asc", "limit": 200},
+        )
+    except httpx.HTTPError:
+        pass
+    context = await _installment_plan_accounts_context()
+    context.update({"plan": plan, "transactions": transactions, "currency_symbols": await _currency_symbols()})
+    return templates.TemplateResponse(request, "finance_installment_detail.html", context)
+
+
+@router.post("/installments/{plan_id}/delete", response_class=HTMLResponse)
+async def delete_installment_plan(plan_id: int):
+    try:
+        await api.delete(f"/finance/installment-plans/{plan_id}")
+    except httpx.HTTPError:
+        pass
+    return RedirectResponse("/finance/installments", status_code=303)
+
+
 @router.post("/import/preview", response_class=HTMLResponse)
 async def import_preview(
     request: Request,
@@ -1306,6 +1402,15 @@ async def import_commit(request: Request):
         counterpart = _form_value(form, f"counterpart_{i}")
         if counterpart:
             row["counterpart_account_id"] = int(counterpart)
+        installment_plan_id = _form_value(form, f"installment_plan_id_{i}")
+        if installment_plan_id:
+            row["installment_plan_id"] = int(installment_plan_id)
+        installment_juros = _form_value(form, f"installment_juros_{i}")
+        if installment_juros:
+            row["installment_juros"] = installment_juros
+        installment_duty = _form_value(form, f"installment_duty_{i}")
+        if installment_duty:
+            row["installment_duty"] = installment_duty
         if f"save_rule_{i}" in form:
             pattern = _form_value(form, f"rule_pattern_{i}").strip()
             if pattern:
@@ -1315,6 +1420,22 @@ async def import_commit(request: Request):
                 if _form_value(form, f"rule_match_amount_{i}"):
                     row["rule_match_amount"] = True
         rows.append(row)
+
+    plan_actions = []
+    plan_action_count = int(_form_value(form, "plan_action_count", "0") or "0")
+    for j in range(plan_action_count):
+        if f"plan_include_{j}" not in form:
+            continue
+        action: dict = {
+            "description": _form_value(form, f"plan_description_{j}"),
+            "total_installments": int(_form_value(form, f"plan_total_installments_{j}", "0") or "0"),
+            "opened_date": _form_value(form, f"plan_opened_date_{j}"),
+            "pattern": _form_value(form, f"plan_pattern_{j}"),
+        }
+        matched_transaction_id = _form_value(form, f"plan_matched_transaction_id_{j}")
+        if matched_transaction_id:
+            action["matched_transaction_id"] = int(matched_transaction_id)
+        plan_actions.append(action)
 
     payload: dict = {
         "account_id": int(_form_value(form, "account_id", "0")),
@@ -1326,6 +1447,7 @@ async def import_commit(request: Request):
         "period_end": _form_value(form, "period_end") or None,
         "closing_balance": _form_value(form, "closing_balance") or None,
         "rows": rows,
+        "installment_plan_actions": plan_actions,
     }
     try:
         result = await api.post("/finance/imports/commit", json=payload, timeout=_IMPORT_COMMIT_TIMEOUT)

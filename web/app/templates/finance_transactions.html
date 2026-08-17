@@ -442,9 +442,13 @@ async function openTransferMatchModal(txnId) {
       const amountEl = document.createElement("div");
       amountEl.className = "text-xs text-gray-600 truncate";
       const amountNum = parseFloat(c.amount);
-      amountEl.textContent = Number.isNaN(amountNum)
+      const amountEurNum = parseFloat(c.amount_eur);
+      const amountText = Number.isNaN(amountNum)
         ? "—"
         : `${amountNum.toFixed(2)} ${c.currency || ""}`.trim();
+      amountEl.textContent = (c.currency !== "EUR" && !Number.isNaN(amountEurNum))
+        ? `${amountText} (≈ ${amountEurNum.toFixed(2)} EUR)`
+        : amountText;
       info.appendChild(nameEl);
       info.appendChild(amountEl);
       info.appendChild(metaEl);
@@ -485,6 +489,10 @@ function openTransferMatchDetailModal(c) {
     ["Account", c.account_name],
     ["Date", (c.date || "").slice(0, 10)],
     ["Amount", Number.isNaN(amountNum) ? "—" : `${amountNum.toFixed(2)} ${c.currency || ""}`.trim()],
+    ["Amount (EUR)", (() => {
+      const eur = parseFloat(c.amount_eur);
+      return Number.isNaN(eur) ? null : eur.toFixed(2);
+    })()],
     ["Type", c.type],
     ["Description", c.description],
     ["Bank description", c.bank_description],

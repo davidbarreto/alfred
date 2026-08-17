@@ -482,6 +482,7 @@ async def transfer_candidates(transaction_id: int):
             "description": c.get("description") or c.get("merchant") or c.get("bank_description"),
             "amount": c.get("amount"),
             "currency": c.get("currency"),
+            "amount_eur": c.get("amount_eur"),
             "type": c.get("type"),
             "bank_description": c.get("bank_description"),
             "merchant": c.get("merchant"),

@@ -918,7 +918,7 @@ class TestTransferCandidates:
             [{
                 "id": 2, "account_id": 5, "date": "2026-06-12T10:00:00", "description": "Top-up",
                 "merchant": None, "bank_description": None, "amount": "50.00", "currency": "EUR",
-                "type": "transfer", "note": None, "source": None,
+                "amount_eur": "50.00", "type": "transfer", "note": None, "source": None,
             }],
             [_account(id=5, name="Card")],
         ]
@@ -929,7 +929,7 @@ class TestTransferCandidates:
         data = resp.json()
         assert data == [{
             "id": 2, "account_name": "Card", "date": "2026-06-12T10:00:00", "description": "Top-up",
-            "amount": "50.00", "currency": "EUR", "type": "transfer",
+            "amount": "50.00", "currency": "EUR", "amount_eur": "50.00", "type": "transfer",
             "bank_description": None, "merchant": None, "note": None, "source": None,
         }]
 

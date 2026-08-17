@@ -481,6 +481,10 @@ async function openTransferMatchModal(txnId) {
   }
 }
 
+function openTransactionDetailModal(txn, accountName) {
+  openTransferMatchDetailModal({ ...txn, account_name: accountName });
+}
+
 function openTransferMatchDetailModal(c) {
   const listEl = document.getElementById("transfer-match-detail-list");
   listEl.innerHTML = "";

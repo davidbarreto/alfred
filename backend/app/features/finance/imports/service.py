@@ -730,8 +730,33 @@ class ImportService:
                 plan.id, request.account_id,
             )
 
+    async def _relink_new_plan_rows(self, request: ImportCommitRequest) -> None:
+        """A plan's auto-created ImportRule doesn't exist yet when _apply_rules runs
+        during preview (rule creation only happens here, at commit -- see
+        _apply_installment_plan_actions, which just ran) -- so a plan's own first
+        captured installment, when it arrives in the SAME import that opens the
+        plan, was never tagged with installment_plan_id despite the row and its
+        plan both being right here. Re-match just the installment-plan rules (not
+        categories, which the user may have already reviewed/edited in the UI)
+        against any row still missing it.
+        """
+        if not request.installment_plan_actions:
+            return
+        rules = await self._repo.list_rules()
+        plan_rules = [r for r in rules if r.installment_plan_id is not None]
+        if not plan_rules:
+            return
+        for row in request.rows:
+            if row.installment_plan_id is not None or row.supersedes_installment_plan_id is not None:
+                continue
+            for rule in plan_rules:
+                if _rule_matches(rule, row.bank_description, row.amount):
+                    row.installment_plan_id = rule.installment_plan_id
+                    break
+
     async def commit(self, request: ImportCommitRequest) -> ImportCommitResponse:
         await self._apply_installment_plan_actions(request)
+        await self._relink_new_plan_rows(request)
 
         existing = await self._txn_repo.get_existing_dedup_hashes(
             [r.deduplication_hash for r in request.rows]

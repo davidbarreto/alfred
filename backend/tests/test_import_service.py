@@ -1745,6 +1745,79 @@ class TestApplyInstallmentPlanActions:
         service._txn_repo.add.assert_called_once()
 
 
+class TestRelinkNewPlanRows:
+    """Regression for a real incident: a plan's own first captured installment,
+    when it arrives in the SAME import that opens the plan, was never tagged with
+    installment_plan_id -- the plan's auto-created rule didn't exist yet when
+    _apply_rules ran during preview (rule creation only happens at commit)."""
+
+    def _prepare(self, service: ImportService) -> None:
+        batch = ImportBatch()
+        batch.id = 7
+        service._repo.add_batch.return_value = batch
+        service._txn_repo.add.side_effect = lambda data, amount_eur=None: MagicMock(
+            id=100, category_id=data.category_id, type=data.type,
+            bank_description=data.bank_description, amount=data.amount, amount_eur=amount_eur,
+        )
+        plan = MagicMock()
+        plan.id = 55
+        service._installment_plans.ensure_plan_for_ref.return_value = (plan, True)
+
+    @pytest.mark.asyncio
+    async def test_capital_row_gets_linked_to_plan_created_in_same_commit(self):
+        service = self._service_with_rule()
+        rows = [
+            _commit_row(
+                bank_description="COMPRA 4681 CAMAROTE TICKETS TALLIN (00021/2)",
+                amount=Decimal("-12.67"),
+                deduplication_hash="h1",
+                installment_plan_id=None,
+            )
+        ]
+        action = _plan_action(plan_ref="00021", matched_transaction_id=None)
+
+        await service.commit(_commit_request(rows, installment_plan_actions=[action]))
+
+        created_data = service._txn_repo.add.call_args.args[0]
+        assert created_data.installment_plan_id == 55
+
+    @pytest.mark.asyncio
+    async def test_does_not_override_a_row_already_linked_at_preview(self):
+        service = self._service_with_rule()
+        rows = [
+            _commit_row(
+                bank_description="COMPRA 4681 CAMAROTE TICKETS TALLIN (00021/2)",
+                amount=Decimal("-12.67"),
+                deduplication_hash="h1",
+                installment_plan_id=99,
+            )
+        ]
+        action = _plan_action(plan_ref="00021", matched_transaction_id=None)
+
+        await service.commit(_commit_request(rows, installment_plan_actions=[action]))
+
+        created_data = service._txn_repo.add.call_args.args[0]
+        assert created_data.installment_plan_id == 99
+
+    @pytest.mark.asyncio
+    async def test_no_op_when_no_plan_actions_in_this_commit(self):
+        service = _service()
+        self._prepare(service)
+        rows = [_commit_row(deduplication_hash="h1")]
+
+        await service.commit(_commit_request(rows))
+
+        service._repo.list_rules.assert_not_awaited()
+
+    def _service_with_rule(self) -> ImportService:
+        service = _service()
+        self._prepare(service)
+        service._repo.list_rules.return_value = [
+            _rule(pattern="00021", installment_plan_id=55, category_id=None, transfer_account_id=None)
+        ]
+        return service
+
+
 class TestCommitRecordsInstallmentCapture:
     def _prepare(self, service: ImportService) -> None:
         batch = ImportBatch()

@@ -1399,7 +1399,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Transfer Matching Card\",\n  \"type\": \"credit_card\",\n  \"currency\": \"EUR\",\n  \"balance\": \"0.00\",\n  \"institution\": \"My Card Issuer\",\n  \"is_active\": true\n}",
+              "raw": "{\n  \"name\": \"Transfer Matching Card\",\n  \"type\": \"credit\",\n  \"currency\": \"EUR\",\n  \"balance\": \"0.00\",\n  \"institution\": \"My Card Issuer\",\n  \"is_active\": true\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -1763,7 +1763,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Transfer Matching Card 2\",\n  \"type\": \"credit_card\",\n  \"currency\": \"EUR\",\n  \"balance\": \"0.00\",\n  \"institution\": \"My Card Issuer\",\n  \"is_active\": true\n}",
+              "raw": "{\n  \"name\": \"Transfer Matching Card 2\",\n  \"type\": \"credit\",\n  \"currency\": \"EUR\",\n  \"balance\": \"0.00\",\n  \"institution\": \"My Card Issuer\",\n  \"is_active\": true\n}",
               "options": {
                 "raw": {
                   "language": "json"

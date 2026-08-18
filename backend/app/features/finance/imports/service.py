@@ -516,7 +516,10 @@ class ImportService:
             return
         pending = [
             r for r in rows
-            if r.status == "new" and r.type != "transfer" and r.category_id is None
+            if r.status == "new"
+            and r.type != "transfer"
+            and r.category_id is None
+            and r.suggestion_source is None
         ]
         if not pending:
             return

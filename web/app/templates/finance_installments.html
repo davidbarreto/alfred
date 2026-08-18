@@ -45,7 +45,8 @@
       <div>
         <label class="text-xs text-gray-500 mb-1 block">Match amount (optional)</label>
         <input type="number" step="0.01" name="amount"
-               class="input input-sm border-gray-200 bg-white w-24" />
+               class="input input-sm border-gray-200 bg-white w-24"
+               title="The amount of ONE installment, not the plan's total purchase price. Leave blank to match on text alone." />
       </div>
       <button type="submit" class="btn btn-sm btn-primary gap-1">
         <i class="ti ti-plus text-sm"></i>Create plan
@@ -54,6 +55,7 @@
     <p class="text-xs text-gray-400 mt-2">
       Creates a matching import rule too — any future imported transaction whose bank description
       contains the match text (and, if set, matches the amount) will be linked to this plan automatically.
+      If set, the amount must match a single installment, not the total purchase price — usually best left blank.
     </p>
   </div>
 

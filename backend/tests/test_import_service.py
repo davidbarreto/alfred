@@ -388,6 +388,26 @@ class TestPreview:
         assert preview.rows[0].review_reasons == ["redated_installment"]
 
     @pytest.mark.asyncio
+    async def test_installment_plan_rule_match_not_overridden_by_llm(self):
+        # An installment-plan rule (see InstallmentPlanService) sets installment_plan_id
+        # but has no category_id -- _apply_llm must still skip the row (it already has a
+        # suggestion_source from the rule), or it silently overwrites "rule_auto" with
+        # "llm" and never puts the category back, hiding that a rule matched at all.
+        llm = AsyncMock()
+        service = _service(_statement([_row()]), llm=llm)
+        service._repo.list_rules.return_value = [
+            _rule(pattern="PINGO DOCE", description=None, merchant=None, category_id=None, installment_plan_id=7)
+        ]
+        service._category_repo.list.return_value = [_category(10, "Groceries")]
+
+        preview = await service.preview(1, "x.csv", b"", provider="fakebank")
+
+        row = preview.rows[0]
+        assert row.installment_plan_id == 7
+        assert row.suggestion_source == "rule_auto"
+        llm.complete.assert_not_awaited()
+
+    @pytest.mark.asyncio
     async def test_parser_flagged_row_combines_with_uncategorized_reason(self):
         row = _row()
         row.flag_reason = "redated_installment"

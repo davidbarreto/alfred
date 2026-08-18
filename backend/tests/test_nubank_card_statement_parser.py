@@ -68,3 +68,39 @@ class TestParse:
         statement = NubankCardStatementParser().parse(b"date,title,amount\n")
         assert statement.rows == []
         assert statement.period_start is None
+
+
+class TestInstallmentPlanSignals:
+    def test_detects_parcela_suffix_as_a_plan_signal(self):
+        statement = NubankCardStatementParser().parse(_content())
+        assert len(statement.installment_plans_opened) == 1
+        signal = statement.installment_plans_opened[0]
+        assert signal.plan_ref == "Tap Web Vip"
+        assert signal.description == "Tap Web Vip"
+        assert signal.total_installments == 10
+        assert signal.original_amount is None
+
+    def test_no_signal_for_ordinary_purchases(self):
+        content = b"date,title,amount\n2025-08-05,Amazonprimebr,\"19,90\"\n"
+        statement = NubankCardStatementParser().parse(content)
+        assert statement.installment_plans_opened == []
+
+    def test_dedupes_multiple_installments_of_the_same_plan(self):
+        content = (
+            b"date,title,amount\n"
+            b"2025-07-03,Tap Web Vip - Parcela 2/10,\"1.187,58\"\n"
+            b"2025-08-03,Tap Web Vip - Parcela 3/10,\"1.187,58\"\n"
+        )
+        statement = NubankCardStatementParser().parse(content)
+        assert len(statement.installment_plans_opened) == 1
+        assert statement.installment_plans_opened[0].total_installments == 10
+
+    def test_distinct_merchants_produce_distinct_signals(self):
+        content = (
+            b"date,title,amount\n"
+            b"2025-08-03,Tap Web Vip - Parcela 3/10,\"1.187,58\"\n"
+            b"2025-08-04,Magazine Luiza - Parcela 1/6,\"250,00\"\n"
+        )
+        statement = NubankCardStatementParser().parse(content)
+        refs = {s.plan_ref for s in statement.installment_plans_opened}
+        assert refs == {"Tap Web Vip", "Magazine Luiza"}

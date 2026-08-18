@@ -92,16 +92,27 @@ class ParsedInstallmentPlanSignal:
     Used as the auto-created ImportRule's match pattern instead of the bare
     description, since the description alone matches both future installment rows AND
     the original full-price purchase, which would wrongly tag the original as a
-    captured installment if it's imported (e.g. via CSV) after this plan exists."""
+    captured installment if it's imported (e.g. via CSV) after this plan exists.
+
+    Providers with no bank-issued reference (e.g. Nubank's "Parcela M/N" card CSV)
+    use the normalized merchant description itself as plan_ref instead -- the same
+    identity the manual "New plan" form already relies on, with the same known
+    limitation: two genuinely separate plans for the same merchant text collide."""
     description: str
-    original_amount: Decimal
+    original_amount: Decimal | None
     """The full, unamortized purchase price ("Valor Transação"), constant across every
     row sharing this plan_ref -- used to match a plan's original lump-sum transaction
-    by (account, description, amount) in any future import, regardless of order."""
+    by (account, description, amount) in any future import, regardless of order. None
+    for a provider whose installment rows never had a separate one-time original
+    purchase to begin with (e.g. Nubank -- each "Parcela M/N" row already is the real,
+    already-amortized charge) -- the import service skips the match/placeholder step
+    entirely in that case, see ImportService._apply_one_installment_plan_action."""
     total_installments: int
     """max(position) across every row sharing this plan_ref within this one statement
     -- the schedule table's remaining-tail guarantee (see class docstring) makes this
-    reliable however far into the plan's life this particular statement is."""
+    reliable however far into the plan's life this particular statement is. For a
+    provider without a schedule table, read directly off a single row instead (e.g.
+    Nubank's own "M/N" suffix)."""
 
 
 @dataclass

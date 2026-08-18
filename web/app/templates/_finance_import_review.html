@@ -49,7 +49,9 @@
         <input type="hidden" name="plan_ref_{{ j }}" value="{{ action.plan_ref }}" />
         <input type="hidden" name="plan_description_{{ j }}" value="{{ action.description }}" />
         <input type="hidden" name="plan_total_installments_{{ j }}" value="{{ action.total_installments }}" />
+        {% if action.original_amount is not none %}
         <input type="hidden" name="plan_original_amount_{{ j }}" value="{{ action.original_amount }}" />
+        {% endif %}
         {% if action.matched_transaction_id %}
         <input type="hidden" name="plan_matched_transaction_id_{{ j }}" value="{{ action.matched_transaction_id }}" />
         {% endif %}
@@ -58,6 +60,8 @@
           <span class="font-medium">{{ action.description }}</span> — plan {{ action.plan_ref }}, {{ action.total_installments }} installments
           {% if action.already_tracked %}
           <div class="text-amber-700">Already tracked from a prior import.</div>
+          {% elif action.original_amount is none %}
+          <div class="text-amber-700">No separate original purchase for this provider — its own installment rows below will link automatically.</div>
           {% elif action.matched_transaction_id %}
           <div class="text-amber-700">Will mark existing transaction ({{ action.matched_transaction_summary }}) as split into installments.</div>
           {% else %}
@@ -123,9 +127,6 @@
               {% if row.balance_after is not none %}
               <input type="hidden" name="balance_after_{{ i }}" value="{{ row.balance_after }}" />
               {% endif %}
-              {% if row.installment_plan_id %}
-              <input type="hidden" name="installment_plan_id_{{ i }}" value="{{ row.installment_plan_id }}" />
-              {% endif %}
               {% if row.installment_juros is not none %}
               <input type="hidden" name="installment_juros_{{ i }}" value="{{ row.installment_juros }}" />
               {% endif %}
@@ -144,9 +145,10 @@
                 <i class="ti ti-alert-triangle text-[10px]"></i> Will import at €0.00 — matches an installment plan's original purchase
               </span>
               {% elif row.installment_plan_id %}
-              <span class="block text-[10px] text-[#378ADD] mt-0.5" title="This transaction will be linked to an installment plan">
+              <label class="flex items-center gap-1 text-[10px] text-[#378ADD] mt-0.5 cursor-pointer" title="Uncheck to skip linking this transaction to the installment plan">
+                <input type="checkbox" name="installment_plan_id_{{ i }}" value="{{ row.installment_plan_id }}" checked class="checkbox checkbox-xs" />
                 <i class="ti ti-list-check text-[10px]"></i> Will link to installment plan
-              </span>
+              </label>
               {% endif %}
               {% if row.suggestion_source %}
               <span class="text-[10px] {% if row.suggestion_source == 'rule_auto' %}text-[#3E9C42]{% elif row.suggestion_source == 'knn' %}text-[#378ADD]{% else %}text-amber-600{% endif %}">

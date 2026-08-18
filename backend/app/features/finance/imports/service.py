@@ -257,7 +257,7 @@ class ImportService:
                 account_id, signal.plan_ref
             )
             matched = None
-            if existing_plan is None:
+            if existing_plan is None and signal.original_amount is not None:
                 matched = await self._txn_repo.find_unmatched_transaction(
                     account_id, signal.description, signal.original_amount
                 )
@@ -720,7 +720,12 @@ class ImportService:
                 )
                 superseded = True
 
-        if not superseded:
+        if not superseded and action.original_amount is not None:
+            # No original_amount means this provider never had a separate lump-sum
+            # purchase to begin with (e.g. Nubank's "Parcela M/N" -- each installment
+            # row already is the real charge) -- nothing to anchor with a placeholder;
+            # the plan's own rows link up via the rule just created, see
+            # _relink_new_plan_rows.
             await self._txn_repo.create_placeholder_for_plan(
                 account_id=request.account_id,
                 plan_id=plan.id,

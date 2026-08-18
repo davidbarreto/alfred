@@ -1564,6 +1564,23 @@ class TestBuildInstallmentPlanActions:
 
         assert result.installment_plan_actions[0].matched_transaction_id == 22
 
+    @pytest.mark.asyncio
+    async def test_no_lookup_when_signal_has_no_original_amount(self):
+        # A provider without a bank-issued plan reference or a separate lump-sum
+        # purchase (e.g. Nubank's "Parcela M/N") reports original_amount=None -- there
+        # is nothing to look an unmatched transaction up by, and no placeholder should
+        # ever be implied for it (see TestApplyInstallmentPlanActions).
+        signal = _plan_signal(plan_ref="Tap Web Vip", original_amount=None)
+        service = _service(_statement([], installment_plans_opened=[signal]))
+        service._installment_plan_repo.get_by_account_and_plan_ref.return_value = None
+
+        result = await service.preview(1, "x.csv", b"data")
+
+        service._txn_repo.find_unmatched_transaction.assert_not_awaited()
+        action = result.installment_plan_actions[0]
+        assert action.original_amount is None
+        assert action.matched_transaction_id is None
+
 
 class TestApplyInstallmentPlanRowMatches:
     """The generic, provider-agnostic check: does a plain new row match an already-
@@ -1699,6 +1716,20 @@ class TestApplyInstallmentPlanActions:
         assert call_kwargs["description"] == "COMPRA 4681 Cars on Booking Amsterdam"
         assert call_kwargs["txn_date"] == date(2026, 7, 1)
         assert "Placeholder" in call_kwargs["note"]
+
+    @pytest.mark.asyncio
+    async def test_no_original_amount_skips_placeholder_creation(self):
+        # Nubank-style signal: no separate lump-sum purchase ever existed, so there's
+        # nothing to anchor with a placeholder -- the plan's own rows link up via the
+        # rule created in ensure_plan_for_ref instead (see _relink_new_plan_rows).
+        service = _service()
+        self._prepare(service)
+        action = _plan_action(matched_transaction_id=None, original_amount=None)
+
+        await service.commit(_commit_request([], installment_plan_actions=[action]))
+
+        service._txn_repo.get.assert_not_awaited()
+        service._txn_repo.create_placeholder_for_plan.assert_not_awaited()
 
     @pytest.mark.asyncio
     async def test_already_tracked_action_is_a_no_op(self):

@@ -126,7 +126,9 @@ class InstallmentPlanActionPreview(BaseModel):
     plan_ref: str
     description: str
     total_installments: int
-    original_amount: Decimal
+    original_amount: Decimal | None
+    """None for a provider with no separate original lump-sum purchase (e.g. Nubank) --
+    see ParsedInstallmentPlanSignal.original_amount."""
     already_tracked: bool
     """True if this plan_ref already exists in the DB (from a prior import) -- commit
     is then a no-op for this action, since matching/placeholder handling only ever
@@ -181,7 +183,7 @@ class InstallmentPlanActionCommit(BaseModel):
     plan_ref: str
     description: str
     total_installments: int
-    original_amount: Decimal
+    original_amount: Decimal | None = None
     already_tracked: bool = False
     """Defaults False since the portal only ever sends actionable (not-yet-tracked)
     actions -- an already-tracked plan needs no action at commit time, so its checkbox

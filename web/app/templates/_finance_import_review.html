@@ -143,6 +143,10 @@
               <span class="block text-[10px] text-amber-700 mt-0.5" title="This transaction matches an open installment plan's original purchase">
                 <i class="ti ti-alert-triangle text-[10px]"></i> Will import at €0.00 — matches an installment plan's original purchase
               </span>
+              {% elif row.installment_plan_id %}
+              <span class="block text-[10px] text-[#378ADD] mt-0.5" title="This transaction will be linked to an installment plan">
+                <i class="ti ti-list-check text-[10px]"></i> Will link to installment plan
+              </span>
               {% endif %}
               {% if row.suggestion_source %}
               <span class="text-[10px] {% if row.suggestion_source == 'rule_auto' %}text-[#3E9C42]{% elif row.suggestion_source == 'knn' %}text-[#378ADD]{% else %}text-amber-600{% endif %}">

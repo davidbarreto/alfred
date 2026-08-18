@@ -57,7 +57,12 @@ class InstallmentPlanService:
         await self._import_repo.create_rule(
             ImportRuleCreate(
                 pattern=data.pattern,
-                amount=data.amount,
+                # Imported rows always carry a negative amount for an expense (see
+                # _rule_matches, which compares against row.amount directly) -- an
+                # installment payment is always an expense, but the form has no sign
+                # hint, so a user typing the amount off their statement naturally
+                # enters it positive. Normalize here rather than expect them to guess.
+                amount=-abs(data.amount) if data.amount is not None else None,
                 mode=data.mode,
                 installment_plan_id=plan.id,
             )

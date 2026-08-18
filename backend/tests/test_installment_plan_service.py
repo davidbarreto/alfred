@@ -61,6 +61,29 @@ class TestCreatePlanWithRule:
         assert result.id == plan.id
         assert result.captured_installments == 0
 
+    async def test_normalizes_positive_match_amount_to_negative(self):
+        # Imported expense rows always carry a negative amount (see _rule_matches in
+        # imports/service.py, which compares against it directly); a user typing the
+        # amount off their bank statement naturally enters it positive, so the rule
+        # would silently never match without this normalization.
+        service = _service()
+        service._repo.create.return_value = _plan()
+
+        await service.create_plan_with_rule(
+            InstallmentPlanCreate(
+                account_id=1,
+                description="COMPRA IKEA",
+                total_installments=3,
+                opened_date=date(2026, 7, 1),
+                pattern="IKEA",
+                amount=Decimal("142.94"),
+                mode="auto",
+            )
+        )
+
+        rule_data = service._import_repo.create_rule.call_args[0][0]
+        assert rule_data.amount == Decimal("-142.94")
+
 
 class TestEnsurePlanForRef:
     async def test_returns_existing_plan_without_creating(self):

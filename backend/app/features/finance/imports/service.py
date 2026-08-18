@@ -41,7 +41,6 @@ from app.features.finance.imports.schemas import (
 )
 from app.features.finance.imports.tables import ImportBatch, ImportRule
 from app.features.finance.installment_plans.repository import InstallmentPlanRepository
-from app.features.finance.installment_plans.schemas import InstallmentPlanCreate
 from app.features.finance.installment_plans.service import InstallmentPlanService
 from app.features.finance.transactions.repository import TransactionRepository
 from app.features.finance.transactions.schemas import TransactionCreate
@@ -225,6 +224,7 @@ class ImportService:
         installment_plan_actions = await self._build_installment_plan_actions(
             account_id, statement.installment_plans_opened
         )
+        await self._apply_installment_plan_row_matches(account_id, rows)
 
         return ImportPreviewResponse(
             provider=parser.provider,
@@ -246,21 +246,28 @@ class ImportService:
     async def _build_installment_plan_actions(
         self, account_id: int, signals: list
     ) -> list[InstallmentPlanActionPreview]:
+        """Read-only preview of what committing would do for each plan_ref found in
+        the PDF's installment schedule table -- nothing is created here (see
+        _apply_installment_plan_actions, commit-only). Already-tracked plans (from a
+        prior import) are surfaced with already_tracked=True and no match lookup,
+        since matching/placeholder handling only ever happens once, at creation."""
         actions: list[InstallmentPlanActionPreview] = []
         for signal in signals:
-            # A "Fracionada" purchase is always a debit (a COMPRA), never a transfer
-            # or income -- Transaction.amount stores expenses as an absolute value
-            # (sign lives in .type), while ParsedRow/signal.amount uses the signed
-            # convention (negative = expense), so the lookup must convert.
-            matched = await self._txn_repo.find_by_account_date_description_amount(
-                account_id, signal.date_posted, signal.description, abs(signal.amount)
+            existing_plan = await self._installment_plan_repo.get_by_account_and_plan_ref(
+                account_id, signal.plan_ref
             )
+            matched = None
+            if existing_plan is None:
+                matched = await self._txn_repo.find_unmatched_transaction(
+                    account_id, signal.description, signal.original_amount
+                )
             actions.append(
                 InstallmentPlanActionPreview(
+                    plan_ref=signal.plan_ref,
                     description=signal.description,
                     total_installments=signal.total_installments,
-                    opened_date=signal.date_posted,
-                    plan_ref=signal.plan_ref,
+                    original_amount=signal.original_amount,
+                    already_tracked=existing_plan is not None,
                     matched_transaction_id=matched.id if matched else None,
                     matched_transaction_summary=(
                         f"{matched.date.date().isoformat()} {matched.amount} {matched.bank_description or ''}".strip()
@@ -270,6 +277,24 @@ class ImportService:
                 )
             )
         return actions
+
+    async def _apply_installment_plan_row_matches(
+        self, account_id: int, rows: list[ImportPreviewRow]
+    ) -> None:
+        """Generic check, independent of provider: does this new row's own
+        (description, amount) match an already-open plan's original lump sum that
+        hasn't been matched yet? Runs for every import (CSV or PDF), which is what
+        makes matching independent of import order -- a CSV landing before OR after
+        the PDF that created the plan both resolve the same way, since the plan
+        already exists in the DB by the time either side's row is processed."""
+        for row in rows:
+            if row.status != "new":
+                continue
+            matched_plan = await self._txn_repo.find_open_plan_match(
+                account_id, row.bank_description, abs(row.amount)
+            )
+            if matched_plan is not None:
+                row.supersedes_installment_plan_id = matched_plan.id
 
     def _apply_review_reasons(
         self, rows: list[ImportPreviewRow], parsed: list[ParsedRow]
@@ -574,11 +599,20 @@ class ImportService:
         else:
             delta = Decimal("0")
             for row in rows:
+                # A row superseding a plan's original purchase is inserted at €0.00
+                # regardless of its parsed amount (see commit()) -- it must contribute
+                # nothing to the balance delta, or the account would be double-counted
+                # (once when the real, now-zeroed transaction it stands in for
+                # originally posted -- via a prior CSV import or this same one).
+                if row.supersedes_installment_plan_id is not None:
+                    continue
                 amount = row.amount if row.type == "transfer" else abs(row.amount)
                 delta += amount if row.type == "income" else -amount
             if delta:
                 await self._account_repo.adjust_balance(account_id, delta)
         for row in rows:
+            if row.supersedes_installment_plan_id is not None:
+                continue
             if row.type == "transfer" and row.counterpart_account_id is not None:
                 await self._account_repo.adjust_balance(row.counterpart_account_id, row.amount)
 
@@ -615,37 +649,39 @@ class ImportService:
             )
 
     async def _apply_installment_plan_actions(self, request: ImportCommitRequest) -> None:
+        """Get-or-create every plan_ref this import's schedule table touched. Nothing
+        to do for an already-tracked plan (matching/placeholder handling only ever
+        happens once, right when a plan is first created) -- its future installment
+        rows get linked separately via the generic ImportRule match (_apply_rules),
+        and its original lump sum (if not yet found) via the generic per-row check
+        (_apply_installment_plan_row_matches), both of which run on every import
+        regardless of when the plan itself was created.
+        """
+        opened_date = request.period_start or request.period_end
+        if opened_date is None:
+            logger.warning(
+                "Installment plan actions skipped: no period on import, account_id=%d",
+                request.account_id,
+            )
+            return
         for action in request.installment_plan_actions:
-            existing_plan = await self._installment_plan_repo.get_open_by_account_and_description(
-                request.account_id, action.description
-            )
-            if existing_plan is not None:
-                logger.warning(
-                    "Installment plan already open, skipping duplicate: account_id=%d description=%r",
-                    request.account_id, action.description,
-                )
+            if action.already_tracked:
                 continue
-            plan = await self._installment_plans.create_plan_with_rule(
-                InstallmentPlanCreate(
-                    account_id=request.account_id,
-                    description=action.description,
-                    total_installments=action.total_installments,
-                    opened_date=action.opened_date,
-                    plan_ref=action.plan_ref,
-                    # Prefer the plan's own reference (e.g. "00024") as the match
-                    # pattern over the bare description: the description alone matches
-                    # both future installment rows AND the original full-price
-                    # purchase, which would wrongly tag the original as a captured
-                    # installment if it's imported (e.g. via CSV) after this plan
-                    # already exists. Falls back to the description when the schedule
-                    # table didn't have this plan's reference yet.
-                    pattern=action.plan_ref or action.pattern,
-                    mode="auto",
-                )
+            plan, created = await self._installment_plans.ensure_plan_for_ref(
+                account_id=request.account_id,
+                plan_ref=action.plan_ref,
+                description=action.description,
+                total_installments=action.total_installments,
+                original_amount=action.original_amount,
+                opened_date=opened_date,
             )
+            if not created:
+                # Race: another request created this plan_ref between preview and
+                # commit. Safe to skip -- nothing left for this action to do.
+                continue
             if action.matched_transaction_id is not None:
                 matched = await self._txn_repo.get(action.matched_transaction_id)
-                if matched is not None and matched.amount != 0:
+                if matched is not None and matched.amount != 0 and matched.installment_plan_id is None:
                     original_amount = matched.amount
                     matched.amount = Decimal("0.00")
                     matched.note = (
@@ -658,6 +694,18 @@ class ImportService:
                         "Transaction superseded by installment plan: transaction_id=%d plan_id=%d",
                         matched.id, plan.id,
                     )
+            else:
+                await self._txn_repo.create_placeholder_for_plan(
+                    account_id=request.account_id,
+                    plan_id=plan.id,
+                    description=action.description,
+                    txn_date=opened_date,
+                    note="Placeholder — original purchase transaction not found in imported history.",
+                )
+                logger.info(
+                    "Installment plan placeholder created: plan_id=%d account_id=%d",
+                    plan.id, request.account_id,
+                )
 
     async def commit(self, request: ImportCommitRequest) -> ImportCommitResponse:
         await self._apply_installment_plan_actions(request)
@@ -699,7 +747,18 @@ class ImportService:
 
         transactions = []
         for row in to_insert:
-            amount = row.amount if row.type == "transfer" else abs(row.amount)
+            if row.supersedes_installment_plan_id is not None:
+                # This row IS an open plan's original lump-sum purchase (matched at
+                # preview time by _apply_installment_plan_row_matches) -- insert it at
+                # €0.00 with a note instead of its real amount, same treatment as a
+                # plan-creation-time match (see _apply_installment_plan_actions), just
+                # discovered later since the plan already existed when this row was
+                # parsed.
+                amount = Decimal("0.00")
+                note = f"Original amount {row.amount} {request.currency}. Split into installments."
+            else:
+                amount = row.amount if row.type == "transfer" else abs(row.amount)
+                note = row.note
             amount_eur = await self._fx.convert_to_eur(amount, request.currency, row.date_posted)
             txn = await self._txn_repo.add(
                 TransactionCreate(
@@ -711,14 +770,14 @@ class ImportService:
                     category_id=row.category_id,
                     description=row.description,
                     bank_description=row.bank_description,
-                    note=row.note,
+                    note=note,
                     merchant=row.merchant,
                     source=request.provider,
                     counterpart_account_id=row.counterpart_account_id,
                     balance_after=row.balance_after,
                     deduplication_hash=row.deduplication_hash,
                     import_batch_id=batch.id,
-                    installment_plan_id=row.installment_plan_id,
+                    installment_plan_id=row.installment_plan_id or row.supersedes_installment_plan_id,
                 ),
                 amount_eur=amount_eur,
             )
@@ -726,9 +785,11 @@ class ImportService:
 
         await self._repo.commit()
         for row, txn in zip(to_insert, transactions):
-            if row.installment_plan_id is not None:
+            if row.supersedes_installment_plan_id is not None:
+                await self._txn_repo.delete_placeholder_for_plan(row.supersedes_installment_plan_id)
+            elif row.installment_plan_id is not None:
                 await self._installment_plan_repo.record_capture(
-                    row.installment_plan_id, plan_ref=None,
+                    row.installment_plan_id,
                     juros=row.installment_juros, imposto_selo=row.installment_duty,
                 )
 

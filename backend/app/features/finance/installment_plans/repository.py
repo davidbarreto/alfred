@@ -48,6 +48,9 @@ class InstallmentPlanRepository:
     async def get_open_by_account_and_description(
         self, account_id: int, description: str
     ) -> InstallmentPlan | None:
+        """Legacy/manual-plan lookup key -- still used by the manual (Cetelem/Nubank)
+        creation path, which has no plan_ref concept. PDF-derived plans are looked up
+        by get_by_account_and_plan_ref instead."""
         result = await self._session.execute(
             select(InstallmentPlan).where(
                 and_(
@@ -55,6 +58,17 @@ class InstallmentPlanRepository:
                     InstallmentPlan.description == description,
                     InstallmentPlan.status == "open",
                 )
+            )
+        )
+        return result.scalars().first()
+
+    async def get_by_account_and_plan_ref(
+        self, account_id: int, plan_ref: str
+    ) -> InstallmentPlan | None:
+        result = await self._session.execute(
+            select(InstallmentPlan).where(
+                InstallmentPlan.account_id == account_id,
+                InstallmentPlan.plan_ref == plan_ref,
             )
         )
         return result.scalars().first()
@@ -82,6 +96,7 @@ class InstallmentPlanRepository:
         total_installments: int,
         opened_date: date,
         plan_ref: str | None = None,
+        original_amount: Decimal | None = None,
     ) -> InstallmentPlan:
         plan = InstallmentPlan(
             account_id=account_id,
@@ -89,6 +104,7 @@ class InstallmentPlanRepository:
             total_installments=total_installments,
             opened_date=opened_date,
             plan_ref=plan_ref,
+            original_amount=original_amount,
             status="open",
         )
         self._session.add(plan)
@@ -121,21 +137,19 @@ class InstallmentPlanRepository:
     async def record_capture(
         self,
         plan_id: int,
-        plan_ref: str | None,
         juros: Decimal | None,
         imposto_selo: Decimal | None,
     ) -> InstallmentPlan | None:
         """Called once per newly-inserted transaction linked to a plan. juros/
-        imposto_selo are only ever set for ActivoBank-PDF-sourced Capital rows
-        (None for a manually-matched Cetelem/Nubank transaction), so the
-        interest/duty accumulation and plan_ref backfill are no-ops there --
-        everything else (live recount, closing) applies uniformly.
+        imposto_selo are only ever set for ActivoBank-PDF-sourced Capital rows (None
+        for a manually-matched Cetelem/Nubank transaction), so the interest/duty
+        accumulation is a no-op there -- everything else (live recount, closing)
+        applies uniformly. plan_ref is always known at plan-creation time now (see
+        ensure_plan_for_ref), so there's no backfill step here anymore.
         """
         plan = await self.get(plan_id)
         if plan is None:
             return None
-        if plan_ref and not plan.plan_ref:
-            plan.plan_ref = plan_ref
         if juros is not None:
             plan.total_interest_paid += juros
         if imposto_selo is not None:

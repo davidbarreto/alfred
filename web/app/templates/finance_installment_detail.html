@@ -38,6 +38,18 @@
       <div class="text-xs text-gray-400">Interest + duty paid</div>
       <div class="text-gray-800">€{{ (plan.total_interest_paid | float + plan.total_duty_paid | float) | money }}</div>
     </div>
+    {% if plan.original_amount is not none %}
+    <div>
+      <div class="text-xs text-gray-400">Original amount</div>
+      <div class="text-gray-800">€{{ plan.original_amount | float | money }}</div>
+    </div>
+    {% endif %}
+    {% if plan.plan_ref %}
+    <div>
+      <div class="text-xs text-gray-400">Plan reference</div>
+      <div class="text-gray-800">{{ plan.plan_ref }}</div>
+    </div>
+    {% endif %}
   </div>
 
   <div class="bg-white border border-gray-200 rounded-lg p-4">

@@ -275,6 +275,70 @@ class TestImportCommit:
         assert row["rule_pattern"] == "PINGO DOCE"
         assert "note" not in row
 
+    def test_builds_installment_plan_actions_and_superseding_row(self, client, mock_api):
+        mock_api["post"].return_value = {
+            "batch_id": 7, "inserted": 1, "skipped_duplicates": 0, "rules_created": 0
+        }
+
+        resp = client.post(
+            "/finance/import/commit",
+            json={
+                "account_id": "1",
+                "provider": "activobank_card_pdf",
+                "currency": "EUR",
+                "row_count": "1",
+                "include_0": "on",
+                "date_0": "2026-07-03",
+                "bank_description_0": "COMPRA 4681 Cars on Booking Amsterdam",
+                "amount_0": "-248.46",
+                "type_0": "expense",
+                "hash_0": "hash-super",
+                "supersedes_installment_plan_id_0": "55",
+                "plan_action_count": "1",
+                "plan_include_0": "on",
+                "plan_ref_0": "00024",
+                "plan_description_0": "COMPRA 4681 Cars on Booking Amsterdam",
+                "plan_total_installments_0": "3",
+                "plan_original_amount_0": "248.46",
+                "plan_matched_transaction_id_0": "200",
+            },
+        )
+
+        assert resp.status_code == 200
+        payload = mock_api["post"].call_args.kwargs["json"]
+        assert payload["rows"][0]["supersedes_installment_plan_id"] == 55
+        action = payload["installment_plan_actions"][0]
+        assert action == {
+            "plan_ref": "00024",
+            "description": "COMPRA 4681 Cars on Booking Amsterdam",
+            "total_installments": 3,
+            "original_amount": "248.46",
+            "matched_transaction_id": 200,
+        }
+
+    def test_already_tracked_plan_action_not_sent_without_checkbox(self, client, mock_api):
+        # already_tracked actions render no checkbox/hidden fields at all (see
+        # _finance_import_review.html), so plan_action_count entries missing
+        # plan_include_N are simply skipped.
+        mock_api["post"].return_value = {
+            "batch_id": 7, "inserted": 0, "skipped_duplicates": 0, "rules_created": 0
+        }
+
+        resp = client.post(
+            "/finance/import/commit",
+            json={
+                "account_id": "1",
+                "provider": "activobank_card_pdf",
+                "currency": "EUR",
+                "row_count": "0",
+                "plan_action_count": "1",
+            },
+        )
+
+        assert resp.status_code == 200
+        payload = mock_api["post"].call_args.kwargs["json"]
+        assert payload["installment_plan_actions"] == []
+
     def test_commit_failure_returns_error(self, client, mock_api):
         mock_api["post"].side_effect = httpx.HTTPError("boom")
 

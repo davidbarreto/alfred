@@ -81,26 +81,29 @@ class TestParseTextInstallments:
         result = _parse_text(_STATEMENT_TEXT, _PERIOD_START, _PERIOD_END, installments_only=True)
         assert len(result.installment_plans_opened) == 1
         signal = result.installment_plans_opened[0]
-        assert signal.description == "COMPRA 4681 SAMPLE SHOP A"
-        assert signal.amount == Decimal("-200.00")
-        assert signal.date_posted == date(2026, 5, 1)
-        assert signal.total_installments == 4
-        # Cross-referenced from the installment schedule table's own plano column
-        # (both its "00001/2" and "00001/3" rows resolve to the same prefix).
         assert signal.plan_ref == "00001"
+        assert signal.description == "COMPRA 4681 SAMPLE SHOP A"
+        assert signal.original_amount == Decimal("200.00")
+        # max(position) across the "00001/2" and "00001/3" rows -- the "Fracionada x4"
+        # text in movements is no longer consulted at all (see below).
+        assert signal.total_installments == 3
 
     def test_plan_open_signal_detected_in_full_mode_too(self):
         result = _parse_text(_STATEMENT_TEXT, _PERIOD_START, _PERIOD_END, installments_only=False)
         assert len(result.installment_plans_opened) == 1
 
-    def test_plan_ref_none_when_not_resolvable_from_schedule_table(self):
+    def test_plan_signal_detected_even_without_a_fracionada_line(self):
+        # Regression for the whole point of this redesign: a plan already a few
+        # months in (no "Fracionada" announcement in THIS statement's movements at
+        # all, since that line only ever appears once, in the long-gone opening
+        # month) is still detected purely from the installment schedule table.
         text = _STATEMENT_TEXT.replace(
-            "2026/05/01 2026/05/02 COMPRA 4681 SAMPLE SHOP A 200.00\nFracionada x4",
-            "2026/05/01 2026/05/02 COMPRA 4681 UNRELATED PURCHASE 75.00\nFracionada x2",
+            "2026/05/01 2026/05/02 COMPRA 4681 SAMPLE SHOP A 200.00\nFracionada x4 VIS\n", ""
         )
+        assert "Fracionada" not in text
         result = _parse_text(text, _PERIOD_START, _PERIOD_END, installments_only=True)
-        signal = next(s for s in result.installment_plans_opened if s.description == "COMPRA 4681 UNRELATED PURCHASE")
-        assert signal.plan_ref is None
+        assert len(result.installment_plans_opened) == 1
+        assert result.installment_plans_opened[0].plan_ref == "00001"
 
 
 class TestParseTextMovementsInstallmentsOnly:

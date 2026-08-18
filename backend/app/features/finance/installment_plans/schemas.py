@@ -16,6 +16,10 @@ class InstallmentPlanCreate(BaseModel):
     total_installments: int
     opened_date: date
     plan_ref: str | None = None
+    original_amount: Decimal | None = None
+    """The full, unamortized purchase price, when this plan has a lump-sum original
+    transaction to match/supersede (ActivoBank PDF-derived plans always have one; a
+    manually-created plan generally doesn't -- see InstallmentPlan.original_amount)."""
     # The matching rule created alongside the plan (see InstallmentPlanService) --
     # every plan is created together with an ImportRule that tags future matching
     # transactions with this plan's id, so there is exactly one mechanism ("a rule
@@ -38,6 +42,7 @@ class InstallmentPlanRead(BaseModel):
     captured_installments: int
     """Derived (COUNT of linked, non-zero-amount transactions), not a stored column."""
     plan_ref: str | None = None
+    original_amount: Decimal | None = None
     opened_date: date
     status: InstallmentPlanStatus
     total_interest_paid: Decimal

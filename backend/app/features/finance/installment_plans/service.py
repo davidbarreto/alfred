@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import logging
+from datetime import date
+from decimal import Decimal
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -21,6 +23,7 @@ def _to_read(plan: InstallmentPlan, captured: int) -> InstallmentPlanRead:
         total_installments=plan.total_installments,
         captured_installments=captured,
         plan_ref=plan.plan_ref,
+        original_amount=plan.original_amount,
         opened_date=plan.opened_date,
         status=plan.status,
         total_interest_paid=plan.total_interest_paid,
@@ -47,6 +50,7 @@ class InstallmentPlanService:
             total_installments=data.total_installments,
             opened_date=data.opened_date,
             plan_ref=data.plan_ref,
+            original_amount=data.original_amount,
         )
         await self._import_repo.create_rule(
             ImportRuleCreate(
@@ -61,6 +65,40 @@ class InstallmentPlanService:
             plan.id, plan.account_id, plan.total_installments,
         )
         return _to_read(plan, captured=0)
+
+    async def ensure_plan_for_ref(
+        self,
+        account_id: int,
+        plan_ref: str,
+        description: str,
+        total_installments: int,
+        original_amount: Decimal,
+        opened_date: date,
+    ) -> tuple[InstallmentPlanRead, bool]:
+        """Get-or-create by plan_ref, called for every distinct plan_ref seen in a PDF
+        import (any statement month, not just the plan's opening one -- see
+        ParsedInstallmentPlanSignal). Returns (plan, was_created) so the caller can
+        decide whether to attempt the one-time "find a match, else create a
+        placeholder" step, which only makes sense right when a plan is first seen.
+        """
+        existing = await self._repo.get_by_account_and_plan_ref(account_id, plan_ref)
+        if existing is not None:
+            found = await self._repo.get_with_captured_count(existing.id)
+            assert found is not None
+            return _to_read(*found), False
+        created = await self.create_plan_with_rule(
+            InstallmentPlanCreate(
+                account_id=account_id,
+                description=description,
+                total_installments=total_installments,
+                opened_date=opened_date,
+                plan_ref=plan_ref,
+                original_amount=original_amount,
+                pattern=plan_ref,
+                mode="auto",
+            )
+        )
+        return created, True
 
     async def get(self, plan_id: int) -> InstallmentPlanRead | None:
         found = await self._repo.get_with_captured_count(plan_id)

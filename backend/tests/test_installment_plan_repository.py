@@ -42,6 +42,7 @@ def _plan(**kwargs):
     p.description = kwargs.get("description", "COMPRA IKEA")
     p.total_installments = kwargs.get("total_installments", 3)
     p.plan_ref = kwargs.get("plan_ref", None)
+    p.original_amount = kwargs.get("original_amount", Decimal("428.83"))
     p.opened_date = kwargs.get("opened_date", date(2026, 7, 1))
     p.status = kwargs.get("status", "open")
     p.total_interest_paid = kwargs.get("total_interest_paid", Decimal("0"))
@@ -91,6 +92,21 @@ class TestGetOpenByAccountAndDescription:
         assert result is None
 
 
+class TestGetByAccountAndPlanRef:
+    async def test_found(self):
+        session = _make_session()
+        plan = _plan(plan_ref="00024")
+        session.execute.return_value = _scalar_first(plan)
+        result = await InstallmentPlanRepository(session).get_by_account_and_plan_ref(1, "00024")
+        assert result == plan
+
+    async def test_not_found(self):
+        session = _make_session()
+        session.execute.return_value = _scalar_first(None)
+        result = await InstallmentPlanRepository(session).get_by_account_and_plan_ref(1, "00024")
+        assert result is None
+
+
 class TestList:
     async def test_returns_plans_with_counts(self):
         session = _make_session()
@@ -115,15 +131,16 @@ class TestCreate:
         session.refresh.assert_awaited_once()
         assert plan is added
 
-    async def test_creates_with_plan_ref(self):
+    async def test_creates_with_plan_ref_and_original_amount(self):
         session = _make_session()
         repo = InstallmentPlanRepository(session)
         await repo.create(
             account_id=1, description="COMPRA IKEA", total_installments=3,
-            opened_date=date(2026, 7, 1), plan_ref="00024",
+            opened_date=date(2026, 7, 1), plan_ref="00024", original_amount=Decimal("428.83"),
         )
         added = session.add.call_args[0][0]
         assert added.plan_ref == "00024"
+        assert added.original_amount == Decimal("428.83")
 
 
 class TestUpdate:
@@ -157,38 +174,24 @@ class TestDelete:
 
 
 class TestRecordCapture:
-    async def test_accumulates_interest_and_duty_and_sets_plan_ref(self):
+    async def test_accumulates_interest_and_duty(self):
         session = _make_session()
         plan = _plan(total_installments=3)
         session.execute.side_effect = [_scalar_first(plan), _scalar(1)]
 
         result = await InstallmentPlanRepository(session).record_capture(
-            1, plan_ref="00024", juros=Decimal("0.81"), imposto_selo=Decimal("0.03")
+            1, juros=Decimal("0.81"), imposto_selo=Decimal("0.03")
         )
 
-        assert result.plan_ref == "00024"
         assert result.total_interest_paid == Decimal("0.81")
         assert result.total_duty_paid == Decimal("0.03")
-
-    async def test_does_not_overwrite_existing_plan_ref(self):
-        session = _make_session()
-        plan = _plan(plan_ref="00024", total_installments=3)
-        session.execute.side_effect = [_scalar_first(plan), _scalar(1)]
-
-        result = await InstallmentPlanRepository(session).record_capture(
-            1, plan_ref="99999", juros=None, imposto_selo=None
-        )
-
-        assert result.plan_ref == "00024"
 
     async def test_closes_plan_once_captured_reaches_total(self):
         session = _make_session()
         plan = _plan(total_installments=2, status="open")
         session.execute.side_effect = [_scalar_first(plan), _scalar(2)]
 
-        result = await InstallmentPlanRepository(session).record_capture(
-            1, plan_ref=None, juros=None, imposto_selo=None
-        )
+        result = await InstallmentPlanRepository(session).record_capture(1, juros=None, imposto_selo=None)
 
         assert result.status == "closed"
 
@@ -197,16 +200,12 @@ class TestRecordCapture:
         plan = _plan(total_installments=3, status="open")
         session.execute.side_effect = [_scalar_first(plan), _scalar(1)]
 
-        result = await InstallmentPlanRepository(session).record_capture(
-            1, plan_ref=None, juros=None, imposto_selo=None
-        )
+        result = await InstallmentPlanRepository(session).record_capture(1, juros=None, imposto_selo=None)
 
         assert result.status == "open"
 
     async def test_none_when_plan_not_found(self):
         session = _make_session()
         session.execute.return_value = _scalar_first(None)
-        result = await InstallmentPlanRepository(session).record_capture(
-            999, plan_ref=None, juros=None, imposto_selo=None
-        )
+        result = await InstallmentPlanRepository(session).record_capture(999, juros=None, imposto_selo=None)
         assert result is None

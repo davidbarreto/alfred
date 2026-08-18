@@ -10,6 +10,7 @@ def _plan(**kwargs):
         "total_installments": 12,
         "captured_installments": 3,
         "plan_ref": None,
+        "original_amount": None,
         "opened_date": "2026-06-01",
         "status": "open",
         "total_interest_paid": "1.50",

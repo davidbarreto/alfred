@@ -24,14 +24,20 @@ Installment ("fracionado") purchases -- the split-payment plan:
 - A fracionado purchase posts its FULL price once in ``DETALHE DOS
   MOVIMENTOS``, flagged by a "Fracionada xN" line right below it. That full
   amount is never actually charged in one go -- it's replaced by the real
-  monthly installment. That row is skipped entirely (in both modes), and
-  instead recorded as a ``ParsedInstallmentPlanSignal`` (description, amount,
-  date, total installments) for the import service to create/track a plan
-  and supersede whatever transaction that full price already became
-  (typically via the daily CSV import). The signal also carries a
-  ``plan_ref`` (e.g. "00024"), cross-referenced from the installment
-  schedule table below, when resolvable -- see that dataclass's docstring
-  for why the bare description alone isn't a safe match pattern.
+  monthly installment, so that row is always skipped entirely (in both
+  modes) and never becomes a transaction.
+- Plan identity/tracking data comes entirely from ``DETALHE DE TRANSAÇÕES
+  COM PAGAMENTO FRACIONADO`` (the schedule table below), not from the
+  "Fracionada xN" line -- one ``ParsedInstallmentPlanSignal`` per distinct
+  ``plan_ref`` (e.g. "00024") seen in that table, carrying its description,
+  original purchase price ("Valor Transação"), and total_installments
+  (max installment position seen for that ref). The schedule table always
+  shows a plan's full *remaining* tail in one statement (confirmed against
+  real exports -- a plan already a few months in still lists every
+  installment through completion, not just the next one or two), so this
+  resolves the same way whether the statement covers the plan's opening
+  month or one much later, with no dependency on catching the one-time
+  purchase line in a different section of the same PDF.
 - The real monthly charge is Capital + Juros + Imposto do Selo (together
   called "Mensalidade") from ``DETALHE DE TRANSAÇÕES COM PAGAMENTO
   FRACIONADO``. That section is a full projection of ALL remaining
@@ -157,17 +163,21 @@ class _ParseResult:
     installment_plans_opened: list[ParsedInstallmentPlanSignal]
 
 
+@dataclass
+class _PlanInfo:
+    description: str
+    original_amount: Decimal
+    max_position: int
+
+
 def _parse_text(
     text: str, period_start: date | None, period_end: date | None, installments_only: bool
 ) -> _ParseResult:
     rows: list[ParsedRow] = []
-    plans_opened: list[ParsedInstallmentPlanSignal] = []
-    # (description, original purchase price) -> plan reference (e.g. "00024"),
-    # populated from every installment-table row seen regardless of period filtering
-    # (the table always lists a plan's current+future installments, including a
-    # brand-new plan's first one, even when it falls outside this statement's own
-    # period) -- used to disambiguate a Fracionada signal's auto-created rule pattern.
-    plan_ref_lookup: dict[tuple[str, Decimal], str] = {}
+    # plan_ref -> accumulated info, built from every installment-table row seen
+    # regardless of period filtering (see module docstring: the table always shows a
+    # plan's full remaining tail in one statement).
+    plan_info: dict[str, _PlanInfo] = {}
     lines = [line.strip() for line in text.splitlines()]
     n = len(lines)
     state = "none"
@@ -196,8 +206,16 @@ def _parse_text(
                 parts = lines[i + 1].split()
                 if len(parts) == 8:
                     valor_transacao = _parse_amount(parts[0])
-                    if valor_transacao is not None:
-                        plan_ref_lookup[(description, valor_transacao)] = parts[3].split("/")[0]
+                    plano_parts = parts[3].split("/")
+                    if valor_transacao is not None and len(plano_parts) == 2 and plano_parts[1].isdigit():
+                        ref, position = plano_parts[0], int(plano_parts[1])
+                        existing = plan_info.get(ref)
+                        if existing is None:
+                            plan_info[ref] = _PlanInfo(
+                                description=description, original_amount=valor_transacao, max_position=position
+                            )
+                        else:
+                            existing.max_position = max(existing.max_position, position)
                 if row_date is not None and len(parts) == 8 and _within_period(
                     row_date, period_start, period_end
                 ):
@@ -234,23 +252,11 @@ def _parse_text(
             posted_raw, value_raw, description, amount_raw = match.groups()
 
             next_line = lines[i + 1] if i + 1 < n else ""
-            fracionada_match = _FRACIONADA_RE.match(next_line)
-            if fracionada_match is not None:
-                date_posted = _parse_date(posted_raw)
-                amount = _parse_amount(amount_raw)
-                clean_description = description.strip()
-                if clean_description.startswith(">"):
-                    clean_description = clean_description[1:].strip()
-                if date_posted is not None and amount is not None:
-                    plans_opened.append(
-                        ParsedInstallmentPlanSignal(
-                            description=clean_description,
-                            amount=-amount,
-                            date_posted=date_posted,
-                            total_installments=int(fracionada_match.group(1)),
-                            plan_ref=plan_ref_lookup.get((clean_description, amount)),
-                        )
-                    )
+            if _FRACIONADA_RE.match(next_line) is not None:
+                # The full purchase price is never actually charged in one go -- it's
+                # replaced by the real monthly installment(s), so this row is always
+                # skipped (both modes). Plan identity/tracking comes from the
+                # installment schedule table instead (see module docstring).
                 i += 1
                 continue
 
@@ -273,6 +279,15 @@ def _parse_text(
 
         i += 1
 
+    plans_opened = [
+        ParsedInstallmentPlanSignal(
+            plan_ref=ref,
+            description=info.description,
+            original_amount=info.original_amount,
+            total_installments=info.max_position,
+        )
+        for ref, info in plan_info.items()
+    ]
     return _ParseResult(rows=rows, installment_plans_opened=plans_opened)
 
 

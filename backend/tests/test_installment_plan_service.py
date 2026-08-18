@@ -15,6 +15,7 @@ def _plan(**kwargs):
     p.description = kwargs.get("description", "COMPRA IKEA")
     p.total_installments = kwargs.get("total_installments", 3)
     p.plan_ref = kwargs.get("plan_ref", None)
+    p.original_amount = kwargs.get("original_amount", Decimal("428.83"))
     p.opened_date = kwargs.get("opened_date", date(2026, 7, 1))
     p.status = kwargs.get("status", "open")
     p.total_interest_paid = kwargs.get("total_interest_paid", Decimal("0"))
@@ -50,7 +51,7 @@ class TestCreatePlanWithRule:
 
         service._repo.create.assert_awaited_once_with(
             account_id=1, description="COMPRA IKEA", total_installments=3, opened_date=date(2026, 7, 1),
-            plan_ref=None,
+            plan_ref=None, original_amount=None,
         )
         service._import_repo.create_rule.assert_awaited_once()
         rule_data = service._import_repo.create_rule.call_args[0][0]
@@ -58,6 +59,43 @@ class TestCreatePlanWithRule:
         assert rule_data.installment_plan_id == plan.id
         assert result.id == plan.id
         assert result.captured_installments == 0
+
+
+class TestEnsurePlanForRef:
+    async def test_returns_existing_plan_without_creating(self):
+        service = _service()
+        existing = _plan(id=7, plan_ref="00024")
+        service._repo.get_by_account_and_plan_ref.return_value = existing
+        service._repo.get_with_captured_count.return_value = (existing, 2)
+
+        plan, created = await service.ensure_plan_for_ref(
+            account_id=1, plan_ref="00024", description="COMPRA IKEA",
+            total_installments=3, original_amount=Decimal("428.83"), opened_date=date(2026, 7, 1),
+        )
+
+        assert created is False
+        assert plan.id == 7
+        service._repo.create.assert_not_awaited()
+
+    async def test_creates_new_plan_when_not_found(self):
+        service = _service()
+        service._repo.get_by_account_and_plan_ref.return_value = None
+        created_plan = _plan(id=9, plan_ref="00024")
+        service._repo.create.return_value = created_plan
+
+        plan, created = await service.ensure_plan_for_ref(
+            account_id=1, plan_ref="00024", description="COMPRA IKEA",
+            total_installments=3, original_amount=Decimal("428.83"), opened_date=date(2026, 7, 1),
+        )
+
+        assert created is True
+        assert plan.id == 9
+        service._repo.create.assert_awaited_once_with(
+            account_id=1, description="COMPRA IKEA", total_installments=3,
+            opened_date=date(2026, 7, 1), plan_ref="00024", original_amount=Decimal("428.83"),
+        )
+        rule_data = service._import_repo.create_rule.call_args[0][0]
+        assert rule_data.pattern == "00024"
 
 
 class TestGet:

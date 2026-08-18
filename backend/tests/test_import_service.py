@@ -122,11 +122,13 @@ def _service(statement: ParsedStatement | None = None, llm=None, files=None) -> 
     service._session.add = MagicMock()
     service._txn_repo.get_existing_dedup_hashes.return_value = set()
     service._txn_repo.get_existing_keys.return_value = set()
-    service._txn_repo.find_by_account_date_description_amount.return_value = None
+    service._txn_repo.find_unmatched_transaction.return_value = None
+    service._txn_repo.find_open_plan_match.return_value = None
     service._category_repo.list.return_value = []
     service._account_repo.list.return_value = []
     service._account_repo.get.return_value = None
     service._installment_plan_repo.get_open_by_account_and_description.return_value = None
+    service._installment_plan_repo.get_by_account_and_plan_ref.return_value = None
     service._fx.convert_to_eur.return_value = None
     service._embeddings.search.return_value = []
     return service
@@ -560,6 +562,8 @@ def _commit_request(rows: list[ImportCommitRow], installment_plan_actions=None) 
         provider="fakebank",
         source_file="x.csv",
         currency="EUR",
+        period_start=date(2026, 7, 1),
+        period_end=date(2026, 7, 31),
         closing_balance=Decimal("100.00"),
         rows=rows,
         installment_plan_actions=installment_plan_actions or [],
@@ -1482,60 +1486,106 @@ class TestCommitGrouped:
         service._account_repo.adjust_balance.assert_awaited_once_with(2, Decimal("50.00"))
 
 
+def _plan_signal(**kwargs) -> ParsedInstallmentPlanSignal:
+    defaults = dict(
+        plan_ref="00024",
+        description="COMPRA 4681 Cars on Booking Amsterdam",
+        original_amount=Decimal("248.46"),
+        total_installments=3,
+    )
+    defaults.update(kwargs)
+    return ParsedInstallmentPlanSignal(**defaults)
+
+
 class TestBuildInstallmentPlanActions:
-    """Regression coverage for a real bug: Transaction.amount stores expenses as an
-    absolute value (sign lives in .type), while a plan-open signal's amount uses the
-    signed ParsedRow convention (negative = expense) -- the DB lookup must convert,
-    or a genuinely-matching lump-sum transaction is never found."""
+    """Preview-time (read-only) surfacing of what committing would do for each
+    plan_ref in the PDF's own schedule table."""
 
     @pytest.mark.asyncio
-    async def test_looks_up_matched_transaction_by_absolute_amount(self):
-        signal = ParsedInstallmentPlanSignal(
-            description="COMPRA 4681 Cars on Booking Amsterdam",
-            amount=Decimal("-248.46"),
-            date_posted=date(2026, 7, 3),
-            total_installments=3,
-        )
+    async def test_new_plan_looks_up_unmatched_transaction_by_description_and_amount(self):
+        signal = _plan_signal()
         service = _service(_statement([], installment_plans_opened=[signal]))
+        service._installment_plan_repo.get_by_account_and_plan_ref.return_value = None
 
         result = await service.preview(1, "x.csv", b"data")
 
-        service._txn_repo.find_by_account_date_description_amount.assert_awaited_once_with(
-            1, date(2026, 7, 3), "COMPRA 4681 Cars on Booking Amsterdam", Decimal("248.46")
+        service._txn_repo.find_unmatched_transaction.assert_awaited_once_with(
+            1, "COMPRA 4681 Cars on Booking Amsterdam", Decimal("248.46")
         )
-        assert result.installment_plan_actions[0].total_installments == 3
+        action = result.installment_plan_actions[0]
+        assert action.plan_ref == "00024"
+        assert action.total_installments == 3
+        assert action.original_amount == Decimal("248.46")
+        assert action.already_tracked is False
 
     @pytest.mark.asyncio
-    async def test_plan_ref_carried_into_action(self):
-        signal = ParsedInstallmentPlanSignal(
-            description="COMPRA 4681 Cars on Booking Amsterdam",
-            amount=Decimal("-248.46"),
-            date_posted=date(2026, 7, 3),
-            total_installments=3,
-            plan_ref="00024",
-        )
+    async def test_already_tracked_plan_skips_the_match_lookup(self):
+        # Matching/placeholder handling only ever happens once, right when a plan is
+        # first created -- an already-tracked plan_ref needs no further DB lookup here.
+        signal = _plan_signal()
         service = _service(_statement([], installment_plans_opened=[signal]))
+        service._installment_plan_repo.get_by_account_and_plan_ref.return_value = MagicMock()
 
         result = await service.preview(1, "x.csv", b"data")
 
-        assert result.installment_plan_actions[0].plan_ref == "00024"
+        service._txn_repo.find_unmatched_transaction.assert_not_awaited()
+        assert result.installment_plan_actions[0].already_tracked is True
 
     @pytest.mark.asyncio
     async def test_matched_transaction_surfaced_in_action(self):
-        signal = ParsedInstallmentPlanSignal(
-            description="COMPRA 4681 Cars on Booking Amsterdam",
-            amount=Decimal("-248.46"),
-            date_posted=date(2026, 7, 3),
-            total_installments=3,
-        )
+        signal = _plan_signal()
         matched = MagicMock(id=22, amount=Decimal("248.46"), bank_description="COMPRA 4681 Cars on Booking Amsterdam")
         matched.date.date.return_value = date(2026, 7, 3)
         service = _service(_statement([], installment_plans_opened=[signal]))
-        service._txn_repo.find_by_account_date_description_amount.return_value = matched
+        service._installment_plan_repo.get_by_account_and_plan_ref.return_value = None
+        service._txn_repo.find_unmatched_transaction.return_value = matched
 
         result = await service.preview(1, "x.csv", b"data")
 
         assert result.installment_plan_actions[0].matched_transaction_id == 22
+
+
+class TestApplyInstallmentPlanRowMatches:
+    """The generic, provider-agnostic check: does a plain new row match an already-
+    open plan's original lump sum? This is what makes matching independent of import
+    order -- a CSV row can be flagged this way whether the PDF that created the plan
+    ran before or after it."""
+
+    @pytest.mark.asyncio
+    async def test_new_row_matching_open_plan_is_flagged(self):
+        rows = [_row(raw_description="COMPRA 4681 Cars on Booking Amsterdam", amount=Decimal("-248.46"))]
+        service = _service(_statement(rows))
+        matched_plan = MagicMock(id=55)
+        service._txn_repo.find_open_plan_match.return_value = matched_plan
+
+        result = await service.preview(1, "x.csv", b"data")
+
+        service._txn_repo.find_open_plan_match.assert_awaited_once_with(
+            1, "COMPRA 4681 Cars on Booking Amsterdam", Decimal("248.46")
+        )
+        assert result.rows[0].supersedes_installment_plan_id == 55
+
+    @pytest.mark.asyncio
+    async def test_no_matching_plan_leaves_field_unset(self):
+        rows = [_row(raw_description="COMPRA CONTINENTE", amount=Decimal("-50.00"))]
+        service = _service(_statement(rows))
+        service._txn_repo.find_open_plan_match.return_value = None
+
+        result = await service.preview(1, "x.csv", b"data")
+
+        assert result.rows[0].supersedes_installment_plan_id is None
+
+    @pytest.mark.asyncio
+    async def test_duplicate_rows_are_not_checked(self):
+        rows = [_row()]
+        service = _service(_statement(rows))
+        service._txn_repo.get_existing_dedup_hashes.return_value = {
+            _compute_dedup_hash(1, rows[0], 1)
+        }
+
+        await service.preview(1, "x.csv", b"data")
+
+        service._txn_repo.find_open_plan_match.assert_not_awaited()
 
 
 class TestApplyRulesInstallmentPlan:
@@ -1568,8 +1618,21 @@ class TestApplyRulesInstallmentPlan:
         assert result.rows[0].installment_plan_id is None
 
 
+def _plan_action(**kwargs) -> InstallmentPlanActionCommit:
+    defaults = dict(
+        plan_ref="00024",
+        description="COMPRA 4681 Cars on Booking Amsterdam",
+        total_installments=3,
+        original_amount=Decimal("248.46"),
+        already_tracked=False,
+        matched_transaction_id=None,
+    )
+    defaults.update(kwargs)
+    return InstallmentPlanActionCommit(**defaults)
+
+
 class TestApplyInstallmentPlanActions:
-    def _prepare(self, service: ImportService) -> None:
+    def _prepare(self, service: ImportService, created: bool = True) -> MagicMock:
         batch = ImportBatch()
         batch.id = 7
         service._repo.add_batch.return_value = batch
@@ -1579,103 +1642,80 @@ class TestApplyInstallmentPlanActions:
         )
         plan = MagicMock()
         plan.id = 55
-        service._installment_plans.create_plan_with_rule.return_value = plan
+        service._installment_plans.ensure_plan_for_ref.return_value = (plan, created)
+        return plan
 
     @pytest.mark.asyncio
     async def test_creates_plan_and_supersedes_matched_transaction(self):
         service = _service()
         self._prepare(service)
-        original = MagicMock(id=200, amount=Decimal("-248.46"), currency="EUR", note=None)
+        original = MagicMock(id=200, amount=Decimal("-248.46"), currency="EUR", note=None, installment_plan_id=None)
         service._txn_repo.get.return_value = original
-        action = InstallmentPlanActionCommit(
-            description="COMPRA 4681 Cars on Booking Amsterdam",
-            total_installments=3,
-            opened_date=date(2026, 7, 3),
-            pattern="Cars on Booking Amsterdam",
-            matched_transaction_id=200,
-        )
+        action = _plan_action(matched_transaction_id=200)
 
         await service.commit(_commit_request([], installment_plan_actions=[action]))
 
-        service._installment_plans.create_plan_with_rule.assert_awaited_once()
+        service._installment_plans.ensure_plan_for_ref.assert_awaited_once_with(
+            account_id=1, plan_ref="00024", description="COMPRA 4681 Cars on Booking Amsterdam",
+            total_installments=3, original_amount=Decimal("248.46"), opened_date=date(2026, 7, 1),
+        )
         assert original.amount == Decimal("0.00")
         assert "Original amount -248.46" in original.note
         assert original.installment_plan_id == 55
 
     @pytest.mark.asyncio
-    async def test_plan_ref_preferred_over_bare_description_as_rule_pattern(self):
-        # Regression: the bare description matches both the original lump-sum
-        # purchase AND every future installment row, so a rule built from it would
-        # wrongly tag a later-imported original as a captured installment. The
-        # plan's own reference (unique to future rows) must be preferred.
+    async def test_no_match_creates_placeholder(self):
         service = _service()
         self._prepare(service)
-        action = InstallmentPlanActionCommit(
-            description="COMPRA 4681 Cars on Booking Amsterdam",
-            total_installments=3,
-            opened_date=date(2026, 7, 3),
-            pattern="COMPRA 4681 Cars on Booking Amsterdam",
-            plan_ref="00024",
-            matched_transaction_id=None,
-        )
+        action = _plan_action(matched_transaction_id=None)
 
         await service.commit(_commit_request([], installment_plan_actions=[action]))
 
-        create_data = service._installment_plans.create_plan_with_rule.call_args[0][0]
-        assert create_data.pattern == "00024"
-        assert create_data.plan_ref == "00024"
-
-    @pytest.mark.asyncio
-    async def test_falls_back_to_pattern_when_no_plan_ref(self):
-        service = _service()
-        self._prepare(service)
-        action = InstallmentPlanActionCommit(
-            description="COMPRA 4681 New Plan",
-            total_installments=3,
-            opened_date=date(2026, 7, 3),
-            pattern="New Plan",
-            plan_ref=None,
-            matched_transaction_id=None,
-        )
-
-        await service.commit(_commit_request([], installment_plan_actions=[action]))
-
-        create_data = service._installment_plans.create_plan_with_rule.call_args[0][0]
-        assert create_data.pattern == "New Plan"
-
-    @pytest.mark.asyncio
-    async def test_no_match_still_creates_plan_without_superseding(self):
-        service = _service()
-        self._prepare(service)
-        action = InstallmentPlanActionCommit(
-            description="COMPRA 4681 New Plan",
-            total_installments=3,
-            opened_date=date(2026, 7, 3),
-            pattern="New Plan",
-            matched_transaction_id=None,
-        )
-
-        await service.commit(_commit_request([], installment_plan_actions=[action]))
-
-        service._installment_plans.create_plan_with_rule.assert_awaited_once()
         service._txn_repo.get.assert_not_awaited()
+        service._txn_repo.create_placeholder_for_plan.assert_awaited_once()
+        call_kwargs = service._txn_repo.create_placeholder_for_plan.call_args.kwargs
+        assert call_kwargs["account_id"] == 1
+        assert call_kwargs["plan_id"] == 55
+        assert call_kwargs["description"] == "COMPRA 4681 Cars on Booking Amsterdam"
+        assert call_kwargs["txn_date"] == date(2026, 7, 1)
+        assert "Placeholder" in call_kwargs["note"]
 
     @pytest.mark.asyncio
-    async def test_existing_open_plan_is_not_recreated(self):
+    async def test_already_tracked_action_is_a_no_op(self):
         service = _service()
         self._prepare(service)
-        service._installment_plan_repo.get_open_by_account_and_description.return_value = MagicMock()
-        action = InstallmentPlanActionCommit(
-            description="COMPRA 4681 Cars on Booking Amsterdam",
-            total_installments=3,
-            opened_date=date(2026, 7, 3),
-            pattern="Cars on Booking Amsterdam",
-            matched_transaction_id=200,
-        )
+        action = _plan_action(already_tracked=True, matched_transaction_id=200)
 
         await service.commit(_commit_request([], installment_plan_actions=[action]))
 
-        service._installment_plans.create_plan_with_rule.assert_not_awaited()
+        service._installment_plans.ensure_plan_for_ref.assert_not_awaited()
+        service._txn_repo.get.assert_not_awaited()
+        service._txn_repo.create_placeholder_for_plan.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_race_where_plan_already_existed_skips_further_action(self):
+        # ensure_plan_for_ref reports created=False (another request created this
+        # plan_ref between preview and commit) -- nothing left to do.
+        service = _service()
+        self._prepare(service, created=False)
+        action = _plan_action(matched_transaction_id=200)
+
+        await service.commit(_commit_request([], installment_plan_actions=[action]))
+
+        service._txn_repo.get.assert_not_awaited()
+        service._txn_repo.create_placeholder_for_plan.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_already_zeroed_transaction_is_not_matched_again(self):
+        service = _service()
+        self._prepare(service)
+        already_matched = MagicMock(id=200, amount=Decimal("0.00"), installment_plan_id=99)
+        service._txn_repo.get.return_value = already_matched
+        action = _plan_action(matched_transaction_id=200)
+
+        await service.commit(_commit_request([], installment_plan_actions=[action]))
+
+        assert already_matched.installment_plan_id == 99  # untouched
 
 
 class TestCommitRecordsInstallmentCapture:
@@ -1703,7 +1743,7 @@ class TestCommitRecordsInstallmentCapture:
         await service.commit(_commit_request(rows))
 
         service._installment_plan_repo.record_capture.assert_awaited_once_with(
-            42, plan_ref=None, juros=Decimal("1.00"), imposto_selo=Decimal("0.20")
+            42, juros=Decimal("1.00"), imposto_selo=Decimal("0.20")
         )
 
     @pytest.mark.asyncio
@@ -1715,3 +1755,65 @@ class TestCommitRecordsInstallmentCapture:
         await service.commit(_commit_request(rows))
 
         service._installment_plan_repo.record_capture.assert_not_awaited()
+
+
+class TestCommitInsertsSupersedingRowAtZero:
+    def _prepare(self, service: ImportService) -> None:
+        batch = ImportBatch()
+        batch.id = 7
+        service._repo.add_batch.return_value = batch
+        service._txn_repo.add.side_effect = lambda data, amount_eur=None: MagicMock(
+            id=100, category_id=data.category_id, type=data.type,
+            bank_description=data.bank_description, amount=data.amount, amount_eur=amount_eur,
+        )
+
+    @pytest.mark.asyncio
+    async def test_row_is_inserted_at_zero_with_note(self):
+        service = _service()
+        self._prepare(service)
+        rows = [_commit_row(amount=Decimal("-248.46"), supersedes_installment_plan_id=55)]
+
+        await service.commit(_commit_request(rows))
+
+        created = service._txn_repo.add.call_args.args[0]
+        assert created.amount == Decimal("0.00")
+        assert "Original amount -248.46" in created.note
+        assert created.installment_plan_id == 55
+
+    @pytest.mark.asyncio
+    async def test_placeholder_deleted_after_superseding_row_inserted(self):
+        service = _service()
+        self._prepare(service)
+        rows = [_commit_row(amount=Decimal("-248.46"), supersedes_installment_plan_id=55)]
+
+        await service.commit(_commit_request(rows))
+
+        service._txn_repo.delete_placeholder_for_plan.assert_awaited_once_with(55)
+
+    @pytest.mark.asyncio
+    async def test_does_not_also_call_record_capture(self):
+        # A superseded original is never a "captured installment" -- record_capture
+        # only applies to installment_plan_id (future installments), not
+        # supersedes_installment_plan_id (the original purchase).
+        service = _service()
+        self._prepare(service)
+        rows = [_commit_row(amount=Decimal("-248.46"), supersedes_installment_plan_id=55)]
+
+        await service.commit(_commit_request(rows))
+
+        service._installment_plan_repo.record_capture.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_balance_delta_excludes_superseding_row(self):
+        service = _service()
+        self._prepare(service)
+        rows = [
+            _commit_row(deduplication_hash="h1", amount=Decimal("-248.46"), supersedes_installment_plan_id=55),
+            _commit_row(deduplication_hash="h2", amount=Decimal("-10.00")),
+        ]
+
+        await service.commit(_commit_request(rows))
+
+        # Only the ordinary -10.00 row should move the balance; the superseded
+        # original contributes 0, not its real -248.46 amount.
+        service._account_repo.adjust_balance.assert_awaited_once_with(1, Decimal("-10.00"))

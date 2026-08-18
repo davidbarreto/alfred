@@ -1,12 +1,13 @@
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, datetime
 from decimal import Decimal
 from typing import Any
 from sqlalchemy import and_, case, func, or_, select, update
 from sqlalchemy.orm import aliased
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.features.finance.installment_plans.tables import InstallmentPlan
 from app.features.finance.transactions.tables import Transaction
 from app.features.finance.transactions.schemas import (
     GLOBAL_CURRENCY,
@@ -15,6 +16,8 @@ from app.features.finance.transactions.schemas import (
     TransactionUpdate,
     TransactionFilters,
 )
+
+_PLACEHOLDER_NOTE_PREFIX = "Placeholder"
 
 
 def _amount_column(currency: str):
@@ -279,22 +282,97 @@ class TransactionRepository:
         )
         return {(row[0].date(), row[1], row[2]) for row in result.all()}
 
-    async def find_by_account_date_description_amount(
-        self, account_id: int, txn_date: date, description: str, amount: Decimal
+    async def find_unmatched_transaction(
+        self, account_id: int, bank_description: str, amount: Decimal
     ) -> Transaction | None:
-        """Find the already-imported lump-sum transaction a newly-detected
-        installment plan should supersede. Restricted to amount != 0 so an
-        already-superseded (zeroed) row is never matched a second time."""
+        """A pre-existing, not-yet-linked transaction matching (account, description,
+        amount) -- used right when a plan is first created (see
+        InstallmentPlanService.ensure_plan_for_ref) to check whether its original
+        lump-sum purchase was already imported earlier (e.g. by a prior CSV import).
+        No date constraint, for the same reason as find_open_plan_match below."""
         result = await self._session.execute(
             select(Transaction).where(
                 Transaction.account_id == account_id,
-                func.date(Transaction.date) == txn_date,
-                Transaction.bank_description == description,
+                Transaction.bank_description == bank_description,
                 Transaction.amount == amount,
                 Transaction.amount != 0,
+                Transaction.installment_plan_id.is_(None),
             )
         )
         return result.scalars().first()
+
+    async def find_open_plan_match(
+        self, account_id: int, bank_description: str, amount: Decimal
+    ) -> InstallmentPlan | None:
+        """An open installment plan whose original lump-sum purchase this row could
+        be, matched by (account, description, original_amount) -- no date constraint,
+        since a plan created retroactively (first seen mid-life, not at its opening
+        month) has no reliable original purchase date to constrain by. Skips plans
+        that already have their real original matched (a non-placeholder zeroed
+        transaction already linked); a plan with only a placeholder, or nothing yet,
+        is still eligible. Runs for every newly-parsed row of every import (not just
+        PDF-sourced ones), so a CSV import landing before OR after the PDF that
+        created the plan both resolve the same way.
+        """
+        already_matched = (
+            select(Transaction.id)
+            .where(
+                Transaction.installment_plan_id == InstallmentPlan.id,
+                Transaction.amount == 0,
+                or_(
+                    Transaction.note.is_(None),
+                    ~Transaction.note.like(f"{_PLACEHOLDER_NOTE_PREFIX}%"),
+                ),
+            )
+            .correlate(InstallmentPlan)
+            .exists()
+        )
+        result = await self._session.execute(
+            select(InstallmentPlan).where(
+                InstallmentPlan.account_id == account_id,
+                InstallmentPlan.status == "open",
+                InstallmentPlan.original_amount.isnot(None),
+                InstallmentPlan.original_amount == amount,
+                InstallmentPlan.description == bank_description,
+                ~already_matched,
+            )
+        )
+        return result.scalars().first()
+
+    async def create_placeholder_for_plan(
+        self, account_id: int, plan_id: int, description: str, txn_date: date, note: str
+    ) -> Transaction:
+        """A zeroed anchor transaction for a plan whose original purchase hasn't been
+        matched to any imported transaction yet, so the plan always has something to
+        show on its transaction list. Deleted automatically once a real match is
+        found (see delete_placeholder_for_plan)."""
+        placeholder = Transaction(
+            account_id=account_id,
+            date=datetime.combine(txn_date, datetime.min.time()),
+            amount=Decimal("0.00"),
+            currency="EUR",
+            type="expense",
+            description=description,
+            note=note,
+            installment_plan_id=plan_id,
+        )
+        self._session.add(placeholder)
+        await self._session.commit()
+        await self._session.refresh(placeholder)
+        return placeholder
+
+    async def delete_placeholder_for_plan(self, plan_id: int) -> None:
+        result = await self._session.execute(
+            select(Transaction).where(
+                Transaction.installment_plan_id == plan_id,
+                Transaction.amount == 0,
+                Transaction.note.like(f"{_PLACEHOLDER_NOTE_PREFIX}%"),
+            )
+        )
+        placeholder = result.scalars().first()
+        if placeholder is not None:
+            await self._session.delete(placeholder)
+            await self._session.commit()
 
     async def get_mirror(self, source_transaction_id: int) -> Transaction | None:
         result = await self._session.execute(

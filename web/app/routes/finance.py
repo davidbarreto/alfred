@@ -1411,6 +1411,9 @@ async def import_commit(request: Request):
         installment_duty = _form_value(form, f"installment_duty_{i}")
         if installment_duty:
             row["installment_duty"] = installment_duty
+        supersedes_installment_plan_id = _form_value(form, f"supersedes_installment_plan_id_{i}")
+        if supersedes_installment_plan_id:
+            row["supersedes_installment_plan_id"] = int(supersedes_installment_plan_id)
         if f"save_rule_{i}" in form:
             pattern = _form_value(form, f"rule_pattern_{i}").strip()
             if pattern:
@@ -1427,14 +1430,11 @@ async def import_commit(request: Request):
         if f"plan_include_{j}" not in form:
             continue
         action: dict = {
+            "plan_ref": _form_value(form, f"plan_ref_{j}"),
             "description": _form_value(form, f"plan_description_{j}"),
             "total_installments": int(_form_value(form, f"plan_total_installments_{j}", "0") or "0"),
-            "opened_date": _form_value(form, f"plan_opened_date_{j}"),
-            "pattern": _form_value(form, f"plan_pattern_{j}"),
+            "original_amount": _form_value(form, f"plan_original_amount_{j}"),
         }
-        plan_ref = _form_value(form, f"plan_ref_{j}")
-        if plan_ref:
-            action["plan_ref"] = plan_ref
         matched_transaction_id = _form_value(form, f"plan_matched_transaction_id_{j}")
         if matched_transaction_id:
             action["matched_transaction_id"] = int(matched_transaction_id)

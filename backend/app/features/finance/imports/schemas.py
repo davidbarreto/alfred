@@ -103,25 +103,34 @@ class ImportPreviewRow(BaseModel):
     review_reasons: list[ReviewReason] = Field(default_factory=list)
     installment_plan_id: int | None = None
     """Set by a matching ImportRule (see _apply_rules) -- links this row's eventual
-    transaction to an installment plan. Independent of installment_juros/duty below,
-    which only ever come from the ActivoBank PDF parser's own Capital-installment rows."""
+    transaction to an installment plan (a real captured installment, inserted at its
+    own amount). Independent of installment_juros/duty below, which only ever come
+    from the ActivoBank PDF parser's own Capital-installment rows."""
     installment_juros: Decimal | None = None
     installment_duty: Decimal | None = None
+    supersedes_installment_plan_id: int | None = None
+    """Set when this row itself IS an open plan's original lump-sum purchase (matched
+    by account+description+amount against TransactionRepository.find_open_plan_match)
+    -- at commit, insert at €0.00 with a note instead of its real amount, and delete
+    the plan's placeholder transaction if it had one. Mutually exclusive in practice
+    with installment_plan_id (a row is either a future installment or the original
+    purchase, never both)."""
 
 
 class InstallmentPlanActionPreview(BaseModel):
-    """A newly-detected installment plan (ActivoBank PDF "Fracionada" purchase) this
-    import would open, shown separately from the row table since it doesn't insert a
-    row itself -- it creates a plan (+ matching rule) and, if matched, zeroes out an
-    already-imported lump-sum transaction."""
+    """An installment plan (from the ActivoBank PDF's own schedule table) touched by
+    this import, shown separately from the row table since it doesn't insert a row
+    itself -- it gets-or-creates a plan (+ matching rule) and, if not already tracked,
+    tries to find and zero an already-imported lump-sum transaction, or falls back to
+    a placeholder if none exists yet."""
+    plan_ref: str
     description: str
     total_installments: int
-    opened_date: date
-    plan_ref: str | None = None
-    """The bank's own plan reference, when resolvable -- used as the auto-created
-    rule's match pattern instead of the bare description (see
-    ParsedInstallmentPlanSignal), so a later-imported original purchase can never be
-    mistaken for one of its own future installments."""
+    original_amount: Decimal
+    already_tracked: bool
+    """True if this plan_ref already exists in the DB (from a prior import) -- commit
+    is then a no-op for this action, since matching/placeholder handling only ever
+    happens once, right when a plan is first created."""
     matched_transaction_id: int | None = None
     matched_transaction_summary: str | None = None
 
@@ -165,14 +174,18 @@ class ImportCommitRow(BaseModel):
     installment_plan_id: int | None = None
     installment_juros: Decimal | None = None
     installment_duty: Decimal | None = None
+    supersedes_installment_plan_id: int | None = None
 
 
 class InstallmentPlanActionCommit(BaseModel):
+    plan_ref: str
     description: str
     total_installments: int
-    opened_date: date
-    pattern: str
-    plan_ref: str | None = None
+    original_amount: Decimal
+    already_tracked: bool = False
+    """Defaults False since the portal only ever sends actionable (not-yet-tracked)
+    actions -- an already-tracked plan needs no action at commit time, so its checkbox
+    and hidden fields aren't rendered at all (see _finance_import_review.html)."""
     matched_transaction_id: int | None = None
 
 

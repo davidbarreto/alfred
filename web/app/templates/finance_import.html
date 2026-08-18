@@ -166,6 +166,17 @@ function toggleRuleInputs(index, checked) {
   if (cell) cell.classList.toggle("hidden", !checked);
 }
 
+function toggleTransferAccount(index, type) {
+  const cell = document.getElementById("transfer-account-" + index);
+  if (!cell) return;
+  const isTransfer = type === "transfer";
+  cell.classList.toggle("hidden", !isTransfer);
+  if (!isTransfer) {
+    const select = cell.querySelector("select");
+    if (select) select.value = "";
+  }
+}
+
 function startEditRule(id) {
   document.getElementById(`rule-view-${id}`).classList.add("hidden");
   document.getElementById(`rule-edit-${id}`).classList.remove("hidden");

@@ -204,6 +204,7 @@ def _parse_text(
                                 flag_reason="installment_capital",
                                 installment_juros=juros,
                                 installment_duty=imposto_selo,
+                                note=f"Installment {plano}",
                             )
                         )
                 i += 2

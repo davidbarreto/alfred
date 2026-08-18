@@ -154,6 +154,41 @@ class TestImportPreview:
 
         assert "repeated within this file" in resp.text
 
+    def test_transfer_row_shows_destination_account_select(self, client, mock_api):
+        rows = [_preview_row(type="transfer", counterpart_account_id=2)]
+        mock_api["post_multipart"].return_value = _preview(rows)
+        mock_api["get"].side_effect = [
+            [_account(1, "Checking"), _account(2, "Savings")],
+            [_category()],
+        ]
+
+        resp = client.post(
+            "/finance/import/preview",
+            data={"account_id": "1"},
+            files={"file": ("mov.csv", b"x", "text/csv")},
+        )
+
+        assert 'name="counterpart_0"' in resp.text
+        assert 'id="transfer-account-0"' in resp.text
+        # The select is visible (no "hidden" class) since this row is already a transfer.
+        assert 'id="transfer-account-0" class="mt-0.5 "' in resp.text
+        assert 'value="2" selected' in resp.text
+        # The importing account itself must not be offered as its own destination.
+        assert '<option value="1"' not in resp.text
+
+    def test_non_transfer_row_hides_destination_account_select(self, client, mock_api):
+        rows = [_preview_row(type="expense")]
+        mock_api["post_multipart"].return_value = _preview(rows)
+        mock_api["get"].side_effect = [[_account()], [_category()]]
+
+        resp = client.post(
+            "/finance/import/preview",
+            data={"account_id": "1"},
+            files={"file": ("mov.csv", b"x", "text/csv")},
+        )
+
+        assert 'id="transfer-account-0" class="mt-0.5 hidden"' in resp.text
+
     def test_review_reasons_rendered_for_flagged_rows(self, client, mock_api):
         rows = [
             _preview_row(

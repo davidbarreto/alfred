@@ -119,9 +119,6 @@
               {% if row.balance_after is not none %}
               <input type="hidden" name="balance_after_{{ i }}" value="{{ row.balance_after }}" />
               {% endif %}
-              {% if row.counterpart_account_id %}
-              <input type="hidden" name="counterpart_{{ i }}" value="{{ row.counterpart_account_id }}" />
-              {% endif %}
               {% if row.installment_plan_id %}
               <input type="hidden" name="installment_plan_id_{{ i }}" value="{{ row.installment_plan_id }}" />
               {% endif %}
@@ -151,14 +148,22 @@
               €{{ row.amount | money }}
             </td>
             <td>
-              <select name="type_{{ i }}" class="select select-xs border-gray-200 bg-white">
+              <select name="type_{{ i }}" class="select select-xs border-gray-200 bg-white"
+                      onchange="toggleTransferAccount({{ i }}, this.value)">
                 <option value="expense" {% if row.type == "expense" %}selected{% endif %}>Expense</option>
                 <option value="income" {% if row.type == "income" %}selected{% endif %}>Income</option>
                 <option value="transfer" {% if row.type == "transfer" %}selected{% endif %}>Transfer</option>
               </select>
-              {% if row.counterpart_account_id %}
-              <div class="text-[10px] text-gray-400 mt-0.5">→ {{ accounts_by_id.get(row.counterpart_account_id, "?") }}</div>
-              {% endif %}
+              <div id="transfer-account-{{ i }}" class="mt-0.5 {% if row.type != 'transfer' %}hidden{% endif %}">
+                <select name="counterpart_{{ i }}" class="select select-xs border-gray-200 bg-white">
+                  <option value="">— destination account —</option>
+                  {% for acc in accounts %}
+                  {% if acc.id != preview.account_id %}
+                  <option value="{{ acc.id }}" {% if row.counterpart_account_id == acc.id %}selected{% endif %}>{{ acc.name }}</option>
+                  {% endif %}
+                  {% endfor %}
+                </select>
+              </div>
             </td>
             <td>
               <select name="category_{{ i }}" class="select select-xs border-gray-200 bg-white">
@@ -174,7 +179,7 @@
               <input type="hidden" name="merchant_{{ i }}" value="{{ row.merchant or '' }}" />
             </td>
             <td>
-              <input type="text" name="note_{{ i }}" value="" placeholder="Note"
+              <input type="text" name="note_{{ i }}" value="{{ row.note or '' }}" placeholder="Note"
                      class="input input-xs border-gray-200 bg-white w-28" />
             </td>
             <td class="text-xs">

@@ -64,6 +64,12 @@ class ParsedRow:
     """Interest / stamp duty for this specific installment, when the parser can read
     them directly from a per-installment schedule (e.g. ActivoBank's own Capital/Juros/
     IS breakdown). None for every other parser and for any non-installment row."""
+    note: str | None = None
+    """Pre-filled note for the transaction, editable by the user at review time (see
+    ImportPreviewRow.note). Used by ActivoBank's Capital-installment rows to record the
+    bank's own installment reference (e.g. "Installment 00019/3") -- the row's own
+    plan/position within its plan, which isn't otherwise recoverable once imported since
+    the total installment count for a plan can't always be inferred from a single row."""
 
 
 @dataclass

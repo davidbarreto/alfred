@@ -248,8 +248,12 @@ class ImportService:
     ) -> list[InstallmentPlanActionPreview]:
         actions: list[InstallmentPlanActionPreview] = []
         for signal in signals:
+            # A "Fracionada" purchase is always a debit (a COMPRA), never a transfer
+            # or income -- Transaction.amount stores expenses as an absolute value
+            # (sign lives in .type), while ParsedRow/signal.amount uses the signed
+            # convention (negative = expense), so the lookup must convert.
             matched = await self._txn_repo.find_by_account_date_description_amount(
-                account_id, signal.date_posted, signal.description, signal.amount
+                account_id, signal.date_posted, signal.description, abs(signal.amount)
             )
             actions.append(
                 InstallmentPlanActionPreview(
@@ -358,6 +362,7 @@ class ImportService:
                     ),
                     installment_juros=parsed_row.installment_juros,
                     installment_duty=parsed_row.installment_duty,
+                    note=parsed_row.note,
                 )
             )
         return rows

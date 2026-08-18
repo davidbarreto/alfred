@@ -67,6 +67,7 @@ class TestParseTextInstallments:
         assert row.installment_juros == Decimal("1.50")
         assert row.installment_duty == Decimal("0.50")
         assert row.flag_reason == "installment_capital"
+        assert row.note == "Installment 00001/2"
 
     def test_future_projected_installment_not_captured(self):
         result = _parse_text(_STATEMENT_TEXT, _PERIOD_START, _PERIOD_END, installments_only=True)

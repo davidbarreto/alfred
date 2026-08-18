@@ -23,7 +23,7 @@ from app.features.finance.imports.service import (
 )
 from app.features.finance.imports.tables import ImportBatch, ImportRule
 from app.shared.llm import LlmResponse
-from app.shared.statement import ParsedRow, ParsedStatement
+from app.shared.statement import ParsedInstallmentPlanSignal, ParsedRow, ParsedStatement
 
 
 def _row(**kwargs) -> ParsedRow:
@@ -72,7 +72,7 @@ class _FakeParser:
         return self._statement
 
 
-def _statement(rows: list[ParsedRow]) -> ParsedStatement:
+def _statement(rows: list[ParsedRow], installment_plans_opened=None) -> ParsedStatement:
     return ParsedStatement(
         provider="fakebank",
         account_number="123",
@@ -81,6 +81,7 @@ def _statement(rows: list[ParsedRow]) -> ParsedStatement:
         period_end=date(2026, 6, 30),
         closing_balance=Decimal("2539.65"),
         rows=rows,
+        installment_plans_opened=installment_plans_opened or [],
     )
 
 
@@ -1479,6 +1480,47 @@ class TestCommitGrouped:
 
         service._account_repo.set_balance.assert_awaited_once_with(1, Decimal("300.00"))
         service._account_repo.adjust_balance.assert_awaited_once_with(2, Decimal("50.00"))
+
+
+class TestBuildInstallmentPlanActions:
+    """Regression coverage for a real bug: Transaction.amount stores expenses as an
+    absolute value (sign lives in .type), while a plan-open signal's amount uses the
+    signed ParsedRow convention (negative = expense) -- the DB lookup must convert,
+    or a genuinely-matching lump-sum transaction is never found."""
+
+    @pytest.mark.asyncio
+    async def test_looks_up_matched_transaction_by_absolute_amount(self):
+        signal = ParsedInstallmentPlanSignal(
+            description="COMPRA 4681 Cars on Booking Amsterdam",
+            amount=Decimal("-248.46"),
+            date_posted=date(2026, 7, 3),
+            total_installments=3,
+        )
+        service = _service(_statement([], installment_plans_opened=[signal]))
+
+        result = await service.preview(1, "x.csv", b"data")
+
+        service._txn_repo.find_by_account_date_description_amount.assert_awaited_once_with(
+            1, date(2026, 7, 3), "COMPRA 4681 Cars on Booking Amsterdam", Decimal("248.46")
+        )
+        assert result.installment_plan_actions[0].total_installments == 3
+
+    @pytest.mark.asyncio
+    async def test_matched_transaction_surfaced_in_action(self):
+        signal = ParsedInstallmentPlanSignal(
+            description="COMPRA 4681 Cars on Booking Amsterdam",
+            amount=Decimal("-248.46"),
+            date_posted=date(2026, 7, 3),
+            total_installments=3,
+        )
+        matched = MagicMock(id=22, amount=Decimal("248.46"), bank_description="COMPRA 4681 Cars on Booking Amsterdam")
+        matched.date.date.return_value = date(2026, 7, 3)
+        service = _service(_statement([], installment_plans_opened=[signal]))
+        service._txn_repo.find_by_account_date_description_amount.return_value = matched
+
+        result = await service.preview(1, "x.csv", b"data")
+
+        assert result.installment_plan_actions[0].matched_transaction_id == 22
 
 
 class TestApplyRulesInstallmentPlan:

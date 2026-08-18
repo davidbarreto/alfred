@@ -89,6 +89,10 @@ class ImportPreviewRow(BaseModel):
     duplicate_reason: DuplicateReason | None = None
     deduplication_hash: str
     description: str | None = None
+    note: str | None = None
+    """Pre-filled by the parser (e.g. ActivoBank's own installment reference), editable
+    by the user before commit -- see ImportCommitRow.note, which carries whatever value
+    the user leaves in the review form's note input."""
     merchant: str | None = None
     category_id: int | None = None
     category_name: str | None = None

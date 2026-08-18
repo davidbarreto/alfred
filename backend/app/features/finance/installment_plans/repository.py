@@ -157,14 +157,28 @@ class InstallmentPlanRepository:
         await self._session.commit()
         await self._session.refresh(plan)
 
+        return await self._recompute_status(plan)
+
+    async def recompute_status(self, plan_id: int) -> InstallmentPlan | None:
+        """Re-derive open/closed from the live captured count -- used after a
+        transaction is unlinked, which can drop a closed plan back under its
+        total_installments (record_capture only ever moves it the other way,
+        towards closed, since captures only increase there)."""
+        plan = await self.get(plan_id)
+        if plan is None:
+            return None
+        return await self._recompute_status(plan)
+
+    async def _recompute_status(self, plan: InstallmentPlan) -> InstallmentPlan:
         result = await self._session.execute(
             select(func.count(Transaction.id)).where(
-                Transaction.installment_plan_id == plan_id, Transaction.amount != 0
+                Transaction.installment_plan_id == plan.id, Transaction.amount != 0
             )
         )
         captured = result.scalar() or 0
-        if captured >= plan.total_installments and plan.status != "closed":
-            plan.status = "closed"
+        new_status = "closed" if captured >= plan.total_installments else "open"
+        if plan.status != new_status:
+            plan.status = new_status
             await self._session.commit()
             await self._session.refresh(plan)
         return plan

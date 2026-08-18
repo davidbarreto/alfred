@@ -50,3 +50,13 @@ async def delete_installment_plan(plan_id: int, service: InstallmentPlanServiceD
     if not deleted:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Installment plan not found")
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.post("/{plan_id}/transactions/{transaction_id}/unlink", status_code=status.HTTP_204_NO_CONTENT)
+async def unlink_installment_plan_transaction(
+    plan_id: int, transaction_id: int, service: InstallmentPlanServiceDep
+):
+    unlinked = await service.unlink_transaction(plan_id, transaction_id)
+    if not unlinked:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Transaction not found on this plan")
+    return Response(status_code=status.HTTP_204_NO_CONTENT)

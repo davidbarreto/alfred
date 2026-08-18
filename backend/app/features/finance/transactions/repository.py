@@ -374,6 +374,17 @@ class TransactionRepository:
             await self._session.delete(placeholder)
             await self._session.commit()
 
+    async def unlink_installment_plan(self, transaction_id: int) -> Transaction | None:
+        """Clear a mismatched link -- the transaction itself is kept, same treatment
+        as deleting a whole plan (InstallmentPlanService.delete), just for one row."""
+        transaction = await self.get(transaction_id)
+        if transaction is None:
+            return None
+        transaction.installment_plan_id = None
+        await self._session.commit()
+        await self._session.refresh(transaction)
+        return transaction
+
     async def get_mirror(self, source_transaction_id: int) -> Transaction | None:
         result = await self._session.execute(
             select(Transaction).where(

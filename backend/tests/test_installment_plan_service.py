@@ -186,3 +186,33 @@ class TestDelete:
         service._repo.delete.return_value = False
 
         assert await service.delete(999) is False
+
+
+class TestUnlinkTransaction:
+    async def test_unlinks_and_recomputes_status(self):
+        from unittest.mock import MagicMock
+
+        service = _service()
+        txn = MagicMock(installment_plan_id=5)
+        service._txn_repo.get.return_value = txn
+
+        assert await service.unlink_transaction(plan_id=5, transaction_id=42) is True
+        service._txn_repo.unlink_installment_plan.assert_awaited_once_with(42)
+        service._repo.recompute_status.assert_awaited_once_with(5)
+
+    async def test_returns_false_when_transaction_not_found(self):
+        service = _service()
+        service._txn_repo.get.return_value = None
+
+        assert await service.unlink_transaction(plan_id=5, transaction_id=42) is False
+        service._txn_repo.unlink_installment_plan.assert_not_awaited()
+
+    async def test_returns_false_when_transaction_belongs_to_different_plan(self):
+        from unittest.mock import MagicMock
+
+        service = _service()
+        txn = MagicMock(installment_plan_id=9)
+        service._txn_repo.get.return_value = txn
+
+        assert await service.unlink_transaction(plan_id=5, transaction_id=42) is False
+        service._txn_repo.unlink_installment_plan.assert_not_awaited()

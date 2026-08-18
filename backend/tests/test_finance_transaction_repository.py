@@ -366,6 +366,24 @@ class TestUpdate:
         assert result.amount_eur == Decimal("88.00")
 
 
+class TestUnlinkInstallmentPlan:
+    async def test_clears_installment_plan_id_and_commits(self):
+        session = _make_session()
+        txn = _make_txn_orm()
+        txn.installment_plan_id = 5
+        session.execute.return_value = _scalar_first(txn)
+        result = await TransactionRepository(session).unlink_installment_plan(1)
+        assert result.installment_plan_id is None
+        session.commit.assert_called_once()
+
+    async def test_returns_none_when_not_found(self):
+        session = _make_session()
+        session.execute.return_value = _scalar_first(None)
+        result = await TransactionRepository(session).unlink_installment_plan(999)
+        assert result is None
+        session.commit.assert_not_called()
+
+
 class TestDelete:
     async def test_returns_false_when_not_found(self):
         session = _make_session()

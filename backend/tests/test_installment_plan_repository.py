@@ -209,3 +209,32 @@ class TestRecordCapture:
         session.execute.return_value = _scalar_first(None)
         result = await InstallmentPlanRepository(session).record_capture(999, juros=None, imposto_selo=None)
         assert result is None
+
+
+class TestRecomputeStatus:
+    async def test_reopens_closed_plan_once_below_total(self):
+        # record_capture only ever moves a plan towards closed (captures only
+        # increase there); unlinking a transaction is the one path that can drop
+        # a closed plan back under its total_installments.
+        session = _make_session()
+        plan = _plan(total_installments=3, status="closed")
+        session.execute.side_effect = [_scalar_first(plan), _scalar(2)]
+
+        result = await InstallmentPlanRepository(session).recompute_status(1)
+
+        assert result.status == "open"
+
+    async def test_stays_closed_when_still_at_or_above_total(self):
+        session = _make_session()
+        plan = _plan(total_installments=2, status="closed")
+        session.execute.side_effect = [_scalar_first(plan), _scalar(2)]
+
+        result = await InstallmentPlanRepository(session).recompute_status(1)
+
+        assert result.status == "closed"
+
+    async def test_none_when_plan_not_found(self):
+        session = _make_session()
+        session.execute.return_value = _scalar_first(None)
+        result = await InstallmentPlanRepository(session).recompute_status(999)
+        assert result is None

@@ -3295,6 +3295,298 @@
       ]
     },
     {
+      "name": "Installment Plans",
+      "item": [
+        {
+          "name": "01 - Create Installment Plan",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+                  "pm.test('Plan created and saves id', () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.have.property('id');",
+                  "    pm.expect(json.description).to.eql('Sofa - Cetelem');",
+                  "    pm.expect(json.total_installments).to.eql(10);",
+                  "    pm.expect(json.captured_installments).to.eql(0);",
+                  "    pm.environment.set('installment_plan_id', json.id);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"account_id\": \"{{finance_account_id}}\",\n  \"description\": \"Sofa - Cetelem\",\n  \"total_installments\": 10,\n  \"opened_date\": \"2026-06-01\",\n  \"pattern\": \"CETELEM SOFA\",\n  \"mode\": \"auto\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/finance/installment-plans",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "finance",
+                "installment-plans"
+              ]
+            }
+          }
+        },
+        {
+          "name": "02 - Get Installment Plan",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Plan matches created one', () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(String(json.id)).to.eql(String(pm.environment.get('installment_plan_id')));",
+                  "    pm.expect(json.status).to.eql('open');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/finance/installment-plans/{{installment_plan_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "finance",
+                "installment-plans",
+                "{{installment_plan_id}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "03 - List Installment Plans",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Array includes created plan', () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.be.an('array');",
+                  "    pm.expect(json.some(p => String(p.id) === String(pm.environment.get('installment_plan_id')))).to.eql(true);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/finance/installment-plans",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "finance",
+                "installment-plans"
+              ]
+            }
+          }
+        },
+        {
+          "name": "04 - Update Installment Plan",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Description and total updated', () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.description).to.eql('Sofa - Cetelem (updated)');",
+                  "    pm.expect(json.total_installments).to.eql(12);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"description\": \"Sofa - Cetelem (updated)\",\n  \"total_installments\": 12\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/finance/installment-plans/{{installment_plan_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "finance",
+                "installment-plans",
+                "{{installment_plan_id}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "05 - Unlink Transaction Not On Plan Returns 404",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 404', () => pm.response.to.have.status(404));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/finance/installment-plans/{{installment_plan_id}}/transactions/{{finance_transaction_id}}/unlink",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "finance",
+                "installment-plans",
+                "{{installment_plan_id}}",
+                "transactions",
+                "{{finance_transaction_id}}",
+                "unlink"
+              ]
+            }
+          }
+        },
+        {
+          "name": "06 - Unlink Transaction Unknown Plan Returns 404",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 404', () => pm.response.to.have.status(404));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/finance/installment-plans/999999999/transactions/{{finance_transaction_id}}/unlink",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "finance",
+                "installment-plans",
+                "999999999",
+                "transactions",
+                "{{finance_transaction_id}}",
+                "unlink"
+              ]
+            }
+          }
+        },
+        {
+          "name": "07 - Delete Installment Plan",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 204', () => pm.response.to.have.status(204));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/finance/installment-plans/{{installment_plan_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "finance",
+                "installment-plans",
+                "{{installment_plan_id}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "08 - Get Deleted Plan Returns 404",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 404', () => pm.response.to.have.status(404));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/finance/installment-plans/{{installment_plan_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "finance",
+                "installment-plans",
+                "{{installment_plan_id}}"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
       "name": "Cleanup",
       "item": [
         {

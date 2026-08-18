@@ -1280,6 +1280,15 @@ async def delete_installment_plan(plan_id: int):
     return RedirectResponse("/finance/installments", status_code=303)
 
 
+@router.post("/installments/{plan_id}/transactions/{transaction_id}/unlink", response_class=HTMLResponse)
+async def unlink_installment_plan_transaction(plan_id: int, transaction_id: int):
+    try:
+        await api.post(f"/finance/installment-plans/{plan_id}/transactions/{transaction_id}/unlink")
+    except httpx.HTTPError:
+        pass
+    return RedirectResponse(f"/finance/installments/{plan_id}", status_code=303)
+
+
 @router.post("/import/preview", response_class=HTMLResponse)
 async def import_preview(
     request: Request,
@@ -1433,7 +1442,7 @@ async def import_commit(request: Request):
             "plan_ref": _form_value(form, f"plan_ref_{j}"),
             "description": _form_value(form, f"plan_description_{j}"),
             "total_installments": int(_form_value(form, f"plan_total_installments_{j}", "0") or "0"),
-            "original_amount": _form_value(form, f"plan_original_amount_{j}"),
+            "original_amount": _form_value(form, f"plan_original_amount_{j}") or None,
         }
         matched_transaction_id = _form_value(form, f"plan_matched_transaction_id_{j}")
         if matched_transaction_id:

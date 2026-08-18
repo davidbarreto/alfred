@@ -68,6 +68,12 @@
         <span class="text-sm font-medium flex-shrink-0 {% if txn.amount | float == 0 %}text-gray-400{% elif txn.type == 'income' %}text-[#639922]{% else %}text-[#E24B4A]{% endif %}">
           {{ currency_symbols.get(txn.currency, txn.currency + " ") }}{{ txn.amount | float | abs | money }}
         </span>
+        <form method="post" action="/finance/installments/{{ plan.id }}/transactions/{{ txn.id }}/unlink"
+              onsubmit="return confirm('Unlink this transaction from the plan? The transaction itself is kept.');">
+          <button type="submit" class="btn btn-xs btn-ghost text-gray-400 hover:text-[#E24B4A]" title="Unlink from this plan">
+            <i class="ti ti-unlink text-sm"></i>
+          </button>
+        </form>
       </li>
       {% endfor %}
     </ul>

@@ -79,7 +79,7 @@ class InstallmentPlanService:
         plan_ref: str,
         description: str,
         total_installments: int,
-        original_amount: Decimal,
+        original_amount: Decimal | None,
         opened_date: date,
     ) -> tuple[InstallmentPlanRead, bool]:
         """Get-or-create by plan_ref, called for every distinct plan_ref seen in a PDF
@@ -128,6 +128,18 @@ class InstallmentPlanService:
         logger.info("Installment plan updated: id=%d", plan_id)
         found = await self._repo.get_with_captured_count(plan_id)
         return None if found is None else _to_read(*found)
+
+    async def unlink_transaction(self, plan_id: int, transaction_id: int) -> bool:
+        txn = await self._txn_repo.get(transaction_id)
+        if txn is None or txn.installment_plan_id != plan_id:
+            return False
+        await self._txn_repo.unlink_installment_plan(transaction_id)
+        await self._repo.recompute_status(plan_id)
+        logger.info(
+            "Transaction unlinked from installment plan: transaction_id=%d plan_id=%d",
+            transaction_id, plan_id,
+        )
+        return True
 
     async def delete(self, plan_id: int) -> bool:
         rules_deleted = await self._import_repo.delete_rules_by_installment_plan(plan_id)

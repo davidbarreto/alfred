@@ -48,12 +48,16 @@
         <input type="hidden" name="plan_description_{{ j }}" value="{{ action.description }}" />
         <input type="hidden" name="plan_total_installments_{{ j }}" value="{{ action.total_installments }}" />
         <input type="hidden" name="plan_opened_date_{{ j }}" value="{{ action.opened_date }}" />
-        <input type="hidden" name="plan_pattern_{{ j }}" value="{{ action.description }}" />
+        <input type="hidden" name="plan_pattern_{{ j }}" value="{{ action.plan_ref or action.description }}" />
+        {% if action.plan_ref %}
+        <input type="hidden" name="plan_ref_{{ j }}" value="{{ action.plan_ref }}" />
+        {% endif %}
         {% if action.matched_transaction_id %}
         <input type="hidden" name="plan_matched_transaction_id_{{ j }}" value="{{ action.matched_transaction_id }}" />
         {% endif %}
         <div>
           <span class="font-medium">{{ action.description }}</span> — {{ action.total_installments }} installments
+          {% if action.plan_ref %}<span class="text-amber-700">(plan {{ action.plan_ref }})</span>{% endif %}
           {% if action.matched_transaction_id %}
           <div class="text-amber-700">Will mark existing transaction ({{ action.matched_transaction_summary }}) as split into installments.</div>
           {% else %}

@@ -1506,6 +1506,21 @@ class TestBuildInstallmentPlanActions:
         assert result.installment_plan_actions[0].total_installments == 3
 
     @pytest.mark.asyncio
+    async def test_plan_ref_carried_into_action(self):
+        signal = ParsedInstallmentPlanSignal(
+            description="COMPRA 4681 Cars on Booking Amsterdam",
+            amount=Decimal("-248.46"),
+            date_posted=date(2026, 7, 3),
+            total_installments=3,
+            plan_ref="00024",
+        )
+        service = _service(_statement([], installment_plans_opened=[signal]))
+
+        result = await service.preview(1, "x.csv", b"data")
+
+        assert result.installment_plan_actions[0].plan_ref == "00024"
+
+    @pytest.mark.asyncio
     async def test_matched_transaction_surfaced_in_action(self):
         signal = ParsedInstallmentPlanSignal(
             description="COMPRA 4681 Cars on Booking Amsterdam",
@@ -1586,6 +1601,47 @@ class TestApplyInstallmentPlanActions:
         assert original.amount == Decimal("0.00")
         assert "Original amount -248.46" in original.note
         assert original.installment_plan_id == 55
+
+    @pytest.mark.asyncio
+    async def test_plan_ref_preferred_over_bare_description_as_rule_pattern(self):
+        # Regression: the bare description matches both the original lump-sum
+        # purchase AND every future installment row, so a rule built from it would
+        # wrongly tag a later-imported original as a captured installment. The
+        # plan's own reference (unique to future rows) must be preferred.
+        service = _service()
+        self._prepare(service)
+        action = InstallmentPlanActionCommit(
+            description="COMPRA 4681 Cars on Booking Amsterdam",
+            total_installments=3,
+            opened_date=date(2026, 7, 3),
+            pattern="COMPRA 4681 Cars on Booking Amsterdam",
+            plan_ref="00024",
+            matched_transaction_id=None,
+        )
+
+        await service.commit(_commit_request([], installment_plan_actions=[action]))
+
+        create_data = service._installment_plans.create_plan_with_rule.call_args[0][0]
+        assert create_data.pattern == "00024"
+        assert create_data.plan_ref == "00024"
+
+    @pytest.mark.asyncio
+    async def test_falls_back_to_pattern_when_no_plan_ref(self):
+        service = _service()
+        self._prepare(service)
+        action = InstallmentPlanActionCommit(
+            description="COMPRA 4681 New Plan",
+            total_installments=3,
+            opened_date=date(2026, 7, 3),
+            pattern="New Plan",
+            plan_ref=None,
+            matched_transaction_id=None,
+        )
+
+        await service.commit(_commit_request([], installment_plan_actions=[action]))
+
+        create_data = service._installment_plans.create_plan_with_rule.call_args[0][0]
+        assert create_data.pattern == "New Plan"
 
     @pytest.mark.asyncio
     async def test_no_match_still_creates_plan_without_superseding(self):

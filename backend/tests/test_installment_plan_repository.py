@@ -115,6 +115,16 @@ class TestCreate:
         session.refresh.assert_awaited_once()
         assert plan is added
 
+    async def test_creates_with_plan_ref(self):
+        session = _make_session()
+        repo = InstallmentPlanRepository(session)
+        await repo.create(
+            account_id=1, description="COMPRA IKEA", total_installments=3,
+            opened_date=date(2026, 7, 1), plan_ref="00024",
+        )
+        added = session.add.call_args[0][0]
+        assert added.plan_ref == "00024"
+
 
 class TestUpdate:
     async def test_updates_fields(self):

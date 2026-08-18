@@ -1432,6 +1432,9 @@ async def import_commit(request: Request):
             "opened_date": _form_value(form, f"plan_opened_date_{j}"),
             "pattern": _form_value(form, f"plan_pattern_{j}"),
         }
+        plan_ref = _form_value(form, f"plan_ref_{j}")
+        if plan_ref:
+            action["plan_ref"] = plan_ref
         matched_transaction_id = _form_value(form, f"plan_matched_transaction_id_{j}")
         if matched_transaction_id:
             action["matched_transaction_id"] = int(matched_transaction_id)

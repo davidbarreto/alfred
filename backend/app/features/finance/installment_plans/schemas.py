@@ -15,6 +15,7 @@ class InstallmentPlanCreate(BaseModel):
     description: str
     total_installments: int
     opened_date: date
+    plan_ref: str | None = None
     # The matching rule created alongside the plan (see InstallmentPlanService) --
     # every plan is created together with an ImportRule that tags future matching
     # transactions with this plan's id, so there is exactly one mechanism ("a rule

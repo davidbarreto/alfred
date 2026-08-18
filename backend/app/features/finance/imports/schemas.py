@@ -117,6 +117,11 @@ class InstallmentPlanActionPreview(BaseModel):
     description: str
     total_installments: int
     opened_date: date
+    plan_ref: str | None = None
+    """The bank's own plan reference, when resolvable -- used as the auto-created
+    rule's match pattern instead of the bare description (see
+    ParsedInstallmentPlanSignal), so a later-imported original purchase can never be
+    mistaken for one of its own future installments."""
     matched_transaction_id: int | None = None
     matched_transaction_summary: str | None = None
 
@@ -167,6 +172,7 @@ class InstallmentPlanActionCommit(BaseModel):
     total_installments: int
     opened_date: date
     pattern: str
+    plan_ref: str | None = None
     matched_transaction_id: int | None = None
 
 

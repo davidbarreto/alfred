@@ -81,12 +81,14 @@ class InstallmentPlanRepository:
         description: str,
         total_installments: int,
         opened_date: date,
+        plan_ref: str | None = None,
     ) -> InstallmentPlan:
         plan = InstallmentPlan(
             account_id=account_id,
             description=description,
             total_installments=total_installments,
             opened_date=opened_date,
+            plan_ref=plan_ref,
             status="open",
         )
         self._session.add(plan)

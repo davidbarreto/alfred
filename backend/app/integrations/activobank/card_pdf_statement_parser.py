@@ -28,7 +28,10 @@ Installment ("fracionado") purchases -- the split-payment plan:
   instead recorded as a ``ParsedInstallmentPlanSignal`` (description, amount,
   date, total installments) for the import service to create/track a plan
   and supersede whatever transaction that full price already became
-  (typically via the daily CSV import).
+  (typically via the daily CSV import). The signal also carries a
+  ``plan_ref`` (e.g. "00024"), cross-referenced from the installment
+  schedule table below, when resolvable -- see that dataclass's docstring
+  for why the bare description alone isn't a safe match pattern.
 - The real monthly charge is Capital + Juros + Imposto do Selo (together
   called "Mensalidade") from ``DETALHE DE TRANSAÇÕES COM PAGAMENTO
   FRACIONADO``. That section is a full projection of ALL remaining
@@ -159,6 +162,12 @@ def _parse_text(
 ) -> _ParseResult:
     rows: list[ParsedRow] = []
     plans_opened: list[ParsedInstallmentPlanSignal] = []
+    # (description, original purchase price) -> plan reference (e.g. "00024"),
+    # populated from every installment-table row seen regardless of period filtering
+    # (the table always lists a plan's current+future installments, including a
+    # brand-new plan's first one, even when it falls outside this statement's own
+    # period) -- used to disambiguate a Fracionada signal's auto-created rule pattern.
+    plan_ref_lookup: dict[tuple[str, Decimal], str] = {}
     lines = [line.strip() for line in text.splitlines()]
     n = len(lines)
     state = "none"
@@ -185,6 +194,10 @@ def _parse_text(
                 row_date = _parse_date(match.group(1))
                 description = match.group(2).strip()
                 parts = lines[i + 1].split()
+                if len(parts) == 8:
+                    valor_transacao = _parse_amount(parts[0])
+                    if valor_transacao is not None:
+                        plan_ref_lookup[(description, valor_transacao)] = parts[3].split("/")[0]
                 if row_date is not None and len(parts) == 8 and _within_period(
                     row_date, period_start, period_end
                 ):
@@ -235,6 +248,7 @@ def _parse_text(
                             amount=-amount,
                             date_posted=date_posted,
                             total_installments=int(fracionada_match.group(1)),
+                            plan_ref=plan_ref_lookup.get((clean_description, amount)),
                         )
                     )
                 i += 1

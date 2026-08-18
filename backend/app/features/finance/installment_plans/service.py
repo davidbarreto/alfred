@@ -46,6 +46,7 @@ class InstallmentPlanService:
             description=data.description,
             total_installments=data.total_installments,
             opened_date=data.opened_date,
+            plan_ref=data.plan_ref,
         )
         await self._import_repo.create_rule(
             ImportRuleCreate(

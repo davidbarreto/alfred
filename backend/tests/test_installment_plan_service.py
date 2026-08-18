@@ -49,7 +49,8 @@ class TestCreatePlanWithRule:
         )
 
         service._repo.create.assert_awaited_once_with(
-            account_id=1, description="COMPRA IKEA", total_installments=3, opened_date=date(2026, 7, 1)
+            account_id=1, description="COMPRA IKEA", total_installments=3, opened_date=date(2026, 7, 1),
+            plan_ref=None,
         )
         service._import_repo.create_rule.assert_awaited_once()
         rule_data = service._import_repo.create_rule.call_args[0][0]

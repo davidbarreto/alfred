@@ -260,6 +260,7 @@ class ImportService:
                     description=signal.description,
                     total_installments=signal.total_installments,
                     opened_date=signal.date_posted,
+                    plan_ref=signal.plan_ref,
                     matched_transaction_id=matched.id if matched else None,
                     matched_transaction_summary=(
                         f"{matched.date.date().isoformat()} {matched.amount} {matched.bank_description or ''}".strip()
@@ -630,7 +631,15 @@ class ImportService:
                     description=action.description,
                     total_installments=action.total_installments,
                     opened_date=action.opened_date,
-                    pattern=action.pattern,
+                    plan_ref=action.plan_ref,
+                    # Prefer the plan's own reference (e.g. "00024") as the match
+                    # pattern over the bare description: the description alone matches
+                    # both future installment rows AND the original full-price
+                    # purchase, which would wrongly tag the original as a captured
+                    # installment if it's imported (e.g. via CSV) after this plan
+                    # already exists. Falls back to the description when the schedule
+                    # table didn't have this plan's reference yet.
+                    pattern=action.plan_ref or action.pattern,
                     mode="auto",
                 )
             )

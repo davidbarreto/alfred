@@ -82,6 +82,14 @@ class ParsedInstallmentPlanSignal:
     amount: Decimal
     date_posted: date
     total_installments: int
+    plan_ref: str | None = None
+    """The bank's own plan reference (e.g. "00024"), cross-referenced from the same
+    statement's installment schedule table when resolvable -- used as the auto-created
+    ImportRule's match pattern instead of the bare description, since the description
+    alone matches both future installment rows AND the original full-price purchase,
+    which would wrongly tag the original as a captured installment if it's imported
+    (e.g. via CSV) after this plan already exists. None when the schedule table doesn't
+    show this plan's reference yet (falls back to the bare description)."""
 
 
 @dataclass

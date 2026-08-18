@@ -1717,6 +1717,33 @@ class TestApplyInstallmentPlanActions:
 
         assert already_matched.installment_plan_id == 99  # untouched
 
+    @pytest.mark.asyncio
+    async def test_one_failing_action_does_not_abort_the_rest_of_the_commit(self):
+        # Regression for a real incident: a DB-level collision on one plan (e.g. two
+        # distinct plan_refs sharing a description, before migration 058) must not
+        # silently discard every other plan action AND the whole row-insert loop that
+        # follows it in the same commit.
+        service = _service()
+        self._prepare(service)
+        plan_b = MagicMock()
+        plan_b.id = 66
+        service._installment_plans.ensure_plan_for_ref.side_effect = [
+            RuntimeError("simulated DB collision"),
+            (plan_b, True),
+        ]
+        action_a = _plan_action(plan_ref="00018", matched_transaction_id=None)
+        action_b = _plan_action(plan_ref="00019", matched_transaction_id=None)
+        rows = [_commit_row(deduplication_hash="h1")]
+
+        await service.commit(_commit_request(rows, installment_plan_actions=[action_a, action_b]))
+
+        service._session.rollback.assert_awaited_once()
+        # The second action still ran despite the first one raising.
+        service._txn_repo.create_placeholder_for_plan.assert_awaited_once()
+        assert service._txn_repo.create_placeholder_for_plan.call_args.kwargs["plan_id"] == 66
+        # The row-insert loop that follows still ran too.
+        service._txn_repo.add.assert_called_once()
+
 
 class TestCommitRecordsInstallmentCapture:
     def _prepare(self, service: ImportService) -> None:

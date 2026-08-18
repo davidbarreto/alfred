@@ -11,6 +11,7 @@ from app.features.finance.imports.schemas import ImportRuleCreate
 from app.features.finance.installment_plans.repository import InstallmentPlanRepository
 from app.features.finance.installment_plans.schemas import InstallmentPlanCreate, InstallmentPlanRead
 from app.features.finance.installment_plans.tables import InstallmentPlan
+from app.features.finance.transactions.repository import TransactionRepository
 
 logger = logging.getLogger(__name__)
 
@@ -42,6 +43,7 @@ class InstallmentPlanService:
     def __init__(self, session: AsyncSession) -> None:
         self._repo = InstallmentPlanRepository(session)
         self._import_repo = ImportRepository(session)
+        self._txn_repo = TransactionRepository(session)
 
     async def create_plan_with_rule(self, data: InstallmentPlanCreate) -> InstallmentPlanRead:
         plan = await self._repo.create(
@@ -124,6 +126,11 @@ class InstallmentPlanService:
 
     async def delete(self, plan_id: int) -> bool:
         rules_deleted = await self._import_repo.delete_rules_by_installment_plan(plan_id)
+        # A placeholder is meaningless without its plan -- deleting it here avoids
+        # leaving a stray €0.00 "Placeholder" transaction behind with no plan to
+        # explain it. A real (non-placeholder) linked transaction is left alone,
+        # just unlinked (installment_plan_id -> NULL via ondelete=SET NULL).
+        await self._txn_repo.delete_placeholder_for_plan(plan_id)
         deleted = await self._repo.delete(plan_id)
         if deleted:
             logger.info("Installment plan deleted: id=%d rules_deleted=%d", plan_id, rules_deleted)

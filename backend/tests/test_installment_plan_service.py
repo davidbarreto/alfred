@@ -28,6 +28,7 @@ def _service() -> InstallmentPlanService:
     service = InstallmentPlanService(session=AsyncMock())
     service._repo = AsyncMock()
     service._import_repo = AsyncMock()
+    service._txn_repo = AsyncMock()
     return service
 
 
@@ -153,6 +154,7 @@ class TestDelete:
 
         assert await service.delete(1) is True
         service._import_repo.delete_rules_by_installment_plan.assert_awaited_once_with(1)
+        service._txn_repo.delete_placeholder_for_plan.assert_awaited_once_with(1)
         service._repo.delete.assert_awaited_once_with(1)
 
     async def test_returns_false_when_plan_not_found(self):

@@ -667,45 +667,68 @@ class ImportService:
         for action in request.installment_plan_actions:
             if action.already_tracked:
                 continue
-            plan, created = await self._installment_plans.ensure_plan_for_ref(
-                account_id=request.account_id,
-                plan_ref=action.plan_ref,
-                description=action.description,
-                total_installments=action.total_installments,
-                original_amount=action.original_amount,
-                opened_date=opened_date,
-            )
-            if not created:
-                # Race: another request created this plan_ref between preview and
-                # commit. Safe to skip -- nothing left for this action to do.
-                continue
-            if action.matched_transaction_id is not None:
-                matched = await self._txn_repo.get(action.matched_transaction_id)
-                if matched is not None and matched.amount != 0 and matched.installment_plan_id is None:
-                    original_amount = matched.amount
-                    matched.amount = Decimal("0.00")
-                    matched.note = (
-                        f"Original amount {original_amount} {matched.currency}. "
-                        f"Split into {action.total_installments} installments ({action.description})."
-                    )
-                    matched.installment_plan_id = plan.id
-                    await self._session.commit()
-                    logger.info(
-                        "Transaction superseded by installment plan: transaction_id=%d plan_id=%d",
-                        matched.id, plan.id,
-                    )
-            else:
-                await self._txn_repo.create_placeholder_for_plan(
-                    account_id=request.account_id,
-                    plan_id=plan.id,
-                    description=action.description,
-                    txn_date=opened_date,
-                    note="Placeholder — original purchase transaction not found in imported history.",
+            try:
+                await self._apply_one_installment_plan_action(request, action, opened_date)
+            except Exception:
+                # One action's failure (e.g. an unexpected DB error) must never abort
+                # the rest of this loop or the row-insert loop that follows it --
+                # a previous incident (fixed by migration 058) showed exactly this:
+                # a collision partway through silently discarded every remaining
+                # plan AND every transaction in the same commit, including ones with
+                # no relation to the failing action at all. Roll back so the session
+                # is usable again for the next action.
+                await self._session.rollback()
+                logger.error(
+                    "Installment plan action failed, skipping: account_id=%d plan_ref=%s",
+                    request.account_id, action.plan_ref, exc_info=True,
                 )
+
+    async def _apply_one_installment_plan_action(
+        self, request: ImportCommitRequest, action, opened_date
+    ) -> None:
+        plan, created = await self._installment_plans.ensure_plan_for_ref(
+            account_id=request.account_id,
+            plan_ref=action.plan_ref,
+            description=action.description,
+            total_installments=action.total_installments,
+            original_amount=action.original_amount,
+            opened_date=opened_date,
+        )
+        if not created:
+            # Race: another request created this plan_ref between preview and
+            # commit. Safe to skip -- nothing left for this action to do.
+            return
+
+        superseded = False
+        if action.matched_transaction_id is not None:
+            matched = await self._txn_repo.get(action.matched_transaction_id)
+            if matched is not None and matched.amount != 0 and matched.installment_plan_id is None:
+                original_amount = matched.amount
+                matched.amount = Decimal("0.00")
+                matched.note = (
+                    f"Original amount {original_amount} {matched.currency}. "
+                    f"Split into {action.total_installments} installments ({action.description})."
+                )
+                matched.installment_plan_id = plan.id
+                await self._session.commit()
                 logger.info(
-                    "Installment plan placeholder created: plan_id=%d account_id=%d",
-                    plan.id, request.account_id,
+                    "Transaction superseded by installment plan: transaction_id=%d plan_id=%d",
+                    matched.id, plan.id,
                 )
+                superseded = True
+
+        if not superseded:
+            await self._txn_repo.create_placeholder_for_plan(
+                account_id=request.account_id,
+                plan_id=plan.id,
+                description=action.description,
+                txn_date=opened_date,
+                note="Placeholder — original purchase transaction not found in imported history.",
+            )
+            logger.info(
+                "Installment plan placeholder created: plan_id=%d account_id=%d",
+                plan.id, request.account_id,
+            )
 
     async def commit(self, request: ImportCommitRequest) -> ImportCommitResponse:
         await self._apply_installment_plan_actions(request)

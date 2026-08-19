@@ -6,6 +6,9 @@
     <div class="flex-1 min-w-0">
       <div>
         <span class="font-medium text-gray-800">{{ acc.name }}</span>
+        {% if not acc.is_active %}
+        <span class="ml-1 badge badge-sm badge-ghost text-gray-400 align-middle">Inactive</span>
+        {% endif %}
         <span class="ml-2 text-xs text-gray-400">{{ acc.type }} · {{ acc.currency }}</span>
         {% if acc.institution %}<span class="ml-1 text-xs text-gray-400">· {{ acc.institution }}</span>{% endif %}
         {% if acc.credit_limit %}

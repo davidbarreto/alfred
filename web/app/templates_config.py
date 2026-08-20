@@ -3,8 +3,11 @@ from pathlib import Path
 
 from fastapi.templating import Jinja2Templates
 
+from app.config import get_settings
+
 _DIR = Path(__file__).parent / "templates"
 templates = Jinja2Templates(directory=str(_DIR))
+templates.env.globals["is_dev"] = get_settings().env.lower() not in ("production", "prod")
 
 
 def _timeago(dt_str: str | None) -> str:

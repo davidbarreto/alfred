@@ -12,7 +12,7 @@
 
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>{% block title %}Alfred{% endblock %} — Alfred Portal</title>
+  <title>{% if is_dev %}[DEV] {% endif %}{% block title %}Alfred{% endblock %} — Alfred Portal</title>
 
   <!-- Tabler icons webfont (outline, stroke-1.5) -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3/dist/tabler-icons.min.css" />
@@ -258,9 +258,16 @@
 </head>
 <body class="bg-[#FAFAF9] text-gray-900 antialiased">
 
+  {% if is_dev %}
+  <div class="fixed top-0 left-0 right-0 z-50 h-[3px] bg-[#BA7517] pointer-events-none"></div>
+  {% endif %}
+
   <!-- Mobile top bar -->
   <header class="md:hidden fixed top-0 left-0 right-0 z-40 flex items-center justify-between px-4 bg-[#F5F4F0] border-b border-gray-200 h-12">
-    <span class="text-sm font-semibold text-gray-900 tracking-tight">Alfred</span>
+    <span class="text-sm font-semibold text-gray-900 tracking-tight flex items-center gap-1.5">
+      Alfred
+      {% if is_dev %}<span class="text-[10px] font-bold tracking-wide px-1.5 py-0.5 rounded bg-[#FAEEDA] text-[#BA7517]">DEV</span>{% endif %}
+    </span>
     <button id="sidebar-toggle" class="p-1.5 rounded hover:bg-[#ECEAE4] text-gray-600" aria-label="Open menu">
       <i class="ti ti-menu-2 text-xl leading-none"></i>
     </button>
@@ -274,8 +281,9 @@
     <!-- Sidebar -->
     <aside id="sidebar" class="fixed md:static top-12 md:top-0 bottom-0 left-0 z-30 w-[200px] shrink-0 bg-[#F5F4F0] border-r border-gray-200 flex flex-col py-5 px-2 -translate-x-full md:translate-x-0 transition-transform duration-200 ease-in-out overflow-y-auto">
 
-      <div class="px-3 mb-5 hidden md:block">
+      <div class="px-3 mb-5 hidden md:flex items-center gap-1.5">
         <span class="text-sm font-semibold text-gray-900 tracking-tight">Alfred</span>
+        {% if is_dev %}<span class="text-[10px] font-bold tracking-wide px-1.5 py-0.5 rounded bg-[#FAEEDA] text-[#BA7517]">DEV</span>{% endif %}
       </div>
 
       <nav class="flex flex-col gap-0.5 flex-1">

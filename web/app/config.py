@@ -4,6 +4,8 @@ from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
+    # "local"/"dev"/"development" render a dev indicator in the portal UI; anything else is treated as production.
+    env: str = Field(default="production", validation_alias="ENV")
     backend_url: str = Field(default="http://api:8000", validation_alias="BACKEND_URL")
     # Browser-accessible backend URL — used only in the chat page JS for the SSE call.
     # Differs from BACKEND_URL when running in Docker (internal vs host-visible address).

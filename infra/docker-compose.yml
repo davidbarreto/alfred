@@ -94,6 +94,7 @@ services:
       - api
     restart: unless-stopped
     environment:
+      - ENV=${ENV}
       - BACKEND_URL=http://api:8000
       - PUBLIC_BACKEND_URL=${PUBLIC_BACKEND_URL}
       - ALFRED_API_TOKEN=${ALFRED_API_TOKEN}

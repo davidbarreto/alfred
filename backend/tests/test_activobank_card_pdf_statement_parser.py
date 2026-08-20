@@ -174,6 +174,16 @@ class TestParseTextMovementsFull:
         by_desc = {r.raw_description: r for r in result.rows}
         assert by_desc["COMPRA 4681 SAMPLE SHOP B"].suggested_type is None
 
+    def test_date_posted_uses_data_valor_not_data_movimento(self):
+        # Row: "2026/05/03 2026/05/04 COMPRA 4681 SAMPLE SHOP B 42.50" -- Data
+        # Movimento is 05/03, Data Valor is 05/04. date_posted (the field the
+        # import service treats as the transaction's actual date) must carry
+        # Data Valor; date_value keeps Data Movimento.
+        result = _parse_text(_STATEMENT_TEXT, _PERIOD_START, _PERIOD_END, installments_only=False)
+        row = next(r for r in result.rows if r.raw_description == "COMPRA 4681 SAMPLE SHOP B")
+        assert row.date_posted == date(2026, 5, 4)
+        assert row.date_value == date(2026, 5, 3)
+
     def test_fx_summary_section_is_skipped(self):
         result = _parse_text(_STATEMENT_TEXT, _PERIOD_START, _PERIOD_END, installments_only=False)
         assert not any(r.amount == Decimal("-4.99") for r in result.rows)

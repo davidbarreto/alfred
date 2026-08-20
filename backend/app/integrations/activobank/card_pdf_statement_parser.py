@@ -3,9 +3,12 @@
 Format notes (differs from the account-history and card-CSV exports):
 - Text-based PDF; movements live under a ``DETALHE DOS MOVIMENTOS`` section
 - Row shape: ``2026/07/06 2026/07/07 COMPRA 4681 KEF FOOD MARSEILLE 1 54.80``
-  (date posted, date value, description, amount) -- network markers (``VIS``/
-  ``MB``), FX sub-lines, and "Fracionada xN" continuation lines sit on their
-  own following line and are simply not matched by the row pattern
+  (Data Movimento, Data Valor, description, amount) -- network markers
+  (``VIS``/``MB``), FX sub-lines, and "Fracionada xN" continuation lines sit
+  on their own following line and are simply not matched by the row pattern.
+  ``ParsedRow.date_posted`` (the field the import service treats as the
+  transaction's actual date) is populated from Data Valor, not Data
+  Movimento -- see ``_build_movement_row``.
 
 Two provider registrations, same parsing code (see ``registry.py``):
 - ``activobank_card_pdf`` (``installments_only=True``, the default): only
@@ -130,7 +133,15 @@ def _within_period(day: date, period_start: date | None, period_end: date | None
     return period_start <= day <= period_end
 
 
-def _build_movement_row(description: str, amount: Decimal, date_posted: date, date_value: date) -> ParsedRow:
+def _build_movement_row(description: str, amount: Decimal, date_movimento: date, date_valor: date) -> ParsedRow:
+    """Build a movement row, using Data Valor as the transaction's canonical date.
+
+    ``ParsedRow.date_posted`` is what the import service treats as the actual
+    transaction date (dedup key, FX lookup, stored ``date``) across every
+    provider -- so it's populated with Data Valor here, not Data Movimento,
+    even though the field name says "posted". Data Movimento is kept on
+    ``date_value`` purely for record-keeping.
+    """
     description = description.strip()
     if description.startswith(">"):
         description = description[1:].strip()
@@ -147,8 +158,8 @@ def _build_movement_row(description: str, amount: Decimal, date_posted: date, da
         suggested_type = None
 
     return ParsedRow(
-        date_posted=date_posted,
-        date_value=date_value,
+        date_posted=date_valor,
+        date_value=date_movimento,
         raw_description=description,
         amount=signed_amount,
         currency="EUR",
@@ -264,15 +275,15 @@ def _parse_text(
                 i += 1
                 continue
 
-            date_posted = _parse_date(posted_raw)
-            date_value = _parse_date(value_raw)
+            date_movimento = _parse_date(posted_raw)
+            date_valor = _parse_date(value_raw)
             amount = _parse_amount(amount_raw)
-            if date_posted is None or amount is None:
+            if date_movimento is None or amount is None:
                 i += 1
                 continue
 
             rows.append(
-                _build_movement_row(description, amount, date_posted, date_value or date_posted)
+                _build_movement_row(description, amount, date_movimento, date_valor or date_movimento)
             )
             i += 1
             continue

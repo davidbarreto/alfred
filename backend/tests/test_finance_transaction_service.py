@@ -612,6 +612,30 @@ class TestLinkTransfer:
             1, TransactionUpdate(type="transfer", counterpart_account_id=2), amount_eur=None, recompute_amount_eur=False
         )
 
+    async def test_allows_counterpart_with_rule_guessed_account_matching_source(self, service):
+        """A counterpart leg's counterpart_account_id may already be set by an import
+        rule's guessed destination account -- if that guess already points back at the
+        source transaction's own account, it's consistent with this being a genuine (if
+        previously unconfirmed) link, so it should not block linking."""
+        from datetime import datetime
+        same_date = datetime(2026, 6, 12)
+        txn = _make_txn_orm(
+            id=1, account_id=1, type="transfer", amount=Decimal("50.00"), date=same_date,
+        )
+        counterpart = _make_txn_orm(
+            id=2, account_id=2, type="transfer", amount=Decimal("-50.00"), date=same_date,
+            counterpart_account_id=1,
+        )
+        service._repo.get.side_effect = [txn, counterpart, txn, counterpart]
+        service._repo.update.return_value = txn
+
+        result = await service.link_transfer(1, 2)
+
+        assert isinstance(result, TransactionRead)
+        service._repo.update.assert_any_await(
+            2, TransactionUpdate(type="transfer", counterpart_account_id=1), amount_eur=None, recompute_amount_eur=False
+        )
+
     async def test_rejects_same_account(self, service):
         service._repo.get.side_effect = [
             _make_txn_orm(id=1, account_id=1, type="transfer"),

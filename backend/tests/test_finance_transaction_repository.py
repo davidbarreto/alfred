@@ -110,6 +110,21 @@ class TestGetTransferMatchCandidates:
         sql = str(query.compile(compile_kwargs={"literal_binds": True}))
         assert "transactions.type = 'transfer'" not in sql
 
+    async def test_query_allows_candidate_counterpart_guessed_at_source_account(self):
+        """A candidate's counterpart_account_id may already be set by an import rule's
+        guess rather than a confirmed link -- if that guess already points at the source
+        transaction's own account, it doesn't rule the candidate out, since that's
+        consistent with this transaction being the missing counterpart."""
+        session = _make_session()
+        session.execute.return_value = _scalar_all([])
+        source = self._source(account_id=7)
+
+        await TransactionRepository(session).get_transfer_match_candidates(source)
+
+        query = session.execute.call_args.args[0]
+        sql = str(query.compile(compile_kwargs={"literal_binds": True}))
+        assert "counterpart_account_id IS NULL OR finance.transactions.counterpart_account_id = 7" in sql
+
     async def test_query_also_matches_on_identical_bank_description(self):
         """A currency exchange has different currencies and an FX-converted (not
         exactly opposite) amount on each leg, so it can only be found by matching the

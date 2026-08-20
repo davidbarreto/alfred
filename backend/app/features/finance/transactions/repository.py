@@ -114,13 +114,19 @@ class TransactionRepository:
 
     async def get_transfer_match_candidates(self, transaction: Transaction) -> list[Transaction]:
         """Other accounts' unmatched legs that could be this transaction's missing
-        counterpart, same day only, not already linked or a mirror row. Used to
-        reconcile a transfer whose two legs were imported from separate statement files
-        (or, for a same-file currency exchange, never paired at import time), so no
-        shared transfer_pair_key was ever set. Not restricted to type=transfer -- one or
-        both legs may have been miscategorized as expense/income on import, which is
-        exactly the case this is meant to catch. Candidates are only ever suggested,
-        never auto-linked. Two independent match strategies, either sufficient:
+        counterpart, same day only, not a mirror row. A candidate's counterpart_account_id
+        may be set from an import rule's guessed destination account rather than a
+        confirmed link (see TransactionService.link_transfer) -- that's not disqualifying
+        as long as the guess already points back at this transaction's own account, since
+        that's consistent with this transaction being the missing counterpart. A guess
+        pointing at some other account rules the candidate out, narrowing results instead
+        of blocking the search entirely. Used to reconcile a transfer whose two legs were
+        imported from separate statement files (or, for a same-file currency exchange,
+        never paired at import time), so no shared transfer_pair_key was ever set. Not
+        restricted to type=transfer -- one or both legs may have been miscategorized as
+        expense/income on import, which is exactly the case this is meant to catch.
+        Candidates are only ever suggested, never auto-linked. Two independent match
+        strategies, either sufficient:
         - same currency + exactly opposite amount -- a same-currency transfer split
           across separate imports (e.g. an external card charge and the Revolut top-up
           it funds).
@@ -156,7 +162,10 @@ class TransactionRepository:
             select(Transaction).where(
                 Transaction.id != transaction.id,
                 Transaction.account_id != transaction.account_id,
-                Transaction.counterpart_account_id.is_(None),
+                or_(
+                    Transaction.counterpart_account_id.is_(None),
+                    Transaction.counterpart_account_id == transaction.account_id,
+                ),
                 Transaction.generated_from_transaction_id.is_(None),
                 func.date(Transaction.date) == func.date(transaction.date),
                 or_(same_currency_opposite_amount, same_description_opposite_sign),

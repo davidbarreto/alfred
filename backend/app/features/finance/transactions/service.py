@@ -278,8 +278,9 @@ class TransactionService:
         it is not proof a specific counterpart transaction was ever found (an import rule
         can set it as a guess with no reciprocal row). So a transaction is still eligible
         to search here as long as it isn't itself a generated mirror row; the repo query
-        already restricts candidates to rows with counterpart_account_id unset, so an
-        already mutually-linked pair naturally yields no candidates.
+        allows candidates whose own counterpart_account_id is unset or already guesses
+        this transaction's account, so a genuinely mutually-linked pair naturally yields
+        no candidates while a pair of independent rule-guesses can still be found.
         """
         transaction = await self._repo.get(transaction_id)
         if transaction is None or transaction.generated_from_transaction_id is not None:
@@ -306,10 +307,11 @@ class TransactionService:
             raise TransferMatchError("A generated mirror row cannot be linked")
         # transaction.counterpart_account_id may already be set from an import rule's
         # guessed destination account (see _apply_rules) rather than a confirmed
-        # counterpart -- only the chosen candidate's own link state actually guards
-        # against double-linking, since get_transfer_match_candidates already restricts
-        # candidates to counterpart_account_id IS NULL.
-        if counterpart.counterpart_account_id is not None:
+        # counterpart. Same for counterpart.counterpart_account_id: it's only a problem
+        # if it points somewhere other than transaction's own account -- a guess already
+        # pointing back at transaction's account is consistent with this being a genuine
+        # (if previously unconfirmed) link.
+        if counterpart.counterpart_account_id is not None and counterpart.counterpart_account_id != transaction.account_id:
             raise TransferMatchError("The counterpart transaction is already linked")
         if transaction.account_id == counterpart.account_id:
             raise TransferMatchError("Cannot link two legs on the same account")

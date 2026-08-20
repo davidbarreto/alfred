@@ -3479,7 +3479,7 @@
             "method": "POST",
             "header": [],
             "url": {
-              "raw": "{{base_url}}/finance/installment-plans/{{installment_plan_id}}/transactions/{{finance_transaction_id}}/unlink",
+              "raw": "{{base_url}}/finance/installment-plans/{{installment_plan_id}}/transactions/999999999/unlink",
               "host": [
                 "{{base_url}}"
               ],
@@ -3488,7 +3488,7 @@
                 "installment-plans",
                 "{{installment_plan_id}}",
                 "transactions",
-                "{{finance_transaction_id}}",
+                "999999999",
                 "unlink"
               ]
             }
@@ -3511,7 +3511,7 @@
             "method": "POST",
             "header": [],
             "url": {
-              "raw": "{{base_url}}/finance/installment-plans/999999999/transactions/{{finance_transaction_id}}/unlink",
+              "raw": "{{base_url}}/finance/installment-plans/999999999/transactions/999999999/unlink",
               "host": [
                 "{{base_url}}"
               ],
@@ -3520,7 +3520,7 @@
                 "installment-plans",
                 "999999999",
                 "transactions",
-                "{{finance_transaction_id}}",
+                "999999999",
                 "unlink"
               ]
             }

@@ -33,7 +33,11 @@ from app.api.routes.commands import router as commands_router
 from app.api.routes.organizer.tasks import router as tasks_router
 from app.api.routes.organizer.notes import router as notes_router
 from app.api.routes.organizer.calendar_events import router as calendar_events_router
+from app.api.routes.organizer.calendar_notification_settings import router as calendar_notification_settings_router
+from app.api.routes.organizer.calendar_notifications import router as calendar_notifications_router
 from app.api.routes.organizer.contacts import router as contacts_router
+from app.api.routes.organizer.contact_birthday_settings import router as contact_birthday_settings_router
+from app.api.routes.organizer.contact_birthday_notifications import router as contact_birthday_notifications_router
 from app.api.routes.organizer.shopping import shopping_router, wishlist_router, recurrence_router
 from app.api.routes.organizer.shopping_categories import router as shopping_categories_router
 from app.api.routes.finance.accounts import router as finance_accounts_router
@@ -124,7 +128,11 @@ app.include_router(commands_router)
 app.include_router(tasks_router)
 app.include_router(notes_router)
 app.include_router(calendar_events_router)
+app.include_router(calendar_notification_settings_router)
+app.include_router(calendar_notifications_router)
 app.include_router(contacts_router)
+app.include_router(contact_birthday_settings_router)
+app.include_router(contact_birthday_notifications_router)
 app.include_router(shopping_router)
 app.include_router(wishlist_router)
 app.include_router(recurrence_router)

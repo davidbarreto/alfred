@@ -576,6 +576,197 @@
           ]
         }
       }
+    },
+    {
+      "name": "15 - Create Event with Notification Profile",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+              "pm.test('Response echoes the notification_profile', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json).to.have.property('id');",
+              "    pm.expect(json.notification_profile).to.eql('cant_miss');",
+              "    pm.environment.set('profile_event_id', json.id);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"title\": \"Job Interview\",\n  \"start_datetime\": \"2026-09-01T10:00:00\",\n  \"end_datetime\": \"2026-09-01T11:00:00\",\n  \"all_day\": false,\n  \"notification_profile\": \"cant_miss\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{base_url}}/organizer/calendar-events",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "calendar-events"
+          ]
+        }
+      }
+    },
+    {
+      "name": "16 - Delete Event with Notification Profile",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 204', () => pm.response.to.have.status(204));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/organizer/calendar-events/{{profile_event_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "calendar-events",
+            "{{profile_event_id}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "17 - Calendar Notification Settings - Get Defaults",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Response has default profiles', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json.profiles).to.have.property('cant_miss');",
+              "    pm.expect(json.profiles).to.have.property('normal');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/organizer/calendar-notification-settings",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "calendar-notification-settings"
+          ]
+        }
+      }
+    },
+    {
+      "name": "18 - Calendar Notification Settings - Update Profile",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Profile is updated', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json.profiles.light).to.eql(['10m', '0']);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"offsets\": [\"10m\", \"0\"]\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{base_url}}/organizer/calendar-notification-settings/light",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "calendar-notification-settings",
+            "light"
+          ]
+        }
+      }
+    },
+    {
+      "name": "19 - Calendar Notifications - Get Due Digest",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Response has expected shape', () => {",
+              "    const json = pm.response.json();",
+              "    ['date', 'has_content', 'text'].forEach(f => pm.expect(json).to.have.property(f));",
+              "    pm.expect(json.text).to.be.a('string');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/organizer/calendar-notifications/due",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "calendar-notifications",
+            "due"
+          ]
+        }
+      }
     }
   ]
 }

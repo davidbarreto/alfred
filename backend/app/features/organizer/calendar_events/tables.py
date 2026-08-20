@@ -40,6 +40,7 @@ class CalendarEvent(Base):
     recurrence_rule: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
     timezone: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
     host: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    notification_profile: Mapped[Optional[str]] = mapped_column(String(32), nullable=True)
 
     invitees: Mapped[List["CalendarEventInvitee"]] = relationship(
         "CalendarEventInvitee",

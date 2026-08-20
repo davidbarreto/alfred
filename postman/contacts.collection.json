@@ -2,7 +2,7 @@
   "info": {
     "name": "Alfred - Contacts API",
     "_postman_id": "alfred-contacts-v1",
-    "description": "CRUD for contacts with Google write-through cache. Run in order: List → Create → Get → Filter by name → Filter by email → Filter by birthday → Filter by letter → Paginate → Update → Mark as Self → Get Not Found → Delete. Requires Google Contacts re-authorized with full contacts scope (not readonly).",
+    "description": "CRUD for contacts with Google write-through cache. Run in order: List \u2192 Create \u2192 Get \u2192 Filter by name \u2192 Filter by email \u2192 Filter by birthday \u2192 Filter by letter \u2192 Paginate \u2192 Update \u2192 Mark as Self \u2192 Get Not Found \u2192 Delete. Requires Google Contacts re-authorized with full contacts scope (not readonly).",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -37,10 +37,19 @@
         "header": [],
         "url": {
           "raw": "{{base_url}}/organizer/contacts/?limit=100",
-          "host": ["{{base_url}}"],
-          "path": ["organizer", "contacts", ""],
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "contacts",
+            ""
+          ],
           "query": [
-            { "key": "limit", "value": "100" }
+            {
+              "key": "limit",
+              "value": "100"
+            }
           ]
         }
       }
@@ -68,17 +77,30 @@
       "request": {
         "method": "POST",
         "header": [
-          { "key": "Content-Type", "value": "application/json" }
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
         ],
         "body": {
           "mode": "raw",
           "raw": "{\n  \"name\": \"Jane Doe\",\n  \"email\": \"jane.doe@example.com\",\n  \"phone\": \"+351900000001\",\n  \"birthday\": \"1990-06-15\"\n}",
-          "options": { "raw": { "language": "json" } }
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
         },
         "url": {
           "raw": "{{base_url}}/organizer/contacts/",
-          "host": ["{{base_url}}"],
-          "path": ["organizer", "contacts", ""]
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "contacts",
+            ""
+          ]
         }
       }
     },
@@ -105,8 +127,14 @@
         "header": [],
         "url": {
           "raw": "{{base_url}}/organizer/contacts/{{contact_id}}",
-          "host": ["{{base_url}}"],
-          "path": ["organizer", "contacts", "{{contact_id}}"]
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "contacts",
+            "{{contact_id}}"
+          ]
         }
       }
     },
@@ -131,11 +159,23 @@
         "header": [],
         "url": {
           "raw": "{{base_url}}/organizer/contacts/?name=Jane&limit=50",
-          "host": ["{{base_url}}"],
-          "path": ["organizer", "contacts", ""],
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "contacts",
+            ""
+          ],
           "query": [
-            { "key": "name", "value": "Jane" },
-            { "key": "limit", "value": "50" }
+            {
+              "key": "name",
+              "value": "Jane"
+            },
+            {
+              "key": "limit",
+              "value": "50"
+            }
           ]
         }
       }
@@ -161,10 +201,19 @@
         "header": [],
         "url": {
           "raw": "{{base_url}}/organizer/contacts/?email=example.com",
-          "host": ["{{base_url}}"],
-          "path": ["organizer", "contacts", ""],
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "contacts",
+            ""
+          ],
           "query": [
-            { "key": "email", "value": "example.com" }
+            {
+              "key": "email",
+              "value": "example.com"
+            }
           ]
         }
       }
@@ -192,10 +241,19 @@
         "header": [],
         "url": {
           "raw": "{{base_url}}/organizer/contacts/?has_birthday=true",
-          "host": ["{{base_url}}"],
-          "path": ["organizer", "contacts", ""],
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "contacts",
+            ""
+          ],
           "query": [
-            { "key": "has_birthday", "value": "true" }
+            {
+              "key": "has_birthday",
+              "value": "true"
+            }
           ]
         }
       }
@@ -223,11 +281,23 @@
         "header": [],
         "url": {
           "raw": "{{base_url}}/organizer/contacts/?letter=J&limit=50",
-          "host": ["{{base_url}}"],
-          "path": ["organizer", "contacts", ""],
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "contacts",
+            ""
+          ],
           "query": [
-            { "key": "letter", "value": "J" },
-            { "key": "limit", "value": "50" }
+            {
+              "key": "letter",
+              "value": "J"
+            },
+            {
+              "key": "limit",
+              "value": "50"
+            }
           ]
         }
       }
@@ -253,11 +323,23 @@
         "header": [],
         "url": {
           "raw": "{{base_url}}/organizer/contacts/?limit=50&offset=50",
-          "host": ["{{base_url}}"],
-          "path": ["organizer", "contacts", ""],
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "contacts",
+            ""
+          ],
           "query": [
-            { "key": "limit", "value": "50" },
-            { "key": "offset", "value": "50" }
+            {
+              "key": "limit",
+              "value": "50"
+            },
+            {
+              "key": "offset",
+              "value": "50"
+            }
           ]
         }
       }
@@ -282,17 +364,30 @@
       "request": {
         "method": "PATCH",
         "header": [
-          { "key": "Content-Type", "value": "application/json" }
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
         ],
         "body": {
           "mode": "raw",
           "raw": "{\n  \"phone\": \"+351900000099\"\n}",
-          "options": { "raw": { "language": "json" } }
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
         },
         "url": {
           "raw": "{{base_url}}/organizer/contacts/{{contact_id}}",
-          "host": ["{{base_url}}"],
-          "path": ["organizer", "contacts", "{{contact_id}}"]
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "contacts",
+            "{{contact_id}}"
+          ]
         }
       }
     },
@@ -316,17 +411,30 @@
       "request": {
         "method": "PATCH",
         "header": [
-          { "key": "Content-Type", "value": "application/json" }
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
         ],
         "body": {
           "mode": "raw",
           "raw": "{\n  \"is_self\": true\n}",
-          "options": { "raw": { "language": "json" } }
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
         },
         "url": {
           "raw": "{{base_url}}/organizer/contacts/{{contact_id}}",
-          "host": ["{{base_url}}"],
-          "path": ["organizer", "contacts", "{{contact_id}}"]
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "contacts",
+            "{{contact_id}}"
+          ]
         }
       }
     },
@@ -351,8 +459,14 @@
         "header": [],
         "url": {
           "raw": "{{base_url}}/organizer/contacts/999999",
-          "host": ["{{base_url}}"],
-          "path": ["organizer", "contacts", "999999"]
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "contacts",
+            "999999"
+          ]
         }
       }
     },
@@ -375,8 +489,14 @@
         "header": [],
         "url": {
           "raw": "{{base_url}}/organizer/contacts/{{contact_id}}",
-          "host": ["{{base_url}}"],
-          "path": ["organizer", "contacts", "{{contact_id}}"]
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "contacts",
+            "{{contact_id}}"
+          ]
         }
       }
     },
@@ -403,10 +523,133 @@
         "header": [],
         "url": {
           "raw": "{{base_url}}/organizer/contacts/?relationship=family",
-          "host": ["{{base_url}}"],
-          "path": ["organizer", "contacts", ""],
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "contacts",
+            ""
+          ],
           "query": [
-            { "key": "relationship", "value": "family" }
+            {
+              "key": "relationship",
+              "value": "family"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "14 - Birthday Notification Settings - Get Defaults",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Response has default relationships', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json.relationships).to.have.property('family');",
+              "    pm.expect(json.relationships).to.have.property('other');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/organizer/contact-birthday-settings",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "contact-birthday-settings"
+          ]
+        }
+      }
+    },
+    {
+      "name": "15 - Birthday Notification Settings - Update Relationship",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Relationship is updated', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json.relationships.friend).to.eql(['3d']);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"offsets\": [\"3d\"]\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{base_url}}/organizer/contact-birthday-settings/friend",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "contact-birthday-settings",
+            "friend"
+          ]
+        }
+      }
+    },
+    {
+      "name": "16 - Birthday Notifications - Get Due Digest",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Response has expected shape', () => {",
+              "    const json = pm.response.json();",
+              "    ['date', 'has_content', 'text'].forEach(f => pm.expect(json).to.have.property(f));",
+              "    pm.expect(json.text).to.be.a('string');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/organizer/contact-birthday-notifications/due",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "contact-birthday-notifications",
+            "due"
           ]
         }
       }

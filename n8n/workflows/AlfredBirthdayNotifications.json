@@ -1,0 +1,110 @@
+{
+  "name": "AlfredBirthdayNotifications",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 8 * * *"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [-320, 0],
+      "id": "b1b1b1b1-0001-4000-8000-000000000001",
+      "name": "Daily 08:00"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "http://api:8000/organizer/contact-birthday-notifications/due",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBearerAuth",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [-80, 0],
+      "id": "b1b1b1b1-0002-4000-8000-000000000002",
+      "name": "Get Due Birthday Notifications",
+      "credentials": {
+        "httpBearerAuth": {
+          "id": "oj5Yf1MhLsryeSrX",
+          "name": "Bearer Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "b1b1b1b1-0003-4000-8000-000000000003",
+              "leftValue": "={{ $json.has_content }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [160, 0],
+      "id": "b1b1b1b1-0004-4000-8000-000000000004",
+      "name": "Has Content"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $env.TELEGRAM_CHAT_ID }}",
+        "text": "={{ $json.text }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [400, -80],
+      "id": "b1b1b1b1-0005-4000-8000-000000000005",
+      "name": "Send Message",
+      "webhookId": "b1b1b1b1-0005-4000-8000-000000000099",
+      "credentials": {
+        "telegramApi": {
+          "id": "t63z4EHeYTEZtFAR",
+          "name": "Telegram account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Daily 08:00": {
+      "main": [[{ "node": "Get Due Birthday Notifications", "type": "main", "index": 0 }]]
+    },
+    "Get Due Birthday Notifications": {
+      "main": [[{ "node": "Has Content", "type": "main", "index": 0 }]]
+    },
+    "Has Content": {
+      "main": [
+        [{ "node": "Send Message", "type": "main", "index": 0 }],
+        []
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

@@ -151,6 +151,7 @@ class TestCreateEvent:
             "location": None,
             "recurrence_rule": None,
             "timezone": None,
+            "notification_profile": None,
         })
 
     def test_creates_recurring_event(self, client, mock_api):
@@ -173,6 +174,7 @@ class TestCreateEvent:
             "location": None,
             "recurrence_rule": "FREQ=DAILY",
             "timezone": None,
+            "notification_profile": None,
         })
 
     def test_creates_event_with_custom_recurrence_rule(self, client, mock_api):
@@ -195,6 +197,7 @@ class TestCreateEvent:
             "location": None,
             "recurrence_rule": "FREQ=WEEKLY;BYDAY=MO,WE,FR;COUNT=10",
             "timezone": None,
+            "notification_profile": None,
         })
 
     def test_creates_event_with_timezone(self, client, mock_api):
@@ -206,6 +209,7 @@ class TestCreateEvent:
             "start_time": "09:00",
             "end_time": "09:30",
             "timezone": "America/Chicago",
+            "notification_profile": None,
         })
 
         assert resp.status_code == 204
@@ -217,6 +221,7 @@ class TestCreateEvent:
             "location": None,
             "recurrence_rule": None,
             "timezone": "America/Chicago",
+            "notification_profile": None,
         })
 
     def test_creates_multi_day_all_day_event(self, client, mock_api):
@@ -238,6 +243,7 @@ class TestCreateEvent:
             "location": None,
             "recurrence_rule": None,
             "timezone": None,
+            "notification_profile": None,
         })
 
     def test_creates_all_day_event_defaults_end_date_to_start_date(self, client, mock_api):
@@ -258,6 +264,7 @@ class TestCreateEvent:
             "location": None,
             "recurrence_rule": None,
             "timezone": None,
+            "notification_profile": None,
         })
 
     def test_returns_422_when_backend_create_fails(self, client, mock_api):
@@ -295,6 +302,7 @@ class TestUpdateEvent:
             "location": "Room 2",
             "recurrence_rule": None,
             "timezone": None,
+            "notification_profile": None,
         })
 
     def test_updates_all_day_event(self, client, mock_api):
@@ -315,6 +323,7 @@ class TestUpdateEvent:
             "location": None,
             "recurrence_rule": None,
             "timezone": None,
+            "notification_profile": None,
         })
 
     def test_updates_all_day_event_to_span_multiple_days(self, client, mock_api):
@@ -336,6 +345,7 @@ class TestUpdateEvent:
             "location": None,
             "recurrence_rule": None,
             "timezone": None,
+            "notification_profile": None,
         })
 
     def test_updates_recurrence_rule(self, client, mock_api):
@@ -358,6 +368,7 @@ class TestUpdateEvent:
             "location": None,
             "recurrence_rule": "FREQ=WEEKLY",
             "timezone": None,
+            "notification_profile": None,
         })
 
     def test_updates_timezone(self, client, mock_api):
@@ -369,6 +380,7 @@ class TestUpdateEvent:
             "start_time": "09:00",
             "end_time": "09:30",
             "timezone": "America/Chicago",
+            "notification_profile": None,
         })
 
         assert resp.status_code == 204
@@ -380,6 +392,7 @@ class TestUpdateEvent:
             "location": None,
             "recurrence_rule": None,
             "timezone": "America/Chicago",
+            "notification_profile": None,
         })
 
     def test_returns_422_when_backend_update_fails(self, client, mock_api):

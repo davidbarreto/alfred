@@ -1,7 +1,9 @@
 from datetime import date, datetime
-from typing import Annotated, Any, List, Optional
+from typing import Annotated, Any, List, Literal, Optional
 from pydantic import BaseModel, field_validator
 from fastapi import Query
+
+NotificationProfile = Literal["cant_miss", "important", "normal", "light", "aware"]
 
 
 class EventBase(BaseModel):
@@ -16,6 +18,7 @@ class EventBase(BaseModel):
     tags: list[str] = []
     recurrence_rule: str | None = None
     timezone: str | None = None
+    notification_profile: NotificationProfile | None = None
 
 
 class EventCreate(EventBase):
@@ -34,6 +37,7 @@ class EventUpdate(BaseModel):
     tags: list[str] | None = None
     recurrence_rule: str | None = None
     timezone: str | None = None
+    notification_profile: NotificationProfile | None = None
 
 
 class EventRead(EventBase):

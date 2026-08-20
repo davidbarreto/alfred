@@ -197,6 +197,20 @@
         />
       </div>
       <div>
+        <label class="text-xs text-gray-500 mb-1 block">Reminder profile</label>
+        <select
+          name="notification_profile"
+          class="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white w-full focus:outline-none focus:ring-1 focus:ring-[#378ADD]"
+        >
+          <option value="">Default (normal)</option>
+          <option value="cant_miss">Can't miss</option>
+          <option value="important">Important</option>
+          <option value="normal">Normal</option>
+          <option value="light">Light</option>
+          <option value="aware">Aware</option>
+        </select>
+      </div>
+      <div>
         <label class="text-xs text-gray-500 mb-2 block">Repeat</label>
         <div class="flex flex-wrap gap-1.5" id="event-recurrence-chips">
           {% for chip in [
@@ -353,6 +367,7 @@ function openEditEvent(ev) {
   form.querySelector('[name="title"]').value = ev.title;
   form.querySelector('[name="start_date"]').value = ev.start_datetime.slice(0, 10);
   form.querySelector('[name="location"]').value = ev.location || "";
+  form.querySelector('[name="notification_profile"]').value = ev.notification_profile || "";
 
   const rr = ev.recurrence_rule || "";
   const knownRecurrences = ["", "FREQ=DAILY", "FREQ=WEEKLY", "FREQ=MONTHLY", "FREQ=YEARLY"];

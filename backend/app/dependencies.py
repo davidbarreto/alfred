@@ -24,6 +24,10 @@ from app.features.finance.imports.registry import all_parsers
 from app.features.finance.installment_plans.service import InstallmentPlanService
 from app.features.finance.budgets.service import BudgetTargetService
 from app.features.finance.settings.service import FinanceSettingsService
+from app.features.organizer.calendar_events.notification_settings.service import CalendarNotificationSettingsService
+from app.features.organizer.calendar_events.notifications.service import CalendarNotificationService
+from app.features.organizer.contacts.notification_settings.service import ContactBirthdaySettingsService
+from app.features.organizer.contacts.notifications.service import ContactBirthdayNotificationService
 from app.features.finance.recurring_transactions.service import RecurringTransactionService
 from app.features.core.sessions.service import SessionService
 from app.features.core.messages.service import MessageService
@@ -194,6 +198,24 @@ def get_budget_target_service(session: AsyncSession = Depends(get_session)) -> B
 
 def get_finance_settings_service(session: AsyncSession = Depends(get_session)) -> FinanceSettingsService:
     return FinanceSettingsService(session)
+
+def get_calendar_notification_settings_service(
+    session: AsyncSession = Depends(get_session),
+) -> CalendarNotificationSettingsService:
+    return CalendarNotificationSettingsService(session)
+
+def get_calendar_notification_service(session: AsyncSession = Depends(get_session)) -> CalendarNotificationService:
+    return CalendarNotificationService(session, CalendarEventService(provider=None, session=session))
+
+def get_contact_birthday_settings_service(
+    session: AsyncSession = Depends(get_session),
+) -> ContactBirthdaySettingsService:
+    return ContactBirthdaySettingsService(session)
+
+def get_contact_birthday_notification_service(
+    session: AsyncSession = Depends(get_session),
+) -> ContactBirthdayNotificationService:
+    return ContactBirthdayNotificationService(session)
 
 def get_recurring_transaction_service(session: AsyncSession = Depends(get_session)) -> RecurringTransactionService:
     return RecurringTransactionService(session, get_exchange_rate_service(session))
@@ -514,6 +536,16 @@ ImportServiceDep = Annotated[ImportService, Depends(get_import_service)]
 InstallmentPlanServiceDep = Annotated[InstallmentPlanService, Depends(get_installment_plan_service)]
 BudgetTargetServiceDep = Annotated[BudgetTargetService, Depends(get_budget_target_service)]
 FinanceSettingsServiceDep = Annotated[FinanceSettingsService, Depends(get_finance_settings_service)]
+CalendarNotificationSettingsServiceDep = Annotated[
+    CalendarNotificationSettingsService, Depends(get_calendar_notification_settings_service)
+]
+CalendarNotificationServiceDep = Annotated[CalendarNotificationService, Depends(get_calendar_notification_service)]
+ContactBirthdaySettingsServiceDep = Annotated[
+    ContactBirthdaySettingsService, Depends(get_contact_birthday_settings_service)
+]
+ContactBirthdayNotificationServiceDep = Annotated[
+    ContactBirthdayNotificationService, Depends(get_contact_birthday_notification_service)
+]
 RecurringTransactionServiceDep = Annotated[RecurringTransactionService, Depends(get_recurring_transaction_service)]
 SessionServiceDep = Annotated[SessionService, Depends(get_session_service)]
 MessageServiceDep = Annotated[MessageService, Depends(get_message_service)]

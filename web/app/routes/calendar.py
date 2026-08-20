@@ -170,6 +170,7 @@ async def calendar_day(date_str: str, request: Request):
 def _event_payload(
     title: str, start_date: str, start_time: str, end_time: str, location: str, all_day: str,
     recurrence_rule: str | None = None, timezone: str | None = None, end_date: str | None = None,
+    notification_profile: str | None = None,
 ) -> dict:
     is_all_day = bool(all_day)
     if is_all_day:
@@ -187,6 +188,7 @@ def _event_payload(
         "location": location or None,
         "recurrence_rule": recurrence_rule or None,
         "timezone": timezone or None,
+        "notification_profile": notification_profile or None,
     }
 
 
@@ -202,8 +204,12 @@ async def create_event(
     recurrence_rule: Annotated[str | None, Form()] = None,
     timezone: Annotated[str | None, Form()] = None,
     end_date: Annotated[str | None, Form()] = None,
+    notification_profile: Annotated[str | None, Form()] = None,
 ):
-    payload = _event_payload(title, start_date, start_time, end_time, location, all_day, recurrence_rule, timezone, end_date)
+    payload = _event_payload(
+        title, start_date, start_time, end_time, location, all_day,
+        recurrence_rule, timezone, end_date, notification_profile,
+    )
     try:
         await api.post("/organizer/calendar-events", json=payload)
     except httpx.HTTPStatusError as e:
@@ -231,8 +237,12 @@ async def update_event(
     recurrence_rule: Annotated[str | None, Form()] = None,
     timezone: Annotated[str | None, Form()] = None,
     end_date: Annotated[str | None, Form()] = None,
+    notification_profile: Annotated[str | None, Form()] = None,
 ):
-    payload = _event_payload(title, start_date, start_time, end_time, location, all_day, recurrence_rule, timezone, end_date)
+    payload = _event_payload(
+        title, start_date, start_time, end_time, location, all_day,
+        recurrence_rule, timezone, end_date, notification_profile,
+    )
     try:
         await api.patch(f"/organizer/calendar-events/{event_id}", json=payload)
     except httpx.HTTPStatusError as e:

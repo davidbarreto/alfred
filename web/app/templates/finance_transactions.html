@@ -216,6 +216,11 @@
   <div class="modal-box bg-white rounded-xl border border-gray-200 shadow-lg max-w-sm w-full p-6">
     <h3 class="text-sm font-semibold text-gray-900 mb-2">Find matching transfer</h3>
     <p class="text-xs text-gray-500 mb-4">Other unmatched transfers on the same day with the exact opposite amount.</p>
+    <div id="transfer-match-auto" class="hidden flex items-center justify-between gap-2 border border-gray-100 rounded-lg px-3 py-2 mb-2 bg-gray-50">
+      <span class="text-xs text-gray-600">Counterpart account auto-mirrors transfers.</span>
+      <button type="button" id="transfer-match-auto-btn" class="btn btn-xs btn-primary flex-shrink-0"
+              onclick="autoCreateTransferMirror()">Auto-create</button>
+    </div>
     <div id="transfer-match-list" class="flex flex-col gap-2"></div>
     <p id="transfer-match-empty" class="text-xs text-gray-400 hidden">No matching transfer found.</p>
     <p id="transfer-match-error" class="text-xs text-[#E24B4A] hidden mt-2"></p>
@@ -414,15 +419,18 @@ async function openTransferMatchModal(txnId) {
   const listEl = document.getElementById("transfer-match-list");
   const emptyEl = document.getElementById("transfer-match-empty");
   const errEl = document.getElementById("transfer-match-error");
+  const autoEl = document.getElementById("transfer-match-auto");
   listEl.innerHTML = "";
   emptyEl.classList.add("hidden");
   errEl.classList.add("hidden");
+  autoEl.classList.add("hidden");
   document.getElementById("transfer-match-modal").showModal();
 
   try {
     const res = await fetch(`/finance/transactions/${txnId}/transfer-candidates`);
     if (!res.ok) throw new Error(`Error ${res.status}`);
-    const candidates = await res.json();
+    const { candidates, can_auto_mirror } = await res.json();
+    autoEl.classList.toggle("hidden", !can_auto_mirror);
     if (!candidates.length) {
       emptyEl.classList.remove("hidden");
       return;
@@ -519,6 +527,29 @@ function openTransferMatchDetailModal(c) {
     listEl.appendChild(rowEl);
   }
   document.getElementById("transfer-match-detail-modal").showModal();
+}
+
+async function autoCreateTransferMirror() {
+  const errEl = document.getElementById("transfer-match-error");
+  const btn = document.getElementById("transfer-match-auto-btn");
+  errEl.classList.add("hidden");
+  btn.disabled = true;
+  try {
+    const res = await fetch(`/finance/transactions/${_transferMatchTxnId}/auto-mirror-transfer`, {
+      method: "POST",
+    });
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(text || `Error ${res.status}`);
+    }
+    document.getElementById("transfer-match-modal").close();
+    refreshTxnList();
+  } catch (err) {
+    errEl.textContent = err.message || "Failed to auto-create counterpart.";
+    errEl.classList.remove("hidden");
+  } finally {
+    btn.disabled = false;
+  }
 }
 
 async function linkTransferCandidate(counterpartId) {

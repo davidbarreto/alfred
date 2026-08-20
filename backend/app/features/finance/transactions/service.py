@@ -1,4 +1,5 @@
 import logging
+from dataclasses import dataclass
 from datetime import date, timedelta
 from decimal import Decimal
 from typing import List
@@ -80,6 +81,38 @@ def build_mirror_transaction_create(source: Transaction) -> TransactionCreate:
         counterpart_account_id=None,
         counterpart_transaction_id=source.id,
     )
+
+
+@dataclass
+class _TransactionSnapshot:
+    """Plain pre-update copy of the fields _reconcile_balance/_sync_mirror/
+    _sync_counterpart_link compare against. Needed because TransactionRepository.get()
+    and .update() run in the same session and share SQLAlchemy's identity map -- both
+    calls return the *same* Transaction object for a given id, so update()'s setattr
+    mutates it in place. Without this snapshot, the "old" values passed to those
+    helpers would already reflect the post-update state (same object, not a copy),
+    making every diff against "new" compare a row to itself.
+    """
+
+    id: int
+    source: str | None
+    account_id: int
+    type: str
+    amount: Decimal
+    counterpart_account_id: int | None
+    counterpart_transaction_id: int | None
+
+    @classmethod
+    def of(cls, txn: Transaction) -> "_TransactionSnapshot":
+        return cls(
+            id=txn.id,
+            source=txn.source,
+            account_id=txn.account_id,
+            type=txn.type,
+            amount=txn.amount,
+            counterpart_account_id=txn.counterpart_account_id,
+            counterpart_transaction_id=txn.counterpart_transaction_id,
+        )
 
 
 class InvalidBulkMoveError(Exception):
@@ -174,16 +207,20 @@ class TransactionService:
             )
             recompute_amount_eur = True
 
+        # Snapshot before repo.update() mutates `current` in place -- see
+        # _TransactionSnapshot for why old/new would otherwise alias the same object.
+        old = _TransactionSnapshot.of(current)
+
         txn = await self._repo.update(
             transaction_id, data, amount_eur=amount_eur, recompute_amount_eur=recompute_amount_eur
         )
         if txn is None:
             logger.debug("Transaction update: id=%d not found", transaction_id)
             return None
-        await self._reconcile_balance(old=current, new=txn)
-        mirror_related = await self._sync_mirror(old=current, new=txn)
+        await self._reconcile_balance(old=old, new=txn)
+        mirror_related = await self._sync_mirror(old=old, new=txn)
         if not mirror_related:
-            await self._sync_counterpart_link(old=current, new=txn, fields=fields)
+            await self._sync_counterpart_link(old=old, new=txn, fields=fields)
         logger.info("Transaction updated: id=%d fields=%s", transaction_id, list(fields.keys()))
         return TransactionRead.model_validate(txn)
 
@@ -330,6 +367,33 @@ class TransactionService:
             return []
         candidates = await self._repo.get_transfer_match_candidates(transaction)
         return [TransactionRead.model_validate(c) for c in candidates]
+
+    async def auto_create_transfer_mirror(self, transaction_id: int) -> TransactionRead:
+        """Explicit, user-confirmed counterpart to _maybe_create_mirror -- offered from
+        Find Match when a transfer's counterpart_account_id already points at an
+        auto_mirror_transfers account (typically an import rule guess) but no mirror
+        exists yet, e.g. the row predates the rule or the flag was enabled afterwards.
+        Reuses _maybe_create_mirror for the actual creation; the checks here exist only
+        to turn its silent no-op into an explicit, actionable error for the caller.
+        """
+        transaction = await self._repo.get(transaction_id)
+        if transaction is None:
+            raise TransferMatchError("Transaction not found")
+        if transaction.source == "auto_transfer":
+            raise TransferMatchError("A generated mirror row cannot be linked")
+        if transaction.counterpart_transaction_id is not None:
+            raise TransferMatchError("Transaction is already linked")
+        if transaction.type != "transfer" or transaction.counterpart_account_id is None:
+            raise TransferMatchError("Transaction has no counterpart account set")
+        counterpart_account = await self._account_repo.get(transaction.counterpart_account_id)
+        if counterpart_account is None or not counterpart_account.auto_mirror_transfers:
+            raise TransferMatchError("Counterpart account does not auto-mirror transfers")
+
+        await self._maybe_create_mirror(transaction)
+        updated = await self._repo.get(transaction_id)
+        assert updated is not None
+        logger.info("Transfer mirror auto-created from Find Match: id=%d", transaction_id)
+        return TransactionRead.model_validate(updated)
 
     async def link_transfer(self, transaction_id: int, counterpart_transaction_id: int) -> TransactionRead:
         """Link two independently-imported transfer legs as each other's counterpart --

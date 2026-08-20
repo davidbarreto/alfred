@@ -201,6 +201,14 @@ async def link_transfer(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=exc.message)
 
 
+@router.post("/{transaction_id}/auto-mirror-transfer", response_model=TransactionRead)
+async def auto_mirror_transfer(transaction_id: int, service: TransactionServiceDep):
+    try:
+        return await service.auto_create_transfer_mirror(transaction_id)
+    except TransferMatchError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=exc.message)
+
+
 @router.get("/{transaction_id}", response_model=TransactionRead)
 async def get_transaction(transaction_id: int, service: TransactionServiceDep):
     txn = await service.get(transaction_id)

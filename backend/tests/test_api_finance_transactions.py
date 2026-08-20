@@ -78,6 +78,9 @@ def mock_txn_service():
     svc.bulk_move_account.return_value = 12
     svc.get_transfer_match_candidates.return_value = [_txn_read(id=2, type="transfer", amount=Decimal("-45.50"))]
     svc.link_transfer.return_value = _txn_read(type="transfer")
+    svc.auto_create_transfer_mirror.return_value = _txn_read(
+        type="transfer", counterpart_transaction_id=2
+    )
     svc.backfill_amount_eur.return_value = TransactionBackfillEurResponse(
         updated_count=3, failed_count=1, remaining_count=1,
     )
@@ -366,6 +369,28 @@ class TestLinkTransfer:
             "/finance/transactions/1/link-transfer", json={"counterpart_transaction_id": 2}
         )
         assert response.status_code == 403
+
+
+class TestAutoMirrorTransfer:
+    def test_creates_and_returns_200(self, client):
+        response = client.post("/finance/transactions/1/auto-mirror-transfer", headers=AUTH)
+        assert response.status_code == 200
+        assert response.json()["counterpart_transaction_id"] == 2
+
+    def test_passes_transaction_id_to_service(self, client, mock_txn_service):
+        client.post("/finance/transactions/1/auto-mirror-transfer", headers=AUTH)
+        mock_txn_service.auto_create_transfer_mirror.assert_called_once_with(1)
+
+    def test_ineligible_returns_400(self, client, mock_txn_service):
+        mock_txn_service.auto_create_transfer_mirror.side_effect = TransferMatchError(
+            "Counterpart account does not auto-mirror transfers"
+        )
+        response = client.post("/finance/transactions/1/auto-mirror-transfer", headers=AUTH)
+        assert response.status_code == 400
+        assert response.json()["detail"] == "Counterpart account does not auto-mirror transfers"
+
+    def test_requires_auth(self, client):
+        assert client.post("/finance/transactions/1/auto-mirror-transfer").status_code == 403
 
 
 class TestBackfillEur:

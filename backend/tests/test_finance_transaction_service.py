@@ -377,6 +377,33 @@ class TestUpdateBalanceMaintenance:
         await service.update(999, TransactionUpdate(merchant="X"))
         service._account_repo.adjust_balance.assert_not_awaited()
 
+    async def test_reconciles_correctly_when_repo_mutates_the_same_object_in_place(self, service):
+        """Regression test for the SQLAlchemy identity-map aliasing bug: the real
+        TransactionRepository.get() and .update() share a session identity map, so
+        both calls return the *same* ORM object, and .update() mutates it via setattr
+        rather than returning a distinct copy. If TransactionService.update() diffs
+        against that live object instead of a pre-mutation snapshot, "old" silently
+        reflects the post-update state too, and the balance reconciliation nets to
+        zero instead of reversing the old effect and applying the new one.
+        """
+        from datetime import datetime as dt
+
+        shared = _make_txn_orm(account_id=1, type="expense", amount=Decimal("10.00"), date=dt(2026, 6, 12))
+        service._repo.get.return_value = shared
+
+        async def mutating_update(transaction_id, data, amount_eur=None, recompute_amount_eur=False):
+            for field, value in data.model_dump(exclude_unset=True).items():
+                setattr(shared, field, value)
+            return shared
+
+        service._repo.update.side_effect = mutating_update
+
+        await service.update(1, TransactionUpdate(amount=Decimal("40.00")))
+
+        calls = service._account_repo.adjust_balance.await_args_list
+        assert calls[0].args == (1, Decimal("10.00"))
+        assert calls[1].args == (1, Decimal("-40.00"))
+
 
 class TestUpdateAutoMirror:
     async def test_amount_change_syncs_existing_mirror(self, service):
@@ -616,6 +643,42 @@ class TestLinkTransfer:
             amount_eur=None, recompute_amount_eur=False,
         )
 
+    async def test_persists_link_when_repo_mutates_the_same_object_in_place(self, service):
+        """Regression test for the identity-map aliasing bug (see
+        TestUpdateBalanceMaintenance.test_reconciles_correctly_when_repo_mutates_the_same_object_in_place)
+        as it manifests in link_transfer specifically: linking two legs calls update()
+        twice, each setting type/counterpart_account_id/counterpart_transaction_id
+        together -- exactly the fields _sync_counterpart_link treats as invalidating a
+        prior link. If "old" aliased the just-mutated object, _sync_counterpart_link
+        would see a spuriously already-set counterpart_transaction_id and immediately
+        null out the link this very call just established.
+        """
+        from datetime import datetime
+        same_date = datetime(2026, 6, 12)
+        txn = _make_txn_orm(id=1, account_id=1, type="transfer", amount=Decimal("50.00"), date=same_date)
+        counterpart = _make_txn_orm(
+            id=2, account_id=2, type="transfer", amount=Decimal("-50.00"), date=same_date
+        )
+        store = {1: txn, 2: counterpart}
+
+        async def fake_get(transaction_id):
+            return store.get(transaction_id)
+
+        async def fake_update(transaction_id, data, amount_eur=None, recompute_amount_eur=False):
+            obj = store[transaction_id]
+            for field, value in data.model_dump(exclude_unset=True).items():
+                setattr(obj, field, value)
+            return obj
+
+        service._repo.get.side_effect = fake_get
+        service._repo.update.side_effect = fake_update
+
+        await service.link_transfer(1, 2)
+
+        assert txn.counterpart_transaction_id == 2
+        assert counterpart.counterpart_transaction_id == 1
+        service._repo.set_counterpart_transaction.assert_not_awaited()
+
     async def test_rejects_linking_to_self(self, service):
         with pytest.raises(TransferMatchError):
             await service.link_transfer(1, 1)
@@ -827,6 +890,75 @@ class TestLinkTransfer:
 
         with pytest.raises(TransferMatchError):
             await service.link_transfer(1, 2)
+
+
+class TestAutoCreateTransferMirror:
+    async def test_creates_mirror_and_returns_updated_transaction(self, service):
+        source = _make_txn_orm(
+            id=10, account_id=1, type="transfer", amount=Decimal("100.00"),
+            counterpart_account_id=2, currency="EUR",
+        )
+        mirror = _make_txn_orm(id=11, account_id=2, type="transfer", amount=Decimal("-100.00"))
+        updated_source = _make_txn_orm(
+            id=10, account_id=1, type="transfer", amount=Decimal("100.00"),
+            counterpart_account_id=2, counterpart_transaction_id=11, currency="EUR",
+        )
+        service._repo.get.side_effect = [source, updated_source]
+        service._repo.create.return_value = mirror
+        service._account_repo.get.return_value = MagicMock(auto_mirror_transfers=True)
+
+        result = await service.auto_create_transfer_mirror(10)
+
+        assert result.id == 10
+        assert result.counterpart_transaction_id == 11
+        service._repo.set_counterpart_transaction.assert_awaited_once_with(10, 11)
+
+    async def test_rejects_when_transaction_not_found(self, service):
+        service._repo.get.return_value = None
+        with pytest.raises(TransferMatchError):
+            await service.auto_create_transfer_mirror(10)
+
+    async def test_rejects_generated_mirror_row(self, service):
+        service._repo.get.return_value = _make_txn_orm(id=10, source="auto_transfer")
+        with pytest.raises(TransferMatchError):
+            await service.auto_create_transfer_mirror(10)
+
+    async def test_rejects_already_linked(self, service):
+        service._repo.get.return_value = _make_txn_orm(
+            id=10, type="transfer", counterpart_transaction_id=99
+        )
+        with pytest.raises(TransferMatchError):
+            await service.auto_create_transfer_mirror(10)
+
+    async def test_rejects_non_transfer_type(self, service):
+        service._repo.get.return_value = _make_txn_orm(
+            id=10, type="expense", counterpart_account_id=2
+        )
+        with pytest.raises(TransferMatchError):
+            await service.auto_create_transfer_mirror(10)
+
+    async def test_rejects_missing_counterpart_account(self, service):
+        service._repo.get.return_value = _make_txn_orm(
+            id=10, type="transfer", counterpart_account_id=None
+        )
+        with pytest.raises(TransferMatchError):
+            await service.auto_create_transfer_mirror(10)
+
+    async def test_rejects_when_counterpart_account_does_not_auto_mirror(self, service):
+        service._repo.get.return_value = _make_txn_orm(
+            id=10, type="transfer", counterpart_account_id=2
+        )
+        service._account_repo.get.return_value = MagicMock(auto_mirror_transfers=False)
+        with pytest.raises(TransferMatchError):
+            await service.auto_create_transfer_mirror(10)
+
+    async def test_rejects_when_counterpart_account_not_found(self, service):
+        service._repo.get.return_value = _make_txn_orm(
+            id=10, type="transfer", counterpart_account_id=2
+        )
+        service._account_repo.get.return_value = None
+        with pytest.raises(TransferMatchError):
+            await service.auto_create_transfer_mirror(10)
 
 
 class TestSpendingReport:

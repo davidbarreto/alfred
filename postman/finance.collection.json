@@ -2054,6 +2054,307 @@
               ]
             }
           }
+        },
+        {
+          "name": "18 - Create Auto-Mirror Account",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+                  "pm.test('Response has id and saves it', () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.have.property('id');",
+                  "    pm.expect(json.auto_mirror_transfers).to.eql(false);",
+                  "    pm.environment.set('finance_automirror_account_id', json.id);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Auto-Mirror Card\",\n  \"type\": \"credit\",\n  \"currency\": \"EUR\",\n  \"balance\": \"0.00\",\n  \"institution\": \"My Card Issuer\",\n  \"is_active\": true,\n  \"auto_mirror_transfers\": false\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/finance/accounts/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "finance",
+                "accounts",
+                ""
+              ]
+            }
+          }
+        },
+        {
+          "name": "19 - Create Transfer Leg E Pointing At Auto-Mirror Account",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+                  "pm.test('No mirror created yet (flag was disabled at creation time)', () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.have.property('id');",
+                  "    pm.expect(json.counterpart_transaction_id).to.be.null;",
+                  "    pm.environment.set('finance_transfer_e_id', json.id);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"account_id\": {{finance_account_id}},\n  \"date\": \"2026-06-12T09:00:00\",\n  \"amount\": \"75.00\",\n  \"currency\": \"EUR\",\n  \"type\": \"transfer\",\n  \"description\": \"Card top-up\",\n  \"counterpart_account_id\": {{finance_automirror_account_id}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/finance/transactions/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "finance",
+                "transactions",
+                ""
+              ]
+            }
+          }
+        },
+        {
+          "name": "20 - Enable Auto-Mirror On Account",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Flag is now enabled', () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.auto_mirror_transfers).to.eql(true);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"auto_mirror_transfers\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/finance/accounts/{{finance_automirror_account_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "finance",
+                "accounts",
+                "{{finance_automirror_account_id}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "21 - Auto-Mirror Transfer Leg E",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Leg E now has a confirmed counterpart', () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.counterpart_transaction_id).to.not.be.null;",
+                  "    pm.expect(json.counterpart_account_id).to.eql(parseInt(pm.environment.get('finance_automirror_account_id')));",
+                  "    pm.environment.set('finance_mirror_id', json.counterpart_transaction_id);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/finance/transactions/{{finance_transfer_e_id}}/auto-mirror-transfer",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "finance",
+                "transactions",
+                "{{finance_transfer_e_id}}",
+                "auto-mirror-transfer"
+              ]
+            }
+          }
+        },
+        {
+          "name": "22 - Auto-Mirror Already-Linked Leg Returns 400",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 400', () => pm.response.to.have.status(400));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/finance/transactions/{{finance_transfer_e_id}}/auto-mirror-transfer",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "finance",
+                "transactions",
+                "{{finance_transfer_e_id}}",
+                "auto-mirror-transfer"
+              ]
+            }
+          }
+        },
+        {
+          "name": "23 - Cleanup - Delete Mirror Transaction",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 204', () => pm.response.to.have.status(204));",
+                  "pm.environment.unset('finance_mirror_id');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/finance/transactions/{{finance_mirror_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "finance",
+                "transactions",
+                "{{finance_mirror_id}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "24 - Cleanup - Delete Transfer Leg E",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 204', () => pm.response.to.have.status(204));",
+                  "pm.environment.unset('finance_transfer_e_id');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/finance/transactions/{{finance_transfer_e_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "finance",
+                "transactions",
+                "{{finance_transfer_e_id}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "25 - Cleanup - Delete Auto-Mirror Account",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 204', () => pm.response.to.have.status(204));",
+                  "pm.environment.unset('finance_automirror_account_id');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/finance/accounts/{{finance_automirror_account_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "finance",
+                "accounts",
+                "{{finance_automirror_account_id}}"
+              ]
+            }
+          }
         }
       ]
     },

@@ -921,35 +921,64 @@ class TestTransferCandidates:
                 "amount_eur": "50.00", "type": "transfer", "note": None, "source": None,
             }],
             [_account(id=5, name="Card")],
+            {"type": "expense", "counterpart_account_id": None, "counterpart_transaction_id": None},
         ]
 
         resp = client.get("/finance/transactions/1/transfer-candidates")
 
         assert resp.status_code == 200
         data = resp.json()
-        assert data == [{
+        assert data["candidates"] == [{
             "id": 2, "account_name": "Card", "date": "2026-06-12T10:00:00", "description": "Top-up",
             "amount": "50.00", "currency": "EUR", "amount_eur": "50.00", "type": "transfer",
             "bank_description": None, "merchant": None, "note": None, "source": None,
         }]
+        assert data["can_auto_mirror"] is False
 
     def test_falls_back_to_merchant_then_bank_description(self, client, mock_api):
         mock_api["get"].side_effect = [
             [{"id": 2, "account_id": 5, "date": "2026-06-12T10:00:00", "description": None, "merchant": None, "bank_description": "APPLE PAY TOPUP"}],
             [_account(id=5, name="Card")],
+            {"type": "expense", "counterpart_account_id": None, "counterpart_transaction_id": None},
         ]
 
         resp = client.get("/finance/transactions/1/transfer-candidates")
 
-        assert resp.json()[0]["description"] == "APPLE PAY TOPUP"
+        assert resp.json()["candidates"][0]["description"] == "APPLE PAY TOPUP"
 
     def test_returns_empty_list_on_backend_error(self, client, mock_api):
-        mock_api["get"].side_effect = [self._http_status_error("boom"), [_account()]]
+        mock_api["get"].side_effect = [
+            self._http_status_error("boom"),
+            [_account()],
+            {"type": "expense", "counterpart_account_id": None, "counterpart_transaction_id": None},
+        ]
 
         resp = client.get("/finance/transactions/1/transfer-candidates")
 
         assert resp.status_code == 200
-        assert resp.json() == []
+        assert resp.json()["candidates"] == []
+
+    def test_can_auto_mirror_true_when_counterpart_account_auto_mirrors(self, client, mock_api):
+        mock_api["get"].side_effect = [
+            [],
+            [_full_account(id=5, name="PoupUP", auto_mirror_transfers=True)],
+            {"type": "transfer", "counterpart_account_id": 5, "counterpart_transaction_id": None},
+        ]
+
+        resp = client.get("/finance/transactions/1/transfer-candidates")
+
+        assert resp.json()["can_auto_mirror"] is True
+
+    def test_can_auto_mirror_false_when_already_linked(self, client, mock_api):
+        mock_api["get"].side_effect = [
+            [],
+            [_full_account(id=5, name="PoupUP", auto_mirror_transfers=True)],
+            {"type": "transfer", "counterpart_account_id": 5, "counterpart_transaction_id": 9},
+        ]
+
+        resp = client.get("/finance/transactions/1/transfer-candidates")
+
+        assert resp.json()["can_auto_mirror"] is False
 
     def test_requires_authentication(self, anon_client):
         resp = anon_client.get("/finance/transactions/1/transfer-candidates", follow_redirects=False)
@@ -988,6 +1017,35 @@ class TestLinkTransfer:
             "/finance/transactions/1/link-transfer",
             json={"counterpart_transaction_id": "2"},
             follow_redirects=False,
+        )
+        assert resp.status_code == 302
+        assert resp.headers["location"].startswith("/login")
+
+
+class TestAutoMirrorTransfer:
+    def test_forwards_to_backend(self, client, mock_api):
+        mock_api["post"].return_value = {}
+
+        resp = client.post("/finance/transactions/1/auto-mirror-transfer")
+
+        assert resp.status_code == 200
+        assert mock_api["post"].call_args.args[0] == "/finance/transactions/1/auto-mirror-transfer"
+
+    def test_surfaces_api_error_detail(self, client, mock_api):
+        request = httpx.Request("POST", "http://backend/finance/transactions/1/auto-mirror-transfer")
+        response = httpx.Response(
+            400, json={"detail": "Counterpart account does not auto-mirror transfers"}, request=request
+        )
+        mock_api["post"].side_effect = httpx.HTTPStatusError("Bad Request", request=request, response=response)
+
+        resp = client.post("/finance/transactions/1/auto-mirror-transfer")
+
+        assert resp.status_code == 422
+        assert "Counterpart account does not auto-mirror transfers" in resp.text
+
+    def test_requires_authentication(self, anon_client):
+        resp = anon_client.post(
+            "/finance/transactions/1/auto-mirror-transfer", follow_redirects=False
         )
         assert resp.status_code == 302
         assert resp.headers["location"].startswith("/login")

@@ -463,6 +463,11 @@ async def transfer_candidates(transaction_id: int):
     """Other accounts' unmatched transfer legs that could be this transaction's missing
     counterpart -- see TransactionRepository.get_transfer_match_candidates. Returned as
     plain JSON (not a template fragment) since the modal renders rows client-side.
+
+    Also reports can_auto_mirror: true when this transaction's counterpart_account_id
+    already points at an account with auto_mirror_transfers enabled and no counterpart
+    has been confirmed yet -- lets the modal offer one-click auto-creation instead of
+    requiring the user to find a real candidate (see auto_mirror_transfer below).
     """
     try:
         candidates = await api.get(f"/finance/transactions/{transaction_id}/transfer-candidates")
@@ -473,24 +478,41 @@ async def transfer_candidates(transaction_id: int):
         accounts = await api.get("/finance/accounts")
     except httpx.HTTPError:
         pass
-    accounts_by_id = {a["id"]: a["name"] for a in accounts}
-    return JSONResponse([
-        {
-            "id": c["id"],
-            "account_name": accounts_by_id.get(c["account_id"], "?"),
-            "date": c["date"],
-            "description": c.get("description") or c.get("merchant") or c.get("bank_description"),
-            "amount": c.get("amount"),
-            "currency": c.get("currency"),
-            "amount_eur": c.get("amount_eur"),
-            "type": c.get("type"),
-            "bank_description": c.get("bank_description"),
-            "merchant": c.get("merchant"),
-            "note": c.get("note"),
-            "source": c.get("source"),
-        }
-        for c in candidates
-    ])
+    accounts_by_id = {a["id"]: a for a in accounts}
+
+    can_auto_mirror = False
+    try:
+        transaction = await api.get(f"/finance/transactions/{transaction_id}")
+        counterpart_account = accounts_by_id.get(transaction.get("counterpart_account_id"))
+        can_auto_mirror = bool(
+            transaction.get("type") == "transfer"
+            and transaction.get("counterpart_transaction_id") is None
+            and counterpart_account is not None
+            and counterpart_account.get("auto_mirror_transfers")
+        )
+    except httpx.HTTPError:
+        pass
+
+    return JSONResponse({
+        "candidates": [
+            {
+                "id": c["id"],
+                "account_name": accounts_by_id.get(c["account_id"], {}).get("name", "?"),
+                "date": c["date"],
+                "description": c.get("description") or c.get("merchant") or c.get("bank_description"),
+                "amount": c.get("amount"),
+                "currency": c.get("currency"),
+                "amount_eur": c.get("amount_eur"),
+                "type": c.get("type"),
+                "bank_description": c.get("bank_description"),
+                "merchant": c.get("merchant"),
+                "note": c.get("note"),
+                "source": c.get("source"),
+            }
+            for c in candidates
+        ],
+        "can_auto_mirror": can_auto_mirror,
+    })
 
 
 @router.post("/transactions/{transaction_id}/link-transfer", response_class=Response)
@@ -509,6 +531,21 @@ async def link_transfer(transaction_id: int, request: Request):
         return HTMLResponse(detail, status_code=422)
     except httpx.HTTPError:
         return HTMLResponse("Failed to link transfer.", status_code=422)
+    return Response(status_code=200)
+
+
+@router.post("/transactions/{transaction_id}/auto-mirror-transfer", response_class=Response)
+async def auto_mirror_transfer(transaction_id: int):
+    try:
+        await api.post(f"/finance/transactions/{transaction_id}/auto-mirror-transfer")
+    except httpx.HTTPStatusError as exc:
+        try:
+            detail = exc.response.json().get("detail") or "Failed to auto-create counterpart."
+        except ValueError:
+            detail = "Failed to auto-create counterpart."
+        return HTMLResponse(detail, status_code=422)
+    except httpx.HTTPError:
+        return HTMLResponse("Failed to auto-create counterpart.", status_code=422)
     return Response(status_code=200)
 
 

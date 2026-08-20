@@ -149,6 +149,7 @@ class TransactionFilters:
         period: Annotated[str | None, Query()] = None,
         currency: Annotated[str | None, Query()] = None,
         installment_plan_id: Annotated[int | None, Query()] = None,
+        unconfirmed_transfer: Annotated[bool, Query()] = False,
         sort: Annotated[TransactionSort, Query()] = "date_desc",
     ) -> None:
         self.limit = limit
@@ -163,6 +164,7 @@ class TransactionFilters:
         self.period = period
         self.currency = currency.upper() if currency is not None else None
         self.installment_plan_id = installment_plan_id
+        self.unconfirmed_transfer = unconfirmed_transfer
         self.sort = sort
 
 

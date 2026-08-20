@@ -75,7 +75,19 @@
         <option value="name_desc" {% if query_filters.sort == 'name_desc' %}selected{% endif %}>Name (Z–A)</option>
       </select>
     </div>
-    {% if query_filters.type or query_filters.category_id or query_filters.uncategorized or query_filters.account_id or query_filters.merchant or query_filters.from_date or query_filters.to_date or query_filters.currency %}
+    <div>
+      <label class="text-xs text-gray-500 mb-1 block">&nbsp;</label>
+      <label class="flex items-center gap-1.5 border border-gray-200 rounded-lg px-2 py-1.5 text-sm bg-white cursor-pointer">
+        <input
+          id="txn-filter-unconfirmed-transfer"
+          type="checkbox"
+          {% if query_filters.unconfirmed_transfer %}checked{% endif %}
+          onchange="applyTxnFilters()"
+        />
+        Unconfirmed transfers
+      </label>
+    </div>
+    {% if query_filters.type or query_filters.category_id or query_filters.uncategorized or query_filters.account_id or query_filters.merchant or query_filters.from_date or query_filters.to_date or query_filters.currency or query_filters.unconfirmed_transfer %}
     <button onclick="clearTxnFilters()" class="btn btn-sm btn-ghost text-gray-500 gap-1">
       <i class="ti ti-x text-xs"></i>Clear filters
     </button>
@@ -259,6 +271,7 @@ function _txnQuery() {
   const fromDate = document.getElementById("txn-filter-from").value;
   const toDate = document.getElementById("txn-filter-to").value;
   const sort = document.getElementById("txn-filter-sort").value;
+  const unconfirmedTransfer = document.getElementById("txn-filter-unconfirmed-transfer").checked;
   if (type) params.set("type", type);
   if (category === "uncategorized") params.set("uncategorized", "true");
   else if (category) params.set("category_id", category);
@@ -266,6 +279,7 @@ function _txnQuery() {
   if (merchant) params.set("merchant", merchant);
   if (fromDate) params.set("from_date", fromDate);
   if (toDate) params.set("to_date", toDate);
+  if (unconfirmedTransfer) params.set("unconfirmed_transfer", "true");
   if (sort && sort !== "date_desc") params.set("sort", sort);
   if (_txnCurrency) params.set("currency", _txnCurrency);
   params.set("offset", _txnOffset);

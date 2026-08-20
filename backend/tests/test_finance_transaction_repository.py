@@ -269,6 +269,15 @@ class TestList:
         await TransactionRepository(session).list(TransactionFilters(merchant="Shop"))
         session.execute.assert_called_once()
 
+    async def test_unconfirmed_transfer_filter(self):
+        session = _make_session()
+        session.execute.return_value = _scalar_all([])
+        await TransactionRepository(session).list(TransactionFilters(unconfirmed_transfer=True))
+        query = session.execute.call_args.args[0]
+        sql = str(query.compile(compile_kwargs={"literal_binds": True}))
+        assert "transactions.type = 'transfer'" in sql
+        assert "transactions.counterpart_transaction_id IS NULL" in sql
+
     async def test_date_range_filter(self):
         session = _make_session()
         session.execute.return_value = _scalar_all([])

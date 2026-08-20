@@ -28,6 +28,7 @@ def _parse_txn_query(request: Request) -> tuple[dict, int]:
         "from_date": qp.get("from_date") or None,
         "to_date": qp.get("to_date") or None,
         "currency": qp.get("currency") or None,
+        "unconfirmed_transfer": qp.get("unconfirmed_transfer") or None,
         "sort": qp.get("sort") or None,
     }
     offset = max(0, int(qp.get("offset", "0") or "0"))

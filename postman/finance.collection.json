@@ -1573,6 +1573,56 @@
           }
         },
         {
+          "name": "03b - List Unconfirmed Transfers Includes Legs A And B",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Returns both unconfirmed transfer legs', () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.be.an('array');",
+                  "    const ids = json.map((txn) => txn.id);",
+                  "    pm.expect(ids).to.include(parseInt(pm.environment.get('finance_transfer_a_id')));",
+                  "    pm.expect(ids).to.include(parseInt(pm.environment.get('finance_transfer_b_id')));",
+                  "    json.forEach((txn) => {",
+                  "        pm.expect(txn.type).to.eql('transfer');",
+                  "        pm.expect(txn.counterpart_transaction_id).to.be.null;",
+                  "    });",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/finance/transactions/?limit=50&unconfirmed_transfer=true",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "finance",
+                "transactions",
+                ""
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "50"
+                },
+                {
+                  "key": "unconfirmed_transfer",
+                  "value": "true"
+                }
+              ]
+            }
+          }
+        },
+        {
           "name": "04 - Get Transfer Candidates",
           "event": [
             {

@@ -87,6 +87,10 @@ def _filter_conditions(filters: Any, cycle_start_day: int = 1) -> list:
         conditions.append(Transaction.account_id == filters.account_id)
     if getattr(filters, "installment_plan_id", None) is not None:
         conditions.append(Transaction.installment_plan_id == filters.installment_plan_id)
+    if getattr(filters, "unconfirmed_transfer", False):
+        conditions.append(
+            and_(Transaction.type == "transfer", Transaction.counterpart_transaction_id.is_(None))
+        )
     if filters.merchant is not None:
         conditions.append(Transaction.merchant.ilike(f"%{filters.merchant}%"))
     if filters.currency is not None and filters.currency != GLOBAL_CURRENCY:

@@ -20,6 +20,8 @@ from app.features.finance.transactions.schemas import (
     SpendingReportResponse,
     SpendingTopResponse,
     TransactionBackfillEurResponse,
+    TransactionCountItem,
+    TransactionCoverageResponse,
     TransactionRead,
     TransactionSumResponse,
 )
@@ -130,6 +132,16 @@ def mock_txn_service():
         to_date=date(2026, 6, 30),
         currency="EUR",
         group_by="day",
+    )
+    svc.transaction_coverage.return_value = TransactionCoverageResponse(
+        items=[
+            TransactionCountItem(period="2026-05", count=10, unmatched_transfer_count=0),
+            TransactionCountItem(period="2026-06", count=4, unmatched_transfer_count=1),
+        ],
+        from_date=date(2026, 5, 1),
+        to_date=date(2026, 6, 30),
+        group_by="month",
+        account_id=1,
     )
     svc.filtered_sum.return_value = TransactionSumResponse(
         total=Decimal("340.00"), transaction_count=7, currency="EUR"
@@ -524,6 +536,31 @@ class TestSpendingOverTime:
 
     def test_requires_auth(self, client):
         assert client.get("/finance/transactions/over-time").status_code == 403
+
+
+class TestTransactionCoverage:
+    def test_returns_200_with_items(self, client):
+        response = client.get("/finance/transactions/coverage", headers=AUTH)
+        assert response.status_code == 200
+        data = response.json()
+        assert data["group_by"] == "month"
+        assert data["items"][1]["period"] == "2026-06"
+        assert data["items"][1]["unmatched_transfer_count"] == 1
+
+    def test_defaults_to_month(self, client, mock_txn_service):
+        client.get("/finance/transactions/coverage", headers=AUTH)
+        assert mock_txn_service.transaction_coverage.call_args[0][1] == "month"
+
+    def test_group_by_forwarded(self, client, mock_txn_service):
+        client.get("/finance/transactions/coverage?group_by=day", headers=AUTH)
+        assert mock_txn_service.transaction_coverage.call_args[0][1] == "day"
+
+    def test_account_id_forwarded(self, client, mock_txn_service):
+        client.get("/finance/transactions/coverage?account_id=3", headers=AUTH)
+        assert mock_txn_service.transaction_coverage.call_args[0][0] == 3
+
+    def test_requires_auth(self, client):
+        assert client.get("/finance/transactions/coverage").status_code == 403
 
 
 class TestSpendingByAccount:

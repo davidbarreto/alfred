@@ -1,6 +1,6 @@
 import html
 import json
-from datetime import date
+from datetime import date, timedelta
 from typing import Annotated, Optional
 from urllib.parse import urlencode
 
@@ -588,6 +588,103 @@ async def bulk_move_transactions(request: Request):
         return HTMLResponse("Failed to move transactions.", status_code=422)
 
     return Response(status_code=200)
+
+
+# --- Data coverage ---
+
+def _month_range(start: date, end: date) -> list[str]:
+    """Every "YYYY-MM" month from start's month through end's month, inclusive."""
+    months = []
+    cursor = date(start.year, start.month, 1)
+    end_marker = date(end.year, end.month, 1)
+    while cursor <= end_marker:
+        months.append(cursor.strftime("%Y-%m"))
+        cursor = date(cursor.year + 1, 1, 1) if cursor.month == 12 else date(cursor.year, cursor.month + 1, 1)
+    return months
+
+
+@router.get("/coverage", response_class=HTMLResponse)
+async def coverage_page(request: Request):
+    accounts = []
+    try:
+        accounts = await api.get("/finance/accounts", params={"is_active": "true"})
+    except httpx.HTTPError:
+        pass
+
+    today = date.today()
+    earliest_overall = today
+    account_rows = []
+    for account in accounts:
+        try:
+            coverage = await api.get(
+                "/finance/transactions/coverage",
+                params={"account_id": account["id"], "group_by": "month"},
+            )
+        except httpx.HTTPError:
+            coverage = None
+        account_from = date.fromisoformat(coverage["from_date"]) if coverage else today
+        earliest_overall = min(earliest_overall, account_from)
+        account_rows.append({
+            "id": account["id"],
+            "name": account["name"],
+            "from_period": account_from.strftime("%Y-%m"),
+            "counts_by_period": {i["period"]: i for i in (coverage or {}).get("items", [])},
+        })
+
+    months = _month_range(earliest_overall, today)
+    for row in account_rows:
+        row["cells"] = [
+            {
+                "period": period,
+                "count": (row["counts_by_period"].get(period) or {}).get("count", 0),
+                "unmatched_transfer_count": (row["counts_by_period"].get(period) or {}).get(
+                    "unmatched_transfer_count", 0
+                ),
+                "before_start": period < row["from_period"],
+            }
+            for period in months
+        ]
+
+    return templates.TemplateResponse(
+        request, "finance_coverage.html", {"accounts": account_rows, "months": months}
+    )
+
+
+@router.get("/coverage/days", response_class=HTMLResponse)
+async def coverage_days_fragment(request: Request):
+    qp = request.query_params
+    account_id = qp.get("account_id")
+    month = qp.get("month") or ""
+    days = []
+    if account_id and month:
+        year, mon = (int(p) for p in month.split("-"))
+        start = date(year, mon, 1)
+        end = (date(year + 1, 1, 1) if mon == 12 else date(year, mon + 1, 1)) - timedelta(days=1)
+        try:
+            coverage = await api.get(
+                "/finance/transactions/coverage",
+                params={
+                    "account_id": account_id,
+                    "group_by": "day",
+                    "from_date": start.isoformat(),
+                    "to_date": end.isoformat(),
+                },
+            )
+        except httpx.HTTPError:
+            coverage = None
+        counts_by_day = {i["period"]: i for i in (coverage or {}).get("items", [])}
+        cursor = start
+        while cursor <= end:
+            item = counts_by_day.get(cursor.isoformat())
+            days.append({
+                "date": cursor.isoformat(),
+                "day": cursor.day,
+                "count": item["count"] if item else 0,
+                "unmatched_transfer_count": item["unmatched_transfer_count"] if item else 0,
+            })
+            cursor += timedelta(days=1)
+
+    return templates.TemplateResponse(request, "_finance_coverage_days.html", {"days": days})
 
 
 # --- Accounts ---

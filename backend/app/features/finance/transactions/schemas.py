@@ -240,6 +240,23 @@ class SpendingOverTimeResponse(BaseModel):
     group_by: str
 
 
+class TransactionCountItem(BaseModel):
+    period: str
+    count: int
+    unmatched_transfer_count: int = 0
+    """Count of this period's transactions that are transfers with no confirmed
+    counterpart (see TransactionRepository.get_transaction_counts) -- a signal the
+    counterpart account's statement for this period may still be missing."""
+
+
+class TransactionCoverageResponse(BaseModel):
+    items: list[TransactionCountItem]
+    from_date: date
+    to_date: date
+    group_by: str
+    account_id: int | None
+
+
 class AccountSpendingItem(BaseModel):
     account_id: int | None
     account_name: str | None

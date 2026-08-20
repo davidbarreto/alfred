@@ -1097,6 +1097,60 @@ class TestSpendingOverTime:
         assert call_kwargs["group_by"] == "month"
 
 
+class TestTransactionCoverage:
+    async def test_returns_items_with_unmatched_transfer_counts(self, service):
+        service._repo.get_transaction_counts.return_value = [
+            ("2026-05", 10, 0),
+            ("2026-06", 4, 2),
+        ]
+
+        result = await service.transaction_coverage(
+            account_id=1, group_by="month", from_date=date(2026, 5, 1), to_date=date(2026, 6, 30)
+        )
+
+        assert [i.period for i in result.items] == ["2026-05", "2026-06"]
+        assert result.items[1].count == 4
+        assert result.items[1].unmatched_transfer_count == 2
+        assert result.from_date == date(2026, 5, 1)
+        assert result.to_date == date(2026, 6, 30)
+        assert result.account_id == 1
+
+    async def test_defaults_from_date_to_earliest_transaction(self, service):
+        service._repo.get_earliest_transaction_date.return_value = date(2025, 1, 15)
+        service._repo.get_transaction_counts.return_value = []
+
+        result = await service.transaction_coverage(
+            account_id=2, group_by="month", from_date=None, to_date=date(2026, 6, 30)
+        )
+
+        service._repo.get_earliest_transaction_date.assert_awaited_once_with(2)
+        assert result.from_date == date(2025, 1, 15)
+        call_kwargs = service._repo.get_transaction_counts.call_args[1]
+        assert call_kwargs["from_date"] == date(2025, 1, 15)
+
+    async def test_defaults_to_date_to_today(self, service):
+        service._repo.get_earliest_transaction_date.return_value = date(2025, 1, 1)
+        service._repo.get_transaction_counts.return_value = []
+
+        result = await service.transaction_coverage(
+            account_id=None, group_by="month", from_date=date(2025, 1, 1), to_date=None
+        )
+
+        assert result.to_date == date.today()
+
+    async def test_no_transactions_falls_back_from_date_to_resolved_to_date(self, service):
+        """An account with no transactions at all has no earliest date to anchor
+        on -- the range collapses to a single empty day rather than erroring."""
+        service._repo.get_earliest_transaction_date.return_value = None
+        service._repo.get_transaction_counts.return_value = []
+
+        result = await service.transaction_coverage(
+            account_id=5, group_by="month", from_date=None, to_date=date(2026, 6, 30)
+        )
+
+        assert result.from_date == date(2026, 6, 30)
+
+
 class TestSpendingByAccount:
     async def test_returns_items(self, service):
         service._repo.get_spending_by_account.return_value = [

@@ -33,6 +33,8 @@ from app.features.finance.transactions.schemas import (
     SpendingTopResponse,
     TransactionBackfillEurResponse,
     TransactionBulkMoveRequest,
+    TransactionCountItem,
+    TransactionCoverageResponse,
     TransactionCreate,
     TransactionFilters,
     TransactionRead,
@@ -599,6 +601,33 @@ class TransactionService:
             from_date=from_date,
             to_date=to_date,
             currency=filters.currency,
+        )
+
+    async def transaction_coverage(
+        self,
+        account_id: int | None,
+        group_by: str,
+        from_date: date | None,
+        to_date: date | None,
+    ) -> TransactionCoverageResponse:
+        """Transaction counts per period, defaulting the range to [this account's (or
+        overall) earliest transaction, today] -- the finance data-coverage page uses
+        this to show which months/days actually have imported data.
+        """
+        resolved_to = to_date or date.today()
+        resolved_from = from_date
+        if resolved_from is None:
+            resolved_from = await self._repo.get_earliest_transaction_date(account_id)
+            resolved_from = resolved_from or resolved_to
+        rows = await self._repo.get_transaction_counts(
+            from_date=resolved_from, to_date=resolved_to, group_by=group_by, account_id=account_id
+        )
+        items = [
+            TransactionCountItem(period=period, count=count, unmatched_transfer_count=unmatched)
+            for period, count, unmatched in rows
+        ]
+        return TransactionCoverageResponse(
+            items=items, from_date=resolved_from, to_date=resolved_to, group_by=group_by, account_id=account_id
         )
 
     async def income_vs_expense_over_time(

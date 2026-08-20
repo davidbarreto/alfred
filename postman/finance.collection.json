@@ -1115,6 +1115,60 @@
           }
         },
         {
+          "name": "04g - Transaction Coverage",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Response has coverage fields', () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.have.property('items');",
+                  "    pm.expect(json).to.have.property('from_date');",
+                  "    pm.expect(json).to.have.property('to_date');",
+                  "    pm.expect(json).to.have.property('group_by');",
+                  "    pm.expect(json).to.have.property('account_id');",
+                  "    pm.expect(json.group_by).to.eql('month');",
+                  "    pm.expect(String(json.account_id)).to.eql(String(pm.environment.get('finance_account_id')));",
+                  "    json.items.forEach((item) => {",
+                  "        pm.expect(item).to.have.property('period');",
+                  "        pm.expect(item).to.have.property('count');",
+                  "        pm.expect(item).to.have.property('unmatched_transfer_count');",
+                  "    });",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/finance/transactions/coverage?account_id={{finance_account_id}}&group_by=month",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "finance",
+                "transactions",
+                "coverage"
+              ],
+              "query": [
+                {
+                  "key": "account_id",
+                  "value": "{{finance_account_id}}"
+                },
+                {
+                  "key": "group_by",
+                  "value": "month"
+                }
+              ]
+            }
+          }
+        },
+        {
           "name": "05 - Spending Average",
           "event": [
             {

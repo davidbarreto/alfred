@@ -1240,3 +1240,109 @@ class TestFinanceSettingsPage:
 
         assert resp.status_code == 200
         assert "Failed to save settings" in resp.text
+
+
+class TestCoveragePage:
+    def _fake_get(self, accounts, coverage_by_account):
+        async def fake(path, params=None):
+            if path == "/finance/accounts":
+                return accounts
+            if path == "/finance/transactions/coverage":
+                return coverage_by_account[params["account_id"]]
+            return []
+        return fake
+
+    def test_renders_account_row_with_monthly_counts(self, client, mock_api):
+        mock_api["get"].side_effect = self._fake_get(
+            accounts=[_account(id=1, name="Checking")],
+            coverage_by_account={
+                1: {
+                    "items": [
+                        {"period": "2026-05", "count": 10, "unmatched_transfer_count": 0},
+                        {"period": "2026-06", "count": 4, "unmatched_transfer_count": 1},
+                    ],
+                    "from_date": "2026-05-01",
+                    "to_date": "2026-08-21",
+                    "group_by": "month",
+                    "account_id": 1,
+                }
+            },
+        )
+
+        resp = client.get("/finance/coverage")
+
+        assert resp.status_code == 200
+        assert "Checking" in resp.text
+        assert "2026-05" in resp.text
+        assert "2026-06" in resp.text
+
+    def test_account_id_passed_to_coverage_call(self, client, mock_api):
+        mock_api["get"].side_effect = self._fake_get(
+            accounts=[_account(id=7, name="Revolut")],
+            coverage_by_account={
+                7: {
+                    "items": [],
+                    "from_date": "2026-08-01",
+                    "to_date": "2026-08-21",
+                    "group_by": "month",
+                    "account_id": 7,
+                }
+            },
+        )
+
+        client.get("/finance/coverage")
+
+        calls = mock_api["get"].call_args_list
+        coverage_call = next(c for c in calls if c.args[0] == "/finance/transactions/coverage")
+        assert coverage_call.kwargs["params"]["account_id"] == 7
+        assert coverage_call.kwargs["params"]["group_by"] == "month"
+
+    def test_no_active_accounts_shows_empty_state(self, client, mock_api):
+        mock_api["get"].side_effect = self._fake_get(accounts=[], coverage_by_account={})
+
+        resp = client.get("/finance/coverage")
+
+        assert resp.status_code == 200
+        assert "No active accounts" in resp.text
+
+    def test_requires_authentication(self, anon_client):
+        resp = anon_client.get("/finance/coverage", follow_redirects=False)
+        assert resp.status_code == 302
+        assert resp.headers["location"].startswith("/login")
+
+
+class TestCoverageDaysFragment:
+    def test_renders_day_grid_for_month(self, client, mock_api):
+        async def fake(path, params=None):
+            if path == "/finance/transactions/coverage":
+                assert params["from_date"] == "2026-06-01"
+                assert params["to_date"] == "2026-06-30"
+                return {
+                    "items": [
+                        {"period": "2026-06-05", "count": 2, "unmatched_transfer_count": 0},
+                        {"period": "2026-06-06", "count": 0, "unmatched_transfer_count": 1},
+                    ],
+                    "from_date": "2026-06-01",
+                    "to_date": "2026-06-30",
+                    "group_by": "day",
+                    "account_id": 1,
+                }
+            return []
+        mock_api["get"].side_effect = fake
+
+        resp = client.get("/finance/coverage/days?account_id=1&month=2026-06")
+
+        assert resp.status_code == 200
+        assert "2026-06-05: 2 transactions" in resp.text
+        assert "1 unresolved transfer" in resp.text
+
+    def test_missing_params_renders_no_data(self, client, mock_api):
+        resp = client.get("/finance/coverage/days")
+
+        assert resp.status_code == 200
+        assert "No data" in resp.text
+
+    def test_requires_authentication(self, anon_client):
+        resp = anon_client.get("/finance/coverage/days", follow_redirects=False)
+        assert resp.status_code == 302
+        assert resp.headers["location"].startswith("/login")

@@ -870,6 +870,95 @@ class TestGetSpendingOverTime:
         assert "counterpart_account_id" not in sql
 
 
+class TestGetTransactionCounts:
+    async def test_formats_month_buckets_with_counts(self):
+        session = _make_session()
+        result = MagicMock()
+        result.all.return_value = [(datetime(2026, 6, 1), 5, 0)]
+        session.execute.return_value = result
+        rows = await TransactionRepository(session).get_transaction_counts(
+            from_date=date(2026, 1, 1),
+            to_date=date(2026, 12, 31),
+            group_by="month",
+        )
+        assert rows == [("2026-06", 5, 0)]
+
+    async def test_formats_day_buckets(self):
+        session = _make_session()
+        result = MagicMock()
+        result.all.return_value = [(datetime(2026, 6, 5), 2, 1)]
+        session.execute.return_value = result
+        rows = await TransactionRepository(session).get_transaction_counts(
+            from_date=date(2026, 6, 1),
+            to_date=date(2026, 6, 30),
+            group_by="day",
+        )
+        assert rows == [("2026-06-05", 2, 1)]
+
+    async def test_counts_regardless_of_type(self):
+        """Unlike get_spending_over_time, no type/currency filtering in the WHERE
+        clause -- every transaction (income, expense, transfer) contributes to the
+        total count. (The CASE expression legitimately references `type` to flag
+        unmatched transfers, but that's a SELECT column, not a filter.)"""
+        session = _make_session()
+        result = MagicMock()
+        result.all.return_value = []
+        session.execute.return_value = result
+        await TransactionRepository(session).get_transaction_counts(
+            from_date=date(2026, 6, 1),
+            to_date=date(2026, 6, 30),
+            group_by="day",
+        )
+        query = session.execute.call_args.args[0]
+        sql = str(query.compile(compile_kwargs={"literal_binds": True}))
+        where_clause = sql.split("WHERE", 1)[1].split("GROUP BY", 1)[0]
+        assert "transactions.type =" not in where_clause
+        assert "transactions.currency =" not in where_clause
+
+    async def test_filters_by_account(self):
+        session = _make_session()
+        result = MagicMock()
+        result.all.return_value = []
+        session.execute.return_value = result
+        await TransactionRepository(session).get_transaction_counts(
+            from_date=date(2026, 6, 1),
+            to_date=date(2026, 6, 30),
+            group_by="day",
+            account_id=7,
+        )
+        query = session.execute.call_args.args[0]
+        sql = str(query.compile(compile_kwargs={"literal_binds": True}))
+        assert "transactions.account_id = 7" in sql
+
+
+class TestGetEarliestTransactionDate:
+    async def test_returns_date_of_earliest_transaction(self):
+        session = _make_session()
+        result = MagicMock()
+        result.scalar.return_value = datetime(2025, 3, 4, 12, 0)
+        session.execute.return_value = result
+        value = await TransactionRepository(session).get_earliest_transaction_date()
+        assert value == date(2025, 3, 4)
+
+    async def test_returns_none_when_no_transactions(self):
+        session = _make_session()
+        result = MagicMock()
+        result.scalar.return_value = None
+        session.execute.return_value = result
+        value = await TransactionRepository(session).get_earliest_transaction_date()
+        assert value is None
+
+    async def test_filters_by_account(self):
+        session = _make_session()
+        result = MagicMock()
+        result.scalar.return_value = None
+        session.execute.return_value = result
+        await TransactionRepository(session).get_earliest_transaction_date(account_id=3)
+        query = session.execute.call_args.args[0]
+        sql = str(query.compile(compile_kwargs={"literal_binds": True}))
+        assert "transactions.account_id = 3" in sql
+
+
 class TestGetCategorySpent:
     async def test_returns_decimal_total(self):
         session = _make_session()

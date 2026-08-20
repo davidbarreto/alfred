@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% set active_page = "finance" %}
+{% block title %}Data Coverage{% endblock %}
+
+{% block content %}
+<div class="p-6 space-y-4">
+
+  <div class="flex items-center gap-2">
+    <a href="/finance" class="text-gray-400 hover:text-gray-600"><i class="ti ti-arrow-left text-sm"></i></a>
+    <h1 class="text-base font-semibold text-gray-900">Data coverage</h1>
+  </div>
+
+  <p class="text-xs text-gray-500 max-w-2xl">
+    One row per active account, one column per month since its earliest imported transaction.
+    Click a cell to see day-by-day coverage for that month. A dark ring marks a month with an
+    unresolved transfer (no confirmed counterpart) — often a sign the other account's statement
+    for that period hasn't been imported yet.
+  </p>
+
+  {% if not accounts %}
+  <p class="text-sm text-gray-400">No active accounts.</p>
+  {% else %}
+  <div class="bg-white border border-gray-200 rounded-lg overflow-x-auto">
+    <table class="text-xs border-collapse">
+      <thead>
+        <tr>
+          <th class="sticky left-0 bg-white z-10 text-left px-3 py-2 font-medium text-gray-600 border-b border-gray-100">Account</th>
+          {% for period in months %}
+          <th class="px-1 py-2 font-medium text-gray-500 border-b border-gray-100 whitespace-nowrap">{{ period }}</th>
+          {% endfor %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for account in accounts %}
+        <tr class="border-b border-gray-50">
+          <td class="sticky left-0 bg-white z-10 px-3 py-1.5 font-medium text-gray-800 whitespace-nowrap">{{ account.name }}</td>
+          {% for cell in account.cells %}
+          <td class="p-0.5">
+            {% if cell.before_start %}
+            <div class="w-6 h-6 rounded bg-gray-50" title="Before this account's first transaction"></div>
+            {% else %}
+            <button
+              type="button"
+              onclick="openCoverageDay({{ account.id }}, '{{ cell.period }}', '{{ account.name | e }}')"
+              class="w-6 h-6 rounded flex items-center justify-center text-[10px] font-medium transition-transform hover:scale-110
+                {% if cell.count == 0 %}bg-[#FBE9E9] text-[#B23B3A]
+                {% elif cell.count < 5 %}bg-[#DCEFE0] text-[#2F7A43]
+                {% elif cell.count < 15 %}bg-[#A9DDB6] text-[#1F5C31]
+                {% else %}bg-[#5CB877] text-white{% endif %}
+                {% if cell.unmatched_transfer_count > 0 %}ring-2 ring-[#8A5A0B]{% endif %}"
+              title="{{ cell.period }}: {{ cell.count }} transaction{{ 's' if cell.count != 1 else '' }}{% if cell.unmatched_transfer_count %}, {{ cell.unmatched_transfer_count }} unresolved transfer{{ 's' if cell.unmatched_transfer_count != 1 else '' }}{% endif %}"
+            >{{ cell.count if cell.count else '' }}</button>
+            {% endif %}
+          </td>
+          {% endfor %}
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+</div>
+
+<dialog id="coverage-day-modal" class="modal">
+  <div class="modal-box bg-white rounded-xl border border-gray-200 shadow-lg max-w-lg w-full p-4 sm:p-6">
+    <div class="flex items-center justify-between mb-3">
+      <h3 id="coverage-day-modal-title" class="text-sm font-medium text-gray-900"></h3>
+      <button onclick="document.getElementById('coverage-day-modal').close()" class="text-gray-400 hover:text-gray-600"><i class="ti ti-x"></i></button>
+    </div>
+    <div id="coverage-day-modal-body" class="text-xs text-gray-500">Loading…</div>
+  </div>
+  <form method="dialog" class="modal-backdrop"><button>close</button></form>
+</dialog>
+
+<script>
+function openCoverageDay(accountId, period, accountName) {
+  document.getElementById("coverage-day-modal-title").textContent = accountName + " — " + period;
+  const body = document.getElementById("coverage-day-modal-body");
+  body.innerHTML = "Loading…";
+  document.getElementById("coverage-day-modal").showModal();
+  fetch(`/finance/coverage/days?account_id=${accountId}&month=${period}`)
+    .then(r => r.text())
+    .then(html => { body.innerHTML = html; })
+    .catch(() => { body.innerHTML = "Failed to load."; });
+}
+</script>
+{% endblock %}

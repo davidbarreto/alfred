@@ -576,6 +576,48 @@ class TransactionRepository:
         key_format = "%Y-%m" if group_by == "month" else "%Y-%m-%d"
         return [(row[0].strftime(key_format), Decimal(str(row[1]))) for row in result.all()]
 
+    async def get_earliest_transaction_date(self, account_id: int | None = None) -> date | None:
+        query = select(func.min(Transaction.date))
+        if account_id is not None:
+            query = query.where(Transaction.account_id == account_id)
+        result = await self._session.execute(query)
+        value = result.scalar()
+        return value.date() if value is not None else None
+
+    async def get_transaction_counts(
+        self,
+        from_date: date,
+        to_date: date,
+        group_by: str,
+        account_id: int | None = None,
+    ) -> list[tuple[str, int, int]]:
+        """Transaction counts bucketed by day or month, regardless of type/currency --
+        unlike get_spending_over_time, used to show which periods have any imported
+        data at all (the finance data-coverage page), not to total spend.
+
+        Also reports, per bucket, how many of those transactions are unresolved
+        transfers (type='transfer' with no confirmed counterpart_transaction_id --
+        see TransactionService.link_transfer). A transfer left dangling like this is a
+        signal the *other* leg's account statement may not have been imported yet for
+        that period, even though this account's own coverage looks complete.
+        """
+        bucket = func.date_trunc(group_by, Transaction.date)
+        unmatched_transfer = case(
+            (and_(Transaction.type == "transfer", Transaction.counterpart_transaction_id.is_(None)), 1),
+            else_=0,
+        )
+        query = (
+            select(bucket, func.count(Transaction.id), func.coalesce(func.sum(unmatched_transfer), 0))
+            .where(Transaction.date >= from_date, Transaction.date <= to_date)
+            .group_by(bucket)
+            .order_by(bucket)
+        )
+        if account_id is not None:
+            query = query.where(Transaction.account_id == account_id)
+        result = await self._session.execute(query)
+        key_format = "%Y-%m" if group_by == "month" else "%Y-%m-%d"
+        return [(row[0].strftime(key_format), row[1], int(row[2])) for row in result.all()]
+
     async def get_spending_by_account(
         self,
         from_date: date,

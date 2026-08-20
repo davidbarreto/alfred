@@ -1,3 +1,4 @@
+from datetime import date
 from decimal import Decimal
 from typing import Annotated, Literal
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
@@ -24,6 +25,7 @@ from app.features.finance.transactions.schemas import (
     TransactionBackfillEurResponse,
     TransactionBulkMoveRequest,
     TransactionBulkMoveResponse,
+    TransactionCoverageResponse,
     TransactionCreate,
     TransactionFilters,
     TransactionRead,
@@ -86,6 +88,17 @@ async def spending_over_time(
     group_by: Annotated[Literal["day", "month"], Query()] = "day",
 ):
     return await service.spending_over_time(filters, group_by)
+
+
+@router.get("/coverage", response_model=TransactionCoverageResponse)
+async def transaction_coverage(
+    service: TransactionServiceDep,
+    account_id: Annotated[int | None, Query()] = None,
+    group_by: Annotated[Literal["day", "month"], Query()] = "month",
+    from_date: Annotated[date | None, Query()] = None,
+    to_date: Annotated[date | None, Query()] = None,
+):
+    return await service.transaction_coverage(account_id, group_by, from_date, to_date)
 
 
 @router.get("/by-account", response_model=SpendingByAccountResponse)

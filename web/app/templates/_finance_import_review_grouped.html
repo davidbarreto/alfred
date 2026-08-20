@@ -97,6 +97,9 @@
                 {% if row.counterpart_account_id %}
                 <input type="hidden" name="counterpart_{{ i }}" value="{{ row.counterpart_account_id }}" />
                 {% endif %}
+                {% if row.transfer_pair_key %}
+                <input type="hidden" name="transfer_pair_key_{{ i }}" value="{{ row.transfer_pair_key }}" />
+                {% endif %}
               </td>
               <td class="whitespace-nowrap text-xs">{{ row.date_posted }}</td>
               <td class="text-xs max-w-64">

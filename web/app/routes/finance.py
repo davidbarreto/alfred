@@ -1568,6 +1568,9 @@ async def import_commit_grouped(request: Request):
         counterpart = _form_value(form, f"counterpart_{i}")
         if counterpart:
             row["counterpart_account_id"] = int(counterpart)
+        transfer_pair_key = _form_value(form, f"transfer_pair_key_{i}")
+        if transfer_pair_key:
+            row["transfer_pair_key"] = transfer_pair_key
         if f"save_rule_{i}" in form:
             pattern = _form_value(form, f"rule_pattern_{i}").strip()
             if pattern:

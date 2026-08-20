@@ -58,6 +58,14 @@ def build_mirror_transaction_create(source: Transaction) -> TransactionCreate:
     credit (see create()/_reconcile_balance()) already moves the money; this only
     makes the transfer visible in the counterpart account's own transaction list.
     Shared by TransactionService and ImportService so both paths mirror identically.
+
+    counterpart_transaction_id=source.id points the mirror back at its source --
+    source.id is already known here since the mirror is only ever built after the
+    source has been committed. source="auto_transfer" is what distinguishes a mirror
+    from an ordinary Find Match-confirmed leg (both share the same counterpart_transaction_id
+    concept). The reverse pointer (source's own counterpart_transaction_id -> mirror.id)
+    is set by the caller once the mirror row has its own id (see _maybe_create_mirror /
+    _sync_mirror / ImportService._create_transfer_mirrors).
     """
     return TransactionCreate(
         account_id=source.counterpart_account_id,
@@ -70,7 +78,7 @@ def build_mirror_transaction_create(source: Transaction) -> TransactionCreate:
         merchant=source.merchant,
         source="auto_transfer",
         counterpart_account_id=None,
-        generated_from_transaction_id=source.id,
+        counterpart_transaction_id=source.id,
     )
 
 
@@ -142,6 +150,7 @@ class TransactionService:
             build_mirror_transaction_create(source),
             amount_eur=(-source.amount_eur if source.amount_eur is not None else None),
         )
+        await self._repo.set_counterpart_transaction(source.id, mirror.id)
         logger.info(
             "Auto-mirror transaction created: id=%d source_id=%d account_id=%d",
             mirror.id, source.id, mirror.account_id,
@@ -172,17 +181,34 @@ class TransactionService:
             logger.debug("Transaction update: id=%d not found", transaction_id)
             return None
         await self._reconcile_balance(old=current, new=txn)
-        await self._sync_mirror(old=current, new=txn)
+        mirror_related = await self._sync_mirror(old=current, new=txn)
+        if not mirror_related:
+            await self._sync_counterpart_link(old=current, new=txn, fields=fields)
         logger.info("Transaction updated: id=%d fields=%s", transaction_id, list(fields.keys()))
         return TransactionRead.model_validate(txn)
+
+    async def _sync_counterpart_link(self, old, new, fields) -> None:
+        """Editing any field a confirmed match was validated against (see
+        link_transfer) invalidates it -- clears counterpart_transaction_id on both
+        legs rather than leaving a stale, no-longer-accurate confirmed pairing.
+        """
+        if old.counterpart_transaction_id is None:
+            return
+        invalidating_fields = {"type", "counterpart_account_id", "amount", "currency", "date", "account_id"}
+        if not invalidating_fields & fields.keys():
+            return
+        counterpart_id = old.counterpart_transaction_id
+        await self._repo.set_counterpart_transaction(new.id, None)
+        await self._repo.set_counterpart_transaction(counterpart_id, None)
+        logger.info("Transfer link invalidated by edit: id=%d counterpart_id=%d", new.id, counterpart_id)
 
     async def _reconcile_balance(self, old, new) -> None:
         """Reverse a transaction's old balance effect and apply its new one -- covers
         every field an update could change (amount, type, account, counterpart).
-        A mirror row (generated_from_transaction_id set) carries no balance effect of
-        its own -- see create()/delete() -- so editing one directly is a no-op here.
+        A mirror row (source == "auto_transfer") carries no balance effect of its own
+        -- see create()/delete() -- so editing one directly is a no-op here.
         """
-        if old.generated_from_transaction_id is not None:
+        if old.source == "auto_transfer":
             return
         await self._account_repo.adjust_balance(
             old.account_id, -_account_delta(old.type, old.amount)
@@ -195,15 +221,23 @@ class TransactionService:
         if new.type == "transfer" and new.counterpart_account_id is not None:
             await self._account_repo.adjust_balance(new.counterpart_account_id, new.amount)
 
-    async def _sync_mirror(self, old, new) -> None:
+    async def _sync_mirror(self, old, new) -> bool:
         """Keep an auto-generated counterpart mirror row (see create()) in step with
         edits to its source leg -- content only, never balance (mirrors carry none).
         Creates one if the edit newly qualifies (e.g. counterpart_account_id changed
         to a mirrored account), removes it if the edit no longer qualifies, or moves
         it to the new counterpart account if that changed.
+
+        Returns True whenever this transaction's counterpart_transaction_id is (or
+        was, or becomes) a mirror relationship rather than an ordinary Find
+        Match-confirmed pair -- the caller should then skip _sync_counterpart_link's
+        invalidation logic entirely, since this method already owns the mirror link's
+        full lifecycle (including its pointer to/from the source leg) and editing a
+        mirrored transfer's amount/date/etc. must never be treated as breaking the
+        match the way it would for two independently-imported legs.
         """
-        if old.generated_from_transaction_id is not None:
-            return
+        if old.source == "auto_transfer":
+            return True
         mirror = await self._repo.get_mirror(old.id)
         counterpart = None
         if new.type == "transfer" and new.counterpart_account_id is not None:
@@ -213,7 +247,8 @@ class TransactionService:
         if not wants_mirror:
             if mirror is not None:
                 await self._repo.delete(mirror.id)
-            return
+                return True
+            return False
 
         if mirror is not None and mirror.account_id == new.counterpart_account_id:
             await self._repo.update(
@@ -228,10 +263,12 @@ class TransactionService:
         else:
             if mirror is not None:
                 await self._repo.delete(mirror.id)
-            await self._repo.create(
+            new_mirror = await self._repo.create(
                 build_mirror_transaction_create(new),
                 amount_eur=(-new.amount_eur if new.amount_eur is not None else None),
             )
+            await self._repo.set_counterpart_transaction(new.id, new_mirror.id)
+        return True
 
     async def backfill_amount_eur(self, batch_size: int = 1000) -> TransactionBackfillEurResponse:
         pending = await self._repo.list_missing_amount_eur(limit=batch_size)
@@ -259,12 +296,14 @@ class TransactionService:
             return False
         deleted = await self._repo.delete(transaction_id)
         if deleted:
-            # A mirror row (generated_from_transaction_id set) carries no balance
-            # effect of its own -- see create() -- deleting one directly is balance-
-            # neutral. Deleting the source leg cascades its mirror row away at the DB
-            # level (ondelete="CASCADE"); the source leg's own reversal below already
-            # undoes the money movement, so nothing extra is needed for the mirror.
-            if txn.generated_from_transaction_id is None:
+            # A mirror row (source == "auto_transfer") carries no balance effect of
+            # its own -- see create() -- deleting one directly is balance-neutral.
+            # Deleting the source leg does NOT cascade-delete its mirror (
+            # counterpart_transaction_id is ondelete="SET NULL", not CASCADE) --  the
+            # mirror is left orphaned rather than cleaned up automatically. Accepted
+            # trade-off for sharing one column with confirmed Find Match links, which
+            # must never cascade-delete a real counterpart transaction.
+            if txn.source != "auto_transfer":
                 await self._account_repo.adjust_balance(
                     txn.account_id, -_account_delta(txn.type, txn.amount)
                 )
@@ -283,7 +322,11 @@ class TransactionService:
         no candidates while a pair of independent rule-guesses can still be found.
         """
         transaction = await self._repo.get(transaction_id)
-        if transaction is None or transaction.generated_from_transaction_id is not None:
+        if (
+            transaction is None
+            or transaction.source == "auto_transfer"
+            or transaction.counterpart_transaction_id is not None
+        ):
             return []
         candidates = await self._repo.get_transfer_match_candidates(transaction)
         return [TransactionRead.model_validate(c) for c in candidates]
@@ -303,8 +346,10 @@ class TransactionService:
         counterpart = await self._repo.get(counterpart_transaction_id)
         if transaction is None or counterpart is None:
             raise TransferMatchError("Transaction not found")
-        if transaction.generated_from_transaction_id is not None or counterpart.generated_from_transaction_id is not None:
+        if transaction.source == "auto_transfer" or counterpart.source == "auto_transfer":
             raise TransferMatchError("A generated mirror row cannot be linked")
+        if transaction.counterpart_transaction_id is not None or counterpart.counterpart_transaction_id is not None:
+            raise TransferMatchError("A transaction is already confirmed-linked")
         # transaction.counterpart_account_id may already be set from an import rule's
         # guessed destination account (see _apply_rules) rather than a confirmed
         # counterpart. Same for counterpart.counterpart_account_id: it's only a problem
@@ -336,10 +381,20 @@ class TransactionService:
             raise TransferMatchError("Amounts do not match")
 
         updated = await self.update(
-            transaction.id, TransactionUpdate(type="transfer", counterpart_account_id=counterpart.account_id)
+            transaction.id,
+            TransactionUpdate(
+                type="transfer",
+                counterpart_account_id=counterpart.account_id,
+                counterpart_transaction_id=counterpart.id,
+            ),
         )
         await self.update(
-            counterpart.id, TransactionUpdate(type="transfer", counterpart_account_id=transaction.account_id)
+            counterpart.id,
+            TransactionUpdate(
+                type="transfer",
+                counterpart_account_id=transaction.account_id,
+                counterpart_transaction_id=transaction.id,
+            ),
         )
         assert updated is not None
         logger.info("Transfer linked: id=%d counterpart_id=%d", transaction.id, counterpart.id)

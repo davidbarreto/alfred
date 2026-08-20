@@ -820,9 +820,10 @@ class TestCreateTransferMirrors:
         mirror_data = service._txn_repo.create.await_args.args[0]
         assert mirror_data.account_id == 9
         assert mirror_data.amount == Decimal("-100.00")
-        assert mirror_data.generated_from_transaction_id == 100
+        assert mirror_data.counterpart_transaction_id == 100
         assert mirror_data.counterpart_account_id is None
         assert service._txn_repo.create.await_args.kwargs["amount_eur"] == Decimal("-100.00")
+        service._txn_repo.set_counterpart_transaction.assert_awaited_once_with(100, 200)
 
     @pytest.mark.asyncio
     async def test_skips_when_counterpart_flag_disabled(self):
@@ -1331,6 +1332,8 @@ class TestCommitGrouped:
             txn.bank_description = data.bank_description
             txn.description = data.description
             txn.amount_eur = amount_eur
+            txn.account_id = data.account_id
+            txn.counterpart_account_id = data.counterpart_account_id
             created.append(data)
             return txn
         service._txn_repo.add.side_effect = _add_txn
@@ -1504,6 +1507,89 @@ class TestCommitGrouped:
 
         service._account_repo.set_balance.assert_awaited_once_with(1, Decimal("300.00"))
         service._account_repo.adjust_balance.assert_awaited_once_with(2, Decimal("50.00"))
+
+    @pytest.mark.asyncio
+    async def test_confirms_currency_exchange_pair_once_both_legs_are_inserted(self):
+        """Both legs of a same-event currency exchange (see _link_transfer_pairs)
+        share a transfer_pair_key -- once both are actually inserted, the pairing
+        should be confirmed via counterpart_transaction_id, not left as an
+        unconfirmed counterpart_account_id guess."""
+        service = _service()
+        self._prepare(service)
+        request = _grouped_commit_request(
+            [
+                _grouped_commit_row(
+                    currency="EUR", deduplication_hash="h1", type="transfer",
+                    amount=Decimal("-100.00"), category_id=None,
+                    counterpart_account_id=2, transfer_pair_key="pair-1",
+                ),
+                _grouped_commit_row(
+                    currency="PLN", deduplication_hash="h2", type="transfer",
+                    amount=Decimal("434.09"), category_id=None,
+                    counterpart_account_id=1, transfer_pair_key="pair-1",
+                ),
+            ],
+            account_map={"EUR": 1, "PLN": 2},
+        )
+
+        await service.commit_grouped(request)
+
+        service._txn_repo.set_counterpart_transaction.assert_any_await(100, 101)
+        service._txn_repo.set_counterpart_transaction.assert_any_await(101, 100)
+
+    @pytest.mark.asyncio
+    async def test_does_not_confirm_when_one_leg_of_the_pair_was_skipped(self):
+        """If one leg was a duplicate and got skipped, only one transaction from the
+        pair key is actually inserted -- nothing to confirm against."""
+        service = _service()
+        self._prepare(service)
+        service._txn_repo.get_existing_dedup_hashes.return_value = {"h2"}
+        request = _grouped_commit_request(
+            [
+                _grouped_commit_row(
+                    currency="EUR", deduplication_hash="h1", type="transfer",
+                    amount=Decimal("-100.00"), category_id=None,
+                    counterpart_account_id=2, transfer_pair_key="pair-1",
+                ),
+                _grouped_commit_row(
+                    currency="PLN", deduplication_hash="h2", type="transfer",
+                    amount=Decimal("434.09"), category_id=None,
+                    counterpart_account_id=1, transfer_pair_key="pair-1",
+                ),
+            ],
+            account_map={"EUR": 1, "PLN": 2},
+        )
+
+        await service.commit_grouped(request)
+
+        service._txn_repo.set_counterpart_transaction.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_does_not_confirm_when_counterpart_accounts_no_longer_match(self):
+        """A row edited before commit so its counterpart_account_id no longer points
+        back at the other leg's account -- the pairing is no longer trustworthy, so
+        it's left unconfirmed rather than guessed at."""
+        service = _service()
+        self._prepare(service)
+        request = _grouped_commit_request(
+            [
+                _grouped_commit_row(
+                    currency="EUR", deduplication_hash="h1", type="transfer",
+                    amount=Decimal("-100.00"), category_id=None,
+                    counterpart_account_id=9, transfer_pair_key="pair-1",
+                ),
+                _grouped_commit_row(
+                    currency="PLN", deduplication_hash="h2", type="transfer",
+                    amount=Decimal("434.09"), category_id=None,
+                    counterpart_account_id=1, transfer_pair_key="pair-1",
+                ),
+            ],
+            account_map={"EUR": 1, "PLN": 2},
+        )
+
+        await service.commit_grouped(request)
+
+        service._txn_repo.set_counterpart_transaction.assert_not_awaited()
 
 
 def _plan_signal(**kwargs) -> ParsedInstallmentPlanSignal:

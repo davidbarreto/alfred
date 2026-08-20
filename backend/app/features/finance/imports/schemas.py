@@ -97,6 +97,11 @@ class ImportPreviewRow(BaseModel):
     category_id: int | None = None
     category_name: str | None = None
     counterpart_account_id: int | None = None
+    transfer_pair_key: str | None = None
+    """Carries ParsedRow.transfer_pair_key through to commit so a same-event
+    currency-exchange pair (see ImportService._link_transfer_pairs) can be confirmed
+    -- counterpart_transaction_id set on both legs -- once both are actually inserted,
+    instead of left as an unconfirmed counterpart_account_id guess."""
     suggestion_source: SuggestionSource | None = None
     confidence: float | None = None
     needs_review: bool = False
@@ -166,6 +171,7 @@ class ImportCommitRow(BaseModel):
     note: str | None = None
     category_id: int | None = None
     counterpart_account_id: int | None = None
+    transfer_pair_key: str | None = None
     save_rule: bool = False
     rule_pattern: str | None = None
     rule_mode: RuleMode = "auto"

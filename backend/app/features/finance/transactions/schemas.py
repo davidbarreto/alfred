@@ -82,9 +82,15 @@ class TransactionBase(BaseModel):
     merchant: str | None = None
     source: str | None = None
     counterpart_account_id: int | None = None
-    generated_from_transaction_id: int | None = None
-    """Set only on an auto-generated mirror row (see Account.auto_mirror_transfers) --
-    points back at the transfer leg that spawned it. Not user-editable."""
+    counterpart_transaction_id: int | None = None
+    """Set once this transfer is confirmed as matching a specific other transaction --
+    counterpart_account_id alone can be an unconfirmed rule/user guess. Two ways this
+    gets set: TransactionService.link_transfer (a user-confirmed Find Match), or an
+    auto-generated mirror row (see Account.auto_mirror_transfers) -- a mirror always
+    points back at the source leg that spawned it (Transaction.source == "auto_transfer"
+    identifies the mirror side), and the source leg points at its mirror in return. Not
+    directly user-editable when it points at/from a mirror. Spend totals and net-worth
+    treat a transfer as a genuine internal move only once this is set."""
     balance_after: Decimal | None = None
     """The account's running balance immediately after this transaction, when the
     source statement reports one (e.g. ActivoBank checking, Banco Inter, Revolut).
@@ -111,6 +117,7 @@ class TransactionUpdate(BaseModel):
     note: str | None = None
     merchant: str | None = None
     counterpart_account_id: int | None = None
+    counterpart_transaction_id: int | None = None
 
 
 class TransactionRead(TransactionBase):

@@ -95,7 +95,7 @@ class TestGetTransferMatchCandidates:
         query = session.execute.call_args.args[0]
         sql = str(query.compile(compile_kwargs={"literal_binds": True}))
         assert "counterpart_account_id" in sql
-        assert "generated_from_transaction_id" in sql
+        assert "counterpart_transaction_id" in sql
         assert "-50.00" in sql
 
     async def test_query_is_not_restricted_to_transfer_type(self):
@@ -124,6 +124,19 @@ class TestGetTransferMatchCandidates:
         query = session.execute.call_args.args[0]
         sql = str(query.compile(compile_kwargs={"literal_binds": True}))
         assert "counterpart_account_id IS NULL OR finance.transactions.counterpart_account_id = 7" in sql
+
+    async def test_query_excludes_already_confirmed_linked_candidates(self):
+        """A candidate that already has a confirmed counterpart_transaction_id is
+        genuinely already linked (to someone else, or would be a duplicate link) --
+        never offered as a match."""
+        session = _make_session()
+        session.execute.return_value = _scalar_all([])
+
+        await TransactionRepository(session).get_transfer_match_candidates(self._source())
+
+        query = session.execute.call_args.args[0]
+        sql = str(query.compile(compile_kwargs={"literal_binds": True}))
+        assert "counterpart_transaction_id IS NULL" in sql
 
     async def test_query_also_matches_on_identical_bank_description(self):
         """A currency exchange has different currencies and an FX-converted (not
@@ -183,6 +196,28 @@ class TestGetTransferMatchCandidates:
         query = session.execute.call_args.args[0]
         sql = str(query.compile(compile_kwargs={"literal_binds": True}))
         assert "currency !=" in sql or "!= transactions.currency" in sql or "currency <>" in sql
+
+
+class TestSetCounterpartTransaction:
+    async def test_updates_the_column(self):
+        session = _make_session()
+
+        await TransactionRepository(session).set_counterpart_transaction(1, 2)
+
+        query = session.execute.call_args.args[0]
+        sql = str(query.compile(compile_kwargs={"literal_binds": True}))
+        assert "UPDATE finance.transactions SET counterpart_transaction_id=2" in sql
+        assert "transactions.id = 1" in sql
+        session.commit.assert_awaited_once()
+
+    async def test_can_clear_the_column(self):
+        session = _make_session()
+
+        await TransactionRepository(session).set_counterpart_transaction(1, None)
+
+        query = session.execute.call_args.args[0]
+        sql = str(query.compile(compile_kwargs={"literal_binds": True}))
+        assert "counterpart_transaction_id=NULL" in sql
 
 
 class TestList:
@@ -458,6 +493,10 @@ class TestGetSpendingTotal:
         assert "expense" in str(query.compile(compile_kwargs={"literal_binds": True}))
 
     async def test_expense_query_excludes_auto_mirror_rows_from_spend(self):
+        """A mirror row always has its own counterpart_transaction_id set (pointing
+        back at the source leg that spawned it), so it's excluded from spend by the
+        same counterpart_transaction_id check as any other confirmed transfer -- no
+        separate condition needed."""
         session = _make_session()
         session.execute.return_value = _one_result((Decimal("0"), 0))
         await TransactionRepository(session).get_spending_total(
@@ -466,7 +505,7 @@ class TestGetSpendingTotal:
         )
         query = session.execute.call_args.args[0]
         sql = str(query.compile(compile_kwargs={"literal_binds": True}))
-        assert "generated_from_transaction_id" in sql
+        assert "counterpart_transaction_id" in sql
 
     async def test_transaction_type_income_override(self):
         session = _make_session()
@@ -482,8 +521,9 @@ class TestGetSpendingTotal:
         assert count == 1
 
     async def test_expense_query_counts_untracked_transfers_as_spend(self):
-        """A transfer with no counterpart_account_id never landed in another tracked
-        account, so it should be included in "expense" totals alongside real expenses."""
+        """A transfer with no confirmed counterpart_transaction_id has no verified
+        evidence it landed in another tracked account, so it should be included in
+        "expense" totals alongside real expenses."""
         session = _make_session()
         session.execute.return_value = _one_result((Decimal("0"), 0))
         await TransactionRepository(session).get_spending_total(
@@ -493,7 +533,7 @@ class TestGetSpendingTotal:
         query = session.execute.call_args.args[0]
         sql = str(query.compile(compile_kwargs={"literal_binds": True}))
         assert "transfer" in sql
-        assert "counterpart_account_id" in sql
+        assert "counterpart_transaction_id" in sql
 
     async def test_expense_query_excludes_positive_amount_transfers_from_spend(self):
         """A positive-amount untracked transfer (e.g. a Revolut top-up funded from an
@@ -598,7 +638,7 @@ class TestGetSpendingByCategory:
         )
         query = session.execute.call_args.args[0]
         sql = str(query.compile(compile_kwargs={"literal_binds": True}))
-        assert "counterpart_account_id" in sql
+        assert "counterpart_transaction_id" in sql
 
     async def test_global_currency_sums_amount_eur(self):
         session = _make_session()
@@ -657,7 +697,7 @@ class TestGetSpendingByAccount:
         )
         query = session.execute.call_args.args[0]
         sql = str(query.compile(compile_kwargs={"literal_binds": True}))
-        assert "counterpart_account_id" in sql
+        assert "counterpart_transaction_id" in sql
 
     async def test_global_currency_sums_amount_eur(self):
         session = _make_session()
@@ -739,7 +779,7 @@ class TestGetLedgerEvents:
         query = session.execute.call_args.args[0]
         sql = str(query.compile(compile_kwargs={"literal_binds": True})).upper()
         assert "NOT (EXISTS" in sql or "NOT EXISTS" in sql
-        assert "GENERATED_FROM_TRANSACTION_ID" in sql
+        assert "AUTO_TRANSFER" in sql
 
 
 class TestGetMirror:
@@ -851,7 +891,7 @@ class TestGetCategorySpent:
         )
         query = session.execute.call_args.args[0]
         sql = str(query.compile(compile_kwargs={"literal_binds": True}))
-        assert "counterpart_account_id" in sql
+        assert "counterpart_transaction_id" in sql
 
     async def test_global_currency_sums_amount_eur(self):
         session = _make_session()

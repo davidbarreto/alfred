@@ -344,6 +344,25 @@ class ImportService:
             row_a.counterpart_account_id = account_b
             row_b.counterpart_account_id = account_a
 
+    async def _confirm_transfer_pairs(self, pair_transactions: dict[str, list[Transaction]]) -> None:
+        """Once both legs a same-event currency exchange (see _link_transfer_pairs)
+        have actually been inserted, set counterpart_transaction_id on each so the
+        pairing counts as a confirmed link (see TransactionService.link_transfer) --
+        not just an unconfirmed counterpart_account_id guess. A key can resolve to
+        fewer than two transactions if one leg was a duplicate/skipped, or to
+        mismatched accounts if a row was edited before commit -- either way, no
+        confirmed link is safe to make, so it's left as-is (still eligible for the
+        user to confirm manually via Find Match).
+        """
+        for txn_a, txn_b in (entries for entries in pair_transactions.values() if len(entries) == 2):
+            if txn_a.account_id == txn_b.account_id:
+                continue
+            if txn_a.counterpart_account_id != txn_b.account_id or txn_b.counterpart_account_id != txn_a.account_id:
+                continue
+            await self._txn_repo.set_counterpart_transaction(txn_a.id, txn_b.id)
+            await self._txn_repo.set_counterpart_transaction(txn_b.id, txn_a.id)
+            logger.info("Transfer pair confirmed at import: id=%d counterpart_id=%d", txn_a.id, txn_b.id)
+
     async def _store_file(self, provider: str, filename: str, content: bytes) -> str | None:
         """Persist the original upload; the content-hash path makes re-uploads idempotent."""
         if self._files is None:
@@ -389,6 +408,7 @@ class ImportService:
                     installment_juros=parsed_row.installment_juros,
                     installment_duty=parsed_row.installment_duty,
                     note=parsed_row.note,
+                    transfer_pair_key=parsed_row.transfer_pair_key,
                 )
             )
         return rows
@@ -646,6 +666,7 @@ class ImportService:
                 build_mirror_transaction_create(txn),
                 amount_eur=(-txn.amount_eur if txn.amount_eur is not None else None),
             )
+            await self._txn_repo.set_counterpart_transaction(txn.id, mirror.id)
             logger.info(
                 "Auto-mirror transaction created: id=%d source_id=%d account_id=%d",
                 mirror.id, txn.id, mirror.account_id,
@@ -1141,6 +1162,7 @@ class ImportService:
         rows_by_account: dict[int, list] = defaultdict(list)
         total_rules_created = 0
         next_position = await self._repo.next_position()
+        pair_transactions: dict[str, list[Transaction]] = defaultdict(list)
 
         for currency in sorted(by_currency):
             rows = by_currency[currency]
@@ -1197,6 +1219,8 @@ class ImportService:
                     amount_eur=amount_eur,
                 )
                 all_transactions.append(txn)
+                if row.transfer_pair_key:
+                    pair_transactions[row.transfer_pair_key].append(txn)
 
             rules_created_here = 0
             for row in to_insert:
@@ -1232,6 +1256,7 @@ class ImportService:
         for synced_account_id, synced_rows in rows_by_account.items():
             await self._sync_account_balance(synced_account_id, synced_rows)
         await self._create_transfer_mirrors(all_transactions)
+        await self._confirm_transfer_pairs(pair_transactions)
         logger.info(
             "Grouped import committed: provider=%s currencies=%s total_inserted=%d rules=%d",
             request.provider, sorted(by_currency), len(all_transactions), total_rules_created,

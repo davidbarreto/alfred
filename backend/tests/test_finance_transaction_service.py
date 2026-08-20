@@ -35,10 +35,10 @@ def _make_txn_orm(**kwargs):
     t.merchant = kwargs.get("merchant", "Shop")
     t.source = kwargs.get("source", None)
     t.counterpart_account_id = kwargs.get("counterpart_account_id", None)
+    t.counterpart_transaction_id = kwargs.get("counterpart_transaction_id", None)
     t.import_batch_id = kwargs.get("import_batch_id", None)
     t.amount_eur = kwargs.get("amount_eur", None)
     t.balance_after = kwargs.get("balance_after", None)
-    t.generated_from_transaction_id = kwargs.get("generated_from_transaction_id", None)
     t.created_at = kwargs.get("created_at", "2026-06-12T10:00:00")
     return t
 
@@ -186,7 +186,8 @@ class TestCreateAutoMirror:
         assert mirror_data.account_id == 2
         assert mirror_data.amount == Decimal("-100.00")
         assert mirror_data.counterpart_account_id is None
-        assert mirror_data.generated_from_transaction_id == 10
+        assert mirror_data.counterpart_transaction_id == 10
+        service._repo.set_counterpart_transaction.assert_awaited_once_with(10, 11)
 
     async def test_phantom_counterpart_credit_still_applied_alongside_mirror(self, service):
         source = _make_txn_orm(
@@ -259,6 +260,79 @@ class TestUpdate:
         assert await service.update(999, TransactionUpdate(amount=Decimal("10"))) is None
 
 
+class TestSyncCounterpartLink:
+    async def test_amount_change_on_confirmed_leg_clears_link_on_both_sides(self, service):
+        from datetime import datetime as dt
+
+        current = _make_txn_orm(
+            id=1, type="transfer", counterpart_account_id=2, counterpart_transaction_id=2,
+            date=dt(2026, 6, 12),
+        )
+        service._repo.get.return_value = current
+        service._repo.update.return_value = _make_txn_orm(
+            id=1, type="transfer", amount=Decimal("999.00"),
+            counterpart_account_id=2, counterpart_transaction_id=2,
+        )
+
+        await service.update(1, TransactionUpdate(amount=Decimal("999.00")))
+
+        service._repo.set_counterpart_transaction.assert_any_await(1, None)
+        service._repo.set_counterpart_transaction.assert_any_await(2, None)
+
+    async def test_counterpart_account_change_on_confirmed_leg_clears_link(self, service):
+        current = _make_txn_orm(
+            id=1, type="transfer", counterpart_account_id=2, counterpart_transaction_id=2,
+        )
+        service._repo.get.return_value = current
+        service._repo.update.return_value = _make_txn_orm(
+            id=1, type="transfer", counterpart_account_id=3, counterpart_transaction_id=2,
+        )
+
+        await service.update(1, TransactionUpdate(counterpart_account_id=3))
+
+        service._repo.set_counterpart_transaction.assert_any_await(1, None)
+        service._repo.set_counterpart_transaction.assert_any_await(2, None)
+
+    async def test_type_change_away_from_transfer_clears_link(self, service):
+        current = _make_txn_orm(
+            id=1, type="transfer", counterpart_account_id=2, counterpart_transaction_id=2,
+        )
+        service._repo.get.return_value = current
+        service._repo.update.return_value = _make_txn_orm(
+            id=1, type="expense", counterpart_account_id=2, counterpart_transaction_id=2,
+        )
+
+        await service.update(1, TransactionUpdate(type="expense"))
+
+        service._repo.set_counterpart_transaction.assert_any_await(1, None)
+        service._repo.set_counterpart_transaction.assert_any_await(2, None)
+
+    async def test_unrelated_field_change_leaves_confirmed_link_intact(self, service):
+        current = _make_txn_orm(
+            id=1, type="transfer", counterpart_account_id=2, counterpart_transaction_id=2,
+        )
+        service._repo.get.return_value = current
+        service._repo.update.return_value = _make_txn_orm(
+            id=1, type="transfer", merchant="Renamed",
+            counterpart_account_id=2, counterpart_transaction_id=2,
+        )
+
+        await service.update(1, TransactionUpdate(merchant="Renamed"))
+
+        service._repo.set_counterpart_transaction.assert_not_awaited()
+
+    async def test_no_prior_link_never_calls_unlink(self, service):
+        from datetime import datetime as dt
+
+        current = _make_txn_orm(id=1, type="expense", date=dt(2026, 6, 12))
+        service._repo.get.return_value = current
+        service._repo.update.return_value = _make_txn_orm(id=1, type="expense", amount=Decimal("5.00"))
+
+        await service.update(1, TransactionUpdate(amount=Decimal("5.00")))
+
+        service._repo.set_counterpart_transaction.assert_not_awaited()
+
+
 class TestUpdateBalanceMaintenance:
     async def test_amount_change_reverses_old_and_applies_new(self, service):
         from datetime import datetime as dt
@@ -318,7 +392,7 @@ class TestUpdateAutoMirror:
         service._repo.get.return_value = old
         service._repo.update.return_value = new
         mirror = _make_txn_orm(
-            id=11, account_id=2, type="transfer", amount=Decimal("-100.00"), generated_from_transaction_id=10
+            id=11, account_id=2, type="transfer", amount=Decimal("-100.00"), source="auto_transfer",
         )
         service._repo.get_mirror.return_value = mirror
         service._account_repo.get.return_value = MagicMock(auto_mirror_transfers=True)
@@ -341,7 +415,7 @@ class TestUpdateAutoMirror:
         )
         service._repo.get.return_value = old
         service._repo.update.return_value = new
-        mirror = _make_txn_orm(id=11, account_id=2, generated_from_transaction_id=10)
+        mirror = _make_txn_orm(id=11, account_id=2, source="auto_transfer")
         service._repo.get_mirror.return_value = mirror
         service._account_repo.get.return_value = MagicMock(auto_mirror_transfers=False)
 
@@ -353,11 +427,11 @@ class TestUpdateAutoMirror:
         from datetime import datetime as dt
 
         old = _make_txn_orm(
-            id=11, account_id=2, type="transfer", amount=Decimal("-100.00"), generated_from_transaction_id=10,
+            id=11, account_id=2, type="transfer", amount=Decimal("-100.00"), source="auto_transfer",
             date=dt(2026, 6, 12),
         )
         new = _make_txn_orm(
-            id=11, account_id=2, type="transfer", amount=Decimal("-150.00"), generated_from_transaction_id=10
+            id=11, account_id=2, type="transfer", amount=Decimal("-150.00"), source="auto_transfer",
         )
         service._repo.get.return_value = old
         service._repo.update.return_value = new
@@ -412,7 +486,7 @@ class TestDeleteAutoMirror:
     async def test_deleting_a_mirror_row_directly_is_balance_neutral(self, service):
         service._repo.get.return_value = _make_txn_orm(
             id=11, account_id=2, type="transfer", amount=Decimal("-100.00"),
-            counterpart_account_id=None, generated_from_transaction_id=10,
+            counterpart_account_id=None, source="auto_transfer",
         )
         service._repo.delete.return_value = True
 
@@ -511,7 +585,7 @@ class TestGetTransferMatchCandidates:
 
     async def test_returns_empty_for_generated_mirror_row(self, service):
         service._repo.get.return_value = _make_txn_orm(
-            type="transfer", generated_from_transaction_id=5
+            type="transfer", source="auto_transfer"
         )
         assert await service.get_transfer_match_candidates(1) == []
         service._repo.get_transfer_match_candidates.assert_not_awaited()
@@ -532,10 +606,14 @@ class TestLinkTransfer:
 
         assert isinstance(result, TransactionRead)
         service._repo.update.assert_any_await(
-            1, TransactionUpdate(type="transfer", counterpart_account_id=2), amount_eur=None, recompute_amount_eur=False
+            1,
+            TransactionUpdate(type="transfer", counterpart_account_id=2, counterpart_transaction_id=2),
+            amount_eur=None, recompute_amount_eur=False,
         )
         service._repo.update.assert_any_await(
-            2, TransactionUpdate(type="transfer", counterpart_account_id=1), amount_eur=None, recompute_amount_eur=False
+            2,
+            TransactionUpdate(type="transfer", counterpart_account_id=1, counterpart_transaction_id=1),
+            amount_eur=None, recompute_amount_eur=False,
         )
 
     async def test_rejects_linking_to_self(self, service):
@@ -567,10 +645,14 @@ class TestLinkTransfer:
 
         assert isinstance(result, TransactionRead)
         service._repo.update.assert_any_await(
-            1, TransactionUpdate(type="transfer", counterpart_account_id=2), amount_eur=None, recompute_amount_eur=False
+            1,
+            TransactionUpdate(type="transfer", counterpart_account_id=2, counterpart_transaction_id=2),
+            amount_eur=None, recompute_amount_eur=False,
         )
         service._repo.update.assert_any_await(
-            2, TransactionUpdate(type="transfer", counterpart_account_id=1), amount_eur=None, recompute_amount_eur=False
+            2,
+            TransactionUpdate(type="transfer", counterpart_account_id=1, counterpart_transaction_id=1),
+            amount_eur=None, recompute_amount_eur=False,
         )
 
     async def test_rejects_already_linked_counterpart(self, service):
@@ -583,7 +665,7 @@ class TestLinkTransfer:
 
     async def test_rejects_generated_mirror_row(self, service):
         service._repo.get.side_effect = [
-            _make_txn_orm(id=1, account_id=1, type="transfer", generated_from_transaction_id=5),
+            _make_txn_orm(id=1, account_id=1, type="transfer", source="auto_transfer"),
             _make_txn_orm(id=2, account_id=2, type="transfer"),
         ]
         with pytest.raises(TransferMatchError):
@@ -609,7 +691,9 @@ class TestLinkTransfer:
 
         assert isinstance(result, TransactionRead)
         service._repo.update.assert_any_await(
-            1, TransactionUpdate(type="transfer", counterpart_account_id=2), amount_eur=None, recompute_amount_eur=False
+            1,
+            TransactionUpdate(type="transfer", counterpart_account_id=2, counterpart_transaction_id=2),
+            amount_eur=None, recompute_amount_eur=False,
         )
 
     async def test_allows_counterpart_with_rule_guessed_account_matching_source(self, service):
@@ -633,7 +717,9 @@ class TestLinkTransfer:
 
         assert isinstance(result, TransactionRead)
         service._repo.update.assert_any_await(
-            2, TransactionUpdate(type="transfer", counterpart_account_id=1), amount_eur=None, recompute_amount_eur=False
+            2,
+            TransactionUpdate(type="transfer", counterpart_account_id=1, counterpart_transaction_id=1),
+            amount_eur=None, recompute_amount_eur=False,
         )
 
     async def test_rejects_same_account(self, service):
@@ -692,10 +778,14 @@ class TestLinkTransfer:
 
         assert isinstance(result, TransactionRead)
         service._repo.update.assert_any_await(
-            1, TransactionUpdate(type="transfer", counterpart_account_id=2), amount_eur=None, recompute_amount_eur=False
+            1,
+            TransactionUpdate(type="transfer", counterpart_account_id=2, counterpart_transaction_id=2),
+            amount_eur=None, recompute_amount_eur=False,
         )
         service._repo.update.assert_any_await(
-            2, TransactionUpdate(type="transfer", counterpart_account_id=1), amount_eur=None, recompute_amount_eur=False
+            2,
+            TransactionUpdate(type="transfer", counterpart_account_id=1, counterpart_transaction_id=1),
+            amount_eur=None, recompute_amount_eur=False,
         )
 
     async def test_rejects_currency_exchange_with_different_descriptions(self, service):

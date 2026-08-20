@@ -25,29 +25,31 @@ def _amount_column(currency: str):
 
 
 def _spend_condition(transaction_type: str):
-    """A transfer with no tracked counterpart account is money that left an
-    Alfred-tracked account and never landed in another one (e.g. sent to an external
-    wallet, or converted to a currency Alfred doesn't track) -- it's effectively spent,
-    even though the bank/import labeled it a transfer. A transfer that does have a
-    counterpart_account_id is a genuine internal move between two tracked accounts and
-    stays excluded from spend. Only applies when reporting "expense"; other types
-    (income) match the column exactly.
+    """A transfer with no *confirmed* counterpart transaction is money that left an
+    Alfred-tracked account with no verified evidence it landed in another one (e.g.
+    sent to an external wallet, converted to a currency Alfred doesn't track, or only
+    a rule/user guess at the destination account that was never confirmed) -- it's
+    effectively spent, even though the bank/import labeled it a transfer. A transfer
+    only stays excluded from spend once counterpart_transaction_id is set (see
+    TransactionService.link_transfer) -- counterpart_account_id alone is not proof,
+    since it can be an unconfirmed guess. Only applies when reporting "expense"; other
+    types (income) match the column exactly.
 
     Only a negative amount can count as spend -- a positive-amount unmatched transfer
     (e.g. a Revolut top-up funded from an external card) is money coming in, never an
     outflow, regardless of counterpart state.
 
-    An auto-generated mirror row (generated_from_transaction_id set, see
-    Account.auto_mirror_transfers) has no counterpart_account_id of its own but is
-    still a genuine internal move -- excluded from spend the same way.
+    An auto-generated mirror row (Transaction.source == "auto_transfer", see
+    Account.auto_mirror_transfers) always has its own counterpart_transaction_id set
+    (pointing back at the source leg that spawned it) -- excluded from spend by the
+    same counterpart_transaction_id check, no separate condition needed.
     """
     if transaction_type == "expense":
         return or_(
             Transaction.type == "expense",
             and_(
                 Transaction.type == "transfer",
-                Transaction.counterpart_account_id.is_(None),
-                Transaction.generated_from_transaction_id.is_(None),
+                Transaction.counterpart_transaction_id.is_(None),
                 Transaction.amount < 0,
             ),
         )
@@ -166,12 +168,24 @@ class TransactionRepository:
                     Transaction.counterpart_account_id.is_(None),
                     Transaction.counterpart_account_id == transaction.account_id,
                 ),
-                Transaction.generated_from_transaction_id.is_(None),
+                Transaction.counterpart_transaction_id.is_(None),
                 func.date(Transaction.date) == func.date(transaction.date),
                 or_(same_currency_opposite_amount, same_description_opposite_sign),
             )
         )
         return list(result.scalars().all())
+
+    async def set_counterpart_transaction(self, transaction_id: int, counterpart_transaction_id: int | None) -> None:
+        """Raw column update, no ORM object refresh -- used to confirm a link (or clear
+        one) without re-triggering balance/mirror side effects, which the caller has
+        already applied (or never needed) separately.
+        """
+        await self._session.execute(
+            update(Transaction)
+            .where(Transaction.id == transaction_id)
+            .values(counterpart_transaction_id=counterpart_transaction_id)
+        )
+        await self._session.commit()
 
     async def list(self, filters: TransactionFilters, cycle_start_day: int = 1) -> list[Transaction]:
         query = select(Transaction).order_by(_build_order_by(filters.sort))
@@ -397,7 +411,8 @@ class TransactionRepository:
     async def get_mirror(self, source_transaction_id: int) -> Transaction | None:
         result = await self._session.execute(
             select(Transaction).where(
-                Transaction.generated_from_transaction_id == source_transaction_id
+                Transaction.counterpart_transaction_id == source_transaction_id,
+                Transaction.source == "auto_transfer",
             )
         )
         return result.scalars().first()
@@ -604,11 +619,14 @@ class TransactionRepository:
         (account_id, date, signed delta) triples -- the raw material for
         reconstructing a running per-account (and total) balance over time.
 
-        Income credits its account; expense and untracked-counterpart
-        transfers debit their account (money left the tracked system);
-        internal transfers (counterpart_account_id set) debit the source
-        *and* credit the counterpart -- two legs from one row, so those are
-        produced as a second, unioned select.
+        Income credits its account; expense and unconfirmed transfers debit their
+        account (money left the tracked system, or its landing account was never
+        confirmed); confirmed internal transfers (counterpart_transaction_id set,
+        see TransactionService.link_transfer) debit the source *and* credit the
+        counterpart account -- two legs from one row, so those are produced as a
+        second, unioned select. counterpart_account_id alone is not enough to credit
+        the counterpart -- it can be an unconfirmed rule/user guess with no verified
+        matching transaction.
 
         A source leg whose counterpart account has auto_mirror_transfers enabled
         (see Account.auto_mirror_transfers) has a real mirror Transaction row on the
@@ -620,7 +638,9 @@ class TransactionRepository:
         delta = case((Transaction.type == "income", amount_column), else_=-amount_column)
         Mirror = aliased(Transaction)
         has_mirror = (
-            select(Mirror.id).where(Mirror.generated_from_transaction_id == Transaction.id).exists()
+            select(Mirror.id)
+            .where(Mirror.id == Transaction.counterpart_transaction_id, Mirror.source == "auto_transfer")
+            .exists()
         )
 
         source_legs = select(Transaction.account_id, Transaction.date, delta).where(
@@ -630,7 +650,7 @@ class TransactionRepository:
             Transaction.counterpart_account_id, Transaction.date, amount_column
         ).where(
             Transaction.type == "transfer",
-            Transaction.counterpart_account_id.is_not(None),
+            Transaction.counterpart_transaction_id.is_not(None),
             Transaction.date <= to_date,
             ~has_mirror,
         )

@@ -17,8 +17,9 @@
         {{ (txn.description or txn.merchant or txn.bank_description or "?")[0] | upper }}
       </span>
     </div>
-    {% set counts_as_spend = txn.type == 'transfer' and not txn.counterpart_account_id and not txn.generated_from_transaction_id and txn.amount | float < 0 %}
-    {% set can_find_match = not txn.generated_from_transaction_id %}
+    {% set counts_as_spend = txn.type == 'transfer' and not txn.counterpart_transaction_id and txn.amount | float < 0 %}
+    {% set can_find_match = not txn.counterpart_transaction_id %}
+    {% set unconfirmed_transfer = txn.type == 'transfer' and txn.counterpart_account_id and not txn.counterpart_transaction_id %}
     <div class="flex-1 min-w-0 cursor-pointer" onclick='openTransactionDetailModal({{ txn | tojson }}, {{ accounts_by_id.get(txn.account_id, "?") | tojson }})'>
       <div class="text-sm text-gray-800 truncate flex items-center gap-1.5">
         <span class="truncate">{{ txn.description or txn.merchant or txn.bank_description or "—" }}</span>
@@ -26,7 +27,9 @@
         <i class="ti ti-note flex-shrink-0 text-gray-400 text-xs" title="{{ txn.note }}"></i>
         {% endif %}
         {% if counts_as_spend %}
-        <span class="flex-shrink-0 px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-50 text-amber-700" title="Transfer with no tracked destination account — counted as spend">counts as spend</span>
+        <span class="flex-shrink-0 px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-50 text-amber-700" title="Transfer with no confirmed destination transaction — counted as spend">counts as spend</span>
+        {% elif unconfirmed_transfer %}
+        <span class="flex-shrink-0 px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-50 text-amber-700" title="Destination account is only a guess — no confirmed matching transaction yet">unconfirmed</span>
         {% endif %}
         {% if can_find_match %}
         <button type="button" onclick="event.stopPropagation(); openTransferMatchModal({{ txn.id }})" class="flex-shrink-0 px-1.5 py-0.5 rounded text-[10px] font-medium bg-blue-50 text-[#378ADD] hover:bg-blue-100" title="Look for a matching transfer leg on another account">find match</button>

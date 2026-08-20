@@ -76,6 +76,7 @@ def build_mirror_transaction_create(source: Transaction) -> TransactionCreate:
         type="transfer",
         description=source.description,
         bank_description=source.bank_description,
+        note=f"Auto-mirrored from transfer match. {source.note}" if source.note else "Auto-mirrored from transfer match",
         merchant=source.merchant,
         source="auto_transfer",
         counterpart_account_id=None,

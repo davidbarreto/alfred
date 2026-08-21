@@ -18,6 +18,17 @@ Format notes:
   review on import
 - Some exports are prefixed with null bytes; parsing starts at the ``%PDF`` marker
 - No running balance; dedup relies on the occurrence-counter fallback
+
+Installment ("Parcela M de N") purchases:
+- Same self-contained-row model as Nubank (see NubankCardStatementParser):
+  every row IS the real, already-amortized charge, so N (total installments)
+  is read directly off a single row's ``(Parcela M de N)`` suffix instead of
+  a schedule table. There's no bank-issued plan reference either, so the
+  merchant text with the suffix stripped doubles as plan_ref, and
+  original_amount stays None -- the import service skips the lump-sum
+  match/supersede step entirely in that case. The row's own raw_description
+  keeps the ``(Parcela M de N)`` suffix; only the plan signal's description
+  is stripped.
 """
 from __future__ import annotations
 
@@ -26,7 +37,7 @@ import logging
 import re
 from datetime import date
 
-from app.shared.statement import ParsedRow, ParsedStatement
+from app.shared.statement import ParsedInstallmentPlanSignal, ParsedRow, ParsedStatement
 from app.shared.statement import parse_european_amount as parse_amount
 
 logger = logging.getLogger(__name__)
@@ -42,6 +53,7 @@ _ROW_RE = re.compile(
 )
 _CARD_RE = re.compile(r"CART.O\s+(\d{4}\*+\d{4})")
 _VENCIMENTO_RE = re.compile(r"Data de Vencimento\s*\n?\s*(\d{2})/(\d{2})/(\d{4})")
+_INSTALLMENT_RE = re.compile(r"^(.*?)\s*\(Parcela\s+(\d+)\s+de\s+(\d+)\)\s*$", re.IGNORECASE)
 
 
 def _pdf_text(content: bytes) -> str | None:
@@ -111,6 +123,30 @@ def _redate_old_rows(rows: list[ParsedRow], vencimento: date | None) -> None:
             row.flag_reason = "redated_installment"
 
 
+def _installment_plan_signals(rows: list[ParsedRow]) -> list[ParsedInstallmentPlanSignal]:
+    """One signal per distinct merchant text carrying a "(Parcela M de N)" suffix in
+    this statement -- deduplicated since the same ongoing plan can post more than one
+    installment within a single export. N is read straight off whichever row is seen
+    first; every row sharing this plan is expected to report the same N."""
+    totals: dict[str, int] = {}
+    for row in rows:
+        match = _INSTALLMENT_RE.match(row.raw_description)
+        if match is None:
+            continue
+        base_description = match.group(1).strip()
+        total_installments = int(match.group(3))
+        totals.setdefault(base_description, total_installments)
+    return [
+        ParsedInstallmentPlanSignal(
+            plan_ref=description,
+            description=description,
+            original_amount=None,
+            total_installments=total,
+        )
+        for description, total in totals.items()
+    ]
+
+
 class BancoInterFaturaParser:
 
     @property
@@ -143,4 +179,5 @@ class BancoInterFaturaParser:
             period_end=vencimento,
             closing_balance=None,
             rows=rows,
+            installment_plans_opened=_installment_plan_signals(rows),
         )

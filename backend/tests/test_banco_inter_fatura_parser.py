@@ -3,6 +3,7 @@ from decimal import Decimal
 
 from app.integrations.banco_inter.fatura_parser import (
     BancoInterFaturaParser,
+    _installment_plan_signals,
     _parse_text,
     _pdf_text,
 )
@@ -71,6 +72,36 @@ class TestParseText:
         assert all(r.raw_description != "SHOULD BE IGNORED" for r in rows)
 
 
+class TestInstallmentPlanSignals:
+    def test_one_signal_per_distinct_plan(self):
+        rows = _parse_text(_FATURA_TEXT)
+        signals = _installment_plan_signals(rows)
+        by_ref = {s.plan_ref: s for s in signals}
+        assert set(by_ref) == {"LOJA DE BRINQUEDOS XY", "CURSO ONLINE ABC"}
+        assert by_ref["LOJA DE BRINQUEDOS XY"].total_installments == 10
+        assert by_ref["CURSO ONLINE ABC"].total_installments == 10
+
+    def test_signal_has_no_original_amount(self):
+        rows = _parse_text(_FATURA_TEXT)
+        signals = _installment_plan_signals(rows)
+        assert all(s.original_amount is None for s in signals)
+
+    def test_description_matches_plan_ref(self):
+        rows = _parse_text(_FATURA_TEXT)
+        signals = _installment_plan_signals(rows)
+        assert all(s.description == s.plan_ref for s in signals)
+
+    def test_non_installment_rows_produce_no_signal(self):
+        rows = _parse_text(_FATURA_TEXT)
+        signals = _installment_plan_signals(rows)
+        assert all(s.plan_ref != "NETFLIX.COM" for s in signals)
+        assert all(s.plan_ref != "PAGTO DEBITO AUTOMATICO" for s in signals)
+
+    def test_no_installments_yields_no_signals(self):
+        rows = _parse_text("Despesas da fatura\n09 de mai. 2026 NETFLIX.COM - R$ 44,90\n")
+        assert _installment_plan_signals(rows) == []
+
+
 class TestPdfText:
     def test_returns_none_without_pdf_marker(self):
         assert _pdf_text(b"\x00\x00\x00 not a pdf") is None
@@ -102,6 +133,15 @@ class TestParse:
         assert statement.period_end == date(2026, 6, 15)
         assert statement.closing_balance is None
         assert len(statement.rows) == 4
+
+    def test_parse_populates_installment_plans_opened(self, monkeypatch):
+        import app.integrations.banco_inter.fatura_parser as module
+        monkeypatch.setattr(module, "_pdf_text", lambda content: _FATURA_TEXT)
+
+        statement = BancoInterFaturaParser().parse(b"%PDF fake")
+
+        refs = {s.plan_ref for s in statement.installment_plans_opened}
+        assert refs == {"LOJA DE BRINQUEDOS XY", "CURSO ONLINE ABC"}
 
     def test_old_installments_redated_to_fatura_month_and_flagged(self, monkeypatch):
         import app.integrations.banco_inter.fatura_parser as module

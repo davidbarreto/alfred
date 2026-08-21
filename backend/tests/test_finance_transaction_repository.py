@@ -883,26 +883,28 @@ class TestGetTransactionCounts:
     async def test_formats_month_buckets_with_counts(self):
         session = _make_session()
         result = MagicMock()
-        result.all.return_value = [(datetime(2026, 6, 1), 5, 0)]
+        result.all.return_value = [(datetime(2026, 6, 1), 5, 0, None)]
         session.execute.return_value = result
         rows = await TransactionRepository(session).get_transaction_counts(
             from_date=date(2026, 1, 1),
             to_date=date(2026, 12, 31),
             group_by="month",
         )
-        assert rows == [("2026-06", 5, 0)]
+        assert rows == [("2026-06", 5, 0, [])]
 
     async def test_formats_day_buckets(self):
         session = _make_session()
         result = MagicMock()
-        result.all.return_value = [(datetime(2026, 6, 5), 2, 1)]
+        result.all.return_value = [
+            (datetime(2026, 6, 5), 2, 1, [{"id": 3, "name": "Wise EUR"}])
+        ]
         session.execute.return_value = result
         rows = await TransactionRepository(session).get_transaction_counts(
             from_date=date(2026, 6, 1),
             to_date=date(2026, 6, 30),
             group_by="day",
         )
-        assert rows == [("2026-06-05", 2, 1)]
+        assert rows == [("2026-06-05", 2, 1, [{"id": 3, "name": "Wise EUR"}])]
 
     async def test_counts_regardless_of_type(self):
         """Unlike get_spending_over_time, no type/currency filtering in the WHERE
@@ -920,7 +922,11 @@ class TestGetTransactionCounts:
         )
         query = session.execute.call_args.args[0]
         sql = str(query.compile(compile_kwargs={"literal_binds": True}))
-        where_clause = sql.split("WHERE", 1)[1].split("GROUP BY", 1)[0]
+        # The FILTER subclause on the missing-accounts aggregate also contains a
+        # "WHERE", so isolate the query's own WHERE by taking the last occurrence
+        # before GROUP BY rather than the first.
+        before_group_by = sql.split("GROUP BY", 1)[0]
+        where_clause = before_group_by.rsplit("WHERE", 1)[1]
         assert "transactions.type =" not in where_clause
         assert "transactions.currency =" not in where_clause
 

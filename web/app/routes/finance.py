@@ -625,11 +625,28 @@ async def coverage_page(request: Request):
             coverage = None
         account_from = date.fromisoformat(coverage["from_date"]) if coverage else today
         earliest_overall = min(earliest_overall, account_from)
+
+        last_transaction = None
+        days_since_last = None
+        try:
+            latest = await api.get(
+                "/finance/transactions",
+                params={"account_id": account["id"], "limit": 1, "sort": "date_desc"},
+            )
+            if latest:
+                last_transaction = latest[0]
+                last_date = date.fromisoformat(last_transaction["date"][:10])
+                days_since_last = (today - last_date).days
+        except httpx.HTTPError:
+            pass
+
         account_rows.append({
             "id": account["id"],
             "name": account["name"],
             "from_period": account_from.strftime("%Y-%m"),
             "counts_by_period": {i["period"]: i for i in (coverage or {}).get("items", [])},
+            "last_transaction": last_transaction,
+            "days_since_last": days_since_last,
         })
 
     months = _month_range(earliest_overall, today)
@@ -640,6 +657,9 @@ async def coverage_page(request: Request):
                 "count": (row["counts_by_period"].get(period) or {}).get("count", 0),
                 "unmatched_transfer_count": (row["counts_by_period"].get(period) or {}).get(
                     "unmatched_transfer_count", 0
+                ),
+                "unmatched_transfer_accounts": (row["counts_by_period"].get(period) or {}).get(
+                    "unmatched_transfer_accounts", []
                 ),
                 "before_start": period < row["from_period"],
             }
@@ -682,10 +702,15 @@ async def coverage_days_fragment(request: Request):
                 "day": cursor.day,
                 "count": item["count"] if item else 0,
                 "unmatched_transfer_count": item["unmatched_transfer_count"] if item else 0,
+                "unmatched_transfer_accounts": item.get("unmatched_transfer_accounts", []) if item else [],
             })
             cursor += timedelta(days=1)
 
-    return templates.TemplateResponse(request, "_finance_coverage_days.html", {"days": days})
+    return templates.TemplateResponse(
+        request,
+        "_finance_coverage_days.html",
+        {"days": days, "account_id": account_id, "month": month},
+    )
 
 
 # --- Accounts ---

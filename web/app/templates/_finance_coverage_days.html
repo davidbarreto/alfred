@@ -3,14 +3,15 @@
 {% else %}
 <div class="grid grid-cols-7 gap-1">
   {% for day in days %}
-  <div
-    class="aspect-square rounded flex items-center justify-center text-[10px] font-medium
+  <a
+    href="/finance/transactions?account_id={{ account_id }}&from_date={{ day.date }}&to_date={{ day.date }}"
+    class="aspect-square rounded flex items-center justify-center text-[10px] font-medium transition-transform hover:scale-110
       {% if day.count == 0 %}bg-[#FBE9E9] text-[#B23B3A]
       {% elif day.count < 3 %}bg-[#DCEFE0] text-[#2F7A43]
       {% else %}bg-[#5CB877] text-white{% endif %}
       {% if day.unmatched_transfer_count > 0 %}ring-2 ring-[#8A5A0B]{% endif %}"
-    title="{{ day.date }}: {{ day.count }} transaction{{ 's' if day.count != 1 else '' }}{% if day.unmatched_transfer_count %}, {{ day.unmatched_transfer_count }} unresolved transfer{{ 's' if day.unmatched_transfer_count != 1 else '' }}{% endif %}"
-  >{{ day.day }}</div>
+    title="{{ day.date }}: {{ day.count }} transaction{{ 's' if day.count != 1 else '' }}{% if day.unmatched_transfer_count %}, {{ day.unmatched_transfer_count }} unresolved transfer{{ 's' if day.unmatched_transfer_count != 1 else '' }}{% if day.unmatched_transfer_accounts %} (likely missing from: {{ day.unmatched_transfer_accounts | map(attribute='name') | join(', ') }}){% endif %}{% endif %}"
+  >{{ day.day }}</a>
   {% endfor %}
 </div>
 {% endif %}

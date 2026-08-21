@@ -40,6 +40,7 @@ from app.features.finance.transactions.schemas import (
     TransactionRead,
     TransactionSumResponse,
     TransactionUpdate,
+    UnmatchedTransferAccount,
     resolve_period,
 )
 
@@ -623,8 +624,15 @@ class TransactionService:
             from_date=resolved_from, to_date=resolved_to, group_by=group_by, account_id=account_id
         )
         items = [
-            TransactionCountItem(period=period, count=count, unmatched_transfer_count=unmatched)
-            for period, count, unmatched in rows
+            TransactionCountItem(
+                period=period,
+                count=count,
+                unmatched_transfer_count=unmatched,
+                unmatched_transfer_accounts=[
+                    UnmatchedTransferAccount(id=a["id"], name=a["name"]) for a in missing_accounts
+                ],
+            )
+            for period, count, unmatched, missing_accounts in rows
         ]
         return TransactionCoverageResponse(
             items=items, from_date=resolved_from, to_date=resolved_to, group_by=group_by, account_id=account_id

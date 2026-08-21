@@ -1135,6 +1135,7 @@
                   "        pm.expect(item).to.have.property('period');",
                   "        pm.expect(item).to.have.property('count');",
                   "        pm.expect(item).to.have.property('unmatched_transfer_count');",
+                  "        pm.expect(item).to.have.property('unmatched_transfer_accounts');",
                   "    });",
                   "});"
                 ],

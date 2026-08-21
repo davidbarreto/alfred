@@ -1100,8 +1100,8 @@ class TestSpendingOverTime:
 class TestTransactionCoverage:
     async def test_returns_items_with_unmatched_transfer_counts(self, service):
         service._repo.get_transaction_counts.return_value = [
-            ("2026-05", 10, 0),
-            ("2026-06", 4, 2),
+            ("2026-05", 10, 0, []),
+            ("2026-06", 4, 2, [{"id": 3, "name": "Wise EUR"}]),
         ]
 
         result = await service.transaction_coverage(
@@ -1111,6 +1111,9 @@ class TestTransactionCoverage:
         assert [i.period for i in result.items] == ["2026-05", "2026-06"]
         assert result.items[1].count == 4
         assert result.items[1].unmatched_transfer_count == 2
+        assert result.items[1].unmatched_transfer_accounts[0].id == 3
+        assert result.items[1].unmatched_transfer_accounts[0].name == "Wise EUR"
+        assert result.items[0].unmatched_transfer_accounts == []
         assert result.from_date == date(2026, 5, 1)
         assert result.to_date == date(2026, 6, 30)
         assert result.account_id == 1

@@ -1,3 +1,5 @@
+from datetime import date, timedelta
+
 import httpx
 
 
@@ -1243,12 +1245,16 @@ class TestFinanceSettingsPage:
 
 
 class TestCoveragePage:
-    def _fake_get(self, accounts, coverage_by_account):
+    def _fake_get(self, accounts, coverage_by_account, last_transactions=None):
         async def fake(path, params=None):
             if path == "/finance/accounts":
                 return accounts
             if path == "/finance/transactions/coverage":
                 return coverage_by_account[params["account_id"]]
+            if path == "/finance/transactions":
+                last_transactions_by_account = last_transactions or {}
+                txn = last_transactions_by_account.get(params["account_id"])
+                return [txn] if txn else []
             return []
         return fake
 
@@ -1275,6 +1281,54 @@ class TestCoveragePage:
         assert "Checking" in resp.text
         assert "2026-05" in resp.text
         assert "2026-06" in resp.text
+
+    def test_shows_last_transaction_date_per_account(self, client, mock_api):
+        last_date = date.today() - timedelta(days=20)
+        mock_api["get"].side_effect = self._fake_get(
+            accounts=[_account(id=1, name="Checking")],
+            coverage_by_account={
+                1: {
+                    "items": [],
+                    "from_date": "2026-05-01",
+                    "to_date": date.today().isoformat(),
+                    "group_by": "month",
+                    "account_id": 1,
+                }
+            },
+            last_transactions={
+                1: {
+                    "id": 99,
+                    "date": f"{last_date.isoformat()}T00:00:00",
+                    "description": "Some purchase",
+                    "merchant": None,
+                }
+            },
+        )
+
+        resp = client.get("/finance/coverage")
+
+        assert resp.status_code == 200
+        assert last_date.isoformat() in resp.text
+        assert "20d ago" in resp.text
+
+    def test_no_transactions_shows_placeholder(self, client, mock_api):
+        mock_api["get"].side_effect = self._fake_get(
+            accounts=[_account(id=1, name="Checking")],
+            coverage_by_account={
+                1: {
+                    "items": [],
+                    "from_date": "2026-08-01",
+                    "to_date": "2026-08-21",
+                    "group_by": "month",
+                    "account_id": 1,
+                }
+            },
+        )
+
+        resp = client.get("/finance/coverage")
+
+        assert resp.status_code == 200
+        assert "—" in resp.text
 
     def test_account_id_passed_to_coverage_call(self, client, mock_api):
         mock_api["get"].side_effect = self._fake_get(
@@ -1320,7 +1374,12 @@ class TestCoverageDaysFragment:
                 return {
                     "items": [
                         {"period": "2026-06-05", "count": 2, "unmatched_transfer_count": 0},
-                        {"period": "2026-06-06", "count": 0, "unmatched_transfer_count": 1},
+                        {
+                            "period": "2026-06-06",
+                            "count": 0,
+                            "unmatched_transfer_count": 1,
+                            "unmatched_transfer_accounts": [{"id": 2, "name": "Wise EUR"}],
+                        },
                     ],
                     "from_date": "2026-06-01",
                     "to_date": "2026-06-30",
@@ -1335,6 +1394,8 @@ class TestCoverageDaysFragment:
         assert resp.status_code == 200
         assert "2026-06-05: 2 transactions" in resp.text
         assert "1 unresolved transfer" in resp.text
+        assert "likely missing from: Wise EUR" in resp.text
+        assert 'href="/finance/transactions?account_id=1&from_date=2026-06-05&to_date=2026-06-05"' in resp.text
 
     def test_missing_params_renders_no_data(self, client, mock_api):
         resp = client.get("/finance/coverage/days")

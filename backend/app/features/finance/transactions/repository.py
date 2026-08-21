@@ -594,7 +594,7 @@ class TransactionRepository:
         to_date: date,
         group_by: str,
         account_id: int | None = None,
-    ) -> list[tuple[str, int, int]]:
+    ) -> list[tuple[str, int, int, list[dict]]]:
         """Transaction counts bucketed by day or month, regardless of type/currency --
         unlike get_spending_over_time, used to show which periods have any imported
         data at all (the finance data-coverage page), not to total spend.
@@ -603,15 +603,31 @@ class TransactionRepository:
         transfers (type='transfer' with no confirmed counterpart_transaction_id --
         see TransactionService.link_transfer). A transfer left dangling like this is a
         signal the *other* leg's account statement may not have been imported yet for
-        that period, even though this account's own coverage looks complete.
+        that period, even though this account's own coverage looks complete -- the
+        4th tuple element names which account(s), via counterpart_account_id (an
+        unconfirmed guess, but the best hint available), so the coverage page can
+        point at the specific statement that's still missing instead of just flagging
+        "something's unresolved".
         """
+        from app.features.finance.accounts.tables import Account
+
+        counterpart = aliased(Account)
         bucket = func.date_trunc(group_by, Transaction.date)
-        unmatched_transfer = case(
-            (and_(Transaction.type == "transfer", Transaction.counterpart_transaction_id.is_(None)), 1),
-            else_=0,
+        is_unmatched = and_(
+            Transaction.type == "transfer", Transaction.counterpart_transaction_id.is_(None)
         )
+        unmatched_transfer = case((is_unmatched, 1), else_=0)
+        missing_accounts = func.jsonb_agg(
+            func.distinct(func.jsonb_build_object("id", counterpart.id, "name", counterpart.name))
+        ).filter(and_(is_unmatched, counterpart.id.is_not(None)))
         query = (
-            select(bucket, func.count(Transaction.id), func.coalesce(func.sum(unmatched_transfer), 0))
+            select(
+                bucket,
+                func.count(Transaction.id),
+                func.coalesce(func.sum(unmatched_transfer), 0),
+                missing_accounts,
+            )
+            .outerjoin(counterpart, Transaction.counterpart_account_id == counterpart.id)
             .where(Transaction.date >= from_date, Transaction.date <= to_date)
             .group_by(bucket)
             .order_by(bucket)
@@ -620,7 +636,10 @@ class TransactionRepository:
             query = query.where(Transaction.account_id == account_id)
         result = await self._session.execute(query)
         key_format = "%Y-%m" if group_by == "month" else "%Y-%m-%d"
-        return [(row[0].strftime(key_format), row[1], int(row[2])) for row in result.all()]
+        return [
+            (row[0].strftime(key_format), row[1], int(row[2]), row[3] or [])
+            for row in result.all()
+        ]
 
     async def get_spending_by_account(
         self,

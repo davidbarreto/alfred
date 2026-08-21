@@ -12,9 +12,10 @@
 
   <p class="text-xs text-gray-500 max-w-2xl">
     One row per active account, one column per month since its earliest imported transaction.
-    Click a cell to see day-by-day coverage for that month. A dark ring marks a month with an
-    unresolved transfer (no confirmed counterpart) — often a sign the other account's statement
-    for that period hasn't been imported yet.
+    Click a cell to see day-by-day coverage for that month, then click a day to open its
+    transactions. A dark ring marks a month with an unresolved transfer on this account's own
+    leg (no confirmed counterpart) — hover it to see which other account's statement is likely
+    still missing, based on the transfer's guessed destination.
   </p>
 
   {% if not accounts %}
@@ -25,6 +26,7 @@
       <thead>
         <tr>
           <th class="sticky left-0 bg-white z-10 text-left px-3 py-2 font-medium text-gray-600 border-b border-gray-100">Account</th>
+          <th class="text-left px-2 py-2 font-medium text-gray-500 border-b border-gray-100 whitespace-nowrap">Last transaction</th>
           {% for period in months %}
           <th class="px-1 py-2 font-medium text-gray-500 border-b border-gray-100 whitespace-nowrap">{{ period }}</th>
           {% endfor %}
@@ -34,6 +36,17 @@
         {% for account in accounts %}
         <tr class="border-b border-gray-50">
           <td class="sticky left-0 bg-white z-10 px-3 py-1.5 font-medium text-gray-800 whitespace-nowrap">{{ account.name }}</td>
+          <td class="px-2 py-1.5 whitespace-nowrap">
+            {% if account.last_transaction %}
+            <a
+              href="/finance/transactions?account_id={{ account.id }}&sort=date_desc"
+              class="hover:underline {% if account.days_since_last > 30 %}text-[#B23B3A] font-medium{% elif account.days_since_last > 7 %}text-[#8A5A0B]{% else %}text-gray-500{% endif %}"
+              title="{{ account.last_transaction.description or account.last_transaction.merchant or '' }}"
+            >{{ account.last_transaction.date[:10] }} ({{ account.days_since_last }}d ago)</a>
+            {% else %}
+            <span class="text-gray-300">—</span>
+            {% endif %}
+          </td>
           {% for cell in account.cells %}
           <td class="p-0.5">
             {% if cell.before_start %}
@@ -48,7 +61,7 @@
                 {% elif cell.count < 15 %}bg-[#A9DDB6] text-[#1F5C31]
                 {% else %}bg-[#5CB877] text-white{% endif %}
                 {% if cell.unmatched_transfer_count > 0 %}ring-2 ring-[#8A5A0B]{% endif %}"
-              title="{{ cell.period }}: {{ cell.count }} transaction{{ 's' if cell.count != 1 else '' }}{% if cell.unmatched_transfer_count %}, {{ cell.unmatched_transfer_count }} unresolved transfer{{ 's' if cell.unmatched_transfer_count != 1 else '' }}{% endif %}"
+              title="{{ cell.period }}: {{ cell.count }} transaction{{ 's' if cell.count != 1 else '' }}{% if cell.unmatched_transfer_count %}, {{ cell.unmatched_transfer_count }} unresolved transfer{{ 's' if cell.unmatched_transfer_count != 1 else '' }} on {{ account.name }}'s side{% if cell.unmatched_transfer_accounts %} (likely missing from: {{ cell.unmatched_transfer_accounts | map(attribute='name') | join(', ') }}){% endif %}{% endif %}"
             >{{ cell.count if cell.count else '' }}</button>
             {% endif %}
           </td>
@@ -65,7 +78,10 @@
   <div class="modal-box bg-white rounded-xl border border-gray-200 shadow-lg max-w-lg w-full p-4 sm:p-6">
     <div class="flex items-center justify-between mb-3">
       <h3 id="coverage-day-modal-title" class="text-sm font-medium text-gray-900"></h3>
-      <button onclick="document.getElementById('coverage-day-modal').close()" class="text-gray-400 hover:text-gray-600"><i class="ti ti-x"></i></button>
+      <div class="flex items-center gap-3">
+        <a id="coverage-day-modal-view-month" href="#" class="text-xs text-gray-400 hover:text-gray-600">View month</a>
+        <button onclick="document.getElementById('coverage-day-modal').close()" class="text-gray-400 hover:text-gray-600"><i class="ti ti-x"></i></button>
+      </div>
     </div>
     <div id="coverage-day-modal-body" class="text-xs text-gray-500">Loading…</div>
   </div>
@@ -75,6 +91,12 @@
 <script>
 function openCoverageDay(accountId, period, accountName) {
   document.getElementById("coverage-day-modal-title").textContent = accountName + " — " + period;
+  const [year, month] = period.split("-").map(Number);
+  const fromDate = `${period}-01`;
+  const lastDay = new Date(year, month, 0).getDate();
+  const toDate = `${period}-${String(lastDay).padStart(2, "0")}`;
+  document.getElementById("coverage-day-modal-view-month").href =
+    `/finance/transactions?account_id=${accountId}&from_date=${fromDate}&to_date=${toDate}`;
   const body = document.getElementById("coverage-day-modal-body");
   body.innerHTML = "Loading…";
   document.getElementById("coverage-day-modal").showModal();

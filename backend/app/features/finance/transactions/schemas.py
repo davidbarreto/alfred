@@ -242,6 +242,11 @@ class SpendingOverTimeResponse(BaseModel):
     group_by: str
 
 
+class UnmatchedTransferAccount(BaseModel):
+    id: int
+    name: str
+
+
 class TransactionCountItem(BaseModel):
     period: str
     count: int
@@ -249,6 +254,10 @@ class TransactionCountItem(BaseModel):
     """Count of this period's transactions that are transfers with no confirmed
     counterpart (see TransactionRepository.get_transaction_counts) -- a signal the
     counterpart account's statement for this period may still be missing."""
+    unmatched_transfer_accounts: list[UnmatchedTransferAccount] = []
+    """The account(s), per counterpart_account_id, those unresolved transfers point
+    at -- an unconfirmed guess, but usually enough to tell which statement to import
+    next. Empty when a dangling transfer never got a counterpart account guess."""
 
 
 class TransactionCoverageResponse(BaseModel):

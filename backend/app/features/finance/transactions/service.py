@@ -433,19 +433,29 @@ class TransactionService:
 
         # Mirrors TransactionRepository.get_transfer_match_candidates' two match
         # strategies: same currency + exactly opposite amount (a plain transfer split
-        # across separate imports), or identical bank_description + opposite sign +
-        # different currency (a currency exchange, where legs are in different
-        # currencies with an FX-converted, not exactly opposite, amount).
+        # across separate imports), or opposite sign + different currency with
+        # EUR-normalized magnitudes within 5% (a cross-currency transfer or exchange,
+        # where legs are in different currencies with an FX-converted, not exactly
+        # opposite, amount) -- falling back to identical bank_description when either
+        # leg has no amount_eur to compare.
         same_currency_opposite_amount = (
             transaction.currency == counterpart.currency and transaction.amount == -counterpart.amount
         )
-        same_description_opposite_sign = (
+        cross_currency_opposite_sign = (
             transaction.currency != counterpart.currency
-            and transaction.bank_description is not None
-            and transaction.bank_description == counterpart.bank_description
             and (transaction.amount > 0) != (counterpart.amount > 0)
         )
-        if not same_currency_opposite_amount and not same_description_opposite_sign:
+        if transaction.amount_eur is not None and counterpart.amount_eur is not None:
+            cross_currency_opposite_sign = cross_currency_opposite_sign and abs(
+                abs(transaction.amount_eur) - abs(counterpart.amount_eur)
+            ) <= abs(transaction.amount_eur) * Decimal("0.05")
+        else:
+            cross_currency_opposite_sign = (
+                cross_currency_opposite_sign
+                and transaction.bank_description is not None
+                and transaction.bank_description == counterpart.bank_description
+            )
+        if not same_currency_opposite_amount and not cross_currency_opposite_sign:
             raise TransferMatchError("Amounts do not match")
 
         updated = await self.update(

@@ -851,6 +851,53 @@ class TestLinkTransfer:
             amount_eur=None, recompute_amount_eur=False,
         )
 
+    async def test_links_cross_currency_transfer_via_amount_eur_without_matching_description(self, service):
+        """A genuine transfer between two different institutions (e.g. a Wise EUR
+        debit funding a Banco Inter BRL credit) has independently-generated
+        bank_description text on each leg that never matches -- when both legs have
+        an EUR-normalized amount within 5% of each other, the link must still
+        succeed without requiring bank_description equality."""
+        from datetime import datetime
+        same_date = datetime(2026, 6, 12)
+        txn = _make_txn_orm(
+            id=1, account_id=1, type="transfer", amount=Decimal("-100.00"), currency="EUR",
+            date=same_date, amount_eur=Decimal("100.00"),
+        )
+        txn.bank_description = "David Ferreira"
+        counterpart = _make_txn_orm(
+            id=2, account_id=2, type="transfer", amount=Decimal("560.00"), currency="BRL",
+            date=same_date, amount_eur=Decimal("103.00"),
+        )
+        counterpart.bank_description = "Transferencia Recebida - Wise"
+        service._repo.get.side_effect = [txn, counterpart, txn, counterpart]
+        service._repo.update.return_value = txn
+
+        result = await service.link_transfer(1, 2)
+
+        assert isinstance(result, TransactionRead)
+        service._repo.update.assert_any_await(
+            1,
+            TransactionUpdate(type="transfer", counterpart_account_id=2, counterpart_transaction_id=2),
+            amount_eur=None, recompute_amount_eur=False,
+        )
+
+    async def test_rejects_cross_currency_transfer_when_amount_eur_diverges_too_much(self, service):
+        from datetime import datetime
+        same_date = datetime(2026, 6, 12)
+        service._repo.get.side_effect = [
+            _make_txn_orm(
+                id=1, account_id=1, type="transfer", amount=Decimal("-100.00"), currency="EUR",
+                date=same_date, amount_eur=Decimal("100.00"),
+            ),
+            _make_txn_orm(
+                id=2, account_id=2, type="transfer", amount=Decimal("560.00"), currency="BRL",
+                date=same_date, amount_eur=Decimal("140.00"),
+            ),
+        ]
+
+        with pytest.raises(TransferMatchError):
+            await service.link_transfer(1, 2)
+
     async def test_rejects_currency_exchange_with_different_descriptions(self, service):
         from datetime import datetime
         same_date = datetime(2026, 6, 12)

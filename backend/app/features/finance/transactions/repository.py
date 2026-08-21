@@ -136,33 +136,40 @@ class TransactionRepository:
         - same currency + exactly opposite amount -- a same-currency transfer split
           across separate imports (e.g. an external card charge and the Revolut top-up
           it funds).
-        - identical bank_description + opposite sign, different currency -- a currency
-          exchange, where the two legs are in different currencies with an FX-converted
-          (not exactly opposite) amount, but both sides of one Revolut "Exchange" row
-          share the exact same bank text (e.g. "Exchanged to PLN"). Restricted to
-          different currencies so this strategy only ever fires for a genuine exchange,
-          never overlapping with the same-currency strategy above. The same generic
-          bank text can also appear on multiple same-day exchanges, so when both legs
-          have a EUR-normalized amount, their magnitudes must additionally land within
-          5% of each other -- generous enough to absorb a bank's exchange spread while
-          still ruling out an unrelated exchange that happens to share the same text.
+        - opposite sign, different currency, EUR-normalized magnitudes within 5% of
+          each other -- a cross-currency transfer (e.g. a Wise EUR debit funding a
+          Banco Inter BRL credit) or a same-bank currency exchange. Deliberately does
+          not require bank_description to match: two different institutions describe
+          the same transfer in unrelated, independently-generated text (a counterparty
+          name on one side, bank jargon on the other), so requiring equality there
+          made this strategy unreachable for the exact cross-currency transfers it's
+          meant to catch. The 5% tolerance is generous enough to absorb a bank's
+          exchange spread while still ruling out an unrelated same-day transfer.
+          When amount_eur isn't available on one of the legs (no FX rate on record),
+          falls back to requiring identical bank_description, since without an
+          EUR-normalized amount to compare there'd otherwise be nothing to narrow the
+          match down beyond "opposite sign, different currency, same day".
         """
         same_currency_opposite_amount = and_(
             Transaction.currency == transaction.currency,
             Transaction.amount == -transaction.amount,
         )
-        same_description_opposite_sign = and_(
+        cross_currency_opposite_sign = and_(
             Transaction.currency != transaction.currency,
-            Transaction.bank_description.isnot(None),
-            Transaction.bank_description == transaction.bank_description,
             Transaction.amount < 0 if transaction.amount > 0 else Transaction.amount > 0,
         )
         if transaction.amount_eur is not None:
-            same_description_opposite_sign = and_(
-                same_description_opposite_sign,
+            cross_currency_opposite_sign = and_(
+                cross_currency_opposite_sign,
                 Transaction.amount_eur.isnot(None),
                 func.abs(func.abs(Transaction.amount_eur) - abs(transaction.amount_eur))
                 <= abs(transaction.amount_eur) * Decimal("0.05"),
+            )
+        else:
+            cross_currency_opposite_sign = and_(
+                cross_currency_opposite_sign,
+                Transaction.bank_description.isnot(None),
+                Transaction.bank_description == transaction.bank_description,
             )
         result = await self._session.execute(
             select(Transaction).where(
@@ -174,7 +181,7 @@ class TransactionRepository:
                 ),
                 Transaction.counterpart_transaction_id.is_(None),
                 func.date(Transaction.date) == func.date(transaction.date),
-                or_(same_currency_opposite_amount, same_description_opposite_sign),
+                or_(same_currency_opposite_amount, cross_currency_opposite_sign),
             )
         )
         return list(result.scalars().all())

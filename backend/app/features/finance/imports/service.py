@@ -212,8 +212,9 @@ class ImportService:
 
         stored_file = await self._store_file(parser.provider, filename, content)
         rows = self._build_rows(account_id, statement.rows)
-        await self._mark_duplicates(account_id, rows)
         rules = await self._repo.list_rules()
+        self._apply_rule_types(rows, rules)
+        await self._mark_duplicates(account_id, rows)
         categories = {c.id: c.name for c in await self._category_repo.list()}
         self._apply_rules(rows, rules, categories)
         await self._apply_knn(rows, categories)
@@ -458,6 +459,24 @@ class ImportService:
                 row.duplicate_reason = "repeated_in_file"
             else:
                 seen.add(row.deduplication_hash)
+
+    def _apply_rule_types(self, rows: list[ImportPreviewRow], rules: list[ImportRule]) -> None:
+        """Classify transfer rows before _mark_duplicates runs, so the dedup key's
+        amount-sign convention (row.type == "transfer" -> signed, else abs -- see
+        _mark_duplicates) already matches what commit() will persist. Without this,
+        a row only reclassified as a transfer by _apply_rules (which runs after
+        dedup, since it also needs duplicate status to skip already-flagged rows)
+        gets stored with a signed amount that a future re-import's abs()-keyed
+        duplicate check can never match, silently re-importing it forever.
+        """
+        for row in rows:
+            for rule in rules:
+                if not _rule_matches(rule, row.bank_description, row.amount):
+                    continue
+                if rule.transfer_account_id is not None:
+                    row.type = "transfer"
+                    row.counterpart_account_id = rule.transfer_account_id
+                break
 
     def _apply_rules(
         self,

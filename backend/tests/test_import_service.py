@@ -373,6 +373,31 @@ class TestPreview:
         assert preview.rows[0].review_reasons == []
 
     @pytest.mark.asyncio
+    async def test_card_format_transfer_row_flagged_duplicate_by_signed_amount(self):
+        # Regression: a no-balance (card-format, e.g. Nubank) row that a transfer
+        # rule reclassifies is stored at commit time with its *signed* amount (see
+        # commit()), not abs() like every other row -- the dedup key computed here
+        # must already know the row is a transfer, or it keys off abs(amount) and
+        # never matches the signed amount actually in the DB, so the same statement
+        # re-imports as "new" forever.
+        row = _row(balance_after=None, raw_description="TRF P/ PoupeUp", amount=Decimal("-100.00"))
+        service = _service(_statement([row]))
+        service._repo.list_rules.return_value = [
+            _rule(pattern="PoupeUp", description=None, merchant=None, category_id=None, transfer_account_id=5)
+        ]
+        service._txn_repo.get_existing_keys.return_value = {
+            (date(2026, 6, 1), row.raw_description, Decimal("-100.00"))
+        }
+
+        preview = await service.preview(1, "x.csv", b"", provider="fakebank")
+
+        assert preview.rows[0].type == "transfer"
+        assert preview.rows[0].status == "duplicate"
+        assert preview.rows[0].duplicate_reason == "already_imported"
+        assert preview.duplicate_count == 1
+        assert preview.new_count == 0
+
+    @pytest.mark.asyncio
     async def test_parser_flagged_row_needs_review_even_when_categorized(self):
         row = _row()
         row.flag_reason = "redated_installment"

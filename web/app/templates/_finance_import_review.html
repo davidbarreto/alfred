@@ -1,3 +1,4 @@
+{% set currency_symbol = currency_symbols.get(preview.currency, preview.currency + " ") %}
 {% set review_reason_labels = {
   "uncategorized": "No category found",
   "rule_suggested": "Rule suggestion, please confirm",
@@ -19,7 +20,7 @@
     <span class="px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-700">{{ preview.needs_review_count }} need review</span>
     {% endif %}
     <span class="text-xs text-gray-400 ml-auto">
-      {{ preview.provider }}{% if preview.period_start %} · {{ preview.period_start }} → {{ preview.period_end }}{% endif %}{% if preview.closing_balance is not none %} · closing balance €{{ preview.closing_balance | money }}{% endif %}
+      {{ preview.provider }}{% if preview.period_start %} · {{ preview.period_start }} → {{ preview.period_end }}{% endif %}{% if preview.closing_balance is not none %} · closing balance {{ currency_symbol }}{{ preview.closing_balance | money }}{% endif %}
     </span>
   </div>
 
@@ -109,7 +110,7 @@
             </td>
             <td class="whitespace-nowrap text-xs">{{ row.date_posted }}</td>
             <td class="text-xs max-w-64 truncate" title="{{ row.bank_description }}">{{ row.bank_description }}</td>
-            <td class="text-right text-xs whitespace-nowrap">€{{ row.amount | money }}</td>
+            <td class="text-right text-xs whitespace-nowrap">{{ currency_symbol }}{{ row.amount | money }}</td>
             {% if row.duplicate_reason == "repeated_in_file" %}
             <td colspan="5" class="text-xs text-amber-600">Skipped — repeated within this file <span class="text-gray-400">(tick to import anyway)</span></td>
             {% else %}
@@ -142,7 +143,7 @@
               <span class="block truncate" title="{{ row.bank_description }}">{{ row.bank_description }}</span>
               {% if row.supersedes_installment_plan_id %}
               <span class="block text-[10px] text-amber-700 mt-0.5" title="This transaction matches an open installment plan's original purchase">
-                <i class="ti ti-alert-triangle text-[10px]"></i> Will import at €0.00 — matches an installment plan's original purchase
+                <i class="ti ti-alert-triangle text-[10px]"></i> Will import at {{ currency_symbol }}0.00 — matches an installment plan's original purchase
               </span>
               {% elif row.installment_plan_id %}
               <label class="flex items-center gap-1 text-[10px] text-[#378ADD] mt-0.5 cursor-pointer" title="Uncheck to skip linking this transaction to the installment plan">
@@ -163,7 +164,7 @@
               {% endif %}
             </td>
             <td class="text-right text-xs whitespace-nowrap font-medium {% if row.amount | float < 0 %}text-[#E24B4A]{% else %}text-[#3E9C42]{% endif %}">
-              €{{ row.amount | money }}
+              {{ currency_symbol }}{{ row.amount | money }}
             </td>
             <td>
               <select name="type_{{ i }}" class="select select-xs border-gray-200 bg-white"

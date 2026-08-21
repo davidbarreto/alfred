@@ -1495,6 +1495,7 @@ async def import_preview(
             "accounts": accounts,
             "categories": categories,
             "accounts_by_id": {a["id"]: a["name"] for a in accounts},
+            "currency_symbols": await _currency_symbols(),
         },
     )
 

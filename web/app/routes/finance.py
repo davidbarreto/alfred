@@ -1399,15 +1399,16 @@ async def _installment_plan_accounts_context() -> dict:
 async def installment_plans_page(request: Request):
     qp = request.query_params
     account_id = qp.get("account_id") or None
-    status = qp.get("status") or None
-    params = {k: v for k, v in {"account_id": account_id, "status": status}.items() if v}
+    hide_completed = qp.get("hide_completed") == "true"
+    params = {k: v for k, v in {"account_id": account_id, "status": "open" if hide_completed else None}.items() if v}
     plans = []
     try:
         plans = await api.get("/finance/installment-plans", params=params)
     except httpx.HTTPError:
         pass
+    plans.sort(key=lambda p: (p["status"] != "open", -float(p.get("original_amount") or 0)))
     context = await _installment_plan_accounts_context()
-    context.update({"plans": plans, "query_account_id": account_id, "query_status": status})
+    context.update({"plans": plans, "query_account_id": account_id, "hide_completed": hide_completed})
     return templates.TemplateResponse(request, "finance_installments.html", context)
 
 
@@ -1454,8 +1455,18 @@ async def installment_plan_detail_page(plan_id: int, request: Request):
         )
     except httpx.HTTPError:
         pass
+    categories = []
+    try:
+        categories = await api.get("/finance/categories")
+    except httpx.HTTPError:
+        pass
     context = await _installment_plan_accounts_context()
-    context.update({"plan": plan, "transactions": transactions, "currency_symbols": await _currency_symbols()})
+    context.update({
+        "plan": plan,
+        "transactions": transactions,
+        "categories": categories,
+        "currency_symbols": await _currency_symbols(),
+    })
     return templates.TemplateResponse(request, "finance_installment_detail.html", context)
 
 

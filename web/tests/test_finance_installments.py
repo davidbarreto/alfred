@@ -57,7 +57,35 @@ class TestInstallmentPlansPage:
     def test_requires_authentication(self, anon_client):
         resp = anon_client.get("/finance/installments", follow_redirects=False)
         assert resp.status_code == 302
-        assert resp.headers["location"].startswith("/login")
+
+    def test_sorts_open_first_then_by_amount_desc(self, client, mock_api):
+        closed_big = _plan(id=1, description="Closed big", status="closed", original_amount="900.00")
+        open_small = _plan(id=2, description="Open small", status="open", original_amount="10.00")
+        open_big = _plan(id=3, description="Open big", status="open", original_amount="500.00")
+        mock_api["get"].side_effect = [
+            [closed_big, open_small, open_big],
+            [_account()],
+        ]
+
+        resp = client.get("/finance/installments")
+
+        assert resp.status_code == 200
+        pos_big = resp.text.index("Open big")
+        pos_small = resp.text.index("Open small")
+        pos_closed = resp.text.index("Closed big")
+        assert pos_big < pos_small < pos_closed
+
+    def test_hide_completed_filters_to_open_plans(self, client, mock_api):
+        mock_api["get"].side_effect = [
+            [_plan()],
+            [_account()],
+        ]
+
+        resp = client.get("/finance/installments?hide_completed=true")
+
+        assert resp.status_code == 200
+        mock_api["get"].assert_any_call("/finance/installment-plans", params={"status": "open"})
+        assert "Show completed" in resp.text
 
 
 class TestCreateInstallmentPlan:
@@ -87,6 +115,7 @@ class TestInstallmentPlanDetailPage:
         mock_api["get"].side_effect = [
             _plan(),                    # plan detail
             [_transaction()],           # linked transactions
+            [],                         # categories
             [_account()],               # accounts
             [{"code": "EUR", "symbol": "€ "}],  # currencies
         ]

@@ -60,6 +60,13 @@
   </div>
 
   <div class="bg-white border border-gray-200 rounded-lg p-4">
+    <div class="flex items-center justify-end mb-2">
+      <a href="/finance/installments?{% if query_account_id %}account_id={{ query_account_id }}&{% endif %}hide_completed={{ 'false' if hide_completed else 'true' }}"
+         class="btn btn-xs btn-ghost text-gray-500 gap-1">
+        <i class="ti ti-{{ 'eye' if hide_completed else 'eye-off' }} text-xs"></i>
+        {{ 'Show completed' if hide_completed else 'Hide completed' }}
+      </a>
+    </div>
     {% if plans %}
     <ul>
       {% for plan in plans %}

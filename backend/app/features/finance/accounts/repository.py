@@ -17,7 +17,7 @@ class AccountRepository:
         return result.scalars().first()
 
     async def list(self, filters: AccountFilters) -> list[Account]:
-        query = select(Account)
+        query = select(Account).order_by(Account.name)
         if filters.is_active is not None:
             query = query.where(Account.is_active == filters.is_active)
         if filters.type is not None:

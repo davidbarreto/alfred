@@ -86,6 +86,14 @@ class TestList:
         await repo.list(AccountFilters(currency="USD"))
         session.execute.assert_called_once()
 
+    async def test_orders_by_name(self):
+        session = _make_session()
+        session.execute.return_value = _scalar_all([])
+        repo = AccountRepository(session)
+        await repo.list(AccountFilters())
+        query = session.execute.call_args[0][0]
+        assert "ORDER BY finance.accounts.name" in str(query)
+
 
 class TestCreate:
     async def test_adds_commits_and_refreshes(self):

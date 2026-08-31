@@ -71,13 +71,17 @@ async def _txn_list_context(filters: dict, offset: int) -> dict:
     except httpx.HTTPError:
         pass
 
-    categories, txn_accounts = [], []
+    categories, txn_accounts, plans = [], [], []
     try:
         categories = await api.get("/finance/categories")
     except httpx.HTTPError:
         pass
     try:
         txn_accounts = await api.get("/finance/accounts")
+    except httpx.HTTPError:
+        pass
+    try:
+        plans = await api.get("/finance/installment-plans")
     except httpx.HTTPError:
         pass
 
@@ -90,6 +94,7 @@ async def _txn_list_context(filters: dict, offset: int) -> dict:
         "accounts": txn_accounts,
         "categories_by_id": {c["id"]: c["name"] for c in categories},
         "accounts_by_id": {a["id"]: a["name"] for a in txn_accounts},
+        "plans_by_id": {p["id"]: p["description"] for p in plans},
         "currency_symbols": await _currency_symbols(),
         "query_filters": filters,
         "query_offset": offset,

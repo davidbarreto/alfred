@@ -44,6 +44,14 @@
     <span class="text-sm font-medium {% if txn.type == 'income' %}text-[#639922]{% elif txn.type == 'transfer' and not counts_as_spend %}text-gray-500{% else %}text-[#E24B4A]{% endif %} flex-shrink-0">
       {% if txn.type == 'income' %}+{% elif txn.type == 'expense' or counts_as_spend %}-{% endif %}{{ currency_symbols.get(txn.currency, txn.currency + " ") }}{{ txn.amount | float | abs | money }}
     </span>
+    {% if txn.installment_plan_id %}
+    <a
+      href="/finance/installments/{{ txn.installment_plan_id }}"
+      class="text-gray-300 hover:text-[#378ADD] opacity-0 group-hover:opacity-100 transition-all flex-shrink-0"
+      onclick="event.stopPropagation()"
+      title="{{ (plans_by_id or {}).get(txn.installment_plan_id, 'View installment plan') }}"
+    ><i class="ti ti-calendar-stats text-sm"></i></a>
+    {% endif %}
     <button
       class="text-gray-300 hover:text-[#378ADD] opacity-0 group-hover:opacity-100 transition-all flex-shrink-0"
       onclick='openEditTransaction({{ txn | tojson }}, {{ filters_qs | tojson }})'

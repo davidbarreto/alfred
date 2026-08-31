@@ -15,6 +15,7 @@ from app.features.finance.transactions.schemas import (
     TransactionFilters,
     TransactionRead,
     TransactionUpdate,
+    TransferMatchCandidate,
 )
 
 FIXED_TODAY = date(2026, 6, 12)
@@ -40,6 +41,7 @@ def _make_txn_orm(**kwargs):
     t.amount_eur = kwargs.get("amount_eur", None)
     t.balance_after = kwargs.get("balance_after", None)
     t.created_at = kwargs.get("created_at", "2026-06-12T10:00:00")
+    t.installment_plan_id = kwargs.get("installment_plan_id", None)
     return t
 
 
@@ -58,6 +60,8 @@ def service():
     svc._repo.get_mirror.return_value = None
     svc._account_repo = AsyncMock()
     svc._account_repo.get.return_value = None
+    svc._plan_repo = AsyncMock()
+    svc._plan_repo.get.return_value = None
     svc._fx = AsyncMock()
     svc._fx.convert_to_eur.return_value = None
     svc._settings = AsyncMock()
@@ -584,7 +588,8 @@ class TestGetTransferMatchCandidates:
         ]
         result = await service.get_transfer_match_candidates(1)
         assert len(result) == 1
-        assert isinstance(result[0], TransactionRead)
+        assert isinstance(result[0], TransferMatchCandidate)
+        assert result[0].plan_original_amount is None
 
     async def test_returns_empty_when_not_found(self, service):
         service._repo.get.return_value = None
@@ -616,6 +621,42 @@ class TestGetTransferMatchCandidates:
         )
         assert await service.get_transfer_match_candidates(1) == []
         service._repo.get_transfer_match_candidates.assert_not_awaited()
+
+    async def test_surfaces_plan_original_amount_for_installment_plan_anchor_candidate(self, service):
+        """A candidate anchoring an installment plan has its own amount zeroed --
+        surface the plan's original_amount separately so the UI doesn't show a
+        misleading 0.00 as the match amount."""
+        service._repo.get.return_value = _make_txn_orm(type="income", counterpart_account_id=None)
+        service._repo.get_transfer_match_candidates.return_value = [
+            _make_txn_orm(
+                id=2, account_id=2, type="expense", amount=Decimal("0.00"), installment_plan_id=7,
+            )
+        ]
+        plan = MagicMock()
+        plan.original_amount = Decimal("-100.00")
+        service._plan_repo.get.return_value = plan
+
+        result = await service.get_transfer_match_candidates(1)
+
+        assert result[0].plan_original_amount == Decimal("-100.00")
+        service._plan_repo.get.assert_any_await(7)
+
+    async def test_plan_original_amount_stays_none_when_plan_has_no_original_amount(self, service):
+        """A manually-created plan (Cetelem/Nubank) has no lump sum at all -- an anchor
+        can't exist for it, but guard the lookup regardless."""
+        service._repo.get.return_value = _make_txn_orm(type="income", counterpart_account_id=None)
+        service._repo.get_transfer_match_candidates.return_value = [
+            _make_txn_orm(
+                id=2, account_id=2, type="expense", amount=Decimal("0.00"), installment_plan_id=7,
+            )
+        ]
+        plan = MagicMock()
+        plan.original_amount = None
+        service._plan_repo.get.return_value = plan
+
+        result = await service.get_transfer_match_candidates(1)
+
+        assert result[0].plan_original_amount is None
 
 
 class TestLinkTransfer:
@@ -934,6 +975,52 @@ class TestLinkTransfer:
         )
         counterpart.bank_description = "Some transfer"
         service._repo.get.side_effect = [txn, counterpart]
+
+        with pytest.raises(TransferMatchError):
+            await service.link_transfer(1, 2)
+
+    async def test_links_against_installment_plan_anchor_using_original_amount_and_month(self, service):
+        """A placeholder/superseded-original row anchoring an installment plan (own
+        amount zeroed -- see TransactionRepository.create_placeholder_for_plan) has
+        no real amount/date of its own to validate against; the plan's
+        original_amount/opened_date must be substituted, matched by month rather
+        than exact day since opened_date is only an import period boundary."""
+        from datetime import datetime
+        txn = _make_txn_orm(
+            id=1, account_id=1, type="income", amount=Decimal("100.00"), currency="EUR",
+            date=datetime(2026, 6, 15),
+        )
+        anchor = _make_txn_orm(
+            id=2, account_id=2, type="expense", amount=Decimal("0.00"), currency="EUR",
+            date=datetime(2026, 6, 1), installment_plan_id=7,
+        )
+        service._repo.get.side_effect = [txn, anchor, txn, anchor]
+        service._repo.update.return_value = txn
+        plan = MagicMock()
+        plan.original_amount = Decimal("-100.00")
+        plan.opened_date = date(2026, 6, 1)
+        service._plan_repo.get.return_value = plan
+
+        result = await service.link_transfer(1, 2)
+
+        assert isinstance(result, TransactionRead)
+        service._plan_repo.get.assert_any_await(7)
+
+    async def test_rejects_plan_anchor_match_outside_opened_month(self, service):
+        from datetime import datetime
+        txn = _make_txn_orm(
+            id=1, account_id=1, type="income", amount=Decimal("100.00"), currency="EUR",
+            date=datetime(2026, 7, 15),
+        )
+        anchor = _make_txn_orm(
+            id=2, account_id=2, type="expense", amount=Decimal("0.00"), currency="EUR",
+            date=datetime(2026, 6, 1), installment_plan_id=7,
+        )
+        service._repo.get.side_effect = [txn, anchor]
+        plan = MagicMock()
+        plan.original_amount = Decimal("-100.00")
+        plan.opened_date = date(2026, 6, 1)
+        service._plan_repo.get.return_value = plan
 
         with pytest.raises(TransferMatchError):
             await service.link_transfer(1, 2)

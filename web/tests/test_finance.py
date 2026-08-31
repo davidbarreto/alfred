@@ -934,6 +934,7 @@ class TestTransferCandidates:
             "id": 2, "account_name": "Card", "date": "2026-06-12T10:00:00", "description": "Top-up",
             "amount": "50.00", "currency": "EUR", "amount_eur": "50.00", "type": "transfer",
             "bank_description": None, "merchant": None, "note": None, "source": None,
+            "plan_original_amount": None,
         }]
         assert data["can_auto_mirror"] is False
 
@@ -947,6 +948,25 @@ class TestTransferCandidates:
         resp = client.get("/finance/transactions/1/transfer-candidates")
 
         assert resp.json()["candidates"][0]["description"] == "APPLE PAY TOPUP"
+
+    def test_passes_through_plan_original_amount(self, client, mock_api):
+        """An installment-plan anchor candidate's own amount is always 0.00 -- the
+        backend surfaces the plan's real original_amount separately so the modal can
+        show it instead of a misleading 0.00."""
+        mock_api["get"].side_effect = [
+            [{
+                "id": 2, "account_id": 5, "date": "2026-06-01T00:00:00", "description": "Revolut top-up",
+                "merchant": None, "bank_description": None, "amount": "0.00", "currency": "EUR",
+                "amount_eur": None, "type": "expense", "note": "Placeholder", "source": None,
+                "plan_original_amount": "-100.00",
+            }],
+            [_account(id=5, name="Card")],
+            {"type": "income", "counterpart_account_id": None, "counterpart_transaction_id": None},
+        ]
+
+        resp = client.get("/finance/transactions/1/transfer-candidates")
+
+        assert resp.json()["candidates"][0]["plan_original_amount"] == "-100.00"
 
     def test_returns_empty_list_on_backend_error(self, client, mock_api):
         mock_api["get"].side_effect = [

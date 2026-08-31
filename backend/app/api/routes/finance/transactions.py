@@ -32,6 +32,7 @@ from app.features.finance.transactions.schemas import (
     TransactionSumResponse,
     TransactionUpdate,
     TransferLinkRequest,
+    TransferMatchCandidate,
 )
 from app.features.finance.transactions.service import InvalidBulkMoveError, TransferMatchError
 
@@ -199,7 +200,7 @@ async def balance_forecast(
     )
 
 
-@router.get("/{transaction_id}/transfer-candidates", response_model=list[TransactionRead])
+@router.get("/{transaction_id}/transfer-candidates", response_model=list[TransferMatchCandidate])
 async def get_transfer_candidates(transaction_id: int, service: TransactionServiceDep):
     return await service.get_transfer_match_candidates(transaction_id)
 

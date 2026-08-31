@@ -10,6 +10,7 @@ logger = logging.getLogger(__name__)
 from app.features.finance.accounts.repository import AccountRepository
 from app.features.finance.accounts.schemas import AccountFilters
 from app.features.finance.exchange_rates.service import ExchangeRateService
+from app.features.finance.installment_plans.repository import InstallmentPlanRepository
 from app.features.finance.settings.service import FinanceSettingsService
 from app.features.finance.transactions.repository import TransactionRepository
 from app.features.finance.transactions.tables import Transaction
@@ -40,6 +41,7 @@ from app.features.finance.transactions.schemas import (
     TransactionRead,
     TransactionSumResponse,
     TransactionUpdate,
+    TransferMatchCandidate,
     UnmatchedTransferAccount,
     resolve_period,
 )
@@ -142,8 +144,22 @@ class TransactionService:
     def __init__(self, session: AsyncSession, exchange_rate_service: ExchangeRateService) -> None:
         self._repo = TransactionRepository(session)
         self._account_repo = AccountRepository(session)
+        self._plan_repo = InstallmentPlanRepository(session)
         self._fx = exchange_rate_service
         self._settings = FinanceSettingsService(session)
+
+    async def _effective_transfer_match(self, txn: Transaction) -> tuple[Decimal, date]:
+        """(amount, reference date) to validate a transfer link against. A transaction
+        anchoring an installment plan (own amount zeroed -- see
+        TransactionRepository.create_placeholder_for_plan) has no real amount/date of
+        its own to compare; substitute the plan's original_amount/opened_date,
+        mirroring TransactionRepository.get_transfer_match_candidates.
+        """
+        if txn.installment_plan_id is not None and txn.amount == 0:
+            plan = await self._plan_repo.get(txn.installment_plan_id)
+            if plan is not None and plan.original_amount is not None:
+                return plan.original_amount, plan.opened_date
+        return txn.amount, txn.date.date()
 
     async def _resolve_period(self, filters) -> tuple[date, date]:
         cycle_start_day = await self._settings.get_cycle_start_day()
@@ -353,7 +369,7 @@ class TransactionService:
             logger.info("Transaction deleted: id=%d", transaction_id)
         return deleted
 
-    async def get_transfer_match_candidates(self, transaction_id: int) -> List[TransactionRead]:
+    async def get_transfer_match_candidates(self, transaction_id: int) -> List[TransferMatchCandidate]:
         """counterpart_account_id only records which account a transfer moves to/from --
         it is not proof a specific counterpart transaction was ever found (an import rule
         can set it as a guess with no reciprocal row). So a transaction is still eligible
@@ -370,7 +386,31 @@ class TransactionService:
         ):
             return []
         candidates = await self._repo.get_transfer_match_candidates(transaction)
-        return [TransactionRead.model_validate(c) for c in candidates]
+        results = []
+        for c in candidates:
+            plan_original_amount = None
+            if c.installment_plan_id is not None and c.amount == 0:
+                plan = await self._plan_repo.get(c.installment_plan_id)
+                if plan is not None and plan.original_amount is not None:
+                    plan_original_amount = plan.original_amount
+            results.append(
+                TransferMatchCandidate(
+                    id=c.id,
+                    account_id=c.account_id,
+                    date=c.date,
+                    amount=c.amount,
+                    currency=c.currency,
+                    amount_eur=c.amount_eur,
+                    type=c.type,
+                    description=c.description,
+                    bank_description=c.bank_description,
+                    note=c.note,
+                    merchant=c.merchant,
+                    source=c.source,
+                    plan_original_amount=plan_original_amount,
+                )
+            )
+        return results
 
     async def auto_create_transfer_mirror(self, transaction_id: int) -> TransactionRead:
         """Explicit, user-confirmed counterpart to _maybe_create_mirror -- offered from
@@ -428,7 +468,22 @@ class TransactionService:
             raise TransferMatchError("The counterpart transaction is already linked")
         if transaction.account_id == counterpart.account_id:
             raise TransferMatchError("Cannot link two legs on the same account")
-        if transaction.date.date() != counterpart.date.date():
+
+        transaction_amount, transaction_ref_date = await self._effective_transfer_match(transaction)
+        counterpart_amount, counterpart_ref_date = await self._effective_transfer_match(counterpart)
+        transaction_is_plan_anchor = transaction.installment_plan_id is not None and transaction.amount == 0
+        counterpart_is_plan_anchor = counterpart.installment_plan_id is not None and counterpart.amount == 0
+        # A plan-anchored leg's reference date is the plan's opened_date -- an import
+        # period boundary, not the actual purchase day -- so it's compared by month
+        # rather than exact day (see _effective_transfer_match).
+        if transaction_is_plan_anchor or counterpart_is_plan_anchor:
+            dates_match = (
+                transaction_ref_date.year == counterpart_ref_date.year
+                and transaction_ref_date.month == counterpart_ref_date.month
+            )
+        else:
+            dates_match = transaction_ref_date == counterpart_ref_date
+        if not dates_match:
             raise TransferMatchError("Dates do not match")
 
         # Mirrors TransactionRepository.get_transfer_match_candidates' two match
@@ -437,9 +492,11 @@ class TransactionService:
         # EUR-normalized magnitudes within 5% (a cross-currency transfer or exchange,
         # where legs are in different currencies with an FX-converted, not exactly
         # opposite, amount) -- falling back to identical bank_description when either
-        # leg has no amount_eur to compare.
+        # leg has no amount_eur to compare. Amount comparison uses each leg's
+        # effective (plan-substituted) amount; the cross-currency strategy still
+        # compares raw amount_eur, since InstallmentPlan carries none of its own.
         same_currency_opposite_amount = (
-            transaction.currency == counterpart.currency and transaction.amount == -counterpart.amount
+            transaction.currency == counterpart.currency and transaction_amount == -counterpart_amount
         )
         cross_currency_opposite_sign = (
             transaction.currency != counterpart.currency

@@ -509,6 +509,7 @@ async def transfer_candidates(transaction_id: int):
                 "merchant": c.get("merchant"),
                 "note": c.get("note"),
                 "source": c.get("source"),
+                "plan_original_amount": c.get("plan_original_amount"),
             }
             for c in candidates
         ],

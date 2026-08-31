@@ -69,6 +69,31 @@ def resolve_period(
     return cycle.current_cycle_range(today, cycle_start_day)
 
 
+class TransferMatchCandidate(BaseModel):
+    """A transaction offered as a possible transfer counterpart, plus the effective
+    amount actually used to match it when it's an installment-plan anchor (own amount
+    zeroed -- see TransactionRepository.create_placeholder_for_plan). plan_original_amount
+    is set only in that case, since the row's own `amount` field is always 0.00 for an
+    anchor and would otherwise look like an unrelated, misleading match to the user.
+    """
+
+    id: int
+    account_id: int
+    date: datetime
+    amount: Decimal
+    currency: str = "EUR"
+    amount_eur: Decimal | None = None
+    type: TransactionType
+    description: str | None = None
+    bank_description: str | None = None
+    note: str | None = None
+    merchant: str | None = None
+    source: str | None = None
+    plan_original_amount: Decimal | None = None
+
+    model_config = {"from_attributes": True}
+
+
 class TransactionBase(BaseModel):
     account_id: int
     date: datetime

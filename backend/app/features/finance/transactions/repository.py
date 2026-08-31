@@ -149,14 +149,49 @@ class TransactionRepository:
           falls back to requiring identical bank_description, since without an
           EUR-normalized amount to compare there'd otherwise be nothing to narrow the
           match down beyond "opposite sign, different currency, same day".
+
+        A candidate anchoring an installment plan (its own amount zeroed to 0.00 --
+        see create_placeholder_for_plan, and the superseded-original path in
+        ImportService._apply_one_installment_plan_action) can never satisfy either
+        strategy on its raw amount/date: the real value only exists on
+        InstallmentPlan.original_amount, and its date is the plan's opened_date (an
+        import period boundary, not the actual purchase day -- e.g. a Revolut top-up
+        paid via an ActivoBank card and then split into installments never has a
+        -100 row to match against, only 0.00). For such a candidate, both the
+        same-currency amount check and the day check substitute the plan's
+        original_amount/opened_date (matched by month, not exact day) for the
+        candidate's own zeroed amount/date. `transaction` itself may just as well be
+        a plan anchor (the user opened the placeholder row and asked to find its
+        match) -- substituted the same way before building the query. Not applied to
+        the cross-currency strategy -- InstallmentPlan carries no amount_eur to
+        compare against.
         """
+        transaction_amount = transaction.amount
+        transaction_date = transaction.date
+        transaction_is_plan_anchor = False
+        if transaction.installment_plan_id is not None and transaction.amount == 0:
+            plan_result = await self._session.execute(
+                select(InstallmentPlan).where(InstallmentPlan.id == transaction.installment_plan_id)
+            )
+            transaction_plan = plan_result.scalars().first()
+            if transaction_plan is not None and transaction_plan.original_amount is not None:
+                transaction_amount = transaction_plan.original_amount
+                transaction_date = datetime.combine(transaction_plan.opened_date, datetime.min.time())
+                transaction_is_plan_anchor = True
+
+        plan_anchor = and_(
+            Transaction.installment_plan_id.isnot(None),
+            Transaction.amount == 0,
+            InstallmentPlan.original_amount.isnot(None),
+        )
+        effective_amount = case((plan_anchor, InstallmentPlan.original_amount), else_=Transaction.amount)
         same_currency_opposite_amount = and_(
             Transaction.currency == transaction.currency,
-            Transaction.amount == -transaction.amount,
+            effective_amount == -transaction_amount,
         )
         cross_currency_opposite_sign = and_(
             Transaction.currency != transaction.currency,
-            Transaction.amount < 0 if transaction.amount > 0 else Transaction.amount > 0,
+            Transaction.amount < 0 if transaction_amount > 0 else Transaction.amount > 0,
         )
         if transaction.amount_eur is not None:
             cross_currency_opposite_sign = and_(
@@ -171,8 +206,25 @@ class TransactionRepository:
                 Transaction.bank_description.isnot(None),
                 Transaction.bank_description == transaction.bank_description,
             )
+        same_month_as_plan_open = and_(
+            plan_anchor,
+            func.extract("year", InstallmentPlan.opened_date) == transaction_date.year,
+            func.extract("month", InstallmentPlan.opened_date) == transaction_date.month,
+        )
+        if transaction_is_plan_anchor:
+            date_matches = or_(
+                and_(
+                    func.extract("year", Transaction.date) == transaction_date.year,
+                    func.extract("month", Transaction.date) == transaction_date.month,
+                ),
+                same_month_as_plan_open,
+            )
+        else:
+            date_matches = or_(func.date(Transaction.date) == func.date(transaction_date), same_month_as_plan_open)
         result = await self._session.execute(
-            select(Transaction).where(
+            select(Transaction)
+            .outerjoin(InstallmentPlan, Transaction.installment_plan_id == InstallmentPlan.id)
+            .where(
                 Transaction.id != transaction.id,
                 Transaction.account_id != transaction.account_id,
                 or_(
@@ -180,7 +232,7 @@ class TransactionRepository:
                     Transaction.counterpart_account_id == transaction.account_id,
                 ),
                 Transaction.counterpart_transaction_id.is_(None),
-                func.date(Transaction.date) == func.date(transaction.date),
+                date_matches,
                 or_(same_currency_opposite_amount, cross_currency_opposite_sign),
             )
         )

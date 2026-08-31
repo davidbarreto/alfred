@@ -463,14 +463,18 @@ async function openTransferMatchModal(txnId) {
       metaEl.textContent = `${c.description || "—"} · ${(c.date || "").slice(0, 10)}`;
       const amountEl = document.createElement("div");
       amountEl.className = "text-xs text-gray-600 truncate";
-      const amountNum = parseFloat(c.amount);
+      const planAmountNum = parseFloat(c.plan_original_amount);
+      const amountNum = Number.isNaN(planAmountNum) ? parseFloat(c.amount) : planAmountNum;
       const amountEurNum = parseFloat(c.amount_eur);
       const amountText = Number.isNaN(amountNum)
         ? "—"
         : `${amountNum.toFixed(2)} ${c.currency || ""}`.trim();
-      amountEl.textContent = (c.currency !== "EUR" && !Number.isNaN(amountEurNum))
-        ? `${amountText} (≈ ${amountEurNum.toFixed(2)} EUR)`
-        : amountText;
+      const amountSuffix = !Number.isNaN(planAmountNum)
+        ? " (installment plan)"
+        : (c.currency !== "EUR" && !Number.isNaN(amountEurNum))
+          ? ` (≈ ${amountEurNum.toFixed(2)} EUR)`
+          : "";
+      amountEl.textContent = `${amountText}${amountSuffix}`;
       info.appendChild(nameEl);
       info.appendChild(amountEl);
       info.appendChild(metaEl);
@@ -511,6 +515,7 @@ function openTransferMatchDetailModal(c) {
   const listEl = document.getElementById("transfer-match-detail-list");
   listEl.innerHTML = "";
   const amountNum = parseFloat(c.amount);
+  const planAmountNum = parseFloat(c.plan_original_amount);
   const rows = [
     ["Account", c.account_name],
     ["Date", (c.date || "").slice(0, 10)],
@@ -519,6 +524,9 @@ function openTransferMatchDetailModal(c) {
       const eur = parseFloat(c.amount_eur);
       return Number.isNaN(eur) ? null : eur.toFixed(2);
     })()],
+    ["Installment plan original amount", Number.isNaN(planAmountNum)
+      ? null
+      : `${planAmountNum.toFixed(2)} ${c.currency || ""}`.trim()],
     ["Type", c.type],
     ["Description", c.description],
     ["Bank description", c.bank_description],

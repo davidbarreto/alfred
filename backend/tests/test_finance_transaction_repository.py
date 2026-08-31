@@ -208,6 +208,54 @@ class TestGetTransferMatchCandidates:
         sql = str(query.compile(compile_kwargs={"literal_binds": True}))
         assert "currency !=" in sql or "!= transactions.currency" in sql or "currency <>" in sql
 
+    async def test_query_substitutes_plan_original_amount_for_candidate_anchors(self):
+        """A candidate row anchoring an installment plan (own amount zeroed -- see
+        create_placeholder_for_plan) has no real amount/date of its own; the query
+        must compare against InstallmentPlan.original_amount/opened_date instead."""
+        session = _make_session()
+        session.execute.return_value = _scalar_all([])
+        source = self._source(amount=Decimal("100.00"), date=datetime(2026, 6, 12, 10, 0))
+
+        await TransactionRepository(session).get_transfer_match_candidates(source)
+
+        query = session.execute.call_args.args[0]
+        sql = str(query.compile(compile_kwargs={"literal_binds": True}))
+        assert "installment_plans" in sql
+        assert "original_amount" in sql
+        assert "opened_date" in sql
+        assert "-100.00" in sql
+
+    async def test_source_itself_a_plan_anchor_substitutes_plan_amount_and_month(self):
+        """Searching for matches from the placeholder/anchor row itself (own amount
+        0.00) must substitute the plan's original_amount/opened_date for the search
+        target, matched by month rather than exact day."""
+        session = _make_session()
+        plan = MagicMock()
+        plan.original_amount = Decimal("100.00")
+        plan.opened_date = date(2026, 6, 1)
+        session.execute.side_effect = [_scalar_first(plan), _scalar_all([])]
+        source = self._source(amount=Decimal("0.00"), date=datetime(2026, 6, 1, 0, 0))
+        source.installment_plan_id = 5
+
+        await TransactionRepository(session).get_transfer_match_candidates(source)
+
+        query = session.execute.call_args_list[1].args[0]
+        sql = str(query.compile(compile_kwargs={"literal_binds": True}))
+        assert "-100.00" in sql
+        assert "EXTRACT" in sql.upper()
+
+    async def test_source_zero_amount_without_plan_link_is_not_treated_as_anchor(self):
+        """A genuinely zero-amount transaction with no installment_plan_id must not
+        trigger the plan lookup or substitution -- only one query is executed."""
+        session = _make_session()
+        session.execute.return_value = _scalar_all([])
+        source = self._source(amount=Decimal("0.00"))
+        source.installment_plan_id = None
+
+        await TransactionRepository(session).get_transfer_match_candidates(source)
+
+        assert session.execute.call_count == 1
+
 
 class TestSetCounterpartTransaction:
     async def test_updates_the_column(self):

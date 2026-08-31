@@ -169,6 +169,7 @@ class TransactionFilters:
         uncategorized: Annotated[bool, Query()] = False,
         account_id: Annotated[int | None, Query()] = None,
         merchant: Annotated[str | None, Query()] = None,
+        search: Annotated[str | None, Query()] = None,
         from_date: Annotated[date | None, Query()] = None,
         to_date: Annotated[date | None, Query()] = None,
         period: Annotated[str | None, Query()] = None,
@@ -184,6 +185,12 @@ class TransactionFilters:
         self.uncategorized = uncategorized
         self.account_id = account_id
         self.merchant = merchant
+        self.search = search
+        """Free-text match across description/merchant/bank_description (whichever
+        is set -- see TransactionRepository._NAME_COLUMN), unlike `merchant` which
+        only matches the merchant column. Used by the manual transfer-link search
+        (see TransactionService.search_link_candidates), where the target
+        transaction's own text is unknown ahead of time."""
         self.from_date = from_date
         self.to_date = to_date
         self.period = period

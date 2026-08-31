@@ -236,6 +236,21 @@
     <div id="transfer-match-list" class="flex flex-col gap-2"></div>
     <p id="transfer-match-empty" class="text-xs text-gray-400 hidden">No matching transfer found.</p>
     <p id="transfer-match-error" class="text-xs text-[#E24B4A] hidden mt-2"></p>
+
+    <div class="mt-4 pt-4 border-t border-gray-100">
+      <label class="text-xs text-gray-500 mb-1 block">Or search for any transaction to link manually</label>
+      <input
+        id="transfer-match-search"
+        type="text"
+        autocomplete="off"
+        placeholder="Search by description, merchant…"
+        class="w-full border border-gray-200 rounded-lg px-3 py-1.5 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-[#378ADD]"
+        oninput="onManualLinkSearchInput()"
+      />
+      <div id="transfer-match-search-list" class="flex flex-col gap-2 mt-2"></div>
+      <p id="transfer-match-search-empty" class="text-xs text-gray-400 hidden mt-2">No matching transactions.</p>
+    </div>
+
     <div class="flex justify-end gap-2 mt-4">
       <button type="button" onclick="document.getElementById('transfer-match-modal').close()"
               class="btn btn-sm btn-ghost text-gray-500">Close</button>
@@ -427,6 +442,60 @@ async function submitBulkMove(e) {
 }
 
 let _transferMatchTxnId = null;
+let _manualSearchDebounce = null;
+
+function _buildCandidateRow(c) {
+  const row = document.createElement("div");
+  row.className = "flex items-center justify-between gap-2 border border-gray-100 rounded-lg px-3 py-2";
+
+  const info = document.createElement("div");
+  info.className = "min-w-0";
+  const nameEl = document.createElement("div");
+  nameEl.className = "text-sm text-gray-800 truncate";
+  nameEl.textContent = c.account_name;
+  const metaEl = document.createElement("div");
+  metaEl.className = "text-xs text-gray-400 truncate";
+  metaEl.textContent = `${c.description || "—"} · ${(c.date || "").slice(0, 10)}`;
+  const amountEl = document.createElement("div");
+  amountEl.className = "text-xs text-gray-600 truncate";
+  const planAmountNum = parseFloat(c.plan_original_amount);
+  const amountNum = Number.isNaN(planAmountNum) ? parseFloat(c.amount) : planAmountNum;
+  const amountEurNum = parseFloat(c.amount_eur);
+  const amountText = Number.isNaN(amountNum)
+    ? "—"
+    : `${amountNum.toFixed(2)} ${c.currency || ""}`.trim();
+  const amountSuffix = !Number.isNaN(planAmountNum)
+    ? " (installment plan)"
+    : (c.currency !== "EUR" && !Number.isNaN(amountEurNum))
+      ? ` (≈ ${amountEurNum.toFixed(2)} EUR)`
+      : "";
+  amountEl.textContent = `${amountText}${amountSuffix}`;
+  info.appendChild(nameEl);
+  info.appendChild(amountEl);
+  info.appendChild(metaEl);
+
+  const actions = document.createElement("div");
+  actions.className = "flex items-center gap-1 flex-shrink-0";
+
+  const detailBtn = document.createElement("button");
+  detailBtn.type = "button";
+  detailBtn.className = "btn btn-xs btn-ghost";
+  detailBtn.textContent = "Details";
+  detailBtn.onclick = () => openTransferMatchDetailModal(c);
+
+  const linkBtn = document.createElement("button");
+  linkBtn.type = "button";
+  linkBtn.className = "btn btn-xs btn-primary";
+  linkBtn.textContent = "Link";
+  linkBtn.onclick = () => linkTransferCandidate(c.id);
+
+  actions.appendChild(detailBtn);
+  actions.appendChild(linkBtn);
+
+  row.appendChild(info);
+  row.appendChild(actions);
+  return row;
+}
 
 async function openTransferMatchModal(txnId) {
   _transferMatchTxnId = txnId;
@@ -434,8 +503,14 @@ async function openTransferMatchModal(txnId) {
   const emptyEl = document.getElementById("transfer-match-empty");
   const errEl = document.getElementById("transfer-match-error");
   const autoEl = document.getElementById("transfer-match-auto");
+  const searchInput = document.getElementById("transfer-match-search");
+  const searchListEl = document.getElementById("transfer-match-search-list");
+  const searchEmptyEl = document.getElementById("transfer-match-search-empty");
   listEl.innerHTML = "";
+  searchListEl.innerHTML = "";
+  searchInput.value = "";
   emptyEl.classList.add("hidden");
+  searchEmptyEl.classList.add("hidden");
   errEl.classList.add("hidden");
   autoEl.classList.add("hidden");
   document.getElementById("transfer-match-modal").showModal();
@@ -450,60 +525,44 @@ async function openTransferMatchModal(txnId) {
       return;
     }
     for (const c of candidates) {
-      const row = document.createElement("div");
-      row.className = "flex items-center justify-between gap-2 border border-gray-100 rounded-lg px-3 py-2";
-
-      const info = document.createElement("div");
-      info.className = "min-w-0";
-      const nameEl = document.createElement("div");
-      nameEl.className = "text-sm text-gray-800 truncate";
-      nameEl.textContent = c.account_name;
-      const metaEl = document.createElement("div");
-      metaEl.className = "text-xs text-gray-400 truncate";
-      metaEl.textContent = `${c.description || "—"} · ${(c.date || "").slice(0, 10)}`;
-      const amountEl = document.createElement("div");
-      amountEl.className = "text-xs text-gray-600 truncate";
-      const planAmountNum = parseFloat(c.plan_original_amount);
-      const amountNum = Number.isNaN(planAmountNum) ? parseFloat(c.amount) : planAmountNum;
-      const amountEurNum = parseFloat(c.amount_eur);
-      const amountText = Number.isNaN(amountNum)
-        ? "—"
-        : `${amountNum.toFixed(2)} ${c.currency || ""}`.trim();
-      const amountSuffix = !Number.isNaN(planAmountNum)
-        ? " (installment plan)"
-        : (c.currency !== "EUR" && !Number.isNaN(amountEurNum))
-          ? ` (≈ ${amountEurNum.toFixed(2)} EUR)`
-          : "";
-      amountEl.textContent = `${amountText}${amountSuffix}`;
-      info.appendChild(nameEl);
-      info.appendChild(amountEl);
-      info.appendChild(metaEl);
-
-      const actions = document.createElement("div");
-      actions.className = "flex items-center gap-1 flex-shrink-0";
-
-      const detailBtn = document.createElement("button");
-      detailBtn.type = "button";
-      detailBtn.className = "btn btn-xs btn-ghost";
-      detailBtn.textContent = "Details";
-      detailBtn.onclick = () => openTransferMatchDetailModal(c);
-
-      const linkBtn = document.createElement("button");
-      linkBtn.type = "button";
-      linkBtn.className = "btn btn-xs btn-primary";
-      linkBtn.textContent = "Link";
-      linkBtn.onclick = () => linkTransferCandidate(c.id);
-
-      actions.appendChild(detailBtn);
-      actions.appendChild(linkBtn);
-
-      row.appendChild(info);
-      row.appendChild(actions);
-      listEl.appendChild(row);
+      listEl.appendChild(_buildCandidateRow(c));
     }
   } catch (err) {
     errEl.textContent = "Failed to search for a match.";
     errEl.classList.remove("hidden");
+  }
+}
+
+function onManualLinkSearchInput() {
+  clearTimeout(_manualSearchDebounce);
+  _manualSearchDebounce = setTimeout(runManualLinkSearch, 300);
+}
+
+async function runManualLinkSearch() {
+  const q = document.getElementById("transfer-match-search").value.trim();
+  const searchListEl = document.getElementById("transfer-match-search-list");
+  const searchEmptyEl = document.getElementById("transfer-match-search-empty");
+  searchListEl.innerHTML = "";
+  searchEmptyEl.classList.add("hidden");
+  if (!q || !_transferMatchTxnId) return;
+
+  try {
+    const res = await fetch(
+      `/finance/transactions/${_transferMatchTxnId}/search-link-candidates?q=${encodeURIComponent(q)}`
+    );
+    if (!res.ok) throw new Error(`Error ${res.status}`);
+    const { candidates } = await res.json();
+    if (!candidates.length) {
+      searchEmptyEl.textContent = "No matching transactions.";
+      searchEmptyEl.classList.remove("hidden");
+      return;
+    }
+    for (const c of candidates) {
+      searchListEl.appendChild(_buildCandidateRow(c));
+    }
+  } catch (err) {
+    searchEmptyEl.textContent = "Search failed.";
+    searchEmptyEl.classList.remove("hidden");
   }
 }
 

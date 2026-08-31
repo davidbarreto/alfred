@@ -1659,6 +1659,48 @@
           }
         },
         {
+          "name": "04b - Search Link Candidates Finds Leg B By Description",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Leg B is found by description search, Leg A itself is excluded', () => {",
+                  "    const json = pm.response.json();",
+                  "    const ids = json.map(t => t.id);",
+                  "    pm.expect(ids).to.include(parseInt(pm.environment.get('finance_transfer_b_id')));",
+                  "    pm.expect(ids).to.not.include(parseInt(pm.environment.get('finance_transfer_a_id')));",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/finance/transactions/{{finance_transfer_a_id}}/search-link-candidates?q=Card top-up",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "finance",
+                "transactions",
+                "{{finance_transfer_a_id}}",
+                "search-link-candidates"
+              ],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "Card top-up"
+                }
+              ]
+            }
+          }
+        },
+        {
           "name": "05 - Link Transfer",
           "event": [
             {

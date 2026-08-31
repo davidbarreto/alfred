@@ -1008,6 +1008,57 @@ class TestTransferCandidates:
         assert resp.headers["location"].startswith("/login")
 
 
+class TestSearchLinkCandidates:
+    def test_returns_matching_candidates_with_account_names(self, client, mock_api):
+        mock_api["get"].side_effect = [
+            [{
+                "id": 2, "account_id": 5, "date": "2026-06-01T00:00:00", "description": "Revolut top-up",
+                "merchant": None, "bank_description": None, "amount": "0.00", "currency": "EUR",
+                "amount_eur": None, "type": "expense", "note": "Placeholder", "source": None,
+                "plan_original_amount": "-100.00",
+            }],
+            [_account(id=5, name="Card")],
+        ]
+
+        resp = client.get("/finance/transactions/1/search-link-candidates", params={"q": "Revolut"})
+
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["candidates"] == [{
+            "id": 2, "account_name": "Card", "date": "2026-06-01T00:00:00", "description": "Revolut top-up",
+            "amount": "0.00", "currency": "EUR", "amount_eur": None, "type": "expense",
+            "bank_description": None, "merchant": None, "note": "Placeholder", "source": None,
+            "plan_original_amount": "-100.00",
+        }]
+
+    def test_blank_query_returns_empty_without_calling_backend(self, client, mock_api):
+        resp = client.get("/finance/transactions/1/search-link-candidates", params={"q": "  "})
+
+        assert resp.status_code == 200
+        assert resp.json()["candidates"] == []
+        mock_api["get"].assert_not_called()
+
+    def test_returns_empty_list_on_backend_error(self, client, mock_api):
+        request = httpx.Request("GET", "http://backend/finance/transactions/1/search-link-candidates")
+        response = httpx.Response(400, json={"detail": "boom"}, request=request)
+        mock_api["get"].side_effect = [
+            httpx.HTTPStatusError("Bad Request", request=request, response=response),
+            [_account()],
+        ]
+
+        resp = client.get("/finance/transactions/1/search-link-candidates", params={"q": "Revolut"})
+
+        assert resp.status_code == 200
+        assert resp.json()["candidates"] == []
+
+    def test_requires_authentication(self, anon_client):
+        resp = anon_client.get(
+            "/finance/transactions/1/search-link-candidates", params={"q": "Revolut"}, follow_redirects=False
+        )
+        assert resp.status_code == 302
+        assert resp.headers["location"].startswith("/login")
+
+
 class TestLinkTransfer:
     def test_forwards_counterpart_id(self, client, mock_api):
         mock_api["post"].return_value = {}

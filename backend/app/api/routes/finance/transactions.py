@@ -205,6 +205,15 @@ async def get_transfer_candidates(transaction_id: int, service: TransactionServi
     return await service.get_transfer_match_candidates(transaction_id)
 
 
+@router.get("/{transaction_id}/search-link-candidates", response_model=list[TransferMatchCandidate])
+async def search_link_candidates(
+    transaction_id: int,
+    service: TransactionServiceDep,
+    q: Annotated[str, Query()] = "",
+):
+    return await service.search_link_candidates(transaction_id, q)
+
+
 @router.post("/{transaction_id}/link-transfer", response_model=TransactionRead)
 async def link_transfer(
     transaction_id: int, request: TransferLinkRequest, service: TransactionServiceDep

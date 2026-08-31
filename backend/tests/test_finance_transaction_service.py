@@ -659,6 +659,49 @@ class TestGetTransferMatchCandidates:
         assert result[0].plan_original_amount is None
 
 
+class TestSearchLinkCandidates:
+    async def test_returns_matching_transactions(self, service):
+        service._repo.list.return_value = [
+            _make_txn_orm(id=2, account_id=2, type="expense", amount=Decimal("-100.00"))
+        ]
+
+        result = await service.search_link_candidates(1, "Revolut")
+
+        assert len(result) == 1
+        assert isinstance(result[0], TransferMatchCandidate)
+        args, kwargs = service._repo.list.call_args
+        assert args[0].search == "Revolut"
+
+    async def test_returns_empty_for_blank_query(self, service):
+        result = await service.search_link_candidates(1, "   ")
+        assert result == []
+        service._repo.list.assert_not_awaited()
+
+    async def test_excludes_the_searching_transaction_itself(self, service):
+        service._repo.list.return_value = [
+            _make_txn_orm(id=1, account_id=1, type="expense", amount=Decimal("-100.00")),
+            _make_txn_orm(id=2, account_id=2, type="expense", amount=Decimal("-100.00")),
+        ]
+
+        result = await service.search_link_candidates(1, "Revolut")
+
+        assert [c.id for c in result] == [2]
+
+    async def test_surfaces_plan_original_amount_for_matched_anchor(self, service):
+        service._repo.list.return_value = [
+            _make_txn_orm(
+                id=2, account_id=2, type="expense", amount=Decimal("0.00"), installment_plan_id=7,
+            )
+        ]
+        plan = MagicMock()
+        plan.original_amount = Decimal("-100.00")
+        service._plan_repo.get.return_value = plan
+
+        result = await service.search_link_candidates(1, "Revolut")
+
+        assert result[0].plan_original_amount == Decimal("-100.00")
+
+
 class TestLinkTransfer:
     async def test_links_both_legs(self, service):
         from datetime import datetime

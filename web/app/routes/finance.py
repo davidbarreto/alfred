@@ -459,6 +459,35 @@ async def delete_transaction(transaction_id: int, request: Request):
     return templates.TemplateResponse(request, "_finance_transactions.html", context)
 
 
+async def _accounts_by_id() -> dict:
+    try:
+        accounts = await api.get("/finance/accounts")
+    except httpx.HTTPError:
+        accounts = []
+    return {a["id"]: a for a in accounts}
+
+
+def _shape_candidates(candidates: list[dict], accounts_by_id: dict) -> list[dict]:
+    return [
+        {
+            "id": c["id"],
+            "account_name": accounts_by_id.get(c["account_id"], {}).get("name", "?"),
+            "date": c["date"],
+            "description": c.get("description") or c.get("merchant") or c.get("bank_description"),
+            "amount": c.get("amount"),
+            "currency": c.get("currency"),
+            "amount_eur": c.get("amount_eur"),
+            "type": c.get("type"),
+            "bank_description": c.get("bank_description"),
+            "merchant": c.get("merchant"),
+            "note": c.get("note"),
+            "source": c.get("source"),
+            "plan_original_amount": c.get("plan_original_amount"),
+        }
+        for c in candidates
+    ]
+
+
 @router.get("/transactions/{transaction_id}/transfer-candidates", response_class=Response)
 async def transfer_candidates(transaction_id: int):
     """Other accounts' unmatched transfer legs that could be this transaction's missing
@@ -474,12 +503,7 @@ async def transfer_candidates(transaction_id: int):
         candidates = await api.get(f"/finance/transactions/{transaction_id}/transfer-candidates")
     except httpx.HTTPError:
         candidates = []
-    accounts = []
-    try:
-        accounts = await api.get("/finance/accounts")
-    except httpx.HTTPError:
-        pass
-    accounts_by_id = {a["id"]: a for a in accounts}
+    accounts_by_id = await _accounts_by_id()
 
     can_auto_mirror = False
     try:
@@ -495,26 +519,29 @@ async def transfer_candidates(transaction_id: int):
         pass
 
     return JSONResponse({
-        "candidates": [
-            {
-                "id": c["id"],
-                "account_name": accounts_by_id.get(c["account_id"], {}).get("name", "?"),
-                "date": c["date"],
-                "description": c.get("description") or c.get("merchant") or c.get("bank_description"),
-                "amount": c.get("amount"),
-                "currency": c.get("currency"),
-                "amount_eur": c.get("amount_eur"),
-                "type": c.get("type"),
-                "bank_description": c.get("bank_description"),
-                "merchant": c.get("merchant"),
-                "note": c.get("note"),
-                "source": c.get("source"),
-                "plan_original_amount": c.get("plan_original_amount"),
-            }
-            for c in candidates
-        ],
+        "candidates": _shape_candidates(candidates, accounts_by_id),
         "can_auto_mirror": can_auto_mirror,
     })
+
+
+@router.get("/transactions/{transaction_id}/search-link-candidates", response_class=Response)
+async def search_link_candidates(transaction_id: int, q: str = ""):
+    """Free-text search across every other transaction, for manually picking a
+    transfer counterpart the automated candidate search (see transfer_candidates)
+    didn't surface. link_transfer still re-validates the chosen pair server-side --
+    this only widens what the user can search for.
+    """
+    if not q.strip():
+        return JSONResponse({"candidates": []})
+    try:
+        candidates = await api.get(
+            f"/finance/transactions/{transaction_id}/search-link-candidates", params={"q": q.strip()}
+        )
+    except httpx.HTTPError:
+        candidates = []
+    accounts_by_id = await _accounts_by_id()
+
+    return JSONResponse({"candidates": _shape_candidates(candidates, accounts_by_id)})
 
 
 @router.post("/transactions/{transaction_id}/link-transfer", response_class=Response)

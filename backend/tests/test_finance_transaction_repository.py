@@ -328,6 +328,15 @@ class TestList:
         await TransactionRepository(session).list(TransactionFilters(merchant="Shop"))
         session.execute.assert_called_once()
 
+    async def test_search_filter_matches_description_merchant_or_bank_description(self):
+        session = _make_session()
+        session.execute.return_value = _scalar_all([])
+        await TransactionRepository(session).list(TransactionFilters(search="Revolut"))
+        query = session.execute.call_args.args[0]
+        sql = str(query.compile(compile_kwargs={"literal_binds": True}))
+        assert "Revolut" in sql
+        assert "coalesce" in sql.lower()
+
     async def test_unconfirmed_transfer_filter(self):
         session = _make_session()
         session.execute.return_value = _scalar_all([])

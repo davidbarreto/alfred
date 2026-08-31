@@ -386,6 +386,27 @@ class TransactionService:
         ):
             return []
         candidates = await self._repo.get_transfer_match_candidates(transaction)
+        return await self._to_transfer_match_candidates(candidates)
+
+    async def search_link_candidates(
+        self, transaction_id: int, query: str, limit: int = 20
+    ) -> List[TransferMatchCandidate]:
+        """Free-text search (by description/merchant/bank_description) across every
+        other transaction, for manually picking a transfer counterpart that
+        get_transfer_match_candidates' automated day/month + amount matching didn't
+        surface -- e.g. a genuine transfer whose amounts diverge for a reason the
+        matcher doesn't model (a fee taken on one leg, a partial refund folded in).
+        Widens *what can be searched*, not what can be linked: link_transfer still
+        re-validates the chosen pair before confirming.
+        """
+        query = query.strip()
+        if not query:
+            return []
+        candidates = await self._repo.list(TransactionFilters(search=query, limit=limit))
+        candidates = [c for c in candidates if c.id != transaction_id]
+        return await self._to_transfer_match_candidates(candidates)
+
+    async def _to_transfer_match_candidates(self, candidates: List[Transaction]) -> List[TransferMatchCandidate]:
         results = []
         for c in candidates:
             plan_original_amount = None

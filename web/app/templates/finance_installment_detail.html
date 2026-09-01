@@ -41,7 +41,7 @@
     {% if plan.original_amount is not none %}
     <div>
       <div class="text-xs text-gray-400">Original amount</div>
-      <div class="text-gray-800">€{{ plan.original_amount | float | money }}</div>
+      <div class="text-gray-800">€{{ plan.original_amount | float | abs | money }}</div>
     </div>
     {% endif %}
     {% if plan.plan_ref %}

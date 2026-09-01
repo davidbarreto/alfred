@@ -3,7 +3,12 @@ from __future__ import annotations
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.features.finance.imports.schemas import ImportRuleCreate, ImportRuleFilters, ImportRuleUpdate
+from app.features.finance.imports.schemas import (
+    ImportBatchFilters,
+    ImportRuleCreate,
+    ImportRuleFilters,
+    ImportRuleUpdate,
+)
 from app.features.finance.imports.tables import ImportBatch, ImportRule
 
 
@@ -101,9 +106,12 @@ class ImportRepository:
         )
         return result.scalars().first()
 
-    async def list_batches(self) -> list[ImportBatch]:
+    async def list_batches(self, filters: ImportBatchFilters) -> list[ImportBatch]:
         result = await self._session.execute(
-            select(ImportBatch).order_by(ImportBatch.created_at.desc())
+            select(ImportBatch)
+            .order_by(ImportBatch.created_at.desc())
+            .offset(filters.offset)
+            .limit(filters.limit)
         )
         return list(result.scalars().all())
 

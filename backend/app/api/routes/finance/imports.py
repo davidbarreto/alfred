@@ -6,6 +6,7 @@ from app.api.auth import require_auth
 from app.dependencies import ImportServiceDep
 from app.features.finance.imports.schemas import (
     DetectCurrenciesResponse,
+    ImportBatchFilters,
     ImportBatchRead,
     ImportCommitGroupedRequest,
     ImportCommitGroupedResponse,
@@ -157,8 +158,8 @@ async def list_pending_installments(account_id: int, service: ImportServiceDep):
 
 
 @router.get("", response_model=list[ImportBatchRead])
-async def list_batches(service: ImportServiceDep):
-    return await service.list_batches()
+async def list_batches(service: ImportServiceDep, filters: ImportBatchFilters = Depends()):
+    return await service.list_batches(filters)
 
 
 @router.get("/{batch_id}/file")

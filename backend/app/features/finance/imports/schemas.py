@@ -73,6 +73,16 @@ class ImportRuleFilters:
 
 class ImportRuleReorderRequest(BaseModel):
     rule_ids: list[int]
+
+
+class ImportBatchFilters:
+    def __init__(
+        self,
+        limit: Annotated[int, Query(ge=1, le=200)] = 20,
+        offset: Annotated[int, Query(ge=0)] = 0,
+    ) -> None:
+        self.limit = limit
+        self.offset = offset
     """The rules currently shown, in their new desired match-precedence order. Each rule
     keeps the position "slot" it already occupied -- only reassigned among each other --
     so rules outside this set are unaffected."""

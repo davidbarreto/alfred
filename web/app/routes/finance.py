@@ -1151,19 +1151,34 @@ async def delete_recurring(recurring_id: int, request: Request):
 
 # --- Statement import ---
 
-async def _import_batches_context() -> dict:
+_BATCHES_PAGE_SIZE = 20
+
+
+def _batches_pagination(items: list, offset: int) -> tuple[list, bool, bool]:
+    has_next = len(items) > _BATCHES_PAGE_SIZE
+    return items[:_BATCHES_PAGE_SIZE], has_next, offset > 0
+
+
+async def _import_batches_context(offset: int = 0) -> dict:
     batches, accounts = [], []
     try:
-        batches = await api.get("/finance/imports")
+        batches = await api.get(
+            "/finance/imports", params={"limit": _BATCHES_PAGE_SIZE + 1, "offset": offset}
+        )
     except httpx.HTTPError:
         pass
     try:
         accounts = await api.get("/finance/accounts")
     except httpx.HTTPError:
         pass
+    batches, has_next, has_prev = _batches_pagination(batches, offset)
     return {
         "batches": batches,
         "accounts_by_id": {a["id"]: a["name"] for a in accounts},
+        "batches_offset": offset,
+        "batches_has_next": has_next,
+        "batches_has_prev": has_prev,
+        "batches_page_size": _BATCHES_PAGE_SIZE,
     }
 
 
@@ -1394,7 +1409,8 @@ async def import_rules_list_fragment(request: Request):
 
 @router.get("/import/batches", response_class=HTMLResponse)
 async def import_batches_fragment(request: Request):
-    context = await _import_batches_context()
+    offset = max(0, int(request.query_params.get("offset", "0") or "0"))
+    context = await _import_batches_context(offset)
     return templates.TemplateResponse(request, "_finance_import_batches.html", context)
 
 
@@ -1849,9 +1865,10 @@ async def download_import_batch_file(batch_id: int):
 
 @router.delete("/import/batches/{batch_id}", response_class=HTMLResponse)
 async def delete_import_batch(batch_id: int, request: Request):
+    offset = max(0, int(request.query_params.get("offset", "0") or "0"))
     try:
         await api.delete(f"/finance/imports/{batch_id}")
     except httpx.HTTPError:
         return HTMLResponse('<p class="text-[#E24B4A] text-sm px-1">Failed to delete import batch.</p>', status_code=422)
-    context = await _import_batches_context()
+    context = await _import_batches_context(offset)
     return templates.TemplateResponse(request, "_finance_import_batches.html", context)

@@ -27,7 +27,7 @@
           </a>
           {% endif %}
           <button class="btn btn-ghost btn-xs text-gray-400 hover:text-[#E24B4A]"
-                  hx-delete="/finance/import/batches/{{ b.id }}"
+                  hx-delete="/finance/import/batches/{{ b.id }}?offset={{ batches_offset }}"
                   hx-target="#import-batches"
                   hx-swap="innerHTML"
                   hx-confirm="Delete this import and all {{ b.inserted_count }} transactions it created?">
@@ -38,6 +38,23 @@
       {% endfor %}
     </tbody>
   </table>
+</div>
+<div class="flex items-center justify-between mt-3">
+  <span class="text-xs text-gray-400">{{ batches | length }} import{{ "s" if batches | length != 1 else "" }} shown</span>
+  <div class="flex gap-2">
+    <button class="btn btn-xs btn-ghost"
+            hx-get="/finance/import/batches?offset={{ [batches_offset - batches_page_size, 0] | max }}"
+            hx-target="#import-batches" hx-swap="innerHTML"
+            {% if not batches_has_prev %}disabled{% endif %}>
+      <i class="ti ti-chevron-left text-xs"></i>Prev
+    </button>
+    <button class="btn btn-xs btn-ghost"
+            hx-get="/finance/import/batches?offset={{ batches_offset + batches_page_size }}"
+            hx-target="#import-batches" hx-swap="innerHTML"
+            {% if not batches_has_next %}disabled{% endif %}>
+      Next<i class="ti ti-chevron-right text-xs"></i>
+    </button>
+  </div>
 </div>
 {% else %}
 <p class="text-sm text-gray-400">No imports yet.</p>

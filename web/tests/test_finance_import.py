@@ -469,6 +469,17 @@ class TestImportBatches:
         assert "activobank" in resp.text
         assert "/finance/import/batches/7/file" in resp.text
 
+    def test_batches_fragment_paginates(self, client, mock_api):
+        batches = [_batch(id=i) for i in range(21)]
+        mock_api["get"].side_effect = [batches, [_account()]]
+
+        resp = client.get("/finance/import/batches")
+
+        assert resp.status_code == 200
+        assert mock_api["get"].call_args_list[0].kwargs["params"] == {"limit": 21, "offset": 0}
+        assert resp.text.count("activobank") == 20
+        assert "20 imports shown" in resp.text
+
     def test_download_original_file(self, client, mock_api):
         mock_api["get_bytes"].return_value = (b"csv-bytes", "text/csv")
 

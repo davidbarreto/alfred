@@ -23,6 +23,7 @@ from app.features.finance.imports.schemas import (
     CurrencyCandidateAccount,
     CurrencyDetection,
     DetectCurrenciesResponse,
+    ImportBatchFilters,
     ImportBatchRead,
     ImportCommitBatchResult,
     ImportCommitGroupedRequest,
@@ -945,8 +946,8 @@ class ImportService:
 
     # -- batches and rules ----------------------------------------------
 
-    async def list_batches(self) -> list[ImportBatchRead]:
-        batches = await self._repo.list_batches()
+    async def list_batches(self, filters: ImportBatchFilters) -> list[ImportBatchRead]:
+        batches = await self._repo.list_batches(filters)
         return [ImportBatchRead.model_validate(b) for b in batches]
 
     async def delete_batch(self, batch_id: int) -> bool:

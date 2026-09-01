@@ -31,9 +31,12 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from sqlalchemy import select
 
+import app.main  # noqa: F401 -- importing every router transitively imports every tables.py,
+# which SQLAlchemy needs to fully configure before a flush can resolve any model's FKs/
+# relationships (Account alone reaches transactions, budgets, recurring_transactions, etc.) --
+# selectively importing just accounts.tables wasn't enough, it only pushed the same
+# unconfigured-mapper error one relationship further down the graph.
 from app.db.session import async_session
-import app.features.finance.accounts.tables  # noqa: F401 -- registers finance.accounts so the
-# InstallmentPlan.account_id FK resolves at flush time; nothing here references it directly.
 from app.features.finance.installment_plans.tables import InstallmentPlan
 
 

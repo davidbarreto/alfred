@@ -208,16 +208,18 @@ class TransactionRepository:
         InstallmentPlan.original_amount, and its date is the plan's opened_date (an
         import period boundary, not the actual purchase day -- e.g. a Revolut top-up
         paid via an ActivoBank card and then split into installments never has a
-        -100 row to match against, only 0.00). For such a candidate, both the
-        same-currency amount check and the day check substitute the plan's
-        original_amount/opened_date (matched by month, not exact day) for the
-        candidate's own zeroed amount/date. `transaction` itself may just as well be
-        a plan anchor (the user opened the placeholder row and asked to find its
-        match) -- substituted the same way before building the query. Not applied to
-        the cross-currency strategy -- InstallmentPlan carries no amount_eur to
-        compare against.
+        -100 row to match against, only 0.00). For such a candidate, the
+        same-currency amount check, the cross-currency amount_eur check, and the day
+        check all substitute the plan's original_amount/opened_date (matched by
+        month, not exact day) for the candidate's own zeroed amount/date --
+        original_amount doubles as the EUR-normalized amount since a plan anchor is
+        always created in EUR (see create_placeholder_for_plan). `transaction` itself
+        may just as well be a plan anchor (the user opened the placeholder row and
+        asked to find its match) -- substituted the same way before building the
+        query.
         """
         transaction_amount = transaction.amount
+        transaction_amount_eur = transaction.amount_eur
         transaction_date = transaction.date
         transaction_is_plan_anchor = False
         if transaction.installment_plan_id is not None and transaction.amount == 0:
@@ -227,6 +229,7 @@ class TransactionRepository:
             transaction_plan = plan_result.scalars().first()
             if transaction_plan is not None and transaction_plan.original_amount is not None:
                 transaction_amount = transaction_plan.original_amount
+                transaction_amount_eur = transaction_plan.original_amount
                 transaction_date = datetime.combine(transaction_plan.opened_date, datetime.min.time())
                 transaction_is_plan_anchor = True
 
@@ -236,6 +239,7 @@ class TransactionRepository:
             InstallmentPlan.original_amount.isnot(None),
         )
         effective_amount = case((plan_anchor, InstallmentPlan.original_amount), else_=Transaction.amount)
+        effective_amount_eur = case((plan_anchor, InstallmentPlan.original_amount), else_=Transaction.amount_eur)
         same_currency_opposite_amount = and_(
             Transaction.currency == transaction.currency,
             effective_amount == -transaction_amount,
@@ -244,12 +248,12 @@ class TransactionRepository:
             Transaction.currency != transaction.currency,
             Transaction.amount < 0 if transaction_amount > 0 else Transaction.amount > 0,
         )
-        if transaction.amount_eur is not None:
+        if transaction_amount_eur is not None:
             cross_currency_opposite_sign = and_(
                 cross_currency_opposite_sign,
-                Transaction.amount_eur.isnot(None),
-                func.abs(func.abs(Transaction.amount_eur) - abs(transaction.amount_eur))
-                <= abs(transaction.amount_eur) * Decimal("0.05"),
+                effective_amount_eur.isnot(None),
+                func.abs(func.abs(effective_amount_eur) - abs(transaction_amount_eur))
+                <= abs(transaction_amount_eur) * Decimal("0.05"),
             )
         else:
             cross_currency_opposite_sign = and_(

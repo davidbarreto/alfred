@@ -148,18 +148,20 @@ class TransactionService:
         self._fx = exchange_rate_service
         self._settings = FinanceSettingsService(session)
 
-    async def _effective_transfer_match(self, txn: Transaction) -> tuple[Decimal, date]:
-        """(amount, reference date) to validate a transfer link against. A transaction
-        anchoring an installment plan (own amount zeroed -- see
+    async def _effective_transfer_match(self, txn: Transaction) -> tuple[Decimal, date, Decimal | None]:
+        """(amount, reference date, EUR-normalized amount) to validate a transfer link
+        against. A transaction anchoring an installment plan (own amount zeroed -- see
         TransactionRepository.create_placeholder_for_plan) has no real amount/date of
-        its own to compare; substitute the plan's original_amount/opened_date,
-        mirroring TransactionRepository.get_transfer_match_candidates.
+        its own to compare; substitute the plan's original_amount/opened_date --
+        original_amount doubles as the EUR-normalized amount since a plan anchor is
+        always created in EUR -- mirroring
+        TransactionRepository.get_transfer_match_candidates.
         """
         if txn.installment_plan_id is not None and txn.amount == 0:
             plan = await self._plan_repo.get(txn.installment_plan_id)
             if plan is not None and plan.original_amount is not None:
-                return plan.original_amount, plan.opened_date
-        return txn.amount, txn.date.date()
+                return plan.original_amount, plan.opened_date, plan.original_amount
+        return txn.amount, txn.date.date(), txn.amount_eur
 
     async def _resolve_period(self, filters) -> tuple[date, date]:
         cycle_start_day = await self._settings.get_cycle_start_day()
@@ -499,8 +501,12 @@ class TransactionService:
         if transaction.account_id == counterpart.account_id:
             raise TransferMatchError("Cannot link two legs on the same account")
 
-        transaction_amount, transaction_ref_date = await self._effective_transfer_match(transaction)
-        counterpart_amount, counterpart_ref_date = await self._effective_transfer_match(counterpart)
+        transaction_amount, transaction_ref_date, transaction_amount_eur = await self._effective_transfer_match(
+            transaction
+        )
+        counterpart_amount, counterpart_ref_date, counterpart_amount_eur = await self._effective_transfer_match(
+            counterpart
+        )
         transaction_is_plan_anchor = transaction.installment_plan_id is not None and transaction.amount == 0
         counterpart_is_plan_anchor = counterpart.installment_plan_id is not None and counterpart.amount == 0
         # A plan-anchored leg's reference date is the plan's opened_date -- an import
@@ -523,19 +529,19 @@ class TransactionService:
         # where legs are in different currencies with an FX-converted, not exactly
         # opposite, amount) -- falling back to identical bank_description when either
         # leg has no amount_eur to compare. Amount comparison uses each leg's
-        # effective (plan-substituted) amount; the cross-currency strategy still
-        # compares raw amount_eur, since InstallmentPlan carries none of its own.
+        # effective (plan-substituted) amount and amount_eur throughout, so a plan
+        # anchor's original_amount stands in for its own zeroed amount_eur too.
         same_currency_opposite_amount = (
             transaction.currency == counterpart.currency and transaction_amount == -counterpart_amount
         )
         cross_currency_opposite_sign = (
             transaction.currency != counterpart.currency
-            and (transaction.amount > 0) != (counterpart.amount > 0)
+            and (transaction_amount > 0) != (counterpart_amount > 0)
         )
-        if transaction.amount_eur is not None and counterpart.amount_eur is not None:
+        if transaction_amount_eur is not None and counterpart_amount_eur is not None:
             cross_currency_opposite_sign = cross_currency_opposite_sign and abs(
-                abs(transaction.amount_eur) - abs(counterpart.amount_eur)
-            ) <= abs(transaction.amount_eur) * Decimal("0.05")
+                abs(transaction_amount_eur) - abs(counterpart_amount_eur)
+            ) <= abs(transaction_amount_eur) * Decimal("0.05")
         else:
             cross_currency_opposite_sign = (
                 cross_currency_opposite_sign

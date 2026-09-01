@@ -1091,6 +1091,32 @@ class TestLinkTransfer:
         with pytest.raises(TransferMatchError):
             await service.link_transfer(1, 2)
 
+    async def test_links_installment_plan_anchor_to_cross_currency_transfer_via_original_amount(self, service):
+        """A EUR installment plan anchor's own amount_eur is zeroed along with its
+        amount -- the cross-currency EUR-normalized comparison must fall back to the
+        plan's original_amount (always EUR) instead of the zeroed amount_eur, or a
+        genuine cross-currency counterpart (e.g. a BRL Pix funding a EUR plan) is
+        rejected as a false amount mismatch."""
+        from datetime import datetime
+        counterpart = _make_txn_orm(
+            id=1, account_id=1, type="income", amount=Decimal("2150.00"), amount_eur=Decimal("363.23"),
+            currency="BRL", date=datetime(2026, 4, 11),
+        )
+        anchor = _make_txn_orm(
+            id=2, account_id=2, type="expense", amount=Decimal("0.00"), amount_eur=Decimal("0.00"),
+            currency="EUR", date=datetime(2026, 4, 11), installment_plan_id=7,
+        )
+        service._repo.get.side_effect = [anchor, counterpart, anchor, counterpart]
+        service._repo.update.return_value = anchor
+        plan = MagicMock()
+        plan.original_amount = Decimal("-376.40")
+        plan.opened_date = date(2026, 4, 1)
+        service._plan_repo.get.return_value = plan
+
+        result = await service.link_transfer(2, 1)
+
+        assert isinstance(result, TransactionRead)
+
 
 class TestAutoCreateTransferMirror:
     async def test_creates_mirror_and_returns_updated_transaction(self, service):

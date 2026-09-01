@@ -271,6 +271,27 @@ class TestGetTransferMatchCandidates:
         assert "-100.00" in sql
         assert "EXTRACT" in sql.upper()
 
+    async def test_source_plan_anchor_substitutes_original_amount_into_cross_currency_check(self):
+        """A plan anchor's own amount_eur is zeroed along with its amount -- the
+        cross-currency EUR-normalized comparison must use the plan's original_amount
+        (always EUR, per create_placeholder_for_plan) instead of the zeroed
+        amount_eur, or a cross-currency counterpart (e.g. a BRL transfer funding a
+        EUR installment plan) can never be found."""
+        session = _make_session()
+        plan = MagicMock()
+        plan.original_amount = Decimal("376.40")
+        plan.opened_date = date(2026, 4, 1)
+        session.execute.side_effect = [_scalar_first(plan), _scalar_all([])]
+        source = self._source(amount=Decimal("0.00"), amount_eur=Decimal("0.00"), date=datetime(2026, 4, 11, 0, 0))
+        source.installment_plan_id = 5
+
+        await TransactionRepository(session).get_transfer_match_candidates(source)
+
+        query = session.execute.call_args_list[1].args[0]
+        sql = str(query.compile(compile_kwargs={"literal_binds": True}))
+        assert "376.40" in sql
+        assert "18.82" in sql or "18.8200" in sql
+
     async def test_source_zero_amount_without_plan_link_is_not_treated_as_anchor(self):
         """A genuinely zero-amount transaction with no installment_plan_id must not
         trigger the plan lookup or substitution -- only one query is executed."""

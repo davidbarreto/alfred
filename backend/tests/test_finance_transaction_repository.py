@@ -664,6 +664,21 @@ class TestGetSpendingTotal:
         sql = str(query.compile(compile_kwargs={"literal_binds": True}))
         assert "counterpart_account_id" not in sql
 
+    async def test_expense_query_excludes_installments_of_a_confirmed_transfer_plan(self):
+        """Once a plan's zeroed anchor row is confirmed as a transfer, its monthly
+        installment captures shouldn't count as spend either, even though each one
+        is its own real, non-zero debit."""
+        session = _make_session()
+        session.execute.return_value = _one_result((Decimal("0"), 0))
+        await TransactionRepository(session).get_spending_total(
+            from_date=date(2026, 6, 1),
+            to_date=date(2026, 6, 30),
+        )
+        query = session.execute.call_args.args[0]
+        sql = str(query.compile(compile_kwargs={"literal_binds": True}))
+        assert "installment_plan_id" in sql
+        assert "EXISTS" in sql
+
     async def test_global_currency_sums_amount_eur_across_all_currencies(self):
         session = _make_session()
         session.execute.return_value = _one_result((Decimal("300.00"), 5))

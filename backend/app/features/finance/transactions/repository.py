@@ -43,15 +43,42 @@ def _spend_condition(transaction_type: str):
     Account.auto_mirror_transfers) always has its own counterpart_transaction_id set
     (pointing back at the source leg that spawned it) -- excluded from spend by the
     same counterpart_transaction_id check, no separate condition needed.
+
+    A plan's monthly installment captures (type="expense", installment_plan_id set)
+    are excluded the same way once the plan's zeroed anchor row (see
+    create_placeholder_for_plan / the superseded-original path in
+    ImportService._apply_one_installment_plan_action) has itself been confirmed as a
+    transfer (counterpart_transaction_id set via TransactionService.link_transfer):
+    a confirmed anchor means the whole purchase was a transfer to/from another
+    Alfred-tracked account, not real spend, so its installments shouldn't count as
+    spend either even though each capture is its own real, non-zero debit.
     """
     if transaction_type == "expense":
-        return or_(
-            Transaction.type == "expense",
-            and_(
-                Transaction.type == "transfer",
-                Transaction.counterpart_transaction_id.is_(None),
-                Transaction.amount < 0,
+        Anchor = aliased(Transaction)
+        installment_plan_transfer_confirmed = (
+            select(Anchor.id)
+            .where(
+                Anchor.installment_plan_id == Transaction.installment_plan_id,
+                Anchor.amount == 0,
+                Anchor.counterpart_transaction_id.isnot(None),
+            )
+            .correlate(Transaction)
+            .exists()
+        )
+        is_confirmed_installment_transfer = and_(
+            Transaction.installment_plan_id.isnot(None),
+            installment_plan_transfer_confirmed,
+        )
+        return and_(
+            or_(
+                Transaction.type == "expense",
+                and_(
+                    Transaction.type == "transfer",
+                    Transaction.counterpart_transaction_id.is_(None),
+                    Transaction.amount < 0,
+                ),
             ),
+            ~is_confirmed_installment_transfer,
         )
     return Transaction.type == transaction_type
 

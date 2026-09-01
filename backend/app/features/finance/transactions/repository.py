@@ -24,6 +24,33 @@ def _amount_column(currency: str):
     return Transaction.amount_eur if currency == GLOBAL_CURRENCY else Transaction.amount
 
 
+def _confirmed_installment_transfer_condition():
+    """True when a row belongs to an installment plan whose zeroed anchor row (see
+    create_placeholder_for_plan / the superseded-original path in
+    ImportService._apply_one_installment_plan_action) has itself been confirmed as a
+    transfer (counterpart_transaction_id set via TransactionService.link_transfer).
+    A confirmed anchor means the whole purchase was a transfer to/from another
+    Alfred-tracked account, not real spend or an unresolved transfer -- so every
+    installment capture in the plan shares that status too, even though each one
+    is its own real, non-zero row with no counterpart of its own.
+    """
+    Anchor = aliased(Transaction)
+    installment_plan_transfer_confirmed = (
+        select(Anchor.id)
+        .where(
+            Anchor.installment_plan_id == Transaction.installment_plan_id,
+            Anchor.amount == 0,
+            Anchor.counterpart_transaction_id.isnot(None),
+        )
+        .correlate(Transaction)
+        .exists()
+    )
+    return and_(
+        Transaction.installment_plan_id.isnot(None),
+        installment_plan_transfer_confirmed,
+    )
+
+
 def _spend_condition(transaction_type: str):
     """A transfer with no *confirmed* counterpart transaction is money that left an
     Alfred-tracked account with no verified evidence it landed in another one (e.g.
@@ -45,30 +72,10 @@ def _spend_condition(transaction_type: str):
     same counterpart_transaction_id check, no separate condition needed.
 
     A plan's monthly installment captures (type="expense", installment_plan_id set)
-    are excluded the same way once the plan's zeroed anchor row (see
-    create_placeholder_for_plan / the superseded-original path in
-    ImportService._apply_one_installment_plan_action) has itself been confirmed as a
-    transfer (counterpart_transaction_id set via TransactionService.link_transfer):
-    a confirmed anchor means the whole purchase was a transfer to/from another
-    Alfred-tracked account, not real spend, so its installments shouldn't count as
-    spend either even though each capture is its own real, non-zero debit.
+    are excluded the same way once their plan's anchor is a confirmed transfer -- see
+    _confirmed_installment_transfer_condition.
     """
     if transaction_type == "expense":
-        Anchor = aliased(Transaction)
-        installment_plan_transfer_confirmed = (
-            select(Anchor.id)
-            .where(
-                Anchor.installment_plan_id == Transaction.installment_plan_id,
-                Anchor.amount == 0,
-                Anchor.counterpart_transaction_id.isnot(None),
-            )
-            .correlate(Transaction)
-            .exists()
-        )
-        is_confirmed_installment_transfer = and_(
-            Transaction.installment_plan_id.isnot(None),
-            installment_plan_transfer_confirmed,
-        )
         return and_(
             or_(
                 Transaction.type == "expense",
@@ -78,7 +85,7 @@ def _spend_condition(transaction_type: str):
                     Transaction.amount < 0,
                 ),
             ),
-            ~is_confirmed_installment_transfer,
+            ~_confirmed_installment_transfer_condition(),
         )
     return Transaction.type == transaction_type
 
@@ -116,7 +123,11 @@ def _filter_conditions(filters: Any, cycle_start_day: int = 1) -> list:
         conditions.append(Transaction.installment_plan_id == filters.installment_plan_id)
     if getattr(filters, "unconfirmed_transfer", False):
         conditions.append(
-            and_(Transaction.type == "transfer", Transaction.counterpart_transaction_id.is_(None))
+            and_(
+                Transaction.type == "transfer",
+                Transaction.counterpart_transaction_id.is_(None),
+                ~_confirmed_installment_transfer_condition(),
+            )
         )
     if filters.merchant is not None:
         conditions.append(Transaction.merchant.ilike(f"%{filters.merchant}%"))

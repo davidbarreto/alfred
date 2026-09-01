@@ -83,7 +83,7 @@ class TestParseTextInstallments:
         signal = result.installment_plans_opened[0]
         assert signal.plan_ref == "00001"
         assert signal.description == "COMPRA 4681 SAMPLE SHOP A"
-        assert signal.original_amount == Decimal("200.00")
+        assert signal.original_amount == Decimal("-200.00")
         # max(position) across the "00001/2" and "00001/3" rows -- the "Fracionada x4"
         # text in movements is no longer consulted at all (see below).
         assert signal.total_installments == 3

@@ -223,7 +223,14 @@ def _parse_text(
                         existing = plan_info.get(ref)
                         if existing is None:
                             plan_info[ref] = _PlanInfo(
-                                description=description, original_amount=valor_transacao, max_position=position
+                                # "Valor Transação" prints unsigned like every other
+                                # amount column here -- negate to match the expense
+                                # sign convention used everywhere else (e.g. -capital
+                                # below), since this value is later compared directly
+                                # against a real Transaction.amount (find_unmatched_transaction)
+                                # and substituted as one for transfer matching
+                                # (get_transfer_match_candidates).
+                                description=description, original_amount=-valor_transacao, max_position=position
                             )
                         else:
                             existing.max_position = max(existing.max_position, position)

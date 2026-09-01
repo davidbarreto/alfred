@@ -32,6 +32,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from sqlalchemy import select
 
 from app.db.session import async_session
+import app.features.finance.accounts.tables  # noqa: F401 -- registers finance.accounts so the
+# InstallmentPlan.account_id FK resolves at flush time; nothing here references it directly.
 from app.features.finance.installment_plans.tables import InstallmentPlan
 
 

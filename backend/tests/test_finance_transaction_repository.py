@@ -64,6 +64,33 @@ class TestGet:
         assert await TransactionRepository(session).get(999) is None
 
 
+class TestGetRelated:
+    async def test_returns_counterpart_when_set_and_resolvable(self):
+        session = _make_session()
+        counterpart = _make_txn_orm(id=2)
+        session.execute.return_value = _scalar_first(counterpart)
+        transaction = _make_txn_orm(id=1)
+        transaction.counterpart_transaction_id = 2
+        result = await TransactionRepository(session).get_related(transaction)
+        assert result == counterpart
+
+    async def test_returns_none_when_no_counterpart(self):
+        session = _make_session()
+        transaction = _make_txn_orm(id=1)
+        transaction.counterpart_transaction_id = None
+        result = await TransactionRepository(session).get_related(transaction)
+        assert result is None
+        session.execute.assert_not_called()
+
+    async def test_returns_none_when_counterpart_missing(self):
+        session = _make_session()
+        session.execute.return_value = _scalar_first(None)
+        transaction = _make_txn_orm(id=1)
+        transaction.counterpart_transaction_id = 99
+        result = await TransactionRepository(session).get_related(transaction)
+        assert result is None
+
+
 class TestGetTransferMatchCandidates:
     def _source(self, **kwargs):
         source = _make_txn_orm(

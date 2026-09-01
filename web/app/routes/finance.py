@@ -568,6 +568,27 @@ async def link_transfer(transaction_id: int, request: Request):
     return Response(status_code=200)
 
 
+@router.get("/transactions/{transaction_id}/related", response_class=Response)
+async def related_transaction(transaction_id: int):
+    """The confirmed transfer counterpart of this transaction, if any -- see
+    TransactionRepository.get_related. Returned as plain JSON (not a template
+    fragment) since the modal renders it client-side, same as transfer_candidates.
+    """
+    try:
+        related = await api.get(f"/finance/transactions/{transaction_id}/related")
+    except httpx.HTTPStatusError as exc:
+        if exc.response.status_code == 404:
+            return JSONResponse({"transaction": None}, status_code=404)
+        return JSONResponse({"transaction": None}, status_code=422)
+    except httpx.HTTPError:
+        return JSONResponse({"transaction": None}, status_code=422)
+    if related is None:
+        return JSONResponse({"transaction": None})
+    accounts_by_id = await _accounts_by_id()
+    account = accounts_by_id.get(related.get("account_id"), {})
+    return JSONResponse({"transaction": {**related, "account_name": account.get("name", "?")}})
+
+
 @router.post("/transactions/{transaction_id}/auto-mirror-transfer", response_class=Response)
 async def auto_mirror_transfer(transaction_id: int):
     try:

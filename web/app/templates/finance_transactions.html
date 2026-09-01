@@ -271,6 +271,18 @@
   <form method="dialog" class="modal-backdrop"><button>close</button></form>
 </dialog>
 
+<dialog id="related-txn-detail-modal" class="modal">
+  <div class="modal-box bg-white rounded-xl border border-gray-200 shadow-lg max-w-sm w-full p-6">
+    <h3 class="text-sm font-semibold text-gray-900 mb-4">Related transaction</h3>
+    <div id="related-txn-detail-list" class="flex flex-col gap-2 text-sm"></div>
+    <div class="flex justify-end gap-2 mt-4">
+      <button type="button" onclick="document.getElementById('related-txn-detail-modal').close()"
+              class="btn btn-sm btn-ghost text-gray-500">Close</button>
+    </div>
+  </div>
+  <form method="dialog" class="modal-backdrop"><button>close</button></form>
+</dialog>
+
 <script>
 const TXN_LIST_URL = "/finance/transactions/list";
 let _txnOffset = {{ query_offset }};
@@ -570,8 +582,8 @@ function openTransactionDetailModal(txn, accountName) {
   openTransferMatchDetailModal({ ...txn, account_name: accountName });
 }
 
-function openTransferMatchDetailModal(c) {
-  const listEl = document.getElementById("transfer-match-detail-list");
+function _renderTxnDetailRows(c, listElId, { showRelatedLink = false } = {}) {
+  const listEl = document.getElementById(listElId);
   listEl.innerHTML = "";
   const amountNum = parseFloat(c.amount);
   const planAmountNum = parseFloat(c.plan_original_amount);
@@ -607,7 +619,36 @@ function openTransferMatchDetailModal(c) {
     rowEl.appendChild(valueEl);
     listEl.appendChild(rowEl);
   }
+  if (showRelatedLink && c.counterpart_transaction_id) {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "btn btn-xs btn-ghost text-indigo-600 self-start mt-1";
+    btn.textContent = "View related transaction →";
+    btn.onclick = () => openRelatedTransactionModal(c.id);
+    listEl.appendChild(btn);
+  }
+}
+
+function openTransferMatchDetailModal(c) {
+  _renderTxnDetailRows(c, "transfer-match-detail-list", { showRelatedLink: true });
   document.getElementById("transfer-match-detail-modal").showModal();
+}
+
+async function openRelatedTransactionModal(currentTxnId) {
+  const listEl = document.getElementById("related-txn-detail-list");
+  listEl.innerHTML = "";
+  try {
+    const res = await fetch(`/finance/transactions/${currentTxnId}/related`);
+    const data = await res.json();
+    if (!res.ok || !data.transaction) {
+      listEl.innerHTML = '<p class="text-gray-400">No related transaction found.</p>';
+    } else {
+      _renderTxnDetailRows(data.transaction, "related-txn-detail-list", { showRelatedLink: false });
+    }
+  } catch (err) {
+    listEl.innerHTML = '<p class="text-gray-400">Failed to load related transaction.</p>';
+  }
+  document.getElementById("related-txn-detail-modal").showModal();
 }
 
 async function autoCreateTransferMirror() {

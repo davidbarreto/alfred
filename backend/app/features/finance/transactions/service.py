@@ -171,6 +171,15 @@ class TransactionService:
             return None
         return TransactionRead.model_validate(txn)
 
+    async def get_related(self, transaction_id: int) -> TransactionRead | None:
+        transaction = await self._repo.get(transaction_id)
+        if transaction is None:
+            return None
+        related = await self._repo.get_related(transaction)
+        if related is None:
+            return None
+        return TransactionRead.model_validate(related)
+
     async def list(self, filters: TransactionFilters) -> list[TransactionRead]:
         cycle_start_day = await self._settings.get_cycle_start_day()
         txns = await self._repo.list(filters, cycle_start_day)

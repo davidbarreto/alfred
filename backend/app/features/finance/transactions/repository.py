@@ -120,6 +120,17 @@ class TransactionRepository:
         )
         return result.scalars().first()
 
+    async def get_related(self, transaction: Transaction) -> Transaction | None:
+        """The confirmed transfer counterpart, if any -- two cheap PK lookups rather
+        than a join, since this is an on-demand single-row fetch, not a list-rendering
+        hot path. Returns None both when there's no counterpart and when the FK is
+        dangling (e.g. the counterpart was deleted), so callers don't need to
+        special-case either.
+        """
+        if transaction.counterpart_transaction_id is None:
+            return None
+        return await self.get(transaction.counterpart_transaction_id)
+
     async def get_transfer_match_candidates(self, transaction: Transaction) -> list[Transaction]:
         """Other accounts' unmatched legs that could be this transaction's missing
         counterpart, same day only, not a mirror row. A candidate's counterpart_account_id

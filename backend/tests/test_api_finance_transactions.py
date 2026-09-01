@@ -338,6 +338,29 @@ class TestBulkMoveTransactions:
         assert response.status_code == 403
 
 
+class TestGetRelatedTransaction:
+    def test_returns_related_transaction(self, client, mock_txn_service):
+        mock_txn_service.get_related.return_value = _txn_read(id=2)
+        response = client.get("/finance/transactions/1/related", headers=AUTH)
+        assert response.status_code == 200
+        assert response.json()["id"] == 2
+
+    def test_no_counterpart_returns_200_null(self, client, mock_txn_service):
+        mock_txn_service.get_related.return_value = None
+        response = client.get("/finance/transactions/1/related", headers=AUTH)
+        assert response.status_code == 200
+        assert response.json() is None
+
+    def test_not_found_returns_404(self, client, mock_txn_service):
+        mock_txn_service.get.return_value = None
+        response = client.get("/finance/transactions/999/related", headers=AUTH)
+        assert response.status_code == 404
+        assert response.json()["detail"] == "Transaction not found"
+
+    def test_requires_auth(self, client):
+        assert client.get("/finance/transactions/1/related").status_code == 403
+
+
 class TestTransferCandidates:
     def test_returns_candidates(self, client):
         response = client.get("/finance/transactions/1/transfer-candidates", headers=AUTH)

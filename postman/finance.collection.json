@@ -1749,6 +1749,40 @@
           }
         },
         {
+          "name": "05a - Get Related Transaction",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Related transaction is Leg B', () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.id).to.eql(parseInt(pm.environment.get('finance_transfer_b_id')));",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/finance/transactions/{{finance_transfer_a_id}}/related",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "finance",
+                "transactions",
+                "{{finance_transfer_a_id}}",
+                "related"
+              ]
+            }
+          }
+        },
+        {
           "name": "06 - Link Already-Matched Leg Returns 400",
           "event": [
             {

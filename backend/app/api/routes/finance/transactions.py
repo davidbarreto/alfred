@@ -214,6 +214,14 @@ async def search_link_candidates(
     return await service.search_link_candidates(transaction_id, q)
 
 
+@router.get("/{transaction_id}/related", response_model=TransactionRead | None)
+async def get_related_transaction(transaction_id: int, service: TransactionServiceDep):
+    txn = await service.get(transaction_id)
+    if txn is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Transaction not found")
+    return await service.get_related(transaction_id)
+
+
 @router.post("/{transaction_id}/link-transfer", response_model=TransactionRead)
 async def link_transfer(
     transaction_id: int, request: TransferLinkRequest, service: TransactionServiceDep

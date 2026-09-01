@@ -80,6 +80,29 @@ class TestGet:
         assert await service.get(999) is None
 
 
+class TestGetRelated:
+    async def test_returns_none_when_transaction_not_found(self, service):
+        service._repo.get.return_value = None
+        assert await service.get_related(999) is None
+        service._repo.get_related.assert_not_called()
+
+    async def test_returns_none_when_no_counterpart(self, service):
+        transaction = _make_txn_orm()
+        service._repo.get.return_value = transaction
+        service._repo.get_related.return_value = None
+        assert await service.get_related(1) is None
+        service._repo.get_related.assert_called_once_with(transaction)
+
+    async def test_returns_counterpart_as_transaction_read(self, service):
+        transaction = _make_txn_orm(id=1, counterpart_transaction_id=2)
+        counterpart = _make_txn_orm(id=2, counterpart_transaction_id=1)
+        service._repo.get.return_value = transaction
+        service._repo.get_related.return_value = counterpart
+        result = await service.get_related(1)
+        assert isinstance(result, TransactionRead)
+        assert result.id == 2
+
+
 class TestList:
     async def test_returns_list_of_transaction_reads(self, service):
         service._repo.list.return_value = [_make_txn_orm(id=i) for i in range(3)]

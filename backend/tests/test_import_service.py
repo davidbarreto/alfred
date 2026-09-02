@@ -726,7 +726,7 @@ class TestCommit:
 
         await service.commit(_commit_request(rows))
 
-        service._account_repo.adjust_balance.assert_awaited_once_with(1, Decimal("-100.00"))
+        service._account_repo.adjust_balance.assert_awaited_once_with(1, Decimal("100.00"))
 
     @pytest.mark.asyncio
     async def test_forced_row_bypasses_existing_hash_skip(self):
@@ -855,7 +855,7 @@ class TestCreateTransferMirrors:
         assert service._txn_repo.create.await_args.kwargs["amount_eur"] == Decimal("-100.00")
         # The mirror is the counterpart account's own real transaction -- it moves
         # that account's balance by its own amount (see create()'s note).
-        service._account_repo.adjust_balance.assert_awaited_once_with(9, Decimal("100.00"))
+        service._account_repo.adjust_balance.assert_awaited_once_with(9, Decimal("-100.00"))
         service._txn_repo.set_counterpart_transaction.assert_awaited_once_with(100, 200)
 
     async def test_skips_mirror_when_already_confirmed_linked(self):
@@ -1617,7 +1617,7 @@ class TestCommitGrouped:
         calls = [c.args for c in service._account_repo.adjust_balance.await_args_list]
         assert (2, Decimal("-100.00")) not in calls  # phantom counterpart credit for the EUR leg
         assert (1, Decimal("434.09")) not in calls  # phantom counterpart credit for the PLN leg
-        assert calls == [(1, Decimal("100.00")), (2, Decimal("-434.09"))]
+        assert calls == [(1, Decimal("-100.00")), (2, Decimal("434.09"))]
 
     @pytest.mark.asyncio
     async def test_does_not_confirm_when_one_leg_of_the_pair_was_skipped(self):

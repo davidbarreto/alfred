@@ -315,16 +315,17 @@ class TransactionRepository:
 
     async def get_filtered_sum(self, filters: TransactionFilters, cycle_start_day: int = 1) -> tuple[Decimal, int]:
         """Net signed total across every transaction matching filters.type (and the
-        rest of the filter set), regardless of pagination -- income credits, expense
-        and transfer debit, matching the sign convention used everywhere else
-        (_account_delta, get_ledger_events). Used for the "total across all pages of
-        this filtered result" summary on the transactions page.
+        rest of the filter set), regardless of pagination -- expense debits (stored
+        as an unsigned magnitude); income and transfer both already store their real
+        signed delta directly, so they're summed as-is, matching the sign convention
+        used everywhere else (_account_delta, get_ledger_events). Used for the "total
+        across all pages of this filtered result" summary on the transactions page.
         """
         # No currency filter means the list itself spans every currency, so the sum
         # must be normalized (amount_eur) rather than adding raw native amounts
         # across currencies -- same fallback GLOBAL_CURRENCY uses everywhere else.
         amount_column = _amount_column(filters.currency or GLOBAL_CURRENCY)
-        delta = case((Transaction.type == "income", amount_column), else_=-amount_column)
+        delta = case((Transaction.type == "expense", -amount_column), else_=amount_column)
         query = select(func.coalesce(func.sum(delta), 0), func.count(Transaction.id))
         for condition in _filter_conditions(filters, cycle_start_day):
             query = query.where(condition)
@@ -798,46 +799,25 @@ class TransactionRepository:
         (account_id, date, signed delta) triples -- the raw material for
         reconstructing a running per-account (and total) balance over time.
 
-        Income credits its account; expense and unconfirmed transfers debit their
-        account (money left the tracked system, or its landing account was never
-        confirmed); confirmed internal transfers (counterpart_transaction_id set,
-        see TransactionService.link_transfer) debit the source *and* credit the
-        counterpart account -- two legs from one row, so those are produced as a
-        second, unioned select. counterpart_account_id alone is not enough to credit
-        the counterpart -- it can be an unconfirmed rule/user guess with no verified
-        matching transaction.
-
-        A source leg whose counterpart account has auto_mirror_transfers enabled
-        (see Account.auto_mirror_transfers) has a real mirror Transaction row on the
-        counterpart side instead -- that mirror already contributes its own credit
-        via source_legs, so the synthetic counterpart leg is skipped for it here to
-        avoid crediting the counterpart account twice.
+        Every transaction only ever moves its own account's balance by its own
+        amount -- expense debits (stored as an unsigned magnitude); income and
+        transfer both already store their real signed delta directly, so they're
+        used as-is (see TransactionService._account_delta). counterpart_account_id
+        is pure linking metadata, never a second account's balance mutation here
+        either: the counterpart's own balance comes from its own transaction row
+        (an independently-imported/confirmed leg, or a mirror), so crediting it a
+        second time from this row would double-count it -- mirrors
+        Account.balance's own incremental maintenance so the two never disagree.
         """
         amount_column = _amount_column(currency)
-        delta = case((Transaction.type == "income", amount_column), else_=-amount_column)
-        Mirror = aliased(Transaction)
-        has_mirror = (
-            select(Mirror.id)
-            .where(Mirror.id == Transaction.counterpart_transaction_id, Mirror.source == "auto_transfer")
-            .exists()
-        )
+        delta = case((Transaction.type == "expense", -amount_column), else_=amount_column)
 
-        source_legs = select(Transaction.account_id, Transaction.date, delta).where(
+        query = select(Transaction.account_id, Transaction.date, delta).where(
             Transaction.date <= to_date
         )
-        counterpart_legs = select(
-            Transaction.counterpart_account_id, Transaction.date, amount_column
-        ).where(
-            Transaction.type == "transfer",
-            Transaction.counterpart_transaction_id.is_not(None),
-            Transaction.date <= to_date,
-            ~has_mirror,
-        )
         if currency != GLOBAL_CURRENCY:
-            source_legs = source_legs.where(Transaction.currency == currency)
-            counterpart_legs = counterpart_legs.where(Transaction.currency == currency)
+            query = query.where(Transaction.currency == currency)
 
-        query = source_legs.union_all(counterpart_legs)
         result = await self._session.execute(query)
         return [
             (row[0], row[1].date() if hasattr(row[1], "date") else row[1], Decimal(str(row[2])))

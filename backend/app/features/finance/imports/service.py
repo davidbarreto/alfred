@@ -671,7 +671,10 @@ class ImportService:
                 if row.supersedes_installment_plan_id is not None:
                     continue
                 amount = row.amount if row.type == "transfer" else abs(row.amount)
-                delta += amount if row.type == "income" else -amount
+                # expense debits (unsigned magnitude, sign implied by type); income
+                # and transfer both already carry their real signed delta, so they're
+                # added as-is (see TransactionService._account_delta).
+                delta += -amount if row.type == "expense" else amount
             if delta:
                 await self._account_repo.adjust_balance(account_id, delta)
 
@@ -711,7 +714,9 @@ class ImportService:
                 build_mirror_transaction_create(txn),
                 amount_eur=(-txn.amount_eur if txn.amount_eur is not None else None),
             )
-            mirror_delta = mirror.amount if mirror.type == "income" else -mirror.amount
+            # mirror.type is always "transfer" -- its stored amount is already the
+            # real signed delta (see TransactionService._account_delta), used as-is.
+            mirror_delta = -mirror.amount if mirror.type == "expense" else mirror.amount
             await self._account_repo.adjust_balance(mirror.account_id, mirror_delta)
             await self._txn_repo.set_counterpart_transaction(txn.id, mirror.id)
             logger.info(

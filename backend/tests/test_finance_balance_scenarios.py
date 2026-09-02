@@ -92,9 +92,11 @@ class TestSingleAccountLedgerScenario:
         # adjust_balance from backfill/account creation, not a transaction.
         await service._account_repo.adjust_balance(checking_account, Decimal("1000.00"))
 
-        # expense/transfer amounts are stored positive when money LEAVES this
-        # account and negative when it ARRIVES -- transfer reuses the exact same
-        # sign convention as expense (see _account_delta: -amount for both).
+        # expense amounts are stored positive (an unsigned magnitude, always a
+        # debit). income and transfer amounts are stored as the real signed delta
+        # directly -- positive means money arrived/credited this account, negative
+        # means it left/debited it (see _account_delta and every statement parser,
+        # which reads the bank's own signed column as-is for these two types).
         rows = [
             _txn(checking_account, "4.50", "expense", "Coffee Shop"),
             _txn(checking_account, "38.20", "expense", "Grocery Store"),
@@ -102,21 +104,21 @@ class TestSingleAccountLedgerScenario:
             _txn(checking_account, "2500.00", "income", "Salary"),
             # Confirmed transfer to a savings account -- both legs already real
             # (imported/matched independently), so this account's own leg is the
-            # only thing that should move ITS balance.
+            # only thing that should move ITS balance. Negative: money is leaving.
             _txn(
-                checking_account, "300.00", "transfer", "Savings",
+                checking_account, "-300.00", "transfer", "Savings",
                 counterpart_account_id=2, counterpart_transaction_id=999,
             ),
-            # Confirmed transfer paying down a credit card.
+            # Confirmed transfer paying down a credit card -- leaving, negative.
             _txn(
-                checking_account, "150.00", "transfer", "Credit Card Payment",
+                checking_account, "-150.00", "transfer", "Credit Card Payment",
                 counterpart_account_id=3, counterpart_transaction_id=998,
             ),
             _txn(checking_account, "65.30", "expense", "Utility Bill"),
             # A confirmed incoming transfer (e.g. a refund routed through another
-            # tracked account) -- negative, since money is arriving.
+            # tracked account) -- positive, since money is arriving.
             _txn(
-                checking_account, "-40.00", "transfer", "Refund via Wallet",
+                checking_account, "40.00", "transfer", "Refund via Wallet",
                 counterpart_account_id=4, counterpart_transaction_id=997,
             ),
         ]
@@ -145,7 +147,7 @@ class TestAutoMirroredTransferScenario:
         service = service_with_state(auto_mirror_accounts={savings_account})
 
         await service.create(_txn(
-            checking_account, "500.00", "transfer", "Move to Savings",
+            checking_account, "-500.00", "transfer", "Move to Savings",
             counterpart_account_id=savings_account,
         ))
 
@@ -171,11 +173,11 @@ class TestMultiCurrencyAccountScenario:
         await service._account_repo.adjust_balance(usd_wallet, Decimal("50.00"))
 
         await service.create(_txn(
-            eur_wallet, "90.00", "transfer", "Currency Exchange",
+            eur_wallet, "-90.00", "transfer", "Currency Exchange",
             counterpart_account_id=usd_wallet, counterpart_transaction_id=500,
         ))
         await service.create(_txn(
-            usd_wallet, "-97.50", "transfer", "Currency Exchange",
+            usd_wallet, "97.50", "transfer", "Currency Exchange",
             counterpart_account_id=eur_wallet, counterpart_transaction_id=499,
         ))
 

@@ -5,14 +5,21 @@ in aggregate.
 
 Running balance starts at opening_balance (0 if unset) and, for each transaction in
 date order, applies the same signed-delta rule as the live app (see
-TransactionService._account_delta / ImportService._sync_account_balance):
-income credits; expense and transfer legs debit their own account; a transfer's
-counterpart_account_id also credits this account when IT is the counterpart side
-(counterpart_transaction_id NULL only -- see the recent double-counting fix) --
-this script only traces one account at a time, so a counterpart-credit is shown
-inline as a synthetic row when this account is the *destination* of an unconfirmed
-guess from another account's transaction (not modeled here; run per source account
-instead if that matters for the account being traced).
+TransactionService._account_delta): expense debits (stored as an unsigned
+magnitude); income and transfer both already store their real signed delta
+directly (positive = arrived/credited, negative = left/debited this account), so
+they're added as-is. Only ever touches this account -- counterpart_account_id is
+pure linking metadata, never a second account's balance mutation (see
+TransactionService.create's note); the counterpart's own balance always comes
+from its own transaction row, so run this script against that account directly
+to see its side.
+
+Rows dated before opening_balance_date are marked [pre-opening] but still
+included in the running total below, unlike backfill_account_balances.py's
+delta-sum fallback (which excludes them, since opening_balance already reflects
+that history) -- this script shows the full ledger for inspection; check the
+[pre-opening] flag rather than assuming this running total matches the backfill
+script's result.
 
 Makes no changes.
 
@@ -57,9 +64,11 @@ async def main(account_id: int) -> None:
 
         rows = (await session.execute(_QUERY, {"account_id": account_id})).all()
         for row in rows:
-            delta = row.amount if row.type == "income" else -row.amount
+            delta = -row.amount if row.type == "expense" else row.amount
             running += delta
             flags = []
+            if account.opening_balance_date is not None and row.date.date() < account.opening_balance_date:
+                flags.append("pre-opening")
             if row.counterpart_account_id is not None:
                 flags.append(
                     f"counterpart={row.counterpart_account_id}"

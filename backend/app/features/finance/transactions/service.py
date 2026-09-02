@@ -48,13 +48,18 @@ from app.features.finance.transactions.schemas import (
 
 
 def _account_delta(type_: str, amount: Decimal) -> Decimal:
-    """Signed effect of a transaction on its own account's balance -- income credits,
-    expense and transfer (the source leg; a transfer's counterpart leg is applied
-    separately by the caller) debit. Mirrors TransactionRepository.get_ledger_events'
-    delta convention so incremental Account.balance maintenance and the net-worth
-    ledger reconstruction never disagree.
+    """Signed effect of a transaction on its own account's balance. expense stores an
+    unsigned magnitude (sign is implied by type, always a debit: -amount). income and
+    transfer both store the real signed delta directly -- positive means money
+    arrived/credited this account, negative means it left/debited it (see
+    _spend_condition's "Only a negative amount can count as spend" and every
+    statement parser, which reads the bank's own signed column as-is for these two
+    types) -- so their delta is just the amount, unchanged. Mirrors
+    TransactionRepository.get_ledger_events' delta convention so incremental
+    Account.balance maintenance and the net-worth ledger reconstruction never
+    disagree.
     """
-    return amount if type_ == "income" else -amount
+    return -amount if type_ == "expense" else amount
 
 
 def build_mirror_transaction_create(source: Transaction) -> TransactionCreate:
@@ -571,22 +576,29 @@ class TransactionService:
         if not same_currency_opposite_amount and not cross_currency_opposite_sign:
             raise TransferMatchError("Amounts do not match")
 
-        updated = await self.update(
-            transaction.id,
-            TransactionUpdate(
-                type="transfer",
-                counterpart_account_id=counterpart.account_id,
-                counterpart_transaction_id=counterpart.id,
-            ),
+        # expense stores an unsigned magnitude (sign implied by type); transfer
+        # stores the real signed delta directly (see _account_delta). Converting a
+        # leg FROM expense TO transfer must therefore negate its stored amount to
+        # preserve the real-world direction it already correctly represented --
+        # income needs no adjustment, since it already stores a signed-equivalent
+        # positive value transfer's "positive = arrived" convention agrees with.
+        # amount is omitted entirely (not just left None) when no negation is
+        # needed, since TransactionUpdate uses exclude_unset=True downstream --
+        # an explicit amount=None would still register as "set" and null it out.
+        transaction_fields: dict = dict(
+            type="transfer", counterpart_account_id=counterpart.account_id, counterpart_transaction_id=counterpart.id,
         )
-        await self.update(
-            counterpart.id,
-            TransactionUpdate(
-                type="transfer",
-                counterpart_account_id=transaction.account_id,
-                counterpart_transaction_id=transaction.id,
-            ),
+        if transaction.type == "expense":
+            transaction_fields["amount"] = -transaction.amount
+        updated = await self.update(transaction.id, TransactionUpdate(**transaction_fields))
+
+        counterpart_fields: dict = dict(
+            type="transfer", counterpart_account_id=transaction.account_id, counterpart_transaction_id=transaction.id,
         )
+        if counterpart.type == "expense":
+            counterpart_fields["amount"] = -counterpart.amount
+        await self.update(counterpart.id, TransactionUpdate(**counterpart_fields))
+
         assert updated is not None
         logger.info("Transfer linked: id=%d counterpart_id=%d", transaction.id, counterpart.id)
         return updated

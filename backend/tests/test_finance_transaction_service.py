@@ -183,13 +183,13 @@ class TestCreateBalanceMaintenance:
             amount=Decimal("100"), currency="EUR", type="transfer",
             counterpart_account_id=2,
         ))
-        service._account_repo.adjust_balance.assert_awaited_once_with(1, Decimal("-100"))
+        service._account_repo.adjust_balance.assert_awaited_once_with(1, Decimal("100"))
 
     async def test_transfer_without_counterpart_only_debits_source(self, service):
         service._repo.create.return_value = _make_txn_orm(type="transfer")
         await service.create(TransactionCreate(
             account_id=1, date="2026-06-12T10:00:00",
-            amount=Decimal("100"), currency="EUR", type="transfer",
+            amount=Decimal("-100"), currency="EUR", type="transfer",
         ))
         service._account_repo.adjust_balance.assert_awaited_once_with(1, Decimal("-100"))
 
@@ -236,8 +236,8 @@ class TestCreateAutoMirror:
         ))
 
         calls = service._account_repo.adjust_balance.await_args_list
-        assert calls[0].args == (1, Decimal("-100"))
-        assert calls[1].args == (2, Decimal("100"))
+        assert calls[0].args == (1, Decimal("100"))
+        assert calls[1].args == (2, Decimal("-100"))
         assert len(calls) == 2
 
     async def test_no_mirror_when_counterpart_flag_disabled(self, service):
@@ -503,8 +503,8 @@ class TestUpdateAutoMirror:
 
         service._repo.get_mirror.assert_not_awaited()
         calls = service._account_repo.adjust_balance.await_args_list
-        assert calls[0].args == (2, Decimal("-100.00"))
-        assert calls[1].args == (2, Decimal("150.00"))
+        assert calls[0].args == (2, Decimal("100.00"))
+        assert calls[1].args == (2, Decimal("-150.00"))
 
 
 class TestDelete:
@@ -542,7 +542,7 @@ class TestDeleteBalanceMaintenance:
 
         await service.delete(1)
 
-        service._account_repo.adjust_balance.assert_awaited_once_with(1, Decimal("100.00"))
+        service._account_repo.adjust_balance.assert_awaited_once_with(1, Decimal("-100.00"))
 
 
 class TestDeleteAutoMirror:
@@ -557,7 +557,7 @@ class TestDeleteAutoMirror:
 
         await service.delete(11)
 
-        service._account_repo.adjust_balance.assert_awaited_once_with(2, Decimal("-100.00"))
+        service._account_repo.adjust_balance.assert_awaited_once_with(2, Decimal("100.00"))
 
     async def test_deleting_the_source_leg_only_reverses_its_own_account(self, service):
         service._repo.get.return_value = _make_txn_orm(
@@ -567,7 +567,7 @@ class TestDeleteAutoMirror:
 
         await service.delete(10)
 
-        service._account_repo.adjust_balance.assert_awaited_once_with(1, Decimal("100.00"))
+        service._account_repo.adjust_balance.assert_awaited_once_with(1, Decimal("-100.00"))
 
 
 class TestBulkMoveAccount:
@@ -823,10 +823,18 @@ class TestLinkTransfer:
         result = await service.link_transfer(1, 2)
 
         assert isinstance(result, TransactionRead)
+        # txn started as expense (unsigned magnitude, 50.00 implying a debit) --
+        # converting it to transfer (real signed delta) must negate the stored
+        # amount to -50.00 to preserve that same real-world debit (see
+        # link_transfer's note). counterpart was already type='transfer', so its
+        # amount is left untouched.
         service._repo.update.assert_any_await(
             1,
-            TransactionUpdate(type="transfer", counterpart_account_id=2, counterpart_transaction_id=2),
-            amount_eur=None, recompute_amount_eur=False,
+            TransactionUpdate(
+                type="transfer", amount=Decimal("-50.00"),
+                counterpart_account_id=2, counterpart_transaction_id=2,
+            ),
+            amount_eur=None, recompute_amount_eur=True,
         )
         service._repo.update.assert_any_await(
             2,
@@ -869,8 +877,8 @@ class TestLinkTransfer:
         # sides are now confirmed-linked (counterpart_transaction_id set).
         calls = [c.args for c in service._account_repo.adjust_balance.await_args_list]
         assert calls == [
-            (1, Decimal("-50.00")), (1, Decimal("50.00")),
-            (2, Decimal("50.00")), (2, Decimal("-50.00")),
+            (1, Decimal("50.00")), (1, Decimal("-50.00")),
+            (2, Decimal("-50.00")), (2, Decimal("50.00")),
         ]
 
     async def test_rejects_already_linked_counterpart(self, service):

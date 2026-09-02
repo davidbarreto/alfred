@@ -27,14 +27,17 @@ exactly:
    of it -- opening_balance_date plays no role in this branch at all.
 
 2. Only accounts with NO balance_after anywhere in their history (card-format
-   statements, manual entries) fall back to summing signed transaction deltas --
-   income credits; expense AND transfer legs both debit/credit only their OWN
-   account, by their own stored amount, exactly like an expense/income (see
-   TransactionService.create's note: counterpart_account_id is pure linking
-   metadata, never a second account's balance mutation -- the counterpart's own
-   balance always comes from its own transaction row, e.g. a mirror or an
+   statements, manual entries) fall back to summing signed transaction deltas.
+   expense stores an unsigned magnitude (sign implied by type, always a debit);
+   income and transfer both store their real signed delta directly -- positive
+   means money arrived/credited this account, negative means it left/debited it
+   (every statement parser reads the bank's own signed column as-is for these
+   two types) -- so they're summed as-is (see TransactionService._account_delta).
+   counterpart_account_id is pure linking metadata, never a second account's
+   balance mutation (see TransactionService.create's note) -- the counterpart's
+   own balance always comes from its own transaction row, e.g. a mirror or an
    independently-imported leg, so this never reaches into another account here
-   either). Summed on top of opening_balance (0 if unset), and restricted to
+   either. Summed on top of opening_balance (0 if unset), and restricted to
    transactions on/after opening_balance_date: if opening_balance was captured
    as a snapshot after existing history (rather than at zero, before any
    transactions), that earlier history's effect is already baked into
@@ -88,7 +91,7 @@ def compute_account_balance(
     ]
     delta = Decimal("0")
     for t in relevant:
-        delta += t.amount if t.type == "income" else -t.amount
+        delta += -t.amount if t.type == "expense" else t.amount
     return (opening_balance or Decimal("0")) + delta
 
 

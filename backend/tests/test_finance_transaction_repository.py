@@ -894,7 +894,11 @@ class TestGetLedgerEvents:
             (1, date(2026, 6, 2), Decimal("-30.00")),
         ]
 
-    async def test_query_unions_counterpart_leg_for_transfers(self):
+    async def test_query_never_reaches_into_a_counterpart_account(self):
+        """Every event is this account's own row moving its own balance --
+        counterpart_account_id is pure linking metadata, never a second account's
+        balance mutation (see TransactionService.create's note), so the query must
+        never union in a synthetic counterpart-crediting leg."""
         session = _make_session()
         result = MagicMock()
         result.all.return_value = []
@@ -902,8 +906,8 @@ class TestGetLedgerEvents:
         await TransactionRepository(session).get_ledger_events(date(2026, 6, 30))
         query = session.execute.call_args.args[0]
         sql = str(query.compile(compile_kwargs={"literal_binds": True}))
-        assert "UNION ALL" in sql.upper()
-        assert "counterpart_account_id" in sql
+        assert "UNION" not in sql.upper()
+        assert "counterpart_account_id" not in sql
 
     async def test_global_currency_uses_amount_eur(self):
         session = _make_session()
@@ -916,23 +920,19 @@ class TestGetLedgerEvents:
         assert "amount_eur" in sql
         assert "transactions.currency =" not in sql
 
-    async def test_counterpart_leg_skipped_for_rows_that_have_a_mirror(self):
-        """A transfer whose counterpart account has auto_mirror_transfers enabled gets
-        a real mirror Transaction row on the counterpart side (see
-        TransactionService._maybe_create_mirror); that mirror already contributes its
-        own credit via the unconditional source_legs half of the union, so the
-        synthetic counterpart leg must be excluded via a NOT EXISTS guard to avoid
-        double-crediting the counterpart account.
-        """
+    async def test_expense_amounts_are_negated_income_and_transfer_used_as_is(self):
+        """expense stores an unsigned magnitude (negated to debit); income and
+        transfer both already store their real signed delta directly, so the CASE
+        expression must only flip sign for expense (see
+        TransactionService._account_delta)."""
         session = _make_session()
         result = MagicMock()
         result.all.return_value = []
         session.execute.return_value = result
         await TransactionRepository(session).get_ledger_events(date(2026, 6, 30))
         query = session.execute.call_args.args[0]
-        sql = str(query.compile(compile_kwargs={"literal_binds": True})).upper()
-        assert "NOT (EXISTS" in sql or "NOT EXISTS" in sql
-        assert "AUTO_TRANSFER" in sql
+        sql = str(query.compile(compile_kwargs={"literal_binds": True})).lower()
+        assert "case when (finance.transactions.type = 'expense')" in sql
 
 
 class TestGetMirror:

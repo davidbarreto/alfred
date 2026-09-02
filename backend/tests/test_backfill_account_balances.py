@@ -24,13 +24,14 @@ class TestNoBalanceAfterAnywhere:
         balance = compute_account_balance(Decimal("100.00"), None, transactions)
         assert balance == Decimal("100.00") - Decimal("20.00") + Decimal("500.00") - Decimal("15.50")
 
-    def test_transfer_debits_and_credits_like_expense(self):
-        """A transfer with a positive amount leaves the account (like an
-        expense); negative arrives (like income) -- see
-        TransactionService._account_delta's sign convention."""
+    def test_transfer_stores_its_real_signed_delta_like_income(self):
+        """A transfer with a negative amount leaves the account (a debit);
+        positive arrives (a credit) -- transfer stores its real signed delta
+        directly, just like income (see
+        TransactionService._account_delta's sign convention)."""
         transactions = [
-            _txn(1, date(2026, 1, 5), type_="transfer", amount="300.00"),   # leaving
-            _txn(2, date(2026, 1, 6), type_="transfer", amount="-40.00"),   # arriving
+            _txn(1, date(2026, 1, 5), type_="transfer", amount="-300.00"),  # leaving
+            _txn(2, date(2026, 1, 6), type_="transfer", amount="40.00"),    # arriving
         ]
         balance = compute_account_balance(Decimal("1000.00"), None, transactions)
         assert balance == Decimal("1000.00") - Decimal("300.00") + Decimal("40.00")

@@ -9,18 +9,22 @@ TransactionService._reconcile_balance and ImportService._sync_account_balance),
 but existing accounts need their balance reconstructed once from history
 first -- this script does that, then incremental maintenance takes over.
 
-Two branches, mirroring ImportService._sync_account_balance exactly:
+compute_account_balance() (below) is the one piece of decision logic and is
+covered by tests/test_backfill_account_balances.py with plain Python inputs --
+no DB needed. Two branches, mirroring ImportService._sync_account_balance
+exactly:
 
 1. Any account with at least one transaction carrying balance_after (ActivoBank
    checking, Banco Inter, Revolut -- statements that report their own running
    "Saldo" per row) gets set directly to the balance_after of its most recently
-   dated such transaction. This is the authoritative, bank-reported number --
-   reconstructing it by summing deltas is unnecessary AND fragile: it has to
-   correctly account for opening_balance/opening_balance_date overlap with
-   pre-existing history, confirmed vs. unconfirmed transfer legs, and
-   installment-plan lump-sum superseding, and a bug in any one of those
-   silently compounds across the account's entire history. Trusting the
-   statement's own number sidesteps all of it.
+   dated such transaction (ties broken by highest id). This is the
+   authoritative, bank-reported number -- reconstructing it by summing deltas
+   is unnecessary AND fragile: it has to correctly account for
+   opening_balance/opening_balance_date overlap with pre-existing history,
+   confirmed vs. unconfirmed transfer legs, and installment-plan lump-sum
+   superseding, and a bug in any one of those silently compounds across the
+   account's entire history. Trusting the statement's own number sidesteps all
+   of it -- opening_balance_date plays no role in this branch at all.
 
 2. Only accounts with NO balance_after anywhere in their history (card-format
    statements, manual entries) fall back to summing signed transaction deltas --
@@ -42,61 +46,74 @@ Usage (from backend/, with the venv active):
     python scripts/backfill_account_balances.py
 """
 import asyncio
+from dataclasses import dataclass
+from datetime import date
+from decimal import Decimal
 
-from sqlalchemy import text
+from sqlalchemy import select
 
+import app.main  # noqa: F401 -- importing every router transitively imports every tables.py,
+# which SQLAlchemy needs to fully configure before a flush can resolve any model's FKs/
+# relationships (see fix_installment_plan_original_amount_sign.py for the same need).
 from app.db.session import async_session
+from app.features.finance.accounts.tables import Account
+from app.features.finance.transactions.tables import Transaction
 
-_STATEMENT_BALANCE_QUERY = text(
-    """
-    WITH latest AS (
-        SELECT DISTINCT ON (account_id) account_id, balance_after
-        FROM finance.transactions
-        WHERE balance_after IS NOT NULL
-        ORDER BY account_id, date DESC, id DESC
-    )
-    UPDATE finance.accounts a
-    SET balance = l.balance_after
-    FROM latest l
-    WHERE a.id = l.account_id
-    RETURNING a.id, a.name, a.balance
-    """
-)
 
-_DELTA_SUM_QUERY = text(
-    """
-    WITH statement_tracked AS (
-        SELECT DISTINCT account_id FROM finance.transactions WHERE balance_after IS NOT NULL
-    ),
-    totals AS (
-        SELECT t.account_id,
-               SUM(CASE WHEN t.type = 'income' THEN t.amount ELSE -t.amount END) AS total_delta
-        FROM finance.transactions t
-        JOIN finance.accounts a ON a.id = t.account_id
-        WHERE t.account_id NOT IN (SELECT account_id FROM statement_tracked)
-          AND (a.opening_balance_date IS NULL OR t.date >= a.opening_balance_date)
-        GROUP BY t.account_id
-    )
-    UPDATE finance.accounts a
-    SET balance = COALESCE(a.opening_balance, 0) + COALESCE(t.total_delta, 0)
-    FROM totals t
-    WHERE a.id = t.account_id
-      AND a.id NOT IN (SELECT account_id FROM statement_tracked)
-    RETURNING a.id, a.name, a.balance
-    """
-)
+@dataclass(frozen=True)
+class LedgerTransaction:
+    """Just the fields compute_account_balance needs, decoupled from the ORM so
+    the function can be unit tested with plain Python objects."""
+
+    id: int
+    date: date
+    type: str
+    amount: Decimal
+    balance_after: Decimal | None = None
+
+
+def compute_account_balance(
+    opening_balance: Decimal | None,
+    opening_balance_date: date | None,
+    transactions: list[LedgerTransaction],
+) -> Decimal:
+    balance_rows = [t for t in transactions if t.balance_after is not None]
+    if balance_rows:
+        latest = max(balance_rows, key=lambda t: (t.date, t.id))
+        return latest.balance_after
+
+    relevant = [
+        t for t in transactions
+        if opening_balance_date is None or t.date >= opening_balance_date
+    ]
+    delta = Decimal("0")
+    for t in relevant:
+        delta += t.amount if t.type == "income" else -t.amount
+    return (opening_balance or Decimal("0")) + delta
 
 
 async def main() -> None:
     async with async_session() as session:
-        statement_rows = (await session.execute(_STATEMENT_BALANCE_QUERY)).all()
-        delta_rows = (await session.execute(_DELTA_SUM_QUERY)).all()
+        accounts = (await session.execute(select(Account))).scalars().all()
+        txns = (await session.execute(select(Transaction))).scalars().all()
+
+        by_account: dict[int, list[LedgerTransaction]] = {}
+        for t in txns:
+            by_account.setdefault(t.account_id, []).append(
+                LedgerTransaction(
+                    id=t.id, date=t.date.date(), type=t.type, amount=t.amount,
+                    balance_after=t.balance_after,
+                )
+            )
+
+        for account in accounts:
+            account.balance = compute_account_balance(
+                account.opening_balance, account.opening_balance_date,
+                by_account.get(account.id, []),
+            )
+            print(f"  account_id={account.id} name={account.name!r} balance -> {account.balance}")
         await session.commit()
-        for row in statement_rows:
-            print(f"  account_id={row.id} name={row.name!r} balance -> {row.balance} (from statement balance_after)")
-        for row in delta_rows:
-            print(f"  account_id={row.id} name={row.name!r} balance -> {row.balance} (from summed deltas)")
-        print(f"Updated {len(statement_rows) + len(delta_rows)} account(s).")
+        print(f"Updated {len(accounts)} account(s).")
 
 
 if __name__ == "__main__":

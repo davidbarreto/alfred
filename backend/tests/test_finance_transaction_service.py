@@ -825,6 +825,45 @@ class TestLinkTransfer:
             amount_eur=None, recompute_amount_eur=False,
         )
 
+    async def test_linking_two_real_legs_never_double_credits_either_account(self, service):
+        """Regression test: both legs already exist as independently-imported real
+        transactions, each already carrying its own correct balance contribution from
+        creation. Linking them must not ALSO apply the synthetic counterpart-credit
+        (see create()/_reconcile_balance) on top -- that credit exists only to cover
+        an unconfirmed guess with no second row, which is no longer true once both
+        legs are confirmed-linked here.
+        """
+        from datetime import datetime
+        same_date = datetime(2026, 6, 12)
+        txn = _make_txn_orm(id=1, account_id=1, type="transfer", amount=Decimal("-50.00"), date=same_date)
+        counterpart = _make_txn_orm(
+            id=2, account_id=2, type="transfer", amount=Decimal("50.00"), date=same_date
+        )
+        store = {1: txn, 2: counterpart}
+
+        async def fake_get(transaction_id):
+            return store.get(transaction_id)
+
+        async def fake_update(transaction_id, data, amount_eur=None, recompute_amount_eur=False):
+            obj = store[transaction_id]
+            for field, value in data.model_dump(exclude_unset=True).items():
+                setattr(obj, field, value)
+            return obj
+
+        service._repo.get.side_effect = fake_get
+        service._repo.update.side_effect = fake_update
+
+        await service.link_transfer(1, 2)
+
+        # Each leg's own reconciliation nets to zero (relabeling doesn't move new
+        # money) and neither leg's phantom counterpart-credit fires, since both
+        # sides are now confirmed-linked (counterpart_transaction_id set).
+        calls = [c.args for c in service._account_repo.adjust_balance.await_args_list]
+        assert calls == [
+            (1, Decimal("-50.00")), (1, Decimal("50.00")),
+            (2, Decimal("50.00")), (2, Decimal("-50.00")),
+        ]
+
     async def test_rejects_already_linked_counterpart(self, service):
         service._repo.get.side_effect = [
             _make_txn_orm(id=1, account_id=1, type="transfer"),

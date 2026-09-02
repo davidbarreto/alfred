@@ -11,12 +11,18 @@ first -- this script does that, then incremental maintenance takes over.
 
 balance_after (added alongside this) is not used here: it's NULL for every
 transaction imported before that column existed, so this always sums signed
-transaction deltas -- income credits; expense and untracked-counterpart
-transfers debit their account; internal transfers (counterpart_account_id
-set) debit the source and credit the counterpart -- on top of each account's
-opening_balance (0 if unset). No currency filtering/conversion: each
-account's transactions are assumed to already be in that account's own
-currency, so amounts are summed as stored.
+transaction deltas -- income credits; expense and transfer legs debit their
+own account. A transfer's counterpart_account_id also credits the *other*
+account, but only when counterpart_transaction_id is NULL -- i.e. still an
+unconfirmed guess, with no real second transaction row of its own. Once a
+transfer is confirmed-linked (counterpart_transaction_id set, via
+TransactionService.link_transfer or an import's automatic same-event-currency
+pairing), the counterpart leg is itself a real row already contributing its
+own delta -- crediting it again here would double-count the transfer (see
+TransactionService.create/_reconcile_balance/delete for the matching live
+logic this mirrors). On top of each account's opening_balance (0 if unset).
+No currency filtering/conversion: each account's transactions are assumed to
+already be in that account's own currency, so amounts are summed as stored.
 
 Usage (from backend/, with the venv active):
     python scripts/backfill_account_balances.py
@@ -37,7 +43,9 @@ _QUERY = text(
     counterpart_legs AS (
         SELECT counterpart_account_id AS account_id, amount AS delta
         FROM finance.transactions
-        WHERE type = 'transfer' AND counterpart_account_id IS NOT NULL
+        WHERE type = 'transfer'
+          AND counterpart_account_id IS NOT NULL
+          AND counterpart_transaction_id IS NULL
     ),
     totals AS (
         SELECT account_id, SUM(delta) AS total_delta

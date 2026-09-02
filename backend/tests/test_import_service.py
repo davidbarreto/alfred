@@ -1359,6 +1359,7 @@ class TestCommitGrouped:
             txn.amount_eur = amount_eur
             txn.account_id = data.account_id
             txn.counterpart_account_id = data.counterpart_account_id
+            txn.deduplication_hash = data.deduplication_hash
             created.append(data)
             return txn
         service._txn_repo.add.side_effect = _add_txn
@@ -1561,6 +1562,39 @@ class TestCommitGrouped:
 
         service._txn_repo.set_counterpart_transaction.assert_any_await(100, 101)
         service._txn_repo.set_counterpart_transaction.assert_any_await(101, 100)
+
+    @pytest.mark.asyncio
+    async def test_confirmed_pair_does_not_double_credit_either_account(self):
+        """Regression test: both legs of a same-event currency exchange are real,
+        independently-inserted transactions, each already contributing its own
+        correct delta via _sync_account_balance's own-leg step. The counterpart-
+        credit loop must skip rows resolved into a confirmed pair here, or the
+        transfer gets applied to each account twice.
+        """
+        service = _service()
+        self._prepare(service)
+        request = _grouped_commit_request(
+            [
+                _grouped_commit_row(
+                    currency="EUR", deduplication_hash="h1", type="transfer",
+                    amount=Decimal("-100.00"), category_id=None,
+                    counterpart_account_id=2, transfer_pair_key="pair-1",
+                ),
+                _grouped_commit_row(
+                    currency="PLN", deduplication_hash="h2", type="transfer",
+                    amount=Decimal("434.09"), category_id=None,
+                    counterpart_account_id=1, transfer_pair_key="pair-1",
+                ),
+            ],
+            account_map={"EUR": 1, "PLN": 2},
+        )
+
+        await service.commit_grouped(request)
+
+        calls = [c.args for c in service._account_repo.adjust_balance.await_args_list]
+        assert (2, Decimal("-100.00")) not in calls  # phantom counterpart credit for the EUR leg
+        assert (1, Decimal("434.09")) not in calls  # phantom counterpart credit for the PLN leg
+        assert calls == [(1, Decimal("100.00")), (2, Decimal("-434.09"))]
 
     @pytest.mark.asyncio
     async def test_does_not_confirm_when_one_leg_of_the_pair_was_skipped(self):

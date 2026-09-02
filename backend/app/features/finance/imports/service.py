@@ -346,21 +346,36 @@ class ImportService:
             row_a.counterpart_account_id = account_b
             row_b.counterpart_account_id = account_a
 
-    async def _confirm_transfer_pairs(self, pair_transactions: dict[str, list[Transaction]]) -> None:
-        """Once both legs a same-event currency exchange (see _link_transfer_pairs)
-        have actually been inserted, set counterpart_transaction_id on each so the
-        pairing counts as a confirmed link (see TransactionService.link_transfer) --
-        not just an unconfirmed counterpart_account_id guess. A key can resolve to
-        fewer than two transactions if one leg was a duplicate/skipped, or to
-        mismatched accounts if a row was edited before commit -- either way, no
-        confirmed link is safe to make, so it's left as-is (still eligible for the
-        user to confirm manually via Find Match).
+    @staticmethod
+    def _resolve_confirmable_pairs(
+        pair_transactions: dict[str, list[Transaction]]
+    ) -> list[tuple[Transaction, Transaction]]:
+        """Same-event currency-exchange pairs (see _link_transfer_pairs) whose both
+        legs actually got inserted into two different, mutually-consistent accounts.
+        A key can resolve to fewer than two transactions if one leg was a
+        duplicate/skipped, or to mismatched accounts if a row was edited before
+        commit -- either way, no confirmed link is safe to make (left for the user
+        to confirm manually via Find Match).
         """
-        for txn_a, txn_b in (entries for entries in pair_transactions.values() if len(entries) == 2):
+        confirmable = []
+        for entries in pair_transactions.values():
+            if len(entries) != 2:
+                continue
+            txn_a, txn_b = entries
             if txn_a.account_id == txn_b.account_id:
                 continue
             if txn_a.counterpart_account_id != txn_b.account_id or txn_b.counterpart_account_id != txn_a.account_id:
                 continue
+            confirmable.append((txn_a, txn_b))
+        return confirmable
+
+    async def _confirm_transfer_pairs(self, pair_transactions: dict[str, list[Transaction]]) -> None:
+        """Set counterpart_transaction_id on each confirmable pair (see
+        _resolve_confirmable_pairs) so the pairing counts as a confirmed link (see
+        TransactionService.link_transfer) -- not just an unconfirmed
+        counterpart_account_id guess.
+        """
+        for txn_a, txn_b in self._resolve_confirmable_pairs(pair_transactions):
             await self._txn_repo.set_counterpart_transaction(txn_a.id, txn_b.id)
             await self._txn_repo.set_counterpart_transaction(txn_b.id, txn_a.id)
             logger.info("Transfer pair confirmed at import: id=%d counterpart_id=%d", txn_a.id, txn_b.id)
@@ -624,7 +639,9 @@ class ImportService:
 
     # -- commit ----------------------------------------------------------
 
-    async def _sync_account_balance(self, account_id: int, rows: list) -> None:
+    async def _sync_account_balance(
+        self, account_id: int, rows: list, confirmed_pair_hashes: set[str] = frozenset()
+    ) -> None:
         """After inserting a batch of imported transactions, bring the account's
         balance up to date. If the batch reported a running balance (ActivoBank
         checking, Banco Inter, Revolut), trust the most recent one directly --
@@ -632,6 +649,12 @@ class ImportService:
         Otherwise (card-format statements, which never report one) apply the
         batch's net delta incrementally on top of whatever balance is already
         stored.
+
+        confirmed_pair_hashes identifies rows resolved as a same-event currency-
+        exchange pair (see _resolve_confirmable_pairs) whose *other* leg was also
+        just inserted in this same commit -- both legs' own delta above already
+        moves the money correctly, so the counterpart-credit loop below must skip
+        them, or the transfer gets double-counted into both accounts.
         """
         if not rows:
             return
@@ -655,6 +678,8 @@ class ImportService:
                 await self._account_repo.adjust_balance(account_id, delta)
         for row in rows:
             if row.supersedes_installment_plan_id is not None:
+                continue
+            if row.deduplication_hash in confirmed_pair_hashes:
                 continue
             if row.type == "transfer" and row.counterpart_account_id is not None:
                 await self._account_repo.adjust_balance(row.counterpart_account_id, row.amount)
@@ -1273,8 +1298,14 @@ class ImportService:
             )
 
         await self._repo.commit()
+        confirmed_pair_hashes = {
+            txn.deduplication_hash
+            for txn_a, txn_b in self._resolve_confirmable_pairs(pair_transactions)
+            for txn in (txn_a, txn_b)
+            if txn.deduplication_hash is not None
+        }
         for synced_account_id, synced_rows in rows_by_account.items():
-            await self._sync_account_balance(synced_account_id, synced_rows)
+            await self._sync_account_balance(synced_account_id, synced_rows, confirmed_pair_hashes)
         await self._create_transfer_mirrors(all_transactions)
         await self._confirm_transfer_pairs(pair_transactions)
         logger.info(

@@ -201,8 +201,14 @@ class TransactionService:
         txn = await self._repo.create(data, amount_eur=amount_eur)
         await self._account_repo.adjust_balance(data.account_id, _account_delta(data.type, data.amount))
         if data.type == "transfer" and data.counterpart_account_id is not None:
-            await self._account_repo.adjust_balance(data.counterpart_account_id, data.amount)
-            await self._maybe_create_mirror(txn)
+            if data.counterpart_transaction_id is None:
+                # A confirmed link (counterpart_transaction_id set) means a real second
+                # leg already exists and independently carries its own balance effect --
+                # crediting the counterpart here too would double-count it. Only an
+                # unconfirmed guess, with no second row yet, needs this synthetic credit
+                # and a mirror to make the transfer visible on the counterpart account.
+                await self._account_repo.adjust_balance(data.counterpart_account_id, data.amount)
+                await self._maybe_create_mirror(txn)
         logger.info("Transaction created: id=%d merchant=%r", txn.id, data.merchant)
         return TransactionRead.model_validate(txn)
 
@@ -281,12 +287,17 @@ class TransactionService:
         await self._account_repo.adjust_balance(
             old.account_id, -_account_delta(old.type, old.amount)
         )
-        if old.type == "transfer" and old.counterpart_account_id is not None:
+        # See create(): the synthetic counterpart credit only ever applied while the
+        # transfer was an unconfirmed guess (counterpart_transaction_id unset). Once
+        # confirmed-linked, the counterpart's own real leg already covers its side, so
+        # reversing/re-applying this credit must follow the same confirmed/unconfirmed
+        # state each snapshot was actually in -- not just today's counterpart_account_id.
+        if old.type == "transfer" and old.counterpart_account_id is not None and old.counterpart_transaction_id is None:
             await self._account_repo.adjust_balance(old.counterpart_account_id, -old.amount)
         await self._account_repo.adjust_balance(
             new.account_id, _account_delta(new.type, new.amount)
         )
-        if new.type == "transfer" and new.counterpart_account_id is not None:
+        if new.type == "transfer" and new.counterpart_account_id is not None and new.counterpart_transaction_id is None:
             await self._account_repo.adjust_balance(new.counterpart_account_id, new.amount)
 
     async def _sync_mirror(self, old, new) -> bool:
@@ -375,7 +386,11 @@ class TransactionService:
                 await self._account_repo.adjust_balance(
                     txn.account_id, -_account_delta(txn.type, txn.amount)
                 )
-                if txn.type == "transfer" and txn.counterpart_account_id is not None:
+                if (
+                    txn.type == "transfer"
+                    and txn.counterpart_account_id is not None
+                    and txn.counterpart_transaction_id is None
+                ):
                     await self._account_repo.adjust_balance(txn.counterpart_account_id, -txn.amount)
             logger.info("Transaction deleted: id=%d", transaction_id)
         return deleted

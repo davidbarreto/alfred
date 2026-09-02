@@ -716,14 +716,17 @@ class TestCommit:
         service._account_repo.set_balance.assert_not_awaited()
 
     @pytest.mark.asyncio
-    async def test_syncs_counterpart_account_on_transfer(self):
+    async def test_transfer_row_only_moves_its_own_account_never_the_counterpart(self):
+        """counterpart_account_id is pure linking metadata (see
+        TransactionService.create's note) -- an imported transfer row must never
+        reach into a different account's balance from here."""
         service = _service()
         self._prepare(service)
         rows = [_commit_row(deduplication_hash="h1", type="transfer", amount=Decimal("100.00"), counterpart_account_id=9)]
 
         await service.commit(_commit_request(rows))
 
-        service._account_repo.adjust_balance.assert_any_call(9, Decimal("100.00"))
+        service._account_repo.adjust_balance.assert_awaited_once_with(1, Decimal("-100.00"))
 
     @pytest.mark.asyncio
     async def test_forced_row_bypasses_existing_hash_skip(self):
@@ -831,12 +834,14 @@ class TestCreateTransferMirrors:
     async def test_creates_mirror_for_transfer_to_a_mirrored_account(self):
         service = _service()
         source = MagicMock(
-            id=100, type="transfer", counterpart_account_id=9,
+            id=100, type="transfer", counterpart_account_id=9, counterpart_transaction_id=None,
             amount=Decimal("100.00"), amount_eur=Decimal("100.00"), currency="EUR",
             date="2026-06-12", description=None, bank_description="TRF POUPUP", merchant=None,
         )
         service._account_repo.get.return_value = MagicMock(auto_mirror_transfers=True)
-        service._txn_repo.create.return_value = MagicMock(id=200, account_id=9)
+        service._txn_repo.create.return_value = MagicMock(
+            id=200, account_id=9, type="transfer", amount=Decimal("-100.00")
+        )
 
         await service._create_transfer_mirrors([source])
 
@@ -848,7 +853,25 @@ class TestCreateTransferMirrors:
         assert mirror_data.counterpart_transaction_id == 100
         assert mirror_data.counterpart_account_id is None
         assert service._txn_repo.create.await_args.kwargs["amount_eur"] == Decimal("-100.00")
+        # The mirror is the counterpart account's own real transaction -- it moves
+        # that account's balance by its own amount (see create()'s note).
+        service._account_repo.adjust_balance.assert_awaited_once_with(9, Decimal("100.00"))
         service._txn_repo.set_counterpart_transaction.assert_awaited_once_with(100, 200)
+
+    async def test_skips_mirror_when_already_confirmed_linked(self):
+        """A row that's already a confirmed link (real counterpart row exists --
+        see commit_grouped's in-memory marking before this runs) must not also get
+        a redundant mirror, or the counterpart's balance would be double-counted."""
+        service = _service()
+        source = MagicMock(
+            id=100, type="transfer", counterpart_account_id=9, counterpart_transaction_id=555,
+        )
+        service._account_repo.get.return_value = MagicMock(auto_mirror_transfers=True)
+
+        await service._create_transfer_mirrors([source])
+
+        service._txn_repo.create.assert_not_awaited()
+        service._account_repo.adjust_balance.assert_not_awaited()
 
     @pytest.mark.asyncio
     async def test_skips_when_counterpart_flag_disabled(self):

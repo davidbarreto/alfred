@@ -172,16 +172,18 @@ class TestCreateBalanceMaintenance:
         ))
         service._account_repo.adjust_balance.assert_awaited_once_with(1, Decimal("2000"))
 
-    async def test_transfer_debits_source_and_credits_counterpart(self, service):
+    async def test_transfer_only_debits_its_own_account_never_the_counterpart(self, service):
+        """counterpart_account_id is pure linking metadata -- it must never move a
+        different account's balance from here (see create()'s note). The counterpart
+        gets its own balance effect from its own transaction row (an
+        independently-imported leg, a Find Match link, or a mirror)."""
         service._repo.create.return_value = _make_txn_orm(type="transfer")
         await service.create(TransactionCreate(
             account_id=1, date="2026-06-12T10:00:00",
             amount=Decimal("100"), currency="EUR", type="transfer",
             counterpart_account_id=2,
         ))
-        calls = service._account_repo.adjust_balance.await_args_list
-        assert calls[0].args == (1, Decimal("-100"))
-        assert calls[1].args == (2, Decimal("100"))
+        service._account_repo.adjust_balance.assert_awaited_once_with(1, Decimal("-100"))
 
     async def test_transfer_without_counterpart_only_debits_source(self, service):
         service._repo.create.return_value = _make_txn_orm(type="transfer")
@@ -216,7 +218,10 @@ class TestCreateAutoMirror:
         assert mirror_data.counterpart_transaction_id == 10
         service._repo.set_counterpart_transaction.assert_awaited_once_with(10, 11)
 
-    async def test_phantom_counterpart_credit_still_applied_alongside_mirror(self, service):
+    async def test_mirror_gets_its_own_balance_effect_from_its_own_amount(self, service):
+        """The mirror is the counterpart account's own real transaction for this
+        transfer -- its balance effect comes from its own (opposite-signed) amount,
+        not a synthetic credit derived from the source's amount."""
         source = _make_txn_orm(
             id=10, account_id=1, type="transfer", amount=Decimal("100.00"), counterpart_account_id=2
         )
@@ -233,7 +238,7 @@ class TestCreateAutoMirror:
         calls = service._account_repo.adjust_balance.await_args_list
         assert calls[0].args == (1, Decimal("-100"))
         assert calls[1].args == (2, Decimal("100"))
-        assert len(calls) == 2  # mirror creation itself never calls adjust_balance
+        assert len(calls) == 2
 
     async def test_no_mirror_when_counterpart_flag_disabled(self, service):
         service._repo.create.return_value = _make_txn_orm(id=10, type="transfer")
@@ -477,7 +482,11 @@ class TestUpdateAutoMirror:
 
         service._repo.delete.assert_awaited_once_with(11)
 
-    async def test_editing_mirror_row_directly_skips_reconciliation_and_sync(self, service):
+    async def test_editing_mirror_row_directly_reconciles_balance_but_skips_mirror_of_mirror(self, service):
+        """A mirror carries a real balance effect like any transaction (see
+        create()'s note), so editing one directly still reconciles balance normally
+        -- but it must never try to mirror itself (see _sync_mirror's own-mirror
+        guard), so get_mirror is never called for it."""
         from datetime import datetime as dt
 
         old = _make_txn_orm(
@@ -493,7 +502,9 @@ class TestUpdateAutoMirror:
         await service.update(11, TransactionUpdate(amount=Decimal("-150.00")))
 
         service._repo.get_mirror.assert_not_awaited()
-        service._account_repo.adjust_balance.assert_not_awaited()
+        calls = service._account_repo.adjust_balance.await_args_list
+        assert calls[0].args == (2, Decimal("-100.00"))
+        assert calls[1].args == (2, Decimal("150.00"))
 
 
 class TestDelete:
@@ -523,7 +534,7 @@ class TestDeleteBalanceMaintenance:
 
         service._account_repo.adjust_balance.assert_awaited_once_with(1, Decimal("50.00"))
 
-    async def test_transfer_deletion_reverses_both_legs(self, service):
+    async def test_transfer_deletion_only_reverses_its_own_account(self, service):
         service._repo.get.return_value = _make_txn_orm(
             account_id=1, type="transfer", amount=Decimal("100.00"), counterpart_account_id=2
         )
@@ -531,13 +542,13 @@ class TestDeleteBalanceMaintenance:
 
         await service.delete(1)
 
-        calls = service._account_repo.adjust_balance.await_args_list
-        assert calls[0].args == (1, Decimal("100.00"))
-        assert calls[1].args == (2, Decimal("-100.00"))
+        service._account_repo.adjust_balance.assert_awaited_once_with(1, Decimal("100.00"))
 
 
 class TestDeleteAutoMirror:
-    async def test_deleting_a_mirror_row_directly_is_balance_neutral(self, service):
+    async def test_deleting_a_mirror_row_directly_reverses_its_own_balance_effect(self, service):
+        """A mirror carries a real balance effect from its own amount (see create()'s
+        note) -- deleting it directly must reverse that, not skip it."""
         service._repo.get.return_value = _make_txn_orm(
             id=11, account_id=2, type="transfer", amount=Decimal("-100.00"),
             counterpart_account_id=None, source="auto_transfer",
@@ -546,9 +557,9 @@ class TestDeleteAutoMirror:
 
         await service.delete(11)
 
-        service._account_repo.adjust_balance.assert_not_awaited()
+        service._account_repo.adjust_balance.assert_awaited_once_with(2, Decimal("-100.00"))
 
-    async def test_deleting_the_source_leg_still_reverses_normally(self, service):
+    async def test_deleting_the_source_leg_only_reverses_its_own_account(self, service):
         service._repo.get.return_value = _make_txn_orm(
             id=10, account_id=1, type="transfer", amount=Decimal("100.00"), counterpart_account_id=2
         )
@@ -556,9 +567,7 @@ class TestDeleteAutoMirror:
 
         await service.delete(10)
 
-        calls = service._account_repo.adjust_balance.await_args_list
-        assert calls[0].args == (1, Decimal("100.00"))
-        assert calls[1].args == (2, Decimal("-100.00"))
+        service._account_repo.adjust_balance.assert_awaited_once_with(1, Decimal("100.00"))
 
 
 class TestBulkMoveAccount:

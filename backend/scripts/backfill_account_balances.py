@@ -23,22 +23,20 @@ Two branches, mirroring ImportService._sync_account_balance exactly:
    statement's own number sidesteps all of it.
 
 2. Only accounts with NO balance_after anywhere in their history (card-format
-   statements, manual entries) fall back to summing signed transaction deltas
-   -- income credits; expense and transfer legs debit their own account. A
-   transfer's counterpart_account_id also credits the *other* account, but
-   only when counterpart_transaction_id is NULL -- i.e. still an unconfirmed
-   guess, with no real second transaction row of its own; a confirmed-linked
-   transfer's counterpart leg is itself a real row already contributing its
-   own delta, so crediting it again here would double-count it (see
-   TransactionService.create/_reconcile_balance/delete for the matching live
-   logic this mirrors). Summed on top of opening_balance (0 if unset), and
-   restricted to transactions on/after opening_balance_date: if
-   opening_balance was captured as a snapshot after existing history (rather
-   than at zero, before any transactions), that earlier history's effect is
-   already baked into opening_balance -- summing it again on top would
-   double-count it. No currency filtering/conversion: each account's
-   transactions are assumed to already be in that account's own currency, so
-   amounts are summed as stored.
+   statements, manual entries) fall back to summing signed transaction deltas --
+   income credits; expense AND transfer legs both debit/credit only their OWN
+   account, by their own stored amount, exactly like an expense/income (see
+   TransactionService.create's note: counterpart_account_id is pure linking
+   metadata, never a second account's balance mutation -- the counterpart's own
+   balance always comes from its own transaction row, e.g. a mirror or an
+   independently-imported leg, so this never reaches into another account here
+   either). Summed on top of opening_balance (0 if unset), and restricted to
+   transactions on/after opening_balance_date: if opening_balance was captured
+   as a snapshot after existing history (rather than at zero, before any
+   transactions), that earlier history's effect is already baked into
+   opening_balance -- summing it again on top would double-count it. No
+   currency filtering/conversion: each account's transactions are assumed to
+   already be in that account's own currency, so amounts are summed as stored.
 
 Usage (from backend/, with the venv active):
     python scripts/backfill_account_balances.py
@@ -70,28 +68,14 @@ _DELTA_SUM_QUERY = text(
     WITH statement_tracked AS (
         SELECT DISTINCT account_id FROM finance.transactions WHERE balance_after IS NOT NULL
     ),
-    source_legs AS (
+    totals AS (
         SELECT t.account_id,
-               CASE WHEN t.type = 'income' THEN t.amount ELSE -t.amount END AS delta
+               SUM(CASE WHEN t.type = 'income' THEN t.amount ELSE -t.amount END) AS total_delta
         FROM finance.transactions t
         JOIN finance.accounts a ON a.id = t.account_id
         WHERE t.account_id NOT IN (SELECT account_id FROM statement_tracked)
           AND (a.opening_balance_date IS NULL OR t.date >= a.opening_balance_date)
-    ),
-    counterpart_legs AS (
-        SELECT t.counterpart_account_id AS account_id, t.amount AS delta
-        FROM finance.transactions t
-        JOIN finance.accounts a ON a.id = t.counterpart_account_id
-        WHERE t.type = 'transfer'
-          AND t.counterpart_account_id IS NOT NULL
-          AND t.counterpart_transaction_id IS NULL
-          AND t.counterpart_account_id NOT IN (SELECT account_id FROM statement_tracked)
-          AND (a.opening_balance_date IS NULL OR t.date >= a.opening_balance_date)
-    ),
-    totals AS (
-        SELECT account_id, SUM(delta) AS total_delta
-        FROM (SELECT * FROM source_legs UNION ALL SELECT * FROM counterpart_legs) legs
-        GROUP BY account_id
+        GROUP BY t.account_id
     )
     UPDATE finance.accounts a
     SET balance = COALESCE(a.opening_balance, 0) + COALESCE(t.total_delta, 0)

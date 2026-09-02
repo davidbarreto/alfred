@@ -639,9 +639,7 @@ class ImportService:
 
     # -- commit ----------------------------------------------------------
 
-    async def _sync_account_balance(
-        self, account_id: int, rows: list, confirmed_pair_hashes: set[str] = frozenset()
-    ) -> None:
+    async def _sync_account_balance(self, account_id: int, rows: list) -> None:
         """After inserting a batch of imported transactions, bring the account's
         balance up to date. If the batch reported a running balance (ActivoBank
         checking, Banco Inter, Revolut), trust the most recent one directly --
@@ -650,11 +648,11 @@ class ImportService:
         batch's net delta incrementally on top of whatever balance is already
         stored.
 
-        confirmed_pair_hashes identifies rows resolved as a same-event currency-
-        exchange pair (see _resolve_confirmable_pairs) whose *other* leg was also
-        just inserted in this same commit -- both legs' own delta above already
-        moves the money correctly, so the counterpart-credit loop below must skip
-        them, or the transfer gets double-counted into both accounts.
+        Only ever touches this account -- a transfer row's counterpart_account_id is
+        pure linking metadata here too (see TransactionService.create's note); the
+        counterpart's own balance comes from its own transaction row (an
+        independently-imported/synced leg, or a mirror -- see
+        _create_transfer_mirrors), never from this account's batch reaching into it.
         """
         if not rows:
             return
@@ -676,19 +674,16 @@ class ImportService:
                 delta += amount if row.type == "income" else -amount
             if delta:
                 await self._account_repo.adjust_balance(account_id, delta)
-        for row in rows:
-            if row.supersedes_installment_plan_id is not None:
-                continue
-            if row.deduplication_hash in confirmed_pair_hashes:
-                continue
-            if row.type == "transfer" and row.counterpart_account_id is not None:
-                await self._account_repo.adjust_balance(row.counterpart_account_id, row.amount)
 
     async def _create_transfer_mirrors(self, transactions: list[Transaction]) -> None:
         """Give a real, visible mirror row (see build_mirror_transaction_create) to
         every imported transfer whose counterpart account has auto_mirror_transfers
-        enabled. Runs after the batch commit so every transaction already has an id;
-        carries no balance effect of its own (see _sync_account_balance, unchanged).
+        enabled. Runs after the batch commit so every transaction already has an id.
+        The mirror is the counterpart account's own real transaction for this
+        transfer -- it moves that account's balance by its own amount like any other
+        transaction (see TransactionService.create's note; _sync_account_balance
+        above never reaches into the counterpart, so this is the only thing that
+        does for an auto-mirrored account).
         """
         counterpart_ids = {
             txn.counterpart_account_id
@@ -707,10 +702,17 @@ class ImportService:
         for txn in transactions:
             if txn.type != "transfer" or txn.counterpart_account_id not in mirrored_accounts:
                 continue
+            if txn.counterpart_transaction_id is not None:
+                # Already a confirmed link (see commit_grouped's in-memory marking
+                # above) -- a real counterpart row exists, so a mirror on top would
+                # be redundant and double the counterpart's balance.
+                continue
             mirror = await self._txn_repo.create(
                 build_mirror_transaction_create(txn),
                 amount_eur=(-txn.amount_eur if txn.amount_eur is not None else None),
             )
+            mirror_delta = mirror.amount if mirror.type == "income" else -mirror.amount
+            await self._account_repo.adjust_balance(mirror.account_id, mirror_delta)
             await self._txn_repo.set_counterpart_transaction(txn.id, mirror.id)
             logger.info(
                 "Auto-mirror transaction created: id=%d source_id=%d account_id=%d",
@@ -1298,14 +1300,16 @@ class ImportService:
             )
 
         await self._repo.commit()
-        confirmed_pair_hashes = {
-            txn.deduplication_hash
-            for txn_a, txn_b in self._resolve_confirmable_pairs(pair_transactions)
-            for txn in (txn_a, txn_b)
-            if txn.deduplication_hash is not None
-        }
         for synced_account_id, synced_rows in rows_by_account.items():
-            await self._sync_account_balance(synced_account_id, synced_rows, confirmed_pair_hashes)
+            await self._sync_account_balance(synced_account_id, synced_rows)
+        # Mark confirmable pairs in-memory before mirror creation, so a row that's
+        # about to become a confirmed link (both legs already real, see
+        # _resolve_confirmable_pairs) doesn't also get a redundant auto-mirror row on
+        # top of its already-real counterpart -- _confirm_transfer_pairs below then
+        # persists the same links to the DB.
+        for txn_a, txn_b in self._resolve_confirmable_pairs(pair_transactions):
+            txn_a.counterpart_transaction_id = txn_b.id
+            txn_b.counterpart_transaction_id = txn_a.id
         await self._create_transfer_mirrors(all_transactions)
         await self._confirm_transfer_pairs(pair_transactions)
         logger.info(

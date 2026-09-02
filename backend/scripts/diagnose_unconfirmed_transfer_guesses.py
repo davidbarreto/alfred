@@ -36,7 +36,7 @@ _QUERY = text(
         ON c.account_id = t.counterpart_account_id
        AND c.counterpart_transaction_id IS NULL
        AND c.id != t.id
-       AND ABS(c.date - t.date) <= INTERVAL '3 days'
+       AND c.date BETWEEN t.date - INTERVAL '3 days' AND t.date + INTERVAL '3 days'
     WHERE t.type = 'transfer'
       AND t.counterpart_account_id IS NOT NULL
       AND t.counterpart_transaction_id IS NULL

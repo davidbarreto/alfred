@@ -32,8 +32,11 @@ Format notes:
   collide on ``balance_after`` too, e.g. two top-ups on the same day that both left
   the balance at the same figure because an Exchange in between spent it back down
   to zero.
-- The ``Fee`` column is informational only in the observed export (always 0.00);
-  ``Amount`` already reflects the net effect on the balance, so Fee is not applied.
+- The ``Fee`` column is usually 0.00, in which case ``Amount`` already reflects the
+  net effect on the balance. When ``Fee`` is non-zero, Revolut still charges it on top
+  of ``Amount`` (e.g. a foreign-currency card payment with ``Amount = 0.00`` and
+  ``Fee = 17.99`` -- an FX fee charged with no separate purchase amount), so the
+  imported transaction amount is ``Amount - Fee``.
 """
 from __future__ import annotations
 
@@ -102,10 +105,12 @@ class RevolutStatementParser:
             completed = _parse_datetime(completed_raw)
             started = _parse_datetime(record.get("Started Date") or "")
             amount = _parse_amount(record.get("Amount") or "")
+            fee = _parse_amount(record.get("Fee") or "") or Decimal("0")
             balance = _parse_amount(record.get("Balance") or "")
             currency = (record.get("Currency") or "").strip().upper()
             if completed is None or amount is None or not currency:
                 continue
+            amount -= fee
 
             row_type = (record.get("Type") or "").strip()
             description = (record.get("Description") or "").strip()

@@ -16,6 +16,7 @@ Exchange,Current,2025-12-11 13:36:40,2025-12-11 13:36:40,Exchanged to EUR,6.10,0
 Transfer,Current,2026-04-19 23:50:17,2026-04-19 23:50:18,Revolut Bank UAB Sucursal em Portugal,-5.32,0.00,USD,COMPLETED,154.05
 Transfer,Current,2026-04-19 02:23:52,2026-04-19 02:23:52,Transfer to SOME PERSON,-32.00,0.00,USD,COMPLETED,28.89
 Card Payment,Current,2026-02-27 12:52:27,2026-02-28 05:14:01,Starbucks,-155.00,0.00,CZK,COMPLETED,3536.18
+Card Payment,Current,2026-08-15 09:12:00,2026-08-15 09:12:01,FX Fee,0.00,17.99,EUR,COMPLETED,600.00
 """
 
 
@@ -52,8 +53,18 @@ class TestParse:
 
     def test_row_count_matches_completed_rows(self):
         statement = RevolutStatementParser().parse(_content())
-        # 11 data rows, 1 REVERTED excluded -> 10
-        assert len(statement.rows) == 10
+        # 12 data rows, 1 REVERTED excluded -> 11
+        assert len(statement.rows) == 11
+
+    def test_fee_is_subtracted_from_zero_amount(self):
+        statement = RevolutStatementParser().parse(_content())
+        fee_row = next(r for r in statement.rows if r.raw_description == "FX Fee")
+        assert fee_row.amount == Decimal("-17.99")
+
+    def test_zero_fee_leaves_amount_untouched(self):
+        statement = RevolutStatementParser().parse(_content())
+        bolt = next(r for r in statement.rows if r.raw_description == "Bolt")
+        assert bolt.amount == Decimal("-20.63")
 
     def test_exchange_is_always_a_transfer(self):
         statement = RevolutStatementParser().parse(_content())
@@ -136,7 +147,7 @@ class TestParse:
     def test_period_spans_all_currencies(self):
         statement = RevolutStatementParser().parse(_content())
         assert statement.period_start == date(2025, 11, 22)
-        assert statement.period_end == date(2026, 4, 30)
+        assert statement.period_end == date(2026, 8, 15)
 
     def test_empty_file_yields_empty_statement(self):
         statement = RevolutStatementParser().parse(

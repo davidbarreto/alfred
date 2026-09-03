@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import date, datetime
-from typing import Annotated, Literal, TypeAlias
+from typing import Literal, TypeAlias
 
 from fastapi import Query
 from pydantic import BaseModel
@@ -82,10 +82,10 @@ class InterviewProcessRead(BaseModel):
 class InterviewProcessFilters:
     def __init__(
         self,
-        limit: Annotated[int, Query(ge=1, le=200)] = 50,
-        offset: Annotated[int, Query(ge=0)] = 0,
-        company_id: Annotated[int | None, Query()] = None,
-        status: Annotated[str | None, Query()] = None,
+        limit: int = Query(50, ge=1, le=200),
+        offset: int = Query(0, ge=0),
+        company_id: int | None = Query(None),
+        status: str | None = Query(None),
     ) -> None:
         self.limit = limit
         self.offset = offset

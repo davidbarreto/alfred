@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Annotated
 
 from fastapi import Query
 from pydantic import BaseModel
@@ -26,8 +25,8 @@ class InterviewInsightRead(BaseModel):
 class InterviewInsightFilters:
     def __init__(
         self,
-        limit: Annotated[int, Query(ge=1, le=100)] = 20,
-        offset: Annotated[int, Query(ge=0)] = 0,
+        limit: int = Query(20, ge=1, le=100),
+        offset: int = Query(0, ge=0),
     ) -> None:
         self.limit = limit
         self.offset = offset

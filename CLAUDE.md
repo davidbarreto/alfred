@@ -285,6 +285,7 @@ logger.warning("Auth failed: invalid token")
 - Don't ignore warnings. Solve them whenever possible
 - Test file mirrors source structure: `tests/test_task_service.py` → `app/features/organizer/tasks/service.py`
 - Aim for behaviour coverage, not line coverage — test contracts, not internals
+- For every bug fix: first write a unit test that reproduces the bug (it should fail against the unfixed code), then write the fix that makes it pass. Keep the regression test after the fix lands.
 
 ### Sensitive data & test fixtures
 - Never copy real personal or financial data — names, account/card numbers, amounts, addresses, merchant strings from a real statement, etc. — from a user-provided file into code, test fixtures, Postman collections, or documentation, even as a "quick example." Always invent synthetic equivalents that preserve the shape/format needed for the test (e.g. `"SOME PERSON"` instead of a real name, `*1234` instead of a real card suffix, round invented amounts instead of real ones).

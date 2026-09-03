@@ -7,7 +7,7 @@ from app.integrations.google_oauth.client import GoogleOAuthClient
 logger = logging.getLogger(__name__)
 
 _BASE_URL = "https://people.googleapis.com/v1"
-_PERSON_FIELDS = "names,emailAddresses,phoneNumbers,birthdays,memberships"
+_PERSON_FIELDS = "names,emailAddresses,phoneNumbers,birthdays,memberships,urls"
 _PAGE_SIZE = 1000
 
 

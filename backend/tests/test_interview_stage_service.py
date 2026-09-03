@@ -96,6 +96,7 @@ class TestStageContactLinking:
         contact.birthday = None
         contact.is_self = False
         contact.relationship = None
+        contact.website = None
         service._repo.list_stage_contacts.return_value = [contact]
         result = await service.list_stage_contacts(1)
         assert result[0].name == "Jane Doe"

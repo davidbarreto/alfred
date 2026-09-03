@@ -8,6 +8,7 @@
       <th class="text-left pb-2 font-medium hidden sm:table-cell">Phone</th>
       <th class="text-left pb-2 font-medium hidden sm:table-cell">Birthday</th>
       <th class="text-left pb-2 font-medium hidden sm:table-cell">Relationship</th>
+      <th class="text-left pb-2 font-medium hidden sm:table-cell">Website</th>
       <th class="pb-2"></th>
     </tr>
   </thead>
@@ -33,7 +34,18 @@
         <span class="text-gray-400">—</span>
         {% endif %}
       </td>
+      <td class="py-2.5 pr-4 hidden sm:table-cell truncate max-w-[160px]">
+        {% if c.website %}<a href="{{ c.website }}" target="_blank" class="text-[#378ADD] hover:underline">{{ c.website }}</a>{% else %}<span class="text-gray-400">—</span>{% endif %}
+      </td>
       <td class="py-2.5 text-right whitespace-nowrap">
+        <button
+          type="button"
+          onclick="document.getElementById('contact-edit-{{ c.id }}').classList.toggle('hidden')"
+          class="opacity-0 group-hover:opacity-100 text-gray-300 hover:text-[#378ADD] transition-opacity"
+          title="Edit contact"
+        >
+          <i class="ti ti-pencil text-sm"></i>
+        </button>
         <button
           hx-patch="/contacts/{{ c.id }}/self?value={{ 'false' if c.is_self else 'true' }}"
           hx-target="#contacts-table"
@@ -53,6 +65,38 @@
         >
           <i class="ti ti-trash text-sm"></i>
         </button>
+      </td>
+    </tr>
+    <tr id="contact-edit-{{ c.id }}" class="hidden">
+      <td colspan="6" class="pb-3">
+        <form
+          hx-post="/contacts/{{ c.id }}/update"
+          hx-target="#contacts-table"
+          hx-swap="innerHTML"
+          class="flex flex-wrap items-end gap-2 bg-gray-50 border border-gray-100 rounded-lg p-3"
+        >
+          <div>
+            <label class="text-xs text-gray-500 mb-1 block">Name</label>
+            <input name="name" type="text" value="{{ c.name }}" class="border border-gray-200 rounded-lg px-2 py-1 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-[#378ADD]" />
+          </div>
+          <div>
+            <label class="text-xs text-gray-500 mb-1 block">Email</label>
+            <input name="email" type="email" value="{{ c.email or '' }}" class="border border-gray-200 rounded-lg px-2 py-1 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-[#378ADD]" />
+          </div>
+          <div>
+            <label class="text-xs text-gray-500 mb-1 block">Phone</label>
+            <input name="phone" type="tel" value="{{ c.phone or '' }}" class="border border-gray-200 rounded-lg px-2 py-1 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-[#378ADD]" />
+          </div>
+          <div>
+            <label class="text-xs text-gray-500 mb-1 block">Website</label>
+            <input name="website" type="url" value="{{ c.website or '' }}" placeholder="https://linkedin.com/in/…" class="border border-gray-200 rounded-lg px-2 py-1 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-[#378ADD]" />
+          </div>
+          <div>
+            <label class="text-xs text-gray-500 mb-1 block">Birthday</label>
+            <input name="birthday" type="date" value="{{ c.birthday or '' }}" class="border border-gray-200 rounded-lg px-2 py-1 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-[#378ADD]" />
+          </div>
+          <button type="submit" class="btn btn-xs btn-primary">Save</button>
+        </form>
       </td>
     </tr>
     {% endfor %}

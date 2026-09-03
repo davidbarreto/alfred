@@ -159,10 +159,12 @@ def _to_row(raw: dict, group_names: dict[str, str] | None = None) -> dict:
     phones = raw.get("phoneNumbers") or []
     birthdays = raw.get("birthdays") or []
     memberships = raw.get("memberships") or []
+    urls = raw.get("urls") or []
 
     name = names[0].get("displayName", "") if names else ""
     email = emails[0].get("value") if emails else None
     phone = phones[0].get("value") if phones else None
+    website = urls[0].get("value") if urls else None
     if birthdays:
         bd_obj = birthdays[0]
         birthday = _parse_birthday(bd_obj.get("date"), bd_obj.get("text"))
@@ -176,6 +178,7 @@ def _to_row(raw: dict, group_names: dict[str, str] | None = None) -> dict:
         "phone": phone,
         "birthday": birthday,
         "relationship": _relationship_from_memberships(memberships, group_names or {}),
+        "website": website,
     }
 
 

@@ -204,7 +204,10 @@
             </div>
             <form method="post" action="/interviews/{{ process.id }}/stages/{{ s.id }}/contacts/new" class="flex flex-wrap gap-1">
               <input name="name" type="text" placeholder="+ New contact name" required class="flex-1 min-w-[100px] border border-gray-200 rounded-lg px-2 py-1 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-[#378ADD]" />
-              <input name="role" type="text" placeholder="role" class="w-20 border border-gray-200 rounded-lg px-2 py-1 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-[#378ADD]" />
+              <input name="role" type="text" placeholder="role" class="w-16 border border-gray-200 rounded-lg px-2 py-1 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-[#378ADD]" />
+              <input name="email" type="email" placeholder="email" class="w-28 border border-gray-200 rounded-lg px-2 py-1 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-[#378ADD]" />
+              <input name="phone" type="tel" placeholder="phone" class="w-24 border border-gray-200 rounded-lg px-2 py-1 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-[#378ADD]" />
+              <input name="website" type="url" placeholder="LinkedIn / website" class="w-32 border border-gray-200 rounded-lg px-2 py-1 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-[#378ADD]" />
               <button type="submit" class="btn btn-xs btn-ghost text-[#378ADD]">Create &amp; link</button>
             </form>
           </div>

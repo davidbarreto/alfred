@@ -52,6 +52,7 @@ class ContactRepository:
             email=contact_create.email,
             phone=contact_create.phone,
             birthday=contact_create.birthday,
+            website=contact_create.website,
         )
         self._session.add(contact)
         await self._session.commit()
@@ -88,6 +89,7 @@ class ContactRepository:
                     "phone": insert(Contact).excluded.phone,
                     "birthday": insert(Contact).excluded.birthday,
                     "relationship": insert(Contact).excluded.relationship,
+                    "website": insert(Contact).excluded.website,
                 },
             )
         )

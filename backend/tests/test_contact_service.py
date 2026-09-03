@@ -50,6 +50,16 @@ class TestToRow:
         assert row["email"] is None
         assert row["phone"] is None
         assert row["birthday"] is None
+        assert row["website"] is None
+
+    def test_website_extracted_from_urls(self):
+        raw = {
+            "resourceName": "people/c789",
+            "names": [{"displayName": "Cara"}],
+            "urls": [{"value": "https://linkedin.com/in/cara", "type": "other"}],
+        }
+        row = _to_row(raw)
+        assert row["website"] == "https://linkedin.com/in/cara"
 
     def test_no_memberships_defaults_relationship_to_other(self):
         raw = {
@@ -219,7 +229,7 @@ class TestNextBirthday:
         assert result == date(2027, 3, 1)
 
 
-def _make_contact_orm(id=1, provider_id="people/c1", name="Alice", email="alice@example.com", phone=None, birthday=None, is_self=False, relationship=None):
+def _make_contact_orm(id=1, provider_id="people/c1", name="Alice", email="alice@example.com", phone=None, birthday=None, is_self=False, relationship=None, website=None):
     c = MagicMock()
     c.id = id
     c.provider_id = provider_id
@@ -229,6 +239,7 @@ def _make_contact_orm(id=1, provider_id="people/c1", name="Alice", email="alice@
     c.birthday = birthday
     c.is_self = is_self
     c.relationship = relationship
+    c.website = website
     c.model_fields = {}
     return c
 

@@ -105,6 +105,7 @@ async def create_contact(
     email: Annotated[str, Form()] = "",
     phone: Annotated[str, Form()] = "",
     birthday: Annotated[str, Form()] = "",
+    website: Annotated[str, Form()] = "",
 ):
     payload: dict = {"name": name}
     if email:
@@ -113,6 +114,8 @@ async def create_contact(
         payload["phone"] = phone
     if birthday:
         payload["birthday"] = birthday
+    if website:
+        payload["website"] = website
 
     try:
         await api.post("/organizer/contacts", json=payload)
@@ -125,6 +128,46 @@ async def create_contact(
         raw = []
 
     contacts, has_next, has_prev = _pagination(raw, 0)
+    return templates.TemplateResponse(request, "_contacts_table.html", {
+        "contacts": contacts,
+        "has_next": has_next,
+        "has_prev": has_prev,
+    })
+
+
+@router.post("/{contact_id}/update", response_class=HTMLResponse)
+async def update_contact(
+    contact_id: int,
+    request: Request,
+    name: Annotated[str, Form()] = "",
+    email: Annotated[str, Form()] = "",
+    phone: Annotated[str, Form()] = "",
+    website: Annotated[str, Form()] = "",
+    birthday: Annotated[str, Form()] = "",
+):
+    offset = max(0, int(request.query_params.get("offset", "0")))
+    letter = request.query_params.get("letter", "").strip().upper()
+    has_birthday = request.query_params.get("has_birthday", "")
+
+    payload: dict = {}
+    if name:
+        payload["name"] = name
+    payload["email"] = email or None
+    payload["phone"] = phone or None
+    payload["website"] = website or None
+    payload["birthday"] = birthday or None
+
+    try:
+        await api.patch(f"/organizer/contacts/{contact_id}", json=payload)
+    except httpx.HTTPError:
+        pass
+
+    try:
+        raw = await api.get("/organizer/contacts", params=_build_params("", "", has_birthday, letter, offset))
+    except httpx.HTTPError:
+        raw = []
+
+    contacts, has_next, has_prev = _pagination(raw, offset)
     return templates.TemplateResponse(request, "_contacts_table.html", {
         "contacts": contacts,
         "has_next": has_next,

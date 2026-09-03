@@ -12,7 +12,7 @@ from .client import GoogleContactsClient
 
 logger = logging.getLogger(__name__)
 
-_PERSON_FIELDS = "names,emailAddresses,phoneNumbers,birthdays"
+_PERSON_FIELDS = "names,emailAddresses,phoneNumbers,birthdays,urls"
 _PLACEHOLDER_YEAR = 2000
 
 
@@ -41,6 +41,9 @@ class GoogleContactsProvider:
             else:
                 person["birthdays"] = []
             update_fields.append("birthdays")
+        if "website" in record:
+            person["urls"] = [{"value": record["website"], "type": "other"}] if record["website"] else []
+            update_fields.append("urls")
 
         return person, ",".join(update_fields)
 
@@ -49,10 +52,12 @@ class GoogleContactsProvider:
         emails = person.get("emailAddresses") or []
         phones = person.get("phoneNumbers") or []
         birthdays = person.get("birthdays") or []
+        urls = person.get("urls") or []
 
         name = names[0].get("displayName", "") if names else ""
         email = emails[0].get("value") if emails else None
         phone = phones[0].get("value") if phones else None
+        website = urls[0].get("value") if urls else None
 
         birthday: date | None = None
         if birthdays:
@@ -73,6 +78,7 @@ class GoogleContactsProvider:
             "email": email,
             "phone": phone,
             "birthday": birthday,
+            "website": website,
         }
 
     async def create(self, record: dict[str, Any], session: AsyncSession | None = None) -> dict[str, Any]:

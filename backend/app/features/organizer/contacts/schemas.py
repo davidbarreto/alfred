@@ -11,6 +11,7 @@ class ContactCreate(BaseModel):
     email: str | None = None
     phone: str | None = None
     birthday: date | None = None
+    website: str | None = None
 
 
 class ContactUpdate(BaseModel):
@@ -19,6 +20,7 @@ class ContactUpdate(BaseModel):
     phone: str | None = None
     birthday: date | None = None
     is_self: bool | None = None
+    website: str | None = None
 
 
 class ContactRead(BaseModel):
@@ -30,6 +32,7 @@ class ContactRead(BaseModel):
     birthday: date | None
     is_self: bool
     relationship: str | None = None
+    website: str | None = None
 
     model_config = {"from_attributes": True}
 

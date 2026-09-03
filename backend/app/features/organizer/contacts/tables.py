@@ -24,3 +24,4 @@ class Contact(Base):
     birthday: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
     is_self: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False, server_default="false")
     relationship: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)
+    website: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)

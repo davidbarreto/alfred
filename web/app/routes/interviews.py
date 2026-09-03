@@ -630,9 +630,24 @@ async def unlink_contact(process_id: int, stage_id: int, contact_id: int):
 
 
 @router.post("/{process_id}/stages/{stage_id}/contacts/new")
-async def create_and_link_contact(process_id: int, stage_id: int, name: Annotated[str, Form()], role: Annotated[str, Form()] = ""):
+async def create_and_link_contact(
+    process_id: int,
+    stage_id: int,
+    name: Annotated[str, Form()],
+    role: Annotated[str, Form()] = "",
+    email: Annotated[str, Form()] = "",
+    phone: Annotated[str, Form()] = "",
+    website: Annotated[str, Form()] = "",
+):
+    contact_payload: dict = {"name": name}
+    if email:
+        contact_payload["email"] = email
+    if phone:
+        contact_payload["phone"] = phone
+    if website:
+        contact_payload["website"] = website
     try:
-        contact = await api.post("/organizer/contacts", json={"name": name})
+        contact = await api.post("/organizer/contacts", json=contact_payload)
         await api.post(f"/organizer/interview-stages/{stage_id}/contacts/{contact['id']}", json={"role": role or None})
     except httpx.HTTPError:
         pass

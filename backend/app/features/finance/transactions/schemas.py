@@ -200,10 +200,17 @@ class TransactionFilters:
         self.sort = sort
 
 
+class TransactionCurrencySum(BaseModel):
+    currency: str
+    total: Decimal
+    transaction_count: int
+
+
 class TransactionSumResponse(BaseModel):
     total: Decimal
     transaction_count: int
     currency: str
+    by_currency: list[TransactionCurrencySum] = []
 
 
 class TransactionBulkMoveRequest(BaseModel):

@@ -1,9 +1,30 @@
 {% if txn_sum %}
-<div class="flex items-center justify-between text-xs text-gray-500 mb-2 pb-2 border-b border-gray-100">
+{% set other_currencies = txn_sum.by_currency | rejectattr("currency", "equalto", "EUR") | list %}
+<div class="flex items-center justify-between text-xs text-gray-500 mb-2 pb-2 border-b border-gray-100 gap-3">
   <span>{{ txn_sum.transaction_count }} transaction{% if txn_sum.transaction_count != 1 %}s{% endif %} matching filters</span>
-  <span class="font-medium {% if txn_sum.total | float < 0 %}text-[#E24B4A]{% else %}text-[#3E9C42]{% endif %}">
-    Net: {{ "-" if txn_sum.total | float < 0 else "+" }}{{ currency_symbols.get("EUR", "€ ") if txn_sum.currency == "GLOBAL" else currency_symbols.get(txn_sum.currency, txn_sum.currency + " ") }}{{ txn_sum.total | float | abs | money }}
-  </span>
+  <div class="flex items-center gap-2">
+    {% if other_currencies %}
+    <details class="relative">
+      <summary class="list-none cursor-pointer text-gray-400 hover:text-gray-600 flex items-center gap-1">
+        <i class="ti ti-currency-exchange text-sm"></i>
+        <span>{{ other_currencies | length }} other currenc{{ "y" if other_currencies | length == 1 else "ies" }}</span>
+      </summary>
+      <div class="absolute right-0 mt-1 bg-white border border-gray-100 rounded-lg shadow-lg p-2 z-10 min-w-[140px]">
+        {% for cs in txn_sum.by_currency %}
+        <div class="flex items-center justify-between gap-3 py-0.5 whitespace-nowrap">
+          <span class="text-gray-400">{{ cs.currency }}</span>
+          <span class="font-medium {% if cs.total | float < 0 %}text-[#E24B4A]{% else %}text-[#3E9C42]{% endif %}">
+            {{ "-" if cs.total | float < 0 else "+" }}{{ currency_symbols.get(cs.currency, cs.currency + " ") }}{{ cs.total | float | abs | money }}
+          </span>
+        </div>
+        {% endfor %}
+      </div>
+    </details>
+    {% endif %}
+    <span class="font-medium {% if txn_sum.total | float < 0 %}text-[#E24B4A]{% else %}text-[#3E9C42]{% endif %}">
+      Net: {{ "-" if txn_sum.total | float < 0 else "+" }}{{ currency_symbols.get("EUR", "€ ") if txn_sum.currency == "GLOBAL" else currency_symbols.get(txn_sum.currency, txn_sum.currency + " ") }}{{ txn_sum.total | float | abs | money }}
+    </span>
+  </div>
 </div>
 {% endif %}
 

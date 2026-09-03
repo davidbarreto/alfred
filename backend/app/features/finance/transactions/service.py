@@ -39,6 +39,7 @@ from app.features.finance.transactions.schemas import (
     TransactionCreate,
     TransactionFilters,
     TransactionRead,
+    TransactionCurrencySum,
     TransactionSumResponse,
     TransactionUpdate,
     TransferMatchCandidate,
@@ -195,10 +196,20 @@ class TransactionService:
     async def filtered_sum(self, filters: TransactionFilters) -> TransactionSumResponse:
         cycle_start_day = await self._settings.get_cycle_start_day()
         total, count = await self._repo.get_filtered_sum(filters, cycle_start_day)
+        by_currency: list[TransactionCurrencySum] = []
+        if filters.currency is None:
+            # Only worth breaking down when the list itself spans every currency --
+            # with a currency filter applied, total is already in that one currency.
+            rows = await self._repo.get_filtered_sum_by_currency(filters, cycle_start_day)
+            by_currency = [
+                TransactionCurrencySum(currency=currency, total=currency_total, transaction_count=currency_count)
+                for currency, currency_total, currency_count in rows
+            ]
         return TransactionSumResponse(
             total=total,
             transaction_count=count,
             currency=filters.currency or GLOBAL_CURRENCY,
+            by_currency=by_currency,
         )
 
     async def create(self, data: TransactionCreate) -> TransactionRead:
@@ -373,7 +384,7 @@ class TransactionService:
             if amount_eur is None:
                 failed += 1
                 continue
-            await self._repo.set_amount_eur(txn.id, amount_eur)
+            await self._repo.set_amount_eur(txn.id, txn.amount, amount_eur)
             updated += 1
         remaining = await self._repo.count_missing_amount_eur()
         logger.info(

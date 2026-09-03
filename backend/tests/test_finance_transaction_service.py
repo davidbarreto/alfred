@@ -130,6 +130,22 @@ class TestFilteredSum:
         result = await service.filtered_sum(TransactionFilters())
         assert result.currency == "GLOBAL"
 
+    async def test_no_currency_includes_breakdown_by_currency(self, service):
+        service._repo.get_filtered_sum.return_value = (Decimal("340.00"), 7)
+        service._repo.get_filtered_sum_by_currency.return_value = [
+            ("EUR", Decimal("200.00"), 5), ("USD", Decimal("150.00"), 2),
+        ]
+        result = await service.filtered_sum(TransactionFilters())
+        assert [(c.currency, c.total, c.transaction_count) for c in result.by_currency] == [
+            ("EUR", Decimal("200.00"), 5), ("USD", Decimal("150.00"), 2),
+        ]
+
+    async def test_currency_filter_skips_breakdown_query(self, service):
+        service._repo.get_filtered_sum.return_value = (Decimal("340.00"), 7)
+        result = await service.filtered_sum(TransactionFilters(currency="EUR"))
+        service._repo.get_filtered_sum_by_currency.assert_not_called()
+        assert result.by_currency == []
+
 
 class TestCreate:
     async def test_returns_transaction_read(self, service):
@@ -1619,7 +1635,7 @@ class TestBackfillAmountEur:
 
         result = await service.backfill_amount_eur(batch_size=500)
 
-        service._repo.set_amount_eur.assert_awaited_once_with(1, Decimal("9.00"))
+        service._repo.set_amount_eur.assert_awaited_once_with(1, Decimal("10.00"), Decimal("9.00"))
         assert result.updated_count == 1
         assert result.failed_count == 1
         assert result.remaining_count == 1

@@ -24,6 +24,20 @@ def _amount_column(currency: str):
     return Transaction.amount_eur if currency == GLOBAL_CURRENCY else Transaction.amount
 
 
+def _signed_eur(amount: Decimal, amount_eur: Decimal | None) -> Decimal | None:
+    """Normalizes amount_eur to carry the same sign as `amount`. FX conversion
+    (amount / a positive rate) already derives amount_eur from amount so the two
+    naturally agree, but a caller building amount_eur some other way (e.g. reusing
+    a sibling row's) could pass a mismatched pair -- this is the single choke point
+    every write goes through, so it's the cheapest place to guarantee the invariant
+    rather than trusting every call site to get it right.
+    """
+    if amount_eur is None:
+        return None
+    magnitude = abs(amount_eur)
+    return -magnitude if amount < 0 else magnitude
+
+
 def _confirmed_installment_transfer_condition():
     """True when a row belongs to an installment plan whose zeroed anchor row (see
     create_placeholder_for_plan / the superseded-original path in
@@ -333,6 +347,24 @@ class TransactionRepository:
         total, count = result.one()
         return Decimal(str(total)), count
 
+    async def get_filtered_sum_by_currency(
+        self, filters: TransactionFilters, cycle_start_day: int = 1
+    ) -> list[tuple[str, Decimal, int]]:
+        """Per-currency net signed totals across every transaction matching filters,
+        using each row's native amount (not amount_eur) -- lets the transactions page
+        show a currency breakdown alongside the EUR-normalized total when the
+        filtered result spans more than one currency. Only meaningful when
+        filters.currency is unset (see TransactionService.filtered_sum); with a
+        currency filter applied there is only ever one group.
+        """
+        delta = case((Transaction.type == "expense", -Transaction.amount), else_=Transaction.amount)
+        query = select(Transaction.currency, func.coalesce(func.sum(delta), 0), func.count(Transaction.id))
+        for condition in _filter_conditions(filters, cycle_start_day):
+            query = query.where(condition)
+        query = query.group_by(Transaction.currency)
+        result = await self._session.execute(query)
+        return [(currency, Decimal(str(total)), count) for currency, total, count in result.all()]
+
     async def bulk_reassign_account(self, request: TransactionBulkMoveRequest, cycle_start_day: int = 1) -> int:
         """Move every transaction matching request's account_id + optional filters to
         target_account_id. Clears deduplication_hash on moved rows: the stored hash was
@@ -347,7 +379,7 @@ class TransactionRepository:
         return result.rowcount
 
     async def create(self, data: TransactionCreate, amount_eur: Decimal | None = None) -> Transaction:
-        transaction = Transaction(**data.model_dump(), amount_eur=amount_eur)
+        transaction = Transaction(**data.model_dump(), amount_eur=_signed_eur(data.amount, amount_eur))
         self._session.add(transaction)
         await self._session.commit()
         await self._session.refresh(transaction)
@@ -366,14 +398,14 @@ class TransactionRepository:
         for field, value in data.model_dump(exclude_unset=True).items():
             setattr(transaction, field, value)
         if recompute_amount_eur:
-            transaction.amount_eur = amount_eur
+            transaction.amount_eur = _signed_eur(transaction.amount, amount_eur)
         await self._session.commit()
         await self._session.refresh(transaction)
         return transaction
 
     async def add(self, data: TransactionCreate, amount_eur: Decimal | None = None) -> Transaction:
         """Add transaction to session without committing. Caller is responsible for commit."""
-        transaction = Transaction(**data.model_dump(), amount_eur=amount_eur)
+        transaction = Transaction(**data.model_dump(), amount_eur=_signed_eur(data.amount, amount_eur))
         self._session.add(transaction)
         return transaction
 
@@ -853,9 +885,11 @@ class TransactionRepository:
         )
         return list(result.scalars().all())
 
-    async def set_amount_eur(self, transaction_id: int, amount_eur: Decimal) -> None:
+    async def set_amount_eur(self, transaction_id: int, amount: Decimal, amount_eur: Decimal) -> None:
         await self._session.execute(
-            update(Transaction).where(Transaction.id == transaction_id).values(amount_eur=amount_eur)
+            update(Transaction)
+            .where(Transaction.id == transaction_id)
+            .values(amount_eur=_signed_eur(amount, amount_eur))
         )
         await self._session.commit()
 

@@ -34,6 +34,12 @@ def _one_result(values):
     return r
 
 
+def _rows_all(values):
+    r = MagicMock()
+    r.all.return_value = values
+    return r
+
+
 def _scalar_result(value):
     r = MagicMock()
     r.scalar.return_value = value
@@ -498,6 +504,25 @@ class TestGetFilteredSum:
         assert "transactions.category_id = " in sql
 
 
+class TestGetFilteredSumByCurrency:
+    async def test_groups_native_amounts_by_currency(self):
+        session = _make_session()
+        session.execute.return_value = _rows_all([
+            ("EUR", Decimal("200.00"), 5), ("USD", Decimal("-50.00"), 2),
+        ])
+        rows = await TransactionRepository(session).get_filtered_sum_by_currency(TransactionFilters())
+        assert rows == [("EUR", Decimal("200.00"), 5), ("USD", Decimal("-50.00"), 2)]
+
+    async def test_groups_by_currency_column_and_sums_native_amount(self):
+        session = _make_session()
+        session.execute.return_value = _rows_all([])
+        await TransactionRepository(session).get_filtered_sum_by_currency(TransactionFilters())
+        query = session.execute.call_args.args[0]
+        sql = str(query.compile(compile_kwargs={"literal_binds": True}))
+        assert "GROUP BY finance.transactions.currency" in sql
+        assert "amount_eur" not in sql
+
+
 class TestCreate:
     async def test_adds_commits_and_refreshes(self):
         session = _make_session()
@@ -518,6 +543,15 @@ class TestCreate:
         )
         txn = await TransactionRepository(session).create(data, amount_eur=Decimal("45.00"))
         assert txn.amount_eur == Decimal("45.00")
+
+    async def test_normalizes_amount_eur_sign_to_match_amount(self):
+        session = _make_session()
+        data = TransactionCreate(
+            account_id=1, date="2026-06-12T10:00:00",
+            amount=Decimal("-50"), currency="USD", type="income",
+        )
+        txn = await TransactionRepository(session).create(data, amount_eur=Decimal("45.00"))
+        assert txn.amount_eur == Decimal("-45.00")
 
 
 class TestUpdate:
@@ -552,6 +586,16 @@ class TestUpdate:
             amount_eur=Decimal("88.00"), recompute_amount_eur=True,
         )
         assert result.amount_eur == Decimal("88.00")
+
+    async def test_normalizes_amount_eur_sign_to_match_new_amount(self):
+        session = _make_session()
+        txn = _make_txn_orm()
+        session.execute.return_value = _scalar_first(txn)
+        result = await TransactionRepository(session).update(
+            1, TransactionUpdate(amount=Decimal("-99")),
+            amount_eur=Decimal("88.00"), recompute_amount_eur=True,
+        )
+        assert result.amount_eur == Decimal("-88.00")
 
 
 class TestUnlinkInstallmentPlan:
@@ -1168,8 +1212,16 @@ class TestMissingAmountEur:
         session = _make_session()
         result_proxy = MagicMock()
         session.execute.return_value = result_proxy
-        await TransactionRepository(session).set_amount_eur(1, Decimal("12.00"))
+        await TransactionRepository(session).set_amount_eur(1, Decimal("12.00"), Decimal("12.00"))
         session.commit.assert_called_once()
+
+    async def test_set_amount_eur_normalizes_sign_to_match_amount(self):
+        session = _make_session()
+        session.execute.return_value = MagicMock()
+        await TransactionRepository(session).set_amount_eur(1, Decimal("-12.00"), Decimal("10.00"))
+        stmt = session.execute.call_args.args[0]
+        compiled = stmt.compile(compile_kwargs={"literal_binds": True})
+        assert "amount_eur=-10.00" in str(compiled).replace(" ", "")
 
     async def test_count_missing_amount_eur_returns_count(self):
         session = _make_session()

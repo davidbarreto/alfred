@@ -769,6 +769,7 @@
                   "    pm.expect(json).to.have.property('total');",
                   "    pm.expect(json).to.have.property('transaction_count');",
                   "    pm.expect(json).to.have.property('currency');",
+                  "    pm.expect(json).to.have.property('by_currency').that.is.an('array');",
                   "});"
                 ],
                 "type": "text/javascript"

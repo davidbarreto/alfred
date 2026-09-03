@@ -21,7 +21,10 @@
       </div>
     </details>
     {% endif %}
-    <span class="font-medium {% if txn_sum.total | float < 0 %}text-[#E24B4A]{% else %}text-[#3E9C42]{% endif %}">
+    <span
+      class="font-medium {% if txn_sum.total | float < 0 %}text-[#E24B4A]{% else %}text-[#3E9C42]{% endif %} {% if txn_sum.currency == "GLOBAL" %}cursor-help{% endif %}"
+      {% if txn_sum.currency == "GLOBAL" %}title="Converted to EUR at each transaction's own date -- rate movement between dates can leave a small residual even when the native amounts cancel out"{% endif %}
+    >
       Net: {{ "-" if txn_sum.total | float < 0 else "+" }}{{ currency_symbols.get("EUR", "€ ") if txn_sum.currency == "GLOBAL" else currency_symbols.get(txn_sum.currency, txn_sum.currency + " ") }}{{ txn_sum.total | float | abs | money }}
     </span>
   </div>

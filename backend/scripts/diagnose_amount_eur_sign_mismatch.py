@@ -26,21 +26,18 @@ from sqlalchemy import text
 
 from app.db.session import async_session
 
-_SIGN_MISMATCH_QUERY = text(
-    """
+_SIGN_MISMATCH_BASE = """
     SELECT id, account_id, date, currency, type, amount, amount_eur
     FROM finance.transactions
     WHERE amount_eur IS NOT NULL
       AND amount <> 0
       AND amount_eur <> 0
       AND sign(amount) <> sign(amount_eur)
-      AND (:account_id::int IS NULL OR account_id = :account_id)
+      {account_filter}
     ORDER BY account_id, date
     """
-)
 
-_ZERO_NATIVE_NONZERO_EUR_QUERY = text(
-    """
+_ZERO_NATIVE_NONZERO_EUR_BASE = """
     SELECT account_id, currency,
            SUM(CASE WHEN type = 'expense' THEN -amount ELSE amount END) AS native_total,
            SUM(CASE WHEN type = 'expense' THEN -amount_eur ELSE amount_eur END) AS eur_total,
@@ -48,19 +45,23 @@ _ZERO_NATIVE_NONZERO_EUR_QUERY = text(
     FROM finance.transactions
     WHERE currency <> 'EUR'
       AND amount_eur IS NOT NULL
-      AND (:account_id::int IS NULL OR account_id = :account_id)
+      {account_filter}
     GROUP BY account_id, currency
     HAVING SUM(CASE WHEN type = 'expense' THEN -amount ELSE amount END) = 0
        AND SUM(CASE WHEN type = 'expense' THEN -amount_eur ELSE amount_eur END) <> 0
     ORDER BY account_id, currency
     """
-)
 
 
 async def main(account_id: int | None) -> None:
+    account_filter = "AND account_id = :account_id" if account_id is not None else ""
+    params = {"account_id": account_id} if account_id is not None else {}
+
     async with async_session() as session:
         mismatches = (
-            await session.execute(_SIGN_MISMATCH_QUERY, {"account_id": account_id})
+            await session.execute(
+                text(_SIGN_MISMATCH_BASE.format(account_filter=account_filter)), params
+            )
         ).all()
         print(f"{len(mismatches)} row(s) with amount/amount_eur SIGN MISMATCH (real bug, would need a backfill):")
         for row in mismatches:
@@ -71,7 +72,9 @@ async def main(account_id: int | None) -> None:
 
         print()
         drifted = (
-            await session.execute(_ZERO_NATIVE_NONZERO_EUR_QUERY, {"account_id": account_id})
+            await session.execute(
+                text(_ZERO_NATIVE_NONZERO_EUR_BASE.format(account_filter=account_filter)), params
+            )
         ).all()
         print(f"{len(drifted)} (account, currency) group(s) net to zero natively but not in EUR (likely FX-rate drift, not a bug):")
         for row in drifted:

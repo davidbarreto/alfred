@@ -1,0 +1,35 @@
+{% if companies %}
+<div class="overflow-x-auto">
+<table class="w-full text-sm">
+  <thead>
+    <tr class="border-b border-gray-100 text-xs text-gray-400 uppercase tracking-wide">
+      <th class="text-left pb-2 font-medium">Name</th>
+      <th class="text-left pb-2 font-medium hidden sm:table-cell">Website</th>
+    </tr>
+  </thead>
+  <tbody class="divide-y divide-gray-50">
+    {% for c in companies %}
+    <tr class="hover:bg-gray-50">
+      <td class="py-2.5 pr-4">
+        <a href="/interviews/companies/{{ c.id }}" class="font-medium text-gray-900 hover:text-[#378ADD]">{{ c.name }}</a>
+      </td>
+      <td class="py-2.5 pr-4 text-gray-500 hidden sm:table-cell truncate max-w-xs">
+        {% if c.website %}<a href="{{ c.website }}" target="_blank" class="text-[#378ADD] hover:underline">{{ c.website }}</a>{% else %}—{% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+</div>
+{% else %}
+<p class="text-sm text-gray-400 py-4">No companies yet.</p>
+{% endif %}
+
+{% if has_prev or has_next %}
+<div class="flex items-center justify-between mt-4 pt-3 border-t border-gray-100">
+  <a href="?offset={{ (query_offset | default(0)) - 20 }}" class="btn btn-sm btn-ghost text-gray-500 gap-1 {% if not has_prev %}opacity-30 pointer-events-none{% endif %}">
+    <i class="ti ti-chevron-left text-xs"></i>Prev</a>
+  <a href="?offset={{ (query_offset | default(0)) + 20 }}" class="btn btn-sm btn-ghost text-gray-500 gap-1 {% if not has_next %}opacity-30 pointer-events-none{% endif %}">
+    Next<i class="ti ti-chevron-right text-xs"></i></a>
+</div>
+{% endif %}

@@ -127,6 +127,14 @@ class TestGetEvents:
         await repo.get_events(EventFilters(tags=["work"]))
         session.execute.assert_called_once()
 
+    async def test_q_filter_applied(self):
+        session = _make_session()
+        session.execute.return_value = _scalar_all([])
+
+        repo = CalendarEventRepository(session)
+        await repo.get_events(EventFilters(q="sync"))
+        session.execute.assert_called_once()
+
     async def test_range_query_includes_recurring_series_regardless_of_own_start(self):
         # A recurring series can start well before the queried range and still produce
         # occurrences inside it, so it must not be excluded by start_datetime alone.

@@ -7,9 +7,14 @@
 
   <div class="flex items-center justify-between">
     <h1 class="text-base font-semibold text-gray-900">Interviews</h1>
-    <button onclick="document.getElementById('new-process-modal').showModal()" class="btn btn-sm btn-primary gap-1">
-      <i class="ti ti-plus text-sm"></i>New process
-    </button>
+    <div class="flex items-center gap-2">
+      <a href="/interviews/companies" class="btn btn-sm btn-ghost text-gray-600 gap-1">
+        <i class="ti ti-building text-sm"></i>Companies
+      </a>
+      <button onclick="document.getElementById('new-process-modal').showModal()" class="btn btn-sm btn-primary gap-1">
+        <i class="ti ti-plus text-sm"></i>New process
+      </button>
+    </div>
   </div>
 
   {% if api_error %}

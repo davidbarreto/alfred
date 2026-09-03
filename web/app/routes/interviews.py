@@ -24,6 +24,102 @@ async def _get_companies() -> list:
         return []
 
 
+# -- Companies -----------------------------------------------------------
+# Registered before "/{process_id}" so "/companies..." isn't swallowed by
+# the process-detail route's int path-param match failing into a 422.
+
+
+@router.get("/companies", response_class=HTMLResponse)
+async def companies_page(request: Request):
+    offset = max(0, int(request.query_params.get("offset", "0")))
+    try:
+        raw = await api.get("/organizer/interview-companies", params={"limit": _PAGE_SIZE + 1, "offset": offset})
+    except httpx.HTTPError:
+        raw = []
+    companies, has_next, has_prev = _pagination(raw, offset)
+    return templates.TemplateResponse(request, "interview_companies.html", {
+        "companies": companies,
+        "has_next": has_next,
+        "has_prev": has_prev,
+        "query_offset": offset,
+    })
+
+
+@router.get("/companies/table", response_class=HTMLResponse)
+async def companies_table_fragment(request: Request):
+    offset = max(0, int(request.query_params.get("offset", "0")))
+    try:
+        raw = await api.get("/organizer/interview-companies", params={"limit": _PAGE_SIZE + 1, "offset": offset})
+    except httpx.HTTPError:
+        raw = []
+    companies, has_next, has_prev = _pagination(raw, offset)
+    return templates.TemplateResponse(request, "_interview_companies_table.html", {
+        "companies": companies,
+        "has_next": has_next,
+        "has_prev": has_prev,
+        "query_offset": offset,
+    })
+
+
+@router.post("/companies")
+async def create_company(name: Annotated[str, Form()], website: Annotated[str, Form()] = ""):
+    payload: dict = {"name": name}
+    if website:
+        payload["website"] = website
+    try:
+        await api.post("/organizer/interview-companies", json=payload)
+    except httpx.HTTPError:
+        pass
+    return RedirectResponse(url="/interviews/companies", status_code=303)
+
+
+@router.get("/companies/{company_id}", response_class=HTMLResponse)
+async def company_detail(request: Request, company_id: int):
+    try:
+        company = await api.get(f"/organizer/interview-companies/{company_id}")
+    except httpx.HTTPError:
+        return RedirectResponse(url="/interviews/companies", status_code=303)
+    try:
+        processes = await api.get("/organizer/interview-processes", params={"company_id": company_id, "limit": 200})
+    except httpx.HTTPError:
+        processes = []
+    return templates.TemplateResponse(request, "interview_company_detail.html", {
+        "company": company,
+        "processes": processes,
+    })
+
+
+@router.post("/companies/{company_id}/update")
+async def update_company(
+    company_id: int,
+    name: Annotated[str, Form()] = "",
+    website: Annotated[str, Form()] = "",
+    notes: Annotated[str, Form()] = "",
+):
+    payload: dict = {}
+    if name:
+        payload["name"] = name
+    payload["website"] = website or None
+    payload["notes"] = notes or None
+    try:
+        await api.patch(f"/organizer/interview-companies/{company_id}", json=payload)
+    except httpx.HTTPError:
+        pass
+    return RedirectResponse(url=f"/interviews/companies/{company_id}", status_code=303)
+
+
+@router.post("/companies/{company_id}/delete")
+async def delete_company(company_id: int):
+    try:
+        await api.delete(f"/organizer/interview-companies/{company_id}")
+    except httpx.HTTPError:
+        pass
+    return RedirectResponse(url="/interviews/companies", status_code=303)
+
+
+# -- Process list ----------------------------------------------------------
+
+
 @router.get("/", response_class=HTMLResponse)
 async def interviews_page(request: Request):
     status_filter = request.query_params.get("status", "").strip()
@@ -170,6 +266,94 @@ async def delete_process(process_id: int):
     return RedirectResponse(url="/interviews", status_code=303)
 
 
+# -- Process edit ------------------------------------------------------------
+
+
+@router.get("/{process_id}/edit", response_class=HTMLResponse)
+async def edit_process_page(request: Request, process_id: int):
+    try:
+        process = await api.get(f"/organizer/interview-processes/{process_id}")
+    except httpx.HTTPError:
+        return RedirectResponse(url="/interviews", status_code=303)
+    companies = await _get_companies()
+    return templates.TemplateResponse(request, "interview_process_edit.html", {
+        "process": process,
+        "companies": companies,
+    })
+
+
+@router.post("/{process_id}/update")
+async def update_process(
+    process_id: int,
+    company_id: Annotated[str, Form()] = "",
+    role_title: Annotated[str, Form()] = "",
+    status: Annotated[str, Form()] = "",
+    priority: Annotated[str, Form()] = "",
+    source: Annotated[str, Form()] = "",
+    applied_date: Annotated[str, Form()] = "",
+    work_regime: Annotated[str, Form()] = "",
+    office_days_per_month: Annotated[str, Form()] = "",
+    office_location: Annotated[str, Form()] = "",
+    salary_min: Annotated[str, Form()] = "",
+    salary_max: Annotated[str, Form()] = "",
+    salary_currency: Annotated[str, Form()] = "",
+    benefits: Annotated[str, Form()] = "",
+    job_description_url: Annotated[str, Form()] = "",
+):
+    payload: dict = {}
+    if company_id:
+        payload["company_id"] = int(company_id)
+    if role_title:
+        payload["role_title"] = role_title
+    if status:
+        payload["status"] = status
+    payload["priority"] = priority or None
+    payload["source"] = source or None
+    payload["applied_date"] = applied_date or None
+    payload["work_regime"] = work_regime or None
+    payload["office_days_per_month"] = float(office_days_per_month) if office_days_per_month else None
+    payload["office_location"] = office_location or None
+    payload["salary_min"] = int(salary_min) if salary_min else None
+    payload["salary_max"] = int(salary_max) if salary_max else None
+    payload["salary_currency"] = salary_currency or None
+    payload["benefits"] = benefits or None
+    payload["job_description_url"] = job_description_url or None
+    try:
+        await api.patch(f"/organizer/interview-processes/{process_id}", json=payload)
+    except httpx.HTTPError:
+        pass
+    return RedirectResponse(url=f"/interviews/{process_id}", status_code=303)
+
+
+# -- Process detail ----------------------------------------------------------
+
+
+async def _get_stage_links(stage_id: int) -> dict:
+    contacts, tasks, notes = [], [], []
+    try:
+        contacts = await api.get(f"/organizer/interview-stages/{stage_id}/contacts")
+    except httpx.HTTPError:
+        pass
+    try:
+        tasks = await api.get(f"/organizer/interview-stages/{stage_id}/tasks")
+    except httpx.HTTPError:
+        pass
+    try:
+        notes = await api.get(f"/organizer/interview-stages/{stage_id}/notes")
+    except httpx.HTTPError:
+        pass
+    return {"contacts": contacts, "tasks": tasks, "notes": notes}
+
+
+async def _get_calendar_event(event_id: int | None):
+    if not event_id:
+        return None
+    try:
+        return await api.get(f"/organizer/calendar-events/{event_id}")
+    except httpx.HTTPError:
+        return None
+
+
 @router.get("/{process_id}", response_class=HTMLResponse)
 async def interview_process_detail(request: Request, process_id: int):
     try:
@@ -187,10 +371,16 @@ async def interview_process_detail(request: Request, process_id: int):
     except httpx.HTTPError:
         links = []
 
+    stage_extras: dict[int, dict] = {}
+    for s in process.get("stages", []):
+        stage_extras[s["id"]] = await _get_stage_links(s["id"])
+        stage_extras[s["id"]]["event"] = await _get_calendar_event(s.get("calendar_event_id"))
+
     return templates.TemplateResponse(request, "interview_process_detail.html", {
         "process": process,
         "company": company,
         "links": links,
+        "stage_extras": stage_extras,
     })
 
 
@@ -215,13 +405,22 @@ async def create_stage(
 async def update_stage(
     process_id: int,
     stage_id: int,
+    stage_type: Annotated[str, Form()] = "",
     status: Annotated[str, Form()] = "",
+    scheduled_at: Annotated[str, Form()] = "",
+    sequence: Annotated[str, Form()] = "",
     feedback: Annotated[str, Form()] = "",
     notes: Annotated[str, Form()] = "",
 ):
     payload: dict = {}
+    if stage_type:
+        payload["stage_type"] = stage_type
     if status:
         payload["status"] = status
+    if scheduled_at:
+        payload["scheduled_at"] = scheduled_at
+    if sequence:
+        payload["sequence"] = int(sequence)
     if feedback:
         payload["feedback"] = feedback
     if notes:
@@ -279,3 +478,198 @@ async def generate_insights():
     except httpx.HTTPError:
         pass
     return RedirectResponse(url="/interviews", status_code=303)
+
+
+# -- Stage <-> task/note/contact/calendar-event linking -----------------------
+
+
+@router.get("/{process_id}/stages/{stage_id}/search/tasks", response_class=HTMLResponse)
+async def search_tasks(request: Request, process_id: int, stage_id: int):
+    query = request.query_params.get("q", "").strip()
+    results = []
+    if query:
+        try:
+            results = await api.get("/organizer/tasks", params={"q": query, "status": "ACTIVE", "limit": 8})
+        except httpx.HTTPError:
+            results = []
+    return templates.TemplateResponse(request, "_interview_link_suggestions.html", {
+        "results": results,
+        "process_id": process_id,
+        "stage_id": stage_id,
+        "entity": "tasks",
+        "label_field": "title",
+    })
+
+
+@router.get("/{process_id}/stages/{stage_id}/search/notes", response_class=HTMLResponse)
+async def search_notes(request: Request, process_id: int, stage_id: int):
+    query = request.query_params.get("q", "").strip()
+    results = []
+    if query:
+        try:
+            results = await api.get("/organizer/notes", params={"q": query, "limit": 8})
+        except httpx.HTTPError:
+            results = []
+    return templates.TemplateResponse(request, "_interview_link_suggestions.html", {
+        "results": results,
+        "process_id": process_id,
+        "stage_id": stage_id,
+        "entity": "notes",
+        "label_field": "title",
+    })
+
+
+@router.get("/{process_id}/stages/{stage_id}/search/contacts", response_class=HTMLResponse)
+async def search_contacts(request: Request, process_id: int, stage_id: int):
+    query = request.query_params.get("q", "").strip()
+    results = []
+    if query:
+        try:
+            results = await api.get("/organizer/contacts", params={"name": query, "limit": 8})
+        except httpx.HTTPError:
+            results = []
+    return templates.TemplateResponse(request, "_interview_link_suggestions.html", {
+        "results": results,
+        "process_id": process_id,
+        "stage_id": stage_id,
+        "entity": "contacts",
+        "label_field": "name",
+    })
+
+
+@router.get("/{process_id}/stages/{stage_id}/search/events", response_class=HTMLResponse)
+async def search_events(request: Request, process_id: int, stage_id: int):
+    query = request.query_params.get("q", "").strip()
+    results = []
+    if query:
+        try:
+            results = await api.get("/organizer/calendar-events", params={"q": query, "limit": 8})
+        except httpx.HTTPError:
+            results = []
+    return templates.TemplateResponse(request, "_interview_link_suggestions.html", {
+        "results": results,
+        "process_id": process_id,
+        "stage_id": stage_id,
+        "entity": "events",
+        "label_field": "title",
+    })
+
+
+@router.post("/{process_id}/stages/{stage_id}/tasks/{task_id}/link")
+async def link_task(process_id: int, stage_id: int, task_id: int):
+    try:
+        await api.post(f"/organizer/interview-stages/{stage_id}/tasks/{task_id}")
+    except httpx.HTTPError:
+        pass
+    return RedirectResponse(url=f"/interviews/{process_id}", status_code=303)
+
+
+@router.post("/{process_id}/stages/{stage_id}/tasks/{task_id}/unlink")
+async def unlink_task(process_id: int, stage_id: int, task_id: int):
+    try:
+        await api.delete(f"/organizer/interview-stages/{stage_id}/tasks/{task_id}")
+    except httpx.HTTPError:
+        pass
+    return RedirectResponse(url=f"/interviews/{process_id}", status_code=303)
+
+
+@router.post("/{process_id}/stages/{stage_id}/tasks/new")
+async def create_and_link_task(process_id: int, stage_id: int, title: Annotated[str, Form()]):
+    try:
+        task = await api.post("/organizer/tasks", json={"title": title})
+        await api.post(f"/organizer/interview-stages/{stage_id}/tasks/{task['id']}")
+    except httpx.HTTPError:
+        pass
+    return RedirectResponse(url=f"/interviews/{process_id}", status_code=303)
+
+
+@router.post("/{process_id}/stages/{stage_id}/notes/{note_id}/link")
+async def link_note(process_id: int, stage_id: int, note_id: int):
+    try:
+        await api.post(f"/organizer/interview-stages/{stage_id}/notes/{note_id}")
+    except httpx.HTTPError:
+        pass
+    return RedirectResponse(url=f"/interviews/{process_id}", status_code=303)
+
+
+@router.post("/{process_id}/stages/{stage_id}/notes/{note_id}/unlink")
+async def unlink_note(process_id: int, stage_id: int, note_id: int):
+    try:
+        await api.delete(f"/organizer/interview-stages/{stage_id}/notes/{note_id}")
+    except httpx.HTTPError:
+        pass
+    return RedirectResponse(url=f"/interviews/{process_id}", status_code=303)
+
+
+@router.post("/{process_id}/stages/{stage_id}/notes/new")
+async def create_and_link_note(process_id: int, stage_id: int, title: Annotated[str, Form()]):
+    try:
+        note = await api.post("/organizer/notes", json={"title": title})
+        await api.post(f"/organizer/interview-stages/{stage_id}/notes/{note['id']}")
+    except httpx.HTTPError:
+        pass
+    return RedirectResponse(url=f"/interviews/{process_id}", status_code=303)
+
+
+@router.post("/{process_id}/stages/{stage_id}/contacts/{contact_id}/link")
+async def link_contact(process_id: int, stage_id: int, contact_id: int, role: Annotated[str, Form()] = ""):
+    try:
+        await api.post(f"/organizer/interview-stages/{stage_id}/contacts/{contact_id}", json={"role": role or None})
+    except httpx.HTTPError:
+        pass
+    return RedirectResponse(url=f"/interviews/{process_id}", status_code=303)
+
+
+@router.post("/{process_id}/stages/{stage_id}/contacts/{contact_id}/unlink")
+async def unlink_contact(process_id: int, stage_id: int, contact_id: int):
+    try:
+        await api.delete(f"/organizer/interview-stages/{stage_id}/contacts/{contact_id}")
+    except httpx.HTTPError:
+        pass
+    return RedirectResponse(url=f"/interviews/{process_id}", status_code=303)
+
+
+@router.post("/{process_id}/stages/{stage_id}/contacts/new")
+async def create_and_link_contact(process_id: int, stage_id: int, name: Annotated[str, Form()], role: Annotated[str, Form()] = ""):
+    try:
+        contact = await api.post("/organizer/contacts", json={"name": name})
+        await api.post(f"/organizer/interview-stages/{stage_id}/contacts/{contact['id']}", json={"role": role or None})
+    except httpx.HTTPError:
+        pass
+    return RedirectResponse(url=f"/interviews/{process_id}", status_code=303)
+
+
+@router.post("/{process_id}/stages/{stage_id}/event/{event_id}/link")
+async def link_event(process_id: int, stage_id: int, event_id: int):
+    try:
+        await api.patch(f"/organizer/interview-stages/{stage_id}", json={"calendar_event_id": event_id})
+    except httpx.HTTPError:
+        pass
+    return RedirectResponse(url=f"/interviews/{process_id}", status_code=303)
+
+
+@router.post("/{process_id}/stages/{stage_id}/event/unlink")
+async def unlink_event(process_id: int, stage_id: int):
+    try:
+        await api.patch(f"/organizer/interview-stages/{stage_id}", json={"calendar_event_id": None})
+    except httpx.HTTPError:
+        pass
+    return RedirectResponse(url=f"/interviews/{process_id}", status_code=303)
+
+
+@router.post("/{process_id}/stages/{stage_id}/event/new")
+async def create_and_link_event(
+    process_id: int,
+    stage_id: int,
+    title: Annotated[str, Form()],
+    start_datetime: Annotated[str, Form()],
+    end_datetime: Annotated[str, Form()],
+):
+    try:
+        event = await api.post("/organizer/calendar-events", json={
+            "title": title, "start_datetime": start_datetime, "end_datetime": end_datetime,
+        })
+        await api.patch(f"/organizer/interview-stages/{stage_id}", json={"calendar_event_id": event["id"]})
+    except httpx.HTTPError:
+        pass
+    return RedirectResponse(url=f"/interviews/{process_id}", status_code=303)

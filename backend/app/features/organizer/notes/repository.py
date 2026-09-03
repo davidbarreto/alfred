@@ -30,6 +30,8 @@ class NoteRepository:
         )
         if note_filter.tags:
             query = query.where(Note.tags.any(Tag.name.in_(note_filter.tags)))
+        if note_filter.q:
+            query = query.where(Note.title.ilike(f"%{note_filter.q}%"))
         order_by = Note.updated_at.desc() if note_filter.sort == "updated" else Note.created_at.desc()
         query = query.order_by(order_by).limit(note_filter.limit).offset(note_filter.offset)
         result = await self._session.execute(query)

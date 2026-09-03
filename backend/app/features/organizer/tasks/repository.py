@@ -39,6 +39,8 @@ class TaskRepository:
             query = query.where(Task.status == task_filter.status)
         if task_filter.priority != "ALL":
             query = query.where(Task.priority == task_filter.priority)
+        if task_filter.q:
+            query = query.where(Task.title.ilike(f"%{task_filter.q}%"))
         if task_filter.urgency != "ALL":
             query = query.where(Task.urgency == task_filter.urgency)
         if task_filter.due_today:

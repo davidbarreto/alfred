@@ -42,12 +42,14 @@ class NoteFilters:
         tags: Annotated[Optional[List[str]], Query()] = None,
         archived: Annotated[bool, Query()] = False,
         sort: Annotated[str, Query()] = "created",
+        q: Annotated[Optional[str], Query(description="Case-insensitive substring match on title")] = None,
     ) -> None:
         self.limit = limit
         self.offset = offset
         self.tags = tags
         self.archived = archived
         self.sort = sort
+        self.q = q
 
     def __eq__(self, other: object) -> bool:
         return isinstance(other, NoteFilters) and vars(self) == vars(other)
@@ -55,5 +57,5 @@ class NoteFilters:
     def __repr__(self) -> str:
         return (
             f"NoteFilters(limit={self.limit}, offset={self.offset}, tags={self.tags!r}, "
-            f"archived={self.archived}, sort={self.sort!r})"
+            f"archived={self.archived}, sort={self.sort!r}, q={self.q!r})"
         )

@@ -89,6 +89,14 @@ class TestGetNotes:
         await repo.get_notes(NoteFilters(tags=["work"]))
         session.execute.assert_called_once()
 
+    async def test_q_filter_applied(self):
+        session = _make_session()
+        session.execute.return_value = _scalar_all([])
+
+        repo = NoteRepository(session)
+        await repo.get_notes(NoteFilters(q="idea"))
+        session.execute.assert_called_once()
+
     async def test_orders_by_most_recent_first(self):
         session = _make_session()
         session.execute.return_value = _scalar_all([])

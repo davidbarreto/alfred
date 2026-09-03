@@ -1,0 +1,11 @@
+{% if results %}
+<div class="bg-white border border-gray-200 rounded-lg shadow-md text-sm overflow-hidden">
+  {% for r in results %}
+  <form method="post" action="/interviews/{{ process_id }}/stages/{{ stage_id }}/{{ 'event' if entity == 'events' else entity }}/{{ r.id }}/link">
+    <button type="submit" class="block w-full text-left px-3 py-1.5 hover:bg-[#E6F1FB] hover:text-[#0C447C]">
+      {{ r[label_field] }}
+    </button>
+  </form>
+  {% endfor %}
+</div>
+{% endif %}

@@ -64,6 +64,11 @@ class TestGetNotes:
         filters = mock_service.get_notes.call_args[0][0]
         assert filters.limit == 10
 
+    def test_q_filter_passed_to_service(self, client, mock_service):
+        client.get("/organizer/notes/?q=idea", headers=AUTH)
+        filters = mock_service.get_notes.call_args[0][0]
+        assert filters.q == "idea"
+
     def test_default_filters_when_no_params(self, client, mock_service):
         client.get("/organizer/notes/", headers=AUTH)
         filters = mock_service.get_notes.call_args[0][0]

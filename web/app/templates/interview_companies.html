@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% set active_page = "interviews" %}
+{% block title %}Companies{% endblock %}
+
+{% block content %}
+<div class="p-6 space-y-4">
+
+  <div class="flex items-center justify-between">
+    <div class="flex items-center gap-2">
+      <a href="/interviews" class="text-gray-400 hover:text-gray-600"><i class="ti ti-arrow-left text-sm"></i></a>
+      <h1 class="text-base font-semibold text-gray-900">Companies</h1>
+    </div>
+  </div>
+
+  <form method="post" action="/interviews/companies" class="bg-white border border-gray-200 rounded-lg p-4 flex flex-wrap items-end gap-2">
+    <div>
+      <label class="text-xs text-gray-500 mb-1 block">Name</label>
+      <input name="name" type="text" required class="border border-gray-200 rounded-lg px-3 py-1.5 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-[#378ADD]" />
+    </div>
+    <div>
+      <label class="text-xs text-gray-500 mb-1 block">Website</label>
+      <input name="website" type="url" class="border border-gray-200 rounded-lg px-3 py-1.5 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-[#378ADD]" />
+    </div>
+    <button type="submit" class="btn btn-sm btn-primary">Add company</button>
+  </form>
+
+  <div id="companies-table" class="bg-white border border-gray-200 rounded-lg p-4">
+    {% include "_interview_companies_table.html" %}
+  </div>
+
+</div>
+{% endblock %}

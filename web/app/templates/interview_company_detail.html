@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% set active_page = "interviews" %}
+{% block title %}{{ company.name }}{% endblock %}
+
+{% block content %}
+<div class="p-6 space-y-4">
+
+  <div class="flex items-center gap-2">
+    <a href="/interviews/companies" class="text-gray-400 hover:text-gray-600"><i class="ti ti-arrow-left text-sm"></i></a>
+    <h1 class="text-base font-semibold text-gray-900">{{ company.name }}</h1>
+  </div>
+
+  <form method="post" action="/interviews/companies/{{ company.id }}/update" class="bg-white border border-gray-200 rounded-lg p-4 flex flex-col gap-3">
+    <div class="grid grid-cols-2 gap-3">
+      <div>
+        <label class="text-xs text-gray-500 mb-1 block">Name</label>
+        <input name="name" type="text" value="{{ company.name }}" required
+               class="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white w-full focus:outline-none focus:ring-1 focus:ring-[#378ADD]" />
+      </div>
+      <div>
+        <label class="text-xs text-gray-500 mb-1 block">Website</label>
+        <input name="website" type="url" value="{{ company.website or '' }}"
+               class="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white w-full focus:outline-none focus:ring-1 focus:ring-[#378ADD]" />
+      </div>
+    </div>
+    <div>
+      <label class="text-xs text-gray-500 mb-1 block">Notes</label>
+      <textarea name="notes" rows="3"
+                class="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white w-full focus:outline-none focus:ring-1 focus:ring-[#378ADD]">{{ company.notes or "" }}</textarea>
+    </div>
+    <div class="flex justify-between items-center mt-1">
+      <form method="post" action="/interviews/companies/{{ company.id }}/delete" onsubmit="return confirm('Delete this company? Its interview processes will also be deleted.');">
+        <button type="submit" class="btn btn-sm btn-ghost text-[#E24B4A]">Delete company</button>
+      </form>
+      <button type="submit" class="btn btn-sm btn-primary">Save</button>
+    </div>
+  </form>
+
+  <div class="bg-white border border-gray-200 rounded-lg p-4">
+    <h2 class="text-sm font-semibold text-gray-900 mb-3">Interview processes</h2>
+    {% if processes %}
+    <ul class="divide-y divide-gray-50">
+      {% for p in processes %}
+      <li class="py-2.5 flex items-center justify-between gap-2">
+        <a href="/interviews/{{ p.id }}" class="text-gray-800 hover:text-[#378ADD]">{{ p.role_title }}</a>
+        <span class="px-2 py-0.5 rounded-full text-xs font-medium
+          {% if p.status == 'offer' %}bg-[#E9F5E1] text-[#3B7A1F]
+          {% elif p.status in ['rejected', 'withdrawn', 'ghosted'] %}bg-gray-100 text-gray-500
+          {% else %}bg-[#E6F1FB] text-[#0C447C]{% endif %}">
+          {{ p.status }}
+        </span>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p class="text-sm text-gray-400 py-3">No interview processes for this company yet.</p>
+    {% endif %}
+  </div>
+
+</div>
+{% endblock %}

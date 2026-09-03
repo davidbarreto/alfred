@@ -119,6 +119,14 @@ class TestGetTasks:
         await repo.get_tasks(TaskFilters(priority="HIGH"))
         session.execute.assert_called_once()
 
+    async def test_q_filter_applied(self):
+        session = _make_session()
+        session.execute.return_value = _scalar_all([])
+
+        repo = TaskRepository(session)
+        await repo.get_tasks(TaskFilters(q="ship"))
+        session.execute.assert_called_once()
+
     async def test_urgency_filter_applied(self):
         session = _make_session()
         session.execute.return_value = _scalar_all([])

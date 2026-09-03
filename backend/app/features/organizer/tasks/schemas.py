@@ -64,6 +64,7 @@ class TaskFilters:
         deadline_to: Annotated[Optional[datetime], Query()] = None,
         include_recurring: Annotated[bool, Query()] = False,
         due_today: Annotated[bool, Query()] = False,
+        q: Annotated[Optional[str], Query(description="Case-insensitive substring match on title")] = None,
     ) -> None:
         self.limit = limit
         self.status = status
@@ -74,6 +75,7 @@ class TaskFilters:
         self.deadline_to = deadline_to
         self.include_recurring = include_recurring
         self.due_today = due_today
+        self.q = q
 
     def __eq__(self, other: object) -> bool:
         return isinstance(other, TaskFilters) and vars(self) == vars(other)
@@ -84,7 +86,7 @@ class TaskFilters:
             f"priority={self.priority!r}, urgency={self.urgency!r}, "
             f"tags={self.tags!r}, deadline_from={self.deadline_from!r}, "
             f"deadline_to={self.deadline_to!r}, include_recurring={self.include_recurring!r}, "
-            f"due_today={self.due_today!r})"
+            f"due_today={self.due_today!r}, q={self.q!r})"
         )
 
 

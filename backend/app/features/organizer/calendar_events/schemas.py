@@ -63,11 +63,13 @@ class EventFilters:
         start_from: Annotated[Optional[datetime], Query()] = None,
         start_to: Annotated[Optional[datetime], Query()] = None,
         tags: Annotated[Optional[List[str]], Query()] = None,
+        q: Annotated[Optional[str], Query(description="Case-insensitive substring match on title")] = None,
     ) -> None:
         self.limit = limit
         self.start_from = start_from.replace(tzinfo=None) if start_from is not None else None
         self.start_to = start_to.replace(tzinfo=None) if start_to is not None else None
         self.tags = tags
+        self.q = q
 
     def __eq__(self, other: object) -> bool:
         return isinstance(other, EventFilters) and vars(self) == vars(other)
@@ -75,7 +77,7 @@ class EventFilters:
     def __repr__(self) -> str:
         return (
             f"EventFilters(limit={self.limit}, start_from={self.start_from!r}, "
-            f"start_to={self.start_to!r}, tags={self.tags!r})"
+            f"start_to={self.start_to!r}, tags={self.tags!r}, q={self.q!r})"
         )
 
 

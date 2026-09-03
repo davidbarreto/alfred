@@ -60,6 +60,8 @@ class CalendarEventRepository:
             query = query.where(or_(and_(*non_recurring_range), and_(*recurring_range)))
         if event_filter.tags:
             query = query.where(CalendarEvent.tags.any(Tag.name.in_(event_filter.tags)))
+        if event_filter.q:
+            query = query.where(CalendarEvent.title.ilike(f"%{event_filter.q}%"))
         query = query.order_by(CalendarEvent.start_datetime.asc()).limit(event_filter.limit)
         result = await self._session.execute(query)
         return list(result.scalars().all())

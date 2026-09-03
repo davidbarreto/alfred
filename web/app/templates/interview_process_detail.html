@@ -9,7 +9,9 @@
     <div class="flex items-center gap-2">
       <a href="/interviews" class="text-gray-400 hover:text-gray-600"><i class="ti ti-arrow-left text-sm"></i></a>
       <h1 class="text-base font-semibold text-gray-900">{{ process.role_title }}</h1>
-      <span class="text-sm text-gray-500">at {{ company.name if company else "—" }}</span>
+      <span class="text-sm text-gray-500">at
+        {% if company %}<a href="/interviews/companies/{{ company.id }}" class="hover:text-[#378ADD] hover:underline">{{ company.name }}</a>{% else %}—{% endif %}
+      </span>
       <span class="px-2 py-0.5 rounded-full text-xs font-medium
         {% if process.status == 'offer' %}bg-[#E9F5E1] text-[#3B7A1F]
         {% elif process.status in ['rejected', 'withdrawn', 'ghosted'] %}bg-gray-100 text-gray-500
@@ -17,6 +19,9 @@
         {{ process.status }}
       </span>
     </div>
+    <a href="/interviews/{{ process.id }}/edit" class="btn btn-sm btn-ghost text-[#378ADD] gap-1">
+      <i class="ti ti-pencil text-sm"></i>Edit
+    </a>
   </div>
 
   <div class="bg-white border border-gray-200 rounded-lg p-4 grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
@@ -78,9 +83,10 @@
   <div class="bg-white border border-gray-200 rounded-lg p-4">
     <h2 class="text-sm font-semibold text-gray-900 mb-3">Stages</h2>
     {% if process.stages %}
-    <ul class="space-y-2 mb-4">
+    <ul class="space-y-4 mb-4">
       {% for s in process.stages %}
-      <li class="border-b border-gray-100 pb-2.5 last:border-0 last:pb-0">
+      {% set extras = stage_extras.get(s.id, {"contacts": [], "tasks": [], "notes": [], "event": None}) %}
+      <li class="border border-gray-100 rounded-lg p-3">
         <div class="flex items-start justify-between gap-2">
           <div>
             <span class="font-medium text-gray-800 capitalize">{{ s.stage_type.replace("_", " ") }}</span>
@@ -96,15 +102,160 @@
             <button type="submit" class="text-gray-300 hover:text-[#E24B4A]" title="Delete stage"><i class="ti ti-trash text-sm"></i></button>
           </form>
         </div>
-        <form method="post" action="/interviews/{{ process.id }}/stages/{{ s.id }}/update" class="flex flex-wrap items-center gap-2 mt-2">
-          <select name="status" class="border border-gray-200 rounded-lg px-2 py-1 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-[#378ADD]">
-            {% for st in ["scheduled", "completed", "passed", "failed", "cancelled"] %}
-            <option value="{{ st }}" {% if s.status == st %}selected{% endif %}>{{ st }}</option>
-            {% endfor %}
-          </select>
-          <input name="feedback" type="text" placeholder="Feedback" class="flex-1 min-w-[120px] border border-gray-200 rounded-lg px-2 py-1 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-[#378ADD]" />
-          <button type="submit" class="btn btn-xs btn-ghost text-[#378ADD]">Update</button>
+
+        <div class="flex flex-wrap items-center gap-2 mt-2">
+          <form method="post" action="/interviews/{{ process.id }}/stages/{{ s.id }}/update">
+            <input type="hidden" name="status" value="passed" />
+            <button type="submit" class="btn btn-xs bg-[#E9F5E1] text-[#3B7A1F] border-0 hover:brightness-95">Mark Passed</button>
+          </form>
+          <form method="post" action="/interviews/{{ process.id }}/stages/{{ s.id }}/update">
+            <input type="hidden" name="status" value="failed" />
+            <button type="submit" class="btn btn-xs bg-[#FCEBEB] text-[#E24B4A] border-0 hover:brightness-95">Mark Failed</button>
+          </form>
+          <button type="button" onclick="document.getElementById('stage-edit-{{ s.id }}').classList.toggle('hidden')" class="btn btn-xs btn-ghost text-gray-500">Edit</button>
+          <button type="button" onclick="document.getElementById('stage-links-{{ s.id }}').classList.toggle('hidden')" class="btn btn-xs btn-ghost text-gray-500">
+            Links
+            {% set link_count = (extras.contacts | length) + (extras.tasks | length) + (extras.notes | length) + (1 if extras.event else 0) %}
+            {% if link_count %}<span class="badge badge-ghost badge-xs">{{ link_count }}</span>{% endif %}
+          </button>
+        </div>
+
+        <form id="stage-edit-{{ s.id }}" method="post" action="/interviews/{{ process.id }}/stages/{{ s.id }}/update" class="hidden flex flex-wrap items-end gap-2 mt-3 pt-3 border-t border-gray-100">
+          <div>
+            <label class="text-xs text-gray-500 mb-1 block">Type</label>
+            <select name="stage_type" class="border border-gray-200 rounded-lg px-2 py-1 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-[#378ADD]">
+              {% for st in ["phone_screen", "code_review", "live_coding", "onsite", "behavioral", "system_design", "offer", "other"] %}
+              <option value="{{ st }}" {% if s.stage_type == st %}selected{% endif %}>{{ st.replace("_", " ") | capitalize }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div>
+            <label class="text-xs text-gray-500 mb-1 block">Status</label>
+            <select name="status" class="border border-gray-200 rounded-lg px-2 py-1 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-[#378ADD]">
+              {% for st in ["scheduled", "completed", "passed", "failed", "cancelled"] %}
+              <option value="{{ st }}" {% if s.status == st %}selected{% endif %}>{{ st }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div>
+            <label class="text-xs text-gray-500 mb-1 block">Scheduled at</label>
+            <input name="scheduled_at" type="datetime-local" value="{{ s.scheduled_at[:16] if s.scheduled_at else '' }}"
+                   class="border border-gray-200 rounded-lg px-2 py-1 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-[#378ADD]" />
+          </div>
+          <div>
+            <label class="text-xs text-gray-500 mb-1 block">Sequence</label>
+            <input name="sequence" type="number" value="{{ s.sequence }}" class="w-16 border border-gray-200 rounded-lg px-2 py-1 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-[#378ADD]" />
+          </div>
+          <div class="flex-1 min-w-[140px]">
+            <label class="text-xs text-gray-500 mb-1 block">Feedback</label>
+            <input name="feedback" type="text" value="{{ s.feedback or '' }}" class="w-full border border-gray-200 rounded-lg px-2 py-1 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-[#378ADD]" />
+          </div>
+          <div class="flex-1 min-w-[140px]">
+            <label class="text-xs text-gray-500 mb-1 block">Notes</label>
+            <input name="notes" type="text" value="{{ s.notes or '' }}" class="w-full border border-gray-200 rounded-lg px-2 py-1 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-[#378ADD]" />
+          </div>
+          <button type="submit" class="btn btn-xs btn-primary">Save</button>
         </form>
+
+        <div id="stage-links-{{ s.id }}" class="hidden mt-3 pt-3 border-t border-gray-100 grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+
+          <div>
+            <div class="font-medium text-gray-600 mb-1">Calendar event</div>
+            {% if extras.event %}
+            <div class="flex items-center justify-between gap-2 mb-2">
+              <span class="text-gray-700">{{ extras.event.title }} — {{ extras.event.start_datetime }}</span>
+              <form method="post" action="/interviews/{{ process.id }}/stages/{{ s.id }}/event/unlink">
+                <button type="submit" class="text-gray-300 hover:text-[#E24B4A]"><i class="ti ti-x text-xs"></i></button>
+              </form>
+            </div>
+            {% else %}
+            <div class="relative mb-2">
+              <input type="text" placeholder="Search events…" autocomplete="off"
+                     hx-get="/interviews/{{ process.id }}/stages/{{ s.id }}/search/events"
+                     hx-trigger="keyup changed delay:300ms" hx-target="#event-suggest-{{ s.id }}" hx-swap="innerHTML" hx-params="q" name="q"
+                     class="w-full border border-gray-200 rounded-lg px-2 py-1 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-[#378ADD]" />
+              <div id="event-suggest-{{ s.id }}" class="absolute z-10 left-0 right-0 mt-1"></div>
+            </div>
+            <form method="post" action="/interviews/{{ process.id }}/stages/{{ s.id }}/event/new" class="flex flex-wrap gap-1">
+              <input name="title" type="text" placeholder="+ New event title" required class="flex-1 min-w-[100px] border border-gray-200 rounded-lg px-2 py-1 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-[#378ADD]" />
+              <input name="start_datetime" type="datetime-local" required class="border border-gray-200 rounded-lg px-2 py-1 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-[#378ADD]" />
+              <input name="end_datetime" type="datetime-local" required class="border border-gray-200 rounded-lg px-2 py-1 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-[#378ADD]" />
+              <button type="submit" class="btn btn-xs btn-ghost text-[#378ADD]">Create &amp; link</button>
+            </form>
+            {% endif %}
+          </div>
+
+          <div>
+            <div class="font-medium text-gray-600 mb-1">Contacts</div>
+            {% for c in extras.contacts %}
+            <div class="flex items-center justify-between gap-2 mb-1">
+              <span class="text-gray-700">{{ c.name }}</span>
+              <form method="post" action="/interviews/{{ process.id }}/stages/{{ s.id }}/contacts/{{ c.id }}/unlink">
+                <button type="submit" class="text-gray-300 hover:text-[#E24B4A]"><i class="ti ti-x text-xs"></i></button>
+              </form>
+            </div>
+            {% endfor %}
+            <div class="relative mb-2">
+              <input type="text" placeholder="Search contacts…" autocomplete="off"
+                     hx-get="/interviews/{{ process.id }}/stages/{{ s.id }}/search/contacts"
+                     hx-trigger="keyup changed delay:300ms" hx-target="#contact-suggest-{{ s.id }}" hx-swap="innerHTML" hx-params="q" name="q"
+                     class="w-full border border-gray-200 rounded-lg px-2 py-1 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-[#378ADD]" />
+              <div id="contact-suggest-{{ s.id }}" class="absolute z-10 left-0 right-0 mt-1"></div>
+            </div>
+            <form method="post" action="/interviews/{{ process.id }}/stages/{{ s.id }}/contacts/new" class="flex flex-wrap gap-1">
+              <input name="name" type="text" placeholder="+ New contact name" required class="flex-1 min-w-[100px] border border-gray-200 rounded-lg px-2 py-1 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-[#378ADD]" />
+              <input name="role" type="text" placeholder="role" class="w-20 border border-gray-200 rounded-lg px-2 py-1 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-[#378ADD]" />
+              <button type="submit" class="btn btn-xs btn-ghost text-[#378ADD]">Create &amp; link</button>
+            </form>
+          </div>
+
+          <div>
+            <div class="font-medium text-gray-600 mb-1">Tasks</div>
+            {% for t in extras.tasks %}
+            <div class="flex items-center justify-between gap-2 mb-1">
+              <span class="text-gray-700">{{ t.title }}</span>
+              <form method="post" action="/interviews/{{ process.id }}/stages/{{ s.id }}/tasks/{{ t.id }}/unlink">
+                <button type="submit" class="text-gray-300 hover:text-[#E24B4A]"><i class="ti ti-x text-xs"></i></button>
+              </form>
+            </div>
+            {% endfor %}
+            <div class="relative mb-2">
+              <input type="text" placeholder="Search tasks…" autocomplete="off"
+                     hx-get="/interviews/{{ process.id }}/stages/{{ s.id }}/search/tasks"
+                     hx-trigger="keyup changed delay:300ms" hx-target="#task-suggest-{{ s.id }}" hx-swap="innerHTML" hx-params="q" name="q"
+                     class="w-full border border-gray-200 rounded-lg px-2 py-1 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-[#378ADD]" />
+              <div id="task-suggest-{{ s.id }}" class="absolute z-10 left-0 right-0 mt-1"></div>
+            </div>
+            <form method="post" action="/interviews/{{ process.id }}/stages/{{ s.id }}/tasks/new" class="flex flex-wrap gap-1">
+              <input name="title" type="text" placeholder="+ New task title" required class="flex-1 min-w-[100px] border border-gray-200 rounded-lg px-2 py-1 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-[#378ADD]" />
+              <button type="submit" class="btn btn-xs btn-ghost text-[#378ADD]">Create &amp; link</button>
+            </form>
+          </div>
+
+          <div>
+            <div class="font-medium text-gray-600 mb-1">Notes</div>
+            {% for n in extras.notes %}
+            <div class="flex items-center justify-between gap-2 mb-1">
+              <span class="text-gray-700">{{ n.title }}</span>
+              <form method="post" action="/interviews/{{ process.id }}/stages/{{ s.id }}/notes/{{ n.id }}/unlink">
+                <button type="submit" class="text-gray-300 hover:text-[#E24B4A]"><i class="ti ti-x text-xs"></i></button>
+              </form>
+            </div>
+            {% endfor %}
+            <div class="relative mb-2">
+              <input type="text" placeholder="Search notes…" autocomplete="off"
+                     hx-get="/interviews/{{ process.id }}/stages/{{ s.id }}/search/notes"
+                     hx-trigger="keyup changed delay:300ms" hx-target="#note-suggest-{{ s.id }}" hx-swap="innerHTML" hx-params="q" name="q"
+                     class="w-full border border-gray-200 rounded-lg px-2 py-1 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-[#378ADD]" />
+              <div id="note-suggest-{{ s.id }}" class="absolute z-10 left-0 right-0 mt-1"></div>
+            </div>
+            <form method="post" action="/interviews/{{ process.id }}/stages/{{ s.id }}/notes/new" class="flex flex-wrap gap-1">
+              <input name="title" type="text" placeholder="+ New note title" required class="flex-1 min-w-[100px] border border-gray-200 rounded-lg px-2 py-1 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-[#378ADD]" />
+              <button type="submit" class="btn btn-xs btn-ghost text-[#378ADD]">Create &amp; link</button>
+            </form>
+          </div>
+
+        </div>
       </li>
       {% endfor %}
     </ul>

@@ -68,6 +68,11 @@ class TestGetTasks:
         filters = mock_service.get_tasks.call_args[0][0]
         assert filters.status == "TODO"
 
+    def test_q_filter_passed_to_service(self, client, mock_service):
+        client.get("/organizer/tasks/?q=prep", headers=AUTH)
+        filters = mock_service.get_tasks.call_args[0][0]
+        assert filters.q == "prep"
+
     def test_priority_filter_passed_to_service(self, client, mock_service):
         client.get("/organizer/tasks/?priority=HIGH", headers=AUTH)
         filters = mock_service.get_tasks.call_args[0][0]

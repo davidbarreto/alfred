@@ -33,10 +33,12 @@ Format notes:
   the balance at the same figure because an Exchange in between spent it back down
   to zero.
 - The ``Fee`` column is usually 0.00, in which case ``Amount`` already reflects the
-  net effect on the balance. When ``Fee`` is non-zero, Revolut still charges it on top
-  of ``Amount`` (e.g. a foreign-currency card payment with ``Amount = 0.00`` and
-  ``Fee = 17.99`` -- an FX fee charged with no separate purchase amount), so the
-  imported transaction amount is ``Amount - Fee``.
+  full effect on the balance. When ``Fee`` is non-zero, Revolut still charges it on
+  top of ``Amount`` (e.g. a foreign-currency card payment with ``Amount = 0.00`` and
+  ``Fee = 17.99`` -- an FX fee charged with no separate purchase amount) -- imported
+  as its own additional expense row ("Fee for <description>") rather than folded into
+  the main row's amount, so it's visible in spend totals and category reporting on
+  its own.
 """
 from __future__ import annotations
 
@@ -110,7 +112,6 @@ class RevolutStatementParser:
             currency = (record.get("Currency") or "").strip().upper()
             if completed is None or amount is None or not currency:
                 continue
-            amount -= fee
 
             row_type = (record.get("Type") or "").strip()
             description = (record.get("Description") or "").strip()
@@ -131,6 +132,27 @@ class RevolutStatementParser:
                     transfer_pair_key=transfer_pair_key,
                 )
             )
+            if fee:
+                # A non-zero Fee is charged on top of Amount (e.g. a foreign-currency
+                # card payment with Amount = 0.00 and Fee = 17.99 -- an FX fee with no
+                # separate purchase amount). Kept as its own expense line rather than
+                # folded into the main row's amount, so it shows up in spend totals and
+                # category reporting on its own. balance_after is the real, final
+                # post-fee balance either way, so both rows can safely carry it: the
+                # hash payload's raw_description/amount already differ between them, so
+                # there's no dedup-hash collision risk (see _compute_dedup_hash).
+                rows.append(
+                    ParsedRow(
+                        date_posted=completed,
+                        date_value=started or completed,
+                        raw_description=f"Fee for {description}",
+                        amount=fee,
+                        currency=currency,
+                        balance_after=balance,
+                        suggested_type="expense",
+                        posted_at=completed_raw or None,
+                    )
+                )
 
         dates = [r.date_posted for r in rows]
         return ParsedStatement(

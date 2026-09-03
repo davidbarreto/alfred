@@ -53,18 +53,27 @@ class TestParse:
 
     def test_row_count_matches_completed_rows(self):
         statement = RevolutStatementParser().parse(_content())
-        # 12 data rows, 1 REVERTED excluded -> 11
-        assert len(statement.rows) == 11
+        # 12 data rows, 1 REVERTED excluded, +1 extra row for the FX Fee -> 12
+        assert len(statement.rows) == 12
 
-    def test_fee_is_subtracted_from_zero_amount(self):
+    def test_nonzero_fee_becomes_its_own_expense_row(self):
         statement = RevolutStatementParser().parse(_content())
-        fee_row = next(r for r in statement.rows if r.raw_description == "FX Fee")
-        assert fee_row.amount == Decimal("-17.99")
+        original = next(r for r in statement.rows if r.raw_description == "FX Fee")
+        fee_row = next(r for r in statement.rows if r.raw_description == "Fee for FX Fee")
+        # The original row keeps its own (unmodified) Amount -- here 0.00, since this
+        # is the "FX fee with no separate purchase line" case.
+        assert original.amount == Decimal("0.00")
+        assert fee_row.amount == Decimal("17.99")
+        assert fee_row.suggested_type == "expense"
+        assert fee_row.currency == original.currency
+        assert fee_row.date_posted == original.date_posted
+        assert fee_row.balance_after == original.balance_after
 
-    def test_zero_fee_leaves_amount_untouched(self):
+    def test_zero_fee_leaves_amount_untouched_and_adds_no_extra_row(self):
         statement = RevolutStatementParser().parse(_content())
         bolt = next(r for r in statement.rows if r.raw_description == "Bolt")
         assert bolt.amount == Decimal("-20.63")
+        assert not any(r.raw_description == "Fee for Bolt" for r in statement.rows)
 
     def test_exchange_is_always_a_transfer(self):
         statement = RevolutStatementParser().parse(_content())

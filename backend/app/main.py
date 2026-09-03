@@ -40,6 +40,11 @@ from app.api.routes.organizer.contact_birthday_settings import router as contact
 from app.api.routes.organizer.contact_birthday_notifications import router as contact_birthday_notifications_router
 from app.api.routes.organizer.shopping import shopping_router, wishlist_router, recurrence_router
 from app.api.routes.organizer.shopping_categories import router as shopping_categories_router
+from app.api.routes.organizer.interviews.companies import router as interview_companies_router
+from app.api.routes.organizer.interviews.processes import router as interview_processes_router
+from app.api.routes.organizer.interviews.stages import router as interview_stages_router
+from app.api.routes.organizer.interviews.links import router as interview_links_router
+from app.api.routes.organizer.interviews.insights import router as interview_insights_router
 from app.api.routes.finance.accounts import router as finance_accounts_router
 from app.api.routes.finance.categories import router as finance_categories_router
 from app.api.routes.finance.currencies import router as finance_currencies_router
@@ -137,6 +142,11 @@ app.include_router(shopping_router)
 app.include_router(wishlist_router)
 app.include_router(recurrence_router)
 app.include_router(shopping_categories_router)
+app.include_router(interview_companies_router)
+app.include_router(interview_processes_router)
+app.include_router(interview_stages_router)
+app.include_router(interview_links_router)
+app.include_router(interview_insights_router)
 app.include_router(finance_accounts_router)
 app.include_router(finance_categories_router)
 app.include_router(finance_currencies_router)

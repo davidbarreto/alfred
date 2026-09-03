@@ -1,0 +1,216 @@
+{% extends "base.html" %}
+{% set active_page = "interviews" %}
+{% block title %}Interviews{% endblock %}
+
+{% block content %}
+<div class="p-6 space-y-4">
+
+  <div class="flex items-center justify-between">
+    <h1 class="text-base font-semibold text-gray-900">Interviews</h1>
+    <button onclick="document.getElementById('new-process-modal').showModal()" class="btn btn-sm btn-primary gap-1">
+      <i class="ti ti-plus text-sm"></i>New process
+    </button>
+  </div>
+
+  {% if api_error %}
+  <div class="rounded-lg bg-[#FCEBEB] border border-[#E24B4A]/20 px-4 py-2.5 text-sm text-[#E24B4A]">
+    <strong>Backend error:</strong> {{ api_error }}
+  </div>
+  {% endif %}
+
+  <div class="flex flex-wrap items-center gap-2">
+    <select
+      id="filter-status"
+      class="border border-gray-200 rounded-lg px-3 py-1.5 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-[#378ADD]"
+      onchange="window.location = '/interviews?status=' + this.value"
+    >
+      <option value="" {% if not query_status %}selected{% endif %}>All statuses</option>
+      {% for s in ["active", "offer", "rejected", "withdrawn", "ghosted"] %}
+      <option value="{{ s }}" {% if query_status == s %}selected{% endif %}>{{ s | capitalize }}</option>
+      {% endfor %}
+    </select>
+  </div>
+
+  <div id="interviews-table" class="bg-white border border-gray-200 rounded-lg p-4">
+    {% include "_interviews_table.html" %}
+  </div>
+
+  <div class="bg-white border border-gray-200 rounded-lg p-4">
+    <div class="flex items-center justify-between mb-3">
+      <h2 class="text-sm font-semibold text-gray-900">AI Insights</h2>
+      <form method="post" action="/interviews/insights/generate">
+        <button type="submit" class="btn btn-sm btn-ghost text-[#378ADD] gap-1">
+          <i class="ti ti-sparkles text-sm"></i>Generate this week's focus
+        </button>
+      </form>
+    </div>
+    {% if insights %}
+    <ul class="space-y-3">
+      {% for insight in insights %}
+      <li class="border-b border-gray-100 pb-3 last:border-0 last:pb-0">
+        <p class="text-xs text-gray-400 mb-1">{{ insight.generated_at }}</p>
+        <p class="text-sm text-gray-700">{{ insight.content }}</p>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p class="text-sm text-gray-400 py-4">No insights generated yet.</p>
+    {% endif %}
+  </div>
+
+</div>
+
+<dialog id="new-process-modal" class="modal">
+  <div class="modal-box bg-white rounded-xl border border-gray-200 shadow-lg max-w-lg w-full p-6">
+    <h3 class="text-sm font-semibold text-gray-900 mb-4">New interview process</h3>
+
+    <div class="flex items-center gap-2 mb-4">
+      <input
+        id="jd-url"
+        type="url"
+        placeholder="Paste a job posting URL to auto-fill…"
+        class="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-[#378ADD]"
+      />
+      <button type="button" id="extract-btn" onclick="extractFromUrl()" class="btn btn-sm btn-ghost text-[#378ADD]">Extract</button>
+    </div>
+    <p id="extract-error" class="text-xs text-[#E24B4A] hidden mb-2"></p>
+
+    <form method="post" action="/interviews/" class="flex flex-col gap-3">
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="text-xs text-gray-500 mb-1 block">Company <span class="text-[#E24B4A]">*</span></label>
+          <select name="company_id" id="company-select" class="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white w-full focus:outline-none focus:ring-1 focus:ring-[#378ADD]">
+            <option value="">— create new below —</option>
+            {% for c in companies %}
+            <option value="{{ c.id }}">{{ c.name }}</option>
+            {% endfor %}
+          </select>
+          <input name="new_company_name" id="new-company-name" type="text" placeholder="Or new company name"
+                 class="mt-1 border border-gray-200 rounded-lg px-3 py-1.5 text-xs bg-white w-full focus:outline-none focus:ring-1 focus:ring-[#378ADD]" />
+        </div>
+        <div>
+          <label class="text-xs text-gray-500 mb-1 block">Role title <span class="text-[#E24B4A]">*</span></label>
+          <input name="role_title" id="role-title" type="text" required
+                 class="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white w-full focus:outline-none focus:ring-1 focus:ring-[#378ADD]" />
+        </div>
+      </div>
+
+      <div class="grid grid-cols-3 gap-3">
+        <div>
+          <label class="text-xs text-gray-500 mb-1 block">Priority</label>
+          <select name="priority" class="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white w-full focus:outline-none focus:ring-1 focus:ring-[#378ADD]">
+            <option value="">—</option>
+            <option value="low">Low</option>
+            <option value="medium">Medium</option>
+            <option value="high">High</option>
+          </select>
+        </div>
+        <div>
+          <label class="text-xs text-gray-500 mb-1 block">Work regime</label>
+          <select name="work_regime" id="work-regime" class="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white w-full focus:outline-none focus:ring-1 focus:ring-[#378ADD]">
+            <option value="">—</option>
+            <option value="remote">Remote</option>
+            <option value="hybrid">Hybrid</option>
+            <option value="onsite">Onsite</option>
+          </select>
+        </div>
+        <div>
+          <label class="text-xs text-gray-500 mb-1 block">Office days/month</label>
+          <input name="office_days_per_month" id="office-days" type="number" step="0.5"
+                 class="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white w-full focus:outline-none focus:ring-1 focus:ring-[#378ADD]" />
+        </div>
+      </div>
+
+      <div class="grid grid-cols-3 gap-3">
+        <div>
+          <label class="text-xs text-gray-500 mb-1 block">Salary min</label>
+          <input name="salary_min" id="salary-min" type="number"
+                 class="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white w-full focus:outline-none focus:ring-1 focus:ring-[#378ADD]" />
+        </div>
+        <div>
+          <label class="text-xs text-gray-500 mb-1 block">Salary max</label>
+          <input name="salary_max" id="salary-max" type="number"
+                 class="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white w-full focus:outline-none focus:ring-1 focus:ring-[#378ADD]" />
+        </div>
+        <div>
+          <label class="text-xs text-gray-500 mb-1 block">Currency</label>
+          <input name="salary_currency" id="salary-currency" type="text" maxlength="3" placeholder="EUR"
+                 class="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white w-full focus:outline-none focus:ring-1 focus:ring-[#378ADD]" />
+        </div>
+      </div>
+
+      <div>
+        <label class="text-xs text-gray-500 mb-1 block">Office location</label>
+        <input name="office_location" id="office-location" type="text"
+               class="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white w-full focus:outline-none focus:ring-1 focus:ring-[#378ADD]" />
+      </div>
+      <div>
+        <label class="text-xs text-gray-500 mb-1 block">Benefits</label>
+        <textarea name="benefits" id="benefits" rows="2"
+                  class="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white w-full focus:outline-none focus:ring-1 focus:ring-[#378ADD]"></textarea>
+      </div>
+      <input type="hidden" name="job_description_url" id="job-description-url" />
+
+      <div class="border-t border-gray-100 pt-3">
+        <p class="text-xs text-gray-500 mb-2">Optional first stage (e.g. if a call is already scheduled)</p>
+        <div class="grid grid-cols-2 gap-3">
+          <select name="first_stage_type" class="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white w-full focus:outline-none focus:ring-1 focus:ring-[#378ADD]">
+            <option value="">— none —</option>
+            <option value="phone_screen">Phone screen</option>
+            <option value="code_review">Code review</option>
+            <option value="live_coding">Live coding</option>
+            <option value="onsite">Onsite</option>
+            <option value="behavioral">Behavioral</option>
+            <option value="system_design">System design</option>
+            <option value="offer">Offer</option>
+            <option value="other">Other</option>
+          </select>
+          <input name="first_stage_scheduled_at" type="datetime-local"
+                 class="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white w-full focus:outline-none focus:ring-1 focus:ring-[#378ADD]" />
+        </div>
+      </div>
+
+      <div class="flex justify-end gap-2 mt-1">
+        <button type="button" onclick="document.getElementById('new-process-modal').close()" class="btn btn-sm btn-ghost text-gray-500">Cancel</button>
+        <button type="submit" class="btn btn-sm btn-primary">Create</button>
+      </div>
+    </form>
+  </div>
+  <form method="dialog" class="modal-backdrop"><button>close</button></form>
+</dialog>
+
+<script>
+async function extractFromUrl() {
+  const url = document.getElementById("jd-url").value.trim();
+  const errEl = document.getElementById("extract-error");
+  const btn = document.getElementById("extract-btn");
+  errEl.classList.add("hidden");
+  if (!url) return;
+  btn.disabled = true;
+  btn.textContent = "Extracting…";
+  try {
+    const form = new FormData();
+    form.set("url", url);
+    const res = await fetch("/interviews/extract", { method: "POST", body: form });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || "Extraction failed.");
+    if (data.role_title) document.getElementById("role-title").value = data.role_title;
+    if (data.work_regime) document.getElementById("work-regime").value = data.work_regime;
+    if (data.office_days_per_month !== null && data.office_days_per_month !== undefined) document.getElementById("office-days").value = data.office_days_per_month;
+    if (data.salary_min !== null && data.salary_min !== undefined) document.getElementById("salary-min").value = data.salary_min;
+    if (data.salary_max !== null && data.salary_max !== undefined) document.getElementById("salary-max").value = data.salary_max;
+    if (data.salary_currency) document.getElementById("salary-currency").value = data.salary_currency;
+    if (data.office_location) document.getElementById("office-location").value = data.office_location;
+    if (data.benefits) document.getElementById("benefits").value = data.benefits;
+    if (data.company_name) document.getElementById("new-company-name").value = data.company_name;
+    document.getElementById("job-description-url").value = url;
+  } catch (err) {
+    errEl.textContent = err.message || "Extraction failed.";
+    errEl.classList.remove("hidden");
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Extract";
+  }
+}
+</script>
+{% endblock %}

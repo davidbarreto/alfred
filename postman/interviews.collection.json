@@ -1,0 +1,332 @@
+{
+  "info": {
+    "name": "Alfred - Interviews API",
+    "_postman_id": "alfred-interviews-v1",
+    "description": "CRUD for the interview process tracker (companies, processes, stages, links, insights). Run in order: Create Company → Create Process → Get Process → List Processes → Update Process → Create Stage → Update Stage → Link Stage Contact → List Stage Contacts → Unlink Stage Contact → Create Link → List Links → Delete Link → Extract From URL → Generate Insights → Get Insights History → Delete Stage → Delete Process → Delete Company.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      { "key": "token", "value": "{{api_token}}", "type": "string" }
+    ]
+  },
+  "item": [
+    {
+      "name": "01 - Create Company",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+              "pm.test('Saves company_id', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json).to.have.property('id');",
+              "    pm.environment.set('company_id', json.id);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Acme Corp\",\n  \"website\": \"https://acme.example.com\"\n}"
+        },
+        "url": { "raw": "{{base_url}}/organizer/interview-companies", "host": ["{{base_url}}"], "path": ["organizer", "interview-companies"] }
+      }
+    },
+    {
+      "name": "02 - Create Process (with first stage)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+              "pm.test('Saves process_id and first stage_id', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json).to.have.property('id');",
+              "    pm.environment.set('process_id', json.id);",
+              "    pm.expect(json.stages.length).to.eql(1);",
+              "    pm.environment.set('stage_id', json.stages[0].id);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"process\": {\n    \"company_id\": {{company_id}},\n    \"role_title\": \"Backend Engineer\",\n    \"source\": \"referral\",\n    \"priority\": \"high\",\n    \"work_regime\": \"hybrid\",\n    \"office_days_per_month\": 8\n  },\n  \"first_stage\": {\n    \"stage_type\": \"phone_screen\"\n  }\n}"
+        },
+        "url": { "raw": "{{base_url}}/organizer/interview-processes", "host": ["{{base_url}}"], "path": ["organizer", "interview-processes"] }
+      }
+    },
+    {
+      "name": "03 - Get Process",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Role title matches', () => pm.expect(pm.response.json().role_title).to.eql('Backend Engineer'));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "url": { "raw": "{{base_url}}/organizer/interview-processes/{{process_id}}", "host": ["{{base_url}}"], "path": ["organizer", "interview-processes", "{{process_id}}"] }
+      }
+    },
+    {
+      "name": "04 - List Processes",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Response is an array', () => pm.expect(pm.response.json()).to.be.an('array'));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "url": { "raw": "{{base_url}}/organizer/interview-processes?status=active", "host": ["{{base_url}}"], "path": ["organizer", "interview-processes"], "query": [{ "key": "status", "value": "active" }] }
+      }
+    },
+    {
+      "name": "05 - Update Process",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Status updated', () => pm.expect(pm.response.json().status).to.eql('offer'));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "PATCH",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"status\": \"offer\",\n  \"company_feedback\": \"Strong technical round, moving to offer stage.\"\n}" },
+        "url": { "raw": "{{base_url}}/organizer/interview-processes/{{process_id}}", "host": ["{{base_url}}"], "path": ["organizer", "interview-processes", "{{process_id}}"] }
+      }
+    },
+    {
+      "name": "06 - Create Stage",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+              "pm.test('Saves second stage_id', () => {",
+              "    const json = pm.response.json();",
+              "    pm.environment.set('stage_id_2', json.id);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"process_id\": {{process_id}},\n  \"stage_type\": \"live_coding\",\n  \"sequence\": 1\n}" },
+        "url": { "raw": "{{base_url}}/organizer/interview-stages", "host": ["{{base_url}}"], "path": ["organizer", "interview-stages"] }
+      }
+    },
+    {
+      "name": "07 - Update Stage",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Status updated', () => pm.expect(pm.response.json().status).to.eql('passed'));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "PATCH",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"status\": \"passed\",\n  \"feedback\": \"Solved both problems cleanly.\"\n}" },
+        "url": { "raw": "{{base_url}}/organizer/interview-stages/{{stage_id}}", "host": ["{{base_url}}"], "path": ["organizer", "interview-stages", "{{stage_id}}"] }
+      }
+    },
+    {
+      "name": "08 - Create Link",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+              "pm.test('Saves link_id', () => pm.environment.set('link_id', pm.response.json().id));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"process_id\": {{process_id}},\n  \"url\": \"https://example.com/jobs/backend-engineer\",\n  \"label\": \"Job posting\"\n}" },
+        "url": { "raw": "{{base_url}}/organizer/interview-links", "host": ["{{base_url}}"], "path": ["organizer", "interview-links"] }
+      }
+    },
+    {
+      "name": "09 - List Links",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Response is an array', () => pm.expect(pm.response.json()).to.be.an('array'));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "url": { "raw": "{{base_url}}/organizer/interview-links?process_id={{process_id}}", "host": ["{{base_url}}"], "path": ["organizer", "interview-links"], "query": [{ "key": "process_id", "value": "{{process_id}}" }] }
+      }
+    },
+    {
+      "name": "10 - Delete Link",
+      "event": [
+        {
+          "listen": "test",
+          "script": { "exec": ["pm.test('Status is 204', () => pm.response.to.have.status(204));"], "type": "text/javascript" }
+        }
+      ],
+      "request": {
+        "method": "DELETE",
+        "url": { "raw": "{{base_url}}/organizer/interview-links/{{link_id}}", "host": ["{{base_url}}"], "path": ["organizer", "interview-links", "{{link_id}}"] }
+      }
+    },
+    {
+      "name": "11 - Extract From URL",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Response has JobPostingExtraction shape', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json).to.have.property('role_title');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": { "mode": "raw", "raw": "{\n  \"url\": \"https://example.com/jobs/backend-engineer\"\n}" },
+        "url": { "raw": "{{base_url}}/organizer/interview-processes/extract-from-url", "host": ["{{base_url}}"], "path": ["organizer", "interview-processes", "extract-from-url"] }
+      }
+    },
+    {
+      "name": "12 - Generate Insights",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+              "pm.test('Response has content', () => pm.expect(pm.response.json()).to.have.property('content'));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "url": { "raw": "{{base_url}}/organizer/interview-insights", "host": ["{{base_url}}"], "path": ["organizer", "interview-insights"] }
+      }
+    },
+    {
+      "name": "13 - Get Insights History",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Response is an array', () => pm.expect(pm.response.json()).to.be.an('array'));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "url": { "raw": "{{base_url}}/organizer/interview-insights", "host": ["{{base_url}}"], "path": ["organizer", "interview-insights"] }
+      }
+    },
+    {
+      "name": "14 - Delete Stage",
+      "event": [
+        {
+          "listen": "test",
+          "script": { "exec": ["pm.test('Status is 204', () => pm.response.to.have.status(204));"], "type": "text/javascript" }
+        }
+      ],
+      "request": {
+        "method": "DELETE",
+        "url": { "raw": "{{base_url}}/organizer/interview-stages/{{stage_id_2}}", "host": ["{{base_url}}"], "path": ["organizer", "interview-stages", "{{stage_id_2}}"] }
+      }
+    },
+    {
+      "name": "15 - Delete Process",
+      "event": [
+        {
+          "listen": "test",
+          "script": { "exec": ["pm.test('Status is 204', () => pm.response.to.have.status(204));"], "type": "text/javascript" }
+        }
+      ],
+      "request": {
+        "method": "DELETE",
+        "url": { "raw": "{{base_url}}/organizer/interview-processes/{{process_id}}", "host": ["{{base_url}}"], "path": ["organizer", "interview-processes", "{{process_id}}"] }
+      }
+    },
+    {
+      "name": "16 - Delete Company",
+      "event": [
+        {
+          "listen": "test",
+          "script": { "exec": ["pm.test('Status is 204', () => pm.response.to.have.status(204));"], "type": "text/javascript" }
+        }
+      ],
+      "request": {
+        "method": "DELETE",
+        "url": { "raw": "{{base_url}}/organizer/interview-companies/{{company_id}}", "host": ["{{base_url}}"], "path": ["organizer", "interview-companies", "{{company_id}}"] }
+      }
+    }
+  ]
+}

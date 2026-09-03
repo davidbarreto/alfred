@@ -71,6 +71,12 @@ from app.features.language.production.service import ProductionService
 from app.features.language.conversation.repository import ConversationRepository
 from app.features.language.conversation.service import ConversationService
 from app.features.organizer.contacts.service import ContactService
+from app.features.organizer.interviews.companies.service import CompanyService as InterviewCompanyService
+from app.features.organizer.interviews.processes.service import InterviewProcessService
+from app.features.organizer.interviews.processes.jd_extraction_service import JdExtractionService
+from app.features.organizer.interviews.stages.service import InterviewStageService
+from app.features.organizer.interviews.links.service import InterviewLinkService
+from app.features.organizer.interviews.insights.service import InterviewInsightService
 from app.integrations.google_contacts.client import GoogleContactsClient
 from app.integrations.google_contacts.provider import GoogleContactsProvider
 from app.integrations.sentence_transformers.provider import SentenceTransformerEmbeddingProvider
@@ -490,6 +496,24 @@ def get_cs_study_plan_service(session: AsyncSession = Depends(get_session)) -> C
 def get_cs_recommendation_service(session: AsyncSession = Depends(get_session)) -> CsRecommendationService:
     return CsRecommendationService(llm_provider=get_extraction_llm_provider(), session=session)
 
+def get_interview_company_service(session: AsyncSession = Depends(get_session)) -> InterviewCompanyService:
+    return InterviewCompanyService(session)
+
+def get_interview_process_service(session: AsyncSession = Depends(get_session)) -> InterviewProcessService:
+    return InterviewProcessService(session)
+
+def get_jd_extraction_service(session: AsyncSession = Depends(get_session)) -> JdExtractionService:
+    return JdExtractionService(session=session, llm_provider=get_extraction_llm_provider())
+
+def get_interview_stage_service(session: AsyncSession = Depends(get_session)) -> InterviewStageService:
+    return InterviewStageService(session)
+
+def get_interview_link_service(session: AsyncSession = Depends(get_session)) -> InterviewLinkService:
+    return InterviewLinkService(session)
+
+def get_interview_insight_service(session: AsyncSession = Depends(get_session)) -> InterviewInsightService:
+    return InterviewInsightService(session=session, llm_provider=get_extraction_llm_provider())
+
 def get_codeforces_sync_service(session: AsyncSession = Depends(get_session)) -> CodeforcesSyncService:
     return CodeforcesSyncService(session, CodeforcesClient())
 
@@ -583,3 +607,9 @@ CsStudyPlanServiceDep = Annotated[CsStudyPlanService, Depends(get_cs_study_plan_
 CsRecommendationServiceDep = Annotated[CsRecommendationService, Depends(get_cs_recommendation_service)]
 CodeforcesSyncServiceDep = Annotated[CodeforcesSyncService, Depends(get_codeforces_sync_service)]
 LeetCodeSyncServiceDep = Annotated[LeetCodeSyncService, Depends(get_leetcode_sync_service)]
+InterviewCompanyServiceDep = Annotated[InterviewCompanyService, Depends(get_interview_company_service)]
+InterviewProcessServiceDep = Annotated[InterviewProcessService, Depends(get_interview_process_service)]
+JdExtractionServiceDep = Annotated[JdExtractionService, Depends(get_jd_extraction_service)]
+InterviewStageServiceDep = Annotated[InterviewStageService, Depends(get_interview_stage_service)]
+InterviewLinkServiceDep = Annotated[InterviewLinkService, Depends(get_interview_link_service)]
+InterviewInsightServiceDep = Annotated[InterviewInsightService, Depends(get_interview_insight_service)]

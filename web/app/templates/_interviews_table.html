@@ -1,0 +1,57 @@
+{% if processes %}
+<div class="overflow-x-auto">
+<table class="w-full text-sm">
+  <thead>
+    <tr class="border-b border-gray-100 text-xs text-gray-400 uppercase tracking-wide">
+      <th class="text-left pb-2 font-medium">Company</th>
+      <th class="text-left pb-2 font-medium">Role</th>
+      <th class="text-left pb-2 font-medium hidden sm:table-cell">Status</th>
+      <th class="text-left pb-2 font-medium hidden sm:table-cell">Priority</th>
+      <th class="text-left pb-2 font-medium hidden sm:table-cell">Stages</th>
+      <th class="pb-2"></th>
+    </tr>
+  </thead>
+  <tbody class="divide-y divide-gray-50">
+    {% for p in processes %}
+    {% set company = companies | selectattr("id", "equalto", p.company_id) | first %}
+    <tr class="hover:bg-gray-50 group">
+      <td class="py-2.5 pr-4">
+        <a href="/interviews/{{ p.id }}" class="font-medium text-gray-900 hover:text-[#378ADD]">{{ company.name if company else "—" }}</a>
+      </td>
+      <td class="py-2.5 pr-4 text-gray-700">{{ p.role_title }}</td>
+      <td class="py-2.5 pr-4 hidden sm:table-cell">
+        <span class="px-2 py-0.5 rounded-full text-xs font-medium
+          {% if p.status == 'offer' %}bg-[#E9F5E1] text-[#3B7A1F]
+          {% elif p.status in ['rejected', 'withdrawn', 'ghosted'] %}bg-gray-100 text-gray-500
+          {% else %}bg-[#E6F1FB] text-[#0C447C]{% endif %}">
+          {{ p.status }}
+        </span>
+      </td>
+      <td class="py-2.5 pr-4 hidden sm:table-cell">
+        {% if p.priority %}<span class="badge badge-ghost badge-sm capitalize">{{ p.priority }}</span>{% else %}<span class="text-gray-400">—</span>{% endif %}
+      </td>
+      <td class="py-2.5 pr-4 text-gray-500 hidden sm:table-cell">{{ p.stages | length }}</td>
+      <td class="py-2.5 text-right whitespace-nowrap">
+        <form method="post" action="/interviews/{{ p.id }}/delete" onsubmit="return confirm('Delete this interview process? Stages and links are removed too.');">
+          <button type="submit" class="opacity-0 group-hover:opacity-100 text-gray-300 hover:text-[#E24B4A] transition-opacity" title="Delete process">
+            <i class="ti ti-trash text-sm"></i>
+          </button>
+        </form>
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+</div>
+{% else %}
+<p class="text-sm text-gray-400 py-4">No interview processes found.</p>
+{% endif %}
+
+{% if has_prev or has_next %}
+<div class="flex items-center justify-between mt-4 pt-3 border-t border-gray-100">
+  <a href="?offset={{ (query_offset | default(0)) - 20 }}" class="btn btn-sm btn-ghost text-gray-500 gap-1 {% if not has_prev %}opacity-30 pointer-events-none{% endif %}">
+    <i class="ti ti-chevron-left text-xs"></i>Prev</a>
+  <a href="?offset={{ (query_offset | default(0)) + 20 }}" class="btn btn-sm btn-ghost text-gray-500 gap-1 {% if not has_next %}opacity-30 pointer-events-none{% endif %}">
+    Next<i class="ti ti-chevron-right text-xs"></i></a>
+</div>
+{% endif %}

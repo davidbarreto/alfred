@@ -188,6 +188,27 @@ class TestDedupHash:
         row_b = _row(posted_at="2025-12-05 08:01:14")
         assert _compute_dedup_hash(1, row_a, 1) == _compute_dedup_hash(1, row_b, 1)
 
+    def test_posted_at_hour_drift_still_matches(self):
+        # Regression: two real Revolut exports of the same historical period, taken
+        # months apart, rendered the same transaction's Completed Date with a different
+        # hour (confirmed on real files -- minute:second identical, hour off by 1).
+        # A re-import must still hash to the same value as the originally-committed row.
+        original_import = _row(posted_at="2024-10-14 09:46:44")
+        later_reexport = _row(posted_at="2024-10-14 10:46:44")
+        assert _compute_dedup_hash(1, original_import, 1) == _compute_dedup_hash(
+            1, later_reexport, 1
+        )
+
+    def test_posted_at_different_minute_second_still_differs_despite_same_hour(self):
+        row_a = _row(posted_at="2024-10-14 09:46:44")
+        row_b = _row(posted_at="2024-10-14 09:47:44")
+        assert _compute_dedup_hash(1, row_a, 1) != _compute_dedup_hash(1, row_b, 1)
+
+    def test_missing_posted_at_does_not_crash(self):
+        row_a = _row(posted_at=None)
+        row_b = _row(posted_at=None)
+        assert _compute_dedup_hash(1, row_a, 1) == _compute_dedup_hash(1, row_b, 1)
+
 
 class TestRuleMatches:
     def test_case_insensitive_substring(self):

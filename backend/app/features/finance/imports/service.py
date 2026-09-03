@@ -92,13 +92,33 @@ def _clean_description(raw: str) -> str:
     return _WHITESPACE.sub(" ", text).strip()
 
 
+def _normalize_posted_at(raw: str | None) -> str:
+    """Strip the hour off a provider's raw intra-day timestamp, keeping minute:second.
+
+    Revolut (and possibly Wise) re-exports the same historical transaction with a
+    different hour on ``Completed Date``/``Started Date`` depending on when the export
+    is taken -- confirmed by diffing two real exports of the same account months apart,
+    where every row's hour shifted by exactly 1 while minute:second stayed identical.
+    Hashing the raw string made every re-export of a period fail to match its own
+    previously-committed rows, so the whole file showed up as "not a duplicate". Minute
+    and second are what's actually stable, so that's what stays in the disambiguator.
+    """
+    if not raw:
+        return ""
+    try:
+        return datetime.strptime(raw.strip(), "%Y-%m-%d %H:%M:%S").strftime("%M:%S")
+    except ValueError:
+        return raw
+
+
 def _compute_dedup_hash(account_id: int, row: ParsedRow, occurrence: int) -> str:
     # balance_after alone isn't always a reliable disambiguator: two distinct same-day,
     # same-amount, same-description rows can still coincidentally leave the same running
     # balance (e.g. two top-ups on the same day, each immediately spent back down to zero
     # by an unrelated transaction in between). row.posted_at folds in intra-day precision
     # for providers that have it (Revolut, Wise) to break that tie without touching the
-    # date-only date_posted used everywhere else.
+    # date-only date_posted used everywhere else. See _normalize_posted_at for why the
+    # hour is stripped before hashing.
     disambiguator = (
         str(row.balance_after) if row.balance_after is not None else f"occ:{occurrence}"
     )
@@ -110,7 +130,7 @@ def _compute_dedup_hash(account_id: int, row: ParsedRow, occurrence: int) -> str
             row.raw_description,
             str(row.amount),
             disambiguator,
-            row.posted_at or "",
+            _normalize_posted_at(row.posted_at),
         ]
     )
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()

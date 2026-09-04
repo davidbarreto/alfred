@@ -1808,6 +1808,46 @@
       }
     },
     {
+      "name": "59a - Embeddings - List Source Types",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Response is an array of strings', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json).to.be.an('array');",
+              "    json.forEach(v => pm.expect(v).to.be.a('string'));",
+              "});",
+              "pm.test('Source types are sorted and unique', () => {",
+              "    const json = pm.response.json();",
+              "    const sorted = [...json].sort();",
+              "    pm.expect(json).to.eql(sorted);",
+              "    pm.expect(new Set(json).size).to.eql(json.length);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/core/embeddings/source-types",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "core",
+            "embeddings",
+            "source-types"
+          ]
+        }
+      }
+    },
+    {
       "name": "60 - Embeddings - Create",
       "event": [
         {

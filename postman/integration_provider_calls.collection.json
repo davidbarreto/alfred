@@ -233,6 +233,126 @@
       }
     },
     {
+      "name": "07a - List Provider Call Providers",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Response is a sorted array of unique strings', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json).to.be.an('array');",
+              "    json.forEach(v => pm.expect(v).to.be.a('string'));",
+              "    pm.expect(json).to.eql([...json].sort());",
+              "    pm.expect(new Set(json).size).to.eql(json.length);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/integration/provider-calls/providers",
+          "host": ["{{base_url}}"],
+          "path": ["integration", "provider-calls", "providers"]
+        }
+      }
+    },
+    {
+      "name": "07b - List Provider Call Operations",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Response is a sorted array of unique strings', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json).to.be.an('array');",
+              "    json.forEach(v => pm.expect(v).to.be.a('string'));",
+              "    pm.expect(json).to.eql([...json].sort());",
+              "    pm.expect(new Set(json).size).to.eql(json.length);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/integration/provider-calls/operations",
+          "host": ["{{base_url}}"],
+          "path": ["integration", "provider-calls", "operations"]
+        }
+      }
+    },
+    {
+      "name": "07c - List Provider Call Entity Types",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Response is a sorted array of unique strings', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json).to.be.an('array');",
+              "    json.forEach(v => pm.expect(v).to.be.a('string'));",
+              "    pm.expect(json).to.eql([...json].sort());",
+              "    pm.expect(new Set(json).size).to.eql(json.length);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/integration/provider-calls/entity-types",
+          "host": ["{{base_url}}"],
+          "path": ["integration", "provider-calls", "entity-types"]
+        }
+      }
+    },
+    {
+      "name": "07d - List Provider Call Statuses",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Response is a sorted array of unique strings', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json).to.be.an('array');",
+              "    json.forEach(v => pm.expect(v).to.be.a('string'));",
+              "    pm.expect(json).to.eql([...json].sort());",
+              "    pm.expect(new Set(json).size).to.eql(json.length);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/integration/provider-calls/statuses",
+          "host": ["{{base_url}}"],
+          "path": ["integration", "provider-calls", "statuses"]
+        }
+      }
+    },
+    {
       "name": "08 - List Provider Calls - Text Search (q)",
       "event": [
         {

@@ -5,7 +5,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.auth import require_auth
 from app.db.session import get_session
-from app.integrations.embedding_calls.repository import get_embedding_call, get_embedding_calls
+from app.integrations.embedding_calls.repository import (
+    get_distinct_features,
+    get_embedding_call,
+    get_embedding_calls,
+)
 from app.integrations.embedding_calls.schemas import EmbeddingCallRead
 
 router = APIRouter(
@@ -34,6 +38,11 @@ async def read_embedding_calls(
         skip=skip,
         limit=limit,
     )
+
+
+@router.get("/features", response_model=list[str])
+async def read_embedding_call_features(session: AsyncSession = Depends(get_session)):
+    return await get_distinct_features(session)
 
 
 @router.get("/{call_id}", response_model=EmbeddingCallRead)

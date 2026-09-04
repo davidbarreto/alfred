@@ -1,7 +1,7 @@
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from app.api.routes.core.embeddings import backfill_embeddings, read_embeddings
+from app.api.routes.core.embeddings import backfill_embeddings, read_embedding_source_types, read_embeddings
 
 
 def _note(id=1, title="Title", content="Content"):
@@ -46,6 +46,16 @@ class TestListEmbeddings:
         result = await read_embeddings(mock_service, source_type=None, q=None, skip=0, limit=50)
 
         assert result == expected
+
+
+class TestReadEmbeddingSourceTypes:
+    async def test_returns_service_result(self, mock_service):
+        mock_service.list_source_types = AsyncMock(return_value=["memory", "note", "task", "transaction"])
+
+        result = await read_embedding_source_types(mock_service)
+
+        assert result == ["memory", "note", "task", "transaction"]
+        mock_service.list_source_types.assert_awaited_once()
 
 
 class TestBackfillEmbeddings:

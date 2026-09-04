@@ -106,6 +106,12 @@ class EmbeddingRepository:
         result = await self._session.execute(query)
         return [(row.Embedding, row.similarity) for row in result]
 
+    async def get_distinct_source_types(self) -> list[str]:
+        result = await self._session.execute(
+            select(Embedding.source_type).distinct().order_by(Embedding.source_type)
+        )
+        return list(result.scalars().all())
+
     async def delete(self, embedding_id: int) -> bool:
         embedding = await self.get(embedding_id)
         if embedding is None:

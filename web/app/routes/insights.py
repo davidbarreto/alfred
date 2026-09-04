@@ -15,11 +15,8 @@ router = APIRouter(prefix="/insights")
 _PAGE_SIZE = 20
 _PREVIEW_SIZE = 5
 _LLM_CALLS_PREVIEW_SIZE = 5
-_LLM_CALL_OPTIONS_LIMIT = 500
 _PROVIDER_CALLS_PREVIEW_SIZE = 5
-_PROVIDER_CALL_OPTIONS_LIMIT = 500
 _EMBEDDING_CALLS_PREVIEW_SIZE = 5
-_EMBEDDING_CALL_OPTIONS_LIMIT = 500
 _MESSAGES_PREVIEW_SIZE = 5
 _SESSIONS_PREVIEW_SIZE = 5
 _FILTER_OPTIONS_SAMPLE_LIMIT = 200
@@ -295,13 +292,15 @@ async def memories_page(request: Request):
 
 
 async def _llm_call_filter_options() -> tuple[list[str], list[str]]:
-    """Distinct models/features for the filter dropdowns, from a recent sample of calls."""
+    """Distinct models/features for the filter dropdowns."""
     try:
-        raw = await api.get("/integration/llm-calls", params={"limit": _LLM_CALL_OPTIONS_LIMIT})
+        models = await api.get("/integration/llm-calls/models")
     except httpx.HTTPError:
-        raw = []
-    models = sorted({c["model"] for c in raw})
-    features = sorted({c["feature"] for c in raw})
+        models = []
+    try:
+        features = await api.get("/integration/llm-calls/features")
+    except httpx.HTTPError:
+        features = []
     return models, features
 
 
@@ -344,15 +343,23 @@ async def llm_calls_page(request: Request):
 
 
 async def _provider_call_filter_options() -> tuple[list[str], list[str], list[str], list[str]]:
-    """Distinct providers/operations/entity types/statuses for the filter dropdowns, from a recent sample."""
+    """Distinct providers/operations/entity types/statuses for the filter dropdowns."""
     try:
-        raw = await api.get("/integration/provider-calls", params={"limit": _PROVIDER_CALL_OPTIONS_LIMIT})
+        providers = await api.get("/integration/provider-calls/providers")
     except httpx.HTTPError:
-        raw = []
-    providers = sorted({c["provider"] for c in raw})
-    operations = sorted({c["operation"] for c in raw})
-    entity_types = sorted({c["entity_type"] for c in raw})
-    statuses = sorted({c["status"] for c in raw})
+        providers = []
+    try:
+        operations = await api.get("/integration/provider-calls/operations")
+    except httpx.HTTPError:
+        operations = []
+    try:
+        entity_types = await api.get("/integration/provider-calls/entity-types")
+    except httpx.HTTPError:
+        entity_types = []
+    try:
+        statuses = await api.get("/integration/provider-calls/statuses")
+    except httpx.HTTPError:
+        statuses = []
     return providers, operations, entity_types, statuses
 
 
@@ -427,12 +434,11 @@ async def provider_call_detail(call_id: int, request: Request):
 
 
 async def _embedding_call_filter_options() -> list[str]:
-    """Distinct features for the filter dropdown, from a recent sample of calls."""
+    """Distinct features for the filter dropdown."""
     try:
-        raw = await api.get("/integration/embedding-calls", params={"limit": _EMBEDDING_CALL_OPTIONS_LIMIT})
+        return await api.get("/integration/embedding-calls/features")
     except httpx.HTTPError:
-        raw = []
-    return sorted({c["feature"] for c in raw})
+        return []
 
 
 @router.get("/embedding-calls", response_class=HTMLResponse)
@@ -478,12 +484,11 @@ async def embedding_call_detail(call_id: int, request: Request):
 
 
 async def _embedding_source_type_options() -> list[str]:
-    """Distinct source types for the filter dropdown, from a recent sample of embeddings."""
+    """Distinct source types for the filter dropdown."""
     try:
-        raw = await api.get("/core/embeddings", params={"limit": _FILTER_OPTIONS_SAMPLE_LIMIT})
+        return await api.get("/core/embeddings/source-types")
     except httpx.HTTPError:
-        raw = []
-    return sorted({e["source_type"] for e in raw})
+        return []
 
 
 @router.delete("/embeddings/{embedding_id}", response_class=HTMLResponse)

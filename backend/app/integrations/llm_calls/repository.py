@@ -75,3 +75,13 @@ async def get_llm_calls(
 async def get_llm_call(session: AsyncSession, call_id: int) -> LlmCall | None:
     result = await session.execute(select(LlmCall).where(LlmCall.id == call_id))
     return result.scalars().first()
+
+
+async def get_distinct_models(session: AsyncSession) -> list[str]:
+    result = await session.execute(select(LlmCall.model).distinct().order_by(LlmCall.model))
+    return list(result.scalars().all())
+
+
+async def get_distinct_features(session: AsyncSession) -> list[str]:
+    result = await session.execute(select(LlmCall.feature).distinct().order_by(LlmCall.feature))
+    return list(result.scalars().all())

@@ -36,6 +36,23 @@ def _provider_call(id=1, provider="notion", operation="sync", entity_type="task"
     }
 
 
+def _embedding_call(id=1, feature="chat", query_text="find related notes", top_k=5, threshold=0.7,
+                     results=None, result_count=0, latency_ms=120):
+    return {
+        "id": id, "feature": feature, "query_text": query_text, "source_types": None,
+        "top_k": top_k, "threshold": threshold, "results": results or [],
+        "result_count": result_count, "latency_ms": latency_ms,
+        "created_at": "2026-07-01T00:00:00",
+    }
+
+
+def _embedding(id=1, source_type="note", source_id=1, content="Some content", model="text-embedding-3-small"):
+    return {
+        "id": id, "source_type": source_type, "source_id": source_id, "content": content,
+        "model": model, "dimensions": 1536, "embedded_at": "2026-07-01T00:00:00",
+    }
+
+
 def _message(id=1, session_id=1, role="user", content="hello", meta=None):
     return {
         "id": id, "session_id": session_id, "role": role, "content": content,
@@ -209,11 +226,10 @@ class TestInsightsPageLlmCharts:
 class TestLlmCallsPage:
     def test_lists_calls_and_filter_dropdown_options(self, client, mock_api):
         async def fake_get(path, params=None):
-            if params.get("limit") == 500:
-                return [
-                    _llm_call(id=1, model="gemini-2.5-flash", feature="chat"),
-                    _llm_call(id=2, model="gpt-4o-mini", feature="briefing"),
-                ]
+            if path == "/integration/llm-calls/models":
+                return ["gemini-2.5-flash", "gpt-4o-mini"]
+            if path == "/integration/llm-calls/features":
+                return ["briefing", "chat"]
             return [_llm_call(id=1, model="gemini-2.5-flash", feature="chat")]
 
         mock_api["get"].side_effect = fake_get
@@ -229,9 +245,9 @@ class TestLlmCallsPage:
         seen_params = []
 
         async def fake_get(path, params=None):
-            seen_params.append(params)
-            if params.get("limit") == 500:
+            if path in ("/integration/llm-calls/models", "/integration/llm-calls/features"):
                 return []
+            seen_params.append(params)
             return [_llm_call(id=1, model="gemini-2.5-flash", feature="chat")]
 
         mock_api["get"].side_effect = fake_get
@@ -239,7 +255,7 @@ class TestLlmCallsPage:
         resp = client.get("/insights/llm-calls?model=gemini-2.5-flash&feature=chat&q=hello")
 
         assert resp.status_code == 200
-        main_call_params = next(p for p in seen_params if p.get("limit") != 500)
+        main_call_params = seen_params[0]
         assert main_call_params["model"] == "gemini-2.5-flash"
         assert main_call_params["feature"] == "chat"
         assert main_call_params["q"] == "hello"
@@ -247,7 +263,7 @@ class TestLlmCallsPage:
 
     def test_shows_next_link_when_more_than_a_page(self, client, mock_api):
         async def fake_get(path, params=None):
-            if params.get("limit") == 500:
+            if path in ("/integration/llm-calls/models", "/integration/llm-calls/features"):
                 return []
             return [_llm_call(id=i) for i in range(21)]
 
@@ -279,13 +295,21 @@ class TestInsightsPageProviderCallsPreview:
 
 
 class TestProviderCallsPage:
+    _OPTION_PATHS = {
+        "/integration/provider-calls/providers",
+        "/integration/provider-calls/operations",
+        "/integration/provider-calls/entity-types",
+        "/integration/provider-calls/statuses",
+    }
+
     def test_lists_calls_and_filter_dropdown_options(self, client, mock_api):
         async def fake_get(path, params=None):
-            if params.get("limit") == 500:
-                return [
-                    _provider_call(id=1, provider="notion", operation="sync", entity_type="task"),
-                    _provider_call(id=2, provider="google_calendar", operation="import", entity_type="event"),
-                ]
+            if path == "/integration/provider-calls/providers":
+                return ["google_calendar", "notion"]
+            if path == "/integration/provider-calls/operations":
+                return ["import", "sync"]
+            if path in self._OPTION_PATHS:
+                return []
             return [_provider_call(id=1, provider="notion", operation="sync", entity_type="task")]
 
         mock_api["get"].side_effect = fake_get
@@ -301,9 +325,9 @@ class TestProviderCallsPage:
         seen_params = []
 
         async def fake_get(path, params=None):
-            seen_params.append(params)
-            if params.get("limit") == 500:
+            if path in self._OPTION_PATHS:
                 return []
+            seen_params.append(params)
             return [_provider_call(id=1)]
 
         mock_api["get"].side_effect = fake_get
@@ -313,7 +337,7 @@ class TestProviderCallsPage:
         )
 
         assert resp.status_code == 200
-        main_call_params = next(p for p in seen_params if p.get("limit") != 500)
+        main_call_params = seen_params[0]
         assert main_call_params["provider"] == "notion"
         assert main_call_params["operation"] == "sync"
         assert main_call_params["entity_type"] == "task"
@@ -323,13 +347,109 @@ class TestProviderCallsPage:
 
     def test_shows_next_link_when_more_than_a_page(self, client, mock_api):
         async def fake_get(path, params=None):
-            if params.get("limit") == 500:
+            if path in self._OPTION_PATHS:
                 return []
             return [_provider_call(id=i) for i in range(21)]
 
         mock_api["get"].side_effect = fake_get
 
         resp = client.get("/insights/provider-calls")
+
+        assert resp.status_code == 200
+        assert "Next →" in resp.text
+        assert "offset=20" in resp.text
+
+
+class TestEmbeddingCallsPage:
+    def test_lists_calls_and_filter_dropdown_options(self, client, mock_api):
+        async def fake_get(path, params=None):
+            if path == "/integration/embedding-calls/features":
+                return ["chat", "finance_category_match"]
+            return [_embedding_call(id=1, feature="chat")]
+
+        mock_api["get"].side_effect = fake_get
+
+        resp = client.get("/insights/embedding-calls")
+
+        assert resp.status_code == 200
+        assert "finance_category_match" in resp.text  # only present via the feature filter dropdown
+
+    def test_applies_filters_as_backend_query_params(self, client, mock_api):
+        seen_params = []
+
+        async def fake_get(path, params=None):
+            if path == "/integration/embedding-calls/features":
+                return []
+            seen_params.append(params)
+            return [_embedding_call(id=1, feature="chat")]
+
+        mock_api["get"].side_effect = fake_get
+
+        resp = client.get("/insights/embedding-calls?feature=chat&q=hello")
+
+        assert resp.status_code == 200
+        main_call_params = seen_params[0]
+        assert main_call_params["feature"] == "chat"
+        assert main_call_params["q"] == "hello"
+        assert main_call_params["skip"] == 0
+
+    def test_shows_next_link_when_more_than_a_page(self, client, mock_api):
+        async def fake_get(path, params=None):
+            if path == "/integration/embedding-calls/features":
+                return []
+            return [_embedding_call(id=i) for i in range(21)]
+
+        mock_api["get"].side_effect = fake_get
+
+        resp = client.get("/insights/embedding-calls")
+
+        assert resp.status_code == 200
+        assert "Next →" in resp.text
+        assert "offset=20" in resp.text
+
+
+class TestEmbeddingsPage:
+    def test_lists_items_and_filter_dropdown_options(self, client, mock_api):
+        async def fake_get(path, params=None):
+            if path == "/core/embeddings/source-types":
+                return ["note", "task", "transaction"]
+            return [_embedding(id=1, source_type="note")]
+
+        mock_api["get"].side_effect = fake_get
+
+        resp = client.get("/insights/embeddings")
+
+        assert resp.status_code == 200
+        assert "transaction" in resp.text  # only present via the source type filter dropdown
+
+    def test_applies_filters_as_backend_query_params(self, client, mock_api):
+        seen_params = []
+
+        async def fake_get(path, params=None):
+            if path == "/core/embeddings/source-types":
+                return []
+            seen_params.append(params)
+            return [_embedding(id=1, source_type="note")]
+
+        mock_api["get"].side_effect = fake_get
+
+        resp = client.get("/insights/embeddings?source_type=note&q=hello")
+
+        assert resp.status_code == 200
+        main_call_params = seen_params[0]
+        assert main_call_params["source_type"] == "note"
+        assert main_call_params["q"] == "hello"
+        assert main_call_params["skip"] == 0
+
+    def test_shows_next_link_when_more_than_a_page(self, client, mock_api):
+        async def fake_get(path, params=None):
+            if path == "/core/embeddings/source-types":
+                return []
+            return [_embedding(id=i) for i in range(21)]
+
+        mock_api["get"].side_effect = fake_get
+
+        resp = client.get("/insights/embeddings")
 
         assert resp.status_code == 200
         assert "Next →" in resp.text

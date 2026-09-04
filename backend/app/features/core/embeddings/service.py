@@ -156,6 +156,9 @@ class EmbeddingService:
         objs = await self._repo.get_many(source_type=source_type, q=q, skip=skip, limit=limit)
         return [EmbeddingRead.model_validate(obj) for obj in objs]
 
+    async def list_source_types(self) -> list[str]:
+        return await self._repo.get_distinct_source_types()
+
     async def delete(self, embedding_id: int) -> bool:
         deleted = await self._repo.delete(embedding_id)
         if deleted:

@@ -78,3 +78,31 @@ async def get_sync_log(session: AsyncSession, log_id: int) -> IntegrationSyncLog
         select(IntegrationSyncLog).where(IntegrationSyncLog.id == log_id)
     )
     return result.scalars().first()
+
+
+async def get_distinct_providers(session: AsyncSession) -> list[str]:
+    result = await session.execute(
+        select(IntegrationSyncLog.provider).distinct().order_by(IntegrationSyncLog.provider)
+    )
+    return list(result.scalars().all())
+
+
+async def get_distinct_operations(session: AsyncSession) -> list[str]:
+    result = await session.execute(
+        select(IntegrationSyncLog.operation).distinct().order_by(IntegrationSyncLog.operation)
+    )
+    return list(result.scalars().all())
+
+
+async def get_distinct_entity_types(session: AsyncSession) -> list[str]:
+    result = await session.execute(
+        select(IntegrationSyncLog.entity_type).distinct().order_by(IntegrationSyncLog.entity_type)
+    )
+    return list(result.scalars().all())
+
+
+async def get_distinct_statuses(session: AsyncSession) -> list[str]:
+    result = await session.execute(
+        select(IntegrationSyncLog.status).distinct().order_by(IntegrationSyncLog.status)
+    )
+    return list(result.scalars().all())

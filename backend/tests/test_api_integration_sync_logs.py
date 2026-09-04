@@ -101,6 +101,53 @@ class TestListSyncLogs:
         assert kwargs["before"] is not None
 
 
+class TestReadSyncLogProviders:
+    def test_returns_distinct_providers(self, client):
+        with patch(
+            "app.api.routes.integrations.provider_calls.get_distinct_providers",
+            new=AsyncMock(return_value=["google_calendar", "notion"]),
+        ):
+            response = client.get("/integration/provider-calls/providers", headers=AUTH)
+        assert response.status_code == 200
+        assert response.json() == ["google_calendar", "notion"]
+
+    def test_requires_auth(self, client):
+        assert client.get("/integration/provider-calls/providers").status_code == 403
+
+
+class TestReadSyncLogOperations:
+    def test_returns_distinct_operations(self, client):
+        with patch(
+            "app.api.routes.integrations.provider_calls.get_distinct_operations",
+            new=AsyncMock(return_value=["create", "update"]),
+        ):
+            response = client.get("/integration/provider-calls/operations", headers=AUTH)
+        assert response.status_code == 200
+        assert response.json() == ["create", "update"]
+
+
+class TestReadSyncLogEntityTypes:
+    def test_returns_distinct_entity_types(self, client):
+        with patch(
+            "app.api.routes.integrations.provider_calls.get_distinct_entity_types",
+            new=AsyncMock(return_value=["note", "task"]),
+        ):
+            response = client.get("/integration/provider-calls/entity-types", headers=AUTH)
+        assert response.status_code == 200
+        assert response.json() == ["note", "task"]
+
+
+class TestReadSyncLogStatuses:
+    def test_returns_distinct_statuses(self, client):
+        with patch(
+            "app.api.routes.integrations.provider_calls.get_distinct_statuses",
+            new=AsyncMock(return_value=["error", "ok"]),
+        ):
+            response = client.get("/integration/provider-calls/statuses", headers=AUTH)
+        assert response.status_code == 200
+        assert response.json() == ["error", "ok"]
+
+
 class TestGetSyncLog:
     def test_returns_log(self, client):
         log = _sync_log_read(id=1)

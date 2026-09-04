@@ -5,7 +5,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.auth import require_auth
 from app.db.session import get_session
-from app.integrations.llm_calls.repository import get_llm_call, get_llm_calls
+from app.integrations.llm_calls.repository import (
+    get_distinct_features,
+    get_distinct_models,
+    get_llm_call,
+    get_llm_calls,
+)
 from app.integrations.llm_calls.schemas import LlmCallRead
 
 router = APIRouter(
@@ -40,6 +45,16 @@ async def read_llm_calls(
         skip=skip,
         limit=limit,
     )
+
+
+@router.get("/models", response_model=list[str])
+async def read_llm_call_models(session: AsyncSession = Depends(get_session)):
+    return await get_distinct_models(session)
+
+
+@router.get("/features", response_model=list[str])
+async def read_llm_call_features(session: AsyncSession = Depends(get_session)):
+    return await get_distinct_features(session)
 
 
 @router.get("/{call_id}", response_model=LlmCallRead)

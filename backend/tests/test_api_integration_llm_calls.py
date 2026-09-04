@@ -107,6 +107,34 @@ class TestListLlmCalls:
         assert kwargs["before"] is not None
 
 
+class TestReadLlmCallModels:
+    def test_returns_distinct_models(self, client):
+        with patch(
+            "app.api.routes.integrations.llm_calls.get_distinct_models",
+            new=AsyncMock(return_value=["claude-sonnet-4-6", "gemini-2.5-flash"]),
+        ):
+            response = client.get("/integration/llm-calls/models", headers=AUTH)
+        assert response.status_code == 200
+        assert response.json() == ["claude-sonnet-4-6", "gemini-2.5-flash"]
+
+    def test_requires_auth(self, client):
+        assert client.get("/integration/llm-calls/models").status_code == 403
+
+
+class TestReadLlmCallFeatures:
+    def test_returns_distinct_features(self, client):
+        with patch(
+            "app.api.routes.integrations.llm_calls.get_distinct_features",
+            new=AsyncMock(return_value=["chat", "memory_extraction"]),
+        ):
+            response = client.get("/integration/llm-calls/features", headers=AUTH)
+        assert response.status_code == 200
+        assert response.json() == ["chat", "memory_extraction"]
+
+    def test_requires_auth(self, client):
+        assert client.get("/integration/llm-calls/features").status_code == 403
+
+
 class TestGetLlmCall:
     def test_returns_call(self, client):
         call = _llm_call_read(id=1)

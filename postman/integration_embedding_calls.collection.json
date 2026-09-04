@@ -167,6 +167,36 @@
       }
     },
     {
+      "name": "05a - List Embedding Call Features",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Response is a sorted array of unique strings', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json).to.be.an('array');",
+              "    json.forEach(v => pm.expect(v).to.be.a('string'));",
+              "    pm.expect(json).to.eql([...json].sort());",
+              "    pm.expect(new Set(json).size).to.eql(json.length);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/integration/embedding-calls/features",
+          "host": ["{{base_url}}"],
+          "path": ["integration", "embedding-calls", "features"]
+        }
+      }
+    },
+    {
       "name": "06 - List Embedding Calls - Text Search (q)",
       "event": [
         {

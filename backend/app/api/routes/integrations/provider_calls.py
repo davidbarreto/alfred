@@ -5,7 +5,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.auth import require_auth
 from app.db.session import get_session
-from app.integrations.provider_calls.repository import get_sync_log, get_sync_logs
+from app.integrations.provider_calls.repository import (
+    get_distinct_entity_types,
+    get_distinct_operations,
+    get_distinct_providers,
+    get_distinct_statuses,
+    get_sync_log,
+    get_sync_logs,
+)
 from app.integrations.provider_calls.schemas import SyncLogRead
 
 router = APIRouter(
@@ -40,6 +47,26 @@ async def read_provider_calls(
         skip=skip,
         limit=limit,
     )
+
+
+@router.get("/providers", response_model=list[str])
+async def read_provider_call_providers(session: AsyncSession = Depends(get_session)):
+    return await get_distinct_providers(session)
+
+
+@router.get("/operations", response_model=list[str])
+async def read_provider_call_operations(session: AsyncSession = Depends(get_session)):
+    return await get_distinct_operations(session)
+
+
+@router.get("/entity-types", response_model=list[str])
+async def read_provider_call_entity_types(session: AsyncSession = Depends(get_session)):
+    return await get_distinct_entity_types(session)
+
+
+@router.get("/statuses", response_model=list[str])
+async def read_provider_call_statuses(session: AsyncSession = Depends(get_session)):
+    return await get_distinct_statuses(session)
 
 
 @router.get("/{call_id}", response_model=SyncLogRead)

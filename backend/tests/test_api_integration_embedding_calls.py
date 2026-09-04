@@ -97,6 +97,20 @@ class TestListEmbeddingCalls:
         assert kwargs["before"] is not None
 
 
+class TestReadEmbeddingCallFeatures:
+    def test_returns_distinct_features(self, client):
+        with patch(
+            "app.api.routes.integrations.embedding_calls.get_distinct_features",
+            new=AsyncMock(return_value=["chat", "finance_category_match", "recall"]),
+        ):
+            response = client.get("/integration/embedding-calls/features", headers=AUTH)
+        assert response.status_code == 200
+        assert response.json() == ["chat", "finance_category_match", "recall"]
+
+    def test_requires_auth(self, client):
+        assert client.get("/integration/embedding-calls/features").status_code == 403
+
+
 class TestGetEmbeddingCall:
     def test_returns_call(self, client):
         call = _embedding_call_read(id=1)

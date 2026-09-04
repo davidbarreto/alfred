@@ -343,6 +343,26 @@ class TestSearchMethodLogging:
         assert kwargs["feature"] == "api"
 
 
+class TestListSourceTypesMethod:
+    @pytest.mark.asyncio
+    async def test_returns_repo_result(self):
+        session = AsyncMock()
+        provider = _make_provider()
+
+        with patch(
+            "app.features.core.embeddings.service.EmbeddingRepository"
+        ) as MockRepo:
+            repo_instance = MockRepo.return_value
+            repo_instance.get_distinct_source_types = AsyncMock(
+                return_value=["memory", "note", "task", "transaction"]
+            )
+
+            service = EmbeddingService(session, provider)
+            result = await service.list_source_types()
+
+        assert result == ["memory", "note", "task", "transaction"]
+
+
 class TestDeleteMethod:
     @pytest.mark.asyncio
     async def test_returns_true_when_found(self):

@@ -96,6 +96,11 @@ async def backfill_embeddings(service: EmbeddingServiceDep, session: DbSessionDe
     )
 
 
+@router.get("/source-types", response_model=list[str])
+async def read_embedding_source_types(service: EmbeddingServiceDep):
+    return await service.list_source_types()
+
+
 @router.delete("/{embedding_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_embedding(embedding_id: int, service: EmbeddingServiceDep):
     deleted = await service.delete(embedding_id)

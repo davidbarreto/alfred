@@ -62,6 +62,13 @@ async def get_embedding_calls(
     return list(result.scalars().all())
 
 
+async def get_distinct_features(session: AsyncSession) -> list[str]:
+    result = await session.execute(
+        select(EmbeddingCall.feature).distinct().order_by(EmbeddingCall.feature)
+    )
+    return list(result.scalars().all())
+
+
 async def get_embedding_call(session: AsyncSession, call_id: int) -> EmbeddingCall | None:
     result = await session.execute(select(EmbeddingCall).where(EmbeddingCall.id == call_id))
     return result.scalars().first()

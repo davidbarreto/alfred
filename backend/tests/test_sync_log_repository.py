@@ -2,7 +2,15 @@ import pytest
 from unittest.mock import AsyncMock, MagicMock, call, patch
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.integrations.provider_calls.repository import create_sync_log, get_sync_log, get_sync_logs
+from app.integrations.provider_calls.repository import (
+    create_sync_log,
+    get_distinct_entity_types,
+    get_distinct_operations,
+    get_distinct_providers,
+    get_distinct_statuses,
+    get_sync_log,
+    get_sync_logs,
+)
 from app.integrations.provider_calls.tables import IntegrationSyncLog
 
 
@@ -154,6 +162,55 @@ class TestGetSyncLogs:
         await get_sync_logs(session)
 
         session.execute.assert_called_once()
+
+
+class TestGetDistinctProviders:
+    async def test_returns_scalars(self):
+        session = _make_session()
+        mock_result = MagicMock()
+        mock_result.scalars.return_value.all.return_value = ["google_calendar", "notion"]
+        session.execute.return_value = mock_result
+
+        result = await get_distinct_providers(session)
+
+        assert result == ["google_calendar", "notion"]
+        session.execute.assert_called_once()
+
+
+class TestGetDistinctOperations:
+    async def test_returns_scalars(self):
+        session = _make_session()
+        mock_result = MagicMock()
+        mock_result.scalars.return_value.all.return_value = ["create", "update"]
+        session.execute.return_value = mock_result
+
+        result = await get_distinct_operations(session)
+
+        assert result == ["create", "update"]
+
+
+class TestGetDistinctEntityTypes:
+    async def test_returns_scalars(self):
+        session = _make_session()
+        mock_result = MagicMock()
+        mock_result.scalars.return_value.all.return_value = ["note", "task"]
+        session.execute.return_value = mock_result
+
+        result = await get_distinct_entity_types(session)
+
+        assert result == ["note", "task"]
+
+
+class TestGetDistinctStatuses:
+    async def test_returns_scalars(self):
+        session = _make_session()
+        mock_result = MagicMock()
+        mock_result.scalars.return_value.all.return_value = ["error", "ok"]
+        session.execute.return_value = mock_result
+
+        result = await get_distinct_statuses(session)
+
+        assert result == ["error", "ok"]
 
 
 class TestGetSyncLog:

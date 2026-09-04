@@ -126,7 +126,7 @@
         </div>
       </div>
 
-      <div class="grid grid-cols-2 gap-3">
+      <div class="grid grid-cols-3 gap-3">
         <div>
           <label class="text-xs text-gray-500 mb-1 block">Source</label>
           <input name="source" type="text" placeholder="e.g. LinkedIn, referral"
@@ -135,6 +135,11 @@
         <div>
           <label class="text-xs text-gray-500 mb-1 block">Applied date</label>
           <input name="applied_date" type="date"
+                 class="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white w-full focus:outline-none focus:ring-1 focus:ring-[#378ADD]" />
+        </div>
+        <div>
+          <label class="text-xs text-gray-500 mb-1 block">Department</label>
+          <input name="department" type="text" placeholder="e.g. Platform Engineering"
                  class="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white w-full focus:outline-none focus:ring-1 focus:ring-[#378ADD]" />
         </div>
       </div>
@@ -169,7 +174,7 @@
       </div>
       <div>
         <label class="text-xs text-gray-500 mb-1 block">Notes</label>
-        <textarea name="notes" rows="2" placeholder="Personal notes (e.g. team/department)"
+        <textarea name="notes" rows="2" placeholder="Personal notes"
                   class="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white w-full focus:outline-none focus:ring-1 focus:ring-[#378ADD]"></textarea>
       </div>
       <input type="hidden" name="job_description_url" id="job-description-url" />

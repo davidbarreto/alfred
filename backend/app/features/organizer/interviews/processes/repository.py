@@ -1,9 +1,10 @@
 from __future__ import annotations
 
-from sqlalchemy import select
+from sqlalchemy import case, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from app.features.organizer.interviews.companies.tables import Company
 from app.features.organizer.interviews.processes.schemas import (
     InterviewProcessCreate,
     InterviewProcessFilters,
@@ -11,6 +12,12 @@ from app.features.organizer.interviews.processes.schemas import (
 )
 from app.features.organizer.interviews.processes.tables import InterviewProcess
 from app.features.organizer.interviews.stages.tables import InterviewStage
+
+_PRIORITY_ORDER = case(
+    {"high": 0, "medium": 1, "low": 2},
+    value=InterviewProcess.priority,
+    else_=3,
+)
 
 
 class InterviewProcessRepository:
@@ -26,12 +33,22 @@ class InterviewProcessRepository:
         return result.scalars().first()
 
     async def get_processes(self, filters: InterviewProcessFilters) -> list[InterviewProcess]:
-        stmt = select(InterviewProcess).options(selectinload(InterviewProcess.stages))
+        stmt = (
+            select(InterviewProcess)
+            .join(Company, InterviewProcess.company_id == Company.id)
+            .options(selectinload(InterviewProcess.stages))
+        )
         if filters.company_id is not None:
             stmt = stmt.where(InterviewProcess.company_id == filters.company_id)
         if filters.status is not None:
             stmt = stmt.where(InterviewProcess.status == filters.status)
-        stmt = stmt.order_by(InterviewProcess.created_at.desc()).offset(filters.offset).limit(filters.limit)
+        stmt = stmt.order_by(
+            case({"active": 0}, value=InterviewProcess.status, else_=1),
+            _PRIORITY_ORDER,
+            Company.name,
+            InterviewProcess.role_title,
+            InterviewProcess.department,
+        ).offset(filters.offset).limit(filters.limit)
         result = await self._session.execute(stmt)
         return list(result.scalars().all())
 

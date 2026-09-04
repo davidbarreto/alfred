@@ -213,6 +213,7 @@ async def create_process(
     source: Annotated[str, Form()] = "",
     applied_date: Annotated[str, Form()] = "",
     priority: Annotated[str, Form()] = "",
+    department: Annotated[str, Form()] = "",
     work_regime: Annotated[str, Form()] = "",
     office_days_per_month: Annotated[str, Form()] = "",
     office_location: Annotated[str, Form()] = "",
@@ -243,6 +244,8 @@ async def create_process(
         process_payload["applied_date"] = applied_date
     if priority:
         process_payload["priority"] = priority
+    if department:
+        process_payload["department"] = department
     if work_regime:
         process_payload["work_regime"] = work_regime
     if office_days_per_month:
@@ -312,6 +315,7 @@ async def update_process(
     role_title: Annotated[str, Form()] = "",
     status: Annotated[str, Form()] = "",
     priority: Annotated[str, Form()] = "",
+    department: Annotated[str, Form()] = "",
     source: Annotated[str, Form()] = "",
     applied_date: Annotated[str, Form()] = "",
     work_regime: Annotated[str, Form()] = "",
@@ -332,6 +336,7 @@ async def update_process(
     if status:
         payload["status"] = status
     payload["priority"] = priority or None
+    payload["department"] = department or None
     payload["source"] = source or None
     payload["applied_date"] = applied_date or None
     payload["work_regime"] = work_regime or None

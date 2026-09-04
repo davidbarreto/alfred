@@ -27,6 +27,7 @@ def _make_process_orm(**kwargs):
     orm.source = None
     orm.applied_date = None
     orm.priority = None
+    orm.department = None
     orm.notes = None
     orm.study_plan_id = kwargs.get("study_plan_id", None)
     orm.salary_min = None

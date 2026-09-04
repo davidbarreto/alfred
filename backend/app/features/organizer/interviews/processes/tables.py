@@ -25,6 +25,7 @@ class InterviewProcess(Base):
     source: Mapped[str | None] = mapped_column(String(100), nullable=True)
     applied_date: Mapped[datetime.date | None] = mapped_column(Date, nullable=True)
     priority: Mapped[str | None] = mapped_column(String(10), nullable=True)
+    department: Mapped[str | None] = mapped_column(String(255), nullable=True)
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
     study_plan_id: Mapped[int | None] = mapped_column(
         ForeignKey("cs.study_plans.id", ondelete="SET NULL"), nullable=True

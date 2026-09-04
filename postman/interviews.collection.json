@@ -116,7 +116,8 @@
           "script": {
             "exec": [
               "pm.test('Status is 200', () => pm.response.to.have.status(200));",
-              "pm.test('Status updated', () => pm.expect(pm.response.json().status).to.eql('offer'));"
+              "pm.test('Status updated', () => pm.expect(pm.response.json().status).to.eql('offer'));",
+              "pm.test('Department updated', () => pm.expect(pm.response.json().department).to.eql('Platform Engineering'));"
             ],
             "type": "text/javascript"
           }
@@ -125,7 +126,7 @@
       "request": {
         "method": "PATCH",
         "header": [{ "key": "Content-Type", "value": "application/json" }],
-        "body": { "mode": "raw", "raw": "{\n  \"status\": \"offer\",\n  \"company_feedback\": \"Strong technical round, moving to offer stage.\"\n}" },
+        "body": { "mode": "raw", "raw": "{\n  \"status\": \"offer\",\n  \"department\": \"Platform Engineering\",\n  \"company_feedback\": \"Strong technical round, moving to offer stage.\"\n}" },
         "url": { "raw": "{{base_url}}/organizer/interview-processes/{{process_id}}", "host": ["{{base_url}}"], "path": ["organizer", "interview-processes", "{{process_id}}"] }
       }
     },

@@ -1,7 +1,7 @@
 def _process(id=1, company_id=1, role_title="Backend Engineer", status="active", stages=None):
     return {
         "id": id, "company_id": company_id, "role_title": role_title, "status": status,
-        "source": None, "applied_date": None, "priority": None, "notes": None, "study_plan_id": None,
+        "source": None, "applied_date": None, "priority": None, "department": None, "notes": None, "study_plan_id": None,
         "salary_min": None, "salary_max": None, "salary_currency": None, "work_regime": None,
         "office_days_per_month": None, "office_location": None, "benefits": None,
         "job_description_url": None, "company_feedback": None,
@@ -107,6 +107,32 @@ class TestInterviewsTable:
         assert "2/2" in resp.text
 
 
+class TestCreateProcess:
+    def test_create_posts_department(self, client, mock_api):
+        mock_api["post"].return_value = _process()
+        resp = client.post(
+            "/interviews/",
+            data={
+                "company_id": "1", "role_title": "Backend Engineer", "department": "Platform Engineering",
+            },
+            follow_redirects=False,
+        )
+        assert resp.status_code == 303
+        payload = mock_api["post"].call_args.kwargs["json"]
+        assert payload["process"]["department"] == "Platform Engineering"
+
+    def test_create_omits_department_when_blank(self, client, mock_api):
+        mock_api["post"].return_value = _process()
+        resp = client.post(
+            "/interviews/",
+            data={"company_id": "1", "role_title": "Backend Engineer", "department": ""},
+            follow_redirects=False,
+        )
+        assert resp.status_code == 303
+        payload = mock_api["post"].call_args.kwargs["json"]
+        assert "department" not in payload["process"]
+
+
 class TestProcessEdit:
     def test_renders_prefilled_form(self, client, mock_api):
         mock_api["get"].side_effect = _by_path({
@@ -124,7 +150,7 @@ class TestProcessEdit:
             "/interviews/1/update",
             data={
                 "company_id": "1", "role_title": "Principal Engineer", "status": "offer",
-                "priority": "high", "source": "", "applied_date": "", "work_regime": "remote",
+                "priority": "high", "department": "Platform", "source": "", "applied_date": "", "work_regime": "remote",
                 "office_days_per_month": "", "office_location": "", "salary_min": "", "salary_max": "",
                 "salary_currency": "", "benefits": "", "job_description_url": "",
             },
@@ -136,6 +162,7 @@ class TestProcessEdit:
         assert payload["role_title"] == "Principal Engineer"
         assert payload["status"] == "offer"
         assert payload["priority"] == "high"
+        assert payload["department"] == "Platform"
         assert payload["work_regime"] == "remote"
         assert payload["source"] is None
 

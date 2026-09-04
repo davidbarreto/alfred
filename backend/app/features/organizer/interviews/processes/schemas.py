@@ -20,6 +20,7 @@ class InterviewProcessCreate(BaseModel):
     source: str | None = None
     applied_date: date | None = None
     priority: Priority | None = None
+    department: str | None = None
     notes: str | None = None
     study_plan_id: int | None = None
     salary_min: int | None = None
@@ -40,6 +41,7 @@ class InterviewProcessUpdate(BaseModel):
     source: str | None = None
     applied_date: date | None = None
     priority: Priority | None = None
+    department: str | None = None
     notes: str | None = None
     study_plan_id: int | None = None
     salary_min: int | None = None
@@ -61,6 +63,7 @@ class InterviewProcessRead(BaseModel):
     source: str | None
     applied_date: date | None
     priority: str | None
+    department: str | None
     notes: str | None
     study_plan_id: int | None
     salary_min: int | None

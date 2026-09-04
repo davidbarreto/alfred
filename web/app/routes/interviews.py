@@ -12,6 +12,20 @@ router = APIRouter(prefix="/interviews")
 _PAGE_SIZE = 20
 
 
+def _safe_back_url(raw: str, fallback: str) -> str:
+    if raw.startswith("/") and not raw.startswith("//"):
+        return raw
+    return fallback
+
+
+def _referer_path(request: Request) -> str:
+    referer = request.headers.get("referer", "")
+    try:
+        return httpx.URL(referer).raw_path.decode() if referer else ""
+    except (httpx.InvalidURL, UnicodeDecodeError):
+        return ""
+
+
 def _pagination(items: list, offset: int) -> tuple[list, bool, bool]:
     has_next = len(items) > _PAGE_SIZE
     return items[:_PAGE_SIZE], has_next, offset > 0
@@ -282,15 +296,18 @@ async def edit_process_page(request: Request, process_id: int):
     except httpx.HTTPError:
         return RedirectResponse(url="/interviews", status_code=303)
     companies = await _get_companies()
+    back_url = _safe_back_url(_referer_path(request), f"/interviews/{process_id}")
     return templates.TemplateResponse(request, "interview_process_edit.html", {
         "process": process,
         "companies": companies,
+        "back_url": back_url,
     })
 
 
 @router.post("/{process_id}/update")
 async def update_process(
     process_id: int,
+    back_url: Annotated[str, Form()] = "",
     company_id: Annotated[str, Form()] = "",
     role_title: Annotated[str, Form()] = "",
     status: Annotated[str, Form()] = "",
@@ -330,7 +347,7 @@ async def update_process(
         await api.patch(f"/organizer/interview-processes/{process_id}", json=payload)
     except httpx.HTTPError:
         pass
-    return RedirectResponse(url=f"/interviews/{process_id}", status_code=303)
+    return RedirectResponse(url=_safe_back_url(back_url, f"/interviews/{process_id}"), status_code=303)
 
 
 # -- Process detail ----------------------------------------------------------

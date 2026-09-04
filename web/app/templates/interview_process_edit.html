@@ -6,11 +6,12 @@
 <div class="p-6 space-y-4 max-w-2xl">
 
   <div class="flex items-center gap-2">
-    <a href="/interviews/{{ process.id }}" class="text-gray-400 hover:text-gray-600"><i class="ti ti-arrow-left text-sm"></i></a>
+    <a href="{{ back_url }}" class="text-gray-400 hover:text-gray-600"><i class="ti ti-arrow-left text-sm"></i></a>
     <h1 class="text-base font-semibold text-gray-900">Edit process</h1>
   </div>
 
   <form method="post" action="/interviews/{{ process.id }}/update" class="bg-white border border-gray-200 rounded-lg p-4 flex flex-col gap-3">
+    <input type="hidden" name="back_url" value="{{ back_url }}" />
     <div class="grid grid-cols-2 gap-3">
       <div>
         <label class="text-xs text-gray-500 mb-1 block">Company</label>
@@ -114,7 +115,7 @@
     </div>
 
     <div class="flex justify-end gap-2 mt-1">
-      <a href="/interviews/{{ process.id }}" class="btn btn-sm btn-ghost text-gray-500">Cancel</a>
+      <a href="{{ back_url }}" class="btn btn-sm btn-ghost text-gray-500">Cancel</a>
       <button type="submit" class="btn btn-sm btn-primary">Save</button>
     </div>
   </form>

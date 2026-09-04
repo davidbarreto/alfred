@@ -32,7 +32,14 @@
       <td class="py-2.5 pr-4 hidden sm:table-cell">
         {% if p.priority %}<span class="badge badge-ghost badge-sm capitalize">{{ p.priority }}</span>{% else %}<span class="text-gray-400">—</span>{% endif %}
       </td>
-      <td class="py-2.5 pr-4 text-gray-500 hidden sm:table-cell">{{ p.stages | length }}</td>
+      <td class="py-2.5 pr-4 text-gray-500 hidden sm:table-cell">
+        {% set total_stages = p.stages | length %}
+        {% if total_stages %}
+        {% set active_stage_id = (p.stages | selectattr('status', 'equalto', 'scheduled') | map(attribute='id') | first) %}
+        {% set current_stage = (p.stages | map(attribute='id') | list).index(active_stage_id) + 1 if active_stage_id else total_stages %}
+        {{ current_stage }}/{{ total_stages }}
+        {% else %}0{% endif %}
+      </td>
       <td class="py-2.5 text-right whitespace-nowrap">
         <form method="post" action="/interviews/{{ p.id }}/delete" onsubmit="return confirm('Delete this interview process? Stages and links are removed too.');">
           <button type="submit" class="opacity-0 group-hover:opacity-100 text-gray-300 hover:text-[#E24B4A] transition-opacity" title="Delete process">

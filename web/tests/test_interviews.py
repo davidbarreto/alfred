@@ -79,6 +79,34 @@ class TestCompanyDetail:
         mock_api["delete"].assert_awaited_once_with("/organizer/interview-companies/1")
 
 
+class TestInterviewsTable:
+    def test_shows_current_stage_progress(self, client, mock_api):
+        stages = [
+            _stage(id=1, status="passed"),
+            _stage(id=2, status="scheduled"),
+            _stage(id=3, status="scheduled"),
+        ]
+        mock_api["get"].side_effect = _by_path({
+            "/organizer/interview-processes": [_process(stages=stages)],
+            "/organizer/interview-companies": [_company(name="Acme Corp")],
+            "/organizer/interview-insights": [],
+        }, default=[])
+        resp = client.get("/interviews/table")
+        assert resp.status_code == 200
+        assert "2/3" in resp.text
+
+    def test_shows_final_stage_when_none_scheduled(self, client, mock_api):
+        stages = [_stage(id=1, status="passed"), _stage(id=2, status="passed")]
+        mock_api["get"].side_effect = _by_path({
+            "/organizer/interview-processes": [_process(stages=stages)],
+            "/organizer/interview-companies": [_company(name="Acme Corp")],
+            "/organizer/interview-insights": [],
+        }, default=[])
+        resp = client.get("/interviews/table")
+        assert resp.status_code == 200
+        assert "2/2" in resp.text
+
+
 class TestProcessEdit:
     def test_renders_prefilled_form(self, client, mock_api):
         mock_api["get"].side_effect = _by_path({
@@ -110,6 +138,48 @@ class TestProcessEdit:
         assert payload["priority"] == "high"
         assert payload["work_regime"] == "remote"
         assert payload["source"] is None
+
+    def test_renders_form_with_back_url_from_referer(self, client, mock_api):
+        mock_api["get"].side_effect = _by_path({
+            "/organizer/interview-processes/1": _process(role_title="Staff Engineer"),
+            "/organizer/interview-companies": [_company(name="Acme Corp")],
+        })
+        resp = client.get("/interviews/1/edit", headers={"referer": "http://testserver/interviews/companies/1"})
+        assert resp.status_code == 200
+        assert 'action="/interviews/1/update"' in resp.text
+        assert 'value="/interviews/companies/1"' in resp.text
+
+    def test_update_redirects_to_back_url(self, client, mock_api):
+        mock_api["patch"].return_value = _process()
+        resp = client.post(
+            "/interviews/1/update",
+            data={
+                "back_url": "/interviews/companies/1",
+                "company_id": "1", "role_title": "Principal Engineer", "status": "offer",
+                "priority": "", "source": "", "applied_date": "", "work_regime": "",
+                "office_days_per_month": "", "office_location": "", "salary_min": "", "salary_max": "",
+                "salary_currency": "", "benefits": "", "job_description_url": "",
+            },
+            follow_redirects=False,
+        )
+        assert resp.status_code == 303
+        assert resp.headers["location"] == "/interviews/companies/1"
+
+    def test_update_ignores_unsafe_back_url(self, client, mock_api):
+        mock_api["patch"].return_value = _process()
+        resp = client.post(
+            "/interviews/1/update",
+            data={
+                "back_url": "https://evil.example",
+                "company_id": "1", "role_title": "Principal Engineer", "status": "offer",
+                "priority": "", "source": "", "applied_date": "", "work_regime": "",
+                "office_days_per_month": "", "office_location": "", "salary_min": "", "salary_max": "",
+                "salary_currency": "", "benefits": "", "job_description_url": "",
+            },
+            follow_redirects=False,
+        )
+        assert resp.status_code == 303
+        assert resp.headers["location"] == "/interviews/1"
 
 
 class TestProcessDetailLinks:

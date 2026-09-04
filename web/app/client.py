@@ -48,21 +48,21 @@ async def post(path: str, json: Any = None, timeout: float = 10.0) -> Any:
     async with httpx.AsyncClient(follow_redirects=True) as client:
         resp = await client.post(_url(path), headers=_headers(), json=json, timeout=timeout)
         resp.raise_for_status()
-        return resp.json()
+        return resp.json() if resp.content else None
 
 
 async def patch(path: str, json: Any = None, timeout: float = 10.0) -> Any:
     async with httpx.AsyncClient(follow_redirects=True) as client:
         resp = await client.patch(_url(path), headers=_headers(), json=json, timeout=timeout)
         resp.raise_for_status()
-        return resp.json()
+        return resp.json() if resp.content else None
 
 
 async def put(path: str, json: Any = None) -> Any:
     async with httpx.AsyncClient(follow_redirects=True) as client:
         resp = await client.put(_url(path), headers=_headers(), json=json, timeout=10.0)
         resp.raise_for_status()
-        return resp.json()
+        return resp.json() if resp.content else None
 
 
 async def delete(path: str) -> None:

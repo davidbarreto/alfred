@@ -19,6 +19,20 @@ def _make_process_orm(**kwargs):
     return orm
 
 
+def _make_stage(stage_type: str, status: str, scheduled_at=None):
+    stage = MagicMock()
+    stage.stage_type = stage_type
+    stage.status = status
+    stage.scheduled_at = scheduled_at
+    return stage
+
+
+def _make_company(name: str):
+    company = MagicMock()
+    company.name = name
+    return company
+
+
 def _make_insight_orm(**kwargs):
     orm = MagicMock()
     orm.id = kwargs.get("id", 1)
@@ -64,6 +78,20 @@ class TestGenerateInsights:
         assert kwargs["content"] == "Focus on X"
         assert result.content == "Focus on X"
 
+    async def test_prompt_includes_todays_date(self, service):
+        svc, llm_provider = service
+        svc._process_repo.get_active_processes.return_value = []
+        llm_provider.complete.return_value = LlmResponse(
+            text='{"content": "x", "focus_process_ids": []}', tokens_input=1, tokens_output=1, finish_reason="STOP",
+        )
+        svc._repo.create_insight.return_value = _make_insight_orm(process_ids=[])
+
+        with patch("app.features.organizer.interviews.insights.service.create_llm_call", new=AsyncMock()):
+            await svc.generate_insights()
+
+        _, kwargs = llm_provider.complete.call_args
+        assert "Today's date is" in kwargs["system"]
+
     async def test_logs_llm_call_with_correct_feature(self, service):
         svc, llm_provider = service
         svc._process_repo.get_active_processes.return_value = []
@@ -77,6 +105,53 @@ class TestGenerateInsights:
             await svc.generate_insights()
 
         assert mock_log.call_args.kwargs["feature"] == "interview_insights"
+
+
+class TestBuildProcessSummary:
+    """Regression test: the LLM once judged a stage on 2026-09-11 as "closer" than one on
+    2026-09-04, seemingly because the prompt made it do its own date comparison across an
+    unsorted, unlabeled list. The summary is now precomputed and sorted server-side so the
+    model doesn't have to do date arithmetic itself."""
+
+    async def test_orders_by_soonest_next_stage_not_priority_or_id(self, service):
+        svc, _ = service
+        now = datetime(2026, 9, 3, tzinfo=timezone.utc)
+
+        teya = _make_process_orm(id=1, company_id=10, role_title="Senior Backend Engineer")
+        teya.priority = "high"
+        teya.stages = [_make_stage("behavioral", "scheduled", datetime(2026, 9, 11, 17, 0, tzinfo=timezone.utc))]
+
+        squarespace = _make_process_orm(id=2, company_id=20, role_title="Staff Software Engineer")
+        squarespace.priority = "medium"
+        squarespace.stages = [_make_stage("code_review", "scheduled", datetime(2026, 9, 4, 15, 0, tzinfo=timezone.utc))]
+
+        svc._process_repo.get_active_processes.return_value = [teya, squarespace]
+        companies = {10: _make_company("Teya"), 20: _make_company("Squarespace")}
+        svc._company_repo.get_company.side_effect = lambda cid: companies[cid]
+
+        summary, ids = await svc._build_process_summary(now)
+
+        assert ids == [2, 1]
+        assert summary.index("Process id 2") < summary.index("Process id 1")
+        assert "NEXT: code_review in 1 day(s)" in summary
+        assert "NEXT: behavioral in 8 day(s)" in summary
+
+    async def test_process_with_no_scheduled_stage_sorts_last(self, service):
+        svc, _ = service
+        now = datetime(2026, 9, 3, tzinfo=timezone.utc)
+
+        no_stage = _make_process_orm(id=1, company_id=10)
+        no_stage.stages = []
+        has_stage = _make_process_orm(id=2, company_id=20)
+        has_stage.stages = [_make_stage("phone_screen", "scheduled", datetime(2026, 9, 5, tzinfo=timezone.utc))]
+
+        svc._process_repo.get_active_processes.return_value = [no_stage, has_stage]
+        svc._company_repo.get_company.return_value = _make_company("Acme")
+
+        summary, ids = await svc._build_process_summary(now)
+
+        assert ids == [2, 1]
+        assert "NEXT: nothing scheduled" in summary
 
 
 class TestGetInsightsHistory:

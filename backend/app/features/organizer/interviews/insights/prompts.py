@@ -1,9 +1,12 @@
 INSIGHTS_SYSTEM_PROMPT_TEMPLATE = (
     "You are helping the user prioritize their time across several concurrent job interview processes. "
-    "Below is a list of their currently active interview processes, each with its company, role, upcoming "
-    "stages (sorted by date), and any linked study plan. Recommend what to focus on this week: which "
-    "process(es) need the most preparation given upcoming stage dates and stage types, and what to study or "
-    "practice. Be direct and actionable, 3-5 sentences. "
+    "Today's date is {today}. Below is a list of their currently active interview processes, sorted by how "
+    "soon their next scheduled stage is (soonest first) — do not re-derive or second-guess this ordering, "
+    "trust it. Each process shows its company, role, a precomputed NEXT line (the next scheduled stage and "
+    "how many days from today it is), its full stage history for context, and any linked study plan. "
+    "Recommend what to focus on this week: which process(es) need the most preparation given how soon their "
+    "next stage is and what type of stage it is, and what to study or practice. Be direct and actionable, "
+    "3-5 sentences. "
     "Return ONLY a valid JSON object matching this schema — no explanation or commentary:\n{schema}\n\n"
-    "Active processes:\n{processes}"
+    "Active processes (soonest next stage first):\n{processes}"
 )

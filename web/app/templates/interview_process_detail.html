@@ -159,9 +159,9 @@
             <label class="text-xs text-gray-500 mb-1 block">Feedback</label>
             <input name="feedback" type="text" value="{{ s.feedback or '' }}" class="w-full border border-gray-200 rounded-lg px-2 py-1 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-[#378ADD]" />
           </div>
-          <div class="flex-1 min-w-[140px]">
+          <div class="flex-1 min-w-[140px] basis-full">
             <label class="text-xs text-gray-500 mb-1 block">Notes</label>
-            <input name="notes" type="text" value="{{ s.notes or '' }}" class="w-full border border-gray-200 rounded-lg px-2 py-1 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-[#378ADD]" />
+            <textarea name="notes" rows="2" class="w-full border border-gray-200 rounded-lg px-2 py-1 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-[#378ADD]">{{ s.notes or "" }}</textarea>
           </div>
           <button type="submit" class="btn btn-xs btn-primary">Save</button>
         </form>

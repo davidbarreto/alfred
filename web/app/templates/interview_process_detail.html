@@ -69,6 +69,12 @@
       <div class="text-gray-800">{{ process.benefits }}</div>
     </div>
     {% endif %}
+    {% if process.notes %}
+    <div class="col-span-2 sm:col-span-4">
+      <div class="text-xs text-gray-400">Notes</div>
+      <div class="text-gray-800 whitespace-pre-wrap">{{ process.notes }}</div>
+    </div>
+    {% endif %}
   </div>
 
   <div class="bg-white border border-gray-200 rounded-lg p-4">
@@ -83,10 +89,11 @@
   <div class="bg-white border border-gray-200 rounded-lg p-4">
     <h2 class="text-sm font-semibold text-gray-900 mb-3">Stages</h2>
     {% if process.stages %}
+    {% set active_stage_id = (process.stages | selectattr('status', 'equalto', 'scheduled') | map(attribute='id') | first) %}
     <ul class="space-y-4 mb-4">
       {% for s in process.stages %}
       {% set extras = stage_extras.get(s.id, {"contacts": [], "tasks": [], "notes": [], "event": None}) %}
-      <li class="border border-gray-100 rounded-lg p-3">
+      <li class="border rounded-lg p-3 {% if s.id == active_stage_id %}border-[#378ADD] ring-1 ring-[#378ADD] bg-[#F5FAFF]{% else %}border-gray-100{% endif %}">
         <div class="flex items-start justify-between gap-2">
           <div>
             <span class="font-medium text-gray-800 capitalize">{{ s.stage_type.replace("_", " ") }}</span>
@@ -104,6 +111,7 @@
         </div>
 
         <div class="flex flex-wrap items-center gap-2 mt-2">
+          {% if s.status not in ['passed', 'failed'] %}
           <form method="post" action="/interviews/{{ process.id }}/stages/{{ s.id }}/update">
             <input type="hidden" name="status" value="passed" />
             <button type="submit" class="btn btn-xs bg-[#E9F5E1] text-[#3B7A1F] border-0 hover:brightness-95">Mark Passed</button>
@@ -112,6 +120,7 @@
             <input type="hidden" name="status" value="failed" />
             <button type="submit" class="btn btn-xs bg-[#FCEBEB] text-[#E24B4A] border-0 hover:brightness-95">Mark Failed</button>
           </form>
+          {% endif %}
           <button type="button" onclick="document.getElementById('stage-edit-{{ s.id }}').classList.toggle('hidden')" class="btn btn-xs btn-ghost text-gray-500">Edit</button>
           <button type="button" onclick="document.getElementById('stage-links-{{ s.id }}').classList.toggle('hidden')" class="btn btn-xs btn-ghost text-gray-500">
             Links

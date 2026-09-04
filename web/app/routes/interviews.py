@@ -197,6 +197,7 @@ async def create_process(
     new_company_name: Annotated[str, Form()] = "",
     role_title: Annotated[str, Form()] = "",
     source: Annotated[str, Form()] = "",
+    applied_date: Annotated[str, Form()] = "",
     priority: Annotated[str, Form()] = "",
     work_regime: Annotated[str, Form()] = "",
     office_days_per_month: Annotated[str, Form()] = "",
@@ -205,6 +206,7 @@ async def create_process(
     salary_max: Annotated[str, Form()] = "",
     salary_currency: Annotated[str, Form()] = "",
     benefits: Annotated[str, Form()] = "",
+    notes: Annotated[str, Form()] = "",
     job_description_url: Annotated[str, Form()] = "",
     first_stage_type: Annotated[str, Form()] = "",
     first_stage_scheduled_at: Annotated[str, Form()] = "",
@@ -223,6 +225,8 @@ async def create_process(
     process_payload: dict = {"company_id": int(resolved_company_id), "role_title": role_title}
     if source:
         process_payload["source"] = source
+    if applied_date:
+        process_payload["applied_date"] = applied_date
     if priority:
         process_payload["priority"] = priority
     if work_regime:
@@ -239,6 +243,8 @@ async def create_process(
         process_payload["salary_currency"] = salary_currency
     if benefits:
         process_payload["benefits"] = benefits
+    if notes:
+        process_payload["notes"] = notes
     if job_description_url:
         process_payload["job_description_url"] = job_description_url
 
@@ -298,6 +304,7 @@ async def update_process(
     salary_max: Annotated[str, Form()] = "",
     salary_currency: Annotated[str, Form()] = "",
     benefits: Annotated[str, Form()] = "",
+    notes: Annotated[str, Form()] = "",
     job_description_url: Annotated[str, Form()] = "",
 ):
     payload: dict = {}
@@ -317,6 +324,7 @@ async def update_process(
     payload["salary_max"] = int(salary_max) if salary_max else None
     payload["salary_currency"] = salary_currency or None
     payload["benefits"] = benefits or None
+    payload["notes"] = notes or None
     payload["job_description_url"] = job_description_url or None
     try:
         await api.patch(f"/organizer/interview-processes/{process_id}", json=payload)

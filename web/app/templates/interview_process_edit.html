@@ -107,6 +107,11 @@
       <input name="job_description_url" type="url" value="{{ process.job_description_url or '' }}"
              class="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white w-full focus:outline-none focus:ring-1 focus:ring-[#378ADD]" />
     </div>
+    <div>
+      <label class="text-xs text-gray-500 mb-1 block">Notes</label>
+      <textarea name="notes" rows="2" placeholder="Personal notes (e.g. team/department)"
+                class="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white w-full focus:outline-none focus:ring-1 focus:ring-[#378ADD]">{{ process.notes or "" }}</textarea>
+    </div>
 
     <div class="flex justify-end gap-2 mt-1">
       <a href="/interviews/{{ process.id }}" class="btn btn-sm btn-ghost text-gray-500">Cancel</a>

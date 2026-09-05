@@ -4,6 +4,7 @@
   <thead>
     <tr class="border-b border-gray-100 text-xs text-gray-400 uppercase tracking-wide">
       <th class="text-left pb-2 font-medium">Company</th>
+      <th class="pb-2 hidden sm:table-cell" title="Office location"><i class="ti ti-map-pin text-sm"></i></th>
       <th class="text-left pb-2 font-medium">Role</th>
       <th class="text-left pb-2 font-medium hidden sm:table-cell">Status</th>
       <th class="text-left pb-2 font-medium hidden sm:table-cell">Priority</th>
@@ -21,6 +22,9 @@
         {% if company %}
         <a href="/interviews/companies/{{ company.id }}" class="font-medium text-gray-900 hover:text-[#378ADD]">{{ company.name }}</a>
         {% else %}—{% endif %}
+      </td>
+      <td class="py-2.5 pr-4 hidden sm:table-cell text-center" {% if p.office_location %}title="{{ p.office_location }}"{% endif %}>
+        {{ p.office_location | country_flag }}
       </td>
       <td class="py-2.5 pr-4"><a href="/interviews/{{ p.id }}" class="text-gray-700 hover:text-[#378ADD]">{{ p.role_title }}</a></td>
       <td class="py-2.5 pr-4 hidden sm:table-cell">

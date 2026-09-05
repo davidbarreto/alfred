@@ -8,11 +8,11 @@ from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse, Response
 
 import app.client as api
+from app.shared.flags import language_flag
 from app.templates_config import templates
 
 router = APIRouter(prefix="/languages")
 
-_FLAG = {"fr": "🇫🇷", "ru": "🇷🇺", "es": "🇪🇸", "it": "🇮🇹", "de": "🇩🇪", "en": "🇺🇸"}
 _LEVEL_COLOR = {
     "A1": "bg-gray-100 text-gray-500",
     "A2": "bg-gray-100 text-gray-600",
@@ -40,7 +40,7 @@ def _pagination(items: list, offset: int, page_size: int) -> tuple[list, bool, b
 
 
 def _flag(code: str) -> str:
-    return _FLAG.get(code.lower(), "🌐")
+    return language_flag(code)
 
 
 def _level_color(level: str) -> str:

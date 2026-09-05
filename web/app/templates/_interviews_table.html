@@ -24,13 +24,17 @@
       </td>
       <td class="py-2.5 pr-4"><a href="/interviews/{{ p.id }}" class="text-gray-700 hover:text-[#378ADD]">{{ p.role_title }}</a></td>
       <td class="py-2.5 pr-4 hidden sm:table-cell">
-        <span class="px-2 py-0.5 rounded-full text-xs font-medium
-          {% if p.status == 'offer' %}bg-[#E9F5E1] text-[#3B7A1F]
-          {% elif p.status in ['rejected', 'withdrawn', 'ghosted'] %}bg-gray-100 text-gray-500
-          {% elif p.status == 'applied' %}bg-[#FDF3E1] text-[#8A6100]
-          {% else %}bg-[#E6F1FB] text-[#0C447C]{% endif %}">
-          {{ p.status }}
-        </span>
+        <form method="post" action="/interviews/{{ p.id }}/status">
+          <select name="status" onchange="this.form.submit()" class="px-2 py-0.5 rounded-full text-xs font-medium border-0 cursor-pointer focus:outline-none focus:ring-1 focus:ring-[#378ADD]
+            {% if p.status == 'offer' %}bg-[#E9F5E1] text-[#3B7A1F]
+            {% elif p.status in ['rejected', 'withdrawn', 'ghosted'] %}bg-gray-100 text-gray-500
+            {% elif p.status == 'applied' %}bg-[#FDF3E1] text-[#8A6100]
+            {% else %}bg-[#E6F1FB] text-[#0C447C]{% endif %}">
+            {% for st in ["applied", "active", "offer", "rejected", "withdrawn", "ghosted"] %}
+            <option value="{{ st }}" {% if p.status == st %}selected{% endif %}>{{ st | capitalize }}</option>
+            {% endfor %}
+          </select>
+        </form>
       </td>
       <td class="py-2.5 pr-4 hidden sm:table-cell">
         {% if p.priority %}<span class="badge badge-ghost badge-sm capitalize">{{ p.priority }}</span>{% else %}<span class="text-gray-400">—</span>{% endif %}

@@ -291,6 +291,15 @@ async def delete_process(process_id: int):
     return RedirectResponse(url="/interviews", status_code=303)
 
 
+@router.post("/{process_id}/status")
+async def update_process_status(request: Request, process_id: int, status: Annotated[str, Form()]):
+    try:
+        await api.patch(f"/organizer/interview-processes/{process_id}", json={"status": status})
+    except httpx.HTTPError:
+        pass
+    return RedirectResponse(url=_safe_back_url(_referer_path(request), "/interviews"), status_code=303)
+
+
 # -- Process edit ------------------------------------------------------------
 
 

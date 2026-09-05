@@ -133,6 +133,22 @@ class TestCreateProcess:
         assert "department" not in payload["process"]
 
 
+class TestUpdateProcessStatus:
+    def test_patches_status_and_redirects_back(self, client, mock_api):
+        mock_api["patch"].return_value = _process(status="active")
+        resp = client.post(
+            "/interviews/1/status",
+            data={"status": "active"},
+            headers={"referer": "http://testserver/interviews?status=applied"},
+            follow_redirects=False,
+        )
+        assert resp.status_code == 303
+        assert resp.headers["location"] == "/interviews?status=applied"
+        mock_api["patch"].assert_awaited_once_with(
+            "/organizer/interview-processes/1", json={"status": "active"}
+        )
+
+
 class TestProcessEdit:
     def test_renders_prefilled_form(self, client, mock_api):
         mock_api["get"].side_effect = _by_path({

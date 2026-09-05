@@ -19,6 +19,12 @@ _PRIORITY_ORDER = case(
     else_=3,
 )
 
+_STATUS_ORDER = case(
+    {"active": 0, "offer": 1, "rejected": 2, "withdrawn": 3, "ghosted": 4},
+    value=InterviewProcess.status,
+    else_=5,
+)
+
 
 class InterviewProcessRepository:
     def __init__(self, session: AsyncSession) -> None:
@@ -43,11 +49,11 @@ class InterviewProcessRepository:
         if filters.status is not None:
             stmt = stmt.where(InterviewProcess.status == filters.status)
         stmt = stmt.order_by(
-            case({"active": 0}, value=InterviewProcess.status, else_=1),
+            _STATUS_ORDER,
             _PRIORITY_ORDER,
+            InterviewProcess.applied_date.desc(),
             Company.name,
             InterviewProcess.role_title,
-            InterviewProcess.department,
         ).offset(filters.offset).limit(filters.limit)
         result = await self._session.execute(stmt)
         return list(result.scalars().all())

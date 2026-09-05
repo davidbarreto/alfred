@@ -8,6 +8,8 @@
       <th class="text-left pb-2 font-medium hidden sm:table-cell">Status</th>
       <th class="text-left pb-2 font-medium hidden sm:table-cell">Priority</th>
       <th class="text-left pb-2 font-medium hidden sm:table-cell">Stages</th>
+      <th class="text-left pb-2 font-medium hidden sm:table-cell">Team/Department/Domain</th>
+      <th class="text-left pb-2 font-medium hidden sm:table-cell">Applied Date</th>
       <th class="pb-2"></th>
     </tr>
   </thead>
@@ -39,6 +41,12 @@
         {% set current_stage = (p.stages | map(attribute='id') | list).index(active_stage_id) + 1 if active_stage_id else total_stages %}
         {{ current_stage }}/{{ total_stages }}
         {% else %}0{% endif %}
+      </td>
+      <td class="py-2.5 pr-4 text-gray-500 hidden sm:table-cell">
+        {{ p.department if p.department else "—" }}
+      </td>
+      <td class="py-2.5 pr-4 text-gray-500 hidden sm:table-cell whitespace-nowrap">
+        {{ p.applied_date if p.applied_date else "—" }}
       </td>
       <td class="py-2.5 text-right whitespace-nowrap">
         <form method="post" action="/interviews/{{ p.id }}/delete" onsubmit="return confirm('Delete this interview process? Stages and links are removed too.');">

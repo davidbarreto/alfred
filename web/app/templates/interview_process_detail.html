@@ -30,7 +30,7 @@
       <div class="text-gray-800">{{ process.priority or "—" }}</div>
     </div>
     <div>
-      <div class="text-xs text-gray-400">Department</div>
+      <div class="text-xs text-gray-400">Team/Department/Domain</div>
       <div class="text-gray-800">{{ process.department or "—" }}</div>
     </div>
     <div>
@@ -282,7 +282,7 @@
     <form method="post" action="/interviews/{{ process.id }}/stages" class="flex flex-wrap items-end gap-2 pt-3 border-t border-gray-100">
       <div>
         <label class="text-xs text-gray-500 mb-1 block">Stage type</label>
-        <select name="stage_type" required class="border border-gray-200 rounded-lg px-3 py-1.5 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-[#378ADD]">
+        <select name="stage_type" required onchange="this.closest('form').querySelector('[data-other-description]').classList.toggle('hidden', this.value !== 'other')" class="border border-gray-200 rounded-lg px-3 py-1.5 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-[#378ADD]">
           <option value="phone_screen">Phone screen</option>
           <option value="code_review">Code review</option>
           <option value="live_coding">Live coding</option>
@@ -300,6 +300,10 @@
       <div>
         <label class="text-xs text-gray-500 mb-1 block">Sequence</label>
         <input name="sequence" type="number" value="{{ process.stages | length }}" class="w-16 border border-gray-200 rounded-lg px-3 py-1.5 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-[#378ADD]" />
+      </div>
+      <div data-other-description class="hidden">
+        <label class="text-xs text-gray-500 mb-1 block">Description</label>
+        <input name="notes" type="text" placeholder="What kind of stage is this?" class="border border-gray-200 rounded-lg px-3 py-1.5 text-sm bg-white w-56 focus:outline-none focus:ring-1 focus:ring-[#378ADD]" />
       </div>
       <button type="submit" class="btn btn-sm btn-primary">Add stage</button>
     </form>

@@ -1,3 +1,4 @@
+from datetime import date
 from typing import Annotated
 
 import httpx
@@ -167,6 +168,7 @@ async def interviews_page(request: Request):
         "query_status": status_filter,
         "query_offset": offset,
         "api_error": api_error,
+        "today": date.today().isoformat(),
     })
 
 
@@ -420,10 +422,13 @@ async def create_stage(
     stage_type: Annotated[str, Form()],
     scheduled_at: Annotated[str, Form()] = "",
     sequence: Annotated[str, Form()] = "0",
+    notes: Annotated[str, Form()] = "",
 ):
     payload: dict = {"process_id": process_id, "stage_type": stage_type, "sequence": int(sequence or 0)}
     if scheduled_at:
         payload["scheduled_at"] = scheduled_at
+    if notes:
+        payload["notes"] = notes
     try:
         await api.post("/organizer/interview-stages", json=payload)
     except httpx.HTTPError:

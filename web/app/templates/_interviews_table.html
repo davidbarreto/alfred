@@ -27,6 +27,7 @@
         <span class="px-2 py-0.5 rounded-full text-xs font-medium
           {% if p.status == 'offer' %}bg-[#E9F5E1] text-[#3B7A1F]
           {% elif p.status in ['rejected', 'withdrawn', 'ghosted'] %}bg-gray-100 text-gray-500
+          {% elif p.status == 'applied' %}bg-[#FDF3E1] text-[#8A6100]
           {% else %}bg-[#E6F1FB] text-[#0C447C]{% endif %}">
           {{ p.status }}
         </span>

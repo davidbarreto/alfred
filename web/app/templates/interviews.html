@@ -30,7 +30,7 @@
       onchange="window.location = '/interviews?status=' + this.value"
     >
       <option value="" {% if not query_status %}selected{% endif %}>All statuses</option>
-      {% for s in ["active", "offer", "rejected", "withdrawn", "ghosted"] %}
+      {% for s in ["applied", "active", "offer", "rejected", "withdrawn", "ghosted"] %}
       <option value="{{ s }}" {% if query_status == s %}selected{% endif %}>{{ s | capitalize }}</option>
       {% endfor %}
     </select>

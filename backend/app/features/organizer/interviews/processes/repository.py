@@ -20,9 +20,9 @@ _PRIORITY_ORDER = case(
 )
 
 _STATUS_ORDER = case(
-    {"active": 0, "offer": 1, "rejected": 2, "withdrawn": 3, "ghosted": 4},
+    {"active": 0, "applied": 1, "offer": 2, "rejected": 3, "withdrawn": 4, "ghosted": 5},
     value=InterviewProcess.status,
-    else_=5,
+    else_=6,
 )
 
 
@@ -62,7 +62,7 @@ class InterviewProcessRepository:
         result = await self._session.execute(
             select(InterviewProcess)
             .options(selectinload(InterviewProcess.stages))
-            .where(InterviewProcess.status == "active")
+            .where(InterviewProcess.status.in_(["active", "applied"]))
             .order_by(InterviewProcess.created_at.desc())
         )
         return list(result.scalars().all())

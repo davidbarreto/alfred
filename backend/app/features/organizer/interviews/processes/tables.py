@@ -21,7 +21,7 @@ class InterviewProcess(Base):
         ForeignKey("organizer.interview_companies.id", ondelete="CASCADE"), nullable=False, index=True
     )
     role_title: Mapped[str] = mapped_column(String(255), nullable=False)
-    status: Mapped[str] = mapped_column(String(20), nullable=False, default="active")
+    status: Mapped[str] = mapped_column(String(20), nullable=False, default="applied")
     source: Mapped[str | None] = mapped_column(String(100), nullable=True)
     applied_date: Mapped[datetime.date | None] = mapped_column(Date, nullable=True)
     priority: Mapped[str | None] = mapped_column(String(10), nullable=True)

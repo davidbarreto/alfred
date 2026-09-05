@@ -8,7 +8,7 @@ from pydantic import BaseModel
 
 from app.features.organizer.interviews.stages.schemas import InterviewStageRead, StageType
 
-ProcessStatus: TypeAlias = Literal["active", "offer", "rejected", "withdrawn", "ghosted"]
+ProcessStatus: TypeAlias = Literal["applied", "active", "offer", "rejected", "withdrawn", "ghosted"]
 Priority: TypeAlias = Literal["low", "medium", "high"]
 WorkRegime: TypeAlias = Literal["remote", "hybrid", "onsite"]
 
@@ -16,7 +16,7 @@ WorkRegime: TypeAlias = Literal["remote", "hybrid", "onsite"]
 class InterviewProcessCreate(BaseModel):
     company_id: int
     role_title: str
-    status: ProcessStatus = "active"
+    status: ProcessStatus = "applied"
     source: str | None = None
     applied_date: date | None = None
     priority: Priority | None = None

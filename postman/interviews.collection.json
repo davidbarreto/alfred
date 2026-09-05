@@ -2,7 +2,7 @@
   "info": {
     "name": "Alfred - Interviews API",
     "_postman_id": "alfred-interviews-v1",
-    "description": "CRUD for the interview process tracker (companies, processes, stages, links, insights). Run in order: Create Company → Create Process → Get Process → List Processes → Update Process → Create Stage → Update Stage → Link Stage Contact → List Stage Contacts → Unlink Stage Contact → Create Link → List Links → Delete Link → Extract From URL → Generate Insights → Get Insights History → Delete Stage → Delete Process → Delete Company.",
+    "description": "CRUD for the interview process tracker (companies, processes, stages, links, insights, preferences). Run in order: Create Company → Create Process → Get Process → List Processes → Update Process → Create Stage → Update Stage → Link Stage Contact → List Stage Contacts → Unlink Stage Contact → Create Link → List Links → Delete Link → Extract From URL → Generate Insights → Get Insights History → Delete Stage → Delete Process → Delete Company → Get Preferences → Update Preferences.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -327,6 +327,50 @@
       "request": {
         "method": "DELETE",
         "url": { "raw": "{{base_url}}/organizer/interview-companies/{{company_id}}", "host": ["{{base_url}}"], "path": ["organizer", "interview-companies", "{{company_id}}"] }
+      }
+    },
+    {
+      "name": "17 - Get Preferences",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Has work_regimes array', () => pm.expect(pm.response.json().work_regimes).to.be.an('array'));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "url": { "raw": "{{base_url}}/organizer/interview-preferences", "host": ["{{base_url}}"], "path": ["organizer", "interview-preferences"] }
+      }
+    },
+    {
+      "name": "18 - Update Preferences",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Work regimes updated', () => pm.expect(pm.response.json().work_regimes).to.eql(['remote', 'hybrid']));",
+              "pm.test('Tech stack updated', () => pm.expect(pm.response.json().tech_stack).to.eql(['Java', 'Python']));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "PATCH",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"work_regimes\": [\"remote\", \"hybrid\"],\n  \"target_office_days_per_month\": 8.5,\n  \"salary_min\": 80000,\n  \"salary_max\": 100000,\n  \"salary_currency\": \"EUR\",\n  \"locations\": [\"Lisbon\", \"Remote-EU\"],\n  \"tech_stack\": [\"Java\", \"Python\"],\n  \"roles\": [\"Backend Engineer\", \"Staff Engineer\"],\n  \"career_objectives\": \"Move into a staff-level backend role with more system design ownership\"\n}"
+        },
+        "url": { "raw": "{{base_url}}/organizer/interview-preferences", "host": ["{{base_url}}"], "path": ["organizer", "interview-preferences"] }
       }
     }
   ]

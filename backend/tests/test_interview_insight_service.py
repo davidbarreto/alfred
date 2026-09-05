@@ -33,6 +33,20 @@ def _make_company(name: str):
     return company
 
 
+def _make_preferences_orm(**kwargs):
+    orm = MagicMock()
+    orm.work_regimes = kwargs.get("work_regimes", [])
+    orm.target_office_days_per_month = kwargs.get("target_office_days_per_month", None)
+    orm.salary_min = kwargs.get("salary_min", None)
+    orm.salary_max = kwargs.get("salary_max", None)
+    orm.salary_currency = kwargs.get("salary_currency", None)
+    orm.locations = kwargs.get("locations", [])
+    orm.tech_stack = kwargs.get("tech_stack", [])
+    orm.roles = kwargs.get("roles", [])
+    orm.career_objectives = kwargs.get("career_objectives", None)
+    return orm
+
+
 def _make_insight_orm(**kwargs):
     orm = MagicMock()
     orm.id = kwargs.get("id", 1)
@@ -54,6 +68,8 @@ def service():
     svc._repo = AsyncMock()
     svc._process_repo = AsyncMock()
     svc._company_repo = AsyncMock()
+    svc._preferences_repo = AsyncMock()
+    svc._preferences_repo.get_preferences.return_value = _make_preferences_orm()
     return svc, llm_provider
 
 
@@ -152,6 +168,53 @@ class TestBuildProcessSummary:
 
         assert ids == [2, 1]
         assert "NEXT: nothing scheduled" in summary
+
+
+class TestBuildPreferencesSummary:
+    def test_returns_placeholder_when_nothing_configured(self):
+        summary = InterviewInsightService._build_preferences_summary(_make_preferences_orm())
+        assert summary == "No preferences configured."
+
+    def test_includes_configured_fields(self):
+        preferences = _make_preferences_orm(
+            work_regimes=["remote", "hybrid"],
+            target_office_days_per_month=4.0,
+            salary_min=80000,
+            salary_max=100000,
+            salary_currency="EUR",
+            locations=["Lisbon"],
+            tech_stack=["Java", "Python"],
+            roles=["Backend Engineer"],
+            career_objectives="Move into a staff-level role",
+        )
+        summary = InterviewInsightService._build_preferences_summary(preferences)
+        assert "work regime: remote, hybrid" in summary
+        assert "target office days/month: 4.0" in summary
+        assert "salary expectations: 80000-100000 EUR" in summary
+        assert "preferred locations: Lisbon" in summary
+        assert "preferred tech stack: Java, Python" in summary
+        assert "target roles: Backend Engineer" in summary
+        assert "career objectives: Move into a staff-level role" in summary
+
+
+class TestGenerateInsightsWithPreferences:
+    async def test_prompt_includes_preferences_summary(self, service):
+        svc, llm_provider = service
+        svc._process_repo.get_active_processes.return_value = []
+        svc._preferences_repo.get_preferences.return_value = _make_preferences_orm(
+            work_regimes=["remote"], roles=["Backend Engineer"]
+        )
+        llm_provider.complete.return_value = LlmResponse(
+            text='{"content": "x", "focus_process_ids": []}', tokens_input=1, tokens_output=1, finish_reason="STOP",
+        )
+        svc._repo.create_insight.return_value = _make_insight_orm(process_ids=[])
+
+        with patch("app.features.organizer.interviews.insights.service.create_llm_call", new=AsyncMock()):
+            await svc.generate_insights()
+
+        _, kwargs = llm_provider.complete.call_args
+        assert "work regime: remote" in kwargs["system"]
+        assert "target roles: Backend Engineer" in kwargs["system"]
 
 
 class TestGetInsightsHistory:

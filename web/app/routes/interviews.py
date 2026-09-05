@@ -366,6 +366,66 @@ async def update_process(
     return RedirectResponse(url=_safe_back_url(back_url, f"/interviews/{process_id}"), status_code=303)
 
 
+# -- Preferences ---------------------------------------------------------
+
+_WORK_REGIME_OPTIONS = ["remote", "hybrid", "onsite"]
+
+
+def _split_list(raw: str) -> list[str]:
+    return [item.strip() for item in raw.split(",") if item.strip()]
+
+
+async def _preferences_context(error: str | None = None) -> dict:
+    try:
+        preferences = await api.get("/organizer/interview-preferences")
+    except httpx.HTTPError:
+        preferences = {}
+    return {
+        "preferences": preferences,
+        "work_regime_options": _WORK_REGIME_OPTIONS,
+        "error": error,
+    }
+
+
+@router.get("/preferences", response_class=HTMLResponse)
+async def preferences_page(request: Request):
+    context = await _preferences_context()
+    return templates.TemplateResponse(request, "interview_preferences.html", context)
+
+
+@router.post("/preferences", response_class=HTMLResponse)
+async def update_preferences(
+    request: Request,
+    work_regimes: Annotated[list[str], Form()] = [],
+    target_office_days_per_month: Annotated[str, Form()] = "",
+    salary_min: Annotated[str, Form()] = "",
+    salary_max: Annotated[str, Form()] = "",
+    salary_currency: Annotated[str, Form()] = "",
+    locations: Annotated[str, Form()] = "",
+    tech_stack: Annotated[str, Form()] = "",
+    roles: Annotated[str, Form()] = "",
+    career_objectives: Annotated[str, Form()] = "",
+):
+    payload: dict = {
+        "work_regimes": work_regimes,
+        "target_office_days_per_month": float(target_office_days_per_month) if target_office_days_per_month else None,
+        "salary_min": int(salary_min) if salary_min else None,
+        "salary_max": int(salary_max) if salary_max else None,
+        "salary_currency": salary_currency or None,
+        "locations": _split_list(locations),
+        "tech_stack": _split_list(tech_stack),
+        "roles": _split_list(roles),
+        "career_objectives": career_objectives or None,
+    }
+    error = None
+    try:
+        await api.patch("/organizer/interview-preferences", json=payload)
+    except httpx.HTTPError:
+        error = "Failed to save preferences."
+    context = await _preferences_context(error=error)
+    return templates.TemplateResponse(request, "interview_preferences.html", context)
+
+
 # -- Process detail ----------------------------------------------------------
 
 

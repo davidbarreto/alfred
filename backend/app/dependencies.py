@@ -77,6 +77,7 @@ from app.features.organizer.interviews.processes.jd_extraction_service import Jd
 from app.features.organizer.interviews.stages.service import InterviewStageService
 from app.features.organizer.interviews.links.service import InterviewLinkService
 from app.features.organizer.interviews.insights.service import InterviewInsightService
+from app.features.organizer.interviews.preferences.service import InterviewPreferencesService
 from app.integrations.google_contacts.client import GoogleContactsClient
 from app.integrations.google_contacts.provider import GoogleContactsProvider
 from app.integrations.sentence_transformers.provider import SentenceTransformerEmbeddingProvider
@@ -514,6 +515,9 @@ def get_interview_link_service(session: AsyncSession = Depends(get_session)) -> 
 def get_interview_insight_service(session: AsyncSession = Depends(get_session)) -> InterviewInsightService:
     return InterviewInsightService(session=session, llm_provider=get_extraction_llm_provider())
 
+def get_interview_preferences_service(session: AsyncSession = Depends(get_session)) -> InterviewPreferencesService:
+    return InterviewPreferencesService(session)
+
 def get_codeforces_sync_service(session: AsyncSession = Depends(get_session)) -> CodeforcesSyncService:
     return CodeforcesSyncService(session, CodeforcesClient())
 
@@ -613,3 +617,6 @@ JdExtractionServiceDep = Annotated[JdExtractionService, Depends(get_jd_extractio
 InterviewStageServiceDep = Annotated[InterviewStageService, Depends(get_interview_stage_service)]
 InterviewLinkServiceDep = Annotated[InterviewLinkService, Depends(get_interview_link_service)]
 InterviewInsightServiceDep = Annotated[InterviewInsightService, Depends(get_interview_insight_service)]
+InterviewPreferencesServiceDep = Annotated[
+    InterviewPreferencesService, Depends(get_interview_preferences_service)
+]

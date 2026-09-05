@@ -45,6 +45,7 @@ from app.api.routes.organizer.interviews.processes import router as interview_pr
 from app.api.routes.organizer.interviews.stages import router as interview_stages_router
 from app.api.routes.organizer.interviews.links import router as interview_links_router
 from app.api.routes.organizer.interviews.insights import router as interview_insights_router
+from app.api.routes.organizer.interviews.preferences import router as interview_preferences_router
 from app.api.routes.finance.accounts import router as finance_accounts_router
 from app.api.routes.finance.categories import router as finance_categories_router
 from app.api.routes.finance.currencies import router as finance_currencies_router
@@ -147,6 +148,7 @@ app.include_router(interview_processes_router)
 app.include_router(interview_stages_router)
 app.include_router(interview_links_router)
 app.include_router(interview_insights_router)
+app.include_router(interview_preferences_router)
 app.include_router(finance_accounts_router)
 app.include_router(finance_categories_router)
 app.include_router(finance_currencies_router)

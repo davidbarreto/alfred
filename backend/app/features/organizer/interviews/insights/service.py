@@ -15,6 +15,8 @@ from app.features.organizer.interviews.insights.schemas import (
     InterviewInsightFilters,
     InterviewInsightRead,
 )
+from app.features.organizer.interviews.preferences.repository import InterviewPreferencesRepository
+from app.features.organizer.interviews.preferences.tables import InterviewPreferences
 from app.features.organizer.interviews.processes.repository import InterviewProcessRepository
 from app.integrations.llm_calls.repository import create_llm_call
 from app.shared.llm import LlmProvider
@@ -29,6 +31,7 @@ class InterviewInsightService:
         self._repo = InterviewInsightRepository(session)
         self._process_repo = InterviewProcessRepository(session)
         self._company_repo = CompanyRepository(session)
+        self._preferences_repo = InterviewPreferencesRepository(session)
 
     async def _build_process_summary(self, now: datetime) -> tuple[str, list[int]]:
         processes = await self._process_repo.get_active_processes()
@@ -72,12 +75,35 @@ class InterviewInsightService:
         ]
         return "\n".join(lines) or "No active interview processes.", [e["id"] for e in entries]
 
+    @staticmethod
+    def _build_preferences_summary(preferences: InterviewPreferences) -> str:
+        parts = []
+        if preferences.work_regimes:
+            parts.append(f"work regime: {', '.join(preferences.work_regimes)}")
+        if preferences.target_office_days_per_month is not None:
+            parts.append(f"target office days/month: {preferences.target_office_days_per_month}")
+        if preferences.salary_min is not None or preferences.salary_max is not None:
+            currency = preferences.salary_currency or ""
+            salary_range = f"{preferences.salary_min or '?'}-{preferences.salary_max or '?'} {currency}".strip()
+            parts.append(f"salary expectations: {salary_range}")
+        if preferences.locations:
+            parts.append(f"preferred locations: {', '.join(preferences.locations)}")
+        if preferences.tech_stack:
+            parts.append(f"preferred tech stack: {', '.join(preferences.tech_stack)}")
+        if preferences.roles:
+            parts.append(f"target roles: {', '.join(preferences.roles)}")
+        if preferences.career_objectives:
+            parts.append(f"career objectives: {preferences.career_objectives}")
+        return "; ".join(parts) or "No preferences configured."
+
     async def generate_insights(self) -> InterviewInsightRead:
         now = datetime.now(timezone.utc)
         processes_summary, process_ids = await self._build_process_summary(now)
+        preferences = await self._preferences_repo.get_preferences()
+        preferences_summary = self._build_preferences_summary(preferences)
         schema_str = json.dumps(InsightsResult.model_json_schema(), indent=2)
         system_prompt = INSIGHTS_SYSTEM_PROMPT_TEMPLATE.format(
-            schema=schema_str, processes=processes_summary, today=now.date()
+            schema=schema_str, processes=processes_summary, preferences=preferences_summary, today=now.date()
         )
         messages = [{"role": "user", "content": "What should I focus on this week?"}]
 

@@ -1,3 +1,6 @@
+import httpx
+
+
 def _process(id=1, company_id=1, role_title="Backend Engineer", status="active", stages=None):
     return {
         "id": id, "company_id": company_id, "role_title": role_title, "status": status,
@@ -21,6 +24,17 @@ def _stage(id=1, process_id=1, stage_type="phone_screen", status="scheduled"):
         "status": status, "feedback": None, "notes": None, "sequence": 0, "calendar_event_id": None,
         "created_at": "2026-09-01T10:00:00", "updated_at": "2026-09-01T10:00:00",
     }
+
+
+def _preferences(**overrides):
+    data = {
+        "id": 1, "work_regimes": [], "target_office_days_per_month": None,
+        "salary_min": None, "salary_max": None, "salary_currency": None,
+        "locations": [], "tech_stack": [], "roles": [], "career_objectives": None,
+        "created_at": "2026-09-01T10:00:00", "updated_at": "2026-09-01T10:00:00",
+    }
+    data.update(overrides)
+    return data
 
 
 def _by_path(mapping, default=None):
@@ -302,3 +316,60 @@ class TestSearchProxies:
         resp = client.get("/interviews/1/stages/1/search/tasks")
         assert resp.status_code == 200
         mock_api["get"].assert_not_awaited()
+
+
+class TestPreferencesPage:
+    def test_renders_saved_preferences(self, client, mock_api):
+        mock_api["get"].return_value = _preferences(
+            work_regimes=["remote", "hybrid"],
+            tech_stack=["Java", "Python"],
+            locations=["Lisbon"],
+            career_objectives="Move into a staff-level role",
+        )
+        resp = client.get("/interviews/preferences")
+        assert resp.status_code == 200
+        assert "Java, Python" in resp.text
+        assert "Lisbon" in resp.text
+        assert "Move into a staff-level role" in resp.text
+
+    def test_renders_when_backend_unreachable(self, client, mock_api):
+        mock_api["get"].side_effect = httpx.ConnectError("boom")
+        resp = client.get("/interviews/preferences")
+        assert resp.status_code == 200
+
+
+class TestUpdatePreferences:
+    def test_patches_split_lists_and_redirects(self, client, mock_api):
+        mock_api["get"].return_value = _preferences()
+        mock_api["patch"].return_value = _preferences()
+        resp = client.post(
+            "/interviews/preferences",
+            data={
+                "work_regimes": ["remote", "hybrid"],
+                "target_office_days_per_month": "8.5",
+                "salary_min": "80000",
+                "salary_max": "100000",
+                "salary_currency": "EUR",
+                "locations": "Lisbon, Remote-EU",
+                "tech_stack": "Java, Python",
+                "roles": "Backend Engineer",
+                "career_objectives": "Move into a staff-level role",
+            },
+        )
+        assert resp.status_code == 200
+        payload = mock_api["patch"].call_args.kwargs["json"]
+        assert payload["work_regimes"] == ["remote", "hybrid"]
+        assert payload["target_office_days_per_month"] == 8.5
+        assert payload["locations"] == ["Lisbon", "Remote-EU"]
+        assert payload["tech_stack"] == ["Java", "Python"]
+        assert payload["roles"] == ["Backend Engineer"]
+
+    def test_omits_blank_fields_as_none(self, client, mock_api):
+        mock_api["get"].return_value = _preferences()
+        mock_api["patch"].return_value = _preferences()
+        resp = client.post("/interviews/preferences", data={})
+        assert resp.status_code == 200
+        payload = mock_api["patch"].call_args.kwargs["json"]
+        assert payload["work_regimes"] == []
+        assert payload["target_office_days_per_month"] is None
+        assert payload["locations"] == []

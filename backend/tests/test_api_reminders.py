@@ -22,7 +22,7 @@ def client():
 
 class TestGetDueReminders:
     def test_returns_digest(self, client):
-        from app.dependencies import get_reminder_service
+        from app.dependencies import get_global_pause_service, get_reminder_service
         from app.features.core.reminders.schemas import ReminderDigest
         from app.main import app
 
@@ -31,6 +31,9 @@ class TestGetDueReminders:
             date=date(2026, 7, 11), has_content=True, text="Reminders text"
         )
         app.dependency_overrides[get_reminder_service] = lambda: service
+        pause_service = AsyncMock()
+        pause_service.is_paused.return_value = False
+        app.dependency_overrides[get_global_pause_service] = lambda: pause_service
 
         response = client.get("/core/reminders/due", headers=AUTH)
 
@@ -38,6 +41,24 @@ class TestGetDueReminders:
         body = response.json()
         assert body["has_content"] is True
         assert body["text"] == "Reminders text"
+
+    def test_returns_empty_digest_when_paused(self, client):
+        from app.dependencies import get_global_pause_service, get_reminder_service
+        from app.main import app
+
+        service = AsyncMock()
+        app.dependency_overrides[get_reminder_service] = lambda: service
+        pause_service = AsyncMock()
+        pause_service.is_paused.return_value = True
+        app.dependency_overrides[get_global_pause_service] = lambda: pause_service
+
+        response = client.get("/core/reminders/due", headers=AUTH)
+
+        assert response.status_code == 200
+        body = response.json()
+        assert body["has_content"] is False
+        assert body["text"] == ""
+        service.build_due_digest.assert_not_called()
 
     def test_requires_auth(self, client):
         response = client.get("/core/reminders/due")

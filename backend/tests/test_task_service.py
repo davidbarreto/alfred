@@ -624,3 +624,19 @@ class TestGetDistinctTags:
 
         assert result == ["work", "personal"]
         service._repo.get_distinct_tags.assert_awaited_once()
+
+
+class TestRestoreAfterPause:
+    async def test_delegates_to_repository_and_returns_counts(self, service):
+        service._repo.reset_escalated_urgency = AsyncMock(return_value=5)
+        service._repo.shift_overdue_deadlines = AsyncMock(return_value=2)
+
+        urgency_reset, deadlines_shifted = await service.restore_after_pause(timedelta(days=3))
+
+        assert urgency_reset == 5
+        assert deadlines_shifted == 2
+        service._repo.reset_escalated_urgency.assert_awaited_once()
+        service._repo.shift_overdue_deadlines.assert_awaited_once()
+        (delta, now), _ = service._repo.shift_overdue_deadlines.call_args
+        assert delta == timedelta(days=3)
+        assert now is not None

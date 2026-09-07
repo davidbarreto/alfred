@@ -2369,6 +2369,194 @@
       }
     },
     {
+      "name": "86 - Pause - Get State (Not Paused)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Not paused', () => {",
+              "    pm.expect(pm.response.json().paused).to.eql(false);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/core/pause",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "core",
+            "pause"
+          ]
+        }
+      }
+    },
+    {
+      "name": "87 - Pause - Start",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Now paused with a timestamp', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json.paused).to.eql(true);",
+              "    pm.expect(json.paused_at).to.not.be.null;",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/core/pause",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "core",
+            "pause"
+          ]
+        }
+      }
+    },
+    {
+      "name": "88 - Pause - Get State (Paused)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Paused', () => {",
+              "    pm.expect(pm.response.json().paused).to.eql(true);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/core/pause",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "core",
+            "pause"
+          ]
+        }
+      }
+    },
+    {
+      "name": "89 - Pause - Start Again (400 Conflict)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 400', () => pm.response.to.have.status(400));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/core/pause",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "core",
+            "pause"
+          ]
+        }
+      }
+    },
+    {
+      "name": "89a - Pause - Resume",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Response has expected shape', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json.paused).to.eql(false);",
+              "    ['resumed_at', 'tasks_urgency_reset', 'tasks_deadline_shifted'].forEach(",
+              "        f => pm.expect(json).to.have.property(f)",
+              "    );",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/core/pause/resume",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "core",
+            "pause",
+            "resume"
+          ]
+        }
+      }
+    },
+    {
+      "name": "89b - Pause - Resume Again (400 Conflict)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 400', () => pm.response.to.have.status(400));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/core/pause/resume",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "core",
+            "pause",
+            "resume"
+          ]
+        }
+      }
+    },
+    {
       "name": "90 - Sessions - Finish",
       "event": [
         {

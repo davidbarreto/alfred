@@ -1,7 +1,9 @@
+from datetime import date
+
 from fastapi import APIRouter, Depends
 
 from app.api.auth import require_auth
-from app.dependencies import ContactBirthdayNotificationServiceDep
+from app.dependencies import ContactBirthdayNotificationServiceDep, GlobalPauseServiceDep
 from app.features.core.reminders.schemas import ReminderDigest
 
 router = APIRouter(
@@ -10,5 +12,9 @@ router = APIRouter(
 
 
 @router.get("/due", response_model=ReminderDigest)
-async def get_due_contact_birthday_notifications(service: ContactBirthdayNotificationServiceDep) -> ReminderDigest:
+async def get_due_contact_birthday_notifications(
+    service: ContactBirthdayNotificationServiceDep, pause_service: GlobalPauseServiceDep
+) -> ReminderDigest:
+    if await pause_service.is_paused():
+        return ReminderDigest(date=date.today(), has_content=False, text="")
     return await service.build_due_digest()

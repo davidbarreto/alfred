@@ -44,11 +44,23 @@ def mock_formatter_service():
 
 
 @pytest.fixture
-def client(mock_summary_service, mock_formatter_service):
+def mock_pause_service():
+    svc = AsyncMock()
+    svc.is_paused.return_value = False
+    return svc
+
+
+@pytest.fixture
+def client(mock_summary_service, mock_formatter_service, mock_pause_service):
     from app.main import app
-    from app.dependencies import get_morning_briefing_formatter_service, get_morning_briefing_summary_service
+    from app.dependencies import (
+        get_global_pause_service,
+        get_morning_briefing_formatter_service,
+        get_morning_briefing_summary_service,
+    )
     app.dependency_overrides[get_morning_briefing_summary_service] = lambda: mock_summary_service
     app.dependency_overrides[get_morning_briefing_formatter_service] = lambda: mock_formatter_service
+    app.dependency_overrides[get_global_pause_service] = lambda: mock_pause_service
     yield TestClient(app)
     app.dependency_overrides.clear()
 
@@ -70,11 +82,16 @@ def mock_evening_formatter_service():
 
 
 @pytest.fixture
-def evening_client(mock_evening_summary_service, mock_evening_formatter_service):
+def evening_client(mock_evening_summary_service, mock_evening_formatter_service, mock_pause_service):
     from app.main import app
-    from app.dependencies import get_evening_digest_formatter_service, get_evening_digest_summary_service
+    from app.dependencies import (
+        get_evening_digest_formatter_service,
+        get_evening_digest_summary_service,
+        get_global_pause_service,
+    )
     app.dependency_overrides[get_evening_digest_summary_service] = lambda: mock_evening_summary_service
     app.dependency_overrides[get_evening_digest_formatter_service] = lambda: mock_evening_formatter_service
+    app.dependency_overrides[get_global_pause_service] = lambda: mock_pause_service
     yield TestClient(app)
     app.dependency_overrides.clear()
 
@@ -115,6 +132,18 @@ class TestMorningBriefingFormatted:
         mock_formatter_service.get_saved.assert_not_called()
         mock_summary_service.build.assert_called_once()
         mock_formatter_service.format.assert_called_once()
+
+    def test_returns_empty_when_paused(
+        self, client, mock_summary_service, mock_formatter_service, mock_pause_service
+    ):
+        mock_pause_service.is_paused.return_value = True
+
+        response = client.get("/briefing/morning/formatted", headers=AUTH)
+
+        assert response.status_code == 200
+        assert response.json()["text"] == ""
+        mock_summary_service.build.assert_not_called()
+        mock_formatter_service.format.assert_not_called()
 
 
 class TestEveningDigestFormatted:
@@ -166,6 +195,18 @@ class TestEveningDigestFormatted:
         assert response.json()["text"] == "Freshly generated digest."
         mock_evening_summary_service.build.assert_called_once()
         mock_evening_formatter_service.format.assert_called_once()
+
+    def test_returns_empty_when_paused(
+        self, evening_client, mock_evening_summary_service, mock_evening_formatter_service, mock_pause_service
+    ):
+        mock_pause_service.is_paused.return_value = True
+
+        response = evening_client.get("/briefing/evening/formatted", headers=AUTH)
+
+        assert response.status_code == 200
+        assert response.json()["text"] == ""
+        mock_evening_summary_service.build.assert_not_called()
+        mock_evening_formatter_service.format.assert_not_called()
 
 
 @pytest.fixture

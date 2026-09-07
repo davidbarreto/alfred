@@ -1,3 +1,5 @@
+from datetime import datetime, timedelta
+
 import pytest
 from unittest.mock import AsyncMock, MagicMock
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -435,3 +437,44 @@ class TestGetDistinctTags:
         tags = await repo.get_distinct_tags()
 
         assert tags == []
+
+
+class TestResetEscalatedUrgency:
+    async def test_returns_rowcount(self):
+        session = _make_session()
+        result = MagicMock()
+        result.rowcount = 3
+        session.execute.return_value = result
+
+        repo = TaskRepository(session)
+        count = await repo.reset_escalated_urgency()
+
+        assert count == 3
+        session.execute.assert_called_once()
+        session.commit.assert_awaited_once()
+
+    async def test_zero_when_nothing_matched(self):
+        session = _make_session()
+        result = MagicMock()
+        result.rowcount = 0
+        session.execute.return_value = result
+
+        repo = TaskRepository(session)
+        count = await repo.reset_escalated_urgency()
+
+        assert count == 0
+
+
+class TestShiftOverdueDeadlines:
+    async def test_returns_rowcount(self):
+        session = _make_session()
+        result = MagicMock()
+        result.rowcount = 2
+        session.execute.return_value = result
+
+        repo = TaskRepository(session)
+        count = await repo.shift_overdue_deadlines(timedelta(days=3), datetime(2026, 9, 7))
+
+        assert count == 2
+        session.execute.assert_called_once()
+        session.commit.assert_awaited_once()

@@ -404,6 +404,22 @@ COMMAND_DEFINITIONS = {
             "arg_keys": ["title"]
         }
     },
+    "pause": {
+        "start": {
+            "description": "Pause all reminders and briefings, and stop task urgency from escalating",
+            "aliases": ["/pause", "/breath"],
+            "flags": {},
+            "requires_args": False,
+            "arg_keys": []
+        },
+        "stop": {
+            "description": "Resume reminders; restores escalated task urgency and shifts overdue deadlines forward",
+            "aliases": ["/resume", "/unpause"],
+            "flags": {},
+            "requires_args": False,
+            "arg_keys": []
+        }
+    },
     "help": {
         "help": {
             "description": "Show available commands, or details about a specific command",

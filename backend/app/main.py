@@ -64,6 +64,7 @@ from app.api.routes.core.embeddings import router as core_embeddings_router
 from app.api.routes.core.transcription import router as core_transcription_router
 from app.api.routes.core.chats import router as core_chats_router, stream_router as core_chats_stream_router
 from app.api.routes.core.reminders import router as core_reminders_router
+from app.api.routes.core.pause import router as core_pause_router
 from app.api.routes.briefing import router as briefing_router
 from app.api.routes.language.tracks import router as language_tracks_router
 from app.api.routes.language.grammar_scope import router as language_grammar_scope_router
@@ -168,6 +169,7 @@ app.include_router(core_transcription_router)
 app.include_router(core_chats_router)
 app.include_router(core_chats_stream_router)
 app.include_router(core_reminders_router)
+app.include_router(core_pause_router)
 app.include_router(briefing_router)
 app.include_router(language_tracks_router)
 app.include_router(language_grammar_scope_router)

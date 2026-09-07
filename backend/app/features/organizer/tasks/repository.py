@@ -218,3 +218,30 @@ class TaskRepository:
         await self._session.commit()
         await self._session.refresh(completion)
         return completion
+
+    async def reset_escalated_urgency(self) -> int:
+        result = await self._session.execute(
+            update(Task)
+            .where(
+                Task.urgency == "URGENT",
+                Task.status.not_in(["DONE", "CANCELLED"]),
+                Task.deleted_at.is_(None),
+            )
+            .values(urgency="NORMAL")
+        )
+        await self._session.commit()
+        return result.rowcount or 0
+
+    async def shift_overdue_deadlines(self, delta: timedelta, now: datetime) -> int:
+        result = await self._session.execute(
+            update(Task)
+            .where(
+                Task.deadline.is_not(None),
+                Task.deadline < now,
+                Task.status.not_in(["DONE", "CANCELLED"]),
+                Task.deleted_at.is_(None),
+            )
+            .values(deadline=Task.deadline + delta)
+        )
+        await self._session.commit()
+        return result.rowcount or 0

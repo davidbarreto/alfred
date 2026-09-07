@@ -1,0 +1,31 @@
+{% if paused %}
+<div class="px-3 py-2 rounded-md bg-[#FAEEDA] text-[#8A5A00] text-xs space-y-1.5">
+  <div class="flex items-center gap-1.5 font-medium">
+    <i class="ti ti-player-pause-filled"></i>
+    Paused{% if paused_at %} since {{ paused_at }}{% endif %}
+  </div>
+  <div class="text-[11px] opacity-80">Reminders and briefings are muted; task urgency is frozen.</div>
+  <button
+    type="button"
+    class="w-full px-2 py-1 rounded bg-[#BA7517] text-white text-xs font-medium hover:opacity-90"
+    hx-post="/pause/resume"
+    hx-target="#pause-control"
+    hx-swap="innerHTML"
+  >Resume</button>
+</div>
+{% else %}
+<div>
+  {% if result %}
+  <div class="px-3 py-1.5 mb-1 rounded-md bg-[#EAF3DE] text-[#639922] text-[11px]">
+    Welcome back — reset {{ result.tasks_urgency_reset }} task(s), shifted {{ result.tasks_deadline_shifted }} deadline(s).
+  </div>
+  {% endif %}
+  <button
+    type="button"
+    class="nav-link w-full"
+    hx-post="/pause"
+    hx-target="#pause-control"
+    hx-swap="innerHTML"
+  ><i class="ti ti-player-pause"></i>Take a breath</button>
+</div>
+{% endif %}

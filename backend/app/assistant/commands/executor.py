@@ -10,6 +10,7 @@ from app.assistant.commands.handlers.finance import handle_finance
 from app.assistant.commands.handlers.help import handle_help
 from app.assistant.commands.handlers.language import handle_language
 from app.assistant.commands.handlers.note import handle_note
+from app.assistant.commands.handlers.pause import handle_pause
 from app.assistant.commands.handlers.recall import handle_recall
 from app.assistant.commands.handlers.reminder import handle_reminder
 from app.assistant.commands.handlers.shopping import handle_shopping
@@ -32,6 +33,7 @@ from app.features.organizer.calendar_events.service import CalendarEventService
 from app.features.organizer.notes.service import NoteService
 from app.features.organizer.shopping.service import ShoppingService
 from app.features.organizer.tasks.service import TaskService
+from app.features.core.pause.service import GlobalPauseService
 
 logger = logging.getLogger(__name__)
 
@@ -57,6 +59,7 @@ async def execute(
     conversation_service: ConversationService | None = None,
     cs_stats_service: CsStatsService | None = None,
     cs_study_plan_service: CsStudyPlanService | None = None,
+    pause_service: GlobalPauseService | None = None,
     message_id: int | None = None,
 ) -> Any:
     logger.info("Execute: %s.%s args_keys=%s", cmd_type, command, list(arguments.keys()))
@@ -135,6 +138,14 @@ async def execute(
 
     if cmd_type == "reminder":
         return await handle_reminder(command, arguments, task_service=task_service)
+
+    if cmd_type == "pause":
+        if pause_service is None:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Pause service not available",
+            )
+        return await handle_pause(command, arguments, pause_service)
 
     if cmd_type == "help":
         return handle_help(arguments)

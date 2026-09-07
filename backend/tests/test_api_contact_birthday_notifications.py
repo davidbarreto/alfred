@@ -22,7 +22,7 @@ def client():
 
 class TestGetDueContactBirthdayNotifications:
     def test_returns_digest(self, client):
-        from app.dependencies import get_contact_birthday_notification_service
+        from app.dependencies import get_contact_birthday_notification_service, get_global_pause_service
         from app.features.core.reminders.schemas import ReminderDigest
         from app.main import app
 
@@ -31,11 +31,30 @@ class TestGetDueContactBirthdayNotifications:
             date=date(2026, 8, 20), has_content=True, text="Birthday reminders text"
         )
         app.dependency_overrides[get_contact_birthday_notification_service] = lambda: service
+        pause_service = AsyncMock()
+        pause_service.is_paused.return_value = False
+        app.dependency_overrides[get_global_pause_service] = lambda: pause_service
 
         response = client.get("/organizer/contact-birthday-notifications/due", headers=AUTH)
 
         assert response.status_code == 200
         assert response.json()["has_content"] is True
+
+    def test_returns_empty_digest_when_paused(self, client):
+        from app.dependencies import get_contact_birthday_notification_service, get_global_pause_service
+        from app.main import app
+
+        service = AsyncMock()
+        app.dependency_overrides[get_contact_birthday_notification_service] = lambda: service
+        pause_service = AsyncMock()
+        pause_service.is_paused.return_value = True
+        app.dependency_overrides[get_global_pause_service] = lambda: pause_service
+
+        response = client.get("/organizer/contact-birthday-notifications/due", headers=AUTH)
+
+        assert response.status_code == 200
+        assert response.json()["has_content"] is False
+        service.build_due_digest.assert_not_called()
 
     def test_requires_auth(self, client):
         assert client.get("/organizer/contact-birthday-notifications/due").status_code == 403

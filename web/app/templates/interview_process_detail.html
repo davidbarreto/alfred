@@ -94,7 +94,7 @@
   <div class="bg-white border border-gray-200 rounded-lg p-4">
     <h2 class="text-sm font-semibold text-gray-900 mb-3">Stages</h2>
     {% if process.stages %}
-    {% set active_stage_id = (process.stages | selectattr('status', 'equalto', 'scheduled') | map(attribute='id') | first) %}
+    {% set active_stage_id = (process.stages | selectattr('status', 'in', ['scheduled', 'failed']) | map(attribute='id') | first) %}
     <ul class="space-y-4 mb-4">
       {% for s in process.stages %}
       {% set extras = stage_extras.get(s.id, {"contacts": [], "tasks": [], "notes": [], "event": None}) %}

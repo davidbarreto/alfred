@@ -120,6 +120,25 @@ class TestInterviewsTable:
         assert resp.status_code == 200
         assert "2/2" in resp.text
 
+    def test_shows_failed_stage_as_current(self, client, mock_api):
+        # 4-stage process, failed at stage 2 -- should stay "current" (2/4), not
+        # get skipped in favor of the next scheduled stage (which would show 3/4).
+        stages = [
+            _stage(id=1, status="passed"),
+            _stage(id=2, status="failed"),
+            _stage(id=3, status="scheduled"),
+            _stage(id=4, status="scheduled"),
+        ]
+        mock_api["get"].side_effect = _by_path({
+            "/organizer/interview-processes": [_process(stages=stages)],
+            "/organizer/interview-companies": [_company(name="Acme Corp")],
+            "/organizer/interview-insights": [],
+        }, default=[])
+        resp = client.get("/interviews/table")
+        assert resp.status_code == 200
+        assert "2/4" in resp.text
+        assert "3/4" not in resp.text
+
 
 class TestCreateProcess:
     def test_create_posts_department(self, client, mock_api):
@@ -258,6 +277,25 @@ class TestProcessDetailLinks:
         resp = client.get("/interviews/1")
         assert resp.status_code == 200
         assert "Phone screen" in resp.text
+
+    def test_highlights_failed_stage_as_current(self, client, mock_api):
+        stages = [
+            _stage(id=1, stage_type="phone_screen", status="passed"),
+            _stage(id=2, stage_type="live_coding", status="failed"),
+            _stage(id=3, stage_type="onsite", status="scheduled"),
+        ]
+        self._mock_detail_gets(mock_api, stages)
+        resp = client.get("/interviews/1")
+        assert resp.status_code == 200
+        # Each stage's <li> starts a new block; every stage type also appears as a
+        # plain dropdown option in every other stage's hidden edit form, so split on
+        # the <li> boundary itself rather than searching for "Live coding" by text.
+        blocks = resp.text.split('<li class="border rounded-lg p-3')[1:]
+        assert len(blocks) == 3
+        highlight = "border-[#378ADD] ring-1 ring-[#378ADD]"
+        assert highlight not in blocks[0]  # stage 1, passed
+        assert highlight in blocks[1]      # stage 2, failed -- should be "current"
+        assert highlight not in blocks[2]  # stage 3, scheduled
 
     def test_mark_passed_sends_status(self, client, mock_api):
         mock_api["patch"].return_value = _stage(status="passed")

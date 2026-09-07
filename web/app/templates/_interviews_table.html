@@ -46,7 +46,7 @@
       <td class="py-2.5 pr-4 text-gray-500 hidden sm:table-cell">
         {% set total_stages = p.stages | length %}
         {% if total_stages %}
-        {% set active_stage_id = (p.stages | selectattr('status', 'equalto', 'scheduled') | map(attribute='id') | first) %}
+        {% set active_stage_id = (p.stages | selectattr('status', 'in', ['scheduled', 'failed']) | map(attribute='id') | first) %}
         {% set current_stage = (p.stages | map(attribute='id') | list).index(active_stage_id) + 1 if active_stage_id else total_stages %}
         {{ current_stage }}/{{ total_stages }}
         {% else %}0{% endif %}

@@ -108,13 +108,20 @@ class TaskService:
         if task is None:
             logger.debug("Task update: id=%d not found", task_id)
             return None
-        await self._provider.update(
-            task.provider_id,
-            task_update.model_dump(exclude_unset=True),
-            self._session,
-        )
+
+        update_data = task_update.model_dump(exclude_unset=True)
+        # Escalation is derived from the deadline, so editing it invalidates whatever
+        # urgency was computed against the old value -- clear it here (unless the
+        # caller is explicitly setting urgency in the same call) and let the next
+        # reminder run re-escalate it if it's still overdue.
+        if "deadline" in update_data and "urgency" not in update_data and task.urgency == "URGENT":
+            update_data["urgency"] = "NORMAL"
+            task_update = TaskUpdate(**update_data)
+            logger.info("Task urgency reset on deadline change: id=%d", task_id)
+
+        await self._provider.update(task.provider_id, update_data, self._session)
         task_orm = await self._repo.update_task(task_id, task_update)
-        logger.info("Task updated: id=%d fields=%s", task_id, list(task_update.model_dump(exclude_unset=True).keys()))
+        logger.info("Task updated: id=%d fields=%s", task_id, list(update_data.keys()))
         if self._embedding_service and task_update.title is not None:
             self._embedding_service.embed_background(
                 EmbeddingCreate(source_type=_SOURCE_TYPE, source_id=task_id, content=task_orm.title)
@@ -130,6 +137,9 @@ class TaskService:
 
         if task.recurrence_rule is None:
             task_orm = await self._repo.complete_task(task_id)
+            if task_orm.urgency == "URGENT":
+                task_orm = await self._repo.update_task(task_id, TaskUpdate(urgency="NORMAL"))
+                logger.info("Task urgency reset on completion: id=%d", task_id)
             logger.info("Task completed (non-recurring): id=%d", task_id)
             result = TaskRead.model_validate(task_orm)
             result.is_done_today = True
@@ -141,6 +151,12 @@ class TaskService:
             return TaskCompletionRead.model_validate(existing)
 
         completion = await self._repo.complete_occurrence(task_id, occ_date)
+        if task.urgency == "URGENT":
+            # A completed occurrence resets urgency so the next cycle starts fresh --
+            # otherwise a recurring task escalated once (age or overdue) stays flagged
+            # URGENT forever, since created_at/recurrence never change on their own.
+            await self._repo.update_task(task_id, TaskUpdate(urgency="NORMAL"))
+            logger.info("Task urgency reset on occurrence completion: id=%d", task_id)
         logger.info("Task occurrence completed: id=%d occurrence_date=%s", task_id, occ_date)
         return TaskCompletionRead.model_validate(completion)
 

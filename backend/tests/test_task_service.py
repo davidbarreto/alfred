@@ -215,6 +215,33 @@ class TestUpdateTask:
         result = await service.update_task(999, TaskUpdate(status="DONE"))
         assert result is None
 
+    async def test_resets_urgency_when_deadline_changes_without_explicit_urgency(self, service):
+        service._repo.get_task.return_value = _make_task_orm(urgency="URGENT")
+        service._repo.update_task.return_value = _make_task_orm(urgency="NORMAL")
+
+        await service.update_task(1, TaskUpdate(deadline=datetime(2026, 12, 1)))
+
+        called_update = service._repo.update_task.call_args.args[1]
+        assert called_update.urgency == "NORMAL"
+
+    async def test_keeps_explicit_urgency_when_deadline_changes(self, service):
+        service._repo.get_task.return_value = _make_task_orm(urgency="URGENT")
+        service._repo.update_task.return_value = _make_task_orm(urgency="URGENT")
+
+        await service.update_task(1, TaskUpdate(deadline=datetime(2026, 12, 1), urgency="URGENT"))
+
+        called_update = service._repo.update_task.call_args.args[1]
+        assert called_update.urgency == "URGENT"
+
+    async def test_does_not_touch_urgency_when_deadline_unchanged(self, service):
+        service._repo.get_task.return_value = _make_task_orm(urgency="URGENT")
+        service._repo.update_task.return_value = _make_task_orm(urgency="URGENT")
+
+        await service.update_task(1, TaskUpdate(title="Renamed"))
+
+        called_update = service._repo.update_task.call_args.args[1]
+        assert "urgency" not in called_update.model_dump(exclude_unset=True)
+
 
 class TestDeleteTask:
     async def test_calls_delete_when_found(self, service):
@@ -342,6 +369,38 @@ class TestCompleteTask:
         service._repo.get_task.return_value = None
         result = await service.complete_task(999)
         assert result is None
+
+    async def test_non_recurring_resets_urgency_when_urgent(self, service):
+        task_orm = _make_task_orm(recurrence_rule=None, urgency="URGENT")
+        service._repo.get_task.return_value = task_orm
+        service._repo.complete_task.return_value = _make_task_orm(status="DONE", urgency="URGENT")
+        service._repo.update_task.return_value = _make_task_orm(status="DONE", urgency="NORMAL")
+
+        result = await service.complete_task(1)
+
+        service._repo.update_task.assert_called_once_with(1, TaskUpdate(urgency="NORMAL"))
+        assert result.urgency == "NORMAL"
+
+    async def test_non_recurring_does_not_reset_when_already_normal(self, service):
+        task_orm = _make_task_orm(recurrence_rule=None, urgency="NORMAL")
+        service._repo.get_task.return_value = task_orm
+        service._repo.complete_task.return_value = _make_task_orm(status="DONE", urgency="NORMAL")
+
+        await service.complete_task(1)
+
+        service._repo.update_task.assert_not_called()
+
+    async def test_recurring_resets_urgency_on_occurrence_completion(self, service):
+        task_orm = _make_task_orm(recurrence_rule="FREQ=DAILY", urgency="URGENT")
+        service._repo.get_task.return_value = task_orm
+        service._repo.get_completion.return_value = None
+        service._repo.complete_occurrence.return_value = MagicMock(
+            id=1, task_id=1, occurrence_date=date.today(), completed_at=MagicMock()
+        )
+
+        await service.complete_task(1)
+
+        service._repo.update_task.assert_called_once_with(1, TaskUpdate(urgency="NORMAL"))
 
 
 class TestCancelTask:

@@ -157,7 +157,9 @@ async def handle_task(
             )
 
         days = int(arguments["days"]) if arguments.get("days") else None
-        expires_at = await snooze_undated_escalation(working_memory_service, task_id, days)
+        expires_at = await snooze_undated_escalation(
+            working_memory_service, task_id, days, task_service=service, current_urgency=existing.urgency
+        )
         return {"id": task_id, "snoozed_until": expires_at.isoformat()}
 
     raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Unknown task command: {command}")

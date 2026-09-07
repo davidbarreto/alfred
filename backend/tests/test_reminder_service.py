@@ -643,6 +643,39 @@ class TestSnoozeUndatedEscalation:
         created = wm_service.upsert.call_args.args[0]
         assert 2 <= (created.expires_at - before).days <= 3
 
+    async def test_resets_urgency_when_currently_urgent(self):
+        from app.features.core.reminders.service import snooze_undated_escalation
+        from app.features.organizer.tasks.schemas import TaskUpdate
+
+        wm_service = AsyncMock()
+        task_service = AsyncMock()
+
+        await snooze_undated_escalation(
+            wm_service, task_id=5, task_service=task_service, current_urgency="URGENT"
+        )
+
+        task_service.update_task.assert_awaited_once_with(5, TaskUpdate(urgency="NORMAL"))
+
+    async def test_does_not_reset_when_already_normal(self):
+        from app.features.core.reminders.service import snooze_undated_escalation
+
+        wm_service = AsyncMock()
+        task_service = AsyncMock()
+
+        await snooze_undated_escalation(
+            wm_service, task_id=5, task_service=task_service, current_urgency="NORMAL"
+        )
+
+        task_service.update_task.assert_not_called()
+
+    async def test_no_task_service_is_a_no_op_for_urgency(self):
+        from app.features.core.reminders.service import snooze_undated_escalation
+
+        wm_service = AsyncMock()
+
+        # Should not raise even though current_urgency is URGENT and no task_service given.
+        await snooze_undated_escalation(wm_service, task_id=5, current_urgency="URGENT")
+
 
 class TestUndatedTaskEscalationConfigAndSnooze:
     async def test_escalation_age_respects_setting(self, mock_session, mock_task_service):

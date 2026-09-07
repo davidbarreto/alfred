@@ -89,14 +89,26 @@ def undated_escalation_snooze_key(task_id: int) -> str:
 
 
 async def snooze_undated_escalation(
-    working_memory_service: WorkingMemoryService, task_id: int, days: int | None = None
+    working_memory_service: WorkingMemoryService,
+    task_id: int,
+    days: int | None = None,
+    task_service: TaskService | None = None,
+    current_urgency: str | None = None,
 ) -> datetime:
-    """Shared by the Telegram `task.snooze` command and the portal's snooze button."""
+    """Shared by the Telegram `task.snooze` command and the portal's snooze button.
+
+    Snoozing means "I've seen this, stop bugging me" -- so if the task was already
+    flagged URGENT, clear that too (not just the future reminder), matching what
+    completing or rescheduling the task already does.
+    """
     days = days if days is not None else get_settings().undated_task_snooze_days
     key = undated_escalation_snooze_key(task_id)
     expires_at = datetime.now(timezone.utc) + timedelta(days=days)
     await working_memory_service.upsert(WorkingMemoryCreate(key=key, value="snoozed", expires_at=expires_at))
     logger.info("Task escalation snoozed: id=%d days=%d until=%s", task_id, days, expires_at.isoformat())
+    if task_service is not None and current_urgency == "URGENT":
+        await task_service.update_task(task_id, TaskUpdate(urgency="NORMAL"))
+        logger.info("Task urgency reset on snooze: id=%d", task_id)
     return expires_at
 
 

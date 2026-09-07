@@ -74,7 +74,9 @@ async def snooze_task(
     task_read = await service.get_task(task_id)
     if task_read is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found")
-    expires_at = await snooze_undated_escalation(working_memory_service, task_id, days)
+    expires_at = await snooze_undated_escalation(
+        working_memory_service, task_id, days, task_service=service, current_urgency=task_read.urgency
+    )
     return TaskSnoozeRead(id=task_id, snoozed_until=expires_at)
 
 

@@ -623,6 +623,565 @@
           "path": ["commands", "execute"]
         }
       }
+    },
+    {
+      "name": "15 - Execute: account list",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('account.list result is array', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json.status).to.eql('ok');",
+              "    pm.expect(json.result).to.be.an('array');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"message_id\": {{core_message_id}},\n  \"type\": \"account\",\n  \"command\": \"list\",\n  \"args\": {}\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{base_url}}/commands/execute",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "commands",
+            "execute"
+          ]
+        }
+      }
+    },
+    {
+      "name": "16 - Execute: category list",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('category.list result is array', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json.status).to.eql('ok');",
+              "    pm.expect(json.result).to.be.an('array');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"message_id\": {{core_message_id}},\n  \"type\": \"category\",\n  \"command\": \"list\",\n  \"args\": {}\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{base_url}}/commands/execute",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "commands",
+            "execute"
+          ]
+        }
+      }
+    },
+    {
+      "name": "17 - Execute: recurring list",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('recurring.list result is array', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json.status).to.eql('ok');",
+              "    pm.expect(json.result).to.be.an('array');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"message_id\": {{core_message_id}},\n  \"type\": \"recurring\",\n  \"command\": \"list\",\n  \"args\": {}\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{base_url}}/commands/execute",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "commands",
+            "execute"
+          ]
+        }
+      }
+    },
+    {
+      "name": "18 - Execute: contact list",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('contact.list result is array', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json.status).to.eql('ok');",
+              "    pm.expect(json.result).to.be.an('array');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"message_id\": {{core_message_id}},\n  \"type\": \"contact\",\n  \"command\": \"list\",\n  \"args\": {}\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{base_url}}/commands/execute",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "commands",
+            "execute"
+          ]
+        }
+      }
+    },
+    {
+      "name": "19 - Execute: watcher list",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('watcher.list result is array', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json.status).to.eql('ok');",
+              "    pm.expect(json.result).to.be.an('array');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"message_id\": {{core_message_id}},\n  \"type\": \"watcher\",\n  \"command\": \"list\",\n  \"args\": {}\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{base_url}}/commands/execute",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "commands",
+            "execute"
+          ]
+        }
+      }
+    },
+    {
+      "name": "20 - Execute: alert list",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('alert.list result is array', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json.status).to.eql('ok');",
+              "    pm.expect(json.result).to.be.an('array');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"message_id\": {{core_message_id}},\n  \"type\": \"alert\",\n  \"command\": \"list\",\n  \"args\": {}\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{base_url}}/commands/execute",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "commands",
+            "execute"
+          ]
+        }
+      }
+    },
+    {
+      "name": "21 - Execute: interview list",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('interview.list result is array', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json.status).to.eql('ok');",
+              "    pm.expect(json.result).to.be.an('array');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"message_id\": {{core_message_id}},\n  \"type\": \"interview\",\n  \"command\": \"list\",\n  \"args\": {}\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{base_url}}/commands/execute",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "commands",
+            "execute"
+          ]
+        }
+      }
+    },
+    {
+      "name": "22 - Execute: memory list",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('memory.list result is array', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json.status).to.eql('ok');",
+              "    pm.expect(json.result).to.be.an('array');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"message_id\": {{core_message_id}},\n  \"type\": \"memory\",\n  \"command\": \"list\",\n  \"args\": {}\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{base_url}}/commands/execute",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "commands",
+            "execute"
+          ]
+        }
+      }
+    },
+    {
+      "name": "23 - Execute: working_memory list",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('working_memory.list result is array', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json.status).to.eql('ok');",
+              "    pm.expect(json.result).to.be.an('array');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"message_id\": {{core_message_id}},\n  \"type\": \"working_memory\",\n  \"command\": \"list\",\n  \"args\": {}\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{base_url}}/commands/execute",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "commands",
+            "execute"
+          ]
+        }
+      }
+    },
+    {
+      "name": "24 - Execute: track list",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('track.list result is array', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json.status).to.eql('ok');",
+              "    pm.expect(json.result).to.be.an('array');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"message_id\": {{core_message_id}},\n  \"type\": \"track\",\n  \"command\": \"list\",\n  \"args\": {}\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{base_url}}/commands/execute",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "commands",
+            "execute"
+          ]
+        }
+      }
+    },
+    {
+      "name": "25 - Execute: grammar_scope list requires track_id",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 400 (missing required track_id)', () => pm.response.to.have.status(400));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"message_id\": {{core_message_id}},\n  \"type\": \"grammar_scope\",\n  \"command\": \"list\",\n  \"args\": {}\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{base_url}}/commands/execute",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "commands",
+            "execute"
+          ]
+        }
+      }
+    },
+    {
+      "name": "26 - Execute: briefing history",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('briefing.history result is array', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json.status).to.eql('ok');",
+              "    pm.expect(json.result).to.be.an('array');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"message_id\": {{core_message_id}},\n  \"type\": \"briefing\",\n  \"command\": \"history\",\n  \"args\": {}\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{base_url}}/commands/execute",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "commands",
+            "execute"
+          ]
+        }
+      }
     }
   ]
 }

@@ -38,17 +38,21 @@ def _note_read_mock(id=1, title="Some note", tags=None):
 
 
 def _override_services(app, task_svc=None, note_svc=None):
+    from app.db.session import get_session
     from app.dependencies import (
         get_task_service, get_note_service, get_calendar_event_service,
         get_transaction_service, get_account_service, get_budget_target_service,
         get_category_service,
         get_recurring_transaction_service, get_command_execution_service,
         get_production_service, get_conversation_service, get_language_session_service,
+        get_contacts_crud_service, get_memory_service, get_interview_process_service,
+        get_grammar_scope_service, get_briefing_history_service,
     )
     mock_cmd_exec = AsyncMock()
     mock_cmd_exec.create.return_value = MagicMock(id=99)
     mock_cmd_exec.update = AsyncMock()
     app.dependency_overrides[get_command_execution_service] = lambda: mock_cmd_exec
+    app.dependency_overrides[get_session] = lambda: AsyncMock()
 
     for dep, svc in [
         (get_task_service, task_svc),
@@ -62,6 +66,11 @@ def _override_services(app, task_svc=None, note_svc=None):
         (get_production_service, None),
         (get_conversation_service, None),
         (get_language_session_service, None),
+        (get_contacts_crud_service, None),
+        (get_memory_service, None),
+        (get_interview_process_service, None),
+        (get_grammar_scope_service, None),
+        (get_briefing_history_service, None),
     ]:
         app.dependency_overrides[dep] = lambda s=svc: s or AsyncMock()
 

@@ -30,11 +30,13 @@ from app.config import get_settings
 from app.api.auth import require_auth
 from app.dependencies import (
     AccountServiceDep,
+    BriefingHistoryServiceDep,
     BudgetTargetServiceDep,
     CalendarEventServiceDep,
     CategoryServiceDep,
     ChunkServiceDep,
     CommandExecutionServiceDep,
+    ContactsCRUDServiceDep,
     ConversationServiceDep,
     CsStatsServiceDep,
     CsStudyPlanServiceDep,
@@ -42,6 +44,9 @@ from app.dependencies import (
     EmbeddingServiceDep,
     ExtractionLlmProviderDep,
     GlobalPauseServiceDep,
+    GrammarScopeServiceDep,
+    InterviewProcessServiceDep,
+    MemoryServiceDep,
     NoteServiceDep,
     ProductionServiceDep,
     RecurringTransactionServiceDep,
@@ -135,6 +140,12 @@ async def execute_command(
     cs_stats_service: CsStatsServiceDep,
     cs_study_plan_service: CsStudyPlanServiceDep,
     pause_service: GlobalPauseServiceDep,
+    contact_service: ContactsCRUDServiceDep,
+    memory_service: MemoryServiceDep,
+    interview_process_service: InterviewProcessServiceDep,
+    grammar_scope_service: GrammarScopeServiceDep,
+    briefing_history_service: BriefingHistoryServiceDep,
+    session: DbSessionDep,
 ):
     logger.info("POST /commands/execute %s.%s source=%s", request.type, request.command, request.source)
     execution = await cmd_execution_service.create(
@@ -169,6 +180,12 @@ async def execute_command(
             cs_stats_service=cs_stats_service,
             cs_study_plan_service=cs_study_plan_service,
             pause_service=pause_service,
+            contact_service=contact_service,
+            memory_service=memory_service,
+            interview_process_service=interview_process_service,
+            grammar_scope_service=grammar_scope_service,
+            briefing_history_service=briefing_history_service,
+            session=session,
             message_id=request.message_id,
         )
         entity_id = result.get("id") if isinstance(result, dict) else None

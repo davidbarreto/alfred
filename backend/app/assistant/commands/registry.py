@@ -519,7 +519,142 @@ COMMAND_DEFINITIONS = {
             "flags": BALANCE_FORECAST_FLAGS,
             "arg_keys": ["period"]
         }
-    }
+    },
+    "account": {
+        "list": {
+            "description": "List finance accounts, optionally filtered by type, currency, or active status",
+            "aliases": ["/accountlist", "/accounts"],
+            "flags": {"--type": "type", "--currency": "currency", "--active": "is_active"},
+        },
+        "get": {
+            "description": "Get a single finance account by ID",
+            "aliases": ["/accountget"],
+            "flags": {},
+            "requires_args": True,
+            "arg_keys": ["id"],
+        },
+    },
+    "category": {
+        "list": {
+            "description": "List all finance categories",
+            "aliases": ["/categorylist", "/categories"],
+            "flags": {},
+        },
+    },
+    "recurring": {
+        "list": {
+            "description": "List recurring transaction rules, optionally filtered by account, type, or active status",
+            "aliases": ["/recurringlist", "/recurring"],
+            "flags": {"--active": "active", "--type": "type", "--account_id": "account_id"},
+        },
+        "get": {
+            "description": "Get a single recurring transaction rule by ID",
+            "aliases": ["/recurringget"],
+            "flags": {},
+            "requires_args": True,
+            "arg_keys": ["id"],
+        },
+    },
+    "contact": {
+        "list": {
+            "description": "List contacts, optionally filtered by relationship (family, relative, friend, other)",
+            "aliases": ["/contactlist", "/contacts"],
+            "flags": {"--relationship": "relationship"},
+        },
+        "search": {
+            "description": "Search contacts by name",
+            "aliases": ["/contactsearch"],
+            "flags": {},
+            "requires_args": True,
+            "arg_keys": ["query"],
+        },
+        "get": {
+            "description": "Get a single contact by ID",
+            "aliases": ["/contactget"],
+            "flags": {},
+            "requires_args": True,
+            "arg_keys": ["id"],
+        },
+    },
+    "watcher": {
+        "list": {
+            "description": "List configured monitoring watchers",
+            "aliases": ["/watcherlist", "/watchers"],
+            "flags": {},
+        },
+        "get": {
+            "description": "Get a single monitoring watcher by ID",
+            "aliases": ["/watcherget"],
+            "flags": {},
+            "requires_args": True,
+            "arg_keys": ["id"],
+        },
+    },
+    "alert": {
+        "list": {
+            "description": "List monitoring alerts, optionally filtered by status (pending, done) or watcher ID",
+            "aliases": ["/alertlist", "/alerts"],
+            "flags": {"--status": "status", "--config_id": "config_id"},
+        },
+    },
+    "interview": {
+        "list": {
+            "description": "List interview processes, optionally filtered by company or status",
+            "aliases": ["/interviewlist", "/interviews"],
+            "flags": {"--company_id": "company_id", "--status": "status"},
+        },
+        "get": {
+            "description": "Get a single interview process by ID",
+            "aliases": ["/interviewget"],
+            "flags": {},
+            "requires_args": True,
+            "arg_keys": ["id"],
+        },
+    },
+    "memory": {
+        "list": {
+            "description": "List stored memories, optionally filtered by category (fact, preference, relationship, skill, episodic, goal)",
+            "aliases": ["/memorylist", "/memories"],
+            "flags": {"--category": "category", "--active": "active"},
+        },
+        "search": {
+            "description": "Search stored memories by keyword",
+            "aliases": ["/memorysearch"],
+            "flags": {"--category": "category"},
+            "requires_args": True,
+            "arg_keys": ["query"],
+        },
+    },
+    "working_memory": {
+        "list": {
+            "description": "List active working-memory context items, optionally filtered by key substring",
+            "aliases": ["/workingmemorylist", "/wmlist"],
+            "flags": {"--query": "query", "--expired": "expired"},
+        },
+    },
+    "track": {
+        "list": {
+            "description": "List language tracks",
+            "aliases": ["/tracklist", "/tracks"],
+            "flags": {"--active_only": "active_only", "--exclude_paused": "exclude_paused"},
+        },
+    },
+    "grammar_scope": {
+        "list": {
+            "description": "List a language track's grammar curriculum scope, optionally filtered by status",
+            "aliases": ["/grammarscope", "/grammarscopelist"],
+            "flags": {"--status": "status"},
+            "requires_args": True,
+            "arg_keys": ["track_id"],
+        },
+    },
+    "briefing": {
+        "history": {
+            "description": "List past morning/evening briefings, optionally filtered by type",
+            "aliases": ["/briefinghistory"],
+            "flags": {"--type": "type", "--limit": "limit"},
+        },
+    },
 }
 
 def _build_registry() -> Dict[str, CommandMetadata]:

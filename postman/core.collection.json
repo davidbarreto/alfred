@@ -2557,6 +2557,44 @@
       }
     },
     {
+      "name": "89c - Pause - History",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Response is a list of pause logs', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json).to.be.an('array');",
+              "    if (json.length > 0) {",
+              "        ['id', 'started_at', 'ended_at', 'tasks_urgency_reset', 'tasks_deadline_shifted'].forEach(",
+              "            f => pm.expect(json[0]).to.have.property(f)",
+              "        );",
+              "    }",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/core/pause/history",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "core",
+            "pause",
+            "history"
+          ]
+        }
+      }
+    },
+    {
       "name": "90 - Sessions - Finish",
       "event": [
         {

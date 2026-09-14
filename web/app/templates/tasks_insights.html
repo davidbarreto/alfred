@@ -245,6 +245,65 @@
     </div>
   </section>
 
+  <!-- ── Pauses ("Take a breath") ─────────────────────────────── -->
+  <section>
+    <h2 class="text-sm font-medium text-gray-900 mb-3">Pauses</h2>
+
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+      <div class="card bg-white"><div class="card-body p-4">
+        <p class="text-xs text-gray-400 uppercase tracking-wide">Times paused</p>
+        <p class="text-2xl font-semibold text-gray-900 mt-1">{{ total_pauses }}</p>
+      </div></div>
+      <div class="card bg-white"><div class="card-body p-4">
+        <p class="text-xs text-gray-400 uppercase tracking-wide">Total time paused</p>
+        <p class="text-2xl font-semibold text-[#378ADD] mt-1">{{ total_paused_duration }}</p>
+      </div></div>
+      <div class="card bg-white"><div class="card-body p-4">
+        <p class="text-xs text-gray-400 uppercase tracking-wide">Urgency resets</p>
+        <p class="text-2xl font-semibold text-[#639922] mt-1">{{ total_urgency_reset }}</p>
+      </div></div>
+      <div class="card bg-white"><div class="card-body p-4">
+        <p class="text-xs text-gray-400 uppercase tracking-wide">Deadlines postponed</p>
+        <p class="text-2xl font-semibold text-[#BA7517] mt-1">{{ total_deadlines_shifted }}</p>
+      </div></div>
+    </div>
+
+    {% if pause_rows %}
+    <div class="card bg-white"><div class="card-body p-0">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="border-b border-gray-100 text-xs text-gray-400 uppercase tracking-wide">
+            <th class="text-left px-4 py-3 font-medium">Paused since</th>
+            <th class="text-center px-4 py-3 font-medium">Duration</th>
+            <th class="text-center px-4 py-3 font-medium">Urgency reset</th>
+            <th class="text-center px-4 py-3 font-medium">Deadlines postponed</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-gray-50">
+          {% for p in pause_rows %}
+          <tr class="hover:bg-gray-50">
+            <td class="px-4 py-2.5 font-medium text-gray-800">{{ p.started_at }}</td>
+            <td class="px-4 py-2.5 text-center text-gray-500">{{ p.duration }}</td>
+            <td class="px-4 py-2.5 text-center">
+              {% if p.tasks_urgency_reset %}
+              <span class="text-[#639922] font-medium">{{ p.tasks_urgency_reset }}</span>
+              {% else %}<span class="text-gray-300">—</span>{% endif %}
+            </td>
+            <td class="px-4 py-2.5 text-center">
+              {% if p.tasks_deadline_shifted %}
+              <span class="text-[#BA7517] font-medium">{{ p.tasks_deadline_shifted }}</span>
+              {% else %}<span class="text-gray-300">—</span>{% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div></div>
+    {% else %}
+    <div class="card bg-white"><div class="card-body p-6 text-center text-sm text-gray-400">No pauses yet.</div></div>
+    {% endif %}
+  </section>
+
   <!-- ── Time to complete ───────────────────────────────────── -->
   <section>
     <h2 class="text-sm font-medium text-gray-900 mb-3">Time to complete</h2>

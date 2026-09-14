@@ -1,8 +1,10 @@
-from fastapi import APIRouter, Depends
+from typing import Annotated
+
+from fastapi import APIRouter, Depends, Query
 
 from app.api.auth import require_auth
 from app.dependencies import GlobalPauseServiceDep
-from app.features.core.pause.schemas import PauseResumeRead, PauseStateRead
+from app.features.core.pause.schemas import PauseLogRead, PauseResumeRead, PauseStateRead
 
 router = APIRouter(prefix="/core/pause", tags=["core"], dependencies=[Depends(require_auth)])
 
@@ -10,6 +12,14 @@ router = APIRouter(prefix="/core/pause", tags=["core"], dependencies=[Depends(re
 @router.get("", response_model=PauseStateRead)
 async def get_pause_state(service: GlobalPauseServiceDep) -> PauseStateRead:
     return await service.get_state()
+
+
+@router.get("/history", response_model=list[PauseLogRead])
+async def get_pause_history(
+    service: GlobalPauseServiceDep,
+    limit: Annotated[int, Query(ge=1, le=500)] = 100,
+) -> list[PauseLogRead]:
+    return await service.list_history(limit=limit)
 
 
 @router.post("", response_model=PauseStateRead)

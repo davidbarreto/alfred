@@ -5,7 +5,7 @@ import pytest
 from fastapi import HTTPException
 
 from app.features.core.pause.service import PAUSE_KEY, GlobalPauseService
-from app.features.core.pause.schemas import PauseStateRead
+from app.features.core.pause.schemas import PauseLogRead, PauseStateRead
 
 
 @pytest.fixture
@@ -13,6 +13,7 @@ def service():
     svc = GlobalPauseService.__new__(GlobalPauseService)
     svc._settings = AsyncMock()
     svc._task_service = AsyncMock()
+    svc._pause_log_repo = AsyncMock()
     return svc
 
 
@@ -97,3 +98,28 @@ class TestResume:
         assert delta > timedelta(days=2, hours=23)
 
         service._settings.set_value.assert_called_once_with(PAUSE_KEY, "")
+
+        service._pause_log_repo.create.assert_awaited_once()
+        _, kwargs = service._pause_log_repo.create.call_args
+        assert kwargs["started_at"] == paused_at
+        assert kwargs["tasks_urgency_reset"] == 4
+        assert kwargs["tasks_deadline_shifted"] == 2
+
+
+class TestListHistory:
+    async def test_returns_mapped_logs(self, service):
+        from unittest.mock import MagicMock
+
+        raw = MagicMock(
+            id=1,
+            started_at=datetime.now(timezone.utc) - timedelta(hours=2),
+            ended_at=datetime.now(timezone.utc),
+            tasks_urgency_reset=3,
+            tasks_deadline_shifted=1,
+        )
+        service._pause_log_repo.list.return_value = [raw]
+
+        result = await service.list_history(limit=50)
+
+        service._pause_log_repo.list.assert_awaited_once_with(limit=50)
+        assert result == [PauseLogRead.model_validate(raw)]

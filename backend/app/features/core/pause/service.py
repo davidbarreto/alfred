@@ -4,7 +4,8 @@ from datetime import datetime, timezone
 from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.features.core.pause.schemas import PauseResumeRead, PauseStateRead
+from app.features.core.pause.repository import PauseLogRepository
+from app.features.core.pause.schemas import PauseLogRead, PauseResumeRead, PauseStateRead
 from app.features.core.settings.service import SettingService
 from app.features.organizer.tasks.service import TaskService
 
@@ -22,6 +23,7 @@ class GlobalPauseService:
     def __init__(self, session: AsyncSession, task_service: TaskService) -> None:
         self._settings = SettingService(session)
         self._task_service = task_service
+        self._pause_log_repo = PauseLogRepository(session)
 
     async def get_state(self) -> PauseStateRead:
         raw = await self._settings.get_value(PAUSE_KEY)
@@ -49,6 +51,12 @@ class GlobalPauseService:
         delta = now - state.paused_at
         urgency_reset, deadlines_shifted = await self._task_service.restore_after_pause(delta)
         await self._settings.set_value(PAUSE_KEY, "")
+        await self._pause_log_repo.create(
+            started_at=state.paused_at,
+            ended_at=now,
+            tasks_urgency_reset=urgency_reset,
+            tasks_deadline_shifted=deadlines_shifted,
+        )
         logger.info(
             "Global pause disabled: paused_at=%s resumed_at=%s urgency_reset=%d deadlines_shifted=%d",
             state.paused_at.isoformat(), now.isoformat(), urgency_reset, deadlines_shifted,
@@ -58,3 +66,7 @@ class GlobalPauseService:
             tasks_urgency_reset=urgency_reset,
             tasks_deadline_shifted=deadlines_shifted,
         )
+
+    async def list_history(self, limit: int = 100) -> list[PauseLogRead]:
+        logs = await self._pause_log_repo.list(limit=limit)
+        return [PauseLogRead.model_validate(log) for log in logs]

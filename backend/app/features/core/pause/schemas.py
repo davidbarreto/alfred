@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 
 class PauseStateRead(BaseModel):
@@ -11,5 +11,15 @@ class PauseStateRead(BaseModel):
 class PauseResumeRead(BaseModel):
     paused: bool = False
     resumed_at: datetime
+    tasks_urgency_reset: int
+    tasks_deadline_shifted: int
+
+
+class PauseLogRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    started_at: datetime
+    ended_at: datetime
     tasks_urgency_reset: int
     tasks_deadline_shifted: int

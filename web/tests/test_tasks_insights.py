@@ -15,15 +15,26 @@ def _completion(task_id, occurrence_date):
     return {"id": task_id * 100, "task_id": task_id, "occurrence_date": occurrence_date, "completed_at": occurrence_date + "T09:00:00"}
 
 
-def _fake_get(tasks=None, history=None):
+def _pause_log(id=1, started_at="2026-09-14T09:00:00+00:00", ended_at="2026-09-14T10:00:00+00:00",
+                tasks_urgency_reset=0, tasks_deadline_shifted=0):
+    return {
+        "id": id, "started_at": started_at, "ended_at": ended_at,
+        "tasks_urgency_reset": tasks_urgency_reset, "tasks_deadline_shifted": tasks_deadline_shifted,
+    }
+
+
+def _fake_get(tasks=None, history=None, pause_history=None):
     tasks = tasks or []
     history = history or []
+    pause_history = pause_history or []
 
     async def fake_get(path, params=None):
         if path == "/organizer/tasks":
             return tasks
         if path == "/organizer/tasks/history":
             return history
+        if path == "/core/pause/history":
+            return pause_history
         return []
 
     return fake_get
@@ -127,6 +138,34 @@ class TestCompletionRateByPriority:
         assert resp.status_code == 200
         assert "Completion rate by priority" in resp.text
         assert "50" in resp.text  # HIGH: 1/2 done
+
+
+class TestPauseHistory:
+    def test_no_pauses_shows_empty_state(self, client, mock_api):
+        mock_api["get"].side_effect = _fake_get()
+
+        resp = client.get("/tasks/insights")
+
+        assert resp.status_code == 200
+        assert "No pauses yet." in resp.text
+
+    def test_aggregates_counts_and_duration(self, client, mock_api):
+        pause_history = [
+            _pause_log(id=1, started_at="2026-09-14T09:00:00+00:00", ended_at="2026-09-14T11:30:00+00:00",
+                       tasks_urgency_reset=3, tasks_deadline_shifted=2),
+            _pause_log(id=2, started_at="2026-09-10T08:00:00+00:00", ended_at="2026-09-10T09:00:00+00:00",
+                       tasks_urgency_reset=1, tasks_deadline_shifted=0),
+        ]
+        mock_api["get"].side_effect = _fake_get(pause_history=pause_history)
+
+        resp = client.get("/tasks/insights")
+
+        assert resp.status_code == 200
+        assert "No pauses yet." not in resp.text
+        assert ">2<" in resp.text  # times paused
+        assert "3h 30m" in resp.text  # total duration (2h30m + 1h)
+        assert ">4<" in resp.text  # total urgency resets (3+1)
+        assert ">2<" in resp.text  # total deadlines postponed
 
 
 class TestTimeToComplete:

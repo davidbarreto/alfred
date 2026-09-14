@@ -86,3 +86,37 @@ class TestResume:
 
     def test_requires_auth(self, client):
         assert client.post("/core/pause/resume").status_code == 403
+
+
+class TestPauseHistory:
+    def test_returns_logs(self, client, mock_service):
+        from app.features.core.pause.schemas import PauseLogRead
+
+        mock_service.list_history.return_value = [
+            PauseLogRead(
+                id=1,
+                started_at=datetime(2026, 9, 14, 9, 0, tzinfo=timezone.utc),
+                ended_at=datetime(2026, 9, 14, 10, 0, tzinfo=timezone.utc),
+                tasks_urgency_reset=3,
+                tasks_deadline_shifted=1,
+            )
+        ]
+
+        response = client.get("/core/pause/history", headers=AUTH)
+
+        assert response.status_code == 200
+        body = response.json()
+        assert len(body) == 1
+        assert body[0]["tasks_urgency_reset"] == 3
+        mock_service.list_history.assert_awaited_once_with(limit=100)
+
+    def test_passes_custom_limit(self, client, mock_service):
+        mock_service.list_history.return_value = []
+
+        response = client.get("/core/pause/history", params={"limit": 10}, headers=AUTH)
+
+        assert response.status_code == 200
+        mock_service.list_history.assert_awaited_once_with(limit=10)
+
+    def test_requires_auth(self, client):
+        assert client.get("/core/pause/history").status_code == 403

@@ -66,13 +66,29 @@ def _time_to_complete_bucket(delta: timedelta) -> str:
     return _TIME_TO_COMPLETE_OVERFLOW
 
 
+def _format_duration(delta: timedelta) -> str:
+    total_minutes = int(delta.total_seconds() // 60)
+    days, rem_minutes = divmod(total_minutes, 24 * 60)
+    hours, minutes = divmod(rem_minutes, 60)
+    if days:
+        return f"{days}d {hours}h"
+    if hours:
+        return f"{hours}h {minutes}m"
+    return f"{minutes}m"
+
+
+def _parse_dt(value: str) -> datetime:
+    return datetime.fromisoformat(value.replace("Z", "+00:00"))
+
+
 @router.get("", response_class=HTMLResponse)
 async def tasks_insights_page(request: Request):
-    all_tasks, task_history = [], []
+    all_tasks, task_history, pause_history = [], [], []
 
     for path, params, target in [
         ("/organizer/tasks", {"status": "ALL", "limit": 200}, "tasks"),
         ("/organizer/tasks/history", {"days": 90}, "task_history"),
+        ("/core/pause/history", {"limit": 200}, "pause_history"),
     ]:
         try:
             result = await api.get(path, params=params)
@@ -80,6 +96,8 @@ async def tasks_insights_page(request: Request):
                 all_tasks = result
             elif target == "task_history":
                 task_history = result
+            elif target == "pause_history":
+                pause_history = result
         except httpx.HTTPError:
             pass
 
@@ -163,6 +181,25 @@ async def tasks_insights_page(request: Request):
         if time_to_complete[label]
     }
 
+    # ── Pauses ("Take a breath") ───────────────────────────────────
+    pause_rows = []
+    total_paused_delta = timedelta()
+    total_urgency_reset = 0
+    total_deadlines_shifted = 0
+    for p in pause_history:
+        started = _parse_dt(p["started_at"])
+        ended = _parse_dt(p["ended_at"])
+        duration = ended - started
+        total_paused_delta += duration
+        total_urgency_reset += p["tasks_urgency_reset"]
+        total_deadlines_shifted += p["tasks_deadline_shifted"]
+        pause_rows.append({
+            "started_at": started.strftime("%d %b, %H:%M"),
+            "duration": _format_duration(duration),
+            "tasks_urgency_reset": p["tasks_urgency_reset"],
+            "tasks_deadline_shifted": p["tasks_deadline_shifted"],
+        })
+
     return templates.TemplateResponse(request, "tasks_insights.html", {
         # habits
         "recurring_tasks": recurring_tasks,
@@ -178,4 +215,10 @@ async def tasks_insights_page(request: Request):
         "by_weekday": by_weekday,
         "completion_rate_by_priority": completion_rate_by_priority,
         "time_to_complete": time_to_complete_chart,
+        # pauses
+        "pause_rows": pause_rows,
+        "total_pauses": len(pause_rows),
+        "total_paused_duration": _format_duration(total_paused_delta) if pause_rows else "—",
+        "total_urgency_reset": total_urgency_reset,
+        "total_deadlines_shifted": total_deadlines_shifted,
     })

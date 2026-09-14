@@ -16,11 +16,18 @@ def _humanize(paused_at: str | None) -> str | None:
     return datetime.fromisoformat(paused_at).strftime("%d %b, %H:%M")
 
 
-def _render(request: Request, paused: bool, paused_at: str | None = None, result: dict | None = None):
+def _render(
+    request: Request,
+    paused: bool,
+    paused_at: str | None = None,
+    result: dict | None = None,
+    error: str | None = None,
+):
     return templates.TemplateResponse(request, "_pause_control.html", {
         "paused": paused,
         "paused_at": _humanize(paused_at),
         "result": result,
+        "error": error,
     })
 
 
@@ -34,8 +41,9 @@ async def pause_control(request: Request):
 async def start_pause(request: Request):
     try:
         state = await api.post("/core/pause")
-    except httpx.HTTPStatusError:
+    except httpx.HTTPStatusError as exc:
         state = await api.get("/core/pause")
+        return _render(request, state["paused"], state["paused_at"], error=_error_detail(exc))
     return _render(request, state["paused"], state["paused_at"])
 
 
@@ -43,7 +51,14 @@ async def start_pause(request: Request):
 async def stop_pause(request: Request):
     try:
         result = await api.post("/core/pause/resume")
-    except httpx.HTTPStatusError:
+    except httpx.HTTPStatusError as exc:
         state = await api.get("/core/pause")
-        return _render(request, state["paused"], state["paused_at"])
+        return _render(request, state["paused"], state["paused_at"], error=_error_detail(exc))
     return _render(request, paused=False, result=result)
+
+
+def _error_detail(exc: httpx.HTTPStatusError) -> str:
+    try:
+        return exc.response.json().get("detail", "Something went wrong. Please try again.")
+    except ValueError:
+        return "Something went wrong. Please try again."

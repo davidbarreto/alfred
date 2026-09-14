@@ -33,7 +33,7 @@ class TestStartPause:
 
     def test_falls_back_to_current_state_on_conflict(self, client, mock_api):
         request = httpx.Request("POST", "http://api/core/pause")
-        response = httpx.Response(400, request=request, text="Already paused")
+        response = httpx.Response(400, request=request, json={"detail": "Already paused"})
         mock_api["post"].side_effect = httpx.HTTPStatusError("error", request=request, response=response)
         mock_api["get"].return_value = {"paused": True, "paused_at": "2026-09-01T10:00:00+00:00"}
 
@@ -41,6 +41,7 @@ class TestStartPause:
 
         assert resp.status_code == 200
         assert "Resume" in resp.text
+        assert "Already paused" in resp.text
         mock_api["get"].assert_awaited_once_with("/core/pause")
 
 
@@ -63,7 +64,7 @@ class TestStopPause:
 
     def test_falls_back_to_current_state_on_conflict(self, client, mock_api):
         request = httpx.Request("POST", "http://api/core/pause/resume")
-        response = httpx.Response(400, request=request, text="Not paused")
+        response = httpx.Response(400, request=request, json={"detail": "Not paused"})
         mock_api["post"].side_effect = httpx.HTTPStatusError("error", request=request, response=response)
         mock_api["get"].return_value = {"paused": False, "paused_at": None}
 
@@ -71,3 +72,16 @@ class TestStopPause:
 
         assert resp.status_code == 200
         assert "Take a breath" in resp.text
+        assert "Not paused" in resp.text
+
+    def test_surfaces_error_on_server_error(self, client, mock_api):
+        request = httpx.Request("POST", "http://api/core/pause/resume")
+        response = httpx.Response(500, request=request, json={"detail": "Internal Server Error"})
+        mock_api["post"].side_effect = httpx.HTTPStatusError("error", request=request, response=response)
+        mock_api["get"].return_value = {"paused": True, "paused_at": "2026-09-14T12:11:03+00:00"}
+
+        resp = client.post("/pause/resume")
+
+        assert resp.status_code == 200
+        assert "Resume" in resp.text
+        assert "Internal Server Error" in resp.text

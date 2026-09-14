@@ -1,5 +1,5 @@
 from datetime import date, datetime, time, timedelta, timezone
-from sqlalchemy import and_, case, or_, select, update
+from sqlalchemy import Interval, and_, bindparam, case, or_, select, update
 from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -241,7 +241,7 @@ class TaskRepository:
                 Task.status.not_in(["DONE", "CANCELLED"]),
                 Task.deleted_at.is_(None),
             )
-            .values(deadline=Task.deadline + delta)
+            .values(deadline=Task.deadline + bindparam("shift_delta", delta, type_=Interval()))
         )
         await self._session.commit()
         return result.rowcount or 0

@@ -478,3 +478,32 @@ class TestShiftOverdueDeadlines:
         assert count == 2
         session.execute.assert_called_once()
         session.commit.assert_awaited_once()
+
+    async def test_delta_binds_without_error_against_real_dialect(self):
+        """Regression test: `Task.deadline + delta` previously made SQLAlchemy bind
+        `delta` (a timedelta) through the `deadline` column's LocalDateTime type
+        decorator, which crashed with AttributeError on `.tzinfo` at execution time
+        (mocked sessions never exercise real bind-param processing, so the bug was
+        invisible to the mocked test above — this hit prod on every "Resume" click).
+        """
+        from sqlalchemy.dialects import postgresql
+
+        session = _make_session()
+        captured = {}
+
+        async def fake_execute(stmt):
+            captured["stmt"] = stmt
+            result = MagicMock()
+            result.rowcount = 0
+            return result
+
+        session.execute = AsyncMock(side_effect=fake_execute)
+
+        repo = TaskRepository(session)
+        await repo.shift_overdue_deadlines(timedelta(days=3), datetime(2026, 9, 7))
+
+        compiled = captured["stmt"].compile(dialect=postgresql.asyncpg.dialect())
+        params = compiled.construct_params()
+        for key, processor in compiled._bind_processors.items():
+            if processor is not None:
+                processor(params[key])

@@ -82,6 +82,14 @@ services:
     environment:
       - BACKEND_URL=http://api:8000
       - ALFRED_API_TOKEN=${ALFRED_API_TOKEN}
+      - MCP_PUBLIC_URL=${MCP_PUBLIC_URL}
+      - MCP_LOGIN_PASSWORD=${MCP_LOGIN_PASSWORD}
+      - MCP_SESSION_SECRET_KEY=${MCP_SESSION_SECRET_KEY}
+    volumes:
+      # Persists registered OAuth clients + tokens across container restarts/deploys —
+      # without this, every connected client (Claude Code/Desktop/web) would need to
+      # re-register and re-authorize on every `docker compose up -d mcp`.
+      - ${MCP_DATA_DIR:-/srv/data/alfred/mcp}:/data
     networks:
       - default
       - mcp-shared

@@ -188,6 +188,7 @@ class TransactionFilters:
         installment_plan_id: Annotated[int | None, Query()] = None,
         unconfirmed_transfer: Annotated[bool, Query()] = False,
         tags: Annotated[list[str] | None, Query()] = None,
+        tags_mode: Annotated[Literal["all", "any"], Query()] = "all",
         sort: Annotated[TransactionSort, Query()] = "date_desc",
     ) -> None:
         self.limit = limit
@@ -198,8 +199,12 @@ class TransactionFilters:
         self.account_id = account_id
         self.merchant = merchant
         self.tags = tags
-        """Match transactions carrying ANY of these tag names (OR, not AND) -- see
+        """Tag names to filter by -- combined per tags_mode. See
         TransactionRepository._filter_conditions."""
+        self.tags_mode = tags_mode
+        """"all" (default): a transaction must carry every tag in `tags` (AND) --
+        e.g. ["Travel", "Barcelona"] means both. "any": carrying at least one is
+        enough (OR)."""
         self.search = search
         """Free-text match across description/merchant/bank_description (whichever
         is set -- see TransactionRepository._NAME_COLUMN), unlike `merchant` which

@@ -52,6 +52,25 @@ class TestTransactionsPage:
         txn_call = next(c for c in calls if c.args[0] == "/finance/transactions")
         assert txn_call.kwargs["params"]["type"] == "income"
 
+    def test_tags_and_tags_mode_passed_to_api(self, client, mock_api):
+        mock_api["get"].side_effect = [[], None, [], [], [], [], []]
+
+        client.get("/finance/transactions?tags=Travel&tags=Barcelona&tags_mode=any")
+
+        calls = mock_api["get"].call_args_list
+        txn_call = next(c for c in calls if c.args[0] == "/finance/transactions")
+        assert txn_call.kwargs["params"]["tags"] == ["Travel", "Barcelona"]
+        assert txn_call.kwargs["params"]["tags_mode"] == "any"
+
+    def test_tags_mode_defaults_to_unset_when_not_passed(self, client, mock_api):
+        mock_api["get"].side_effect = [[], None, [], [], [], [], []]
+
+        client.get("/finance/transactions?tags=Travel")
+
+        calls = mock_api["get"].call_args_list
+        txn_call = next(c for c in calls if c.args[0] == "/finance/transactions")
+        assert "tags_mode" not in txn_call.kwargs["params"]
+
     def test_merchant_filter_passed_to_api(self, client, mock_api):
         mock_api["get"].side_effect = [[], None, [], [], [], [], []]
 

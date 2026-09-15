@@ -361,6 +361,29 @@ class TestList:
         sql = str(query.compile(compile_kwargs={"literal_binds": True}))
         assert "finance.tags" in sql
 
+    async def test_multiple_tags_filter_defaults_to_requiring_all(self):
+        session = _make_session()
+        session.execute.return_value = _scalar_all([])
+        await TransactionRepository(session).list(TransactionFilters(tags=["Travel", "Barcelona"]))
+        query = session.execute.call_args.args[0]
+        sql = str(query.compile(compile_kwargs={"literal_binds": True}))
+        # One EXISTS subquery per tag, ANDed together (not one IN-based OR subquery).
+        assert sql.count("EXISTS") == 2
+        assert "'Travel'" in sql
+        assert "'Barcelona'" in sql
+        assert " IN " not in sql
+
+    async def test_multiple_tags_filter_any_mode_uses_or(self):
+        session = _make_session()
+        session.execute.return_value = _scalar_all([])
+        await TransactionRepository(session).list(
+            TransactionFilters(tags=["Travel", "Barcelona"], tags_mode="any")
+        )
+        query = session.execute.call_args.args[0]
+        sql = str(query.compile(compile_kwargs={"literal_binds": True}))
+        assert sql.count("EXISTS") == 1
+        assert " IN " in sql
+
     async def test_uncategorized_filter(self):
         session = _make_session()
         session.execute.return_value = _scalar_all([])

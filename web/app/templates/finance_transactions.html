@@ -33,13 +33,46 @@
       </select>
     </div>
     <div>
-      <label class="text-xs text-gray-500 mb-1 block">Tag</label>
-      <select id="txn-filter-tag" class="border border-gray-200 rounded-lg px-2 py-1.5 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-[#378ADD]" onchange="applyTxnFilters()">
-        <option value="">All tags</option>
-        {% for tag in tags %}
-        <option value="{{ tag.name }}" {% if query_filters.tag == tag.name %}selected{% endif %}>{{ tag.name }}</option>
-        {% endfor %}
-      </select>
+      <label class="text-xs text-gray-500 mb-1 block">Tags</label>
+      <details id="txn-filter-tags-details" class="relative">
+        <summary class="list-none cursor-pointer border border-gray-200 rounded-lg px-2 py-1.5 text-sm bg-white flex items-center gap-1.5 min-w-[130px]">
+          <span id="txn-filter-tags-summary">
+            {% if query_filters.tags %}{{ query_filters.tags | length }} tag{{ "s" if query_filters.tags | length != 1 else "" }}{% else %}All tags{% endif %}
+          </span>
+          <i class="ti ti-chevron-down text-xs ml-auto text-gray-400"></i>
+        </summary>
+        {% if tags %}
+        <div class="absolute z-10 mt-1 bg-white border border-gray-100 rounded-lg shadow-lg p-2 min-w-[170px] max-h-72 overflow-y-auto">
+          <div class="flex items-center gap-1 mb-2 pb-2 border-b border-gray-100 text-[11px]">
+            <span class="text-gray-400 mr-1">Match</span>
+            <label class="flex items-center gap-1 cursor-pointer">
+              <input type="radio" name="txn-filter-tags-mode" value="all"
+                {% if (query_filters.tags_mode or 'all') == 'all' %}checked{% endif %}
+                onchange="applyTxnFilters()" />
+              All
+            </label>
+            <label class="flex items-center gap-1 cursor-pointer ml-2">
+              <input type="radio" name="txn-filter-tags-mode" value="any"
+                {% if query_filters.tags_mode == 'any' %}checked{% endif %}
+                onchange="applyTxnFilters()" />
+              Any
+            </label>
+          </div>
+          {% for tag in tags %}
+          <label class="flex items-center gap-2 py-1 px-1 text-sm text-gray-700 hover:bg-gray-50 rounded cursor-pointer whitespace-nowrap">
+            <input
+              type="checkbox"
+              class="txn-filter-tag-checkbox"
+              value="{{ tag.name }}"
+              {% if tag.name in (query_filters.tags or []) %}checked{% endif %}
+              onchange="applyTxnFilters()"
+            />
+            {{ tag.name }}
+          </label>
+          {% endfor %}
+        </div>
+        {% endif %}
+      </details>
     </div>
     <div>
       <label class="text-xs text-gray-500 mb-1 block">Account</label>
@@ -96,7 +129,7 @@
         Unconfirmed transfers
       </label>
     </div>
-    {% if query_filters.type or query_filters.category_id or query_filters.uncategorized or query_filters.tag or query_filters.account_id or query_filters.merchant or query_filters.from_date or query_filters.to_date or query_filters.currency or query_filters.unconfirmed_transfer %}
+    {% if query_filters.type or query_filters.category_id or query_filters.uncategorized or query_filters.tags or query_filters.account_id or query_filters.merchant or query_filters.from_date or query_filters.to_date or query_filters.currency or query_filters.unconfirmed_transfer %}
     <button onclick="clearTxnFilters()" class="btn btn-sm btn-ghost text-gray-500 gap-1">
       <i class="ti ti-x text-xs"></i>Clear filters
     </button>
@@ -311,7 +344,9 @@ function _txnQuery() {
   const params = new URLSearchParams();
   const type = document.getElementById("txn-filter-type").value;
   const category = document.getElementById("txn-filter-category").value;
-  const tag = document.getElementById("txn-filter-tag").value;
+  const tags = Array.from(document.querySelectorAll(".txn-filter-tag-checkbox:checked")).map(el => el.value);
+  const tagsModeEl = document.querySelector('input[name="txn-filter-tags-mode"]:checked');
+  const tagsMode = tagsModeEl ? tagsModeEl.value : "all";
   const account = document.getElementById("txn-filter-account").value;
   const merchant = document.getElementById("txn-filter-merchant").value;
   const fromDate = document.getElementById("txn-filter-from").value;
@@ -321,7 +356,8 @@ function _txnQuery() {
   if (type) params.set("type", type);
   if (category === "uncategorized") params.set("uncategorized", "true");
   else if (category) params.set("category_id", category);
-  if (tag) params.set("tag", tag);
+  tags.forEach(t => params.append("tags", t));
+  if (tags.length && tagsMode !== "all") params.set("tags_mode", tagsMode);
   if (account) params.set("account_id", account);
   if (merchant) params.set("merchant", merchant);
   if (fromDate) params.set("from_date", fromDate);
@@ -342,6 +378,11 @@ function refreshTxnList() {
 
 function applyTxnFilters() {
   _txnOffset = 0;
+  const checked = document.querySelectorAll(".txn-filter-tag-checkbox:checked");
+  const tagsModeEl = document.querySelector('input[name="txn-filter-tags-mode"]:checked');
+  const modeSuffix = checked.length > 1 && tagsModeEl && tagsModeEl.value === "any" ? " (any)" : "";
+  document.getElementById("txn-filter-tags-summary").textContent =
+    checked.length ? `${checked.length} tag${checked.length !== 1 ? "s" : ""}${modeSuffix}` : "All tags";
   refreshTxnList();
 }
 

@@ -23,7 +23,8 @@ def _parse_txn_query(request: Request) -> tuple[dict, int]:
         "type": qp.get("type") or None,
         "category_id": qp.get("category_id") or None,
         "uncategorized": qp.get("uncategorized") or None,
-        "tag": qp.get("tag") or None,
+        "tags": qp.getlist("tags") or None,
+        "tags_mode": qp.get("tags_mode") or None,
         "account_id": qp.get("account_id") or None,
         "merchant": qp.get("merchant") or None,
         "from_date": qp.get("from_date") or None,
@@ -38,9 +39,7 @@ def _parse_txn_query(request: Request) -> tuple[dict, int]:
 
 def _build_txn_params(filters: dict, offset: int) -> dict:
     params: dict = {"limit": _PAGE_SIZE + 1, "offset": offset}
-    params.update({k: v for k, v in filters.items() if v and k != "tag"})
-    if filters.get("tag"):
-        params["tags"] = [filters["tag"]]
+    params.update({k: v for k, v in filters.items() if v})
     return params
 
 
@@ -69,9 +68,7 @@ async def _txn_list_context(filters: dict, offset: int) -> dict:
     txn_sum = None
     try:
         txn_sum = await api.get(
-            "/finance/transactions/sum",
-            params={k: v for k, v in filters.items() if v and k != "tag"}
-            | ({"tags": [filters["tag"]]} if filters.get("tag") else {}),
+            "/finance/transactions/sum", params={k: v for k, v in filters.items() if v}
         )
     except httpx.HTTPError:
         pass
@@ -109,7 +106,7 @@ async def _txn_list_context(filters: dict, offset: int) -> dict:
         "query_filters": filters,
         "query_offset": offset,
         "page_size": _PAGE_SIZE,
-        "filters_qs": urlencode({**{k: v for k, v in filters.items() if v}, "offset": offset}),
+        "filters_qs": urlencode({**{k: v for k, v in filters.items() if v}, "offset": offset}, doseq=True),
     }
 
 

@@ -149,7 +149,14 @@ def _filter_conditions(filters: Any, cycle_start_day: int = 1) -> list:
     if filters.merchant is not None:
         conditions.append(Transaction.merchant.ilike(f"%{filters.merchant}%"))
     if getattr(filters, "tags", None):
-        conditions.append(Transaction.tags.any(FinanceTag.name.in_(filters.tags)))
+        if getattr(filters, "tags_mode", "all") == "any":
+            # OR -- carrying at least one of the requested tags is enough.
+            conditions.append(Transaction.tags.any(FinanceTag.name.in_(filters.tags)))
+        else:
+            # AND (default) -- a separate .any() per tag name, so a transaction must
+            # carry every requested tag (e.g. Travel AND Barcelona), not just one.
+            for tag_name in filters.tags:
+                conditions.append(Transaction.tags.any(FinanceTag.name == tag_name))
     if getattr(filters, "search", None):
         conditions.append(_NAME_COLUMN.ilike(f"%{filters.search}%"))
     if filters.currency is not None and filters.currency != GLOBAL_CURRENCY:

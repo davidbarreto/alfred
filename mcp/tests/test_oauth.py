@@ -238,3 +238,12 @@ class TestProtectedResource:
     def test_mcp_with_invalid_token_returns_401(self, client):
         resp = client.post("/mcp", json={}, headers={"Authorization": "Bearer not-a-real-token"})
         assert resp.status_code == 401
+
+    def test_bare_mcp_path_does_not_redirect(self, client):
+        # Regression: Starlette's Mount("/mcp", ...) 307-redirects a bare POST /mcp
+        # to /mcp/ by default. MCP clients request the bare path and don't reliably
+        # resend the Authorization header across that redirect, turning every call
+        # into a silent 401 despite a valid token. redirect_slashes=False on the
+        # app's router must keep this a direct (non-redirected) request.
+        resp = client.post("/mcp", json={}, headers={"Authorization": "Bearer fake"}, follow_redirects=False)
+        assert resp.status_code != 307

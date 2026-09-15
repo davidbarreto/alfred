@@ -102,3 +102,9 @@ app = Starlette(
         Middleware(BearerAuthMiddleware),
     ],
 )
+
+# Without this, a bare POST /mcp (no trailing slash — what every MCP client
+# actually requests) gets a 307 to /mcp/ from Starlette's Mount matching.
+# Clients don't reliably resend the Authorization header across that
+# redirect, so every call silently 401s despite a valid token.
+app.router.redirect_slashes = False

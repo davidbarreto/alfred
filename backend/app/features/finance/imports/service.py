@@ -927,6 +927,7 @@ class ImportService:
                     deduplication_hash=row.deduplication_hash,
                     import_batch_id=batch.id,
                     installment_plan_id=row.installment_plan_id or row.supersedes_installment_plan_id,
+                    tags=request.tag_names,
                 ),
                 amount_eur=amount_eur,
             )
@@ -1287,6 +1288,7 @@ class ImportService:
                         balance_after=row.balance_after,
                         deduplication_hash=row.deduplication_hash,
                         import_batch_id=batch.id,
+                        tags=request.tag_names,
                     ),
                     amount_eur=amount_eur,
                 )

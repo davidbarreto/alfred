@@ -4,10 +4,12 @@ from datetime import date, datetime
 from decimal import Decimal
 from typing import Any
 from sqlalchemy import and_, case, func, or_, select, update
-from sqlalchemy.orm import aliased
+from sqlalchemy.orm import aliased, selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.features.finance.installment_plans.tables import InstallmentPlan
+from app.features.finance.tags.repository import TagRepository
+from app.features.finance.tags.tables import FinanceTag
 from app.features.finance.transactions.tables import Transaction
 from app.features.finance.transactions.schemas import (
     GLOBAL_CURRENCY,
@@ -18,6 +20,7 @@ from app.features.finance.transactions.schemas import (
 )
 
 _PLACEHOLDER_NOTE_PREFIX = "Placeholder"
+_TXN_EXCLUDE = {"tags"}
 
 
 def _amount_column(currency: str):
@@ -145,6 +148,8 @@ def _filter_conditions(filters: Any, cycle_start_day: int = 1) -> list:
         )
     if filters.merchant is not None:
         conditions.append(Transaction.merchant.ilike(f"%{filters.merchant}%"))
+    if getattr(filters, "tags", None):
+        conditions.append(Transaction.tags.any(FinanceTag.name.in_(filters.tags)))
     if getattr(filters, "search", None):
         conditions.append(_NAME_COLUMN.ilike(f"%{filters.search}%"))
     if filters.currency is not None and filters.currency != GLOBAL_CURRENCY:
@@ -165,10 +170,13 @@ class TransactionRepository:
 
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
+        self._tag_repo = TagRepository(session)
 
     async def get(self, transaction_id: int) -> Transaction | None:
         result = await self._session.execute(
-            select(Transaction).where(Transaction.id == transaction_id)
+            select(Transaction)
+            .options(selectinload(Transaction.tags))
+            .where(Transaction.id == transaction_id)
         )
         return result.scalars().first()
 
@@ -320,7 +328,7 @@ class TransactionRepository:
         await self._session.commit()
 
     async def list(self, filters: TransactionFilters, cycle_start_day: int = 1) -> list[Transaction]:
-        query = select(Transaction).order_by(_build_order_by(filters.sort))
+        query = select(Transaction).options(selectinload(Transaction.tags)).order_by(_build_order_by(filters.sort))
         for condition in _filter_conditions(filters, cycle_start_day):
             query = query.where(condition)
         query = query.offset(filters.offset).limit(filters.limit)
@@ -379,7 +387,10 @@ class TransactionRepository:
         return result.rowcount
 
     async def create(self, data: TransactionCreate, amount_eur: Decimal | None = None) -> Transaction:
-        transaction = Transaction(**data.model_dump(), amount_eur=_signed_eur(data.amount, amount_eur))
+        transaction = Transaction(
+            **data.model_dump(exclude=_TXN_EXCLUDE), amount_eur=_signed_eur(data.amount, amount_eur)
+        )
+        transaction.tags = await self._tag_repo.resolve_tags(data.tags)
         self._session.add(transaction)
         await self._session.commit()
         await self._session.refresh(transaction)
@@ -395,7 +406,10 @@ class TransactionRepository:
         transaction = await self.get(transaction_id)
         if transaction is None:
             return None
-        for field, value in data.model_dump(exclude_unset=True).items():
+        update_data = data.model_dump(exclude_unset=True)
+        if "tags" in update_data:
+            transaction.tags = await self._tag_repo.resolve_tags(update_data.pop("tags"))
+        for field, value in update_data.items():
             setattr(transaction, field, value)
         if recompute_amount_eur:
             transaction.amount_eur = _signed_eur(transaction.amount, amount_eur)
@@ -405,7 +419,10 @@ class TransactionRepository:
 
     async def add(self, data: TransactionCreate, amount_eur: Decimal | None = None) -> Transaction:
         """Add transaction to session without committing. Caller is responsible for commit."""
-        transaction = Transaction(**data.model_dump(), amount_eur=_signed_eur(data.amount, amount_eur))
+        transaction = Transaction(
+            **data.model_dump(exclude=_TXN_EXCLUDE), amount_eur=_signed_eur(data.amount, amount_eur)
+        )
+        transaction.tags = await self._tag_repo.resolve_tags(data.tags)
         self._session.add(transaction)
         return transaction
 

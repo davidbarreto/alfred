@@ -1,8 +1,8 @@
 from datetime import date, datetime, timedelta
 from decimal import Decimal
-from typing import Annotated, Literal, Optional, TypeAlias
+from typing import Annotated, Any, Literal, Optional, TypeAlias
 from fastapi import Query
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 
 from app.features.finance import cycle
 
@@ -124,6 +124,11 @@ class TransactionBase(BaseModel):
     """Links this transaction to an installment plan (see finance.installment_plans),
     set by a matching ImportRule during import. Not user-editable -- not on
     TransactionUpdate, which is the public PATCH surface."""
+    tags: list[str] = []
+    """Free-form context labels (e.g. "Travel", "Work"), orthogonal to category_id --
+    unlike category (exclusive, one per transaction), a transaction can carry several.
+    Resolved get-or-create by name (see TransactionRepository._resolve_tags), same
+    pattern as organizer.tasks' tags field."""
 
 
 class TransactionCreate(TransactionBase):
@@ -143,6 +148,7 @@ class TransactionUpdate(BaseModel):
     merchant: str | None = None
     counterpart_account_id: int | None = None
     counterpart_transaction_id: int | None = None
+    tags: list[str] | None = None
 
 
 class TransactionRead(TransactionBase):
@@ -152,6 +158,11 @@ class TransactionRead(TransactionBase):
     created_at: datetime
 
     model_config = {"from_attributes": True}
+
+    @field_validator("tags", mode="before")
+    @classmethod
+    def coerce_tags(cls, v: Any) -> list[str]:
+        return [item.name if hasattr(item, "name") else item for item in v]
 
 
 TransactionSort: TypeAlias = Literal[
@@ -176,6 +187,7 @@ class TransactionFilters:
         currency: Annotated[str | None, Query()] = None,
         installment_plan_id: Annotated[int | None, Query()] = None,
         unconfirmed_transfer: Annotated[bool, Query()] = False,
+        tags: Annotated[list[str] | None, Query()] = None,
         sort: Annotated[TransactionSort, Query()] = "date_desc",
     ) -> None:
         self.limit = limit
@@ -185,6 +197,9 @@ class TransactionFilters:
         self.uncategorized = uncategorized
         self.account_id = account_id
         self.merchant = merchant
+        self.tags = tags
+        """Match transactions carrying ANY of these tag names (OR, not AND) -- see
+        TransactionRepository._filter_conditions."""
         self.search = search
         """Free-text match across description/merchant/bank_description (whichever
         is set -- see TransactionRepository._NAME_COLUMN), unlike `merchant` which

@@ -261,7 +261,7 @@
 
     <!-- Tabs -->
     <div class="flex gap-1 border-b border-gray-100 mb-4 overflow-x-auto" id="manage-tabs">
-      {% for tab in [("categories","Categories"),("currencies","Currencies"),("recurring","Recurring")] %}
+      {% for tab in [("categories","Categories"),("tags","Tags"),("currencies","Currencies"),("recurring","Recurring")] %}
       <button
         onclick="showManageTab('{{ tab[0] }}')"
         id="tab-btn-{{ tab[0] }}"
@@ -277,6 +277,17 @@
       </div>
       <form class="mt-3 flex flex-col sm:flex-row gap-2" onsubmit="submitManageForm(event, '/finance/categories', 'categories-list')">
         <input name="name" required placeholder="Category name" class="border border-gray-200 rounded-lg px-3 py-1.5 text-sm w-full sm:flex-1 focus:outline-none focus:ring-1 focus:ring-[#378ADD]" />
+        <button type="submit" class="btn btn-sm btn-primary w-full sm:w-auto">Add</button>
+      </form>
+    </div>
+
+    <!-- Tags tab -->
+    <div id="tab-tags" class="manage-tab hidden">
+      <div id="tags-list">
+        {% include "_finance_tags.html" %}
+      </div>
+      <form class="mt-3 flex flex-col sm:flex-row gap-2" onsubmit="submitManageForm(event, '/finance/tags', 'tags-list')">
+        <input name="name" required placeholder="Tag name (e.g. Travel)" class="border border-gray-200 rounded-lg px-3 py-1.5 text-sm w-full sm:flex-1 focus:outline-none focus:ring-1 focus:ring-[#378ADD]" />
         <button type="submit" class="btn btn-sm btn-primary w-full sm:w-auto">Add</button>
       </form>
     </div>
@@ -477,6 +488,20 @@ async function submitManageForm(e, url, targetId) {
         </select>
       </div>
       <div>
+        <label class="text-xs text-gray-500 mb-1 block">Tags</label>
+        <input
+          name="tags"
+          type="text"
+          placeholder="e.g. Travel, Work"
+          list="finance-tag-options"
+          class="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white w-full focus:outline-none focus:ring-1 focus:ring-[#378ADD]"
+        />
+        <p class="text-[10px] text-gray-400 mt-1">Comma-separated. Context labels like Travel or Work, on top of the category.</p>
+        <datalist id="finance-tag-options">
+          {% for tag in tags %}<option value="{{ tag.name }}"></option>{% endfor %}
+        </datalist>
+      </div>
+      <div>
         <label class="text-xs text-gray-500 mb-1 block">Description</label>
         <input
           name="description"
@@ -532,6 +557,7 @@ function openEditTransaction(txn) {
   form.querySelector('[name="counterpart_account_id"]').value = txn.counterpart_account_id || "";
   form.querySelector('[name="merchant"]').value = txn.merchant || "";
   form.querySelector('[name="category_id"]').value = txn.category_id || "";
+  form.querySelector('[name="tags"]').value = (txn.tags || []).join(", ");
   form.querySelector('[name="description"]').value = txn.description || "";
   form.querySelector('[name="note"]').value = txn.note || "";
   toggleTxnCounterpartField(txn.type);

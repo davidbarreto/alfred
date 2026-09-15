@@ -110,7 +110,7 @@ class TestImportPage:
 class TestImportPreview:
     def test_renders_review_table(self, client, mock_api):
         mock_api["post_multipart"].return_value = _preview()
-        mock_api["get"].side_effect = [[_account()], [_category()], _currencies()]
+        mock_api["get"].side_effect = [[_account()], [_category()], [], _currencies()]
 
         resp = client.post(
             "/finance/import/preview",
@@ -133,7 +133,7 @@ class TestImportPreview:
         # as if they were EUR even though the backend had parsed/returned "BRL" correctly.
         rows = [_preview_row(amount="-23.17")]
         mock_api["post_multipart"].return_value = _preview(rows, currency="BRL")
-        mock_api["get"].side_effect = [[_account()], [_category()], _currencies()]
+        mock_api["get"].side_effect = [[_account()], [_category()], [], _currencies()]
 
         resp = client.post(
             "/finance/import/preview",
@@ -147,7 +147,7 @@ class TestImportPreview:
     def test_duplicate_rows_marked_skipped(self, client, mock_api):
         rows = [_preview_row(), _preview_row(status="duplicate", deduplication_hash="dup1")]
         mock_api["post_multipart"].return_value = _preview(rows)
-        mock_api["get"].side_effect = [[_account()], [_category()], _currencies()]
+        mock_api["get"].side_effect = [[_account()], [_category()], [], _currencies()]
 
         resp = client.post(
             "/finance/import/preview",
@@ -165,7 +165,7 @@ class TestImportPreview:
             ),
         ]
         mock_api["post_multipart"].return_value = _preview(rows)
-        mock_api["get"].side_effect = [[_account()], [_category()], _currencies()]
+        mock_api["get"].side_effect = [[_account()], [_category()], [], _currencies()]
 
         resp = client.post(
             "/finance/import/preview",
@@ -181,6 +181,7 @@ class TestImportPreview:
         mock_api["get"].side_effect = [
             [_account(1, "Checking"), _account(2, "Savings")],
             [_category()],
+            [],
             _currencies(),
         ]
 
@@ -201,7 +202,7 @@ class TestImportPreview:
     def test_non_transfer_row_hides_destination_account_select(self, client, mock_api):
         rows = [_preview_row(type="expense")]
         mock_api["post_multipart"].return_value = _preview(rows)
-        mock_api["get"].side_effect = [[_account()], [_category()], _currencies()]
+        mock_api["get"].side_effect = [[_account()], [_category()], [], _currencies()]
 
         resp = client.post(
             "/finance/import/preview",
@@ -219,7 +220,7 @@ class TestImportPreview:
             )
         ]
         mock_api["post_multipart"].return_value = _preview(rows)
-        mock_api["get"].side_effect = [[_account()], [_category()], _currencies()]
+        mock_api["get"].side_effect = [[_account()], [_category()], [], _currencies()]
 
         resp = client.post(
             "/finance/import/preview",

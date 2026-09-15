@@ -36,6 +36,21 @@
     <input type="hidden" name="row_count" value="{{ preview.rows | length }}" />
     <input type="hidden" name="plan_action_count" value="{{ preview.installment_plan_actions | length }}" />
 
+    <div class="mb-3 flex items-center gap-2">
+      <label class="text-xs text-gray-500 whitespace-nowrap">Tags for this import</label>
+      <input
+        type="text"
+        name="tag_names"
+        placeholder="e.g. Travel"
+        list="finance-tag-options"
+        class="border border-gray-200 rounded-lg px-3 py-1.5 text-sm bg-white flex-1 max-w-xs focus:outline-none focus:ring-1 focus:ring-[#378ADD]"
+      />
+      <datalist id="finance-tag-options">
+        {% for tag in tags %}<option value="{{ tag.name }}"></option>{% endfor %}
+      </datalist>
+      <span class="text-[10px] text-gray-400">Comma-separated. Applied to every row committed below (e.g. a trip statement tagged "Travel"). New names are created automatically.</span>
+    </div>
+
     {% if preview.installment_plan_actions %}
     <div class="bg-amber-50/60 border border-amber-100 rounded-xl p-3 mb-3 space-y-2">
       <p class="text-xs font-medium text-amber-700">

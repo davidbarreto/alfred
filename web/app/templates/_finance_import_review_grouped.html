@@ -27,6 +27,21 @@
     <input type="hidden" name="source_file" value="{{ preview.source_file or '' }}" />
     <input type="hidden" name="stored_file" value="{{ preview.stored_file or '' }}" />
     <input type="hidden" name="account_map" value='{{ account_map | tojson }}' />
+
+    <div class="mb-3 flex items-center gap-2">
+      <label class="text-xs text-gray-500 whitespace-nowrap">Tags for this import</label>
+      <input
+        type="text"
+        name="tag_names"
+        placeholder="e.g. Travel"
+        list="finance-tag-options"
+        class="border border-gray-200 rounded-lg px-3 py-1.5 text-sm bg-white flex-1 max-w-xs focus:outline-none focus:ring-1 focus:ring-[#378ADD]"
+      />
+      <datalist id="finance-tag-options">
+        {% for tag in tags %}<option value="{{ tag.name }}"></option>{% endfor %}
+      </datalist>
+      <span class="text-[10px] text-gray-400">Comma-separated. Applied to every row committed below. New names are created automatically.</span>
+    </div>
     {% set ns = namespace(i=0) %}
 
     {% for group in preview.groups %}

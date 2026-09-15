@@ -23,6 +23,7 @@ def _parse_txn_query(request: Request) -> tuple[dict, int]:
         "type": qp.get("type") or None,
         "category_id": qp.get("category_id") or None,
         "uncategorized": qp.get("uncategorized") or None,
+        "tag": qp.get("tag") or None,
         "account_id": qp.get("account_id") or None,
         "merchant": qp.get("merchant") or None,
         "from_date": qp.get("from_date") or None,
@@ -37,7 +38,9 @@ def _parse_txn_query(request: Request) -> tuple[dict, int]:
 
 def _build_txn_params(filters: dict, offset: int) -> dict:
     params: dict = {"limit": _PAGE_SIZE + 1, "offset": offset}
-    params.update({k: v for k, v in filters.items() if v})
+    params.update({k: v for k, v in filters.items() if v and k != "tag"})
+    if filters.get("tag"):
+        params["tags"] = [filters["tag"]]
     return params
 
 
@@ -66,14 +69,20 @@ async def _txn_list_context(filters: dict, offset: int) -> dict:
     txn_sum = None
     try:
         txn_sum = await api.get(
-            "/finance/transactions/sum", params={k: v for k, v in filters.items() if v}
+            "/finance/transactions/sum",
+            params={k: v for k, v in filters.items() if v and k != "tag"}
+            | ({"tags": [filters["tag"]]} if filters.get("tag") else {}),
         )
     except httpx.HTTPError:
         pass
 
-    categories, txn_accounts, plans = [], [], []
+    categories, tags, txn_accounts, plans = [], [], [], []
     try:
         categories = await api.get("/finance/categories")
+    except httpx.HTTPError:
+        pass
+    try:
+        tags = await api.get("/finance/tags")
     except httpx.HTTPError:
         pass
     try:
@@ -91,6 +100,7 @@ async def _txn_list_context(filters: dict, offset: int) -> dict:
         "has_prev": has_prev,
         "txn_sum": txn_sum,
         "categories": categories,
+        "tags": tags,
         "accounts": txn_accounts,
         "categories_by_id": {c["id"]: c["name"] for c in categories},
         "accounts_by_id": {a["id"]: a["name"] for a in txn_accounts},
@@ -168,7 +178,7 @@ async def finance_page(request: Request):
     currency = _resolve_currency(request)
 
     spending, income, by_category, transactions, budgets = None, None, None, [], []
-    accounts, categories, currencies, recurring, errors = [], [], [], [], []
+    accounts, categories, tags, currencies, recurring, errors = [], [], [], [], [], []
 
     try:
         accounts = await api.get("/finance/accounts", params={"is_active": "true"})
@@ -177,6 +187,11 @@ async def finance_page(request: Request):
 
     try:
         categories = await api.get("/finance/categories")
+    except httpx.HTTPError:
+        pass
+
+    try:
+        tags = await api.get("/finance/tags")
     except httpx.HTTPError:
         pass
 
@@ -353,6 +368,7 @@ async def finance_page(request: Request):
         "time_label": "Month" if group_by_month else "Day",
         "accounts": accounts,
         "categories": categories,
+        "tags": tags,
         "currencies": currencies,
         "recurring": recurring,
         "currency": currency,
@@ -362,6 +378,12 @@ async def finance_page(request: Request):
         "accounts_by_id": {a["id"]: a["name"] for a in accounts},
         "categories_by_id": {c["id"]: c["name"] for c in categories},
     })
+
+
+def _parse_tags_field(raw: str | None) -> list[str]:
+    if not raw:
+        return []
+    return [t.strip() for t in raw.split(",") if t.strip()]
 
 
 @router.post("/transactions", response_class=HTMLResponse)
@@ -374,6 +396,7 @@ async def create_transaction(
     category_id: Annotated[Optional[str], Form()] = None,
     merchant: Annotated[Optional[str], Form()] = None,
     description: Annotated[Optional[str], Form()] = None,
+    tags: Annotated[Optional[str], Form()] = None,
     counterpart_account_id: Annotated[Optional[str], Form()] = None,
 ):
     range_params = _range_params(request)
@@ -383,6 +406,7 @@ async def create_transaction(
         "date": f"{date}T00:00:00",
         "type": type,
         "account_id": int(account_id),
+        "tags": _parse_tags_field(tags),
     }
     if category_id:
         payload["category_id"] = int(category_id)
@@ -413,6 +437,7 @@ async def update_transaction(
     category_id: Annotated[Optional[str], Form()] = None,
     merchant: Annotated[Optional[str], Form()] = None,
     description: Annotated[Optional[str], Form()] = None,
+    tags: Annotated[Optional[str], Form()] = None,
     note: Annotated[Optional[str], Form()] = None,
     counterpart_account_id: Annotated[Optional[str], Form()] = None,
 ):
@@ -426,6 +451,7 @@ async def update_transaction(
         "category_id": int(category_id) if category_id else None,
         "merchant": merchant or None,
         "description": description or None,
+        "tags": _parse_tags_field(tags),
         "note": note or None,
         "counterpart_account_id": int(counterpart_account_id) if counterpart_account_id else None,
     }
@@ -921,6 +947,41 @@ async def delete_category(category_id: int, request: Request):
     except httpx.HTTPError:
         pass
     return templates.TemplateResponse(request, "_finance_categories.html", {"categories": categories})
+
+
+# --- Tags ---
+
+@router.post("/tags", response_class=HTMLResponse)
+async def create_tag(
+    request: Request,
+    name: Annotated[str, Form()],
+):
+    try:
+        await api.post("/finance/tags", json={"name": name})
+    except httpx.HTTPError:
+        return HTMLResponse('<p class="text-[#E24B4A] text-sm">Failed to create tag.</p>', status_code=422)
+
+    tags = []
+    try:
+        tags = await api.get("/finance/tags")
+    except httpx.HTTPError:
+        pass
+    return templates.TemplateResponse(request, "_finance_tags.html", {"tags": tags})
+
+
+@router.delete("/tags/{tag_id}", response_class=HTMLResponse)
+async def delete_tag(tag_id: int, request: Request):
+    try:
+        await api.delete(f"/finance/tags/{tag_id}")
+    except httpx.HTTPError:
+        return HTMLResponse('<p class="text-[#E24B4A] text-sm">Failed to delete tag.</p>', status_code=422)
+
+    tags = []
+    try:
+        tags = await api.get("/finance/tags")
+    except httpx.HTTPError:
+        pass
+    return templates.TemplateResponse(request, "_finance_tags.html", {"tags": tags})
 
 
 # --- Currencies ---
@@ -1559,13 +1620,17 @@ async def import_preview(
             status_code=422,
         )
 
-    accounts, categories = [], []
+    accounts, categories, tags = [], [], []
     try:
         accounts = await api.get("/finance/accounts")
     except httpx.HTTPError:
         pass
     try:
         categories = await api.get("/finance/categories")
+    except httpx.HTTPError:
+        pass
+    try:
+        tags = await api.get("/finance/tags")
     except httpx.HTTPError:
         pass
 
@@ -1575,6 +1640,7 @@ async def import_preview(
             "preview": preview,
             "accounts": accounts,
             "categories": categories,
+            "tags": tags,
             "accounts_by_id": {a["id"]: a["name"] for a in accounts},
             "currency_symbols": await _currency_symbols(),
         },
@@ -1702,6 +1768,7 @@ async def import_commit(request: Request):
         "closing_balance": _form_value(form, "closing_balance") or None,
         "rows": rows,
         "installment_plan_actions": plan_actions,
+        "tag_names": _parse_tags_field(_form_value(form, "tag_names")),
     }
     try:
         result = await api.post("/finance/imports/commit", json=payload, timeout=_IMPORT_COMMIT_TIMEOUT)
@@ -1764,14 +1831,18 @@ async def import_preview_grouped(
             '<p class="text-[#E24B4A] text-sm px-1">Could not preview this import.</p>', status_code=422
         )
 
-    categories = []
+    categories, tags = [], []
     try:
         categories = await api.get("/finance/categories")
     except httpx.HTTPError:
         pass
+    try:
+        tags = await api.get("/finance/tags")
+    except httpx.HTTPError:
+        pass
 
     return templates.TemplateResponse(
-        request, "_finance_import_review_grouped.html", {"preview": preview, "categories": categories}
+        request, "_finance_import_review_grouped.html", {"preview": preview, "categories": categories, "tags": tags}
     )
 
 
@@ -1834,6 +1905,7 @@ async def import_commit_grouped(request: Request):
         "stored_file": _form_value(form, "stored_file") or None,
         "account_map": account_map,
         "rows": rows,
+        "tag_names": _parse_tags_field(_form_value(form, "tag_names")),
     }
     try:
         result = await api.post(

@@ -218,6 +218,11 @@ class ImportCommitRequest(BaseModel):
     closing_balance: Decimal | None = None
     rows: list[ImportCommitRow]
     installment_plan_actions: list[InstallmentPlanActionCommit] = Field(default_factory=list)
+    tag_names: list[str] = Field(default_factory=list)
+    """Context tags (e.g. "Travel") applied to every transaction inserted by this
+    commit -- batch-wide rather than per-row, since one statement import typically
+    corresponds to one context (a trip, a work expense period). Get-or-created by
+    name, same as TransactionCreate.tags."""
 
 
 class ImportCommitResponse(BaseModel):
@@ -285,6 +290,9 @@ class ImportCommitGroupedRequest(BaseModel):
     account_map: dict[str, int]
     """currency -> target account_id, covering every currency present in rows."""
     rows: list[ImportCommitGroupedRow]
+    tag_names: list[str] = Field(default_factory=list)
+    """See ImportCommitRequest.tag_names -- applied to every transaction across every
+    currency group in this commit."""
 
 
 class ImportCommitBatchResult(BaseModel):

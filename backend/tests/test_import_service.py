@@ -622,7 +622,9 @@ def _commit_row(**kwargs) -> ImportCommitRow:
     return ImportCommitRow(**defaults)
 
 
-def _commit_request(rows: list[ImportCommitRow], installment_plan_actions=None) -> ImportCommitRequest:
+def _commit_request(
+    rows: list[ImportCommitRow], installment_plan_actions=None, tag_names=None
+) -> ImportCommitRequest:
     return ImportCommitRequest(
         account_id=1,
         provider="fakebank",
@@ -633,6 +635,7 @@ def _commit_request(rows: list[ImportCommitRow], installment_plan_actions=None) 
         closing_balance=Decimal("100.00"),
         rows=rows,
         installment_plan_actions=installment_plan_actions or [],
+        tag_names=tag_names or [],
     )
 
 
@@ -674,6 +677,18 @@ class TestCommit:
         assert len(service._created) == 1
         assert service._created[0].import_batch_id == 7
         assert service._created[0].source == "fakebank"
+
+    @pytest.mark.asyncio
+    async def test_applies_batch_wide_tag_names_to_every_inserted_row(self):
+        service = _service()
+        self._prepare(service)
+        service._txn_repo.get_existing_dedup_hashes.return_value = set()
+        rows = [_commit_row(deduplication_hash="hash-a"), _commit_row(deduplication_hash="hash-b")]
+
+        await service.commit(_commit_request(rows, tag_names=["Travel"]))
+
+        assert len(service._created) == 2
+        assert all(data.tags == ["Travel"] for data in service._created)
 
     @pytest.mark.asyncio
     async def test_converts_amount_to_eur_via_fx_service(self):

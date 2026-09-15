@@ -26,6 +26,7 @@ class TestTransactionsPage:
             [_txn(id=1, merchant="Continente")],
             None,
             [_category()],
+            [],
             [_account()],
             [],
             [],
@@ -43,7 +44,7 @@ class TestTransactionsPage:
         assert resp.headers["location"].startswith("/login")
 
     def test_type_filter_passed_to_api(self, client, mock_api):
-        mock_api["get"].side_effect = [[], None, [], [], [], []]
+        mock_api["get"].side_effect = [[], None, [], [], [], [], []]
 
         client.get("/finance/transactions?type=income")
 
@@ -52,7 +53,7 @@ class TestTransactionsPage:
         assert txn_call.kwargs["params"]["type"] == "income"
 
     def test_merchant_filter_passed_to_api(self, client, mock_api):
-        mock_api["get"].side_effect = [[], None, [], [], [], []]
+        mock_api["get"].side_effect = [[], None, [], [], [], [], []]
 
         client.get("/finance/transactions?merchant=Continente")
 
@@ -61,7 +62,7 @@ class TestTransactionsPage:
         assert txn_call.kwargs["params"]["merchant"] == "Continente"
 
     def test_uncategorized_filter_passed_to_api(self, client, mock_api):
-        mock_api["get"].side_effect = [[], None, [], [], [], []]
+        mock_api["get"].side_effect = [[], None, [], [], [], [], []]
 
         client.get("/finance/transactions?uncategorized=true")
 
@@ -71,7 +72,7 @@ class TestTransactionsPage:
         assert "category_id" not in txn_call.kwargs["params"]
 
     def test_offset_passed_to_api(self, client, mock_api):
-        mock_api["get"].side_effect = [[], None, [], [], [], []]
+        mock_api["get"].side_effect = [[], None, [], [], [], [], []]
 
         client.get("/finance/transactions?offset=20")
 
@@ -80,7 +81,7 @@ class TestTransactionsPage:
         assert txn_call.kwargs["params"]["offset"] == 20
 
     def test_sort_filter_passed_to_api(self, client, mock_api):
-        mock_api["get"].side_effect = [[], None, [], [], [], []]
+        mock_api["get"].side_effect = [[], None, [], [], [], [], []]
 
         client.get("/finance/transactions?sort=amount_asc")
 
@@ -89,7 +90,7 @@ class TestTransactionsPage:
         assert txn_call.kwargs["params"]["sort"] == "amount_asc"
 
     def test_sum_endpoint_called_with_same_filters(self, client, mock_api):
-        mock_api["get"].side_effect = [[], None, [], [], [], []]
+        mock_api["get"].side_effect = [[], None, [], [], [], [], []]
 
         client.get("/finance/transactions?type=expense")
 
@@ -101,6 +102,7 @@ class TestTransactionsPage:
         mock_api["get"].side_effect = [
             [_txn(id=1)],
             {"total": "-45.00", "transaction_count": 3, "currency": "EUR"},
+            [],
             [],
             [],
             [],
@@ -121,6 +123,7 @@ class TestTransactionsListFragment:
             [],
             [],
             [],
+            [],
         ]
 
         resp = client.get("/finance/transactions/list")
@@ -129,7 +132,7 @@ class TestTransactionsListFragment:
         assert "changeTxnPage(1)" in resp.text
 
     def test_no_pagination_footer_for_short_list(self, client, mock_api):
-        mock_api["get"].side_effect = [[_txn(id=1)], None, [], [], [], []]
+        mock_api["get"].side_effect = [[_txn(id=1)], None, [], [], [], [], []]
 
         resp = client.get("/finance/transactions/list")
 
@@ -137,7 +140,7 @@ class TestTransactionsListFragment:
         assert "changeTxnPage(1)" not in resp.text
 
     def test_empty_state_message(self, client, mock_api):
-        mock_api["get"].side_effect = [[], None, [], [], [], []]
+        mock_api["get"].side_effect = [[], None, [], [], [], [], []]
 
         resp = client.get("/finance/transactions/list")
 
@@ -159,7 +162,7 @@ class TestTransactionsListFragment:
 
 class TestDeleteTransaction:
     def test_delete_with_offset_renders_list_partial(self, client, mock_api):
-        mock_api["get"].side_effect = [[_txn(id=2)], None, [], [], [], []]
+        mock_api["get"].side_effect = [[_txn(id=2)], None, [], [], [], [], []]
 
         resp = client.delete("/finance/transactions/1?offset=0")
 
@@ -541,6 +544,33 @@ class TestUpdateTransaction:
         assert mock_api["patch"].call_args.args[0] == "/finance/transactions/1"
         # list-page context fetches paginated transactions, not the dashboard's range-scoped ones
         assert any(p.get("offset") == 20 for path, p in calls if path == "/finance/transactions")
+
+    def test_parses_comma_separated_tags(self, client, mock_api):
+        calls = []
+        mock_api["get"].side_effect = self._fake_get(calls)
+        mock_api["patch"].return_value = {"id": 1}
+
+        client.patch(
+            "/finance/transactions/1?offset=0",
+            data={
+                "amount": "10.00", "date": "2026-06-01", "type": "expense", "account_id": "1",
+                "tags": " Travel ,  Work,,",
+            },
+        )
+
+        assert mock_api["patch"].call_args.kwargs["json"]["tags"] == ["Travel", "Work"]
+
+    def test_blank_tags_field_sends_empty_list(self, client, mock_api):
+        calls = []
+        mock_api["get"].side_effect = self._fake_get(calls)
+        mock_api["patch"].return_value = {"id": 1}
+
+        client.patch(
+            "/finance/transactions/1?offset=0",
+            data={"amount": "10.00", "date": "2026-06-01", "type": "expense", "account_id": "1"},
+        )
+
+        assert mock_api["patch"].call_args.kwargs["json"]["tags"] == []
 
     def test_no_offset_renders_dashboard_partial(self, client, mock_api):
         calls = []
@@ -1129,14 +1159,14 @@ class TestAutoMirrorTransfer:
 
 class TestTransactionsPageBulkMoveButton:
     def test_shown_when_account_filter_set(self, client, mock_api):
-        mock_api["get"].side_effect = [[], None, [_account()], [], [], []]
+        mock_api["get"].side_effect = [[], None, [_account()], [], [], [], []]
 
         resp = client.get("/finance/transactions?account_id=1")
 
         assert "Move to account" in resp.text
 
     def test_hidden_without_account_filter(self, client, mock_api):
-        mock_api["get"].side_effect = [[], None, [], [], [], []]
+        mock_api["get"].side_effect = [[], None, [], [], [], [], []]
 
         resp = client.get("/finance/transactions")
 

@@ -42,6 +42,7 @@ def _make_txn_orm(**kwargs):
     t.balance_after = kwargs.get("balance_after", None)
     t.created_at = kwargs.get("created_at", "2026-06-12T10:00:00")
     t.installment_plan_id = kwargs.get("installment_plan_id", None)
+    t.tags = kwargs.get("tags", [])
     return t
 
 

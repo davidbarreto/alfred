@@ -48,6 +48,7 @@ from app.api.routes.organizer.interviews.insights import router as interview_ins
 from app.api.routes.organizer.interviews.preferences import router as interview_preferences_router
 from app.api.routes.finance.accounts import router as finance_accounts_router
 from app.api.routes.finance.categories import router as finance_categories_router
+from app.api.routes.finance.tags import router as finance_tags_router
 from app.api.routes.finance.currencies import router as finance_currencies_router
 from app.api.routes.finance.transactions import router as finance_transactions_router
 from app.api.routes.finance.budgets import router as finance_budgets_router
@@ -152,6 +153,7 @@ app.include_router(interview_insights_router)
 app.include_router(interview_preferences_router)
 app.include_router(finance_accounts_router)
 app.include_router(finance_categories_router)
+app.include_router(finance_tags_router)
 app.include_router(finance_currencies_router)
 app.include_router(finance_transactions_router)
 app.include_router(finance_budgets_router)

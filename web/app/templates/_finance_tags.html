@@ -1,0 +1,18 @@
+{% if tags %}
+<ul class="divide-y divide-gray-100">
+  {% for tag in tags %}
+  <li class="flex items-center justify-between py-2 text-sm" id="tag-{{ tag.id }}">
+    <span class="text-gray-800">{{ tag.name }}</span>
+    <button
+      class="text-gray-300 hover:text-[#E24B4A] transition-colors"
+      hx-delete="/finance/tags/{{ tag.id }}"
+      hx-target="#tags-list"
+      hx-confirm="Delete tag '{{ tag.name }}'?"
+      title="Delete"
+    ><i class="ti ti-trash text-base"></i></button>
+  </li>
+  {% endfor %}
+</ul>
+{% else %}
+<p class="text-sm text-gray-400 py-3 text-center">No tags yet.</p>
+{% endif %}

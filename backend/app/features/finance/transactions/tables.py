@@ -1,14 +1,16 @@
 from sqlalchemy import DateTime, Integer, ForeignKey, Numeric, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from typing import Optional, TYPE_CHECKING
+from typing import List, Optional, TYPE_CHECKING
 from datetime import datetime
 from decimal import Decimal
 
 from app.db.base import Base
+from app.features.finance.tags.tables import transactions_tags
 
 if TYPE_CHECKING:
     from app.features.finance.accounts.tables import Account
     from app.features.finance.categories.tables import Category
+    from app.features.finance.tags.tables import FinanceTag
 
 
 class Transaction(Base):
@@ -54,3 +56,6 @@ class Transaction(Base):
         "Account", back_populates="transactions", foreign_keys=[account_id]
     )
     category: Mapped[Optional["Category"]] = relationship("Category", back_populates="transactions")
+    tags: Mapped[List["FinanceTag"]] = relationship(
+        "app.features.finance.tags.tables.FinanceTag", secondary=transactions_tags, back_populates="transactions"
+    )

@@ -353,6 +353,14 @@ class TestList:
         await TransactionRepository(session).list(TransactionFilters(category_id=2))
         session.execute.assert_called_once()
 
+    async def test_tags_filter(self):
+        session = _make_session()
+        session.execute.return_value = _scalar_all([])
+        await TransactionRepository(session).list(TransactionFilters(tags=["Travel"]))
+        query = session.execute.call_args.args[0]
+        sql = str(query.compile(compile_kwargs={"literal_binds": True}))
+        assert "finance.tags" in sql
+
     async def test_uncategorized_filter(self):
         session = _make_session()
         session.execute.return_value = _scalar_all([])
@@ -553,6 +561,16 @@ class TestCreate:
         txn = await TransactionRepository(session).create(data, amount_eur=Decimal("45.00"))
         assert txn.amount_eur == Decimal("-45.00")
 
+    async def test_resolves_tags_by_name(self):
+        session = _make_session()
+        session.execute.return_value = _scalar_first(None)
+        data = TransactionCreate(
+            account_id=1, date="2026-06-12T10:00:00",
+            amount=Decimal("50"), currency="EUR", type="expense", tags=["Travel"],
+        )
+        txn = await TransactionRepository(session).create(data)
+        assert [t.name for t in txn.tags] == ["Travel"]
+
 
 class TestUpdate:
     async def test_returns_none_when_not_found(self):
@@ -596,6 +614,21 @@ class TestUpdate:
             amount_eur=Decimal("88.00"), recompute_amount_eur=True,
         )
         assert result.amount_eur == Decimal("-88.00")
+
+    async def test_updates_tags_when_provided(self):
+        session = _make_session()
+        txn = _make_txn_orm()
+        session.execute.side_effect = [_scalar_first(txn), _scalar_first(None)]
+        await TransactionRepository(session).update(1, TransactionUpdate(tags=["Work"]))
+        assert [t.name for t in txn.tags] == ["Work"]
+
+    async def test_leaves_tags_untouched_when_not_provided(self):
+        session = _make_session()
+        txn = _make_txn_orm()
+        txn.tags = ["existing"]
+        session.execute.return_value = _scalar_first(txn)
+        await TransactionRepository(session).update(1, TransactionUpdate(merchant="NewShop"))
+        assert txn.tags == ["existing"]
 
 
 class TestUnlinkInstallmentPlan:

@@ -43,6 +43,43 @@ def _register_client(client: TestClient, redirect_uri: str = "https://client.exa
     return resp.json()
 
 
+def _obtain_access_token(client: TestClient) -> str:
+    """Runs the full DCR -> authorize -> consent -> token exchange and returns a live access token."""
+    registered = _register_client(client)
+    verifier, challenge = _pkce_pair()
+    redirect_uri = registered["redirect_uris"][0]
+    params = {
+        "response_type": "code",
+        "client_id": registered["client_id"],
+        "redirect_uri": redirect_uri,
+        "code_challenge": challenge,
+        "code_challenge_method": "S256",
+        "state": "xyz",
+    }
+    client.post("/authorize/login", data={**params, "password": "test-password"}, follow_redirects=False)
+    consent_get = client.get("/authorize", params=params)
+    token_marker = 'name="consent_token" value="'
+    start = consent_get.text.index(token_marker) + len(token_marker)
+    consent_token = consent_get.text[start:consent_get.text.index('"', start)]
+    approve_resp = client.post(
+        "/authorize/consent",
+        data={**params, "consent_token": consent_token, "decision": "approve"},
+        follow_redirects=False,
+    )
+    code = parse_qs(urlparse(approve_resp.headers["location"]).query)["code"][0]
+    token_resp = client.post(
+        "/token",
+        data={
+            "grant_type": "authorization_code",
+            "code": code,
+            "client_id": registered["client_id"],
+            "redirect_uri": redirect_uri,
+            "code_verifier": verifier,
+        },
+    )
+    return token_resp.json()["access_token"]
+
+
 class TestDynamicClientRegistration:
     def test_register_returns_client_id_and_no_secret_for_public_client(self, client):
         body = _register_client(client)
@@ -239,11 +276,26 @@ class TestProtectedResource:
         resp = client.post("/mcp", json={}, headers={"Authorization": "Bearer not-a-real-token"})
         assert resp.status_code == 401
 
-    def test_bare_mcp_path_does_not_redirect(self, client):
-        # Regression: Starlette's Mount("/mcp", ...) 307-redirects a bare POST /mcp
-        # to /mcp/ by default. MCP clients request the bare path and don't reliably
-        # resend the Authorization header across that redirect, turning every call
-        # into a silent 401 despite a valid token. redirect_slashes=False on the
-        # app's router must keep this a direct (non-redirected) request.
-        resp = client.post("/mcp", json={}, headers={"Authorization": "Bearer fake"}, follow_redirects=False)
-        assert resp.status_code != 307
+    def test_bare_mcp_path_with_valid_token_is_not_redirected_or_missing(self, client, monkeypatch):
+        # Regression: Starlette's Mount("/mcp", ...) compiles to a regex that only
+        # matches "/mcp/<something>" — a bare "/mcp" (no trailing slash, what every
+        # MCP client actually requests) never matches it directly. The Router's
+        # default redirect_slashes=True papered over that with a 307 to "/mcp/",
+        # but clients don't reliably resend the Authorization header across that
+        # redirect, so every tool call silently 401'd despite a valid token
+        # (confirmed against the real deployment). The fix dispatches "/mcp" to
+        # the session manager directly, bypassing Router matching entirely — so a
+        # valid token must reach it with neither a redirect nor a 404, regardless
+        # of what the session manager itself does with the request — verified
+        # here with session_manager.run() actually active (unlike every other
+        # test in this file, which skips entering `app`'s lifespan).
+        import app.server as server_module
+
+        async def _fake_get_catalog():
+            return {}
+
+        monkeypatch.setattr(server_module, "get_catalog", _fake_get_catalog)
+        token = _obtain_access_token(client)
+        with TestClient(app) as live_client:
+            resp = live_client.post("/mcp", json={}, headers={"Authorization": f"Bearer {token}"}, follow_redirects=False)
+        assert resp.status_code not in (307, 404)

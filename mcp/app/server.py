@@ -5,12 +5,11 @@ from mcp import types
 from mcp.server.lowlevel import Server
 from mcp.server.streamable_http_manager import StreamableHTTPSessionManager
 from starlette.applications import Starlette
-from starlette.middleware import Middleware
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.middleware.sessions import SessionMiddleware
 from starlette.requests import Request
 from starlette.responses import JSONResponse
-from starlette.routing import Mount
+from starlette.types import Receive, Scope, Send
 
 from app.backend_client import execute_command, get_catalog
 from app.catalog import Catalog, build_tools, resolve_call
@@ -91,20 +90,47 @@ async def lifespan(app: Starlette):
 
 settings = get_settings()
 
-app = Starlette(
-    routes=[*oauth_routes, Mount("/mcp", app=session_manager.handle_request)],
-    lifespan=lifespan,
-    middleware=[
-        # Starlette's `middleware=[...]` list is applied outermost-first, unlike
-        # add_middleware()'s LIFO order. SessionMiddleware must be outermost so
-        # request.session is populated before the /authorize route handlers run.
-        Middleware(SessionMiddleware, secret_key=settings.oauth_session_secret, https_only=False, session_cookie="mcp_session"),
-        Middleware(BearerAuthMiddleware),
-    ],
-)
+# oauth_app owns the lifespan and every non-MCP route (DCR, .well-known,
+# /authorize, /token, /revoke).
+oauth_app = Starlette(routes=oauth_routes, lifespan=lifespan)
 
-# Without this, a bare POST /mcp (no trailing slash — what every MCP client
-# actually requests) gets a 307 to /mcp/ from Starlette's Mount matching.
-# Clients don't reliably resend the Authorization header across that
-# redirect, so every call silently 401s despite a valid token.
-app.router.redirect_slashes = False
+
+class Dispatcher:
+    """Routes /mcp (and any sub-path) straight to the MCP session manager,
+    everything else to oauth_app — without going through Starlette's Router.
+
+    Starlette's `Mount("/mcp", ...)` only matches "/mcp/<something>": its
+    compiled regex is `^/mcp/(?P<path>.*)$`, which a bare "/mcp" (no trailing
+    slash — what every MCP client actually requests) never matches. The
+    Router's default redirect_slashes=True papers over that with a 307 to
+    "/mcp/", but clients don't reliably resend the Authorization header
+    across that redirect, so every tool call silently 401'd despite a valid
+    token (confirmed against the real deployment). Dispatching by prefix
+    here sidesteps the regex entirely — no redirect, ever.
+    """
+
+    def __init__(self, mcp_app, other_app):
+        self._mcp_app = mcp_app
+        self._other_app = other_app
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] == "lifespan":
+            await self._other_app(scope, receive, send)
+            return
+        path = scope.get("path", "")
+        if path == "/mcp" or path.startswith("/mcp/"):
+            await self._mcp_app(scope, receive, send)
+        else:
+            await self._other_app(scope, receive, send)
+
+
+# Manual ASGI composition (bypassing Starlette's `middleware=` list) so the
+# Dispatcher — not a Starlette Router — owns /mcp routing. SessionMiddleware
+# must be outermost so request.session is populated before oauth_app's
+# /authorize route handlers run.
+app = SessionMiddleware(
+    BearerAuthMiddleware(Dispatcher(mcp_app=session_manager.handle_request, other_app=oauth_app)),
+    secret_key=settings.oauth_session_secret,
+    https_only=False,
+    session_cookie="mcp_session",
+)

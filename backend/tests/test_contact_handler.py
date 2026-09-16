@@ -38,6 +38,7 @@ class TestHandleContactList:
 
         called_filters = mock_service.get_contacts.call_args.args[0]
         assert called_filters.limit == 100
+        assert called_filters.offset == 0
         assert called_filters.relationship is None
 
 

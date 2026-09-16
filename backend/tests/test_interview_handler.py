@@ -38,6 +38,7 @@ class TestHandleInterviewList:
 
         called_filters = mock_service.get_processes.call_args.args[0]
         assert called_filters.limit == 50
+        assert called_filters.offset == 0
         assert called_filters.company_id is None
         assert called_filters.status is None
 

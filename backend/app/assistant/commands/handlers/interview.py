@@ -14,6 +14,7 @@ async def handle_interview(command: str, arguments: dict[str, Any], service: Int
     if command == "list":
         filters = InterviewProcessFilters(
             limit=int(arguments.get("limit", 50)),
+            offset=int(arguments.get("offset", 0)),
             company_id=int(arguments["company_id"]) if arguments.get("company_id") else None,
             status=arguments.get("status"),
         )

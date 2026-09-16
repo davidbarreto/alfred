@@ -14,6 +14,7 @@ async def handle_contact(command: str, arguments: dict[str, Any], service: Conta
     if command == "list":
         filters = ContactFilters(
             limit=int(arguments.get("limit", 100)),
+            offset=int(arguments.get("offset", 0)),
             relationship=arguments.get("relationship"),
         )
         results = await service.get_contacts(filters)
@@ -22,6 +23,7 @@ async def handle_contact(command: str, arguments: dict[str, Any], service: Conta
     if command == "search":
         filters = ContactFilters(
             limit=int(arguments.get("limit", 100)),
+            offset=int(arguments.get("offset", 0)),
             name=arguments.get("query"),
         )
         results = await service.get_contacts(filters)

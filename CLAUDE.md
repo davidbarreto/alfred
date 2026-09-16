@@ -145,6 +145,8 @@ When a feature needs multiple services (e.g. briefing), use descriptive prefixes
 - `<Entity>Update` — PATCH request body; all fields `Optional`, `exclude_unset=True` in callers
 - `<Entity>Read` — response model; returned by routes; `model_config = {"from_attributes": True}`
 - `<Entity>Filters` — query-parameter class; plain `__init__` (not `BaseModel`), uses `Annotated[X, Query()]`; used via `Depends()` in routes
+  - Always give the parameter a plain-value default: `offset: Annotated[int, Query(ge=0)] = 0`. Never write `offset: int = Query(0, ge=0)` — that makes the `Query(...)` sentinel object itself the default, which is fine when FastAPI resolves it via `Depends()` but crashes (e.g. `int() argument must be a ... not 'Query'` deep in a repository `.offset()`/`.limit()` call) whenever the `Filters` class is constructed directly, e.g. from a command handler in `app/assistant/commands/handlers/`. Every field a handler might not explicitly pass needs the plain-value form.
+  - Caveat: `Annotated[X, Query(...)] = default` breaks FastAPI's Pydantic `TypeAdapter` (`PydanticUserError: ... is not fully defined`) in a `schemas.py` that has `from __future__ import annotations` at the top, because postponed evaluation turns the annotation into a string FastAPI can't resolve. So: new `Filters` classes should skip `from __future__ import annotations` in that file and use the safe `Annotated` form. If a file already has `from __future__ import annotations` (e.g. legacy modules), keep the bare `Query(...)` default instead, and make sure every command handler that constructs that `Filters` class passes every field explicitly (don't rely on the default at all).
 
 ### Repository conventions
 

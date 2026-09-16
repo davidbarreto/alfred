@@ -15,6 +15,10 @@ async def handle_contact(command: str, arguments: dict[str, Any], service: Conta
         filters = ContactFilters(
             limit=int(arguments.get("limit", 100)),
             offset=int(arguments.get("offset", 0)),
+            name=None,
+            email=None,
+            letter=None,
+            has_birthday=None,
             relationship=arguments.get("relationship"),
         )
         results = await service.get_contacts(filters)
@@ -25,6 +29,10 @@ async def handle_contact(command: str, arguments: dict[str, Any], service: Conta
             limit=int(arguments.get("limit", 100)),
             offset=int(arguments.get("offset", 0)),
             name=arguments.get("query"),
+            email=None,
+            letter=None,
+            has_birthday=None,
+            relationship=None,
         )
         results = await service.get_contacts(filters)
         return [r.model_dump(mode="json") for r in results]

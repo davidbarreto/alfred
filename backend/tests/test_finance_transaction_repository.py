@@ -22,6 +22,12 @@ def _scalar_first(value):
     return r
 
 
+def _scalar_one(value):
+    r = MagicMock()
+    r.scalars.return_value.one.return_value = value
+    return r
+
+
 def _scalar_all(values):
     r = MagicMock()
     r.scalars.return_value.all.return_value = values
@@ -555,47 +561,68 @@ class TestGetFilteredSumByCurrency:
 
 
 class TestCreate:
-    async def test_adds_commits_and_refreshes(self):
+    """create() re-selects with selectinload(Transaction.tags) after commit (instead
+    of session.refresh()) since a plain refresh() leaves the tags relationship
+    expired, causing a lazy-load MissingGreenlet crash later when the async
+    response is serialized -- see TaskRepository.create_task for the established
+    pattern this mirrors. Tests assert on the object passed to session.add() to
+    check construction-time fields (amount_eur, tags) independently of the
+    mocked re-select's return value."""
+
+    async def test_adds_commits_and_reselects_with_tags(self):
         session = _make_session()
+        txn = _make_txn_orm()
+        session.execute.return_value = _scalar_one(txn)
         data = TransactionCreate(
             account_id=1, date="2026-06-12T10:00:00",
             amount=Decimal("50"), currency="EUR", type="expense",
         )
-        await TransactionRepository(session).create(data)
+        result = await TransactionRepository(session).create(data)
         session.add.assert_called_once()
         session.commit.assert_called_once()
-        session.refresh.assert_called_once()
+        assert result == txn
 
     async def test_sets_amount_eur_on_created_transaction(self):
         session = _make_session()
+        session.execute.return_value = _scalar_one(_make_txn_orm())
         data = TransactionCreate(
             account_id=1, date="2026-06-12T10:00:00",
             amount=Decimal("50"), currency="USD", type="expense",
         )
-        txn = await TransactionRepository(session).create(data, amount_eur=Decimal("45.00"))
-        assert txn.amount_eur == Decimal("45.00")
+        await TransactionRepository(session).create(data, amount_eur=Decimal("45.00"))
+        created = session.add.call_args.args[0]
+        assert created.amount_eur == Decimal("45.00")
 
     async def test_normalizes_amount_eur_sign_to_match_amount(self):
         session = _make_session()
+        session.execute.return_value = _scalar_one(_make_txn_orm())
         data = TransactionCreate(
             account_id=1, date="2026-06-12T10:00:00",
             amount=Decimal("-50"), currency="USD", type="income",
         )
-        txn = await TransactionRepository(session).create(data, amount_eur=Decimal("45.00"))
-        assert txn.amount_eur == Decimal("-45.00")
+        await TransactionRepository(session).create(data, amount_eur=Decimal("45.00"))
+        created = session.add.call_args.args[0]
+        assert created.amount_eur == Decimal("-45.00")
 
     async def test_resolves_tags_by_name(self):
         session = _make_session()
-        session.execute.return_value = _scalar_first(None)
+        session.execute.side_effect = [_scalar_first(None), _scalar_one(_make_txn_orm())]
         data = TransactionCreate(
             account_id=1, date="2026-06-12T10:00:00",
             amount=Decimal("50"), currency="EUR", type="expense", tags=["Travel"],
         )
-        txn = await TransactionRepository(session).create(data)
-        assert [t.name for t in txn.tags] == ["Travel"]
+        await TransactionRepository(session).create(data)
+        created = session.add.call_args.args[0]
+        assert [t.name for t in created.tags] == ["Travel"]
 
 
 class TestUpdate:
+    """update() re-selects with selectinload(Transaction.tags) after commit (same
+    reasoning as TestCreate above) instead of session.refresh(). The mutated
+    transaction object from the initial get() is reused as the final re-select's
+    mocked return, since setattr() already mutated it in place by the time the
+    second query would run for real."""
+
     async def test_returns_none_when_not_found(self):
         session = _make_session()
         session.execute.return_value = _scalar_first(None)
@@ -606,7 +633,7 @@ class TestUpdate:
     async def test_applies_fields_and_commits(self):
         session = _make_session()
         txn = _make_txn_orm()
-        session.execute.return_value = _scalar_first(txn)
+        session.execute.side_effect = [_scalar_first(txn), _scalar_one(txn)]
         await TransactionRepository(session).update(1, TransactionUpdate(merchant="NewShop"))
         session.commit.assert_called_once()
 
@@ -614,14 +641,14 @@ class TestUpdate:
         session = _make_session()
         txn = _make_txn_orm()
         txn.amount_eur = Decimal("10.00")
-        session.execute.return_value = _scalar_first(txn)
+        session.execute.side_effect = [_scalar_first(txn), _scalar_one(txn)]
         result = await TransactionRepository(session).update(1, TransactionUpdate(merchant="NewShop"))
         assert result.amount_eur == Decimal("10.00")
 
     async def test_sets_amount_eur_when_recomputing(self):
         session = _make_session()
         txn = _make_txn_orm()
-        session.execute.return_value = _scalar_first(txn)
+        session.execute.side_effect = [_scalar_first(txn), _scalar_one(txn)]
         result = await TransactionRepository(session).update(
             1, TransactionUpdate(amount=Decimal("99")),
             amount_eur=Decimal("88.00"), recompute_amount_eur=True,
@@ -631,7 +658,7 @@ class TestUpdate:
     async def test_normalizes_amount_eur_sign_to_match_new_amount(self):
         session = _make_session()
         txn = _make_txn_orm()
-        session.execute.return_value = _scalar_first(txn)
+        session.execute.side_effect = [_scalar_first(txn), _scalar_one(txn)]
         result = await TransactionRepository(session).update(
             1, TransactionUpdate(amount=Decimal("-99")),
             amount_eur=Decimal("88.00"), recompute_amount_eur=True,
@@ -641,7 +668,7 @@ class TestUpdate:
     async def test_updates_tags_when_provided(self):
         session = _make_session()
         txn = _make_txn_orm()
-        session.execute.side_effect = [_scalar_first(txn), _scalar_first(None)]
+        session.execute.side_effect = [_scalar_first(txn), _scalar_first(None), _scalar_one(txn)]
         await TransactionRepository(session).update(1, TransactionUpdate(tags=["Work"]))
         assert [t.name for t in txn.tags] == ["Work"]
 

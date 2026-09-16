@@ -400,8 +400,10 @@ class TransactionRepository:
         transaction.tags = await self._tag_repo.resolve_tags(data.tags)
         self._session.add(transaction)
         await self._session.commit()
-        await self._session.refresh(transaction)
-        return transaction
+        result = await self._session.execute(
+            select(Transaction).options(selectinload(Transaction.tags)).where(Transaction.id == transaction.id)
+        )
+        return result.scalars().one()
 
     async def update(
         self,
@@ -421,8 +423,10 @@ class TransactionRepository:
         if recompute_amount_eur:
             transaction.amount_eur = _signed_eur(transaction.amount, amount_eur)
         await self._session.commit()
-        await self._session.refresh(transaction)
-        return transaction
+        result = await self._session.execute(
+            select(Transaction).options(selectinload(Transaction.tags)).where(Transaction.id == transaction_id)
+        )
+        return result.scalars().one()
 
     async def add(self, data: TransactionCreate, amount_eur: Decimal | None = None) -> Transaction:
         """Add transaction to session without committing. Caller is responsible for commit."""

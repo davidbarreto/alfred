@@ -62,3 +62,16 @@ class TestExpandOccurrences:
         end = datetime(2026, 1, 5, 11, 0)
         with pytest.raises(ValueError):
             expand_occurrences(start, end, "NOT-A-VALID-RRULE", None, None)
+
+    def test_utc_until_from_google_calendar_does_not_raise(self):
+        # Google Calendar always encodes UNTIL in UTC ("Z"), but start_datetime here
+        # is the naive local datetime LocalDateTime hands back — this combination
+        # used to raise "RRULE UNTIL values must be specified in UTC when DTSTART
+        # is timezone-aware" from dateutil.rrule.
+        start = datetime(2026, 1, 5, 10, 0)
+        end = datetime(2026, 1, 5, 11, 0)
+        spans = expand_occurrences(
+            start, end, "FREQ=WEEKLY;UNTIL=20260119T100000Z",
+            range_start=None, range_end=None,
+        )
+        assert [s.date().isoformat() for s, _ in spans] == ["2026-01-05", "2026-01-12", "2026-01-19"]

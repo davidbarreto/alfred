@@ -20,9 +20,18 @@ _PRIORITY_ORDER = case(
 )
 
 _STATUS_ORDER = case(
-    {"active": 0, "applied": 1, "offer": 2, "rejected": 3, "withdrawn": 4, "ghosted": 5},
+    {
+        "active": 0,
+        "applied": 1,
+        "offer": 2,
+        "offer_accepted": 3,
+        "withdrawn": 4,
+        "offer_declined": 5,
+        "rejected": 6,
+        "ghosted": 7,
+    },
     value=InterviewProcess.status,
-    else_=6,
+    else_=8,
 )
 
 

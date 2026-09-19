@@ -32,8 +32,8 @@
       <div>
         <label class="text-xs text-gray-500 mb-1 block">Status</label>
         <select name="status" class="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white w-full focus:outline-none focus:ring-1 focus:ring-[#378ADD]">
-          {% for st in ["applied", "active", "offer", "rejected", "withdrawn", "ghosted"] %}
-          <option value="{{ st }}" {% if process.status == st %}selected{% endif %}>{{ st | capitalize }}</option>
+          {% for st in ["applied", "active", "offer", "offer_accepted", "offer_declined", "rejected", "withdrawn", "ghosted"] %}
+          <option value="{{ st }}" {% if process.status == st %}selected{% endif %}>{{ st | replace('_', ' ') | capitalize }}</option>
           {% endfor %}
         </select>
       </div>

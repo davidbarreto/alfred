@@ -13,11 +13,11 @@
         {% if company %}<a href="/interviews/companies/{{ company.id }}" class="hover:text-[#378ADD] hover:underline">{{ company.name }}</a>{% else %}—{% endif %}
       </span>
       <span class="px-2 py-0.5 rounded-full text-xs font-medium
-        {% if process.status == 'offer' %}bg-[#E9F5E1] text-[#3B7A1F]
-        {% elif process.status in ['rejected', 'withdrawn', 'ghosted'] %}bg-gray-100 text-gray-500
+        {% if process.status in ['offer', 'offer_accepted'] %}bg-[#E9F5E1] text-[#3B7A1F]
+        {% elif process.status in ['rejected', 'withdrawn', 'offer_declined', 'ghosted'] %}bg-gray-100 text-gray-500
         {% elif process.status == 'applied' %}bg-[#FDF3E1] text-[#8A6100]
         {% else %}bg-[#E6F1FB] text-[#0C447C]{% endif %}">
-        {{ process.status }}
+        {{ process.status | replace('_', ' ') }}
       </span>
     </div>
     <a href="/interviews/{{ process.id }}/edit" class="btn btn-sm btn-ghost text-[#378ADD] gap-1">

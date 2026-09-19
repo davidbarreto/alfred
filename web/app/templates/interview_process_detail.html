@@ -47,10 +47,18 @@
       <div class="text-gray-800">{{ process.office_location or "—" }}</div>
     </div>
     <div>
-      <div class="text-xs text-gray-400">Salary range</div>
+      <div class="text-xs text-gray-400">Salary range (yearly gross)</div>
       <div class="text-gray-800">
         {% if process.salary_min or process.salary_max %}
           {{ process.salary_min or "?" }} – {{ process.salary_max or "?" }} {{ process.salary_currency or "" }}
+        {% else %}—{% endif %}
+      </div>
+    </div>
+    <div>
+      <div class="text-xs text-gray-400">Salary offered (yearly gross)</div>
+      <div class="text-gray-800">
+        {% if process.salary_offered %}
+          {{ process.salary_offered }} {{ process.salary_currency or "" }}
         {% else %}—{% endif %}
       </div>
     </div>

@@ -83,20 +83,25 @@
       </div>
     </div>
 
-    <div class="grid grid-cols-3 gap-3">
+    <div class="grid grid-cols-4 gap-3">
       <div>
-        <label class="text-xs text-gray-500 mb-1 block">Salary min</label>
+        <label class="text-xs text-gray-500 mb-1 block">Salary min (yearly gross)</label>
         <input name="salary_min" type="number" value="{{ process.salary_min if process.salary_min is not none else '' }}"
                class="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white w-full focus:outline-none focus:ring-1 focus:ring-[#378ADD]" />
       </div>
       <div>
-        <label class="text-xs text-gray-500 mb-1 block">Salary max</label>
+        <label class="text-xs text-gray-500 mb-1 block">Salary max (yearly gross)</label>
         <input name="salary_max" type="number" value="{{ process.salary_max if process.salary_max is not none else '' }}"
                class="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white w-full focus:outline-none focus:ring-1 focus:ring-[#378ADD]" />
       </div>
       <div>
+        <label class="text-xs text-gray-500 mb-1 block">Salary offered (yearly gross)</label>
+        <input name="salary_offered" type="number" value="{{ process.salary_offered if process.salary_offered is not none else '' }}"
+               class="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white w-full focus:outline-none focus:ring-1 focus:ring-[#378ADD]" />
+      </div>
+      <div>
         <label class="text-xs text-gray-500 mb-1 block">Currency</label>
-        <input name="salary_currency" type="text" maxlength="3" value="{{ process.salary_currency or '' }}"
+        <input name="salary_currency" type="text" maxlength="3" value="{{ process.salary_currency or 'EUR' }}"
                class="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white w-full focus:outline-none focus:ring-1 focus:ring-[#378ADD]" />
       </div>
     </div>

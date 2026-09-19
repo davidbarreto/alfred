@@ -27,7 +27,8 @@ class InterviewProcessCreate(BaseModel):
     study_plan_id: int | None = None
     salary_min: int | None = None
     salary_max: int | None = None
-    salary_currency: str | None = None
+    salary_offered: int | None = None
+    salary_currency: str | None = "EUR"
     work_regime: WorkRegime | None = None
     office_days_per_month: float | None = None
     office_location: str | None = None
@@ -48,6 +49,7 @@ class InterviewProcessUpdate(BaseModel):
     study_plan_id: int | None = None
     salary_min: int | None = None
     salary_max: int | None = None
+    salary_offered: int | None = None
     salary_currency: str | None = None
     work_regime: WorkRegime | None = None
     office_days_per_month: float | None = None
@@ -70,6 +72,7 @@ class InterviewProcessRead(BaseModel):
     study_plan_id: int | None
     salary_min: int | None
     salary_max: int | None
+    salary_offered: int | None
     salary_currency: str | None
     work_regime: str | None
     office_days_per_month: float | None

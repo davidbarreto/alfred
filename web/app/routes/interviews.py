@@ -221,6 +221,7 @@ async def create_process(
     office_location: Annotated[str, Form()] = "",
     salary_min: Annotated[str, Form()] = "",
     salary_max: Annotated[str, Form()] = "",
+    salary_offered: Annotated[str, Form()] = "",
     salary_currency: Annotated[str, Form()] = "",
     benefits: Annotated[str, Form()] = "",
     notes: Annotated[str, Form()] = "",
@@ -258,6 +259,8 @@ async def create_process(
         process_payload["salary_min"] = int(salary_min)
     if salary_max:
         process_payload["salary_max"] = int(salary_max)
+    if salary_offered:
+        process_payload["salary_offered"] = int(salary_offered)
     if salary_currency:
         process_payload["salary_currency"] = salary_currency
     if benefits:
@@ -334,6 +337,7 @@ async def update_process(
     office_location: Annotated[str, Form()] = "",
     salary_min: Annotated[str, Form()] = "",
     salary_max: Annotated[str, Form()] = "",
+    salary_offered: Annotated[str, Form()] = "",
     salary_currency: Annotated[str, Form()] = "",
     benefits: Annotated[str, Form()] = "",
     notes: Annotated[str, Form()] = "",
@@ -355,6 +359,7 @@ async def update_process(
     payload["office_location"] = office_location or None
     payload["salary_min"] = int(salary_min) if salary_min else None
     payload["salary_max"] = int(salary_max) if salary_max else None
+    payload["salary_offered"] = int(salary_offered) if salary_offered else None
     payload["salary_currency"] = salary_currency or None
     payload["benefits"] = benefits or None
     payload["notes"] = notes or None

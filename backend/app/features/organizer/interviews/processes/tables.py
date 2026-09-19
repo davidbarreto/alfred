@@ -33,6 +33,7 @@ class InterviewProcess(Base):
 
     salary_min: Mapped[int | None] = mapped_column(Integer, nullable=True)
     salary_max: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    salary_offered: Mapped[int | None] = mapped_column(Integer, nullable=True)
     salary_currency: Mapped[str | None] = mapped_column(String(3), nullable=True)
     work_regime: Mapped[str | None] = mapped_column(String(20), nullable=True)
     office_days_per_month: Mapped[float | None] = mapped_column(Numeric(4, 1), nullable=True)

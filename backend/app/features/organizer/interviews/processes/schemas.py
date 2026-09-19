@@ -93,7 +93,7 @@ class InterviewProcessFilters:
         limit: int = Query(50, ge=1, le=200),
         offset: int = Query(0, ge=0),
         company_id: int | None = Query(None),
-        status: str | None = Query(None),
+        status: list[str] | None = Query(None),
     ) -> None:
         self.limit = limit
         self.offset = offset

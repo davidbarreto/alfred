@@ -11,6 +11,23 @@ from app.templates_config import templates
 router = APIRouter(prefix="/interviews")
 
 _PAGE_SIZE = 20
+_STATUS_OPTIONS = ["applied", "active", "offer", "offer_accepted", "offer_declined", "rejected", "withdrawn", "ghosted"]
+_DEFAULT_STATUSES = ["active", "applied"]
+_STATUS_COOKIE = "interview_status_filter"
+_STATUS_COOKIE_MAX_AGE = 60 * 60 * 24 * 365
+
+
+def _resolve_statuses(request: Request) -> list[str]:
+    if "filtered" in request.query_params:
+        return request.query_params.getlist("status")
+    cookie_value = request.cookies.get(_STATUS_COOKIE)
+    if cookie_value is not None:
+        return [s for s in cookie_value.split(",") if s]
+    return _DEFAULT_STATUSES
+
+
+def _status_query_string(statuses: list[str]) -> str:
+    return "&".join(f"status={s}" for s in statuses)
 
 
 def _safe_back_url(raw: str, fallback: str) -> str:
@@ -137,12 +154,12 @@ async def delete_company(company_id: int):
 
 @router.get("/", response_class=HTMLResponse)
 async def interviews_page(request: Request):
-    status_filter = request.query_params.get("status", "").strip()
+    selected_statuses = _resolve_statuses(request)
     offset = max(0, int(request.query_params.get("offset", "0")))
 
     params: dict = {"limit": _PAGE_SIZE + 1, "offset": offset}
-    if status_filter:
-        params["status"] = status_filter
+    if selected_statuses:
+        params["status"] = selected_statuses
 
     api_error: str | None = None
     try:
@@ -159,27 +176,34 @@ async def interviews_page(request: Request):
     except httpx.HTTPError:
         insights = []
 
-    return templates.TemplateResponse(request, "interviews.html", {
+    response = templates.TemplateResponse(request, "interviews.html", {
         "processes": processes,
         "companies": companies,
         "insights": insights,
         "has_next": has_next,
         "has_prev": has_prev,
-        "query_status": status_filter,
+        "status_options": _STATUS_OPTIONS,
+        "selected_statuses": selected_statuses,
+        "status_qs": _status_query_string(selected_statuses),
         "query_offset": offset,
         "api_error": api_error,
         "today": date.today().isoformat(),
     })
+    if "filtered" in request.query_params:
+        response.set_cookie(
+            _STATUS_COOKIE, ",".join(selected_statuses), max_age=_STATUS_COOKIE_MAX_AGE, httponly=True, samesite="lax"
+        )
+    return response
 
 
 @router.get("/table", response_class=HTMLResponse)
 async def interviews_table_fragment(request: Request):
-    status_filter = request.query_params.get("status", "").strip()
+    selected_statuses = _resolve_statuses(request)
     offset = max(0, int(request.query_params.get("offset", "0")))
 
     params: dict = {"limit": _PAGE_SIZE + 1, "offset": offset}
-    if status_filter:
-        params["status"] = status_filter
+    if selected_statuses:
+        params["status"] = selected_statuses
 
     try:
         raw = await api.get("/organizer/interview-processes", params=params)
@@ -194,6 +218,7 @@ async def interviews_table_fragment(request: Request):
         "companies": companies,
         "has_next": has_next,
         "has_prev": has_prev,
+        "status_qs": _status_query_string(selected_statuses),
     })
 
 

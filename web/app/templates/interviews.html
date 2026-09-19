@@ -27,16 +27,26 @@
   {% endif %}
 
   <div class="flex flex-wrap items-center gap-2">
-    <select
-      id="filter-status"
-      class="border border-gray-200 rounded-lg px-3 py-1.5 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-[#378ADD]"
-      onchange="window.location = '/interviews?status=' + this.value"
-    >
-      <option value="" {% if not query_status %}selected{% endif %}>All statuses</option>
-      {% for s in ["applied", "active", "offer", "offer_accepted", "offer_declined", "rejected", "withdrawn", "ghosted"] %}
-      <option value="{{ s }}" {% if query_status == s %}selected{% endif %}>{{ s | replace('_', ' ') | capitalize }}</option>
-      {% endfor %}
-    </select>
+    <details class="dropdown">
+      <summary class="btn btn-sm btn-outline border-gray-200 text-gray-700 gap-1 list-none">
+        <i class="ti ti-filter text-sm"></i>
+        Status
+        {% if selected_statuses %}({{ selected_statuses | length }}){% else %}(All){% endif %}
+      </summary>
+      <form method="get" action="/interviews" class="dropdown-content menu bg-white border border-gray-200 rounded-lg shadow z-10 w-56 p-2 gap-0.5 mt-1">
+        <input type="hidden" name="filtered" value="1" />
+        {% for s in status_options %}
+        <label class="flex items-center gap-2 text-sm px-2 py-1 hover:bg-gray-50 rounded cursor-pointer">
+          <input type="checkbox" name="status" value="{{ s }}" {% if s in selected_statuses %}checked{% endif %}
+                 class="checkbox checkbox-xs" />
+          {{ s | replace('_', ' ') | capitalize }}
+        </label>
+        {% endfor %}
+        <div class="flex justify-end gap-2 mt-2 pt-2 border-t border-gray-100">
+          <button type="submit" class="btn btn-xs btn-primary">Apply</button>
+        </div>
+      </form>
+    </details>
   </div>
 
   <div id="interviews-table" class="bg-white border border-gray-200 rounded-lg p-4">

@@ -55,8 +55,9 @@ class InterviewProcessRepository:
         )
         if filters.company_id is not None:
             stmt = stmt.where(InterviewProcess.company_id == filters.company_id)
-        if filters.status is not None:
-            stmt = stmt.where(InterviewProcess.status == filters.status)
+        if filters.status:
+            statuses = filters.status if isinstance(filters.status, list) else [filters.status]
+            stmt = stmt.where(InterviewProcess.status.in_(statuses))
         stmt = stmt.order_by(
             _STATUS_ORDER,
             _PRIORITY_ORDER,

@@ -46,6 +46,7 @@ from app.features.briefing.evening_formatter_service import EveningDigestFormatt
 from app.features.briefing.history_service import BriefingHistoryService
 from app.features.core.reminders.service import ReminderService
 from app.features.core.pause.service import GlobalPauseService
+from app.features.core.urgency_reset.service import UrgencyResetService
 from app.integrations.open_meteo.client import OpenMeteoClient
 from app.integrations.open_meteo.provider import OpenMeteoProvider
 from app.integrations.google_public_holidays.client import GooglePublicHolidayClient
@@ -392,6 +393,9 @@ def get_reminder_service(session: AsyncSession = Depends(get_session)) -> Remind
 def get_global_pause_service(session: AsyncSession = Depends(get_session)) -> GlobalPauseService:
     return GlobalPauseService(session=session, task_service=get_task_service(session))
 
+def get_urgency_reset_service(session: AsyncSession = Depends(get_session)) -> UrgencyResetService:
+    return UrgencyResetService(session=session, task_service=get_task_service(session))
+
 def get_track_service(session: AsyncSession = Depends(get_session)) -> TrackService:
     return TrackService(session, chunk_service=get_language_chunk_service(session))
 
@@ -603,6 +607,7 @@ EveningDigestFormatterServiceDep = Annotated[EveningDigestFormatterService, Depe
 BriefingHistoryServiceDep = Annotated[BriefingHistoryService, Depends(get_briefing_history_service)]
 ReminderServiceDep = Annotated[ReminderService, Depends(get_reminder_service)]
 GlobalPauseServiceDep = Annotated[GlobalPauseService, Depends(get_global_pause_service)]
+UrgencyResetServiceDep = Annotated[UrgencyResetService, Depends(get_urgency_reset_service)]
 TrackServiceDep = Annotated[TrackService, Depends(get_track_service)]
 GrammarScopeServiceDep = Annotated[GrammarScopeService, Depends(get_grammar_scope_service)]
 ChunkServiceDep = Annotated[LanguageChunkService, Depends(get_language_chunk_service)]

@@ -438,6 +438,30 @@ class TestBuildDueDigestTasks:
         assert "Urgent tasks:" in digest.text
         assert "- Learn guitar (LOW)" in digest.text
 
+    async def test_recurring_undated_task_is_not_age_escalated(self, mock_session, mock_task_service):
+        # Every cycle of a habit starts fresh, so created_at age says nothing about it.
+        task = _make_task(
+            id=10, title="Take medicine", deadline=None, urgency="NORMAL", priority="LOW",
+            created_at=NOW - timedelta(days=90), recurrence_rule="FREQ=WEEKLY;BYDAY=SA",
+        )
+        mock_task_service.get_tasks.return_value = [task]
+
+        with (
+            patch("app.features.core.reminders.service.CalendarEventService") as MockEventService,
+            patch("app.features.core.reminders.service.ShoppingRepository") as MockShoppingRepo,
+            patch("app.features.core.reminders.service.WorkingMemoryRepository") as MockWMRepo,
+            patch("app.features.core.reminders.service.local_now", return_value=NOW),
+        ):
+            MockEventService.return_value.get_events = AsyncMock(return_value=[])
+            MockShoppingRepo.return_value.list = AsyncMock(return_value=[])
+            MockWMRepo.return_value.list = AsyncMock(return_value=[])
+            MockWMRepo.return_value.upsert = AsyncMock()
+
+            digest = await _service(mock_session, mock_task_service).build_due_digest()
+
+        mock_task_service.update_task.assert_not_awaited()
+        assert "Urgent tasks:" not in digest.text
+
     async def test_undated_task_under_a_month_old_is_not_escalated(self, mock_session, mock_task_service):
         task = _make_task(
             id=9, title="Learn guitar", deadline=None, urgency="NORMAL", priority="LOW",

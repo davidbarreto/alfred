@@ -206,3 +206,44 @@ class TestSnoozeTask:
 
         assert resp.status_code == 302
         assert resp.headers["location"].startswith("/login")
+
+
+class TestResetUrgency:
+    _RESULT = {"days": 7, "tasks_urgency_reset": 5, "tasks_deadline_moved": 3, "tasks_snoozed": 1}
+
+    def test_resets_and_renders_refreshed_list_with_summary(self, client, mock_api):
+        mock_api["post"].return_value = self._RESULT
+        mock_api["get"].return_value = [_task(id=3, title="Learn guitar")]
+
+        resp = client.post("/tasks/reset-urgency")
+
+        assert resp.status_code == 200
+        assert "Learn guitar" in resp.text
+        assert resp.headers["X-Urgency-Reset-Summary"] == (
+            "Reset 5 urgent task(s), moved 3 deadline(s), snoozed 1 undated task(s) for 7 days."
+        )
+        mock_api["post"].assert_awaited_once_with("/core/urgency-reset")
+
+    def test_reloads_list_for_active_filter(self, client, mock_api):
+        mock_api["post"].return_value = self._RESULT
+        mock_api["get"].return_value = []
+
+        client.post("/tasks/reset-urgency?filter=today")
+
+        params = mock_api["get"].call_args.kwargs["params"]
+        assert params["due_today"] == "true"
+
+    def test_returns_422_when_backend_fails(self, client, mock_api):
+        request = httpx.Request("POST", "http://api/core/urgency-reset")
+        response = httpx.Response(500, request=request)
+        mock_api["post"].side_effect = httpx.HTTPStatusError("boom", request=request, response=response)
+
+        resp = client.post("/tasks/reset-urgency")
+
+        assert resp.status_code == 422
+
+    def test_requires_authentication(self, anon_client):
+        resp = anon_client.post("/tasks/reset-urgency", follow_redirects=False)
+
+        assert resp.status_code == 302
+        assert resp.headers["location"].startswith("/login")

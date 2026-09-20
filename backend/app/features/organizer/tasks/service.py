@@ -4,7 +4,6 @@ from datetime import date, datetime, timedelta, timezone
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.shared.storage import StorageProvider
-from app.shared.timezone import local_now
 from app.features.organizer.tasks.tables import Task
 from app.features.organizer.tasks.schemas import (
     TaskCompletionRead,
@@ -186,19 +185,6 @@ class TaskService:
         task_orm = await self._repo.update_task(task_id, TaskUpdate(status="CANCELLED"))
         logger.info("Task cancelled: id=%d", task_id)
         return TaskRead.model_validate(task_orm)
-
-    async def restore_after_pause(self, delta: timedelta) -> tuple[int, int]:
-        """Undo age-based urgency escalation and push overdue deadlines forward by
-        `delta` (the pause duration), so a break doesn't get held against active tasks.
-        """
-        now = local_now().replace(tzinfo=None)
-        urgency_reset = await self._repo.reset_escalated_urgency()
-        deadlines_shifted = await self._repo.shift_overdue_deadlines(delta, now)
-        logger.info(
-            "Tasks restored after pause: urgency_reset=%d deadlines_shifted=%d delta=%s",
-            urgency_reset, deadlines_shifted, delta,
-        )
-        return urgency_reset, deadlines_shifted
 
     async def delete_task(self, task_id: int) -> None:
         task = await self._repo.get_task(task_id)

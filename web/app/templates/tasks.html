@@ -7,7 +7,13 @@
   <div class="flex items-center justify-between">
     <h1 class="text-base font-semibold text-gray-900">Tasks</h1>
     <div class="flex items-center gap-3">
+      <span id="reset-urgency-msg" class="text-xs text-[#639922] hidden"></span>
       <a href="/tasks/insights" class="text-xs text-[#378ADD] hover:underline">View insights →</a>
+      <button id="reset-urgency-btn" onclick="resetUrgency()"
+              title="Clear Urgent on all tasks and give them a fresh escalation clock"
+              class="btn btn-sm btn-ghost gap-1">
+        <i class="ti ti-refresh text-sm"></i>Reset urgency
+      </button>
       <button onclick="openNewTask()"
               class="btn btn-sm btn-primary gap-1">
         <i class="ti ti-plus text-sm"></i>New task
@@ -218,6 +224,34 @@ function openEditTask(task) {
 
   document.getElementById("new-task-modal").showModal();
   setTimeout(() => document.getElementById("task-title").focus(), 50);
+}
+
+async function resetUrgency() {
+  const ok = confirm(
+    "Reset urgency for all tasks?\n\n" +
+    "- Urgent tasks go back to Normal\n" +
+    "- Overdue deadlines move a week ahead\n" +
+    "- Undated tasks are snoozed for a week\n" +
+    "Priority is never changed."
+  );
+  if (!ok) return;
+  const btn = document.getElementById("reset-urgency-btn");
+  const msg = document.getElementById("reset-urgency-msg");
+  btn.disabled = true;
+  msg.classList.add("hidden");
+  try {
+    const res = await fetch(`/tasks/reset-urgency${window.location.search}`, { method: "POST" });
+    if (!res.ok) throw new Error((await res.text()) || `Error ${res.status}`);
+    document.getElementById("task-list").innerHTML = await res.text();
+    msg.textContent = res.headers.get("X-Urgency-Reset-Summary") || "Urgency reset.";
+    msg.classList.replace("text-[#E24B4A]", "text-[#639922]");
+  } catch (err) {
+    msg.textContent = err.message || "Failed to reset urgency.";
+    msg.classList.replace("text-[#639922]", "text-[#E24B4A]");
+  } finally {
+    msg.classList.remove("hidden");
+    btn.disabled = false;
+  }
 }
 
 async function submitNewTask(e) {

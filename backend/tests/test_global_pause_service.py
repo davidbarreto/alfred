@@ -6,13 +6,14 @@ from fastapi import HTTPException
 
 from app.features.core.pause.service import PAUSE_KEY, GlobalPauseService
 from app.features.core.pause.schemas import PauseLogRead, PauseStateRead
+from app.features.core.urgency_reset.schemas import UrgencyResetRead
 
 
 @pytest.fixture
 def service():
     svc = GlobalPauseService.__new__(GlobalPauseService)
     svc._settings = AsyncMock()
-    svc._task_service = AsyncMock()
+    svc._urgency_reset_service = AsyncMock()
     svc._pause_log_repo = AsyncMock()
     return svc
 
@@ -82,10 +83,12 @@ class TestResume:
             await service.resume()
         assert exc_info.value.status_code == 400
 
-    async def test_restores_tasks_and_clears_setting(self, service):
+    async def test_resets_urgency_and_clears_setting(self, service):
         paused_at = datetime.now(timezone.utc) - timedelta(days=3)
         service._settings.get_value.return_value = paused_at.isoformat()
-        service._task_service.restore_after_pause.return_value = (4, 2)
+        service._urgency_reset_service.reset.return_value = UrgencyResetRead(
+            days=7, tasks_urgency_reset=4, tasks_deadline_moved=2, tasks_snoozed=1
+        )
 
         result = await service.resume()
 
@@ -93,9 +96,7 @@ class TestResume:
         assert result.tasks_urgency_reset == 4
         assert result.tasks_deadline_shifted == 2
 
-        service._task_service.restore_after_pause.assert_awaited_once()
-        (delta,), _ = service._task_service.restore_after_pause.call_args
-        assert delta > timedelta(days=2, hours=23)
+        service._urgency_reset_service.reset.assert_awaited_once_with()
 
         service._settings.set_value.assert_called_once_with(PAUSE_KEY, "")
 

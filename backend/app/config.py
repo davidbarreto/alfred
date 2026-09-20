@@ -86,6 +86,7 @@ class Settings(BaseSettings):
     # Reminders — undated-task escalation
     undated_task_escalation_days: int = Field(default=30, validation_alias="UNDATED_TASK_ESCALATION_DAYS")
     undated_task_snooze_days: int = Field(default=7, validation_alias="UNDATED_TASK_SNOOZE_DAYS")
+    urgency_reset_days: int = Field(default=7, validation_alias="URGENCY_RESET_DAYS")
 
     # CS coach — LeetCode auth is a static session cookie (not a refreshable OAuth
     # token), copied from a logged-in browser session; it needs manual renewal in

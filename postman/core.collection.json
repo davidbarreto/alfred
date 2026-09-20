@@ -2595,6 +2595,81 @@
       }
     },
     {
+      "name": "89d - Urgency Reset",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Response has expected shape', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json.days).to.be.a('number');",
+              "    ['tasks_urgency_reset', 'tasks_deadline_moved', 'tasks_snoozed'].forEach(",
+              "        f => pm.expect(json[f]).to.be.a('number')",
+              "    );",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/core/urgency-reset?days=7",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "core",
+            "urgency-reset"
+          ],
+          "query": [
+            {
+              "key": "days",
+              "value": "7"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "89e - Urgency Reset Invalid Days (422)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 422', () => pm.response.to.have.status(422));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/core/urgency-reset?days=0",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "core",
+            "urgency-reset"
+          ],
+          "query": [
+            {
+              "key": "days",
+              "value": "0"
+            }
+          ]
+        }
+      }
+    },
+    {
       "name": "90 - Sessions - Finish",
       "event": [
         {

@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.features.core.pause.repository import PauseLogRepository
 from app.features.core.pause.schemas import PauseLogRead, PauseResumeRead, PauseStateRead
 from app.features.core.settings.service import SettingService
+from app.features.core.urgency_reset.service import UrgencyResetService
 from app.features.organizer.tasks.service import TaskService
 
 logger = logging.getLogger(__name__)
@@ -16,13 +17,13 @@ PAUSE_KEY = "core.paused_at"
 
 class GlobalPauseService:
     """A single global switch: while paused, reminders/briefing pushes are muted and
-    task urgency stops escalating. Resuming restores urgency and shifts overdue
-    deadlines forward by the pause duration, so lost time isn't held against you.
+    task urgency stops escalating. Resuming runs an urgency reset (see
+    UrgencyResetService) so lost time isn't held against you.
     """
 
     def __init__(self, session: AsyncSession, task_service: TaskService) -> None:
         self._settings = SettingService(session)
-        self._task_service = task_service
+        self._urgency_reset_service = UrgencyResetService(session, task_service)
         self._pause_log_repo = PauseLogRepository(session)
 
     async def get_state(self) -> PauseStateRead:
@@ -48,23 +49,23 @@ class GlobalPauseService:
         if not state.paused:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Not paused")
         now = datetime.now(timezone.utc)
-        delta = now - state.paused_at
-        urgency_reset, deadlines_shifted = await self._task_service.restore_after_pause(delta)
+        reset = await self._urgency_reset_service.reset()
         await self._settings.set_value(PAUSE_KEY, "")
         await self._pause_log_repo.create(
             started_at=state.paused_at,
             ended_at=now,
-            tasks_urgency_reset=urgency_reset,
-            tasks_deadline_shifted=deadlines_shifted,
+            tasks_urgency_reset=reset.tasks_urgency_reset,
+            tasks_deadline_shifted=reset.tasks_deadline_moved,
         )
         logger.info(
-            "Global pause disabled: paused_at=%s resumed_at=%s urgency_reset=%d deadlines_shifted=%d",
-            state.paused_at.isoformat(), now.isoformat(), urgency_reset, deadlines_shifted,
+            "Global pause disabled: paused_at=%s resumed_at=%s urgency_reset=%d deadlines_moved=%d snoozed=%d",
+            state.paused_at.isoformat(), now.isoformat(),
+            reset.tasks_urgency_reset, reset.tasks_deadline_moved, reset.tasks_snoozed,
         )
         return PauseResumeRead(
             resumed_at=now,
-            tasks_urgency_reset=urgency_reset,
-            tasks_deadline_shifted=deadlines_shifted,
+            tasks_urgency_reset=reset.tasks_urgency_reset,
+            tasks_deadline_shifted=reset.tasks_deadline_moved,
         )
 
     async def list_history(self, limit: int = 100) -> list[PauseLogRead]:

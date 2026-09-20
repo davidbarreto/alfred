@@ -204,9 +204,12 @@ class ReminderService:
                 quiet.append(task)
                 continue
 
+            # Recurring tasks are exempt: each cycle starts fresh, so created_at age
+            # says nothing about whether the current occurrence is neglected.
             if (
                 task.urgency == "NORMAL"
                 and task.priority != "HIGH"
+                and task.recurrence_rule is None
                 and now - task.created_at >= escalation_age
             ):
                 task = await self._task_service.update_task(task.id, TaskUpdate(urgency="URGENT"))

@@ -164,6 +164,38 @@ async def create_task(
     })
 
 
+@router.post("/reset-urgency", response_class=HTMLResponse)
+async def reset_urgency(request: Request):
+    try:
+        result = await api.post("/core/urgency-reset")
+    except httpx.HTTPError:
+        return Response("Failed to reset urgency.", status_code=422, media_type="text/plain")
+
+    active_filter = request.query_params.get("filter", "all")
+    params = _build_params(active_filter)
+    tasks = []
+    try:
+        tasks = await api.get("/organizer/tasks", params=params)
+        tasks = _apply_recurrence_filter(tasks, active_filter)
+    except httpx.HTTPError:
+        pass
+    summary = (
+        f"Reset {result['tasks_urgency_reset']} urgent task(s), "
+        f"moved {result['tasks_deadline_moved']} deadline(s), "
+        f"snoozed {result['tasks_snoozed']} undated task(s) for {result['days']} days."
+    )
+    return templates.TemplateResponse(
+        request,
+        "_tasks_list.html",
+        {
+            "tasks": tasks,
+            "today": date.today().isoformat(),
+            "tomorrow": (date.today() + timedelta(days=1)).isoformat(),
+        },
+        headers={"X-Urgency-Reset-Summary": summary},
+    )
+
+
 @router.patch("/{task_id}", response_class=HTMLResponse)
 async def update_task(
     task_id: int,

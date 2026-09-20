@@ -50,3 +50,23 @@ class TestGetCatalog:
         _patch_client(monkeypatch, handler)
         catalog = await get_catalog()
         assert catalog == {"task": {"add": {}}}
+
+
+class TestClientHeader:
+    """Backend API usage is charted per caller via X-Alfred-Client."""
+
+    async def test_execute_command_identifies_as_mcp(self, monkeypatch):
+        def handler(request: httpx.Request) -> httpx.Response:
+            assert request.headers["X-Alfred-Client"] == "mcp"
+            return httpx.Response(200, json={"result": {}})
+
+        _patch_client(monkeypatch, handler)
+        await execute_command("task", "list", {})
+
+    async def test_get_catalog_identifies_as_mcp(self, monkeypatch):
+        def handler(request: httpx.Request) -> httpx.Response:
+            assert request.headers["X-Alfred-Client"] == "mcp"
+            return httpx.Response(200, json={"domains": {}})
+
+        _patch_client(monkeypatch, handler)
+        await get_catalog()

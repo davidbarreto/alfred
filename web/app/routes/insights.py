@@ -20,6 +20,8 @@ _EMBEDDING_CALLS_PREVIEW_SIZE = 5
 _MESSAGES_PREVIEW_SIZE = 5
 _SESSIONS_PREVIEW_SIZE = 5
 _FILTER_OPTIONS_SAMPLE_LIMIT = 200
+_API_USAGE_DAYS = 7
+_MCP_SOURCE = "mcp"
 _MESSAGE_ROLES = ["user", "assistant"]
 _MESSAGE_SOURCES = ["telegram", "api", "web"]
 _SESSION_SOURCES = ["telegram", "api", "web"]
@@ -46,6 +48,27 @@ def _pagination(items: list, offset: int) -> tuple[list, bool, bool]:
     """Return (page_slice, has_next, has_prev) using the limit+1 trick."""
     has_next = len(items) > _PAGE_SIZE
     return items[:_PAGE_SIZE], has_next, offset > 0
+
+
+async def _fetch_api_usage() -> dict:
+    try:
+        summary = await api.get("/core/api-requests/summary", params={"days": _API_USAGE_DAYS})
+    except httpx.HTTPError:
+        return {}
+    return summary if isinstance(summary, dict) else {}
+
+
+def _api_usage_charts(summary: dict) -> dict[str, dict]:
+    """Chart series from the backend's API-usage summary, keyed by caller (X-Alfred-Client)."""
+    by_client = summary.get("by_client", [])
+    return {
+        "api_by_client": {c["client"]: c["requests"] for c in by_client},
+        "api_error_rate": {c["client"]: round(c["errors"] / c["requests"] * 100, 1) for c in by_client},
+        "api_latency": {c["client"]: round(c["avg_latency_ms"]) for c in by_client},
+        "api_top_routes": {
+            f"{r['client']} {r['method']} {r['route']}": r["requests"] for r in summary.get("top_routes", [])
+        },
+    }
 
 
 _REMINDER_KIND_PATHS = {"task": "/organizer/tasks", "event": "/organizer/calendar-events"}
@@ -128,6 +151,8 @@ async def insights_page(request: Request):
         except httpx.HTTPError:
             pass
 
+    api_usage = await _fetch_api_usage()
+
     # ── LLM aggregations ─────────────────────────────────────────
     llm_by_model = dict(Counter(c["model"] for c in llm_calls).most_common())
     llm_by_feature = dict(Counter(c["feature"] for c in llm_calls).most_common(10))
@@ -149,6 +174,10 @@ async def insights_page(request: Request):
     # ── Command execution aggregations ────────────────────────────
     cmd_by_name = dict(Counter(c["command_name"] for c in cmd_executions).most_common(10))
     cmd_by_status = dict(Counter(c["status"] for c in cmd_executions).most_common())
+    cmd_by_source = dict(Counter(c["source"] or "unknown" for c in cmd_executions).most_common())
+    mcp_cmd_by_name = dict(
+        Counter(c["command_name"] for c in cmd_executions if c["source"] == _MCP_SOURCE).most_common(10)
+    )
 
     # ── Embedding call aggregations ───────────────────────────────
     embedding_calls_by_feature = dict(Counter(c["feature"] for c in embedding_calls).most_common(10))
@@ -192,6 +221,12 @@ async def insights_page(request: Request):
         "provider_by_status": provider_by_status,
         "cmd_by_name": cmd_by_name,
         "cmd_by_status": cmd_by_status,
+        "cmd_by_source": cmd_by_source,
+        "mcp_cmd_by_name": mcp_cmd_by_name,
+        # api usage
+        "api_usage_days": _API_USAGE_DAYS,
+        "total_api_requests": api_usage.get("total", 0),
+        **_api_usage_charts(api_usage),
         "embedding_calls_by_feature": embedding_calls_by_feature,
         "messages_by_role": messages_by_role,
         "sessions_by_source": sessions_by_source,

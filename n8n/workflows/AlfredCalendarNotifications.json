@@ -21,6 +21,15 @@
     {
       "parameters": {
         "method": "GET",
+        "sendHeaders": true,
+        "headerParameters": {
+            "parameters": [
+                {
+                    "name": "X-Alfred-Client",
+                    "value": "n8n"
+                }
+            ]
+        },
         "url": "http://api:8000/organizer/calendar-notifications/due",
         "authentication": "genericCredentialType",
         "genericAuthType": "httpBearerAuth",

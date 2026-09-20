@@ -20,6 +20,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from typing import AsyncGenerator
 
+from app.api.request_logging import ApiRequestLoggingMiddleware
 from app.api.routes.watcher.watchers import router as watchers_router
 from app.api.routes.watcher.alerts import router as alerts_router
 from app.api.routes.watcher.executions import router as executions_router
@@ -67,6 +68,7 @@ from app.api.routes.core.chats import router as core_chats_router, stream_router
 from app.api.routes.core.reminders import router as core_reminders_router
 from app.api.routes.core.pause import router as core_pause_router
 from app.api.routes.core.urgency_reset import router as core_urgency_reset_router
+from app.api.routes.core.api_requests import router as core_api_requests_router
 from app.api.routes.briefing import router as briefing_router
 from app.api.routes.language.tracks import router as language_tracks_router
 from app.api.routes.language.grammar_scope import router as language_grammar_scope_router
@@ -121,8 +123,11 @@ if _cors_origins:
         CORSMiddleware,
         allow_origins=_cors_origins,
         allow_methods=["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
-        allow_headers=["Authorization", "Content-Type"],
+        allow_headers=["Authorization", "Content-Type", "X-Alfred-Client"],
     )
+
+# Added after CORS so it is the outermost middleware and sees every request, including rejected ones.
+app.add_middleware(ApiRequestLoggingMiddleware)
 
 app.include_router(watchers_router)
 app.include_router(alerts_router)
@@ -174,6 +179,7 @@ app.include_router(core_chats_stream_router)
 app.include_router(core_reminders_router)
 app.include_router(core_pause_router)
 app.include_router(core_urgency_reset_router)
+app.include_router(core_api_requests_router)
 app.include_router(briefing_router)
 app.include_router(language_tracks_router)
 app.include_router(language_grammar_scope_router)

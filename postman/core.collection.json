@@ -2670,6 +2670,155 @@
       }
     },
     {
+      "name": "89f - API Requests - Summary",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Response has expected shape', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json.days).to.eql(7);",
+              "    pm.expect(json.total).to.be.a('number');",
+              "    pm.expect(json.by_client).to.be.an('array');",
+              "    pm.expect(json.top_routes).to.be.an('array');",
+              "    json.by_client.forEach(c => {",
+              "        ['client', 'requests', 'errors', 'avg_latency_ms'].forEach(f => pm.expect(c).to.have.property(f));",
+              "    });",
+              "    json.top_routes.forEach(r => {",
+              "        ['client', 'method', 'route', 'requests', 'errors'].forEach(f => pm.expect(r).to.have.property(f));",
+              "    });",
+              "});",
+              "pm.test('Total equals the sum of per-client requests', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json.total).to.eql(json.by_client.reduce((n, c) => n + c.requests, 0));",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/core/api-requests/summary",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "core",
+            "api-requests",
+            "summary"
+          ]
+        }
+      }
+    },
+    {
+      "name": "89g - API Requests - Summary Custom Window",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Window echoed back', () => pm.expect(pm.response.json().days).to.eql(30));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/core/api-requests/summary?days=30",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "core",
+            "api-requests",
+            "summary"
+          ],
+          "query": [
+            {
+              "key": "days",
+              "value": "30"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "89h - API Requests - Summary Invalid Days (422)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 422', () => pm.response.to.have.status(422));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/core/api-requests/summary?days=0",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "core",
+            "api-requests",
+            "summary"
+          ],
+          "query": [
+            {
+              "key": "days",
+              "value": "0"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "89i - API Requests - Summary No Auth",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('No auth returns 403', () => pm.response.to.have.status(403));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "auth": {
+          "type": "noauth"
+        },
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/core/api-requests/summary",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "core",
+            "api-requests",
+            "summary"
+          ]
+        }
+      }
+    },
+    {
       "name": "90 - Sessions - Finish",
       "event": [
         {

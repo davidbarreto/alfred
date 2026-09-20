@@ -54,3 +54,13 @@ class TestPostStillParsesJsonBody:
         monkeypatch.setattr(api.httpx, "AsyncClient", _client_factory)
         result = await api.post("/some/path", json={})
         assert result == {"id": 1}
+
+
+class TestClientHeader:
+    """Backend API usage is charted per caller via X-Alfred-Client."""
+
+    def test_headers_identify_the_portal(self):
+        headers = api._headers()
+
+        assert headers["X-Alfred-Client"] == "web"
+        assert headers["Authorization"].startswith("Bearer ")

@@ -15,7 +15,7 @@ class BackendError(RuntimeError):
 
 
 def _headers() -> dict[str, str]:
-    return {"Authorization": f"Bearer {get_settings().alfred_api_token}"}
+    return {"Authorization": f"Bearer {get_settings().alfred_api_token}", "X-Alfred-Client": "mcp"}
 
 
 def _url(path: str) -> str:

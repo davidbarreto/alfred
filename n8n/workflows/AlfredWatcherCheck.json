@@ -21,6 +21,15 @@
     {
       "parameters": {
         "method": "POST",
+        "sendHeaders": true,
+        "headerParameters": {
+            "parameters": [
+                {
+                    "name": "X-Alfred-Client",
+                    "value": "n8n"
+                }
+            ]
+        },
         "url": "http://api:8000/watcher/configs/run",
         "authentication": "genericCredentialType",
         "genericAuthType": "httpBearerAuth",
@@ -41,6 +50,15 @@
     {
       "parameters": {
         "method": "GET",
+        "sendHeaders": true,
+        "headerParameters": {
+            "parameters": [
+                {
+                    "name": "X-Alfred-Client",
+                    "value": "n8n"
+                }
+            ]
+        },
         "url": "http://api:8000/watcher/alerts/pending",
         "authentication": "genericCredentialType",
         "genericAuthType": "httpBearerAuth",
@@ -163,6 +181,15 @@
     {
       "parameters": {
         "method": "POST",
+        "sendHeaders": true,
+        "headerParameters": {
+            "parameters": [
+                {
+                    "name": "X-Alfred-Client",
+                    "value": "n8n"
+                }
+            ]
+        },
         "url": "http://api:8000/watcher/alerts/resolve",
         "authentication": "genericCredentialType",
         "genericAuthType": "httpBearerAuth",

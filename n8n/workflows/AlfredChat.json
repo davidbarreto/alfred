@@ -143,6 +143,15 @@
         {
             "parameters": {
                 "method": "POST",
+                "sendHeaders": true,
+                "headerParameters": {
+                    "parameters": [
+                        {
+                            "name": "X-Alfred-Client",
+                            "value": "n8n"
+                        }
+                    ]
+                },
                 "url": "http://api:8000/core/transcription",
                 "authentication": "genericCredentialType",
                 "genericAuthType": "httpBearerAuth",
@@ -178,6 +187,15 @@
         {
             "parameters": {
                 "method": "POST",
+                "sendHeaders": true,
+                "headerParameters": {
+                    "parameters": [
+                        {
+                            "name": "X-Alfred-Client",
+                            "value": "n8n"
+                        }
+                    ]
+                },
                 "url": "http://api:8000/core/messages",
                 "authentication": "predefinedCredentialType",
                 "nodeCredentialType": "httpBearerAuth",
@@ -223,6 +241,15 @@
         {
             "parameters": {
                 "method": "POST",
+                "sendHeaders": true,
+                "headerParameters": {
+                    "parameters": [
+                        {
+                            "name": "X-Alfred-Client",
+                            "value": "n8n"
+                        }
+                    ]
+                },
                 "url": "http://api:8000/commands/execute",
                 "authentication": "genericCredentialType",
                 "genericAuthType": "httpBearerAuth",
@@ -270,6 +297,15 @@
         {
             "parameters": {
                 "method": "POST",
+                "sendHeaders": true,
+                "headerParameters": {
+                    "parameters": [
+                        {
+                            "name": "X-Alfred-Client",
+                            "value": "n8n"
+                        }
+                    ]
+                },
                 "url": "http://api:8000/core/chats",
                 "authentication": "genericCredentialType",
                 "genericAuthType": "httpBearerAuth",
@@ -389,6 +425,15 @@
         {
             "parameters": {
                 "method": "POST",
+                "sendHeaders": true,
+                "headerParameters": {
+                    "parameters": [
+                        {
+                            "name": "X-Alfred-Client",
+                            "value": "n8n"
+                        }
+                    ]
+                },
                 "url": "http://api:8000/commands/detect",
                 "authentication": "genericCredentialType",
                 "genericAuthType": "httpBearerAuth",
@@ -422,6 +467,15 @@
         {
             "parameters": {
                 "method": "POST",
+                "sendHeaders": true,
+                "headerParameters": {
+                    "parameters": [
+                        {
+                            "name": "X-Alfred-Client",
+                            "value": "n8n"
+                        }
+                    ]
+                },
                 "url": "http://api:8000/commands/extract",
                 "authentication": "genericCredentialType",
                 "genericAuthType": "httpBearerAuth",
@@ -508,6 +562,15 @@
         {
             "parameters": {
                 "method": "POST",
+                "sendHeaders": true,
+                "headerParameters": {
+                    "parameters": [
+                        {
+                            "name": "X-Alfred-Client",
+                            "value": "n8n"
+                        }
+                    ]
+                },
                 "url": "http://api:8000/commands/respond",
                 "authentication": "genericCredentialType",
                 "genericAuthType": "httpBearerAuth",
@@ -702,6 +765,15 @@
         },
         {
             "parameters": {
+                "sendHeaders": true,
+                "headerParameters": {
+                    "parameters": [
+                        {
+                            "name": "X-Alfred-Client",
+                            "value": "n8n"
+                        }
+                    ]
+                },
                 "url": "http://api:8000/core/working-memory",
                 "authentication": "genericCredentialType",
                 "genericAuthType": "httpBearerAuth",
@@ -740,6 +812,15 @@
         {
             "parameters": {
                 "method": "POST",
+                "sendHeaders": true,
+                "headerParameters": {
+                    "parameters": [
+                        {
+                            "name": "X-Alfred-Client",
+                            "value": "n8n"
+                        }
+                    ]
+                },
                 "url": "http://api:8000/language/sessions/shadowing/audio",
                 "authentication": "genericCredentialType",
                 "genericAuthType": "httpBearerAuth",
@@ -965,6 +1046,15 @@
         {
             "parameters": {
                 "method": "POST",
+                "sendHeaders": true,
+                "headerParameters": {
+                    "parameters": [
+                        {
+                            "name": "X-Alfred-Client",
+                            "value": "n8n"
+                        }
+                    ]
+                },
                 "url": "http://api:8000/language/sessions/advance",
                 "authentication": "genericCredentialType",
                 "genericAuthType": "httpBearerAuth",
@@ -1089,6 +1179,15 @@
         {
             "parameters": {
                 "method": "GET",
+                "sendHeaders": true,
+                "headerParameters": {
+                    "parameters": [
+                        {
+                            "name": "X-Alfred-Client",
+                            "value": "n8n"
+                        }
+                    ]
+                },
                 "url": "http://api:8000/language/chunks/pronunciation",
                 "authentication": "genericCredentialType",
                 "genericAuthType": "httpBearerAuth",
@@ -1333,6 +1432,15 @@
         {
             "parameters": {
                 "method": "POST",
+                "sendHeaders": true,
+                "headerParameters": {
+                    "parameters": [
+                        {
+                            "name": "X-Alfred-Client",
+                            "value": "n8n"
+                        }
+                    ]
+                },
                 "url": "http://api:8000/language/conversation/turns/audio",
                 "authentication": "genericCredentialType",
                 "genericAuthType": "httpBearerAuth",
@@ -1454,6 +1562,15 @@
         },
         {
             "parameters": {
+                "sendHeaders": true,
+                "headerParameters": {
+                    "parameters": [
+                        {
+                            "name": "X-Alfred-Client",
+                            "value": "n8n"
+                        }
+                    ]
+                },
                 "url": "http://api:8000/core/working-memory",
                 "authentication": "genericCredentialType",
                 "genericAuthType": "httpBearerAuth",
@@ -1545,6 +1662,15 @@
         {
             "parameters": {
                 "method": "POST",
+                "sendHeaders": true,
+                "headerParameters": {
+                    "parameters": [
+                        {
+                            "name": "X-Alfred-Client",
+                            "value": "n8n"
+                        }
+                    ]
+                },
                 "url": "http://api:8000/language/conversation/turns",
                 "authentication": "genericCredentialType",
                 "genericAuthType": "httpBearerAuth",
@@ -1748,6 +1874,15 @@
         {
             "parameters": {
                 "method": "POST",
+                "sendHeaders": true,
+                "headerParameters": {
+                    "parameters": [
+                        {
+                            "name": "X-Alfred-Client",
+                            "value": "n8n"
+                        }
+                    ]
+                },
                 "url": "http://api:8000/language/sessions/advance",
                 "authentication": "genericCredentialType",
                 "genericAuthType": "httpBearerAuth",

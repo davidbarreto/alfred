@@ -108,7 +108,7 @@ formEl.addEventListener("submit", async (e) => {
   const url = `${BACKEND_URL}/core/chats/stream?session_id=${sessionId}&token=${API_TOKEN}`;
 
   try {
-    const resp = await fetch(url, { headers: { "Accept": "text/event-stream" } });
+    const resp = await fetch(url, { headers: { "Accept": "text/event-stream", "X-Alfred-Client": "web" } });
     const reader = resp.body.getReader();
     const decoder = new TextDecoder();
     let buffer = "";

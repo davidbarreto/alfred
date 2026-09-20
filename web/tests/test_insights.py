@@ -776,3 +776,140 @@ class TestSessionDetail:
         resp = client.get("/insights/sessions/1/detail")
 
         assert resp.status_code == 422
+
+
+def _cmd_execution(id=1, command_name="task.add", source="telegram", status="success"):
+    return {
+        "id": id, "message_id": None, "source": source, "command_name": command_name,
+        "entities": None, "status": status, "result": None, "error": None,
+        "entity_type": None, "entity_id": None, "duration_ms": 5, "executed_at": None,
+        "created_at": "2026-07-01T00:00:00",
+    }
+
+
+def _api_usage(by_client=None, top_routes=None, days=7):
+    by_client = by_client if by_client is not None else []
+    return {
+        "days": days,
+        "total": sum(c["requests"] for c in by_client),
+        "by_client": by_client,
+        "top_routes": top_routes or [],
+    }
+
+
+def _client_usage(client, requests, errors=0, avg_latency_ms=10.0):
+    return {"client": client, "requests": requests, "errors": errors, "avg_latency_ms": avg_latency_ms}
+
+
+class TestInsightsPageApiUsage:
+    def _get_page(self, client, mock_api, summary=None, executions=None):
+        async def fake_get(path, params=None):
+            if path == "/core/api-requests/summary":
+                return summary if summary is not None else _api_usage()
+            if path == "/core/command-executions":
+                return executions or []
+            return []
+
+        mock_api["get"].side_effect = fake_get
+        return client.get("/insights/")
+
+    def test_fetches_seven_day_summary(self, client, mock_api):
+        self._get_page(client, mock_api)
+
+        call = next(c for c in mock_api["get"].call_args_list if c.args[0] == "/core/api-requests/summary")
+        assert call.kwargs["params"] == {"days": 7}
+
+    def test_charts_requests_error_rate_and_latency_per_client(self, client, mock_api):
+        summary = _api_usage(by_client=[
+            _client_usage("web", requests=8, errors=2, avg_latency_ms=41.6),
+            _client_usage("n8n", requests=4, errors=0, avg_latency_ms=12.2),
+            _client_usage("unknown", requests=1, errors=1, avg_latency_ms=3.0),
+        ])
+
+        resp = self._get_page(client, mock_api, summary=summary)
+
+        assert resp.status_code == 200
+        assert 'id="chart-api-clients"' in resp.text
+        assert '{"n8n": 4, "unknown": 1, "web": 8}' in resp.text
+        assert '{"n8n": 0.0, "unknown": 100.0, "web": 25.0}' in resp.text
+        assert '{"n8n": 12, "unknown": 3, "web": 42}' in resp.text
+
+    def test_untagged_callers_get_their_own_bar(self, client, mock_api):
+        summary = _api_usage(by_client=[_client_usage("unknown", requests=3)])
+
+        resp = self._get_page(client, mock_api, summary=summary)
+
+        assert '{"unknown": 3}' in resp.text
+
+    def test_top_routes_are_labelled_with_caller_and_method(self, client, mock_api):
+        summary = _api_usage(
+            by_client=[_client_usage("web", requests=5)],
+            top_routes=[{"client": "web", "method": "GET", "route": "/organizer/tasks", "requests": 5, "errors": 0}],
+        )
+
+        resp = self._get_page(client, mock_api, summary=summary)
+
+        assert 'id="chart-api-routes"' in resp.text
+        assert '{"web GET /organizer/tasks": 5}' in resp.text
+
+    def test_shows_empty_state_when_no_api_requests_recorded(self, client, mock_api):
+        resp = self._get_page(client, mock_api)
+
+        assert 'id="chart-api-clients"' not in resp.text
+        assert "API &amp; MCP Usage" in resp.text
+        assert "No data" in resp.text
+
+    def test_page_still_renders_when_summary_endpoint_fails(self, client, mock_api):
+        async def fake_get(path, params=None):
+            if path == "/core/api-requests/summary":
+                raise httpx.ConnectError("down", request=httpx.Request("GET", "http://api/x"))
+            return []
+
+        mock_api["get"].side_effect = fake_get
+
+        resp = client.get("/insights/")
+
+        assert resp.status_code == 200
+        assert 'id="chart-api-clients"' not in resp.text
+
+
+class TestInsightsPageMcpUsage:
+    def _get_page(self, client, mock_api, executions):
+        async def fake_get(path, params=None):
+            if path == "/core/command-executions":
+                return executions
+            return []
+
+        mock_api["get"].side_effect = fake_get
+        return client.get("/insights/")
+
+    def test_charts_commands_by_source(self, client, mock_api):
+        executions = [
+            _cmd_execution(id=1, source="telegram"),
+            _cmd_execution(id=2, source="telegram"),
+            _cmd_execution(id=3, source="mcp"),
+            _cmd_execution(id=4, source=None),
+        ]
+
+        resp = self._get_page(client, mock_api, executions)
+
+        assert 'id="chart-cmd-source"' in resp.text
+        assert '{"mcp": 1, "telegram": 2, "unknown": 1}' in resp.text
+
+    def test_mcp_chart_only_counts_mcp_commands(self, client, mock_api):
+        executions = [
+            _cmd_execution(id=1, command_name="task.add", source="mcp"),
+            _cmd_execution(id=2, command_name="task.add", source="mcp"),
+            _cmd_execution(id=3, command_name="note.search", source="mcp"),
+            _cmd_execution(id=4, command_name="finance.report", source="telegram"),
+        ]
+
+        resp = self._get_page(client, mock_api, executions)
+
+        assert 'id="chart-mcp-commands"' in resp.text
+        assert '{"note.search": 1, "task.add": 2}' in resp.text
+
+    def test_no_mcp_chart_without_mcp_commands(self, client, mock_api):
+        resp = self._get_page(client, mock_api, [_cmd_execution(source="telegram")])
+
+        assert 'id="chart-mcp-commands"' not in resp.text

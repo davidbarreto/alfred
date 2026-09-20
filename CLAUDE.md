@@ -305,6 +305,7 @@ logger.warning("Auth failed: invalid token")
 
 - **Docker Compose** — environment variables injected at runtime; never bake secrets into images
 - **Migrations** — run `alembic upgrade head` as part of container startup, not manually
+- **API caller identity** — every service that calls the backend API sends an `X-Alfred-Client` header (`web`, `mcp`, `n8n`); `ApiRequestLoggingMiddleware` records one `core.api_requests` row per request (missing header → `unknown`) for the Insights "API & MCP Usage" charts. New callers (or new n8n HTTP Request nodes hitting `http://api:8000`) must send it too. `/health` and `/core/api-requests/*` are deliberately not logged
 - **nginx** — shared snippets for SSL termination and proxy headers; do not duplicate config per service
 - **File layout on VPS** — application in `/opt/stacks/alfred/`, persistent data in `/srv/data/alfred/`
 - **The local Docker stack (`infra/docker-compose.yml`) build issue has been fixed** — it's runnable again, but default to unit tests and code review to verify changes; the user tests in production themselves. Only start/rebuild the local stack when a change genuinely needs it and isn't covered by unit tests (e.g. verifying real container/DB/migration behavior) — don't reach for it as a routine step on every change.

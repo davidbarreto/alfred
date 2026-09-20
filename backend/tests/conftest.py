@@ -30,6 +30,13 @@ TEST_TOKEN = "test-api-token"
 AUTH_HEADERS = {"Authorization": f"Bearer {TEST_TOKEN}"}
 
 
+@pytest.fixture(autouse=True)
+def _no_api_request_db_writes(monkeypatch):
+    """The app-level request-logging middleware would otherwise try to reach a real DB
+    on every TestClient call."""
+    monkeypatch.setattr("app.api.request_logging._record_to_db", AsyncMock())
+
+
 @pytest.fixture(scope="session")
 def app():
     from app.main import app as fastapi_app

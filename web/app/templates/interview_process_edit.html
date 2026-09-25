@@ -42,7 +42,7 @@
         <select name="priority" class="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white w-full focus:outline-none focus:ring-1 focus:ring-[#378ADD]">
           <option value="">—</option>
           {% for p in ["low", "medium", "high"] %}
-          <option value="{{ p }}" {% if process.priority == p %}selected{% endif %}>{{ p | capitalize }}</option>
+          <option value="{{ p }}" {% if process.priority == p or (process.priority is none and p == "low") %}selected{% endif %}>{{ p | capitalize }}</option>
           {% endfor %}
         </select>
       </div>

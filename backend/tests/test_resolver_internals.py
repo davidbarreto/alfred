@@ -365,6 +365,17 @@ class TestDetectCommandsNlTriggers:
         assert commands[0].type == "recall"
         assert commands[0].args["query"] == "the deployment"
 
+    async def test_task_add_trigger_with_period(self):
+        # Regression test for period-separated task instructions (e.g. voice transcription).
+        # The nl_trigger "create a task." now matches the pattern explicitly.
+        commands = await detect_commands("Create a task. Check my status on Immigration Department.")
+        assert len(commands) == 1
+        assert commands[0].type == "task"
+        assert commands[0].command == "add"
+        # Title is extracted and cleaned; "on" is removed during NLP enrichment
+        assert "Check" in commands[0].args["title"]
+        assert "Immigration" in commands[0].args["title"]
+
 
 # ── _enrich_finance ───────────────────────────────────────────────────────────
 

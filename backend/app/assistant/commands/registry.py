@@ -75,7 +75,7 @@ COMMAND_DEFINITIONS = {
             "aliases": ["/taskadd", "/t", "/ta", "/task"],
             "nl_triggers": [
                 "add a task to", "add a task:", "create a task to", "create a task:",
-                "create the task", "new task:", "task:",
+                "create a task.", "create the task", "new task:", "task:",
             ],
             "flags": TASK_ADD_FLAGS,
             "requires_args": True,

@@ -214,3 +214,36 @@ class TestFlagConstants:
     def test_task_update_flags_composition(self):
         assert "-s" in TASK_UPDATE_FLAGS  # status
         assert "-p" in TASK_UPDATE_FLAGS  # priority
+
+
+class TestMcpReservedArgNames:
+    def test_no_command_uses_action_as_arg_or_flag(self):
+        # The MCP server reserves `action` for its action-selector param and refuses to
+        # build any tool whose command declares it, which takes the whole server down.
+        for cmd_type, actions in COMMAND_DEFINITIONS.items():
+            for action_name, config in actions.items():
+                names = set(config.get("arg_keys", [])) | set(config.get("flags", {}).values())
+                assert "action" not in names, f"{cmd_type}.{action_name} declares reserved name 'action'"
+
+
+class TestInterviewPrepCommandParsing:
+    def test_storyadd_keeps_full_star_text_and_flags(self):
+        from app.assistant.commands.resolver import _parse_tokens, _resolve_fragment
+
+        tokens = _parse_tokens("/storyadd Outage at peak | Restore service | Rolled back fast | Back in 5 min --strength 4 -t oncall,ops")
+        detail = _resolve_fragment(tokens[0], tokens[1:])
+
+        assert detail is not None
+        assert (detail.type, detail.command) == ("interview_story", "add")
+        assert detail.args["text"] == "Outage at peak | Restore service | Rolled back fast | Back in 5 min"
+        assert detail.args["strength"] == "4"
+        assert detail.args["tags"] == "oncall,ops"
+
+    def test_candidateadd_takes_whole_question_and_category_flag(self):
+        from app.assistant.commands.resolver import _parse_tokens, _resolve_fragment
+
+        tokens = _parse_tokens("/candidateadd How is on-call organised? --category Tech")
+        detail = _resolve_fragment(tokens[0], tokens[1:])
+
+        assert detail is not None
+        assert detail.args == {"text": "How is on-call organised?", "category": "Tech"}

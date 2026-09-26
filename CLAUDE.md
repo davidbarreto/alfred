@@ -336,15 +336,17 @@ User self-assesses when creating the story. Can be revised later as the story is
 - **4 (Strong Fit):** Perfectly tailored; directly and powerfully answers the question
 - **5 (Excellent Fit):** Perfectly tailored; demonstrates competency exactly as the question asks
 
-User assigns when linking a story to a prep question. Stories are sorted by fit_score (descending) for each question.
+User assigns when linking a story to a prep question (default 3). Stories are sorted by fit_score (descending) for each question. Both scales are enforced by DB CHECK constraints.
 
-### Future: AI Assessment
+### AI strength suggestion
 
-A "Suggest Strength" button (backend not yet implemented) would:
-1. User fills in story (S/T/A/R)
-2. Clicks "Suggest Strength"
-3. LLM analyzes and proposes a 1-5 score
-4. User accepts or overrides
+`POST /organizer/interview-stories/{id}/assess-strength` (and `/storyassess <id>`) asks the LLM for a suggested 1-5 strength plus one improvement tip. It only suggests; it never writes `strength`. Returns 404 for an unknown story, 502 when the LLM fails or returns invalid JSON. Logged to `llm_calls` as `interview_story_strength`. No portal button yet.
+
+### Command formats
+
+The resolver splits positional args on whitespace and gives the *last* `arg_key` the remainder, and MCP reserves the name `action`. So multi-field text can't be positional:
+- `/storyadd situation | task | action | result --strength 4 -t leadership,conflict` (single `text` arg, split on `|` in the handler)
+- `/candidateadd How is on-call organised? --category Tech`
 
 ---
 

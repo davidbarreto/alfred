@@ -49,7 +49,6 @@ from app.dependencies import (
     InterviewStoryServiceDep,
     InterviewPrepQuestionServiceDep,
     InterviewCandidateQuestionServiceDep,
-    LlmProviderDep,
     MemoryServiceDep,
     NoteServiceDep,
     ProductionServiceDep,
@@ -152,7 +151,6 @@ async def execute_command(
     interview_candidate_service: InterviewCandidateQuestionServiceDep,
     grammar_scope_service: GrammarScopeServiceDep,
     briefing_history_service: BriefingHistoryServiceDep,
-    llm_provider: LlmProviderDep,
     session: DbSessionDep,
 ):
     logger.info("POST /commands/execute %s.%s source=%s", request.type, request.command, request.source)
@@ -196,7 +194,6 @@ async def execute_command(
             interview_candidate_service=interview_candidate_service,
             grammar_scope_service=grammar_scope_service,
             briefing_history_service=briefing_history_service,
-            llm_provider=llm_provider,
             session=session,
             message_id=request.message_id,
         )

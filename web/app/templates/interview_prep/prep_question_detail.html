@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% set active_page = "interviews" %}
+{% block title %}Prep Question{% endblock %}
+
+{% block content %}
+{% set fit_labels = {1: "Poor", 2: "Weak", 3: "Good", 4: "Strong", 5: "Excellent"} %}
+<div class="container mx-auto px-4 py-6">
+    <a href="/interview-prep/prep-questions" class="btn btn-sm btn-ghost mb-4">&larr; Prep Questions</a>
+
+    {% if error %}
+    <div class="alert alert-error mb-6"><span>{{ error }}</span></div>
+    {% endif %}
+
+    {% if question %}
+    <h1 class="text-2xl font-bold mb-6">{{ question.text }}</h1>
+
+    <div class="card bg-base-100 shadow-md mb-6">
+        <div class="card-body">
+            <h2 class="card-title">Link a Story</h2>
+            {% if linkable_stories %}
+            <form method="post" action="/interview-prep/prep-questions/{{ question.id }}/link" class="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+                <div class="form-control md:col-span-2">
+                    <label class="label"><span class="label-text">Story</span></label>
+                    <select name="story_id" class="select select-bordered" required>
+                        {% for story in linkable_stories %}
+                        <option value="{{ story.id }}">#{{ story.id }} — {{ story.situation | truncate(70) }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-control">
+                    <label class="label"><span class="label-text">Fit (1-5)</span></label>
+                    <select name="fit_score" class="select select-bordered">
+                        {% for score, label in fit_labels.items() %}
+                        <option value="{{ score }}" {% if score == 3 %}selected{% endif %}>{{ score }} - {{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <button type="submit" class="btn btn-primary">Link</button>
+            </form>
+            {% else %}
+            <p class="text-sm text-gray-500">Every story is already linked, or you have no stories yet. <a href="/interview-prep/stories" class="link">Add a story</a>.</p>
+            {% endif %}
+        </div>
+    </div>
+
+    {% if question.stories %}
+    <div class="space-y-4">
+        {% for story in question.stories %}
+        <div class="card bg-base-100 shadow-md">
+            <div class="card-body">
+                <div class="flex justify-between items-start gap-4">
+                    <div class="flex-1 space-y-2 text-sm whitespace-pre-line">
+                        <div><strong>Situation:</strong> {{ story.situation }}</div>
+                        <div><strong>Task:</strong> {{ story.task }}</div>
+                        <div><strong>Action:</strong> {{ story.action }}</div>
+                        <div><strong>Result:</strong> {{ story.result }}</div>
+                    </div>
+                    <div class="flex flex-col gap-2 items-end">
+                        <div class="badge badge-lg badge-secondary">Fit: {{ story.fit_score }} - {{ fit_labels[story.fit_score] }}</div>
+                        <div class="badge badge-outline">Strength: {{ story.strength }}/5</div>
+                    </div>
+                </div>
+                <div class="card-actions justify-between items-center mt-2">
+                    <form method="post" action="/interview-prep/prep-questions/{{ question.id }}/link" class="flex gap-2 items-center">
+                        <input type="hidden" name="story_id" value="{{ story.id }}" />
+                        <select name="fit_score" class="select select-bordered select-xs">
+                            {% for score, label in fit_labels.items() %}
+                            <option value="{{ score }}" {% if score == story.fit_score %}selected{% endif %}>{{ score }} - {{ label }}</option>
+                            {% endfor %}
+                        </select>
+                        <button type="submit" class="btn btn-xs btn-ghost">Update fit</button>
+                    </form>
+                    <form method="post" action="/interview-prep/prep-questions/{{ question.id }}/stories/{{ story.id }}/unlink">
+                        <button type="submit" class="btn btn-sm btn-ghost btn-error" onclick="return confirm('Unlink this story?')">Unlink</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="alert alert-info"><span>No stories linked yet. A question without a story is a gap to prepare for.</span></div>
+    {% endif %}
+    {% endif %}
+</div>
+{% endblock %}

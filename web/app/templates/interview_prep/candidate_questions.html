@@ -1,20 +1,22 @@
 {% extends "base.html" %}
-
+{% set active_page = "interviews" %}
 {% block title %}Interview Candidate Questions{% endblock %}
 
 {% block content %}
 <div class="container mx-auto px-4 py-6">
     <h1 class="text-3xl font-bold mb-6">Questions to Ask Interviewers</h1>
 
-    <!-- Tab Navigation -->
     <div class="tabs tabs-bordered mb-6">
         <a href="/interview-prep/stories" class="tab">Stories</a>
         <a href="/interview-prep/prep-questions" class="tab">Prep Questions</a>
         <a href="/interview-prep/candidate-questions" class="tab tab-active">Candidate Questions</a>
     </div>
 
+    {% if error %}
+    <div class="alert alert-error mb-6"><span>{{ error }}</span></div>
+    {% endif %}
+
     <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        <!-- Sidebar: Category Filter -->
         <div class="lg:col-span-1">
             <div class="card bg-base-100 shadow-md">
                 <div class="card-body">
@@ -24,7 +26,7 @@
                         All
                     </a>
                     {% for category in all_categories %}
-                    <a href="/interview-prep/candidate-questions?category={{ category }}" class="btn btn-sm {% if current_category == category %}btn-active{% else %}btn-ghost{% endif %} btn-block text-left">
+                    <a href="/interview-prep/candidate-questions?category={{ category | urlencode }}" class="btn btn-sm {% if current_category == category %}btn-active{% else %}btn-ghost{% endif %} btn-block text-left">
                         {{ category }}
                     </a>
                     {% endfor %}
@@ -32,27 +34,22 @@
             </div>
         </div>
 
-        <!-- Main Content -->
         <div class="lg:col-span-3">
-            <!-- Add Question Form -->
             <div class="card bg-base-100 shadow-md mb-6">
                 <div class="card-body">
                     <h2 class="card-title">Add Question</h2>
-                    <form method="post" class="space-y-4">
+                    <form method="post" action="/interview-prep/candidate-questions" class="space-y-4">
                         <div class="form-control">
                             <label class="label"><span class="label-text">Question</span></label>
-                            <input type="text" name="text" class="input input-bordered" placeholder="E.g., How is the onboarding process?" required />
+                            <input type="text" name="text" class="input input-bordered" maxlength="500" placeholder="E.g., How is the onboarding process?" required />
                         </div>
                         <div class="form-control">
                             <label class="label"><span class="label-text">Category</span></label>
                             <select name="category" class="select select-bordered" required>
                                 <option value="">Select a category</option>
-                                <option value="Onboarding">Onboarding</option>
-                                <option value="Tech">Tech/Stack</option>
-                                <option value="Culture">Culture/Team</option>
-                                <option value="Benefits">Benefits/Logistics</option>
-                                <option value="Growth">Growth</option>
-                                <option value="Work-life">Work-life Balance</option>
+                                {% for option in category_options %}
+                                <option value="{{ option }}">{{ option }}</option>
+                                {% endfor %}
                             </select>
                         </div>
                         <button type="submit" class="btn btn-primary btn-block">Add Question</button>
@@ -60,30 +57,22 @@
                 </div>
             </div>
 
-            <!-- Questions List -->
             {% if questions %}
             <div class="space-y-4">
-                {% set current_category = None %}
-                {% for question in questions %}
-                    {% if question.category != current_category %}
-                        {% if current_category is not none %}
-                        </div>
-                        {% endif %}
-                        {% set current_category = question.category %}
-                        <div class="divider my-2">{{ question.category }}</div>
-                        <div class="space-y-2">
-                    {% endif %}
-                    <div class="card bg-base-50 shadow-sm">
+                {% for group in questions | groupby("category") %}
+                <div class="divider my-2">{{ group.grouper }}</div>
+                <div class="space-y-2">
+                    {% for question in group.list %}
+                    <div class="card bg-base-100 shadow-sm">
                         <div class="card-body p-3">
                             <p>{{ question.text }}</p>
                         </div>
                     </div>
-                {% endfor %}
-                {% if current_category is not none %}
+                    {% endfor %}
                 </div>
-                {% endif %}
+                {% endfor %}
             </div>
-            {% else %}
+            {% elif not error %}
             <div class="alert alert-info">
                 <span>No questions yet. Add some questions to ask during your interviews!</span>
             </div>

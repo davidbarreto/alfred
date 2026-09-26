@@ -2,9 +2,11 @@ import logging
 from typing import Any
 
 from fastapi import HTTPException, status
+from pydantic import ValidationError
 
-from app.features.organizer.interviews.interviewee_questions.schemas import InterviewCandidateQuestionCreate, InterviewCandidateQuestionUpdate
-from app.features.organizer.interviews.interviewee_questions.service import InterviewCandidateQuestionService
+from app.assistant.commands.handlers._utils import optional_int, require_int
+from app.features.organizer.interviews.candidate_questions.schemas import InterviewCandidateQuestionCreate
+from app.features.organizer.interviews.candidate_questions.service import InterviewCandidateQuestionService
 
 logger = logging.getLogger(__name__)
 
@@ -15,12 +17,16 @@ async def handle_interview_candidate(
     logger.debug("handle_interview_candidate: command=%s args_keys=%s", command, list(arguments.keys()))
 
     if command == "add":
-        text = arguments.get("text")
-        category = arguments.get("category")
+        text = (arguments.get("text") or "").strip()
+        category = (arguments.get("category") or "").strip()
         if not text or not category:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="text and category required")
-
-        data = InterviewCandidateQuestionCreate(text=text, category=category)
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST, detail="text and --category are required"
+            )
+        try:
+            data = InterviewCandidateQuestionCreate(text=text, category=category)
+        except ValidationError as exc:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=exc.errors()[0]["msg"])
         question = await service.create_question(data)
         return {
             "id": question.id,
@@ -30,25 +36,13 @@ async def handle_interview_candidate(
         }
 
     if command == "list":
-        category = arguments.get("category")
-        limit = int(arguments.get("limit", 50))
-        offset = int(arguments.get("offset", 0))
-
-        if category:
-            questions = await service.get_questions_by_category(category, limit=limit + 1, offset=offset)
-        else:
-            questions = await service.get_questions(limit=limit + 1, offset=offset)
-
-        has_next = len(questions) > limit
-        questions = questions[:limit]
-
+        limit = optional_int(arguments, "limit", 50)
+        offset = optional_int(arguments, "offset", 0)
+        questions = await service.get_questions(category=arguments.get("category"), limit=limit + 1, offset=offset)
         return {
-            "count": len(questions),
-            "has_next": has_next,
-            "questions": [
-                {"id": q.id, "text": q.text, "category": q.category}
-                for q in questions
-            ],
+            "count": min(len(questions), limit),
+            "has_next": len(questions) > limit,
+            "questions": [{"id": q.id, "text": q.text, "category": q.category} for q in questions[:limit]],
         }
 
     if command == "categories":
@@ -56,9 +50,9 @@ async def handle_interview_candidate(
         return {"categories": categories, "count": len(categories)}
 
     if command == "get":
-        question_id = int(arguments.get("id"))
+        question_id = require_int(arguments, "id")
         question = await service.get_question(question_id)
-        if not question:
+        if question is None:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Question {question_id} not found")
         return {"id": question.id, "text": question.text, "category": question.category}
 

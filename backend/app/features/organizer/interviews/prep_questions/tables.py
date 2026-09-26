@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import DateTime, ForeignKey, Integer, Text, func
+from sqlalchemy import CheckConstraint, DateTime, ForeignKey, Integer, Text, UniqueConstraint, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
@@ -38,7 +38,11 @@ class InterviewPrepQuestion(Base):
 
 class InterviewPrepQuestionStory(Base):
     __tablename__ = "interview_story_questions"
-    __table_args__ = {"schema": "organizer"}
+    __table_args__ = (
+        UniqueConstraint("story_id", "question_id", name="uq_story_question"),
+        CheckConstraint("fit_score BETWEEN 1 AND 5", name="ck_interview_story_questions_fit_score"),
+        {"schema": "organizer"},
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
     story_id: Mapped[int] = mapped_column(
@@ -47,13 +51,11 @@ class InterviewPrepQuestionStory(Base):
     question_id: Mapped[int] = mapped_column(
         ForeignKey("organizer.interview_prep_questions.id", ondelete="CASCADE"), nullable=False, index=True
     )
-    # priority renamed to fit_score: 1-5 assessment of how well the story answers this question
-    # 1=Poor fit, 2=Weak fit, 3=Good fit, 4=Strong fit, 5=Excellent fit
-    # Stories sorted by fit_score (descending) for each question
-    # See CLAUDE.md "Interview Prep Module" for full scale definition
-    priority: Mapped[int] = mapped_column(Integer, nullable=False, default=5)
+    # 1-5 how well the story answers this question; scale defined in CLAUDE.md "Interview Prep Module"
+    fit_score: Mapped[int] = mapped_column(Integer, nullable=False, default=3)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
 
     question: Mapped[InterviewPrepQuestion] = relationship("InterviewPrepQuestion", back_populates="story_links")
+    story: Mapped[InterviewStory] = relationship("InterviewStory")

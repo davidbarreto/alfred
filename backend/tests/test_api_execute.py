@@ -47,6 +47,8 @@ def _override_services(app, task_svc=None, note_svc=None):
         get_production_service, get_conversation_service, get_language_session_service,
         get_contacts_crud_service, get_memory_service, get_interview_process_service,
         get_grammar_scope_service, get_briefing_history_service,
+        get_interview_story_service, get_interview_prep_question_service,
+        get_interview_candidate_question_service,
     )
     mock_cmd_exec = AsyncMock()
     mock_cmd_exec.create.return_value = MagicMock(id=99)
@@ -71,6 +73,9 @@ def _override_services(app, task_svc=None, note_svc=None):
         (get_interview_process_service, None),
         (get_grammar_scope_service, None),
         (get_briefing_history_service, None),
+        (get_interview_story_service, None),
+        (get_interview_prep_question_service, None),
+        (get_interview_candidate_question_service, None),
     ]:
         app.dependency_overrides[dep] = lambda s=svc: s or AsyncMock()
 

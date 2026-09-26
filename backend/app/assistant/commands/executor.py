@@ -53,12 +53,11 @@ from app.features.organizer.contacts.service import ContactService
 from app.features.organizer.interviews.processes.service import InterviewProcessService
 from app.features.organizer.interviews.stories.service import InterviewStoryService
 from app.features.organizer.interviews.prep_questions.service import InterviewPrepQuestionService
-from app.features.organizer.interviews.interviewee_questions.service import InterviewCandidateQuestionService
+from app.features.organizer.interviews.candidate_questions.service import InterviewCandidateQuestionService
 from app.features.organizer.notes.service import NoteService
 from app.features.organizer.shopping.service import ShoppingService
 from app.features.organizer.tasks.service import TaskService
 from app.features.core.pause.service import GlobalPauseService
-from app.shared.llm import LlmProvider
 
 logger = logging.getLogger(__name__)
 
@@ -93,7 +92,6 @@ async def execute(
     interview_candidate_service: InterviewCandidateQuestionService | None = None,
     grammar_scope_service: GrammarScopeService | None = None,
     briefing_history_service: BriefingHistoryService | None = None,
-    llm_provider: LlmProvider | None = None,
     session: AsyncSession | None = None,
     message_id: int | None = None,
 ) -> Any:
@@ -272,7 +270,7 @@ async def execute(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                 detail="Interview story service not available",
             )
-        return await handle_interview_story(command, arguments, interview_story_service, llm_provider=llm_provider)
+        return await handle_interview_story(command, arguments, interview_story_service)
 
     if cmd_type == "interview_prep":
         if interview_prep_service is None:

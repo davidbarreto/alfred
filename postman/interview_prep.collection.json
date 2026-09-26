@@ -1,0 +1,747 @@
+{
+  "info": {
+    "name": "Alfred - Interview Prep API",
+    "description": "Behavioral interview prep: STAR stories (tags, search, AI strength assessment), prep questions with story links scored by fit (1-5), and candidate questions to ask interviewers. Run in order; the last requests clean up everything the run created.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{api_token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "01 - Create Story",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+              "const json = pm.response.json();",
+              "pm.test('Tags normalized', () => pm.expect(json.tags.map(t => t.tag)).to.eql(['Leadership', 'Ops']));",
+              "pm.test('Timestamps present', () => pm.expect(json.created_at).to.be.a('string'));",
+              "pm.environment.set('story_id', json.id);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/organizer/interview-stories",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "interview-stories"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"situation\": \"Postman test: service kept timing out\",\n  \"task\": \"Stabilise before peak\",\n  \"action\": \"Added caching and a circuit breaker\",\n  \"result\": \"p99 latency halved\",\n  \"strength\": 4,\n  \"tags\": [\n    \"Leadership\",\n    \" Ops \",\n    \"Leadership\"\n  ]\n}"
+        }
+      }
+    },
+    {
+      "name": "02 - Create Story (invalid strength)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 422', () => pm.response.to.have.status(422));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/organizer/interview-stories",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "interview-stories"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"situation\": \"s\",\n  \"task\": \"t\",\n  \"action\": \"a\",\n  \"result\": \"r\",\n  \"strength\": 9\n}"
+        }
+      }
+    },
+    {
+      "name": "03 - Get Story",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Has tags', () => pm.expect(pm.response.json().tags).to.have.length(2));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/organizer/interview-stories/{{story_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "interview-stories",
+            "{{story_id}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "04 - List Stories by Tag",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Contains story', () => pm.expect(pm.response.json().map(s => s.id)).to.include(pm.environment.get('story_id')));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/organizer/interview-stories?tag=Ops",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "interview-stories"
+          ],
+          "query": [
+            {
+              "key": "tag",
+              "value": "Ops"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "05 - Search Stories",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Finds story', () => pm.expect(pm.response.json().map(s => s.id)).to.include(pm.environment.get('story_id')));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/organizer/interview-stories/search?q=circuit breaker",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "interview-stories",
+            "search"
+          ],
+          "query": [
+            {
+              "key": "q",
+              "value": "circuit breaker"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "06 - Add Tag",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Tag added', () => pm.expect(pm.response.json().tags.map(t => t.tag)).to.include('Resilience'));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/organizer/interview-stories/{{story_id}}/tags/Resilience",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "interview-stories",
+            "{{story_id}}",
+            "tags",
+            "Resilience"
+          ]
+        }
+      }
+    },
+    {
+      "name": "07 - Update Story (replace tags)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "const json = pm.response.json();",
+              "pm.test('Strength updated', () => pm.expect(json.strength).to.eql(5));",
+              "pm.test('Tags replaced', () => pm.expect(json.tags.map(t => t.tag)).to.eql(['Leadership', 'Scale']));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/organizer/interview-stories/{{story_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "interview-stories",
+            "{{story_id}}"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"strength\": 5,\n  \"tags\": [\n    \"Leadership\",\n    \"Scale\"\n  ]\n}"
+        }
+      }
+    },
+    {
+      "name": "08 - Assess Strength (LLM)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('200 or 502 (LLM unavailable)', () => pm.expect(pm.response.code).to.be.oneOf([200, 502]));",
+              "if (pm.response.code === 200) {",
+              "    pm.test('Score in range', () => pm.expect(pm.response.json().suggested_strength).to.be.within(1, 5));",
+              "}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/organizer/interview-stories/{{story_id}}/assess-strength",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "interview-stories",
+            "{{story_id}}",
+            "assess-strength"
+          ]
+        }
+      }
+    },
+    {
+      "name": "09 - Create Prep Question",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+              "pm.environment.set('prep_question_id', pm.response.json().id);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/organizer/interview-prep-questions",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "interview-prep-questions"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"text\": \"Postman test: tell me about a time you improved reliability\"\n}"
+        }
+      }
+    },
+    {
+      "name": "10 - Link Story (fit 4)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Fit saved', () => pm.expect(pm.response.json().fit_score).to.eql(4));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/organizer/interview-prep-questions/{{prep_question_id}}/stories/{{story_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "interview-prep-questions",
+            "{{prep_question_id}}",
+            "stories",
+            "{{story_id}}"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"fit_score\": 4\n}"
+        }
+      }
+    },
+    {
+      "name": "11 - Link Missing Story",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 404', () => pm.response.to.have.status(404));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/organizer/interview-prep-questions/{{prep_question_id}}/stories/999999999",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "interview-prep-questions",
+            "{{prep_question_id}}",
+            "stories",
+            "999999999"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"fit_score\": 3\n}"
+        }
+      }
+    },
+    {
+      "name": "12 - Link Invalid Fit",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 422', () => pm.response.to.have.status(422));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/organizer/interview-prep-questions/{{prep_question_id}}/stories/{{story_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "interview-prep-questions",
+            "{{prep_question_id}}",
+            "stories",
+            "{{story_id}}"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"fit_score\": 6\n}"
+        }
+      }
+    },
+    {
+      "name": "13 - Get Prep Question With Stories",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "const stories = pm.response.json().stories;",
+              "pm.test('Linked story carries fit_score', () => {",
+              "    pm.expect(stories).to.have.length(1);",
+              "    pm.expect(stories[0].fit_score).to.eql(4);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/organizer/interview-prep-questions/{{prep_question_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "interview-prep-questions",
+            "{{prep_question_id}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "14 - Unlink Story",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 204', () => pm.response.to.have.status(204));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/organizer/interview-prep-questions/{{prep_question_id}}/stories/{{story_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "interview-prep-questions",
+            "{{prep_question_id}}",
+            "stories",
+            "{{story_id}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "15 - Create Candidate Question",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+              "pm.environment.set('candidate_question_id', pm.response.json().id);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/organizer/candidate-questions",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "candidate-questions"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"text\": \"Postman test: how is on-call organised?\",\n  \"category\": \"Tech\"\n}"
+        }
+      }
+    },
+    {
+      "name": "16 - List Candidate Questions by Category",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('All in category', () => pm.response.json().forEach(q => pm.expect(q.category).to.eql('Tech')));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/organizer/candidate-questions?category=Tech",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "candidate-questions"
+          ],
+          "query": [
+            {
+              "key": "category",
+              "value": "Tech"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "17 - List Candidate Categories",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Includes Tech', () => pm.expect(pm.response.json()).to.include('Tech'));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/organizer/candidate-questions/categories",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "candidate-questions",
+            "categories"
+          ]
+        }
+      }
+    },
+    {
+      "name": "18 - Delete Candidate Question",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 204', () => pm.response.to.have.status(204));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/organizer/candidate-questions/{{candidate_question_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "candidate-questions",
+            "{{candidate_question_id}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "19 - Delete Prep Question",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 204', () => pm.response.to.have.status(204));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/organizer/interview-prep-questions/{{prep_question_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "interview-prep-questions",
+            "{{prep_question_id}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "20 - Delete Story",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 204', () => pm.response.to.have.status(204));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/organizer/interview-stories/{{story_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "interview-stories",
+            "{{story_id}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "21 - Get Deleted Story",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 404', () => pm.response.to.have.status(404));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/organizer/interview-stories/{{story_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "interview-stories",
+            "{{story_id}}"
+          ]
+        }
+      }
+    }
+  ]
+}

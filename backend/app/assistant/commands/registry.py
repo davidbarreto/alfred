@@ -657,20 +657,20 @@ COMMAND_DEFINITIONS = {
     },
     "interview_story": {
         "add": {
-            "description": "Add a new STAR interview story with optional strength and tags",
+            "description": "Add a STAR interview story as 'situation | task | action | result', with optional strength (1-5) and comma-separated tags",
             "aliases": ["/storyadd", "/story"],
             "nl_triggers": [
                 "add a story", "save a story", "new story:", "story:",
             ],
-            "flags": {"--strength": "strength", "--tags": "tags"},
+            "flags": {"--strength": "strength", **FLAG_TAGS},
             "requires_args": True,
-            "arg_keys": ["situation", "task", "action", "result"],
+            "arg_keys": ["text"],
         },
         "list": {
             "description": "List interview stories, optionally filtered by tag",
             "aliases": ["/storylist", "/stories"],
             "nl_triggers": ["list my stories", "show my stories", "show all my interview stories"],
-            "flags": {"--tag": "tag", "--limit": "limit", "--offset": "offset"},
+            "flags": {"--tag": "tag", **FLAG_LIMIT, "--offset": "offset"},
         },
         "search": {
             "description": "Search interview stories by keyword",
@@ -735,18 +735,18 @@ COMMAND_DEFINITIONS = {
     },
     "interview_candidate": {
         "add": {
-            "description": "Add a question to ask the interviewer",
+            "description": "Add a question to ask the interviewer; --category is required (e.g. Onboarding, Tech, Culture, Benefits, Logistics, Growth, Work-life)",
             "aliases": ["/candidateadd", "/candidatequestion"],
             "nl_triggers": ["add a candidate question", "add a question to ask", "question for interviewer:"],
-            "flags": {},
+            "flags": {**FLAG_CATEGORY},
             "requires_args": True,
-            "arg_keys": ["text", "category"],
+            "arg_keys": ["text"],
         },
         "list": {
             "description": "List questions to ask interviewers, optionally filtered by category",
             "aliases": ["/candidatelist", "/candidatequestions"],
             "nl_triggers": ["list my candidate questions", "show questions to ask"],
-            "flags": {"--category": "category", "--limit": "limit", "--offset": "offset"},
+            "flags": {**FLAG_CATEGORY, "--limit": "limit", "--offset": "offset"},
         },
         "categories": {
             "description": "List available question categories",

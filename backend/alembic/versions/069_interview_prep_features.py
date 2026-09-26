@@ -1,14 +1,14 @@
-"""Add interview prep: stories, prep questions, interviewee questions
+"""Add interview prep: stories, prep questions, candidate questions
 
-Revision ID: 049
-Revises: 048
+Revision ID: 069
+Revises: 068
 Create Date: 2026-09-26
 """
 from alembic import op
 import sqlalchemy as sa
 
-revision = "049"
-down_revision = "048"
+revision = "069"
+down_revision = "068"
 branch_labels = None
 depends_on = None
 
@@ -25,6 +25,7 @@ def upgrade() -> None:
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
         sa.PrimaryKeyConstraint("id"),
+        sa.CheckConstraint("strength BETWEEN 1 AND 5", name="ck_interview_stories_strength"),
         schema="organizer",
     )
     op.create_index("ix_interview_stories_id", "interview_stories", ["id"], schema="organizer")
@@ -59,12 +60,13 @@ def upgrade() -> None:
         sa.Column("id", sa.Integer(), nullable=False),
         sa.Column("story_id", sa.Integer(), nullable=False),
         sa.Column("question_id", sa.Integer(), nullable=False),
-        sa.Column("priority", sa.Integer(), nullable=False, server_default="5"),
+        sa.Column("fit_score", sa.Integer(), nullable=False, server_default="3"),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False, server_default=sa.func.now()),
         sa.ForeignKeyConstraint(["story_id"], ["organizer.interview_stories.id"], ondelete="CASCADE"),
         sa.ForeignKeyConstraint(["question_id"], ["organizer.interview_prep_questions.id"], ondelete="CASCADE"),
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint("story_id", "question_id", name="uq_story_question"),
+        sa.CheckConstraint("fit_score BETWEEN 1 AND 5", name="ck_interview_story_questions_fit_score"),
         schema="organizer",
     )
     op.create_index("ix_interview_story_questions_story_id", "interview_story_questions", ["story_id"], schema="organizer")

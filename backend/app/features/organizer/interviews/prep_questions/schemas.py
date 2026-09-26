@@ -1,9 +1,8 @@
+from datetime import datetime
+
 from pydantic import BaseModel, Field
 
-
-class StoryTagRead(BaseModel):
-    id: int
-    tag: str
+from app.features.organizer.interviews.stories.schemas import InterviewStoryTagRead
 
 
 class InterviewStoryForQuestion(BaseModel):
@@ -13,12 +12,8 @@ class InterviewStoryForQuestion(BaseModel):
     action: str
     result: str
     strength: int
-    tags: list[StoryTagRead]
-
-    # From join table
-    priority: int
-
-    model_config = {"from_attributes": True}
+    tags: list[InterviewStoryTagRead]
+    fit_score: int
 
 
 class InterviewPrepQuestionCreate(BaseModel):
@@ -32,8 +27,8 @@ class InterviewPrepQuestionUpdate(BaseModel):
 class InterviewPrepQuestionRead(BaseModel):
     id: int
     text: str
-    created_at: str
-    updated_at: str
+    created_at: datetime
+    updated_at: datetime
 
     model_config = {"from_attributes": True}
 
@@ -42,7 +37,17 @@ class InterviewPrepQuestionWithStories(BaseModel):
     id: int
     text: str
     stories: list[InterviewStoryForQuestion]
-    created_at: str
-    updated_at: str
+    created_at: datetime
+    updated_at: datetime
+
+
+class StoryLinkCreate(BaseModel):
+    fit_score: int = Field(default=3, ge=1, le=5)
+
+
+class StoryLinkRead(BaseModel):
+    question_id: int
+    story_id: int
+    fit_score: int
 
     model_config = {"from_attributes": True}

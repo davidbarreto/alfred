@@ -82,6 +82,9 @@ from app.features.organizer.interviews.stages.service import InterviewStageServi
 from app.features.organizer.interviews.links.service import InterviewLinkService
 from app.features.organizer.interviews.insights.service import InterviewInsightService
 from app.features.organizer.interviews.preferences.service import InterviewPreferencesService
+from app.features.organizer.interviews.stories.service import InterviewStoryService
+from app.features.organizer.interviews.prep_questions.service import InterviewPrepQuestionService
+from app.features.organizer.interviews.candidate_questions.service import InterviewCandidateQuestionService
 from app.integrations.google_contacts.client import GoogleContactsClient
 from app.integrations.google_contacts.provider import GoogleContactsProvider
 from app.integrations.sentence_transformers.provider import SentenceTransformerEmbeddingProvider
@@ -534,6 +537,15 @@ def get_interview_insight_service(session: AsyncSession = Depends(get_session)) 
 def get_interview_preferences_service(session: AsyncSession = Depends(get_session)) -> InterviewPreferencesService:
     return InterviewPreferencesService(session)
 
+def get_interview_story_service(session: AsyncSession = Depends(get_session), llm_provider: LlmProvider = Depends(get_llm_provider)) -> InterviewStoryService:
+    return InterviewStoryService(session, llm_provider)
+
+def get_interview_prep_question_service(session: AsyncSession = Depends(get_session)) -> InterviewPrepQuestionService:
+    return InterviewPrepQuestionService(session)
+
+def get_interview_candidate_question_service(session: AsyncSession = Depends(get_session)) -> InterviewCandidateQuestionService:
+    return InterviewCandidateQuestionService(session)
+
 def get_codeforces_sync_service(session: AsyncSession = Depends(get_session)) -> CodeforcesSyncService:
     return CodeforcesSyncService(session, CodeforcesClient())
 
@@ -640,3 +652,6 @@ InterviewInsightServiceDep = Annotated[InterviewInsightService, Depends(get_inte
 InterviewPreferencesServiceDep = Annotated[
     InterviewPreferencesService, Depends(get_interview_preferences_service)
 ]
+InterviewStoryServiceDep = Annotated[InterviewStoryService, Depends(get_interview_story_service)]
+InterviewPrepQuestionServiceDep = Annotated[InterviewPrepQuestionService, Depends(get_interview_prep_question_service)]
+InterviewCandidateQuestionServiceDep = Annotated[InterviewCandidateQuestionService, Depends(get_interview_candidate_question_service)]

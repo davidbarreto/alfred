@@ -301,6 +301,53 @@ logger.warning("Auth failed: invalid token")
 
 ---
 
+## Interview Prep Module
+
+### Stories, Questions, and Assessment Scales
+
+The interview prep module (`organizer.interviews`) helps track behavioral interview preparation with three main features:
+
+**1. Interview Stories** — STAR framework stories in `interview_stories` table
+- Separate columns: `situation`, `task`, `action`, `result` (mandatory; enforces STAR structure)
+- `strength` (1-5) — self-assessed quality of the story itself
+
+**2. Prep Questions** — Behavioral interview questions in `interview_prep_questions`
+- Linked to stories via `interview_story_questions` join table
+- Each link has a `fit_score` (1-5) — how well the story answers that specific question
+
+**3. Candidate Questions** — Questions to ask interviewers in `interview_candidate_questions`
+- Categorized (Onboarding, Tech, Culture, Benefits, Logistics, Growth, Work-life)
+
+### Assessment Scales
+
+**Story Strength (1-5)** — Quality of the story itself:
+- **1 (Vague/Incomplete):** Missing context, unclear outcome, lacks details
+- **2 (Basic):** STAR parts present but generic; no metrics or specifics
+- **3 (Good):** Clear story, specific details, shows competency, has some measure of success
+- **4 (Strong):** Specific, concrete metrics, clear before/after, demonstrates key competency well
+- **5 (Excellent):** Polished, specific, quantified outcome, shows growth/learning, universally compelling
+
+User self-assesses when creating the story. Can be revised later as the story is refined.
+
+**Link Fit (1-5)** — How well the story answers a specific prep question:
+- **1 (Poor Fit):** Tangentially related; doesn't directly answer the question
+- **2 (Weak Fit):** Related but requires explanation to connect to the question
+- **3 (Good Fit):** Directly addresses the question, clearly demonstrates what's being asked
+- **4 (Strong Fit):** Perfectly tailored; directly and powerfully answers the question
+- **5 (Excellent Fit):** Perfectly tailored; demonstrates competency exactly as the question asks
+
+User assigns when linking a story to a prep question. Stories are sorted by fit_score (descending) for each question.
+
+### Future: AI Assessment
+
+A "Suggest Strength" button (backend not yet implemented) would:
+1. User fills in story (S/T/A/R)
+2. Clicks "Suggest Strength"
+3. LLM analyzes and proposes a 1-5 score
+4. User accepts or overrides
+
+---
+
 ## Infrastructure Notes
 
 - **Docker Compose** — environment variables injected at runtime; never bake secrets into images

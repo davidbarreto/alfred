@@ -1,0 +1,158 @@
+{% extends "base.html" %}
+
+{% block title %}Interview Stories{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-6">
+    <h1 class="text-3xl font-bold mb-6">Interview Stories</h1>
+
+    <!-- Tab Navigation -->
+    <div class="tabs tabs-bordered mb-6">
+        <a href="/interview-prep/stories" class="tab tab-active">Stories</a>
+        <a href="/interview-prep/prep-questions" class="tab">Prep Questions</a>
+        <a href="/interview-prep/candidate-questions" class="tab">Candidate Questions</a>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        <!-- Sidebar: Tags Filter -->
+        <div class="lg:col-span-1">
+            <div class="card bg-base-100 shadow-md">
+                <div class="card-body">
+                    <h3 class="card-title text-lg">Filter by Tag</h3>
+                    <div class="divider"></div>
+                    <a href="/interview-prep/stories" class="btn btn-sm {% if not current_tag %}btn-active{% else %}btn-ghost{% endif %} btn-block text-left">
+                        All Stories
+                    </a>
+                    {% for tag in all_tags %}
+                    <a href="/interview-prep/stories?tag={{ tag }}" class="btn btn-sm {% if current_tag == tag %}btn-active{% else %}btn-ghost{% endif %} btn-block text-left">
+                        {{ tag }}
+                    </a>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="lg:col-span-3">
+            <!-- Add Story Form -->
+            <div class="card bg-base-100 shadow-md mb-6">
+                <div class="card-body">
+                    <h2 class="card-title">Add New Story</h2>
+                    <form method="post" class="space-y-4">
+                        <div class="form-control">
+                            <label class="label"><span class="label-text">Situation</span></label>
+                            <textarea name="situation" class="textarea textarea-bordered" placeholder="What was the situation?" required></textarea>
+                        </div>
+                        <div class="form-control">
+                            <label class="label"><span class="label-text">Task</span></label>
+                            <textarea name="task" class="textarea textarea-bordered" placeholder="What was your responsibility?" required></textarea>
+                        </div>
+                        <div class="form-control">
+                            <label class="label"><span class="label-text">Action</span></label>
+                            <textarea name="action" class="textarea textarea-bordered" placeholder="What did you do?" required></textarea>
+                        </div>
+                        <div class="form-control">
+                            <label class="label"><span class="label-text">Result</span></label>
+                            <textarea name="result" class="textarea textarea-bordered" placeholder="What was the outcome?" required></textarea>
+                        </div>
+                        <div class="form-control">
+                            <label class="label"><span class="label-text">Strength (1-5)</span></label>
+                            <select name="strength" class="select select-bordered">
+                                <option value="3" selected>3 - Good</option>
+                                <option value="1">1 - Vague/Incomplete</option>
+                                <option value="2">2 - Basic</option>
+                                <option value="4">4 - Strong</option>
+                                <option value="5">5 - Excellent</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-block">Add Story</button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Stories Grid -->
+            {% if stories %}
+            <div class="space-y-4">
+                {% for story in stories %}
+                <div class="card bg-base-100 shadow-md">
+                    <div class="card-body">
+                        <div class="flex justify-between items-start">
+                            <div class="flex-1">
+                                <h3 class="card-title text-lg">Story</h3>
+                                <div class="mt-3 space-y-2 text-sm">
+                                    <div><strong>Situation:</strong> {{ story.situation[:100] }}...</div>
+                                    <div><strong>Task:</strong> {{ story.task[:100] }}...</div>
+                                    <div><strong>Action:</strong> {{ story.action[:100] }}...</div>
+                                    <div><strong>Result:</strong> {{ story.result[:100] }}...</div>
+                                </div>
+                            </div>
+                            <div class="ml-4">
+                                <div class="badge badge-lg badge-primary">Strength: {{ story.strength }}/5</div>
+                            </div>
+                        </div>
+
+                        <!-- Tags -->
+                        {% if story.tags %}
+                        <div class="mt-4 flex flex-wrap gap-2">
+                            {% for tag_obj in story.tags %}
+                            <span class="badge badge-outline">{{ tag_obj.tag }}</span>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+
+                        <div class="card-actions justify-end mt-4">
+                            <button class="btn btn-sm btn-ghost" onclick="showModal({{ story.id }}, '{{ story.situation }}', '{{ story.task }}', '{{ story.action }}', '{{ story.result }}')">
+                                View Full
+                            </button>
+                            <form method="post" action="/interview-prep/stories/{{ story.id }}/delete" style="display:inline;">
+                                <button type="submit" class="btn btn-sm btn-ghost btn-error" onclick="return confirm('Delete this story?')">Delete</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+
+            <!-- Pagination -->
+            <div class="flex justify-center gap-2 mt-6">
+                {% if has_prev %}
+                <a href="/interview-prep/stories?offset={{ prev_offset }}{% if current_tag %}&tag={{ current_tag }}{% endif %}" class="btn btn-outline">Previous</a>
+                {% endif %}
+                {% if has_next %}
+                <a href="/interview-prep/stories?offset={{ next_offset }}{% if current_tag %}&tag={{ current_tag }}{% endif %}" class="btn btn-outline">Next</a>
+                {% endif %}
+            </div>
+            {% else %}
+            <div class="alert alert-info">
+                <span>No stories yet. Create your first STAR story above!</span>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Modal for Full Story -->
+<dialog id="storyModal" class="modal">
+    <form method="dialog" class="modal-box w-11/12 max-w-2xl">
+        <h3 class="font-bold text-lg mb-4">Story Details</h3>
+        <div id="modalContent" class="space-y-3"></div>
+        <div class="modal-action">
+            <button class="btn">Close</button>
+        </div>
+    </form>
+</dialog>
+
+<script>
+function showModal(id, situation, task, action, result) {
+    const modal = document.getElementById('storyModal');
+    const content = document.getElementById('modalContent');
+    content.innerHTML = `
+        <div><strong>Situation:</strong> ${situation}</div>
+        <div><strong>Task:</strong> ${task}</div>
+        <div><strong>Action:</strong> ${action}</div>
+        <div><strong>Result:</strong> ${result}</div>
+    `;
+    modal.showModal();
+}
+</script>
+{% endblock %}

@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+
+{% block title %}Interview Prep Questions{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-6">
+    <h1 class="text-3xl font-bold mb-6">Behavioral Interview Prep</h1>
+
+    <!-- Tab Navigation -->
+    <div class="tabs tabs-bordered mb-6">
+        <a href="/interview-prep/stories" class="tab">Stories</a>
+        <a href="/interview-prep/prep-questions" class="tab tab-active">Prep Questions</a>
+        <a href="/interview-prep/candidate-questions" class="tab">Candidate Questions</a>
+    </div>
+
+    <!-- Add Question Form -->
+    <div class="card bg-base-100 shadow-md mb-6">
+        <div class="card-body">
+            <h2 class="card-title">Add Prep Question</h2>
+            <form method="post" class="space-y-4">
+                <div class="form-control">
+                    <label class="label"><span class="label-text">Question</span></label>
+                    <textarea name="text" class="textarea textarea-bordered" placeholder="E.g., Tell me about a time you had a difficult decision..." required></textarea>
+                </div>
+                <button type="submit" class="btn btn-primary">Add Question</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Questions List -->
+    {% if questions %}
+    <div class="space-y-4">
+        {% for question in questions %}
+        <div class="card bg-base-100 shadow-md">
+            <div class="card-body">
+                <h3 class="card-title">{{ question.text }}</h3>
+                <p class="text-sm text-gray-500">{{ question.created_at }}</p>
+                <div class="card-actions justify-end">
+                    <a href="/interview-prep/prep-questions/{{ question.id }}" class="btn btn-sm btn-outline">View Stories</a>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Pagination -->
+    <div class="flex justify-center gap-2 mt-6">
+        {% if has_prev %}
+        <a href="/interview-prep/prep-questions?offset={{ prev_offset }}" class="btn btn-outline">Previous</a>
+        {% endif %}
+        {% if has_next %}
+        <a href="/interview-prep/prep-questions?offset={{ next_offset }}" class="btn btn-outline">Next</a>
+        {% endif %}
+    </div>
+    {% else %}
+    <div class="alert alert-info">
+        <span>No prep questions yet. Add one above to start building your interview prep plan!</span>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

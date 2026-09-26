@@ -16,6 +16,9 @@ from app.assistant.commands.handlers.finance import handle_finance
 from app.assistant.commands.handlers.grammar_scope import handle_grammar_scope
 from app.assistant.commands.handlers.help import handle_help
 from app.assistant.commands.handlers.interview import handle_interview
+from app.assistant.commands.handlers.interview_story import handle_interview_story
+from app.assistant.commands.handlers.interview_prep import handle_interview_prep
+from app.assistant.commands.handlers.interview_candidate import handle_interview_candidate
 from app.assistant.commands.handlers.language import handle_language
 from app.assistant.commands.handlers.memory import handle_memory
 from app.assistant.commands.handlers.note import handle_note
@@ -48,10 +51,14 @@ from app.features.language.tracks.service import TrackService
 from app.features.organizer.calendar_events.service import CalendarEventService
 from app.features.organizer.contacts.service import ContactService
 from app.features.organizer.interviews.processes.service import InterviewProcessService
+from app.features.organizer.interviews.stories.service import InterviewStoryService
+from app.features.organizer.interviews.prep_questions.service import InterviewPrepQuestionService
+from app.features.organizer.interviews.interviewee_questions.service import InterviewCandidateQuestionService
 from app.features.organizer.notes.service import NoteService
 from app.features.organizer.shopping.service import ShoppingService
 from app.features.organizer.tasks.service import TaskService
 from app.features.core.pause.service import GlobalPauseService
+from app.shared.llm import LlmProvider
 
 logger = logging.getLogger(__name__)
 
@@ -81,8 +88,12 @@ async def execute(
     contact_service: ContactService | None = None,
     memory_service: MemoryService | None = None,
     interview_process_service: InterviewProcessService | None = None,
+    interview_story_service: InterviewStoryService | None = None,
+    interview_prep_service: InterviewPrepQuestionService | None = None,
+    interview_candidate_service: InterviewCandidateQuestionService | None = None,
     grammar_scope_service: GrammarScopeService | None = None,
     briefing_history_service: BriefingHistoryService | None = None,
+    llm_provider: LlmProvider | None = None,
     session: AsyncSession | None = None,
     message_id: int | None = None,
 ) -> Any:
@@ -254,6 +265,30 @@ async def execute(
                 detail="Briefing service not available",
             )
         return await handle_briefing(command, arguments, briefing_history_service)
+
+    if cmd_type == "interview_story":
+        if interview_story_service is None:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Interview story service not available",
+            )
+        return await handle_interview_story(command, arguments, interview_story_service, llm_provider=llm_provider)
+
+    if cmd_type == "interview_prep":
+        if interview_prep_service is None:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Interview prep service not available",
+            )
+        return await handle_interview_prep(command, arguments, interview_prep_service)
+
+    if cmd_type == "interview_candidate":
+        if interview_candidate_service is None:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Interview candidate service not available",
+            )
+        return await handle_interview_candidate(command, arguments, interview_candidate_service)
 
     logger.error("Execute: unknown command type=%s command=%s", cmd_type, command)
     raise HTTPException(

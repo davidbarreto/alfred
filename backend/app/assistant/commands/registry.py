@@ -655,6 +655,112 @@ COMMAND_DEFINITIONS = {
             "flags": {"--type": "type", "--limit": "limit"},
         },
     },
+    "interview_story": {
+        "add": {
+            "description": "Add a new STAR interview story with optional strength and tags",
+            "aliases": ["/storyadd", "/story"],
+            "nl_triggers": [
+                "add a story", "save a story", "new story:", "story:",
+            ],
+            "flags": {"--strength": "strength", "--tags": "tags"},
+            "requires_args": True,
+            "arg_keys": ["situation", "task", "action", "result"],
+        },
+        "list": {
+            "description": "List interview stories, optionally filtered by tag",
+            "aliases": ["/storylist", "/stories"],
+            "nl_triggers": ["list my stories", "show my stories", "show all my interview stories"],
+            "flags": {"--tag": "tag", "--limit": "limit", "--offset": "offset"},
+        },
+        "search": {
+            "description": "Search interview stories by keyword",
+            "aliases": ["/storysearch"],
+            "nl_triggers": ["find stories about", "find my stories about"],
+            "flags": {},
+            "requires_args": True,
+            "arg_keys": ["query"],
+        },
+        "tag": {
+            "description": "Add a tag to a story",
+            "aliases": ["/storytag"],
+            "flags": {},
+            "requires_args": True,
+            "arg_keys": ["id", "tag"],
+        },
+        "assess": {
+            "description": "Get AI-suggested strength assessment for a story",
+            "aliases": ["/storyassess", "/assessstory"],
+            "nl_triggers": ["rate story", "how strong is story", "assess story"],
+            "flags": {},
+            "requires_args": True,
+            "arg_keys": ["id"],
+        },
+    },
+    "interview_prep": {
+        "add": {
+            "description": "Add a behavioral prep question",
+            "aliases": ["/prepadd", "/prepquestion", "/prep"],
+            "nl_triggers": ["add a prep question", "create a prep question", "prep question:"],
+            "flags": {},
+            "requires_args": True,
+            "arg_keys": ["text"],
+        },
+        "list": {
+            "description": "List all prep questions",
+            "aliases": ["/preplist", "/prepquestions"],
+            "nl_triggers": ["list my prep questions", "show my prep questions"],
+            "flags": {"--limit": "limit", "--offset": "offset"},
+        },
+        "get": {
+            "description": "Get a prep question with linked stories",
+            "aliases": ["/prepget"],
+            "flags": {},
+            "requires_args": True,
+            "arg_keys": ["id"],
+        },
+        "link": {
+            "description": "Link a story to a prep question with fit score (1-5)",
+            "aliases": ["/preplink"],
+            "flags": {},
+            "requires_args": True,
+            "arg_keys": ["question_id", "story_id", "fit_score"],
+        },
+        "unlink": {
+            "description": "Unlink a story from a prep question",
+            "aliases": ["/prepunlink"],
+            "flags": {},
+            "requires_args": True,
+            "arg_keys": ["question_id", "story_id"],
+        },
+    },
+    "interview_candidate": {
+        "add": {
+            "description": "Add a question to ask the interviewer",
+            "aliases": ["/candidateadd", "/candidatequestion"],
+            "nl_triggers": ["add a candidate question", "add a question to ask", "question for interviewer:"],
+            "flags": {},
+            "requires_args": True,
+            "arg_keys": ["text", "category"],
+        },
+        "list": {
+            "description": "List questions to ask interviewers, optionally filtered by category",
+            "aliases": ["/candidatelist", "/candidatequestions"],
+            "nl_triggers": ["list my candidate questions", "show questions to ask"],
+            "flags": {"--category": "category", "--limit": "limit", "--offset": "offset"},
+        },
+        "categories": {
+            "description": "List available question categories",
+            "aliases": ["/candidatecategories"],
+            "flags": {},
+        },
+        "get": {
+            "description": "Get a candidate question by ID",
+            "aliases": ["/candidateget"],
+            "flags": {},
+            "requires_args": True,
+            "arg_keys": ["id"],
+        },
+    },
 }
 
 def _build_registry() -> Dict[str, CommandMetadata]:

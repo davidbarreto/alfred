@@ -84,7 +84,9 @@ from app.api.routes.cs.problems import router as cs_problems_router
 from app.api.routes.cs.submissions import router as cs_submissions_router
 from app.api.routes.cs.stats import router as cs_stats_router
 from app.api.routes.cs.recommendations import router as cs_recommendations_router
-from app.api.routes.cs.study_plans import router as cs_study_plans_router
+from app.api.routes.study.plans import router as study_plans_router
+from app.api.routes.study.settings import router as study_settings_router
+from app.api.routes.study.tracks import router as study_tracks_router
 from app.config import get_settings
 from app.db.session import async_session
 from app.dependencies import get_embedding_provider, get_notion_client
@@ -198,7 +200,9 @@ app.include_router(cs_problems_router)
 app.include_router(cs_submissions_router)
 app.include_router(cs_stats_router)
 app.include_router(cs_recommendations_router)
-app.include_router(cs_study_plans_router)
+app.include_router(study_tracks_router)
+app.include_router(study_plans_router)
+app.include_router(study_settings_router)
 
 @app.exception_handler(RequestValidationError)
 async def _validation_error_handler(request: Request, exc: RequestValidationError) -> JSONResponse:

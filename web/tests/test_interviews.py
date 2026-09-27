@@ -4,7 +4,7 @@ import httpx
 def _process(id=1, company_id=1, role_title="Backend Engineer", status="active", stages=None):
     return {
         "id": id, "company_id": company_id, "role_title": role_title, "status": status,
-        "source": None, "applied_date": None, "priority": None, "department": None, "notes": None, "study_plan_id": None,
+        "source": None, "applied_date": None, "priority": None, "department": None, "notes": None,
         "salary_min": None, "salary_max": None, "salary_currency": None, "work_regime": None,
         "office_days_per_month": None, "office_location": None, "benefits": None,
         "job_description_url": None, "company_feedback": None,

@@ -10,7 +10,6 @@ from app.features.cs.platforms.repository import PlatformRepository
 from app.features.cs.platforms.schemas import PlatformUpdate
 from app.features.cs.problems.schemas import ProblemCreate
 from app.features.cs.problems.service import ProblemService
-from app.features.cs.study_plans.service import StudyPlanService
 from app.features.cs.submissions.schemas import SubmissionCreate
 from app.features.cs.submissions.service import SubmissionService
 from app.integrations.leetcode.client import LeetCodeClient
@@ -28,7 +27,6 @@ class LeetCodeSyncService:
         self._platforms = PlatformRepository(session)
         self._problems = ProblemService(session)
         self._submissions = SubmissionService(session)
-        self._plans = StudyPlanService(session)
 
     async def sync(self) -> int:
         platform = await self._platforms.get_platform_by_code(_PLATFORM_CODE)
@@ -64,7 +62,7 @@ class LeetCodeSyncService:
             )
 
             verdict_raw = raw["statusDisplay"]
-            submission = await self._submissions.upsert_submission(
+            await self._submissions.upsert_submission(
                 SubmissionCreate(
                     platform_id=platform.id,
                     problem_id=problem.id,
@@ -79,8 +77,6 @@ class LeetCodeSyncService:
                     ),
                 )
             )
-            if submission.verdict == "accepted":
-                await self._plans.auto_complete_items_for_problem(problem.id)
 
             count += 1
             max_external_id = str(raw["id"])

@@ -1,0 +1,37 @@
+{% if not plans %}
+<p class="text-sm text-gray-400 py-6 text-center">No finished plans yet.</p>
+{% else %}
+<div class="divide-y divide-gray-100">
+  {% for plan in plans %}
+  {% set done = plan['items'] | selectattr('is_done') | list | length %}
+  <div class="py-3">
+    <div class="flex items-center justify-between gap-3">
+      <p class="text-sm text-gray-900">{{ plan.title }}
+        {% for tag in plan.tags %}<span class="ml-1 px-2 py-0.5 rounded-full text-xs bg-gray-100 text-gray-600">{{ tag }}</span>{% endfor %}
+      </p>
+      <span class="px-2 py-0.5 rounded-full text-xs font-medium {{ status_color.get(plan.status, 'text-gray-500 bg-gray-50') }}">{{ plan.status }}</span>
+    </div>
+    <p class="text-xs text-gray-500 mt-0.5">{{ plan.goal }} · {{ done }}/{{ plan['items'] | length }} done{% if plan.completed_at %} · completed {{ plan.completed_at[:10] }}{% endif %}</p>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+<div class="flex items-center justify-between pt-3 mt-1 border-t border-gray-100">
+  <button
+    {% if not history_has_prev %}disabled{% endif %}
+    hx-get="/study/history-section?offset={{ [history_offset - 10, 0] | max }}"
+    hx-target="#study-history"
+    hx-swap="innerHTML"
+    class="btn btn-sm btn-ghost text-xs disabled:opacity-30">
+    <i class="ti ti-chevron-left text-sm"></i>Prev
+  </button>
+  <button
+    {% if not history_has_next %}disabled{% endif %}
+    hx-get="/study/history-section?offset={{ history_offset + 10 }}"
+    hx-target="#study-history"
+    hx-swap="innerHTML"
+    class="btn btn-sm btn-ghost text-xs disabled:opacity-30">
+    Next<i class="ti ti-chevron-right text-sm"></i>
+  </button>
+</div>

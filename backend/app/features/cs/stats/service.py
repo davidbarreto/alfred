@@ -14,7 +14,6 @@ from app.features.cs.stats.schemas import (
     StatsSummary,
     TagBreakdown,
 )
-from app.features.cs.study_plans.schemas import StudyPlanRead
 
 logger = logging.getLogger(__name__)
 
@@ -80,17 +79,6 @@ def format_recent_activity(by_day: list[DailyActivity], days: int = 7) -> str:
     active_days = len(recent)
     gap = (today - by_day[-1].date).days
     return f"{active_days}/{days}d active recently, last activity {gap}d ago"
-
-
-def format_plan_summary(plan: StudyPlanRead | None) -> str | None:
-    """Pure function: render pending items from an active study plan as a compact blurb, or None if not worth surfacing."""
-    if plan is None:
-        return None
-    pending = [item for item in plan.items if not item.is_done]
-    if not pending:
-        return None
-    items = ", ".join(item.description for item in pending[:5])
-    return f"{plan.cadence} plan pending: {items}"
 
 
 def compute_streaks(solved_dates: list[datetime.date]) -> tuple[int, int]:

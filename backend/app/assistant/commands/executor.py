@@ -11,6 +11,7 @@ from app.assistant.commands.handlers.briefing import handle_briefing
 from app.assistant.commands.handlers.category import handle_category
 from app.assistant.commands.handlers.contact import handle_contact
 from app.assistant.commands.handlers.cs import handle_cs
+from app.assistant.commands.handlers.study import handle_study
 from app.assistant.commands.handlers.event import handle_event
 from app.assistant.commands.handlers.finance import handle_finance
 from app.assistant.commands.handlers.grammar_scope import handle_grammar_scope
@@ -37,7 +38,7 @@ from app.features.core.embeddings.service import EmbeddingService
 from app.features.core.memories.service import MemoryService
 from app.features.core.working_memory.service import WorkingMemoryService
 from app.features.cs.stats.service import StatsService as CsStatsService
-from app.features.cs.study_plans.service import StudyPlanService as CsStudyPlanService
+from app.features.study.plans.service import StudyPlanService
 from app.features.finance.accounts.service import AccountService
 from app.features.finance.budgets.service import BudgetTargetService
 from app.features.finance.categories.service import CategoryService
@@ -82,7 +83,7 @@ async def execute(
     production_service: ProductionService | None = None,
     conversation_service: ConversationService | None = None,
     cs_stats_service: CsStatsService | None = None,
-    cs_study_plan_service: CsStudyPlanService | None = None,
+    study_plan_service: StudyPlanService | None = None,
     pause_service: GlobalPauseService | None = None,
     contact_service: ContactService | None = None,
     memory_service: MemoryService | None = None,
@@ -148,10 +149,15 @@ async def execute(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                 detail="CS service not available",
             )
-        return await handle_cs(
-            command, arguments, cs_stats_service, working_memory_service,
-            study_plan_service=cs_study_plan_service,
-        )
+        return await handle_cs(command, arguments, cs_stats_service, working_memory_service)
+
+    if cmd_type == "study":
+        if study_plan_service is None:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Study service not available",
+            )
+        return await handle_study(command, arguments, study_plan_service)
 
     if cmd_type == "recall":
         if embedding_service is None:

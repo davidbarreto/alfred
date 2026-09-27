@@ -53,7 +53,6 @@ def service(mock_session, mock_client):
     svc._platforms = AsyncMock()
     svc._problems = AsyncMock()
     svc._submissions = AsyncMock()
-    svc._plans = AsyncMock()
     return svc
 
 
@@ -96,18 +95,6 @@ class TestSync:
         count = await service.sync()
 
         assert count == 2
-        service._plans.auto_complete_items_for_problem.assert_called_with(7)
         update_call = service._platforms.update_platform.call_args
         assert update_call[0][0] == service._platforms.get_platform_by_code.return_value.id
         assert update_call[0][1].last_submission_external_id == "102"
-
-    async def test_does_not_autocomplete_for_non_accepted_verdict(self, service, mock_client):
-        service._platforms.get_platform_by_code.return_value = _platform_orm()
-        mock_client.get_user_info.return_value = {"rating": None, "maxRating": None, "rank": None}
-        mock_client.get_submissions_since.return_value = [_cf_submission(200, verdict="WRONG_ANSWER")]
-        service._problems.upsert_problem.return_value = _problem_read(id=9)
-        service._submissions.upsert_submission.return_value = _submission_read(verdict="wrong_answer")
-
-        await service.sync()
-
-        service._plans.auto_complete_items_for_problem.assert_not_called()

@@ -10,7 +10,6 @@ from app.features.core.reminders.schemas import ReminderDigest
 from app.features.core.working_memory.repository import WorkingMemoryRepository
 from app.features.core.working_memory.schemas import WorkingMemoryCreate, WorkingMemoryFilters
 from app.features.core.working_memory.service import WorkingMemoryService
-from app.features.cs.study_plans.service import StudyPlanService
 from app.features.organizer.calendar_events.schemas import EventFilters
 from app.features.organizer.calendar_events.service import CalendarEventService
 from app.features.organizer.shopping.repository import ShoppingRepository
@@ -18,6 +17,7 @@ from app.features.organizer.shopping.schemas import ShoppingItemFilters
 from app.features.organizer.tasks.recurrence import is_due_today
 from app.features.organizer.tasks.schemas import TaskFilters, TaskUpdate
 from app.features.organizer.tasks.service import TaskService
+from app.features.study.plans.service import StudyPlanService
 from app.shared.timezone import local_now
 
 logger = logging.getLogger(__name__)
@@ -31,19 +31,6 @@ _URGENT_DEDUP_TTL = timedelta(minutes=50)  # every hourly run
 _HIGH_DEDUP_TTL = timedelta(hours=3, minutes=50)  # ~4x/day (08, 12, 16, 20)
 _MEDIUM_DEDUP_TTL = timedelta(hours=7, minutes=50)  # ~2x/day (08, 16)
 _DAILY_DEDUP_TTL = timedelta(hours=24)  # once a day (marker keys are date-scoped)
-
-# A weekly study plan's "midweek" window: nudge once if the active plan still has
-# incomplete items partway through its period. The window spans several days (not a
-# single day) so a missed hourly run doesn't skip the nudge entirely; the dedup key is
-# keyed by plan id (not date) with a TTL spanning the whole cadence, so it still only
-# fires once per plan regardless of how many days the window covers.
-_STUDY_PLAN_MIDWEEK_MIN_DAY = 3
-_STUDY_PLAN_MIDWEEK_MAX_DAY = 5
-_STUDY_PLAN_DEDUP_TTL = timedelta(days=7)
-# "Plan created" is a one-shot notice per plan id, not date-scoped -- the TTL just
-# needs to outlive how long a plan can plausibly stay active so it never re-fires.
-_STUDY_PLAN_CREATED_DEDUP_TTL = timedelta(days=30)
-
 
 _PRIORITY_ORDER = {"HIGH": 0, "MEDIUM": 1, "LOW": 2}
 
@@ -129,7 +116,6 @@ class ReminderService:
         lines.extend(await self._collect_task_lines(now, today))
         lines.extend(await self._collect_event_lines(now, today))
         lines.extend(await self._collect_shopping_lines(today))
-        lines.extend(await self._collect_study_plan_created_lines())
         lines.extend(await self._collect_study_plan_lines(today))
 
         text = "\n".join(["⏰ Reminders", *lines]) if lines else ""
@@ -258,53 +244,15 @@ class ReminderService:
         await self._mark_reminded("shopping", 0, today, _DAILY_DEDUP_TTL)
         return [f"Shopping list still has {len(items)} pending item(s)"]
 
-    async def _collect_study_plan_created_lines(self) -> list[str]:
-        plan = await self._study_plan_service.get_active_plan("weekly")
-        if plan is None:
-            return []
-        key = f"reminder:study_plan_created:{plan.id}"
-        existing = await self._working_memory_repo.list(
-            WorkingMemoryFilters(key=key, expired="active", limit=1)
-        )
-        if existing:
-            return []
-        await self._working_memory_repo.upsert(
-            WorkingMemoryCreate(
-                key=key, value="reminded",
-                expires_at=datetime.now(timezone.utc) + _STUDY_PLAN_CREATED_DEDUP_TTL,
-            )
-        )
-        return [
-            f"New {plan.cadence} study plan generated ({len(plan.items)} item(s)): "
-            f"{plan.rationale or 'no rationale given'}"
-        ]
-
     async def _collect_study_plan_lines(self, today) -> list[str]:
-        plan = await self._study_plan_service.get_active_plan("weekly")
-        if plan is None:
+        plans = await self._study_plan_service.get_active_plans()
+        open_plans = [plan for plan in plans if any(not item.is_done for item in plan.items)]
+        if not open_plans:
             return []
-        days_elapsed = (today - plan.period_start).days
-        if not (_STUDY_PLAN_MIDWEEK_MIN_DAY <= days_elapsed <= _STUDY_PLAN_MIDWEEK_MAX_DAY):
+        if await self._already_reminded("study_plans", 0, today):
             return []
-        incomplete = [item for item in plan.items if not item.is_done]
-        if not incomplete:
-            return []
-        # Not date-scoped like _already_reminded/_mark_reminded: the midweek window spans
-        # several days on purpose, so dedup must key on the plan alone (one nudge per
-        # plan), not on today's date (which would re-fire once per day in the window).
-        key = f"reminder:study_plan_midweek:{plan.id}"
-        existing = await self._working_memory_repo.list(
-            WorkingMemoryFilters(key=key, expired="active", limit=1)
-        )
-        if existing:
-            return []
-        await self._working_memory_repo.upsert(
-            WorkingMemoryCreate(
-                key=key, value="reminded",
-                expires_at=datetime.now(timezone.utc) + _STUDY_PLAN_DEDUP_TTL,
-            )
-        )
-        return [f"This week's CS study plan still has {len(incomplete)} item(s) left"]
+        await self._mark_reminded("study_plans", 0, today, _DAILY_DEDUP_TTL)
+        return [f"You have open items in {len(open_plans)} study plan(s)"]
 
     async def _is_escalation_snoozed(self, task_id: int) -> bool:
         existing = await self._working_memory_repo.list(

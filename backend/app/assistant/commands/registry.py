@@ -361,6 +361,13 @@ COMMAND_DEFINITIONS = {
             "flags": {},
         }
     },
+    "study": {
+        "plans": {
+            "description": "List your active and backlog study plans with their open items",
+            "aliases": ["/studyplans", "/study"],
+            "flags": {},
+        }
+    },
     "recall": {
         "search": {
             "description": "Search your memories semantically by keyword",

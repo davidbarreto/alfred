@@ -26,7 +26,8 @@ alfred/
 │   │   │       ├── integrations/  # google_calendar, google_contacts (OAuth + sync), llm_calls, provider_calls
 │   │   │       ├── language/      # tracks, grammar_scope, chunks, sessions
 │   │   │       ├── monitoring/    # monitors, alerts, executions
-│   │   │       └── organizer/     # tasks, notes, calendar_events, contacts, shopping
+│   │   │       ├── organizer/     # tasks, notes, calendar_events, contacts, shopping
+│   │   │       └── study/         # tracks, plans (overview/generate/transitions), settings
 │   │   ├── assistant/
 │   │   │   ├── commands/          # registry, resolver, executor, per-domain handlers
 │   │   │   └── intents/           # intent service, extraction service, examples
@@ -55,6 +56,7 @@ alfred/
 │   │   │   │   ├── sessions/      # Learning sessions; feeds_srs flag; daily progress
 │   │   │   │   └── tracks/        # Language tracks (code, CEFR level, daily_quota, review_mode)
 │   │   │   ├── monitoring/        # Monitors, alerts, executions (flat, not sub-modules)
+│   │   │   ├── study/             # Study planner: tracks, targeted plans (backlog + global cap), tags, generator
 │   │   │   └── organizer/
 │   │   │       ├── calendar_events/
 │   │   │       ├── contacts/      # Write-through cache against Google Contacts (full CRUD)
@@ -84,7 +86,7 @@ alfred/
 │       ├── config.py
 │       ├── main.py                # FastAPI app, auth middleware, router registration
 │       ├── routes/                # dashboard, tasks, notes, contacts, calendar, shopping,
-│       │                          #   finance, insights, briefing, chat, auth, language
+│       │                          #   finance, insights, briefing, chat, auth, language, cs, study
 │       └── templates/             # Jinja2 + Tailwind/DaisyUI; partials prefixed with _
 ├── n8n/
 ├── infra/                         # docker-compose.yml, .env, postgres-init scripts
@@ -106,7 +108,7 @@ alfred/
 - **Single responsibility** — split files when a module grows beyond one clear concern
 
 ### Database (PostgreSQL + pgvector)
-- Five schemas: `core`, `organizer`, `monitoring`, `finance`, `language`
+- Schemas: `core`, `organizer`, `monitoring`, `finance`, `language`, `cs` (programming-practice evidence), `study` (study planner)
 - Write-through cache pattern for external integrations (Notion, Google Calendar)
 - Embeddings stored in a generic `core.embeddings` table with `source_id` foreign keys; treat as a derived index, not source of truth
 - `core.memories` is polymorphic with a `type` discriminator column

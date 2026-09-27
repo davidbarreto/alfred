@@ -60,7 +60,6 @@ class InterviewInsightService:
                 "company": company_name,
                 "role": process.role_title,
                 "priority": process.priority or "unset",
-                "study_plan_id": process.study_plan_id,
                 "next_summary": next_summary,
                 "stage_lines": stage_lines,
                 "days_until": days_until,
@@ -69,8 +68,8 @@ class InterviewInsightService:
         entries.sort(key=lambda e: (e["days_until"] is None, e["days_until"]))
 
         lines = [
-            f"- Process id {e['id']}: {e['company']} — {e['role']} (priority={e['priority']}, "
-            f"study_plan_id={e['study_plan_id']}). {e['next_summary']}. Full stage history: {e['stage_lines']}"
+            f"- Process id {e['id']}: {e['company']} — {e['role']} (priority={e['priority']}). "
+            f"{e['next_summary']}. Full stage history: {e['stage_lines']}"
             for e in entries
         ]
         return "\n".join(lines) or "No active interview processes.", [e["id"] for e in entries]

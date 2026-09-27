@@ -1,12 +1,12 @@
 {% extends "base.html" %}
 {% set active_page = "cs" %}
-{% block title %}CS Coach{% endblock %}
+{% block title %}CS{% endblock %}
 
 {% block content %}
 <div class="p-6 space-y-6">
 
   <div class="flex items-center justify-between">
-    <h1 class="text-base font-semibold text-gray-900">CS Coach</h1>
+    <h1 class="text-base font-semibold text-gray-900">CS</h1>
     <div class="flex flex-col items-end gap-1">
       {% if sync_status_text %}
       <p class="text-xs text-gray-400" id="sync-status-text">{{ sync_status_text }}</p>
@@ -19,10 +19,6 @@
         <button onclick="syncPlatform('leetcode')" id="sync-leetcode"
                 class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 text-xs font-medium text-gray-500 hover:bg-gray-50 transition-colors">
           <i class="ti ti-refresh text-sm"></i>Sync LeetCode
-        </button>
-        <button onclick="generatePlan('weekly')" id="generate-plan"
-                class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#378ADD] text-xs font-medium text-white hover:bg-[#2f7bc4] transition-colors">
-          <i class="ti ti-sparkles text-sm"></i>Generate plan
         </button>
       </div>
     </div>
@@ -50,64 +46,30 @@
     </div>
   </div>
 
-  <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-
-    <!-- Live recommendation -->
-    <div class="card bg-white">
-      <div class="card-body p-5 space-y-3">
-        <p class="text-sm font-semibold text-gray-900">Right now</p>
-        {% if live_recommendation %}
-        <p class="text-sm text-gray-600">{{ live_recommendation.reason }}</p>
-        <div class="divide-y divide-gray-100">
-          {% for c in live_recommendation.candidates %}
-          <div class="flex items-center justify-between py-2 text-sm">
-            {% if c.url %}
-            <a href="{{ c.url }}" target="_blank" rel="noopener" class="text-gray-900 hover:text-[#378ADD]">{{ c.name }}</a>
-            {% else %}
-            <span class="text-gray-900">{{ c.name }}</span>
-            {% endif %}
-            {% if c.difficulty %}
-            <span class="px-2 py-0.5 rounded-full text-xs font-medium {{ difficulty_color.get(c.difficulty, 'text-gray-500 bg-gray-50') }}">{{ c.difficulty }}</span>
-            {% endif %}
-          </div>
-          {% endfor %}
+  <!-- Live recommendation -->
+  <div class="card bg-white">
+    <div class="card-body p-5 space-y-3">
+      <p class="text-sm font-semibold text-gray-900">Right now</p>
+      {% if live_recommendation %}
+      <p class="text-sm text-gray-600">{{ live_recommendation.reason }}</p>
+      <div class="divide-y divide-gray-100">
+        {% for c in live_recommendation.candidates %}
+        <div class="flex items-center justify-between py-2 text-sm">
+          {% if c.url %}
+          <a href="{{ c.url }}" target="_blank" rel="noopener" class="text-gray-900 hover:text-[#378ADD]">{{ c.name }}</a>
+          {% else %}
+          <span class="text-gray-900">{{ c.name }}</span>
+          {% endif %}
+          {% if c.difficulty %}
+          <span class="px-2 py-0.5 rounded-full text-xs font-medium {{ difficulty_color.get(c.difficulty, 'text-gray-500 bg-gray-50') }}">{{ c.difficulty }}</span>
+          {% endif %}
         </div>
-        {% else %}
-        <p class="text-sm text-gray-400">Not enough submission history yet.</p>
-        {% endif %}
+        {% endfor %}
       </div>
+      {% else %}
+      <p class="text-sm text-gray-400">Not enough submission history yet.</p>
+      {% endif %}
     </div>
-
-    <!-- Study plan -->
-    <div class="card bg-white">
-      <div class="card-body p-5 space-y-3">
-        <div class="flex items-center justify-between">
-          <p class="text-sm font-semibold text-gray-900">Study plan</p>
-          <a href="/cs/plans" class="text-xs text-[#378ADD] hover:underline">History →</a>
-        </div>
-        {% if active_plan %}
-        {% if active_plan.rationale %}
-        <p class="text-sm text-gray-600">{{ active_plan.rationale }}</p>
-        {% endif %}
-        <div class="divide-y divide-gray-100" id="plan-items">
-          {% for item in active_plan['items'] %}
-          <label class="flex items-start gap-2.5 py-2 text-sm cursor-pointer {% if item.is_done %}opacity-50{% endif %}" id="plan-item-{{ item.id }}">
-            <input type="checkbox" {% if item.is_done %}checked disabled{% endif %}
-                   onchange="completeItem({{ item.id }})"
-                   class="mt-0.5 checkbox checkbox-sm">
-            <span class="{% if item.is_done %}line-through{% endif %}">
-              {{ item.description }}
-              {% if item.url %}<a href="{{ item.url }}" target="_blank" rel="noopener" class="text-[#378ADD] ml-1"><i class="ti ti-external-link text-xs"></i></a>{% endif %}
-            </span>
-          </label>
-          {% endfor %}
-        </div>
-        {% else %}
-        <p class="text-sm text-gray-400">No active plan yet — generate one above.</p>
-        {% endif %}
-      </div>
-    </div>
-
   </div>
 
   <!-- Weakest tags -->
@@ -275,45 +237,6 @@ async function syncPlatform(code) {
   } finally {
     btn.disabled = false;
     btn.innerHTML = originalHtml;
-  }
-}
-
-async function generatePlan(cadence, force = false) {
-  const btn = document.getElementById('generate-plan');
-  btn.disabled = true;
-  try {
-    const url = `/cs/plans/${cadence}/generate` + (force ? '?force=true' : '');
-    const res = await fetch(url, { method: 'POST' });
-    if (!res.ok) {
-      const body = await res.json().catch(() => ({}));
-      if (res.status === 409 && body.incomplete && !force) {
-        btn.disabled = false;
-        if (confirm(`${body.error} This will mark the current plan as won't-do.`)) {
-          await generatePlan(cadence, true);
-        }
-        return;
-      }
-      alert(body.error || 'Could not generate a plan.');
-      return;
-    }
-    location.reload();
-  } catch (e) {
-    alert('Could not generate a plan.');
-  } finally {
-    btn.disabled = false;
-  }
-}
-
-async function completeItem(itemId) {
-  const row = document.getElementById(`plan-item-${itemId}`);
-  try {
-    const res = await fetch(`/cs/plans/items/${itemId}/complete`, { method: 'POST' });
-    if (!res.ok) throw new Error();
-    row.classList.add('opacity-50');
-    row.querySelector('span').classList.add('line-through');
-    row.querySelector('input').disabled = true;
-  } catch (e) {
-    alert('Could not update item.');
   }
 }
 </script>

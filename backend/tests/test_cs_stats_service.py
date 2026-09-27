@@ -8,10 +8,8 @@ from app.features.cs.stats.service import (
     StatsService,
     compute_streaks,
     format_context_summary,
-    format_plan_summary,
     format_recent_activity,
 )
-from app.features.cs.study_plans.schemas import StudyPlanItemRead, StudyPlanRead
 
 
 def _d(*args):
@@ -273,38 +271,3 @@ class TestFormatRecentActivity:
         by_day = [DailyActivity(date=today - datetime.timedelta(days=30), attempts=2, solved=1)]
         text = format_recent_activity(by_day, days=7)
         assert text == "no activity in the last 7d"
-
-
-def _plan_item(description: str, is_done: bool = False) -> StudyPlanItemRead:
-    return StudyPlanItemRead(
-        id=1, item_type="problem", description=description, problem_id=None,
-        url=None, is_done=is_done, completed_at=None, position=0,
-    )
-
-
-def _plan(cadence: str = "weekly", items: list[StudyPlanItemRead] | None = None) -> StudyPlanRead:
-    return StudyPlanRead(
-        id=1, cadence=cadence, period_start=datetime.date(2026, 8, 1), status="active",
-        rationale=None, items=items or [],
-        created_at=datetime.datetime.now(datetime.timezone.utc),
-        updated_at=datetime.datetime.now(datetime.timezone.utc),
-    )
-
-
-class TestFormatPlanSummary:
-    def test_none_plan_returns_none(self):
-        assert format_plan_summary(None) is None
-
-    def test_no_pending_items_returns_none(self):
-        plan = _plan(items=[_plan_item("solved one", is_done=True)])
-        assert format_plan_summary(plan) is None
-
-    def test_lists_pending_items(self):
-        plan = _plan(items=[_plan_item("do DP problem"), _plan_item("review union-find", is_done=True)])
-        text = format_plan_summary(plan)
-        assert text == "weekly plan pending: do DP problem"
-
-    def test_caps_at_five_items(self):
-        items = [_plan_item(f"item {i}") for i in range(7)]
-        text = format_plan_summary(_plan(items=items))
-        assert text.count(",") == 4

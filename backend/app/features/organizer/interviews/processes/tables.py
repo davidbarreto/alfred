@@ -27,9 +27,6 @@ class InterviewProcess(Base):
     priority: Mapped[str | None] = mapped_column(String(10), nullable=True)
     department: Mapped[str | None] = mapped_column(String(255), nullable=True)
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
-    study_plan_id: Mapped[int | None] = mapped_column(
-        ForeignKey("cs.study_plans.id", ondelete="SET NULL"), nullable=True
-    )
 
     salary_min: Mapped[int | None] = mapped_column(Integer, nullable=True)
     salary_max: Mapped[int | None] = mapped_column(Integer, nullable=True)

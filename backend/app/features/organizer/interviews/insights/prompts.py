@@ -4,7 +4,7 @@ INSIGHTS_SYSTEM_PROMPT_TEMPLATE = (
     "currently active interview processes, sorted by how soon their next scheduled stage is (soonest "
     "first) — do not re-derive or second-guess this ordering, trust it. Each process shows its company, "
     "role, a precomputed NEXT line (the next scheduled stage and how many days from today it is), its "
-    "full stage history for context, and any linked study plan. "
+    "and full stage history for context. "
     "Recommend what to focus on this week: which process(es) need the most preparation given how soon "
     "their next stage is and what type of stage it is, and what to study or practice. Where relevant, "
     "factor in how well a process fits the stated preferences (e.g. flag a strong misfit briefly, or note "

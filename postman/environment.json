@@ -195,13 +195,25 @@
       "enabled": true
     },
     {
-      "key": "cs_plan_id",
+      "key": "study_plan_id",
       "value": "",
       "type": "default",
       "enabled": true
     },
     {
-      "key": "cs_plan_item_id",
+      "key": "study_plan_item_id",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "study_plan_status",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "study_original_max_active_plans",
       "value": "",
       "type": "default",
       "enabled": true

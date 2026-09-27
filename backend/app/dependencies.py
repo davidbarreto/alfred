@@ -114,8 +114,11 @@ from app.features.cs.platforms.leetcode_sync_service import LeetCodeSyncService
 from app.features.cs.problems.service import ProblemService as CsProblemService
 from app.features.cs.submissions.service import SubmissionService as CsSubmissionService
 from app.features.cs.stats.service import StatsService as CsStatsService
-from app.features.cs.study_plans.service import StudyPlanService as CsStudyPlanService
 from app.features.cs.recommendations.service import RecommendationService as CsRecommendationService
+from app.features.study.generator.service import StudyPlanGeneratorService
+from app.features.study.plans.service import StudyPlanService
+from app.features.study.settings.service import StudySettingsService
+from app.features.study.tracks.service import StudyTrackService
 from app.integrations.codeforces.client import CodeforcesClient
 from app.integrations.leetcode.client import LeetCodeClient
 
@@ -510,11 +513,20 @@ def get_cs_submission_service(session: AsyncSession = Depends(get_session)) -> C
 def get_cs_stats_service(session: AsyncSession = Depends(get_session)) -> CsStatsService:
     return CsStatsService(session)
 
-def get_cs_study_plan_service(session: AsyncSession = Depends(get_session)) -> CsStudyPlanService:
-    return CsStudyPlanService(session)
-
 def get_cs_recommendation_service(session: AsyncSession = Depends(get_session)) -> CsRecommendationService:
-    return CsRecommendationService(llm_provider=get_extraction_llm_provider(), session=session)
+    return CsRecommendationService(session)
+
+def get_study_track_service(session: AsyncSession = Depends(get_session)) -> StudyTrackService:
+    return StudyTrackService(session)
+
+def get_study_plan_service(session: AsyncSession = Depends(get_session)) -> StudyPlanService:
+    return StudyPlanService(session)
+
+def get_study_settings_service(session: AsyncSession = Depends(get_session)) -> StudySettingsService:
+    return StudySettingsService(session)
+
+def get_study_plan_generator_service(session: AsyncSession = Depends(get_session)) -> StudyPlanGeneratorService:
+    return StudyPlanGeneratorService(llm_provider=get_extraction_llm_provider(), session=session)
 
 def get_interview_company_service(session: AsyncSession = Depends(get_session)) -> InterviewCompanyService:
     return InterviewCompanyService(session)
@@ -639,8 +651,11 @@ CsPlatformServiceDep = Annotated[PlatformService, Depends(get_cs_platform_servic
 CsProblemServiceDep = Annotated[CsProblemService, Depends(get_cs_problem_service)]
 CsSubmissionServiceDep = Annotated[CsSubmissionService, Depends(get_cs_submission_service)]
 CsStatsServiceDep = Annotated[CsStatsService, Depends(get_cs_stats_service)]
-CsStudyPlanServiceDep = Annotated[CsStudyPlanService, Depends(get_cs_study_plan_service)]
 CsRecommendationServiceDep = Annotated[CsRecommendationService, Depends(get_cs_recommendation_service)]
+StudyTrackServiceDep = Annotated[StudyTrackService, Depends(get_study_track_service)]
+StudyPlanServiceDep = Annotated[StudyPlanService, Depends(get_study_plan_service)]
+StudySettingsServiceDep = Annotated[StudySettingsService, Depends(get_study_settings_service)]
+StudyPlanGeneratorServiceDep = Annotated[StudyPlanGeneratorService, Depends(get_study_plan_generator_service)]
 CodeforcesSyncServiceDep = Annotated[CodeforcesSyncService, Depends(get_codeforces_sync_service)]
 LeetCodeSyncServiceDep = Annotated[LeetCodeSyncService, Depends(get_leetcode_sync_service)]
 InterviewCompanyServiceDep = Annotated[InterviewCompanyService, Depends(get_interview_company_service)]

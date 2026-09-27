@@ -1,0 +1,196 @@
+{% extends "base.html" %}
+{% set active_page = "study" %}
+{% block title %}Study{% endblock %}
+
+{% macro tag_chips(tags) %}
+{% for tag in tags %}
+<span class="px-2 py-0.5 rounded-full text-xs bg-gray-100 text-gray-600">{{ tag }}</span>
+{% endfor %}
+{% endmacro %}
+
+{% block content %}
+{% set active = overview['active'] if overview else [] %}
+{% set backlog = overview['backlog'] if overview else [] %}
+{% set max_active = overview.max_active_plans if overview else 0 %}
+<div class="p-6 space-y-6">
+
+  <div class="flex items-center justify-between">
+    <h1 class="text-base font-semibold text-gray-900">Study</h1>
+    <button onclick="generatePlan()" id="generate-plan"
+            class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#378ADD] text-xs font-medium text-white hover:bg-[#2f7bc4] transition-colors">
+      <i class="ti ti-sparkles text-sm"></i>New plan from CS stats
+    </button>
+  </div>
+
+  {% if not overview %}
+  <div class="card bg-white">
+    <div class="card-body p-5">
+      <p class="text-sm text-gray-400">Study plans are unavailable right now.</p>
+    </div>
+  </div>
+  {% else %}
+
+  {% if backlog and active | length < max_active %}
+  <div class="rounded-lg border border-blue-100 bg-blue-50 px-4 py-3 text-sm text-blue-700" id="next-up">
+    A slot is free. Next up from the backlog: <span class="font-medium">{{ backlog[0].title }}</span>
+    <button onclick="planAction({{ backlog[0].id }}, 'activate')" class="ml-2 underline">Start it</button>
+  </div>
+  {% endif %}
+
+  <!-- Active plans -->
+  <div class="space-y-3">
+    <p class="text-sm font-semibold text-gray-900">Active plans <span class="font-normal text-gray-400">({{ active | length }}/{{ max_active }})</span></p>
+    {% if active %}
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      {% for plan in active %}
+      {% set done = plan['items'] | selectattr('is_done') | list | length %}
+      <div class="card bg-white" id="plan-{{ plan.id }}">
+        <div class="card-body p-5 space-y-3">
+          <div class="flex items-start justify-between gap-3">
+            <div>
+              <p class="text-sm font-semibold text-gray-900">{{ plan.title }}</p>
+              <p class="text-sm text-gray-600 mt-0.5">{{ plan.goal }}</p>
+            </div>
+            <span class="px-2 py-0.5 rounded-full text-xs font-medium whitespace-nowrap {{ priority_color.get(plan.priority, 'text-gray-500 bg-gray-50') }}">{{ plan.priority }}</span>
+          </div>
+          {% if plan.tags %}<div class="flex flex-wrap gap-1">{{ tag_chips(plan.tags) }}</div>{% endif %}
+          <div class="divide-y divide-gray-100">
+            {% for item in plan['items'] %}
+            <label class="flex items-start gap-2.5 py-2 text-sm cursor-pointer {% if item.is_done %}opacity-50{% endif %}" id="plan-item-{{ item.id }}">
+              <input type="checkbox" {% if item.is_done %}checked disabled{% endif %}
+                     onchange="completeItem({{ item.id }})"
+                     class="mt-0.5 checkbox checkbox-sm">
+              <span class="{% if item.is_done %}line-through{% endif %}">
+                {{ item.description }}
+                {% if item.url %}<a href="{{ item.url }}" target="_blank" rel="noopener" class="text-[#378ADD] ml-1"><i class="ti ti-external-link text-xs"></i></a>{% endif %}
+                {% if item.reason %}<i class="ti ti-info-circle text-xs text-gray-400 ml-1" title="Why: {{ item.reason }}"></i>{% endif %}
+              </span>
+            </label>
+            {% endfor %}
+          </div>
+          {% if plan['items'] and done == plan['items'] | length %}
+          <p class="text-xs text-green-700">All items done. Does this gap look closed?</p>
+          {% endif %}
+          <div class="flex items-center justify-between pt-1">
+            <span class="text-xs text-gray-400">{{ done }}/{{ plan['items'] | length }} done</span>
+            <div class="flex items-center gap-2">
+              <button onclick="planAction({{ plan.id }}, 'abandon', 'Abandon this plan?')" class="btn btn-xs btn-ghost text-gray-500">Abandon</button>
+              <button onclick="planAction({{ plan.id }}, 'complete')" class="btn btn-xs btn-outline">Complete plan</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="card bg-white">
+      <div class="card-body p-5">
+        <p class="text-sm text-gray-400">No active plans. Start one from the backlog or create a new one above.</p>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Backlog -->
+  <div class="card bg-white">
+    <div class="card-body p-5 space-y-3">
+      <p class="text-sm font-semibold text-gray-900">Backlog <span class="font-normal text-gray-400">({{ backlog | length }})</span></p>
+      {% if backlog %}
+      <div class="divide-y divide-gray-100">
+        {% for plan in backlog %}
+        <div class="flex items-start justify-between gap-3 py-3" id="plan-{{ plan.id }}">
+          <div class="space-y-1">
+            <p class="text-sm text-gray-900">{{ plan.title }}
+              <span class="ml-1 px-2 py-0.5 rounded-full text-xs font-medium {{ priority_color.get(plan.priority, 'text-gray-500 bg-gray-50') }}">{{ plan.priority }}</span>
+            </p>
+            <p class="text-xs text-gray-500">{{ plan.goal }} · {{ plan['items'] | length }} item(s)</p>
+            {% if plan.tags %}<div class="flex flex-wrap gap-1">{{ tag_chips(plan.tags) }}</div>{% endif %}
+          </div>
+          <div class="flex items-center gap-2 shrink-0">
+            <button onclick="deletePlan({{ plan.id }})" class="btn btn-xs btn-ghost text-gray-400" title="Delete"><i class="ti ti-trash"></i></button>
+            <button onclick="planAction({{ plan.id }}, 'abandon', 'Abandon this plan?')" class="btn btn-xs btn-ghost text-gray-500">Abandon</button>
+            <button onclick="planAction({{ plan.id }}, 'activate')" class="btn btn-xs btn-outline"
+                    {% if active | length >= max_active %}disabled title="You're at {{ max_active }} active plans"{% endif %}>Start</button>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <p class="text-sm text-gray-400">Nothing waiting. New plans land here when you're at the limit of {{ max_active }} active plans.</p>
+      {% endif %}
+    </div>
+  </div>
+
+  {% endif %}
+
+  <!-- History -->
+  <div class="card bg-white">
+    <div class="card-body p-5 space-y-3">
+      <p class="text-sm font-semibold text-gray-900">Past plans</p>
+      <div id="study-history" hx-get="/study/history-section" hx-trigger="load" hx-swap="innerHTML">
+        <div class="flex items-center justify-center py-10">
+          <span class="loading loading-spinner loading-md text-[#378ADD]"></span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+async function postJson(url, method = 'POST') {
+  const res = await fetch(url, { method });
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(body.error || 'Something went wrong.');
+  return body;
+}
+
+async function generatePlan() {
+  const btn = document.getElementById('generate-plan');
+  btn.disabled = true;
+  try {
+    const plan = await postJson('/study/plans/generate');
+    if (plan.status === 'backlog') {
+      alert(`"${plan.title}" went to the backlog: you're already at your limit of active plans.`);
+    }
+    location.reload();
+  } catch (e) {
+    alert(e.message);
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+async function planAction(planId, action, confirmText = null) {
+  if (confirmText && !confirm(confirmText)) return;
+  try {
+    await postJson(`/study/plans/${planId}/${action}`);
+    location.reload();
+  } catch (e) {
+    alert(e.message);
+  }
+}
+
+async function deletePlan(planId) {
+  if (!confirm('Delete this plan permanently?')) return;
+  try {
+    await postJson(`/study/plans/${planId}`, 'DELETE');
+    document.getElementById(`plan-${planId}`)?.remove();
+  } catch (e) {
+    alert(e.message);
+  }
+}
+
+async function completeItem(itemId) {
+  const row = document.getElementById(`plan-item-${itemId}`);
+  try {
+    await postJson(`/study/items/${itemId}/complete`);
+    row.classList.add('opacity-50');
+    row.querySelector('span').classList.add('line-through');
+    row.querySelector('input').disabled = true;
+  } catch (e) {
+    alert(e.message);
+  }
+}
+</script>
+{% endblock %}

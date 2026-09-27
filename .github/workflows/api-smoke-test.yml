@@ -11,10 +11,11 @@ name: API Smoke Test
 #   - integration_telegram: hits the real Telegram Bot API.
 #   - cs.collection.json: only the "ci-safe" folder runs (platforms/problems/
 #     submissions/stats/recommendations CRUD). The "excluded-from-ci" folder
-#     is skipped — item 19 (study plan generation) expects the LLM to return
-#     parseable JSON, which the null LLM provider's canned text is not; items
-#     20-23 depend on the plan it creates; items 24/25 trigger real
-#     Codeforces/LeetCode sync calls.
+#     is skipped — items 24/25 trigger real Codeforces/LeetCode sync calls.
+#   - study.collection.json: only the "ci-safe" folder runs (tracks, settings,
+#     overview, 404s). The "excluded-from-ci" folder is skipped — item 15
+#     (plan generation) expects the LLM to return parseable JSON, which the
+#     null LLM provider's canned text is not; items 16-21 depend on that plan.
 #   - language.collection.json: production/conversation/shadowing endpoints
 #     need real audio (TTS/transcription/pronunciation analysis via Gemini)
 #     and aren't covered by a null provider yet.
@@ -138,6 +139,14 @@ jobs:
 
           echo "==> cs.collection.json (ci-safe folder only)"
           newman run cs.collection.json \
+            --folder ci-safe \
+            -e environment.json \
+            --env-var "base_url=http://localhost:8000" \
+            --env-var "api_token=ci-smoke-test-token" \
+            || status=1
+
+          echo "==> study.collection.json (ci-safe folder only)"
+          newman run study.collection.json \
             --folder ci-safe \
             -e environment.json \
             --env-var "base_url=http://localhost:8000" \

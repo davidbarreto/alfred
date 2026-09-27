@@ -12,6 +12,7 @@ from app.features.organizer.interviews.processes.schemas import (
     FirstStageInput,
     InterviewProcessCreate,
     InterviewProcessFilters,
+    InterviewProcessRead,
     InterviewProcessUpdate,
 )
 from app.features.organizer.interviews.processes.service import InterviewProcessService
@@ -29,7 +30,6 @@ def _make_process_orm(**kwargs):
     orm.priority = None
     orm.department = None
     orm.notes = None
-    orm.study_plan_id = kwargs.get("study_plan_id", None)
     orm.salary_min = None
     orm.salary_max = None
     orm.salary_currency = None
@@ -50,7 +50,6 @@ def service():
     svc = InterviewProcessService(session=AsyncMock())
     svc._repo = AsyncMock()
     svc._company_repo = AsyncMock()
-    svc._study_plan_repo = AsyncMock()
     return svc
 
 
@@ -63,13 +62,9 @@ class TestCreateProcess:
         assert exc.value.status_code == 404
         service._repo.create_process.assert_not_called()
 
-    async def test_raises_404_when_study_plan_missing(self, service):
-        service._company_repo.get_company.return_value = MagicMock()
-        service._study_plan_repo.get_plan.return_value = None
-        data = InterviewProcessCreate(company_id=1, role_title="Backend Engineer", study_plan_id=999)
-        with pytest.raises(HTTPException) as exc:
-            await service.create_process(data)
-        assert exc.value.status_code == 404
+    def test_process_schemas_no_longer_link_a_study_plan(self):
+        for schema in (InterviewProcessCreate, InterviewProcessUpdate, InterviewProcessRead):
+            assert "study_plan_id" not in schema.model_fields
 
     async def test_delegates_to_repo_when_valid(self, service):
         service._company_repo.get_company.return_value = MagicMock()

@@ -13,7 +13,6 @@ _SUBMISSIONS_PAGE_SIZE = 10
 _SUBMISSIONS_LIST_PAGE_SIZE = 20
 _PROBLEMS_PREVIEW_SIZE = 10
 _PROBLEMS_PAGE_SIZE = 20
-_STUDY_PLANS_PAGE_SIZE = 10
 
 _ACTIVITY_RANGE_DAYS = {
     "30": 30,
@@ -30,12 +29,6 @@ _DIFFICULTY_COLOR = {
 }
 _VERDICT_COLOR = {
     "accepted": "text-green-600 bg-green-50",
-}
-_PLAN_STATUS_COLOR = {
-    "active": "text-blue-600 bg-blue-50",
-    "completed": "text-green-600 bg-green-50",
-    "abandoned": "text-gray-500 bg-gray-50",
-    "superseded": "text-gray-500 bg-gray-50",
 }
 
 
@@ -121,7 +114,6 @@ def _enrich_attempted_problems(problems: list, platform_by_id: dict) -> None:
 async def dashboard(request: Request):
     summary = await _safe_get("/cs/stats/summary")
     live_recommendation = await _safe_get("/cs/recommendations/live")
-    active_plan = await _safe_get("/cs/study-plans/active/weekly")
     platforms = await _safe_get("/cs/platforms") or []
     platform_by_id = {p["id"]: p for p in platforms}
 
@@ -147,7 +139,6 @@ async def dashboard(request: Request):
     return templates.TemplateResponse(request, "cs.html", {
         "summary": summary,
         "live_recommendation": live_recommendation,
-        "active_plan": active_plan,
         "sync_status_text": _sync_status_text(platforms),
         "submissions": submissions,
         "submissions_offset": 0,
@@ -296,55 +287,3 @@ async def trigger_sync(platform_code: str):
     except httpx.HTTPError:
         return JSONResponse({"error": "Sync failed."}, status_code=502)
     return JSONResponse(result)
-
-
-@router.post("/plans/{cadence}/generate")
-async def generate_plan(cadence: str, request: Request):
-    if cadence not in ("weekly", "monthly"):
-        return JSONResponse({"error": "Unknown cadence."}, status_code=404)
-    force = request.query_params.get("force") == "true"
-    path = f"/cs/recommendations/plans/{cadence}" + ("?force=true" if force else "")
-    try:
-        plan = await api.post(path, timeout=60.0)
-    except httpx.HTTPStatusError as exc:
-        if exc.response.status_code == 409:
-            detail = exc.response.json().get("detail", {})
-            return JSONResponse(
-                {
-                    "error": detail.get("message", "The current plan still has unfinished items."),
-                    "incomplete": True,
-                },
-                status_code=409,
-            )
-        return JSONResponse({"error": "Could not generate a study plan."}, status_code=502)
-    except httpx.HTTPError:
-        return JSONResponse({"error": "Could not generate a study plan."}, status_code=502)
-    return JSONResponse(plan)
-
-
-@router.get("/plans", response_class=HTMLResponse)
-async def study_plans_page(request: Request):
-    return templates.TemplateResponse(request, "cs_study_plans.html", {})
-
-
-@router.get("/plans-list-section", response_class=HTMLResponse)
-async def study_plans_list_section(request: Request):
-    offset = max(0, int(request.query_params.get("offset", "0")))
-    raw = await _safe_get("/cs/study-plans", {"limit": _STUDY_PLANS_PAGE_SIZE + 1, "offset": offset}) or []
-    plans, has_next, has_prev = _pagination(raw, offset, _STUDY_PLANS_PAGE_SIZE)
-    return templates.TemplateResponse(request, "_cs_study_plans_list.html", {
-        "plans": plans,
-        "plans_offset": offset,
-        "plans_has_next": has_next,
-        "plans_has_prev": has_prev,
-        "plan_status_color": _PLAN_STATUS_COLOR,
-    })
-
-
-@router.post("/plans/items/{item_id}/complete")
-async def complete_item(item_id: int):
-    try:
-        await api.post(f"/cs/study-plans/items/{item_id}/complete")
-    except httpx.HTTPError:
-        return JSONResponse({"error": "Could not update item."}, status_code=502)
-    return JSONResponse({"ok": True})

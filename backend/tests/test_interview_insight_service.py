@@ -14,7 +14,6 @@ def _make_process_orm(**kwargs):
     orm.company_id = kwargs.get("company_id", 1)
     orm.role_title = kwargs.get("role_title", "Backend Engineer")
     orm.priority = None
-    orm.study_plan_id = None
     orm.stages = []
     return orm
 

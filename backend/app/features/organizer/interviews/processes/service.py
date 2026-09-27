@@ -5,7 +5,6 @@ import logging
 from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.features.cs.study_plans.repository import StudyPlanRepository
 from app.features.organizer.interviews.companies.repository import CompanyRepository
 from app.features.organizer.interviews.processes.repository import InterviewProcessRepository
 from app.features.organizer.interviews.processes.schemas import (
@@ -25,7 +24,6 @@ class InterviewProcessService:
         self._session = session
         self._repo = InterviewProcessRepository(session)
         self._company_repo = CompanyRepository(session)
-        self._study_plan_repo = StudyPlanRepository(session)
 
     async def get_process(self, process_id: int) -> InterviewProcessRead | None:
         process = await self._repo.get_process(process_id)
@@ -40,10 +38,6 @@ class InterviewProcessService:
             company = await self._company_repo.get_company(data.company_id)
             if company is None:
                 raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Company not found")
-        if data.study_plan_id is not None:
-            plan = await self._study_plan_repo.get_plan(data.study_plan_id)
-            if plan is None:
-                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Study plan not found")
 
     async def create_process(self, data: InterviewProcessCreate) -> InterviewProcessRead:
         await self._validate_refs(data)

@@ -1,0 +1,721 @@
+{
+  "info": {
+    "name": "Alfred - Study API",
+    "_postman_id": "alfred-study-v1",
+    "description": "Run in order. ci-safe: tracks, settings (cap get/update/restore), overview, closed-plan list and 404s for every plan action. excluded-from-ci: generate a plan from CS stats (needs a real LLM) and walk it through item completion, activate/complete/abandon transitions and delete.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{api_token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "ci-safe",
+      "item": [
+        {
+          "name": "01 - Health Check",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/health",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "health"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          }
+        },
+        {
+          "name": "02 - List Tracks (Software Engineering seeded)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Software Engineering track is seeded', () => {",
+                  "    const names = pm.response.json().map(t => t.name);",
+                  "    pm.expect(names).to.include('Software Engineering');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/study/tracks",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "study",
+                "tracks"
+              ]
+            }
+          }
+        },
+        {
+          "name": "03 - Get Settings (default cap)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Has max_active_plans', () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.max_active_plans).to.be.a('number');",
+                  "    pm.environment.set('study_original_max_active_plans', json.max_active_plans);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/study/settings",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "study",
+                "settings"
+              ]
+            }
+          }
+        },
+        {
+          "name": "04 - Update Settings (cap = 2)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Cap updated', () => pm.expect(pm.response.json().max_active_plans).to.eql(2));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/study/settings",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "study",
+                "settings"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"max_active_plans\": 2\n}"
+            }
+          }
+        },
+        {
+          "name": "05 - Update Settings (cap = 0, 422)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 422', () => pm.response.to.have.status(422));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/study/settings",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "study",
+                "settings"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"max_active_plans\": 0\n}"
+            }
+          }
+        },
+        {
+          "name": "06 - Get Overview",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Overview shape', () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.active).to.be.an('array');",
+                  "    pm.expect(json.backlog).to.be.an('array');",
+                  "    pm.expect(json.max_active_plans).to.eql(2);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/study/plans/overview",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "study",
+                "plans",
+                "overview"
+              ]
+            }
+          }
+        },
+        {
+          "name": "07 - List Closed Plans",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Only closed plans', () => {",
+                  "    pm.response.json().forEach(p => pm.expect(['completed', 'abandoned']).to.include(p.status));",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/study/plans?closed=true&limit=10",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "study",
+                "plans"
+              ],
+              "query": [
+                {
+                  "key": "closed",
+                  "value": "true"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "08 - Get Plan (unknown id, 404)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 404', () => pm.response.to.have.status(404));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/study/plans/999999",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "study",
+                "plans",
+                "999999"
+              ]
+            }
+          }
+        },
+        {
+          "name": "09 - Activate Plan (unknown id, 404)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 404', () => pm.response.to.have.status(404));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/study/plans/999999/activate",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "study",
+                "plans",
+                "999999",
+                "activate"
+              ]
+            }
+          }
+        },
+        {
+          "name": "10 - Complete Plan (unknown id, 404)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 404', () => pm.response.to.have.status(404));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/study/plans/999999/complete",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "study",
+                "plans",
+                "999999",
+                "complete"
+              ]
+            }
+          }
+        },
+        {
+          "name": "11 - Abandon Plan (unknown id, 404)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 404', () => pm.response.to.have.status(404));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/study/plans/999999/abandon",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "study",
+                "plans",
+                "999999",
+                "abandon"
+              ]
+            }
+          }
+        },
+        {
+          "name": "12 - Delete Plan (unknown id, 404)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 404', () => pm.response.to.have.status(404));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/study/plans/999999",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "study",
+                "plans",
+                "999999"
+              ]
+            }
+          }
+        },
+        {
+          "name": "13 - Complete Plan Item (unknown id, 404)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 404', () => pm.response.to.have.status(404));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/study/plans/items/999999/complete",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "study",
+                "plans",
+                "items",
+                "999999",
+                "complete"
+              ]
+            }
+          }
+        },
+        {
+          "name": "14 - Restore Settings",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/study/settings",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "study",
+                "settings"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"max_active_plans\": {{study_original_max_active_plans}}\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "excluded-from-ci",
+      "item": [
+        {
+          "name": "15 - Generate Plan from CS Stats (calls LLM, requires GEMINI_API_KEY)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+                  "pm.test('Plan has title, goal, tags and sourced items', () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.title).to.be.a('string').and.not.empty;",
+                  "    pm.expect(json.goal).to.be.a('string').and.not.empty;",
+                  "    pm.expect(['active', 'backlog']).to.include(json.status);",
+                  "    pm.expect(json.tags).to.be.an('array');",
+                  "    pm.expect(json.items).to.be.an('array').with.length.above(0);",
+                  "    pm.expect(json.items[0].source_type).to.eql('cs_tag');",
+                  "    pm.environment.set('study_plan_id', json.id);",
+                  "    pm.environment.set('study_plan_item_id', json.items[0].id);",
+                  "    pm.environment.set('study_plan_status', json.status);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/study/plans/generate",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "study",
+                "plans",
+                "generate"
+              ]
+            }
+          }
+        },
+        {
+          "name": "16 - Get Plan by Id",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Same plan', () => pm.expect(pm.response.json().id).to.eql(pm.environment.get('study_plan_id')));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/study/plans/{{study_plan_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "study",
+                "plans",
+                "{{study_plan_id}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "17 - Complete Plan Item",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 204', () => pm.response.to.have.status(204));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/study/plans/items/{{study_plan_item_id}}/complete",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "study",
+                "plans",
+                "items",
+                "{{study_plan_item_id}}",
+                "complete"
+              ]
+            }
+          }
+        },
+        {
+          "name": "18 - Activate Plan (409 if already active)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Activates a backlog plan, or 409 when already active / at the cap', () => {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 409]);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/study/plans/{{study_plan_id}}/activate",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "study",
+                "plans",
+                "{{study_plan_id}}",
+                "activate"
+              ]
+            }
+          }
+        },
+        {
+          "name": "19 - Complete Plan",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Completes an active plan (409 if it stayed in the backlog)', () => {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([200, 409]);",
+                  "    if (pm.response.code === 200) {",
+                  "        pm.expect(pm.response.json().status).to.eql('completed');",
+                  "        pm.expect(pm.response.json().completed_at).to.not.be.null;",
+                  "    }",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/study/plans/{{study_plan_id}}/complete",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "study",
+                "plans",
+                "{{study_plan_id}}",
+                "complete"
+              ]
+            }
+          }
+        },
+        {
+          "name": "20 - Abandon Completed Plan (409)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Closed plans cannot be abandoned', () => pm.expect(pm.response.code).to.be.oneOf([200, 409]));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/study/plans/{{study_plan_id}}/abandon",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "study",
+                "plans",
+                "{{study_plan_id}}",
+                "abandon"
+              ]
+            }
+          }
+        },
+        {
+          "name": "21 - Delete Plan",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 204', () => pm.response.to.have.status(204));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/study/plans/{{study_plan_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "study",
+                "plans",
+                "{{study_plan_id}}"
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

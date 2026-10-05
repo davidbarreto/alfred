@@ -216,6 +216,29 @@ class TaskRepository:
         )
         return list(result.scalars().all())
 
+    async def get_task_completion(self, task_id: int, completion_id: int) -> TaskCompletion | None:
+        result = await self._session.execute(
+            select(TaskCompletion).where(
+                TaskCompletion.id == completion_id,
+                TaskCompletion.task_id == task_id,
+            )
+        )
+        return result.scalars().first()
+
+    async def update_completion(
+        self,
+        completion: TaskCompletion,
+        occurrence_date: date | None,
+        completed_on: date | None,
+    ) -> TaskCompletion:
+        if occurrence_date is not None:
+            completion.occurrence_date = occurrence_date
+        if completed_on is not None:
+            completion.completed_at = datetime.combine(completed_on, time(12, 0)).astimezone()
+        await self._session.commit()
+        await self._session.refresh(completion)
+        return completion
+
     async def complete_occurrence(
         self, task_id: int, occurrence_date: date, completed_on: date | None = None
     ) -> TaskCompletion:

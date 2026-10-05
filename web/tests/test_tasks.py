@@ -296,3 +296,50 @@ class TestEndRecurringTask:
         mock_api["post"].side_effect = httpx.HTTPError("boom")
 
         assert client.post("/tasks/5/end").status_code == 502
+
+
+def _completion(id=7, occurrence_date="2026-09-01", completed_at="2026-09-03T12:00:00+00:00"):
+    return {"id": id, "task_id": 1, "occurrence_date": occurrence_date, "completed_at": completed_at}
+
+
+class TestTaskHistoryEditing:
+    def test_edit_form_shown_for_selected_completion(self, client, mock_api):
+        mock_api["get"].side_effect = [_task(id=1, recurrence_rule="FREQ=MONTHLY"), [_completion()]]
+
+        resp = client.get("/tasks/1/completions/7/edit")
+
+        assert resp.status_code == 200
+        assert 'name="occurrence_date"' in resp.text
+        assert 'value="2026-09-01"' in resp.text
+
+    def test_plain_history_has_edit_button_and_no_form(self, client, mock_api):
+        mock_api["get"].side_effect = [_task(id=1, recurrence_rule="FREQ=MONTHLY"), [_completion()]]
+
+        resp = client.get("/tasks/1/history")
+
+        assert "/tasks/1/completions/7/edit" in resp.text
+        assert 'name="occurrence_date"' not in resp.text
+
+    def test_save_patches_backend_and_returns_history(self, client, mock_api):
+        mock_api["patch"].return_value = _completion()
+        mock_api["get"].side_effect = [_task(id=1, recurrence_rule="FREQ=MONTHLY"), [_completion()]]
+
+        resp = client.patch("/tasks/1/completions/7", data={"occurrence_date": "2026-08-01", "completed_on": "2026-09-02"})
+
+        assert resp.status_code == 200
+        mock_api["patch"].assert_called_once_with(
+            "/organizer/tasks/1/completions/7",
+            json={"occurrence_date": "2026-08-01", "completed_on": "2026-09-02"},
+        )
+
+    def test_backend_conflict_rerenders_edit_form_with_reason(self, client, mock_api):
+        request = httpx.Request("PATCH", "http://api/x")
+        response = httpx.Response(409, json={"detail": "A completion already exists for 2026-08-01."}, request=request)
+        mock_api["patch"].side_effect = httpx.HTTPStatusError("conflict", request=request, response=response)
+        mock_api["get"].side_effect = [_task(id=1, recurrence_rule="FREQ=MONTHLY"), [_completion()]]
+
+        resp = client.patch("/tasks/1/completions/7", data={"occurrence_date": "2026-08-01", "completed_on": "2026-09-02"})
+
+        assert resp.status_code == 200
+        assert "already exists" in resp.text
+        assert 'name="occurrence_date"' in resp.text

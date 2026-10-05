@@ -1,6 +1,7 @@
 from datetime import date, datetime
 from typing import Annotated, Any, Literal, Optional, List
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, field_validator, model_validator
+from pydantic_core import PydanticCustomError
 from typing import Literal, TypeAlias
 from fastapi import Query
 
@@ -97,6 +98,19 @@ class TaskCompletionRead(BaseModel):
     completed_at: datetime
 
     model_config = {"from_attributes": True}
+
+
+class TaskCompletionUpdate(BaseModel):
+    occurrence_date: date | None = None
+    # Calendar day the task was actually done; stored as noon local time on that day.
+    completed_on: date | None = None
+
+    @model_validator(mode="after")
+    def _require_a_field(self) -> "TaskCompletionUpdate":
+        # PydanticCustomError (not ValueError) keeps the 422 body JSON-serializable.
+        if self.occurrence_date is None and self.completed_on is None:
+            raise PydanticCustomError("missing_fields", "Provide occurrence_date and/or completed_on.")
+        return self
 
 
 class TaskSnoozeRead(BaseModel):

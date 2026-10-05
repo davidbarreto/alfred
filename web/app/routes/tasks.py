@@ -1,4 +1,4 @@
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from urllib.parse import urlencode
 
 import httpx
@@ -303,8 +303,9 @@ async def snooze_task(task_id: int, request: Request):
     })
 
 
-@router.get("/{task_id}/history", response_class=HTMLResponse)
-async def task_history(task_id: int, request: Request):
+async def _render_history(
+    request: Request, task_id: int, editing_id: int | None = None, error: str | None = None
+) -> HTMLResponse:
     try:
         task = await api.get(f"/organizer/tasks/{task_id}")
         raw_completions = await api.get(f"/organizer/tasks/{task_id}/completions")
@@ -313,12 +314,47 @@ async def task_history(task_id: int, request: Request):
 
     completions = [
         {
+            "id": c["id"],
             "date": c["occurrence_date"],
             "day": date.fromisoformat(c["occurrence_date"]).strftime("%a"),
+            "completed_on": datetime.fromisoformat(c["completed_at"]).astimezone().date().isoformat(),
         }
         for c in raw_completions
     ]
     return templates.TemplateResponse(request, "_task_history.html", {
         "task": task,
         "completions": completions,
+        "editing_id": editing_id,
+        "error": error,
+        "today": date.today().isoformat(),
     })
+
+
+@router.get("/{task_id}/history", response_class=HTMLResponse)
+async def task_history(task_id: int, request: Request):
+    return await _render_history(request, task_id)
+
+
+@router.get("/{task_id}/completions/{completion_id}/edit", response_class=HTMLResponse)
+async def edit_task_completion(task_id: int, completion_id: int, request: Request):
+    return await _render_history(request, task_id, editing_id=completion_id)
+
+
+@router.patch("/{task_id}/completions/{completion_id}", response_class=HTMLResponse)
+async def update_task_completion(
+    task_id: int,
+    completion_id: int,
+    request: Request,
+    occurrence_date: Annotated[date, Form()],
+    completed_on: Annotated[date, Form()],
+):
+    payload = {"occurrence_date": occurrence_date.isoformat(), "completed_on": completed_on.isoformat()}
+    try:
+        await api.patch(f"/organizer/tasks/{task_id}/completions/{completion_id}", json=payload)
+    except httpx.HTTPStatusError as exc:
+        # Re-render the row in edit mode with the backend's reason (future date, duplicate day).
+        detail = exc.response.json().get("detail", "Could not save changes.")
+        return await _render_history(request, task_id, editing_id=completion_id, error=str(detail))
+    except httpx.HTTPError:
+        return await _render_history(request, task_id, editing_id=completion_id, error="Could not save changes.")
+    return await _render_history(request, task_id)

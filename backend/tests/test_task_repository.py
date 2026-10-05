@@ -460,3 +460,35 @@ class TestGetDistinctTags:
         tags = await repo.get_distinct_tags()
 
         assert tags == []
+
+
+class TestUpdateCompletion:
+    async def test_sets_only_provided_fields(self):
+        from datetime import date
+        session = _make_session()
+        completion = MagicMock(occurrence_date=date(2026, 9, 1), completed_at="orig")
+        repo = TaskRepository(session)
+
+        await repo.update_completion(completion, date(2026, 8, 1), None)
+
+        assert completion.occurrence_date == date(2026, 8, 1)
+        assert completion.completed_at == "orig"
+        session.commit.assert_called_once()
+
+    async def test_completed_on_stored_as_that_calendar_day(self):
+        from datetime import date
+        session = _make_session()
+        completion = MagicMock(occurrence_date=date(2026, 9, 1))
+        repo = TaskRepository(session)
+
+        await repo.update_completion(completion, None, date(2026, 9, 5))
+
+        assert completion.occurrence_date == date(2026, 9, 1)
+        assert completion.completed_at.astimezone().date() == date(2026, 9, 5)
+
+    async def test_get_task_completion_returns_row(self):
+        session = _make_session()
+        row = MagicMock()
+        session.execute.return_value = _scalar_first(row)
+
+        assert await TaskRepository(session).get_task_completion(1, 7) is row

@@ -715,3 +715,64 @@ class TestGetDistinctTags:
 
         assert result == ["work", "personal"]
         service._repo.get_distinct_tags.assert_awaited_once()
+
+
+class TestUpdateCompletion:
+    def _completion(self, occ=date(2026, 9, 1)):
+        return MagicMock(id=7, task_id=1, occurrence_date=occ, completed_at=datetime.now())
+
+    async def test_updates_both_dates(self, service):
+        from app.features.organizer.tasks.schemas import TaskCompletionUpdate
+        existing = self._completion()
+        service._repo.get_task_completion.return_value = existing
+        service._repo.get_completion.return_value = None
+        service._repo.update_completion.return_value = MagicMock(
+            id=7, task_id=1, occurrence_date=date(2026, 8, 1), completed_at=datetime.now()
+        )
+
+        result = await service.update_completion(
+            1, 7, TaskCompletionUpdate(occurrence_date=date(2026, 8, 1), completed_on=date(2026, 9, 2))
+        )
+
+        service._repo.update_completion.assert_called_once_with(existing, date(2026, 8, 1), date(2026, 9, 2))
+        assert result.occurrence_date == date(2026, 8, 1)
+
+    async def test_not_found_returns_none(self, service):
+        from app.features.organizer.tasks.schemas import TaskCompletionUpdate
+        service._repo.get_task_completion.return_value = None
+
+        assert await service.update_completion(1, 99, TaskCompletionUpdate(completed_on=date(2026, 9, 1))) is None
+        service._repo.update_completion.assert_not_called()
+
+    async def test_future_date_rejected(self, service):
+        from app.features.organizer.tasks.schemas import TaskCompletionUpdate
+        service._repo.get_task_completion.return_value = self._completion()
+
+        with pytest.raises(ValueError, match="future"):
+            await service.update_completion(
+                1, 7, TaskCompletionUpdate(completed_on=date.today() + timedelta(days=1))
+            )
+        service._repo.update_completion.assert_not_called()
+
+    async def test_occurrence_date_taken_by_another_completion_conflicts(self, service):
+        from app.features.organizer.tasks.schemas import TaskCompletionUpdate
+        from app.features.organizer.tasks.service import CompletionConflictError
+        service._repo.get_task_completion.return_value = self._completion()
+        service._repo.get_completion.return_value = MagicMock(id=8)
+
+        with pytest.raises(CompletionConflictError):
+            await service.update_completion(1, 7, TaskCompletionUpdate(occurrence_date=date(2026, 8, 1)))
+        service._repo.update_completion.assert_not_called()
+
+    async def test_unchanged_occurrence_date_skips_conflict_check(self, service):
+        from app.features.organizer.tasks.schemas import TaskCompletionUpdate
+        service._repo.get_task_completion.return_value = self._completion(date(2026, 9, 1))
+        service._repo.update_completion.return_value = MagicMock(
+            id=7, task_id=1, occurrence_date=date(2026, 9, 1), completed_at=datetime.now()
+        )
+
+        await service.update_completion(
+            1, 7, TaskCompletionUpdate(occurrence_date=date(2026, 9, 1), completed_on=date(2026, 9, 3))
+        )
+
+        service._repo.get_completion.assert_not_called()

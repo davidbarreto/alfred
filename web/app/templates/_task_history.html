@@ -39,11 +39,46 @@
 <p class="text-[10px] text-gray-400 uppercase tracking-wide mb-2">History</p>
 <ul class="space-y-1 max-h-64 overflow-y-auto">
   {% for c in completions %}
-  <li class="flex items-center gap-2 text-sm text-gray-600 py-1 border-b border-gray-50 last:border-0">
+  {% if c.id == editing_id %}
+  <li class="py-2 border-b border-gray-50 last:border-0">
+    <form hx-patch="/tasks/{{ task.id }}/completions/{{ c.id }}"
+          hx-target="#task-history-content" hx-swap="innerHTML" class="space-y-2">
+      <label class="flex items-center justify-between gap-2 text-xs text-gray-500">
+        Counts for
+        <input type="date" name="occurrence_date" value="{{ c.date }}" max="{{ today }}" required
+               class="input input-bordered input-xs w-36">
+      </label>
+      <label class="flex items-center justify-between gap-2 text-xs text-gray-500">
+        Done on
+        <input type="date" name="completed_on" value="{{ c.completed_on }}" max="{{ today }}" required
+               class="input input-bordered input-xs w-36">
+      </label>
+      {% if error %}<p class="text-xs text-[#E24B4A]">{{ error }}</p>{% endif %}
+      <div class="flex justify-end gap-2">
+        <button type="button" class="btn btn-xs btn-ghost"
+                hx-get="/tasks/{{ task.id }}/history" hx-target="#task-history-content" hx-swap="innerHTML">Cancel</button>
+        <button type="submit" class="btn btn-xs btn-primary">Save</button>
+      </div>
+    </form>
+  </li>
+  {% else %}
+  <li class="flex items-center gap-2 text-sm text-gray-600 py-1 border-b border-gray-50 last:border-0 group/row">
     <i class="ti ti-calendar-check text-emerald-400" style="font-size:0.85rem"></i>
     <span class="font-mono text-xs text-gray-500 w-24 flex-shrink-0">{{ c.date }}</span>
     <span class="text-xs text-gray-400">{{ c.day }}</span>
+    {% if c.completed_on != c.date %}
+    <span class="text-[10px] text-gray-400" title="Done on {{ c.completed_on }}">
+      <i class="ti ti-clock" style="font-size:0.7rem"></i> {{ c.completed_on }}
+    </span>
+    {% endif %}
+    <button class="ml-auto text-gray-300 hover:text-gray-600 opacity-0 group-hover/row:opacity-100 transition-opacity"
+            title="Edit dates"
+            hx-get="/tasks/{{ task.id }}/completions/{{ c.id }}/edit"
+            hx-target="#task-history-content" hx-swap="innerHTML">
+      <i class="ti ti-pencil" style="font-size:0.85rem"></i>
+    </button>
   </li>
+  {% endif %}
   {% endfor %}
 </ul>
 {% else %}

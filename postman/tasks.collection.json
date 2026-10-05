@@ -399,6 +399,46 @@
       }
     },
     {
+      "name": "09d - Edit Completion Dates",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "pm.sendRequest({ url: pm.variables.replaceIn('{{base_url}}/organizer/tasks/{{task_id}}/completions'), method: 'GET', header: { 'Authorization': 'Bearer ' + pm.variables.get('api_token') } }, (err, res) => {",
+              "    const rows = res.json();",
+              "    pm.variables.set('completion_id', rows[rows.length - 1].id);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Dates updated', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json.occurrence_date).to.eql('2019-12-31');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "PATCH",
+        "header": [{"key": "Content-Type", "value": "application/json"}],
+        "body": {"mode": "raw", "raw": "{\"occurrence_date\": \"2019-12-31\", \"completed_on\": \"2020-01-01\"}"},
+        "url": {
+          "raw": "{{base_url}}/organizer/tasks/{{task_id}}/completions/{{completion_id}}",
+          "host": ["{{base_url}}"],
+          "path": ["organizer", "tasks", "{{task_id}}", "completions", "{{completion_id}}"]
+        }
+      }
+    },
+    {
       "name": "10 - List Tasks (Filter by Status TODO — recurring still active)",
       "event": [
         {

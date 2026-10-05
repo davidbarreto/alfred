@@ -143,3 +143,24 @@ class TestTaskFilters:
         assert filters.status == "TODO"
         assert filters.priority == "HIGH"
         assert filters.tags == ["work"]
+
+
+class TestTaskCompletionUpdate:
+    def test_accepts_a_single_field(self):
+        from datetime import date
+        from app.features.organizer.tasks.schemas import TaskCompletionUpdate
+        assert TaskCompletionUpdate(completed_on=date(2026, 9, 1)).occurrence_date is None
+
+    def test_rejects_empty_body(self):
+        import pytest
+        from pydantic import ValidationError
+        from app.features.organizer.tasks.schemas import TaskCompletionUpdate
+        with pytest.raises(ValidationError):
+            TaskCompletionUpdate()
+
+    def test_rejects_explicit_nulls(self):
+        import pytest
+        from pydantic import ValidationError
+        from app.features.organizer.tasks.schemas import TaskCompletionUpdate
+        with pytest.raises(ValidationError):
+            TaskCompletionUpdate(occurrence_date=None, completed_on=None)

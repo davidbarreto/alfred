@@ -7,6 +7,7 @@ from app.shared.storage import StorageProvider
 from app.features.organizer.tasks.tables import Task
 from app.features.organizer.tasks.schemas import (
     TaskCompletionRead,
+    TaskCompletionUpdate,
     TaskCreate,
     TaskRead,
     TaskUpdate,
@@ -20,6 +21,10 @@ from app.features.core.embeddings.service import EmbeddingService
 logger = logging.getLogger(__name__)
 
 _SOURCE_TYPE = "task"
+
+
+class CompletionConflictError(Exception):
+    """Another completion already exists for the requested occurrence date."""
 
 
 def _compute_streak(dates: list[date], rule: str, today: date) -> int:
@@ -169,6 +174,30 @@ class TaskService:
             logger.info("Task urgency reset on occurrence completion: id=%d", task_id)
         logger.info("Task occurrence completed: id=%d occurrence_date=%s", task_id, occ_date)
         return TaskCompletionRead.model_validate(completion)
+
+    async def update_completion(
+        self, task_id: int, completion_id: int, data: TaskCompletionUpdate
+    ) -> TaskCompletionRead | None:
+        completion = await self._repo.get_task_completion(task_id, completion_id)
+        if completion is None:
+            logger.debug("Completion update: task_id=%d completion_id=%d not found", task_id, completion_id)
+            return None
+
+        today = date.today()
+        if any(d is not None and d > today for d in (data.occurrence_date, data.completed_on)):
+            raise ValueError("Completion dates cannot be in the future.")
+
+        new_occ = data.occurrence_date
+        if new_occ is not None and new_occ != completion.occurrence_date:
+            if await self._repo.get_completion(task_id, new_occ) is not None:
+                raise CompletionConflictError(f"A completion already exists for {new_occ.isoformat()}.")
+
+        updated = await self._repo.update_completion(completion, new_occ, data.completed_on)
+        logger.info(
+            "Task completion updated: task_id=%d completion_id=%d fields=%s",
+            task_id, completion_id, list(data.model_dump(exclude_unset=True).keys()),
+        )
+        return TaskCompletionRead.model_validate(updated)
 
     async def get_completions_history(self, days: int) -> list[TaskCompletionRead]:
         since = date.today() - timedelta(days=days)

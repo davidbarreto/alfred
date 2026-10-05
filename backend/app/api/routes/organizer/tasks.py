@@ -3,12 +3,14 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from app.features.core.reminders.service import snooze_undated_escalation
 from app.features.organizer.tasks.schemas import (
     TaskCompletionRead,
+    TaskCompletionUpdate,
     TaskRead,
     TaskCreate,
     TaskSnoozeRead,
     TaskUpdate,
     TaskFilters,
 )
+from app.features.organizer.tasks.service import CompletionConflictError
 from app.api.auth import require_auth
 from app.dependencies import TaskServiceDep, WorkingMemoryServiceDep
 
@@ -61,6 +63,21 @@ async def get_task_completions(task_id: int, service: TaskServiceDep):
     result = await service.get_task_completions(task_id)
     if result is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found")
+    return result
+
+
+@router.patch("/{task_id}/completions/{completion_id}", response_model=TaskCompletionRead)
+async def update_task_completion(
+    task_id: int, completion_id: int, request: TaskCompletionUpdate, service: TaskServiceDep
+):
+    try:
+        result = await service.update_completion(task_id, completion_id, request)
+    except CompletionConflictError as exc:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc))
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
+    if result is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Completion not found")
     return result
 
 

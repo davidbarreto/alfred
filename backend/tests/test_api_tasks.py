@@ -289,3 +289,43 @@ class TestCancelTask:
     def test_requires_auth(self, client):
         response = client.post("/organizer/tasks/1/cancel")
         assert response.status_code == 403
+
+
+class TestUpdateTaskCompletion:
+    def _read(self):
+        from datetime import date, datetime, timezone
+        return TaskCompletionRead(
+            id=7, task_id=1, occurrence_date=date(2026, 9, 1), completed_at=datetime.now(timezone.utc)
+        )
+
+    def test_updates_completion(self, client, mock_service):
+        mock_service.update_completion.return_value = self._read()
+        response = client.patch(
+            "/organizer/tasks/1/completions/7",
+            json={"occurrence_date": "2026-09-01", "completed_on": "2026-09-02"},
+            headers=AUTH,
+        )
+        assert response.status_code == 200
+        assert response.json()["id"] == 7
+
+    def test_empty_body_is_422(self, client, mock_service):
+        assert client.patch("/organizer/tasks/1/completions/7", json={}, headers=AUTH).status_code == 422
+
+    def test_not_found_is_404(self, client, mock_service):
+        mock_service.update_completion.return_value = None
+        response = client.patch("/organizer/tasks/1/completions/9", json={"completed_on": "2026-09-02"}, headers=AUTH)
+        assert response.status_code == 404
+
+    def test_future_date_is_400(self, client, mock_service):
+        mock_service.update_completion.side_effect = ValueError("Completion dates cannot be in the future.")
+        response = client.patch("/organizer/tasks/1/completions/7", json={"completed_on": "2999-01-01"}, headers=AUTH)
+        assert response.status_code == 400
+
+    def test_duplicate_day_is_409(self, client, mock_service):
+        from app.features.organizer.tasks.service import CompletionConflictError
+        mock_service.update_completion.side_effect = CompletionConflictError("exists")
+        response = client.patch("/organizer/tasks/1/completions/7", json={"occurrence_date": "2026-08-01"}, headers=AUTH)
+        assert response.status_code == 409
+
+    def test_requires_auth(self, client):
+        assert client.patch("/organizer/tasks/1/completions/7", json={"completed_on": "2026-09-02"}).status_code == 403

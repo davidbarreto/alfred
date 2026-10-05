@@ -165,6 +165,10 @@
   <div class="modal-box bg-white rounded-xl border border-gray-200 shadow-lg max-w-xs w-full p-6">
     <h3 class="text-sm font-semibold text-gray-900 mb-3">Mark done on date</h3>
     <input type="date" id="task-done-on-date" class="input input-bordered input-sm w-full mb-4" max="{{ today }}">
+    <label id="task-done-on-backdate-wrap" class="hidden flex items-center gap-2 text-xs text-gray-600 mb-4">
+      <input type="checkbox" id="task-done-on-backdate" class="checkbox checkbox-xs">
+      I actually did it on that day
+    </label>
     <p id="task-done-on-error" class="hidden text-xs text-[#E24B4A] mb-3"></p>
     <div class="flex justify-end gap-2">
       <button type="button" class="btn btn-sm btn-ghost" onclick="document.getElementById('task-done-on-modal').close()">Cancel</button>
@@ -176,8 +180,10 @@
 
 <script>
 let _doneOnTaskId = null;
-function openDoneOnDate(taskId) {
+function openDoneOnDate(taskId, recurring) {
   _doneOnTaskId = taskId;
+  document.getElementById('task-done-on-backdate').checked = false;
+  document.getElementById('task-done-on-backdate-wrap').classList.toggle('hidden', !recurring);
   const input = document.getElementById('task-done-on-date');
   const d = new Date();
   d.setDate(d.getDate() - 1);
@@ -189,7 +195,8 @@ async function submitDoneOnDate() {
   const value = document.getElementById('task-done-on-date').value;
   const errorEl = document.getElementById('task-done-on-error');
   if (!value) return;
-  const resp = await fetch(`/tasks/${_doneOnTaskId}/done?occurrence_date=${encodeURIComponent(value)}`, {method: 'POST'});
+  const backdate = document.getElementById('task-done-on-backdate').checked;
+  const resp = await fetch(`/tasks/${_doneOnTaskId}/done?occurrence_date=${encodeURIComponent(value)}${backdate ? '&backdate=true' : ''}`, {method: 'POST'});
   if (!resp.ok) {
     errorEl.textContent = 'Could not save completion.';
     errorEl.classList.remove('hidden');

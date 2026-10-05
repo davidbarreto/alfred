@@ -128,7 +128,7 @@ class TaskService:
         return TaskRead.model_validate(task_orm)
 
     async def complete_task(
-        self, task_id: int, occurrence_date: date | None = None
+        self, task_id: int, occurrence_date: date | None = None, backdate: bool = False
     ) -> TaskRead | TaskCompletionRead | None:
         task = await self._repo.get_task(task_id)
         if task is None:
@@ -155,7 +155,12 @@ class TaskService:
         if existing is not None:
             return TaskCompletionRead.model_validate(existing)
 
-        completion = await self._repo.complete_occurrence(task_id, occ_date)
+        if backdate:
+            # completed_at normally records when the user clicked; backdate records
+            # that the task was actually done on the occurrence date (forgot to tick it).
+            completion = await self._repo.complete_occurrence(task_id, occ_date, occ_date)
+        else:
+            completion = await self._repo.complete_occurrence(task_id, occ_date)
         if task.urgency == "URGENT":
             # A completed occurrence resets urgency so the next cycle starts fresh --
             # otherwise a recurring task escalated once (age or overdue) stays flagged

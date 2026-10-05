@@ -359,6 +359,17 @@ class TestDeleteTask:
         session.commit.assert_called_once()
 
 
+class TestCompleteOccurrenceBackdated:
+    async def test_completed_on_sets_completed_at(self):
+        from datetime import date
+        session = _make_session()
+        repo = TaskRepository(session)
+
+        completion = await repo.complete_occurrence(1, date(2026, 9, 10), date(2026, 9, 10))
+
+        assert completion.completed_at.astimezone().date() == date(2026, 9, 10)
+
+
 class TestCompleteOccurrence:
     async def test_get_completion_not_found(self):
         from datetime import date

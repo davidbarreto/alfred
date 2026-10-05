@@ -204,7 +204,16 @@ class TestCompleteTask:
         )
         assert response.status_code == 200
         assert response.json()["is_done_today"] is False
-        mock_service.complete_task.assert_called_once_with(1, yesterday)
+        mock_service.complete_task.assert_called_once_with(1, yesterday, False)
+
+    def test_backdate_flag_is_forwarded(self, client, mock_service):
+        from datetime import date, datetime, timezone
+        mock_service.complete_task.return_value = TaskCompletionRead(
+            id=1, task_id=1, occurrence_date=date(2026, 9, 10), completed_at=datetime.now(timezone.utc)
+        )
+        mock_service.get_task.return_value = _task_read(recurrence_rule="FREQ=MONTHLY")
+        client.post("/organizer/tasks/1/complete?occurrence_date=2026-09-10&backdate=true", headers=AUTH)
+        mock_service.complete_task.assert_called_once_with(1, date(2026, 9, 10), True)
 
     def test_future_date_returns_400(self, client, mock_service):
         mock_service.complete_task.side_effect = ValueError("Completion date cannot be in the future.")

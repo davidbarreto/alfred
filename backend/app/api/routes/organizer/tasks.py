@@ -85,9 +85,10 @@ async def complete_task(
     task_id: int,
     service: TaskServiceDep,
     occurrence_date: date | None = Query(None),
+    backdate: bool = Query(False),
 ):
     try:
-        result = await service.complete_task(task_id, occurrence_date)
+        result = await service.complete_task(task_id, occurrence_date, backdate)
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
     if result is None:

@@ -351,6 +351,30 @@
       }
     },
     {
+      "name": "09c - Complete Task for a Past Date (backdate completion time)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/organizer/tasks/{{task_id}}/complete?occurrence_date=2020-01-02&backdate=true",
+          "host": ["{{base_url}}"],
+          "path": ["organizer", "tasks", "{{task_id}}", "complete"],
+          "query": [{"key": "occurrence_date", "value": "2020-01-02"}, {"key": "backdate", "value": "true"}]
+        }
+      }
+    },
+    {
       "name": "09b - Complete Task for a Future Date (rejected)",
       "event": [
         {

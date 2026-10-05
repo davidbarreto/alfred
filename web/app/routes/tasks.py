@@ -244,8 +244,12 @@ async def update_task(
 
 
 @router.post("/{task_id}/done", response_class=HTMLResponse)
-async def mark_task_done(task_id: int, request: Request, occurrence_date: date | None = None):
+async def mark_task_done(
+    task_id: int, request: Request, occurrence_date: date | None = None, backdate: bool = False
+):
     suffix = f"?occurrence_date={occurrence_date.isoformat()}" if occurrence_date else ""
+    if occurrence_date and backdate:
+        suffix += "&backdate=true"
     try:
         task = await api.post(f"/organizer/tasks/{task_id}/complete{suffix}")
     except httpx.HTTPError:

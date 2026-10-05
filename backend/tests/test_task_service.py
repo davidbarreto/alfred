@@ -323,6 +323,17 @@ class TestCompleteTaskBackdated:
 
         service._repo.complete_task.assert_called_once_with(1, yesterday)
 
+    async def test_recurring_backdate_records_completion_on_occurrence_date(self, service):
+        service._repo.get_task.return_value = _make_task_orm(recurrence_rule="FREQ=MONTHLY")
+        service._repo.get_completion.return_value = None
+        service._repo.complete_occurrence.return_value = MagicMock(
+            id=1, task_id=1, occurrence_date=date(2026, 9, 10), completed_at=datetime.now()
+        )
+
+        await service.complete_task(1, date(2026, 9, 10), backdate=True)
+
+        service._repo.complete_occurrence.assert_called_once_with(1, date(2026, 9, 10), date(2026, 9, 10))
+
     @pytest.mark.parametrize("rule", [None, "FREQ=DAILY"])
     async def test_future_date_is_rejected(self, service, rule):
         service._repo.get_task.return_value = _make_task_orm(recurrence_rule=rule)

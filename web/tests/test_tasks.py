@@ -258,6 +258,15 @@ class TestMarkTaskDone:
         assert resp.status_code == 200
         mock_api["post"].assert_called_once_with("/organizer/tasks/3/complete?occurrence_date=2026-10-04")
 
+    def test_backdate_flag_is_forwarded(self, client, mock_api):
+        mock_api["post"].return_value = _task(id=3, recurrence_rule="FREQ=DAILY")
+
+        client.post("/tasks/3/done?occurrence_date=2026-10-04&backdate=true")
+
+        mock_api["post"].assert_called_once_with(
+            "/organizer/tasks/3/complete?occurrence_date=2026-10-04&backdate=true"
+        )
+
     def test_without_date_hits_plain_complete(self, client, mock_api):
         mock_api["post"].return_value = _task(id=3)
 

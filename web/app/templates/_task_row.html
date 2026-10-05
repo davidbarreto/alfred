@@ -193,7 +193,7 @@
           <li>
             <button
               class="w-full text-left px-3 py-1.5 rounded hover:bg-gray-50 text-gray-700"
-              onclick="_taskMenuClose(); openDoneOnDate({{ task.id }})"
+              onclick="_taskMenuClose(); openDoneOnDate({{ task.id }}, {{ "true" if task.recurrence_rule else "false" }})"
             >Done on date…</button>
           </li>
           {% endif %}

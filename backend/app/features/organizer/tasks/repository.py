@@ -216,8 +216,12 @@ class TaskRepository:
         )
         return list(result.scalars().all())
 
-    async def complete_occurrence(self, task_id: int, occurrence_date: date) -> TaskCompletion:
+    async def complete_occurrence(
+        self, task_id: int, occurrence_date: date, completed_on: date | None = None
+    ) -> TaskCompletion:
         completion = TaskCompletion(task_id=task_id, occurrence_date=occurrence_date)
+        if completed_on is not None:
+            completion.completed_at = datetime.combine(completed_on, time(12, 0)).astimezone()
         self._session.add(completion)
         await self._session.commit()
         await self._session.refresh(completion)

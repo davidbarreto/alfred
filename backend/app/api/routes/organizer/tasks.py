@@ -86,13 +86,27 @@ async def complete_task(
     service: TaskServiceDep,
     occurrence_date: date | None = Query(None),
 ):
-    result = await service.complete_task(task_id, occurrence_date)
+    try:
+        result = await service.complete_task(task_id, occurrence_date)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
     if result is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found")
     if isinstance(result, TaskCompletionRead):
         task_read = await service.get_task(task_id)
         if task_read is None:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found")
-        task_read.is_done_today = True
+        task_read.is_done_today = occurrence_date is None or occurrence_date == date.today()
         return task_read
+    return result
+
+
+@router.post("/{task_id}/cancel", response_model=TaskRead)
+async def cancel_task(task_id: int, service: TaskServiceDep):
+    try:
+        result = await service.cancel_task(task_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc))
+    if result is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found")
     return result

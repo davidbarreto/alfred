@@ -2,7 +2,7 @@
   "info": {
     "name": "Alfred - Tasks API",
     "_postman_id": "alfred-tasks-v1",
-    "description": "Run in order: Health Check → Create → List → List (include_recurring) → Get → Update → Complete (Recurring) → List Completions → Complete Again (idempotent) → Filter by Status → Filter by Tags → Delete",
+    "description": "Run in order: Health Check → Create → List → List (include_recurring) → Get → Update → Complete (Recurring) → List Completions → Complete Again (idempotent) → Complete Past Date → Complete Future Date (400) → Filter by Status → Filter by Tags → End Recurring (cancel) → Delete",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -327,6 +327,54 @@
       }
     },
     {
+      "name": "09a - Complete Task for a Past Date",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/organizer/tasks/{{task_id}}/complete?occurrence_date=2020-01-01",
+          "host": ["{{base_url}}"],
+          "path": ["organizer", "tasks", "{{task_id}}", "complete"],
+          "query": [{"key": "occurrence_date", "value": "2020-01-01"}]
+        }
+      }
+    },
+    {
+      "name": "09b - Complete Task for a Future Date (rejected)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 400', () => pm.response.to.have.status(400));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/organizer/tasks/{{task_id}}/complete?occurrence_date=2999-01-01",
+          "host": ["{{base_url}}"],
+          "path": ["organizer", "tasks", "{{task_id}}", "complete"],
+          "query": [{"key": "occurrence_date", "value": "2999-01-01"}]
+        }
+      }
+    },
+    {
       "name": "10 - List Tasks (Filter by Status TODO — recurring still active)",
       "event": [
         {
@@ -389,6 +437,30 @@
             { "key": "tags", "value": "errands" },
             { "key": "limit", "value": "100" }
           ]
+        }
+      }
+    },
+    {
+      "name": "11a - End Recurring Task (cancel)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Task is CANCELLED', () => pm.expect(pm.response.json().status).to.eql('CANCELLED'));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/organizer/tasks/{{task_id}}/cancel",
+          "host": ["{{base_url}}"],
+          "path": ["organizer", "tasks", "{{task_id}}", "cancel"]
         }
       }
     },

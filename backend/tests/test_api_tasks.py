@@ -192,6 +192,25 @@ class TestCompleteTask:
         assert response.status_code == 200
         assert response.json()["is_done_today"] is True
 
+    def test_past_occurrence_date_does_not_mark_done_today(self, client, mock_service):
+        from datetime import date, timedelta, datetime, timezone
+        yesterday = date.today() - timedelta(days=1)
+        mock_service.complete_task.return_value = TaskCompletionRead(
+            id=1, task_id=1, occurrence_date=yesterday, completed_at=datetime.now(timezone.utc)
+        )
+        mock_service.get_task.return_value = _task_read(recurrence_rule="FREQ=DAILY")
+        response = client.post(
+            f"/organizer/tasks/1/complete?occurrence_date={yesterday.isoformat()}", headers=AUTH
+        )
+        assert response.status_code == 200
+        assert response.json()["is_done_today"] is False
+        mock_service.complete_task.assert_called_once_with(1, yesterday)
+
+    def test_future_date_returns_400(self, client, mock_service):
+        mock_service.complete_task.side_effect = ValueError("Completion date cannot be in the future.")
+        response = client.post("/organizer/tasks/1/complete?occurrence_date=2999-01-01", headers=AUTH)
+        assert response.status_code == 400
+
     def test_not_found_returns_404(self, client, mock_service):
         mock_service.complete_task.return_value = None
         response = client.post("/organizer/tasks/999/complete", headers=AUTH)
@@ -238,4 +257,26 @@ class TestGetTaskTags:
 
     def test_requires_auth(self, client):
         response = client.get("/organizer/tasks/tags")
+        assert response.status_code == 403
+
+
+class TestCancelTask:
+    def test_returns_cancelled_task(self, client, mock_service):
+        mock_service.cancel_task.return_value = _task_read(status="CANCELLED", recurrence_rule="FREQ=DAILY")
+        response = client.post("/organizer/tasks/1/cancel", headers=AUTH)
+        assert response.status_code == 200
+        assert response.json()["status"] == "CANCELLED"
+
+    def test_non_recurring_returns_400(self, client, mock_service):
+        mock_service.cancel_task.side_effect = ValueError("Task is not recurring. Use /done instead.")
+        response = client.post("/organizer/tasks/1/cancel", headers=AUTH)
+        assert response.status_code == 400
+
+    def test_not_found_returns_404(self, client, mock_service):
+        mock_service.cancel_task.return_value = None
+        response = client.post("/organizer/tasks/999/cancel", headers=AUTH)
+        assert response.status_code == 404
+
+    def test_requires_auth(self, client):
+        response = client.post("/organizer/tasks/1/cancel")
         assert response.status_code == 403

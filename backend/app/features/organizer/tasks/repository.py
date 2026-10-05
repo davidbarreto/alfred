@@ -124,7 +124,7 @@ class TaskRepository:
         )
         return result.scalars().one()
 
-    async def complete_task(self, task_id: int) -> Task | None:
+    async def complete_task(self, task_id: int, completed_on: date | None = None) -> Task | None:
         task = await self.get_task(task_id)
         if task is None:
             return None
@@ -132,6 +132,10 @@ class TaskRepository:
         # completed_at is set by Task._sync_completed_at (SQLAlchemy @validates on
         # status), so this stays in sync with any other path that closes a task too.
         task.status = "DONE"
+        if completed_on is not None:
+            # Backdated completion: noon local time keeps the timestamp on the intended
+            # calendar day whatever the UTC offset.
+            task.completed_at = datetime.combine(completed_on, time(12, 0)).astimezone()
 
         await self._session.commit()
         result = await self._session.execute(

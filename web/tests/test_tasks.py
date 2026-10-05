@@ -247,3 +247,43 @@ class TestResetUrgency:
 
         assert resp.status_code == 302
         assert resp.headers["location"].startswith("/login")
+
+
+class TestMarkTaskDone:
+    def test_passes_occurrence_date_to_backend(self, client, mock_api):
+        mock_api["post"].return_value = _task(id=3, recurrence_rule="FREQ=DAILY")
+
+        resp = client.post("/tasks/3/done?occurrence_date=2026-10-04")
+
+        assert resp.status_code == 200
+        mock_api["post"].assert_called_once_with("/organizer/tasks/3/complete?occurrence_date=2026-10-04")
+
+    def test_without_date_hits_plain_complete(self, client, mock_api):
+        mock_api["post"].return_value = _task(id=3)
+
+        client.post("/tasks/3/done")
+
+        mock_api["post"].assert_called_once_with("/organizer/tasks/3/complete")
+
+    def test_backdated_failure_returns_error_status(self, client, mock_api):
+        mock_api["post"].side_effect = httpx.HTTPError("boom")
+
+        resp = client.post("/tasks/3/done?occurrence_date=2026-10-04")
+
+        assert resp.status_code == 502
+
+
+class TestEndRecurringTask:
+    def test_cancels_via_backend_and_returns_empty_row(self, client, mock_api):
+        mock_api["post"].return_value = _task(id=5, status="CANCELLED", recurrence_rule="FREQ=DAILY")
+
+        resp = client.post("/tasks/5/end")
+
+        assert resp.status_code == 200
+        assert resp.text == ""
+        mock_api["post"].assert_called_once_with("/organizer/tasks/5/cancel")
+
+    def test_backend_failure_returns_502(self, client, mock_api):
+        mock_api["post"].side_effect = httpx.HTTPError("boom")
+
+        assert client.post("/tasks/5/end").status_code == 502

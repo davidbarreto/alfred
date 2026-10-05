@@ -244,10 +244,13 @@ async def update_task(
 
 
 @router.post("/{task_id}/done", response_class=HTMLResponse)
-async def mark_task_done(task_id: int, request: Request):
+async def mark_task_done(task_id: int, request: Request, occurrence_date: date | None = None):
+    suffix = f"?occurrence_date={occurrence_date.isoformat()}" if occurrence_date else ""
     try:
-        task = await api.post(f"/organizer/tasks/{task_id}/complete")
+        task = await api.post(f"/organizer/tasks/{task_id}/complete{suffix}")
     except httpx.HTTPError:
+        if occurrence_date:
+            return HTMLResponse("Could not save completion.", status_code=502)
         task = {"id": task_id, "title": "—", "status": "DONE", "priority": "LOW",
                 "urgency": "NORMAL", "deadline": None, "tags": [], "is_done_today": True}
     return templates.TemplateResponse(request, "_task_row.html", {
@@ -255,6 +258,16 @@ async def mark_task_done(task_id: int, request: Request):
         "today": date.today().isoformat(),
         "tomorrow": (date.today() + timedelta(days=1)).isoformat(),
     })
+
+
+@router.post("/{task_id}/end", response_class=HTMLResponse)
+async def end_recurring_task(task_id: int):
+    # Empty body + hx-swap="outerHTML" removes the row: an ended task leaves the active list.
+    try:
+        await api.post(f"/organizer/tasks/{task_id}/cancel")
+    except httpx.HTTPError:
+        return HTMLResponse("Could not end task.", status_code=502)
+    return HTMLResponse("")
 
 
 @router.patch("/{task_id}/doing", response_class=HTMLResponse)

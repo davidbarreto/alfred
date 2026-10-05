@@ -134,8 +134,14 @@ class TaskService:
         if task is None:
             return None
 
+        if occurrence_date is not None and occurrence_date > date.today():
+            raise ValueError("Completion date cannot be in the future.")
+
         if task.recurrence_rule is None:
-            task_orm = await self._repo.complete_task(task_id)
+            if occurrence_date is None:
+                task_orm = await self._repo.complete_task(task_id)
+            else:
+                task_orm = await self._repo.complete_task(task_id, occurrence_date)
             if task_orm.urgency == "URGENT":
                 task_orm = await self._repo.update_task(task_id, TaskUpdate(urgency="NORMAL"))
                 logger.info("Task urgency reset on completion: id=%d", task_id)

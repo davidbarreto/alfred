@@ -313,6 +313,27 @@ class TestTaskEmbedding:
         mock_embedding_service.embed.assert_not_called()
 
 
+class TestCompleteTaskBackdated:
+    async def test_non_recurring_passes_date_to_repo(self, service):
+        service._repo.get_task.return_value = _make_task_orm(recurrence_rule=None)
+        service._repo.complete_task.return_value = _make_task_orm(status="DONE")
+        yesterday = date.today() - timedelta(days=1)
+
+        await service.complete_task(1, yesterday)
+
+        service._repo.complete_task.assert_called_once_with(1, yesterday)
+
+    @pytest.mark.parametrize("rule", [None, "FREQ=DAILY"])
+    async def test_future_date_is_rejected(self, service, rule):
+        service._repo.get_task.return_value = _make_task_orm(recurrence_rule=rule)
+
+        with pytest.raises(ValueError, match="future"):
+            await service.complete_task(1, date.today() + timedelta(days=1))
+
+        service._repo.complete_task.assert_not_called()
+        service._repo.complete_occurrence.assert_not_called()
+
+
 class TestCompleteTask:
     async def test_non_recurring_sets_status_done(self, service):
         task_orm = _make_task_orm(recurrence_rule=None)

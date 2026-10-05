@@ -178,6 +178,24 @@
               onclick="_taskMenuClose()"
             >History</button>
           </li>
+          <li>
+            <button
+              class="w-full text-left px-3 py-1.5 rounded hover:bg-gray-50 text-gray-700"
+              hx-post="/tasks/{{ task.id }}/end"
+              hx-target="#task-{{ task.id }}"
+              hx-swap="outerHTML"
+              hx-confirm="End this recurring task? It will stop appearing; history is kept."
+              onclick="_taskMenuClose()"
+            >End recurrence</button>
+          </li>
+          {% endif %}
+          {% if not is_done %}
+          <li>
+            <button
+              class="w-full text-left px-3 py-1.5 rounded hover:bg-gray-50 text-gray-700"
+              onclick="_taskMenuClose(); openDoneOnDate({{ task.id }})"
+            >Done on date…</button>
+          </li>
           {% endif %}
           <li>
             <button

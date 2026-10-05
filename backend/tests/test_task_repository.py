@@ -300,6 +300,18 @@ class TestCompleteTask:
         session.commit.assert_called_once()
         assert result == task
 
+    async def test_completed_on_backdates_completed_at(self):
+        from datetime import date
+        session = _make_session()
+        task = _make_task_orm(status="TODO")
+        session.execute.side_effect = [_scalar_first(task), _scalar_one(task)]
+
+        repo = TaskRepository(session)
+        await repo.complete_task(1, date(2026, 10, 4))
+
+        assert task.status == "DONE"
+        assert task.completed_at.astimezone().date() == date(2026, 10, 4)
+
     async def test_not_found(self):
         session = _make_session()
         session.execute.return_value = _scalar_first(None)

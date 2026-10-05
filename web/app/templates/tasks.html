@@ -160,7 +160,46 @@
   <form method="dialog" class="modal-backdrop"><button>close</button></form>
 </dialog>
 
+<!-- Done-on-date modal (backfill a forgotten completion) -->
+<dialog id="task-done-on-modal" class="modal">
+  <div class="modal-box bg-white rounded-xl border border-gray-200 shadow-lg max-w-xs w-full p-6">
+    <h3 class="text-sm font-semibold text-gray-900 mb-3">Mark done on date</h3>
+    <input type="date" id="task-done-on-date" class="input input-bordered input-sm w-full mb-4" max="{{ today }}">
+    <p id="task-done-on-error" class="hidden text-xs text-[#E24B4A] mb-3"></p>
+    <div class="flex justify-end gap-2">
+      <button type="button" class="btn btn-sm btn-ghost" onclick="document.getElementById('task-done-on-modal').close()">Cancel</button>
+      <button type="button" class="btn btn-sm btn-primary" onclick="submitDoneOnDate()">Mark done</button>
+    </div>
+  </div>
+  <form method="dialog" class="modal-backdrop"><button>close</button></form>
+</dialog>
+
 <script>
+let _doneOnTaskId = null;
+function openDoneOnDate(taskId) {
+  _doneOnTaskId = taskId;
+  const input = document.getElementById('task-done-on-date');
+  const d = new Date();
+  d.setDate(d.getDate() - 1);
+  input.value = d.toLocaleDateString('sv');  // yesterday, local, YYYY-MM-DD
+  document.getElementById('task-done-on-error').classList.add('hidden');
+  document.getElementById('task-done-on-modal').showModal();
+}
+async function submitDoneOnDate() {
+  const value = document.getElementById('task-done-on-date').value;
+  const errorEl = document.getElementById('task-done-on-error');
+  if (!value) return;
+  const resp = await fetch(`/tasks/${_doneOnTaskId}/done?occurrence_date=${encodeURIComponent(value)}`, {method: 'POST'});
+  if (!resp.ok) {
+    errorEl.textContent = 'Could not save completion.';
+    errorEl.classList.remove('hidden');
+    return;
+  }
+  const row = document.getElementById(`task-${_doneOnTaskId}`);
+  row.outerHTML = await resp.text();
+  htmx.process(document.getElementById(`task-${_doneOnTaskId}`));
+  document.getElementById('task-done-on-modal').close();
+}
 function _taskMenuClose() {
   document.querySelectorAll('[id^="task-menu-"]').forEach(m => m.classList.add('hidden'));
 }

@@ -87,6 +87,13 @@ class LeetCodeClient:
             page = data["submissionList"]["submissions"]
             has_next = data["submissionList"]["hasNext"]
             if not page:
+                if offset == 0 and watermark is not None:
+                    logger.warning(
+                        "LeetCode returned an empty submission history but a sync watermark exists "
+                        "(last_external_id=%s): the session cookie may have expired -- "
+                        "refresh LEETCODE_SESSION and LEETCODE_CSRF_TOKEN",
+                        last_external_id,
+                    )
                 break
 
             new_in_page = [s for s in page if watermark is None or int(s["id"]) > watermark]

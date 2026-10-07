@@ -3,59 +3,43 @@
 {% block title %}Interview Prep Questions{% endblock %}
 
 {% block content %}
-<div class="container mx-auto px-4 py-6">
-    <h1 class="text-3xl font-bold mb-6">Behavioral Interview Prep</h1>
+{% set prep_tab = "prep-questions" %}
+{% set prep_action %}<button type="button" onclick="document.getElementById('new-question-modal').showModal()" class="btn btn-sm btn-primary gap-1"><i class="ti ti-plus text-sm"></i>New question</button>{% endset %}
+<div class="p-6 space-y-4">
+  {% include "interview_prep/_prep_header.html" %}
 
-    <div class="tabs tabs-bordered mb-6">
-        <a href="/interview-prep/stories" class="tab">Stories</a>
-        <a href="/interview-prep/prep-questions" class="tab tab-active">Prep Questions</a>
-        <a href="/interview-prep/candidate-questions" class="tab">Candidate Questions</a>
-    </div>
+  {% if questions %}
+  <div class="bg-white border border-gray-200 rounded-lg divide-y divide-gray-100">
+    {% for question in questions %}
+    <a href="/interview-prep/prep-questions/{{ question.id }}" class="flex items-center justify-between gap-4 px-4 py-3 hover:bg-gray-50">
+      <span class="text-sm text-gray-900">{{ question.text }}</span>
+      <span class="flex items-center gap-3 text-xs text-gray-400 whitespace-nowrap">{{ question.created_at[:10] }}<i class="ti ti-chevron-right"></i></span>
+    </a>
+    {% endfor %}
+  </div>
 
-    {% if error %}
-    <div class="alert alert-error mb-6"><span>{{ error }}</span></div>
-    {% endif %}
-
-    <div class="card bg-base-100 shadow-md mb-6">
-        <div class="card-body">
-            <h2 class="card-title">Add Prep Question</h2>
-            <form method="post" action="/interview-prep/prep-questions" class="space-y-4">
-                <div class="form-control">
-                    <label class="label"><span class="label-text">Question</span></label>
-                    <textarea name="text" class="textarea textarea-bordered" placeholder="E.g., Tell me about a time you had a difficult decision..." required></textarea>
-                </div>
-                <button type="submit" class="btn btn-primary">Add Question</button>
-            </form>
-        </div>
-    </div>
-
-    {% if questions %}
-    <div class="space-y-4">
-        {% for question in questions %}
-        <div class="card bg-base-100 shadow-md">
-            <div class="card-body">
-                <h3 class="card-title">{{ question.text }}</h3>
-                <p class="text-sm text-gray-500">{{ question.created_at[:10] }}</p>
-                <div class="card-actions justify-end">
-                    <a href="/interview-prep/prep-questions/{{ question.id }}" class="btn btn-sm btn-outline">View Stories</a>
-                </div>
-            </div>
-        </div>
-        {% endfor %}
-    </div>
-
-    <div class="flex justify-center gap-2 mt-6">
-        {% if has_prev %}
-        <a href="/interview-prep/prep-questions?offset={{ prev_offset }}" class="btn btn-outline">Previous</a>
-        {% endif %}
-        {% if has_next %}
-        <a href="/interview-prep/prep-questions?offset={{ next_offset }}" class="btn btn-outline">Next</a>
-        {% endif %}
-    </div>
-    {% elif not error %}
-    <div class="alert alert-info">
-        <span>No prep questions yet. Add one above to start building your interview prep plan!</span>
-    </div>
-    {% endif %}
+  {% if has_prev or has_next %}
+  <div class="flex justify-center gap-2">
+    {% if has_prev %}<a href="/interview-prep/prep-questions?offset={{ prev_offset }}" class="btn btn-sm btn-outline border-gray-200 text-gray-700">Previous</a>{% endif %}
+    {% if has_next %}<a href="/interview-prep/prep-questions?offset={{ next_offset }}" class="btn btn-sm btn-outline border-gray-200 text-gray-700">Next</a>{% endif %}
+  </div>
+  {% endif %}
+  {% elif not error %}
+  <div class="bg-white border border-gray-200 rounded-lg p-6 text-sm text-gray-500 text-center">No prep questions yet. Use “New question” to start building your prep plan.</div>
+  {% endif %}
 </div>
+
+<dialog id="new-question-modal" class="modal">
+  <div class="modal-box bg-white rounded-xl border border-gray-200 shadow-lg max-w-lg w-full p-6">
+    <h3 class="text-sm font-semibold text-gray-900 mb-4">New prep question</h3>
+    <form method="post" action="/interview-prep/prep-questions" class="flex flex-col gap-3">
+      <textarea name="text" rows="3" required placeholder="E.g., Tell me about a time you had a difficult decision..." class="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white w-full focus:outline-none focus:ring-1 focus:ring-[#378ADD]"></textarea>
+      <div class="flex justify-end gap-2">
+        <button type="button" onclick="document.getElementById('new-question-modal').close()" class="btn btn-sm btn-ghost text-gray-500">Cancel</button>
+        <button type="submit" class="btn btn-sm btn-primary">Add question</button>
+      </div>
+    </form>
+  </div>
+  <form method="dialog" class="modal-backdrop"><button>close</button></form>
+</dialog>
 {% endblock %}

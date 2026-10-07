@@ -1,0 +1,18 @@
+{# Shared header for Interview Prep pages. Expects `prep_tab` (stories | prep-questions | candidate-questions) and optional `prep_action` HTML via caller block. #}
+<div class="flex items-center justify-between gap-3">
+  <div class="flex items-center gap-2 min-w-0">
+    <a href="/interviews" class="text-gray-400 hover:text-gray-600" title="Back to Interviews"><i class="ti ti-arrow-left text-sm"></i></a>
+    <h1 class="text-base font-semibold text-gray-900">Interview prep</h1>
+  </div>
+  {% if prep_action %}{{ prep_action | safe }}{% endif %}
+</div>
+
+<nav class="flex gap-4 border-b border-gray-200 text-sm">
+  {% for key, label, href in [("stories", "Stories", "/interview-prep/stories"), ("prep-questions", "Prep questions", "/interview-prep/prep-questions"), ("candidate-questions", "Questions to ask", "/interview-prep/candidate-questions")] %}
+  <a href="{{ href }}" class="pb-2 -mb-px border-b-2 {% if prep_tab == key %}border-[#378ADD] text-gray-900 font-medium{% else %}border-transparent text-gray-500 hover:text-gray-700{% endif %}">{{ label }}</a>
+  {% endfor %}
+</nav>
+
+{% if error %}
+<div class="rounded-lg bg-[#FCEBEB] border border-[#E24B4A]/20 px-4 py-2.5 text-sm text-[#E24B4A]">{{ error }}</div>
+{% endif %}

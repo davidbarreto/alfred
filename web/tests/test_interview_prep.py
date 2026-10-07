@@ -113,6 +113,6 @@ class TestCandidateQuestionsPage:
         resp = client.get("/interview-prep/candidate-questions")
 
         assert resp.status_code == 200
-        assert resp.text.count('<div class="divider my-2">Tech</div>') == 1
-        assert resp.text.count('<div class="divider my-2">Work-life</div>') == 1
+        assert resp.text.count('uppercase tracking-wide mb-1.5">Tech</h2>') == 1
+        assert resp.text.count('uppercase tracking-wide mb-1.5">Work-life</h2>') == 1
         assert '<option value="Logistics">' in resp.text

@@ -3,149 +3,116 @@
 {% block title %}Interview Stories{% endblock %}
 
 {% block content %}
-<div class="container mx-auto px-4 py-6">
-    <h1 class="text-3xl font-bold mb-6">Interview Stories</h1>
+{% set prep_tab = "stories" %}
+{% set prep_action %}<button type="button" onclick="document.getElementById('new-story-modal').showModal()" class="btn btn-sm btn-primary gap-1"><i class="ti ti-plus text-sm"></i>New story</button>{% endset %}
+<div class="p-6 space-y-4">
+  {% include "interview_prep/_prep_header.html" %}
 
-    <div class="tabs tabs-bordered mb-6">
-        <a href="/interview-prep/stories" class="tab tab-active">Stories</a>
-        <a href="/interview-prep/prep-questions" class="tab">Prep Questions</a>
-        <a href="/interview-prep/candidate-questions" class="tab">Candidate Questions</a>
+  <div class="flex flex-wrap items-center gap-1.5 text-xs">
+    <span class="text-gray-500 mr-1">Tag</span>
+    <a href="/interview-prep/stories" class="px-2.5 py-1 rounded-full border {% if not current_tag %}bg-gray-900 border-gray-900 text-white{% else %}border-gray-200 text-gray-600 hover:bg-gray-50{% endif %}">All</a>
+    {% for tag in all_tags %}
+    <a href="/interview-prep/stories?tag={{ tag | urlencode }}" class="px-2.5 py-1 rounded-full border {% if current_tag == tag %}bg-gray-900 border-gray-900 text-white{% else %}border-gray-200 text-gray-600 hover:bg-gray-50{% endif %}">{{ tag }}</a>
+    {% endfor %}
+  </div>
+
+  {% if stories %}
+  <div class="space-y-3">
+    {% for story in stories %}
+    <div class="bg-white border border-gray-200 rounded-lg p-4">
+      <div class="flex justify-between items-start gap-4">
+        <dl class="flex-1 space-y-1 text-sm text-gray-700">
+          <div><dt class="inline font-medium text-gray-900">Situation:</dt> <dd class="inline">{{ story.situation | truncate(100) }}</dd></div>
+          <div><dt class="inline font-medium text-gray-900">Task:</dt> <dd class="inline">{{ story.task | truncate(100) }}</dd></div>
+          <div><dt class="inline font-medium text-gray-900">Action:</dt> <dd class="inline">{{ story.action | truncate(100) }}</dd></div>
+          <div><dt class="inline font-medium text-gray-900">Result:</dt> <dd class="inline">{{ story.result | truncate(100) }}</dd></div>
+        </dl>
+        <span class="badge badge-sm badge-outline whitespace-nowrap">Strength {{ story.strength }}/5</span>
+      </div>
+
+      <div class="mt-3 flex flex-wrap items-center justify-between gap-2">
+        <div class="flex flex-wrap items-center gap-1.5">
+          {% for tag_obj in story.tags %}
+          <span class="badge badge-sm badge-ghost">{{ tag_obj.tag }}</span>
+          {% endfor %}
+          <form method="post" action="/interview-prep/stories/{{ story.id }}/tags" class="flex gap-1">
+            <input type="text" name="tag" class="border border-gray-200 rounded px-2 py-0.5 text-xs w-24 focus:outline-none focus:ring-1 focus:ring-[#378ADD]" placeholder="+ tag" maxlength="100" required />
+          </form>
+        </div>
+        <div class="flex items-center gap-1">
+          <button type="button" class="btn btn-xs btn-ghost text-gray-600" onclick="showStory({{ story.id }})">View full</button>
+          <form method="post" action="/interview-prep/stories/{{ story.id }}/delete">
+            <button type="submit" class="btn btn-xs btn-ghost text-[#E24B4A]" onclick="return confirm('Delete this story?')">Delete</button>
+          </form>
+        </div>
+      </div>
+
+      <div id="story-full-{{ story.id }}" hidden>
+        <div><strong>Situation:</strong> {{ story.situation }}</div>
+        <div><strong>Task:</strong> {{ story.task }}</div>
+        <div><strong>Action:</strong> {{ story.action }}</div>
+        <div><strong>Result:</strong> {{ story.result }}</div>
+      </div>
     </div>
+    {% endfor %}
+  </div>
 
-    {% if error %}
-    <div class="alert alert-error mb-6"><span>{{ error }}</span></div>
+  {% if has_prev or has_next %}
+  <div class="flex justify-center gap-2">
+    {% if has_prev %}
+    <a href="/interview-prep/stories?offset={{ prev_offset }}{% if current_tag %}&tag={{ current_tag | urlencode }}{% endif %}" class="btn btn-sm btn-outline border-gray-200 text-gray-700">Previous</a>
     {% endif %}
-
-    <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        <div class="lg:col-span-1">
-            <div class="card bg-base-100 shadow-md">
-                <div class="card-body">
-                    <h3 class="card-title text-lg">Filter by Tag</h3>
-                    <div class="divider"></div>
-                    <a href="/interview-prep/stories" class="btn btn-sm {% if not current_tag %}btn-active{% else %}btn-ghost{% endif %} btn-block text-left">
-                        All Stories
-                    </a>
-                    {% for tag in all_tags %}
-                    <a href="/interview-prep/stories?tag={{ tag | urlencode }}" class="btn btn-sm {% if current_tag == tag %}btn-active{% else %}btn-ghost{% endif %} btn-block text-left">
-                        {{ tag }}
-                    </a>
-                    {% endfor %}
-                </div>
-            </div>
-        </div>
-
-        <div class="lg:col-span-3">
-            <div class="card bg-base-100 shadow-md mb-6">
-                <div class="card-body">
-                    <h2 class="card-title">Add New Story</h2>
-                    <form method="post" action="/interview-prep/stories" class="space-y-4">
-                        <div class="form-control">
-                            <label class="label"><span class="label-text">Situation</span></label>
-                            <textarea name="situation" class="textarea textarea-bordered" placeholder="What was the situation?" required></textarea>
-                        </div>
-                        <div class="form-control">
-                            <label class="label"><span class="label-text">Task</span></label>
-                            <textarea name="task" class="textarea textarea-bordered" placeholder="What was your responsibility?" required></textarea>
-                        </div>
-                        <div class="form-control">
-                            <label class="label"><span class="label-text">Action</span></label>
-                            <textarea name="action" class="textarea textarea-bordered" placeholder="What did you do?" required></textarea>
-                        </div>
-                        <div class="form-control">
-                            <label class="label"><span class="label-text">Result</span></label>
-                            <textarea name="result" class="textarea textarea-bordered" placeholder="What was the outcome?" required></textarea>
-                        </div>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div class="form-control">
-                                <label class="label"><span class="label-text">Strength (1-5)</span></label>
-                                <select name="strength" class="select select-bordered">
-                                    <option value="1">1 - Vague/Incomplete</option>
-                                    <option value="2">2 - Basic</option>
-                                    <option value="3" selected>3 - Good</option>
-                                    <option value="4">4 - Strong</option>
-                                    <option value="5">5 - Excellent</option>
-                                </select>
-                            </div>
-                            <div class="form-control">
-                                <label class="label"><span class="label-text">Tags (comma-separated)</span></label>
-                                <input type="text" name="tags" class="input input-bordered" placeholder="Leadership, Conflict" />
-                            </div>
-                        </div>
-                        <button type="submit" class="btn btn-primary btn-block">Add Story</button>
-                    </form>
-                </div>
-            </div>
-
-            {% if stories %}
-            <div class="space-y-4">
-                {% for story in stories %}
-                <div class="card bg-base-100 shadow-md">
-                    <div class="card-body">
-                        <div class="flex justify-between items-start">
-                            <div class="flex-1 space-y-2 text-sm">
-                                <div><strong>Situation:</strong> {{ story.situation | truncate(100) }}</div>
-                                <div><strong>Task:</strong> {{ story.task | truncate(100) }}</div>
-                                <div><strong>Action:</strong> {{ story.action | truncate(100) }}</div>
-                                <div><strong>Result:</strong> {{ story.result | truncate(100) }}</div>
-                            </div>
-                            <div class="ml-4">
-                                <div class="badge badge-lg badge-primary">Strength: {{ story.strength }}/5</div>
-                            </div>
-                        </div>
-
-                        <div class="mt-4 flex flex-wrap items-center gap-2">
-                            {% for tag_obj in story.tags %}
-                            <span class="badge badge-outline">{{ tag_obj.tag }}</span>
-                            {% endfor %}
-                            <form method="post" action="/interview-prep/stories/{{ story.id }}/tags" class="flex gap-1">
-                                <input type="text" name="tag" class="input input-bordered input-xs w-28" placeholder="Add tag" maxlength="100" required />
-                                <button type="submit" class="btn btn-xs btn-ghost">+</button>
-                            </form>
-                        </div>
-
-                        <div id="story-full-{{ story.id }}" hidden>
-                            <div><strong>Situation:</strong> {{ story.situation }}</div>
-                            <div><strong>Task:</strong> {{ story.task }}</div>
-                            <div><strong>Action:</strong> {{ story.action }}</div>
-                            <div><strong>Result:</strong> {{ story.result }}</div>
-                        </div>
-
-                        <div class="card-actions justify-end mt-4">
-                            <button type="button" class="btn btn-sm btn-ghost" onclick="showStory({{ story.id }})">View Full</button>
-                            <form method="post" action="/interview-prep/stories/{{ story.id }}/delete" style="display:inline;">
-                                <button type="submit" class="btn btn-sm btn-ghost btn-error" onclick="return confirm('Delete this story?')">Delete</button>
-                            </form>
-                        </div>
-                    </div>
-                </div>
-                {% endfor %}
-            </div>
-
-            <div class="flex justify-center gap-2 mt-6">
-                {% if has_prev %}
-                <a href="/interview-prep/stories?offset={{ prev_offset }}{% if current_tag %}&tag={{ current_tag | urlencode }}{% endif %}" class="btn btn-outline">Previous</a>
-                {% endif %}
-                {% if has_next %}
-                <a href="/interview-prep/stories?offset={{ next_offset }}{% if current_tag %}&tag={{ current_tag | urlencode }}{% endif %}" class="btn btn-outline">Next</a>
-                {% endif %}
-            </div>
-            {% elif not error %}
-            <div class="alert alert-info">
-                <span>No stories yet. Create your first STAR story above!</span>
-            </div>
-            {% endif %}
-        </div>
-    </div>
+    {% if has_next %}
+    <a href="/interview-prep/stories?offset={{ next_offset }}{% if current_tag %}&tag={{ current_tag | urlencode }}{% endif %}" class="btn btn-sm btn-outline border-gray-200 text-gray-700">Next</a>
+    {% endif %}
+  </div>
+  {% endif %}
+  {% elif not error %}
+  <div class="bg-white border border-gray-200 rounded-lg p-6 text-sm text-gray-500 text-center">No stories yet. Use “New story” to write your first STAR story.</div>
+  {% endif %}
 </div>
 
-<dialog id="storyModal" class="modal">
-    <form method="dialog" class="modal-box w-11/12 max-w-2xl">
-        <h3 class="font-bold text-lg mb-4">Story Details</h3>
-        <div id="modalContent" class="space-y-3 whitespace-pre-line"></div>
-        <div class="modal-action">
-            <button class="btn">Close</button>
-        </div>
+<dialog id="new-story-modal" class="modal">
+  <div class="modal-box bg-white rounded-xl border border-gray-200 shadow-lg max-w-lg w-full p-6">
+    <h3 class="text-sm font-semibold text-gray-900 mb-4">New story</h3>
+    <form method="post" action="/interview-prep/stories" class="flex flex-col gap-3">
+      {% for field, label, hint in [("situation", "Situation", "What was the situation?"), ("task", "Task", "What was your responsibility?"), ("action", "Action", "What did you do?"), ("result", "Result", "What was the outcome?")] %}
+      <label class="flex flex-col gap-1 text-xs text-gray-600">{{ label }}
+        <textarea name="{{ field }}" rows="2" placeholder="{{ hint }}" required class="border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 bg-white w-full focus:outline-none focus:ring-1 focus:ring-[#378ADD]"></textarea>
+      </label>
+      {% endfor %}
+      <div class="grid grid-cols-2 gap-3">
+        <label class="flex flex-col gap-1 text-xs text-gray-600">Strength
+          <select name="strength" class="border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 bg-white w-full focus:outline-none focus:ring-1 focus:ring-[#378ADD]">
+            <option value="1">1 - Vague/Incomplete</option>
+            <option value="2">2 - Basic</option>
+            <option value="3" selected>3 - Good</option>
+            <option value="4">4 - Strong</option>
+            <option value="5">5 - Excellent</option>
+          </select>
+        </label>
+        <label class="flex flex-col gap-1 text-xs text-gray-600">Tags (comma-separated)
+          <input type="text" name="tags" placeholder="Leadership, Conflict" class="border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 bg-white w-full focus:outline-none focus:ring-1 focus:ring-[#378ADD]" />
+        </label>
+      </div>
+      <div class="flex justify-end gap-2 mt-1">
+        <button type="button" onclick="document.getElementById('new-story-modal').close()" class="btn btn-sm btn-ghost text-gray-500">Cancel</button>
+        <button type="submit" class="btn btn-sm btn-primary">Add story</button>
+      </div>
     </form>
+  </div>
+  <form method="dialog" class="modal-backdrop"><button>close</button></form>
+</dialog>
+
+<dialog id="storyModal" class="modal">
+  <div class="modal-box bg-white rounded-xl border border-gray-200 shadow-lg max-w-2xl w-full p-6">
+    <h3 class="text-sm font-semibold text-gray-900 mb-3">Story details</h3>
+    <div id="modalContent" class="space-y-2 text-sm text-gray-700 whitespace-pre-line"></div>
+    <div class="flex justify-end mt-4">
+      <form method="dialog"><button class="btn btn-sm btn-ghost text-gray-500">Close</button></form>
+    </div>
+  </div>
+  <form method="dialog" class="modal-backdrop"><button>close</button></form>
 </dialog>
 
 <script>

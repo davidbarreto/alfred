@@ -1,0 +1,52 @@
+# Common behavioral interview questions (FAANG, big fintech, etc.), grouped by theme.
+# Group names are for readability only; the seed script reads the flattened question text.
+Leadership & ownership:
+  - Tell me about a time you took ownership of something outside your formal responsibilities.
+  - Tell me about a time you led a project without having formal authority.
+  - Describe a time you took initiative to improve a process or system nobody asked you to fix.
+  - Tell me about a time you had to make a decision with incomplete information.
+  - Tell me about a time you mentored or helped a teammate grow.
+  - Describe a time you had to rally a team around a difficult goal.
+Conflict & collaboration:
+  - Tell me about a time you disagreed with your manager or a senior engineer. How did you handle it?
+  - Describe a conflict with a teammate and how you resolved it.
+  - Tell me about a time you had to work with a difficult stakeholder.
+  - Describe a time you disagreed with a technical decision but committed to it anyway.
+  - Tell me about a time you had to influence others without authority.
+  - Tell me about a time you worked with a cross-functional team (product, design, data, compliance).
+Failure & learning:
+  - Tell me about your biggest failure and what you learned from it.
+  - Describe a mistake that caused a production incident. What did you do?
+  - Tell me about a time you received critical feedback. How did you respond?
+  - Describe a project that did not go as planned.
+  - Tell me about a time you had to learn a new technology or domain quickly.
+  - Tell me about something you would do differently if you could redo a past project.
+Delivery & prioritization:
+  - Tell me about a time you had to deliver under a tight deadline.
+  - Describe a time you had to juggle multiple competing priorities.
+  - Tell me about a time you had to push back on scope or say no.
+  - Describe a time you made a trade-off between speed and quality.
+  - Tell me about a time you reduced technical debt and how you justified it.
+  - Tell me about a time you had to cut scope to ship on time.
+Technical depth & impact:
+  - Tell me about the most technically challenging problem you have solved.
+  - Describe a system you designed and the trade-offs you made.
+  - Tell me about a time you improved performance, reliability or scalability of a system.
+  - Describe a time you debugged a hard problem in production.
+  - Tell me about a time you made a measurable impact on the business.
+  - Tell me about a time you simplified something complex.
+Customer focus & fintech:
+  - Tell me about a time you put the customer first, even when it was harder for you.
+  - Describe a time you handled a security, compliance or risk concern in your work.
+  - Tell me about a time you worked on a system where correctness mattered (money, payments, ledgers).
+  - Describe a time you used data to make or change a decision.
+  - Tell me about a time you had to balance innovation with risk.
+Motivation & self-awareness:
+  - Why do you want to work here?
+  - Why are you leaving your current role?
+  - Tell me about yourself.
+  - What are your greatest strengths and weaknesses?
+  - Where do you see yourself in five years?
+  - Tell me about a time you went above and beyond.
+  - Describe a time you had to adapt to a significant change.
+  - Tell me about a time you worked with a team across different time zones or cultures.

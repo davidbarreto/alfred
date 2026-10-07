@@ -3,6 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from app.api.auth import require_auth
 from app.dependencies import CodeforcesSyncServiceDep, CsPlatformServiceDep, LeetCodeSyncServiceDep
 from app.features.cs.platforms.schemas import PlatformCreate, PlatformFilters, PlatformRead, PlatformUpdate
+from app.integrations.leetcode.client import LeetCodeAuthError
 
 router = APIRouter(prefix="/cs/platforms", tags=["cs"], dependencies=[Depends(require_auth)])
 
@@ -41,5 +42,11 @@ async def sync_codeforces(service: CodeforcesSyncServiceDep) -> dict[str, int]:
 
 @router.post("/leetcode/sync")
 async def sync_leetcode(service: LeetCodeSyncServiceDep) -> dict[str, int]:
-    count = await service.sync()
+    try:
+        count = await service.sync()
+    except LeetCodeAuthError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=f"{exc}. Refresh LEETCODE_SESSION and LEETCODE_CSRF_TOKEN.",
+        ) from exc
     return {"synced": count}

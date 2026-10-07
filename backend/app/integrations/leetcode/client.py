@@ -90,9 +90,11 @@ class LeetCodeClient:
                 if offset == 0 and watermark is not None:
                     logger.warning(
                         "LeetCode returned an empty submission history but a sync watermark exists "
-                        "(last_external_id=%s): the session cookie may have expired -- "
-                        "refresh LEETCODE_SESSION and LEETCODE_CSRF_TOKEN",
+                        "(last_external_id=%s): the session cookie may have expired",
                         last_external_id,
+                    )
+                    raise LeetCodeAuthError(
+                        "LeetCode returned no submissions: the session cookie may have expired"
                     )
                 break
 

@@ -3,7 +3,7 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from app.integrations.leetcode.client import LeetCodeClient
+from app.integrations.leetcode.client import LeetCodeAuthError, LeetCodeClient
 
 
 def _page(submissions, has_next=False):
@@ -27,11 +27,11 @@ class TestGetSubmissionsSince:
         result = await client.get_submissions_since("15")
         assert [s["id"] for s in result] == ["30", "20"]
 
-    async def test_warns_when_history_is_empty_but_watermark_is_set(self, client, caplog):
+    async def test_raises_auth_error_when_history_is_empty_but_watermark_is_set(self, client, caplog):
         client._post.return_value = _page([])
         with caplog.at_level(logging.WARNING, logger="app.integrations.leetcode.client"):
-            result = await client.get_submissions_since("2064098650")
-        assert result == []
+            with pytest.raises(LeetCodeAuthError, match="session cookie may have expired"):
+                await client.get_submissions_since("2064098650")
         assert "session cookie may have expired" in caplog.text
 
     async def test_no_warning_when_history_is_empty_on_first_sync(self, client, caplog):

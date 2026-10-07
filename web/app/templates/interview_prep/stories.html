@@ -3,6 +3,7 @@
 {% block title %}Interview Stories{% endblock %}
 
 {% block content %}
+{% from "interview_prep/_score_badge.html" import score_badge %}
 {% set prep_tab = "stories" %}
 {% set prep_action %}<button type="button" onclick="document.getElementById('new-story-modal').showModal()" class="btn btn-sm btn-primary gap-1"><i class="ti ti-plus text-sm"></i>New story</button>{% endset %}
 <div class="p-6 space-y-4">
@@ -27,7 +28,7 @@
           <div><dt class="inline font-medium text-gray-900">Action:</dt> <dd class="inline">{{ story.action | truncate(100) }}</dd></div>
           <div><dt class="inline font-medium text-gray-900">Result:</dt> <dd class="inline">{{ story.result | truncate(100) }}</dd></div>
         </dl>
-        <span class="badge badge-sm badge-outline whitespace-nowrap">Strength {{ story.strength }}/5</span>
+        {{ score_badge(story.strength, "Strength " ~ story.strength ~ "/5") }}
       </div>
 
       <div class="mt-3 flex flex-wrap items-center justify-between gap-2">

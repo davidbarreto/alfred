@@ -215,3 +215,31 @@ class TestEditDeleteCandidateQuestions:
         assert 'action="/interview-prep/candidate-questions/4/edit"' in resp.text
         assert 'action="/interview-prep/candidate-questions/4/delete"' in resp.text
         assert '<option value="Tech" selected>' in resp.text
+
+
+class TestPrepQuestionsList:
+    def test_shows_linked_story_count_per_question(self, client, mock_api):
+        mock_api["get"].side_effect = _by_path({
+            "/organizer/interview-prep-questions": [
+                {"id": 1, "text": "Q one", "story_count": 3, "created_at": _TS, "updated_at": _TS},
+                {"id": 2, "text": "Q two", "story_count": 0, "created_at": _TS, "updated_at": _TS},
+            ],
+        })
+
+        resp = client.get("/interview-prep/prep-questions")
+
+        assert 'title="3 linked stories">3</span>' in resp.text
+        assert 'title="0 linked stories">0</span>' in resp.text
+
+
+class TestScoreBadgeColors:
+    def test_strength_and_fit_badges_use_a_distinct_color_per_score(self, client, mock_api):
+        mock_api["get"].side_effect = _by_path({
+            "/organizer/interview-stories": [_story(id=1, strength=5), _story(id=2, strength=1)],
+            "/organizer/interview-stories/tags": [],
+        })
+
+        resp = client.get("/interview-prep/stories")
+
+        assert "text-[#0F7B58]" in resp.text and "Strength 5/5" in resp.text
+        assert "text-[#B93636]" in resp.text and "Strength 1/5" in resp.text

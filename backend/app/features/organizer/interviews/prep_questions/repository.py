@@ -1,4 +1,4 @@
-from sqlalchemy import delete, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
@@ -39,6 +39,14 @@ class InterviewPrepQuestionRepository:
             .offset(offset)
         )
         return list((await self._session.scalars(stmt)).all())
+
+    async def get_story_counts(self, question_ids: list[int]) -> dict[int, int]:
+        stmt = (
+            select(InterviewPrepQuestionStory.question_id, func.count())
+            .where(InterviewPrepQuestionStory.question_id.in_(question_ids))
+            .group_by(InterviewPrepQuestionStory.question_id)
+        )
+        return {question_id: count for question_id, count in (await self._session.execute(stmt)).all()}
 
     async def create_question(self, text: str) -> InterviewPrepQuestion:
         question = InterviewPrepQuestion(text=text)

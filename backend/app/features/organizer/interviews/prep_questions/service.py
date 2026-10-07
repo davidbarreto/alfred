@@ -51,7 +51,11 @@ class InterviewPrepQuestionService:
 
     async def get_questions(self, limit: int = 100, offset: int = 0) -> list[InterviewPrepQuestionRead]:
         questions = await self._repo.get_questions(limit=limit, offset=offset)
-        return [InterviewPrepQuestionRead.model_validate(q) for q in questions]
+        counts = await self._repo.get_story_counts([q.id for q in questions])
+        return [
+            InterviewPrepQuestionRead.model_validate(q).model_copy(update={"story_count": counts.get(q.id, 0)})
+            for q in questions
+        ]
 
     async def create_question(self, data: InterviewPrepQuestionCreate) -> InterviewPrepQuestionRead:
         question = await self._repo.create_question(text=data.text)

@@ -58,6 +58,17 @@ class TestCrud:
         assert await service.update_question(999, InterviewPrepQuestionUpdate(text="x")) is None
 
 
+class TestListStoryCount:
+    async def test_list_includes_linked_story_count_defaulting_to_zero(self, service, mock_repo):
+        mock_repo.get_questions.return_value = [_question(id=1), _question(id=2)]
+        mock_repo.get_story_counts.return_value = {1: 3}
+
+        result = await service.get_questions()
+
+        assert [(q.id, q.story_count) for q in result] == [(1, 3), (2, 0)]
+        mock_repo.get_story_counts.assert_awaited_once_with([1, 2])
+
+
 class TestQuestionWithStories:
     async def test_stories_carry_fit_score_sorted_best_first(self, service, mock_repo):
         mock_repo.get_question_with_links.return_value = _question(

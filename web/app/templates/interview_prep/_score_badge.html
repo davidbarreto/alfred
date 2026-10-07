@@ -1,0 +1,11 @@
+{# 1-5 score badge: red (1) -> orange -> amber -> lime -> green (5). Used for story strength and link fit. #}
+{% macro score_badge(score, text) %}
+{% set styles = {
+  1: "bg-[#FCEBEB] text-[#B93636] border-[#E24B4A]/30",
+  2: "bg-[#FDF0E3] text-[#B4561A] border-[#E8833A]/30",
+  3: "bg-[#FBF5DC] text-[#8A6A0B] border-[#D9A81E]/30",
+  4: "bg-[#EEF6DF] text-[#4F7A12] border-[#8FBF3A]/30",
+  5: "bg-[#E1F5EE] text-[#0F7B58] border-[#1D9E75]/30",
+} %}
+<span class="inline-flex items-center whitespace-nowrap rounded-full border px-2 py-0.5 text-xs font-medium {{ styles[score] }}">{{ text }}</span>
+{% endmacro %}

@@ -22,7 +22,34 @@
     <h2 class="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1.5">{{ group.grouper }}</h2>
     <div class="bg-white border border-gray-200 rounded-lg divide-y divide-gray-100">
       {% for question in group.list %}
-      <p class="px-4 py-2.5 text-sm text-gray-900">{{ question.text }}</p>
+      <div class="flex items-center justify-between gap-4 px-4 py-2">
+        <p class="text-sm text-gray-900">{{ question.text }}</p>
+        <div class="flex items-center gap-1 whitespace-nowrap">
+          <button type="button" class="btn btn-xs btn-ghost text-gray-600" onclick="document.getElementById('edit-candidate-{{ question.id }}').showModal()">Edit</button>
+          <form method="post" action="/interview-prep/candidate-questions/{{ question.id }}/delete">
+            <button type="submit" class="btn btn-xs btn-ghost text-[#E24B4A]" onclick="return confirm('Delete this question?')">Delete</button>
+          </form>
+        </div>
+      </div>
+      <dialog id="edit-candidate-{{ question.id }}" class="modal">
+        <div class="modal-box bg-white rounded-xl border border-gray-200 shadow-lg max-w-lg w-full p-6">
+          <h3 class="text-sm font-semibold text-gray-900 mb-4">Edit question</h3>
+          <form method="post" action="/interview-prep/candidate-questions/{{ question.id }}/edit" class="flex flex-col gap-3">
+            <input type="text" name="text" value="{{ question.text }}" maxlength="500" required class="border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 bg-white w-full focus:outline-none focus:ring-1 focus:ring-[#378ADD]" />
+            <select name="category" required class="border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 bg-white w-full focus:outline-none focus:ring-1 focus:ring-[#378ADD]">
+              {% for option in category_options %}
+              <option value="{{ option }}" {% if option == question.category %}selected{% endif %}>{{ option }}</option>
+              {% endfor %}
+              {% if question.category not in category_options %}<option value="{{ question.category }}" selected>{{ question.category }}</option>{% endif %}
+            </select>
+            <div class="flex justify-end gap-2">
+              <button type="button" onclick="document.getElementById('edit-candidate-{{ question.id }}').close()" class="btn btn-sm btn-ghost text-gray-500">Cancel</button>
+              <button type="submit" class="btn btn-sm btn-primary">Save</button>
+            </div>
+          </form>
+        </div>
+        <form method="dialog" class="modal-backdrop"><button>close</button></form>
+      </dialog>
       {% endfor %}
     </div>
   </div>

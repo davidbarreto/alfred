@@ -41,6 +41,7 @@
         </div>
         <div class="flex items-center gap-1">
           <button type="button" class="btn btn-xs btn-ghost text-gray-600" onclick="showStory({{ story.id }})">View full</button>
+          <button type="button" class="btn btn-xs btn-ghost text-gray-600" onclick="document.getElementById('edit-story-{{ story.id }}').showModal()">Edit</button>
           <form method="post" action="/interview-prep/stories/{{ story.id }}/delete">
             <button type="submit" class="btn btn-xs btn-ghost text-[#E24B4A]" onclick="return confirm('Delete this story?')">Delete</button>
           </form>
@@ -54,6 +55,36 @@
         <div><strong>Result:</strong> {{ story.result }}</div>
       </div>
     </div>
+
+    <dialog id="edit-story-{{ story.id }}" class="modal">
+      <div class="modal-box bg-white rounded-xl border border-gray-200 shadow-lg max-w-lg w-full p-6">
+        <h3 class="text-sm font-semibold text-gray-900 mb-4">Edit story</h3>
+        <form method="post" action="/interview-prep/stories/{{ story.id }}/edit" class="flex flex-col gap-3">
+          {% for field, label in [("situation", "Situation"), ("task", "Task"), ("action", "Action"), ("result", "Result")] %}
+          <label class="flex flex-col gap-1 text-xs text-gray-600">{{ label }}
+            <textarea name="{{ field }}" rows="2" required class="border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 bg-white w-full focus:outline-none focus:ring-1 focus:ring-[#378ADD]">{{ story[field] }}</textarea>
+          </label>
+          {% endfor %}
+          <div class="grid grid-cols-2 gap-3">
+            <label class="flex flex-col gap-1 text-xs text-gray-600">Strength
+              <select name="strength" class="border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 bg-white w-full focus:outline-none focus:ring-1 focus:ring-[#378ADD]">
+                {% for n, l in [(1, "Vague/Incomplete"), (2, "Basic"), (3, "Good"), (4, "Strong"), (5, "Excellent")] %}
+                <option value="{{ n }}" {% if n == story.strength %}selected{% endif %}>{{ n }} - {{ l }}</option>
+                {% endfor %}
+              </select>
+            </label>
+            <label class="flex flex-col gap-1 text-xs text-gray-600">Tags (comma-separated)
+              <input type="text" name="tags" value="{{ story.tags | map(attribute='tag') | join(', ') }}" class="border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 bg-white w-full focus:outline-none focus:ring-1 focus:ring-[#378ADD]" />
+            </label>
+          </div>
+          <div class="flex justify-end gap-2 mt-1">
+            <button type="button" onclick="document.getElementById('edit-story-{{ story.id }}').close()" class="btn btn-sm btn-ghost text-gray-500">Cancel</button>
+            <button type="submit" class="btn btn-sm btn-primary">Save</button>
+          </div>
+        </form>
+      </div>
+      <form method="dialog" class="modal-backdrop"><button>close</button></form>
+    </dialog>
     {% endfor %}
   </div>
 

@@ -88,6 +88,32 @@ async def create_story(
     return _redirect("/interview-prep/stories")
 
 
+@router.post("/stories/{story_id}/edit")
+async def edit_story(
+    story_id: int,
+    situation: Annotated[str, Form()],
+    task: Annotated[str, Form()],
+    action: Annotated[str, Form()],
+    result: Annotated[str, Form()],
+    strength: Annotated[int, Form()] = 3,
+    tags: Annotated[str, Form()] = "",
+):
+    payload = {
+        "situation": situation,
+        "task": task,
+        "action": action,
+        "result": result,
+        "strength": strength,
+        "tags": [t.strip() for t in tags.split(",") if t.strip()],
+    }
+    try:
+        await api.patch(f"/organizer/interview-stories/{story_id}", json=payload)
+    except httpx.HTTPError as exc:
+        logger.warning("Edit interview story failed: id=%d error=%s", story_id, exc)
+        return _redirect("/interview-prep/stories", _api_error(exc))
+    return _redirect("/interview-prep/stories")
+
+
 @router.post("/stories/{story_id}/delete")
 async def delete_story(story_id: int):
     try:
@@ -131,6 +157,27 @@ async def create_prep_question(text: Annotated[str, Form()]):
     try:
         await api.post("/organizer/interview-prep-questions", json={"text": text})
     except httpx.HTTPError as exc:
+        return _redirect("/interview-prep/prep-questions", _api_error(exc))
+    return _redirect("/interview-prep/prep-questions")
+
+
+@router.post("/prep-questions/{question_id}/edit")
+async def edit_prep_question(question_id: int, text: Annotated[str, Form()], back: Annotated[str, Form()] = ""):
+    url = f"/interview-prep/prep-questions/{question_id}" if back == "detail" else "/interview-prep/prep-questions"
+    try:
+        await api.patch(f"/organizer/interview-prep-questions/{question_id}", json={"text": text})
+    except httpx.HTTPError as exc:
+        logger.warning("Edit prep question failed: id=%d error=%s", question_id, exc)
+        return _redirect(url, _api_error(exc))
+    return _redirect(url)
+
+
+@router.post("/prep-questions/{question_id}/delete")
+async def delete_prep_question(question_id: int):
+    try:
+        await api.delete(f"/organizer/interview-prep-questions/{question_id}")
+    except httpx.HTTPError as exc:
+        logger.warning("Delete prep question failed: id=%d error=%s", question_id, exc)
         return _redirect("/interview-prep/prep-questions", _api_error(exc))
     return _redirect("/interview-prep/prep-questions")
 
@@ -202,5 +249,25 @@ async def create_candidate_question(text: Annotated[str, Form()], category: Anno
     try:
         await api.post("/organizer/candidate-questions", json={"text": text, "category": category})
     except httpx.HTTPError as exc:
+        return _redirect("/interview-prep/candidate-questions", _api_error(exc))
+    return _redirect("/interview-prep/candidate-questions")
+
+
+@router.post("/candidate-questions/{question_id}/edit")
+async def edit_candidate_question(question_id: int, text: Annotated[str, Form()], category: Annotated[str, Form()]):
+    try:
+        await api.patch(f"/organizer/candidate-questions/{question_id}", json={"text": text, "category": category})
+    except httpx.HTTPError as exc:
+        logger.warning("Edit candidate question failed: id=%d error=%s", question_id, exc)
+        return _redirect("/interview-prep/candidate-questions", _api_error(exc))
+    return _redirect("/interview-prep/candidate-questions")
+
+
+@router.post("/candidate-questions/{question_id}/delete")
+async def delete_candidate_question(question_id: int):
+    try:
+        await api.delete(f"/organizer/candidate-questions/{question_id}")
+    except httpx.HTTPError as exc:
+        logger.warning("Delete candidate question failed: id=%d error=%s", question_id, exc)
         return _redirect("/interview-prep/candidate-questions", _api_error(exc))
     return _redirect("/interview-prep/candidate-questions")

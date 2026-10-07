@@ -116,3 +116,102 @@ class TestCandidateQuestionsPage:
         assert resp.text.count('uppercase tracking-wide mb-1.5">Tech</h2>') == 1
         assert resp.text.count('uppercase tracking-wide mb-1.5">Work-life</h2>') == 1
         assert '<option value="Logistics">' in resp.text
+
+
+class TestEditDeleteStories:
+    def test_edit_patches_story_with_parsed_tags(self, client, mock_api):
+        resp = client.post(
+            "/interview-prep/stories/3/edit",
+            data={"situation": "s", "task": "t", "action": "a", "result": "r", "strength": "4", "tags": "Lead, ,Conflict"},
+            follow_redirects=False,
+        )
+
+        assert resp.status_code == 303
+        mock_api["patch"].assert_awaited_once_with(
+            "/organizer/interview-stories/3",
+            json={"situation": "s", "task": "t", "action": "a", "result": "r", "strength": 4, "tags": ["Lead", "Conflict"]},
+        )
+
+    def test_edit_failure_surfaces_backend_detail(self, client, mock_api):
+        mock_api["patch"].side_effect = _status_error(404, "Story not found")
+
+        resp = client.post(
+            "/interview-prep/stories/3/edit",
+            data={"situation": "s", "task": "t", "action": "a", "result": "r"},
+            follow_redirects=False,
+        )
+
+        assert "error=Story+not+found" in resp.headers["location"]
+
+    def test_page_prefills_edit_form(self, client, mock_api):
+        mock_api["get"].side_effect = _by_path({
+            "/organizer/interview-stories": [_story(tags=[{"tag": "Lead"}, {"tag": "Conflict"}])],
+            "/organizer/interview-stories/tags": [],
+        })
+
+        resp = client.get("/interview-prep/stories")
+
+        assert 'action="/interview-prep/stories/1/edit"' in resp.text
+        assert 'value="Lead, Conflict"' in resp.text
+
+    def test_delete_story(self, client, mock_api):
+        client.post("/interview-prep/stories/3/delete", follow_redirects=False)
+        mock_api["delete"].assert_awaited_once_with("/organizer/interview-stories/3")
+
+
+class TestEditDeletePrepQuestions:
+    def test_edit_from_list_redirects_to_list(self, client, mock_api):
+        resp = client.post("/interview-prep/prep-questions/7/edit", data={"text": "New"}, follow_redirects=False)
+
+        mock_api["patch"].assert_awaited_once_with("/organizer/interview-prep-questions/7", json={"text": "New"})
+        assert resp.headers["location"] == "/interview-prep/prep-questions"
+
+    def test_edit_from_detail_redirects_to_detail(self, client, mock_api):
+        resp = client.post(
+            "/interview-prep/prep-questions/7/edit", data={"text": "New", "back": "detail"}, follow_redirects=False
+        )
+
+        assert resp.headers["location"] == "/interview-prep/prep-questions/7"
+
+    def test_delete_redirects_to_list(self, client, mock_api):
+        resp = client.post("/interview-prep/prep-questions/7/delete", follow_redirects=False)
+
+        mock_api["delete"].assert_awaited_once_with("/organizer/interview-prep-questions/7")
+        assert resp.headers["location"] == "/interview-prep/prep-questions"
+
+    def test_delete_failure_surfaces_backend_detail(self, client, mock_api):
+        mock_api["delete"].side_effect = _status_error(404, "Question not found")
+
+        resp = client.post("/interview-prep/prep-questions/7/delete", follow_redirects=False)
+
+        assert "error=Question+not+found" in resp.headers["location"]
+
+
+class TestEditDeleteCandidateQuestions:
+    def test_edit_patches_text_and_category(self, client, mock_api):
+        client.post(
+            "/interview-prep/candidate-questions/4/edit", data={"text": "Q?", "category": "Tech"}, follow_redirects=False
+        )
+
+        mock_api["patch"].assert_awaited_once_with(
+            "/organizer/candidate-questions/4", json={"text": "Q?", "category": "Tech"}
+        )
+
+    def test_delete(self, client, mock_api):
+        client.post("/interview-prep/candidate-questions/4/delete", follow_redirects=False)
+
+        mock_api["delete"].assert_awaited_once_with("/organizer/candidate-questions/4")
+
+    def test_page_renders_edit_and_delete_per_question(self, client, mock_api):
+        mock_api["get"].side_effect = _by_path({
+            "/organizer/candidate-questions": [
+                {"id": 4, "text": "Stack?", "category": "Tech", "created_at": _TS, "updated_at": _TS},
+            ],
+            "/organizer/candidate-questions/categories": ["Tech"],
+        })
+
+        resp = client.get("/interview-prep/candidate-questions")
+
+        assert 'action="/interview-prep/candidate-questions/4/edit"' in resp.text
+        assert 'action="/interview-prep/candidate-questions/4/delete"' in resp.text
+        assert '<option value="Tech" selected>' in resp.text

@@ -12,11 +12,9 @@
   <div class="bg-white border border-gray-200 rounded-lg divide-y divide-gray-100">
     {% for question in questions %}
     <div class="flex items-center justify-between gap-4 px-4 py-3 hover:bg-gray-50">
-      <a href="/interview-prep/prep-questions/{{ question.id }}" class="flex-1 flex items-center gap-2 text-sm text-gray-900">
-        <span>{{ question.text }}</span>
-        <span class="badge badge-sm {% if question.story_count %}badge-ghost{% else %}badge-warning badge-outline{% endif %}" title="{{ question.story_count }} linked {{ 'story' if question.story_count == 1 else 'stories' }}">{{ question.story_count }}</span>
-      </a>
+      <a href="/interview-prep/prep-questions/{{ question.id }}" class="flex-1 text-sm text-gray-900">{{ question.text }}</a>
       <div class="flex items-center gap-1 whitespace-nowrap">
+        <span class="badge badge-sm mr-1 {% if question.story_count %}badge-ghost{% else %}badge-warning badge-outline{% endif %}" title="{{ question.story_count }} linked {{ 'story' if question.story_count == 1 else 'stories' }}">{{ question.story_count }}</span>
         <span class="text-xs text-gray-400 mr-2">{{ question.created_at[:10] }}</span>
         <button type="button" class="btn btn-xs btn-ghost text-gray-600" onclick="document.getElementById('edit-question-{{ question.id }}').showModal()">Edit</button>
         <form method="post" action="/interview-prep/prep-questions/{{ question.id }}/delete">

@@ -705,18 +705,25 @@ COMMAND_DEFINITIONS = {
     },
     "interview_prep": {
         "add": {
-            "description": "Add a behavioral prep question",
+            "description": "Add a behavioral prep question, with optional comma-separated tags",
             "aliases": ["/prepadd", "/prepquestion", "/prep"],
             "nl_triggers": ["add a prep question", "create a prep question", "prep question:"],
-            "flags": {},
+            "flags": {**FLAG_TAGS},
             "requires_args": True,
             "arg_keys": ["text"],
         },
         "list": {
-            "description": "List all prep questions",
+            "description": "List prep questions, optionally filtered by tag",
             "aliases": ["/preplist", "/prepquestions"],
             "nl_triggers": ["list my prep questions", "show my prep questions"],
-            "flags": {"--limit": "limit", "--offset": "offset"},
+            "flags": {"--tag": "tag", "--limit": "limit", "--offset": "offset"},
+        },
+        "tag": {
+            "description": "Add a tag to a prep question",
+            "aliases": ["/preptag"],
+            "flags": {},
+            "requires_args": True,
+            "arg_keys": ["id", "tag"],
         },
         "get": {
             "description": "Get a prep question with linked stories",

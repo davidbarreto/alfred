@@ -72,7 +72,8 @@ class TestPrepQuestionDetail:
         linked = {**_story(id=1, situation="Linked story"), "fit_score": 5}
         mock_api["get"].side_effect = _by_path({
             "/organizer/interview-prep-questions/7": {
-                "id": 7, "text": "Tell me about a conflict", "stories": [linked], "created_at": _TS, "updated_at": _TS,
+                "id": 7, "text": "Tell me about a conflict", "tags": [], "stories": [linked],
+                "created_at": _TS, "updated_at": _TS,
             },
             "/organizer/interview-stories": [_story(id=1, situation="Linked story"), _story(id=2, situation="Free story")],
         })
@@ -145,7 +146,7 @@ class TestEditDeleteStories:
 
     def test_page_prefills_edit_form(self, client, mock_api):
         mock_api["get"].side_effect = _by_path({
-            "/organizer/interview-stories": [_story(tags=[{"tag": "Lead"}, {"tag": "Conflict"}])],
+            "/organizer/interview-stories": [_story(tags=[{"id": 1, "name": "Lead"}, {"id": 2, "name": "Conflict"}])],
             "/organizer/interview-stories/tags": [],
         })
 
@@ -163,7 +164,9 @@ class TestEditDeletePrepQuestions:
     def test_edit_from_list_redirects_to_list(self, client, mock_api):
         resp = client.post("/interview-prep/prep-questions/7/edit", data={"text": "New"}, follow_redirects=False)
 
-        mock_api["patch"].assert_awaited_once_with("/organizer/interview-prep-questions/7", json={"text": "New"})
+        mock_api["patch"].assert_awaited_once_with(
+            "/organizer/interview-prep-questions/7", json={"text": "New", "tags": []}
+        )
         assert resp.headers["location"] == "/interview-prep/prep-questions"
 
     def test_edit_from_detail_redirects_to_detail(self, client, mock_api):
@@ -221,15 +224,83 @@ class TestPrepQuestionsList:
     def test_shows_linked_story_count_per_question(self, client, mock_api):
         mock_api["get"].side_effect = _by_path({
             "/organizer/interview-prep-questions": [
-                {"id": 1, "text": "Q one", "story_count": 3, "created_at": _TS, "updated_at": _TS},
-                {"id": 2, "text": "Q two", "story_count": 0, "created_at": _TS, "updated_at": _TS},
+                {"id": 1, "text": "Q one", "tags": [], "story_count": 3, "created_at": _TS, "updated_at": _TS},
+                {"id": 2, "text": "Q two", "tags": [], "story_count": 0, "created_at": _TS, "updated_at": _TS},
             ],
+            "/organizer/interview-prep-questions/tags": [],
         })
 
         resp = client.get("/interview-prep/prep-questions")
 
         assert 'title="3 linked stories">3</span>' in resp.text
         assert 'title="0 linked stories">0</span>' in resp.text
+
+
+def _question(id=1, text="Q", tags=(), story_count=0):
+    return {
+        "id": id, "text": text, "tags": [{"id": i + 1, "name": t} for i, t in enumerate(tags)],
+        "story_count": story_count, "created_at": _TS, "updated_at": _TS,
+    }
+
+
+class TestPrepQuestionTags:
+    def test_list_shows_tag_chips_and_filter_pills(self, client, mock_api):
+        mock_api["get"].side_effect = _by_path({
+            "/organizer/interview-prep-questions": [_question(text="Own it", tags=["Ownership"])],
+            "/organizer/interview-prep-questions/tags": ["Conflict", "Ownership"],
+        })
+
+        resp = client.get("/interview-prep/prep-questions")
+
+        assert 'href="/interview-prep/prep-questions?tag=Conflict"' in resp.text
+        assert resp.text.count("?tag=Ownership") == 2  # filter pill + chip on the row
+        assert 'value="Ownership"' in resp.text  # prefilled edit form
+
+    def test_list_passes_tag_filter_to_api_and_keeps_it_in_pagination(self, client, mock_api):
+        questions = [_question(id=i) for i in range(16)]
+        mock_api["get"].side_effect = lambda path, *a, **kw: (
+            questions if path == "/organizer/interview-prep-questions" else []
+        )
+
+        resp = client.get("/interview-prep/prep-questions?tag=Ownership")
+
+        first_call = mock_api["get"].await_args_list[0]
+        assert first_call.kwargs["params"]["tag"] == "Ownership"
+        assert "offset=15&tag=Ownership" in resp.text
+
+    def test_create_sends_parsed_tags(self, client, mock_api):
+        client.post("/interview-prep/prep-questions", data={"text": "Q", "tags": "Ownership, , Conflict"}, follow_redirects=False)
+        mock_api["post"].assert_awaited_once_with(
+            "/organizer/interview-prep-questions", json={"text": "Q", "tags": ["Ownership", "Conflict"]}
+        )
+
+    def test_edit_sends_parsed_tags(self, client, mock_api):
+        client.post("/interview-prep/prep-questions/7/edit", data={"text": "New", "tags": "A, B"}, follow_redirects=False)
+        mock_api["patch"].assert_awaited_once_with(
+            "/organizer/interview-prep-questions/7", json={"text": "New", "tags": ["A", "B"]}
+        )
+
+    def test_edit_with_cleared_tags_sends_empty_list_so_backend_removes_them(self, client, mock_api):
+        client.post("/interview-prep/prep-questions/7/edit", data={"text": "New", "tags": ""}, follow_redirects=False)
+        assert mock_api["patch"].await_args.kwargs["json"]["tags"] == []
+
+    def test_detail_shows_tags_and_floats_stories_sharing_a_tag(self, client, mock_api):
+        mock_api["get"].side_effect = _by_path({
+            "/organizer/interview-prep-questions/7": {
+                "id": 7, "text": "Own it", "tags": [{"id": 1, "name": "Ownership"}], "stories": [],
+                "created_at": _TS, "updated_at": _TS,
+            },
+            "/organizer/interview-stories": [
+                _story(id=1, situation="Unrelated", tags=[{"id": 2, "name": "Ops"}]),
+                _story(id=2, situation="Took charge", tags=[{"id": 3, "name": "ownership"}]),
+            ],
+        })
+
+        resp = client.get("/interview-prep/prep-questions/7")
+
+        assert resp.text.index("Took charge") < resp.text.index("Unrelated")
+        assert "★ #2" in resp.text and "[ownership]" in resp.text
+        assert "★ #1" not in resp.text
 
 
 class TestScoreBadgeColors:

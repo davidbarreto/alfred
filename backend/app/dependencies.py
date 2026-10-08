@@ -84,6 +84,7 @@ from app.features.organizer.interviews.insights.service import InterviewInsightS
 from app.features.organizer.interviews.preferences.service import InterviewPreferencesService
 from app.features.organizer.interviews.stories.service import InterviewStoryService
 from app.features.organizer.interviews.prep_questions.service import InterviewPrepQuestionService
+from app.features.organizer.interviews.tags.service import InterviewTagService
 from app.features.organizer.interviews.candidate_questions.service import InterviewCandidateQuestionService
 from app.integrations.google_contacts.client import GoogleContactsClient
 from app.integrations.google_contacts.provider import GoogleContactsProvider
@@ -555,6 +556,9 @@ def get_interview_story_service(session: AsyncSession = Depends(get_session), ll
 def get_interview_prep_question_service(session: AsyncSession = Depends(get_session)) -> InterviewPrepQuestionService:
     return InterviewPrepQuestionService(session)
 
+def get_interview_tag_service(session: AsyncSession = Depends(get_session)) -> InterviewTagService:
+    return InterviewTagService(session)
+
 def get_interview_candidate_question_service(session: AsyncSession = Depends(get_session)) -> InterviewCandidateQuestionService:
     return InterviewCandidateQuestionService(session)
 
@@ -669,4 +673,5 @@ InterviewPreferencesServiceDep = Annotated[
 ]
 InterviewStoryServiceDep = Annotated[InterviewStoryService, Depends(get_interview_story_service)]
 InterviewPrepQuestionServiceDep = Annotated[InterviewPrepQuestionService, Depends(get_interview_prep_question_service)]
+InterviewTagServiceDep = Annotated[InterviewTagService, Depends(get_interview_tag_service)]
 InterviewCandidateQuestionServiceDep = Annotated[InterviewCandidateQuestionService, Depends(get_interview_candidate_question_service)]

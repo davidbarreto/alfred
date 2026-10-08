@@ -17,7 +17,14 @@
 
   {% if question %}
   <div class="flex items-start justify-between gap-4">
-    <h1 class="text-base font-semibold text-gray-900">{{ question.text }}</h1>
+    <div class="space-y-1.5">
+      <h1 class="text-base font-semibold text-gray-900">{{ question.text }}</h1>
+      {% if question.tags %}
+      <div class="flex flex-wrap gap-1">
+        {% for tag_obj in question.tags %}<a href="/interview-prep/prep-questions?tag={{ tag_obj.name | urlencode }}" class="badge badge-sm badge-ghost">{{ tag_obj.name }}</a>{% endfor %}
+      </div>
+      {% endif %}
+    </div>
     <div class="flex items-center gap-1 whitespace-nowrap">
       <button type="button" class="btn btn-xs btn-ghost text-gray-600" onclick="document.getElementById('edit-question-modal').showModal()">Edit</button>
       <form method="post" action="/interview-prep/prep-questions/{{ question.id }}/delete">
@@ -32,6 +39,9 @@
       <form method="post" action="/interview-prep/prep-questions/{{ question.id }}/edit" class="flex flex-col gap-3">
         <input type="hidden" name="back" value="detail" />
         <textarea name="text" rows="3" required class="border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 bg-white w-full focus:outline-none focus:ring-1 focus:ring-[#378ADD]">{{ question.text }}</textarea>
+        <label class="flex flex-col gap-1 text-xs text-gray-600">Tags (comma-separated)
+          <input type="text" name="tags" value="{{ question.tags | map(attribute='name') | join(', ') }}" class="border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 bg-white w-full focus:outline-none focus:ring-1 focus:ring-[#378ADD]" />
+        </label>
         <div class="flex justify-end gap-2">
           <button type="button" onclick="document.getElementById('edit-question-modal').close()" class="btn btn-sm btn-ghost text-gray-500">Cancel</button>
           <button type="submit" class="btn btn-sm btn-primary">Save</button>
@@ -47,7 +57,7 @@
     <form method="post" action="/interview-prep/prep-questions/{{ question.id }}/link" class="flex flex-wrap items-center gap-2">
       <select name="story_id" required class="flex-1 min-w-48 border border-gray-200 rounded-lg px-3 py-1.5 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-[#378ADD]">
         {% for story in linkable_stories %}
-        <option value="{{ story.id }}">#{{ story.id }} — {{ story.situation | truncate(70) }}</option>
+        <option value="{{ story.id }}">{% if story.shared_tags %}★ {% endif %}#{{ story.id }} — {{ story.situation | truncate(70) }}{% if story.shared_tags %} [{{ story.shared_tags | join(', ') }}]{% endif %}</option>
         {% endfor %}
       </select>
       <select name="fit_score" class="border border-gray-200 rounded-lg px-3 py-1.5 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-[#378ADD]" title="Fit">

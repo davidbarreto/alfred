@@ -1,8 +1,8 @@
 from datetime import datetime
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
-from app.features.organizer.interviews.stories.schemas import InterviewStoryTagRead
+from app.features.organizer.interviews.tags.schemas import InterviewTagRead, normalize_tags
 
 
 class InterviewStoryForQuestion(BaseModel):
@@ -12,21 +12,34 @@ class InterviewStoryForQuestion(BaseModel):
     action: str
     result: str
     strength: int
-    tags: list[InterviewStoryTagRead]
+    tags: list[InterviewTagRead]
     fit_score: int
 
 
 class InterviewPrepQuestionCreate(BaseModel):
     text: str = Field(..., min_length=1)
+    tags: list[str] = Field(default_factory=list)
+
+    @field_validator("tags")
+    @classmethod
+    def _clean_tags(cls, value: list[str]) -> list[str]:
+        return normalize_tags(value) or []
 
 
 class InterviewPrepQuestionUpdate(BaseModel):
     text: str | None = Field(default=None, min_length=1)
+    tags: list[str] | None = Field(default=None)
+
+    @field_validator("tags")
+    @classmethod
+    def _clean_tags(cls, value: list[str] | None) -> list[str] | None:
+        return normalize_tags(value)
 
 
 class InterviewPrepQuestionRead(BaseModel):
     id: int
     text: str
+    tags: list[InterviewTagRead] = []
     story_count: int = 0
     created_at: datetime
     updated_at: datetime
@@ -37,6 +50,7 @@ class InterviewPrepQuestionRead(BaseModel):
 class InterviewPrepQuestionWithStories(BaseModel):
     id: int
     text: str
+    tags: list[InterviewTagRead]
     stories: list[InterviewStoryForQuestion]
     created_at: datetime
     updated_at: datetime

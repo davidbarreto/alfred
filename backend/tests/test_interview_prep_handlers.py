@@ -116,3 +116,54 @@ class TestCandidate:
         result = await handle_interview_candidate("list", {"category": "Tech", "limit": "5"}, service)
         service.get_questions.assert_awaited_once_with(category="Tech", limit=6, offset=0)
         assert result["has_next"] is False
+
+
+def _question_read(id=1, tags=()):
+    from app.features.organizer.interviews.prep_questions.schemas import InterviewPrepQuestionRead
+    from app.features.organizer.interviews.tags.schemas import InterviewTagRead
+
+    return InterviewPrepQuestionRead(
+        id=id, text="q", tags=[InterviewTagRead(id=i + 1, name=t) for i, t in enumerate(tags)],
+        created_at=_NOW, updated_at=_NOW,
+    )
+
+
+class TestPrepQuestionTags:
+    async def test_add_parses_tags(self):
+        service = AsyncMock()
+        service.create_question.return_value = _question_read(tags=["ownership", "conflict"])
+
+        result = await handle_interview_prep("add", {"text": "Tell me", "tags": "ownership, conflict"}, service)
+
+        assert service.create_question.await_args.args[0].tags == ["ownership", "conflict"]
+        assert result["tags"] == ["ownership", "conflict"]
+
+    async def test_list_filters_by_tag_and_shows_tags(self):
+        service = AsyncMock()
+        service.get_questions.return_value = [_question_read(tags=["ownership"])]
+
+        result = await handle_interview_prep("list", {"tag": "ownership"}, service)
+
+        assert service.get_questions.await_args.kwargs["tag"] == "ownership"
+        assert result["questions"][0]["tags"] == ["ownership"]
+
+    async def test_tag_command_adds_tag(self):
+        service = AsyncMock()
+        service.add_tag.return_value = _question_read(tags=["ownership"])
+
+        result = await handle_interview_prep("tag", {"id": "1", "tag": " ownership "}, service)
+
+        service.add_tag.assert_awaited_once_with(1, "ownership")
+        assert result["tags"] == ["ownership"]
+
+    async def test_tag_command_unknown_question_is_404(self):
+        service = AsyncMock()
+        service.add_tag.return_value = None
+        with pytest.raises(HTTPException) as exc:
+            await handle_interview_prep("tag", {"id": "9", "tag": "x"}, service)
+        assert exc.value.status_code == 404
+
+    async def test_tag_command_requires_tag(self):
+        with pytest.raises(HTTPException) as exc:
+            await handle_interview_prep("tag", {"id": "1", "tag": " "}, AsyncMock())
+        assert exc.value.status_code == 400

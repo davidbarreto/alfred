@@ -3,7 +3,7 @@ from typing import Any
 
 from fastapi import HTTPException, status
 
-from app.assistant.commands.handlers._utils import optional_int, require_int
+from app.assistant.commands.handlers._utils import optional_int, parse_tags, require_int
 from app.features.organizer.interviews.prep_questions.schemas import InterviewPrepQuestionCreate
 from app.features.organizer.interviews.prep_questions.service import InterviewPrepQuestionService
 
@@ -17,17 +17,19 @@ async def handle_interview_prep(command: str, arguments: dict[str, Any], service
         text = (arguments.get("text") or "").strip()
         if not text:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="text is required")
-        question = await service.create_question(InterviewPrepQuestionCreate(text=text))
-        return {"id": question.id, "text": question.text, "message": f"Prep question {question.id} created"}
+        question = await service.create_question(
+            InterviewPrepQuestionCreate(text=text, tags=parse_tags(arguments.get("tags")))
+        )
+        return {"id": question.id, "text": question.text, "tags": [t.name for t in question.tags], "message": f"Prep question {question.id} created"}
 
     if command == "list":
         limit = optional_int(arguments, "limit", 20)
         offset = optional_int(arguments, "offset", 0)
-        questions = await service.get_questions(limit=limit + 1, offset=offset)
+        questions = await service.get_questions(tag=arguments.get("tag"), limit=limit + 1, offset=offset)
         return {
             "count": min(len(questions), limit),
             "has_next": len(questions) > limit,
-            "questions": [{"id": q.id, "text": q.text} for q in questions[:limit]],
+            "questions": [{"id": q.id, "text": q.text, "tags": [t.name for t in q.tags]} for q in questions[:limit]],
         }
 
     if command == "get":
@@ -38,10 +40,25 @@ async def handle_interview_prep(command: str, arguments: dict[str, Any], service
         return {
             "id": question.id,
             "text": question.text,
+            "tags": [t.name for t in question.tags],
             "stories": [
                 {"id": s.id, "situation": s.situation[:60], "strength": s.strength, "fit_score": s.fit_score}
                 for s in question.stories
             ],
+        }
+
+    if command == "tag":
+        question_id = require_int(arguments, "id")
+        tag = (arguments.get("tag") or "").strip()
+        if not tag:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="tag is required")
+        question = await service.add_tag(question_id, tag)
+        if question is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Question {question_id} not found")
+        return {
+            "id": question_id,
+            "tags": [t.name for t in question.tags],
+            "message": f"Tag '{tag}' added to question {question_id}",
         }
 
     if command == "link":

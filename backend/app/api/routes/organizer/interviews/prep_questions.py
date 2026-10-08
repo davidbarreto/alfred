@@ -23,10 +23,16 @@ router = APIRouter(
 @router.get("", response_model=list[InterviewPrepQuestionRead])
 async def get_questions(
     service: InterviewPrepQuestionServiceDep,
+    tag: str | None = None,
     limit: Annotated[int, Query(ge=1, le=500)] = 100,
     offset: Annotated[int, Query(ge=0)] = 0,
 ) -> list[InterviewPrepQuestionRead]:
-    return await service.get_questions(limit=limit, offset=offset)
+    return await service.get_questions(tag=tag, limit=limit, offset=offset)
+
+
+@router.get("/tags", response_model=list[str])
+async def get_all_tags(service: InterviewPrepQuestionServiceDep) -> list[str]:
+    return await service.get_all_tags()
 
 
 @router.get("/{question_id}", response_model=InterviewPrepQuestionWithStories)
@@ -58,6 +64,23 @@ async def update_question(
 async def delete_question(question_id: int, service: InterviewPrepQuestionServiceDep) -> Response:
     if not await service.delete_question(question_id):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Question not found")
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+@router.post("/{question_id}/tags/{tag}", response_model=InterviewPrepQuestionRead)
+async def add_tag(question_id: int, tag: str, service: InterviewPrepQuestionServiceDep) -> InterviewPrepQuestionRead:
+    if not tag.strip() or len(tag.strip()) > 100:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Tag must be 1-100 characters")
+    question = await service.add_tag(question_id, tag)
+    if question is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Question not found")
+    return question
+
+
+@router.delete("/{question_id}/tags/{tag}", status_code=status.HTTP_204_NO_CONTENT)
+async def remove_tag(question_id: int, tag: str, service: InterviewPrepQuestionServiceDep) -> Response:
+    if not await service.remove_tag(question_id, tag):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Question or tag not found")
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 

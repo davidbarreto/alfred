@@ -2,23 +2,7 @@ from datetime import datetime
 
 from pydantic import BaseModel, Field, field_validator
 
-
-def _normalize_tags(tags: list[str] | None) -> list[str] | None:
-    if tags is None:
-        return None
-    normalized: list[str] = []
-    for tag in tags:
-        cleaned = tag.strip()
-        if cleaned and cleaned not in normalized:
-            normalized.append(cleaned)
-    return normalized
-
-
-class InterviewStoryTagRead(BaseModel):
-    id: int
-    tag: str
-
-    model_config = {"from_attributes": True}
+from app.features.organizer.interviews.tags.schemas import InterviewTagRead, normalize_tags
 
 
 class InterviewStoryCreate(BaseModel):
@@ -32,10 +16,7 @@ class InterviewStoryCreate(BaseModel):
     @field_validator("tags")
     @classmethod
     def _clean_tags(cls, value: list[str]) -> list[str]:
-        cleaned = _normalize_tags(value) or []
-        if any(len(tag) > 100 for tag in cleaned):
-            raise ValueError("tags must be at most 100 characters")
-        return cleaned
+        return normalize_tags(value) or []
 
 
 class InterviewStoryUpdate(BaseModel):
@@ -49,10 +30,7 @@ class InterviewStoryUpdate(BaseModel):
     @field_validator("tags")
     @classmethod
     def _clean_tags(cls, value: list[str] | None) -> list[str] | None:
-        cleaned = _normalize_tags(value)
-        if cleaned and any(len(tag) > 100 for tag in cleaned):
-            raise ValueError("tags must be at most 100 characters")
-        return cleaned
+        return normalize_tags(value)
 
 
 class InterviewStoryRead(BaseModel):
@@ -62,7 +40,7 @@ class InterviewStoryRead(BaseModel):
     action: str
     result: str
     strength: int
-    tags: list[InterviewStoryTagRead]
+    tags: list[InterviewTagRead]
     created_at: datetime
     updated_at: datetime
 

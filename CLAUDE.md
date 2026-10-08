@@ -307,7 +307,7 @@ logger.warning("Auth failed: invalid token")
 
 ### Stories, Questions, and Assessment Scales
 
-The interview prep module (`organizer.interviews`) helps track behavioral interview preparation with three main features:
+The interview prep module (`organizer.interviews`) helps track behavioral interview preparation with three main features, plus a shared tag vocabulary:
 
 **1. Interview Stories** — STAR framework stories in `interview_stories` table
 - Separate columns: `situation`, `task`, `action`, `result` (mandatory; enforces STAR structure)
@@ -319,6 +319,13 @@ The interview prep module (`organizer.interviews`) helps track behavioral interv
 
 **3. Candidate Questions** — Questions to ask interviewers in `interview_candidate_questions`
 - Categorized (Onboarding, Tech, Culture, Benefits, Logistics, Growth, Work-life)
+
+**Shared tags** (`organizer.interviews.tags`) — one case-insensitive-unique vocabulary (`interview_tags`) attached to both stories (`interview_story_tag_links`) and prep questions (`interview_question_tag_links`), so the same label (e.g. `ownership`, `amazon:bias-for-action`) connects a story to the questions it fits
+- Stories and questions take `tags: list[str]` on create/update plus `POST/DELETE .../{id}/tags/{tag}`; names resolve case-insensitively to the existing tag (first spelling wins), missing ones are created
+- Filter with `?tag=` on both list endpoints (`/storylist --tag`, `/preplist --tag`); `GET .../tags` on each returns only tags currently in use there
+- `GET /organizer/interview-tags` (usage counts), `PATCH /{id}` (rename, 409 on name clash), `DELETE /{id}` manage the vocabulary; tags are not deleted automatically when their last story/question goes away
+- The prep question detail page floats stories sharing a tag with the question to the top of the "Link a story" picker
+- `db/seeds/interview_prep_questions.yaml` is the versioned question bank (`text` + `tags`), loaded on every deploy by `seed_interview_prep_questions.py` from `entrypoint.sh`. Insert-only: missing questions are added, existing questions with no tags get the YAML tags, nothing is deleted or re-tagged. Matching is by exact `text`, so reword a question in the YAML and the portal together; a question deleted in the portal returns on the next deploy unless it is removed from the YAML too
 
 ### Assessment Scales
 

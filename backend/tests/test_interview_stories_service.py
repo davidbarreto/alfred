@@ -6,7 +6,8 @@ from pydantic import ValidationError
 
 from app.features.organizer.interviews.stories.schemas import InterviewStoryCreate, InterviewStoryUpdate
 from app.features.organizer.interviews.stories.service import InterviewStoryService, StoryAssessmentError
-from app.features.organizer.interviews.stories.tables import InterviewStory, InterviewStoryTag
+from app.features.organizer.interviews.stories.tables import InterviewStory
+from app.features.organizer.interviews.tags.tables import InterviewTag
 from app.shared.llm import LlmResponse
 
 _NOW = datetime(2026, 9, 26, tzinfo=timezone.utc)
@@ -20,7 +21,7 @@ def _story(id=1, strength=3, tags=()) -> InterviewStory:
         action="Added caching and a circuit breaker",
         result="p99 latency dropped by half",
         strength=strength,
-        tags=[InterviewStoryTag(id=i + 1, story_id=id, tag=t) for i, t in enumerate(tags)],
+        tags=[InterviewTag(id=i + 1, name=t) for i, t in enumerate(tags)],
         created_at=_NOW,
         updated_at=_NOW,
     )
@@ -59,7 +60,7 @@ class TestCreateStory:
 
         assert result.id == 1
         assert result.created_at == _NOW
-        assert [t.tag for t in result.tags] == ["Leadership"]
+        assert [t.name for t in result.tags] == ["Leadership"]
         assert mock_repo.create_story.call_args.kwargs["tags"] == ["Leadership"]
 
 

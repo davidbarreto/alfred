@@ -21,7 +21,7 @@ def _summary(story: InterviewStoryRead, width: int = 80) -> dict[str, Any]:
         "action": story.action[:width],
         "result": story.result[:width],
         "strength": story.strength,
-        "tags": [t.tag for t in story.tags],
+        "tags": [t.name for t in story.tags],
     }
 
 
@@ -76,7 +76,7 @@ async def handle_interview_story(command: str, arguments: dict[str, Any], servic
         story = await service.add_tag(story_id, tag)
         if story is None:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Story {story_id} not found")
-        return {"id": story_id, "tags": [t.tag for t in story.tags], "message": f"Tag '{tag}' added to story {story_id}"}
+        return {"id": story_id, "tags": [t.name for t in story.tags], "message": f"Tag '{tag}' added to story {story_id}"}
 
     if command == "assess":
         story_id = require_int(arguments, "id")

@@ -10,12 +10,16 @@ from app.features.organizer.interviews.prep_questions.schemas import (
 from app.features.organizer.interviews.prep_questions.service import InterviewPrepQuestionService
 from app.features.organizer.interviews.prep_questions.tables import InterviewPrepQuestion, InterviewPrepQuestionStory
 from app.features.organizer.interviews.stories.tables import InterviewStory
+from app.features.organizer.interviews.tags.tables import InterviewTag
 
 _NOW = datetime(2026, 9, 26, tzinfo=timezone.utc)
 
 
-def _question(id=1, text="Tell me about a difficult decision", links=()) -> InterviewPrepQuestion:
-    return InterviewPrepQuestion(id=id, text=text, created_at=_NOW, updated_at=_NOW, story_links=list(links))
+def _question(id=1, text="Tell me about a difficult decision", links=(), tags=()) -> InterviewPrepQuestion:
+    return InterviewPrepQuestion(
+        id=id, text=text, created_at=_NOW, updated_at=_NOW, story_links=list(links),
+        tags=[InterviewTag(id=i + 1, name=t) for i, t in enumerate(tags)],
+    )
 
 
 def _link(story_id: int, fit_score: int, strength: int = 3) -> InterviewPrepQuestionStory:
@@ -46,7 +50,26 @@ class TestCrud:
 
         assert result.id == 1
         assert result.created_at == _NOW
-        mock_repo.create_question.assert_awaited_once_with(text="Tell me about a difficult decision")
+        mock_repo.create_question.assert_awaited_once_with(text="Tell me about a difficult decision", tags=[])
+
+    async def test_create_passes_normalized_tags_and_returns_them(self, service, mock_repo):
+        mock_repo.create_question.return_value = _question(tags=["Ownership"])
+
+        result = await service.create_question(
+            InterviewPrepQuestionCreate(text="q", tags=[" Ownership ", "ownership", ""])
+        )
+
+        assert [t.name for t in result.tags] == ["Ownership"]
+        mock_repo.create_question.assert_awaited_once_with(text="q", tags=["Ownership"])
+
+    async def test_update_passes_tags_through_only_when_set(self, service, mock_repo):
+        mock_repo.update_question.return_value = _question(tags=["Conflict"])
+
+        await service.update_question(1, InterviewPrepQuestionUpdate(tags=["Conflict"]))
+        mock_repo.update_question.assert_awaited_with(question_id=1, text=None, tags=["Conflict"])
+
+        await service.update_question(1, InterviewPrepQuestionUpdate(text="x"))
+        mock_repo.update_question.assert_awaited_with(question_id=1, text="x", tags=None)
 
     async def test_update(self, service, mock_repo):
         mock_repo.update_question.return_value = _question(text="Updated")
@@ -67,6 +90,40 @@ class TestListStoryCount:
 
         assert [(q.id, q.story_count) for q in result] == [(1, 3), (2, 0)]
         mock_repo.get_story_counts.assert_awaited_once_with([1, 2])
+
+
+class TestTags:
+    async def test_list_filters_by_tag(self, service, mock_repo):
+        mock_repo.get_questions.return_value = [_question(tags=["Ownership"])]
+        mock_repo.get_story_counts.return_value = {}
+
+        result = await service.get_questions(tag="Ownership", limit=10, offset=5)
+
+        mock_repo.get_questions.assert_awaited_once_with(tag="Ownership", limit=10, offset=5)
+        assert [t.name for t in result[0].tags] == ["Ownership"]
+
+    async def test_add_tag_strips_and_returns_question(self, service, mock_repo):
+        mock_repo.add_tag.return_value = _question(tags=["Ownership"])
+
+        result = await service.add_tag(1, " Ownership ")
+
+        mock_repo.add_tag.assert_awaited_once_with(1, "Ownership")
+        assert result is not None and [t.name for t in result.tags] == ["Ownership"]
+
+    async def test_add_tag_question_not_found(self, service, mock_repo):
+        mock_repo.add_tag.return_value = None
+        assert await service.add_tag(999, "x") is None
+
+    async def test_remove_tag(self, service, mock_repo):
+        mock_repo.remove_tag.return_value = True
+        assert await service.remove_tag(1, "x") is True
+        mock_repo.remove_tag.return_value = False
+        assert await service.remove_tag(1, "missing") is False
+
+    async def test_detail_includes_question_tags(self, service, mock_repo):
+        mock_repo.get_question_with_links.return_value = _question(tags=["A", "B"])
+        result = await service.get_question_with_stories(1)
+        assert result is not None and [t.name for t in result.tags] == ["A", "B"]
 
 
 class TestQuestionWithStories:

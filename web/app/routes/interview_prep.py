@@ -23,6 +23,10 @@ def _pagination(items: list, page_size: int, offset: int) -> tuple[list, bool, b
     return items[:page_size], has_next, offset > 0
 
 
+def _parse_tags(raw: str) -> list[str]:
+    return [t.strip() for t in raw.split(",") if t.strip()]
+
+
 def _redirect(url: str, error: str | None = None) -> RedirectResponse:
     if error:
         url = f"{url}?{urlencode({'error': error})}"
@@ -78,7 +82,7 @@ async def create_story(
         "action": action,
         "result": result,
         "strength": strength,
-        "tags": [t.strip() for t in tags.split(",") if t.strip()],
+        "tags": _parse_tags(tags),
     }
     try:
         await api.post("/organizer/interview-stories", json=payload)
@@ -104,7 +108,7 @@ async def edit_story(
         "action": action,
         "result": result,
         "strength": strength,
-        "tags": [t.strip() for t in tags.split(",") if t.strip()],
+        "tags": _parse_tags(tags),
     }
     try:
         await api.patch(f"/organizer/interview-stories/{story_id}", json=payload)
@@ -133,12 +137,14 @@ async def add_tag(story_id: int, tag: Annotated[str, Form()]):
 
 
 @router.get("/prep-questions", response_class=HTMLResponse)
-async def prep_questions_list(request: Request, offset: int = 0, error: str | None = None):
-    context = {"questions": [], "error": error}
+async def prep_questions_list(request: Request, tag: str | None = None, offset: int = 0, error: str | None = None):
+    context = {"current_tag": tag, "questions": [], "all_tags": [], "error": error}
     try:
-        questions = await api.get(
-            "/organizer/interview-prep-questions", params={"limit": _QUESTIONS_PAGE_SIZE + 1, "offset": offset}
-        )
+        params: dict = {"limit": _QUESTIONS_PAGE_SIZE + 1, "offset": offset}
+        if tag:
+            params["tag"] = tag
+        questions = await api.get("/organizer/interview-prep-questions", params=params)
+        context["all_tags"] = await api.get("/organizer/interview-prep-questions/tags")
         questions, has_next, has_prev = _pagination(questions, _QUESTIONS_PAGE_SIZE, offset)
         context.update(
             questions=questions,
@@ -153,19 +159,26 @@ async def prep_questions_list(request: Request, offset: int = 0, error: str | No
 
 
 @router.post("/prep-questions")
-async def create_prep_question(text: Annotated[str, Form()]):
+async def create_prep_question(text: Annotated[str, Form()], tags: Annotated[str, Form()] = ""):
     try:
-        await api.post("/organizer/interview-prep-questions", json={"text": text})
+        await api.post("/organizer/interview-prep-questions", json={"text": text, "tags": _parse_tags(tags)})
     except httpx.HTTPError as exc:
         return _redirect("/interview-prep/prep-questions", _api_error(exc))
     return _redirect("/interview-prep/prep-questions")
 
 
 @router.post("/prep-questions/{question_id}/edit")
-async def edit_prep_question(question_id: int, text: Annotated[str, Form()], back: Annotated[str, Form()] = ""):
+async def edit_prep_question(
+    question_id: int,
+    text: Annotated[str, Form()],
+    tags: Annotated[str, Form()] = "",
+    back: Annotated[str, Form()] = "",
+):
     url = f"/interview-prep/prep-questions/{question_id}" if back == "detail" else "/interview-prep/prep-questions"
     try:
-        await api.patch(f"/organizer/interview-prep-questions/{question_id}", json={"text": text})
+        await api.patch(
+            f"/organizer/interview-prep-questions/{question_id}", json={"text": text, "tags": _parse_tags(tags)}
+        )
     except httpx.HTTPError as exc:
         logger.warning("Edit prep question failed: id=%d error=%s", question_id, exc)
         return _redirect(url, _api_error(exc))
@@ -189,10 +202,16 @@ async def prep_question_detail(request: Request, question_id: int, error: str | 
         question = await api.get(f"/organizer/interview-prep-questions/{question_id}")
         all_stories = await api.get("/organizer/interview-stories", params={"limit": 500})
         linked_ids = {s["id"] for s in question["stories"]}
-        context.update(
-            question=question,
-            linkable_stories=[s for s in all_stories if s["id"] not in linked_ids],
-        )
+        question_tags = {t["name"].lower() for t in question["tags"]}
+        linkable = []
+        for story in all_stories:
+            if story["id"] in linked_ids:
+                continue
+            story["shared_tags"] = [t["name"] for t in story["tags"] if t["name"].lower() in question_tags]
+            linkable.append(story)
+        # Stories sharing a tag with this question are the likeliest fits; list them first (stable order otherwise).
+        linkable.sort(key=lambda s: -len(s["shared_tags"]))
+        context.update(question=question, linkable_stories=linkable)
     except httpx.HTTPError as exc:
         context["error"] = _api_error(exc)
     return templates.TemplateResponse(request, "interview_prep/prep_question_detail.html", context)

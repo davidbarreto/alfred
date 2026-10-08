@@ -1,15 +1,18 @@
 from typing import Any
 
-from sqlalchemy import delete, or_, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.features.organizer.interviews.stories.tables import InterviewStory, InterviewStoryTag
+from app.features.organizer.interviews.stories.tables import InterviewStory
+from app.features.organizer.interviews.tags.repository import InterviewTagRepository
+from app.features.organizer.interviews.tags.tables import InterviewTag, interview_story_tag_links
 
 
 class InterviewStoryRepository:
     def __init__(self, session: AsyncSession):
         self._session = session
+        self._tags = InterviewTagRepository(session)
 
     async def get_story(self, story_id: int) -> InterviewStory | None:
         stmt = (
@@ -31,7 +34,11 @@ class InterviewStoryRepository:
         return list((await self._session.scalars(stmt)).all())
 
     async def get_stories_by_tag(self, tag: str, limit: int = 100, offset: int = 0) -> list[InterviewStory]:
-        tagged = select(InterviewStoryTag.story_id).where(InterviewStoryTag.tag == tag)
+        tagged = (
+            select(interview_story_tag_links.c.story_id)
+            .join(InterviewTag, InterviewTag.id == interview_story_tag_links.c.tag_id)
+            .where(func.lower(InterviewTag.name) == tag.lower())
+        )
         stmt = (
             select(InterviewStory)
             .where(InterviewStory.id.in_(tagged))
@@ -44,7 +51,11 @@ class InterviewStoryRepository:
 
     async def search_stories(self, query: str, limit: int = 20) -> list[InterviewStory]:
         pattern = f"%{query}%"
-        tagged = select(InterviewStoryTag.story_id).where(InterviewStoryTag.tag.ilike(pattern))
+        tagged = (
+            select(interview_story_tag_links.c.story_id)
+            .join(InterviewTag, InterviewTag.id == interview_story_tag_links.c.tag_id)
+            .where(InterviewTag.name.ilike(pattern))
+        )
         stmt = (
             select(InterviewStory)
             .where(
@@ -71,7 +82,7 @@ class InterviewStoryRepository:
             action=action,
             result=result,
             strength=strength,
-            tags=[InterviewStoryTag(tag=tag) for tag in tags],
+            tags=await self._tags.get_or_create_tags(tags),
         )
         self._session.add(story)
         await self._session.commit()
@@ -90,11 +101,7 @@ class InterviewStoryRepository:
             setattr(story, name, value)
 
         if tags is not None:
-            # Diff instead of replacing the collection: a replace would INSERT a re-used tag
-            # before DELETEing its old row, tripping uq_story_tag within the same flush.
-            story.tags = [t for t in story.tags if t.tag in tags]
-            existing = {t.tag for t in story.tags}
-            story.tags.extend(InterviewStoryTag(tag=tag) for tag in tags if tag not in existing)
+            story.tags = await self._tags.get_or_create_tags(tags)
 
         await self._session.commit()
         return await self.get_story(story_id)
@@ -111,19 +118,28 @@ class InterviewStoryRepository:
         story = await self.get_story(story_id)
         if story is None:
             return None
-        if all(t.tag != tag for t in story.tags):
-            story.tags.append(InterviewStoryTag(tag=tag))
-            await self._session.commit()
+        resolved = (await self._tags.get_or_create_tags([tag]))[0]
+        if resolved not in story.tags:
+            story.tags.append(resolved)
+        await self._session.commit()
         return await self.get_story(story_id)
 
     async def remove_tag(self, story_id: int, tag: str) -> bool:
-        stmt = delete(InterviewStoryTag).where(
-            InterviewStoryTag.story_id == story_id, InterviewStoryTag.tag == tag
-        )
-        result = await self._session.execute(stmt)
+        story = await self.get_story(story_id)
+        if story is None:
+            return False
+        matching = [t for t in story.tags if t.name.lower() == tag.lower()]
+        if not matching:
+            return False
+        story.tags = [t for t in story.tags if t not in matching]
         await self._session.commit()
-        return result.rowcount > 0
+        return True
 
     async def get_all_tags(self) -> list[str]:
-        stmt = select(InterviewStoryTag.tag).distinct().order_by(InterviewStoryTag.tag)
+        stmt = (
+            select(InterviewTag.name)
+            .join(interview_story_tag_links, interview_story_tag_links.c.tag_id == InterviewTag.id)
+            .distinct()
+            .order_by(InterviewTag.name)
+        )
         return list((await self._session.scalars(stmt)).all())

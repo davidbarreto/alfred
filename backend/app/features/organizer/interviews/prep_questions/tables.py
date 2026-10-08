@@ -7,6 +7,7 @@ from sqlalchemy import CheckConstraint, DateTime, ForeignKey, Integer, Text, Uni
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
+from app.features.organizer.interviews.tags.tables import InterviewTag, interview_question_tag_links
 
 if TYPE_CHECKING:
     from app.features.organizer.interviews.stories.tables import InterviewStory
@@ -30,6 +31,9 @@ class InterviewPrepQuestion(Base):
         secondary="organizer.interview_story_questions",
         back_populates="prep_questions",
         viewonly=True,
+    )
+    tags: Mapped[list[InterviewTag]] = relationship(
+        InterviewTag, secondary=interview_question_tag_links, order_by=InterviewTag.name
     )
     story_links: Mapped[list[InterviewPrepQuestionStory]] = relationship(
         "InterviewPrepQuestionStory", back_populates="question", cascade="all, delete-orphan"

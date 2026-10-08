@@ -34,7 +34,7 @@
       <div class="mt-3 flex flex-wrap items-center justify-between gap-2">
         <div class="flex flex-wrap items-center gap-1.5">
           {% for tag_obj in story.tags %}
-          <span class="badge badge-sm badge-ghost">{{ tag_obj.tag }}</span>
+          <span class="badge badge-sm badge-ghost">{{ tag_obj.name }}</span>
           {% endfor %}
           <form method="post" action="/interview-prep/stories/{{ story.id }}/tags" class="flex gap-1">
             <input type="text" name="tag" class="border border-gray-200 rounded px-2 py-0.5 text-xs w-24 focus:outline-none focus:ring-1 focus:ring-[#378ADD]" placeholder="+ tag" maxlength="100" required />
@@ -75,7 +75,7 @@
               </select>
             </label>
             <label class="flex flex-col gap-1 text-xs text-gray-600">Tags (comma-separated)
-              <input type="text" name="tags" value="{{ story.tags | map(attribute='tag') | join(', ') }}" class="border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 bg-white w-full focus:outline-none focus:ring-1 focus:ring-[#378ADD]" />
+              <input type="text" name="tags" value="{{ story.tags | map(attribute='name') | join(', ') }}" class="border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 bg-white w-full focus:outline-none focus:ring-1 focus:ring-[#378ADD]" />
             </label>
           </div>
           <div class="flex justify-end gap-2 mt-1">

@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "Alfred - Interview Prep API",
-    "description": "Behavioral interview prep: STAR stories (tags, search, AI strength assessment), prep questions with story links scored by fit (1-5), and candidate questions to ask interviewers. Run in order; the last requests clean up everything the run created.",
+    "description": "Behavioral interview prep: STAR stories (shared tags, search, AI strength assessment), prep questions (with the same shared tags) with story links scored by fit (1-5), and candidate questions to ask interviewers. Run in order; the last requests clean up everything the run created.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -24,7 +24,7 @@
             "exec": [
               "pm.test('Status is 201', () => pm.response.to.have.status(201));",
               "const json = pm.response.json();",
-              "pm.test('Tags normalized', () => pm.expect(json.tags.map(t => t.tag)).to.eql(['Leadership', 'Ops']));",
+              "pm.test('Tags normalized', () => pm.expect(json.tags.map(t => t.name)).to.eql(['postman-leadership', 'postman-ops']));",
               "pm.test('Timestamps present', () => pm.expect(json.created_at).to.be.a('string'));",
               "pm.environment.set('story_id', json.id);"
             ],
@@ -52,7 +52,7 @@
         },
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"situation\": \"Postman test: service kept timing out\",\n  \"task\": \"Stabilise before peak\",\n  \"action\": \"Added caching and a circuit breaker\",\n  \"result\": \"p99 latency halved\",\n  \"strength\": 4,\n  \"tags\": [\n    \"Leadership\",\n    \" Ops \",\n    \"Leadership\"\n  ]\n}"
+          "raw": "{\n  \"situation\": \"Postman test: service kept timing out\",\n  \"task\": \"Stabilise before peak\",\n  \"action\": \"Added caching and a circuit breaker\",\n  \"result\": \"p99 latency halved\",\n  \"strength\": 4,\n  \"tags\": [\n    \"postman-leadership\",\n    \" postman-ops \",\n    \"postman-leadership\"\n  ]\n}"
         }
       }
     },
@@ -141,7 +141,7 @@
         "method": "GET",
         "header": [],
         "url": {
-          "raw": "{{base_url}}/organizer/interview-stories?tag=Ops",
+          "raw": "{{base_url}}/organizer/interview-stories?tag=postman-ops",
           "host": [
             "{{base_url}}"
           ],
@@ -152,7 +152,7 @@
           "query": [
             {
               "key": "tag",
-              "value": "Ops"
+              "value": "postman-ops"
             }
           ]
         }
@@ -202,7 +202,7 @@
           "script": {
             "exec": [
               "pm.test('Status is 200', () => pm.response.to.have.status(200));",
-              "pm.test('Tag added', () => pm.expect(pm.response.json().tags.map(t => t.tag)).to.include('Resilience'));"
+              "pm.test('Tag added', () => pm.expect(pm.response.json().tags.map(t => t.name)).to.include('postman-resilience'));"
             ],
             "type": "text/javascript"
           }
@@ -212,7 +212,7 @@
         "method": "POST",
         "header": [],
         "url": {
-          "raw": "{{base_url}}/organizer/interview-stories/{{story_id}}/tags/Resilience",
+          "raw": "{{base_url}}/organizer/interview-stories/{{story_id}}/tags/postman-resilience",
           "host": [
             "{{base_url}}"
           ],
@@ -221,7 +221,7 @@
             "interview-stories",
             "{{story_id}}",
             "tags",
-            "Resilience"
+            "postman-resilience"
           ]
         }
       }
@@ -236,7 +236,7 @@
               "pm.test('Status is 200', () => pm.response.to.have.status(200));",
               "const json = pm.response.json();",
               "pm.test('Strength updated', () => pm.expect(json.strength).to.eql(5));",
-              "pm.test('Tags replaced', () => pm.expect(json.tags.map(t => t.tag)).to.eql(['Leadership', 'Scale']));"
+              "pm.test('Tags replaced', () => pm.expect(json.tags.map(t => t.name)).to.eql(['postman-leadership', 'postman-scale']));"
             ],
             "type": "text/javascript"
           }
@@ -263,7 +263,7 @@
         },
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"strength\": 5,\n  \"tags\": [\n    \"Leadership\",\n    \"Scale\"\n  ]\n}"
+          "raw": "{\n  \"strength\": 5,\n  \"tags\": [\n    \"postman-leadership\",\n    \"postman-scale\"\n  ]\n}"
         }
       }
     },
@@ -308,7 +308,8 @@
           "script": {
             "exec": [
               "pm.test('Status is 201', () => pm.response.to.have.status(201));",
-              "pm.environment.set('prep_question_id', pm.response.json().id);"
+              "pm.environment.set('prep_question_id', pm.response.json().id);",
+              "pm.test('Question tags normalized', () => pm.expect(pm.response.json().tags.map(t => t.name)).to.eql(['postman-ownership']));"
             ],
             "type": "text/javascript"
           }
@@ -334,7 +335,7 @@
         },
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"text\": \"Postman test: tell me about a time you improved reliability\"\n}"
+          "raw": "{\n  \"text\": \"Postman test: tell me about a time you improved reliability\",\n  \"tags\": [\n    \"postman-ownership\",\n    \" postman-ownership \"\n  ]\n}"
         }
       }
     },
@@ -525,6 +526,275 @@
               "key": "limit",
               "value": "500"
             }
+          ]
+        }
+      }
+    },
+    {
+      "name": "13c - List Prep Questions by Tag (case-insensitive)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Created question matches tag filter', () => pm.expect(pm.response.json().map(x => x.id)).to.include(Number(pm.environment.get('prep_question_id'))));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/organizer/interview-prep-questions?tag=POSTMAN-OWNERSHIP",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "interview-prep-questions"
+          ],
+          "query": [
+            {
+              "key": "tag",
+              "value": "POSTMAN-OWNERSHIP"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "13d - Add Prep Question Tag",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Tag added', () => pm.expect(pm.response.json().tags.map(t => t.name)).to.have.members(['postman-ownership', 'postman-conflict']));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/organizer/interview-prep-questions/{{prep_question_id}}/tags/postman-conflict",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "interview-prep-questions",
+            "{{prep_question_id}}",
+            "tags",
+            "postman-conflict"
+          ]
+        }
+      }
+    },
+    {
+      "name": "13e - List Prep Question Tags",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Includes both tags', () => pm.expect(pm.response.json()).to.include.members(['postman-ownership', 'postman-conflict']));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/organizer/interview-prep-questions/tags",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "interview-prep-questions",
+            "tags"
+          ]
+        }
+      }
+    },
+    {
+      "name": "13f - List Shared Interview Tags (usage)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "const tags = pm.response.json();",
+              "const own = tags.find(t => t.name === 'postman-ownership');",
+              "pm.test('Usage counts reflect the question', () => pm.expect(own.question_count).to.be.at.least(1));",
+              "const conflict = tags.find(t => t.name === 'postman-conflict');",
+              "pm.environment.set('interview_tag_id', conflict.id);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/organizer/interview-tags",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "interview-tags"
+          ]
+        }
+      }
+    },
+    {
+      "name": "13g - Rename Tag",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Renamed', () => pm.expect(pm.response.json().name).to.eql('postman-pushback'));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/organizer/interview-tags/{{interview_tag_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "interview-tags",
+            "{{interview_tag_id}}"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"postman-pushback\"\n}"
+        }
+      }
+    },
+    {
+      "name": "13h - Rename Tag to Existing Name (409)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 409', () => pm.response.to.have.status(409));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/organizer/interview-tags/{{interview_tag_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "interview-tags",
+            "{{interview_tag_id}}"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"POSTMAN-OWNERSHIP\"\n}"
+        }
+      }
+    },
+    {
+      "name": "13i - Remove Prep Question Tag",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 204', () => pm.response.to.have.status(204));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/organizer/interview-prep-questions/{{prep_question_id}}/tags/postman-pushback",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "interview-prep-questions",
+            "{{prep_question_id}}",
+            "tags",
+            "postman-pushback"
+          ]
+        }
+      }
+    },
+    {
+      "name": "13j - Remove Missing Prep Question Tag (404)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 404', () => pm.response.to.have.status(404));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/organizer/interview-prep-questions/{{prep_question_id}}/tags/postman-pushback",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "interview-prep-questions",
+            "{{prep_question_id}}",
+            "tags",
+            "postman-pushback"
           ]
         }
       }
@@ -775,6 +1045,38 @@
             "organizer",
             "interview-stories",
             "{{story_id}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "22 - Delete Orphan Postman Tags",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "// Tags are a shared vocabulary that outlives the stories/questions that used them; remove this run's.",
+              "pm.response.json().filter(t => t.name.startsWith('postman-') && t.story_count === 0 && t.question_count === 0).forEach(t => {",
+              "  pm.sendRequest({ url: pm.variables.replaceIn('{{base_url}}/organizer/interview-tags/') + t.id, method: 'DELETE', header: { 'Authorization': 'Bearer ' + pm.variables.get('api_token') } });",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/organizer/interview-tags",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "interview-tags"
           ]
         }
       }

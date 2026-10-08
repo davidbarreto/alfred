@@ -8,11 +8,26 @@
 <div class="p-6 space-y-4">
   {% include "interview_prep/_prep_header.html" %}
 
+  <div class="flex flex-wrap items-center gap-1.5 text-xs">
+    <span class="text-gray-500 mr-1">Tag</span>
+    <a href="/interview-prep/prep-questions" class="px-2.5 py-1 rounded-full border {% if not current_tag %}bg-gray-900 border-gray-900 text-white{% else %}border-gray-200 text-gray-600 hover:bg-gray-50{% endif %}">All</a>
+    {% for tag in all_tags %}
+    <a href="/interview-prep/prep-questions?tag={{ tag | urlencode }}" class="px-2.5 py-1 rounded-full border {% if current_tag == tag %}bg-gray-900 border-gray-900 text-white{% else %}border-gray-200 text-gray-600 hover:bg-gray-50{% endif %}">{{ tag }}</a>
+    {% endfor %}
+  </div>
+
   {% if questions %}
   <div class="bg-white border border-gray-200 rounded-lg divide-y divide-gray-100">
     {% for question in questions %}
     <div class="flex items-center justify-between gap-4 px-4 py-3 hover:bg-gray-50">
-      <a href="/interview-prep/prep-questions/{{ question.id }}" class="flex-1 text-sm text-gray-900">{{ question.text }}</a>
+      <div class="flex-1">
+        <a href="/interview-prep/prep-questions/{{ question.id }}" class="text-sm text-gray-900">{{ question.text }}</a>
+        {% if question.tags %}
+        <div class="flex flex-wrap gap-1 mt-1">
+          {% for tag_obj in question.tags %}<a href="/interview-prep/prep-questions?tag={{ tag_obj.name | urlencode }}" class="badge badge-sm badge-ghost">{{ tag_obj.name }}</a>{% endfor %}
+        </div>
+        {% endif %}
+      </div>
       <div class="flex items-center gap-1 whitespace-nowrap">
         <span class="badge badge-sm mr-1 {% if question.story_count %}badge-ghost{% else %}badge-warning badge-outline{% endif %}" title="{{ question.story_count }} linked {{ 'story' if question.story_count == 1 else 'stories' }}">{{ question.story_count }}</span>
         <span class="text-xs text-gray-400 mr-2">{{ question.created_at[:10] }}</span>
@@ -27,6 +42,9 @@
         <h3 class="text-sm font-semibold text-gray-900 mb-4">Edit prep question</h3>
         <form method="post" action="/interview-prep/prep-questions/{{ question.id }}/edit" class="flex flex-col gap-3">
           <textarea name="text" rows="3" required class="border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 bg-white w-full focus:outline-none focus:ring-1 focus:ring-[#378ADD]">{{ question.text }}</textarea>
+          <label class="flex flex-col gap-1 text-xs text-gray-600">Tags (comma-separated)
+            <input type="text" name="tags" value="{{ question.tags | map(attribute='name') | join(', ') }}" class="border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 bg-white w-full focus:outline-none focus:ring-1 focus:ring-[#378ADD]" />
+          </label>
           <div class="flex justify-end gap-2">
             <button type="button" onclick="document.getElementById('edit-question-{{ question.id }}').close()" class="btn btn-sm btn-ghost text-gray-500">Cancel</button>
             <button type="submit" class="btn btn-sm btn-primary">Save</button>
@@ -40,8 +58,8 @@
 
   {% if has_prev or has_next %}
   <div class="flex justify-center gap-2">
-    {% if has_prev %}<a href="/interview-prep/prep-questions?offset={{ prev_offset }}" class="btn btn-sm btn-outline border-gray-200 text-gray-700">Previous</a>{% endif %}
-    {% if has_next %}<a href="/interview-prep/prep-questions?offset={{ next_offset }}" class="btn btn-sm btn-outline border-gray-200 text-gray-700">Next</a>{% endif %}
+    {% if has_prev %}<a href="/interview-prep/prep-questions?offset={{ prev_offset }}{% if current_tag %}&tag={{ current_tag | urlencode }}{% endif %}" class="btn btn-sm btn-outline border-gray-200 text-gray-700">Previous</a>{% endif %}
+    {% if has_next %}<a href="/interview-prep/prep-questions?offset={{ next_offset }}{% if current_tag %}&tag={{ current_tag | urlencode }}{% endif %}" class="btn btn-sm btn-outline border-gray-200 text-gray-700">Next</a>{% endif %}
   </div>
   {% endif %}
   {% elif not error %}
@@ -54,6 +72,9 @@
     <h3 class="text-sm font-semibold text-gray-900 mb-4">New prep question</h3>
     <form method="post" action="/interview-prep/prep-questions" class="flex flex-col gap-3">
       <textarea name="text" rows="3" required placeholder="E.g., Tell me about a time you had a difficult decision..." class="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white w-full focus:outline-none focus:ring-1 focus:ring-[#378ADD]"></textarea>
+      <label class="flex flex-col gap-1 text-xs text-gray-600">Tags (comma-separated)
+        <input type="text" name="tags" placeholder="Ownership, Conflict" class="border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 bg-white w-full focus:outline-none focus:ring-1 focus:ring-[#378ADD]" />
+      </label>
       <div class="flex justify-end gap-2">
         <button type="button" onclick="document.getElementById('new-question-modal').close()" class="btn btn-sm btn-ghost text-gray-500">Cancel</button>
         <button type="submit" class="btn btn-sm btn-primary">Add question</button>

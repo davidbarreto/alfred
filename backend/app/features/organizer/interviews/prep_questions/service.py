@@ -11,7 +11,7 @@ from app.features.organizer.interviews.prep_questions.schemas import (
     InterviewStoryForQuestion,
     StoryLinkRead,
 )
-from app.features.organizer.interviews.stories.schemas import InterviewStoryTagRead
+from app.features.organizer.interviews.tags.schemas import InterviewTagRead
 
 logger = logging.getLogger(__name__)
 
@@ -32,6 +32,7 @@ class InterviewPrepQuestionService:
         return InterviewPrepQuestionWithStories(
             id=question.id,
             text=question.text,
+            tags=[InterviewTagRead.model_validate(t) for t in question.tags],
             created_at=question.created_at,
             updated_at=question.updated_at,
             stories=[
@@ -42,15 +43,17 @@ class InterviewPrepQuestionService:
                     action=link.story.action,
                     result=link.story.result,
                     strength=link.story.strength,
-                    tags=[InterviewStoryTagRead.model_validate(t) for t in link.story.tags],
+                    tags=[InterviewTagRead.model_validate(t) for t in link.story.tags],
                     fit_score=link.fit_score,
                 )
                 for link in links
             ],
         )
 
-    async def get_questions(self, limit: int = 100, offset: int = 0) -> list[InterviewPrepQuestionRead]:
-        questions = await self._repo.get_questions(limit=limit, offset=offset)
+    async def get_questions(
+        self, tag: str | None = None, limit: int = 100, offset: int = 0
+    ) -> list[InterviewPrepQuestionRead]:
+        questions = await self._repo.get_questions(tag=tag, limit=limit, offset=offset)
         counts = await self._repo.get_story_counts([q.id for q in questions])
         return [
             InterviewPrepQuestionRead.model_validate(q).model_copy(update={"story_count": counts.get(q.id, 0)})
@@ -58,14 +61,14 @@ class InterviewPrepQuestionService:
         ]
 
     async def create_question(self, data: InterviewPrepQuestionCreate) -> InterviewPrepQuestionRead:
-        question = await self._repo.create_question(text=data.text)
-        logger.info("Interview prep question created: id=%d", question.id)
+        question = await self._repo.create_question(text=data.text, tags=data.tags)
+        logger.info("Interview prep question created: id=%d tags=%d", question.id, len(data.tags))
         return InterviewPrepQuestionRead.model_validate(question)
 
     async def update_question(
         self, question_id: int, data: InterviewPrepQuestionUpdate
     ) -> InterviewPrepQuestionRead | None:
-        question = await self._repo.update_question(question_id=question_id, text=data.text)
+        question = await self._repo.update_question(question_id=question_id, text=data.text, tags=data.tags)
         if question is None:
             logger.debug("Interview prep question update: id=%d not found", question_id)
             return None
@@ -77,6 +80,22 @@ class InterviewPrepQuestionService:
         if deleted:
             logger.info("Interview prep question deleted: id=%d", question_id)
         return deleted
+
+    async def add_tag(self, question_id: int, tag: str) -> InterviewPrepQuestionRead | None:
+        question = await self._repo.add_tag(question_id, tag.strip())
+        if question is None:
+            return None
+        logger.info("Interview prep question tagged: id=%d tag=%r", question_id, tag.strip())
+        return InterviewPrepQuestionRead.model_validate(question)
+
+    async def remove_tag(self, question_id: int, tag: str) -> bool:
+        removed = await self._repo.remove_tag(question_id, tag)
+        if removed:
+            logger.info("Interview prep question tag removed: id=%d tag=%r", question_id, tag)
+        return removed
+
+    async def get_all_tags(self) -> list[str]:
+        return await self._repo.get_all_tags()
 
     async def link_story(self, question_id: int, story_id: int, fit_score: int) -> StoryLinkRead | None:
         """Create the link, or update its fit_score if it already exists. None if either side is missing."""

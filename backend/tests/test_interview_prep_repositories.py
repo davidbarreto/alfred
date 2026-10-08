@@ -1,3 +1,4 @@
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
@@ -10,7 +11,7 @@ from app.features.organizer.interviews.stories.repository import InterviewStoryR
 def _session() -> AsyncMock:
     session = AsyncMock()
     session.add = MagicMock()
-    session.scalar.return_value = MagicMock(id=1, tags=[])
+    session.scalar.return_value = MagicMock(id=1, tags=[SimpleNamespace(name="x")])
     session.get.return_value = MagicMock()
     session.execute.return_value = MagicMock(rowcount=1)
     return session
@@ -32,9 +33,11 @@ class TestMutationsCommit:
         session.commit.assert_awaited()
 
     @pytest.mark.parametrize("call", [
-        lambda r: r.create_question("q"),
-        lambda r: r.update_question(1, "q2"),
+        lambda r: r.create_question("q", ["x"]),
+        lambda r: r.update_question(1, "q2", ["y"]),
         lambda r: r.delete_question(1),
+        lambda r: r.add_tag(1, "new"),
+        lambda r: r.remove_tag(1, "x"),
         lambda r: r.link_story(1, 1, 4),
         lambda r: r.unlink_story(1, 1),
     ])

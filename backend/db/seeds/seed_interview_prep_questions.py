@@ -26,6 +26,7 @@ from sqlalchemy.orm import selectinload
 
 from app.db.session import async_session
 from app.features.organizer.interviews.prep_questions.tables import InterviewPrepQuestion
+from app.features.organizer.interviews.stories.tables import InterviewStory  # noqa: F401  (mapper registration)
 from app.features.organizer.interviews.tags.repository import InterviewTagRepository
 from app.features.organizer.interviews.tags.schemas import normalize_tags
 

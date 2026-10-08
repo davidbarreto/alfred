@@ -1,3 +1,5 @@
+import os
+import subprocess
 import re
 import sys
 from pathlib import Path
@@ -22,3 +24,24 @@ class TestLoadQuestions:
     def test_no_duplicate_tags_within_a_question(self):
         for text, tags in _load_questions():
             assert len(tags) == len({t.lower() for t in tags}), text
+
+
+class TestSeedScriptStandalone:
+    def test_mappers_configure_when_script_is_imported_alone(self):
+        """entrypoint.sh runs the script in a fresh interpreter; it must import every model its mappers reference.
+
+        In-process tests can't catch this: by then other tests have already registered all the models.
+        """
+        code = (
+            "import sys; sys.path.insert(0, 'db/seeds'); "
+            "import seed_interview_prep_questions; "
+            "from sqlalchemy.orm import configure_mappers; configure_mappers()"
+        )
+        result = subprocess.run(
+            [sys.executable, "-c", code],
+            cwd=Path(__file__).resolve().parents[1],
+            capture_output=True,
+            text=True,
+            env={**os.environ, "PYTHONPATH": str(Path(__file__).resolve().parents[1])},
+        )
+        assert result.returncode == 0, result.stderr[-800:]

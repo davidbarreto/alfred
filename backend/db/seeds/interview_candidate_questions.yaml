@@ -1,0 +1,74 @@
+# Questions to ask interviewers. Loaded on every deploy by seed_interview_candidate_questions.py.
+# Insert-only: missing questions are added; nothing is ever deleted or re-categorized.
+# Add new questions here (text must be unique, max 500 chars), or in the portal.
+# Categories: Onboarding, Tech, Culture, Benefits, Logistics, Growth, Work-life
+- category: Tech
+  text: "What are the biggest technical challenges the team faces right now, and where does most of the technical debt sit?"
+- category: Tech
+  text: "How are architecture decisions made here, and how much would I be expected to drive them?"
+- category: Tech
+  text: "What does the stack look like, and where does Java sit in it?"
+- category: Tech
+  text: "How do services communicate (REST, gRPC, messaging), and how do you handle versioning and compatibility between them?"
+- category: Tech
+  text: "How do you handle technical debt: is there dedicated capacity for it, or does it compete with feature work?"
+- category: Tech
+  text: "What does the path to production look like (CI/CD, review process, release frequency), and how long does a change typically take from merge to live?"
+- category: Tech
+  text: "How is the system monitored, and how does on-call work (rotation, frequency, how often people are paged, post-incident reviews)?"
+- category: Tech
+  text: "How do you approach testing and quality: what is the balance between unit, integration and end-to-end tests, and who owns quality?"
+- category: Tech
+  text: "What was the last significant incident, and what changed afterward?"
+- category: Tech
+  text: "How do you decide when to adopt a new technology or upgrade a core dependency (for example a Java or framework version)?"
+- category: Tech
+  text: "What are the scalability or reliability targets of the main systems, and how close are they to their limits today?"
+- category: Onboarding
+  text: "What does a typical day look like for an engineer on this team?"
+- category: Onboarding
+  text: "What does onboarding look like, and when would you expect a newcomer to be contributing at a normal pace?"
+- category: Onboarding
+  text: "What would success look like in my first 30, 60 and 90 days?"
+- category: Onboarding
+  text: "Will I have a buddy or mentor during onboarding, and what is the first task a new engineer usually ships?"
+- category: Onboarding
+  text: "How is the existing documentation, and how easy is it to find who owns what?"
+- category: Culture
+  text: "How does the team give and receive feedback, including code review feedback and feedback on decisions?"
+- category: Culture
+  text: "How do disagreements get resolved, for example when two engineers prefer different technical approaches?"
+- category: Culture
+  text: "How does the team work with product, design and other engineering teams, and who decides priorities?"
+- category: Culture
+  text: "How do you handle mistakes and failures: can you give an example of a blameless post-mortem?"
+- category: Culture
+  text: "What do you like most about working here, and what would you change if you could?"
+- category: Culture
+  text: "How has the team changed in the last year (people, scope, priorities), and why did the role open up?"
+- category: Growth
+  text: "How do engineers grow here: what does the career path look like, and how are promotions decided?"
+- category: Growth
+  text: "Is there a budget or time for learning (courses, conferences, internal tech talks)?"
+- category: Growth
+  text: "How are performance and expectations evaluated, and how often do I get formal feedback?"
+- category: Growth
+  text: "What opportunities exist to take on technical leadership without moving into management?"
+- category: Work-life
+  text: "How flexible are working hours day to day? For example, if I need to pick up my kid from school or attend an appointment, is it fine to move that work to later in the day? And how does the team handle urgent work outside normal hours?"
+- category: Work-life
+  text: "How are deadlines and workload managed, and how often does the team crunch?"
+- category: Work-life
+  text: "How is remote and asynchronous work handled, and how does the team stay connected across time zones?"
+- category: Logistics
+  text: "What is the interview process from here, and what are the next steps and timeline?"
+- category: Logistics
+  text: "What is the team's size and structure, and who would I report to?"
+- category: Logistics
+  text: "Is the role remote, hybrid or on-site, and are there expectations about being in the office?"
+- category: Benefits
+  text: "What does the compensation package include beyond base salary (bonus, equity, pension, health insurance)?"
+- category: Benefits
+  text: "What is the policy on vacation, parental leave and sick leave?"
+- category: Benefits
+  text: "Is there support for equipment, a home-office setup or relocation, if applicable?"

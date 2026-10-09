@@ -22,5 +22,8 @@ python db/seeds/seed_language_chunks.py
 echo "Seeding interview prep questions..."
 python db/seeds/seed_interview_prep_questions.py
 
+echo "Seeding interview candidate questions..."
+python db/seeds/seed_interview_candidate_questions.py
+
 echo "Starting server..."
 exec uvicorn app.main:app --host 0.0.0.0 --port 8000

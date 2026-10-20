@@ -15,6 +15,7 @@ _LOG_FORMAT = "%(asctime)s %(levelname)s:%(name)s:%(message)s"
 logging.basicConfig(level=numeric_level, format=_LOG_FORMAT, force=True)
 
 from fastapi import FastAPI, Request
+from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -85,6 +86,10 @@ from app.api.routes.cs.problems import router as cs_problems_router
 from app.api.routes.cs.submissions import router as cs_submissions_router
 from app.api.routes.cs.stats import router as cs_stats_router
 from app.api.routes.cs.recommendations import router as cs_recommendations_router
+from app.api.routes.metrics.entries import router as metric_entries_router
+from app.api.routes.metrics.quick import router as metric_quick_router
+from app.api.routes.metrics.series import router as metric_series_router
+from app.api.routes.metrics.tags import router as metric_tags_router
 from app.api.routes.study.plans import router as study_plans_router
 from app.api.routes.study.settings import router as study_settings_router
 from app.api.routes.study.tracks import router as study_tracks_router
@@ -202,6 +207,10 @@ app.include_router(cs_problems_router)
 app.include_router(cs_submissions_router)
 app.include_router(cs_stats_router)
 app.include_router(cs_recommendations_router)
+app.include_router(metric_series_router)
+app.include_router(metric_entries_router)
+app.include_router(metric_quick_router)
+app.include_router(metric_tags_router)
 app.include_router(study_tracks_router)
 app.include_router(study_plans_router)
 app.include_router(study_settings_router)
@@ -221,7 +230,8 @@ async def _validation_error_handler(request: Request, exc: RequestValidationErro
         body,
         exc.errors(),
     )
-    return JSONResponse(status_code=422, content={"detail": exc.errors()})
+    # exc.errors() can hold the raw ValueError from a custom validator (ctx.error), which JSONResponse can't serialise
+    return JSONResponse(status_code=422, content={"detail": jsonable_encoder(exc.errors())})
 
 
 @app.exception_handler(GoogleTokenExpiredError)

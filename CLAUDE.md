@@ -25,6 +25,7 @@ alfred/
 │   │   │       ├── finance/       # accounts, budgets, categories, transactions, recurring_transactions
 │   │   │       ├── integrations/  # google_calendar, google_contacts (OAuth + sync), llm_calls, provider_calls
 │   │   │       ├── language/      # tracks, grammar_scope, chunks, sessions
+│   │   │       ├── metrics/       # series, entries, quick (start/stop/log), tags
 │   │   │       ├── monitoring/    # monitors, alerts, executions
 │   │   │       ├── organizer/     # tasks, notes, calendar_events, contacts, shopping
 │   │   │       └── study/         # tracks, plans (overview/generate/transitions), settings
@@ -55,6 +56,7 @@ alfred/
 │   │   │   │   ├── grammar_scope/ # Per-track grammar curriculum (active/deferred/mastered)
 │   │   │   │   ├── sessions/      # Learning sessions; feeds_srs flag; daily progress
 │   │   │   │   └── tracks/        # Language tracks (code, CEFR level, daily_quota, review_mode)
+│   │   │   ├── metrics/           # Personal measurement log: series, entries (start/stop, value, count), tags
 │   │   │   ├── monitoring/        # Monitors, alerts, executions (flat, not sub-modules)
 │   │   │   ├── study/             # Study planner: tracks, targeted plans (backlog + global cap), tags, generator
 │   │   │   └── organizer/
@@ -108,7 +110,7 @@ alfred/
 - **Single responsibility** — split files when a module grows beyond one clear concern
 
 ### Database (PostgreSQL + pgvector)
-- Schemas: `core`, `organizer`, `monitoring`, `finance`, `language`, `cs` (programming-practice evidence), `study` (study planner)
+- Schemas: `core`, `organizer`, `monitoring`, `finance`, `language`, `cs` (programming-practice evidence), `study` (study planner), `metrics` (personal measurement log)
 - Write-through cache pattern for external integrations (Notion, Google Calendar)
 - Embeddings stored in a generic `core.embeddings` table with `source_id` foreign keys; treat as a derived index, not source of truth
 - `core.memories` is polymorphic with a `type` discriminator column
@@ -356,6 +358,20 @@ User assigns when linking a story to a prep question (default 3). Stories are so
 The resolver splits positional args on whitespace and gives the *last* `arg_key` the remainder, and MCP reserves the name `action`. So multi-field text can't be positional:
 - `/storyadd situation | task | action | result --strength 4 -t leadership,conflict` (single `text` arg, split on `|` in the handler)
 - `/candidateadd How is on-call organised? --category Tech`
+
+---
+
+## Metrics Module
+
+Personal measurement log (`metrics` schema). Design and phases: `docs/plans/metrics.md`.
+
+- **Series** (`metrics.series`) = the thing measured (`commute-work`), with a kind: `duration` (start/stop), `value` (one number), `count` (one event). Names are lowercase slugs. Created automatically on first `/mstart` or `/mlog`.
+- **Entries** (`metrics.entries`): `started_at`, `ended_at`, `value`, `status` (`open`/`closed`/`discarded`), `source` (`telegram`/`shortcut`/`portal`/`mcp`), start/stop coordinates, `context` JSON (`{start: weather, end: weather}`). Duration is **derived** (`ended_at - started_at`), never stored. Weekday/hour are derived at query time in the configured timezone.
+- **Tags** (`metrics.tags` + `entries_tags`, ORM class `MetricTag`) are the options compared inside a series (`bus`, `metro`).
+- **No cascades**: every FK is `RESTRICT`. Entries are discarded, series archived or merged; deleting a series with entries is a 409.
+- **Start/stop rules**: `stop` closes the latest open entry; a new `start` discards a still-open one; open entries older than 6 h are stale, and a stop that would make an entry last over 6 h is a 409 (backdate with `--ago`, or discard).
+- **Weather** is a best-effort snapshot (`ConditionsProvider.get_current_conditions`, 4 s timeout) and never blocks a start/stop; with no coordinates it uses Porto and is marked `location_source: default`.
+- **Entry points**: Telegram/MCP commands `/mstart`, `/mstop`, `/mlog`, `/mopen`, `/mhistory`, `/mdiscard` (MCP tool `alfred_metric`), and `POST /metrics/quick/{start,stop,log}` (source taken from `X-Alfred-Client`: `shortcut`, `web`→portal, otherwise `mcp`). Stats, the scoped Shortcut token and the portal page are later phases.
 
 ---
 

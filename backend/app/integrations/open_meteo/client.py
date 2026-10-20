@@ -39,3 +39,14 @@ class OpenMeteoClient:
         async with httpx.AsyncClient(timeout=10.0) as client:
             response = await request_with_retry(client, "GET", _BASE_URL, params=params)
         return response.json()["daily"]
+
+    async def fetch_current(self, lat: float, lon: float) -> dict[str, Any]:
+        params = {
+            "latitude": lat,
+            "longitude": lon,
+            "current": "temperature_2m,precipitation,wind_speed_10m,weather_code",
+            "timezone": "auto",
+        }
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            response = await request_with_retry(client, "GET", _BASE_URL, params=params, max_attempts=2, backoff_seconds=0.5)
+        return response.json()["current"]

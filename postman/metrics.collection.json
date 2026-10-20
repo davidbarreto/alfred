@@ -1,0 +1,1163 @@
+{
+  "info": {
+    "name": "Alfred - Metrics API",
+    "description": "Personal measurement log: duration (start/stop), value and count series, entries, and tags. Run in order. Entries and series are never hard-deleted (all FKs are RESTRICT), so the run discards its entries and archives its uniquely named series (postman-*-<timestamp>) at the end.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{api_token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "01 - Create Duration Series",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "const ts = Date.now();",
+              "pm.environment.set('metric_series', 'postman-commute-' + ts);",
+              "pm.environment.set('metric_value_series', 'postman-sleep-' + ts);",
+              "pm.environment.set('metric_tag', 'postman-tag-' + ts);"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+              "const j = pm.response.json();",
+              "pm.test('Name is a slug', () => pm.expect(j.name).to.eql(pm.environment.get('metric_series')));",
+              "pm.test('Kind is duration', () => pm.expect(j.kind).to.eql('duration'));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/metrics/series",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "metrics",
+            "series"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"{{metric_series}}\",\n  \"kind\": \"duration\",\n  \"unit\": \"min\"\n}"
+        }
+      }
+    },
+    {
+      "name": "02 - Create Duplicate Series",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 409', () => pm.response.to.have.status(409));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/metrics/series",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "metrics",
+            "series"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"{{metric_series}}\",\n  \"kind\": \"duration\"\n}"
+        }
+      }
+    },
+    {
+      "name": "03 - Quick Start",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "const j = pm.response.json();",
+              "pm.test('Entry is open', () => pm.expect(j.entry.status).to.eql('open'));",
+              "pm.test('Message names the series', () => pm.expect(j.message).to.include(pm.environment.get('metric_series')));",
+              "pm.test('Tag attached', () => pm.expect(j.entry.tags).to.eql([pm.environment.get('metric_tag')]));",
+              "pm.test('Nothing discarded', () => pm.expect(j.discarded_entry_id).to.eql(null));",
+              "pm.environment.set('metric_first_entry_id', j.entry.id);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/metrics/quick/start",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "metrics",
+            "quick",
+            "start"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"series\": \"{{metric_series}}\",\n  \"tags\": [\n    \"{{metric_tag}}\"\n  ],\n  \"lat\": 41.15,\n  \"lon\": -8.63,\n  \"accuracy_m\": 20\n}"
+        }
+      }
+    },
+    {
+      "name": "04 - Open Entries Lists The Timer",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Running timer listed', () => pm.expect(pm.response.json().map(e => e.id)).to.include(pm.environment.get('metric_first_entry_id')));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/metrics/entries/open",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "metrics",
+            "entries",
+            "open"
+          ]
+        }
+      }
+    },
+    {
+      "name": "05 - Start Again Discards The Unfinished Entry",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "const j = pm.response.json();",
+              "pm.test('Previous entry reported as discarded', () => pm.expect(j.discarded_entry_id).to.eql(pm.environment.get('metric_first_entry_id')));",
+              "pm.environment.set('metric_entry_id', j.entry.id);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/metrics/quick/start",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "metrics",
+            "quick",
+            "start"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"series\": \"{{metric_series}}\",\n  \"tags\": [\n    \"{{metric_tag}}\"\n  ]\n}"
+        }
+      }
+    },
+    {
+      "name": "06 - Quick Stop",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "const j = pm.response.json();",
+              "pm.test('Entry closed', () => pm.expect(j.entry.status).to.eql('closed'));",
+              "pm.test('Duration derived from timestamps', () => pm.expect(j.entry.duration_s).to.be.a('number'));",
+              "pm.test('Message reports the duration', () => pm.expect(j.message).to.match(/^Stopped /));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/metrics/quick/stop",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "metrics",
+            "quick",
+            "stop"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"series\": \"{{metric_series}}\"\n}"
+        }
+      }
+    },
+    {
+      "name": "07 - Stop With Nothing Running",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 409', () => pm.response.to.have.status(409));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/metrics/quick/stop",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "metrics",
+            "quick",
+            "stop"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"series\": \"{{metric_series}}\"\n}"
+        }
+      }
+    },
+    {
+      "name": "08 - Log On A Duration Series Is Rejected",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 409', () => pm.response.to.have.status(409));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/metrics/quick/log",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "metrics",
+            "quick",
+            "log"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"series\": \"{{metric_series}}\"\n}"
+        }
+      }
+    },
+    {
+      "name": "09 - Quick Log Creates A Value Series",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "const j = pm.response.json();",
+              "pm.test('Series auto-created', () => pm.expect(j.series_created).to.eql(true));",
+              "pm.test('Value stored', () => pm.expect(j.entry.value).to.eql(7.5));",
+              "pm.test('Kind is value', () => pm.expect(j.entry.series_kind).to.eql('value'));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/metrics/quick/log",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "metrics",
+            "quick",
+            "log"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"series\": \"{{metric_value_series}}\",\n  \"value\": 7.5\n}"
+        }
+      }
+    },
+    {
+      "name": "10 - Latitude Without Longitude Is Rejected",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 422', () => pm.response.to.have.status(422));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/metrics/quick/start",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "metrics",
+            "quick",
+            "start"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"series\": \"{{metric_series}}\",\n  \"lat\": 41.0\n}"
+        }
+      }
+    },
+    {
+      "name": "11 - Negative Ago Is Rejected",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 422', () => pm.response.to.have.status(422));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/metrics/quick/stop",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "metrics",
+            "quick",
+            "stop"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"series\": \"{{metric_series}}\",\n  \"ago_s\": -5\n}"
+        }
+      }
+    },
+    {
+      "name": "12 - List Entries By Series And Tag",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "const j = pm.response.json();",
+              "pm.test('Both entries returned, newest first', () => pm.expect(j.map(e => e.id)).to.eql([pm.environment.get('metric_entry_id'), pm.environment.get('metric_first_entry_id')]));",
+              "pm.test('Discarded one is marked', () => pm.expect(j[1].status).to.eql('discarded'));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/metrics/entries?series={{metric_series}}&tag={{metric_tag}}&limit=10",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "metrics",
+            "entries"
+          ],
+          "query": [
+            {
+              "key": "series",
+              "value": "{{metric_series}}"
+            },
+            {
+              "key": "tag",
+              "value": "{{metric_tag}}"
+            },
+            {
+              "key": "limit",
+              "value": "10"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "13 - Invalid Status Filter",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 422', () => pm.response.to.have.status(422));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/metrics/entries?status=weird",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "metrics",
+            "entries"
+          ],
+          "query": [
+            {
+              "key": "status",
+              "value": "weird"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "14 - Get Entry",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Context is an object or null', () => pm.expect(pm.response.json()).to.have.property('context'));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/metrics/entries/{{metric_entry_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "metrics",
+            "entries",
+            "{{metric_entry_id}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "15 - Get Unknown Entry",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 404', () => pm.response.to.have.status(404));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/metrics/entries/999999999",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "metrics",
+            "entries",
+            "999999999"
+          ]
+        }
+      }
+    },
+    {
+      "name": "16 - Create Manual Entry",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+              "const j = pm.response.json();",
+              "pm.test('34 minutes', () => pm.expect(j.duration_s).to.eql(2040));",
+              "pm.test('Source is portal', () => pm.expect(j.source).to.eql('portal'));",
+              "pm.environment.set('metric_manual_entry_id', j.id);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/metrics/entries",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "metrics",
+            "entries"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"series\": \"{{metric_series}}\",\n  \"started_at\": \"2026-10-01T08:00:00Z\",\n  \"ended_at\": \"2026-10-01T08:34:00Z\",\n  \"tags\": [\n    \"{{metric_tag}}\"\n  ],\n  \"note\": \"Postman manual entry\"\n}"
+        }
+      }
+    },
+    {
+      "name": "17 - Manual Duration Without End Is Rejected",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 422', () => pm.response.to.have.status(422));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/metrics/entries",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "metrics",
+            "entries"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"series\": \"{{metric_series}}\",\n  \"started_at\": \"2026-10-01T08:00:00Z\"\n}"
+        }
+      }
+    },
+    {
+      "name": "18 - Manual Entry For Unknown Series",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 404', () => pm.response.to.have.status(404));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/metrics/entries",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "metrics",
+            "entries"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"series\": \"postman-no-such-series\",\n  \"started_at\": \"2026-10-01T08:00:00Z\",\n  \"ended_at\": \"2026-10-01T08:10:00Z\"\n}"
+        }
+      }
+    },
+    {
+      "name": "19 - Patch Entry Note",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Note updated', () => pm.expect(pm.response.json().note).to.eql('Edited'));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/metrics/entries/{{metric_manual_entry_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "metrics",
+            "entries",
+            "{{metric_manual_entry_id}}"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"note\": \"Edited\"\n}"
+        }
+      }
+    },
+    {
+      "name": "20 - Patch End Before Start Is Rejected",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 422', () => pm.response.to.have.status(422));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/metrics/entries/{{metric_manual_entry_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "metrics",
+            "entries",
+            "{{metric_manual_entry_id}}"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"ended_at\": \"2026-10-01T07:00:00Z\"\n}"
+        }
+      }
+    },
+    {
+      "name": "21 - Discard Manual Entry",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Discarded', () => pm.expect(pm.response.json().status).to.eql('discarded'));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/metrics/entries/{{metric_manual_entry_id}}/discard",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "metrics",
+            "entries",
+            "{{metric_manual_entry_id}}",
+            "discard"
+          ]
+        }
+      }
+    },
+    {
+      "name": "22 - Discard Unknown Entry",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 404', () => pm.response.to.have.status(404));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/metrics/entries/999999999/discard",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "metrics",
+            "entries",
+            "999999999",
+            "discard"
+          ]
+        }
+      }
+    },
+    {
+      "name": "23 - List Tags",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "const tag = pm.response.json().find(t => t.name === pm.environment.get('metric_tag'));",
+              "pm.test('Tag counted', () => pm.expect(tag.entry_count).to.be.at.least(2));",
+              "pm.environment.set('metric_tag_id', tag.id);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/metrics/tags",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "metrics",
+            "tags"
+          ]
+        }
+      }
+    },
+    {
+      "name": "24 - Rename Tag",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Renamed', () => pm.expect(pm.response.json().name).to.eql(pm.environment.get('metric_tag') + '-renamed'));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/metrics/tags/{{metric_tag_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "metrics",
+            "tags",
+            "{{metric_tag_id}}"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"{{metric_tag}}-renamed\"\n}"
+        }
+      }
+    },
+    {
+      "name": "25 - Delete Tag In Use Is Rejected",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 409', () => pm.response.to.have.status(409));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/metrics/tags/{{metric_tag_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "metrics",
+            "tags",
+            "{{metric_tag_id}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "26 - List Series With Counts",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "const s = pm.response.json().find(x => x.name === pm.environment.get('metric_series'));",
+              "pm.test('Discarded entries are not counted', () => pm.expect(s.entry_count).to.eql(1));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/metrics/series",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "metrics",
+            "series"
+          ]
+        }
+      }
+    },
+    {
+      "name": "27 - Delete Series With Entries Is Rejected",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 409', () => pm.response.to.have.status(409));",
+              "pm.test('Mentions the entry count', () => pm.expect(pm.response.json().detail).to.match(/\\d+ entries/));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/metrics/series/{{metric_series}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "metrics",
+            "series",
+            "{{metric_series}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "28 - Merge Different Kinds Is Rejected",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 409', () => pm.response.to.have.status(409));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/metrics/series/{{metric_series}}/merge",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "metrics",
+            "series",
+            "{{metric_series}}",
+            "merge"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"into\": \"{{metric_value_series}}\"\n}"
+        }
+      }
+    },
+    {
+      "name": "29 - Archive Duration Series",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Archived', () => pm.expect(pm.response.json().is_archived).to.eql(true));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/metrics/series/{{metric_series}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "metrics",
+            "series",
+            "{{metric_series}}"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"is_archived\": true\n}"
+        }
+      }
+    },
+    {
+      "name": "30 - Start On Archived Series Is Rejected",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 409', () => pm.response.to.have.status(409));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/metrics/quick/start",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "metrics",
+            "quick",
+            "start"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"series\": \"{{metric_series}}\"\n}"
+        }
+      }
+    },
+    {
+      "name": "31 - Archive Value Series",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/metrics/series/{{metric_value_series}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "metrics",
+            "series",
+            "{{metric_value_series}}"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"is_archived\": true\n}"
+        }
+      }
+    }
+  ]
+}

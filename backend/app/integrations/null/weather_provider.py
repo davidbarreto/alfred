@@ -3,6 +3,7 @@ from datetime import date
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.features.briefing.schemas import WeatherForecast
+from app.shared.weather import WeatherSnapshot
 
 
 class NullWeatherProvider:
@@ -24,3 +25,8 @@ class NullWeatherProvider:
             description="unavailable — integrations disabled",
             advice=[],
         )
+
+    async def get_current_conditions(
+        self, lat: float | None = None, lon: float | None = None
+    ) -> WeatherSnapshot | None:
+        return None

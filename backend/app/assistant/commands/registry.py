@@ -775,6 +775,46 @@ COMMAND_DEFINITIONS = {
             "arg_keys": ["id"],
         },
     },
+    "metric": {
+        "start": {
+            "description": "Start timing a measurement, e.g. /mstart commute-work bus (series, then optional tags). Creates the series on first use",
+            "aliases": ["/mstart", "/metricstart"],
+            "flags": {**FLAG_TAGS, "--note": "note"},
+            "requires_args": True,
+            "arg_keys": ["series", "rest"],
+        },
+        "stop": {
+            "description": "Stop the running timer (optionally name the series); --ago 5m backdates the stop",
+            "aliases": ["/mstop", "/metricstop"],
+            "flags": {"--ago": "ago"},
+            "arg_keys": ["series"],
+        },
+        "log": {
+            "description": "Log a value or count, e.g. /mlog sleep 7.5 or /mlog coffee (no value counts one event)",
+            "aliases": ["/mlog", "/metriclog"],
+            "flags": {**FLAG_TAGS, "--note": "note"},
+            "requires_args": True,
+            "arg_keys": ["series", "value"],
+        },
+        "open": {
+            "description": "List running timers (unfinished starts); stale ones are flagged",
+            "aliases": ["/mopen", "/metricopen"],
+            "flags": {},
+        },
+        "history": {
+            "description": "Recent metric entries, optionally for one series or tag",
+            "aliases": ["/mhistory", "/metrichistory"],
+            "flags": {"--tag": "tag", **FLAG_LIMIT, "--offset": "offset"},
+            "arg_keys": ["series"],
+        },
+        "discard": {
+            "description": "Discard a metric entry by ID (kept in the database, excluded from stats)",
+            "aliases": ["/mdiscard", "/metricdiscard"],
+            "flags": {},
+            "requires_args": True,
+            "arg_keys": ["id"],
+        },
+    },
 }
 
 def _build_registry() -> Dict[str, CommandMetadata]:

@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.config import get_settings
 from app.features.briefing.schemas import WeatherForecast
 from app.integrations.provider_calls.repository import create_sync_log
+from app.shared.weather import WeatherSnapshot
 
 from .client import OpenMeteoClient
 
@@ -67,6 +68,20 @@ def _build_advice(
 class OpenMeteoProvider:
     def __init__(self, client: OpenMeteoClient) -> None:
         self._client = client
+
+    async def get_current_conditions(
+        self, lat: float | None = None, lon: float | None = None
+    ) -> WeatherSnapshot | None:
+        """Conditions right now at the given point, defaulting to Porto when no coordinates are known."""
+        data = await self._client.fetch_current(
+            lat if lat is not None else _PORTO_LAT, lon if lon is not None else _PORTO_LON
+        )
+        return WeatherSnapshot(
+            temp_c=data["temperature_2m"],
+            precipitation_mm=data["precipitation"],
+            wind_kmh=data["wind_speed_10m"],
+            weather_code=int(data["weather_code"]),
+        )
 
     async def get_forecast_for_city(self, city: str, for_date: date) -> tuple[WeatherForecast, str]:
         """Geocode a city name and return its forecast alongside the resolved city name."""

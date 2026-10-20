@@ -102,7 +102,10 @@ from app.integrations.null.transcription_provider import NullTranscriptionProvid
 from app.shared.llm import LlmProvider
 from app.shared.storage import StorageProvider
 from app.shared.exchange_rate import ExchangeRateProvider
-from app.shared.weather import WeatherProvider
+from app.shared.weather import ConditionsProvider, WeatherProvider
+from app.features.metrics.entries.service import MetricEntryService
+from app.features.metrics.series.service import MetricSeriesService
+from app.features.metrics.tags.service import MetricTagService
 from app.shared.holiday import HolidayProvider
 from app.shared.pronunciation import PronunciationProvider
 from app.shared.conversation import ConversationProvider
@@ -562,6 +565,18 @@ def get_interview_tag_service(session: AsyncSession = Depends(get_session)) -> I
 def get_interview_candidate_question_service(session: AsyncSession = Depends(get_session)) -> InterviewCandidateQuestionService:
     return InterviewCandidateQuestionService(session)
 
+def get_conditions_provider() -> ConditionsProvider:
+    return get_weather_provider()
+
+def get_metric_entry_service(session: AsyncSession = Depends(get_session)) -> MetricEntryService:
+    return MetricEntryService(session, get_conditions_provider())
+
+def get_metric_series_service(session: AsyncSession = Depends(get_session)) -> MetricSeriesService:
+    return MetricSeriesService(session)
+
+def get_metric_tag_service(session: AsyncSession = Depends(get_session)) -> MetricTagService:
+    return MetricTagService(session)
+
 def get_codeforces_sync_service(session: AsyncSession = Depends(get_session)) -> CodeforcesSyncService:
     return CodeforcesSyncService(session, CodeforcesClient())
 
@@ -675,3 +690,6 @@ InterviewStoryServiceDep = Annotated[InterviewStoryService, Depends(get_intervie
 InterviewPrepQuestionServiceDep = Annotated[InterviewPrepQuestionService, Depends(get_interview_prep_question_service)]
 InterviewTagServiceDep = Annotated[InterviewTagService, Depends(get_interview_tag_service)]
 InterviewCandidateQuestionServiceDep = Annotated[InterviewCandidateQuestionService, Depends(get_interview_candidate_question_service)]
+MetricEntryServiceDep = Annotated[MetricEntryService, Depends(get_metric_entry_service)]
+MetricSeriesServiceDep = Annotated[MetricSeriesService, Depends(get_metric_series_service)]
+MetricTagServiceDep = Annotated[MetricTagService, Depends(get_metric_tag_service)]

@@ -21,6 +21,7 @@ from app.assistant.commands.handlers.interview_story import handle_interview_sto
 from app.assistant.commands.handlers.interview_prep import handle_interview_prep
 from app.assistant.commands.handlers.interview_candidate import handle_interview_candidate
 from app.assistant.commands.handlers.language import handle_language
+from app.assistant.commands.handlers.metric import handle_metric
 from app.assistant.commands.handlers.memory import handle_memory
 from app.assistant.commands.handlers.note import handle_note
 from app.assistant.commands.handlers.pause import handle_pause
@@ -54,6 +55,7 @@ from app.features.organizer.contacts.service import ContactService
 from app.features.organizer.interviews.processes.service import InterviewProcessService
 from app.features.organizer.interviews.stories.service import InterviewStoryService
 from app.features.organizer.interviews.prep_questions.service import InterviewPrepQuestionService
+from app.features.metrics.entries.service import MetricEntryService
 from app.features.organizer.interviews.candidate_questions.service import InterviewCandidateQuestionService
 from app.features.organizer.notes.service import NoteService
 from app.features.organizer.shopping.service import ShoppingService
@@ -91,6 +93,8 @@ async def execute(
     interview_story_service: InterviewStoryService | None = None,
     interview_prep_service: InterviewPrepQuestionService | None = None,
     interview_candidate_service: InterviewCandidateQuestionService | None = None,
+    metric_service: MetricEntryService | None = None,
+    source: str | None = None,
     grammar_scope_service: GrammarScopeService | None = None,
     briefing_history_service: BriefingHistoryService | None = None,
     session: AsyncSession | None = None,
@@ -293,6 +297,14 @@ async def execute(
                 detail="Interview candidate service not available",
             )
         return await handle_interview_candidate(command, arguments, interview_candidate_service)
+
+    if cmd_type == "metric":
+        if metric_service is None:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Metric service not available",
+            )
+        return await handle_metric(command, arguments, metric_service, source)
 
     logger.error("Execute: unknown command type=%s command=%s", cmd_type, command)
     raise HTTPException(

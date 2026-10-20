@@ -217,6 +217,48 @@
       "value": "",
       "type": "default",
       "enabled": true
+    },
+    {
+      "key": "metric_series",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "metric_value_series",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "metric_tag",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "metric_tag_id",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "metric_entry_id",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "metric_first_entry_id",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "metric_manual_entry_id",
+      "value": "",
+      "type": "default",
+      "enabled": true
     }
   ],
   "_postman_variable_scope": "environment"

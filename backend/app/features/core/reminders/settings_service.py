@@ -23,6 +23,9 @@ _DEFAULTS: dict[str, int] = {
     "undated_escalation_days_high": 7,
     "undated_escalation_days_medium": 21,
     "undated_escalation_days_low": 45,
+    "catchup_tasks_per_day": 3,
+    "catchup_stale_days": 30,
+    "catchup_missed_habit_threshold": 3,
 }
 
 

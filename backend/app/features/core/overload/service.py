@@ -14,7 +14,7 @@ from app.features.core.overload.schemas import (
 from app.features.core.overload.tables import OverloadLog
 from app.features.core.reminders.schemas import ReminderSettingsRead
 from app.features.core.reminders.settings_service import ReminderSettingsService
-from app.features.organizer.tasks.recurrence import is_due_today
+from app.features.organizer.tasks.recurrence import is_pending_today
 from app.features.organizer.tasks.schemas import TaskFilters
 from app.features.organizer.tasks.service import TaskService
 from app.shared.timezone import local_now
@@ -53,9 +53,7 @@ class OverloadService:
 
         overdue = urgent = active = 0
         for task in tasks:
-            if task.recurrence_rule is not None and (
-                not is_due_today(task.recurrence_rule, now.date()) or task.is_done_in_cycle
-            ):
+            if not is_pending_today(task.recurrence_rule, task.is_done_in_cycle, now.date()):
                 continue
             active += 1
             if task.deadline is not None and task.deadline < now:

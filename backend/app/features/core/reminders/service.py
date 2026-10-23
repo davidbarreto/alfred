@@ -92,7 +92,7 @@ def _format_task_lines(
 def _overload_header(snapshot: OverloadSnapshot) -> str:
     return (
         f"⚠️ Overloaded: {snapshot.overdue} overdue, {snapshot.urgent} urgent. "
-        "Showing the top tasks only; open the portal to triage."
+        "Showing the top tasks only; open the portal to catch up."
     )
 
 

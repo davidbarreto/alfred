@@ -427,6 +427,22 @@ COMMAND_DEFINITIONS = {
             "arg_keys": []
         }
     },
+    "catchup": {
+        "show": {
+            "description": "Suggest how to dig out of an overdue backlog: today's top tasks, spreading, dropping stale tasks",
+            "aliases": ["/catchup"],
+            "flags": {},
+            "requires_args": False,
+            "arg_keys": []
+        },
+        "apply": {
+            "description": "Apply a catch-up suggestion: spread (re-date overdue tasks) or drop <ids> (cancel stale tasks)",
+            "aliases": ["/catchupapply"],
+            "flags": {},
+            "requires_args": True,
+            "arg_keys": ["kind", "ids"]
+        }
+    },
     "help": {
         "help": {
             "description": "Show available commands, or details about a specific command",

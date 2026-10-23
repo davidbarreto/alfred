@@ -45,6 +45,7 @@ from app.features.briefing.evening_summary_service import EveningDigestSummarySe
 from app.features.briefing.evening_formatter_service import EveningDigestFormatterService
 from app.features.briefing.history_service import BriefingHistoryService
 from app.features.core.overload.service import OverloadService
+from app.features.core.catchup.service import CatchupService
 from app.features.core.reminders.service import ReminderService
 from app.features.core.reminders.settings_service import ReminderSettingsService
 from app.features.core.api_requests.service import ApiRequestService
@@ -404,6 +405,9 @@ def get_briefing_history_service(session: AsyncSession = Depends(get_session)) -
 def get_overload_service(session: AsyncSession = Depends(get_session)) -> OverloadService:
     return OverloadService(session=session, task_service=get_task_service(session))
 
+def get_catchup_service(session: AsyncSession = Depends(get_session)) -> CatchupService:
+    return CatchupService(session=session, task_service=get_task_service(session))
+
 def get_reminder_settings_service(session: AsyncSession = Depends(get_session)) -> ReminderSettingsService:
     return ReminderSettingsService(session)
 
@@ -665,6 +669,7 @@ EveningDigestSummaryServiceDep = Annotated[EveningDigestSummaryService, Depends(
 EveningDigestFormatterServiceDep = Annotated[EveningDigestFormatterService, Depends(get_evening_digest_formatter_service)]
 BriefingHistoryServiceDep = Annotated[BriefingHistoryService, Depends(get_briefing_history_service)]
 ReminderServiceDep = Annotated[ReminderService, Depends(get_reminder_service)]
+CatchupServiceDep = Annotated[CatchupService, Depends(get_catchup_service)]
 OverloadServiceDep = Annotated[OverloadService, Depends(get_overload_service)]
 ReminderSettingsServiceDep = Annotated[ReminderSettingsService, Depends(get_reminder_settings_service)]
 GlobalPauseServiceDep = Annotated[GlobalPauseService, Depends(get_global_pause_service)]

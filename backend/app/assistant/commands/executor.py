@@ -25,6 +25,7 @@ from app.assistant.commands.handlers.metric import handle_metric
 from app.assistant.commands.handlers.memory import handle_memory
 from app.assistant.commands.handlers.note import handle_note
 from app.assistant.commands.handlers.pause import handle_pause
+from app.assistant.commands.handlers.catchup import handle_catchup
 from app.assistant.commands.handlers.recall import handle_recall
 from app.assistant.commands.handlers.recurring import handle_recurring
 from app.assistant.commands.handlers.reminder import handle_reminder
@@ -61,6 +62,7 @@ from app.features.organizer.notes.service import NoteService
 from app.features.organizer.shopping.service import ShoppingService
 from app.features.organizer.tasks.service import TaskService
 from app.features.core.pause.service import GlobalPauseService
+from app.features.core.catchup.service import CatchupService
 
 logger = logging.getLogger(__name__)
 
@@ -87,6 +89,7 @@ async def execute(
     cs_stats_service: CsStatsService | None = None,
     study_plan_service: StudyPlanService | None = None,
     pause_service: GlobalPauseService | None = None,
+    catchup_service: CatchupService | None = None,
     contact_service: ContactService | None = None,
     memory_service: MemoryService | None = None,
     interview_process_service: InterviewProcessService | None = None,
@@ -189,6 +192,14 @@ async def execute(
                 detail="Pause service not available",
             )
         return await handle_pause(command, arguments, pause_service)
+
+    if cmd_type == "catchup":
+        if catchup_service is None:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Catchup service not available",
+            )
+        return await handle_catchup(command, arguments, catchup_service)
 
     if cmd_type == "help":
         return handle_help(arguments)

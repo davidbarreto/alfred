@@ -35,6 +35,9 @@ class TestGet:
         assert result.overdue_grace_hours_medium == 48
         assert result.overdue_grace_hours_low == 168
         assert result.undated_escalation_days_low == 45
+        assert result.catchup_tasks_per_day == 3
+        assert result.catchup_stale_days == 30
+        assert result.catchup_missed_habit_threshold == 3
 
     async def test_urgency_reset_days_defaults_to_the_env_value(self, service):
         assert (await service.get()).urgency_reset_days == 9
@@ -76,7 +79,8 @@ class TestUpdate:
     @pytest.mark.parametrize(
         "field,value",
         [("overload_max_listed", 0), ("overload_urgent_threshold", 0), ("overload_urgent_interval_hours", 25),
-         ("undated_escalation_days_low", 0), ("overdue_grace_hours_low", -1)],
+         ("undated_escalation_days_low", 0), ("overdue_grace_hours_low", -1),
+         ("catchup_tasks_per_day", 0), ("catchup_stale_days", 6), ("catchup_missed_habit_threshold", 8)],
     )
     def test_rejects_out_of_range(self, field, value):
         with pytest.raises(ValidationError):

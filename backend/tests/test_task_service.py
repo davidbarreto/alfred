@@ -6,6 +6,7 @@ from app.features.organizer.tasks.recurrence import (
     compute_streak,
     is_done_in_cycle,
     is_due_today,
+    is_pending_today,
     missed_count,
     parse_byday as _parse_byday,
 )
@@ -776,3 +777,17 @@ class TestUpdateCompletion:
         )
 
         service._repo.get_completion.assert_not_called()
+
+
+class TestIsPendingToday:
+    def test_one_off_tasks_are_always_pending(self):
+        assert is_pending_today(None, False, date(2026, 6, 22)) is True
+
+    def test_recurring_task_due_today_and_not_done_is_pending(self):
+        assert is_pending_today("FREQ=WEEKLY;BYDAY=MO", False, date(2026, 6, 22)) is True
+
+    def test_recurring_task_not_scheduled_today_is_not_pending(self):
+        assert is_pending_today("FREQ=WEEKLY;BYDAY=SU", False, date(2026, 6, 22)) is False
+
+    def test_recurring_task_done_this_cycle_is_not_pending(self):
+        assert is_pending_today("FREQ=DAILY", True, date(2026, 6, 22)) is False

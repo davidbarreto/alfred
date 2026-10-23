@@ -136,3 +136,10 @@ def missed_count(rule: str, completions: list[date], today: date) -> int:
         return 0
 
     return 0
+
+
+def is_pending_today(recurrence_rule: str | None, is_done_in_cycle: bool, today: date) -> bool:
+    """False for a recurring task that is not scheduled today or already done this cycle."""
+    if recurrence_rule is None:
+        return True
+    return is_due_today(recurrence_rule, today) and not is_done_in_cycle

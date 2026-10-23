@@ -2974,7 +2974,7 @@
               "pm.test('Status is 200', () => pm.response.to.have.status(200));",
               "pm.test('Has every setting as a number', () => {",
               "    const json = pm.response.json();",
-              "    [\"overload_overdue_threshold\", \"overload_urgent_threshold\", \"overload_max_listed\", \"overload_urgent_interval_hours\", \"overdue_grace_hours_high\", \"overdue_grace_hours_medium\", \"overdue_grace_hours_low\", \"undated_escalation_days_high\", \"undated_escalation_days_medium\", \"undated_escalation_days_low\", \"urgency_reset_days\"].forEach(f => pm.expect(json[f]).to.be.a('number'));",
+              "    [\"overload_overdue_threshold\", \"overload_urgent_threshold\", \"overload_max_listed\", \"overload_urgent_interval_hours\", \"overdue_grace_hours_high\", \"overdue_grace_hours_medium\", \"overdue_grace_hours_low\", \"undated_escalation_days_high\", \"undated_escalation_days_medium\", \"undated_escalation_days_low\", \"catchup_tasks_per_day\", \"catchup_stale_days\", \"catchup_missed_habit_threshold\", \"urgency_reset_days\"].forEach(f => pm.expect(json[f]).to.be.a('number'));",
               "});"
             ],
             "type": "text/javascript"
@@ -3078,6 +3078,211 @@
               "language": "json"
             }
           }
+        }
+      }
+    },
+    {
+      "name": "89q - Catch-up - Suggestions",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Has today_top and suggestions', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json.today_top).to.be.an('array').with.lengthOf.at.most(3);",
+              "    pm.expect(json.suggestions).to.be.an('array');",
+              "    json.suggestions.forEach(s => {",
+              "        pm.expect(['spread', 'drop', 'habits']).to.include(s.kind);",
+              "        pm.expect(s.title).to.be.a('string');",
+              "        pm.expect(s.applicable).to.be.a('boolean');",
+              "    });",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/core/catchup",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "core",
+            "catchup"
+          ]
+        }
+      }
+    },
+    {
+      "name": "89r - Catch-up - Apply Invalid Kind (422)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 422', () => pm.response.to.have.status(422));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/core/catchup/apply",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "core",
+            "catchup",
+            "apply"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"kind\": \"habits\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "89s - Catch-up - Apply Drop With Empty Ids (422)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 422', () => pm.response.to.have.status(422));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/core/catchup/apply",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "core",
+            "catchup",
+            "apply"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"kind\": \"drop\",\n  \"task_ids\": []\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "89t - Catch-up - Apply Drop Unknown Id (200 skipped or 404)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Unknown id is skipped or nothing is stale', () => pm.expect([200, 404]).to.include(pm.response.code));",
+              "if (pm.response.code === 200) {",
+              "    pm.test('Nothing was dropped', () => {",
+              "        const json = pm.response.json();",
+              "        pm.expect(json.applied).to.eql(0);",
+              "        pm.expect(json.skipped).to.eql(1);",
+              "    });",
+              "}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/core/catchup/apply",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "core",
+            "catchup",
+            "apply"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"kind\": \"drop\",\n  \"task_ids\": [\n    999999999\n  ]\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "89u - Catch-up - No Auth",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('No auth returns 403', () => pm.response.to.have.status(403));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "auth": {
+          "type": "noauth"
+        },
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/core/catchup",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "core",
+            "catchup"
+          ]
         }
       }
     },

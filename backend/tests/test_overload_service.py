@@ -18,7 +18,8 @@ def _settings(**overrides) -> ReminderSettingsRead:
         "overload_urgent_interval_hours": 4, "overdue_grace_hours_high": 0,
         "overdue_grace_hours_medium": 48, "overdue_grace_hours_low": 168,
         "undated_escalation_days_high": 7, "undated_escalation_days_medium": 21,
-        "undated_escalation_days_low": 45, "urgency_reset_days": 7,
+        "undated_escalation_days_low": 45, "urgency_reset_days": 7, "catchup_tasks_per_day": 3, "catchup_stale_days": 30,
+        "catchup_missed_habit_threshold": 3,
     }
     return ReminderSettingsRead(**{**values, **overrides})
 
@@ -114,7 +115,7 @@ class TestSnapshot:
             _task(deadline=NOW - timedelta(days=1), urgency="URGENT", recurrence_rule="FREQ=WEEKLY;BYDAY=MO"),
         ]
 
-        with patch("app.features.core.overload.service.is_due_today", return_value=False):
+        with patch("app.features.organizer.tasks.recurrence.is_due_today", return_value=False):
             snapshot = await service.snapshot()
 
         assert (snapshot.overdue, snapshot.urgent, snapshot.active) == (0, 0, 0)
@@ -124,7 +125,7 @@ class TestSnapshot:
             _task(urgency="URGENT", recurrence_rule="FREQ=WEEKLY;BYDAY=FR", is_done_in_cycle=True),
         ]
 
-        with patch("app.features.core.overload.service.is_due_today", return_value=True):
+        with patch("app.features.organizer.tasks.recurrence.is_due_today", return_value=True):
             snapshot = await service.snapshot()
 
         assert snapshot.urgent == 0
@@ -134,7 +135,7 @@ class TestSnapshot:
             _task(urgency="URGENT", recurrence_rule="FREQ=WEEKLY;BYDAY=FR"),
         ]
 
-        with patch("app.features.core.overload.service.is_due_today", return_value=True):
+        with patch("app.features.organizer.tasks.recurrence.is_due_today", return_value=True):
             snapshot = await service.snapshot()
 
         assert (snapshot.urgent, snapshot.active) == (1, 1)

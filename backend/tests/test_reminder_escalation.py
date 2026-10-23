@@ -10,7 +10,8 @@ def _settings(**overrides) -> ReminderSettingsRead:
         "overload_urgent_interval_hours": 4, "overdue_grace_hours_high": 0,
         "overdue_grace_hours_medium": 48, "overdue_grace_hours_low": 168,
         "undated_escalation_days_high": 7, "undated_escalation_days_medium": 21,
-        "undated_escalation_days_low": 45, "urgency_reset_days": 7,
+        "undated_escalation_days_low": 45, "urgency_reset_days": 7, "catchup_tasks_per_day": 3, "catchup_stale_days": 30,
+        "catchup_missed_habit_threshold": 3,
     }
     return ReminderSettingsRead(**{**values, **overrides})
 

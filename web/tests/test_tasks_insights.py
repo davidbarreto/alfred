@@ -1,3 +1,5 @@
+import httpx
+
 def _task(id=1, title="Buy milk", status="TODO", priority="LOW", urgency="NORMAL",
           deadline=None, tags=None, recurrence_rule=None, created_at=None, completed_at=None,
           streak=None, total_completions=None, missed_count=None):
@@ -23,10 +25,26 @@ def _pause_log(id=1, started_at="2026-09-14T09:00:00+00:00", ended_at="2026-09-1
     }
 
 
-def _fake_get(tasks=None, history=None, pause_history=None):
+def _overload_day(date="2026-10-20", level="elevated", peak_overdue=3, peak_urgent=2, tasks_omitted=0):
+    return {
+        "date": date, "level": level, "peak_overdue": peak_overdue, "peak_urgent": peak_urgent,
+        "peak_active": 15, "reminder_runs": 15, "tasks_listed": 10, "tasks_omitted": tasks_omitted,
+        "first_overloaded_at": None,
+    }
+
+
+def _overload_status(level="overloaded", overdue=7, urgent=5):
+    return {
+        "level": level, "overdue": overdue, "urgent": urgent, "active": 20,
+        "overdue_threshold": 5, "urgent_threshold": 4, "streak_days": 2,
+    }
+
+
+def _fake_get(tasks=None, history=None, pause_history=None, overload_status=None, overload_history=None):
     tasks = tasks or []
     history = history or []
     pause_history = pause_history or []
+    overload_history = overload_history or []
 
     async def fake_get(path, params=None):
         if path == "/organizer/tasks":
@@ -35,6 +53,10 @@ def _fake_get(tasks=None, history=None, pause_history=None):
             return history
         if path == "/core/pause/history":
             return pause_history
+        if path == "/core/overload/status":
+            return overload_status or []
+        if path == "/core/overload/history":
+            return overload_history
         return []
 
     return fake_get
@@ -194,3 +216,62 @@ class TestTimeToComplete:
 
         assert resp.status_code == 200
         assert "No data" in resp.text
+
+
+class TestOverloadSection:
+    def test_shows_current_level_and_history_totals(self, client, mock_api):
+        mock_api["get"].side_effect = _fake_get(
+            overload_status=_overload_status(),
+            overload_history=[
+                _overload_day("2026-10-20", level="overloaded", peak_overdue=9, tasks_omitted=4),
+                _overload_day("2026-10-21", level="overloaded", peak_overdue=6, tasks_omitted=3),
+                _overload_day("2026-10-22", level="ok", peak_overdue=1, tasks_omitted=0),
+            ],
+        )
+
+        resp = client.get("/tasks/insights")
+
+        assert resp.status_code == 200
+        assert "Overloaded" in resp.text
+        assert "7 overdue · 5 urgent" in resp.text
+        assert 'id="chart-overload"' in resp.text
+        assert '"Oct 20", "Oct 21", "Oct 22"' in resp.text
+        assert "[9, 6, 1]" in resp.text
+
+    def test_requests_the_last_30_days(self, client, mock_api):
+        mock_api["get"].side_effect = _fake_get()
+
+        client.get("/tasks/insights")
+
+        mock_api["get"].assert_any_await("/core/overload/history", params={"days": 30})
+        mock_api["get"].assert_any_await("/core/overload/status", params=None)
+
+    def test_no_history_shows_an_empty_state_and_no_chart(self, client, mock_api):
+        mock_api["get"].side_effect = _fake_get(overload_status=_overload_status(level="ok", overdue=0, urgent=0))
+
+        resp = client.get("/tasks/insights")
+
+        assert "A row is recorded on each reminder run" in resp.text
+        assert 'id="chart-overload"' not in resp.text
+
+    def test_page_still_renders_when_the_overload_endpoints_fail(self, client, mock_api):
+        base = _fake_get()
+
+        async def fake_get(path, params=None):
+            if path.startswith("/core/overload"):
+                raise httpx.ConnectError("down")
+            return await base(path, params)
+
+        mock_api["get"].side_effect = fake_get
+
+        resp = client.get("/tasks/insights")
+
+        assert resp.status_code == 200
+        assert "Overload" in resp.text
+
+    def test_loads_the_settings_form_lazily(self, client, mock_api):
+        mock_api["get"].side_effect = _fake_get()
+
+        resp = client.get("/tasks/insights")
+
+        assert 'hx-get="/overload/settings"' in resp.text

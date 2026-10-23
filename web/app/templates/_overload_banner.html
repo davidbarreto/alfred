@@ -1,0 +1,29 @@
+{% if status.level == "overloaded" %}
+<div class="rounded-lg bg-[#FCEBEB] border border-[#E24B4A]/20 px-4 py-3 text-sm text-[#A32D2D] flex flex-wrap items-center gap-x-4 gap-y-2">
+  <div class="flex-1 min-w-[16rem]">
+    <div class="font-medium flex items-center gap-1.5">
+      <i class="ti ti-alert-triangle-filled"></i>
+      You're overloaded{% if status.streak_days > 1 %} <span class="font-normal">· day {{ status.streak_days }} in a row</span>{% endif %}
+    </div>
+    <div class="text-xs mt-0.5">
+      {{ status.overdue }} overdue, {{ status.urgent }} urgent (overloaded from {{ status.overdue_threshold }} overdue or {{ status.urgent_threshold }} urgent).
+      Telegram reminders now show only the top tasks, less often.
+    </div>
+  </div>
+  <div class="flex items-center gap-2">
+    <a href="/tasks" class="btn btn-sm btn-ghost">Review tasks</a>
+    <button type="button" class="btn btn-sm btn-ghost gap-1"
+            hx-post="/overload/reset" hx-swap="none"
+            hx-confirm="Reset urgency for all tasks? Urgent tasks go back to Normal, overdue deadlines move ahead and undated tasks are snoozed. Priority is never changed.">
+      <i class="ti ti-refresh text-sm"></i>Reset urgency
+    </button>
+  </div>
+</div>
+{% elif status.level == "elevated" %}
+<div class="rounded-lg bg-[#FAEEDA] border border-[#BA7517]/20 px-4 py-2.5 text-xs text-[#8A5A00] flex items-center gap-2">
+  <i class="ti ti-alert-circle"></i>
+  Backlog building up: {{ status.overdue }} overdue, {{ status.urgent }} urgent.
+  Reminders switch to limited mode at {{ status.overdue_threshold }} overdue or {{ status.urgent_threshold }} urgent.
+  <a href="/tasks" class="ml-auto text-[#378ADD] hover:underline">Review tasks →</a>
+</div>
+{% endif %}

@@ -378,6 +378,17 @@ Personal measurement log (`metrics` schema). Design and phases: `docs/plans/metr
 
 ---
 
+## Reminders & Overload
+
+Hourly n8n cron (`AlfredReminders`, 08:00-22:00) -> `GET /core/reminders/due` -> one digest message. Logic in `app/features/core/reminders/` (`service.py`, pure rules in `escalation.py`).
+
+- **Escalation depends on priority.** Overdue tasks become URGENT after a grace period (HIGH 0h, MEDIUM 48h, LOW 168h); undated tasks after an age (7/21/45 days). Urgent re-remind cadence also depends on priority (HIGH hourly, MEDIUM 2h, LOW 4h). Escalation is persisted through `TaskService` (Notion write-through) and never reverses by itself; `POST /core/urgency-reset` is the way back.
+- **Overload** (`app/features/core/overload/`): `OverloadService.snapshot()` counts overdue/urgent pending tasks and classifies `ok` / `elevated` (half the thresholds) / `overloaded`. Each reminder run upserts one `core.overload_log` row per day (worst level, peaks, runs, tasks listed/omitted). `GET /core/overload/status|history` feed the portal banner (dashboard + tasks) and the Overload section of `/tasks/insights`. Runs skipped by the global pause are not logged, so a pause breaks the "days in a row" streak.
+- **While overloaded** the digest lists at most `overload_max_listed` tasks (urgent first), adds "+K more", slows urgent reminders to `overload_urgent_interval_hours`, and prefixes a header. Only listed tasks get a dedup marker, so the rest rotate into later runs. A one-off "Backlog cleared" line is sent when the level returns to `ok`.
+- **Settings** live in `core.settings` as `reminders.<field>` (`ReminderSettingsService`, `GET/PUT /core/reminder-settings`, form under Overload in `/tasks/insights`); defaults are constants in `settings_service.py`, `urgency_reset_days` falls back to its env var. `UNDATED_TASK_SNOOZE_DAYS` is still env-only.
+
+---
+
 ## Infrastructure Notes
 
 - **Docker Compose** — environment variables injected at runtime; never bake secrets into images

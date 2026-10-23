@@ -18,6 +18,7 @@ _TIME_TO_COMPLETE_BUCKETS = [
     ("<1wk", timedelta(weeks=1)),
 ]
 _TIME_TO_COMPLETE_OVERFLOW = ">1wk"
+_OVERLOAD_DAYS = 30
 
 
 def _expected_30d(rule: str) -> int:
@@ -77,6 +78,20 @@ def _format_duration(delta: timedelta) -> str:
     return f"{minutes}m"
 
 
+def _build_overload(status: dict | None, history: list[dict]) -> dict:
+    return {
+        "status": status,
+        "has_history": bool(history),
+        "days_overloaded": sum(1 for day in history if day["level"] == "overloaded"),
+        "days_tracked": len(history),
+        "tasks_omitted": sum(day["tasks_omitted"] for day in history),
+        "peak_overdue": max((day["peak_overdue"] for day in history), default=0),
+        "labels": [date.fromisoformat(day["date"]).strftime("%b %d") for day in history],
+        "overdue": [day["peak_overdue"] for day in history],
+        "urgent": [day["peak_urgent"] for day in history],
+    }
+
+
 def _parse_dt(value: str) -> datetime:
     return datetime.fromisoformat(value.replace("Z", "+00:00"))
 
@@ -84,11 +99,14 @@ def _parse_dt(value: str) -> datetime:
 @router.get("", response_class=HTMLResponse)
 async def tasks_insights_page(request: Request):
     all_tasks, task_history, pause_history = [], [], []
+    overload_status, overload_history = None, []
 
     for path, params, target in [
         ("/organizer/tasks", {"status": "ALL", "limit": 200}, "tasks"),
         ("/organizer/tasks/history", {"days": 90}, "task_history"),
         ("/core/pause/history", {"limit": 200}, "pause_history"),
+        ("/core/overload/status", None, "overload_status"),
+        ("/core/overload/history", {"days": _OVERLOAD_DAYS}, "overload_history"),
     ]:
         try:
             result = await api.get(path, params=params)
@@ -98,6 +116,10 @@ async def tasks_insights_page(request: Request):
                 task_history = result
             elif target == "pause_history":
                 pause_history = result
+            elif target == "overload_status":
+                overload_status = result
+            elif target == "overload_history":
+                overload_history = result
         except httpx.HTTPError:
             pass
 
@@ -215,6 +237,9 @@ async def tasks_insights_page(request: Request):
         "by_weekday": by_weekday,
         "completion_rate_by_priority": completion_rate_by_priority,
         "time_to_complete": time_to_complete_chart,
+        # overload
+        "overload": _build_overload(overload_status, overload_history),
+        "overload_days": _OVERLOAD_DAYS,
         # pauses
         "pause_rows": pause_rows,
         "total_pauses": len(pause_rows),

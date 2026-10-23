@@ -18,6 +18,11 @@ router = APIRouter(
 
 _TELEGRAM_API = "https://api.telegram.org"
 
+# Telegram documents a 100-command limit, but setMyCommands also rejects the list with
+# BOT_COMMANDS_TOO_MUCH once the combined command + description text grows past ~5.7k
+# characters (observed: 5679 accepted, 5825 rejected). Stay well under it.
+_MAX_TOTAL_CHARS = 5000
+
 
 class TelegramCommandEntry(BaseModel):
     command: str
@@ -40,6 +45,23 @@ def _build_telegram_commands() -> list[TelegramCommandEntry]:
                 continue
             command = aliases[0].lstrip("/").lower()
             entries.append(TelegramCommandEntry(command=command, description=description))
+    return _fit_to_budget(entries)
+
+
+def _truncate(text: str, limit: int) -> str:
+    return text if len(text) <= limit else text[: limit - 1].rstrip() + "…"
+
+
+def _fit_to_budget(entries: list[TelegramCommandEntry]) -> list[TelegramCommandEntry]:
+    """Shorten descriptions with the largest uniform cap that keeps the list within budget."""
+    longest = max((len(e.description) for e in entries), default=0)
+    for cap in range(longest, 0, -1):
+        fitted = [
+            TelegramCommandEntry(command=e.command, description=_truncate(e.description, cap))
+            for e in entries
+        ]
+        if sum(len(e.command) + len(e.description) for e in fitted) <= _MAX_TOTAL_CHARS:
+            return fitted
     return entries
 
 

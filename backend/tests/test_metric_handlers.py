@@ -88,6 +88,12 @@ class TestLog:
         await handle_metric("log", {"series": "sleep", "value": "7,5"}, service)
         assert service.log.await_args.args[0].value == 7.5
 
+    async def test_log_passes_the_unit_flag(self):
+        service = AsyncMock()
+        service.log.return_value = MetricActionResult(message="Logged", entry=_read())
+        await handle_metric("log", {"series": "weight", "value": "80", "unit": "kg"}, service)
+        assert service.log.await_args.args[0].unit == "kg"
+
     async def test_no_value_is_a_count(self):
         service = AsyncMock()
         service.log.return_value = MetricActionResult(message="Logged", entry=_read())

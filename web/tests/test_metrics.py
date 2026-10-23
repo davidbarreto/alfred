@@ -144,6 +144,20 @@ class TestSeriesPage:
         routes.update(overrides)
         return routes
 
+    def test_edit_form_is_prefilled_and_hides_unit_for_timers(self, client, mock_api):
+        _route(mock_api, self._routes(**{"/metrics/series/commute-work": _series(unit=None)}))
+        html = client.get("/metrics/commute-work").text
+        assert 'id="edit-series-form"' in html and 'value="commute-work"' in html
+        assert 'name="unit"' not in html
+
+    def test_edit_form_offers_the_unit_for_value_series(self, client, mock_api):
+        _route(mock_api, self._routes(**{
+            "/metrics/series/commute-work": _series(kind="value", unit="kg"),
+            "/metrics/series/commute-work/stats": _stats("value"),
+        }))
+        html = client.get("/metrics/commute-work").text
+        assert 'name="unit"' in html and 'value="kg"' in html
+
     def test_renders_stats_best_option_and_breakdowns(self, client, mock_api):
         _route(mock_api, self._routes())
 
@@ -304,6 +318,18 @@ class TestWrites:
         mock_api["post"].return_value = {"name": "sleep"}
         resp = client.post("/metrics/series", json={"name": "Sleep", "kind": "value"})
         assert resp.status_code == 200 and mock_api["post"].await_args.args[0] == "/metrics/series"
+
+    def test_update_series_patches_the_backend(self, client, mock_api):
+        mock_api["patch"].return_value = {"name": "weight", "unit": "kg"}
+        resp = client.patch("/metrics/series/weight", json={"unit": "kg"})
+        assert resp.status_code == 200 and resp.json()["unit"] == "kg"
+        assert mock_api["patch"].await_args.args[0] == "/metrics/series/weight"
+        assert mock_api["patch"].await_args.kwargs["json"] == {"unit": "kg"}
+
+    def test_update_series_relays_a_name_clash(self, client, mock_api):
+        mock_api["patch"].side_effect = _status_error(409, "Series name already taken")
+        resp = client.patch("/metrics/series/weight", json={"name": "sleep"})
+        assert resp.status_code == 409 and resp.json()["error"] == "Series name already taken"
 
     def test_create_entry_and_discard(self, client, mock_api):
         mock_api["post"].return_value = {"id": 5}

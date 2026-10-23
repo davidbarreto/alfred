@@ -93,6 +93,13 @@ async def create_series(request: Request):
     return await _forward(api.post("/metrics/series", json=await request.json()), "Could not create the series.")
 
 
+@router.patch("/series/{name}")
+async def update_series(name: str, request: Request):
+    return await _forward(
+        api.patch(f"/metrics/series/{_seg(name)}", json=await request.json()), "Could not update the series."
+    )
+
+
 @router.post("/quick/{action}")
 async def quick_action(action: str, request: Request):
     if action not in _QUICK_ACTIONS:

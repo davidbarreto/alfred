@@ -191,6 +191,9 @@ class MetricEntryService:
     async def log(self, data: MetricLog, source: str) -> MetricActionResult:
         kind = "value" if data.value is not None else "count"
         series, created = await self._resolve_series(data.series, kind)
+        if data.unit and data.unit != series.unit:
+            series = await self._series.update_series(series.id, {"unit": data.unit}) or series
+            logger.info("Metric series unit set: id=%d name=%r", series.id, series.name)
         snapshot = await self._snapshot(data.lat, data.lon)
         entry = await self._repo.create_entry(
             {

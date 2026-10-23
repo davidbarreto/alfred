@@ -83,7 +83,11 @@ async def handle_metric(
                 except ValueError:
                     raise _bad_request(f"value must be a number, got {raw_value!r}")
             data = MetricLog(
-                series=_series(arguments), value=value, tags=_tags(arguments), note=arguments.get("note")
+                series=_series(arguments),
+                value=value,
+                unit=arguments.get("unit"),
+                tags=_tags(arguments),
+                note=arguments.get("note"),
             )
             result = await service.log(data, entry_source)
             return {"id": result.entry.id, "message": result.message}

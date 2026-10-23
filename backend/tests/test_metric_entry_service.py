@@ -285,6 +285,40 @@ class TestLog:
         with pytest.raises(ValueError):
             MetricLog(series="sleep", value=float("nan"))
 
+    async def test_unit_flag_sets_the_unit_on_a_series_without_one(self, make_service):
+        service = make_service()
+        weight = _series("weight", "value")
+        service._series.get_series_by_name.return_value = weight
+        service._series.update_series.return_value = _series("weight", "value", unit="kg")
+        service._repo.create_entry.return_value = _entry(weight, status="closed", value=80)
+
+        result = await service.log(MetricLog(series="weight", value=80, unit=" kg "), "telegram")
+
+        service._series.update_series.assert_awaited_once_with(weight.id, {"unit": "kg"})
+        assert result.message.startswith("Logged weight: 80 kg")
+
+    async def test_unit_flag_changes_a_different_unit(self, make_service):
+        service = make_service()
+        service._series.get_series_by_name.return_value = _series("weight", "value", unit="lb")
+        service._series.update_series.return_value = _series("weight", "value", unit="kg")
+        service._repo.create_entry.return_value = _entry(_series("weight", "value"), status="closed", value=80)
+
+        await service.log(MetricLog(series="weight", value=80, unit="kg"), "telegram")
+
+        service._series.update_series.assert_awaited_once()
+
+    async def test_same_unit_is_not_rewritten(self, make_service):
+        service = make_service()
+        service._series.get_series_by_name.return_value = _series("weight", "value", unit="kg")
+        service._repo.create_entry.return_value = _entry(_series("weight", "value"), status="closed", value=80)
+
+        await service.log(MetricLog(series="weight", value=80, unit="kg"), "telegram")
+
+        service._series.update_series.assert_not_awaited()
+
+    def test_blank_unit_is_treated_as_missing(self):
+        assert MetricLog(series="weight", value=80, unit="  ").unit is None
+
 
 class TestManualEntries:
     async def test_create_duration_needs_an_end(self, make_service):

@@ -56,6 +56,7 @@ class MetricStop(_Location):
 class MetricLog(_Location, _Tagged):
     series: str
     value: float | None = Field(default=None, allow_inf_nan=False)
+    unit: str | None = Field(default=None, max_length=20)
     tags: list[str] = Field(default_factory=list)
     note: str | None = None
 
@@ -63,6 +64,11 @@ class MetricLog(_Location, _Tagged):
     @classmethod
     def _clean_series(cls, value: str) -> str:
         return normalize_series_name(value)
+
+    @field_validator("unit")
+    @classmethod
+    def _clean_unit(cls, value: str | None) -> str | None:
+        return value.strip() or None if value is not None else None
 
 
 class MetricEntryCreate(_Tagged):

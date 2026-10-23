@@ -790,9 +790,9 @@ COMMAND_DEFINITIONS = {
             "arg_keys": ["series"],
         },
         "log": {
-            "description": "Log a value or count, e.g. /mlog sleep 7.5 or /mlog coffee (no value counts one event)",
+            "description": "Log a value or count, e.g. /mlog weight 80 --unit kg or /mlog coffee (no value counts one event)",
             "aliases": ["/mlog", "/metriclog"],
-            "flags": {**FLAG_TAGS, "--note": "note"},
+            "flags": {**FLAG_TAGS, "--note": "note", "--unit": "unit"},
             "requires_args": True,
             "arg_keys": ["series", "value"],
         },

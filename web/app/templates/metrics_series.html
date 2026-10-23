@@ -46,6 +46,7 @@
       <a href="/metrics" class="text-gray-400 hover:text-gray-600" title="All metrics"><i class="ti ti-arrow-left"></i></a>
       <h1 class="text-base font-semibold text-gray-900">{{ s.name }}</h1>
       <span class="px-2 py-0.5 rounded-full text-xs bg-gray-100 text-gray-600">{{ {'duration': 'timer', 'value': 'value', 'count': 'count'}[s.kind] }}{% if s.unit %} · {{ s.unit }}{% endif %}</span>
+      <button type="button" onclick="document.getElementById('edit-series').classList.toggle('hidden')" class="text-gray-400 hover:text-gray-600" title="Edit series"><i class="ti ti-pencil"></i></button>
     </div>
     <form method="get" class="flex items-center gap-2">
       <select name="days" onchange="this.form.submit()" class="select select-sm select-bordered">
@@ -60,6 +61,30 @@
         {% endfor %}
       </select>
     </form>
+  </div>
+
+  <!-- Edit -->
+  <div id="edit-series" class="card bg-white hidden">
+    <div class="card-body p-5">
+      <form id="edit-series-form" class="flex flex-wrap items-end gap-3">
+        <label class="space-y-1">
+          <span class="block text-xs text-gray-500">Name</span>
+          <input name="name" required maxlength="64" value="{{ s.name }}" class="input input-sm input-bordered w-48">
+        </label>
+        {% if s.kind != 'duration' %}
+        <label class="space-y-1">
+          <span class="block text-xs text-gray-500">Unit</span>
+          <input name="unit" maxlength="20" value="{{ s.unit or '' }}" placeholder="kg" class="input input-sm input-bordered w-24">
+        </label>
+        {% endif %}
+        <label class="space-y-1 flex-1 min-w-48">
+          <span class="block text-xs text-gray-500">Description</span>
+          <input name="description" value="{{ s.description or '' }}" class="input input-sm input-bordered w-full">
+        </label>
+        <button type="submit" class="btn btn-sm btn-outline">Save</button>
+        <span id="edit-series-error" class="text-xs text-red-600"></span>
+      </form>
+    </div>
   </div>
 
   <!-- Record -->
@@ -218,6 +243,21 @@ async function postJson(url, body) {
   if (!res.ok) throw new Error(data.error || 'Something went wrong.');
   return data;
 }
+
+document.getElementById('edit-series-form')?.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const form = new FormData(event.target);
+  const body = { name: form.get('name'), description: form.get('description') || null };
+  if (form.has('unit')) body.unit = form.get('unit') || null;
+  const error = document.getElementById('edit-series-error');
+  error.textContent = '';
+  const res = await fetch(`/metrics/series/${encodeURIComponent(SERIES)}`, {
+    method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) { error.textContent = data.error || 'Something went wrong.'; return; }
+  location.href = `/metrics/${encodeURIComponent(data.name)}`;
+});
 
 async function quick(action, body) {
   const message = document.getElementById('record-message');

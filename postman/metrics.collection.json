@@ -348,7 +348,8 @@
               "const j = pm.response.json();",
               "pm.test('Series auto-created', () => pm.expect(j.series_created).to.eql(true));",
               "pm.test('Value stored', () => pm.expect(j.entry.value).to.eql(7.5));",
-              "pm.test('Kind is value', () => pm.expect(j.entry.series_kind).to.eql('value'));"
+              "pm.test('Kind is value', () => pm.expect(j.entry.series_kind).to.eql('value'));",
+              "pm.test('Unit flag applied', () => pm.expect(j.message).to.include('7.5 kg'));"
             ],
             "type": "text/javascript"
           }
@@ -375,7 +376,7 @@
         },
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"series\": \"{{metric_value_series}}\",\n  \"value\": 7.5\n}"
+          "raw": "{\n  \"series\": \"{{metric_value_series}}\",\n  \"value\": 7.5,\n  \"unit\": \"kg\"\n}"
         }
       }
     },

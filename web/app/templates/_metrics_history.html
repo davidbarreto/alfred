@@ -1,0 +1,55 @@
+{% macro fmt(value) -%}
+{%- if series.kind == 'duration' -%}{{ value | duration }}{%- else -%}{{ value | number }}{{ ' ' ~ series.unit if series.unit else '' }}{%- endif -%}
+{%- endmacro %}
+
+{% if not entries %}
+<p class="text-sm text-gray-400 py-6 text-center">No entries yet.</p>
+{% else %}
+<div class="divide-y divide-gray-100">
+  {% for e in entries %}
+  {% set precipitation = ((e.context or {}).get('start') or {}).get('precipitation_mm') %}
+  <div class="flex items-center justify-between gap-3 py-2.5 text-sm {% if e.status == 'discarded' %}opacity-40{% endif %}" id="entry-{{ e.id }}">
+    <div class="flex flex-wrap items-center gap-x-3 gap-y-1">
+      <span class="text-gray-900 whitespace-nowrap">{{ e.started_at | local_dt }}</span>
+      <span class="font-medium text-gray-900 whitespace-nowrap">
+        {% if e.status == 'open' %}
+          <span class="text-green-700">running</span>
+        {% elif series.kind == 'duration' %}{{ fmt(e.duration_s) }}
+        {% elif series.kind == 'value' %}{{ fmt(e.value) }}
+        {% else %}<span class="text-gray-400">1×</span>{% endif %}
+      </span>
+      {% for tag in e.tags %}<span class="px-2 py-0.5 rounded-full text-xs bg-gray-100 text-gray-600">{{ tag }}</span>{% endfor %}
+      {% if precipitation is not none and precipitation >= 0.1 %}<i class="ti ti-cloud-rain text-xs text-[#378ADD]" title="Rain when it started ({{ precipitation }} mm)"></i>{% endif %}
+      {% if e.status == 'discarded' %}<span class="text-xs text-gray-500">discarded</span>{% endif %}
+      {% if e.is_stale %}<span class="px-2 py-0.5 rounded-full text-xs text-amber-700 bg-amber-50">stale</span>{% endif %}
+      {% if e.note %}<span class="text-xs text-gray-400 truncate max-w-xs" title="{{ e.note }}">{{ e.note }}</span>{% endif %}
+    </div>
+    <div class="flex items-center gap-2 shrink-0">
+      <span class="text-xs text-gray-400">{{ e.source }}</span>
+      {% if e.status != 'discarded' %}
+      <button onclick="discardEntry({{ e.id }})" class="btn btn-xs btn-ghost text-gray-400" title="Discard"><i class="ti ti-trash"></i></button>
+      {% endif %}
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+<div class="flex items-center justify-between pt-3 mt-1 border-t border-gray-100">
+  <button
+    {% if not history_has_prev %}disabled{% endif %}
+    hx-get="/metrics/{{ series.name }}/history?offset={{ [history_offset - page_size, 0] | max }}{% if tag %}&tag={{ tag | urlencode }}{% endif %}"
+    hx-target="#metric-history"
+    hx-swap="innerHTML"
+    class="btn btn-sm btn-ghost text-xs disabled:opacity-30">
+    <i class="ti ti-chevron-left text-sm"></i>Prev
+  </button>
+  <button
+    {% if not history_has_next %}disabled{% endif %}
+    hx-get="/metrics/{{ series.name }}/history?offset={{ history_offset + page_size }}{% if tag %}&tag={{ tag | urlencode }}{% endif %}"
+    hx-target="#metric-history"
+    hx-swap="innerHTML"
+    class="btn btn-sm btn-ghost text-xs disabled:opacity-30">
+    Next<i class="ti ti-chevron-right text-sm"></i>
+  </button>
+</div>

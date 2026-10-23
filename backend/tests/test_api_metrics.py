@@ -275,3 +275,44 @@ class TestTags:
         client, service = tags
         service.delete_tag.return_value = False
         assert client.delete("/metrics/tags/9", headers=AUTH).status_code == 404
+
+
+class TestStats:
+    @pytest.fixture
+    def stats(self):
+        from app.dependencies import get_metric_stats_service
+        from app.main import app
+
+        service = AsyncMock()
+        app.dependency_overrides[get_metric_stats_service] = lambda: service
+        yield TestClient(app), service
+        app.dependency_overrides.clear()
+
+    @staticmethod
+    def _stats():
+        from app.features.metrics.stats.schemas import GroupStat, MetricStats, MetricTrend
+
+        block = GroupStat(key="all", label="All", n=12, median=2040.0, p90=2600.0, mean=2100.0, min=1500.0, max=3000.0)
+        return MetricStats(
+            series="commute-work", kind="duration", unit=None, sample_threshold=5, excluded_over_cap=0, overall=block,
+            by_tag=[block], by_hour=[], by_weekday=[], by_weather=[],
+            trend=MetricTrend(days=30, recent=block, previous=block),
+        )
+
+    def test_returns_stats_and_passes_filters(self, stats):
+        client, service = stats
+        service.get_stats.return_value = self._stats()
+
+        response = client.get("/metrics/series/Commute-Work/stats?tag=bus&days=14", headers=AUTH)
+
+        assert response.status_code == 200 and response.json()["overall"]["median"] == 2040.0
+        service.get_stats.assert_awaited_once_with("commute-work", tag="bus", days=14)
+
+    def test_unknown_series_is_404(self, stats):
+        client, service = stats
+        service.get_stats.return_value = None
+        assert client.get("/metrics/series/ghost/stats", headers=AUTH).status_code == 404
+
+    def test_days_out_of_range_is_422(self, stats):
+        client, _ = stats
+        assert client.get("/metrics/series/x/stats?days=0", headers=AUTH).status_code == 422

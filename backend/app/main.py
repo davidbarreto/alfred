@@ -89,6 +89,7 @@ from app.api.routes.cs.recommendations import router as cs_recommendations_route
 from app.api.routes.metrics.entries import router as metric_entries_router
 from app.api.routes.metrics.quick import router as metric_quick_router
 from app.api.routes.metrics.series import router as metric_series_router
+from app.api.routes.metrics.stats import router as metric_stats_router
 from app.api.routes.metrics.tags import router as metric_tags_router
 from app.api.routes.study.plans import router as study_plans_router
 from app.api.routes.study.settings import router as study_settings_router
@@ -207,6 +208,7 @@ app.include_router(cs_problems_router)
 app.include_router(cs_submissions_router)
 app.include_router(cs_stats_router)
 app.include_router(cs_recommendations_router)
+app.include_router(metric_stats_router)
 app.include_router(metric_series_router)
 app.include_router(metric_entries_router)
 app.include_router(metric_quick_router)

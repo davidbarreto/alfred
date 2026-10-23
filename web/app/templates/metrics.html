@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+{% set active_page = "metrics" %}
+{% block title %}Metrics{% endblock %}
+
+{% block content %}
+<div class="p-6 space-y-6">
+
+  <div class="flex items-center justify-between">
+    <h1 class="text-base font-semibold text-gray-900">Metrics</h1>
+    <button onclick="document.getElementById('new-series').classList.toggle('hidden')"
+            class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#378ADD] text-xs font-medium text-white hover:bg-[#2f7bc4] transition-colors">
+      <i class="ti ti-plus text-sm"></i>New series
+    </button>
+  </div>
+
+  <div id="new-series" class="card bg-white hidden">
+    <div class="card-body p-5">
+      <form id="new-series-form" class="flex flex-wrap items-end gap-3">
+        <label class="space-y-1">
+          <span class="block text-xs text-gray-500">Name</span>
+          <input name="name" required maxlength="64" placeholder="commute-work" class="input input-sm input-bordered w-48">
+        </label>
+        <label class="space-y-1">
+          <span class="block text-xs text-gray-500">Kind</span>
+          <select name="kind" class="select select-sm select-bordered">
+            <option value="duration">Timer (start / stop)</option>
+            <option value="value">Value (a number)</option>
+            <option value="count">Count (an event)</option>
+          </select>
+        </label>
+        <label class="space-y-1">
+          <span class="block text-xs text-gray-500">Unit (optional)</span>
+          <input name="unit" maxlength="20" placeholder="kg" class="input input-sm input-bordered w-24">
+        </label>
+        <button type="submit" class="btn btn-sm btn-outline">Create</button>
+        <span id="new-series-error" class="text-xs text-red-600"></span>
+      </form>
+      <p class="text-xs text-gray-400 mt-3">Series are also created the first time you use <code>/mstart</code> or <code>/mlog</code> in Telegram.</p>
+    </div>
+  </div>
+
+  {% if not available %}
+  <div class="card bg-white">
+    <div class="card-body p-5">
+      <p class="text-sm text-gray-400">Metrics are unavailable right now.</p>
+    </div>
+  </div>
+  {% elif not cards %}
+  <div class="card bg-white">
+    <div class="card-body p-5">
+      <p class="text-sm text-gray-400">Nothing measured yet. Send <code>/mstart commute-work bus</code> in Telegram, then <code>/mstop</code> when you arrive, or create a series above.</p>
+    </div>
+  </div>
+  {% else %}
+  <div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
+    {% for card in cards %}
+    {% set s = card.series %}
+    {% set st = card.stats %}
+    <a href="/metrics/{{ s.name }}" class="card bg-white hover:shadow-md transition-shadow" id="series-{{ s.name }}">
+      <div class="card-body p-5 space-y-3">
+        <div class="flex items-start justify-between gap-3">
+          <div>
+            <p class="text-sm font-semibold text-gray-900">{{ s.name }}</p>
+            <p class="text-xs text-gray-400">{{ kind_label[s.kind] }} · {{ s.entry_count }} entr{{ 'y' if s.entry_count == 1 else 'ies' }}</p>
+          </div>
+          {% if card.running %}
+          <span class="px-2 py-0.5 rounded-full text-xs font-medium text-green-700 bg-green-50 whitespace-nowrap">
+            <i class="ti ti-player-play-filled text-[10px]"></i> running since {{ card.running.started_at | local_dt }}
+          </span>
+          {% endif %}
+        </div>
+
+        {% if st and st.overall.n %}
+          {% if s.kind == 'count' %}
+          <p class="text-2xl font-semibold text-gray-900">{{ st.overall.n }}<span class="text-sm font-normal text-gray-400"> events</span></p>
+          {% else %}
+          {% set unit = '' if s.kind == 'duration' else (' ' ~ s.unit if s.unit else '') %}
+          <div class="flex items-end gap-6">
+            <div>
+              <p class="text-xs text-gray-400">Median</p>
+              <p class="text-2xl font-semibold text-gray-900">{% if s.kind == 'duration' %}{{ st.overall.median | duration }}{% else %}{{ st.overall.median | number }}{{ unit }}{% endif %}</p>
+            </div>
+            <div>
+              <p class="text-xs text-gray-400">{% if s.kind == 'duration' %}p90{% else %}Mean{% endif %}</p>
+              <p class="text-sm text-gray-700">{% if s.kind == 'duration' %}{{ st.overall.p90 | duration }}{% else %}{{ st.overall.mean | number }}{{ unit }}{% endif %}</p>
+            </div>
+          </div>
+          <p class="text-xs text-gray-400">
+            n={{ st.overall.n }}{% if st.overall.low_confidence %} · too few samples to trust yet{% endif %}
+          </p>
+          {% endif %}
+        {% else %}
+        <p class="text-sm text-gray-400">No finished entries yet.</p>
+        {% endif %}
+      </div>
+    </a>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+</div>
+
+<script>
+document.getElementById('new-series-form')?.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const form = new FormData(event.target);
+  const body = { name: form.get('name'), kind: form.get('kind') };
+  if (form.get('unit')) body.unit = form.get('unit');
+  const error = document.getElementById('new-series-error');
+  error.textContent = '';
+  const res = await fetch('/metrics/series', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) { error.textContent = data.error || 'Something went wrong.'; return; }
+  location.href = `/metrics/${encodeURIComponent(data.name)}`;
+});
+</script>
+{% endblock %}

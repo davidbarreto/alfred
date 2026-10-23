@@ -1,5 +1,6 @@
 from datetime import datetime, timezone
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 from fastapi.templating import Jinja2Templates
 
@@ -55,7 +56,44 @@ def _money(value: int | float | None, decimals: int = 2) -> str:
     return f"{float(value):,.{decimals}f}"
 
 
+def _duration(seconds: int | float | None) -> str:
+    """Seconds as '45 s', '34 min', '1 h 05 min'; mirrors the backend's /mstop reply."""
+    if seconds is None:
+        return ""
+    seconds = int(round(seconds))
+    if seconds < 60:
+        return f"{seconds} s"
+    minutes = round(seconds / 60)
+    if minutes < 60:
+        return f"{minutes} min"
+    hours, rest = divmod(minutes, 60)
+    return f"{hours} h {rest:02d} min" if rest else f"{hours} h"
+
+
+def _local_dt(dt_str: str | None) -> str:
+    """An ISO timestamp rendered like '21 Oct 08:02' in the portal's configured timezone."""
+    if not dt_str:
+        return ""
+    try:
+        dt = datetime.fromisoformat(str(dt_str).replace("Z", "+00:00"))
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        return dt.astimezone(ZoneInfo(get_settings().timezone)).strftime("%d %b %H:%M")
+    except Exception:
+        return str(dt_str)[:16]
+
+
+def _number(value: int | float | None) -> str:
+    """Up to 3 significant decimals, no trailing zeros (7.5, 12, 0.25)."""
+    if value is None:
+        return ""
+    return f"{float(value):.3f}".rstrip("0").rstrip(".")
+
+
 templates.env.filters["timeago"] = _timeago
+templates.env.filters["duration"] = _duration
+templates.env.filters["local_dt"] = _local_dt
+templates.env.filters["number"] = _number
 templates.env.filters["compact_number"] = _compact_number
 templates.env.filters["money"] = _money
 templates.env.filters["country_flag"] = country_flag

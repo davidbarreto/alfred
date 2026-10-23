@@ -105,6 +105,7 @@ from app.shared.exchange_rate import ExchangeRateProvider
 from app.shared.weather import ConditionsProvider, WeatherProvider
 from app.features.metrics.entries.service import MetricEntryService
 from app.features.metrics.series.service import MetricSeriesService
+from app.features.metrics.stats.service import MetricStatsService
 from app.features.metrics.tags.service import MetricTagService
 from app.shared.holiday import HolidayProvider
 from app.shared.pronunciation import PronunciationProvider
@@ -574,6 +575,9 @@ def get_metric_entry_service(session: AsyncSession = Depends(get_session)) -> Me
 def get_metric_series_service(session: AsyncSession = Depends(get_session)) -> MetricSeriesService:
     return MetricSeriesService(session)
 
+def get_metric_stats_service(session: AsyncSession = Depends(get_session)) -> MetricStatsService:
+    return MetricStatsService(session)
+
 def get_metric_tag_service(session: AsyncSession = Depends(get_session)) -> MetricTagService:
     return MetricTagService(session)
 
@@ -692,4 +696,5 @@ InterviewTagServiceDep = Annotated[InterviewTagService, Depends(get_interview_ta
 InterviewCandidateQuestionServiceDep = Annotated[InterviewCandidateQuestionService, Depends(get_interview_candidate_question_service)]
 MetricEntryServiceDep = Annotated[MetricEntryService, Depends(get_metric_entry_service)]
 MetricSeriesServiceDep = Annotated[MetricSeriesService, Depends(get_metric_series_service)]
+MetricStatsServiceDep = Annotated[MetricStatsService, Depends(get_metric_stats_service)]
 MetricTagServiceDep = Annotated[MetricTagService, Depends(get_metric_tag_service)]

@@ -371,7 +371,9 @@ Personal measurement log (`metrics` schema). Design and phases: `docs/plans/metr
 - **No cascades**: every FK is `RESTRICT`. Entries are discarded, series archived or merged; deleting a series with entries is a 409.
 - **Start/stop rules**: `stop` closes the latest open entry; a new `start` discards a still-open one; open entries older than 6 h are stale, and a stop that would make an entry last over 6 h is a 409 (backdate with `--ago`, or discard).
 - **Weather** is a best-effort snapshot (`ConditionsProvider.get_current_conditions`, 4 s timeout) and never blocks a start/stop; with no coordinates it uses Porto and is marked `location_source: default`.
-- **Entry points**: Telegram/MCP commands `/mstart`, `/mstop`, `/mlog`, `/mopen`, `/mhistory`, `/mdiscard` (MCP tool `alfred_metric`), and `POST /metrics/quick/{start,stop,log}` (source taken from `X-Alfred-Client`: `shortcut`, `web`→portal, otherwise `mcp`). Stats, the scoped Shortcut token and the portal page are later phases.
+- **Entry points**: Telegram/MCP commands `/mstart`, `/mstop`, `/mlog`, `/mopen`, `/mhistory`, `/mdiscard` (MCP tool `alfred_metric`), and `POST /metrics/quick/{start,stop,log}` (source taken from `X-Alfred-Client`: `shortcut`, `web`→portal, otherwise `mcp`).
+- **Stats** (`GET /metrics/series/{name}/stats?tag=&days=`): median/p90/mean/min/max over closed entries, broken down by tag, local hour, weekday and weather (rain = at least 0.1 mm in the start snapshot), plus a 30-day vs previous-30-day trend. Groups under 5 samples are flagged `low_confidence` and never ranked as "best" (needs two confident groups). Closed durations over 6 h are excluded and reported as `excluded_over_cap`. Count series only get `n`.
+- **Portal** (`/metrics`, `/metrics/{name}`): series cards, start/stop/log buttons (the browser's geolocation is sent when allowed so the weather matches where you are), stats and breakdowns, paginated history, manual entry, discard. Writes go through `POST /metrics/{series,quick/{action},entries,entries/{id}/discard}` which proxy to the backend and relay its error message. The scoped Shortcut token is a later phase.
 
 ---
 

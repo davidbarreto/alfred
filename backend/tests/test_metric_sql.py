@@ -83,3 +83,52 @@ class TestSchemaDefinition:
     def test_tag_names_are_unique_ignoring_case(self):
         index = next(i for i in MetricTag.__table__.indexes if i.name == "uq_metric_tags_name_lower")
         assert index.unique and "lower" in str(CreateIndex(index).compile(dialect=postgresql.dialect())).lower()
+
+
+class TestStatsQueries:
+    @staticmethod
+    async def _compile(**kwargs) -> str:
+        from app.features.metrics.stats.repository import MetricStatsRepository
+
+        session = _session()
+        await MetricStatsRepository(session).get_stats(1, kwargs.pop("kind", "duration"), "Europe/Lisbon", 21600, **kwargs)
+        return _sql(session.execute.call_args.args[0])
+
+    async def test_duration_aggregates_derived_seconds_of_closed_entries_under_the_cap(self):
+        sql = await self._compile()
+        assert "percentile_cont(0.5) within group" in sql and "percentile_cont(0.9) within group" in sql
+        assert "extract(epoch from metrics.entries.ended_at - metrics.entries.started_at)" in sql
+        assert "metrics.entries.status = 'closed'" in sql and "<= 21600" in sql
+
+    async def test_value_series_aggregate_the_stored_value_without_a_cap(self):
+        sql = await self._compile(kind="value")
+        assert "metrics.entries.value" in sql and "<= 21600" not in sql
+
+    async def test_hours_and_weekdays_are_taken_in_the_local_timezone(self):
+        hour = await self._compile(group_by="hour")
+        weekday = await self._compile(group_by="weekday")
+        assert "extract(hour from timezone('europe/lisbon'" in hour
+        assert "isodow" in weekday and "group by" in weekday
+
+    async def test_weather_groups_use_the_start_snapshot(self):
+        sql = await self._compile(group_by="weather")
+        assert "context -> 'start'" in sql and "precipitation_mm" in sql
+        assert "'unknown'" in sql and "'dry'" in sql and "'rain'" in sql
+
+    async def test_tag_groups_join_the_tag_tables_case_insensitively(self):
+        sql = await self._compile(group_by="tag")
+        assert "join metrics.tags" in sql and "group by lower(metrics.tags.name)" in sql
+
+    async def test_window_and_tag_filters(self):
+        since = datetime(2026, 9, 1, tzinfo=timezone.utc)
+        sql = await self._compile(since=since, until=datetime(2026, 10, 1, tzinfo=timezone.utc), tag="Bus")
+        assert "started_at >=" in sql and "started_at <" in sql and "lower(metrics.tags.name) = 'bus'" in sql
+
+    async def test_over_cap_count_query(self):
+        from app.features.metrics.stats.repository import MetricStatsRepository
+
+        session = _session()
+        session.scalar.return_value = 3
+        assert await MetricStatsRepository(session).count_over_cap(1, 21600) == 3
+        sql = _sql(session.scalar.call_args.args[0])
+        assert "> 21600" in sql and "status = 'closed'" in sql

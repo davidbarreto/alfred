@@ -1,0 +1,290 @@
+{% extends "base.html" %}
+{% set active_page = "metrics" %}
+{% block title %}{{ series.name }} · Metrics{% endblock %}
+
+{% macro fmt(value) -%}
+{%- if value is none -%}–{%- elif series.kind == 'duration' -%}{{ value | duration }}{%- else -%}{{ value | number }}{{ ' ' ~ series.unit if series.unit else '' }}{%- endif -%}
+{%- endmacro %}
+
+{% macro breakdown(title, groups, hint='') %}
+{% if groups | length > 0 %}
+{% set measured = series.kind != 'count' %}
+{% set top = (groups | map(attribute='median' if measured else 'n') | reject('none') | max) or 1 %}
+<div class="card bg-white">
+  <div class="card-body p-5 space-y-3">
+    <div>
+      <p class="text-sm font-semibold text-gray-900">{{ title }}</p>
+      {% if hint %}<p class="text-xs text-gray-400">{{ hint }}</p>{% endif %}
+    </div>
+    <div class="space-y-2">
+      {% for g in groups %}
+      {% set size = (g.median if measured else g.n) or 0 %}
+      <div class="grid grid-cols-[5rem_1fr_auto] items-center gap-3 text-sm {% if g.low_confidence %}opacity-50{% endif %}"
+           title="{% if g.low_confidence %}Only {{ g.n }} sample{{ '' if g.n == 1 else 's' }}: not enough to compare yet{% endif %}">
+        <span class="text-gray-700 truncate">{{ g.label }}</span>
+        <div class="h-2 rounded-full bg-gray-100 overflow-hidden">
+          <div class="h-2 rounded-full bg-[#378ADD]" style="width: {{ (size / top * 100) | round(1) }}%"></div>
+        </div>
+        <span class="text-xs text-gray-600 whitespace-nowrap text-right">
+          {% if measured %}{{ fmt(g.median) }}{% if series.kind == 'duration' %} <span class="text-gray-400">p90 {{ fmt(g.p90) }}</span>{% endif %}{% endif %}
+          <span class="text-gray-400">n={{ g.n }}</span>
+        </span>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+{% endif %}
+{% endmacro %}
+
+{% block content %}
+{% set s = series %}
+<div class="p-6 space-y-6">
+
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <div class="flex items-center gap-3">
+      <a href="/metrics" class="text-gray-400 hover:text-gray-600" title="All metrics"><i class="ti ti-arrow-left"></i></a>
+      <h1 class="text-base font-semibold text-gray-900">{{ s.name }}</h1>
+      <span class="px-2 py-0.5 rounded-full text-xs bg-gray-100 text-gray-600">{{ {'duration': 'timer', 'value': 'value', 'count': 'count'}[s.kind] }}{% if s.unit %} · {{ s.unit }}{% endif %}</span>
+    </div>
+    <form method="get" class="flex items-center gap-2">
+      <select name="days" onchange="this.form.submit()" class="select select-sm select-bordered">
+        {% for value, label in windows.items() %}
+        <option value="{{ value }}" {% if value == window %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+      <select name="tag" onchange="this.form.submit()" class="select select-sm select-bordered">
+        <option value="">All tags</option>
+        {% for t in tag_options %}
+        <option value="{{ t }}" {% if selected_tag and t | lower == selected_tag | lower %}selected{% endif %}>{{ t }}</option>
+        {% endfor %}
+      </select>
+    </form>
+  </div>
+
+  <!-- Record -->
+  <div class="card bg-white">
+    <div class="card-body p-5 space-y-3">
+      <datalist id="tag-options">{% for t in tag_options %}<option value="{{ t }}">{% endfor %}</datalist>
+      {% if s.kind == 'duration' and running %}
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <p class="text-sm text-gray-700">
+          <i class="ti ti-player-play-filled text-green-600"></i>
+          Running since <span class="font-medium">{{ running.started_at | local_dt }}</span>
+          {% if running.tags %}<span class="text-gray-400">· {{ running.tags | join(', ') }}</span>{% endif %}
+          {% if running.is_stale %}<span class="ml-1 px-2 py-0.5 rounded-full text-xs text-amber-700 bg-amber-50">over 6 h: forgot to stop?</span>{% endif %}
+        </p>
+        <div class="flex items-center gap-2">
+          <input id="ago" placeholder="ended ago, e.g. 5m" class="input input-sm input-bordered w-40" title="Backdate the stop, e.g. 5m or 1h30m">
+          <button onclick="stopTimer()" class="btn btn-sm btn-outline">Stop</button>
+          <button onclick="discardEntry({{ running.id }})" class="btn btn-sm btn-ghost text-gray-500">Discard</button>
+        </div>
+      </div>
+      {% elif s.kind == 'duration' %}
+      <div class="flex flex-wrap items-center gap-2">
+        <input id="record-tags" list="tag-options" placeholder="tags, comma separated (bus, rain…)" class="input input-sm input-bordered w-72">
+        <button onclick="startTimer()" class="btn btn-sm bg-[#378ADD] text-white border-0 hover:bg-[#2f7bc4]"><i class="ti ti-player-play-filled"></i>Start</button>
+      </div>
+      {% else %}
+      <div class="flex flex-wrap items-center gap-2">
+        {% if s.kind == 'value' %}<input id="record-value" type="number" step="any" placeholder="value{{ ' (' ~ s.unit ~ ')' if s.unit else '' }}" class="input input-sm input-bordered w-36">{% endif %}
+        <input id="record-tags" list="tag-options" placeholder="tags, comma separated" class="input input-sm input-bordered w-72">
+        <button onclick="logEntry()" class="btn btn-sm bg-[#378ADD] text-white border-0 hover:bg-[#2f7bc4]"><i class="ti ti-plus"></i>Log</button>
+      </div>
+      {% endif %}
+      <p id="record-message" class="text-xs text-gray-500"></p>
+      <p class="text-xs text-gray-400">The browser may ask for your location so the weather snapshot matches where you are; without it the weather is Porto's.</p>
+    </div>
+  </div>
+
+  {% if not stats %}
+  <div class="card bg-white"><div class="card-body p-5"><p class="text-sm text-gray-400">Statistics are unavailable right now.</p></div></div>
+  {% elif stats.overall.n == 0 %}
+  <div class="card bg-white"><div class="card-body p-5"><p class="text-sm text-gray-400">No finished entries{% if selected_tag or window %} in this view{% endif %} yet.</p></div></div>
+  {% else %}
+
+  <!-- Headline -->
+  <div class="grid grid-cols-2 md:grid-cols-6 gap-3">
+    {% set o = stats.overall %}
+    {% if s.kind == 'count' %}
+    <div class="card bg-white"><div class="card-body p-4"><p class="text-xs text-gray-400">Events</p><p class="text-xl font-semibold text-gray-900">{{ o.n }}</p></div></div>
+    {% else %}
+    {% for label, value in [('Median', o.median), ('p90', o.p90), ('Mean', o.mean), ('Min', o.min), ('Max', o.max)] %}
+    {% if not (s.kind == 'value' and label == 'p90') %}
+    <div class="card bg-white"><div class="card-body p-4">
+      <p class="text-xs text-gray-400">{{ label }}</p>
+      <p class="text-xl font-semibold text-gray-900">{{ fmt(value) }}</p>
+    </div></div>
+    {% endif %}
+    {% endfor %}
+    <div class="card bg-white"><div class="card-body p-4"><p class="text-xs text-gray-400">Samples</p><p class="text-xl font-semibold text-gray-900">{{ o.n }}</p></div></div>
+    {% endif %}
+  </div>
+  {% if o.low_confidence %}
+  <p class="text-xs text-amber-700">Only {{ o.n }} sample{{ '' if o.n == 1 else 's' }} so far (under {{ stats.sample_threshold }}): treat these numbers as a first impression.</p>
+  {% endif %}
+
+  {% if stats.best_tag or stats.best_hour %}
+  <div class="rounded-lg border border-green-100 bg-green-50 px-4 py-3 text-sm text-green-800 space-y-0.5" id="best-option">
+    {% if stats.best_tag %}<p><i class="ti ti-trophy"></i> Best option: <span class="font-medium">{{ stats.best_tag.label }}</span> (median {{ fmt(stats.best_tag.median) }}, n={{ stats.best_tag.n }})</p>{% endif %}
+    {% if stats.best_hour %}<p><i class="ti ti-clock"></i> Best hour to start: <span class="font-medium">{{ stats.best_hour.label }}</span> (median {{ fmt(stats.best_hour.median) }}, n={{ stats.best_hour.n }})</p>{% endif %}
+  </div>
+  {% endif %}
+
+  {% set t = stats.trend %}
+  {% if t.recent.n and t.previous.n %}
+  <p class="text-sm text-gray-600">
+    Last {{ t.days }} days
+    {% if s.kind == 'count' %}
+    {{ t.recent.n }} events vs {{ t.previous.n }} in the {{ t.days }} days before.
+    {% else %}
+    median {{ fmt(t.recent.median) }} (n={{ t.recent.n }}) vs {{ fmt(t.previous.median) }} (n={{ t.previous.n }}) before.
+    {% endif %}
+  </p>
+  {% endif %}
+
+  {% if stats.excluded_over_cap %}
+  <p class="text-xs text-gray-400">{{ stats.excluded_over_cap }} entr{{ 'y' if stats.excluded_over_cap == 1 else 'ies' }} longer than 6 h {{ 'is' if stats.excluded_over_cap == 1 else 'are' }} left out of these numbers (probably a forgotten stop).</p>
+  {% endif %}
+
+  <!-- Breakdowns -->
+  <div class="grid grid-cols-1 xl:grid-cols-2 gap-4">
+    {{ breakdown('By tag', stats.by_tag, 'The options you compare') }}
+    {{ breakdown('By hour of day', stats.by_hour, 'When the entry started') }}
+    {{ breakdown('By weekday', stats.by_weekday) }}
+    {{ breakdown('By weather', stats.by_weather, 'Rain = at least 0.1 mm when it started') }}
+  </div>
+  {% endif %}
+
+  <!-- History -->
+  <div class="card bg-white">
+    <div class="card-body p-5 space-y-3">
+      <p class="text-sm font-semibold text-gray-900">History</p>
+      <div id="metric-history" hx-get="/metrics/{{ s.name }}/history{% if selected_tag %}?tag={{ selected_tag | urlencode }}{% endif %}" hx-trigger="load" hx-swap="innerHTML">
+        <div class="flex items-center justify-center py-10"><span class="loading loading-spinner loading-md text-[#378ADD]"></span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Manual entry -->
+  <details class="card bg-white">
+    <summary class="card-body p-5 text-sm font-semibold text-gray-900 cursor-pointer">Add an entry by hand</summary>
+    <div class="px-5 pb-5">
+      <form id="manual-form" class="flex flex-wrap items-end gap-3">
+        <label class="space-y-1"><span class="block text-xs text-gray-500">{{ 'Started' if s.kind == 'duration' else 'When' }}</span>
+          <input type="datetime-local" name="started_at" required class="input input-sm input-bordered"></label>
+        {% if s.kind == 'duration' %}
+        <label class="space-y-1"><span class="block text-xs text-gray-500">Ended</span>
+          <input type="datetime-local" name="ended_at" required class="input input-sm input-bordered"></label>
+        {% elif s.kind == 'value' %}
+        <label class="space-y-1"><span class="block text-xs text-gray-500">Value</span>
+          <input type="number" step="any" name="value" required class="input input-sm input-bordered w-28"></label>
+        {% endif %}
+        <label class="space-y-1"><span class="block text-xs text-gray-500">Tags</span>
+          <input name="tags" list="tag-options" placeholder="bus, rain" class="input input-sm input-bordered w-48"></label>
+        <label class="space-y-1"><span class="block text-xs text-gray-500">Note</span>
+          <input name="note" class="input input-sm input-bordered w-56"></label>
+        <button type="submit" class="btn btn-sm btn-outline">Add</button>
+        <span id="manual-error" class="text-xs text-red-600"></span>
+      </form>
+    </div>
+  </details>
+
+</div>
+
+<script>
+const SERIES = {{ s.name | tojson }};
+
+function splitTags(raw) {
+  return (raw || '').split(',').map(t => t.trim()).filter(Boolean);
+}
+
+function getPosition() {
+  return new Promise(resolve => {
+    if (!navigator.geolocation) return resolve({});
+    navigator.geolocation.getCurrentPosition(
+      p => resolve({ lat: p.coords.latitude, lon: p.coords.longitude, accuracy_m: p.coords.accuracy }),
+      () => resolve({}),
+      { timeout: 3000, maximumAge: 60000 },
+    );
+  });
+}
+
+async function postJson(url, body) {
+  const res = await fetch(url, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body || {}),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || 'Something went wrong.');
+  return data;
+}
+
+async function quick(action, body) {
+  const message = document.getElementById('record-message');
+  message.textContent = 'Working…';
+  try {
+    const data = await postJson(`/metrics/quick/${action}`, { series: SERIES, ...(await getPosition()), ...body });
+    message.textContent = data.message;
+    setTimeout(() => location.reload(), 600);
+  } catch (e) {
+    message.textContent = e.message;
+  }
+}
+
+const startTimer = () => quick('start', { tags: splitTags(document.getElementById('record-tags').value) });
+
+function stopTimer() {
+  const body = {};
+  const ago = document.getElementById('ago').value.trim();
+  if (ago) {
+    const m = ago.replace(/\s+/g, '').match(/^(?:(\d+)h)?(?:(\d+)m)?(?:(\d+)s)?$/i);
+    const seconds = /^\d+$/.test(ago) ? Number(ago) * 60
+      : m ? (Number(m[1] || 0) * 3600 + Number(m[2] || 0) * 60 + Number(m[3] || 0)) : NaN;
+    if (!seconds && seconds !== 0 || Number.isNaN(seconds)) {
+      document.getElementById('record-message').textContent = 'Use something like 5m or 1h30m.';
+      return;
+    }
+    body.ago_s = seconds;
+  }
+  return quick('stop', body);
+}
+
+function logEntry() {
+  const body = { tags: splitTags(document.getElementById('record-tags').value) };
+  const value = document.getElementById('record-value');
+  if (value) {
+    if (value.value === '') { document.getElementById('record-message').textContent = 'Enter a value.'; return; }
+    body.value = Number(value.value);
+  }
+  return quick('log', body);
+}
+
+async function discardEntry(id) {
+  if (!confirm('Discard this entry? It stays in the database but no longer counts.')) return;
+  try {
+    await postJson(`/metrics/entries/${id}/discard`);
+    location.reload();
+  } catch (e) {
+    alert(e.message);
+  }
+}
+
+document.getElementById('manual-form')?.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const form = new FormData(event.target);
+  const iso = v => new Date(v).toISOString();
+  const body = { series: SERIES, started_at: iso(form.get('started_at')), tags: splitTags(form.get('tags')) };
+  if (form.get('ended_at')) body.ended_at = iso(form.get('ended_at'));
+  if (form.get('value')) body.value = Number(form.get('value'));
+  if (form.get('note')) body.note = form.get('note');
+  const error = document.getElementById('manual-error');
+  error.textContent = '';
+  try {
+    await postJson('/metrics/entries', body);
+    location.reload();
+  } catch (e) {
+    error.textContent = e.message;
+  }
+});
+</script>
+{% endblock %}

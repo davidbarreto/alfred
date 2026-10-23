@@ -1045,7 +1045,151 @@
       }
     },
     {
-      "name": "29 - Archive Duration Series",
+      "name": "29 - Series Stats",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "const j = pm.response.json();",
+              "pm.test('One finished entry counted (discarded ones are not)', () => pm.expect(j.overall.n).to.eql(1));",
+              "pm.test('Too few samples is flagged', () => pm.expect(j.overall.low_confidence).to.eql(true));",
+              "pm.test('Sample threshold exposed', () => pm.expect(j.sample_threshold).to.eql(5));",
+              "pm.test('Tag breakdown present', () => pm.expect(j.by_tag.map(g => g.label)).to.include(pm.environment.get('metric_tag') + '-renamed'));",
+              "pm.test('No best option from one sample', () => pm.expect(j.best_tag).to.eql(null));",
+              "pm.test('Trend has both windows', () => { pm.expect(j.trend.days).to.eql(30); pm.expect(j.trend).to.have.property('previous'); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/metrics/series/{{metric_series}}/stats",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "metrics",
+            "series",
+            "{{metric_series}}",
+            "stats"
+          ]
+        }
+      }
+    },
+    {
+      "name": "30 - Series Stats Filtered By Unknown Tag",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Nothing matches', () => pm.expect(pm.response.json().overall.n).to.eql(0));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/metrics/series/{{metric_series}}/stats?tag=postman-no-such-tag&days=30",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "metrics",
+            "series",
+            "{{metric_series}}",
+            "stats"
+          ],
+          "query": [
+            {
+              "key": "tag",
+              "value": "postman-no-such-tag"
+            },
+            {
+              "key": "days",
+              "value": "30"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "31 - Stats For Unknown Series",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 404', () => pm.response.to.have.status(404));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/metrics/series/postman-no-such-series/stats",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "metrics",
+            "series",
+            "postman-no-such-series",
+            "stats"
+          ]
+        }
+      }
+    },
+    {
+      "name": "32 - Stats With Invalid Window",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 422', () => pm.response.to.have.status(422));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/metrics/series/{{metric_series}}/stats?days=0",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "metrics",
+            "series",
+            "{{metric_series}}",
+            "stats"
+          ],
+          "query": [
+            {
+              "key": "days",
+              "value": "0"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "33 - Archive Duration Series",
       "event": [
         {
           "listen": "test",
@@ -1084,7 +1228,7 @@
       }
     },
     {
-      "name": "30 - Start On Archived Series Is Rejected",
+      "name": "34 - Start On Archived Series Is Rejected",
       "event": [
         {
           "listen": "test",
@@ -1122,7 +1266,7 @@
       }
     },
     {
-      "name": "31 - Archive Value Series",
+      "name": "35 - Archive Value Series",
       "event": [
         {
           "listen": "test",

@@ -3,8 +3,10 @@ from datetime import datetime, timedelta
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.config import get_settings
+from app.features.core.reminders import escalation
+from app.features.core.reminders.schemas import ReminderSettingsRead
 from app.features.core.reminders.service import snooze_undated_escalation
+from app.features.core.reminders.settings_service import ReminderSettingsService
 from app.features.core.urgency_reset.schemas import UrgencyResetRead
 from app.features.core.working_memory.service import WorkingMemoryService
 from app.features.organizer.tasks.schemas import TaskFilters, TaskRead, TaskUpdate
@@ -32,13 +34,13 @@ class UrgencyResetService:
     def __init__(self, session: AsyncSession, task_service: TaskService) -> None:
         self._task_service = task_service
         self._working_memory_service = WorkingMemoryService(session)
+        self._settings_service = ReminderSettingsService(session)
 
     async def reset(self, days: int | None = None) -> UrgencyResetRead:
-        settings = get_settings()
+        settings = await self._settings_service.get()
         days = days if days is not None else settings.urgency_reset_days
         now_local = local_now()
         now = now_local.replace(tzinfo=None)
-        escalation_age = timedelta(days=settings.undated_task_escalation_days)
 
         urgency_reset = deadline_moved = snoozed = 0
         tasks = await self._task_service.get_tasks(TaskFilters(status="ACTIVE", limit=_MAX_TASKS))
@@ -59,7 +61,7 @@ class UrgencyResetService:
                 elif was_urgent:
                     await self._task_service.update_task(task.id, TaskUpdate(urgency="NORMAL"))
                     urgency_reset += 1
-            elif was_urgent or _is_age_escalation_candidate(task, now_local, escalation_age):
+            elif was_urgent or _is_age_escalation_candidate(task, now_local, settings):
                 await snooze_undated_escalation(
                     self._working_memory_service, task.id, days,
                     task_service=self._task_service, current_urgency=task.urgency,
@@ -79,5 +81,5 @@ class UrgencyResetService:
         )
 
 
-def _is_age_escalation_candidate(task: TaskRead, now: datetime, escalation_age: timedelta) -> bool:
-    return task.priority != "HIGH" and now - task.created_at >= escalation_age
+def _is_age_escalation_candidate(task: TaskRead, now: datetime, settings: ReminderSettingsRead) -> bool:
+    return now - task.created_at >= escalation.undated_escalation_age(task.priority, settings)

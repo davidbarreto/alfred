@@ -70,7 +70,9 @@ from app.api.routes.core.working_memory import router as core_working_memory_rou
 from app.api.routes.core.embeddings import router as core_embeddings_router
 from app.api.routes.core.transcription import router as core_transcription_router
 from app.api.routes.core.chats import router as core_chats_router, stream_router as core_chats_stream_router
+from app.api.routes.core.overload import router as core_overload_router
 from app.api.routes.core.reminders import router as core_reminders_router
+from app.api.routes.core.reminder_settings import router as core_reminder_settings_router
 from app.api.routes.core.pause import router as core_pause_router
 from app.api.routes.core.urgency_reset import router as core_urgency_reset_router
 from app.api.routes.core.api_requests import router as core_api_requests_router
@@ -193,6 +195,8 @@ app.include_router(core_transcription_router)
 app.include_router(core_chats_router)
 app.include_router(core_chats_stream_router)
 app.include_router(core_reminders_router)
+app.include_router(core_overload_router)
+app.include_router(core_reminder_settings_router)
 app.include_router(core_pause_router)
 app.include_router(core_urgency_reset_router)
 app.include_router(core_api_requests_router)

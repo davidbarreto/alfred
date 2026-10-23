@@ -2819,6 +2819,269 @@
       }
     },
     {
+      "name": "89j - Overload - Status",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Response has expected shape', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(['ok', 'elevated', 'overloaded']).to.include(json.level);",
+              "    ['overdue', 'urgent', 'active', 'overdue_threshold', 'urgent_threshold', 'streak_days'].forEach(",
+              "        f => pm.expect(json[f]).to.be.a('number')",
+              "    );",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/core/overload/status",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "core",
+            "overload",
+            "status"
+          ]
+        }
+      }
+    },
+    {
+      "name": "89k - Overload - History",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Returns a list of days', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json).to.be.an('array');",
+              "    json.forEach(day => {",
+              "        pm.expect(['ok', 'elevated', 'overloaded']).to.include(day.level);",
+              "        pm.expect(day.peak_overdue).to.be.a('number');",
+              "    });",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/core/overload/history?days=7",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "core",
+            "overload",
+            "history"
+          ],
+          "query": [
+            {
+              "key": "days",
+              "value": "7"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "89l - Overload - History Invalid Days (422)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 422', () => pm.response.to.have.status(422));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/core/overload/history?days=0",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "core",
+            "overload",
+            "history"
+          ],
+          "query": [
+            {
+              "key": "days",
+              "value": "0"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "89m - Overload - Status No Auth",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('No auth returns 403', () => pm.response.to.have.status(403));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "auth": {
+          "type": "noauth"
+        },
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/core/overload/status",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "core",
+            "overload",
+            "status"
+          ]
+        }
+      }
+    },
+    {
+      "name": "89n - Reminder Settings - Get",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Has every setting as a number', () => {",
+              "    const json = pm.response.json();",
+              "    [\"overload_overdue_threshold\", \"overload_urgent_threshold\", \"overload_max_listed\", \"overload_urgent_interval_hours\", \"overdue_grace_hours_high\", \"overdue_grace_hours_medium\", \"overdue_grace_hours_low\", \"undated_escalation_days_high\", \"undated_escalation_days_medium\", \"undated_escalation_days_low\", \"urgency_reset_days\"].forEach(f => pm.expect(json[f]).to.be.a('number'));",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/core/reminder-settings",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "core",
+            "reminder-settings"
+          ]
+        }
+      }
+    },
+    {
+      "name": "89o - Reminder Settings - Update",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Updated value is returned', () => pm.expect(pm.response.json().overload_max_listed).to.eql(5));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/core/reminder-settings",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "core",
+            "reminder-settings"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"overload_max_listed\": 5\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "89p - Reminder Settings - Update Invalid (422)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 422', () => pm.response.to.have.status(422));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/core/reminder-settings",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "core",
+            "reminder-settings"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"overload_max_listed\": 0\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
       "name": "90 - Sessions - Finish",
       "event": [
         {

@@ -44,7 +44,9 @@ from app.features.briefing.morning_formatter_service import MorningBriefingForma
 from app.features.briefing.evening_summary_service import EveningDigestSummaryService
 from app.features.briefing.evening_formatter_service import EveningDigestFormatterService
 from app.features.briefing.history_service import BriefingHistoryService
+from app.features.core.overload.service import OverloadService
 from app.features.core.reminders.service import ReminderService
+from app.features.core.reminders.settings_service import ReminderSettingsService
 from app.features.core.api_requests.service import ApiRequestService
 from app.features.core.pause.service import GlobalPauseService
 from app.features.core.urgency_reset.service import UrgencyResetService
@@ -399,6 +401,12 @@ def get_evening_digest_formatter_service(session: AsyncSession = Depends(get_ses
 def get_briefing_history_service(session: AsyncSession = Depends(get_session)) -> BriefingHistoryService:
     return BriefingHistoryService(session=session)
 
+def get_overload_service(session: AsyncSession = Depends(get_session)) -> OverloadService:
+    return OverloadService(session=session, task_service=get_task_service(session))
+
+def get_reminder_settings_service(session: AsyncSession = Depends(get_session)) -> ReminderSettingsService:
+    return ReminderSettingsService(session)
+
 def get_reminder_service(session: AsyncSession = Depends(get_session)) -> ReminderService:
     return ReminderService(session=session, task_service=get_task_service(session))
 
@@ -657,6 +665,8 @@ EveningDigestSummaryServiceDep = Annotated[EveningDigestSummaryService, Depends(
 EveningDigestFormatterServiceDep = Annotated[EveningDigestFormatterService, Depends(get_evening_digest_formatter_service)]
 BriefingHistoryServiceDep = Annotated[BriefingHistoryService, Depends(get_briefing_history_service)]
 ReminderServiceDep = Annotated[ReminderService, Depends(get_reminder_service)]
+OverloadServiceDep = Annotated[OverloadService, Depends(get_overload_service)]
+ReminderSettingsServiceDep = Annotated[ReminderSettingsService, Depends(get_reminder_settings_service)]
 GlobalPauseServiceDep = Annotated[GlobalPauseService, Depends(get_global_pause_service)]
 ApiRequestServiceDep = Annotated[ApiRequestService, Depends(get_api_request_service)]
 UrgencyResetServiceDep = Annotated[UrgencyResetService, Depends(get_urgency_reset_service)]

@@ -3,6 +3,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
+from app.features.core.reminders.schemas import ReminderSettingsRead
 from app.features.core.urgency_reset.schemas import UrgencyResetRead
 from app.features.core.urgency_reset.service import UrgencyResetService
 from app.features.organizer.tasks.schemas import TaskFilters, TaskUpdate
@@ -29,16 +30,19 @@ def service():
     svc._task_service = AsyncMock()
     svc._task_service.get_tasks.return_value = []
     svc._working_memory_service = AsyncMock()
+    svc._settings_service = AsyncMock()
+    svc._settings_service.get.return_value = ReminderSettingsRead(
+        overload_overdue_threshold=5, overload_urgent_threshold=4, overload_max_listed=5,
+        overload_urgent_interval_hours=4, overdue_grace_hours_high=0, overdue_grace_hours_medium=48,
+        overdue_grace_hours_low=168, undated_escalation_days_high=7, undated_escalation_days_medium=21,
+        undated_escalation_days_low=45, urgency_reset_days=7,
+    )
     return svc
 
 
 @pytest.fixture(autouse=True)
 def _frozen_now():
-    settings = MagicMock(urgency_reset_days=7, undated_task_escalation_days=30)
-    with (
-        patch("app.features.core.urgency_reset.service.local_now", return_value=NOW),
-        patch("app.features.core.urgency_reset.service.get_settings", return_value=settings),
-    ):
+    with patch("app.features.core.urgency_reset.service.local_now", return_value=NOW):
         yield
 
 
@@ -143,9 +147,20 @@ class TestReset:
         snooze.assert_not_awaited()
         service._task_service.update_task.assert_not_awaited()
 
-    async def test_stale_high_priority_normal_undated_task_is_untouched(self, service):
-        # Age escalation never applies to HIGH priority, so there is nothing to defer.
-        task = _task(id=4, deadline=None, urgency="NORMAL", priority="HIGH", created_at=NOW - timedelta(days=45))
+    async def test_stale_high_priority_normal_undated_task_is_snoozed(self, service):
+        # HIGH escalates after 7 days, so a 10-day-old one is about to bounce back.
+        task = _task(id=4, deadline=None, urgency="NORMAL", priority="HIGH", created_at=NOW - timedelta(days=10))
+        service._task_service.get_tasks.return_value = [task]
+
+        with patch(
+            "app.features.core.urgency_reset.service.snooze_undated_escalation", new_callable=AsyncMock
+        ) as snooze:
+            await service.reset()
+
+        snooze.assert_awaited_once()
+
+    async def test_low_priority_undated_task_under_its_age_is_untouched(self, service):
+        task = _task(id=4, deadline=None, urgency="NORMAL", priority="LOW", created_at=NOW - timedelta(days=30))
         service._task_service.get_tasks.return_value = [task]
 
         with patch(

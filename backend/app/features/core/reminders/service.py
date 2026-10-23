@@ -6,7 +6,11 @@ from typing import Any
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import get_settings
-from app.features.core.reminders.schemas import ReminderDigest
+from app.features.core.overload.schemas import OverloadSnapshot
+from app.features.core.overload.service import OverloadService
+from app.features.core.reminders import escalation
+from app.features.core.reminders.schemas import ReminderDigest, ReminderSettingsRead
+from app.features.core.reminders.settings_service import ReminderSettingsService
 from app.features.core.working_memory.repository import WorkingMemoryRepository
 from app.features.core.working_memory.schemas import WorkingMemoryCreate, WorkingMemoryFilters
 from app.features.core.working_memory.service import WorkingMemoryService
@@ -24,25 +28,7 @@ logger = logging.getLogger(__name__)
 
 _TASK_LOOKAHEAD = timedelta(hours=24)
 _EVENT_LOOKAHEAD = timedelta(hours=2)
-# Dedup TTLs set the reminder frequency against the hourly n8n cron (08:00-22:00).
-# Each TTL sits 10 minutes short of the target interval: a marker written seconds
-# after the hour must expire before the run that should re-remind, never after it.
-_URGENT_DEDUP_TTL = timedelta(minutes=50)  # every hourly run
-_HIGH_DEDUP_TTL = timedelta(hours=3, minutes=50)  # ~4x/day (08, 12, 16, 20)
-_MEDIUM_DEDUP_TTL = timedelta(hours=7, minutes=50)  # ~2x/day (08, 16)
-_DAILY_DEDUP_TTL = timedelta(hours=24)  # once a day (marker keys are date-scoped)
-
 _PRIORITY_ORDER = {"HIGH": 0, "MEDIUM": 1, "LOW": 2}
-
-
-def _task_dedup_ttl(urgency: str, priority: str) -> timedelta:
-    if urgency == "URGENT":
-        return _URGENT_DEDUP_TTL
-    if priority == "HIGH":
-        return _HIGH_DEDUP_TTL
-    if priority == "MEDIUM":
-        return _MEDIUM_DEDUP_TTL
-    return _DAILY_DEDUP_TTL
 
 
 @dataclass
@@ -69,6 +55,45 @@ def _format_task_line(entry: _TaskReminder, today: date) -> str:
         prefix = "due" if deadline.date() == today else "due tomorrow"
         details.append(f"{prefix} {deadline.strftime('%H:%M')}")
     return f"- {entry.task.title} ({', '.join(details)})"
+
+
+def _select_entries(
+    entries: list[_TaskReminder], max_listed: int | None
+) -> tuple[list[_TaskReminder], list[_TaskReminder]]:
+    """Urgent tasks first, then by priority; `max_listed` caps the digest (None = no cap)."""
+    ordered = sorted(
+        entries, key=lambda e: (0 if e.urgency == "URGENT" else 1, _task_sort_key(e))
+    )
+    if max_listed is None:
+        return ordered, []
+    return ordered[:max_listed], ordered[max_listed:]
+
+
+def _format_task_lines(
+    shown: list[_TaskReminder], omitted: list[_TaskReminder], summary_lines: list[str], today: date
+) -> list[str]:
+    urgent = [e for e in shown if e.urgency == "URGENT"]
+    normal = [e for e in shown if e.urgency != "URGENT"]
+    lines: list[str] = []
+    if urgent:
+        lines.append("Urgent tasks:")
+        lines.extend(_format_task_line(entry, today) for entry in urgent)
+    if normal:
+        if lines:
+            lines.append("")
+        lines.append("Normal tasks:")
+        lines.extend(_format_task_line(entry, today) for entry in normal)
+    if omitted:
+        lines.append(f"+{len(omitted)} more task(s) not shown, see the portal")
+    lines.extend(summary_lines)
+    return lines
+
+
+def _overload_header(snapshot: OverloadSnapshot) -> str:
+    return (
+        f"⚠️ Overloaded: {snapshot.overdue} overdue, {snapshot.urgent} urgent. "
+        "Showing the top tasks only; open the portal to triage."
+    )
 
 
 def undated_escalation_snooze_key(task_id: int) -> str:
@@ -107,41 +132,53 @@ class ReminderService:
         self._shopping_repo = ShoppingRepository(session)
         self._working_memory_repo = WorkingMemoryRepository(session)
         self._study_plan_service = StudyPlanService(session)
+        self._settings_service = ReminderSettingsService(session)
+        self._overload_service = OverloadService(session, task_service)
 
     async def build_due_digest(self) -> ReminderDigest:
         now = local_now().replace(tzinfo=None)
         today = now.date()
+        settings = await self._settings_service.get()
+        previous_level = await self._overload_service.previous_level()
+
+        entries, summary_lines = await self._collect_task_entries(now, today, settings)
+        # Measured after escalation, so tasks escalated in this very run count as urgent.
+        snapshot = await self._overload_service.snapshot()
+        overloaded = snapshot.level == "overloaded"
+
+        shown, omitted = _select_entries(entries, settings.overload_max_listed if overloaded else None)
+        for entry in shown:
+            ttl = escalation.task_dedup_ttl(entry.urgency, entry.task.priority, overloaded, settings)
+            await self._mark_reminded("task", entry.task.id, today, ttl)
 
         lines: list[str] = []
-        lines.extend(await self._collect_task_lines(now, today))
+        if previous_level == "overloaded" and snapshot.level == "ok":
+            lines.append("✅ Backlog cleared, you're no longer overloaded.")
+        lines.extend(_format_task_lines(shown, omitted, summary_lines, today))
         lines.extend(await self._collect_event_lines(now, today))
         lines.extend(await self._collect_shopping_lines(today))
         lines.extend(await self._collect_study_plan_lines(today))
 
-        text = "\n".join(["⏰ Reminders", *lines]) if lines else ""
-        return ReminderDigest(date=today, has_content=bool(lines), text=text)
+        await self._overload_service.record_run(snapshot, listed=len(shown), omitted=len(omitted))
 
-    async def _collect_task_lines(self, now: datetime, today) -> list[str]:
-        entries = await self._collect_dated_task_entries(now, today)
-        undated_entries, summary_lines = await self._collect_undated_task_entries(today)
+        if not lines:
+            return ReminderDigest(date=today, has_content=False, text="")
+        header = ["⏰ Reminders"]
+        if overloaded:
+            header.append(_overload_header(snapshot))
+        return ReminderDigest(date=today, has_content=True, text="\n".join([*header, *lines]))
+
+    async def _collect_task_entries(
+        self, now: datetime, today, settings: ReminderSettingsRead
+    ) -> tuple[list[_TaskReminder], list[str]]:
+        entries = await self._collect_dated_task_entries(now, today, settings)
+        undated_entries, summary_lines = await self._collect_undated_task_entries(today, settings)
         entries.extend(undated_entries)
+        return entries, summary_lines
 
-        urgent = sorted((e for e in entries if e.urgency == "URGENT"), key=_task_sort_key)
-        normal = sorted((e for e in entries if e.urgency != "URGENT"), key=_task_sort_key)
-
-        lines: list[str] = []
-        if urgent:
-            lines.append("Urgent tasks:")
-            lines.extend(_format_task_line(entry, today) for entry in urgent)
-        if normal:
-            if lines:
-                lines.append("")
-            lines.append("Normal tasks:")
-            lines.extend(_format_task_line(entry, today) for entry in normal)
-        lines.extend(summary_lines)
-        return lines
-
-    async def _collect_dated_task_entries(self, now: datetime, today) -> list[_TaskReminder]:
+    async def _collect_dated_task_entries(
+        self, now: datetime, today, settings: ReminderSettingsRead
+    ) -> list[_TaskReminder]:
         tasks = await self._task_service.get_tasks(
             TaskFilters(status="ACTIVE", deadline_to=now + _TASK_LOOKAHEAD, limit=100)
         )
@@ -158,7 +195,11 @@ class ReminderService:
                 continue
 
             urgency = task.urgency
-            if is_overdue and urgency == "NORMAL":
+            if (
+                is_overdue
+                and urgency == "NORMAL"
+                and now - task.deadline >= escalation.overdue_grace(task.priority, settings)
+            ):
                 await self._task_service.update_task(task.id, TaskUpdate(urgency="URGENT"))
                 logger.info(
                     "Task urgency escalated: id=%d title=%r deadline=%s",
@@ -170,15 +211,15 @@ class ReminderService:
                 continue
 
             entries.append(_TaskReminder(task=task, urgency=urgency, is_overdue=is_overdue))
-            await self._mark_reminded("task", task.id, today, _task_dedup_ttl(urgency, task.priority))
         return entries
 
-    async def _collect_undated_task_entries(self, today) -> tuple[list[_TaskReminder], list[str]]:
+    async def _collect_undated_task_entries(
+        self, today, settings: ReminderSettingsRead
+    ) -> tuple[list[_TaskReminder], list[str]]:
         tasks = await self._task_service.get_tasks(TaskFilters(status="ACTIVE", limit=100))
         undated = [task for task in tasks if task.deadline is None]
 
         now = local_now()
-        escalation_age = timedelta(days=get_settings().undated_task_escalation_days)
         escalated = []
         quiet = []
         for task in undated:
@@ -194,9 +235,8 @@ class ReminderService:
             # says nothing about whether the current occurrence is neglected.
             if (
                 task.urgency == "NORMAL"
-                and task.priority != "HIGH"
                 and task.recurrence_rule is None
-                and now - task.created_at >= escalation_age
+                and now - task.created_at >= escalation.undated_escalation_age(task.priority, settings)
             ):
                 task = await self._task_service.update_task(task.id, TaskUpdate(urgency="URGENT"))
                 logger.info(
@@ -213,12 +253,11 @@ class ReminderService:
             if await self._already_reminded("task", task.id, today):
                 continue
             entries.append(_TaskReminder(task=task, urgency=task.urgency))
-            await self._mark_reminded("task", task.id, today, _task_dedup_ttl(task.urgency, task.priority))
 
         summary_lines: list[str] = []
         if quiet and not await self._already_reminded("task_undated_summary", 0, today):
             summary_lines.append(f"{len(quiet)} other task(s) without a due date")
-            await self._mark_reminded("task_undated_summary", 0, today, _DAILY_DEDUP_TTL)
+            await self._mark_reminded("task_undated_summary", 0, today, escalation.DAILY_DEDUP_TTL)
 
         return entries, summary_lines
 
@@ -232,7 +271,7 @@ class ReminderService:
                 continue
             start_time = "All day" if event.all_day else event.start_datetime.strftime("%H:%M")
             lines.append(f"Starting soon ({start_time}): {event.title}")
-            await self._mark_reminded("event", event.id, today, _DAILY_DEDUP_TTL)
+            await self._mark_reminded("event", event.id, today, escalation.DAILY_DEDUP_TTL)
         return lines
 
     async def _collect_shopping_lines(self, today) -> list[str]:
@@ -241,7 +280,7 @@ class ReminderService:
             return []
         if await self._already_reminded("shopping", 0, today):
             return []
-        await self._mark_reminded("shopping", 0, today, _DAILY_DEDUP_TTL)
+        await self._mark_reminded("shopping", 0, today, escalation.DAILY_DEDUP_TTL)
         return [f"Shopping list still has {len(items)} pending item(s)"]
 
     async def _collect_study_plan_lines(self, today) -> list[str]:
@@ -251,7 +290,7 @@ class ReminderService:
             return []
         if await self._already_reminded("study_plans", 0, today):
             return []
-        await self._mark_reminded("study_plans", 0, today, _DAILY_DEDUP_TTL)
+        await self._mark_reminded("study_plans", 0, today, escalation.DAILY_DEDUP_TTL)
         return [f"You have open items in {len(open_plans)} study plan(s)"]
 
     async def _is_escalation_snoozed(self, task_id: int) -> bool:

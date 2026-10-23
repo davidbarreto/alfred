@@ -83,8 +83,7 @@ class Settings(BaseSettings):
     # e.g. "http://localhost:8080,https://portal.dbflabs.com"
     cors_origins: str = Field(default="", validation_alias="CORS_ORIGINS")
 
-    # Reminders — undated-task escalation
-    undated_task_escalation_days: int = Field(default=30, validation_alias="UNDATED_TASK_ESCALATION_DAYS")
+    # Reminders — snooze/reset defaults (escalation and overload tuning live in core.settings)
     undated_task_snooze_days: int = Field(default=7, validation_alias="UNDATED_TASK_SNOOZE_DAYS")
     urgency_reset_days: int = Field(default=7, validation_alias="URGENCY_RESET_DAYS")
 

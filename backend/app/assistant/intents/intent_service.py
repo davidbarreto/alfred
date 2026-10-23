@@ -35,6 +35,7 @@ _READ_INTENTS: frozenset[str] = frozenset({
     "recall.search",
     "assistant.focus",
     "weather.current",
+    "metric.open",
 })
 
 

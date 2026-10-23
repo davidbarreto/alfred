@@ -39,6 +39,10 @@ _KNOWN_INTENTS = {
     "assistant.focus",
     "weather.current",
     "reminder.set",
+    "metric.start",
+    "metric.stop",
+    "metric.log",
+    "metric.open",
     "unknown",
 }
 

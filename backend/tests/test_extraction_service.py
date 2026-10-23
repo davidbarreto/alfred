@@ -274,3 +274,30 @@ class TestNumericStringFieldsAcceptBareNumbers:
     def test_wishlist_estimated_price_accepts_int(self):
         args = AddWishlistItemArgs.model_validate({"name": "headphones", "estimated_price": 150})
         assert args.estimated_price == 150
+
+
+class TestExtractArgsMetrics:
+    async def test_start_extracts_series_and_tags(self):
+        payload = json.dumps({"series": "commute-work", "tags": "bus", "note": None})
+        result = await extract_args("metric.start", "Starting my commute to work by bus", llm_provider=_make_provider(payload))
+        assert result == {"series": "commute-work", "tags": "bus", "note": None}
+
+    async def test_stop_without_series_and_with_ago(self):
+        payload = json.dumps({"series": None, "ago": "5m"})
+        result = await extract_args("metric.stop", "I arrived 5 minutes ago", llm_provider=_make_provider(payload))
+        assert result == {"series": None, "ago": "5m"}
+
+    async def test_log_accepts_bare_number_value(self):
+        payload = json.dumps({"series": "sleep", "value": 7.5, "tags": None, "note": None})
+        result = await extract_args("metric.log", "Log that I slept 7.5 hours", llm_provider=_make_provider(payload))
+        assert result["series"] == "sleep"
+        assert result["value"] == 7.5
+
+    async def test_log_plain_event_has_no_value(self):
+        payload = json.dumps({"series": "coffee"})
+        result = await extract_args("metric.log", "Record a coffee", llm_provider=_make_provider(payload))
+        assert result["value"] is None
+
+    async def test_start_without_series_fails_soft(self):
+        result = await extract_args("metric.start", "start", llm_provider=_make_provider("{}"))
+        assert result == {}

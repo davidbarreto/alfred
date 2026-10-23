@@ -363,6 +363,42 @@ INTENT_EXAMPLES: list[IntentExample] = [
     IntentExample(id=226, text="Pull up what I know about the n8n workflows", intent="recall.search"),
     IntentExample(id=227, text="Look up my notes on SQLAlchemy async sessions", intent="recall.search"),
 
+    # --- metric.start ---
+    IntentExample(id=289, text="Start timing my commute to work by bus", intent="metric.start"),
+    IntentExample(id=290, text="I'm leaving for the office now, taking the metro", intent="metric.start"),
+    IntentExample(id=291, text="Start the commute timer, going by car", intent="metric.start"),
+    IntentExample(id=292, text="Begin tracking my trip to work", intent="metric.start"),
+    IntentExample(id=293, text="Starting my commute home by bus", intent="metric.start"),
+    IntentExample(id=294, text="Start measuring how long the walk to the gym takes", intent="metric.start"),
+    IntentExample(id=295, text="I'm heading to work now, start the clock", intent="metric.start"),
+    IntentExample(id=296, text="Start a timer for my commute", intent="metric.start"),
+
+    # --- metric.stop ---
+    IntentExample(id=297, text="Stop the commute timer", intent="metric.stop"),
+    IntentExample(id=298, text="I've arrived at the office", intent="metric.stop"),
+    IntentExample(id=299, text="I just got to work, stop timing", intent="metric.stop"),
+    IntentExample(id=300, text="End my commute", intent="metric.stop"),
+    IntentExample(id=301, text="Stop tracking the trip, I arrived 5 minutes ago", intent="metric.stop"),
+    IntentExample(id=302, text="I'm home, stop the timer", intent="metric.stop"),
+    IntentExample(id=303, text="Finish the measurement, I'm here", intent="metric.stop"),
+    IntentExample(id=304, text="Stop the clock on my commute", intent="metric.stop"),
+
+    # --- metric.log ---
+    IntentExample(id=305, text="Log that I slept 7.5 hours", intent="metric.log"),
+    IntentExample(id=306, text="Record a coffee", intent="metric.log"),
+    IntentExample(id=307, text="Log my weight, 78.4 kilos", intent="metric.log"),
+    IntentExample(id=308, text="Track that I drank a glass of water", intent="metric.log"),
+    IntentExample(id=309, text="Add a measurement: slept 6 hours", intent="metric.log"),
+    IntentExample(id=310, text="I just had another coffee, count it", intent="metric.log"),
+    IntentExample(id=311, text="Log 10000 steps for today", intent="metric.log"),
+    IntentExample(id=312, text="Note down that I took a break", intent="metric.log"),
+
+    # --- metric.open ---
+    IntentExample(id=313, text="Do I have any timer running?", intent="metric.open"),
+    IntentExample(id=314, text="What am I timing right now?", intent="metric.open"),
+    IntentExample(id=315, text="Is my commute timer still running?", intent="metric.open"),
+    IntentExample(id=316, text="Show my running timers", intent="metric.open"),
+
     # --- unknown ---
     IntentExample(id=141, text="What's the weather like today?", intent="weather.current"),
     IntentExample(id=142, text="Tell me a joke", intent="unknown"),

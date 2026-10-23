@@ -180,3 +180,16 @@ class TestGetOperationType:
     def test_unknown_ignored_when_other_intents_present(self):
         assert get_operation_type(["unknown", "task.list"]) == "read"
         assert get_operation_type(["unknown", "task.add"]) == "write"
+
+
+class TestMetricOperationType:
+    def test_open_timers_is_a_read(self):
+        from app.assistant.intents.intent_service import get_operation_type
+
+        assert get_operation_type(["metric.open"]) == "read"
+
+    def test_start_stop_and_log_are_writes(self):
+        from app.assistant.intents.intent_service import get_operation_type
+
+        for intent in ("metric.start", "metric.stop", "metric.log"):
+            assert get_operation_type([intent]) == "write"

@@ -112,6 +112,35 @@ class ReminderArgs(BaseModel):
     remind_at: str = Field(description="When to send the reminder, as ISO 8601 datetime (YYYY-MM-DDTHH:MM:SS). Resolve relative expressions like 'in 2 hours' or 'at 3pm' using the current date and time provided.")
 
 
+_SERIES_DESCRIPTION = (
+    "Name of the thing being measured, as a lowercase kebab-case slug built from the user's wording, "
+    "e.g. 'commute-work' for 'going to work', 'sleep', 'coffee'. Do not include the transport mode or other options; those are tags."
+)
+
+
+class MetricStartArgs(BaseModel):
+    series: str = Field(description=_SERIES_DESCRIPTION)
+    tags: str | None = Field(default=None, description="Options being compared, comma separated, e.g. 'bus' or 'car,rain'. Omit if none.")
+    note: str | None = Field(default=None)
+
+
+class MetricStopArgs(BaseModel):
+    series: str | None = Field(default=None, description=_SERIES_DESCRIPTION + " Omit if the user did not name what they are stopping.")
+    ago: str | None = Field(
+        default=None,
+        description="How long ago it actually ended, as a short duration like '5m', '1h30m' or '45s'. Only if the user said they finished earlier. Omit otherwise.",
+    )
+
+
+class MetricLogArgs(BaseModel):
+    series: str = Field(description=_SERIES_DESCRIPTION)
+    value: str | int | float | None = Field(
+        default=None, description="The number to record, e.g. 7.5 for 'slept 7.5 hours'. Omit for a plain event such as 'had a coffee'."
+    )
+    tags: str | None = Field(default=None, description="Comma separated options, if mentioned. Omit if none.")
+    note: str | None = Field(default=None)
+
+
 _INTENT_SCHEMAS: dict[str, type[BaseModel]] = {
     "task.add": CreateTaskArgs,
     "task.list": GetTasksArgs,
@@ -128,6 +157,9 @@ _INTENT_SCHEMAS: dict[str, type[BaseModel]] = {
     "finance.transaction_add": AddTransactionArgs,
     "weather.current": WeatherArgs,
     "reminder.set": ReminderArgs,
+    "metric.start": MetricStartArgs,
+    "metric.stop": MetricStopArgs,
+    "metric.log": MetricLogArgs,
 }
 
 _INTENTS_WITH_DATES = {"task.add", "event.add", "event.list", "finance.transaction_add", "weather.current", "reminder.set"}

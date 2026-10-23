@@ -18,6 +18,21 @@ router = APIRouter(
 
 _TELEGRAM_API = "https://api.telegram.org"
 
+# Only the daily-use commands go in Telegram's "/" menu; every other command still works when typed.
+_MENU_COMMANDS = frozenset(
+    {
+        "taskadd", "tasklist", "pending", "taskdone", "tasksnooze",
+        "noteadd", "notesearch", "notelist",
+        "eventadd", "eventlist",
+        "shop", "shoplist", "bought", "wish", "wishlist",
+        "shadow", "review", "produce", "conversation", "roleplay", "stop",
+        "expense", "income", "transactionlist", "spendingreport", "budgetstatus",
+        "mstart", "mstop", "mlog", "mopen",
+        "studyplans", "csmentor", "recall", "weather", "focus", "remind",
+        "pause", "resume", "help",
+    }
+)  # fmt: skip
+
 # Telegram documents a 100-command limit, but setMyCommands also rejects the list with
 # BOT_COMMANDS_TOO_MUCH once the combined command + description text grows past ~5.7k
 # characters (observed: 5679 accepted, 5825 rejected). Stay well under it.
@@ -44,6 +59,8 @@ def _build_telegram_commands() -> list[TelegramCommandEntry]:
             if not aliases or not description:
                 continue
             command = aliases[0].lstrip("/").lower()
+            if command not in _MENU_COMMANDS:
+                continue
             entries.append(TelegramCommandEntry(command=command, description=description))
     return _fit_to_budget(entries)
 

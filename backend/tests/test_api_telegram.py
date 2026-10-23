@@ -11,6 +11,14 @@ class TestBuildTelegramCommands:
     def test_count_within_telegram_limit(self):
         assert len(telegram._build_telegram_commands()) <= 100
 
+    def test_only_menu_commands_registered(self):
+        commands = {c.command for c in telegram._build_telegram_commands()}
+        assert commands <= telegram._MENU_COMMANDS
+
+    def test_every_menu_command_exists(self):
+        commands = {c.command for c in telegram._build_telegram_commands()}
+        assert commands == telegram._MENU_COMMANDS
+
 
 class TestFitToBudget:
     def test_short_entries_untouched(self):

@@ -13,6 +13,7 @@ _SETTINGS = {
     "overload_urgent_interval_hours": 4, "overdue_grace_hours_high": 0, "overdue_grace_hours_medium": 48,
     "overdue_grace_hours_low": 168, "undated_escalation_days_high": 7, "undated_escalation_days_medium": 21,
     "undated_escalation_days_low": 45, "urgency_reset_days": 7,
+    "catchup_tasks_per_day": 3, "catchup_stale_days": 30, "catchup_missed_habit_threshold": 3,
 }
 
 
@@ -113,6 +114,7 @@ class TestSettingsForm:
         assert 'name="overload_max_listed" value="5"' in resp.text
         assert 'name="overdue_grace_hours_low" value="168"' in resp.text
         assert 'name="undated_escalation_days_medium" value="21"' in resp.text
+        assert 'name="catchup_tasks_per_day" value="3"' in resp.text
         mock_api["get"].assert_awaited_once_with("/core/reminder-settings")
 
     def test_load_failure_shows_a_message(self, client, mock_api):
@@ -160,3 +162,130 @@ class TestSettingsForm:
         assert resp.status_code == 200
         assert "Invalid value" in resp.text
         assert "Saved." not in resp.text
+
+
+def _plan(spread=True, drop=True, habits=True):
+    suggestions = []
+    if spread:
+        suggestions.append({
+            "kind": "spread", "title": "Spread 2 overdue tasks over the next days",
+            "detail": "At most 3 due per day.", "applicable": True, "command": "/catchupapply spread", "tasks": [],
+            "moves": [
+                {"task_id": 5, "title": "Call plumber", "priority": "MEDIUM",
+                 "old_deadline": "2026-10-01T09:00:00", "new_deadline": "2026-10-24T09:00:00"},
+                {"task_id": 6, "title": "Fix bike", "priority": "LOW",
+                 "old_deadline": "2026-10-02T09:00:00", "new_deadline": "2026-10-24T09:00:00"},
+            ],
+        })
+    if drop:
+        suggestions.append({
+            "kind": "drop", "title": "Drop 2 stale task(s)?", "detail": "Cancels them.", "applicable": True,
+            "command": "/catchupapply drop 7,8", "moves": [],
+            "tasks": [
+                {"id": 7, "title": "Old idea", "priority": "LOW", "urgency": "NORMAL", "deadline": None, "days_overdue": 50},
+                {"id": 8, "title": "Other idea", "priority": "MEDIUM", "urgency": "URGENT", "deadline": None, "days_overdue": None},
+            ],
+        })
+    if habits:
+        suggestions.append({
+            "kind": "habits", "title": "1 habit(s) you keep missing", "detail": "Consider dropping.",
+            "applicable": False, "command": None, "moves": [],
+            "tasks": [{"id": 9, "title": "Stretch", "priority": "LOW", "urgency": "NORMAL", "deadline": None, "days_overdue": None}],
+        })
+    return {
+        "today_top": [{"id": 1, "title": "Pay invoice", "priority": "HIGH", "urgency": "URGENT",
+                       "deadline": "2026-10-20T09:00:00", "days_overdue": 3}],
+        "suggestions": suggestions,
+    }
+
+
+class TestCatchupPanel:
+    def test_renders_focus_spread_drop_and_habits(self, client, mock_api):
+        mock_api["get"].return_value = _plan()
+
+        resp = client.get("/overload/catchup")
+
+        assert resp.status_code == 200
+        assert "Catch-up plan" in resp.text
+        assert "Pay invoice" in resp.text and "overdue 3d" in resp.text
+        assert "Spread 2 overdue tasks" in resp.text
+        assert "Call plumber" in resp.text
+        assert "Thu 01 Oct" in resp.text and "Sat 24 Oct" in resp.text
+        assert "Apply plan" in resp.text
+        assert 'name="task_ids" value="7"' in resp.text
+        assert 'name="task_ids" value="8"' in resp.text
+        assert "Drop selected" in resp.text
+        assert "Stretch" in resp.text
+        mock_api["get"].assert_awaited_once_with("/core/catchup")
+
+    def test_empty_plan_shows_a_message(self, client, mock_api):
+        mock_api["get"].return_value = {"today_top": [], "suggestions": []}
+
+        resp = client.get("/overload/catchup")
+
+        assert "Nothing to catch up on" in resp.text
+
+    def test_backend_failure_shows_a_message(self, client, mock_api):
+        mock_api["get"].side_effect = httpx.ConnectError("down")
+
+        resp = client.get("/overload/catchup")
+
+        assert "Could not load the catch-up plan" in resp.text
+
+    def test_banner_offers_the_catch_up_plan(self, client, mock_api):
+        mock_api["get"].return_value = _status()
+
+        resp = client.get("/overload/banner")
+
+        assert 'hx-get="/overload/catchup"' in resp.text
+        assert 'hx-target="#catchup-panel"' in resp.text
+
+    def test_pages_host_the_panel_and_refresh_the_banner_after_applying(self, client, mock_api):
+        mock_api["get"].return_value = []
+
+        resp = client.get("/tasks")
+
+        assert 'id="catchup-panel"' in resp.text
+        assert "catchup-applied from:body" in resp.text
+
+
+class TestApplyCatchup:
+    def test_spread_posts_and_reports_the_result(self, client, mock_api):
+        mock_api["post"].return_value = {"kind": "spread", "applied": 4, "skipped": 0}
+        mock_api["get"].return_value = {"today_top": [], "suggestions": []}
+
+        resp = client.post("/overload/catchup/apply", data={"kind": "spread"})
+
+        assert resp.status_code == 200
+        assert "Moved 4 task(s)." in resp.text
+        assert resp.headers["HX-Trigger"] == "catchup-applied"
+        mock_api["post"].assert_awaited_once_with("/core/catchup/apply", json={"kind": "spread"})
+
+    def test_drop_sends_the_selected_ids(self, client, mock_api):
+        mock_api["post"].return_value = {"kind": "drop", "applied": 1, "skipped": 1}
+        mock_api["get"].return_value = {"today_top": [], "suggestions": []}
+
+        resp = client.post("/overload/catchup/apply", data={"kind": "drop", "task_ids": ["7", "8"]})
+
+        assert "Dropped 1 task(s)." in resp.text
+        assert "1 no longer qualified" in resp.text
+        mock_api["post"].assert_awaited_once_with("/core/catchup/apply", json={"kind": "drop", "task_ids": [7, 8]})
+
+    def test_drop_with_nothing_selected_never_calls_the_backend(self, client, mock_api):
+        mock_api["get"].return_value = _plan()
+
+        resp = client.post("/overload/catchup/apply", data={"kind": "drop"})
+
+        assert "Select at least one task to drop." in resp.text
+        mock_api["post"].assert_not_awaited()
+
+    def test_backend_rejection_is_shown_and_the_plan_reloaded(self, client, mock_api):
+        request = httpx.Request("POST", "http://api/core/catchup/apply")
+        response = httpx.Response(404, request=request, json={"detail": "Nothing to spread"})
+        mock_api["post"].side_effect = httpx.HTTPStatusError("error", request=request, response=response)
+        mock_api["get"].return_value = {"today_top": [], "suggestions": []}
+
+        resp = client.post("/overload/catchup/apply", data={"kind": "spread"})
+
+        assert "Nothing to spread" in resp.text
+        assert "HX-Trigger" not in resp.headers

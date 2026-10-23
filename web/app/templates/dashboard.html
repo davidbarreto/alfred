@@ -6,7 +6,8 @@
 <div class="p-6 space-y-6">
   <h1 class="text-base font-semibold text-gray-900">Good day</h1>
 
-  <div id="overload-banner" hx-get="/overload/banner" hx-trigger="load" hx-swap="innerHTML"></div>
+  <div id="overload-banner" hx-get="/overload/banner" hx-trigger="load, catchup-applied from:body" hx-swap="innerHTML"></div>
+  <div id="catchup-panel"></div>
 
   <!-- 4 metric cards -->
   <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">

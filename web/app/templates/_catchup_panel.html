@@ -1,0 +1,92 @@
+<div class="card bg-white border border-gray-100">
+  <div class="card-body p-4 space-y-4">
+    <div class="flex items-center justify-between">
+      <h2 class="text-sm font-medium text-gray-900 flex items-center gap-1.5">
+        <i class="ti ti-list-check"></i>Catch-up plan
+      </h2>
+      <button type="button" class="text-gray-400 hover:text-gray-600" title="Close"
+              onclick="document.getElementById('catchup-panel').innerHTML = ''">
+        <i class="ti ti-x"></i>
+      </button>
+    </div>
+
+    {% if result %}
+    <div class="rounded-md bg-[#EAF3DE] px-3 py-2 text-xs text-[#639922]">
+      {{ result }} <a href="" class="underline ml-1">Reload to see the updated list</a>
+    </div>
+    {% endif %}
+    {% if error %}
+    <div class="rounded-md bg-[#FCEBEB] px-3 py-2 text-xs text-[#E24B4A]">{{ error }}</div>
+    {% endif %}
+
+    {% if not plan.today_top and not plan.suggestions %}
+    <p class="text-sm text-gray-400 py-4 text-center">Nothing to catch up on: no overdue or urgent tasks.</p>
+    {% endif %}
+
+    {% if plan.today_top %}
+    <section>
+      <p class="text-xs text-gray-400 uppercase tracking-wide mb-2">Focus today</p>
+      <ul class="space-y-1">
+        {% for task in plan.today_top %}
+        <li class="flex items-center gap-2 text-sm text-gray-800">
+          <span class="text-xs px-1.5 py-0.5 rounded {% if task.priority == 'HIGH' %}bg-[#FCEBEB] text-[#E24B4A]{% elif task.priority == 'MEDIUM' %}bg-[#FAEEDA] text-[#8A5A00]{% else %}bg-gray-100 text-gray-500{% endif %}">{{ task.priority }}</span>
+          <span>{{ task.title }}</span>
+          {% if task.days_overdue %}<span class="text-xs text-[#E24B4A]">overdue {{ task.days_overdue }}d</span>{% endif %}
+        </li>
+        {% endfor %}
+      </ul>
+    </section>
+    {% endif %}
+
+    {% for suggestion in plan.suggestions %}
+    <section class="border-t border-gray-100 pt-4">
+      <p class="text-sm font-medium text-gray-900">{{ suggestion.title }}</p>
+      <p class="text-xs text-gray-500 mt-0.5 mb-2">{{ suggestion.detail }}</p>
+
+      {% if suggestion.kind == "spread" %}
+      <ul class="space-y-1 mb-3 max-h-56 overflow-y-auto">
+        {% for move in suggestion.moves %}
+        <li class="flex items-center gap-2 text-sm text-gray-700">
+          <span class="flex-1 truncate">{{ move.title }}</span>
+          <span class="text-xs text-gray-400">{{ move.from_day }}</span>
+          <i class="ti ti-arrow-right text-xs text-gray-300"></i>
+          <span class="text-xs font-medium text-[#378ADD]">{{ move.to_day }}</span>
+        </li>
+        {% endfor %}
+      </ul>
+      <form hx-post="/overload/catchup/apply" hx-target="#catchup-panel" hx-swap="innerHTML"
+            hx-confirm="Move {{ suggestion.moves | length }} overdue deadlines as shown?">
+        <input type="hidden" name="kind" value="spread">
+        <button type="submit" class="btn btn-sm btn-primary">Apply plan</button>
+      </form>
+
+      {% elif suggestion.kind == "drop" %}
+      <form hx-post="/overload/catchup/apply" hx-target="#catchup-panel" hx-swap="innerHTML"
+            hx-confirm="Cancel the selected tasks?">
+        <input type="hidden" name="kind" value="drop">
+        <ul class="space-y-1 mb-3 max-h-56 overflow-y-auto">
+          {% for task in suggestion.tasks %}
+          <li>
+            <label class="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+              <input type="checkbox" name="task_ids" value="{{ task.id }}" checked class="checkbox checkbox-xs">
+              <span class="flex-1 truncate">{{ task.title }}</span>
+              <span class="text-xs text-gray-400">{{ task.priority }}{% if task.days_overdue %} · overdue {{ task.days_overdue }}d{% endif %}</span>
+            </label>
+          </li>
+          {% endfor %}
+        </ul>
+        <button type="submit" class="btn btn-sm btn-ghost text-[#E24B4A]">Drop selected</button>
+      </form>
+
+      {% else %}
+      <ul class="space-y-1">
+        {% for task in suggestion.tasks %}
+        <li class="text-sm text-gray-700">{{ task.title }}</li>
+        {% endfor %}
+      </ul>
+      <a href="/tasks/insights" class="text-xs text-[#378ADD] hover:underline mt-2 inline-block">See habit stats →</a>
+      {% endif %}
+    </section>
+    {% endfor %}
+  </div>
+</div>

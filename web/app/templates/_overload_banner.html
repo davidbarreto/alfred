@@ -11,6 +11,10 @@
     </div>
   </div>
   <div class="flex items-center gap-2">
+    <button type="button" class="btn btn-sm btn-ghost gap-1"
+            hx-get="/overload/catchup" hx-target="#catchup-panel" hx-swap="innerHTML">
+      <i class="ti ti-list-check text-sm"></i>Catch up
+    </button>
     <a href="/tasks" class="btn btn-sm btn-ghost">Review tasks</a>
     <button type="button" class="btn btn-sm btn-ghost gap-1"
             hx-post="/overload/reset" hx-swap="none"
@@ -24,6 +28,8 @@
   <i class="ti ti-alert-circle"></i>
   Backlog building up: {{ status.overdue }} overdue, {{ status.urgent }} urgent.
   Reminders switch to limited mode at {{ status.overdue_threshold }} overdue or {{ status.urgent_threshold }} urgent.
-  <a href="/tasks" class="ml-auto text-[#378ADD] hover:underline">Review tasks →</a>
+  <button type="button" class="ml-auto text-[#378ADD] hover:underline"
+          hx-get="/overload/catchup" hx-target="#catchup-panel" hx-swap="innerHTML">Catch-up plan →</button>
+  <a href="/tasks" class="text-[#378ADD] hover:underline">Review tasks →</a>
 </div>
 {% endif %}

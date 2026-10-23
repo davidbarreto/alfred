@@ -22,7 +22,8 @@
   </div>
 
 
-  <div id="overload-banner" hx-get="/overload/banner" hx-trigger="load" hx-swap="innerHTML"></div>
+  <div id="overload-banner" hx-get="/overload/banner" hx-trigger="load, catchup-applied from:body" hx-swap="innerHTML"></div>
+  <div id="catchup-panel"></div>
 
   {% if api_error %}
   <div class="rounded-lg bg-[#FCEBEB] border border-[#E24B4A]/20 px-4 py-2.5 text-sm text-[#E24B4A]">

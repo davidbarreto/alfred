@@ -1,3 +1,5 @@
+from datetime import datetime
+
 import httpx
 from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse, Response
@@ -26,6 +28,11 @@ _SETTINGS_GROUPS = [
         ("undated_escalation_days_high", "High priority", "days old", ""),
         ("undated_escalation_days_medium", "Medium priority", "days old", ""),
         ("undated_escalation_days_low", "Low priority", "days old", ""),
+    ]),
+    ("Catch-up plan", [
+        ("catchup_tasks_per_day", "Spread: tasks per day", "tasks", "At most this many due on one day."),
+        ("catchup_stale_days", "Stale after", "days overdue", "Non-high tasks overdue this long may be dropped."),
+        ("catchup_missed_habit_threshold", "Missed habit after", "misses this week", ""),
     ]),
     ("Urgency reset", [
         ("urgency_reset_days", "Push deadlines / snooze by", "days", ""),
@@ -97,3 +104,58 @@ async def save_overload_settings(request: Request):
         current = await api.get("/core/reminder-settings")
         return _render_settings(request, current, error=_error_detail(exc))
     return _render_settings(request, values, saved=True)
+
+
+def _day(iso: str | None) -> str:
+    return datetime.fromisoformat(iso).strftime("%a %d %b") if iso else ""
+
+
+def _render_catchup(request: Request, data: dict, result: str | None = None, error: str | None = None):
+    for suggestion in data["suggestions"]:
+        for move in suggestion["moves"]:
+            move["from_day"] = _day(move["old_deadline"])
+            move["to_day"] = _day(move["new_deadline"])
+    return templates.TemplateResponse(request, "_catchup_panel.html", {
+        "plan": data,
+        "result": result,
+        "error": error,
+    })
+
+
+@router.get("/catchup", response_class=HTMLResponse)
+async def catchup_panel(request: Request):
+    try:
+        data = await api.get("/core/catchup")
+    except httpx.HTTPError:
+        return HTMLResponse('<p class="text-sm text-[#E24B4A]">Could not load the catch-up plan.</p>')
+    return _render_catchup(request, data)
+
+
+@router.post("/catchup/apply", response_class=HTMLResponse)
+async def apply_catchup(request: Request):
+    form = await request.form()
+    kind = str(form.get("kind", ""))
+    payload: dict = {"kind": kind}
+    if kind == "drop":
+        try:
+            payload["task_ids"] = [int(value) for value in form.getlist("task_ids")]
+        except ValueError:
+            payload["task_ids"] = []
+        if not payload["task_ids"]:
+            data = await api.get("/core/catchup")
+            return _render_catchup(request, data, error="Select at least one task to drop.")
+
+    try:
+        outcome = await api.post("/core/catchup/apply", json=payload)
+    except httpx.HTTPStatusError as exc:
+        data = await api.get("/core/catchup")
+        return _render_catchup(request, data, error=_error_detail(exc))
+
+    data = await api.get("/core/catchup")
+    verb = "Moved" if kind == "spread" else "Dropped"
+    message = f"{verb} {outcome['applied']} task(s)."
+    if outcome["skipped"]:
+        message += f" {outcome['skipped']} no longer qualified and were left alone."
+    response = _render_catchup(request, data, result=message)
+    response.headers["HX-Trigger"] = "catchup-applied"
+    return response

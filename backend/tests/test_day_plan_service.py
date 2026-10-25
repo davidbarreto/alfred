@@ -206,7 +206,7 @@ class TestMultiDay:
 
     async def test_daily_recurring_task_appears_once_with_three_due_dates(self, service, parts):
         parts.tasks.get_tasks.return_value = [
-            _task(240, "Guitar practice", recurrence_rule="FREQ=DAILY", estimate_minutes=10, context="home", tags=["music"]),
+            _task(240, "Daily practice", recurrence_rule="FREQ=DAILY", estimate_minutes=10, context="home", tags=["music"]),
         ]
 
         plan = _dump(await service.get_plan(date(2026, 10, 21), days=3))

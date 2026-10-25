@@ -27,7 +27,8 @@ alfred/
 │   │   │       ├── language/      # tracks, grammar_scope, chunks, sessions
 │   │   │       ├── metrics/       # series, entries, quick (start/stop/log), tags
 │   │   │       ├── monitoring/    # monitors, alerts, executions
-│   │   │       ├── organizer/     # tasks, notes, calendar_events, contacts, shopping
+│   │   │       ├── organizer/     # tasks, notes, calendar_events, contacts, shopping, routines, activities
+│   │   │       ├── planning.py    # day plan, planning settings, saved plans
 │   │   │       └── study/         # tracks, plans (overview/generate/transitions), settings
 │   │   ├── assistant/
 │   │   │   ├── commands/          # registry, resolver, executor, per-domain handlers
@@ -59,10 +60,13 @@ alfred/
 │   │   │   ├── metrics/           # Personal measurement log: series, entries (start/stop, value, count), tags
 │   │   │   ├── monitoring/        # Monitors, alerts, executions (flat, not sub-modules)
 │   │   │   ├── study/             # Study planner: tracks, targeted plans (backlog + global cap), tags, generator
+│   │   │   ├── planning/          # Day-plan aggregation (service, timeline, settings) + saved_plans/
 │   │   │   └── organizer/
+│   │   │       ├── activities/    # Optional gap fillers + logs + stats (not tasks)
 │   │   │       ├── calendar_events/
 │   │   │       ├── contacts/      # Write-through cache against Google Contacts (full CRUD)
 │   │   │       ├── notes/
+│   │   │       ├── routines/      # Daily-life routines + steps; pure expansion.py
 │   │   │       ├── shopping/      # Shopping list + wishlist + recurrence
 │   │   │       ├── tags/          # Shared M2M tag tables for tasks/notes/events
 │   │   │       └── tasks/
@@ -110,7 +114,7 @@ alfred/
 - **Single responsibility** — split files when a module grows beyond one clear concern
 
 ### Database (PostgreSQL + pgvector)
-- Schemas: `core`, `organizer`, `monitoring`, `finance`, `language`, `cs` (programming-practice evidence), `study` (study planner), `metrics` (personal measurement log)
+- Schemas: `core`, `organizer`, `monitoring`, `finance`, `language`, `cs` (programming-practice evidence), `study` (study planner), `metrics` (personal measurement log), `planning` (saved day plans)
 - Write-through cache pattern for external integrations (Notion, Google Calendar)
 - Embeddings stored in a generic `core.embeddings` table with `source_id` foreign keys; treat as a derived index, not source of truth
 - `core.memories` is polymorphic with a `type` discriminator column
@@ -402,6 +406,22 @@ Hourly n8n cron (`AlfredReminders`, 08:00-22:00) -> `GET /core/reminders/due` ->
 - **While overloaded** the digest lists at most `overload_max_listed` tasks (urgent first), adds "+K more", slows urgent reminders to `overload_urgent_interval_hours`, and prefixes a header. Only listed tasks get a dedup marker, so the rest rotate into later runs. A one-off "Backlog cleared" line is sent when the level returns to `ok`.
 - **Catch-up plan** (`app/features/core/catchup/`, deliberately not called "triage": the language module already uses `pending_triage` for chunks): `CatchupService.get_suggestions()` recomputes on every call (nothing stored) and returns today's top 3 plus suggestions: `spread` (re-date overdue one-off tasks at most `catchup_tasks_per_day` per day from tomorrow, keeping time of day, skipping the top 3 and the stale ones), `drop` (non-HIGH tasks overdue, or undated and urgent, for `catchup_stale_days`+ days) and `habits` (recurring tasks with `catchup_missed_habit_threshold`+ misses this week; informational only). `apply` re-validates against fresh data and writes through `TaskService` (drop = status `CANCELLED`, spread = new deadline). Surfaces: `GET /core/catchup`, `POST /core/catchup/apply`, Telegram `/catchup` and `/catchupapply spread|drop <ids>` (not in the `_MENU_COMMANDS` menu, so type them), and the "Catch up" button of the portal banner. Nothing is ever applied without an explicit accept.
 - **Settings** live in `core.settings` as `reminders.<field>` (`ReminderSettingsService`, `GET/PUT /core/reminder-settings`, form under Overload in `/tasks/insights`); defaults are constants in `settings_service.py`, `urgency_reset_days` falls back to its env var. `UNDATED_TASK_SNOOZE_DAYS` is still env-only.
+
+---
+
+## Planning (day plans, routines, activities)
+
+An LLM client (Claude via MCP) plans a day or week from Alfred's data. Alfred only gathers facts and stores what was agreed; it never schedules anything and never sends a notification for any of this. The design notes live in `docs/plans/day-planning.md` (gitignored: it names real people and routines, so keep personal names out of code, fixtures and this file).
+
+- **Alfred-only fields.** Tasks gain `estimate_minutes`, `context`, `available_from` (not before); calendar events gain `availability`, `presence`, `travel_minutes`, `routine_id`. `NotionStorageProvider` forwards every non-null record key to Notion, so `TaskService` strips `_ALFRED_ONLY_FIELDS` before every provider call and skips the call entirely when an update touches only those fields; `CalendarEventService` does the same for Google and `sync()` never writes them. Enum value sets are defined once (`TASK_CONTEXTS`, `EVENT_AVAILABILITIES`, `EVENT_PRESENCES`) and feed the Pydantic types, the CHECK constraints and the MCP descriptions.
+- **Routines** (`organizer.routines` + `routine_steps`) are daily-life rhythm: no done state, no urgency, never notify, never contain travel (that is the event's `travel_minutes`). Two kinds: *event-based* (attached to event series through `calendar_events.routine_id`; steps use `anchor` start/end + `offset_minutes`) and *scheduled* (an RRULE + `starts_on`; steps use a `window_start`/`window_end`, and a window exactly as long as the duration is a fixed time). `routines/expansion.py` expands steps with pure functions; nothing is stored per occurrence.
+- **Activities** (`organizer.activities`, `activity_logs`, tags through `activities_tags`) are optional gap fillers, not tasks: logging one is what counts as done, `target_per_week` is a soft wish used only for suggestions, archiving keeps the logs (FK `RESTRICT`). Rule of thumb: if skipping it counts as a miss it is a recurring task, otherwise an activity.
+- **`GET /planning/day`** (`DayPlanService`, MCP `alfred_day_plan get`, 1-7 days) aggregates events, event-routine steps, derived travel blocks, scheduled-routine windows, work and office totals, overdue/due/recurring/backlog tasks, study, language quota, shopping, activity suggestions and the saved plan. Free slots are intentionally not returned. Overlaps are reported in `warnings`, never resolved. Planning preferences live in `core.settings` as `planning.<field>` (`PlanningSettingsService`, `GET/PUT /planning/settings`, form on the portal `/plan` page); unset values turn the related section off.
+- **Saved plans** (`planning.day_plans`): saving a date archives its active version (`archived_at`) and inserts the next; a partial unique index keeps one active plan per date. Blocks need UTC offsets, must start on their date (local), and `ref_id`s are validated against the table their `kind` points at (not a foreign key: plans are history).
+- **DST.** A local day is 23-25 hours. In `expansion.py` and `planning/timeline.py` every sum, difference and comparison goes through UTC instants (`shift_minutes`, `elapsed_minutes`): Python subtracts and compares aware datetimes that share a `tzinfo` by wall clock, which is wrong across a clock change.
+- **MCP/command layer.** Command definitions take an optional `details` field (not sent to Telegram, appended to the MCP tool description) for enum values, units, formats and workflow; `description` stays one line, `details` only adds to it. MCP params are strings, so structured input (`save`'s `days`) is a JSON string validated by the handler with a 400 message. Handlers build models with `build_model()` so bad input is a 400, not a 500.
+- **Portal.** `/plan` (read-only saved plan, week strip, settings), `/routines`, `/activities`, plus the planning fields in the task and event forms. Writes proxy through `web/app/shared/forward.py`.
+- **Backfill.** `backend/scripts/backfill_task_planning_fields.py` maps old `context:*` and duration tags (`30m`, `2h`) onto the new columns; dry-run by default, `--apply` to write, `--rename-area-tags` to also drop the `area:` prefix. It never creates routines or other personal data.
 
 ---
 

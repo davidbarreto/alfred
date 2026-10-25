@@ -182,7 +182,7 @@ class TestHandler:
     async def test_add_passes_planning_fields(self, mock_service):
         await handle_event(
             "add",
-            {"title": "Capoeira", "start": "2026-10-21T20:00:00", "availability": "Blocked",
+            {"title": "Evening class", "start": "2026-10-21T20:00:00", "availability": "Blocked",
              "presence": "in_person", "travel_minutes": "25", "routine_id": "3", "location": "Gym"},
             mock_service,
         )

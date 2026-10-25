@@ -14,6 +14,7 @@ from app.assistant.intents.intent_service import IntentResult
 from app.assistant.prompts import DATE_CONTEXT_TEMPLATE, INTENT_SHORTLIST_PROMPT_TEMPLATE
 from app.integrations.llm_calls.repository import create_llm_call
 from app.shared.llm import LlmProvider
+from app.shared.timezone import local_now
 
 logger = logging.getLogger(__name__)
 
@@ -46,7 +47,7 @@ async def resolve_via_shortlist(
         for c in candidates
     ]
 
-    now = datetime.now(tz=timezone.utc).strftime("%A, %B %d, %Y at %H:%M UTC")
+    now = local_now().strftime("%A, %B %d, %Y at %H:%M %Z")
     system_prompt = INTENT_SHORTLIST_PROMPT_TEMPLATE.format(
         date_context=DATE_CONTEXT_TEMPLATE.format(now=now),
         catalog=json.dumps(catalog, indent=2),

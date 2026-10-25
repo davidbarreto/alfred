@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from datetime import date, datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -15,6 +15,7 @@ from app.features.finance.budgets.schemas import (
 from app.features.finance.categories.repository import CategoryRepository
 from app.features.finance.settings.service import FinanceSettingsService
 from app.features.finance.transactions.repository import TransactionRepository
+from app.shared.timezone import local_today
 
 logger = logging.getLogger(__name__)
 
@@ -33,7 +34,7 @@ class BudgetTargetService:
         return [BudgetTargetRead.model_validate(t) for t in targets]
 
     async def set_target(self, category_id: int, amount: Decimal | None) -> BudgetTargetRead | None:
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
         open_target = await self._repo.get_open(category_id)
 
         if amount is None:
@@ -102,5 +103,5 @@ class BudgetTargetService:
 
     async def current_period_label(self) -> str:
         cycle_start_day = await self._settings.get_cycle_start_day()
-        from_date, _ = cycle.current_cycle_range(date.today(), cycle_start_day)
+        from_date, _ = cycle.current_cycle_range(local_today(), cycle_start_day)
         return from_date.strftime("%Y-%m")

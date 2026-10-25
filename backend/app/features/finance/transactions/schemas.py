@@ -5,6 +5,7 @@ from fastapi import Query
 from pydantic import BaseModel, field_validator
 
 from app.features.finance import cycle
+from app.shared.timezone import local_today
 
 TransactionType: TypeAlias = Literal["expense", "income", "transfer"]
 
@@ -23,7 +24,7 @@ def resolve_period(
     if from_date and to_date:
         return from_date, to_date
 
-    today = date.today()
+    today = local_today()
 
     if period:
         p = period.lower().strip()
@@ -382,7 +383,7 @@ class NetWorthFilters:
         currency: Annotated[str, Query()] = "EUR",
     ) -> None:
         self.from_date = from_date
-        self.to_date = to_date or date.today()
+        self.to_date = to_date or local_today()
         self.currency = currency.upper()
 
 

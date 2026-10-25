@@ -1,4 +1,4 @@
-from datetime import date, datetime, timezone
+from datetime import datetime, timezone
 
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -6,6 +6,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.features.language.chunks.tables import Chunk
 from app.features.language.sessions.tables import LearningSession
 from app.features.language.sessions.schemas import SessionFilters
+from app.shared.timezone import local_today
+from app.shared.timezone import local_timezone
 
 
 class SessionRepository:
@@ -92,7 +94,7 @@ class SessionRepository:
 
     async def count_srs_reviews_today(self, track_id: int) -> int:
         """Recognition reviews only — production attempts have their own quota semantics."""
-        today_start = datetime.combine(date.today(), datetime.min.time()).replace(tzinfo=timezone.utc)
+        today_start = datetime.combine(local_today(), datetime.min.time(), tzinfo=local_timezone())
         result = await self._session.execute(
             select(func.count(LearningSession.id)).where(
                 LearningSession.track_id == track_id,

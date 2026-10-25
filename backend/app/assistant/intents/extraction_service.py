@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.assistant.prompts import DATE_CONTEXT_TEMPLATE, INTENT_EXTRACTION_PROMPT_TEMPLATE
 from app.integrations.llm_calls.repository import create_llm_call
 from app.shared.llm import LlmProvider
+from app.shared.timezone import local_now
 
 logger = logging.getLogger(__name__)
 
@@ -185,7 +186,7 @@ async def extract_args(
     schema_str = json.dumps(schema_cls.model_json_schema(), indent=2)
     date_context = ""
     if intent in _INTENTS_WITH_DATES:
-        now = datetime.now(tz=timezone.utc).strftime("%A, %B %d, %Y at %H:%M UTC")
+        now = local_now().strftime("%A, %B %d, %Y at %H:%M %Z")
         date_context = DATE_CONTEXT_TEMPLATE.format(now=now)
     system_prompt = INTENT_EXTRACTION_PROMPT_TEMPLATE.format(date_context=date_context, schema=schema_str)
     messages = [{"role": "user", "content": text}]

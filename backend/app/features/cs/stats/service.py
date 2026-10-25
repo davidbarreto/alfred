@@ -14,6 +14,7 @@ from app.features.cs.stats.schemas import (
     StatsSummary,
     TagBreakdown,
 )
+from app.shared.timezone import local_today
 
 logger = logging.getLogger(__name__)
 
@@ -69,7 +70,7 @@ def format_context_summary(summary: StatsSummary) -> str:
 
 def format_recent_activity(by_day: list[DailyActivity], days: int = 7) -> str:
     """Pure function: render a compact recent-activity blurb from a (sparse, attempts-only) daily series."""
-    today = datetime.datetime.now(datetime.timezone.utc).date()
+    today = local_today()
     window_start = today - datetime.timedelta(days=days)
     recent = [d for d in by_day if d.date >= window_start]
 
@@ -94,7 +95,7 @@ def compute_streaks(solved_dates: list[datetime.date]) -> tuple[int, int]:
             current = 1
         longest = max(longest, current)
 
-    today = datetime.datetime.now(datetime.timezone.utc).date()
+    today = local_today()
     gap_to_today = (today - solved_dates[-1]).days
     current_streak = current if gap_to_today <= 1 else 0
     return current_streak, longest

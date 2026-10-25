@@ -6,6 +6,7 @@ from fastapi import HTTPException, status
 
 from app.integrations.open_meteo.client import OpenMeteoClient
 from app.integrations.open_meteo.provider import OpenMeteoProvider
+from app.shared.timezone import local_today
 
 logger = logging.getLogger(__name__)
 
@@ -25,9 +26,9 @@ async def handle_weather(command: str, arguments: dict[str, Any]) -> Any:
     location = extracted or "Porto"
     date_arg = arguments.get("date")
     try:
-        forecast_date = date.fromisoformat(date_arg) if date_arg else date.today()
+        forecast_date = date.fromisoformat(date_arg) if date_arg else local_today()
     except ValueError:
-        forecast_date = date.today()
+        forecast_date = local_today()
 
     try:
         forecast, resolved_location = await _client.get_forecast_for_city(location, forecast_date)

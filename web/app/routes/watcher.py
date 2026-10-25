@@ -8,8 +8,17 @@ from fastapi.responses import HTMLResponse
 
 import app.client as api
 from app.templates_config import templates
+from app.shared.timezone import local_now, local_today
 
 router = APIRouter(prefix="/watcher")
+
+
+def _local_date(iso_timestamp: str) -> str:
+    """Date part of a backend timestamp in the portal's timezone (the API emits UTC)."""
+    moment = datetime.fromisoformat(iso_timestamp)
+    if moment.tzinfo is None:
+        moment = moment.replace(tzinfo=timezone.utc)
+    return moment.astimezone(local_now().tzinfo).date().isoformat()
 
 
 async def _render_list(request: Request) -> HTMLResponse:
@@ -60,9 +69,9 @@ async def watcher_page(request: Request):
     time_counts: dict[str, int] = defaultdict(int)
     for execution in executions:
         status_counts[execution["status"]] += 1
-        time_counts[execution["created_at"][:10]] += 1
+        time_counts[_local_date(execution["created_at"])] += 1
 
-    today = datetime.now(timezone.utc).date().isoformat()
+    today = local_today().isoformat()
     executions_today = time_counts.get(today, 0)
     pending_alerts = [a for a in alerts if a["status"] == "pending"]
 

@@ -10,6 +10,7 @@ from app.nlp.patterns import (
     _AMOUNT_RE, _MERCHANT_RE, _EXPENSE_INTENT_RE, _INCOME_INTENT_RE,
     _TIME_RANGE_RE, _TIME_SINGLE_RE,
 )
+from app.shared.timezone import local_naive_now
 
 _CURRENCY_SYMBOL_MAP = {"$": "USD", "€": "EUR", "£": "GBP", "¥": "JPY"}
 _CURRENCY_WORD_MAP = {
@@ -50,7 +51,7 @@ def extract_entities(text: str, base_date: Optional[datetime | date] = None) -> 
     if date_match:
         iso_text = date_match.group(0)
         # ensure a concrete base_date for relative parsing
-        effective_base = base_date if base_date is not None else datetime.now()
+        effective_base = base_date if base_date is not None else local_naive_now()
         iso_date = normalize_date(iso_text, base_date=effective_base)
         if iso_date:
             entities["deadline"] = iso_date
@@ -116,7 +117,7 @@ def extract_finance_entities(text: str, base_date: Optional[datetime | date] = N
     effective_base: datetime = (
         base_date if isinstance(base_date, datetime)
         else datetime.combine(base_date, datetime.min.time()) if base_date
-        else datetime.now()
+        else local_naive_now()
     )
 
     m = _AMOUNT_RE.search(text)

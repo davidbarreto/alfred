@@ -164,9 +164,7 @@ class TestProcess:
             mock_txn_repo.exists_by_dedup_hash.return_value = False
             MockTxnRepo.return_value = mock_txn_repo
 
-            with patch("app.features.finance.recurring_transactions.service.date") as mock_date:
-                mock_date.today.return_value = date(2026, 7, 1)
-                mock_date.side_effect = lambda *a, **k: date(*a, **k)
+            with patch("app.features.finance.recurring_transactions.service.local_today", return_value=date(2026, 7, 1)):
                 result = await service.process()
 
         assert result.created == 1
@@ -187,9 +185,7 @@ class TestProcess:
             mock_txn_repo.exists_by_dedup_hash.return_value = False
             MockTxnRepo.return_value = mock_txn_repo
 
-            with patch("app.features.finance.recurring_transactions.service.date") as mock_date:
-                mock_date.today.return_value = date(2026, 7, 1)
-                mock_date.side_effect = lambda *a, **k: date(*a, **k)
+            with patch("app.features.finance.recurring_transactions.service.local_today", return_value=date(2026, 7, 1)):
                 await service.process()
 
         service._fx.convert_to_eur.assert_awaited_once_with(rt.amount, "USD", date(2026, 7, 1))
@@ -206,9 +202,7 @@ class TestProcess:
             mock_txn_repo.exists_by_dedup_hash.return_value = True
             MockTxnRepo.return_value = mock_txn_repo
 
-            with patch("app.features.finance.recurring_transactions.service.date") as mock_date:
-                mock_date.today.return_value = date(2026, 7, 1)
-                mock_date.side_effect = lambda *a, **k: date(*a, **k)
+            with patch("app.features.finance.recurring_transactions.service.local_today", return_value=date(2026, 7, 1)):
                 result = await service.process()
 
         assert result.created == 0
@@ -228,9 +222,7 @@ class TestProcess:
             mock_txn_repo.exists_by_dedup_hash.return_value = True
             MockTxnRepo.return_value = mock_txn_repo
 
-            with patch("app.features.finance.recurring_transactions.service.date") as mock_date:
-                mock_date.today.return_value = date(2026, 7, 1)
-                mock_date.side_effect = lambda *a, **k: date(*a, **k)
+            with patch("app.features.finance.recurring_transactions.service.local_today", return_value=date(2026, 7, 1)):
                 result = await service.process()
 
         assert result.deactivated == 1

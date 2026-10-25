@@ -4,6 +4,7 @@ from typing import Optional
 import dateparser
 
 from app.nlp.patterns import _CLEANUP_RE, PRIORITY_MAP
+from app.shared.timezone import local_today
 
 def normalize_date(raw: str, base_date: Optional[datetime | date] = None) -> Optional[str]:
     """Parse any date string to ISO 8601 date (YYYY-MM-DD)."""
@@ -38,7 +39,7 @@ def normalize_date(raw: str, base_date: Optional[datetime | date] = None) -> Opt
 
         # determine base for relative calculations
         if base_date is None:
-            base = datetime.now().date()
+            base = local_today()
         elif hasattr(base_date, "date"):
             base = base_date.date()
         else:

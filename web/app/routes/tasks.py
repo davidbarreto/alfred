@@ -8,6 +8,7 @@ from typing import Annotated, Optional
 
 import app.client as api
 from app.templates_config import templates
+from app.shared.timezone import local_today
 
 router = APIRouter(prefix="/tasks")
 
@@ -24,7 +25,7 @@ _FILTER_DEFS = {
 
 
 def _build_params(active_filter: str, extra_tags: list[str] | None = None) -> dict:
-    today = date.today()
+    today = local_today()
     defn = _FILTER_DEFS.get(active_filter, _FILTER_DEFS["all"])
     params: dict = {"status": defn["status"], "limit": 200}
 
@@ -98,8 +99,8 @@ async def tasks_page(request: Request):
         "active_filter": active_filter,
         "filters": _FILTER_DEFS,
         "tag_chips": tag_chips,
-        "today": date.today().isoformat(),
-        "tomorrow": (date.today() + timedelta(days=1)).isoformat(),
+        "today": local_today().isoformat(),
+        "tomorrow": (local_today() + timedelta(days=1)).isoformat(),
         "api_error": api_error,
     })
 
@@ -117,8 +118,8 @@ async def tasks_list_fragment(request: Request):
 
     return templates.TemplateResponse(request, "_tasks_list.html", {
         "tasks": tasks,
-        "today": date.today().isoformat(),
-        "tomorrow": (date.today() + timedelta(days=1)).isoformat(),
+        "today": local_today().isoformat(),
+        "tomorrow": (local_today() + timedelta(days=1)).isoformat(),
     })
 
 
@@ -159,8 +160,8 @@ async def create_task(
         pass
     return templates.TemplateResponse(request, "_tasks_list.html", {
         "tasks": tasks,
-        "today": date.today().isoformat(),
-        "tomorrow": (date.today() + timedelta(days=1)).isoformat(),
+        "today": local_today().isoformat(),
+        "tomorrow": (local_today() + timedelta(days=1)).isoformat(),
     })
 
 
@@ -189,8 +190,8 @@ async def reset_urgency(request: Request):
         "_tasks_list.html",
         {
             "tasks": tasks,
-            "today": date.today().isoformat(),
-            "tomorrow": (date.today() + timedelta(days=1)).isoformat(),
+            "today": local_today().isoformat(),
+            "tomorrow": (local_today() + timedelta(days=1)).isoformat(),
         },
         headers={"X-Urgency-Reset-Summary": summary},
     )
@@ -238,8 +239,8 @@ async def update_task(
         pass
     return templates.TemplateResponse(request, "_tasks_list.html", {
         "tasks": tasks,
-        "today": date.today().isoformat(),
-        "tomorrow": (date.today() + timedelta(days=1)).isoformat(),
+        "today": local_today().isoformat(),
+        "tomorrow": (local_today() + timedelta(days=1)).isoformat(),
     })
 
 
@@ -259,8 +260,8 @@ async def mark_task_done(
                 "urgency": "NORMAL", "deadline": None, "tags": [], "is_done_today": True}
     return templates.TemplateResponse(request, "_task_row.html", {
         "task": task,
-        "today": date.today().isoformat(),
-        "tomorrow": (date.today() + timedelta(days=1)).isoformat(),
+        "today": local_today().isoformat(),
+        "tomorrow": (local_today() + timedelta(days=1)).isoformat(),
     })
 
 
@@ -283,8 +284,8 @@ async def mark_task_doing(task_id: int, request: Request):
                 "urgency": "NORMAL", "deadline": None, "tags": []}
     return templates.TemplateResponse(request, "_task_row.html", {
         "task": task,
-        "today": date.today().isoformat(),
-        "tomorrow": (date.today() + timedelta(days=1)).isoformat(),
+        "today": local_today().isoformat(),
+        "tomorrow": (local_today() + timedelta(days=1)).isoformat(),
     })
 
 
@@ -297,8 +298,8 @@ async def snooze_task(task_id: int, request: Request):
         return Response("Failed to snooze task.", status_code=422, media_type="text/plain")
     return templates.TemplateResponse(request, "_task_row.html", {
         "task": task,
-        "today": date.today().isoformat(),
-        "tomorrow": (date.today() + timedelta(days=1)).isoformat(),
+        "today": local_today().isoformat(),
+        "tomorrow": (local_today() + timedelta(days=1)).isoformat(),
         "just_snoozed": True,
     })
 
@@ -326,7 +327,7 @@ async def _render_history(
         "completions": completions,
         "editing_id": editing_id,
         "error": error,
-        "today": date.today().isoformat(),
+        "today": local_today().isoformat(),
     })
 
 

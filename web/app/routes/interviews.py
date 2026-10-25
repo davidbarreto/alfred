@@ -1,4 +1,3 @@
-from datetime import date
 from typing import Annotated
 
 import httpx
@@ -7,6 +6,7 @@ from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 
 import app.client as api
 from app.templates_config import templates
+from app.shared.timezone import local_today
 
 router = APIRouter(prefix="/interviews")
 
@@ -187,7 +187,7 @@ async def interviews_page(request: Request):
         "status_qs": _status_query_string(selected_statuses),
         "query_offset": offset,
         "api_error": api_error,
-        "today": date.today().isoformat(),
+        "today": local_today().isoformat(),
     })
     if "filtered" in request.query_params:
         response.set_cookie(

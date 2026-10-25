@@ -6,6 +6,7 @@ next, and is labeled by the calendar month it starts in (e.g. cycle_start_day=25
 """
 import calendar
 from datetime import date, timedelta
+from app.shared.timezone import local_today
 
 
 def _clamp_day(year: int, month: int, day: int) -> int:
@@ -41,7 +42,7 @@ def parse_year_month_reference(year_month: str | None, cycle_start_day: int) -> 
     """Turn a "YYYY-MM" label into a reference date inside the cycle that label
     identifies, or today's date (inside today's active cycle) when omitted."""
     if year_month is None:
-        return date.today()
+        return local_today()
     try:
         year, month = (int(part) for part in year_month.split("-", 1))
         return date(year, month, _clamp_day(year, month, cycle_start_day))

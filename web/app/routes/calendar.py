@@ -10,6 +10,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 import app.client as api
 from app.config import get_settings
 from app.templates_config import templates
+from app.shared.timezone import local_today
 
 router = APIRouter(prefix="/calendar")
 
@@ -64,7 +65,7 @@ def _month_range(year: int, month: int) -> tuple[str, str]:
 
 @router.get("/", response_class=HTMLResponse)
 async def calendar_page(request: Request):
-    today = date.today()
+    today = local_today()
     year = int(request.query_params.get("year", today.year))
     month = int(request.query_params.get("month", today.month))
     start, end = _month_range(year, month)

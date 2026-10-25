@@ -14,6 +14,8 @@ from app.config import get_settings
 from app.nlp.normalizer import normalize_date, normalize_priority, clean_text
 from app.nlp.extractor import extract_entities, extract_finance_entities, extract_time_range
 from app.shared.llm import LlmProvider
+from app.shared.timezone import local_naive_now
+from app.shared.timezone import local_today
 
 logger = logging.getLogger(__name__)
 
@@ -24,7 +26,7 @@ def _normalize_date(date_str: str, base_date: datetime | date | None = None) -> 
         return None
     try:
         if base_date is None:
-            effective_base = datetime.now()
+            effective_base = local_naive_now()
         elif isinstance(base_date, datetime):
             effective_base = base_date
         else:
@@ -97,7 +99,7 @@ def _extract_args_and_flags(tokens: List[str], flag_definitions: Dict[str, str])
 
 def _enrich_finance(arguments: Dict[str, Any]) -> Dict[str, Any]:
     """Finance-specific NLP enrichment."""
-    today = datetime.now().date()
+    today = local_today()
 
     for date_field in ("from_date", "to_date", "date"):
         if date_field in arguments and isinstance(arguments[date_field], str):
@@ -118,7 +120,7 @@ def _enrich_event(arguments: Dict[str, Any]) -> Dict[str, Any]:
     if not isinstance(title, str):
         return arguments
 
-    today = datetime.now().date()
+    today = local_today()
     cleaned_text, date_entities = extract_entities(title, base_date=today)
     cleaned_text, time_entities = extract_time_range(cleaned_text)
     arguments["title"] = clean_text(cleaned_text)
@@ -142,7 +144,7 @@ def _enrich_arguments(arguments: Dict[str, Any], cmd_type: str = "") -> Dict[str
     if cmd_type == "event":
         return _enrich_event(arguments)
 
-    today = datetime.now().date()
+    today = local_today()
 
     if "deadline" in arguments and isinstance(arguments["deadline"], str):
         arguments["deadline"] = _normalize_date(arguments["deadline"], base_date=today) or arguments["deadline"]

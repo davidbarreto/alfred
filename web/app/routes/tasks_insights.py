@@ -7,6 +7,7 @@ from fastapi.responses import HTMLResponse
 
 import app.client as api
 from app.templates_config import templates
+from app.shared.timezone import local_today
 
 router = APIRouter(prefix="/tasks/insights")
 
@@ -123,7 +124,7 @@ async def tasks_insights_page(request: Request):
         except httpx.HTTPError:
             pass
 
-    today = date.today()
+    today = local_today()
     today_str = today.isoformat()
     week_start = (today - timedelta(days=today.weekday())).isoformat()
     cutoff_30d = (today - timedelta(days=30)).isoformat()

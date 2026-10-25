@@ -43,6 +43,7 @@ from app.features.language.sessions.service import SessionService as LanguageSes
 from app.features.language.sessions.tables import LearningSession
 from app.integrations.llm_calls.repository import create_llm_call
 from app.shared.llm import LlmProvider, StreamMeta
+from app.shared.timezone import local_now
 
 _LANGUAGE_PENDING_KEY = "language:pending"
 _CHUNK_LOOP_MODES = {"practice", "review"}
@@ -74,7 +75,7 @@ def _build_system_prompt(
     language_session: LearningSession | None = None,
     production_section: str | None = None,
 ) -> str:
-    now = datetime.now(tz=timezone.utc).strftime("%A, %B %d, %Y at %H:%M UTC")
+    now = local_now().strftime("%A, %B %d, %Y at %H:%M %Z")
     parts = []
 
     if detected_intents:

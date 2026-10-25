@@ -7,6 +7,7 @@ from fastapi import HTTPException, status
 from app.assistant.commands.handlers._utils import parse_dt, parse_tags
 from app.features.organizer.calendar_events.schemas import EventCreate, EventFilters, EventUpdate
 from app.features.organizer.calendar_events.service import CalendarEventService
+from app.shared.timezone import local_naive_now
 
 logger = logging.getLogger(__name__)
 
@@ -41,7 +42,7 @@ async def handle_event(command: str, arguments: dict[str, Any], service: Calenda
             start_from = parse_dt(date_range.get("start"))
             start_to = parse_dt(date_range.get("end"))
         if start_from is None:
-            start_from = datetime.now(tz=timezone.utc)
+            start_from = local_naive_now()
         filters = EventFilters(
             limit=int(arguments.get("limit", 100)),
             start_from=start_from,

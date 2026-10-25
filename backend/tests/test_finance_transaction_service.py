@@ -1575,9 +1575,7 @@ class TestBalanceForecast:
         filters = AnalyticsFilters(from_date=date(2026, 6, 1), to_date=date(2026, 6, 30))
         rt = _make_rt(type_="expense", amount=Decimal("100.00"), rule="monthly")
 
-        with patch("app.features.finance.transactions.service.date") as mock_date:
-            mock_date.today.return_value = FIXED_TODAY
-            mock_date.side_effect = lambda *args, **kw: date(*args, **kw)
+        with patch("app.features.finance.transactions.service.local_today", return_value=FIXED_TODAY):
             income, expenses, forecast_to = await service.balance_forecast(filters, [rt])
 
         # days_remaining = (2026-06-30 - 2026-06-12).days = 18
@@ -1591,9 +1589,7 @@ class TestBalanceForecast:
         filters = AnalyticsFilters(from_date=date(2026, 6, 1), to_date=date(2026, 6, 30))
         rt = _make_rt(type_="income", amount=Decimal("200.00"), rule="monthly")
 
-        with patch("app.features.finance.transactions.service.date") as mock_date:
-            mock_date.today.return_value = FIXED_TODAY
-            mock_date.side_effect = lambda *args, **kw: date(*args, **kw)
+        with patch("app.features.finance.transactions.service.local_today", return_value=FIXED_TODAY):
             income, expenses, _ = await service.balance_forecast(filters, [rt])
 
         assert income == Decimal("120")  # 200 * (18/30)
@@ -1603,9 +1599,7 @@ class TestBalanceForecast:
         filters = AnalyticsFilters(from_date=date(2026, 6, 1), to_date=date(2026, 6, 30))
         rt = _make_rt(type_="expense", amount=Decimal("100.00"), rule="RRULE:FREQ=MONTHLY")
 
-        with patch("app.features.finance.transactions.service.date") as mock_date:
-            mock_date.today.return_value = FIXED_TODAY
-            mock_date.side_effect = lambda *args, **kw: date(*args, **kw)
+        with patch("app.features.finance.transactions.service.local_today", return_value=FIXED_TODAY):
             income, expenses, _ = await service.balance_forecast(filters, [rt])
 
         assert expenses == Decimal("0")
@@ -1614,9 +1608,7 @@ class TestBalanceForecast:
         filters = AnalyticsFilters(from_date=date(2026, 1, 1), to_date=date(2026, 1, 31))
         rt = _make_rt(type_="expense", amount=Decimal("100.00"), rule="daily")
 
-        with patch("app.features.finance.transactions.service.date") as mock_date:
-            mock_date.today.return_value = FIXED_TODAY
-            mock_date.side_effect = lambda *args, **kw: date(*args, **kw)
+        with patch("app.features.finance.transactions.service.local_today", return_value=FIXED_TODAY):
             income, expenses, _ = await service.balance_forecast(filters, [rt])
 
         assert expenses == Decimal("0")

@@ -17,6 +17,7 @@ from app.features.organizer.tasks.recurrence import compute_streak, is_done_in_c
 from app.features.organizer.tasks.repository import TaskRepository
 from app.features.core.embeddings.schemas import EmbeddingCreate
 from app.features.core.embeddings.service import EmbeddingService
+from app.shared.timezone import local_today
 
 logger = logging.getLogger(__name__)
 
@@ -54,7 +55,7 @@ class TaskService:
             return None
         task_read = TaskRead.model_validate(task_orm)
         if task_orm.recurrence_rule is not None:
-            today = date.today()
+            today = local_today()
             completed = await self._repo.get_completed_task_ids_for_date([task_id], today)
             task_read.is_done_today = task_id in completed
             completions_map = await self._repo.get_completions_by_task([task_id])
@@ -69,7 +70,7 @@ class TaskService:
         tasks_orm = await self._repo.get_tasks(filters)
         task_reads = [TaskRead.model_validate(t) for t in tasks_orm]
         recurring_ids = [t.id for t in task_reads if t.recurrence_rule is not None]
-        today = date.today()
+        today = local_today()
         if recurring_ids:
             completed_today = await self._repo.get_completed_task_ids_for_date(recurring_ids, today)
             completions_map = await self._repo.get_completions_by_task(recurring_ids)
@@ -139,7 +140,7 @@ class TaskService:
         if task is None:
             return None
 
-        if occurrence_date is not None and occurrence_date > date.today():
+        if occurrence_date is not None and occurrence_date > local_today():
             raise ValueError("Completion date cannot be in the future.")
 
         if task.recurrence_rule is None:
@@ -155,7 +156,7 @@ class TaskService:
             result.is_done_today = True
             return result
 
-        occ_date = occurrence_date or date.today()
+        occ_date = occurrence_date or local_today()
         existing = await self._repo.get_completion(task_id, occ_date)
         if existing is not None:
             return TaskCompletionRead.model_validate(existing)
@@ -183,7 +184,7 @@ class TaskService:
             logger.debug("Completion update: task_id=%d completion_id=%d not found", task_id, completion_id)
             return None
 
-        today = date.today()
+        today = local_today()
         if any(d is not None and d > today for d in (data.occurrence_date, data.completed_on)):
             raise ValueError("Completion dates cannot be in the future.")
 
@@ -200,7 +201,7 @@ class TaskService:
         return TaskCompletionRead.model_validate(updated)
 
     async def get_completions_history(self, days: int) -> list[TaskCompletionRead]:
-        since = date.today() - timedelta(days=days)
+        since = local_today() - timedelta(days=days)
         completions = await self._repo.get_all_completions_since(since)
         return [TaskCompletionRead.model_validate(c) for c in completions]
 

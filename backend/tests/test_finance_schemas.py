@@ -7,7 +7,7 @@ FIXED_TODAY = date(2026, 6, 12)  # Friday
 
 
 def _today(d=FIXED_TODAY):
-    return patch("app.features.finance.transactions.schemas.date", wraps=date, **{"today.return_value": d})
+    return patch("app.features.finance.transactions.schemas.local_today", return_value=d)
 
 
 class TestResolvePeriodExplicitDates:

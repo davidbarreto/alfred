@@ -10,6 +10,7 @@ from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Resp
 
 import app.client as api
 from app.templates_config import templates
+from app.shared.timezone import local_today
 
 router = APIRouter(prefix="/finance")
 
@@ -308,8 +309,8 @@ async def finance_page(request: Request):
     # not a single cycle's start/end balance.
     net_worth = None
     try:
-        from datetime import date as _date, timedelta as _timedelta
-        net_worth_from = (_date.today() - _timedelta(days=365)).isoformat()
+        from datetime import timedelta as _timedelta
+        net_worth_from = (local_today() - _timedelta(days=365)).isoformat()
         net_worth = await api.get(
             "/finance/transactions/net-worth",
             params={"currency": currency, "group_by": "month", "from_date": net_worth_from},
@@ -689,7 +690,7 @@ async def coverage_page(request: Request):
     except httpx.HTTPError:
         pass
 
-    today = date.today()
+    today = local_today()
     earliest_overall = today
     account_rows = []
     for account in accounts:
@@ -1053,7 +1054,7 @@ async def budgets_page(request: Request):
         current_period = await api.get("/finance/budgets/current-period")
         year_month = current_period["year_month"]
     except httpx.HTTPError:
-        year_month = date.today().strftime("%Y-%m")
+        year_month = local_today().strftime("%Y-%m")
     budget_status = []
     try:
         budget_status = await api.get("/finance/budgets/status", params={"year_month": year_month})

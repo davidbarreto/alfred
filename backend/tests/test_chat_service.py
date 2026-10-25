@@ -1,3 +1,4 @@
+from freezegun import freeze_time
 import json
 import pytest
 from datetime import datetime, timezone
@@ -307,10 +308,10 @@ class TestBuildSystemPrompt:
         assert "Relevant context" not in prompt
 
     def test_includes_current_datetime(self):
-        with patch("app.features.core.chats.service.datetime") as mock_dt:
-            mock_dt.now.return_value = _fixed_now()
+        # 13:30 UTC is 14:30 in Lisbon (WEST); the prompt shows local time, not UTC
+        with freeze_time(_fixed_now(hour=13, minute=30)):
             prompt = _build_system_prompt([])
-        assert "Wednesday, June 17, 2026 at 14:30 UTC" in prompt
+        assert "Wednesday, June 17, 2026 at 14:30 WEST" in prompt
 
     def test_includes_formatting_instructions(self):
         prompt = _build_system_prompt([])

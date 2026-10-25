@@ -13,6 +13,7 @@ from app.features.organizer.tasks.schemas import (
 from app.features.organizer.tasks.service import CompletionConflictError
 from app.api.auth import require_auth
 from app.dependencies import TaskServiceDep, WorkingMemoryServiceDep
+from app.shared.timezone import local_today
 
 router = APIRouter(prefix="/organizer/tasks", tags=["organizer"], dependencies=[Depends(require_auth)])
 
@@ -114,7 +115,7 @@ async def complete_task(
         task_read = await service.get_task(task_id)
         if task_read is None:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found")
-        task_read.is_done_today = occurrence_date is None or occurrence_date == date.today()
+        task_read.is_done_today = occurrence_date is None or occurrence_date == local_today()
         return task_read
     return result
 

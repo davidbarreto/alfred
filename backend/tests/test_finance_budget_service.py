@@ -1,3 +1,4 @@
+from freezegun import freeze_time
 import pytest
 from datetime import date, datetime
 from decimal import Decimal
@@ -65,8 +66,7 @@ class TestSetTarget:
         new_target = _make_target_orm(category_id=1, amount=Decimal("300"), effective_from=FIXED_NOW)
         service._repo.add.return_value = new_target
 
-        with patch("app.features.finance.budgets.service.datetime") as mock_dt:
-            mock_dt.utcnow.return_value = FIXED_NOW
+        with freeze_time(FIXED_NOW):
             result = await service.set_target(1, Decimal("300"))
 
         service._repo.add.assert_called_once_with(category_id=1, amount=Decimal("300"), effective_from=FIXED_NOW)
@@ -76,8 +76,7 @@ class TestSetTarget:
         open_target = _make_target_orm(category_id=1, amount=Decimal("300"), effective_from=datetime(2026, 7, 1))
         service._repo.get_open.return_value = open_target
 
-        with patch("app.features.finance.budgets.service.datetime") as mock_dt:
-            mock_dt.utcnow.return_value = FIXED_NOW
+        with freeze_time(FIXED_NOW):
             result = await service.set_target(1, Decimal("450"))
 
         assert open_target.amount == Decimal("450")
@@ -91,8 +90,7 @@ class TestSetTarget:
         new_target = _make_target_orm(category_id=1, amount=Decimal("450"), effective_from=FIXED_NOW)
         service._repo.add.return_value = new_target
 
-        with patch("app.features.finance.budgets.service.datetime") as mock_dt:
-            mock_dt.utcnow.return_value = FIXED_NOW
+        with freeze_time(FIXED_NOW):
             result = await service.set_target(1, Decimal("450"))
 
         assert open_target.effective_to == FIXED_NOW
@@ -103,8 +101,7 @@ class TestSetTarget:
         open_target = _make_target_orm(category_id=1, effective_from=datetime(2026, 7, 1))
         service._repo.get_open.return_value = open_target
 
-        with patch("app.features.finance.budgets.service.datetime") as mock_dt:
-            mock_dt.utcnow.return_value = FIXED_NOW
+        with freeze_time(FIXED_NOW):
             result = await service.set_target(1, None)
 
         assert open_target.effective_to == FIXED_NOW
@@ -177,9 +174,7 @@ class TestGetStatus:
         service._category_repo.list.return_value = []
         service._settings.get_cycle_start_day.return_value = 25
 
-        with patch("app.features.finance.cycle.date") as mock_date:
-            mock_date.today.return_value = date(2026, 8, 15)
-            mock_date.side_effect = lambda *a, **kw: date(*a, **kw)
+        with patch("app.features.finance.cycle.local_today", return_value=date(2026, 8, 15)):
             await service.get_status(None)
 
         # Aug 15 with cycle_start_day=25 -> active cycle started July 25 -> ends Aug 24

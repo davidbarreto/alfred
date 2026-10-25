@@ -13,6 +13,7 @@ from app.dependencies import (
     MorningBriefingSummaryServiceDep,
 )
 from app.features.briefing.schemas import BriefingHistoryItem, EveningDigest, FormattedBriefing, MorningBriefing
+from app.shared.timezone import local_today
 
 router = APIRouter(prefix="/briefing", tags=["briefing"], dependencies=[Depends(require_auth)])
 
@@ -40,7 +41,7 @@ async def get_morning_briefing_formatted(
     force: bool = False,
 ) -> FormattedBriefing:
     if await pause_service.is_paused():
-        return FormattedBriefing(date=date.today(), text="")
+        return FormattedBriefing(date=local_today(), text="")
     if not force:
         saved = await formatter_service.get_saved()
         if saved is not None:
@@ -62,7 +63,7 @@ async def get_evening_digest_formatted(
     force: bool = False,
 ) -> FormattedBriefing:
     if await pause_service.is_paused():
-        return FormattedBriefing(date=date.today(), text="")
+        return FormattedBriefing(date=local_today(), text="")
     if force:
         digest = await summary_service.build()
         return await formatter_service.format(digest)

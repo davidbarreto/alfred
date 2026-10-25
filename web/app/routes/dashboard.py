@@ -1,4 +1,4 @@
-from datetime import date, datetime, timedelta, timezone
+from datetime import datetime, timedelta, timezone
 
 import httpx
 from fastapi import APIRouter, Request
@@ -6,14 +6,16 @@ from fastapi.responses import HTMLResponse
 
 import app.client as api
 from app.templates_config import templates
+from app.shared.timezone import local_today
+from app.shared.timezone import local_now
 
 router = APIRouter()
 
 
 @router.get("/", response_class=HTMLResponse)
 async def dashboard(request: Request):
-    today_start = datetime.now(tz=timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0).isoformat()
-    today_end = datetime.now(tz=timezone.utc).replace(hour=23, minute=59, second=59, microsecond=0).isoformat()
+    today_start = local_now().replace(hour=0, minute=0, second=0, microsecond=0).isoformat()
+    today_end = local_now().replace(hour=23, minute=59, second=59, microsecond=0).isoformat()
 
     tasks, shopping_items, events, spending = None, None, None, None
     errors = []
@@ -50,7 +52,7 @@ async def dashboard(request: Request):
         "shopping_items": shopping_items or [],
         "events": events or [],
         "spending": spending,
-        "today": date.today().isoformat(),
-        "tomorrow": (date.today() + timedelta(days=1)).isoformat(),
+        "today": local_today().isoformat(),
+        "tomorrow": (local_today() + timedelta(days=1)).isoformat(),
         "errors": errors,
     })

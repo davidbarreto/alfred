@@ -22,6 +22,8 @@ from app.features.finance.transactions.schemas import (
     TransactionUpdate,
 )
 from app.features.finance.transactions.service import TransactionService
+from app.shared.timezone import local_today
+from app.shared.timezone import local_naive_now
 
 
 def _parse_decimal(value: str | None) -> Decimal | None:
@@ -61,9 +63,9 @@ async def _resolve_category_id(category_name: str | None, service: CategoryServi
 
 def _resolve_year_month(period: str | None) -> date:
     if not period:
-        return date.today().replace(day=1)
+        return local_today().replace(day=1)
     dt = parse_dt(period)
-    return dt.date().replace(day=1) if dt else date.today().replace(day=1)
+    return dt.date().replace(day=1) if dt else local_today().replace(day=1)
 
 
 async def handle_finance(
@@ -85,7 +87,7 @@ async def handle_finance(
         txn_date = parse_dt(arguments.get("date")) or parse_dt(arguments.get("deadline"))
         payload = TransactionCreate(
             account_id=account_id,
-            date=txn_date or __import__("datetime").datetime.now(),
+            date=txn_date or local_naive_now(),
             amount=amount or Decimal("0"),
             currency=arguments.get("currency", "EUR"),
             type=arguments.get("type", "expense"),

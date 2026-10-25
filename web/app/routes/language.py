@@ -10,6 +10,7 @@ from fastapi.responses import HTMLResponse, JSONResponse, Response
 import app.client as api
 from app.shared.flags import language_flag
 from app.templates_config import templates
+from app.shared.timezone import local_today
 
 router = APIRouter(prefix="/languages")
 
@@ -383,7 +384,7 @@ async def reject_chunk(chunk_id: int, request: Request):
 @router.get("/insights", response_class=HTMLResponse)
 async def insights_page(request: Request):
     tracks = await _safe_get("/language/tracks", {"active_only": "false", "exclude_paused": "false"})
-    today = date.today()
+    today = local_today()
 
     track_stats = []
     all_sessions: list = []

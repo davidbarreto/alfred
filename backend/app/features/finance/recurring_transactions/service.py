@@ -16,6 +16,7 @@ from app.features.finance.recurring_transactions.schemas import (
 )
 from app.features.finance.transactions.repository import TransactionRepository
 from app.features.finance.transactions.schemas import TransactionCreate
+from app.shared.timezone import local_today
 
 logger = logging.getLogger(__name__)
 
@@ -109,7 +110,7 @@ class RecurringTransactionService:
         Idempotent: uses deduplication hash to skip already-created occurrences.
         Deactivates rules whose RRULE is exhausted (UNTIL/COUNT reached).
         """
-        today = date.today()
+        today = local_today()
         active = await self._repo.list_active()
         txn_repo = TransactionRepository(self._session)
         created = 0

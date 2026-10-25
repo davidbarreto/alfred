@@ -1,6 +1,6 @@
 import logging
 from dataclasses import dataclass
-from datetime import date, timedelta
+from datetime import date
 from decimal import Decimal
 from typing import List
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -46,6 +46,7 @@ from app.features.finance.transactions.schemas import (
     UnmatchedTransferAccount,
     resolve_period,
 )
+from app.shared.timezone import local_today
 
 
 def _account_delta(type_: str, amount: Decimal) -> Decimal:
@@ -761,7 +762,7 @@ class TransactionService:
         overall) earliest transaction, today] -- the finance data-coverage page uses
         this to show which months/days actually have imported data.
         """
-        resolved_to = to_date or date.today()
+        resolved_to = to_date or local_today()
         resolved_from = from_date
         if resolved_from is None:
             resolved_from = await self._repo.get_earliest_transaction_date(account_id)
@@ -901,7 +902,7 @@ class TransactionService:
         Requires the list of active recurring transactions passed in from the caller
         to avoid a cross-service DB call inside this service.
         """
-        today = date.today()
+        today = local_today()
         _, forecast_to = await self._resolve_period(filters)
 
         # Sum balances from account service is done at the route level; we accept

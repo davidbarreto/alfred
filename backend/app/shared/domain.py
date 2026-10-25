@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 
 
 @dataclass
@@ -21,4 +21,4 @@ class DomainRecord:
 
     @staticmethod
     def _now_iso() -> str:
-        return datetime.utcnow().isoformat()
+        return datetime.now(timezone.utc).replace(tzinfo=None).isoformat()

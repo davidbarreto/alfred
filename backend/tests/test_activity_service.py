@@ -221,3 +221,38 @@ class TestStats:
         assert (stats.total_count, stats.total_minutes) == (1, 60)
         assert stats.by_tag[0].tag == "health"
         assert service._repo.get_logs_since.call_args.args[0] == datetime(2026, 10, 12, 0, 0)
+
+
+@freeze_time("2026-10-21 12:00:00")  # Wednesday
+class TestWeeklyProgressOnReads:
+    async def test_list_counts_this_week_only_for_targeted_activities(self, service):
+        service._repo.get_activities.return_value = [_activity(1, "Gym", target_per_week=3), _activity(2, "Book")]
+        service._repo.count_logs_between.return_value = {1: 2}
+
+        result = await service.get_activities(ActivityFilters())
+
+        assert [a.done_this_week for a in result] == [2, None]
+        ids, start, end = service._repo.count_logs_between.call_args.args
+        assert ids == [1]
+        assert (start, end) == (datetime(2026, 10, 19, 0, 0), datetime(2026, 10, 26, 0, 0))
+
+    async def test_targeted_activity_with_no_logs_reports_zero(self, service):
+        service._repo.get_activities.return_value = [_activity(1, "Gym", target_per_week=3)]
+        assert (await service.get_activities(ActivityFilters()))[0].done_this_week == 0
+
+    async def test_get_activity_includes_progress(self, service):
+        service._repo.get_activity.return_value = _activity(1, "Gym", target_per_week=3)
+        service._repo.count_logs_between.return_value = {1: 1}
+        assert (await service.get_activity(1)).done_this_week == 1
+
+    async def test_create_with_a_target_starts_at_zero(self, service):
+        service._repo.create_activity.return_value = _activity(1, "Gym", target_per_week=3)
+        assert (await service.create_activity(ActivityCreate(title="Gym", target_per_week=3))).done_this_week == 0
+
+    async def test_update_and_archive_keep_the_progress(self, service):
+        service._repo.get_activity.return_value = _activity(1, target_per_week=3)
+        service._repo.update_activity.return_value = _activity(1, target_per_week=3)
+        service._repo.set_archived.return_value = _activity(1, target_per_week=3)
+        service._repo.count_logs_between.return_value = {1: 2}
+        assert (await service.update_activity(1, ActivityUpdate(title="Gym"))).done_this_week == 2
+        assert (await service.archive(1)).done_this_week == 2

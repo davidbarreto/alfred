@@ -33,6 +33,12 @@ class ActivityStateError(ValueError):
     """The activity is in the wrong state for the request, e.g. logging an archived one (maps to 409)."""
 
 
+def _current_week_window() -> tuple[datetime, datetime]:
+    """Monday 00:00 to next Monday 00:00 in local time (naive, like LocalDateTime columns)."""
+    start = datetime.combine(monday_of(local_today()), time.min)
+    return start, start + timedelta(days=7)
+
+
 def _naive_local(moment: datetime) -> datetime:
     if moment.tzinfo is None:
         return moment
@@ -46,20 +52,29 @@ class ActivityService:
 
     async def get_activities(self, filters: ActivityFilters) -> list[ActivityRead]:
         activities = await self._repo.get_activities(filters)
-        last_done = await self._repo.get_last_done([a.id for a in activities])
-        return [self._read(a, last_done.get(a.id)) for a in activities]
+        return await self._with_progress(activities)
 
     async def get_activity(self, activity_id: int) -> ActivityRead | None:
         activity = await self._repo.get_activity(activity_id)
         if activity is None:
             return None
-        last_done = await self._repo.get_last_done([activity_id])
-        return self._read(activity, last_done.get(activity_id))
+        return (await self._with_progress([activity]))[0]
+
+    async def _with_progress(self, activities: list[Activity]) -> list[ActivityRead]:
+        """Reads enriched with the last log time and, for activities with a weekly target, this week's count."""
+        ids = [a.id for a in activities]
+        last_done = await self._repo.get_last_done(ids)
+        targeted = [a.id for a in activities if a.target_per_week]
+        this_week = await self._repo.count_logs_between(targeted, *_current_week_window())
+        return [
+            self._read(a, last_done.get(a.id), this_week.get(a.id, 0) if a.target_per_week else None)
+            for a in activities
+        ]
 
     async def create_activity(self, data: ActivityCreate) -> ActivityRead:
         activity = await self._repo.create_activity(data)
         logger.info("Activity created: id=%d title=%r", activity.id, activity.title)
-        return self._read(activity, None)
+        return self._read(activity, None, 0 if activity.target_per_week else None)
 
     async def update_activity(self, activity_id: int, data: ActivityUpdate) -> ActivityRead | None:
         activity = await self._repo.get_activity(activity_id)
@@ -73,8 +88,7 @@ class ActivityService:
             raise ActivityValidationError("max_minutes must not be less than min_minutes")
         updated = await self._repo.update_activity(activity_id, data)
         logger.info("Activity updated: id=%d fields=%s", activity_id, list(changes.keys()))
-        last_done = await self._repo.get_last_done([activity_id])
-        return self._read(updated, last_done.get(activity_id))
+        return (await self._with_progress([updated]))[0]
 
     async def archive(self, activity_id: int) -> ActivityRead | None:
         return await self._set_archived(activity_id, datetime.now(timezone.utc), "archived")
@@ -88,8 +102,7 @@ class ActivityService:
             logger.debug("Activity %s: id=%d not found", label, activity_id)
             return None
         logger.info("Activity %s: id=%d title=%r", label, activity_id, activity.title)
-        last_done = await self._repo.get_last_done([activity_id])
-        return self._read(activity, last_done.get(activity_id))
+        return (await self._with_progress([activity]))[0]
 
     async def log(self, activity_id: int, data: ActivityLogCreate) -> ActivityLogRead | None:
         activity = await self._repo.get_activity(activity_id)
@@ -133,8 +146,7 @@ class ActivityService:
         ids = [a.id for a in activities]
         last_done = await self._repo.get_last_done(ids)
         today = local_today()
-        week_start = datetime.combine(monday_of(today), time.min)
-        this_week = await self._repo.count_logs_between(ids, week_start, week_start + timedelta(days=7))
+        this_week = await self._repo.count_logs_between(ids, *_current_week_window())
 
         def sort_key(activity: Activity):
             done = last_done.get(activity.id)
@@ -159,5 +171,7 @@ class ActivityService:
         return suggestions
 
     @staticmethod
-    def _read(activity: Activity, last_done: datetime | None) -> ActivityRead:
-        return ActivityRead.model_validate(activity).model_copy(update={"last_done_at": last_done})
+    def _read(activity: Activity, last_done: datetime | None, done_this_week: int | None = None) -> ActivityRead:
+        return ActivityRead.model_validate(activity).model_copy(
+            update={"last_done_at": last_done, "done_this_week": done_this_week}
+        )

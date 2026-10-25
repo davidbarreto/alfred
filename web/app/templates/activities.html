@@ -1,0 +1,171 @@
+{% extends "base.html" %}
+{% set active_page = "activities" %}
+{% block title %}Activities{% endblock %}
+
+{% block content %}
+<div class="p-6 space-y-6">
+
+  <div class="flex items-center justify-between gap-3 flex-wrap">
+    <div>
+      <h1 class="text-base font-semibold text-gray-900">Activities</h1>
+      <p class="text-xs text-gray-400">Optional things for spare time. Logging one is what counts as done.</p>
+    </div>
+    <div class="flex items-center gap-2">
+      <a href="/activities{% if not show_archived %}?archived=1{% endif %}" class="text-xs text-gray-500 hover:text-gray-700">
+        {{ 'Hide archived' if show_archived else 'Show archived' }}
+      </a>
+      <button onclick="document.getElementById('new-activity').classList.toggle('hidden')"
+              class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#378ADD] text-xs font-medium text-white hover:bg-[#2f7bc4] transition-colors">
+        <i class="ti ti-plus text-sm"></i>New activity
+      </button>
+    </div>
+  </div>
+
+  <div id="new-activity" class="card bg-white hidden">
+    <div class="card-body p-5">
+      <form id="new-activity-form" class="flex flex-wrap items-end gap-3">
+        <label class="space-y-1">
+          <span class="block text-xs text-gray-500">Title</span>
+          <input name="title" required maxlength="255" placeholder="Read a book" class="input input-sm input-bordered w-56">
+        </label>
+        <label class="space-y-1">
+          <span class="block text-xs text-gray-500">Min (minutes)</span>
+          <input name="min_minutes" type="number" min="1" class="input input-sm input-bordered w-24">
+        </label>
+        <label class="space-y-1">
+          <span class="block text-xs text-gray-500">Max (minutes)</span>
+          <input name="max_minutes" type="number" min="1" class="input input-sm input-bordered w-24">
+        </label>
+        <label class="space-y-1">
+          <span class="block text-xs text-gray-500">Where</span>
+          <select name="context" class="select select-sm select-bordered">
+            <option value="">Not set</option>
+            {% for c in contexts %}<option value="{{ c }}">{{ c | capitalize }}</option>{% endfor %}
+          </select>
+        </label>
+        <label class="space-y-1">
+          <span class="block text-xs text-gray-500">Times per week (soft wish)</span>
+          <input name="target_per_week" type="number" min="1" class="input input-sm input-bordered w-24">
+        </label>
+        <label class="space-y-1">
+          <span class="block text-xs text-gray-500">Tags (comma-separated)</span>
+          <input name="tags" placeholder="health, sport" class="input input-sm input-bordered w-44">
+        </label>
+        <button type="submit" class="btn btn-sm btn-outline">Add</button>
+        <span id="new-activity-error" class="text-xs text-red-600"></span>
+      </form>
+    </div>
+  </div>
+
+  {% if available and stats and stats.total_count %}
+  <div class="card bg-white" id="activity-weekly-chart">
+    <div class="card-body p-5 space-y-3">
+      <div class="flex items-baseline justify-between">
+        <p class="text-sm font-semibold text-gray-900">Last {{ stats.weeks | length }} weeks</p>
+        <p class="text-xs text-gray-400">{{ stats.total_count }} logged{% if stats.total_minutes %} · {{ stats.total_minutes }} min{% endif %}</p>
+      </div>
+      <div class="flex items-end gap-1.5 h-24">
+        {% for week, height in week_bars %}
+        <div class="flex-1 flex flex-col justify-end h-full" title="Week of {{ week.week_start }}: {{ week.count }} logged{% if week.minutes %}, {{ week.minutes }} min{% endif %}">
+          <div class="rounded-sm bg-[#378ADD]" style="height: {{ height }}%"></div>
+        </div>
+        {% endfor %}
+      </div>
+      <div class="flex flex-wrap gap-x-6 gap-y-1 text-xs text-gray-500">
+        {% for tag in stats.by_tag[:6] %}<span>{{ tag.tag }} <span class="text-gray-400">{{ tag.count }}</span></span>{% endfor %}
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  {% if not available %}
+  <div class="card bg-white"><div class="card-body p-5"><p class="text-sm text-gray-400">Activities are unavailable right now.</p></div></div>
+  {% elif not cards %}
+  <div class="card bg-white"><div class="card-body p-5"><p class="text-sm text-gray-400">No activities yet. Add things you would like to do when you have spare time.</p></div></div>
+  {% else %}
+  <div class="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-4">
+    {% for a in cards %}
+    <div class="card bg-white {% if a.archived_at %}opacity-60{% endif %}" id="activity-{{ a.id }}">
+      <div class="card-body p-5 space-y-3">
+        <div class="flex items-start justify-between gap-3">
+          <div class="min-w-0">
+            <p class="text-sm font-semibold text-gray-900 truncate">{{ a.title }}</p>
+            <p class="text-xs text-gray-400">
+              {% if a.min_minutes and a.max_minutes %}{{ a.min_minutes }}–{{ a.max_minutes }} min{% elif a.min_minutes %}from {{ a.min_minutes }} min{% elif a.max_minutes %}up to {{ a.max_minutes }} min{% else %}any length{% endif %}
+              {% if a.context %} · {{ a.context }}{% endif %}
+            </p>
+          </div>
+          {% if a.archived_at %}<span class="px-2 py-0.5 rounded-full text-xs text-gray-500 bg-gray-100">archived</span>{% endif %}
+        </div>
+
+        {% if a.tags %}
+        <div class="flex flex-wrap gap-1.5">
+          {% for tag in a.tags %}<span class="px-2 py-0.5 rounded-full text-xs bg-[#E6F1FB] text-[#0C447C]">{{ tag }}</span>{% endfor %}
+        </div>
+        {% endif %}
+
+        <p class="text-xs text-gray-500">
+          {% if a.days_since is none %}Never done{% elif a.days_since == 0 %}Done today{% else %}Last done {{ a.days_since }} day{{ '' if a.days_since == 1 else 's' }} ago{% endif %}
+          {% if a.target_per_week %} · <span data-progress>{{ a.done_this_week or 0 }}/{{ a.target_per_week }} this week</span>{% endif %}
+        </p>
+
+        <div class="flex items-center gap-2 pt-1">
+          {% if not a.archived_at %}
+          <input type="number" min="1" placeholder="min" aria-label="Minutes spent" class="input input-xs input-bordered w-16" id="minutes-{{ a.id }}">
+          <button onclick="logActivity({{ a.id }})" class="btn btn-xs btn-outline">Log done</button>
+          <button onclick="activityAction({{ a.id }}, 'archive')" class="btn btn-xs btn-ghost text-gray-500">Archive</button>
+          {% else %}
+          <button onclick="activityAction({{ a.id }}, 'unarchive')" class="btn btn-xs btn-outline">Restore</button>
+          {% endif %}
+          <span class="text-xs text-red-600" id="error-{{ a.id }}"></span>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+</div>
+
+<script>
+async function send(url, method, body) {
+  const res = await fetch(url, {
+    method, headers: { 'Content-Type': 'application/json' }, body: body === undefined ? undefined : JSON.stringify(body),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || 'Something went wrong.');
+  return data;
+}
+
+document.getElementById('new-activity-form')?.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const form = new FormData(event.target);
+  const body = { title: form.get('title'), tags: (form.get('tags') || '').split(',').map(t => t.trim()).filter(Boolean) };
+  for (const key of ['min_minutes', 'max_minutes', 'target_per_week']) {
+    if (form.get(key)) body[key] = Number(form.get(key));
+  }
+  if (form.get('context')) body.context = form.get('context');
+  const error = document.getElementById('new-activity-error');
+  error.textContent = '';
+  try { await send('/activities', 'POST', body); location.reload(); }
+  catch (e) { error.textContent = e.message; }
+});
+
+async function logActivity(id) {
+  const minutes = document.getElementById(`minutes-${id}`).value;
+  const error = document.getElementById(`error-${id}`);
+  error.textContent = '';
+  try {
+    await send(`/activities/${id}/log`, 'POST', minutes ? { minutes: Number(minutes) } : {});
+    location.reload();
+  } catch (e) { error.textContent = e.message; }
+}
+
+async function activityAction(id, action) {
+  const error = document.getElementById(`error-${id}`);
+  error.textContent = '';
+  try { await send(`/activities/${id}/${action}`, 'POST'); location.reload(); }
+  catch (e) { error.textContent = e.message; }
+}
+</script>
+{% endblock %}

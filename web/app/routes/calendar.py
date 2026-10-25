@@ -69,6 +69,15 @@ def _month_range(year: int, month: int) -> tuple[str, str]:
     )
 
 
+async def _event_routines() -> list[dict]:
+    """Active routines that can be attached to an event (those without their own schedule)."""
+    try:
+        routines = await api.get("/organizer/routines", params={"active": "true"})
+    except httpx.HTTPError:
+        return []
+    return [r for r in routines if not r.get("recurrence_rule")]
+
+
 @router.get("/", response_class=HTMLResponse)
 async def calendar_page(request: Request):
     today = local_today()
@@ -118,8 +127,11 @@ async def calendar_page(request: Request):
     next_month = month + 1 if month < 12 else 1
     next_year = year if month < 12 else year + 1
 
+    routines = await _event_routines()
+
     return templates.TemplateResponse(request, "calendar.html", {
         "api_error": api_error,
+        "routines": routines,
         "events": events,
         "events_by_date": events_by_date,
         "weeks": weeks,
@@ -174,10 +186,23 @@ async def calendar_day(date_str: str, request: Request):
     })
 
 
+def _whole_number(raw: str | None, label: str) -> int:
+    value = (raw or "").strip()
+    if not value:
+        return 0
+    if not value.isdigit():
+        raise ValueError(f"{label} must be a whole number.")
+    return int(value)
+
+
 def _event_payload(
     title: str, start_date: str, start_time: str, end_time: str, location: str, all_day: str,
     recurrence_rule: str | None = None, timezone: str | None = None, end_date: str | None = None,
     notification_profile: str | None = None,
+    availability: str | None = None,
+    presence: str | None = None,
+    travel_minutes: str | None = None,
+    routine_id: str | None = None,
 ) -> dict:
     is_all_day = bool(all_day)
     if is_all_day:
@@ -196,6 +221,10 @@ def _event_payload(
         "recurrence_rule": recurrence_rule or None,
         "timezone": timezone or None,
         "notification_profile": notification_profile or None,
+        "availability": availability or None,
+        "presence": presence or "in_person",
+        "travel_minutes": _whole_number(travel_minutes, "Travel time"),
+        "routine_id": _whole_number(routine_id, "Routine") if routine_id else None,
     }
 
 
@@ -212,11 +241,19 @@ async def create_event(
     timezone: Annotated[str | None, Form()] = None,
     end_date: Annotated[str | None, Form()] = None,
     notification_profile: Annotated[str | None, Form()] = None,
+    availability: Annotated[str | None, Form()] = None,
+    presence: Annotated[str | None, Form()] = None,
+    travel_minutes: Annotated[str | None, Form()] = None,
+    routine_id: Annotated[str | None, Form()] = None,
 ):
-    payload = _event_payload(
-        title, start_date, start_time, end_time, location, all_day,
-        recurrence_rule, timezone, end_date, notification_profile,
-    )
+    try:
+        payload = _event_payload(
+            title, start_date, start_time, end_time, location, all_day,
+            recurrence_rule, timezone, end_date, notification_profile,
+            availability, presence, travel_minutes, routine_id,
+        )
+    except ValueError as exc:
+        return HTMLResponse(str(exc), status_code=422)
     try:
         await api.post("/organizer/calendar-events", json=payload)
     except httpx.HTTPStatusError as e:
@@ -245,11 +282,19 @@ async def update_event(
     timezone: Annotated[str | None, Form()] = None,
     end_date: Annotated[str | None, Form()] = None,
     notification_profile: Annotated[str | None, Form()] = None,
+    availability: Annotated[str | None, Form()] = None,
+    presence: Annotated[str | None, Form()] = None,
+    travel_minutes: Annotated[str | None, Form()] = None,
+    routine_id: Annotated[str | None, Form()] = None,
 ):
-    payload = _event_payload(
-        title, start_date, start_time, end_time, location, all_day,
-        recurrence_rule, timezone, end_date, notification_profile,
-    )
+    try:
+        payload = _event_payload(
+            title, start_date, start_time, end_time, location, all_day,
+            recurrence_rule, timezone, end_date, notification_profile,
+            availability, presence, travel_minutes, routine_id,
+        )
+    except ValueError as exc:
+        return HTMLResponse(str(exc), status_code=422)
     try:
         await api.patch(f"/organizer/calendar-events/{event_id}", json=payload)
     except httpx.HTTPStatusError as e:

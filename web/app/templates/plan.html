@@ -1,0 +1,128 @@
+{% extends "base.html" %}
+{% set active_page = "plan" %}
+{% block title %}Plan{% endblock %}
+
+{% block content %}
+<div class="p-6 space-y-6">
+
+  <div class="flex items-center justify-between gap-3 flex-wrap">
+    <div>
+      <h1 class="text-base font-semibold text-gray-900">Plan</h1>
+      <p class="text-xs text-gray-400">The plan you saved with Claude. Read-only: ask Claude to change it.</p>
+    </div>
+    <div class="flex items-center gap-2">
+      <a href="/plan?date={{ prev_day }}" class="btn btn-xs btn-ghost" aria-label="Previous day"><i class="ti ti-chevron-left"></i></a>
+      <span class="text-sm font-medium text-gray-900">{{ day.strftime('%A %d %B %Y') }}</span>
+      <a href="/plan?date={{ next_day }}" class="btn btn-xs btn-ghost" aria-label="Next day"><i class="ti ti-chevron-right"></i></a>
+      {% if day != today %}<a href="/plan" class="btn btn-xs btn-outline">Today</a>{% endif %}
+    </div>
+  </div>
+
+  <div class="grid grid-cols-7 gap-1.5" id="plan-week">
+    {% for d in week %}
+    <a href="/plan?date={{ d.date.isoformat() }}"
+       class="text-center rounded-lg border px-2 py-2 text-xs {% if d.date == day %}border-[#378ADD] bg-[#E6F1FB] text-[#0C447C]{% else %}border-gray-200 bg-white text-gray-500 hover:bg-gray-50{% endif %}">
+      <span class="block">{{ d.date.strftime('%a') }}</span>
+      <span class="block font-medium">{{ d.date.day }}</span>
+      <span class="block h-1.5 mt-1">{% if d.has_plan %}<span class="inline-block w-1.5 h-1.5 rounded-full bg-[#639922]"></span>{% endif %}</span>
+    </a>
+    {% endfor %}
+  </div>
+
+  {% if not available %}
+  <div class="card bg-white"><div class="card-body p-5"><p class="text-sm text-gray-400">Plans are unavailable right now.</p></div></div>
+  {% elif not plan %}
+  <div class="card bg-white"><div class="card-body p-5"><p class="text-sm text-gray-400">No plan saved for this day. Plan the week with Claude and save it.</p></div></div>
+  {% else %}
+  <div class="card bg-white" id="saved-plan">
+    <div class="card-body p-5 space-y-4">
+      <div class="flex items-center justify-between text-xs text-gray-400">
+        <span>Version {{ plan.version }} · saved {{ plan.created_at | timeago }}</span>
+        {% if history | length > 1 %}<span>{{ history | length - 1 }} earlier version{{ '' if history | length == 2 else 's' }}</span>{% endif %}
+      </div>
+      {% if plan.notes %}<p class="text-sm text-gray-700 whitespace-pre-line">{{ plan.notes }}</p>{% endif %}
+      {% if items %}
+      <ul class="divide-y divide-gray-100">
+        {% for item in items %}
+        <li class="py-2 flex items-start gap-3">
+          <span class="w-24 shrink-0 text-xs text-gray-500 tabular-nums pt-0.5">{{ item.start_clock }}–{{ item.end_clock }}</span>
+          <i class="ti {{ item.icon }} text-gray-400 pt-0.5"></i>
+          <div class="min-w-0">
+            <p class="text-sm text-gray-900">{{ item.title }}</p>
+            {% if item.note %}<p class="text-xs text-gray-400">{{ item.note }}</p>{% endif %}
+          </div>
+        </li>
+        {% endfor %}
+      </ul>
+      {% else %}
+      <p class="text-sm text-gray-400">This day was saved empty.</p>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+
+  {% if settings %}
+  <div class="card bg-white" id="planning-settings">
+    <div class="card-body p-5 space-y-4">
+      <div>
+        <p class="text-sm font-semibold text-gray-900">Planning settings</p>
+        <p class="text-xs text-gray-400">What Claude is told when it plans. Leave a field empty to switch it off or use the default.</p>
+      </div>
+      <form id="settings-form" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <label class="space-y-1"><span class="block text-xs text-gray-500">Wake time</span>
+          <input name="wake_time" type="time" value="{{ settings.wake_time or '' }}" class="input input-sm input-bordered w-full"></label>
+        <label class="space-y-1"><span class="block text-xs text-gray-500">Sleep time</span>
+          <input name="sleep_time" type="time" value="{{ settings.sleep_time or '' }}" class="input input-sm input-bordered w-full"></label>
+        <label class="space-y-1"><span class="block text-xs text-gray-500">Work target per day (minutes)</span>
+          <input name="work_target_minutes" type="number" min="0" max="1440" value="{{ settings.work_target_minutes }}" class="input input-sm input-bordered w-full"></label>
+        <label class="space-y-1"><span class="block text-xs text-gray-500">Preferred work windows (comma-separated, e.g. 10:00-14:00)</span>
+          <input name="preferred_work_windows" value="{{ settings.preferred_work_windows | join(', ') }}" class="input input-sm input-bordered w-full"></label>
+        <label class="space-y-1"><span class="block text-xs text-gray-500">Tag that counts as work time</span>
+          <input name="work_tag" value="{{ settings.work_tag }}" class="input input-sm input-bordered w-full"></label>
+        <label class="space-y-1"><span class="block text-xs text-gray-500">Tag that marks an office day</span>
+          <input name="office_tag" value="{{ settings.office_tag }}" class="input input-sm input-bordered w-full"></label>
+        <label class="space-y-1"><span class="block text-xs text-gray-500">Office days per week (empty = off)</span>
+          <input name="office_days_per_week" type="number" min="1" max="7" value="{{ settings.office_days_per_week or '' }}" class="input input-sm input-bordered w-full"></label>
+        <label class="space-y-1"><span class="block text-xs text-gray-500">Minimum minutes for an office day</span>
+          <input name="office_min_minutes" type="number" min="0" value="{{ '' if settings.office_min_minutes is none else settings.office_min_minutes }}" class="input input-sm input-bordered w-full"></label>
+        <div class="md:col-span-2 flex items-center gap-3">
+          <button type="submit" class="btn btn-sm btn-outline">Save</button>
+          <span id="settings-status" class="text-xs"></span>
+        </div>
+      </form>
+    </div>
+  </div>
+  {% endif %}
+
+</div>
+
+<script>
+document.getElementById('settings-form')?.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const form = new FormData(event.target);
+  const text = (key) => (form.get(key) || '').trim() || null;
+  const number = (key) => (form.get(key) === '' ? null : Number(form.get(key)));
+  const windows = (form.get('preferred_work_windows') || '').split(',').map(w => w.trim()).filter(Boolean);
+  const body = {
+    wake_time: text('wake_time'), sleep_time: text('sleep_time'),
+    work_target_minutes: number('work_target_minutes'), preferred_work_windows: windows,
+    work_tag: text('work_tag'), office_tag: text('office_tag'),
+    office_days_per_week: number('office_days_per_week'), office_min_minutes: number('office_min_minutes'),
+  };
+  const status = document.getElementById('settings-status');
+  status.className = 'text-xs text-gray-400';
+  status.textContent = 'Saving…';
+  const res = await fetch('/plan/settings', {
+    method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    status.className = 'text-xs text-red-600';
+    status.textContent = data.error || 'Something went wrong.';
+    return;
+  }
+  status.className = 'text-xs text-[#639922]';
+  status.textContent = 'Saved';
+});
+</script>
+{% endblock %}

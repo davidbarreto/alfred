@@ -1,0 +1,282 @@
+{% extends "base.html" %}
+{% set active_page = "routines" %}
+{% block title %}Routines{% endblock %}
+
+{% block content %}
+<div class="p-6 space-y-6">
+
+  <div class="flex items-center justify-between gap-3 flex-wrap">
+    <div>
+      <h1 class="text-base font-semibold text-gray-900">Routines</h1>
+      <p class="text-xs text-gray-400">Daily-life rhythm that reserves time. No done state, never a reminder.</p>
+    </div>
+    <button onclick="document.getElementById('new-routine').classList.toggle('hidden')"
+            class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#378ADD] text-xs font-medium text-white hover:bg-[#2f7bc4] transition-colors">
+      <i class="ti ti-plus text-sm"></i>New routine
+    </button>
+  </div>
+
+  <div id="new-routine" class="card bg-white hidden">
+    <div class="card-body p-5">
+      <form id="new-routine-form" class="flex flex-wrap items-end gap-3">
+        <label class="space-y-1">
+          <span class="block text-xs text-gray-500">Name</span>
+          <input name="name" required maxlength="255" placeholder="Dinner" class="input input-sm input-bordered w-48">
+        </label>
+        <label class="space-y-1">
+          <span class="block text-xs text-gray-500">Description (optional)</span>
+          <input name="description" class="input input-sm input-bordered w-56">
+        </label>
+        <label class="space-y-1">
+          <span class="block text-xs text-gray-500">Runs</span>
+          <select name="kind" class="select select-sm select-bordered" onchange="document.getElementById('schedule-fields').classList.toggle('hidden', this.value !== 'scheduled')">
+            <option value="event">Around calendar events</option>
+            <option value="scheduled">On its own schedule</option>
+          </select>
+        </label>
+        <span id="schedule-fields" class="hidden flex flex-wrap items-end gap-3">
+          <label class="space-y-1">
+            <span class="block text-xs text-gray-500">Repeat rule</span>
+            <input name="recurrence_rule" placeholder="FREQ=DAILY" class="input input-sm input-bordered w-56">
+          </label>
+          <label class="space-y-1">
+            <span class="block text-xs text-gray-500">Starting</span>
+            <input name="starts_on" type="date" class="input input-sm input-bordered">
+          </label>
+        </span>
+        <button type="submit" class="btn btn-sm btn-outline">Create</button>
+        <span id="new-routine-error" class="text-xs text-red-600"></span>
+      </form>
+    </div>
+  </div>
+
+  {% if not available %}
+  <div class="card bg-white"><div class="card-body p-5"><p class="text-sm text-gray-400">Routines are unavailable right now.</p></div></div>
+  {% elif not routines %}
+  <div class="card bg-white"><div class="card-body p-5"><p class="text-sm text-gray-400">No routines yet. A routine is a list of steps placed around an event (for example, dinner preparation before a class) or on a daily or weekly schedule.</p></div></div>
+  {% endif %}
+
+  <div class="space-y-4">
+    {% for r in routines %}
+    <div class="card bg-white {% if not r.active %}opacity-60{% endif %}" id="routine-{{ r.id }}" data-scheduled="{{ 'true' if r.scheduled else 'false' }}">
+      <div class="card-body p-5 space-y-4">
+        <div class="flex items-start justify-between gap-3 flex-wrap">
+          <div>
+            <p class="text-sm font-semibold text-gray-900">{{ r.name }}
+              <span class="ml-2 px-2 py-0.5 rounded-full text-xs font-normal bg-gray-100 text-gray-500">{{ 'scheduled' if r.scheduled else 'around events' }}</span>
+              {% if not r.active %}<span class="ml-1 px-2 py-0.5 rounded-full text-xs font-normal bg-gray-100 text-gray-500">paused</span>{% endif %}
+            </p>
+            {% if r.description %}<p class="text-xs text-gray-500">{{ r.description }}</p>{% endif %}
+            {% if r.scheduled %}<p class="text-xs text-gray-400"><code>{{ r.recurrence_rule }}</code> from {{ r.starts_on }}</p>{% endif %}
+          </div>
+          <div class="flex items-center gap-2">
+            <button onclick="toggleRoutine({{ r.id }}, {{ 'false' if r.active else 'true' }})" class="btn btn-xs btn-ghost text-gray-500">{{ 'Pause' if r.active else 'Resume' }}</button>
+            <button onclick="deleteRoutine({{ r.id }})" class="btn btn-xs btn-ghost text-red-600">Delete</button>
+          </div>
+        </div>
+
+        {% if r.steps %}
+        <ul class="divide-y divide-gray-100 text-sm">
+          {% for s in r.steps %}
+          <li class="py-2 flex items-start justify-between gap-3" id="step-{{ s.id }}">
+            <div class="min-w-0">
+              <p class="text-gray-900">{{ s.title }}</p>
+              <p class="text-xs text-gray-400">
+                {{ s.timing_label }}{% if s.duration_minutes %} · {{ s.duration_minutes }} min{% endif %}
+                {% if s.context %} · {{ s.context }}{% endif %}{% if s.location %} · {{ s.location }}{% endif %}
+                {% if s.checklist_note_id %} · checklist note #{{ s.checklist_note_id }}{% endif %}
+              </p>
+            </div>
+            <div class="flex items-center gap-1 shrink-0">
+              <button onclick='openStepDialog({{ r.id }}, {{ r.scheduled | tojson }}, {{ s | tojson }})' class="btn btn-xs btn-ghost text-gray-500">Edit</button>
+              <button onclick="deleteStep({{ s.id }})" class="btn btn-xs btn-ghost text-red-600">Delete</button>
+            </div>
+          </li>
+          {% endfor %}
+        </ul>
+        {% else %}
+        <p class="text-sm text-gray-400">No steps yet.</p>
+        {% endif %}
+
+        <div class="flex flex-wrap items-center gap-3">
+          <button onclick='openStepDialog({{ r.id }}, {{ r.scheduled | tojson }}, null)' class="btn btn-xs btn-outline">Add step</button>
+          {% if not r.scheduled %}
+          <span class="text-xs text-gray-400">Attached to:</span>
+          {% for e in r.events %}
+          <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs bg-[#E6F1FB] text-[#0C447C]">
+            {{ e.title }}
+            <button onclick="detachEvent({{ e.id }})" aria-label="Detach {{ e.title }}" class="hover:text-red-600"><i class="ti ti-x text-[10px]"></i></button>
+          </span>
+          {% else %}
+          <span class="text-xs text-gray-400">no events</span>
+          {% endfor %}
+          <select id="attach-{{ r.id }}" class="select select-xs select-bordered max-w-[14rem]">
+            <option value="">Attach to an event…</option>
+            {% for event_id, title in event_options %}<option value="{{ event_id }}">{{ title }}</option>{% endfor %}
+          </select>
+          <button onclick="attachEvent({{ r.id }})" class="btn btn-xs btn-outline">Attach</button>
+          {% endif %}
+          <span class="text-xs text-red-600" id="error-{{ r.id }}"></span>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+</div>
+
+<dialog id="step-dialog" class="modal">
+  <div class="modal-box bg-white rounded-xl border border-gray-200 max-w-md w-full p-6">
+    <h3 id="step-dialog-title" class="text-sm font-semibold text-gray-900 mb-4">Add step</h3>
+    <form id="step-form" class="flex flex-col gap-3">
+      <input type="hidden" name="routine_id"><input type="hidden" name="step_id"><input type="hidden" name="scheduled">
+      <label class="space-y-1"><span class="block text-xs text-gray-500">Title</span>
+        <input name="title" required maxlength="255" class="input input-sm input-bordered w-full"></label>
+      <div class="grid grid-cols-2 gap-3">
+        <label class="space-y-1"><span class="block text-xs text-gray-500">Duration (minutes)</span>
+          <input name="duration_minutes" type="number" min="0" value="0" class="input input-sm input-bordered w-full"></label>
+        <label class="space-y-1"><span class="block text-xs text-gray-500">Where</span>
+          <select name="context" class="select select-sm select-bordered w-full">
+            <option value="">Not set</option>
+            {% for c in contexts %}<option value="{{ c }}">{{ c | capitalize }}</option>{% endfor %}
+          </select></label>
+      </div>
+      <div id="relative-fields" class="grid grid-cols-2 gap-3">
+        <label class="space-y-1"><span class="block text-xs text-gray-500">Relative to the event's</span>
+          <select name="anchor" class="select select-sm select-bordered w-full">
+            <option value="start">Start</option><option value="end">End</option>
+          </select></label>
+        <label class="space-y-1"><span class="block text-xs text-gray-500">Offset (minutes, negative = before)</span>
+          <input name="offset_minutes" type="number" value="-30" class="input input-sm input-bordered w-full"></label>
+      </div>
+      <div id="window-fields" class="grid grid-cols-2 gap-3 hidden">
+        <label class="space-y-1"><span class="block text-xs text-gray-500">Window starts</span>
+          <input name="window_start" type="time" class="input input-sm input-bordered w-full"></label>
+        <label class="space-y-1"><span class="block text-xs text-gray-500">Window ends</span>
+          <input name="window_end" type="time" class="input input-sm input-bordered w-full"></label>
+        <p class="col-span-2 text-xs text-gray-400">A window as long as the duration is a fixed time; a wider one lets the planner place it.</p>
+      </div>
+      <label class="space-y-1"><span class="block text-xs text-gray-500">Location (optional)</span>
+        <input name="location" maxlength="255" class="input input-sm input-bordered w-full"></label>
+      <label class="space-y-1"><span class="block text-xs text-gray-500">Checklist note id (optional)</span>
+        <input name="checklist_note_id" type="number" min="1" class="input input-sm input-bordered w-full"></label>
+      <p id="step-error" class="text-xs text-red-600"></p>
+      <div class="flex justify-end gap-2">
+        <button type="button" onclick="document.getElementById('step-dialog').close()" class="btn btn-sm btn-ghost text-gray-500">Cancel</button>
+        <button type="submit" class="btn btn-sm btn-primary">Save step</button>
+      </div>
+    </form>
+  </div>
+  <form method="dialog" class="modal-backdrop"><button>close</button></form>
+</dialog>
+
+<script>
+async function send(url, method, body) {
+  const res = await fetch(url, {
+    method, headers: { 'Content-Type': 'application/json' }, body: body === undefined ? undefined : JSON.stringify(body),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || 'Something went wrong.');
+  return data;
+}
+
+function showError(routineId, message) {
+  document.getElementById(`error-${routineId}`).textContent = message;
+}
+
+document.getElementById('new-routine-form')?.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const form = new FormData(event.target);
+  const body = { name: form.get('name') };
+  if (form.get('description')) body.description = form.get('description');
+  if (form.get('kind') === 'scheduled') {
+    body.recurrence_rule = form.get('recurrence_rule');
+    body.starts_on = form.get('starts_on');
+  }
+  const error = document.getElementById('new-routine-error');
+  error.textContent = '';
+  try { await send('/routines', 'POST', body); location.reload(); }
+  catch (e) { error.textContent = e.message; }
+});
+
+async function toggleRoutine(id, active) {
+  try { await send(`/routines/${id}`, 'PATCH', { active }); location.reload(); }
+  catch (e) { showError(id, e.message); }
+}
+
+async function deleteRoutine(id) {
+  if (!confirm('Delete this routine and its steps? Attached events are kept.')) return;
+  try { await send(`/routines/${id}`, 'DELETE'); location.reload(); }
+  catch (e) { showError(id, e.message); }
+}
+
+async function deleteStep(id) {
+  if (!confirm('Delete this step?')) return;
+  try { await send(`/routines/steps/${id}`, 'DELETE'); location.reload(); }
+  catch (e) { alert(e.message); }
+}
+
+async function attachEvent(routineId) {
+  const eventId = document.getElementById(`attach-${routineId}`).value;
+  if (!eventId) return;
+  try { await send(`/routines/${routineId}/events/${eventId}`, 'POST'); location.reload(); }
+  catch (e) { showError(routineId, e.message); }
+}
+
+async function detachEvent(eventId) {
+  try { await send(`/routines/events/${eventId}`, 'DELETE'); location.reload(); }
+  catch (e) { alert(e.message); }
+}
+
+function openStepDialog(routineId, scheduled, step) {
+  const form = document.getElementById('step-form');
+  form.reset();
+  document.getElementById('step-error').textContent = '';
+  document.getElementById('step-dialog-title').textContent = step ? 'Edit step' : 'Add step';
+  form.querySelector('[name="routine_id"]').value = routineId;
+  form.querySelector('[name="step_id"]').value = step ? step.id : '';
+  form.querySelector('[name="scheduled"]').value = scheduled ? '1' : '';
+  document.getElementById('relative-fields').classList.toggle('hidden', scheduled);
+  document.getElementById('window-fields').classList.toggle('hidden', !scheduled);
+  if (step) {
+    form.querySelector('[name="title"]').value = step.title;
+    form.querySelector('[name="duration_minutes"]').value = step.duration_minutes;
+    form.querySelector('[name="context"]').value = step.context || '';
+    form.querySelector('[name="location"]').value = step.location || '';
+    form.querySelector('[name="checklist_note_id"]').value = step.checklist_note_id || '';
+    if (scheduled) {
+      form.querySelector('[name="window_start"]').value = (step.window_start || '').slice(0, 5);
+      form.querySelector('[name="window_end"]').value = (step.window_end || '').slice(0, 5);
+    } else {
+      form.querySelector('[name="anchor"]').value = step.anchor;
+      form.querySelector('[name="offset_minutes"]').value = step.offset_minutes;
+    }
+  }
+  document.getElementById('step-dialog').showModal();
+}
+
+document.getElementById('step-form').addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const form = new FormData(event.target);
+  const scheduled = form.get('scheduled') === '1';
+  const body = {
+    title: form.get('title'),
+    duration_minutes: Number(form.get('duration_minutes') || 0),
+    context: form.get('context') || null,
+    location: form.get('location') || null,
+    checklist_note_id: form.get('checklist_note_id') ? Number(form.get('checklist_note_id')) : null,
+  };
+  if (scheduled) {
+    body.window_start = form.get('window_start');
+    body.window_end = form.get('window_end');
+  } else {
+    body.anchor = form.get('anchor');
+    body.offset_minutes = Number(form.get('offset_minutes'));
+  }
+  const stepId = form.get('step_id');
+  const url = stepId ? `/routines/steps/${stepId}` : `/routines/${form.get('routine_id')}/steps`;
+  try { await send(url, stepId ? 'PATCH' : 'POST', body); location.reload(); }
+  catch (e) { document.getElementById('step-error').textContent = e.message; }
+});
+</script>
+{% endblock %}

@@ -1,3 +1,4 @@
+import pytest
 import httpx
 
 
@@ -140,6 +141,9 @@ class TestUpdateTask:
             "tags": ["groceries", "urgent"],
             "deadline": "2026-07-20",
             "recurrence_rule": None,
+            "estimate_minutes": None,
+            "context": None,
+            "available_from": None,
         })
 
     def test_clearing_deadline_and_recurrence_sends_null(self, client, mock_api):
@@ -161,7 +165,40 @@ class TestUpdateTask:
             "tags": [],
             "deadline": None,
             "recurrence_rule": None,
+            "estimate_minutes": None,
+            "context": None,
+            "available_from": None,
         })
+
+    def test_update_sends_planning_fields(self, client, mock_api):
+        mock_api["patch"].return_value = _task(id=3)
+        mock_api["get"].return_value = [_task(id=3)]
+
+        resp = client.patch("/tasks/3", data={
+            "title": "Buy tickets", "tags": "", "estimate_minutes": "10", "context": "phone",
+            "available_from": "2026-10-24",
+        })
+
+        assert resp.status_code == 200
+        payload = mock_api["patch"].await_args.kwargs["json"]
+        assert (payload["estimate_minutes"], payload["context"], payload["available_from"]) == (10, "phone", "2026-10-24")
+
+    def test_update_can_clear_planning_fields(self, client, mock_api):
+        mock_api["patch"].return_value = _task(id=3)
+        mock_api["get"].return_value = [_task(id=3)]
+
+        client.patch("/tasks/3", data={"title": "x", "tags": "", "estimate_minutes": "", "context": ""})
+
+        payload = mock_api["patch"].await_args.kwargs["json"]
+        assert (payload["estimate_minutes"], payload["context"]) == (None, None)
+
+    @pytest.mark.parametrize("estimate", ["abc", "0", "-5", "1.5"])
+    def test_invalid_estimate_is_rejected_before_calling_the_backend(self, client, mock_api, estimate):
+        resp = client.patch("/tasks/3", data={"title": "x", "tags": "", "estimate_minutes": estimate})
+
+        assert resp.status_code == 422
+        assert "whole number of minutes" in resp.text
+        mock_api["patch"].assert_not_called()
 
     def test_returns_422_when_backend_update_fails(self, client, mock_api):
         request = httpx.Request("PATCH", "http://api/organizer/tasks/3")
@@ -343,3 +380,40 @@ class TestTaskHistoryEditing:
         assert resp.status_code == 200
         assert "already exists" in resp.text
         assert 'name="occurrence_date"' in resp.text
+
+
+class TestCreateTaskPlanningFields:
+    def test_create_sends_only_the_planning_fields_that_are_set(self, client, mock_api):
+        mock_api["post"].return_value = _task(id=9)
+        mock_api["get"].return_value = [_task(id=9)]
+
+        client.post("/tasks/", data={"title": "Buy tickets", "estimate_minutes": "10", "context": "phone"})
+
+        payload = mock_api["post"].await_args.kwargs["json"]
+        assert payload["estimate_minutes"] == 10 and payload["context"] == "phone"
+        assert "available_from" not in payload
+
+    def test_create_without_planning_fields_leaves_them_out(self, client, mock_api):
+        mock_api["post"].return_value = _task(id=9)
+        mock_api["get"].return_value = [_task(id=9)]
+
+        client.post("/tasks/", data={"title": "Plain"})
+
+        payload = mock_api["post"].await_args.kwargs["json"]
+        assert not {"estimate_minutes", "context", "available_from"} & set(payload)
+
+    def test_create_rejects_a_bad_estimate(self, client, mock_api):
+        resp = client.post("/tasks/", data={"title": "x", "estimate_minutes": "soon"})
+        assert resp.status_code == 422
+        mock_api["post"].assert_not_called()
+
+
+class TestTaskRowPlanningDisplay:
+    def test_row_shows_estimate_and_context_when_set(self, client, mock_api):
+        mock_api["get"].return_value = [{**_task(id=4, title="Call bank"), "estimate_minutes": 15, "context": "phone"}]
+        resp = client.get("/tasks")
+        assert "15 min · phone" in resp.text
+
+    def test_row_hides_the_marker_without_planning_fields(self, client, mock_api):
+        mock_api["get"].return_value = [_task(id=4, title="Call bank")]
+        assert "ti-clock" not in client.get("/tasks").text.split("Call bank")[1].split("</li>")[0]

@@ -50,6 +50,7 @@ class ActivityRead(ActivityBase):
     id: int
     archived_at: datetime | None = None
     last_done_at: datetime | None = None
+    done_this_week: int | None = Field(default=None, description="Logs this Monday-based week; only set with a target_per_week")
     created_at: datetime
     updated_at: datetime
 

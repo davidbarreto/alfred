@@ -64,6 +64,13 @@
         {% endif %}
       {% endif %}
 
+      <!-- Planning fields (only when set) -->
+      {% if task.estimate_minutes or task.context %}
+      <span class="flex items-center gap-1 text-gray-400">
+        <i class="ti ti-clock" style="font-size:0.8rem"></i>{% if task.estimate_minutes %}{{ task.estimate_minutes }} min{% endif %}{% if task.estimate_minutes and task.context %} · {% endif %}{% if task.context %}{{ task.context }}{% endif %}
+      </span>
+      {% endif %}
+
       <!-- Priority (always shown) -->
       {% if task.priority == 'HIGH' %}
       <span class="flex items-center gap-1 text-[#BA7517]">

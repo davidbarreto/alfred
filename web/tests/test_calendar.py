@@ -1,3 +1,4 @@
+import pytest
 import re
 
 import httpx
@@ -152,6 +153,10 @@ class TestCreateEvent:
             "recurrence_rule": None,
             "timezone": None,
             "notification_profile": None,
+            "availability": None,
+            "presence": "in_person",
+            "travel_minutes": 0,
+            "routine_id": None,
         })
 
     def test_creates_recurring_event(self, client, mock_api):
@@ -175,6 +180,10 @@ class TestCreateEvent:
             "recurrence_rule": "FREQ=DAILY",
             "timezone": None,
             "notification_profile": None,
+            "availability": None,
+            "presence": "in_person",
+            "travel_minutes": 0,
+            "routine_id": None,
         })
 
     def test_creates_event_with_custom_recurrence_rule(self, client, mock_api):
@@ -198,6 +207,10 @@ class TestCreateEvent:
             "recurrence_rule": "FREQ=WEEKLY;BYDAY=MO,WE,FR;COUNT=10",
             "timezone": None,
             "notification_profile": None,
+            "availability": None,
+            "presence": "in_person",
+            "travel_minutes": 0,
+            "routine_id": None,
         })
 
     def test_creates_event_with_timezone(self, client, mock_api):
@@ -210,6 +223,10 @@ class TestCreateEvent:
             "end_time": "09:30",
             "timezone": "America/Chicago",
             "notification_profile": None,
+            "availability": None,
+            "presence": "in_person",
+            "travel_minutes": 0,
+            "routine_id": None,
         })
 
         assert resp.status_code == 204
@@ -222,6 +239,10 @@ class TestCreateEvent:
             "recurrence_rule": None,
             "timezone": "America/Chicago",
             "notification_profile": None,
+            "availability": None,
+            "presence": "in_person",
+            "travel_minutes": 0,
+            "routine_id": None,
         })
 
     def test_creates_multi_day_all_day_event(self, client, mock_api):
@@ -244,6 +265,10 @@ class TestCreateEvent:
             "recurrence_rule": None,
             "timezone": None,
             "notification_profile": None,
+            "availability": None,
+            "presence": "in_person",
+            "travel_minutes": 0,
+            "routine_id": None,
         })
 
     def test_creates_all_day_event_defaults_end_date_to_start_date(self, client, mock_api):
@@ -265,6 +290,10 @@ class TestCreateEvent:
             "recurrence_rule": None,
             "timezone": None,
             "notification_profile": None,
+            "availability": None,
+            "presence": "in_person",
+            "travel_minutes": 0,
+            "routine_id": None,
         })
 
     def test_returns_422_when_backend_create_fails(self, client, mock_api):
@@ -303,6 +332,10 @@ class TestUpdateEvent:
             "recurrence_rule": None,
             "timezone": None,
             "notification_profile": None,
+            "availability": None,
+            "presence": "in_person",
+            "travel_minutes": 0,
+            "routine_id": None,
         })
 
     def test_updates_all_day_event(self, client, mock_api):
@@ -324,6 +357,10 @@ class TestUpdateEvent:
             "recurrence_rule": None,
             "timezone": None,
             "notification_profile": None,
+            "availability": None,
+            "presence": "in_person",
+            "travel_minutes": 0,
+            "routine_id": None,
         })
 
     def test_updates_all_day_event_to_span_multiple_days(self, client, mock_api):
@@ -346,6 +383,10 @@ class TestUpdateEvent:
             "recurrence_rule": None,
             "timezone": None,
             "notification_profile": None,
+            "availability": None,
+            "presence": "in_person",
+            "travel_minutes": 0,
+            "routine_id": None,
         })
 
     def test_updates_recurrence_rule(self, client, mock_api):
@@ -369,6 +410,10 @@ class TestUpdateEvent:
             "recurrence_rule": "FREQ=WEEKLY",
             "timezone": None,
             "notification_profile": None,
+            "availability": None,
+            "presence": "in_person",
+            "travel_minutes": 0,
+            "routine_id": None,
         })
 
     def test_updates_timezone(self, client, mock_api):
@@ -381,6 +426,10 @@ class TestUpdateEvent:
             "end_time": "09:30",
             "timezone": "America/Chicago",
             "notification_profile": None,
+            "availability": None,
+            "presence": "in_person",
+            "travel_minutes": 0,
+            "routine_id": None,
         })
 
         assert resp.status_code == 204
@@ -393,6 +442,10 @@ class TestUpdateEvent:
             "recurrence_rule": None,
             "timezone": "America/Chicago",
             "notification_profile": None,
+            "availability": None,
+            "presence": "in_person",
+            "travel_minutes": 0,
+            "routine_id": None,
         })
 
     def test_returns_422_when_backend_update_fails(self, client, mock_api):
@@ -520,3 +573,69 @@ class TestOffsetBearingEvents:
         _add_display_times(events, "America/New_York")
 
         assert events[0]["display_start"].startswith("2026-07-14T05:00:00")
+
+
+class TestPlanningFields:
+    def test_create_sends_planning_fields(self, client, mock_api):
+        mock_api["post"].return_value = {"id": 1}
+
+        resp = client.post("/calendar/", data={
+            "title": "Class", "start_date": "2026-07-14", "start_time": "20:00", "end_time": "21:00",
+            "availability": "blocked", "presence": "remote_home", "travel_minutes": "25", "routine_id": "3",
+        })
+
+        assert resp.status_code == 204
+        payload = mock_api["post"].await_args.kwargs["json"]
+        assert (payload["availability"], payload["presence"], payload["travel_minutes"], payload["routine_id"]) == (
+            "blocked", "remote_home", 25, 3,
+        )
+
+    def test_update_clears_availability_and_routine_with_empty_values(self, client, mock_api):
+        mock_api["patch"].return_value = {"id": 1}
+
+        client.patch("/calendar/1", data={
+            "title": "Class", "start_date": "2026-07-14", "availability": "", "presence": "in_person",
+            "travel_minutes": "0", "routine_id": "",
+        })
+
+        payload = mock_api["patch"].await_args.kwargs["json"]
+        assert (payload["availability"], payload["travel_minutes"], payload["routine_id"]) == (None, 0, None)
+
+    def test_missing_planning_values_fall_back_to_defaults(self, client, mock_api):
+        mock_api["post"].return_value = {"id": 1}
+        client.post("/calendar/", data={"title": "x", "start_date": "2026-07-14"})
+        payload = mock_api["post"].await_args.kwargs["json"]
+        assert (payload["availability"], payload["presence"], payload["travel_minutes"]) == (None, "in_person", 0)
+
+    @pytest.mark.parametrize("field,value", [("travel_minutes", "far"), ("travel_minutes", "-5"), ("routine_id", "abc")])
+    def test_invalid_numbers_are_rejected_before_calling_the_backend(self, client, mock_api, field, value):
+        resp = client.post("/calendar/", data={"title": "x", "start_date": "2026-07-14", field: value})
+        assert resp.status_code == 422
+        assert "whole number" in resp.text
+        mock_api["post"].assert_not_called()
+
+    def test_edit_form_offers_only_event_based_routines(self, client, mock_api):
+        def fake_get(path, params=None):
+            if path == "/organizer/routines":
+                return [
+                    {"id": 3, "name": "Dinner prep", "recurrence_rule": None},
+                    {"id": 4, "name": "Morning", "recurrence_rule": "FREQ=DAILY"},
+                ]
+            return []
+
+        mock_api["get"].side_effect = fake_get
+
+        resp = client.get("/calendar?year=2026&month=7")
+
+        assert '<option value="3">Dinner prep</option>' in resp.text
+        assert "Morning" not in resp.text
+
+    def test_page_still_renders_when_routines_are_unavailable(self, client, mock_api):
+        def fake_get(path, params=None):
+            if path == "/organizer/routines":
+                raise httpx.ConnectError("down")
+            return []
+
+        mock_api["get"].side_effect = fake_get
+
+        assert client.get("/calendar?year=2026&month=7").status_code == 200

@@ -123,6 +123,18 @@ async def tasks_list_fragment(request: Request):
     })
 
 
+def _planning_payload(estimate_minutes: str, context: str, available_from: str) -> dict:
+    """Alfred-only planning fields from the task form; empty values mean unset (null)."""
+    minutes = estimate_minutes.strip()
+    if minutes and (not minutes.isdigit() or int(minutes) < 1):
+        raise ValueError("Estimate must be a whole number of minutes.")
+    return {
+        "estimate_minutes": int(minutes) if minutes else None,
+        "context": context or None,
+        "available_from": available_from or None,
+    }
+
+
 @router.post("/", response_class=HTMLResponse)
 async def create_task(
     request: Request,
@@ -132,6 +144,9 @@ async def create_task(
     deadline: Annotated[Optional[str], Form()] = None,
     tags: Annotated[str, Form()] = "",
     recurrence_rule: Annotated[Optional[str], Form()] = None,
+    estimate_minutes: Annotated[str, Form()] = "",
+    context: Annotated[str, Form()] = "",
+    available_from: Annotated[str, Form()] = "",
 ):
     tag_list = [t.strip() for t in tags.split(",") if t.strip()]
     payload: dict = {"title": title, "priority": priority, "urgency": urgency, "tags": tag_list}
@@ -139,6 +154,10 @@ async def create_task(
         payload["deadline"] = deadline
     if recurrence_rule:
         payload["recurrence_rule"] = recurrence_rule
+    try:
+        payload.update({k: v for k, v in _planning_payload(estimate_minutes, context, available_from).items() if v is not None})
+    except ValueError as exc:
+        return Response(str(exc), status_code=422, media_type="text/plain")
     try:
         await api.post("/organizer/tasks", json=payload)
     except httpx.HTTPStatusError as exc:
@@ -207,6 +226,9 @@ async def update_task(
     deadline: Annotated[Optional[str], Form()] = None,
     tags: Annotated[str, Form()] = "",
     recurrence_rule: Annotated[Optional[str], Form()] = None,
+    estimate_minutes: Annotated[str, Form()] = "",
+    context: Annotated[str, Form()] = "",
+    available_from: Annotated[str, Form()] = "",
 ):
     tag_list = [t.strip() for t in tags.split(",") if t.strip()]
     payload: dict = {
@@ -217,6 +239,10 @@ async def update_task(
         "deadline": deadline or None,
         "recurrence_rule": recurrence_rule or None,
     }
+    try:
+        payload.update(_planning_payload(estimate_minutes, context, available_from))
+    except ValueError as exc:
+        return Response(str(exc), status_code=422, media_type="text/plain")
     try:
         await api.patch(f"/organizer/tasks/{task_id}", json=payload)
     except httpx.HTTPStatusError as exc:

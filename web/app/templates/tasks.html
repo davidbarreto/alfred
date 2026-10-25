@@ -104,6 +104,35 @@
           class="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white w-full focus:outline-none focus:ring-1 focus:ring-[#378ADD]"
         />
       </div>
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="text-xs text-gray-500 mb-1 block">Estimate <span class="text-gray-300">(minutes)</span></label>
+          <input
+            name="estimate_minutes"
+            type="number"
+            min="1"
+            placeholder="Optional"
+            class="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white w-full focus:outline-none focus:ring-1 focus:ring-[#378ADD]"
+          />
+        </div>
+        <div>
+          <label class="text-xs text-gray-500 mb-1 block">Where</label>
+          <select name="context" class="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white w-full focus:outline-none focus:ring-1 focus:ring-[#378ADD]">
+            <option value="">Not set</option>
+            {% for c in ["computer", "phone", "home", "out", "anywhere"] %}
+            <option value="{{ c }}">{{ c | capitalize }}</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+      <div>
+        <label class="text-xs text-gray-500 mb-1 block">Not before <span class="text-gray-300">(planning only)</span></label>
+        <input
+          name="available_from"
+          type="date"
+          class="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white w-full focus:outline-none focus:ring-1 focus:ring-[#378ADD]"
+        />
+      </div>
       <div>
         <label class="text-xs text-gray-500 mb-2 block">Recurrence</label>
         <div class="flex flex-wrap gap-1.5" id="recurrence-chips">
@@ -266,6 +295,9 @@ function openEditTask(task) {
   form.querySelector('[name="urgency"]').value = task.urgency;
   form.querySelector('[name="deadline"]').value = task.deadline ? task.deadline.slice(0, 10) : "";
   form.querySelector('[name="tags"]').value = (task.tags || []).join(", ");
+  form.querySelector('[name="estimate_minutes"]').value = task.estimate_minutes || "";
+  form.querySelector('[name="context"]').value = task.context || "";
+  form.querySelector('[name="available_from"]').value = task.available_from ? task.available_from.slice(0, 10) : "";
 
   const rr = task.recurrence_rule || "";
   const knownRecurrences = ["", "FREQ=DAILY", "FREQ=WEEKLY", "FREQ=MONTHLY", "FREQ=YEARLY"];

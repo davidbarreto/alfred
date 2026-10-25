@@ -210,6 +210,45 @@
           <option value="aware">Aware</option>
         </select>
       </div>
+      <div class="rounded-lg border border-gray-200 p-3 space-y-3">
+        <p class="text-xs font-medium text-gray-500">Planning <span class="font-normal text-gray-300">(Alfred only, never sent to Google)</span></p>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="text-xs text-gray-500 mb-1 block">Blocks my time</label>
+            <select name="availability" class="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white w-full focus:outline-none focus:ring-1 focus:ring-[#378ADD]">
+              <option value="">Default</option>
+              <option value="blocked">Blocked</option>
+              <option value="light">Light</option>
+              <option value="free">Free</option>
+            </select>
+          </div>
+          <div>
+            <label class="text-xs text-gray-500 mb-1 block">Where</label>
+            <select name="presence" class="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white w-full focus:outline-none focus:ring-1 focus:ring-[#378ADD]">
+              <option value="in_person">In person</option>
+              <option value="remote_home">Remote, from home</option>
+              <option value="remote_anywhere">Remote, anywhere</option>
+            </select>
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="text-xs text-gray-500 mb-1 block">Travel <span class="text-gray-300">(minutes, one way)</span></label>
+            <input name="travel_minutes" type="number" min="0" value="0"
+              class="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white w-full focus:outline-none focus:ring-1 focus:ring-[#378ADD]" />
+          </div>
+          <div>
+            <label class="text-xs text-gray-500 mb-1 block">Routine</label>
+            <select name="routine_id" class="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white w-full focus:outline-none focus:ring-1 focus:ring-[#378ADD]">
+              <option value="">None</option>
+              {% for routine in routines %}
+              <option value="{{ routine.id }}">{{ routine.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+        <p class="text-xs text-gray-400">Changes apply to every occurrence of a repeating event.</p>
+      </div>
       <div>
         <label class="text-xs text-gray-500 mb-2 block">Repeat</label>
         <div class="flex flex-wrap gap-1.5" id="event-recurrence-chips">
@@ -368,6 +407,10 @@ function openEditEvent(ev) {
   form.querySelector('[name="start_date"]').value = ev.start_datetime.slice(0, 10);
   form.querySelector('[name="location"]').value = ev.location || "";
   form.querySelector('[name="notification_profile"]').value = ev.notification_profile || "";
+  form.querySelector('[name="availability"]').value = ev.availability || "";
+  form.querySelector('[name="presence"]').value = ev.presence || "in_person";
+  form.querySelector('[name="travel_minutes"]').value = ev.travel_minutes || 0;
+  form.querySelector('[name="routine_id"]').value = ev.routine_id || "";
 
   const rr = ev.recurrence_rule || "";
   const knownRecurrences = ["", "FREQ=DAILY", "FREQ=WEEKLY", "FREQ=MONTHLY", "FREQ=YEARLY"];

@@ -52,7 +52,9 @@ class TestCommandCatalog:
         assert task_add["action"] == "add"
         assert task_add["requires_args"] is True
         assert task_add["arg_keys"] == ["title"]
-        assert set(task_add["flags"]) == {"deadline", "priority", "tags", "recurrence"}
+        assert set(task_add["flags"]) == {
+            "deadline", "priority", "tags", "recurrence", "estimate", "context", "available_from",
+        }
         assert task_add["implicit_flags"] == {}
 
     def test_convenience_alias_resolves_actual_action_and_implicit_flags(self, client):
@@ -63,7 +65,7 @@ class TestCommandCatalog:
 
     def test_actions_without_details_expose_empty_string(self, client):
         response = client.get("/commands/catalog", headers=AUTH)
-        assert response.json()["domains"]["task"]["add"]["details"] == ""
+        assert response.json()["domains"]["task"]["pending"]["details"] == ""
 
     def test_details_are_exposed_when_defined(self, client, monkeypatch):
         from app.api.routes import commands as commands_route

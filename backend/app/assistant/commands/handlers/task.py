@@ -10,6 +10,7 @@ from app.features.core.embeddings.service import EmbeddingService
 from app.features.core.reminders.service import snooze_undated_escalation
 from app.features.core.working_memory.service import WorkingMemoryService
 from app.features.organizer.tasks.schemas import (
+    TASK_CONTEXTS,
     TaskCompletionRead,
     TaskCreate,
     TaskFilters,
@@ -23,6 +24,30 @@ from app.features.organizer.tasks.service import TaskService
 logger = logging.getLogger(__name__)
 
 _PRIORITY_ORDER = {"HIGH": 0, "MEDIUM": 1, "LOW": 2}
+_TRUE_VALUES = {"true", "1", "yes", "y"}
+
+
+def _parse_estimate(raw: Any) -> int | None:
+    if raw is None or str(raw).strip() == "":
+        return None
+    try:
+        return int(str(raw).strip())
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=f"estimate must be a whole number of minutes, got {raw!r}"
+        )
+
+
+def _parse_context(raw: Any) -> str | None:
+    if raw is None or str(raw).strip() == "":
+        return None
+    value = str(raw).strip().lower()
+    if value not in TASK_CONTEXTS:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"context must be one of {', '.join(TASK_CONTEXTS)}, got {raw!r}",
+        )
+    return value
 
 
 def _parse_occurrence_date(raw: Any) -> date | None:
@@ -49,6 +74,9 @@ async def handle_task(
             deadline=parse_dt(arguments.get("deadline")),
             tags=parse_tags(arguments.get("tags")),
             recurrence_rule=arguments.get("recurrence"),
+            estimate_minutes=_parse_estimate(arguments.get("estimate")),
+            context=_parse_context(arguments.get("context")),
+            available_from=parse_dt(arguments.get("available_from")),
         )
         result = await service.create_task(payload)
         return result.model_dump(mode='json')
@@ -95,6 +123,8 @@ async def handle_task(
             status=cast(TaskStatusFilter, str(raw_status).upper()),
             priority=cast(TaskPriorityFilter, str(raw_priority).upper() if raw_priority else "ALL"),
             limit=int(arguments.get("limit", 100)),
+            context=_parse_context(arguments.get("context")),
+            available=str(arguments.get("available", "")).strip().lower() in _TRUE_VALUES,
         )
         results = await service.get_tasks(filters)
         return [r.model_dump(mode='json') for r in results]
@@ -116,6 +146,12 @@ async def handle_task(
             update_fields["tags"] = parse_tags(arguments["tags"])
         if "recurrence" in arguments:
             update_fields["recurrence_rule"] = arguments["recurrence"]
+        if "estimate" in arguments:
+            update_fields["estimate_minutes"] = _parse_estimate(arguments["estimate"])
+        if "context" in arguments:
+            update_fields["context"] = _parse_context(arguments["context"])
+        if "available_from" in arguments:
+            update_fields["available_from"] = parse_dt(arguments["available_from"])
         result = await service.update_task(task_id, TaskUpdate(**update_fields))
         if result is None:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Task {task_id} not found")

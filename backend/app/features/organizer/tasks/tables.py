@@ -1,4 +1,4 @@
-from sqlalchemy import Date, DateTime, ForeignKey, Integer, String, UniqueConstraint, func
+from sqlalchemy import CheckConstraint, Date, DateTime, ForeignKey, Integer, String, UniqueConstraint, func
 from sqlalchemy.orm import relationship, Mapped, mapped_column, validates
 from typing import Optional, List
 from datetime import date, datetime, timezone
@@ -6,12 +6,18 @@ from datetime import date, datetime, timezone
 from app.features.organizer.tags.tables import Tag
 from app.db.base import Base
 from app.db.types import LocalDateTime
+from app.features.organizer.tasks.schemas import TASK_CONTEXTS
 
 
 class Task(Base):
     __tablename__ = "tasks"
     __table_args__ = (
         UniqueConstraint("provider_id", name="uq_tasks_provider_id"),
+        CheckConstraint("estimate_minutes > 0", name="ck_tasks_estimate_minutes_positive"),
+        CheckConstraint(
+            "context IN ({})".format(", ".join(f"'{c}'" for c in TASK_CONTEXTS)),
+            name="ck_tasks_context",
+        ),
         {"schema": "organizer"},
     )
 
@@ -23,6 +29,10 @@ class Task(Base):
     urgency: Mapped[str] = mapped_column(String(255), nullable=False)
     deadline: Mapped[Optional[datetime]] = mapped_column(LocalDateTime, nullable=True)
     recurrence_rule: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    # Planning fields: Alfred-only, never sent to Notion (see TaskService._ALFRED_ONLY_FIELDS).
+    estimate_minutes: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    context: Mapped[Optional[str]] = mapped_column(String(16), nullable=True)
+    available_from: Mapped[Optional[datetime]] = mapped_column(LocalDateTime, nullable=True)
     completed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False

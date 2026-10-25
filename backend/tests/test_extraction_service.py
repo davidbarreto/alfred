@@ -55,7 +55,17 @@ class TestExtractArgs:
         payload = json.dumps({"title": "Buy milk", "due_date": "tomorrow", "priority": "high", "recurrence": None})
         provider = _make_provider(payload)
         result = await extract_args("task.add", "Buy milk tomorrow, high priority", llm_provider=provider)
-        assert result == {"title": "Buy milk", "due_date": "tomorrow", "priority": "high", "recurrence": None}
+        assert result == {
+            "title": "Buy milk", "due_date": "tomorrow", "priority": "high", "recurrence": None,
+            "estimate": None, "context": None, "available_from": None,
+        }
+
+    async def test_task_add_extracts_planning_fields(self):
+        payload = json.dumps({"title": "Buy flixbus tickets", "estimate": 10, "context": "phone"})
+        provider = _make_provider(payload)
+        result = await extract_args("task.add", "Buy flixbus tickets, 10 min, on the phone", llm_provider=provider)
+        assert result["estimate"] == 10
+        assert result["context"] == "phone"
 
     async def test_task_add_extracts_weekly_recurrence(self):
         payload = json.dumps({"title": "Take out the trash", "due_date": None, "priority": None, "recurrence": "FREQ=WEEKLY"})

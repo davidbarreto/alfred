@@ -29,6 +29,17 @@ class CreateTaskArgs(BaseModel):
             "Map phrasing like 'once a week' or 'every week' to 'FREQ=WEEKLY'. Omit for one-off tasks."
         ),
     )
+    estimate: int | None = Field(
+        default=None, description="Time the task takes, in whole minutes ('10 min' -> 10, '2h' -> 120). Omit if not stated."
+    )
+    context: Literal["computer", "phone", "home", "out", "anywhere"] | None = Field(
+        default=None,
+        description="Where the task can be done, only if stated (e.g. 'on the phone' -> 'phone'). Omit otherwise.",
+    )
+    available_from: str | None = Field(
+        default=None,
+        description="'Not before' date in ISO 8601 (YYYY-MM-DD) if the task can only start later, e.g. 'this weekend'. Omit otherwise.",
+    )
 
 
 class GetTasksArgs(BaseModel):

@@ -1,6 +1,6 @@
 from datetime import date, datetime
 from typing import Annotated, Any, Literal, Optional, List
-from pydantic import BaseModel, field_validator, model_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 from pydantic_core import PydanticCustomError
 from typing import Literal, TypeAlias
 from fastapi import Query
@@ -8,6 +8,11 @@ from fastapi import Query
 TaskStatus: TypeAlias = Literal["TODO", "DOING", "DONE", "CANCELLED"]
 TaskPriority: TypeAlias = Literal["LOW", "MEDIUM", "HIGH"]
 TaskUrgency: TypeAlias = Literal["NORMAL", "URGENT"]
+
+# Where a task can be done; used for planning only. Defined once: the Literal, the DB CHECK
+# constraint and the MCP tool descriptions are all derived from this tuple.
+TASK_CONTEXTS = ("computer", "phone", "home", "out", "anywhere")
+TaskContext: TypeAlias = Literal["computer", "phone", "home", "out", "anywhere"]
 
 # Types for Filter
 # "ACTIVE" excludes terminal states (DONE, CANCELLED) — used to hide finished tasks by default
@@ -23,6 +28,9 @@ class TaskBase(BaseModel):
     deadline: datetime | None = None
     tags: list[str] = []
     recurrence_rule: str | None = None
+    estimate_minutes: int | None = Field(default=None, gt=0)
+    context: TaskContext | None = None
+    available_from: datetime | None = None
 
 class TaskCreate(TaskBase):
     pass
@@ -35,6 +43,9 @@ class TaskUpdate(BaseModel):
     deadline: datetime | None = None
     tags: list[str] | None = None
     recurrence_rule: str | None = None
+    estimate_minutes: int | None = Field(default=None, gt=0)
+    context: TaskContext | None = None
+    available_from: datetime | None = None
 
 class TaskRead(TaskBase):
     id: int
@@ -65,6 +76,8 @@ class TaskFilters:
         deadline_to: Annotated[Optional[datetime], Query()] = None,
         include_recurring: Annotated[bool, Query()] = False,
         due_today: Annotated[bool, Query()] = False,
+        context: Annotated[Optional[TaskContext], Query()] = None,
+        available: Annotated[bool, Query(description="Only tasks whose available_from is unset or already past")] = False,
         q: Annotated[Optional[str], Query(description="Case-insensitive substring match on title")] = None,
     ) -> None:
         self.limit = limit
@@ -76,6 +89,8 @@ class TaskFilters:
         self.deadline_to = deadline_to
         self.include_recurring = include_recurring
         self.due_today = due_today
+        self.context = context
+        self.available = available
         self.q = q
 
     def __eq__(self, other: object) -> bool:
@@ -87,7 +102,8 @@ class TaskFilters:
             f"priority={self.priority!r}, urgency={self.urgency!r}, "
             f"tags={self.tags!r}, deadline_from={self.deadline_from!r}, "
             f"deadline_to={self.deadline_to!r}, include_recurring={self.include_recurring!r}, "
-            f"due_today={self.due_today!r}, q={self.q!r})"
+            f"due_today={self.due_today!r}, context={self.context!r}, "
+            f"available={self.available!r}, q={self.q!r})"
         )
 
 

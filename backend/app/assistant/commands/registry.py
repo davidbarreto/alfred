@@ -1,5 +1,6 @@
 from typing import Any, Dict, List
 from app.assistant.commands.schemas import CommandMetadata
+from app.features.organizer.tasks.schemas import TASK_CONTEXTS
 
 # --- Shared Flag Constants ---
 FLAG_TAGS = {"-t": "tags", "--tags": "tags"}
@@ -17,6 +18,10 @@ FLAG_CONTENT = {"-c": "content", "--content": "content"}
 FLAG_START = {"-s": "start", "--start": "start"}
 FLAG_END = {"-e": "end", "--end": "end"}
 FLAG_DURATION = {"-du": "duration", "--duration": "duration"}
+FLAG_ESTIMATE = {"-est": "estimate", "--estimate": "estimate"}
+FLAG_CONTEXT = {"-cx": "context", "--context": "context"}
+FLAG_AVAILABLE_FROM = {"--from": "available_from", "--not-before": "available_from"}
+FLAG_AVAILABLE = {"--available": "available"}
 
 # --- Finance Flag Constants ---
 FLAG_AMOUNT = {"-a": "amount", "--amount": "amount"}
@@ -35,9 +40,24 @@ FLAG_RECURRENCE_RULE = {"-r": "recurrence_rule", "--recurrence": "recurrence_rul
 # --- Action-Specific Flag Compositions ---
 FLAG_OCCURRENCE_DATE = {"-d": "occurrence_date", "--date": "occurrence_date"}
 
-TASK_ADD_FLAGS = {**FLAG_DUE, **FLAG_PRIORITY, **FLAG_TAGS, **FLAG_RECURRENCE}
-TASK_LIST_FLAGS = {**FLAG_STATUS, **FLAG_DUE, **FLAG_PRIORITY, **FLAG_TAGS, **FLAG_LIMIT}
-TASK_UPDATE_FLAGS = {**FLAG_STATUS, **FLAG_DUE, **FLAG_PRIORITY, **FLAG_TITLE, **FLAG_URGENCY}
+TASK_ADD_FLAGS = {
+    **FLAG_DUE, **FLAG_PRIORITY, **FLAG_TAGS, **FLAG_RECURRENCE, **FLAG_ESTIMATE, **FLAG_CONTEXT, **FLAG_AVAILABLE_FROM,
+}
+TASK_LIST_FLAGS = {
+    **FLAG_STATUS, **FLAG_DUE, **FLAG_PRIORITY, **FLAG_TAGS, **FLAG_LIMIT, **FLAG_CONTEXT, **FLAG_AVAILABLE,
+}
+TASK_UPDATE_FLAGS = {
+    **FLAG_STATUS, **FLAG_DUE, **FLAG_PRIORITY, **FLAG_TITLE, **FLAG_URGENCY,
+    **FLAG_ESTIMATE, **FLAG_CONTEXT, **FLAG_AVAILABLE_FROM,
+}
+
+_TASK_CONTEXT_VALUES = "/".join(TASK_CONTEXTS)
+_TASK_PLANNING_DETAILS = (
+    f"Planning fields are optional and stay in Alfred only (never sent to Notion): estimate = minutes (whole number); "
+    f"context = where it can be done, one of {_TASK_CONTEXT_VALUES}; available_from = not before this ISO date or "
+    "datetime (a date alone means 00:00 local). Tags are plain names. When estimate or context is missing, ask "
+    "David and write the answers back with the update action. Pass an empty value to clear a field."
+)
 TASK_COMPLETE_FLAGS = {**FLAG_OCCURRENCE_DATE}
 TASK_SNOOZE_FLAGS = {**FLAG_DAYS}
 
@@ -73,6 +93,7 @@ COMMAND_DEFINITIONS = {
     "task": {
         "add": {
             "description": "Create a new task with optional deadline, priority, tags, or recurrence",
+            "details": _TASK_PLANNING_DETAILS,
             "aliases": ["/taskadd", "/t", "/ta", "/task"],
             "nl_triggers": [
                 "add a task to", "add a task:", "create a task to", "create a task:",
@@ -84,6 +105,11 @@ COMMAND_DEFINITIONS = {
         },
         "list": {
             "description": "List tasks with optional filters by status, priority, tags, or deadline",
+            "details": (
+                f"Extra filters: context ({_TASK_CONTEXT_VALUES}); available=true keeps only tasks whose "
+                "available_from is unset or already past. Each task shows its estimate_minutes, context and "
+                "available_from when set."
+            ),
             "aliases": ["/tasklist", "/tl", "/list", "/tasks"],
             "nl_triggers": [
                 "what are my pending tasks", "show me my to-do list", "show my to-do list",
@@ -115,6 +141,7 @@ COMMAND_DEFINITIONS = {
         },
         "update": {
             "description": "Update a task's title, status, priority, or deadline by ID",
+            "details": _TASK_PLANNING_DETAILS,
             "aliases": ["/taskupdate", "/tu", "/taskupd"],
             "flags": TASK_UPDATE_FLAGS,
             "requires_args": True,

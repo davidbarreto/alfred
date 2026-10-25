@@ -505,6 +505,188 @@
       }
     },
     {
+      "name": "11b - Update Task Planning Fields",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Planning fields are saved', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json.estimate_minutes).to.eql(25);",
+              "    pm.expect(json.context).to.eql('phone');",
+              "    pm.expect(json.available_from).to.be.a('string');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/organizer/tasks/{{task_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "tasks",
+            "{{task_id}}"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"estimate_minutes\": 25,\n  \"context\": \"phone\",\n  \"available_from\": \"2026-01-01T00:00:00\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "11c - List Tasks (Filter by Context and Availability)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Only phone tasks that are already available', () => {",
+              "    const tasks = pm.response.json();",
+              "    pm.expect(tasks.map(t => t.id)).to.include(Number(pm.environment.get('task_id')));",
+              "    tasks.forEach(t => pm.expect(t.context).to.eql('phone'));",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/organizer/tasks?context=phone&available=true&include_recurring=true",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "tasks"
+          ],
+          "query": [
+            {
+              "key": "context",
+              "value": "phone"
+            },
+            {
+              "key": "available",
+              "value": "true"
+            },
+            {
+              "key": "include_recurring",
+              "value": "true"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "11d - Update Task With Unknown Context (422)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 422', () => pm.response.to.have.status(422));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/organizer/tasks/{{task_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "tasks",
+            "{{task_id}}"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"context\": \"office\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "11e - Update Task With Non-Positive Estimate (422)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 422', () => pm.response.to.have.status(422));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/organizer/tasks/{{task_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "tasks",
+            "{{task_id}}"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"estimate_minutes\": 0\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
       "name": "11a - End Recurring Task (cancel)",
       "event": [
         {

@@ -32,6 +32,9 @@ def _make_task_orm(**kwargs):
     task.urgency = kwargs.get("urgency", "NORMAL")
     task.deadline = kwargs.get("deadline", None)
     task.recurrence_rule = kwargs.get("recurrence_rule", None)
+    task.estimate_minutes = kwargs.get("estimate_minutes", None)
+    task.context = kwargs.get("context", None)
+    task.available_from = kwargs.get("available_from", None)
     task.tags = kwargs.get("tags", [])
     task.provider_id = kwargs.get("provider_id", "provider-1")
     return task

@@ -23,6 +23,10 @@ logger = logging.getLogger(__name__)
 
 _SOURCE_TYPE = "task"
 
+# Planning fields live only in Alfred's DB. NotionStorageProvider forwards every non-null key
+# of a record to Notion, so they must never reach the provider.
+_ALFRED_ONLY_FIELDS = frozenset({"estimate_minutes", "context", "available_from"})
+
 
 class CompletionConflictError(Exception):
     """Another completion already exists for the requested occurrence date."""
@@ -99,7 +103,9 @@ class TaskService:
         return await self._repo.get_distinct_tags()
 
     async def create_task(self, task_create: TaskCreate) -> TaskRead:
-        task_record = await self._provider.create(task_create.model_dump(), self._session)
+        task_record = await self._provider.create(
+            task_create.model_dump(exclude=_ALFRED_ONLY_FIELDS), self._session
+        )
         task_orm = await self._repo.create_task(task_create, task_record["id"])
         logger.info("Task created: id=%d title=%r", task_orm.id, task_create.title)
         if self._embedding_service:
@@ -124,7 +130,9 @@ class TaskService:
             task_update = TaskUpdate(**update_data)
             logger.info("Task urgency reset on deadline change: id=%d", task_id)
 
-        await self._provider.update(task.provider_id, update_data, self._session)
+        provider_data = {k: v for k, v in update_data.items() if k not in _ALFRED_ONLY_FIELDS}
+        if provider_data:
+            await self._provider.update(task.provider_id, provider_data, self._session)
         task_orm = await self._repo.update_task(task_id, task_update)
         logger.info("Task updated: id=%d fields=%s", task_id, list(update_data.keys()))
         if self._embedding_service and task_update.title is not None:

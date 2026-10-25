@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.features.organizer.tags.tables import Tag, tasks_tags
 from app.features.organizer.tasks.tables import Task, TaskCompletion
 from app.features.organizer.tasks.schemas import TaskCreate, TaskUpdate, TaskFilters
-from app.shared.timezone import local_today
+from app.shared.timezone import local_naive_now, local_today
 
 _TASK_EXCLUDE = {"tags"}
 
@@ -44,6 +44,10 @@ class TaskRepository:
             query = query.where(Task.title.ilike(f"%{task_filter.q}%"))
         if task_filter.urgency != "ALL":
             query = query.where(Task.urgency == task_filter.urgency)
+        if task_filter.context:
+            query = query.where(Task.context == task_filter.context)
+        if task_filter.available:
+            query = query.where(or_(Task.available_from.is_(None), Task.available_from <= local_naive_now()))
         if task_filter.due_today:
             today_start = datetime.combine(local_today(), time.min)
             tomorrow_start = today_start + timedelta(days=1)

@@ -199,13 +199,28 @@ def has_tag(event: EventRead, tag: str) -> bool:
     return tag.lower() in {t.lower() for t in event.tags}
 
 
-def committed_work_minutes(events: Sequence[EventRead], day: date, work_tag: str) -> int:
-    """Real minutes taken by timed events tagged `work_tag` that start on `day`."""
+def committed_work_minutes(
+    events: Sequence[EventRead], day: date, work_tag: str, task_blocks: Sequence[tuple[datetime, datetime]] = ()
+) -> int:
+    """Real minutes taken by timed events tagged `work_tag` that start on `day`, plus the saved work-task blocks.
+
+    Time covered by more than one of them counts once.
+    """
+    spans = [event_start_end(e) for e in events_for_day(events, day) if has_tag(e, work_tag)]
+    return merged_minutes([*spans, *task_blocks])
+
+
+def merged_minutes(spans: Sequence[tuple[datetime, datetime]]) -> int:
+    """Minutes covered by the union of the spans, measured on UTC instants so a DST day is not off by an hour."""
+    instants = sorted((start.astimezone(_UTC), end.astimezone(_UTC)) for start, end in spans)
     total = 0
-    for event in events_for_day(events, day):
-        if has_tag(event, work_tag):
-            start, end = event_start_end(event)
-            total += max(0, elapsed_minutes(start, end))
+    covered_until: datetime | None = None
+    for start, end in instants:
+        if covered_until is not None and start < covered_until:
+            start = covered_until
+        if end > start:
+            total += elapsed_minutes(start, end)
+            covered_until = end
     return total
 
 

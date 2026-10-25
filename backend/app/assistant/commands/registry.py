@@ -169,7 +169,7 @@ _DAY_PLAN_GET_DETAILS = (
     "Per day: timeline (events with availability/presence/notification_profile, routine_step entries around events, "
     "derived travel blocks, sorted; overlaps are only reported in warnings), routine_blocks (steps of scheduled "
     "routines with a duration and a window, fixed=true when the window is exactly the duration), all_day, work "
-    "(target, committed by events tagged with the work tag, remaining, preferred windows). Once per request: "
+    "(target, committed by events tagged with the work tag plus the saved task blocks of work-tagged tasks, overlaps counted once, remaining, preferred windows). Once per request: "
     "preferences; overdue_tasks; due_tasks (deadline in the range or the next 3 days; you choose the day); "
     "recurring_tasks (with due_dates, or flexible=true when no specific day); backlog_tasks (undated open tasks, "
     "the pool for placing work without a date); study (open items of active plans plus language quota progress); "

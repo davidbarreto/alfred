@@ -431,6 +431,64 @@ class TestSavedPlanSection:
         assert "saved_plan" not in _dump(await service.get_plan(date(2026, 10, 21)))
 
 
+def _saved_day(items) -> "SavedDayPlanRead":
+    from app.features.planning.saved_plans.schemas import SavedDayPlanRead
+
+    return SavedDayPlanRead(
+        id=5, plan_date=date(2026, 10, 21), version=1, source="mcp", created_at=_NOW, updated_at=_NOW, items=items,
+    )
+
+
+def _block(start, end, kind="task", ref_id=4):
+    return {"start": start, "end": end, "kind": kind, "ref_id": ref_id, "title": "Block", "note": None}
+
+
+@freeze_time("2026-10-21 08:00:00")
+class TestWorkTaskBlocks:
+    async def test_saved_work_task_blocks_count_as_committed(self, service, parts):
+        parts.events.get_events.return_value = [
+            _event(1, "Standup", datetime(2026, 10, 21, 10, 0), datetime(2026, 10, 21, 10, 30), tags=["work"]),
+        ]
+        parts.tasks.get_task.return_value = _task(4, tags=["Work", "training"])
+        parts.saved.get_saved.return_value = [_saved_day([_block("2026-10-21T14:00:00+01:00", "2026-10-21T16:00:00+01:00")])]
+
+        plan = _dump(await service.get_plan(date(2026, 10, 21)))
+
+        assert plan["work"]["committed_minutes"] == 150
+        assert plan["work"]["remaining_minutes"] == 330
+
+    async def test_time_covered_by_an_event_and_a_task_counts_once(self, service, parts):
+        parts.events.get_events.return_value = [
+            _event(1, "Workshop", datetime(2026, 10, 21, 14, 0), datetime(2026, 10, 21, 15, 0), tags=["work"]),
+        ]
+        parts.tasks.get_task.return_value = _task(4, tags=["work"])
+        parts.saved.get_saved.return_value = [_saved_day([_block("2026-10-21T14:30:00+01:00", "2026-10-21T16:00:00+01:00")])]
+
+        plan = _dump(await service.get_plan(date(2026, 10, 21)))
+
+        assert plan["work"]["committed_minutes"] == 120
+
+    async def test_tasks_without_the_work_tag_and_other_block_kinds_are_ignored(self, service, parts):
+        parts.tasks.get_task.return_value = _task(4, tags=["home"])
+        parts.saved.get_saved.return_value = [_saved_day([
+            _block("2026-10-21T14:00:00+01:00", "2026-10-21T15:00:00+01:00"),
+            _block("2026-10-21T16:00:00+01:00", "2026-10-21T17:00:00+01:00", kind="break", ref_id=None),
+        ])]
+
+        plan = _dump(await service.get_plan(date(2026, 10, 21)))
+
+        assert plan["work"]["committed_minutes"] == 0
+        parts.tasks.get_task.assert_awaited_once_with(4)
+
+    async def test_blocks_count_on_their_own_day_only(self, service, parts):
+        parts.tasks.get_task.return_value = _task(4, tags=["work"])
+        parts.saved.get_saved.return_value = [_saved_day([_block("2026-10-21T09:00:00+01:00", "2026-10-21T10:00:00+01:00")])]
+
+        plan = _dump(await service.get_plan(date(2026, 10, 20), days=2))
+
+        assert [d["work"]["committed_minutes"] for d in plan["days"]] == [0, 60]
+
+
 @freeze_time("2026-10-21 08:00:00")
 class TestActivitySuggestionsSection:
     async def test_suggestions_are_passed_through_without_a_cap(self, service, parts):

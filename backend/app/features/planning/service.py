@@ -31,6 +31,7 @@ from app.features.planning.schemas import (
     WEEKDAYS,
     WorkSummary,
 )
+from app.features.planning.saved_plans.schemas import SavedDayPlanRead
 from app.features.planning.settings_service import PlanningSettingsService
 from app.features.study.plans.service import StudyPlanService
 from app.shared.timezone import local_now, local_timezone_name, local_today
@@ -82,9 +83,14 @@ class DayPlanService:
         warnings: list[str] = []
 
         events = await self._load_events(dates)
+        saved = await self._saved.get_saved(dates[0], dates[-1])
+        work_task_blocks = await self._work_task_blocks(saved, settings.work_tag)
         routines_by_id, scheduled_routines, note_titles = await self._load_routines(events)
         day_reads = [
-            self._build_day(d, events, routines_by_id, scheduled_routines, note_titles, settings, work_minutes, warnings)
+            self._build_day(
+                d, events, routines_by_id, scheduled_routines, note_titles, settings, work_minutes, warnings,
+                work_task_blocks.get(d, []),
+            )
             for d in dates
         ]
         office = await self._office_summary(first, settings)
@@ -102,7 +108,7 @@ class DayPlanService:
             study=await self._study_section(),
             shopping=await self._shopping_section(),
             activity_suggestions=await self._activities.get_suggestions() or None,
-            saved_plan=await self._saved_plans(dates),
+            saved_plan=self._saved_plans(saved),
             warnings=warnings,
         )
         if days == 1:
@@ -148,6 +154,7 @@ class DayPlanService:
         settings: Any,
         work_minutes: int | None,
         warnings: list[str],
+        work_task_blocks: list[tuple[datetime, datetime]],
     ) -> DayRead:
         items, overlaps = timeline.build_timeline(events, routines_by_id, note_titles, day)
         warnings.extend(overlaps)
@@ -167,7 +174,7 @@ class DayPlanService:
             target = settings.work_target_minutes
         else:
             target = 0
-        committed = timeline.committed_work_minutes(events, day, settings.work_tag)
+        committed = timeline.committed_work_minutes(events, day, settings.work_tag, work_task_blocks)
         return DayRead(
             date=day.isoformat(),
             timeline=items,
@@ -267,8 +274,27 @@ class DayPlanService:
         ]
         return StudySection(plans=plans, language=language)
 
-    async def _saved_plans(self, dates: list[date]) -> list[dict[str, Any]] | None:
-        plans = await self._saved.get_saved(dates[0], dates[-1])
+    async def _work_task_blocks(
+        self, saved: list[SavedDayPlanRead], work_tag: str
+    ) -> dict[date, list[tuple[datetime, datetime]]]:
+        """Saved task blocks whose task carries the work tag, by plan date."""
+        wanted = work_tag.lower()
+        is_work: dict[int, bool] = {}
+        blocks: dict[date, list[tuple[datetime, datetime]]] = {}
+        for plan in saved:
+            for item in plan.items:
+                if item.kind != "task" or item.ref_id is None:
+                    continue
+                if item.ref_id not in is_work:
+                    task = await self._tasks.get_task(item.ref_id)
+                    is_work[item.ref_id] = task is not None and wanted in {t.lower() for t in task.tags or []}
+                if is_work[item.ref_id]:
+                    blocks.setdefault(plan.plan_date, []).append(
+                        (datetime.fromisoformat(item.start), datetime.fromisoformat(item.end))
+                    )
+        return blocks
+
+    def _saved_plans(self, plans: list[SavedDayPlanRead]) -> list[dict[str, Any]] | None:
         if not plans:
             return None
         hidden = {"id", "source", "created_at", "updated_at", "archived_at"}

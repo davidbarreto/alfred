@@ -12,6 +12,7 @@ from app.assistant.commands.handlers.category import handle_category
 from app.assistant.commands.handlers.contact import handle_contact
 from app.assistant.commands.handlers.cs import handle_cs
 from app.assistant.commands.handlers.study import handle_study
+from app.assistant.commands.handlers.day_plan import handle_day_plan
 from app.assistant.commands.handlers.event import handle_event
 from app.assistant.commands.handlers.finance import handle_finance
 from app.assistant.commands.handlers.grammar_scope import handle_grammar_scope
@@ -61,6 +62,8 @@ from app.features.metrics.entries.service import MetricEntryService
 from app.features.organizer.interviews.candidate_questions.service import InterviewCandidateQuestionService
 from app.features.organizer.notes.service import NoteService
 from app.features.organizer.routines.service import RoutineService
+from app.features.planning.service import DayPlanService
+from app.features.planning.settings_service import PlanningSettingsService
 from app.features.organizer.shopping.service import ShoppingService
 from app.features.organizer.tasks.service import TaskService
 from app.features.core.pause.service import GlobalPauseService
@@ -100,6 +103,8 @@ async def execute(
     interview_candidate_service: InterviewCandidateQuestionService | None = None,
     metric_service: MetricEntryService | None = None,
     routine_service: RoutineService | None = None,
+    day_plan_service: DayPlanService | None = None,
+    planning_settings_service: PlanningSettingsService | None = None,
     source: str | None = None,
     grammar_scope_service: GrammarScopeService | None = None,
     briefing_history_service: BriefingHistoryService | None = None,
@@ -327,6 +332,14 @@ async def execute(
                 detail="Routine service not available",
             )
         return await handle_routine(command, arguments, routine_service)
+
+    if cmd_type == "day_plan":
+        if day_plan_service is None or planning_settings_service is None:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Day plan service not available",
+            )
+        return await handle_day_plan(command, arguments, day_plan_service, planning_settings_service)
 
     logger.error("Execute: unknown command type=%s command=%s", cmd_type, command)
     raise HTTPException(

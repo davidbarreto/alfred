@@ -81,6 +81,19 @@ class RoutineService:
         base = self._read(routine, event_ids.get(routine_id, []))
         return RoutineDetail(**{**base.model_dump(), "steps": steps})
 
+    async def get_routines_by_ids(self, routine_ids: list[int]) -> list[RoutineRead]:
+        """Routines (with steps) for planning; unknown ids are skipped."""
+        routines = await self._repo.get_routines_by_ids(routine_ids)
+        return [self._read(r, []) for r in routines]
+
+    async def get_active_scheduled_routines(self) -> list[RoutineRead]:
+        """Active routines that run on their own recurrence rule."""
+        return [self._read(r, []) for r in await self._repo.get_active_scheduled_routines()]
+
+    async def get_note_titles(self, note_ids: list[int]) -> dict[int, str]:
+        notes = await self._repo.get_notes(note_ids)
+        return {note_id: note.title for note_id, note in notes.items()}
+
     async def create_routine(self, data: RoutineCreate) -> RoutineRead:
         _validate_rule(data.recurrence_rule, data.starts_on)
         routine = await self._repo.create_routine(data)

@@ -1,0 +1,380 @@
+{
+  "info": {
+    "name": "Alfred - Planning API",
+    "_postman_id": "alfred-planning-v1",
+    "description": "Run in order: Health Check \u2192 settings (defaults, update, invalid) \u2192 day plan (single day, 3 days, validation) \u2192 reset settings",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{api_token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "01 - Health Check",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/health",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "health"
+          ]
+        },
+        "auth": {
+          "type": "noauth"
+        }
+      }
+    },
+    {
+      "name": "02 - Get Planning Settings (defaults)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Generic defaults', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json.work_target_minutes).to.be.a('number');",
+              "    pm.expect(json.work_tag).to.be.a('string');",
+              "    pm.expect(json.office_tag).to.be.a('string');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/planning/settings",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "planning",
+            "settings"
+          ]
+        }
+      }
+    },
+    {
+      "name": "03 - Update Planning Settings",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Settings saved', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json.wake_time).to.eql('07:30');",
+              "    pm.expect(json.work_target_minutes).to.eql(420);",
+              "    pm.expect(json.preferred_work_windows).to.eql(['10:00-14:00']);",
+              "    pm.expect(json.office_days_per_week).to.eql(3);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/planning/settings",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "planning",
+            "settings"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"wake_time\": \"07:30\",\n  \"work_target_minutes\": 420,\n  \"preferred_work_windows\": [\n    \"10:00-14:00\"\n  ],\n  \"office_days_per_week\": 3,\n  \"office_min_minutes\": 60\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "04 - Update Planning Settings (invalid, 422)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 422', () => pm.response.to.have.status(422));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/planning/settings",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "planning",
+            "settings"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"wake_time\": \"7am\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "05 - Get Day Plan (today)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Single day sits at the top level', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json.timezone).to.be.a('string');",
+              "    pm.expect(json.timeline).to.be.an('array');",
+              "    pm.expect(json.work.target_minutes).to.eql(420);",
+              "    pm.expect(json.preferences.wake_time).to.eql('07:30');",
+              "    pm.expect(json.office.goal_per_week).to.eql(3);",
+              "    pm.expect(json).to.not.have.property('days');",
+              "});",
+              "pm.test('Timeline datetimes carry an offset', () => {",
+              "    pm.response.json().timeline.forEach(i => pm.expect(i.start).to.match(/[+-]\\\\d{2}:\\\\d{2}$/));",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/planning/day",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "planning",
+            "day"
+          ]
+        }
+      }
+    },
+    {
+      "name": "06 - Get Day Plan (3 days, work day off)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Days are listed separately', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json.days).to.have.length(3);",
+              "    pm.expect(json.days.map(d => d.date)).to.eql(['2026-11-04', '2026-11-05', '2026-11-06']);",
+              "    json.days.forEach(d => pm.expect(d.work.target_minutes).to.eql(0));",
+              "    pm.expect(json).to.not.have.property('timeline');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/planning/day?date=2026-11-04&days=3&work_minutes=0",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "planning",
+            "day"
+          ],
+          "query": [
+            {
+              "key": "date",
+              "value": "2026-11-04"
+            },
+            {
+              "key": "days",
+              "value": "3"
+            },
+            {
+              "key": "work_minutes",
+              "value": "0"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "07 - Get Day Plan (too many days, 422)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 422', () => pm.response.to.have.status(422));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/planning/day?days=8",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "planning",
+            "day"
+          ],
+          "query": [
+            {
+              "key": "days",
+              "value": "8"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "08 - Get Day Plan (bad date, 422)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 422', () => pm.response.to.have.status(422));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/planning/day?date=tomorrow",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "planning",
+            "day"
+          ],
+          "query": [
+            {
+              "key": "date",
+              "value": "tomorrow"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "09 - Reset Planning Settings",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Back to defaults', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json.wake_time).to.be.null;",
+              "    pm.expect(json.work_target_minutes).to.eql(480);",
+              "    pm.expect(json.office_days_per_week).to.be.null;",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/planning/settings",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "planning",
+            "settings"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"wake_time\": null,\n  \"work_target_minutes\": null,\n  \"preferred_work_windows\": [],\n  \"office_days_per_week\": null,\n  \"office_min_minutes\": null\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    }
+  ]
+}

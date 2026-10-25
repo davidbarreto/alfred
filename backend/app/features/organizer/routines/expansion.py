@@ -69,6 +69,12 @@ def shift_minutes(moment: datetime, minutes: int) -> datetime:
     return (moment.astimezone(_UTC) + timedelta(minutes=minutes)).astimezone(moment.tzinfo)
 
 
+def elapsed_minutes(start: datetime, end: datetime) -> int:
+    """Real minutes between two aware datetimes. Subtracting them directly would ignore the UTC
+    offsets when both carry the same tzinfo, which is wrong across a DST change."""
+    return int((end.astimezone(_UTC) - start.astimezone(_UTC)).total_seconds() // 60)
+
+
 def expand_event_steps(
     steps: Sequence[StepLike], event_start: datetime, event_end: datetime
 ) -> list[StepOccurrence]:

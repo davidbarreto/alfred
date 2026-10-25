@@ -138,6 +138,36 @@ _ROUTINE_STEP_DETAILS = (
     "Empty values clear optional fields."
 )
 
+PLANNING_SETTINGS_FLAGS = {
+    "--wake": "wake_time", "--sleep": "sleep_time", "--work-target": "work_target_minutes",
+    "--work-windows": "preferred_work_windows", "--work-tag": "work_tag", "--office-tag": "office_tag",
+    "--office-days": "office_days_per_week", "--office-min": "office_min_minutes",
+}
+_PLANNING_SETTINGS_DETAILS = (
+    "wake_time and sleep_time are HH:MM; work_target_minutes is the daily work target in minutes (default 480); "
+    "preferred_work_windows is a comma-separated list like 10:00-14:00,16:00-18:00; work_tag (default work) and "
+    "office_tag (default office) name the event tags that count as work time and office days; office_days_per_week "
+    "(1-7) turns the office section on and office_min_minutes is the minimum length of an event to count as an "
+    "office day. Unset values switch the related section off."
+)
+_DAY_PLAN_GET_DETAILS = (
+    "date is the first local day (YYYY-MM-DD, default today), days is 1-7 (default 1), work_minutes overrides the "
+    "daily work target for this request (0 for a day off). Alfred only gathers facts; it never schedules or notifies, "
+    "and free slots are not returned: derive gaps from the timeline. All datetimes carry their UTC offset; timezone is "
+    "the display zone. With days=1 the day's fields sit at the top level, otherwise under days[]. "
+    "Per day: timeline (events with availability/presence/notification_profile, routine_step entries around events, "
+    "derived travel blocks, sorted; overlaps are only reported in warnings), routine_blocks (steps of scheduled "
+    "routines with a duration and a window, fixed=true when the window is exactly the duration), all_day, work "
+    "(target, committed by events tagged with the work tag, remaining, preferred windows). Once per request: "
+    "preferences; overdue_tasks; due_tasks (deadline in the range or the next 3 days; you choose the day); "
+    "recurring_tasks (with due_dates, or flexible=true when no specific day); backlog_tasks (undated open tasks, "
+    "the pool for placing work without a date); study (open items of active plans plus language quota progress); "
+    "shopping (omitted when nothing to buy); office (only when configured: goal, planned_this_week, days_left_in_week "
+    "counted from the first date through Sunday); warnings. Tasks not yet available (available_from after the range) "
+    "are left out. light/aware events are droppable, important/cant_miss are not. Missing estimates and contexts are "
+    "assumed (30 min, anywhere) and listed in warnings: ask the user and write answers back with the task update action."
+)
+
 COMMAND_DEFINITIONS = {
     "task": {
         "add": {
@@ -989,6 +1019,26 @@ COMMAND_DEFINITIONS = {
             "flags": {},
             "requires_args": True,
             "arg_keys": ["event_id"],
+        },
+    },
+    "day_plan": {
+        "get": {
+            "description": "Everything needed to plan a day or a week: timeline, routines, tasks, study, shopping, work and office",
+            "details": _DAY_PLAN_GET_DETAILS,
+            "aliases": ["/dayplan"],
+            "flags": {"--date": "date", "--days": "days", "--work": "work_minutes"},
+            "arg_keys": ["date"],
+        },
+        "settings": {
+            "description": "Show the planning preferences (wake/sleep time, work target, office goal)",
+            "aliases": ["/planningsettings"],
+            "flags": {},
+        },
+        "set_settings": {
+            "description": "Change planning preferences; an empty value resets one to its default (unset)",
+            "details": _PLANNING_SETTINGS_DETAILS,
+            "aliases": ["/planningset"],
+            "flags": PLANNING_SETTINGS_FLAGS,
         },
     },
 }

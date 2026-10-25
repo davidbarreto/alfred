@@ -41,6 +41,10 @@ def _make_event_orm(**kwargs):
     event.tags = kwargs.get("tags", [])
     event.timezone = kwargs.get("timezone", None)
     event.notification_profile = kwargs.get("notification_profile", None)
+    event.availability = kwargs.get("availability", None)
+    event.presence = kwargs.get("presence", "in_person")
+    event.travel_minutes = kwargs.get("travel_minutes", 0)
+    event.routine_id = kwargs.get("routine_id", None)
     event.provider_id = kwargs.get("provider_id", "gc-event-1")
     return event
 

@@ -26,6 +26,11 @@ _OAUTH_REQUIRED = HTTPException(
 )
 _SYNC_LOOKAHEAD = relativedelta(months=3)
 
+# Planning fields live only in Alfred's DB: they are never sent to Google (the provider
+# picks specific keys anyway) and sync() never writes them. An update touching only
+# these fields does not need Google, so it works without OAuth and skips the API call.
+_ALFRED_ONLY_FIELDS = frozenset({"availability", "presence", "travel_minutes", "routine_id"})
+
 
 class CalendarEventService:
 
@@ -120,6 +125,9 @@ class CalendarEventService:
         return EventRead.model_validate(event_orm)
 
     async def update_event(self, event_id: int, event_update: EventUpdate) -> EventRead | None:
+        changed = event_update.model_dump(exclude_unset=True)
+        if changed and set(changed) <= _ALFRED_ONLY_FIELDS:
+            return await self._update_alfred_only(event_id, event_update)
         if self._provider is None:
             logger.warning("CalendarEvent update: Google Calendar not authorized")
             raise _OAUTH_REQUIRED
@@ -142,6 +150,17 @@ class CalendarEventService:
         })
         event_orm = await self._repo.update_event(event_id, converted)
         logger.info("CalendarEvent updated: id=%d fields=%s", event_id, list(event_update.model_dump(exclude_unset=True).keys()))
+        return EventRead.model_validate(event_orm)
+
+    async def _update_alfred_only(self, event_id: int, event_update: EventUpdate) -> EventRead | None:
+        if await self._repo.get_event(event_id) is None:
+            logger.debug("CalendarEvent update: id=%d not found", event_id)
+            return None
+        event_orm = await self._repo.update_event(event_id, event_update)
+        logger.info(
+            "CalendarEvent planning fields updated: id=%d fields=%s",
+            event_id, list(event_update.model_dump(exclude_unset=True).keys()),
+        )
         return EventRead.model_validate(event_orm)
 
     async def delete_event(self, event_id: int) -> None:

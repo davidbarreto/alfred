@@ -1,0 +1,900 @@
+{
+  "info": {
+    "name": "Alfred - Routines API",
+    "_postman_id": "alfred-routines-v1",
+    "description": "Run in order: Health Check \u2192 event-based routine (create, steps, validation, attach, detach) \u2192 scheduled routine (rule validation, window steps) \u2192 cleanup",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{api_token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "01 - Health Check",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/health",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "health"
+          ]
+        },
+        "auth": {
+          "type": "noauth"
+        }
+      }
+    },
+    {
+      "name": "02 - Create Event-Based Routine",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+              "pm.test('Routine saved', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json.name).to.eql('Postman dinner routine');",
+              "    pm.expect(json.recurrence_rule).to.be.null;",
+              "    pm.expect(json.steps).to.eql([]);",
+              "    pm.environment.set('routine_id', json.id);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/organizer/routines",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "routines"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Postman dinner routine\",\n  \"description\": \"Runs around an event\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "03 - Add Relative Step",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+              "pm.test('Step saved with next position', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json.anchor).to.eql('start');",
+              "    pm.expect(json.offset_minutes).to.eql(-120);",
+              "    pm.expect(json.position).to.eql(0);",
+              "    pm.environment.set('routine_step_id', json.id);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/organizer/routines/{{routine_id}}/steps",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "routines",
+            "{{routine_id}}",
+            "steps"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"title\": \"Prepare dinner\",\n  \"duration_minutes\": 40,\n  \"anchor\": \"start\",\n  \"offset_minutes\": -120,\n  \"context\": \"home\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "04 - Add Window Step To Event-Based Routine (422)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 422', () => pm.response.to.have.status(422));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/organizer/routines/{{routine_id}}/steps",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "routines",
+            "{{routine_id}}",
+            "steps"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"title\": \"Shower\",\n  \"duration_minutes\": 15,\n  \"window_start\": \"07:30\",\n  \"window_end\": \"09:00\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "05 - Add Step Without Timing (422)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 422', () => pm.response.to.have.status(422));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/organizer/routines/{{routine_id}}/steps",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "routines",
+            "{{routine_id}}",
+            "steps"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"title\": \"No timing\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "06 - Add Step At Taken Position (409)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 409', () => pm.response.to.have.status(409));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/organizer/routines/{{routine_id}}/steps",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "routines",
+            "{{routine_id}}",
+            "steps"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"title\": \"Duplicate position\",\n  \"anchor\": \"end\",\n  \"offset_minutes\": 0,\n  \"position\": 0\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "07 - Update Step",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Duration changed, timing kept', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json.duration_minutes).to.eql(45);",
+              "    pm.expect(json.offset_minutes).to.eql(-120);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/organizer/routines/steps/{{routine_step_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "routines",
+            "steps",
+            "{{routine_step_id}}"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"duration_minutes\": 45\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "08 - Get Routine",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Routine has its step', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json.steps).to.have.length(1);",
+              "    pm.expect(json.steps[0]).to.have.property('checklist_note');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/organizer/routines/{{routine_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "routines",
+            "{{routine_id}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "09 - List Routines",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Created routine is listed', () => {",
+              "    pm.expect(pm.response.json().map(r => r.id)).to.include(Number(pm.environment.get('routine_id')));",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/organizer/routines?active=true",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "routines"
+          ],
+          "query": [
+            {
+              "key": "active",
+              "value": "true"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "10 - Create Event To Attach",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+              "pm.test('Event saved', () => pm.environment.set('routine_event_id', pm.response.json().id));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/organizer/calendar-events",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "calendar-events"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"title\": \"Postman routine event\",\n  \"start_datetime\": \"2026-11-04T20:00:00\",\n  \"end_datetime\": \"2026-11-04T21:00:00\",\n  \"tags\": [\n    \"postman\"\n  ]\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "11 - Attach Routine To Event",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Event is attached', () => {",
+              "    pm.expect(pm.response.json().event_ids).to.include(Number(pm.environment.get('routine_event_id')));",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/organizer/routines/{{routine_id}}/events/{{routine_event_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "routines",
+            "{{routine_id}}",
+            "events",
+            "{{routine_event_id}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "12 - Event Shows Routine",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Event points at the routine', () => {",
+              "    pm.expect(pm.response.json().routine_id).to.eql(Number(pm.environment.get('routine_id')));",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/organizer/calendar-events/{{routine_event_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "calendar-events",
+            "{{routine_event_id}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "13 - Make Routine Scheduled While Attached (422)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 422', () => pm.response.to.have.status(422));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/organizer/routines/{{routine_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "routines",
+            "{{routine_id}}"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"recurrence_rule\": \"FREQ=DAILY\",\n  \"starts_on\": \"2026-11-01\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "14 - Detach Routine From Event",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 204', () => pm.response.to.have.status(204));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/organizer/routines/events/{{routine_event_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "routines",
+            "events",
+            "{{routine_event_id}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "15 - Create Scheduled Routine With Invalid Rule (422)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 422', () => pm.response.to.have.status(422));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/organizer/routines",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "routines"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Bad rule\",\n  \"recurrence_rule\": \"FREQ=SOMETIMES\",\n  \"starts_on\": \"2026-11-01\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "16 - Create Scheduled Routine",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+              "pm.test('Scheduled routine saved', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json.recurrence_rule).to.eql('FREQ=DAILY');",
+              "    pm.expect(json.starts_on).to.eql('2026-11-01');",
+              "    pm.environment.set('scheduled_routine_id', json.id);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/organizer/routines",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "routines"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Postman morning routine\",\n  \"recurrence_rule\": \"FREQ=DAILY\",\n  \"starts_on\": \"2026-11-01\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "17 - Add Window Step To Scheduled Routine",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+              "pm.test('Window saved', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json.window_start).to.eql('07:30:00');",
+              "    pm.expect(json.window_end).to.eql('09:00:00');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/organizer/routines/{{scheduled_routine_id}}/steps",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "routines",
+            "{{scheduled_routine_id}}",
+            "steps"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"title\": \"Shower\",\n  \"duration_minutes\": 15,\n  \"window_start\": \"07:30\",\n  \"window_end\": \"09:00\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "18 - Attach Scheduled Routine To Event (422)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 422', () => pm.response.to.have.status(422));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/organizer/routines/{{scheduled_routine_id}}/events/{{routine_event_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "routines",
+            "{{scheduled_routine_id}}",
+            "events",
+            "{{routine_event_id}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "19 - Get Unknown Routine (404)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 404', () => pm.response.to.have.status(404));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/organizer/routines/999999",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "routines",
+            "999999"
+          ]
+        }
+      }
+    },
+    {
+      "name": "20 - Delete Step",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 204', () => pm.response.to.have.status(204));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/organizer/routines/steps/{{routine_step_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "routines",
+            "steps",
+            "{{routine_step_id}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "21 - Delete Routine",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 204', () => pm.response.to.have.status(204));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/organizer/routines/{{routine_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "routines",
+            "{{routine_id}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "22 - Delete Scheduled Routine",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 204', () => pm.response.to.have.status(204));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/organizer/routines/{{scheduled_routine_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "routines",
+            "{{scheduled_routine_id}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "23 - Delete Event",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 204', () => pm.response.to.have.status(204));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/organizer/calendar-events/{{routine_event_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "calendar-events",
+            "{{routine_event_id}}"
+          ]
+        }
+      }
+    }
+  ]
+}

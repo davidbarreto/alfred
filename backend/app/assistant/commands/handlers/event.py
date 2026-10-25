@@ -4,7 +4,7 @@ from typing import Any
 
 from fastapi import HTTPException, status
 
-from app.assistant.commands.handlers._utils import parse_dt, parse_tags
+from app.assistant.commands.handlers._utils import build_model, parse_dt, parse_int, parse_tags
 from app.features.organizer.calendar_events.schemas import EventCreate, EventFilters, EventUpdate
 from app.features.organizer.calendar_events.service import CalendarEventService
 from app.shared.timezone import local_naive_now, local_timezone, local_timezone_name
@@ -27,6 +27,20 @@ def _parse_local(value: Any, end_of_day: bool = False) -> datetime | None:
     return parsed
 
 
+def _planning_fields(arguments: dict[str, Any]) -> dict[str, Any]:
+    """The Alfred-only planning columns present in the arguments (an empty availability/routine_id clears it)."""
+    fields: dict[str, Any] = {}
+    if "availability" in arguments:
+        fields["availability"] = str(arguments["availability"] or "").strip().lower() or None
+    if "presence" in arguments:
+        fields["presence"] = str(arguments["presence"] or "").strip().lower()
+    if "travel_minutes" in arguments:
+        fields["travel_minutes"] = parse_int(arguments["travel_minutes"], "travel_minutes")
+    if "routine_id" in arguments:
+        fields["routine_id"] = parse_int(arguments["routine_id"], "routine_id")
+    return fields
+
+
 async def handle_event(command: str, arguments: dict[str, Any], service: CalendarEventService) -> Any:
     logger.debug("handle_event: command=%s args_keys=%s", command, list(arguments.keys()))
     if command == "add":
@@ -38,13 +52,16 @@ async def handle_event(command: str, arguments: dict[str, Any], service: Calenda
                 detail="Event requires a start date. Use -s <date> or include a date in the title.",
             )
         end_dt = parse_dt(arguments.get("end")) or start_dt + timedelta(hours=1)
-        payload = EventCreate(
+        payload = build_model(
+            EventCreate,
             title=arguments.get("title", ""),
             start_datetime=start_dt,
             end_datetime=end_dt,
             description=arguments.get("additional_notes"),
+            location=arguments.get("location"),
             recurrence_rule=arguments.get("recurrence"),
             tags=parse_tags(arguments.get("tags")),
+            **_planning_fields(arguments),
         )
         result = await service.create_event(payload)
         return result.model_dump(mode='json')
@@ -79,11 +96,14 @@ async def handle_event(command: str, arguments: dict[str, Any], service: Calenda
             update_fields["end_datetime"] = parse_dt(arguments["end"])
         if "additional_notes" in arguments:
             update_fields["description"] = arguments["additional_notes"]
+        if "location" in arguments:
+            update_fields["location"] = arguments["location"]
         if "recurrence" in arguments:
             update_fields["recurrence_rule"] = arguments["recurrence"]
         if "tags" in arguments:
             update_fields["tags"] = parse_tags(arguments["tags"])
-        result = await service.update_event(event_id, EventUpdate(**update_fields))
+        update_fields.update(_planning_fields(arguments))
+        result = await service.update_event(event_id, build_model(EventUpdate, **update_fields))
         if result is None:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Event {event_id} not found")
         return result.model_dump(mode='json')

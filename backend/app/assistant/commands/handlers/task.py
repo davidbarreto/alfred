@@ -4,7 +4,7 @@ from typing import Any, cast
 
 from fastapi import HTTPException, status
 
-from app.assistant.commands.handlers._utils import parse_dt, parse_tags
+from app.assistant.commands.handlers._utils import build_model, parse_dt, parse_tags
 from app.features.core.embeddings.schemas import EmbeddingSearchRequest
 from app.features.core.embeddings.service import EmbeddingService
 from app.features.core.reminders.service import snooze_undated_escalation
@@ -68,7 +68,8 @@ async def handle_task(
 ) -> Any:
     logger.debug("handle_task: command=%s args_keys=%s", command, list(arguments.keys()))
     if command == "add":
-        payload = TaskCreate(
+        payload = build_model(
+            TaskCreate,
             title=arguments.get("title", ""),
             priority=arguments.get("priority", "LOW"),
             deadline=parse_dt(arguments.get("deadline")),
@@ -152,7 +153,7 @@ async def handle_task(
             update_fields["context"] = _parse_context(arguments["context"])
         if "available_from" in arguments:
             update_fields["available_from"] = parse_dt(arguments["available_from"])
-        result = await service.update_task(task_id, TaskUpdate(**update_fields))
+        result = await service.update_task(task_id, build_model(TaskUpdate, **update_fields))
         if result is None:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Task {task_id} not found")
         return result.model_dump(mode='json')

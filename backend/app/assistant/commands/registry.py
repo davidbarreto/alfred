@@ -1,5 +1,6 @@
 from typing import Any, Dict, List
 from app.assistant.commands.schemas import CommandMetadata
+from app.features.organizer.calendar_events.constants import EVENT_AVAILABILITIES, EVENT_PRESENCES
 from app.features.organizer.tasks.schemas import TASK_CONTEXTS
 
 # --- Shared Flag Constants ---
@@ -22,6 +23,11 @@ FLAG_ESTIMATE = {"-est": "estimate", "--estimate": "estimate"}
 FLAG_CONTEXT = {"-cx": "context", "--context": "context"}
 FLAG_AVAILABLE_FROM = {"--from": "available_from", "--not-before": "available_from"}
 FLAG_AVAILABLE = {"--available": "available"}
+FLAG_LOCATION = {"--location": "location"}
+FLAG_EVENT_AVAILABILITY = {"--availability": "availability"}
+FLAG_EVENT_PRESENCE = {"--presence": "presence"}
+FLAG_TRAVEL = {"--travel": "travel_minutes"}
+FLAG_ROUTINE = {"--routine": "routine_id"}
 
 # --- Finance Flag Constants ---
 FLAG_AMOUNT = {"-a": "amount", "--amount": "amount"}
@@ -51,20 +57,35 @@ TASK_UPDATE_FLAGS = {
     **FLAG_ESTIMATE, **FLAG_CONTEXT, **FLAG_AVAILABLE_FROM,
 }
 
+_EVENT_PLANNING_DETAILS = (
+    f"Planning fields (series-wide, Alfred only, never sent to Google): availability = how much the event blocks, one of "
+    f"{'/'.join(EVENT_AVAILABILITIES)} (unset: all-day events are free, timed ones blocked); presence = "
+    f"{'/'.join(EVENT_PRESENCES)} (default in_person); travel_minutes = one-way travel in minutes, applied before and "
+    "after the event (default 0); routine_id = an event-attached routine whose steps run around this event. "
+    "Pass an empty availability or routine_id to clear it."
+)
 _TASK_CONTEXT_VALUES = "/".join(TASK_CONTEXTS)
 _TASK_PLANNING_DETAILS = (
     f"Planning fields are optional and stay in Alfred only (never sent to Notion): estimate = minutes (whole number); "
     f"context = where it can be done, one of {_TASK_CONTEXT_VALUES}; available_from = not before this ISO date or "
     "datetime (a date alone means 00:00 local). Tags are plain names. When estimate or context is missing, ask "
-    "David and write the answers back with the update action. Pass an empty value to clear a field."
+    "the user and write the answers back with the update action. Pass an empty value to clear a field."
 )
 TASK_COMPLETE_FLAGS = {**FLAG_OCCURRENCE_DATE}
 TASK_SNOOZE_FLAGS = {**FLAG_DAYS}
 
 NOTE_ADD_FLAGS = {**FLAG_TAGS, **FLAG_LINKS, **FLAG_TITLE, **FLAG_CONTENT}
 
-EVENT_ADD_FLAGS = {**FLAG_START, **FLAG_END, **FLAG_DURATION, **FLAG_RECURRENCE, **FLAG_NOTES}
 EVENT_LIST_FLAGS = {**FLAG_START, **FLAG_END, **FLAG_LIMIT}
+EVENT_PLANNING_FLAGS = {**FLAG_EVENT_AVAILABILITY, **FLAG_EVENT_PRESENCE, **FLAG_TRAVEL, **FLAG_ROUTINE}
+EVENT_ADD_FLAGS = {
+    **FLAG_START, **FLAG_END, **FLAG_DURATION, **FLAG_RECURRENCE, **FLAG_NOTES, **FLAG_TAGS, **FLAG_LOCATION,
+    **EVENT_PLANNING_FLAGS,
+}
+EVENT_UPDATE_FLAGS = {
+    **FLAG_TITLE, **FLAG_START, **FLAG_END, **FLAG_RECURRENCE, **FLAG_NOTES, **FLAG_TAGS, **FLAG_LOCATION,
+    **EVENT_PLANNING_FLAGS,
+}
 
 TXN_ADD_FLAGS = {**FLAG_AMOUNT, **FLAG_CATEGORY, **FLAG_MERCHANT, **FLAG_TXN_TYPE, **FLAG_DATE, **FLAG_ACCOUNT, **FLAG_CURRENCY, **FLAG_NOTES}
 TXN_LIST_FLAGS = {**FLAG_CATEGORY, **FLAG_MERCHANT, **FLAG_TXN_TYPE, **FLAG_ACCOUNT, **FLAG_FROM_DATE, **FLAG_TO_DATE, **FLAG_PERIOD, **FLAG_LIMIT}
@@ -88,6 +109,34 @@ SHOPPING_LIST_FLAGS = {**FLAG_STATUS, **FLAG_CATEGORY, **FLAG_PRIORITY, **FLAG_L
 SHOPPING_UPDATE_FLAGS = {**FLAG_TITLE, **FLAG_CATEGORY, **FLAG_PRIORITY, **FLAG_QUANTITY, **FLAG_STATUS}
 WISHLIST_ADD_FLAGS = {**FLAG_CATEGORY, **FLAG_NOTES}
 WISHLIST_LIST_FLAGS = {**FLAG_CATEGORY, **FLAG_LIMIT}
+
+FLAG_ROUTINE_NAME = {"--name": "name"}
+ROUTINE_FIELD_FLAGS = {
+    **FLAG_ROUTINE_NAME, "--description": "description", "--active": "active",
+    "--rule": "recurrence_rule", "--starts": "starts_on",
+}
+ROUTINE_STEP_FLAGS = {
+    **FLAG_TITLE, "--duration": "duration_minutes", "--anchor": "anchor", "--offset": "offset_minutes",
+    "--window-start": "window_start", "--window-end": "window_end", **FLAG_CONTEXT, "--location": "location",
+    "--note": "checklist_note_id", "--position": "position",
+}
+_ROUTINE_KIND_RULE = (
+    "A routine is either event-based (no recurrence rule; attach it to calendar events) or scheduled "
+    "(recurrence_rule + starts_on); a routine cannot change kind while its steps or attached events do not fit."
+)
+_ROUTINE_OVERVIEW = (
+    "Routines are daily-life rhythm, not tasks: no done state, never notify, never contain travel (use the event's "
+    "travel_minutes). " + _ROUTINE_KIND_RULE + " recurrence_rule is an RRULE such as FREQ=DAILY or "
+    "FREQ=WEEKLY;BYDAY=MO,TU (COUNT/UNTIL honoured); starts_on is its first date (YYYY-MM-DD)."
+)
+_ROUTINE_STEP_DETAILS = (
+    "Timing is exactly one form. Event-based routines: anchor (start or end of the event) + offset_minutes "
+    "(negative = before the anchor). Scheduled routines: window_start + window_end as HH:MM; the step happens "
+    "inside that window and the planner places it, and a window exactly as long as duration_minutes is a fixed "
+    f"time. duration_minutes is a whole number of minutes. context is one of {'/'.join(TASK_CONTEXTS)}. location is "
+    "free text. note = id of a note used as the step's checklist. position defaults to the end. "
+    "Empty values clear optional fields."
+)
 
 COMMAND_DEFINITIONS = {
     "task": {
@@ -230,6 +279,7 @@ COMMAND_DEFINITIONS = {
     "event": {
         "add": {
             "description": "Add a calendar event with title, start, and optional end time or duration",
+            "details": _EVENT_PLANNING_DETAILS,
             "aliases": ["/eventadd", "/ea", "/event"],
             "flags": EVENT_ADD_FLAGS,
             "requires_args": True,
@@ -253,8 +303,9 @@ COMMAND_DEFINITIONS = {
         },
         "update": {
             "description": "Update a calendar event by ID",
+            "details": _EVENT_PLANNING_DETAILS + " Updates apply to the whole recurring series; the per-event timezone is not editable here.",
             "aliases": ["/eventupdate", "/eu", "/eventupd", "/move"],
-            "flags": {},
+            "flags": EVENT_UPDATE_FLAGS,
             "requires_args": True,
             "arg_keys": ["id"]
         },
@@ -863,6 +914,81 @@ COMMAND_DEFINITIONS = {
             "flags": {},
             "requires_args": True,
             "arg_keys": ["id"],
+        },
+    },
+    "routine": {
+        "add": {
+            "description": "Create a daily-life routine (a named list of timed steps); give a recurrence rule for a scheduled one",
+            "details": _ROUTINE_OVERVIEW,
+            "aliases": ["/routineadd"],
+            "flags": ROUTINE_FIELD_FLAGS,
+            "requires_args": True,
+            "arg_keys": ["name"],
+        },
+        "list": {
+            "description": "List routines with their steps and attached event ids",
+            "aliases": ["/routinelist", "/routines"],
+            "flags": {"--active": "active"},
+        },
+        "get": {
+            "description": "Get one routine with its steps and each step's checklist note (id, title, content)",
+            "aliases": ["/routineget"],
+            "flags": {},
+            "requires_args": True,
+            "arg_keys": ["id"],
+        },
+        "update": {
+            "description": "Update a routine's name, description, active flag or recurrence rule by ID",
+            "details": "recurrence_rule and starts_on are set or cleared together (empty value clears). " + _ROUTINE_KIND_RULE,
+            "aliases": ["/routineupdate"],
+            "flags": ROUTINE_FIELD_FLAGS,
+            "requires_args": True,
+            "arg_keys": ["id"],
+        },
+        "delete": {
+            "description": "Delete a routine and its steps; events attached to it are kept and detached",
+            "aliases": ["/routinedelete"],
+            "flags": {},
+            "requires_args": True,
+            "arg_keys": ["id"],
+        },
+        "add_step": {
+            "description": "Add a step to a routine: routine_id, then the title; timing via anchor+offset or a window",
+            "details": _ROUTINE_STEP_DETAILS,
+            "aliases": ["/routinestepadd"],
+            "flags": ROUTINE_STEP_FLAGS,
+            "requires_args": True,
+            "arg_keys": ["routine_id", "title"],
+        },
+        "update_step": {
+            "description": "Update a routine step by step ID; setting one timing form clears the other",
+            "details": _ROUTINE_STEP_DETAILS,
+            "aliases": ["/routinestepupdate"],
+            "flags": ROUTINE_STEP_FLAGS,
+            "requires_args": True,
+            "arg_keys": ["id"],
+        },
+        "delete_step": {
+            "description": "Delete a routine step by step ID",
+            "aliases": ["/routinestepdelete"],
+            "flags": {},
+            "requires_args": True,
+            "arg_keys": ["id"],
+        },
+        "attach": {
+            "description": "Attach an event-based routine to a calendar event series (all occurrences get its steps)",
+            "details": "id is the routine id, event_id the calendar event. Scheduled routines (with a recurrence rule) cannot be attached.",
+            "aliases": ["/routineattach"],
+            "flags": {},
+            "requires_args": True,
+            "arg_keys": ["id", "event_id"],
+        },
+        "detach": {
+            "description": "Detach whatever routine is attached to a calendar event",
+            "aliases": ["/routinedetach"],
+            "flags": {},
+            "requires_args": True,
+            "arg_keys": ["event_id"],
         },
     },
 }

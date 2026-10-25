@@ -12,6 +12,7 @@ from app.integrations.oauth_tokens.repository import get_oauth_token
 from app.features.organizer.tasks.service import TaskService
 from app.features.organizer.notes.service import NoteService
 from app.features.organizer.calendar_events.service import CalendarEventService
+from app.features.organizer.routines.service import RoutineService
 from app.features.organizer.shopping.service import ShoppingService
 from app.features.organizer.shopping_categories.service import ShoppingCategoryService
 from app.features.finance.accounts.service import AccountService
@@ -581,6 +582,9 @@ def get_interview_candidate_question_service(session: AsyncSession = Depends(get
 def get_conditions_provider() -> ConditionsProvider:
     return get_weather_provider()
 
+def get_routine_service(session: AsyncSession = Depends(get_session)) -> RoutineService:
+    return RoutineService(session)
+
 def get_metric_entry_service(session: AsyncSession = Depends(get_session)) -> MetricEntryService:
     return MetricEntryService(session, get_conditions_provider())
 
@@ -709,6 +713,7 @@ InterviewStoryServiceDep = Annotated[InterviewStoryService, Depends(get_intervie
 InterviewPrepQuestionServiceDep = Annotated[InterviewPrepQuestionService, Depends(get_interview_prep_question_service)]
 InterviewTagServiceDep = Annotated[InterviewTagService, Depends(get_interview_tag_service)]
 InterviewCandidateQuestionServiceDep = Annotated[InterviewCandidateQuestionService, Depends(get_interview_candidate_question_service)]
+RoutineServiceDep = Annotated[RoutineService, Depends(get_routine_service)]
 MetricEntryServiceDep = Annotated[MetricEntryService, Depends(get_metric_entry_service)]
 MetricSeriesServiceDep = Annotated[MetricSeriesService, Depends(get_metric_series_service)]
 MetricStatsServiceDep = Annotated[MetricStatsService, Depends(get_metric_stats_service)]

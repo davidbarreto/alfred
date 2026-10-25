@@ -28,6 +28,7 @@ from app.assistant.commands.handlers.pause import handle_pause
 from app.assistant.commands.handlers.catchup import handle_catchup
 from app.assistant.commands.handlers.recall import handle_recall
 from app.assistant.commands.handlers.recurring import handle_recurring
+from app.assistant.commands.handlers.routine import handle_routine
 from app.assistant.commands.handlers.reminder import handle_reminder
 from app.assistant.commands.handlers.shopping import handle_shopping
 from app.assistant.commands.handlers.task import handle_task
@@ -59,6 +60,7 @@ from app.features.organizer.interviews.prep_questions.service import InterviewPr
 from app.features.metrics.entries.service import MetricEntryService
 from app.features.organizer.interviews.candidate_questions.service import InterviewCandidateQuestionService
 from app.features.organizer.notes.service import NoteService
+from app.features.organizer.routines.service import RoutineService
 from app.features.organizer.shopping.service import ShoppingService
 from app.features.organizer.tasks.service import TaskService
 from app.features.core.pause.service import GlobalPauseService
@@ -97,6 +99,7 @@ async def execute(
     interview_prep_service: InterviewPrepQuestionService | None = None,
     interview_candidate_service: InterviewCandidateQuestionService | None = None,
     metric_service: MetricEntryService | None = None,
+    routine_service: RoutineService | None = None,
     source: str | None = None,
     grammar_scope_service: GrammarScopeService | None = None,
     briefing_history_service: BriefingHistoryService | None = None,
@@ -316,6 +319,14 @@ async def execute(
                 detail="Metric service not available",
             )
         return await handle_metric(command, arguments, metric_service, source)
+
+    if cmd_type == "routine":
+        if routine_service is None:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Routine service not available",
+            )
+        return await handle_routine(command, arguments, routine_service)
 
     logger.error("Execute: unknown command type=%s command=%s", cmd_type, command)
     raise HTTPException(

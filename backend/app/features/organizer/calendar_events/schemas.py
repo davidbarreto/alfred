@@ -1,11 +1,13 @@
 from datetime import date, datetime
 from typing import Annotated, Any, List, Literal, Optional
-from pydantic import BaseModel, field_serializer, field_validator
+from pydantic import BaseModel, Field, field_serializer, field_validator, model_validator
 from fastapi import Query
 
 from app.shared.timezone import local_timezone
 
 NotificationProfile = Literal["cant_miss", "important", "normal", "light", "aware"]
+EventAvailability = Literal["blocked", "light", "free"]
+EventPresence = Literal["in_person", "remote_home", "remote_anywhere"]
 
 
 class EventBase(BaseModel):
@@ -21,6 +23,10 @@ class EventBase(BaseModel):
     recurrence_rule: str | None = None
     timezone: str | None = None
     notification_profile: NotificationProfile | None = None
+    availability: EventAvailability | None = None
+    presence: EventPresence = "in_person"
+    travel_minutes: int = Field(default=0, ge=0)
+    routine_id: int | None = None
 
 
 class EventCreate(EventBase):
@@ -40,6 +46,18 @@ class EventUpdate(BaseModel):
     recurrence_rule: str | None = None
     timezone: str | None = None
     notification_profile: NotificationProfile | None = None
+    availability: EventAvailability | None = None
+    presence: EventPresence | None = None
+    travel_minutes: int | None = Field(default=None, ge=0)
+    routine_id: int | None = None
+
+    @model_validator(mode="after")
+    def _required_columns_not_null(self) -> "EventUpdate":
+        # presence and travel_minutes are NOT NULL columns: they can be changed, never cleared.
+        for field in ("presence", "travel_minutes"):
+            if field in self.model_fields_set and getattr(self, field) is None:
+                raise ValueError(f"{field} cannot be null")
+        return self
 
 
 class EventRead(EventBase):

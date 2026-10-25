@@ -773,6 +773,219 @@
           ]
         }
       }
+    },
+    {
+      "name": "20 - Create Event With Planning Fields",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+              "pm.test('Planning fields saved', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json.availability).to.eql('blocked');",
+              "    pm.expect(json.presence).to.eql('remote_home');",
+              "    pm.expect(json.travel_minutes).to.eql(25);",
+              "    pm.environment.set('planning_event_id', json.id);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/organizer/calendar-events",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "calendar-events"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"title\": \"Postman planning event\",\n  \"start_datetime\": \"2026-11-04T20:00:00\",\n  \"end_datetime\": \"2026-11-04T21:00:00\",\n  \"availability\": \"blocked\",\n  \"presence\": \"remote_home\",\n  \"travel_minutes\": 25\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "21 - Update Only Planning Fields",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Planning fields changed', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json.presence).to.eql('in_person');",
+              "    pm.expect(json.travel_minutes).to.eql(40);",
+              "    pm.expect(json.title).to.eql('Postman planning event');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/organizer/calendar-events/{{planning_event_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "calendar-events",
+            "{{planning_event_id}}"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"presence\": \"in_person\",\n  \"travel_minutes\": 40\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "22 - Invalid Availability (422)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 422', () => pm.response.to.have.status(422));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/organizer/calendar-events/{{planning_event_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "calendar-events",
+            "{{planning_event_id}}"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"availability\": \"busy\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "23 - Negative Travel Minutes (422)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 422', () => pm.response.to.have.status(422));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/organizer/calendar-events/{{planning_event_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "calendar-events",
+            "{{planning_event_id}}"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"travel_minutes\": -5\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "24 - Delete Planning Event",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 204', () => pm.response.to.have.status(204));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/organizer/calendar-events/{{planning_event_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "calendar-events",
+            "{{planning_event_id}}"
+          ]
+        }
+      }
     }
   ]
 }

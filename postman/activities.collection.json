@@ -493,7 +493,11 @@
           "script": {
             "exec": [
               "pm.test('Status is 200', () => pm.response.to.have.status(200));",
-              "pm.test('last_done_at is set', () => pm.expect(pm.response.json().last_done_at).to.be.a('string'));"
+              "pm.test('last_done_at is set and weekly progress counted', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json.last_done_at).to.be.a('string');",
+              "    pm.expect(json.done_this_week).to.be.at.least(1);",
+              "});"
             ],
             "type": "text/javascript"
           }

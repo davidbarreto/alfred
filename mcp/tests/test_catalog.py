@@ -75,6 +75,27 @@ class TestBuildTools:
         assert "update" in description
         assert "pending" in description
 
+    def test_details_follow_the_description(self):
+        catalog = {
+            "demo": {
+                "run": {
+                    "action": "run",
+                    "description": "Run it",
+                    "details": "context is one of computer/phone; units are minutes.",
+                    "requires_args": False,
+                    "arg_keys": [],
+                    "flags": [],
+                    "implicit_flags": {},
+                }
+            }
+        }
+        description = build_tools(catalog)[0].description
+        assert "- run: Run it context is one of computer/phone; units are minutes." in description
+
+    def test_missing_details_add_nothing(self):
+        tools = {t.name: t for t in build_tools(CATALOG)}
+        assert "- pending: Show all overdue and today's pending tasks" in tools["alfred_task"].description
+
 
 class TestResolveCall:
     def test_simple_action_passthrough(self):

@@ -75,6 +75,7 @@ class CommandRespondResponse(BaseModel):
 class CommandCatalogAction(BaseModel):
     action: str
     description: str
+    details: str = ""
     requires_args: bool = False
     arg_keys: List[str] = []
     flags: List[str] = []

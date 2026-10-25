@@ -498,3 +498,25 @@ class TestViewerTimezone:
 
         assert resp.status_code == 200
         assert '<option value="America/Chicago" selected>Chicago</option>' in resp.text
+
+
+class TestOffsetBearingEvents:
+    def test_event_times_with_offsets_render_in_app_timezone(self, client, mock_api):
+        mock_api["get"].return_value = [
+            _event(title="Offset sync", start="2026-07-14T10:00:00+01:00", end="2026-07-14T11:00:00+01:00"),
+        ]
+
+        resp = client.get("/calendar?year=2026&month=7")
+
+        assert resp.status_code == 200
+        assert "10:00 Offset sync" in resp.text
+
+    def test_viewer_timezone_conversion_uses_the_offset_instant(self):
+        from app.routes.calendar import _add_display_times
+
+        events = [_event(start="2026-07-14T10:00:00+01:00", end="2026-07-14T11:00:00+01:00")]
+        events[0]["all_day"] = False
+
+        _add_display_times(events, "America/New_York")
+
+        assert events[0]["display_start"].startswith("2026-07-14T05:00:00")

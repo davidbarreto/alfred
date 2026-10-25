@@ -247,3 +247,18 @@ class TestInterviewPrepCommandParsing:
 
         assert detail is not None
         assert detail.args == {"text": "How is on-call organised?", "category": "Tech"}
+
+
+class TestCommandDescriptions:
+    def test_descriptions_fit_telegram_hard_limit(self):
+        too_long = [
+            f"{cmd_type}.{action}"
+            for cmd_type, actions in COMMAND_DEFINITIONS.items()
+            for action, config in actions.items()
+            if len(config.get("description", "")) > 256
+        ]
+        assert too_long == []
+
+    def test_details_never_reach_registry_metadata(self):
+        for meta in COMMAND_REGISTRY.values():
+            assert "details" not in meta._fields

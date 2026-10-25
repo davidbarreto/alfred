@@ -44,6 +44,7 @@ TASK_SNOOZE_FLAGS = {**FLAG_DAYS}
 NOTE_ADD_FLAGS = {**FLAG_TAGS, **FLAG_LINKS, **FLAG_TITLE, **FLAG_CONTENT}
 
 EVENT_ADD_FLAGS = {**FLAG_START, **FLAG_END, **FLAG_DURATION, **FLAG_RECURRENCE, **FLAG_NOTES}
+EVENT_LIST_FLAGS = {**FLAG_START, **FLAG_END, **FLAG_LIMIT}
 
 TXN_ADD_FLAGS = {**FLAG_AMOUNT, **FLAG_CATEGORY, **FLAG_MERCHANT, **FLAG_TXN_TYPE, **FLAG_DATE, **FLAG_ACCOUNT, **FLAG_CURRENCY, **FLAG_NOTES}
 TXN_LIST_FLAGS = {**FLAG_CATEGORY, **FLAG_MERCHANT, **FLAG_TXN_TYPE, **FLAG_ACCOUNT, **FLAG_FROM_DATE, **FLAG_TO_DATE, **FLAG_PERIOD, **FLAG_LIMIT}
@@ -208,14 +209,20 @@ COMMAND_DEFINITIONS = {
             "arg_keys": ["title"]
         },
         "list": {
-            "description": "List upcoming calendar events",
+            "description": "List calendar events in a date range (default: the next 14 days)",
+            "details": (
+                "start and end are ISO datetimes (an offset such as +01:00 is allowed; a date-only end means the end of "
+                "that day). Recurring events are expanded into one entry per occurrence. Datetimes in the result carry "
+                "their UTC offset and the result states the display `timezone`. Each event includes its tags and "
+                "notification_profile: light/aware events are droppable, important/cant_miss are not."
+            ),
             "aliases": ["/eventlist", "/el", "/events"],
             "nl_triggers": [
                 "what's on my calendar", "whats on my calendar", "show my schedule",
                 "what events do i have", "what meetings do i have", "show my upcoming events",
                 "what does my calendar look like",
             ],
-            "flags": {}
+            "flags": EVENT_LIST_FLAGS
         },
         "update": {
             "description": "Update a calendar event by ID",

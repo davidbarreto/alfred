@@ -61,6 +61,18 @@ class TestCommandCatalog:
         assert expense["action"] == "transaction_add"
         assert expense["implicit_flags"] == {"type": "expense"}
 
+    def test_actions_without_details_expose_empty_string(self, client):
+        response = client.get("/commands/catalog", headers=AUTH)
+        assert response.json()["domains"]["task"]["add"]["details"] == ""
+
+    def test_details_are_exposed_when_defined(self, client, monkeypatch):
+        from app.api.routes import commands as commands_route
+
+        definitions = {"demo": {"run": {"description": "Run it", "details": "Units are minutes.", "flags": {}}}}
+        monkeypatch.setattr(commands_route, "COMMAND_DEFINITIONS", definitions)
+        response = client.get("/commands/catalog", headers=AUTH)
+        assert response.json()["domains"]["demo"]["run"]["details"] == "Units are minutes."
+
     def test_requires_auth(self, client):
         response = client.get("/commands/catalog")
         assert response.status_code == 403

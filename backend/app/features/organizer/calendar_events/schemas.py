@@ -1,7 +1,9 @@
 from datetime import date, datetime
 from typing import Annotated, Any, List, Literal, Optional
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, field_serializer, field_validator
 from fastapi import Query
+
+from app.shared.timezone import local_timezone
 
 NotificationProfile = Literal["cant_miss", "important", "normal", "light", "aware"]
 
@@ -55,6 +57,20 @@ class EventRead(EventBase):
     def coerce_invitees(cls, v: Any) -> list[str]:
         return [item.email if hasattr(item, "email") else item for item in v]
 
+    @field_serializer("start_datetime", "end_datetime", when_used="json")
+    def serialize_with_offset(self, value: datetime) -> str:
+        # Stored values are naive local time; attaching the zone makes the offset explicit
+        # (and DST-correct) for API and MCP consumers. isoformat keeps "+00:00" where
+        # pydantic's own datetime encoding would print "Z".
+        aware = value.replace(tzinfo=local_timezone()) if value.tzinfo is None else value
+        return aware.isoformat()
+
+
+def _to_local_naive(value: datetime | None) -> datetime | None:
+    if value is None or value.tzinfo is None:
+        return value
+    return value.astimezone(local_timezone()).replace(tzinfo=None)
+
 
 class EventFilters:
     def __init__(
@@ -66,8 +82,8 @@ class EventFilters:
         q: Annotated[Optional[str], Query(description="Case-insensitive substring match on title")] = None,
     ) -> None:
         self.limit = limit
-        self.start_from = start_from.replace(tzinfo=None) if start_from is not None else None
-        self.start_to = start_to.replace(tzinfo=None) if start_to is not None else None
+        self.start_from = _to_local_naive(start_from)
+        self.start_to = _to_local_naive(start_to)
         self.tags = tags
         self.q = q
 

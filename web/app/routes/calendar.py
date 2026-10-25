@@ -23,6 +23,11 @@ def _viewer_timezone(request: Request) -> str:
     return request.session.get("calendar_tz", _app_timezone())
 
 
+def _as_aware(value: str, default_zone: ZoneInfo) -> datetime:
+    parsed = datetime.fromisoformat(value)
+    return parsed if parsed.tzinfo is not None else parsed.replace(tzinfo=default_zone)
+
+
 def _add_display_times(events: list[dict], viewer_tz: str) -> None:
     viewer_zone = ZoneInfo(viewer_tz)
     for ev in events:
@@ -33,10 +38,11 @@ def _add_display_times(events: list[dict], viewer_tz: str) -> None:
         # The backend always normalizes start/end to its configured local timezone
         # before storing, regardless of the event's own origin timezone -- ev["timezone"]
         # is metadata about where the event came from, not the zone the returned
-        # datetime is expressed in.
+        # datetime is expressed in. The API sends an explicit offset; a naive value
+        # (older payloads) is read as app-local time.
         app_zone = ZoneInfo(_app_timezone())
-        start = datetime.fromisoformat(ev["start_datetime"]).replace(tzinfo=app_zone)
-        end = datetime.fromisoformat(ev["end_datetime"]).replace(tzinfo=app_zone)
+        start = _as_aware(ev["start_datetime"], app_zone)
+        end = _as_aware(ev["end_datetime"], app_zone)
         ev["display_start"] = start.astimezone(viewer_zone).isoformat()
         ev["display_end"] = end.astimezone(viewer_zone).isoformat()
 

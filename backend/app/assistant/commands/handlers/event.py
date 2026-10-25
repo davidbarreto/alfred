@@ -1,5 +1,5 @@
 import logging
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, time, timedelta
 from typing import Any
 
 from fastapi import HTTPException, status
@@ -7,9 +7,24 @@ from fastapi import HTTPException, status
 from app.assistant.commands.handlers._utils import parse_dt, parse_tags
 from app.features.organizer.calendar_events.schemas import EventCreate, EventFilters, EventUpdate
 from app.features.organizer.calendar_events.service import CalendarEventService
-from app.shared.timezone import local_naive_now
+from app.shared.timezone import local_naive_now, local_timezone, local_timezone_name
 
 logger = logging.getLogger(__name__)
+
+_DEFAULT_LIST_DAYS = 14
+_DATE_ONLY_LENGTH = 10
+
+
+def _parse_local(value: Any, end_of_day: bool = False) -> datetime | None:
+    """Parse an ISO value into naive local time; a date-only end value means the end of that day."""
+    parsed = parse_dt(value)
+    if parsed is None:
+        return None
+    if parsed.tzinfo is not None:
+        return parsed.astimezone(local_timezone()).replace(tzinfo=None)
+    if end_of_day and isinstance(value, str) and len(value.strip()) == _DATE_ONLY_LENGTH:
+        return datetime.combine(parsed.date(), time(23, 59, 59))
+    return parsed
 
 
 async def handle_event(command: str, arguments: dict[str, Any], service: CalendarEventService) -> Any:
@@ -36,20 +51,22 @@ async def handle_event(command: str, arguments: dict[str, Any], service: Calenda
 
     if command == "list":
         date_range = arguments.get("date_range")
-        start_from: datetime | None = None
-        start_to: datetime | None = None
+        start_arg, end_arg = arguments.get("start"), arguments.get("end")
         if isinstance(date_range, dict):
-            start_from = parse_dt(date_range.get("start"))
-            start_to = parse_dt(date_range.get("end"))
-        if start_from is None:
-            start_from = local_naive_now()
+            start_arg = start_arg or date_range.get("start")
+            end_arg = end_arg or date_range.get("end")
+        start_from = _parse_local(start_arg) or local_naive_now()
+        start_to = _parse_local(end_arg, end_of_day=True) or start_from + timedelta(days=_DEFAULT_LIST_DAYS)
         filters = EventFilters(
             limit=int(arguments.get("limit", 100)),
             start_from=start_from,
             start_to=start_to,
         )
         results = await service.get_events(filters)
-        return [r.model_dump(mode='json') for r in results]
+        return {
+            "timezone": local_timezone_name(),
+            "events": [r.model_dump(mode="json", exclude={"timezone"}) for r in results],
+        }
 
     if command == "update":
         event_id = int(arguments["id"])

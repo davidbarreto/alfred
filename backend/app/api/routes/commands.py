@@ -80,6 +80,7 @@ async def get_command_catalog() -> CommandCatalogResponse:
             action_key: CommandCatalogAction(
                 action=config.get("action", action_key),
                 description=config.get("description", ""),
+                details=config.get("details", ""),
                 requires_args=config.get("requires_args", False),
                 arg_keys=config.get("arg_keys", []),
                 flags=sorted(set(config.get("flags", {}).values())),

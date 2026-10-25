@@ -231,6 +231,12 @@
               "pm.test('Status is 200', () => pm.response.to.have.status(200));",
               "pm.test('Response is an array', () => {",
               "    pm.expect(pm.response.json()).to.be.an('array');",
+              "});",
+              "pm.test('Event datetimes carry a UTC offset', () => {",
+              "    pm.response.json().forEach(ev => {",
+              "        pm.expect(ev.start_datetime).to.match(/[+-]\\d{2}:\\d{2}$/);",
+              "        pm.expect(ev.end_datetime).to.match(/[+-]\\d{2}:\\d{2}$/);",
+              "    });",
               "});"
             ],
             "type": "text/javascript"

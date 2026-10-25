@@ -28,7 +28,8 @@ def _domain_description(actions: dict[str, dict[str, Any]]) -> str:
             set(config.get("flags", []))
             | (set(config.get("arg_keys", [])) - set(required))
         )
-        bits = [f"- {action_key}: {config.get('description', '')}"]
+        text = " ".join(part for part in (config.get("description", ""), config.get("details", "")) if part)
+        bits = [f"- {action_key}: {text}"]
         if required:
             bits.append(f"(required: {', '.join(required)})")
         if optional:

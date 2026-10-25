@@ -375,6 +375,482 @@
           }
         }
       }
+    },
+    {
+      "name": "10 - Save Plans For Three Dates",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+              "pm.test('Three plans saved as version 1 or later', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json).to.have.length(3);",
+              "    json.forEach(p => { pm.expect(p.archived_at).to.be.null; pm.expect(p.version).to.be.at.least(1); });",
+              "    pm.expect(json[0].items[0].start).to.match(/[+-]\\\\d{2}:\\\\d{2}$/);",
+              "    pm.environment.set('saved_plan_first_version', json[0].version);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/planning/saved",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "planning",
+            "saved"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"days\": [\n    {\n      \"date\": \"2031-03-03\",\n      \"notes\": \"Postman note 2031-03-03\",\n      \"items\": [\n        {\n          \"start\": \"2031-03-03T09:00:00+00:00\",\n          \"end\": \"2031-03-03T10:00:00+00:00\",\n          \"kind\": \"other\",\n          \"title\": \"Postman block A\",\n          \"note\": \"synthetic\"\n        }\n      ]\n    },\n    {\n      \"date\": \"2031-03-04\",\n      \"notes\": \"Postman note 2031-03-04\",\n      \"items\": [\n        {\n          \"start\": \"2031-03-04T09:00:00+00:00\",\n          \"end\": \"2031-03-04T10:00:00+00:00\",\n          \"kind\": \"other\",\n          \"title\": \"Postman block B\",\n          \"note\": \"synthetic\"\n        }\n      ]\n    },\n    {\n      \"date\": \"2031-03-05\",\n      \"notes\": \"Postman note 2031-03-05\",\n      \"items\": [\n        {\n          \"start\": \"2031-03-05T09:00:00+00:00\",\n          \"end\": \"2031-03-05T10:00:00+00:00\",\n          \"kind\": \"other\",\n          \"title\": \"Postman block C\",\n          \"note\": \"synthetic\"\n        }\n      ]\n    }\n  ]\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "11 - Save One Date Again (new version)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+              "pm.test('Next version for that date only', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json).to.have.length(1);",
+              "    pm.expect(json[0].version).to.eql(Number(pm.environment.get('saved_plan_first_version')) + 1);",
+              "    pm.expect(json[0].items[0].title).to.eql('Postman block A v2');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/planning/saved",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "planning",
+            "saved"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"days\": [\n    {\n      \"date\": \"2031-03-03\",\n      \"notes\": \"Postman note 2031-03-03\",\n      \"items\": [\n        {\n          \"start\": \"2031-03-03T10:00:00+00:00\",\n          \"end\": \"2031-03-03T11:00:00+00:00\",\n          \"kind\": \"other\",\n          \"title\": \"Postman block A v2\",\n          \"note\": \"synthetic\"\n        }\n      ]\n    }\n  ]\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "12 - Get Saved Week (only active versions)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('One active plan per date, other dates unchanged', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json).to.have.length(3);",
+              "    pm.expect(json.map(p => p.plan_date)).to.eql(['2031-03-03', '2031-03-04', '2031-03-05']);",
+              "    json.forEach(p => pm.expect(p.archived_at).to.be.null);",
+              "    pm.expect(json[0].items[0].title).to.eql('Postman block A v2');",
+              "    pm.expect(json[1].items[0].title).to.eql('Postman block B');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/planning/saved?from=2031-03-03&to=2031-03-09",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "planning",
+            "saved"
+          ],
+          "query": [
+            {
+              "key": "from",
+              "value": "2031-03-03"
+            },
+            {
+              "key": "to",
+              "value": "2031-03-09"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "13 - Get Saved Specific Version",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Old version is archived', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json).to.have.length(1);",
+              "    pm.expect(json[0].archived_at).to.be.a('string');",
+              "    pm.expect(json[0].items[0].title).to.eql('Postman block A');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/planning/saved?from=2031-03-03&to=2031-03-03&version={{saved_plan_first_version}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "planning",
+            "saved"
+          ],
+          "query": [
+            {
+              "key": "from",
+              "value": "2031-03-03"
+            },
+            {
+              "key": "to",
+              "value": "2031-03-03"
+            },
+            {
+              "key": "version",
+              "value": "{{saved_plan_first_version}}"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "14 - Saved Plan History",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Newest first, both versions kept', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json.length).to.be.at.least(2);",
+              "    pm.expect(json[0].version).to.be.above(json[1].version);",
+              "    pm.expect(json[0].archived_at).to.be.null;",
+              "    pm.expect(json[1].archived_at).to.be.a('string');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/planning/saved/history?date=2031-03-03",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "planning",
+            "saved",
+            "history"
+          ],
+          "query": [
+            {
+              "key": "date",
+              "value": "2031-03-03"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "15 - Day Plan Includes Saved Plan",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('saved_plan lists the active plan for the date', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json.saved_plan).to.have.length(1);",
+              "    pm.expect(json.saved_plan[0].plan_date).to.eql('2031-03-03');",
+              "    pm.expect(json.saved_plan[0].items[0].title).to.eql('Postman block A v2');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/planning/day?date=2031-03-03",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "planning",
+            "day"
+          ],
+          "query": [
+            {
+              "key": "date",
+              "value": "2031-03-03"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "16 - Save With Unknown ref_id (422)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 422', () => pm.response.to.have.status(422));",
+              "pm.test('Message names the missing id', () => pm.expect(pm.response.json().detail).to.include('999999'));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/planning/saved",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "planning",
+            "saved"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"days\": [\n    {\n      \"date\": \"2031-03-06\",\n      \"items\": [\n        {\n          \"start\": \"2031-03-06T09:00:00+00:00\",\n          \"end\": \"2031-03-06T10:00:00+00:00\",\n          \"kind\": \"task\",\n          \"ref_id\": 999999,\n          \"title\": \"Ghost\"\n        }\n      ]\n    }\n  ]\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "17 - Save Without UTC Offset (422)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 422', () => pm.response.to.have.status(422));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/planning/saved",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "planning",
+            "saved"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"days\": [\n    {\n      \"date\": \"2031-03-06\",\n      \"items\": [\n        {\n          \"start\": \"2031-03-06T09:00:00\",\n          \"end\": \"2031-03-06T10:00:00\",\n          \"kind\": \"break\",\n          \"title\": \"Rest\"\n        }\n      ]\n    }\n  ]\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "18 - Save Block On Another Date (422)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 422', () => pm.response.to.have.status(422));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/planning/saved",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "planning",
+            "saved"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"days\": [\n    {\n      \"date\": \"2031-03-06\",\n      \"items\": [\n        {\n          \"start\": \"2031-03-07T09:00:00+00:00\",\n          \"end\": \"2031-03-07T10:00:00+00:00\",\n          \"kind\": \"break\",\n          \"title\": \"Misfiled\"\n        }\n      ]\n    }\n  ]\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "19 - Save Same Date Twice In One Call (422)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 422', () => pm.response.to.have.status(422));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/planning/saved",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "planning",
+            "saved"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"days\": [\n    {\n      \"date\": \"2031-03-06\",\n      \"items\": []\n    },\n    {\n      \"date\": \"2031-03-06\",\n      \"items\": []\n    }\n  ]\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "20 - Get Saved Missing Range (422)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 422', () => pm.response.to.have.status(422));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/planning/saved?from=2031-03-03",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "planning",
+            "saved"
+          ],
+          "query": [
+            {
+              "key": "from",
+              "value": "2031-03-03"
+            }
+          ]
+        }
+      }
     }
   ]
 }

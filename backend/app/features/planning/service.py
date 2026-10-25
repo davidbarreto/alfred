@@ -13,6 +13,7 @@ from app.features.organizer.shopping.service import ShoppingService
 from app.features.organizer.tasks.schemas import TaskFilters, TaskRead
 from app.features.organizer.tasks.service import TaskService
 from app.features.planning import timeline
+from app.features.planning.saved_plans.service import SavedPlanService
 from app.features.planning.schemas import (
     DayPlanRead,
     DayRead,
@@ -57,6 +58,7 @@ class DayPlanService:
         language_service: LanguageSessionService,
         shopping_service: ShoppingService,
         settings_service: PlanningSettingsService,
+        saved_plan_service: SavedPlanService,
     ) -> None:
         self._events = event_service
         self._routines = routine_service
@@ -65,6 +67,7 @@ class DayPlanService:
         self._language = language_service
         self._shopping = shopping_service
         self._settings = settings_service
+        self._saved = saved_plan_service
 
     async def get_plan(
         self, start: date | None = None, days: int = 1, work_minutes: int | None = None
@@ -94,6 +97,7 @@ class DayPlanService:
             backlog_tasks=tasks["backlog"],
             study=await self._study_section(),
             shopping=await self._shopping_section(),
+            saved_plan=await self._saved_plans(dates),
             warnings=warnings,
         )
         if days == 1:
@@ -252,6 +256,13 @@ class DayPlanService:
             for p in progress
         ]
         return StudySection(plans=plans, language=language)
+
+    async def _saved_plans(self, dates: list[date]) -> list[dict[str, Any]] | None:
+        plans = await self._saved.get_saved(dates[0], dates[-1])
+        if not plans:
+            return None
+        hidden = {"id", "source", "created_at", "updated_at", "archived_at"}
+        return [p.model_dump(mode="json", exclude=hidden, exclude_none=True) for p in plans]
 
     async def _shopping_section(self) -> ShoppingSection | None:
         pending = await self._shopping.list_items(ShoppingItemFilters(status="pending", limit=500))

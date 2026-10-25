@@ -59,9 +59,11 @@ def parts():
     shopping.list_due_recurrences.return_value = []
     settings = AsyncMock()
     settings.get.return_value = _settings()
+    saved = AsyncMock()
+    saved.get_saved.return_value = []
     return SimpleNamespace(
         events=events, routines=routines, tasks=tasks, study=study, language=language, shopping=shopping,
-        settings=settings,
+        settings=settings, saved=saved,
     )
 
 
@@ -70,7 +72,7 @@ def service(parts):
     return DayPlanService(
         event_service=parts.events, routine_service=parts.routines, task_service=parts.tasks,
         study_service=parts.study, language_service=parts.language, shopping_service=parts.shopping,
-        settings_service=parts.settings,
+        settings_service=parts.settings, saved_plan_service=parts.saved,
     )
 
 
@@ -384,3 +386,30 @@ class TestOtherSections:
             "wake_time": "07:30", "sleep_time": "23:30", "work_target_minutes": 480,
             "preferred_work_windows": ["10:00-14:00"],
         }
+
+
+@freeze_time("2026-10-21 08:00:00")
+class TestSavedPlanSection:
+    async def test_saved_plan_is_included_for_the_requested_dates(self, service, parts):
+        from app.features.planning.saved_plans.schemas import SavedDayPlanRead
+
+        parts.saved.get_saved.return_value = [
+            SavedDayPlanRead(
+                id=5, plan_date=date(2026, 10, 21), version=2, notes="Light day", source="mcp",
+                created_at=_NOW, updated_at=_NOW,
+                items=[{"start": "2026-10-21T09:00:00+01:00", "end": "2026-10-21T10:00:00+01:00", "kind": "task",
+                        "ref_id": 4, "title": "Write", "note": None}],
+            )
+        ]
+
+        plan = _dump(await service.get_plan(date(2026, 10, 21), days=3))
+
+        parts.saved.get_saved.assert_awaited_once_with(date(2026, 10, 21), date(2026, 10, 23))
+        assert plan["saved_plan"] == [{
+            "plan_date": "2026-10-21", "version": 2, "notes": "Light day",
+            "items": [{"start": "2026-10-21T09:00:00+01:00", "end": "2026-10-21T10:00:00+01:00", "kind": "task",
+                       "ref_id": 4, "title": "Write"}],
+        }]
+
+    async def test_no_saved_plan_means_the_section_is_omitted(self, service):
+        assert "saved_plan" not in _dump(await service.get_plan(date(2026, 10, 21)))

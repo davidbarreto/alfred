@@ -168,6 +168,17 @@ _DAY_PLAN_GET_DETAILS = (
     "assumed (30 min, anywhere) and listed in warnings: ask the user and write answers back with the task update action."
 )
 
+_DAY_PLAN_SAVE_DETAILS = (
+    "days is a JSON string: a list of {\"date\": \"YYYY-MM-DD\", \"items\": [...], \"notes\": \"why / intent for that day only\"}. "
+    "Each item is {\"start\": ISO datetime WITH UTC offset, \"end\": ISO datetime with offset, \"kind\": one of "
+    "event/task/study_item/activity/routine_step/routine_block/break/other, \"ref_id\": id of the row it refers to (or null), "
+    "\"title\": text, \"note\": optional text}. ref_id kinds: event=calendar event id, task=task id, study_item=study plan "
+    "item id, routine_step and routine_block=routine step id, activity=activity id; break and other take no ref_id. "
+    "Every block must start on its date (local). Only the dates in the call get a new version; other dates are untouched. "
+    "Typical flow: day_plan get for the week, propose, create office events once accepted, save with per-day notes; later "
+    "get_saved for the range, modify and save the changed days again."
+)
+
 COMMAND_DEFINITIONS = {
     "task": {
         "add": {
@@ -1027,6 +1038,29 @@ COMMAND_DEFINITIONS = {
             "details": _DAY_PLAN_GET_DETAILS,
             "aliases": ["/dayplan"],
             "flags": {"--date": "date", "--days": "days", "--work": "work_minutes"},
+            "arg_keys": ["date"],
+        },
+        "save": {
+            "description": "Save the agreed plan for one or more dates; a date saved again keeps the old version in history",
+            "details": _DAY_PLAN_SAVE_DETAILS,
+            "aliases": ["/dayplansave"],
+            "flags": {},
+            "requires_args": True,
+            "arg_keys": ["days"],
+        },
+        "get_saved": {
+            "description": "Load the saved plan of every date in a range (a whole week in one call)",
+            "details": "from and to are YYYY-MM-DD (to defaults to from; at most 62 days). version loads that version instead of the active one.",
+            "aliases": ["/dayplansaved"],
+            "flags": {"--to": "to", "--version": "version"},
+            "requires_args": True,
+            "arg_keys": ["from"],
+        },
+        "history": {
+            "description": "List every saved version of one date's plan, newest first",
+            "aliases": ["/dayplanhistory"],
+            "flags": {},
+            "requires_args": True,
             "arg_keys": ["date"],
         },
         "settings": {

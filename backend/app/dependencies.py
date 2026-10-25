@@ -13,6 +13,7 @@ from app.features.organizer.tasks.service import TaskService
 from app.features.organizer.notes.service import NoteService
 from app.features.organizer.calendar_events.service import CalendarEventService
 from app.features.organizer.routines.service import RoutineService
+from app.features.planning.saved_plans.service import SavedPlanService
 from app.features.planning.service import DayPlanService
 from app.features.planning.settings_service import PlanningSettingsService
 from app.features.organizer.shopping.service import ShoppingService
@@ -590,6 +591,9 @@ def get_routine_service(session: AsyncSession = Depends(get_session)) -> Routine
 def get_planning_settings_service(session: AsyncSession = Depends(get_session)) -> PlanningSettingsService:
     return PlanningSettingsService(session)
 
+def get_saved_plan_service(session: AsyncSession = Depends(get_session)) -> SavedPlanService:
+    return SavedPlanService(session)
+
 def get_day_plan_service(session: AsyncSession = Depends(get_session)) -> DayPlanService:
     # Read-only aggregation: the calendar service gets no Google provider because it never writes.
     return DayPlanService(
@@ -600,6 +604,7 @@ def get_day_plan_service(session: AsyncSession = Depends(get_session)) -> DayPla
         language_service=get_language_session_service(session),
         shopping_service=ShoppingService(session),
         settings_service=PlanningSettingsService(session),
+        saved_plan_service=SavedPlanService(session),
     )
 
 def get_metric_entry_service(session: AsyncSession = Depends(get_session)) -> MetricEntryService:
@@ -731,6 +736,7 @@ InterviewPrepQuestionServiceDep = Annotated[InterviewPrepQuestionService, Depend
 InterviewTagServiceDep = Annotated[InterviewTagService, Depends(get_interview_tag_service)]
 InterviewCandidateQuestionServiceDep = Annotated[InterviewCandidateQuestionService, Depends(get_interview_candidate_question_service)]
 PlanningSettingsServiceDep = Annotated[PlanningSettingsService, Depends(get_planning_settings_service)]
+SavedPlanServiceDep = Annotated[SavedPlanService, Depends(get_saved_plan_service)]
 DayPlanServiceDep = Annotated[DayPlanService, Depends(get_day_plan_service)]
 RoutineServiceDep = Annotated[RoutineService, Depends(get_routine_service)]
 MetricEntryServiceDep = Annotated[MetricEntryService, Depends(get_metric_entry_service)]

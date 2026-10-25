@@ -1,14 +1,27 @@
 from datetime import date
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 
 from app.api.auth import require_auth
-from app.dependencies import DayPlanServiceDep, PlanningSettingsServiceDep
+from app.dependencies import DayPlanServiceDep, PlanningSettingsServiceDep, SavedPlanServiceDep
+from app.features.planning.saved_plans.schemas import DayPlansSave, SavedDayPlanRead
+from app.features.planning.saved_plans.service import SavedPlanConflictError, SavedPlanValidationError
 from app.features.planning.schemas import DayPlanRead, PlanningSettingsRead, PlanningSettingsUpdate
 from app.features.planning.service import MAX_DAYS
 
 router = APIRouter(prefix="/planning", tags=["planning"], dependencies=[Depends(require_auth)])
+
+_SOURCE_BY_CLIENT = {"web": "portal"}
+
+
+def _source(request: Request) -> str:
+    return _SOURCE_BY_CLIENT.get(request.headers.get("x-alfred-client", ""), "mcp")
+
+
+def _http_error(exc: ValueError) -> HTTPException:
+    code = status.HTTP_409_CONFLICT if isinstance(exc, SavedPlanConflictError) else status.HTTP_422_UNPROCESSABLE_ENTITY
+    return HTTPException(status_code=code, detail=str(exc))
 
 
 @router.get("/settings", response_model=PlanningSettingsRead)
@@ -29,3 +42,31 @@ async def get_day_plan(
     work_minutes: Annotated[int | None, Query(ge=0, le=1440, description="Override the daily work target")] = None,
 ):
     return await service.get_plan(date, days, work_minutes)
+
+
+@router.post("/saved", response_model=list[SavedDayPlanRead], status_code=status.HTTP_201_CREATED)
+async def save_day_plans(request: Request, body: DayPlansSave, service: SavedPlanServiceDep):
+    try:
+        return await service.save(body, _source(request))
+    except (SavedPlanValidationError, SavedPlanConflictError) as exc:
+        raise _http_error(exc)
+
+
+@router.get("/saved/history", response_model=list[SavedDayPlanRead])
+async def get_saved_history(
+    service: SavedPlanServiceDep, date: Annotated[date, Query(description="Local date whose versions to list")],
+):
+    return await service.get_history(date)
+
+
+@router.get("/saved", response_model=list[SavedDayPlanRead])
+async def get_saved_plans(
+    service: SavedPlanServiceDep,
+    from_date: Annotated[date, Query(alias="from", description="First local date (inclusive)")],
+    to_date: Annotated[date, Query(alias="to", description="Last local date (inclusive)")],
+    version: Annotated[int | None, Query(ge=1, description="A specific version instead of the active one")] = None,
+):
+    try:
+        return await service.get_saved(from_date, to_date, version)
+    except SavedPlanValidationError as exc:
+        raise _http_error(exc)

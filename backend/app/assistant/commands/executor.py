@@ -62,6 +62,7 @@ from app.features.metrics.entries.service import MetricEntryService
 from app.features.organizer.interviews.candidate_questions.service import InterviewCandidateQuestionService
 from app.features.organizer.notes.service import NoteService
 from app.features.organizer.routines.service import RoutineService
+from app.features.planning.saved_plans.service import SavedPlanService
 from app.features.planning.service import DayPlanService
 from app.features.planning.settings_service import PlanningSettingsService
 from app.features.organizer.shopping.service import ShoppingService
@@ -105,6 +106,7 @@ async def execute(
     routine_service: RoutineService | None = None,
     day_plan_service: DayPlanService | None = None,
     planning_settings_service: PlanningSettingsService | None = None,
+    saved_plan_service: SavedPlanService | None = None,
     source: str | None = None,
     grammar_scope_service: GrammarScopeService | None = None,
     briefing_history_service: BriefingHistoryService | None = None,
@@ -334,12 +336,14 @@ async def execute(
         return await handle_routine(command, arguments, routine_service)
 
     if cmd_type == "day_plan":
-        if day_plan_service is None or planning_settings_service is None:
+        if day_plan_service is None or planning_settings_service is None or saved_plan_service is None:
             raise HTTPException(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                 detail="Day plan service not available",
             )
-        return await handle_day_plan(command, arguments, day_plan_service, planning_settings_service)
+        return await handle_day_plan(
+            command, arguments, day_plan_service, planning_settings_service, saved_plan_service, source
+        )
 
     logger.error("Execute: unknown command type=%s command=%s", cmd_type, command)
     raise HTTPException(

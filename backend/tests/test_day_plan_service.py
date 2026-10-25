@@ -61,9 +61,11 @@ def parts():
     settings.get.return_value = _settings()
     saved = AsyncMock()
     saved.get_saved.return_value = []
+    activities = AsyncMock()
+    activities.get_suggestions.return_value = []
     return SimpleNamespace(
         events=events, routines=routines, tasks=tasks, study=study, language=language, shopping=shopping,
-        settings=settings, saved=saved,
+        settings=settings, saved=saved, activities=activities,
     )
 
 
@@ -72,7 +74,7 @@ def service(parts):
     return DayPlanService(
         event_service=parts.events, routine_service=parts.routines, task_service=parts.tasks,
         study_service=parts.study, language_service=parts.language, shopping_service=parts.shopping,
-        settings_service=parts.settings, saved_plan_service=parts.saved,
+        settings_service=parts.settings, saved_plan_service=parts.saved, activity_service=parts.activities,
     )
 
 
@@ -413,3 +415,27 @@ class TestSavedPlanSection:
 
     async def test_no_saved_plan_means_the_section_is_omitted(self, service):
         assert "saved_plan" not in _dump(await service.get_plan(date(2026, 10, 21)))
+
+
+@freeze_time("2026-10-21 08:00:00")
+class TestActivitySuggestionsSection:
+    async def test_suggestions_are_passed_through_without_a_cap(self, service, parts):
+        from app.features.organizer.activities.schemas import ActivitySuggestion
+
+        parts.activities.get_suggestions.return_value = [
+            ActivitySuggestion(id=5, title="Listen to a podcast", min_minutes=20, max_minutes=60, context="anywhere",
+                               tags=["listen"], days_since_last_done=9),
+            ActivitySuggestion(id=2, title="Gym", context="out", days_since_last_done=3, target_per_week=3, done_this_week=1),
+        ] + [ActivitySuggestion(id=100 + i, title=f"Extra {i}") for i in range(40)]
+
+        plan = _dump(await service.get_plan(date(2026, 10, 21)))
+
+        assert len(plan["activity_suggestions"]) == 42
+        assert plan["activity_suggestions"][0] == {
+            "id": 5, "title": "Listen to a podcast", "min_minutes": 20, "max_minutes": 60, "context": "anywhere",
+            "tags": ["listen"], "days_since_last_done": 9,
+        }
+        assert plan["activity_suggestions"][1]["done_this_week"] == 1
+
+    async def test_section_omitted_without_activities(self, service):
+        assert "activity_suggestions" not in _dump(await service.get_plan(date(2026, 10, 21)))

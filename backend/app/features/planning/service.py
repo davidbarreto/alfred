@@ -3,6 +3,7 @@ from datetime import date, datetime, timedelta, timezone
 from typing import Any
 
 from app.features.language.sessions.service import SessionService as LanguageSessionService
+from app.features.organizer.activities.service import ActivityService
 from app.features.organizer.calendar_events.schemas import EventFilters, EventRead
 from app.features.organizer.calendar_events.service import CalendarEventService
 from app.features.organizer.routines.expansion import expand_scheduled_steps, localize, scheduled_dates
@@ -59,6 +60,7 @@ class DayPlanService:
         shopping_service: ShoppingService,
         settings_service: PlanningSettingsService,
         saved_plan_service: SavedPlanService,
+        activity_service: ActivityService,
     ) -> None:
         self._events = event_service
         self._routines = routine_service
@@ -68,6 +70,7 @@ class DayPlanService:
         self._shopping = shopping_service
         self._settings = settings_service
         self._saved = saved_plan_service
+        self._activities = activity_service
 
     async def get_plan(
         self, start: date | None = None, days: int = 1, work_minutes: int | None = None
@@ -97,6 +100,7 @@ class DayPlanService:
             backlog_tasks=tasks["backlog"],
             study=await self._study_section(),
             shopping=await self._shopping_section(),
+            activity_suggestions=await self._activities.get_suggestions() or None,
             saved_plan=await self._saved_plans(dates),
             warnings=warnings,
         )

@@ -138,6 +138,16 @@ _ROUTINE_STEP_DETAILS = (
     "Empty values clear optional fields."
 )
 
+ACTIVITY_FIELD_FLAGS = {
+    **FLAG_TITLE, "--min": "min_minutes", "--max": "max_minutes", **FLAG_CONTEXT, "--target": "target_per_week",
+    **FLAG_TAGS,
+}
+_ACTIVITY_DETAILS = (
+    "Activities are optional gap fillers, not tasks: no deadline, no done state, never escalated or notified. "
+    f"min_minutes and max_minutes are the usual length in minutes; context is one of {'/'.join(TASK_CONTEXTS)}; "
+    "target_per_week is a soft wish such as 3 for the gym that only shapes suggestions and is never enforced; "
+    "categories are tags (comma-separated plain names). Use a recurring task instead when skipping it counts as a miss."
+)
 PLANNING_SETTINGS_FLAGS = {
     "--wake": "wake_time", "--sleep": "sleep_time", "--work-target": "work_target_minutes",
     "--work-windows": "preferred_work_windows", "--work-tag": "work_tag", "--office-tag": "office_tag",
@@ -1030,6 +1040,61 @@ COMMAND_DEFINITIONS = {
             "flags": {},
             "requires_args": True,
             "arg_keys": ["event_id"],
+        },
+    },
+    "activity": {
+        "add": {
+            "description": "Add an optional activity for spare time (read a book, gym, draw); not a task",
+            "details": _ACTIVITY_DETAILS,
+            "aliases": ["/activityadd"],
+            "flags": ACTIVITY_FIELD_FLAGS,
+            "requires_args": True,
+            "arg_keys": ["title"],
+        },
+        "list": {
+            "description": "List active activities, optionally by tag, search text or including archived ones",
+            "aliases": ["/activitylist", "/activities"],
+            "flags": {"--tag": "tag", "--search": "search", "--archived": "archived", **FLAG_LIMIT},
+        },
+        "update": {
+            "description": "Update an activity by ID; an empty value clears an optional field",
+            "details": _ACTIVITY_DETAILS,
+            "aliases": ["/activityupdate"],
+            "flags": ACTIVITY_FIELD_FLAGS,
+            "requires_args": True,
+            "arg_keys": ["id"],
+        },
+        "log": {
+            "description": "Log that an activity was done now (or at done_at), optionally with the minutes spent",
+            "details": (
+                "Logging is what counts as done. minutes is a whole number of minutes entered by hand (never timed); "
+                "done_at is an ISO datetime to catch up on something done earlier (not in the future); note is free text."
+            ),
+            "aliases": ["/activitylog"],
+            "flags": {"--minutes": "minutes", "--note": "note", "--at": "done_at"},
+            "requires_args": True,
+            "arg_keys": ["id"],
+        },
+        "history": {
+            "description": "Show the logged times of an activity, newest first",
+            "aliases": ["/activityhistory"],
+            "flags": {**FLAG_LIMIT, "--offset": "offset"},
+            "requires_args": True,
+            "arg_keys": ["id"],
+        },
+        "archive": {
+            "description": "Archive an activity: hidden from suggestions, logs are kept",
+            "aliases": ["/activityarchive"],
+            "flags": {},
+            "requires_args": True,
+            "arg_keys": ["id"],
+        },
+        "unarchive": {
+            "description": "Bring an archived activity back",
+            "aliases": ["/activityunarchive"],
+            "flags": {},
+            "requires_args": True,
+            "arg_keys": ["id"],
         },
     },
     "day_plan": {

@@ -3,6 +3,8 @@ from typing import Any
 
 from pydantic import BaseModel, Field, field_validator
 
+from app.features.organizer.activities.schemas import ActivitySuggestion
+
 _HH_MM = re.compile(r"^([01]\d|2[0-3]):[0-5]\d$")
 _WINDOW = re.compile(r"^([01]\d|2[0-3]):[0-5]\d-([01]\d|2[0-3]):[0-5]\d$")
 
@@ -188,6 +190,6 @@ class DayPlanRead(BaseModel):
     backlog_tasks: list[TaskItem] = []
     study: StudySection | None = None
     shopping: ShoppingSection | None = None
-    activity_suggestions: list[dict[str, Any]] | None = None
+    activity_suggestions: list[ActivitySuggestion] | None = None
     saved_plan: list[dict[str, Any]] | None = None
     warnings: list[str] = []

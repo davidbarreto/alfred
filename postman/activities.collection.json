@@ -1,0 +1,898 @@
+{
+  "info": {
+    "name": "Alfred - Activities API",
+    "_postman_id": "alfred-activities-v1",
+    "description": "Run in order: Health Check \u2192 create/update (validation) \u2192 log (now, past, future, invalid) \u2192 history, stats, day-plan suggestion \u2192 archive/unarchive. Activities with logs cannot be deleted, so the run leaves one archived-then-restored activity behind.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{api_token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "01 - Health Check",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/health",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "health"
+          ]
+        },
+        "auth": {
+          "type": "noauth"
+        }
+      }
+    },
+    {
+      "name": "02 - Create Activity",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+              "pm.test('Activity saved', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json.title).to.eql('Postman gym');",
+              "    pm.expect(json.target_per_week).to.eql(3);",
+              "    pm.expect(json.tags).to.have.members(['health', 'sport']);",
+              "    pm.expect(json.archived_at).to.be.null;",
+              "    pm.expect(json.last_done_at).to.be.null;",
+              "    pm.environment.set('activity_id', json.id);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/organizer/activities",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "activities"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"title\": \"Postman gym\",\n  \"min_minutes\": 60,\n  \"max_minutes\": 90,\n  \"context\": \"out\",\n  \"target_per_week\": 3,\n  \"tags\": [\n    \"health\",\n    \"sport\"\n  ]\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "03 - Create Activity With Invalid Range (422)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 422', () => pm.response.to.have.status(422));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/organizer/activities",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "activities"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"title\": \"Bad range\",\n  \"min_minutes\": 90,\n  \"max_minutes\": 30\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "04 - Create Activity With Unknown Context (422)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 422', () => pm.response.to.have.status(422));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/organizer/activities",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "activities"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"title\": \"Bad context\",\n  \"context\": \"office\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "05 - Update Activity",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Target updated', () => pm.expect(pm.response.json().target_per_week).to.eql(2));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/organizer/activities/{{activity_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "activities",
+            "{{activity_id}}"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"target_per_week\": 2\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "06 - Update Activity Range Against Stored Value (422)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 422', () => pm.response.to.have.status(422));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/organizer/activities/{{activity_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "activities",
+            "{{activity_id}}"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"max_minutes\": 30\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "07 - Log Activity Now",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+              "pm.test('Log saved', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json.minutes).to.eql(45);",
+              "    pm.expect(json.note).to.eql('Legs');",
+              "    pm.expect(json.activity_id).to.eql(Number(pm.environment.get('activity_id')));",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/organizer/activities/{{activity_id}}/logs",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "activities",
+            "{{activity_id}}",
+            "logs"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"minutes\": 45,\n  \"note\": \"Legs\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "08 - Log Activity In The Past",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 201', () => pm.response.to.have.status(201));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/organizer/activities/{{activity_id}}/logs",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "activities",
+            "{{activity_id}}",
+            "logs"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"done_at\": \"2026-01-05T19:00:00\",\n  \"minutes\": 60\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "09 - Log Activity In The Future (422)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 422', () => pm.response.to.have.status(422));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/organizer/activities/{{activity_id}}/logs",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "activities",
+            "{{activity_id}}",
+            "logs"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"done_at\": \"2099-01-01T10:00:00\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "10 - Log With Zero Minutes (422)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 422', () => pm.response.to.have.status(422));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/organizer/activities/{{activity_id}}/logs",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "activities",
+            "{{activity_id}}",
+            "logs"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"minutes\": 0\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "11 - Activity History (newest first)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Two logs, newest first', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json).to.have.length(2);",
+              "    pm.expect(json[0].done_at > json[1].done_at).to.be.true;",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/organizer/activities/{{activity_id}}/logs",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "activities",
+            "{{activity_id}}",
+            "logs"
+          ]
+        }
+      }
+    },
+    {
+      "name": "12 - Get Activity Shows Last Done",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('last_done_at is set', () => pm.expect(pm.response.json().last_done_at).to.be.a('string'));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/organizer/activities/{{activity_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "activities",
+            "{{activity_id}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "13 - List Activities By Tag",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Created activity is listed', () => {",
+              "    pm.expect(pm.response.json().map(a => a.id)).to.include(Number(pm.environment.get('activity_id')));",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/organizer/activities?tag=health",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "activities"
+          ],
+          "query": [
+            {
+              "key": "tag",
+              "value": "health"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "14 - Activity Stats",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Weekly buckets and totals', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json.weeks).to.have.length(4);",
+              "    pm.expect(json.total_count).to.be.at.least(1);",
+              "    pm.expect(json.by_tag.map(t => t.tag)).to.include('health');",
+              "    pm.expect(json.by_activity.map(a => a.title)).to.include('Postman gym');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/organizer/activities/stats?weeks=4",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "activities",
+            "stats"
+          ],
+          "query": [
+            {
+              "key": "weeks",
+              "value": "4"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "15 - Stats Weeks Out Of Range (422)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 422', () => pm.response.to.have.status(422));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/organizer/activities/stats?weeks=0",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "activities",
+            "stats"
+          ],
+          "query": [
+            {
+              "key": "weeks",
+              "value": "0"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "16 - Day Plan Suggests Activity",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Activity appears with weekly progress', () => {",
+              "    const found = pm.response.json().activity_suggestions.find(a => a.title === 'Postman gym');",
+              "    pm.expect(found).to.be.an('object');",
+              "    pm.expect(found.target_per_week).to.eql(2);",
+              "    pm.expect(found.done_this_week).to.be.at.least(1);",
+              "    pm.expect(found.days_since_last_done).to.eql(0);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/planning/day",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "planning",
+            "day"
+          ]
+        }
+      }
+    },
+    {
+      "name": "17 - Archive Activity",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Archived', () => pm.expect(pm.response.json().archived_at).to.be.a('string'));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/organizer/activities/{{activity_id}}/archive",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "activities",
+            "{{activity_id}}",
+            "archive"
+          ]
+        }
+      }
+    },
+    {
+      "name": "18 - Archived Activity Hidden From List",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Not listed', () => pm.expect(pm.response.json().map(a => a.id)).to.not.include(Number(pm.environment.get('activity_id'))));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/organizer/activities",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "activities"
+          ]
+        }
+      }
+    },
+    {
+      "name": "19 - Archived Activity Listed When Requested",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Listed with include_archived', () => pm.expect(pm.response.json().map(a => a.id)).to.include(Number(pm.environment.get('activity_id'))));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/organizer/activities?include_archived=true",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "activities"
+          ],
+          "query": [
+            {
+              "key": "include_archived",
+              "value": "true"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "20 - Log Archived Activity (409)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 409', () => pm.response.to.have.status(409));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/organizer/activities/{{activity_id}}/logs",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "activities",
+            "{{activity_id}}",
+            "logs"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "21 - History Survives Archive",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Logs kept', () => pm.expect(pm.response.json()).to.have.length(2));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/organizer/activities/{{activity_id}}/logs",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "activities",
+            "{{activity_id}}",
+            "logs"
+          ]
+        }
+      }
+    },
+    {
+      "name": "22 - Unarchive Activity",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Active again', () => pm.expect(pm.response.json().archived_at).to.be.null);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/organizer/activities/{{activity_id}}/unarchive",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "activities",
+            "{{activity_id}}",
+            "unarchive"
+          ]
+        }
+      }
+    },
+    {
+      "name": "23 - Get Unknown Activity (404)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 404', () => pm.response.to.have.status(404));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/organizer/activities/999999",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "activities",
+            "999999"
+          ]
+        }
+      }
+    }
+  ]
+}

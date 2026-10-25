@@ -6,6 +6,7 @@ from fastapi import HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.assistant.commands.handlers.account import handle_account
+from app.assistant.commands.handlers.activity import handle_activity
 from app.assistant.commands.handlers.assistant import handle_assistant
 from app.assistant.commands.handlers.briefing import handle_briefing
 from app.assistant.commands.handlers.category import handle_category
@@ -61,6 +62,7 @@ from app.features.organizer.interviews.prep_questions.service import InterviewPr
 from app.features.metrics.entries.service import MetricEntryService
 from app.features.organizer.interviews.candidate_questions.service import InterviewCandidateQuestionService
 from app.features.organizer.notes.service import NoteService
+from app.features.organizer.activities.service import ActivityService
 from app.features.organizer.routines.service import RoutineService
 from app.features.planning.saved_plans.service import SavedPlanService
 from app.features.planning.service import DayPlanService
@@ -107,6 +109,7 @@ async def execute(
     day_plan_service: DayPlanService | None = None,
     planning_settings_service: PlanningSettingsService | None = None,
     saved_plan_service: SavedPlanService | None = None,
+    activity_service: ActivityService | None = None,
     source: str | None = None,
     grammar_scope_service: GrammarScopeService | None = None,
     briefing_history_service: BriefingHistoryService | None = None,
@@ -334,6 +337,14 @@ async def execute(
                 detail="Routine service not available",
             )
         return await handle_routine(command, arguments, routine_service)
+
+    if cmd_type == "activity":
+        if activity_service is None:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Activity service not available",
+            )
+        return await handle_activity(command, arguments, activity_service)
 
     if cmd_type == "day_plan":
         if day_plan_service is None or planning_settings_service is None or saved_plan_service is None:

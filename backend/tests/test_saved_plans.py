@@ -17,6 +17,7 @@ from app.features.planning.saved_plans.service import (
 )
 from app.features.planning.saved_plans.tables import DayPlan
 import app.features.organizer.notes.tables  # noqa: F401 — registers Note with SQLAlchemy mapper
+import app.features.organizer.calendar_events.tables  # noqa: F401 — registers CalendarEvent with SQLAlchemy mapper
 
 _NOW = datetime(2026, 10, 21, 9, 0, tzinfo=timezone.utc)
 
@@ -290,10 +291,10 @@ class TestRepository:
         await DayPlanRepository(session).get_history(date(2026, 10, 21))
         assert "ORDER BY planning.day_plans.version DESC" in _sql(session.execute.call_args.args[0])
 
-    async def test_unchecked_kinds_are_assumed_to_exist(self):
-        session = _session()
-        assert await DayPlanRepository(session).existing_ref_ids("activity", {1, 2}) == {1, 2}
-        session.execute.assert_not_called()
+    async def test_activity_refs_are_checked_against_the_activities_table(self):
+        session = _session(rows=[1])
+        assert await DayPlanRepository(session).existing_ref_ids("activity", {1, 2}) == {1}
+        assert "organizer.activities.id" in _sql(session.execute.call_args.args[0])
 
     async def test_no_ids_skips_the_query(self):
         session = _session()

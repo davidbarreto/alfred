@@ -4,6 +4,7 @@ from typing import Any
 from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.features.organizer.activities.tables import Activity
 from app.features.organizer.calendar_events.tables import CalendarEvent
 from app.features.organizer.routines.tables import RoutineStep
 from app.features.organizer.tasks.tables import Task
@@ -64,12 +65,10 @@ class DayPlanRepository:
         return saved
 
     async def existing_ref_ids(self, kind: str, ids: set[int]) -> set[int]:
-        """Which of `ids` exist in the table that `kind` points at (activities are checked by a later phase)."""
+        """Which of `ids` exist in the table that `kind` points at."""
         if not ids:
             return set()
-        column = _REF_COLUMNS.get(kind)
-        if column is None:
-            return set(ids)
+        column = _REF_COLUMNS[kind]
         query = select(column).where(column.in_(ids))
         if kind == "task":
             query = query.where(Task.deleted_at.is_(None))
@@ -78,6 +77,7 @@ class DayPlanRepository:
 
 
 _REF_COLUMNS = {
+    "activity": Activity.id,
     "event": CalendarEvent.id,
     "task": Task.id,
     "study_item": StudyPlanItem.id,

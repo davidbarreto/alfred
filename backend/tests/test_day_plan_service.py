@@ -126,6 +126,20 @@ class TestSingleDay:
         plan = _dump(await service.get_plan(date(2026, 10, 21), work_minutes=0))
         assert plan["work"]["target_minutes"] == 0 and plan["work"]["remaining_minutes"] == 0
 
+    async def test_non_workdays_have_no_work_target(self, service):
+        plan = _dump(await service.get_plan(date(2026, 10, 23), days=3))  # Fri, Sat, Sun
+
+        assert [d["work"]["target_minutes"] for d in plan["days"]] == [480, 0, 0]
+
+    async def test_workdays_setting_and_override_decide_the_target(self, service, parts):
+        parts.settings.get.return_value = _settings(workdays=["sat"])
+
+        weekend = _dump(await service.get_plan(date(2026, 10, 24)))
+        forced = _dump(await service.get_plan(date(2026, 10, 21), work_minutes=120))
+
+        assert weekend["work"]["target_minutes"] == 480
+        assert forced["work"]["target_minutes"] == 120
+
     async def test_event_routine_expands_around_the_event(self, service, parts):
         parts.events.get_events.return_value = [
             _event(7, "Class", datetime(2026, 10, 21, 20, 0), datetime(2026, 10, 21, 21, 0), routine_id=1, travel_minutes=25),

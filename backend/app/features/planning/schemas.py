@@ -9,6 +9,10 @@ _HH_MM = re.compile(r"^([01]\d|2[0-3]):[0-5]\d$")
 _WINDOW = re.compile(r"^([01]\d|2[0-3]):[0-5]\d-([01]\d|2[0-3]):[0-5]\d$")
 
 
+WEEKDAYS = ("mon", "tue", "wed", "thu", "fri", "sat", "sun")
+DEFAULT_WORKDAYS = WEEKDAYS[:5]
+
+
 def _check_hh_mm(value: str | None) -> str | None:
     if value is not None and not _HH_MM.match(value):
         raise ValueError(f"expected HH:MM, got {value!r}")
@@ -20,6 +24,7 @@ class PlanningSettingsRead(BaseModel):
     sleep_time: str | None = None
     work_target_minutes: int
     preferred_work_windows: list[str] = []
+    workdays: list[str] = list(DEFAULT_WORKDAYS)
     work_tag: str
     office_tag: str
     office_days_per_week: int | None = None
@@ -33,6 +38,7 @@ class PlanningSettingsUpdate(BaseModel):
     sleep_time: str | None = None
     work_target_minutes: int | None = Field(default=None, ge=0, le=1440)
     preferred_work_windows: list[str] | None = None
+    workdays: list[str] | None = None
     work_tag: str | None = None
     office_tag: str | None = None
     office_days_per_week: int | None = Field(default=None, ge=1, le=7)
@@ -51,6 +57,17 @@ class PlanningSettingsUpdate(BaseModel):
             if not match or window.split("-")[1] <= window.split("-")[0]:
                 raise ValueError(f"expected HH:MM-HH:MM with the end after the start, got {window!r}")
         return value
+
+    @field_validator("workdays")
+    @classmethod
+    def _workdays(cls, value: list[str] | None) -> list[str] | None:
+        if value is None:
+            return None
+        days = [day.strip().lower() for day in value]
+        unknown = [day for day in days if day not in WEEKDAYS]
+        if unknown:
+            raise ValueError(f"expected weekdays among {', '.join(WEEKDAYS)}, got {unknown!r}")
+        return [day for day in WEEKDAYS if day in days]
 
     @field_validator("work_tag", "office_tag")
     @classmethod

@@ -75,6 +75,8 @@
           <input name="sleep_time" type="time" value="{{ settings.sleep_time or '' }}" class="input input-sm input-bordered w-full"></label>
         <label class="space-y-1"><span class="block text-xs text-gray-500">Work target per day (minutes)</span>
           <input name="work_target_minutes" type="number" min="0" max="1440" value="{{ settings.work_target_minutes }}" class="input input-sm input-bordered w-full"></label>
+        <label class="space-y-1"><span class="block text-xs text-gray-500">Workdays (comma-separated, e.g. mon, tue, wed, thu, fri)</span>
+          <input name="workdays" value="{{ settings.workdays | join(', ') }}" class="input input-sm input-bordered w-full"></label>
         <label class="space-y-1"><span class="block text-xs text-gray-500">Preferred work windows (comma-separated, e.g. 10:00-14:00)</span>
           <input name="preferred_work_windows" value="{{ settings.preferred_work_windows | join(', ') }}" class="input input-sm input-bordered w-full"></label>
         <label class="space-y-1"><span class="block text-xs text-gray-500">Tag that counts as work time</span>
@@ -103,9 +105,10 @@ document.getElementById('settings-form')?.addEventListener('submit', async (even
   const text = (key) => (form.get(key) || '').trim() || null;
   const number = (key) => (form.get(key) === '' ? null : Number(form.get(key)));
   const windows = (form.get('preferred_work_windows') || '').split(',').map(w => w.trim()).filter(Boolean);
+  const workdays = (form.get('workdays') || '').split(',').map(d => d.trim()).filter(Boolean);
   const body = {
     wake_time: text('wake_time'), sleep_time: text('sleep_time'),
-    work_target_minutes: number('work_target_minutes'), preferred_work_windows: windows,
+    work_target_minutes: number('work_target_minutes'), preferred_work_windows: windows, workdays,
     work_tag: text('work_tag'), office_tag: text('office_tag'),
     office_days_per_week: number('office_days_per_week'), office_min_minutes: number('office_min_minutes'),
   };

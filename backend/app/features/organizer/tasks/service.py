@@ -13,7 +13,7 @@ from app.features.organizer.tasks.schemas import (
     TaskUpdate,
     TaskFilters,
 )
-from app.features.organizer.tasks.recurrence import compute_streak, is_done_in_cycle, is_due_today, missed_count
+from app.features.organizer.tasks.recurrence import compute_streak, is_done_in_cycle, is_due_today, missed_count, next_deadline
 from app.features.organizer.tasks.repository import TaskRepository
 from app.features.core.embeddings.schemas import EmbeddingCreate
 from app.features.core.embeddings.service import EmbeddingService
@@ -182,6 +182,12 @@ class TaskService:
             await self._repo.update_task(task_id, TaskUpdate(urgency="NORMAL"))
             logger.info("Task urgency reset on occurrence completion: id=%d", task_id)
         logger.info("Task occurrence completed: id=%d occurrence_date=%s", task_id, occ_date)
+        if task.deadline is not None:
+            # A recurring task's deadline marks its current cycle; move it on so it never goes stale.
+            advanced = next_deadline(task.deadline, task.recurrence_rule, occ_date)
+            if advanced > task.deadline:
+                await self.update_task(task_id, TaskUpdate(deadline=advanced))
+                logger.info("Recurring task deadline advanced: id=%d", task_id)
         return TaskCompletionRead.model_validate(completion)
 
     async def update_completion(

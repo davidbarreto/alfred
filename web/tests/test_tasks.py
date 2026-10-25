@@ -34,6 +34,15 @@ class TestTasksPageFilters:
         assert "due_today" not in params
 
 
+class TestTaskId:
+    def test_row_shows_the_task_id_with_a_tooltip(self, client, mock_api):
+        mock_api["get"].return_value = [_task(id=56)]
+
+        text = client.get("/tasks/?filter=all").text
+
+        assert 'title="Task ID 56">#56</span>' in text
+
+
 class TestRecurrenceFilters:
     def test_habits_filter_keeps_only_recurring_tasks(self, client, mock_api):
         mock_api["get"].side_effect = [[], [

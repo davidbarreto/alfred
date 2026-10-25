@@ -80,6 +80,10 @@ class TestSettings:
             office_min_minutes=60, work_tag="job", office_tag="hq",
         )
 
+    async def test_workdays_are_parsed_from_a_comma_list(self, plans, settings, saved):
+        await handle_day_plan("set_settings", {"workdays": "Mon, tue,sat"}, plans, settings, saved)
+        assert settings.update.call_args.args[0] == PlanningSettingsUpdate(workdays=["mon", "tue", "sat"])
+
     async def test_empty_value_resets_a_setting(self, plans, settings, saved):
         await handle_day_plan("set_settings", {"office_days_per_week": "", "wake_time": "", "preferred_work_windows": ""}, plans, settings, saved)
         update = settings.update.call_args.args[0]

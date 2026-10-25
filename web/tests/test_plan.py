@@ -19,7 +19,7 @@ def _plan(plan_date="2026-10-21", version=2, notes="Light day", items=None):
 
 def _settings(**kw):
     base = {"wake_time": "07:30", "sleep_time": None, "work_target_minutes": 480, "preferred_work_windows": ["10:00-14:00"],
-            "work_tag": "work", "office_tag": "office", "office_days_per_week": 4, "office_min_minutes": 0}
+            "workdays": ["mon", "tue", "wed", "thu", "fri"], "work_tag": "work", "office_tag": "office", "office_days_per_week": 4, "office_min_minutes": 0}
     base.update(kw)
     return base
 
@@ -97,6 +97,7 @@ class TestPlanPage:
         text = client.get("/plan").text
         assert 'name="wake_time" type="time" value="07:30"' in text
         assert 'value="10:00-14:00"' in text
+        assert 'name="workdays" value="mon, tue, wed, thu, fri"' in text
         assert 'name="office_days_per_week" type="number" min="1" max="7" value="4"' in text
 
     def test_unreachable_backend_still_renders(self, client, mock_api):

@@ -8,6 +8,7 @@ from app.features.organizer.tasks.recurrence import (
     is_due_today,
     is_pending_today,
     missed_count,
+    next_deadline,
     parse_byday as _parse_byday,
 )
 from app.features.organizer.tasks.schemas import TaskCompletionRead, TaskCreate, TaskUpdate, TaskFilters, TaskRead
@@ -437,6 +438,47 @@ class TestCompleteTask:
         await service.complete_task(1)
 
         service._repo.update_task.assert_called_once_with(1, TaskUpdate(urgency="NORMAL"))
+
+
+class TestCompleteRecurringDeadline:
+    async def _complete(self, service, deadline, rule, occ):
+        service._repo.get_task.side_effect = [
+            _make_task_orm(recurrence_rule=rule, deadline=deadline),
+            _make_task_orm(recurrence_rule=rule, deadline=deadline),
+        ]
+        service._repo.get_completion.return_value = None
+        service._repo.complete_occurrence.return_value = MagicMock(
+            id=1, task_id=1, occurrence_date=occ, completed_at=MagicMock()
+        )
+        service._repo.update_task.return_value = _make_task_orm(recurrence_rule=rule)
+        await service.complete_task(1, occ)
+
+    async def test_advances_stale_monthly_deadline_to_next_cycle(self, service, mock_provider):
+        await self._complete(service, datetime(2026, 8, 8, 3, 57, 44), "FREQ=MONTHLY", date(2026, 10, 5))
+
+        service._repo.update_task.assert_called_once_with(1, TaskUpdate(deadline=datetime(2026, 11, 8, 3, 57, 44)))
+        mock_provider.update.assert_called_once()
+
+    async def test_task_without_deadline_is_left_alone(self, service):
+        await self._complete(service, None, "FREQ=DAILY", date(2026, 10, 5))
+
+        service._repo.update_task.assert_not_called()
+
+
+class TestNextDeadline:
+    @pytest.mark.parametrize("deadline,rule,done,expected", [
+        (datetime(2026, 8, 8, 3, 0), "FREQ=MONTHLY", date(2026, 10, 5), datetime(2026, 11, 8, 3, 0)),
+        (datetime(2026, 10, 8, 3, 0), "FREQ=MONTHLY", date(2026, 10, 9), datetime(2026, 11, 8, 3, 0)),
+        (datetime(2026, 1, 31, 9, 0), "FREQ=MONTHLY", date(2026, 2, 3), datetime(2026, 3, 31, 9, 0)),
+        (datetime(2026, 8, 15, 9, 0), "FREQ=MONTHLY;INTERVAL=3", date(2026, 8, 15), datetime(2026, 11, 15, 9, 0)),
+        (datetime(2026, 10, 20, 9, 0), "FREQ=DAILY", date(2026, 10, 20), datetime(2026, 10, 21, 9, 0)),
+        (datetime(2026, 10, 1, 9, 0), "FREQ=DAILY", date(2026, 10, 20), datetime(2026, 10, 21, 9, 0)),
+        (datetime(2026, 10, 19, 9, 0), "FREQ=WEEKLY", date(2026, 10, 21), datetime(2026, 10, 26, 9, 0)),
+        (datetime(2026, 10, 23, 9, 0), "FREQ=WEEKLY;BYDAY=FR", date(2026, 10, 23), datetime(2026, 10, 30, 9, 0)),
+        (datetime(2026, 10, 19, 9, 0), "FREQ=WEEKLY;BYDAY=MO,TH", date(2026, 10, 19), datetime(2026, 10, 22, 9, 0)),
+    ])
+    def test_steps_to_the_cycle_after_the_completed_one(self, deadline, rule, done, expected):
+        assert next_deadline(deadline, rule, done) == expected
 
 
 class TestCancelTask:

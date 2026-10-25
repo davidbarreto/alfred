@@ -1,4 +1,6 @@
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
+
+from dateutil.relativedelta import relativedelta
 
 _BYDAY_MAP = {"MO": 0, "TU": 1, "WE": 2, "TH": 3, "FR": 4, "SA": 5, "SU": 6}
 
@@ -143,3 +145,41 @@ def is_pending_today(recurrence_rule: str | None, is_done_in_cycle: bool, today:
     if recurrence_rule is None:
         return True
     return is_due_today(recurrence_rule, today) and not is_done_in_cycle
+
+
+def _interval(rule: str) -> int:
+    for part in rule.split(";"):
+        if part.startswith("INTERVAL="):
+            try:
+                return max(1, int(part[len("INTERVAL="):]))
+            except ValueError:
+                return 1
+    return 1
+
+
+def next_deadline(deadline: datetime, rule: str, completed_for: date) -> datetime:
+    """The deadline of the first cycle after the one `completed_for` belongs to, keeping the time of day.
+
+    Steps forward from the stored deadline by the rule's period until it falls in a later day
+    (daily, weekly with BYDAY), ISO week (weekly) or month (monthly) than the completed occurrence,
+    so a bill paid early in October with a stale August deadline lands on the next month's day, not
+    on the one just paid.
+    """
+    interval = _interval(rule)
+    byday = parse_byday(rule) if "FREQ=WEEKLY" in rule else None
+    current = deadline
+    if "FREQ=MONTHLY" in rule:
+        steps = 0
+        while (current.year, current.month) <= (completed_for.year, completed_for.month):
+            steps += 1
+            current = deadline + relativedelta(months=interval * steps)  # from the original: day 31 must not drift
+    elif "FREQ=WEEKLY" in rule and byday:
+        while current.date() <= completed_for or current.weekday() not in byday:
+            current += timedelta(days=1)
+    elif "FREQ=WEEKLY" in rule:
+        while current.isocalendar()[:2] <= completed_for.isocalendar()[:2]:
+            current += timedelta(weeks=interval)
+    else:
+        while current.date() <= completed_for:
+            current += timedelta(days=interval)
+    return current

@@ -150,12 +150,13 @@ _ACTIVITY_DETAILS = (
 )
 PLANNING_SETTINGS_FLAGS = {
     "--wake": "wake_time", "--sleep": "sleep_time", "--work-target": "work_target_minutes",
-    "--work-windows": "preferred_work_windows", "--work-tag": "work_tag", "--office-tag": "office_tag",
+    "--work-windows": "preferred_work_windows", "--workdays": "workdays", "--work-tag": "work_tag", "--office-tag": "office_tag",
     "--office-days": "office_days_per_week", "--office-min": "office_min_minutes",
 }
 _PLANNING_SETTINGS_DETAILS = (
     "wake_time and sleep_time are HH:MM; work_target_minutes is the daily work target in minutes (default 480); "
-    "preferred_work_windows is a comma-separated list like 10:00-14:00,16:00-18:00; work_tag (default work) and "
+    "preferred_work_windows is a comma-separated list like 10:00-14:00,16:00-18:00; workdays is a comma-separated "
+    "list of mon,tue,wed,thu,fri,sat,sun (default mon-fri) and days outside it get a work target of 0; work_tag (default work) and "
     "office_tag (default office) name the event tags that count as work time and office days; office_days_per_week "
     "(1-7) turns the office section on and office_min_minutes is the minimum length of an event to count as an "
     "office day. Unset values switch the related section off."

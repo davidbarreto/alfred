@@ -20,6 +20,8 @@
   {% else %}border-l-gray-200 hover:border-l-gray-300{% endif %}"
      id="task-{{ task.id }}">
 
+  <span class="absolute top-1 right-2 text-[10px] leading-none text-gray-300 select-none" title="Task ID {{ task.id }}">#{{ task.id }}</span>
+
   <div class="p-4 pl-5">
 
     <!-- Checkbox + title -->
@@ -35,7 +37,7 @@
       <span class="flex-1 text-sm font-medium leading-snug
         {% if is_done %}line-through text-gray-300
         {% elif is_recurring_done %}text-gray-400
-        {% else %}text-gray-900{% endif %}">
+        {% else %}text-gray-900{% endif %} pr-5">
         {{ task.title }}
       </span>
     </div>

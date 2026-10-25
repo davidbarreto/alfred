@@ -16,6 +16,7 @@ logger = logging.getLogger(__name__)
 
 _PORTAL_SOURCES = {"web", "portal"}
 _INT_SETTINGS = ("work_target_minutes", "office_days_per_week", "office_min_minutes")
+_LIST_SETTINGS = ("preferred_work_windows", "workdays")
 _TEXT_SETTINGS = ("wake_time", "sleep_time", "work_tag", "office_tag")
 
 
@@ -36,9 +37,10 @@ def _settings_fields(arguments: dict[str, Any]) -> dict[str, Any]:
     for key in _INT_SETTINGS:
         if key in arguments:
             fields[key] = parse_int(arguments[key], key)
-    if "preferred_work_windows" in arguments:
-        raw = str(arguments["preferred_work_windows"] or "")
-        fields["preferred_work_windows"] = [w.strip() for w in raw.split(",") if w.strip()] or None
+    for key in _LIST_SETTINGS:
+        if key in arguments:
+            raw = str(arguments[key] or "")
+            fields[key] = [item.strip() for item in raw.split(",") if item.strip()] or None
     return fields
 
 

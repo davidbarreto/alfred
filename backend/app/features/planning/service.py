@@ -28,6 +28,7 @@ from app.features.planning.schemas import (
     StudySection,
     SuggestedRun,
     TaskItem,
+    WEEKDAYS,
     WorkSummary,
 )
 from app.features.planning.settings_service import PlanningSettingsService
@@ -160,7 +161,12 @@ class DayPlanService:
             if runs_today:
                 windows = expand_scheduled_steps(routine.steps, [day])
                 blocks.extend(timeline.routine_blocks_for(routine.name, windows, note_titles))
-        target = settings.work_target_minutes if work_minutes is None else work_minutes
+        if work_minutes is not None:
+            target = work_minutes
+        elif WEEKDAYS[day.weekday()] in settings.workdays:
+            target = settings.work_target_minutes
+        else:
+            target = 0
         committed = timeline.committed_work_minutes(events, day, settings.work_tag)
         return DayRead(
             date=day.isoformat(),

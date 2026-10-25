@@ -4,7 +4,7 @@ import logging
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.features.core.settings.service import SettingService
-from app.features.planning.schemas import PlanningSettingsRead, PlanningSettingsUpdate
+from app.features.planning.schemas import DEFAULT_WORKDAYS, PlanningSettingsRead, PlanningSettingsUpdate
 
 logger = logging.getLogger(__name__)
 
@@ -32,6 +32,7 @@ class PlanningSettingsService:
             sleep_time=raw["sleep_time"] or None,
             work_target_minutes=int(raw["work_target_minutes"]) if raw["work_target_minutes"] else DEFAULT_WORK_TARGET_MINUTES,
             preferred_work_windows=json.loads(raw["preferred_work_windows"]) if raw["preferred_work_windows"] else [],
+            workdays=json.loads(raw["workdays"]) if raw["workdays"] else list(DEFAULT_WORKDAYS),
             work_tag=raw["work_tag"] or DEFAULT_WORK_TAG,
             office_tag=raw["office_tag"] or DEFAULT_OFFICE_TAG,
             office_days_per_week=int(raw["office_days_per_week"]) if raw["office_days_per_week"] else None,
@@ -43,7 +44,7 @@ class PlanningSettingsService:
         for field, value in changes.items():
             if value is None:
                 stored = ""
-            elif field == "preferred_work_windows":
+            elif field in ("preferred_work_windows", "workdays"):
                 stored = json.dumps(value) if value else ""
             else:
                 stored = str(value)

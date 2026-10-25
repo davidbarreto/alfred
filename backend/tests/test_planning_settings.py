@@ -97,3 +97,20 @@ class TestValidation:
 
     def test_tags_are_trimmed(self):
         assert PlanningSettingsUpdate(work_tag=" job ").work_tag == "job"
+
+
+class TestWorkdays:
+    async def test_default_is_monday_to_friday(self, service):
+        assert (await service.get()).workdays == ["mon", "tue", "wed", "thu", "fri"]
+
+    async def test_update_stores_sorted_lowercase_and_empty_resets(self, service, store):
+        result = await service.update(PlanningSettingsUpdate(workdays=["Sat", "mon"]))
+        assert json.loads(store.values["planning.workdays"]) == ["mon", "sat"]
+        assert result.workdays == ["mon", "sat"]
+
+        reset = await service.update(PlanningSettingsUpdate(workdays=[]))
+        assert reset.workdays == ["mon", "tue", "wed", "thu", "fri"]
+
+    def test_unknown_day_is_rejected(self):
+        with pytest.raises(ValidationError):
+            PlanningSettingsUpdate(workdays=["funday"])

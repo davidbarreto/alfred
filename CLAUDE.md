@@ -244,6 +244,7 @@ One test class per logical group of behaviour (`TestComputeStreak`, `TestMissedC
 - Foreign keys are always explicit; use `ondelete` cascade where appropriate
 - Alembic migrations must be reversible (`downgrade` implemented)
 - After schema changes, verify all affected modules still align
+- Boolean columns use plain adjective/state names (`active`, `enabled`, `all_day`, `case_sensitive`), not an `is_` prefix, and Pydantic fields mirror the column name. Some older columns still use `is_*` (`is_done`, `is_active`, `is_archived`, ...); leave them until they are standardized deliberately, but don't add new ones. State-change timestamps are `<verb>_at` (`archived_at`, `deleted_at`, `completed_at`); prefer a timestamp over a boolean when "when" matters.
 
 ### Dates & timezones
 

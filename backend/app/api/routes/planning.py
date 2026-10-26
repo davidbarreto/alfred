@@ -6,7 +6,11 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from app.api.auth import require_auth
 from app.dependencies import DayPlanServiceDep, PlanningSettingsServiceDep, SavedPlanServiceDep
 from app.features.planning.saved_plans.schemas import DayPlansSave, SavedDayPlanRead
-from app.features.planning.saved_plans.service import SavedPlanConflictError, SavedPlanValidationError
+from app.features.planning.saved_plans.service import (
+    SavedPlanConflictError,
+    SavedPlanNotFoundError,
+    SavedPlanValidationError,
+)
 from app.features.planning.schemas import DayPlanRead, PlanningSettingsRead, PlanningSettingsUpdate
 from app.features.planning.service import MAX_DAYS
 
@@ -20,7 +24,12 @@ def _source(request: Request) -> str:
 
 
 def _http_error(exc: ValueError) -> HTTPException:
-    code = status.HTTP_409_CONFLICT if isinstance(exc, SavedPlanConflictError) else status.HTTP_422_UNPROCESSABLE_ENTITY
+    if isinstance(exc, SavedPlanConflictError):
+        code = status.HTTP_409_CONFLICT
+    elif isinstance(exc, SavedPlanNotFoundError):
+        code = status.HTTP_404_NOT_FOUND
+    else:
+        code = status.HTTP_422_UNPROCESSABLE_ENTITY
     return HTTPException(status_code=code, detail=str(exc))
 
 
@@ -69,4 +78,28 @@ async def get_saved_plans(
     try:
         return await service.get_saved(from_date, to_date, version)
     except SavedPlanValidationError as exc:
+        raise _http_error(exc)
+
+
+@router.post("/saved/{plan_id}/archive", response_model=SavedDayPlanRead)
+async def archive_saved_plan(plan_id: int, service: SavedPlanServiceDep):
+    try:
+        return await service.archive(plan_id)
+    except (SavedPlanNotFoundError, SavedPlanConflictError) as exc:
+        raise _http_error(exc)
+
+
+@router.post("/saved/{plan_id}/restore", response_model=SavedDayPlanRead)
+async def restore_saved_plan(plan_id: int, service: SavedPlanServiceDep):
+    try:
+        return await service.restore(plan_id)
+    except (SavedPlanNotFoundError, SavedPlanConflictError) as exc:
+        raise _http_error(exc)
+
+
+@router.delete("/saved/{plan_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_saved_plan(plan_id: int, service: SavedPlanServiceDep):
+    try:
+        await service.delete(plan_id)
+    except SavedPlanNotFoundError as exc:
         raise _http_error(exc)

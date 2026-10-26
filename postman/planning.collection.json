@@ -2,7 +2,7 @@
   "info": {
     "name": "Alfred - Planning API",
     "_postman_id": "alfred-planning-v1",
-    "description": "Run in order: Health Check \u2192 settings (defaults, update, invalid) \u2192 day plan (single day, 3 days, validation) \u2192 reset settings",
+    "description": "Run in order: Health Check → settings (defaults, update, invalid) → day plan (single day, 3 days, validation) → reset settings",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -584,6 +584,8 @@
               "    pm.expect(json[0].version).to.be.above(json[1].version);",
               "    pm.expect(json[0].archived_at).to.be.null;",
               "    pm.expect(json[1].archived_at).to.be.a('string');",
+              "    pm.environment.set('saved_plan_active_id', json[0].id);",
+              "    pm.environment.set('saved_plan_old_id', json[1].id);",
               "});"
             ],
             "type": "text/javascript"
@@ -895,6 +897,256 @@
               "language": "json"
             }
           }
+        }
+      }
+    },
+    {
+      "name": "21a - Archive Active Version",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Version is archived', () => pm.expect(pm.response.json().archived_at).to.be.a('string'));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/planning/saved/{{saved_plan_active_id}}/archive",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "planning",
+            "saved",
+            "{{saved_plan_active_id}}",
+            "archive"
+          ]
+        }
+      }
+    },
+    {
+      "name": "21b - Archive Again (409)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 409', () => pm.response.to.have.status(409));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/planning/saved/{{saved_plan_active_id}}/archive",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "planning",
+            "saved",
+            "{{saved_plan_active_id}}",
+            "archive"
+          ]
+        }
+      }
+    },
+    {
+      "name": "21c - Restore Older Version",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Version is active', () => pm.expect(pm.response.json().archived_at).to.be.null);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/planning/saved/{{saved_plan_old_id}}/restore",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "planning",
+            "saved",
+            "{{saved_plan_old_id}}",
+            "restore"
+          ]
+        }
+      }
+    },
+    {
+      "name": "21d - Restore Active Version (409)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 409', () => pm.response.to.have.status(409));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/planning/saved/{{saved_plan_old_id}}/restore",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "planning",
+            "saved",
+            "{{saved_plan_old_id}}",
+            "restore"
+          ]
+        }
+      }
+    },
+    {
+      "name": "21e - History After Restore (one active)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Exactly the restored version is active', () => {",
+              "    const active = pm.response.json().filter(p => p.archived_at === null);",
+              "    pm.expect(active).to.have.length(1);",
+              "    pm.expect(active[0].id).to.eql(Number(pm.environment.get('saved_plan_old_id')));",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/planning/saved/history?date=2031-03-03",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "planning",
+            "saved",
+            "history"
+          ],
+          "query": [
+            {
+              "key": "date",
+              "value": "2031-03-03"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "22 - Delete Non-Active Version",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 204', () => pm.response.to.have.status(204));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/planning/saved/{{saved_plan_active_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "planning",
+            "saved",
+            "{{saved_plan_active_id}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "23 - Delete Again (404)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 404', () => pm.response.to.have.status(404));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/planning/saved/{{saved_plan_active_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "planning",
+            "saved",
+            "{{saved_plan_active_id}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "24 - Archive Unknown Plan (404)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 404', () => pm.response.to.have.status(404));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/planning/saved/999999999/archive",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "planning",
+            "saved",
+            "999999999",
+            "archive"
+          ]
         }
       }
     }

@@ -4,10 +4,10 @@ import httpx
 import pytest
 
 
-def _plan(plan_date="2026-10-21", version=2, notes="Light day", items=None):
+def _plan(plan_date="2026-10-21", version=2, notes="Light day", items=None, id=1, archived_at=None):
     return {
-        "id": 1, "plan_date": plan_date, "version": version, "notes": notes, "source": "mcp",
-        "created_at": "2026-10-20T20:00:00Z", "updated_at": "2026-10-20T20:00:00Z", "archived_at": None,
+        "id": id, "plan_date": plan_date, "version": version, "notes": notes, "source": "mcp",
+        "created_at": "2026-10-20T20:00:00Z", "updated_at": "2026-10-20T20:00:00Z", "archived_at": archived_at,
         "items": items if items is not None else [
             {"start": "2026-10-21T09:00:00+01:00", "end": "2026-10-21T10:30:00+01:00", "kind": "task", "ref_id": 4,
              "title": "Write the report", "note": "Before standup"},
@@ -55,7 +55,7 @@ class TestPlanPage:
         assert "09:00–10:30" in text and "Write the report" in text and "Before standup" in text
         assert "18:00–18:40" in text and "Prepare dinner" in text
         assert "Light day" in text
-        assert "Version 2" in text and "1 earlier version" in text
+        assert "Version 2" in text and "Version 1" in text
 
     def test_block_icon_follows_its_kind(self, client, mock_api):
         items = [
@@ -98,10 +98,50 @@ class TestPlanPage:
         text = client.get("/plan?date=2026-10-21").text
         assert "This day was saved empty" in text and "Day off" in text
 
-    def test_page_is_read_only(self, client, mock_api):
+    def test_page_has_no_edit_form(self, client, mock_api):
         mock_api["get"].side_effect = _routes([_plan()], [_plan()], _settings())
         text = client.get("/plan?date=2026-10-21").text.split('id="planning-settings"')[0]
         assert "<form" not in text.split('id="saved-plan"')[1]
+
+    def test_active_version_offers_archive_and_delete(self, client, mock_api):
+        mock_api["get"].side_effect = _routes([_plan(id=5)], [_plan(id=5)], _settings())
+        text = client.get("/plan?date=2026-10-21").text
+        assert 'data-plan-action="archive" data-plan-id="5"' in text
+        assert 'data-plan-action="delete" data-plan-id="5"' in text
+        assert 'data-plan-action="restore"' not in text
+
+    def test_versions_are_listed_with_links(self, client, mock_api):
+        history = [_plan(id=2, version=2), _plan(id=1, version=1, archived_at="2026-10-20T21:00:00Z", items=[])]
+        mock_api["get"].side_effect = _routes([history[0]], history, _settings())
+        text = client.get("/plan?date=2026-10-21").text
+        assert 'id="plan-versions"' in text
+        assert "/plan?date=2026-10-21&version=1" in text and "/plan?date=2026-10-21&version=2" in text
+        assert "0 blocks" in text and "2 blocks" in text and "archived" in text
+
+    def test_single_version_has_no_versions_list(self, client, mock_api):
+        mock_api["get"].side_effect = _routes([_plan()], [_plan()], _settings())
+        assert 'id="plan-versions"' not in client.get("/plan?date=2026-10-21").text
+
+    def test_an_older_version_can_be_viewed_and_restored(self, client, mock_api):
+        old = _plan(id=1, version=1, notes="First draft", archived_at="2026-10-20T21:00:00Z", items=[])
+        mock_api["get"].side_effect = _routes([_plan(id=2)], [_plan(id=2), old], _settings())
+        text = client.get("/plan?date=2026-10-21&version=1").text
+        assert "Version 1 (archived)" in text and "First draft" in text
+        assert "Write the report" not in text.split('id="plan-versions"')[0]
+        assert 'data-plan-action="restore" data-plan-id="1"' in text
+        assert 'data-plan-action="archive"' not in text
+
+    @pytest.mark.parametrize("version", ["9", "abc"])
+    def test_unknown_version_falls_back_to_the_active_plan(self, client, mock_api, version):
+        mock_api["get"].side_effect = _routes([_plan(id=2)], [_plan(id=2)], _settings())
+        assert "Version 2" in client.get(f"/plan?date=2026-10-21&version={version}").text
+
+    def test_day_with_only_archived_versions_lists_them(self, client, mock_api):
+        old = _plan(id=1, version=1, archived_at="2026-10-20T21:00:00Z")
+        mock_api["get"].side_effect = _routes([], [old], _settings())
+        text = client.get("/plan?date=2026-10-21").text
+        assert "every saved version is archived" in text
+        assert 'id="plan-versions"' in text and "version=1" in text
 
     def test_settings_form_is_prefilled(self, client, mock_api):
         mock_api["get"].side_effect = _routes([], [], _settings())
@@ -118,6 +158,31 @@ class TestPlanPage:
 
     def test_requires_authentication(self, anon_client):
         assert anon_client.get("/plan", follow_redirects=False).status_code == 302
+
+
+class TestPlanVersionWrites:
+    def test_archive_is_forwarded(self, client, mock_api):
+        mock_api["post"].return_value = _plan()
+        assert client.post("/plan/saved/3/archive").status_code == 200
+        mock_api["post"].assert_awaited_once_with("/planning/saved/3/archive")
+
+    def test_restore_is_forwarded(self, client, mock_api):
+        mock_api["post"].return_value = _plan()
+        assert client.post("/plan/saved/3/restore").status_code == 200
+        mock_api["post"].assert_awaited_once_with("/planning/saved/3/restore")
+
+    def test_delete_is_forwarded(self, client, mock_api):
+        mock_api["delete"].return_value = None
+        assert client.delete("/plan/saved/3").status_code == 200
+        mock_api["delete"].assert_awaited_once_with("/planning/saved/3")
+
+    def test_backend_message_is_relayed(self, client, mock_api):
+        request = httpx.Request("POST", "http://api/x")
+        mock_api["post"].side_effect = httpx.HTTPStatusError(
+            "conflict", request=request, response=httpx.Response(409, json={"detail": "This version is already archived"}, request=request)
+        )
+        resp = client.post("/plan/saved/3/archive")
+        assert resp.status_code == 409 and resp.json() == {"error": "This version is already archived"}
 
 
 class TestSettingsWrite:

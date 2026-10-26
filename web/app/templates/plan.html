@@ -8,7 +8,7 @@
   <div class="flex items-center justify-between gap-3 flex-wrap">
     <div>
       <h1 class="text-base font-semibold text-gray-900">Plan</h1>
-      <p class="text-xs text-gray-400">The plan you saved with Claude. Read-only: ask Claude to change it.</p>
+      <p class="text-xs text-gray-400">The plan you saved with Claude. Ask Claude to change it; here you can browse versions, archive or delete.</p>
     </div>
     <div class="flex items-center gap-2">
       <a href="/plan?date={{ prev_day }}" class="btn btn-xs btn-ghost" aria-label="Previous day"><i class="ti ti-chevron-left"></i></a>
@@ -32,14 +32,22 @@
   {% if not available %}
   <div class="card bg-white"><div class="card-body p-5"><p class="text-sm text-gray-400">Plans are unavailable right now.</p></div></div>
   {% elif not plan %}
-  <div class="card bg-white"><div class="card-body p-5"><p class="text-sm text-gray-400">No plan saved for this day. Plan the week with Claude and save it.</p></div></div>
+  <div class="card bg-white"><div class="card-body p-5"><p class="text-sm text-gray-400">{% if history %}No active plan for this day: every saved version is archived. Pick one below to view or restore it.{% else %}No plan saved for this day. Plan the week with Claude and save it.{% endif %}</p></div></div>
   {% else %}
   <div class="card bg-white" id="saved-plan">
     <div class="card-body p-5 space-y-4">
-      <div class="flex items-center justify-between text-xs text-gray-400">
-        <span>Version {{ plan.version }} · saved {{ plan.created_at | timeago }}</span>
-        {% if history | length > 1 %}<span>{{ history | length - 1 }} earlier version{{ '' if history | length == 2 else 's' }}</span>{% endif %}
+      <div class="flex items-center justify-between gap-3 flex-wrap text-xs text-gray-400">
+        <span>Version {{ plan.version }}{% if plan.archived_at %} (archived){% endif %} · saved {{ plan.created_at | timeago }}</span>
+        <span class="flex items-center gap-2">
+          {% if plan.archived_at %}
+          <button type="button" class="btn btn-xs btn-outline" data-plan-action="restore" data-plan-id="{{ plan.id }}">Restore</button>
+          {% else %}
+          <button type="button" class="btn btn-xs btn-outline" data-plan-action="archive" data-plan-id="{{ plan.id }}">Archive</button>
+          {% endif %}
+          <button type="button" class="btn btn-xs btn-outline btn-error" data-plan-action="delete" data-plan-id="{{ plan.id }}">Delete</button>
+        </span>
       </div>
+      {% if plan.archived_at %}<p class="text-xs text-gray-500">You are viewing an archived version. Restore it to make it the plan for this day.</p>{% endif %}
       {% if plan.notes %}<p class="text-sm text-gray-700 whitespace-pre-line">{{ plan.notes }}</p>{% endif %}
       {% if items %}
       <ul class="divide-y divide-gray-100">
@@ -57,6 +65,28 @@
       {% else %}
       <p class="text-sm text-gray-400">This day was saved empty.</p>
       {% endif %}
+    </div>
+  </div>
+  {% endif %}
+
+  {% if history | length > 1 or (history and not active_plan) %}
+  <div class="card bg-white" id="plan-versions">
+    <div class="card-body p-5 space-y-3">
+      <p class="text-sm font-semibold text-gray-900">Versions</p>
+      <ul class="divide-y divide-gray-100">
+        {% for v in history %}
+        <li class="py-2 flex items-center justify-between gap-3 text-sm">
+          <a href="/plan?date={{ day.isoformat() }}&version={{ v.version }}"
+             class="{% if plan and v.id == plan.id %}font-medium text-[#0C447C]{% else %}text-gray-700 hover:underline{% endif %}">
+            Version {{ v.version }}
+          </a>
+          <span class="text-xs text-gray-400">
+            {{ v['items'] | length }} block{{ '' if v['items'] | length == 1 else 's' }} · {{ v.created_at | timeago }} · {{ v.source }}
+            · {% if v.archived_at %}archived{% else %}active{% endif %}
+          </span>
+        </li>
+        {% endfor %}
+      </ul>
     </div>
   </div>
   {% endif %}
@@ -99,6 +129,23 @@
 </div>
 
 <script>
+document.querySelectorAll('[data-plan-action]').forEach((button) => {
+  button.addEventListener('click', async () => {
+    const action = button.dataset.planAction;
+    if (action === 'delete' && !confirm('Delete this version? This cannot be undone.')) return;
+    button.disabled = true;
+    const url = `/plan/saved/${button.dataset.planId}` + (action === 'delete' ? '' : `/${action}`);
+    const res = await fetch(url, { method: action === 'delete' ? 'DELETE' : 'POST' });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      alert(data.error || 'Something went wrong.');
+      button.disabled = false;
+      return;
+    }
+    location.href = `/plan?date={{ day.isoformat() }}`;
+  });
+});
+
 document.getElementById('settings-form')?.addEventListener('submit', async (event) => {
   event.preventDefault();
   const form = new FormData(event.target);

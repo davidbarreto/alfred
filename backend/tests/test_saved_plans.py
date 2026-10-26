@@ -12,6 +12,7 @@ from app.features.planning.saved_plans.repository import DayPlanRepository
 from app.features.planning.saved_plans.schemas import DayPlanSave, DayPlansSave, PlanBlock
 from app.features.planning.saved_plans.service import (
     SavedPlanConflictError,
+    SavedPlanNotFoundError,
     SavedPlanService,
     SavedPlanValidationError,
 )
@@ -228,6 +229,53 @@ class TestRead:
         assert (item.start, item.ref_id, item.title) == ("2026-10-21T09:00:00+01:00", 4, "Write")
 
 
+class TestManage:
+    async def test_archive_marks_the_active_version(self, service, repo_mock):
+        repo_mock.get_plan.return_value = _row(id=7, version=3)
+        repo_mock.archive_plan.side_effect = lambda plan: _row(id=plan.id, version=plan.version, archived_at=_NOW)
+
+        plan = await service.archive(7)
+
+        assert plan.id == 7 and plan.archived_at == _NOW
+
+    async def test_archiving_an_archived_version_is_a_conflict(self, service, repo_mock):
+        repo_mock.get_plan.return_value = _row(archived_at=_NOW)
+        with pytest.raises(SavedPlanConflictError, match="already archived"):
+            await service.archive(1)
+        repo_mock.archive_plan.assert_not_called()
+
+    async def test_restore_reactivates_an_archived_version(self, service, repo_mock):
+        repo_mock.get_plan.return_value = _row(id=4, version=1, archived_at=_NOW)
+        repo_mock.restore_plan.side_effect = lambda plan: _row(id=plan.id, version=plan.version)
+
+        plan = await service.restore(4)
+
+        assert plan.archived_at is None and plan.version == 1
+
+    async def test_restoring_the_active_version_is_a_conflict(self, service, repo_mock):
+        repo_mock.get_plan.return_value = _row()
+        with pytest.raises(SavedPlanConflictError, match="already the active"):
+            await service.restore(1)
+        repo_mock.restore_plan.assert_not_called()
+
+    async def test_a_concurrent_save_during_restore_is_a_conflict(self, service, repo_mock):
+        repo_mock.get_plan.return_value = _row(archived_at=_NOW)
+        repo_mock.restore_plan.side_effect = IntegrityError("stmt", {}, Exception("duplicate"))
+        with pytest.raises(SavedPlanConflictError):
+            await service.restore(1)
+
+    async def test_delete_removes_the_version(self, service, repo_mock):
+        repo_mock.get_plan.return_value = _row(id=9)
+        await service.delete(9)
+        repo_mock.delete_plan.assert_awaited_once_with(9)
+
+    @pytest.mark.parametrize("action", ["archive", "restore", "delete"])
+    async def test_unknown_id_is_not_found(self, service, repo_mock, action):
+        repo_mock.get_plan.return_value = None
+        with pytest.raises(SavedPlanNotFoundError):
+            await getattr(service, action)(99)
+
+
 def _session(scalar=None, rows=None):
     session = AsyncMock(spec=AsyncSession)
     session.add = MagicMock()
@@ -290,6 +338,43 @@ class TestRepository:
         session = _session()
         await DayPlanRepository(session).get_history(date(2026, 10, 21))
         assert "ORDER BY planning.day_plans.version DESC" in _sql(session.execute.call_args.args[0])
+
+    async def test_get_plan_by_id(self):
+        session = _session()
+        await DayPlanRepository(session).get_plan(5)
+        assert "day_plans.id = 5" in _sql(session.execute.call_args.args[0])
+
+    async def test_archive_commits_the_timestamp(self):
+        session = _session()
+        plan = _row()
+        await DayPlanRepository(session).archive_plan(plan)
+        assert plan.archived_at is not None
+        session.commit.assert_awaited_once()
+
+    async def test_restore_archives_the_active_plan_before_clearing_this_one(self):
+        session = _session()
+        plan = _row(plan_date=date(2026, 10, 21), archived_at=_NOW)
+
+        await DayPlanRepository(session).restore_plan(plan)
+
+        sql = _sql(session.execute.call_args.args[0])
+        assert sql.startswith("UPDATE planning.day_plans SET") and "archived_at=now()" in sql
+        assert "plan_date = '2026-10-21'" in sql and "archived_at IS NULL" in sql
+        assert plan.archived_at is None
+        session.commit.assert_awaited_once()
+
+    async def test_failed_restore_rolls_back(self):
+        session = _session()
+        session.commit.side_effect = IntegrityError("stmt", {}, Exception("duplicate"))
+        with pytest.raises(IntegrityError):
+            await DayPlanRepository(session).restore_plan(_row(archived_at=_NOW))
+        session.rollback.assert_awaited_once()
+
+    async def test_delete_removes_one_row_by_id(self):
+        session = _session()
+        await DayPlanRepository(session).delete_plan(5)
+        assert _sql(session.execute.call_args.args[0]).startswith("DELETE FROM planning.day_plans WHERE planning.day_plans.id = 5")
+        session.commit.assert_awaited_once()
 
     async def test_activity_refs_are_checked_against_the_activities_table(self):
         session = _session(rows=[1])

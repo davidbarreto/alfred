@@ -23,7 +23,11 @@ class SavedPlanValidationError(ValueError):
 
 
 class SavedPlanConflictError(ValueError):
-    """Another save for the same date won the race (maps to 409)."""
+    """Another save for the same date won the race, or the plan is already in the requested state (maps to 409)."""
+
+
+class SavedPlanNotFoundError(ValueError):
+    """No saved plan with that id (maps to 404)."""
 
 
 class SavedPlanService:
@@ -70,6 +74,37 @@ class SavedPlanService:
 
     async def get_history(self, plan_date: date) -> list[SavedDayPlanRead]:
         return [SavedDayPlanRead.model_validate(p) for p in await self._repo.get_history(plan_date)]
+
+    async def archive(self, plan_id: int) -> SavedDayPlanRead:
+        plan = await self._get_or_raise(plan_id)
+        if plan.archived_at is not None:
+            raise SavedPlanConflictError("This version is already archived")
+        plan = await self._repo.archive_plan(plan)
+        logger.info("Day plan archived: id=%d date=%s version=%d", plan.id, plan.plan_date, plan.version)
+        return SavedDayPlanRead.model_validate(plan)
+
+    async def restore(self, plan_id: int) -> SavedDayPlanRead:
+        plan = await self._get_or_raise(plan_id)
+        if plan.archived_at is None:
+            raise SavedPlanConflictError("This version is already the active plan")
+        try:
+            plan = await self._repo.restore_plan(plan)
+        except IntegrityError as exc:
+            raise SavedPlanConflictError("Another save for this date ran at the same time; try again") from exc
+        logger.info("Day plan restored: id=%d date=%s version=%d", plan.id, plan.plan_date, plan.version)
+        return SavedDayPlanRead.model_validate(plan)
+
+    async def delete(self, plan_id: int) -> None:
+        plan = await self._get_or_raise(plan_id)
+        await self._repo.delete_plan(plan_id)
+        logger.info("Day plan deleted: id=%d date=%s version=%d", plan.id, plan.plan_date, plan.version)
+
+    async def _get_or_raise(self, plan_id: int):
+        plan = await self._repo.get_plan(plan_id)
+        if plan is None:
+            logger.debug("Day plan not found: id=%d", plan_id)
+            raise SavedPlanNotFoundError(f"Saved plan {plan_id} not found")
+        return plan
 
     async def _ref_problems(self, data: DayPlansSave) -> list[str]:
         wanted: dict[str, set[int]] = {}

@@ -101,6 +101,8 @@ class TestSavedRoutes:
         svc.save.return_value = [plan]
         svc.get_saved.return_value = [plan]
         svc.get_history.return_value = [plan]
+        svc.archive.return_value = plan
+        svc.restore.return_value = plan
         return svc
 
     @pytest.fixture
@@ -137,6 +139,39 @@ class TestSavedRoutes:
         saved_service.save.side_effect = SavedPlanValidationError("Unknown task ref_id(s): 999")
         response = saved_client.post("/planning/saved", json=self._BODY, headers=AUTH)
         assert response.status_code == 422 and "999" in response.json()["detail"]
+
+    def test_archive(self, saved_client, saved_service):
+        response = saved_client.post("/planning/saved/1/archive", headers=AUTH)
+        assert response.status_code == 200
+        saved_service.archive.assert_awaited_once_with(1)
+
+    def test_restore(self, saved_client, saved_service):
+        response = saved_client.post("/planning/saved/1/restore", headers=AUTH)
+        assert response.status_code == 200
+        saved_service.restore.assert_awaited_once_with(1)
+
+    def test_delete_is_204(self, saved_client, saved_service):
+        response = saved_client.delete("/planning/saved/1", headers=AUTH)
+        assert response.status_code == 204
+        saved_service.delete.assert_awaited_once_with(1)
+
+    @pytest.mark.parametrize("method,path,action", [
+        ("post", "/planning/saved/9/archive", "archive"),
+        ("post", "/planning/saved/9/restore", "restore"),
+        ("delete", "/planning/saved/9", "delete"),
+    ])
+    def test_unknown_plan_is_404(self, saved_client, saved_service, method, path, action):
+        from app.features.planning.saved_plans.service import SavedPlanNotFoundError
+
+        getattr(saved_service, action).side_effect = SavedPlanNotFoundError("Saved plan 9 not found")
+        assert getattr(saved_client, method)(path, headers=AUTH).status_code == 404
+
+    @pytest.mark.parametrize("path,action", [("/planning/saved/1/archive", "archive"), ("/planning/saved/1/restore", "restore")])
+    def test_wrong_state_is_409(self, saved_client, saved_service, path, action):
+        from app.features.planning.saved_plans.service import SavedPlanConflictError
+
+        getattr(saved_service, action).side_effect = SavedPlanConflictError("already")
+        assert saved_client.post(path, headers=AUTH).status_code == 409
 
     def test_concurrent_save_is_409(self, saved_client, saved_service):
         from app.features.planning.saved_plans.service import SavedPlanConflictError

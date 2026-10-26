@@ -164,3 +164,43 @@ class TestTaskCompletionUpdate:
         from app.features.organizer.tasks.schemas import TaskCompletionUpdate
         with pytest.raises(ValidationError):
             TaskCompletionUpdate(occurrence_date=None, completed_on=None)
+
+
+class TestTaskReadSerializesWithOffset:
+    """Task datetimes are stored as naive local time; JSON output states the offset (as
+    day_plan and events do) so a client never has to guess the zone."""
+
+    def _read(self, **overrides) -> TaskRead:
+        data = dict(id=1, title="Pay rent", created_at=datetime(2026, 10, 1, 9, 30))
+        data.update(overrides)
+        return TaskRead(**data)
+
+    def test_winter_datetimes_carry_the_lisbon_offset(self):
+        task = self._read(
+            deadline=datetime(2026, 11, 15), available_from=datetime(2026, 11, 1, 8, 0),
+            completed_at=datetime(2026, 11, 16, 10, 0),
+        )
+
+        dumped = task.model_dump(mode="json")
+
+        assert dumped["deadline"] == "2026-11-15T00:00:00+00:00"
+        assert dumped["available_from"] == "2026-11-01T08:00:00+00:00"
+        assert dumped["completed_at"] == "2026-11-16T10:00:00+00:00"
+
+    def test_summer_datetimes_follow_dst(self):
+        assert self._read(deadline=datetime(2026, 7, 15, 12, 0)).model_dump(mode="json")["deadline"] == (
+            "2026-07-15T12:00:00+01:00"
+        )
+
+    def test_created_at_carries_an_offset(self):
+        assert self._read().model_dump(mode="json")["created_at"] == "2026-10-01T09:30:00+01:00"
+
+    def test_missing_datetimes_stay_null(self):
+        dumped = self._read().model_dump(mode="json")
+
+        assert dumped["deadline"] is None
+        assert dumped["available_from"] is None
+        assert dumped["completed_at"] is None
+
+    def test_python_values_stay_naive(self):
+        assert self._read(deadline=datetime(2026, 11, 15)).deadline.tzinfo is None

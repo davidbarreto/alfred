@@ -177,6 +177,9 @@
               "    pm.expect(json).to.have.property('streak');",
               "    pm.expect(json).to.have.property('total_completions');",
               "    pm.expect(json).to.have.property('is_done_today');",
+              "});",
+              "pm.test('created_at states its UTC offset', () => {",
+              "    pm.expect(pm.response.json().created_at).to.match(/(Z|[+-]\\d{2}:\\d{2})$/);",
               "});"
             ],
             "type": "text/javascript"

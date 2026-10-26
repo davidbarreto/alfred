@@ -1,9 +1,11 @@
 from datetime import date, datetime
 from typing import Annotated, Any, Literal, Optional, List
-from pydantic import BaseModel, Field, field_validator, model_validator
+from pydantic import BaseModel, Field, field_serializer, field_validator, model_validator
 from pydantic_core import PydanticCustomError
 from typing import Literal, TypeAlias
 from fastapi import Query
+
+from app.shared.timezone import local_timezone
 
 TaskStatus: TypeAlias = Literal["TODO", "DOING", "DONE", "CANCELLED"]
 TaskPriority: TypeAlias = Literal["LOW", "MEDIUM", "HIGH"]
@@ -63,6 +65,15 @@ class TaskRead(TaskBase):
     @classmethod
     def coerce_tags(cls, v: Any) -> list[str]:
         return [item.name if hasattr(item, "name") else item for item in v]
+
+    @field_serializer("deadline", "available_from", "created_at", "completed_at", when_used="json")
+    def serialize_with_offset(self, value: datetime | None) -> str | None:
+        # Stored values are naive local time; attaching the zone makes the offset explicit
+        # (and DST-correct) for API and MCP consumers, matching events and day_plan.
+        if value is None:
+            return None
+        aware = value.replace(tzinfo=local_timezone()) if value.tzinfo is None else value
+        return aware.isoformat()
 
 class TaskFilters:
     def __init__(

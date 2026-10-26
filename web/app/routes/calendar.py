@@ -203,6 +203,7 @@ def _event_payload(
     presence: str | None = None,
     travel_minutes: str | None = None,
     routine_id: str | None = None,
+    tags: str | None = None,
 ) -> dict:
     is_all_day = bool(all_day)
     if is_all_day:
@@ -225,6 +226,7 @@ def _event_payload(
         "presence": presence or "in_person",
         "travel_minutes": _whole_number(travel_minutes, "Travel time"),
         "routine_id": _whole_number(routine_id, "Routine") if routine_id else None,
+        "tags": [t.strip() for t in (tags or "").split(",") if t.strip()],
     }
 
 
@@ -245,12 +247,13 @@ async def create_event(
     presence: Annotated[str | None, Form()] = None,
     travel_minutes: Annotated[str | None, Form()] = None,
     routine_id: Annotated[str | None, Form()] = None,
+    tags: Annotated[str | None, Form()] = None,
 ):
     try:
         payload = _event_payload(
             title, start_date, start_time, end_time, location, all_day,
             recurrence_rule, timezone, end_date, notification_profile,
-            availability, presence, travel_minutes, routine_id,
+            availability, presence, travel_minutes, routine_id, tags,
         )
     except ValueError as exc:
         return HTMLResponse(str(exc), status_code=422)
@@ -286,12 +289,13 @@ async def update_event(
     presence: Annotated[str | None, Form()] = None,
     travel_minutes: Annotated[str | None, Form()] = None,
     routine_id: Annotated[str | None, Form()] = None,
+    tags: Annotated[str | None, Form()] = None,
 ):
     try:
         payload = _event_payload(
             title, start_date, start_time, end_time, location, all_day,
             recurrence_rule, timezone, end_date, notification_profile,
-            availability, presence, travel_minutes, routine_id,
+            availability, presence, travel_minutes, routine_id, tags,
         )
     except ValueError as exc:
         return HTMLResponse(str(exc), status_code=422)

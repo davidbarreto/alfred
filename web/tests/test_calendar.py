@@ -133,6 +133,18 @@ class TestCalendarDay:
 
 
 class TestCreateEvent:
+    def test_sends_comma_separated_tags_as_list(self, client, mock_api):
+        mock_api["post"].return_value = _event(id=5, title="Standup")
+
+        resp = client.post("/calendar/", data={
+            "title": "Standup",
+            "start_date": "2026-07-14",
+            "tags": "work, office,,",
+        })
+
+        assert resp.status_code == 204
+        assert mock_api["post"].await_args.kwargs["json"]["tags"] == ["work", "office"]
+
     def test_creates_event_without_recurrence(self, client, mock_api):
         mock_api["post"].return_value = _event(id=5, title="Team sync")
 
@@ -157,6 +169,7 @@ class TestCreateEvent:
             "presence": "in_person",
             "travel_minutes": 0,
             "routine_id": None,
+            "tags": [],
         })
 
     def test_creates_recurring_event(self, client, mock_api):
@@ -184,6 +197,7 @@ class TestCreateEvent:
             "presence": "in_person",
             "travel_minutes": 0,
             "routine_id": None,
+            "tags": [],
         })
 
     def test_creates_event_with_custom_recurrence_rule(self, client, mock_api):
@@ -211,6 +225,7 @@ class TestCreateEvent:
             "presence": "in_person",
             "travel_minutes": 0,
             "routine_id": None,
+            "tags": [],
         })
 
     def test_creates_event_with_timezone(self, client, mock_api):
@@ -227,6 +242,7 @@ class TestCreateEvent:
             "presence": "in_person",
             "travel_minutes": 0,
             "routine_id": None,
+            "tags": [],
         })
 
         assert resp.status_code == 204
@@ -243,6 +259,7 @@ class TestCreateEvent:
             "presence": "in_person",
             "travel_minutes": 0,
             "routine_id": None,
+            "tags": [],
         })
 
     def test_creates_multi_day_all_day_event(self, client, mock_api):
@@ -269,6 +286,7 @@ class TestCreateEvent:
             "presence": "in_person",
             "travel_minutes": 0,
             "routine_id": None,
+            "tags": [],
         })
 
     def test_creates_all_day_event_defaults_end_date_to_start_date(self, client, mock_api):
@@ -294,6 +312,7 @@ class TestCreateEvent:
             "presence": "in_person",
             "travel_minutes": 0,
             "routine_id": None,
+            "tags": [],
         })
 
     def test_returns_422_when_backend_create_fails(self, client, mock_api):
@@ -311,6 +330,16 @@ class TestCreateEvent:
 
 
 class TestUpdateEvent:
+    def test_update_sends_tags_and_empty_clears_them(self, client, mock_api):
+        mock_api["patch"].return_value = _event(id=3)
+        form = {"title": "Standup", "start_date": "2026-07-14"}
+
+        client.patch("/calendar/3", data={**form, "tags": "work"})
+        client.patch("/calendar/3", data={**form, "tags": ""})
+
+        sent = [call.kwargs["json"]["tags"] for call in mock_api["patch"].await_args_list]
+        assert sent == [["work"], []]
+
     def test_updates_timed_event(self, client, mock_api):
         mock_api["patch"].return_value = _event(id=3, title="Team sync")
 
@@ -336,6 +365,7 @@ class TestUpdateEvent:
             "presence": "in_person",
             "travel_minutes": 0,
             "routine_id": None,
+            "tags": [],
         })
 
     def test_updates_all_day_event(self, client, mock_api):
@@ -361,6 +391,7 @@ class TestUpdateEvent:
             "presence": "in_person",
             "travel_minutes": 0,
             "routine_id": None,
+            "tags": [],
         })
 
     def test_updates_all_day_event_to_span_multiple_days(self, client, mock_api):
@@ -387,6 +418,7 @@ class TestUpdateEvent:
             "presence": "in_person",
             "travel_minutes": 0,
             "routine_id": None,
+            "tags": [],
         })
 
     def test_updates_recurrence_rule(self, client, mock_api):
@@ -414,6 +446,7 @@ class TestUpdateEvent:
             "presence": "in_person",
             "travel_minutes": 0,
             "routine_id": None,
+            "tags": [],
         })
 
     def test_updates_timezone(self, client, mock_api):
@@ -430,6 +463,7 @@ class TestUpdateEvent:
             "presence": "in_person",
             "travel_minutes": 0,
             "routine_id": None,
+            "tags": [],
         })
 
         assert resp.status_code == 204
@@ -446,6 +480,7 @@ class TestUpdateEvent:
             "presence": "in_person",
             "travel_minutes": 0,
             "routine_id": None,
+            "tags": [],
         })
 
     def test_returns_422_when_backend_update_fails(self, client, mock_api):

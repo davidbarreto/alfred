@@ -197,6 +197,15 @@
         />
       </div>
       <div>
+        <label class="text-xs text-gray-500 mb-1 block">Tags <span class="text-gray-300">(comma-separated)</span></label>
+        <input
+          name="tags"
+          type="text"
+          placeholder="work, office"
+          class="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white w-full focus:outline-none focus:ring-1 focus:ring-[#378ADD]"
+        />
+      </div>
+      <div>
         <label class="text-xs text-gray-500 mb-1 block">Reminder profile</label>
         <select
           name="notification_profile"
@@ -406,6 +415,7 @@ function openEditEvent(ev) {
   form.querySelector('[name="title"]').value = ev.title;
   form.querySelector('[name="start_date"]').value = ev.start_datetime.slice(0, 10);
   form.querySelector('[name="location"]').value = ev.location || "";
+  form.querySelector('[name="tags"]').value = (ev.tags || []).join(", ");
   form.querySelector('[name="notification_profile"]').value = ev.notification_profile || "";
   form.querySelector('[name="availability"]').value = ev.availability || "";
   form.querySelector('[name="presence"]').value = ev.presence || "in_person";

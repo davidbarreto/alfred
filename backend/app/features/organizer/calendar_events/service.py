@@ -1,5 +1,6 @@
 import logging
 from datetime import date, datetime, time
+from typing import Any
 
 from dateutil.relativedelta import relativedelta
 from fastapi import HTTPException, status
@@ -30,6 +31,28 @@ _SYNC_LOOKAHEAD = relativedelta(months=3)
 # picks specific keys anyway) and sync() never writes them. An update touching only
 # these fields does not need Google, so it works without OAuth and skips the API call.
 _ALFRED_ONLY_FIELDS = frozenset({"availability", "presence", "travel_minutes", "routine_id", "tags"})
+
+
+def _comparable(field: str, value: Any) -> Any:
+    if field == "tags":
+        return sorted(getattr(tag, "name", tag) for tag in value or [])
+    if isinstance(value, datetime) and value.tzinfo is not None:
+        return value.astimezone(local_timezone()).replace(tzinfo=None)
+    return value
+
+
+def _changed_fields(event: Any, event_update: EventUpdate) -> dict[str, Any]:
+    """Fields of the update that differ from the stored event.
+
+    The portal posts the whole form on every save, so unchanged fields must not count as
+    edits: an update that only changes Alfred-only fields never needs Google.
+    """
+    changed: dict[str, Any] = {}
+    for field, value in event_update.model_dump(exclude_unset=True).items():
+        if field != "invitees" and _comparable(field, value) == _comparable(field, getattr(event, field)):
+            continue
+        changed[field] = value
+    return changed
 
 
 class CalendarEventService:
@@ -125,13 +148,15 @@ class CalendarEventService:
         return EventRead.model_validate(event_orm)
 
     async def update_event(self, event_id: int, event_update: EventUpdate) -> EventRead | None:
-        changed = event_update.model_dump(exclude_unset=True)
-        if changed and set(changed) <= _ALFRED_ONLY_FIELDS:
-            return await self._update_alfred_only(event_id, event_update)
+        event = await self._repo.get_event(event_id) if event_update.model_fields_set else None
+        if event is not None:
+            changed = _changed_fields(event, event_update)
+            if set(changed) <= _ALFRED_ONLY_FIELDS:
+                return await self._update_alfred_only(event_id, EventUpdate(**changed))
         if self._provider is None:
             logger.warning("CalendarEvent update: Google Calendar not authorized")
             raise _OAUTH_REQUIRED
-        event = await self._repo.get_event(event_id)
+        event = event or await self._repo.get_event(event_id)
         if event is None:
             logger.debug("CalendarEvent update: id=%d not found", event_id)
             return None
@@ -153,9 +178,6 @@ class CalendarEventService:
         return EventRead.model_validate(event_orm)
 
     async def _update_alfred_only(self, event_id: int, event_update: EventUpdate) -> EventRead | None:
-        if await self._repo.get_event(event_id) is None:
-            logger.debug("CalendarEvent update: id=%d not found", event_id)
-            return None
         event_orm = await self._repo.update_event(event_id, event_update)
         logger.info(
             "CalendarEvent planning fields updated: id=%d fields=%s",

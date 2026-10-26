@@ -18,6 +18,7 @@ from app.features.organizer.calendar_events.schemas import EventCreate, EventRea
 from app.features.organizer.calendar_events.service import CalendarEventService
 from app.features.organizer.calendar_events.tables import CalendarEvent
 from app.integrations.google_calendar.provider import GoogleCalendarProvider
+from app.shared.timezone import local_timezone
 
 _START = datetime(2026, 10, 21, 20, 0)
 _END = datetime(2026, 10, 21, 21, 0)
@@ -116,6 +117,43 @@ class TestUpdateKeepsPlanningFieldsLocal:
         await svc.update_event(1, EventUpdate(tags=["work"]))
 
         svc._repo.update_event.assert_awaited_once()
+
+    async def test_full_form_post_that_only_changes_tags_makes_no_google_call(self, service, provider):
+        # The portal posts every field on each save; unchanged ones must not count as edits.
+        await service.update_event(1, EventUpdate(
+            title="Class", start_datetime=_START, end_datetime=_END, all_day=False, location=None,
+            recurrence_rule=None, timezone=None, notification_profile=None, availability=None,
+            presence="in_person", travel_minutes=0, routine_id=None, tags=["work"],
+        ))
+
+        provider.update.assert_not_called()
+        persisted = service._repo.update_event.call_args.args[1]
+        assert persisted.model_dump(exclude_unset=True) == {"tags": ["work"]}
+
+    async def test_unchanged_timezone_aware_datetimes_are_not_edits(self, service, provider):
+        aware_start = _START.replace(tzinfo=local_timezone())
+
+        await service.update_event(1, EventUpdate(start_datetime=aware_start, tags=["work"]))
+
+        provider.update.assert_not_called()
+
+    async def test_unchanged_tags_in_a_different_order_are_not_edits(self, service, provider):
+        service._repo.get_event.return_value = _orm(tags=[SimpleNamespace(name="a"), SimpleNamespace(name="b")])
+
+        await service.update_event(1, EventUpdate(tags=["b", "a"], travel_minutes=10))
+
+        provider.update.assert_not_called()
+        persisted = service._repo.update_event.call_args.args[1]
+        assert persisted.model_dump(exclude_unset=True) == {"travel_minutes": 10}
+
+    async def test_changed_title_with_tags_still_goes_to_google(self, service, provider):
+        provider.update.return_value = {
+            "start_datetime": _START, "end_datetime": _END, "timezone": "Europe/Lisbon", "id": "g-1",
+        }
+
+        await service.update_event(1, EventUpdate(title="Renamed", start_datetime=_START, tags=["work"]))
+
+        provider.update.assert_awaited_once()
 
     async def test_planning_only_update_works_without_google_authorization(self):
         svc = CalendarEventService(provider=None, session=AsyncMock())

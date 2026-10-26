@@ -3,6 +3,8 @@ import re
 
 import httpx
 
+from app.routes.calendar import _add_display_times
+
 
 def _event(id=1, title="Marriage Anniversary", start="2026-07-14T00:00:00", end="2026-07-14T23:59:59", all_day=False, location=None, tags=None, timezone=None):
     return {
@@ -11,6 +13,39 @@ def _event(id=1, title="Marriage Anniversary", start="2026-07-14T00:00:00", end=
         "host": None, "invitees": [], "tags": tags or [], "recurrence_rule": None,
         "timezone": timezone,
     }
+
+
+class TestEditFormWallTimes:
+    """The edit form posts wall times together with the event's timezone, so the times it
+    is prefilled with must be wall times in that timezone, not in the app's local zone."""
+
+    def test_times_are_expressed_in_the_events_own_timezone(self):
+        ev = _event(start="2026-07-14T14:00:00+01:00", end="2026-07-14T15:30:00+01:00", timezone="America/Chicago")
+
+        _add_display_times([ev], "Europe/Lisbon")
+
+        assert (ev["form_start_date"], ev["form_start_time"], ev["form_end_time"]) == ("2026-07-14", "08:00", "09:30")
+
+    def test_date_follows_the_event_timezone_across_midnight(self):
+        ev = _event(start="2026-07-14T01:00:00+01:00", end="2026-07-14T02:00:00+01:00", timezone="America/Chicago")
+
+        _add_display_times([ev], "Europe/Lisbon")
+
+        assert (ev["form_start_date"], ev["form_start_time"]) == ("2026-07-13", "19:00")
+
+    def test_event_without_timezone_keeps_app_local_times(self):
+        ev = _event(start="2026-07-14T14:00:00+01:00", end="2026-07-14T15:00:00+01:00", timezone=None)
+
+        _add_display_times([ev], "Europe/Lisbon")
+
+        assert (ev["form_start_date"], ev["form_start_time"], ev["form_end_time"]) == ("2026-07-14", "14:00", "15:00")
+
+    def test_unknown_timezone_name_falls_back_to_app_local_times(self):
+        ev = _event(start="2026-07-14T14:00:00+01:00", end="2026-07-14T15:00:00+01:00", timezone="Not/AZone")
+
+        _add_display_times([ev], "Europe/Lisbon")
+
+        assert ev["form_start_time"] == "14:00"
 
 
 class TestCalendarPage:

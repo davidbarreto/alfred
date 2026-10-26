@@ -413,7 +413,7 @@ function openEditEvent(ev) {
   const form = document.getElementById("new-event-form");
   form.querySelector('[name="event_id"]').value = ev.id;
   form.querySelector('[name="title"]').value = ev.title;
-  form.querySelector('[name="start_date"]').value = ev.start_datetime.slice(0, 10);
+  form.querySelector('[name="start_date"]').value = ev.all_day ? ev.start_datetime.slice(0, 10) : ev.form_start_date;
   form.querySelector('[name="location"]').value = ev.location || "";
   form.querySelector('[name="tags"]').value = (ev.tags || []).join(", ");
   form.querySelector('[name="notification_profile"]').value = ev.notification_profile || "";
@@ -438,8 +438,8 @@ function openEditEvent(ev) {
   if (ev.all_day) {
     form.querySelector('[name="end_date"]').value = ev.end_datetime.slice(0, 10);
   } else {
-    form.querySelector('[name="start_time"]').value = ev.start_datetime.slice(11, 16);
-    form.querySelector('[name="end_time"]').value = ev.end_datetime.slice(11, 16);
+    form.querySelector('[name="start_time"]').value = ev.form_start_time;
+    form.querySelector('[name="end_time"]').value = ev.form_end_time;
   }
   document.getElementById("new-event-modal").showModal();
   setTimeout(() => document.getElementById("event-title").focus(), 50);

@@ -28,6 +28,13 @@ def _as_aware(value: str, default_zone: ZoneInfo) -> datetime:
     return parsed if parsed.tzinfo is not None else parsed.replace(tzinfo=default_zone)
 
 
+def _event_zone(name: str | None, fallback: ZoneInfo) -> ZoneInfo:
+    try:
+        return ZoneInfo(name) if name else fallback
+    except (KeyError, ValueError):
+        return fallback
+
+
 def _add_display_times(events: list[dict], viewer_tz: str) -> None:
     viewer_zone = ZoneInfo(viewer_tz)
     for ev in events:
@@ -45,6 +52,13 @@ def _add_display_times(events: list[dict], viewer_tz: str) -> None:
         end = _as_aware(ev["end_datetime"], app_zone)
         ev["display_start"] = start.astimezone(viewer_zone).isoformat()
         ev["display_end"] = end.astimezone(viewer_zone).isoformat()
+        # The edit form posts these wall times together with ev["timezone"], and the
+        # provider reads them as wall time in that zone, so express them in that zone.
+        form_start = start.astimezone(_event_zone(ev.get("timezone"), app_zone))
+        form_end = end.astimezone(_event_zone(ev.get("timezone"), app_zone))
+        ev["form_start_date"] = form_start.date().isoformat()
+        ev["form_start_time"] = form_start.strftime("%H:%M")
+        ev["form_end_time"] = form_end.strftime("%H:%M")
 
 
 @router.get("/timezone", response_class=RedirectResponse)

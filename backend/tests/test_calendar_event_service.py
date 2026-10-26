@@ -184,8 +184,10 @@ class TestUpdateEvent:
         return svc
 
     @pytest.mark.asyncio
-    async def test_raises_when_not_authorized(self):
+    async def test_raises_when_not_authorized(self, mock_repo):
         service = CalendarEventService(provider=None, session=AsyncMock())
+        service._repo = mock_repo
+        mock_repo.get_event.return_value = _orm_event(id=1)
         with pytest.raises(HTTPException) as exc_info:
             await service.update_event(1, EventUpdate(title="New title"))
         assert exc_info.value.status_code == 503

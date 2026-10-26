@@ -37,6 +37,18 @@ class TestHandleTaskList:
         called_filters = mock_service.get_tasks.call_args.args[0]
         assert called_filters.status == "DONE"
 
+    async def test_list_filters_by_tags(self, mock_service):
+        await handle_task("list", {"tags": "bills, languages"}, mock_service)
+
+        called_filters = mock_service.get_tasks.call_args.args[0]
+        assert called_filters.tags == ["bills", "languages"]
+
+    async def test_list_without_tags_does_not_filter(self, mock_service):
+        await handle_task("list", {}, mock_service)
+
+        called_filters = mock_service.get_tasks.call_args.args[0]
+        assert called_filters.tags is None
+
 
 class TestHandleTaskUpdate:
     async def test_update_urgency_field(self, mock_service):

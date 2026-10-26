@@ -124,6 +124,7 @@ async def handle_task(
             status=cast(TaskStatusFilter, str(raw_status).upper()),
             priority=cast(TaskPriorityFilter, str(raw_priority).upper() if raw_priority else "ALL"),
             limit=int(arguments.get("limit", 100)),
+            tags=parse_tags(arguments.get("tags")) or None,
             context=_parse_context(arguments.get("context")),
             available=str(arguments.get("available", "")).strip().lower() in _TRUE_VALUES,
         )

@@ -260,7 +260,7 @@ One test class per logical group of behaviour (`TestComputeStreak`, `TestMissedC
 - `datetime.now(timezone.utc)` is correct for instants: audit timestamps, TTLs/expiry, "N hours ago" durations, dedup markers.
 - Day boundaries (start/end of "today") are local midnights: `datetime.combine(local_today(), time.min, tzinfo=local_timezone())`, never UTC midnight.
 - Text shown to an LLM or user as "now" must be local with the zone name (`local_now().strftime("... %H:%M %Z")`), not "UTC".
-- **DST:** a local day is 23, 24 or 25 hours long, and one hour a year is ambiguous or missing. Do arithmetic across day boundaries on aware datetimes (or UTC instants), never by subtracting naive local datetimes. Recurrence expansion works on naive local time on purpose, so "every Wednesday 20:00" stays at 20:00 across the change.
+- **DST:** a local day is 23, 24 or 25 hours long, and one hour a year is ambiguous or missing. Do arithmetic across day boundaries on aware datetimes (or UTC instants), never by subtracting naive local datetimes. Recurrence expansion works on naive wall time on purpose, so "every Wednesday 20:00" stays at 20:00 across the change; calendar events expand in the event's own `timezone` (falling back to the local zone) and convert each occurrence to local time, so a series set in Brasilia keeps 18:00 there and moves in Lisbon time when either zone changes its clocks.
 - Dates grouped from UTC API timestamps (e.g. `created_at[:10]`) must be converted to local first.
 - Tests freeze time with `freezegun` (`freeze_time("2026-07-15 23:30:00")` is 00:30 the next day in Lisbon) or patch `local_today`; don't patch `date`/`datetime` in the module under test.
 

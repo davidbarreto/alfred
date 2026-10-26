@@ -1,5 +1,6 @@
 import re
-from datetime import date, datetime, time, timedelta, timezone as dt_timezone
+from datetime import date, datetime, time, timedelta, timezone as dt_timezone, tzinfo
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from dateutil.rrule import rrulestr
 
@@ -11,20 +12,38 @@ _UNTIL_UTC_RE = re.compile(r"(UNTIL=)(\d{8}T\d{6})Z")
 _END_PARTS_RE = re.compile(r"(?:^|;)(?:UNTIL|COUNT)=[^;]*")
 
 
-def _localize_until(recurrence_rule: str) -> str:
-    """Rewrite a `Z`-suffixed (UTC) UNTIL token to naive local time.
+def _localize_until(recurrence_rule: str, zone: tzinfo) -> str:
+    """Rewrite a `Z`-suffixed (UTC) UNTIL token to naive wall time in `zone`.
 
-    Google Calendar always encodes UNTIL in UTC, but LocalDateTime hands this
-    module naive local datetimes for dtstart/end_datetime, so dateutil.rrule
-    would otherwise reject the aware/naive tzinfo mismatch.
+    Google Calendar always encodes UNTIL in UTC, but the series is expanded as
+    naive wall-clock datetimes, so dateutil.rrule would otherwise reject the
+    aware/naive tzinfo mismatch.
     """
 
     def _replace(match: re.Match[str]) -> str:
         until_utc = datetime.strptime(match.group(2), "%Y%m%dT%H%M%S").replace(tzinfo=dt_timezone.utc)
-        until_local = until_utc.astimezone(local_timezone()).replace(tzinfo=None)
-        return f"{match.group(1)}{until_local.strftime('%Y%m%dT%H%M%S')}"
+        until_wall = until_utc.astimezone(zone).replace(tzinfo=None)
+        return f"{match.group(1)}{until_wall.strftime('%Y%m%dT%H%M%S')}"
 
     return _UNTIL_UTC_RE.sub(_replace, recurrence_rule)
+
+
+def _series_zone(event_timezone: str | None) -> tzinfo:
+    """The zone a series keeps its wall time in: the event's own, else the app's local zone."""
+    if event_timezone:
+        try:
+            return ZoneInfo(event_timezone)
+        except (ZoneInfoNotFoundError, ValueError):
+            pass
+    return local_timezone()
+
+
+def _wall_in(naive_local: datetime, zone: tzinfo) -> datetime:
+    return naive_local.replace(tzinfo=local_timezone()).astimezone(zone).replace(tzinfo=None)
+
+
+def _local_from(wall: datetime, zone: tzinfo) -> datetime:
+    return wall.replace(tzinfo=zone).astimezone(local_timezone()).replace(tzinfo=None)
 
 
 def expand_occurrences(
@@ -33,16 +52,30 @@ def expand_occurrences(
     recurrence_rule: str,
     range_start: datetime | None,
     range_end: datetime | None,
+    event_timezone: str | None = None,
 ) -> list[tuple[datetime, datetime]]:
-    """Expand a series' RRULE into (start, end) pairs overlapping [range_start, range_end]."""
-    duration = end_datetime - start_datetime
-    rule = rrulestr(_localize_until(recurrence_rule), dtstart=start_datetime)
+    """Expand a series' RRULE into (start, end) pairs overlapping [range_start, range_end].
 
-    after = start_datetime if range_start is None else max(start_datetime, range_start - duration)
-    before = (start_datetime + _UNBOUNDED_HORIZON) if range_end is None else range_end
+    Datetimes in and out are naive local time. The series repeats at the same wall time
+    in `event_timezone` (the app's zone when omitted), so an event set in another zone
+    moves in local time when either zone changes its clocks.
+    """
+    zone = _series_zone(event_timezone)
+    start_wall = _wall_in(start_datetime, zone)
+    # Absolute length: subtracting wall times would be off by an hour across a clock change.
+    duration = end_datetime.replace(tzinfo=local_timezone()).astimezone(dt_timezone.utc) - start_datetime.replace(
+        tzinfo=local_timezone()
+    ).astimezone(dt_timezone.utc)
+    rule = rrulestr(_localize_until(recurrence_rule, zone), dtstart=start_wall)
 
-    starts = rule.between(after, before, inc=True)
-    return [(s, s + duration) for s in starts[:_MAX_OCCURRENCES]]
+    after = start_wall if range_start is None else max(start_wall, _wall_in(range_start, zone) - duration)
+    before = (start_wall + _UNBOUNDED_HORIZON) if range_end is None else _wall_in(range_end, zone)
+
+    spans = []
+    for wall in rule.between(after, before, inc=True)[:_MAX_OCCURRENCES]:
+        start_utc = wall.replace(tzinfo=zone).astimezone(dt_timezone.utc)
+        spans.append((_local_from(wall, zone), (start_utc + duration).astimezone(local_timezone()).replace(tzinfo=None)))
+    return spans
 
 
 def end_rule_before(recurrence_rule: str, first_excluded_day: date, all_day: bool) -> str:

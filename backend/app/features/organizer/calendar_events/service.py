@@ -66,7 +66,7 @@ def _require_occurrence(event: Any, day: date) -> None:
     _require_recurring(event)
     spans = expand_occurrences(
         event.start_datetime, event.end_datetime, event.recurrence_rule,
-        datetime.combine(day, time.min), datetime.combine(day, time.max),
+        datetime.combine(day, time.min), datetime.combine(day, time.max), event.timezone,
     )
     if not any(start.date() == day for start, _ in spans):
         raise HTTPException(
@@ -102,6 +102,7 @@ class CalendarEventService:
                     event_read.recurrence_rule,
                     filters.start_from,
                     filters.start_to,
+                    event_read.timezone,
                 )
             except (ValueError, OverflowError) as exc:
                 logger.warning(
@@ -243,7 +244,7 @@ class CalendarEventService:
             )
         remaining = expand_occurrences(
             event.start_datetime, event.end_datetime, event.recurrence_rule,
-            datetime.combine(from_date, time.min), None,
+            datetime.combine(from_date, time.min), None, event.timezone,
         )
         if not remaining:
             raise HTTPException(

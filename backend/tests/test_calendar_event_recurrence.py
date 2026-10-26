@@ -112,3 +112,43 @@ class TestEndRuleBefore:
         spans = expand_occurrences(start, end, rule, datetime(2026, 11, 1), datetime(2026, 12, 31))
 
         assert [s.date().isoformat() for s, _ in spans] == ["2026-11-04", "2026-11-05", "2026-11-06"]
+
+
+class TestForeignTimezoneSeries:
+    """A series keeps its wall time in the event's own zone, so its local time follows that zone's DST."""
+
+    # 2026-10-21 18:00 in Sao Paulo (UTC-3) is 22:00 in Lisbon (UTC+1, summer time) -- stored as naive local.
+    START = datetime(2026, 10, 21, 22, 0)
+    END = datetime(2026, 10, 21, 23, 0)
+
+    def _spans(self, rule="FREQ=WEEKLY", tz="America/Sao_Paulo"):
+        return expand_occurrences(
+            self.START, self.END, rule, datetime(2026, 10, 1), datetime(2026, 11, 30), event_timezone=tz
+        )
+
+    def test_occurrences_after_lisbon_dst_ends_shift_with_the_offset(self):
+        spans = self._spans()
+        assert [(s.isoformat(), e.isoformat()) for s, e in spans if s.date().isoformat() in ("2026-10-21", "2026-10-28")] == [
+            ("2026-10-21T22:00:00", "2026-10-21T23:00:00"),
+            ("2026-10-28T21:00:00", "2026-10-28T22:00:00"),
+        ]
+
+    def test_without_a_timezone_the_wall_time_stays_local(self):
+        assert {s.hour for s, _ in self._spans(tz=None)} == {22}
+
+    def test_same_zone_as_the_app_behaves_like_no_zone(self):
+        assert self._spans(tz="Europe/Lisbon") == self._spans(tz=None)
+
+    def test_unknown_zone_falls_back_to_local_wall_time(self):
+        assert self._spans(tz="Not/AZone") == self._spans(tz=None)
+
+    def test_range_is_still_given_in_local_time(self):
+        spans = expand_occurrences(
+            self.START, self.END, "FREQ=WEEKLY", datetime(2026, 10, 28), datetime(2026, 10, 28, 23, 59), event_timezone="America/Sao_Paulo"
+        )
+        assert [s.isoformat() for s, _ in spans] == ["2026-10-28T21:00:00"]
+
+    def test_utc_until_is_read_in_the_event_zone(self):
+        # UNTIL 2026-10-28T21:00:00Z = 18:00 in Sao Paulo: the 28th occurrence is the last one.
+        spans = self._spans(rule="FREQ=WEEKLY;UNTIL=20261028T210000Z")
+        assert [s.date().isoformat() for s, _ in spans] == ["2026-10-21", "2026-10-28"]

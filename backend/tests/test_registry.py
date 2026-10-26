@@ -214,6 +214,7 @@ class TestFlagConstants:
     def test_task_update_flags_composition(self):
         assert "-s" in TASK_UPDATE_FLAGS  # status
         assert "-p" in TASK_UPDATE_FLAGS  # priority
+        assert "-t" in TASK_UPDATE_FLAGS  # tags
 
 
 class TestMcpReservedArgNames:

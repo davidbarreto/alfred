@@ -68,6 +68,15 @@ class TestNotesGridEditButton:
         assert "openEditNote(" in resp.text
 
 
+class TestNotesGridId:
+    def test_each_card_shows_the_note_id(self, client, mock_api):
+        mock_api["get"].return_value = [_note(id=42, title="Groceries")]
+
+        resp = client.get("/notes/")
+
+        assert 'title="Note ID 42">#42</span>' in resp.text
+
+
 class TestArchiveNote:
     def test_archives_and_renders_grid(self, client, mock_api):
         mock_api["post"].return_value = _note(id=2, archived_at="2026-07-14T10:00:00")

@@ -10,7 +10,8 @@ from app.templates_config import templates
 router = APIRouter(prefix="/routines")
 
 _CONTEXTS = ("computer", "phone", "home", "out", "anywhere")
-_UPCOMING_EVENTS = 100
+_UPCOMING_EVENTS = 200
+_NOTE_OPTIONS = 500
 
 
 def _clock(value: str | None) -> str:
@@ -51,6 +52,7 @@ async def routines_page(request: Request):
         params={"start_from": local_now().replace(tzinfo=None, microsecond=0).isoformat(), "limit": _UPCOMING_EVENTS},
         default=[],
     )
+    notes = await safe_get("/organizer/notes", params={"limit": _NOTE_OPTIONS}, default=[])
     event_titles: dict[int, str] = {}
     for event in upcoming:
         event_titles.setdefault(event["id"], event["title"])
@@ -58,6 +60,7 @@ async def routines_page(request: Request):
         "available": routines is not None,
         "routines": [_describe(r, event_titles) for r in (routines or [])],
         "event_options": list(event_titles.items()),
+        "note_options": [(n["id"], n["title"]) for n in notes],
         "contexts": _CONTEXTS,
     })
 

@@ -97,6 +97,26 @@ class TestCalendarPage:
 
 
 class TestCalendarDay:
+    def test_all_tags_show_under_the_title_instead_of_squeezing_it(self, client, mock_api):
+        mock_api["get"].return_value = [
+            _event(id=2, title="A very long meeting title", start="2026-07-14T09:00:00", end="2026-07-14T09:30:00", tags=["a", "b", "c", "d"]),
+        ]
+
+        text = client.get("/calendar/day/2026-07-14").text
+
+        assert "A very long meeting title" in text
+        assert all(f">{tag}</span>" in text for tag in "abcd")
+        assert "text-sm text-gray-800 break-words" in text
+
+    def test_day_modal_is_wide(self, client, mock_api):
+        mock_api["get"].return_value = []
+        assert "max-w-2xl" in client.get("/calendar").text.split('id="calendar-day-modal"')[1].split("</dialog>")[0]
+
+    def test_edit_form_has_a_slot_for_the_event_id(self, client, mock_api):
+        mock_api["get"].return_value = []
+        text = client.get("/calendar").text
+        assert 'id="event-id-label"' in text and "`#${ev.id}`" in text
+
     def test_renders_all_day_and_timed_events_for_day(self, client, mock_api):
         mock_api["get"].return_value = [
             _event(id=1, title="Marriage Anniversary", all_day=True),

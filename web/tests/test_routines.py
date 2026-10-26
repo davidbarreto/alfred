@@ -22,12 +22,14 @@ def _routine(id=1, name="Dinner", steps=None, **kw):
     return base
 
 
-def _routes(routines, events=None):
+def _routes(routines, events=None, notes=None):
     def fake_get(path, params=None):
         if path == "/organizer/routines":
             return routines
         if path == "/organizer/calendar-events":
             return events if events is not None else []
+        if path == "/organizer/notes":
+            return notes if notes is not None else []
         raise AssertionError(path)
 
     return fake_get
@@ -62,7 +64,7 @@ class TestRoutinesPage:
         assert "2 h before the start" in text and "40 min" in text
         assert "50 min before the start" in text and "Course" in text and "checklist note #26" in text
         assert "Evening class" in text
-        assert '<option value="8">Dentist</option>' in text
+        assert 'data-value="8" data-label="Dentist"' in text
 
     def test_scheduled_routine_shows_rule_and_windows_and_cannot_be_attached(self, client, mock_api):
         mock_api["get"].side_effect = _routes([_routine(
@@ -101,6 +103,35 @@ class TestRoutinesPage:
 
         mock_api["get"].side_effect = fake_get
         assert client.get("/routines").status_code == 200
+
+    def test_note_and_event_pickers_list_titles_with_ids(self, client, mock_api):
+        events = [{"id": 8, "title": "Team dinner"}]
+        notes = [{"id": 31, "title": "Dinner checklist"}, {"id": 32, "title": "Packing list"}]
+        mock_api["get"].side_effect = _routes([_routine()], events, notes)
+
+        text = client.get("/routines").text
+
+        assert 'id="step-note-picker"' in text and 'name="checklist_note_id"' in text
+        assert 'data-value="31" data-label="Dinner checklist"' in text
+        assert 'data-value="32" data-label="Packing list"' in text
+        assert 'id="attach-1"' in text and 'data-value="8" data-label="Team dinner"' in text
+        assert 'type="number" min="1"' not in text.split('name="checklist_note_id"')[0][-200:]
+
+    def test_note_picker_asks_for_enough_notes(self, client, mock_api):
+        mock_api["get"].side_effect = _routes([_routine()])
+        client.get("/routines")
+        note_calls = [c for c in mock_api["get"].call_args_list if c.args[0] == "/organizer/notes"]
+        assert note_calls and note_calls[0].kwargs["params"] == {"limit": 500}
+
+    def test_note_list_failure_only_empties_the_note_picker(self, client, mock_api):
+        def fake_get(path, params=None):
+            if path == "/organizer/notes":
+                raise httpx.ConnectError("down")
+            return _routes([_routine()])(path, params)
+
+        mock_api["get"].side_effect = fake_get
+        resp = client.get("/routines")
+        assert resp.status_code == 200 and "Nothing to choose from." in resp.text
 
     def test_requires_authentication(self, anon_client):
         assert anon_client.get("/routines", follow_redirects=False).status_code == 302

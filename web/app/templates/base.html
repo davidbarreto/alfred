@@ -424,5 +424,58 @@
     })();
   </script>
 
+  <script>
+    // Hover hint for text cut off with "..." (truncate / line-clamp): the full text appears as a tooltip.
+    document.addEventListener('mouseover', function (event) {
+      var el = event.target.closest && event.target.closest('.truncate, [class*="line-clamp-"]');
+      if (!el || el.hasAttribute('title')) return;
+      if (el.scrollWidth > el.clientWidth || el.scrollHeight > el.clientHeight) {
+        el.setAttribute('title', el.textContent.trim());
+        el.dataset.autoHint = '1';
+      }
+    });
+    // A hint set from stale text would mislead after an HTMX swap, so drop it when the element is re-rendered.
+    document.body.addEventListener('htmx:afterSwap', function (event) {
+      event.target.querySelectorAll('[data-auto-hint]').forEach(function (el) {
+        el.removeAttribute('title');
+        delete el.dataset.autoHint;
+      });
+    });
+
+    // Filterable single-choice list (see the picker macro in _picker.html).
+    function pickerSet(picker, value, label) {
+      var hidden = picker.querySelector('input[type="hidden"]');
+      var filter = picker.querySelector('[data-picker-filter]');
+      hidden.value = value || '';
+      picker.querySelectorAll('[data-picker-list] button').forEach(function (b) {
+        b.classList.toggle('active', !!value && b.dataset.value === String(value));
+      });
+      if (!value) { filter.value = ''; pickerFilter(picker); return; }
+      var match = picker.querySelector('[data-picker-list] button[data-value="' + value + '"]');
+      filter.value = label || (match ? match.dataset.label : '#' + value);
+    }
+    function pickerFilter(picker) {
+      var query = picker.querySelector('[data-picker-filter]').value.trim().toLowerCase();
+      picker.querySelectorAll('[data-picker-list] li').forEach(function (li) {
+        var b = li.firstElementChild;
+        li.style.display = !query || b.dataset.label.toLowerCase().includes(query) || ('#' + b.dataset.value).includes(query) ? '' : 'none';
+      });
+    }
+    document.addEventListener('input', function (event) {
+      var picker = event.target.closest && event.target.closest('[data-picker]');
+      if (!picker || !event.target.matches('[data-picker-filter]')) return;
+      picker.querySelector('input[type="hidden"]').value = '';  // typing starts a new search; a choice needs a click
+      picker.querySelectorAll('[data-picker-list] button.active').forEach(function (b) { b.classList.remove('active'); });
+      pickerFilter(picker);
+    });
+    document.addEventListener('click', function (event) {
+      var picker = event.target.closest && event.target.closest('[data-picker]');
+      if (!picker) return;
+      var option = event.target.closest('[data-picker-list] button');
+      if (option) { pickerSet(picker, option.dataset.value, option.dataset.label); return; }
+      if (event.target.closest('[data-picker-clear]')) pickerSet(picker, '');
+    });
+  </script>
+
 </body>
 </html>

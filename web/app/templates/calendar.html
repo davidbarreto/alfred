@@ -321,10 +321,13 @@
         <input type="hidden" name="timezone" id="event-timezone-value" />
       </div>
       <p id="event-error" class="text-xs text-[#E24B4A] hidden"></p>
-      <div class="flex justify-end gap-2 mt-1">
-        <button type="button" onclick="document.getElementById('new-event-modal').close()"
-                class="btn btn-sm btn-ghost text-gray-500">Cancel</button>
-        <button type="submit" id="event-submit-btn" class="btn btn-sm btn-primary">Save event</button>
+      <div class="flex items-center justify-between gap-2 mt-1">
+        <span id="event-id-label" class="text-[10px] text-gray-300 select-none"></span>
+        <div class="flex gap-2">
+          <button type="button" onclick="document.getElementById('new-event-modal').close()"
+                  class="btn btn-sm btn-ghost text-gray-500">Cancel</button>
+          <button type="submit" id="event-submit-btn" class="btn btn-sm btn-primary">Save event</button>
+        </div>
       </div>
     </form>
   </div>
@@ -335,7 +338,7 @@
 
 <!-- Day detail modal -->
 <dialog id="calendar-day-modal" class="modal">
-  <div class="modal-box bg-white rounded-xl border border-gray-200 shadow-lg max-w-sm w-full p-6">
+  <div class="modal-box bg-white rounded-xl border border-gray-200 shadow-lg max-w-2xl w-full p-6">
     <div id="calendar-day-content">
       <p class="text-sm text-gray-400">Loading…</p>
     </div>
@@ -397,6 +400,7 @@ function openNewEvent(prefillDate) {
   document.getElementById("event-skips-row").classList.add("hidden");
   document.getElementById("new-event-form").reset();
   document.getElementById("event-form-title").textContent = "New event";
+  document.getElementById("event-id-label").textContent = "";
   document.getElementById("event-time-row").classList.remove("hidden");
   document.getElementById("event-end-date-row").classList.add("hidden");
   document.getElementById("event-recurrence-custom").value = "";
@@ -415,6 +419,7 @@ function openEditEvent(ev) {
   document.getElementById("event-error").classList.add("hidden");
   document.getElementById("new-event-form").reset();
   document.getElementById("event-form-title").textContent = "Edit event";
+  document.getElementById("event-id-label").textContent = `#${ev.id}`;
   const form = document.getElementById("new-event-form");
   form.querySelector('[name="event_id"]').value = ev.id;
   form.querySelector('[name="title"]').value = ev.title;

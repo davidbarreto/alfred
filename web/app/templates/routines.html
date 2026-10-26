@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "_picker.html" import picker %}
 {% set active_page = "routines" %}
 {% block title %}Routines{% endblock %}
 
@@ -110,10 +111,7 @@
           {% else %}
           <span class="text-xs text-gray-400">no events</span>
           {% endfor %}
-          <select id="attach-{{ r.id }}" class="select select-xs select-bordered max-w-[14rem]">
-            <option value="">Attach to an event…</option>
-            {% for event_id, title in event_options %}<option value="{{ event_id }}">{{ title }}</option>{% endfor %}
-          </select>
+          <div class="w-64">{{ picker("attach-" ~ r.id, "event_id", event_options, "Attach to an event: type to filter…") }}</div>
           <button onclick="attachEvent({{ r.id }})" class="btn btn-xs btn-outline">Attach</button>
           {% endif %}
           <span class="text-xs text-red-600" id="error-{{ r.id }}"></span>
@@ -158,8 +156,8 @@
       </div>
       <label class="space-y-1"><span class="block text-xs text-gray-500">Location (optional)</span>
         <input name="location" maxlength="255" class="input input-sm input-bordered w-full"></label>
-      <label class="space-y-1"><span class="block text-xs text-gray-500">Checklist note id (optional)</span>
-        <input name="checklist_note_id" type="number" min="1" class="input input-sm input-bordered w-full"></label>
+      <div class="space-y-1"><span class="block text-xs text-gray-500">Checklist note (optional)</span>
+        {{ picker("step-note-picker", "checklist_note_id", note_options, "Type part of a note title…") }}</div>
       <p id="step-error" class="text-xs text-red-600"></p>
       <div class="flex justify-end gap-2">
         <button type="button" onclick="document.getElementById('step-dialog').close()" class="btn btn-sm btn-ghost text-gray-500">Cancel</button>
@@ -217,7 +215,7 @@ async function deleteStep(id) {
 }
 
 async function attachEvent(routineId) {
-  const eventId = document.getElementById(`attach-${routineId}`).value;
+  const eventId = document.querySelector(`#attach-${routineId} input[type="hidden"]`).value;
   if (!eventId) return;
   try { await send(`/routines/${routineId}/events/${eventId}`, 'POST'); location.reload(); }
   catch (e) { showError(routineId, e.message); }
@@ -243,7 +241,6 @@ function openStepDialog(routineId, scheduled, step) {
     form.querySelector('[name="duration_minutes"]').value = step.duration_minutes;
     form.querySelector('[name="context"]').value = step.context || '';
     form.querySelector('[name="location"]').value = step.location || '';
-    form.querySelector('[name="checklist_note_id"]').value = step.checklist_note_id || '';
     if (scheduled) {
       form.querySelector('[name="window_start"]').value = (step.window_start || '').slice(0, 5);
       form.querySelector('[name="window_end"]').value = (step.window_end || '').slice(0, 5);
@@ -252,6 +249,7 @@ function openStepDialog(routineId, scheduled, step) {
       form.querySelector('[name="offset_minutes"]').value = step.offset_minutes;
     }
   }
+  pickerSet(document.getElementById('step-note-picker'), step && step.checklist_note_id ? step.checklist_note_id : '');
   document.getElementById('step-dialog').showModal();
 }
 

@@ -144,7 +144,7 @@ function openNoteView(id, title, content, tags, updatedAt) {
   });
 
   const updatedEl = document.getElementById("view-note-updated");
-  updatedEl.textContent = updatedAt ? `updated ${new Date(updatedAt).toLocaleString()}` : "";
+  updatedEl.textContent = `#${id}` + (updatedAt ? ` · updated ${new Date(updatedAt).toLocaleString()}` : "");
 
   document.getElementById("view-note-modal").showModal();
 }

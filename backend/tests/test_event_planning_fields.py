@@ -101,6 +101,22 @@ class TestUpdateKeepsPlanningFieldsLocal:
         assert result.travel_minutes == 25
         service._repo.update_event.assert_awaited_once()
 
+    async def test_tags_only_update_makes_no_google_call(self, service, provider):
+        await service.update_event(1, EventUpdate(tags=["work"]))
+
+        provider.update.assert_not_called()
+        service._repo.update_event.assert_awaited_once()
+
+    async def test_tags_only_update_works_without_google_authorization(self):
+        svc = CalendarEventService(provider=None, session=AsyncMock())
+        svc._repo = AsyncMock()
+        svc._repo.get_event.return_value = _orm()
+        svc._repo.update_event.return_value = _orm()
+
+        await svc.update_event(1, EventUpdate(tags=["work"]))
+
+        svc._repo.update_event.assert_awaited_once()
+
     async def test_planning_only_update_works_without_google_authorization(self):
         svc = CalendarEventService(provider=None, session=AsyncMock())
         svc._repo = AsyncMock()
@@ -158,6 +174,7 @@ class TestSyncLeavesPlanningFieldsAlone:
         payload = provider._to_google_event({
             "title": "Class", "start_datetime": _START, "end_datetime": _END,
             "availability": "blocked", "presence": "remote_home", "travel_minutes": 25, "routine_id": 3,
+            "tags": ["work"],
         })
         assert set(payload) == {"summary", "start", "end"}
 
@@ -168,7 +185,7 @@ class TestSyncLeavesPlanningFieldsAlone:
             "start": {"dateTime": "2026-10-21T20:00:00+01:00", "timeZone": "Europe/Lisbon"},
             "end": {"dateTime": "2026-10-21T21:00:00+01:00", "timeZone": "Europe/Lisbon"},
         })
-        assert not {"availability", "presence", "travel_minutes", "routine_id"} & set(record)
+        assert not {"availability", "presence", "travel_minutes", "routine_id", "tags"} & set(record)
 
 
 class TestHandler:

@@ -26,10 +26,10 @@ _OAUTH_REQUIRED = HTTPException(
 )
 _SYNC_LOOKAHEAD = relativedelta(months=3)
 
-# Planning fields live only in Alfred's DB: they are never sent to Google (the provider
+# Planning fields and tags live only in Alfred's DB: they are never sent to Google (the provider
 # picks specific keys anyway) and sync() never writes them. An update touching only
 # these fields does not need Google, so it works without OAuth and skips the API call.
-_ALFRED_ONLY_FIELDS = frozenset({"availability", "presence", "travel_minutes", "routine_id"})
+_ALFRED_ONLY_FIELDS = frozenset({"availability", "presence", "travel_minutes", "routine_id", "tags"})
 
 
 class CalendarEventService:

@@ -554,6 +554,346 @@
       }
     },
     {
+      "name": "13a - Skip One Occurrence",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('The skipped date is listed on the series', () => {",
+              "    pm.expect(pm.response.json().skips).to.eql(['2026-09-14']);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/organizer/calendar-events/{{recurring_event_id}}/skips",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "calendar-events",
+            "{{recurring_event_id}}",
+            "skips"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"occurrence_date\": \"2026-09-14\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "13b - Skip A Date That Is Not An Occurrence (400)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 400', () => pm.response.to.have.status(400));",
+              "pm.test('Message names the date', () => pm.expect(pm.response.json().detail).to.include('2026-09-15'));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/organizer/calendar-events/{{recurring_event_id}}/skips",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "calendar-events",
+            "{{recurring_event_id}}",
+            "skips"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"occurrence_date\": \"2026-09-15\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "13c - List Events (Skipped Occurrence Is Left Out)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "const days = pm.response.json().filter(e => e.id === pm.environment.get('recurring_event_id')).map(e => e.start_datetime.slice(0, 10));",
+              "pm.test('The skipped Monday is gone and the others remain', () => {",
+              "    pm.expect(days).to.eql(['2026-09-07', '2026-09-21', '2026-09-28']);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/organizer/calendar-events/{{recurring_event_id}}?start_from=2026-09-01T00:00:00&start_to=2026-09-30T23:59:59&limit=100",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "calendar-events",
+            "{{recurring_event_id}}"
+          ],
+          "query": [
+            {
+              "key": "start_from",
+              "value": "2026-09-01T00:00:00"
+            },
+            {
+              "key": "start_to",
+              "value": "2026-09-30T23:59:59"
+            },
+            {
+              "key": "limit",
+              "value": "100"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "13d - Restore The Skipped Occurrence",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('No skipped dates remain', () => pm.expect(pm.response.json().skips).to.eql([]));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/organizer/calendar-events/{{recurring_event_id}}/skips/2026-09-14",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "calendar-events",
+            "{{recurring_event_id}}",
+            "skips",
+            "2026-09-14"
+          ]
+        }
+      }
+    },
+    {
+      "name": "13e - Restore A Date That Was Not Skipped (404)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 404', () => pm.response.to.have.status(404));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/organizer/calendar-events/{{recurring_event_id}}/skips/2026-09-14",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "calendar-events",
+            "{{recurring_event_id}}",
+            "skips",
+            "2026-09-14"
+          ]
+        }
+      }
+    },
+    {
+      "name": "13f - End Series Before The First Occurrence (400)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 400', () => pm.response.to.have.status(400));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/organizer/calendar-events/{{recurring_event_id}}/end-series",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "calendar-events",
+            "{{recurring_event_id}}",
+            "end-series"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"from_date\": \"2026-08-03\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "13g - End Series From A Date",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('The rule now ends with an UNTIL', () => {",
+              "    pm.expect(pm.response.json().recurrence_rule).to.match(/^FREQ=WEEKLY;UNTIL=\\d{8}(T\\d{6}Z)?$/);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/organizer/calendar-events/{{recurring_event_id}}/end-series",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "calendar-events",
+            "{{recurring_event_id}}",
+            "end-series"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"from_date\": \"2026-09-21\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "13h - List Events (Series Stops Before The Chosen Date)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "const days = pm.response.json().filter(e => e.id === pm.environment.get('recurring_event_id')).map(e => e.start_datetime.slice(0, 10));",
+              "pm.test('Only the occurrences before the end date remain', () => {",
+              "    pm.expect(days).to.eql(['2026-09-07', '2026-09-14']);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/organizer/calendar-events/{{recurring_event_id}}?start_from=2026-09-01T00:00:00&start_to=2026-09-30T23:59:59&limit=100",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "calendar-events",
+            "{{recurring_event_id}}"
+          ],
+          "query": [
+            {
+              "key": "start_from",
+              "value": "2026-09-01T00:00:00"
+            },
+            {
+              "key": "start_to",
+              "value": "2026-09-30T23:59:59"
+            },
+            {
+              "key": "limit",
+              "value": "100"
+            }
+          ]
+        }
+      }
+    },
+    {
       "name": "14 - Delete Recurring Event",
       "event": [
         {

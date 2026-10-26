@@ -559,6 +559,99 @@ class TestDeleteEvent:
         assert "Failed to delete event." in resp.text
 
 
+def _http_error(status: int, detail: str, method: str = "POST") -> httpx.HTTPStatusError:
+    request = httpx.Request(method, "http://api/organizer/calendar-events/3")
+    response = httpx.Response(status, json={"detail": detail}, request=request)
+    return httpx.HTTPStatusError("error", request=request, response=response)
+
+
+class TestSkipOccurrence:
+    def test_posts_the_occurrence_date_to_the_backend(self, client, mock_api):
+        resp = client.post("/calendar/3/skip", data={"occurrence_date": "2026-11-11"})
+
+        assert resp.status_code == 204
+        mock_api["post"].assert_awaited_once_with(
+            "/organizer/calendar-events/3/skips", json={"occurrence_date": "2026-11-11"}
+        )
+
+    def test_relays_the_backend_message(self, client, mock_api):
+        mock_api["post"].side_effect = _http_error(400, "The event has no occurrence on 2026-11-12")
+
+        resp = client.post("/calendar/3/skip", data={"occurrence_date": "2026-11-12"})
+
+        assert resp.status_code == 422
+        assert "no occurrence on 2026-11-12" in resp.text
+
+    def test_backend_unreachable_is_a_422(self, client, mock_api):
+        mock_api["post"].side_effect = httpx.ConnectError("refused")
+
+        resp = client.post("/calendar/3/skip", data={"occurrence_date": "2026-11-11"})
+
+        assert resp.status_code == 422
+        assert "Failed to skip this occurrence." in resp.text
+
+
+class TestRestoreOccurrence:
+    def test_deletes_the_skip_on_the_backend(self, client, mock_api):
+        resp = client.delete("/calendar/3/skip/2026-11-11")
+
+        assert resp.status_code == 204
+        mock_api["delete"].assert_awaited_once_with("/organizer/calendar-events/3/skips/2026-11-11")
+
+    def test_relays_the_backend_message(self, client, mock_api):
+        mock_api["delete"].side_effect = _http_error(404, "2026-11-11 is not a skipped date of this event", "DELETE")
+
+        resp = client.delete("/calendar/3/skip/2026-11-11")
+
+        assert resp.status_code == 422
+        assert "not a skipped date" in resp.text
+
+
+class TestEndSeries:
+    def test_posts_the_first_excluded_date_to_the_backend(self, client, mock_api):
+        resp = client.post("/calendar/3/end-series", data={"from_date": "2026-11-18"})
+
+        assert resp.status_code == 204
+        mock_api["post"].assert_awaited_once_with(
+            "/organizer/calendar-events/3/end-series", json={"from_date": "2026-11-18"}, timeout=30.0
+        )
+
+    def test_relays_the_backend_message(self, client, mock_api):
+        mock_api["post"].side_effect = _http_error(400, "The series already ends before that date")
+
+        resp = client.post("/calendar/3/end-series", data={"from_date": "2027-01-06"})
+
+        assert resp.status_code == 422
+        assert "already ends" in resp.text
+
+
+class TestSeriesActionsInTheDayView:
+    def test_recurring_events_offer_skip_and_end_series(self, client, mock_api):
+        recurring = _event(id=7, title="Touchpoint", start="2026-07-14T09:00:00", end="2026-07-14T09:30:00")
+        recurring["recurrence_rule"] = "FREQ=WEEKLY"
+        mock_api["get"].return_value = [recurring]
+
+        resp = client.get("/calendar/day/2026-07-14")
+
+        assert 'skipOccurrence(7, "2026-07-14")' in resp.text
+        assert 'endSeriesFrom(7, "2026-07-14")' in resp.text
+
+    def test_single_events_do_not(self, client, mock_api):
+        mock_api["get"].return_value = [_event(id=8, title="Dentist", start="2026-07-14T09:00:00", end="2026-07-14T09:30:00")]
+
+        resp = client.get("/calendar/day/2026-07-14")
+
+        assert "skipOccurrence(8" not in resp.text
+        assert "endSeriesFrom(8" not in resp.text
+
+    def test_edit_form_lists_skipped_dates_for_restoring(self, client, mock_api):
+        mock_api["get"].return_value = []
+
+        resp = client.get("/calendar/?year=2026&month=7")
+
+        assert 'id="event-skips-list"' in resp.text
+
+
 class TestViewerTimezone:
     def test_origin_timezone_metadata_ignored_for_default_display(self, client, mock_api):
         # The backend always normalizes start/end to the app's local timezone

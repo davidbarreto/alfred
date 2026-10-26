@@ -327,6 +327,47 @@ async def update_event(
     return HTMLResponse("", status_code=204)
 
 
+def _backend_detail(exc: httpx.HTTPStatusError, fallback: str) -> str:
+    try:
+        detail = exc.response.json().get("detail")
+    except Exception:
+        return fallback
+    return detail if isinstance(detail, str) else fallback
+
+
+@router.post("/{event_id}/skip", response_class=HTMLResponse)
+async def skip_occurrence(event_id: int, occurrence_date: Annotated[str, Form()]):
+    try:
+        await api.post(f"/organizer/calendar-events/{event_id}/skips", json={"occurrence_date": occurrence_date})
+    except httpx.HTTPStatusError as e:
+        return HTMLResponse(_backend_detail(e, "Failed to skip this occurrence."), status_code=422)
+    except httpx.HTTPError:
+        return HTMLResponse("Failed to skip this occurrence.", status_code=422)
+    return HTMLResponse("", status_code=204)
+
+
+@router.delete("/{event_id}/skip/{occurrence_date}", response_class=HTMLResponse)
+async def restore_occurrence(event_id: int, occurrence_date: str):
+    try:
+        await api.delete(f"/organizer/calendar-events/{event_id}/skips/{occurrence_date}")
+    except httpx.HTTPStatusError as e:
+        return HTMLResponse(_backend_detail(e, "Failed to restore this occurrence."), status_code=422)
+    except httpx.HTTPError:
+        return HTMLResponse("Failed to restore this occurrence.", status_code=422)
+    return HTMLResponse("", status_code=204)
+
+
+@router.post("/{event_id}/end-series", response_class=HTMLResponse)
+async def end_series(event_id: int, from_date: Annotated[str, Form()]):
+    try:
+        await api.post(f"/organizer/calendar-events/{event_id}/end-series", json={"from_date": from_date}, timeout=30.0)
+    except httpx.HTTPStatusError as e:
+        return HTMLResponse(_backend_detail(e, "Failed to end the series."), status_code=422)
+    except httpx.HTTPError:
+        return HTMLResponse("Failed to end the series.", status_code=422)
+    return HTMLResponse("", status_code=204)
+
+
 @router.delete("/{event_id}", response_class=HTMLResponse)
 async def delete_event(event_id: int):
     try:

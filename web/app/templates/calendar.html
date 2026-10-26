@@ -196,6 +196,10 @@
           class="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white w-full focus:outline-none focus:ring-1 focus:ring-[#378ADD]"
         />
       </div>
+      <div id="event-skips-row" class="hidden">
+        <label class="text-xs text-gray-500 mb-1 block">Skipped occurrences <span class="text-gray-300">(click to bring one back)</span></label>
+        <div id="event-skips-list" class="flex flex-wrap gap-1.5"></div>
+      </div>
       <div>
         <label class="text-xs text-gray-500 mb-1 block">Tags <span class="text-gray-300">(comma-separated)</span></label>
         <input
@@ -390,6 +394,7 @@ function _setEventRecurrenceChip(value) {
 
 function openNewEvent(prefillDate) {
   document.getElementById("event-error").classList.add("hidden");
+  document.getElementById("event-skips-row").classList.add("hidden");
   document.getElementById("new-event-form").reset();
   document.getElementById("event-form-title").textContent = "New event";
   document.getElementById("event-time-row").classList.remove("hidden");
@@ -416,6 +421,7 @@ function openEditEvent(ev) {
   form.querySelector('[name="start_date"]').value = ev.all_day ? ev.start_datetime.slice(0, 10) : ev.form_start_date;
   form.querySelector('[name="location"]').value = ev.location || "";
   form.querySelector('[name="tags"]').value = (ev.tags || []).join(", ");
+  _renderSkippedDates(ev);
   form.querySelector('[name="notification_profile"]').value = ev.notification_profile || "";
   form.querySelector('[name="availability"]').value = ev.availability || "";
   form.querySelector('[name="presence"]').value = ev.presence || "in_person";
@@ -443,6 +449,54 @@ function openEditEvent(ev) {
   }
   document.getElementById("new-event-modal").showModal();
   setTimeout(() => document.getElementById("event-title").focus(), 50);
+}
+
+async function _postEventAction(url, method, body, failure) {
+  try {
+    const res = await fetch(url, { method, body });
+    if (!res.ok) {
+      const txt = await res.text();
+      throw new Error(txt || `Error ${res.status}`);
+    }
+    window.location.reload();
+  } catch (err) {
+    alert(err.message || failure);
+  }
+}
+
+function skipOccurrence(eventId, occurrenceDate) {
+  if (!confirm(`Skip the ${occurrenceDate} occurrence? The event stays in Google Calendar; only Alfred hides it.`)) return;
+  const body = new FormData();
+  body.append("occurrence_date", occurrenceDate);
+  _postEventAction(`/calendar/${eventId}/skip`, "POST", body, "Failed to skip this occurrence.");
+}
+
+function restoreOccurrence(eventId, occurrenceDate) {
+  _postEventAction(`/calendar/${eventId}/skip/${occurrenceDate}`, "DELETE", null, "Failed to restore this occurrence.");
+}
+
+function endSeriesFrom(eventId, occurrenceDate) {
+  if (!confirm(`End this series from ${occurrenceDate}? Earlier occurrences stay. This is also changed in Google Calendar.`)) return;
+  const body = new FormData();
+  body.append("from_date", occurrenceDate);
+  _postEventAction(`/calendar/${eventId}/end-series`, "POST", body, "Failed to end the series.");
+}
+
+function _renderSkippedDates(ev) {
+  const row = document.getElementById("event-skips-row");
+  const list = document.getElementById("event-skips-list");
+  list.replaceChildren();
+  const skips = ev.skips || [];
+  row.classList.toggle("hidden", skips.length === 0);
+  skips.forEach(day => {
+    const chip = document.createElement("button");
+    chip.type = "button";
+    chip.className = "text-xs px-2 py-1 rounded-full border border-gray-200 text-gray-500 hover:bg-gray-50";
+    chip.textContent = `${day} ✕`;
+    chip.title = "Bring this occurrence back";
+    chip.onclick = () => restoreOccurrence(ev.id, day);
+    list.appendChild(chip);
+  });
 }
 
 async function deleteEventFromDay(eventId) {

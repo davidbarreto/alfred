@@ -28,6 +28,14 @@
     <button onclick='document.getElementById("calendar-day-modal").close(); openEditEvent({{ ev | tojson }})' class="text-white/60 hover:text-white flex-shrink-0">
       <i class="ti ti-pencil" style="font-size:0.85rem"></i>
     </button>
+    {% if ev.recurrence_rule %}
+    <button onclick='skipOccurrence({{ ev.id }}, {{ ev.start_datetime[:10] | tojson }})' title="Skip this occurrence" class="text-white/60 hover:text-white flex-shrink-0">
+      <i class="ti ti-player-skip-forward" style="font-size:0.85rem"></i>
+    </button>
+    <button onclick='endSeriesFrom({{ ev.id }}, {{ ev.start_datetime[:10] | tojson }})' title="End the series from this one" class="text-white/60 hover:text-white flex-shrink-0">
+      <i class="ti ti-calendar-off" style="font-size:0.85rem"></i>
+    </button>
+    {% endif %}
     <button onclick='deleteEventFromDay({{ ev.id }})' class="text-white/60 hover:text-white flex-shrink-0">
       <i class="ti ti-trash" style="font-size:0.85rem"></i>
     </button>
@@ -56,6 +64,14 @@
     <button onclick='document.getElementById("calendar-day-modal").close(); openEditEvent({{ ev | tojson }})' class="text-gray-300 hover:text-gray-500 flex-shrink-0">
       <i class="ti ti-pencil" style="font-size:0.85rem"></i>
     </button>
+    {% if ev.recurrence_rule %}
+    <button onclick='skipOccurrence({{ ev.id }}, {{ ev.start_datetime[:10] | tojson }})' title="Skip this occurrence" class="text-gray-300 hover:text-gray-500 flex-shrink-0">
+      <i class="ti ti-player-skip-forward" style="font-size:0.85rem"></i>
+    </button>
+    <button onclick='endSeriesFrom({{ ev.id }}, {{ ev.start_datetime[:10] | tojson }})' title="End the series from this one" class="text-gray-300 hover:text-gray-500 flex-shrink-0">
+      <i class="ti ti-calendar-off" style="font-size:0.85rem"></i>
+    </button>
+    {% endif %}
     <button onclick='deleteEventFromDay({{ ev.id }})' class="text-gray-300 hover:text-gray-500 flex-shrink-0">
       <i class="ti ti-trash" style="font-size:0.85rem"></i>
     </button>

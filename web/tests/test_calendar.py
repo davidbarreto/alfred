@@ -97,7 +97,7 @@ class TestCalendarPage:
 
 
 class TestCalendarDay:
-    def test_all_tags_show_under_the_title_instead_of_squeezing_it(self, client, mock_api):
+    def test_first_three_tags_show_under_the_title_and_the_rest_in_a_hint(self, client, mock_api):
         mock_api["get"].return_value = [
             _event(id=2, title="A very long meeting title", start="2026-07-14T09:00:00", end="2026-07-14T09:30:00", tags=["a", "b", "c", "d"]),
         ]
@@ -105,7 +105,9 @@ class TestCalendarDay:
         text = client.get("/calendar/day/2026-07-14").text
 
         assert "A very long meeting title" in text
-        assert all(f">{tag}</span>" in text for tag in "abcd")
+        assert all(f">{tag}</span>" in text for tag in "abc")
+        assert ">d</span>" not in text and ">+1</span>" in text
+        assert 'title="a, b, c, d"' in text
         assert "text-sm text-gray-800 break-words" in text
 
     def test_day_modal_is_wide(self, client, mock_api):

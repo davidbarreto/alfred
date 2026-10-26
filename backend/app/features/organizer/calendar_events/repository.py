@@ -1,3 +1,5 @@
+from datetime import date
+
 from sqlalchemy import and_, delete, or_, select
 from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -10,7 +12,7 @@ def _naive_utc(dt: object) -> object:
     return dt
 
 from app.features.organizer.tags.tables import Tag
-from app.features.organizer.calendar_events.tables import CalendarEvent, CalendarEventInvitee
+from app.features.organizer.calendar_events.tables import CalendarEvent, CalendarEventInvitee, CalendarEventSkip
 from app.features.organizer.calendar_events.schemas import EventCreate, EventUpdate, EventFilters
 
 _EVENT_EXCLUDE = {"tags", "invitees"}
@@ -123,3 +125,20 @@ class CalendarEventRepository:
             return None
         await self._session.execute(delete(CalendarEvent).where(CalendarEvent.id == event_id))
         await self._session.commit()
+
+    async def add_skip(self, event: CalendarEvent, occurrence_date: date) -> bool:
+        """Record a skipped occurrence on the loaded event; False when it was already skipped."""
+        if any(skip.occurrence_date == occurrence_date for skip in event.skips):
+            return False
+        event.skips.append(CalendarEventSkip(occurrence_date=occurrence_date))
+        await self._session.commit()
+        return True
+
+    async def remove_skip(self, event: CalendarEvent, occurrence_date: date) -> bool:
+        """Forget a skipped occurrence on the loaded event; False when it was not skipped."""
+        for skip in event.skips:
+            if skip.occurrence_date == occurrence_date:
+                event.skips.remove(skip)
+                await self._session.commit()
+                return True
+        return False

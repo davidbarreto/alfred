@@ -1,7 +1,7 @@
-from datetime import datetime
+from datetime import date, datetime
 from typing import List, Optional
 
-from sqlalchemy import Boolean, CheckConstraint, ForeignKey, Integer, String, Text, UniqueConstraint
+from sqlalchemy import Boolean, CheckConstraint, Date, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
@@ -10,6 +10,28 @@ from app.features.organizer.calendar_events.constants import EVENT_AVAILABILITIE
 from app.features.organizer.activities.tables import Activity  # noqa: F401 — Tag.activities needs Activity registered wherever Tag is mapped
 from app.features.organizer.routines.tables import Routine  # noqa: F401 — registers Routine for the routine_id foreign key
 from app.features.organizer.tags.tables import Tag
+
+
+class CalendarEventSkip(Base):
+    """One occurrence of a recurring event that the user will not attend. Alfred-only: Google is never told."""
+
+    __tablename__ = "calendar_event_skips"
+    __table_args__ = (
+        UniqueConstraint("event_id", "occurrence_date", name="uq_calendar_event_skips_event_date"),
+        {"schema": "organizer"},
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    event_id: Mapped[int] = mapped_column(
+        ForeignKey("organizer.calendar_events.id", ondelete="CASCADE"), nullable=False
+    )
+    occurrence_date: Mapped[date] = mapped_column(Date, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
+    )
+
+    event: Mapped["CalendarEvent"] = relationship("CalendarEvent", back_populates="skips")
 
 
 class CalendarEventInvitee(Base):
@@ -70,4 +92,11 @@ class CalendarEvent(Base):
         "Tag",
         secondary="organizer.calendar_events_tags",
         back_populates="calendar_events",
+    )
+    skips: Mapped[List["CalendarEventSkip"]] = relationship(
+        "CalendarEventSkip",
+        back_populates="event",
+        cascade="all, delete-orphan",
+        lazy="selectin",
+        order_by="CalendarEventSkip.occurrence_date",
     )

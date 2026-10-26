@@ -1,5 +1,5 @@
 import logging
-from datetime import datetime, time, timedelta
+from datetime import date, datetime, time, timedelta
 from typing import Any
 
 from fastapi import HTTPException, status
@@ -25,6 +25,13 @@ def _parse_local(value: Any, end_of_day: bool = False) -> datetime | None:
     if end_of_day and isinstance(value, str) and len(value.strip()) == _DATE_ONLY_LENGTH:
         return datetime.combine(parsed.date(), time(23, 59, 59))
     return parsed
+
+
+def _parse_day(value: Any) -> date:
+    parsed = parse_dt(value)
+    if parsed is None:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="A date (YYYY-MM-DD) is required")
+    return parsed.date()
 
 
 def _planning_fields(arguments: dict[str, Any]) -> dict[str, Any]:
@@ -107,6 +114,19 @@ async def handle_event(command: str, arguments: dict[str, Any], service: Calenda
         if result is None:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Event {event_id} not found")
         return result.model_dump(mode='json')
+
+    if command in ("skip", "unskip", "endseries"):
+        event_id = int(arguments["id"])
+        day = _parse_day(arguments.get("date"))
+        if command == "skip":
+            result = await service.skip_occurrence(event_id, day)
+        elif command == "unskip":
+            result = await service.unskip_occurrence(event_id, day)
+        else:
+            result = await service.end_series(event_id, day)
+        if result is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Event {event_id} not found")
+        return result.model_dump(mode="json")
 
     if command == "delete":
         event_id = int(arguments["id"])

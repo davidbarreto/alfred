@@ -17,7 +17,7 @@ from app.features.organizer.calendar_events.schemas import (
     EventRead,
 )
 from app.features.organizer.calendar_events.repository import CalendarEventRepository
-from app.features.organizer.calendar_events.recurrence import expand_occurrences
+from app.features.organizer.calendar_events.recurrence import end_rule_before, expand_occurrences
 
 logger = logging.getLogger(__name__)
 
@@ -53,6 +53,25 @@ def _changed_fields(event: Any, event_update: EventUpdate) -> dict[str, Any]:
             continue
         changed[field] = value
     return changed
+
+
+def _require_recurring(event: Any) -> None:
+    if not event.recurrence_rule:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail="This event does not repeat; delete it instead"
+        )
+
+
+def _require_occurrence(event: Any, day: date) -> None:
+    _require_recurring(event)
+    spans = expand_occurrences(
+        event.start_datetime, event.end_datetime, event.recurrence_rule,
+        datetime.combine(day, time.min), datetime.combine(day, time.max),
+    )
+    if not any(start.date() == day for start, _ in spans):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST, detail=f"The event has no occurrence on {day.isoformat()}"
+        )
 
 
 class CalendarEventService:
@@ -91,9 +110,11 @@ class CalendarEventService:
                 )
                 occurrences.append(event_read)
                 continue
+            skipped = set(event_read.skips)
             occurrences.extend(
                 event_read.model_copy(update={"start_datetime": s, "end_datetime": e})
                 for s, e in spans
+                if s.date() not in skipped
             )
         occurrences.sort(key=lambda e: e.start_datetime)
         return occurrences
@@ -184,6 +205,53 @@ class CalendarEventService:
             event_id, list(event_update.model_dump(exclude_unset=True).keys()),
         )
         return EventRead.model_validate(event_orm)
+
+    async def skip_occurrence(self, event_id: int, occurrence_date: date) -> EventRead | None:
+        """Leave one occurrence of a recurring event out of every view. Alfred-only: Google is not told."""
+        event = await self._repo.get_event(event_id)
+        if event is None:
+            logger.debug("CalendarEvent skip: id=%d not found", event_id)
+            return None
+        _require_occurrence(event, occurrence_date)
+        if await self._repo.add_skip(event, occurrence_date):
+            logger.info("CalendarEvent occurrence skipped: id=%d title=%r date=%s", event_id, event.title, occurrence_date)
+        return EventRead.model_validate(event)
+
+    async def unskip_occurrence(self, event_id: int, occurrence_date: date) -> EventRead | None:
+        event = await self._repo.get_event(event_id)
+        if event is None:
+            logger.debug("CalendarEvent unskip: id=%d not found", event_id)
+            return None
+        if not await self._repo.remove_skip(event, occurrence_date):
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail=f"{occurrence_date} is not a skipped date of this event"
+            )
+        logger.info("CalendarEvent occurrence restored: id=%d title=%r date=%s", event_id, event.title, occurrence_date)
+        return EventRead.model_validate(event)
+
+    async def end_series(self, event_id: int, from_date: date) -> EventRead | None:
+        """Stop a recurring event so its last occurrence is the one before `from_date` (written through to Google)."""
+        event = await self._repo.get_event(event_id)
+        if event is None:
+            logger.debug("CalendarEvent end series: id=%d not found", event_id)
+            return None
+        _require_recurring(event)
+        if from_date <= event.start_datetime.date():
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="That date is not after the first occurrence; delete the event to remove the whole series",
+            )
+        remaining = expand_occurrences(
+            event.start_datetime, event.end_datetime, event.recurrence_rule,
+            datetime.combine(from_date, time.min), None,
+        )
+        if not remaining:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST, detail="The series already ends before that date"
+            )
+        rule = end_rule_before(event.recurrence_rule, from_date, event.all_day)
+        logger.info("CalendarEvent series ended: id=%d title=%r from=%s", event_id, event.title, from_date)
+        return await self.update_event(event_id, EventUpdate(recurrence_rule=rule))
 
     async def delete_event(self, event_id: int) -> None:
         if self._provider is None:

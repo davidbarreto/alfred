@@ -1,5 +1,5 @@
 import re
-from datetime import datetime, timedelta, timezone as dt_timezone
+from datetime import date, datetime, time, timedelta, timezone as dt_timezone
 
 from dateutil.rrule import rrulestr
 
@@ -8,6 +8,7 @@ from app.shared.timezone import local_timezone
 _MAX_OCCURRENCES = 366
 _UNBOUNDED_HORIZON = timedelta(days=365 * 5)
 _UNTIL_UTC_RE = re.compile(r"(UNTIL=)(\d{8}T\d{6})Z")
+_END_PARTS_RE = re.compile(r"(?:^|;)(?:UNTIL|COUNT)=[^;]*")
 
 
 def _localize_until(recurrence_rule: str) -> str:
@@ -42,3 +43,17 @@ def expand_occurrences(
 
     starts = rule.between(after, before, inc=True)
     return [(s, s + duration) for s in starts[:_MAX_OCCURRENCES]]
+
+
+def end_rule_before(recurrence_rule: str, first_excluded_day: date, all_day: bool) -> str:
+    """The rule with any UNTIL/COUNT replaced so the last occurrence is the one before `first_excluded_day`.
+
+    Google wants UNTIL as a date for all-day series and as a UTC instant for timed ones.
+    """
+    base = _END_PARTS_RE.sub("", recurrence_rule).lstrip(";")
+    if all_day:
+        until = (first_excluded_day - timedelta(days=1)).strftime("%Y%m%d")
+    else:
+        midnight = datetime.combine(first_excluded_day, time.min, tzinfo=local_timezone())
+        until = (midnight - timedelta(seconds=1)).astimezone(dt_timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    return f"{base};UNTIL={until}"

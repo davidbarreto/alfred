@@ -62,8 +62,14 @@ class EventUpdate(BaseModel):
 
 class EventRead(EventBase):
     id: int
+    skips: list[date] = []
 
     model_config = {"from_attributes": True}
+
+    @field_validator("skips", mode="before")
+    @classmethod
+    def coerce_skips(cls, v: Any) -> list[date]:
+        return [item.occurrence_date if hasattr(item, "occurrence_date") else item for item in v]
 
     @field_validator("tags", mode="before")
     @classmethod
@@ -120,3 +126,11 @@ class CalendarSyncResult(BaseModel):
     updated: int
     start: date
     end: date
+
+
+class EventSkipRequest(BaseModel):
+    occurrence_date: date
+
+
+class EventEndSeriesRequest(BaseModel):
+    from_date: date

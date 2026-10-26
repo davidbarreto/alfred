@@ -64,6 +64,17 @@ _EVENT_PLANNING_DETAILS = (
     "after the event (default 0); routine_id = an event-attached routine whose steps run around this event. "
     "Pass an empty availability or routine_id to clear it."
 )
+_EVENT_SKIP_DETAILS = (
+    "id is the event id and date the day of the occurrence to leave out. Alfred only: the event in Google Calendar is "
+    "untouched, so use it for a meeting you will not attend; the occurrence disappears from event lists, the day plan "
+    "and reminders. The date must be a real occurrence of a recurring event. Undo with unskip; the skipped dates of a "
+    "series are listed in its `skips`."
+)
+_EVENT_END_SERIES_DETAILS = (
+    "id is the event id and date the first day the series no longer happens, so the last occurrence is the one before "
+    "it. Past occurrences are kept. Replaces any UNTIL/COUNT of the rule and is written through to Google Calendar. "
+    "Use delete instead to remove the whole series."
+)
 _TASK_CONTEXT_VALUES = "/".join(TASK_CONTEXTS)
 _TASK_PLANNING_DETAILS = (
     f"Planning fields are optional and stay in Alfred only (never sent to Notion): estimate = minutes (whole number); "
@@ -361,8 +372,32 @@ COMMAND_DEFINITIONS = {
             "requires_args": True,
             "arg_keys": ["id"]
         },
+        "skip": {
+            "description": "Skip one occurrence of a recurring event (a date, YYYY-MM-DD)",
+            "details": _EVENT_SKIP_DETAILS,
+            "aliases": ["/eventskip", "/skip"],
+            "flags": {},
+            "requires_args": True,
+            "arg_keys": ["id", "date"]
+        },
+        "unskip": {
+            "description": "Bring back a skipped occurrence of a recurring event (a date, YYYY-MM-DD)",
+            "aliases": ["/eventunskip", "/unskip"],
+            "flags": {},
+            "requires_args": True,
+            "arg_keys": ["id", "date"]
+        },
+        "endseries": {
+            "description": "End a recurring event: its last occurrence is the one before a date (YYYY-MM-DD)",
+            "details": _EVENT_END_SERIES_DETAILS,
+            "aliases": ["/eventend", "/endseries"],
+            "flags": {},
+            "requires_args": True,
+            "arg_keys": ["id", "date"]
+        },
         "delete": {
             "description": "Delete a calendar event by ID",
+            "details": "Deletes the whole event; for a recurring one that removes every occurrence, past ones included. To miss a single occurrence use skip, to stop the series use endseries.",
             "aliases": ["/eventdelete", "/ed", "/edel", "/eventrm", "/cancel"],
             "flags": {},
             "requires_args": True,

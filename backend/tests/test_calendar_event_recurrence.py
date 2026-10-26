@@ -1,8 +1,8 @@
-from datetime import datetime
+from datetime import date, datetime
 
 import pytest
 
-from app.features.organizer.calendar_events.recurrence import expand_occurrences
+from app.features.organizer.calendar_events.recurrence import end_rule_before, expand_occurrences
 
 
 class TestExpandOccurrences:
@@ -75,3 +75,40 @@ class TestExpandOccurrences:
             range_start=None, range_end=None,
         )
         assert [s.date().isoformat() for s, _ in spans] == ["2026-01-05", "2026-01-12", "2026-01-19"]
+
+
+class TestEndRuleBefore:
+    def test_timed_series_ends_with_a_utc_until_before_the_excluded_day(self):
+        rule = end_rule_before("FREQ=WEEKLY;BYDAY=WE", date(2026, 11, 18), all_day=False)
+
+        assert rule == "FREQ=WEEKLY;BYDAY=WE;UNTIL=20261117T235959Z"
+
+    def test_summer_until_is_shifted_by_the_dst_offset(self):
+        rule = end_rule_before("FREQ=DAILY", date(2026, 7, 15), all_day=False)
+
+        assert rule == "FREQ=DAILY;UNTIL=20260714T225959Z"
+
+    def test_all_day_series_ends_with_a_date_until(self):
+        assert end_rule_before("FREQ=WEEKLY", date(2026, 11, 18), all_day=True) == "FREQ=WEEKLY;UNTIL=20261117"
+
+    @pytest.mark.parametrize("existing", ["FREQ=WEEKLY;COUNT=10", "FREQ=WEEKLY;UNTIL=20271231T235959Z", "COUNT=5;FREQ=WEEKLY"])
+    def test_existing_count_or_until_is_replaced(self, existing):
+        rule = end_rule_before(existing, date(2026, 11, 18), all_day=False)
+
+        assert rule == "FREQ=WEEKLY;UNTIL=20261117T235959Z"
+
+    def test_expansion_stops_before_the_excluded_day(self):
+        start, end = datetime(2026, 11, 4, 14, 30), datetime(2026, 11, 4, 15, 0)  # a Wednesday
+        rule = end_rule_before("FREQ=WEEKLY", date(2026, 11, 18), all_day=False)
+
+        spans = expand_occurrences(start, end, rule, datetime(2026, 11, 1), datetime(2026, 12, 31))
+
+        assert [s.date().isoformat() for s, _ in spans] == ["2026-11-04", "2026-11-11"]
+
+    def test_all_day_expansion_includes_the_last_day_and_stops_after(self):
+        start, end = datetime(2026, 11, 4), datetime(2026, 11, 4, 23, 59, 59)
+        rule = end_rule_before("FREQ=DAILY", date(2026, 11, 7), all_day=True)
+
+        spans = expand_occurrences(start, end, rule, datetime(2026, 11, 1), datetime(2026, 12, 31))
+
+        assert [s.date().isoformat() for s, _ in spans] == ["2026-11-04", "2026-11-05", "2026-11-06"]

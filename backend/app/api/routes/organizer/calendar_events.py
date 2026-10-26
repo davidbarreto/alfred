@@ -1,5 +1,14 @@
+from datetime import date
+
 from fastapi import APIRouter, Depends, HTTPException, Response, status
-from app.features.organizer.calendar_events.schemas import EventRead, EventCreate, EventUpdate, EventFilters
+from app.features.organizer.calendar_events.schemas import (
+    EventCreate,
+    EventEndSeriesRequest,
+    EventFilters,
+    EventRead,
+    EventSkipRequest,
+    EventUpdate,
+)
 from app.api.auth import require_auth
 from app.dependencies import CalendarEventServiceDep
 
@@ -27,6 +36,30 @@ async def get_event(event_id: int, service: CalendarEventServiceDep):
 @router.patch("/{event_id}", response_model=EventRead)
 async def update_event(event_id: int, request: EventUpdate, service: CalendarEventServiceDep):
     event_read = await service.update_event(event_id, request)
+    if event_read is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Event not found")
+    return event_read
+
+
+@router.post("/{event_id}/skips", response_model=EventRead)
+async def skip_occurrence(event_id: int, request: EventSkipRequest, service: CalendarEventServiceDep):
+    event_read = await service.skip_occurrence(event_id, request.occurrence_date)
+    if event_read is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Event not found")
+    return event_read
+
+
+@router.delete("/{event_id}/skips/{occurrence_date}", response_model=EventRead)
+async def unskip_occurrence(event_id: int, occurrence_date: date, service: CalendarEventServiceDep):
+    event_read = await service.unskip_occurrence(event_id, occurrence_date)
+    if event_read is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Event not found")
+    return event_read
+
+
+@router.post("/{event_id}/end-series", response_model=EventRead)
+async def end_series(event_id: int, request: EventEndSeriesRequest, service: CalendarEventServiceDep):
+    event_read = await service.end_series(event_id, request.from_date)
     if event_read is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Event not found")
     return event_read

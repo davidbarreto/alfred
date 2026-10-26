@@ -17,6 +17,7 @@ _KIND_ICONS = {
     "activity": "ti-mood-smile",
     "routine_step": "ti-repeat",
     "routine_block": "ti-repeat",
+    "meal": "ti-tools-kitchen-2",
     "break": "ti-coffee",
     "other": "ti-dots",
 }

@@ -57,6 +57,17 @@ class TestPlanPage:
         assert "Light day" in text
         assert "Version 2" in text and "1 earlier version" in text
 
+    def test_block_icon_follows_its_kind(self, client, mock_api):
+        items = [
+            {"start": "2026-10-21T19:00:00+01:00", "end": "2026-10-21T20:00:00+01:00", "kind": "meal", "ref_id": None, "title": "Dinner", "note": None},
+            {"start": "2026-10-21T16:00:00+01:00", "end": "2026-10-21T16:15:00+01:00", "kind": "break", "ref_id": None, "title": "Rest", "note": None},
+        ]
+        mock_api["get"].side_effect = _routes([_plan(items=items)], [_plan(items=items)], _settings())
+
+        text = client.get("/plan?date=2026-10-21").text
+
+        assert "ti-tools-kitchen-2" in text and "ti-coffee" in text
+
     def test_defaults_to_today(self, client, mock_api):
         mock_api["get"].side_effect = _routes([], [], _settings())
         client.get("/plan")

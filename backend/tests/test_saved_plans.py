@@ -58,7 +58,7 @@ class TestPlanBlock:
         with pytest.raises(ValidationError):
             PlanBlock(**_block(end="2026-10-21T17:00:00+01:00"))
 
-    @pytest.mark.parametrize("kind", ["break", "other"])
+    @pytest.mark.parametrize("kind", ["meal", "break", "other"])
     def test_free_form_kinds_take_no_ref(self, kind):
         with pytest.raises(ValidationError, match="ref_id"):
             PlanBlock(**_block(kind=kind, ref_id=3))

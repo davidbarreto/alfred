@@ -854,6 +854,49 @@
           ]
         }
       }
+    },
+    {
+      "name": "21 - Save Meal With ref_id (422)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 422', () => pm.response.to.have.status(422));",
+              "pm.test('Message says meal takes no ref_id', () => pm.expect(JSON.stringify(pm.response.json().detail)).to.include('meal'));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/planning/saved",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "planning",
+            "saved"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"days\": [\n    {\n      \"date\": \"2031-03-06\",\n      \"items\": [\n        {\n          \"start\": \"2031-03-06T19:00:00+00:00\",\n          \"end\": \"2031-03-06T20:00:00+00:00\",\n          \"kind\": \"meal\",\n          \"ref_id\": 1,\n          \"title\": \"Dinner\"\n        }\n      ]\n    }\n  ]\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
     }
   ]
 }

@@ -193,9 +193,9 @@ _DAY_PLAN_GET_DETAILS = (
 _DAY_PLAN_SAVE_DETAILS = (
     "days is a JSON string: a list of {\"date\": \"YYYY-MM-DD\", \"items\": [...], \"notes\": \"why / intent for that day only\"}. "
     "Each item is {\"start\": ISO datetime WITH UTC offset, \"end\": ISO datetime with offset, \"kind\": one of "
-    "event/task/study_item/activity/routine_step/routine_block/break/other, \"ref_id\": id of the row it refers to (or null), "
+    "event/task/study_item/activity/routine_step/routine_block/meal/break/other, \"ref_id\": id of the row it refers to (or null), "
     "\"title\": text, \"note\": optional text}. ref_id kinds: event=calendar event id, task=task id, study_item=study plan "
-    "item id, routine_step and routine_block=routine step id, activity=activity id; break and other take no ref_id. "
+    "item id, routine_step and routine_block=routine step id, activity=activity id; meal (lunch, dinner), break (rest) and other take no ref_id. "
     "Every block must start on its date (local). Only the dates in the call get a new version; other dates are untouched. "
     "Typical flow: day_plan get for the week, propose, create office events once accepted, save with per-day notes; later "
     "get_saved for the range, modify and save the changed days again."

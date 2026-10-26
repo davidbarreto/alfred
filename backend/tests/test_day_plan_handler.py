@@ -232,7 +232,7 @@ class TestSaveRegistry:
         details = COMMAND_DEFINITIONS["day_plan"]["save"]["details"]
         for phrase in (
             "JSON", "UTC offset", "event", "task", "study_item", "activity", "routine_step", "routine_block",
-            "break", "other", "ref_id", "notes", "Only the dates in the call get a new version", "get_saved",
+            "meal", "break", "other", "ref_id", "notes", "Only the dates in the call get a new version", "get_saved",
         ):
             assert phrase in details, phrase
 

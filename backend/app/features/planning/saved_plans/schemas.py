@@ -3,9 +3,9 @@ from typing import Literal
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
-BLOCK_KINDS = ("event", "task", "study_item", "activity", "routine_step", "routine_block", "break", "other")
-BlockKind = Literal["event", "task", "study_item", "activity", "routine_step", "routine_block", "break", "other"]
-# Kinds that point at a row; break/other blocks are free-form and carry no ref_id.
+BLOCK_KINDS = ("event", "task", "study_item", "activity", "routine_step", "routine_block", "meal", "break", "other")
+BlockKind = Literal["event", "task", "study_item", "activity", "routine_step", "routine_block", "meal", "break", "other"]
+# Kinds that point at a row; meal/break/other blocks are free-form and carry no ref_id.
 REF_KINDS = ("event", "task", "study_item", "activity", "routine_step", "routine_block")
 
 MAX_SAVE_DAYS = 31

@@ -1,16 +1,16 @@
-{# Filterable, scrollable single-choice list. options: iterable of (value, label). The chosen value is submitted in a hidden input named `name`. #}
+{# Filterable, scrollable single-choice list that opens on click/focus. options: iterable of (value, label). The chosen value is submitted in a hidden input named `name`. #}
 {% macro picker(id, name, options, placeholder="Type to filter…") %}
-<div data-picker id="{{ id }}" class="space-y-1">
+<div data-picker id="{{ id }}" class="relative">
   <input type="hidden" name="{{ name }}" value="">
-  <div class="relative">
-    <input type="text" data-picker-filter autocomplete="off" placeholder="{{ placeholder }}"
-           class="input input-sm input-bordered w-full pr-7">
-    <button type="button" data-picker-clear aria-label="Clear selection"
-            class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-300 hover:text-gray-500"><i class="ti ti-x text-xs"></i></button>
-  </div>
-  <ul data-picker-list class="menu menu-xs p-1 border border-gray-200 rounded-lg max-h-40 overflow-y-auto flex-nowrap w-full">
+  <input type="text" data-picker-filter autocomplete="off" placeholder="{{ placeholder }}"
+         class="input input-sm input-bordered w-full pr-14">
+  <button type="button" data-picker-clear aria-label="Clear selection"
+          class="absolute right-7 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"><i class="ti ti-x text-xs"></i></button>
+  <button type="button" data-picker-toggle aria-label="Show the list"
+          class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"><i class="ti ti-chevron-down text-xs"></i></button>
+  <ul data-picker-list class="hidden absolute z-20 left-0 right-0 mt-1 menu menu-xs p-1 bg-white border border-gray-200 rounded-lg shadow-md max-h-48 overflow-y-auto flex-nowrap">
     {% for value, label in options %}
-    <li><button type="button" data-value="{{ value }}" data-label="{{ label }}" class="block truncate text-left">{{ label }} <span class="text-gray-300">#{{ value }}</span></button></li>
+    <li><button type="button" data-value="{{ value }}" data-label="{{ label }}" class="block truncate text-left">{{ label }} <span class="text-gray-400">#{{ value }}</span></button></li>
     {% else %}
     <li class="px-2 py-1 text-xs text-gray-400">Nothing to choose from.</li>
     {% endfor %}

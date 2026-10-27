@@ -117,6 +117,13 @@ class TestRoutinesPage:
         assert 'id="attach-1"' in text and 'data-value="8" data-label="Team dinner"' in text
         assert 'type="number" min="1"' not in text.split('name="checklist_note_id"')[0][-200:]
 
+    def test_picker_lists_start_closed_and_open_from_the_field(self, client, mock_api):
+        mock_api["get"].side_effect = _routes([_routine()], [{"id": 8, "title": "Team dinner"}], [{"id": 31, "title": "Checklist"}])
+        text = client.get("/routines").text
+        assert text.count('data-picker-list class="hidden ') == 2
+        assert "data-picker-toggle" in text and "pickerOpen(picker, true)" in text
+        assert "haystack.includes(term)" in text
+
     def test_note_picker_asks_for_enough_notes(self, client, mock_api):
         mock_api["get"].side_effect = _routes([_routine()])
         client.get("/routines")

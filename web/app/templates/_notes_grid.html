@@ -20,7 +20,7 @@
       <p class="text-xs text-gray-400 line-clamp-2 mt-0.5">{{ note.content }}</p>
       <div class="text-[10px] text-gray-300 mt-2 flex items-center justify-between">
         <span>{% if note.updated_at %}updated {{ note.updated_at | timeago }}{% endif %}</span>
-        <span class="select-none" title="Note ID {{ note.id }}">#{{ note.id }}</span>
+        <span class="select-none text-xs text-gray-500" title="Note ID {{ note.id }}">#{{ note.id }}</span>
       </div>
     </div>
     <button

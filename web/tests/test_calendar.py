@@ -117,7 +117,7 @@ class TestCalendarDay:
     def test_edit_form_has_a_slot_for_the_event_id(self, client, mock_api):
         mock_api["get"].return_value = []
         text = client.get("/calendar").text
-        assert 'id="event-id-label"' in text and "`#${ev.id}`" in text
+        assert 'id="event-id-label" class="text-xs text-gray-500' in text and "`#${ev.id}`" in text
 
     def test_renders_all_day_and_timed_events_for_day(self, client, mock_api):
         mock_api["get"].return_value = [

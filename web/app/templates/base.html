@@ -442,7 +442,18 @@
       });
     });
 
-    // Filterable single-choice list (see the picker macro in _picker.html).
+    // Filterable single-choice list (see the picker macro in _picker.html). The list opens on focus/click.
+    function pickerNormalize(text) {
+      return String(text).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+    }
+    // Every word typed must appear somewhere in the label (or the #id), in any order.
+    function pickerMatches(label, value, query) {
+      var haystack = pickerNormalize(label) + ' #' + value;
+      return pickerNormalize(query).split(/\s+/).filter(Boolean).every(function (term) { return haystack.includes(term); });
+    }
+    function pickerOpen(picker, open) {
+      picker.querySelector('[data-picker-list]').classList.toggle('hidden', !open);
+    }
     function pickerSet(picker, value, label) {
       var hidden = picker.querySelector('input[type="hidden"]');
       var filter = picker.querySelector('[data-picker-filter]');
@@ -450,31 +461,58 @@
       picker.querySelectorAll('[data-picker-list] button').forEach(function (b) {
         b.classList.toggle('active', !!value && b.dataset.value === String(value));
       });
-      if (!value) { filter.value = ''; pickerFilter(picker); return; }
-      var match = picker.querySelector('[data-picker-list] button[data-value="' + value + '"]');
-      filter.value = label || (match ? match.dataset.label : '#' + value);
+      var match = value ? picker.querySelector('[data-picker-list] button[data-value="' + value + '"]') : null;
+      filter.value = !value ? '' : (label || (match ? match.dataset.label : '#' + value));
+      pickerFilter(picker, '');
+      pickerOpen(picker, false);
     }
-    function pickerFilter(picker) {
-      var query = picker.querySelector('[data-picker-filter]').value.trim().toLowerCase();
+    function pickerFilter(picker, query) {
       picker.querySelectorAll('[data-picker-list] li').forEach(function (li) {
         var b = li.firstElementChild;
-        li.style.display = !query || b.dataset.label.toLowerCase().includes(query) || ('#' + b.dataset.value).includes(query) ? '' : 'none';
+        if (!b) return;
+        li.style.display = pickerMatches(b.dataset.label, b.dataset.value, query) ? '' : 'none';
       });
     }
+    document.addEventListener('focusin', function (event) {
+      var picker = event.target.closest && event.target.closest('[data-picker]');
+      document.querySelectorAll('[data-picker]').forEach(function (other) { if (other !== picker) pickerOpen(other, false); });
+      if (picker && event.target.matches('[data-picker-filter]')) {
+        // With a choice made the field shows its label, so show the whole list rather than a list filtered by it.
+        pickerFilter(picker, picker.querySelector('input[type="hidden"]').value ? '' : event.target.value);
+        pickerOpen(picker, true);
+      }
+    });
     document.addEventListener('input', function (event) {
       var picker = event.target.closest && event.target.closest('[data-picker]');
       if (!picker || !event.target.matches('[data-picker-filter]')) return;
       picker.querySelector('input[type="hidden"]').value = '';  // typing starts a new search; a choice needs a click
       picker.querySelectorAll('[data-picker-list] button.active').forEach(function (b) { b.classList.remove('active'); });
-      pickerFilter(picker);
+      pickerFilter(picker, event.target.value);
+      pickerOpen(picker, true);
     });
     document.addEventListener('click', function (event) {
       var picker = event.target.closest && event.target.closest('[data-picker]');
+      document.querySelectorAll('[data-picker]').forEach(function (other) { if (other !== picker) pickerOpen(other, false); });
       if (!picker) return;
       var option = event.target.closest('[data-picker-list] button');
       if (option) { pickerSet(picker, option.dataset.value, option.dataset.label); return; }
-      if (event.target.closest('[data-picker-clear]')) pickerSet(picker, '');
+      if (event.target.closest('[data-picker-clear]')) { pickerSet(picker, ''); return; }
+      if (event.target.closest('[data-picker-toggle]')) {
+        var list = picker.querySelector('[data-picker-list]');
+        if (list.classList.contains('hidden')) picker.querySelector('[data-picker-filter]').focus();
+        pickerOpen(picker, list.classList.contains('hidden'));
+        return;
+      }
+      if (event.target.matches('[data-picker-filter]')) pickerOpen(picker, true);
     });
+    document.addEventListener('keydown', function (event) {
+      var picker = event.target.closest && event.target.closest('[data-picker]');
+      if (picker && event.key === 'Escape' && !picker.querySelector('[data-picker-list]').classList.contains('hidden')) {
+        event.stopPropagation();  // close the list, not the dialog around it
+        event.preventDefault();
+        pickerOpen(picker, false);
+      }
+    }, true);
   </script>
 
 </body>

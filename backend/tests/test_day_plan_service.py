@@ -457,6 +457,39 @@ class TestWorkTaskBlocks:
         assert plan["work"]["committed_minutes"] == 150
         assert plan["work"]["remaining_minutes"] == 330
 
+    async def test_work_blocks_count_without_a_task(self, service, parts):
+        parts.saved.get_saved.return_value = [_saved_day([
+            _block("2026-10-21T09:00:00+01:00", "2026-10-21T11:00:00+01:00", kind="work", ref_id=None),
+        ])]
+
+        plan = _dump(await service.get_plan(date(2026, 10, 21)))
+
+        assert plan["work"]["committed_minutes"] == 120
+        parts.tasks.get_task.assert_not_awaited()
+
+    async def test_missed_blocks_do_not_count(self, service, parts):
+        parts.tasks.get_task.return_value = _task(4, tags=["work"])
+        parts.saved.get_saved.return_value = [_saved_day([
+            {**_block("2026-10-21T09:00:00+01:00", "2026-10-21T10:00:00+01:00", kind="work", ref_id=None), "missed": True},
+            {**_block("2026-10-21T14:00:00+01:00", "2026-10-21T16:00:00+01:00"), "missed": True},
+            _block("2026-10-21T17:00:00+01:00", "2026-10-21T17:30:00+01:00", kind="work", ref_id=None),
+        ])]
+
+        plan = _dump(await service.get_plan(date(2026, 10, 21)))
+
+        assert plan["work"]["committed_minutes"] == 30
+
+    async def test_saved_plan_in_the_day_plan_exposes_the_missed_flag(self, service, parts):
+        parts.saved.get_saved.return_value = [_saved_day([
+            {**_block("2026-10-21T14:00:00+01:00", "2026-10-21T15:00:00+01:00"), "missed": True, "missed_at": "2026-10-21T21:00:00+01:00"},
+            _block("2026-10-21T16:00:00+01:00", "2026-10-21T17:00:00+01:00", kind="break", ref_id=None),
+        ])]
+        parts.tasks.get_task.return_value = _task(4, tags=[])
+
+        saved = _dump(await service.get_plan(date(2026, 10, 21)))["saved_plan"][0]["items"]
+
+        assert saved[0]["missed"] is True and "missed" not in saved[1]
+
     async def test_time_covered_by_an_event_and_a_task_counts_once(self, service, parts):
         parts.events.get_events.return_value = [
             _event(1, "Workshop", datetime(2026, 10, 21, 14, 0), datetime(2026, 10, 21, 15, 0), tags=["work"]),

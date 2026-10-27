@@ -7,7 +7,12 @@ from fastapi import HTTPException, status
 
 from app.assistant.commands.handlers._utils import build_model, parse_int
 from app.features.planning.saved_plans.schemas import DayPlansSave
-from app.features.planning.saved_plans.service import SavedPlanConflictError, SavedPlanService, SavedPlanValidationError
+from app.features.planning.saved_plans.service import (
+    SavedPlanConflictError,
+    SavedPlanNotFoundError,
+    SavedPlanService,
+    SavedPlanValidationError,
+)
 from app.features.planning.schemas import PlanningSettingsUpdate
 from app.features.planning.service import MAX_DAYS, DayPlanService
 from app.features.planning.settings_service import PlanningSettingsService
@@ -83,6 +88,8 @@ async def handle_day_plan(
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc))
     except SavedPlanConflictError as exc:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc))
+    except SavedPlanNotFoundError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))
 
 
 async def _dispatch(
@@ -129,5 +136,16 @@ async def _dispatch(
     if command == "history":
         plans = await saved_plan_service.get_history(_required_date(arguments, "date"))
         return [p.model_dump(mode="json") for p in plans]
+
+    if command in ("miss", "unmiss"):
+        plan = await saved_plan_service.set_missed_on(
+            _required_date(arguments, "date"),
+            command == "miss",
+            kind=str(arguments.get("kind") or "task"),
+            ref_id=parse_int(arguments.get("ref_id"), "ref_id"),
+            title=str(arguments["title"]) if arguments.get("title") else None,
+            start=str(arguments["start"]) if arguments.get("start") else None,
+        )
+        return plan.model_dump(mode="json")
 
     raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Unknown day_plan command: {command}")

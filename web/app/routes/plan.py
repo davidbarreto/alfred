@@ -17,6 +17,8 @@ _KIND_ICONS = {
     "activity": "ti-mood-smile",
     "routine_step": "ti-repeat",
     "routine_block": "ti-repeat",
+    "work": "ti-briefcase",
+    "transport": "ti-route",
     "meal": "ti-tools-kitchen-2",
     "break": "ti-coffee",
     "other": "ti-dots",
@@ -51,8 +53,8 @@ async def plan_page(request: Request):
     active = by_date.get(day.isoformat())
     plan = _pick_version(history, request.query_params.get("version")) or active
     items = [
-        {**item, "start_clock": _clock(item["start"]), "end_clock": _clock(item["end"]), "icon": _KIND_ICONS.get(item["kind"], "ti-dots")}
-        for item in (plan["items"] if plan else [])
+        {**item, "index": index, "start_clock": _clock(item["start"]), "end_clock": _clock(item["end"]), "icon": _KIND_ICONS.get(item["kind"], "ti-dots")}
+        for index, item in enumerate(plan["items"] if plan else [])
     ]
     return templates.TemplateResponse(request, "plan.html", {
         "available": saved is not None,
@@ -86,6 +88,16 @@ async def archive_plan(plan_id: int):
 @router.post("/saved/{plan_id}/restore")
 async def restore_plan(plan_id: int):
     return await forward(api.post(f"/planning/saved/{plan_id}/restore"), "Could not restore this version.")
+
+
+@router.post("/saved/{plan_id}/blocks/{index}/missed")
+async def mark_missed(plan_id: int, index: int):
+    return await forward(api.post(f"/planning/saved/{plan_id}/blocks/{index}/missed"), "Could not mark this block as not done.")
+
+
+@router.delete("/saved/{plan_id}/blocks/{index}/missed")
+async def unmark_missed(plan_id: int, index: int):
+    return await forward(api.delete(f"/planning/saved/{plan_id}/blocks/{index}/missed"), "Could not undo this.")
 
 
 @router.delete("/saved/{plan_id}")

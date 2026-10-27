@@ -160,6 +160,48 @@ class TestPlanPage:
         assert anon_client.get("/plan", follow_redirects=False).status_code == 302
 
 
+class TestMissedBlocks:
+    def test_blocks_offer_didnt_do_it_and_missed_ones_are_struck_through(self, client, mock_api):
+        items = [
+            {"start": "2026-10-21T18:00:00+01:00", "end": "2026-10-21T19:00:00+01:00", "kind": "task", "ref_id": 4, "title": "Training", "note": None},
+            {"start": "2026-10-21T20:00:00+01:00", "end": "2026-10-21T20:30:00+01:00", "kind": "transport", "ref_id": None, "title": "Metro home",
+             "note": None, "missed": True, "missed_at": "2026-10-21T21:00:00+01:00"},
+        ]
+        mock_api["get"].side_effect = _routes([_plan(id=5, items=items)], [_plan(id=5, items=items)], _settings())
+
+        text = client.get("/plan?date=2026-10-21").text
+
+        assert 'data-missed-action="miss" data-plan-id="5" data-block-index="0"' in text
+        assert 'data-missed-action="undo" data-plan-id="5" data-block-index="1"' in text
+        assert "line-through text-gray-400" in text and "· not done" in text
+        assert text.count("· not done") == 1
+
+    def test_work_and_transport_get_their_own_icons(self, client, mock_api):
+        items = [
+            {"start": "2026-10-21T08:00:00+01:00", "end": "2026-10-21T08:30:00+01:00", "kind": "transport", "ref_id": None, "title": "Commute", "note": None},
+            {"start": "2026-10-21T09:00:00+01:00", "end": "2026-10-21T11:00:00+01:00", "kind": "work", "ref_id": None, "title": "Deep work", "note": None},
+        ]
+        mock_api["get"].side_effect = _routes([_plan(items=items)], [_plan(items=items)], _settings())
+        text = client.get("/plan?date=2026-10-21").text
+        assert "ti-route" in text and "ti-briefcase" in text and "ti-dots" not in text.split('id="saved-plan"')[1].split('id="plan-versions"')[0]
+
+    def test_mark_and_unmark_are_forwarded(self, client, mock_api):
+        mock_api["post"].return_value = _plan()
+        mock_api["delete"].return_value = None
+        assert client.post("/plan/saved/3/blocks/1/missed").status_code == 200
+        assert client.delete("/plan/saved/3/blocks/1/missed").status_code == 200
+        mock_api["post"].assert_awaited_once_with("/planning/saved/3/blocks/1/missed")
+        mock_api["delete"].assert_awaited_once_with("/planning/saved/3/blocks/1/missed")
+
+    def test_backend_message_is_relayed(self, client, mock_api):
+        request = httpx.Request("POST", "http://api/x")
+        mock_api["post"].side_effect = httpx.HTTPStatusError(
+            "nf", request=request, response=httpx.Response(404, json={"detail": "Saved plan 3 has no block 9"}, request=request)
+        )
+        resp = client.post("/plan/saved/3/blocks/9/missed")
+        assert resp.status_code == 404 and resp.json() == {"error": "Saved plan 3 has no block 9"}
+
+
 class TestPlanVersionWrites:
     def test_archive_is_forwarded(self, client, mock_api):
         mock_api["post"].return_value = _plan()

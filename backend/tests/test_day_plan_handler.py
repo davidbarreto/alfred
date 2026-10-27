@@ -224,6 +224,63 @@ class TestLoadCommands:
         assert exc.value.status_code == 400
 
 
+class TestMiss:
+    async def test_miss_by_ref_id_defaults_to_a_task(self, plans, settings, saved):
+        saved.set_missed_on.return_value = _saved_read()
+        await handle_day_plan("miss", {"date": "2026-10-21", "ref_id": "4"}, plans, settings, saved)
+        saved.set_missed_on.assert_awaited_once_with(
+            date(2026, 10, 21), True, kind="task", ref_id=4, title=None, start=None
+        )
+
+    async def test_unmiss_by_title_and_start(self, plans, settings, saved):
+        saved.set_missed_on.return_value = _saved_read()
+        await handle_day_plan(
+            "unmiss", {"date": "2026-10-21", "title": "metro", "kind": "transport", "start": "08:00"}, plans, settings, saved
+        )
+        saved.set_missed_on.assert_awaited_once_with(
+            date(2026, 10, 21), False, kind="transport", ref_id=None, title="metro", start="08:00"
+        )
+
+    async def test_needs_a_date(self, plans, settings, saved):
+        with pytest.raises(HTTPException) as exc:
+            await handle_day_plan("miss", {"ref_id": "4"}, plans, settings, saved)
+        assert exc.value.status_code == 400
+
+    async def test_no_matching_block_is_404_and_ambiguity_422(self, plans, settings, saved):
+        from app.features.planning.saved_plans.service import SavedPlanNotFoundError, SavedPlanValidationError
+
+        saved.set_missed_on.side_effect = SavedPlanNotFoundError("none")
+        with pytest.raises(HTTPException) as exc:
+            await handle_day_plan("miss", {"date": "2026-10-21", "ref_id": "4"}, plans, settings, saved)
+        assert exc.value.status_code == 404
+        saved.set_missed_on.side_effect = SavedPlanValidationError("2 blocks match")
+        with pytest.raises(HTTPException) as exc:
+            await handle_day_plan("miss", {"date": "2026-10-21", "ref_id": "4"}, plans, settings, saved)
+        assert exc.value.status_code == 422
+
+    def test_details_tell_the_llm_when_to_use_it(self):
+        details = COMMAND_DEFINITIONS["day_plan"]["miss"]["details"]
+        for phrase in ("did not do", "missed=true", "no new version", "ref_id", "stays open"):
+            assert phrase in details.replace("creates no new version", "no new version"), phrase
+        assert COMMAND_DEFINITIONS["day_plan"]["unmiss"]["arg_keys"] == ["date"]
+
+    def test_save_details_describe_work_transport_and_missed_blocks(self):
+        details = COMMAND_DEFINITIONS["day_plan"]["save"]["details"]
+        for phrase in ("work/transport", "travel_minutes", "missed=true", "Free-form kinds take no ref_id"):
+            assert phrase in details, phrase
+
+
+def _saved_read():
+    from datetime import datetime, timezone
+
+    from app.features.planning.saved_plans.schemas import SavedDayPlanRead
+
+    now = datetime(2026, 10, 21, 9, 0, tzinfo=timezone.utc)
+    return SavedDayPlanRead(
+        id=1, plan_date=date(2026, 10, 21), version=1, items=[], source="mcp", created_at=now, updated_at=now
+    )
+
+
 class TestSaveRegistry:
     def test_actions_exist(self):
         assert {"save", "get_saved", "history"} <= set(COMMAND_DEFINITIONS["day_plan"])

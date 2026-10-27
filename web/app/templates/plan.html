@@ -52,13 +52,17 @@
       {% if items %}
       <ul class="divide-y divide-gray-100">
         {% for item in items %}
-        <li class="py-2 flex items-start gap-3">
-          <span class="w-24 shrink-0 text-xs text-gray-500 tabular-nums pt-0.5">{{ item.start_clock }}–{{ item.end_clock }}</span>
+        <li class="py-2 flex items-start gap-3 {% if item.missed %}opacity-70{% endif %}" data-block-index="{{ item.index }}">
+          <span class="w-24 shrink-0 text-xs text-gray-500 tabular-nums pt-0.5 {% if item.missed %}line-through{% endif %}">{{ item.start_clock }}–{{ item.end_clock }}</span>
           <i class="ti {{ item.icon }} text-gray-400 pt-0.5"></i>
-          <div class="min-w-0">
-            <p class="text-sm text-gray-900">{{ item.title }}</p>
+          <div class="min-w-0 flex-1">
+            <p class="text-sm {% if item.missed %}line-through text-gray-400{% else %}text-gray-900{% endif %}">{{ item.title }}{% if item.missed %} <span class="inline-block text-xs text-gray-500">· not done</span>{% endif %}</p>
             {% if item.note %}<p class="text-xs text-gray-400">{{ item.note }}</p>{% endif %}
           </div>
+          <button type="button" class="btn btn-xs btn-ghost text-gray-500 shrink-0"
+                  data-missed-action="{{ 'undo' if item.missed else 'miss' }}" data-plan-id="{{ plan.id }}" data-block-index="{{ item.index }}">
+            {{ 'Undo' if item.missed else "Didn't do it" }}
+          </button>
         </li>
         {% endfor %}
       </ul>
@@ -129,6 +133,21 @@
 </div>
 
 <script>
+document.querySelectorAll('[data-missed-action]').forEach((button) => {
+  button.addEventListener('click', async () => {
+    button.disabled = true;
+    const url = `/plan/saved/${button.dataset.planId}/blocks/${button.dataset.blockIndex}/missed`;
+    const res = await fetch(url, { method: button.dataset.missedAction === 'miss' ? 'POST' : 'DELETE' });
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      alert(data.error || 'Something went wrong.');
+      button.disabled = false;
+      return;
+    }
+    location.reload();
+  });
+});
+
 document.querySelectorAll('[data-plan-action]').forEach((button) => {
   button.addEventListener('click', async () => {
     const action = button.dataset.planAction;

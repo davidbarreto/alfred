@@ -180,7 +180,7 @@ _DAY_PLAN_GET_DETAILS = (
     "Per day: timeline (events with availability/presence/notification_profile, routine_step entries around events, "
     "derived travel blocks, sorted; overlaps are only reported in warnings), routine_blocks (steps of scheduled "
     "routines with a duration and a window, fixed=true when the window is exactly the duration), all_day, work "
-    "(target, committed by events tagged with the work tag plus the saved task blocks of work-tagged tasks, overlaps counted once, remaining, preferred windows). Once per request: "
+    "(target, committed by events tagged with the work tag plus the saved work blocks and saved task blocks of work-tagged tasks, missed blocks excluded, overlaps counted once, remaining, preferred windows). Once per request: "
     "preferences; overdue_tasks; due_tasks (deadline in the range or the next 3 days; you choose the day); "
     "recurring_tasks (with due_dates, or flexible=true when no specific day); backlog_tasks (undated open tasks, "
     "the pool for placing work without a date); study (open items of active plans plus language quota progress); "
@@ -193,12 +193,26 @@ _DAY_PLAN_GET_DETAILS = (
 _DAY_PLAN_SAVE_DETAILS = (
     "days is a JSON string: a list of {\"date\": \"YYYY-MM-DD\", \"items\": [...], \"notes\": \"why / intent for that day only\"}. "
     "Each item is {\"start\": ISO datetime WITH UTC offset, \"end\": ISO datetime with offset, \"kind\": one of "
-    "event/task/study_item/activity/routine_step/routine_block/meal/break/other, \"ref_id\": id of the row it refers to (or null), "
+    "event/task/study_item/activity/routine_step/routine_block/work/transport/meal/break/other, \"ref_id\": id of the row it refers to (or null), "
     "\"title\": text, \"note\": optional text}. ref_id kinds: event=calendar event id, task=task id, study_item=study plan "
-    "item id, routine_step and routine_block=routine step id, activity=activity id; meal (lunch, dinner), break (rest) and other take no ref_id. "
+    "item id, routine_step and routine_block=routine step id, activity=activity id. Free-form kinds take no ref_id: work (focused work "
+    "that is not a specific task, counts toward the day's committed work time), transport (a commute or trip leg such as home to office or "
+    "metro to school; use it for travel that is NOT already covered by an event's travel_minutes, since those legs come as derived travel "
+    "blocks), meal (lunch, dinner), break (rest) and other. "
+    "A saved block may carry missed=true: the user marked it as not done (the task stays open, it is not done or overdue because of it). "
+    "Missed blocks do not count as committed work; when you re-plan that task for another day, place it once there and do not treat the "
+    "missed block as a second occurrence. "
     "Every block must start on its date (local). Only the dates in the call get a new version; other dates are untouched. "
     "Typical flow: day_plan get for the week, propose, create office events once accepted, save with per-day notes; later "
     "get_saved for the range, modify and save the changed days again."
+)
+
+_DAY_PLAN_MISS_DETAILS = (
+    "Use this when the user says they did not do something that was planned (\"I skipped training today\"), instead of "
+    "saving the day again: it only flags the block (missed=true) in the day's active saved plan and creates no new version. "
+    "date is the plan's day (YYYY-MM-DD). Identify the block with ref_id (kind defaults to task; use the same kind as in the "
+    "saved plan) or with part of its title for free-form blocks; start (HH:MM, local) picks one when the same thing is planned "
+    "twice that day. The task itself is not touched: it stays open and can be placed on another day. unmiss undoes it."
 )
 
 COMMAND_DEFINITIONS = {
@@ -1156,6 +1170,22 @@ COMMAND_DEFINITIONS = {
             "flags": {"--to": "to", "--version": "version"},
             "requires_args": True,
             "arg_keys": ["from"],
+        },
+        "miss": {
+            "description": "Mark a block of a date's saved plan as not done (the task stays open and can be planned again)",
+            "details": _DAY_PLAN_MISS_DETAILS,
+            "aliases": ["/dayplanmiss"],
+            "flags": {"--ref": "ref_id", "--kind": "kind", "--title": "title", "--start": "start"},
+            "requires_args": True,
+            "arg_keys": ["date"],
+        },
+        "unmiss": {
+            "description": "Undo a not-done mark on a block of a date's saved plan",
+            "details": _DAY_PLAN_MISS_DETAILS,
+            "aliases": ["/dayplanunmiss"],
+            "flags": {"--ref": "ref_id", "--kind": "kind", "--title": "title", "--start": "start"},
+            "requires_args": True,
+            "arg_keys": ["date"],
         },
         "history": {
             "description": "List every saved version of one date's plan, newest first",

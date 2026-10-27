@@ -277,12 +277,22 @@ class DayPlanService:
     async def _work_task_blocks(
         self, saved: list[SavedDayPlanRead], work_tag: str
     ) -> dict[date, list[tuple[datetime, datetime]]]:
-        """Saved task blocks whose task carries the work tag, by plan date."""
+        """Saved blocks that count as work, by plan date: `work` blocks and blocks of tasks carrying the work tag.
+
+        Blocks the user marked as missed are left out: that time was not worked.
+        """
         wanted = work_tag.lower()
         is_work: dict[int, bool] = {}
         blocks: dict[date, list[tuple[datetime, datetime]]] = {}
         for plan in saved:
             for item in plan.items:
+                if item.missed:
+                    continue
+                if item.kind == "work":
+                    blocks.setdefault(plan.plan_date, []).append(
+                        (datetime.fromisoformat(item.start), datetime.fromisoformat(item.end))
+                    )
+                    continue
                 if item.kind != "task" or item.ref_id is None:
                     continue
                 if item.ref_id not in is_work:

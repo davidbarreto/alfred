@@ -103,3 +103,19 @@ async def delete_saved_plan(plan_id: int, service: SavedPlanServiceDep):
         await service.delete(plan_id)
     except SavedPlanNotFoundError as exc:
         raise _http_error(exc)
+
+
+@router.post("/saved/{plan_id}/blocks/{index}/missed", response_model=SavedDayPlanRead)
+async def mark_block_missed(plan_id: int, index: int, service: SavedPlanServiceDep):
+    try:
+        return await service.set_block_missed(plan_id, index, True)
+    except SavedPlanNotFoundError as exc:
+        raise _http_error(exc)
+
+
+@router.delete("/saved/{plan_id}/blocks/{index}/missed", response_model=SavedDayPlanRead)
+async def unmark_block_missed(plan_id: int, index: int, service: SavedPlanServiceDep):
+    try:
+        return await service.set_block_missed(plan_id, index, False)
+    except SavedPlanNotFoundError as exc:
+        raise _http_error(exc)

@@ -1063,6 +1063,139 @@
       }
     },
     {
+      "name": "22a - Mark Block Missed",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Block flagged', () => { const b = pm.response.json().items[0]; pm.expect(b.missed).to.eql(true); pm.expect(b.missed_at).to.match(/[+-]\\d{2}:\\d{2}$/); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/planning/saved/{{saved_plan_old_id}}/blocks/0/missed",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "planning",
+            "saved",
+            "{{saved_plan_old_id}}",
+            "blocks",
+            "0",
+            "missed"
+          ]
+        }
+      }
+    },
+    {
+      "name": "22b - Day Plan Shows Missed Flag",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('saved_plan block carries missed', () => pm.expect(pm.response.json().saved_plan[0].items[0].missed).to.eql(true));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/planning/day?date=2031-03-03",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "planning",
+            "day"
+          ],
+          "query": [
+            {
+              "key": "date",
+              "value": "2031-03-03"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "22c - Unmark Block Missed",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Flag removed', () => pm.expect(pm.response.json().items[0].missed).to.be.undefined);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/planning/saved/{{saved_plan_old_id}}/blocks/0/missed",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "planning",
+            "saved",
+            "{{saved_plan_old_id}}",
+            "blocks",
+            "0",
+            "missed"
+          ]
+        }
+      }
+    },
+    {
+      "name": "22d - Mark Unknown Block (404)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 404', () => pm.response.to.have.status(404));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/planning/saved/{{saved_plan_old_id}}/blocks/99/missed",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "planning",
+            "saved",
+            "{{saved_plan_old_id}}",
+            "blocks",
+            "99",
+            "missed"
+          ]
+        }
+      }
+    },
+    {
       "name": "22 - Delete Non-Active Version",
       "event": [
         {
@@ -1147,6 +1280,91 @@
             "999999999",
             "archive"
           ]
+        }
+      }
+    },
+    {
+      "name": "25 - Save Work And Transport Blocks",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+              "pm.test('Kinds accepted', () => pm.expect(pm.response.json()[0].items.map(i => i.kind)).to.eql(['transport', 'work']));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/planning/saved",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "planning",
+            "saved"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"days\": [\n    {\n      \"date\": \"2031-03-10\",\n      \"items\": [\n        {\n          \"start\": \"2031-03-10T08:00:00+00:00\",\n          \"end\": \"2031-03-10T08:30:00+00:00\",\n          \"kind\": \"transport\",\n          \"title\": \"Postman commute\"\n        },\n        {\n          \"start\": \"2031-03-10T09:00:00+00:00\",\n          \"end\": \"2031-03-10T11:00:00+00:00\",\n          \"kind\": \"work\",\n          \"title\": \"Postman focus block\"\n        }\n      ]\n    }\n  ]\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "26 - Work Block With ref_id (422)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 422', () => pm.response.to.have.status(422));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/planning/saved",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "planning",
+            "saved"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"days\": [\n    {\n      \"date\": \"2031-03-11\",\n      \"items\": [\n        {\n          \"start\": \"2031-03-11T09:00:00+00:00\",\n          \"end\": \"2031-03-11T10:00:00+00:00\",\n          \"kind\": \"work\",\n          \"ref_id\": 5,\n          \"title\": \"Bad\"\n        }\n      ]\n    }\n  ]\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
         }
       }
     }

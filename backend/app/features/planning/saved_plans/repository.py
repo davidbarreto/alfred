@@ -43,6 +43,19 @@ class DayPlanRepository:
         result = await self._session.execute(select(DayPlan).where(DayPlan.id == plan_id))
         return result.scalar_one_or_none()
 
+    async def set_block_missed(self, plan: DayPlan, index: int, missed_at: str | None) -> DayPlan:
+        """Mark (ISO timestamp) or unmark (None) one block as not done. Edits the version in place."""
+        items = [dict(item) for item in plan.items]
+        if missed_at is None:
+            items[index].pop("missed", None)
+            items[index].pop("missed_at", None)
+        else:
+            items[index].update(missed=True, missed_at=missed_at)
+        plan.items = items
+        await self._session.commit()
+        await self._session.refresh(plan)
+        return plan
+
     async def archive_plan(self, plan: DayPlan) -> DayPlan:
         plan.archived_at = func.now()
         await self._session.commit()

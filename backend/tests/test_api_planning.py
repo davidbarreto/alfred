@@ -150,6 +150,18 @@ class TestSavedRoutes:
         assert response.status_code == 200
         saved_service.restore.assert_awaited_once_with(1)
 
+    def test_mark_and_unmark_block_missed(self, saved_client, saved_service):
+        saved_service.set_block_missed.return_value = saved_service.archive.return_value
+        assert saved_client.post("/planning/saved/1/blocks/2/missed", headers=AUTH).status_code == 200
+        assert saved_client.delete("/planning/saved/1/blocks/2/missed", headers=AUTH).status_code == 200
+        assert [c.args for c in saved_service.set_block_missed.await_args_list] == [(1, 2, True), (1, 2, False)]
+
+    def test_missed_unknown_block_is_404(self, saved_client, saved_service):
+        from app.features.planning.saved_plans.service import SavedPlanNotFoundError
+
+        saved_service.set_block_missed.side_effect = SavedPlanNotFoundError("no block")
+        assert saved_client.post("/planning/saved/1/blocks/9/missed", headers=AUTH).status_code == 404
+
     def test_delete_is_204(self, saved_client, saved_service):
         response = saved_client.delete("/planning/saved/1", headers=AUTH)
         assert response.status_code == 204

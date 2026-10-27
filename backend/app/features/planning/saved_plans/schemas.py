@@ -3,9 +3,13 @@ from typing import Literal
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 
-BLOCK_KINDS = ("event", "task", "study_item", "activity", "routine_step", "routine_block", "meal", "break", "other")
-BlockKind = Literal["event", "task", "study_item", "activity", "routine_step", "routine_block", "meal", "break", "other"]
-# Kinds that point at a row; meal/break/other blocks are free-form and carry no ref_id.
+BLOCK_KINDS = (
+    "event", "task", "study_item", "activity", "routine_step", "routine_block", "work", "transport", "meal", "break", "other",
+)
+BlockKind = Literal[
+    "event", "task", "study_item", "activity", "routine_step", "routine_block", "work", "transport", "meal", "break", "other"
+]
+# Kinds that point at a row; work/transport/meal/break/other blocks are free-form and carry no ref_id.
 REF_KINDS = ("event", "task", "study_item", "activity", "routine_step", "routine_block")
 
 MAX_SAVE_DAYS = 31
@@ -55,6 +59,8 @@ class PlanBlockRead(BaseModel):
     ref_id: int | None = None
     title: str
     note: str | None = None
+    missed: bool | None = None
+    missed_at: str | None = None
 
 
 class SavedDayPlanRead(BaseModel):

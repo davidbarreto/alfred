@@ -59,6 +59,12 @@ class TestPlanBlock:
         with pytest.raises(ValidationError):
             PlanBlock(**_block(end="2026-10-21T17:00:00+01:00"))
 
+    @pytest.mark.parametrize("kind", ["work", "transport"])
+    def test_work_and_transport_are_valid_free_form_kinds(self, kind):
+        assert PlanBlock(**_block(kind=kind)).kind == kind
+        with pytest.raises(ValidationError, match="ref_id"):
+            PlanBlock(**_block(kind=kind, ref_id=3))
+
     @pytest.mark.parametrize("kind", ["meal", "break", "other"])
     def test_free_form_kinds_take_no_ref(self, kind):
         with pytest.raises(ValidationError, match="ref_id"):
@@ -229,6 +235,85 @@ class TestRead:
         assert (item.start, item.ref_id, item.title) == ("2026-10-21T09:00:00+01:00", 4, "Write")
 
 
+class TestMissedBlocks:
+    async def test_marking_flags_the_block_with_a_local_timestamp(self, service, repo_mock):
+        repo_mock.get_plan.return_value = _row(id=3, items=[_block_item(), _block_item()])
+        repo_mock.set_block_missed.side_effect = lambda plan, i, at: _row(
+            id=plan.id, items=[plan.items[0], {**plan.items[1], "missed": True, "missed_at": at}]
+        )
+
+        plan = await service.set_block_missed(3, 1, True)
+
+        _, index, stamp = repo_mock.set_block_missed.call_args.args
+        assert index == 1 and stamp is not None and stamp[-6] in "+-"
+        assert plan.items[1].missed is True and plan.items[0].missed is None
+
+    async def test_unmarking_clears_the_flag(self, service, repo_mock):
+        repo_mock.get_plan.return_value = _row(items=[{**_block_item(), "missed": True, "missed_at": "x"}])
+        repo_mock.set_block_missed.side_effect = lambda plan, i, at: _row(items=[_block_item()])
+
+        plan = await service.set_block_missed(1, 0, False)
+
+        assert repo_mock.set_block_missed.call_args.args[2] is None
+        assert plan.items[0].missed is None
+
+    @pytest.mark.parametrize("index", [-1, 1])
+    async def test_block_index_must_exist(self, service, repo_mock, index):
+        repo_mock.get_plan.return_value = _row(items=[_block_item()])
+        with pytest.raises(SavedPlanNotFoundError, match="no block"):
+            await service.set_block_missed(1, index, True)
+        repo_mock.set_block_missed.assert_not_called()
+
+    async def test_unknown_plan_is_not_found(self, service, repo_mock):
+        repo_mock.get_plan.return_value = None
+        with pytest.raises(SavedPlanNotFoundError):
+            await service.set_block_missed(9, 0, True)
+
+    async def test_any_kind_can_be_marked(self, service, repo_mock):
+        repo_mock.get_plan.return_value = _row(items=[{**_block_item(), "kind": "break", "ref_id": None}])
+        repo_mock.set_block_missed.side_effect = lambda plan, i, at: _row(items=plan.items)
+        await service.set_block_missed(1, 0, True)
+        repo_mock.set_block_missed.assert_awaited_once()
+
+
+class TestMissedByReference:
+    @pytest.fixture
+    def day(self, repo_mock):
+        repo_mock.get_active_plans.return_value = [_row(id=8, items=[
+            {**_block_item(), "title": "Training", "ref_id": 4, "start": "2026-10-21T18:00:00+01:00"},
+            {**_block_item(), "kind": "transport", "ref_id": None, "title": "Metro to school", "start": "2026-10-21T08:00:00+01:00"},
+            {**_block_item(), "title": "Training", "ref_id": 4, "start": "2026-10-21T20:00:00+01:00"},
+        ])]
+        repo_mock.get_plan.return_value = repo_mock.get_active_plans.return_value[0]
+        repo_mock.set_block_missed.side_effect = lambda plan, i, at: plan
+        return repo_mock
+
+    async def test_finds_a_free_form_block_by_title(self, service, day):
+        await service.set_missed_on(date(2026, 10, 21), True, title="metro")
+        assert day.set_block_missed.call_args.args[1] == 1
+
+    async def test_two_matches_need_a_start_time(self, service, day):
+        with pytest.raises(SavedPlanValidationError, match="18:00, 20:00"):
+            await service.set_missed_on(date(2026, 10, 21), True, ref_id=4)
+        await service.set_missed_on(date(2026, 10, 21), True, ref_id=4, start="20:00")
+        assert day.set_block_missed.call_args.args[1] == 2
+
+    async def test_ref_id_must_match_the_kind(self, service, day):
+        with pytest.raises(SavedPlanNotFoundError):
+            await service.set_missed_on(date(2026, 10, 21), True, kind="event", ref_id=4)
+
+    async def test_needs_ref_or_title_and_an_active_plan(self, service, day):
+        with pytest.raises(SavedPlanValidationError):
+            await service.set_missed_on(date(2026, 10, 21), True)
+        day.get_active_plans.return_value = []
+        with pytest.raises(SavedPlanNotFoundError, match="No active plan"):
+            await service.set_missed_on(date(2026, 10, 21), True, ref_id=4)
+
+
+def _block_item():
+    return {"start": "2026-10-21T09:00:00+01:00", "end": "2026-10-21T10:00:00+01:00", "kind": "task", "ref_id": 4, "title": "Run", "note": None}
+
+
 class TestManage:
     async def test_archive_marks_the_active_version(self, service, repo_mock):
         repo_mock.get_plan.return_value = _row(id=7, version=3)
@@ -338,6 +423,22 @@ class TestRepository:
         session = _session()
         await DayPlanRepository(session).get_history(date(2026, 10, 21))
         assert "ORDER BY planning.day_plans.version DESC" in _sql(session.execute.call_args.args[0])
+
+    async def test_marking_a_block_edits_only_that_item_in_place(self):
+        session = _session()
+        plan = _row(items=[_block_item(), _block_item()])
+
+        await DayPlanRepository(session).set_block_missed(plan, 1, "2026-10-21T21:00:00+01:00")
+
+        assert plan.items[1]["missed"] is True and plan.items[1]["missed_at"] == "2026-10-21T21:00:00+01:00"
+        assert "missed" not in plan.items[0]
+        session.commit.assert_awaited_once()
+
+    async def test_unmarking_removes_both_keys(self):
+        session = _session()
+        plan = _row(items=[{**_block_item(), "missed": True, "missed_at": "x"}])
+        await DayPlanRepository(session).set_block_missed(plan, 0, None)
+        assert "missed" not in plan.items[0] and "missed_at" not in plan.items[0]
 
     async def test_get_plan_by_id(self):
         session = _session()

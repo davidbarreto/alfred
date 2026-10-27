@@ -13,7 +13,7 @@ from app.features.planning.saved_plans.schemas import (
     SavedDayPlanRead,
 )
 from app.features.planning.timeline import iso_local
-from app.shared.timezone import local_timezone
+from app.shared.timezone import local_now, local_timezone
 
 logger = logging.getLogger(__name__)
 
@@ -94,6 +94,42 @@ class SavedPlanService:
         logger.info("Day plan restored: id=%d date=%s version=%d", plan.id, plan.plan_date, plan.version)
         return SavedDayPlanRead.model_validate(plan)
 
+    async def set_block_missed(self, plan_id: int, index: int, missed: bool) -> SavedDayPlanRead:
+        """Record that a block was not done, or undo that. The plan stays as it was saved; only the block is flagged."""
+        plan = await self._get_or_raise(plan_id)
+        if not 0 <= index < len(plan.items):
+            raise SavedPlanNotFoundError(f"Saved plan {plan_id} has no block {index}")
+        plan = await self._repo.set_block_missed(plan, index, iso_local(local_now()) if missed else None)
+        logger.info(
+            "Day plan block %s: id=%d date=%s block=%d", "missed" if missed else "unmissed", plan.id, plan.plan_date, index
+        )
+        return SavedDayPlanRead.model_validate(plan)
+
+    async def set_missed_on(
+        self, plan_date: date, missed: bool, kind: str = "task", ref_id: int | None = None,
+        title: str | None = None, start: str | None = None,
+    ) -> SavedDayPlanRead:
+        """Flag (or unflag) the block of the date's active plan that matches kind + ref_id, or a part of the title.
+
+        `start` (HH:MM, local) picks one when the same thing is planned more than once that day.
+        """
+        if ref_id is None and not title:
+            raise SavedPlanValidationError("Give the ref_id of the block, or part of its title")
+        plans = await self._repo.get_active_plans(plan_date, plan_date)
+        if not plans:
+            raise SavedPlanNotFoundError(f"No active plan saved for {plan_date.isoformat()}")
+        plan = plans[0]
+        matches = [
+            index for index, item in enumerate(plan.items)
+            if _block_matches(item, kind, ref_id, title, start)
+        ]
+        if not matches:
+            raise SavedPlanNotFoundError(f"No matching block in the plan of {plan_date.isoformat()}")
+        if len(matches) > 1:
+            times = ", ".join(plan.items[i]["start"][11:16] for i in matches)
+            raise SavedPlanValidationError(f"{len(matches)} blocks match (starting at {times}); pass start as HH:MM to pick one")
+        return await self.set_block_missed(plan.id, matches[0], missed)
+
     async def delete(self, plan_id: int) -> None:
         plan = await self._get_or_raise(plan_id)
         await self._repo.delete_plan(plan_id)
@@ -118,6 +154,15 @@ class SavedPlanService:
             if missing:
                 problems.append(f"Unknown {kind} ref_id(s): {', '.join(str(i) for i in missing)}")
         return problems
+
+
+def _block_matches(item: dict, kind: str, ref_id: int | None, title: str | None, start: str | None) -> bool:
+    if ref_id is not None:
+        if item["kind"] != kind or item["ref_id"] != ref_id:
+            return False
+    elif title.lower() not in item["title"].lower():
+        return False
+    return start is None or item["start"][11:16] == start
 
 
 def _date_problems(data: DayPlansSave) -> list[str]:

@@ -105,20 +105,20 @@
     <div class="flex gap-1.5 flex-wrap items-center">
       {% for value, label in [("pending", "Pending"), ("bought", "Bought"), ("all", "All")] %}
       <a
-        href="/shopping?status={{ value }}&category_id={{ active_category_id or '' }}"
+        href="/shopping/?status={{ value }}&category_id={{ active_category_id or '' }}"
         class="px-3 py-1 rounded-full text-xs font-medium transition-colors
           {% if active_status == value %}bg-[#E6F1FB] text-[#0C447C]{% else %}text-gray-500 hover:bg-gray-100{% endif %}"
       >{{ label }}</a>
       {% endfor %}
       <div class="w-px h-4 bg-gray-200 mx-1"></div>
       <a
-        href="/shopping?status={{ active_status }}"
+        href="/shopping/?status={{ active_status }}"
         class="px-2.5 py-0.5 rounded-full text-xs transition-colors
           {% if not active_category_id %}bg-gray-200 text-gray-700 font-medium{% else %}text-gray-400 hover:bg-gray-100{% endif %}"
       >all</a>
       {% for cat in categories %}
       <a
-        href="/shopping?status={{ active_status }}&category_id={{ cat.id }}"
+        href="/shopping/?status={{ active_status }}&category_id={{ cat.id }}"
         class="px-2.5 py-0.5 rounded-full text-xs transition-colors
           {% if active_category_id == cat.id %}bg-gray-200 text-gray-700 font-medium{% else %}text-gray-400 hover:bg-gray-100{% endif %}"
       >{{ cat.name }}</a>

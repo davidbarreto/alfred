@@ -11,25 +11,25 @@
 
   <!-- 4 metric cards -->
   <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
-    <a href="/tasks" class="card bg-white hover:shadow-sm transition-shadow">
+    <a href="/tasks/" class="card bg-white hover:shadow-sm transition-shadow">
       <div class="card-body p-4">
         <p class="text-xs text-gray-400 uppercase tracking-wide">Active tasks</p>
         <p class="text-2xl font-semibold text-[#378ADD] mt-1">{{ tasks | length }}</p>
       </div>
     </a>
-    <a href="/shopping" class="card bg-white hover:shadow-sm transition-shadow">
+    <a href="/shopping/" class="card bg-white hover:shadow-sm transition-shadow">
       <div class="card-body p-4">
         <p class="text-xs text-gray-400 uppercase tracking-wide">Shopping items</p>
         <p class="text-2xl font-semibold text-gray-900 mt-1">{{ shopping_items | length }}</p>
       </div>
     </a>
-    <a href="/calendar" class="card bg-white hover:shadow-sm transition-shadow">
+    <a href="/calendar/" class="card bg-white hover:shadow-sm transition-shadow">
       <div class="card-body p-4">
         <p class="text-xs text-gray-400 uppercase tracking-wide">Events today</p>
         <p class="text-2xl font-semibold text-gray-900 mt-1">{{ events | length }}</p>
       </div>
     </a>
-    <a href="/finance" class="card bg-white hover:shadow-sm transition-shadow">
+    <a href="/finance/" class="card bg-white hover:shadow-sm transition-shadow">
       <div class="card-body p-4">
         <p class="text-xs text-gray-400 uppercase tracking-wide">Monthly spend</p>
         <p class="text-2xl font-semibold text-gray-900 mt-1">
@@ -46,7 +46,7 @@
       <div class="card-body p-4">
         <div class="flex items-center justify-between mb-3">
           <h2 class="text-sm font-medium text-gray-900">Active tasks</h2>
-          <a href="/tasks" class="text-xs text-[#378ADD] hover:underline">View all →</a>
+          <a href="/tasks/" class="text-xs text-[#378ADD] hover:underline">View all →</a>
         </div>
         {% if tasks %}
         <ul class="space-y-2">
@@ -73,7 +73,7 @@
       <div class="card-body p-4">
         <div class="flex items-center justify-between mb-3">
           <h2 class="text-sm font-medium text-gray-900">Shopping</h2>
-          <a href="/shopping" class="text-xs text-[#378ADD] hover:underline">View all →</a>
+          <a href="/shopping/" class="text-xs text-[#378ADD] hover:underline">View all →</a>
         </div>
         {% if shopping_items %}
         <ul class="space-y-2">
@@ -99,7 +99,7 @@
   <div>
     <div class="flex items-center justify-between mb-3">
       <h2 class="text-sm font-medium text-gray-900">Today's events</h2>
-      <a href="/calendar" class="text-xs text-[#378ADD] hover:underline">Calendar →</a>
+      <a href="/calendar/" class="text-xs text-[#378ADD] hover:underline">Calendar →</a>
     </div>
     {% if events %}
     <div class="flex gap-3 overflow-x-auto pb-1">
@@ -131,7 +131,7 @@
         <p class="text-sm font-medium text-gray-900">Chat with Alfred</p>
         <p class="text-xs text-gray-400 mt-0.5">Ask anything or give instructions</p>
       </div>
-      <a href="/chat" class="btn btn-sm btn-primary">Open chat →</a>
+      <a href="/chat/" class="btn btn-sm btn-primary">Open chat →</a>
     </div>
   </div>
 

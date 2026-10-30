@@ -307,7 +307,7 @@ async def create_process(
     except httpx.HTTPError:
         return HTMLResponse('<p class="text-[#E24B4A] text-sm">Failed to create interview process.</p>', status_code=422)
 
-    return RedirectResponse(url="/interviews", status_code=303)
+    return RedirectResponse(url="/interviews/", status_code=303)
 
 
 @router.post("/{process_id}/delete")
@@ -316,7 +316,7 @@ async def delete_process(process_id: int):
         await api.delete(f"/organizer/interview-processes/{process_id}")
     except httpx.HTTPError:
         pass
-    return RedirectResponse(url="/interviews", status_code=303)
+    return RedirectResponse(url="/interviews/", status_code=303)
 
 
 @router.post("/{process_id}/status")
@@ -325,7 +325,7 @@ async def update_process_status(request: Request, process_id: int, status: Annot
         await api.patch(f"/organizer/interview-processes/{process_id}", json={"status": status})
     except httpx.HTTPError:
         pass
-    return RedirectResponse(url=_safe_back_url(_referer_path(request), "/interviews"), status_code=303)
+    return RedirectResponse(url=_safe_back_url(_referer_path(request), "/interviews/"), status_code=303)
 
 
 # -- Process edit ------------------------------------------------------------
@@ -336,7 +336,7 @@ async def edit_process_page(request: Request, process_id: int):
     try:
         process = await api.get(f"/organizer/interview-processes/{process_id}")
     except httpx.HTTPError:
-        return RedirectResponse(url="/interviews", status_code=303)
+        return RedirectResponse(url="/interviews/", status_code=303)
     companies = await _get_companies()
     back_url = _safe_back_url(_referer_path(request), f"/interviews/{process_id}")
     return templates.TemplateResponse(request, "interview_process_edit.html", {
@@ -490,7 +490,7 @@ async def interview_process_detail(request: Request, process_id: int):
     try:
         process = await api.get(f"/organizer/interview-processes/{process_id}")
     except httpx.HTTPError:
-        return RedirectResponse(url="/interviews", status_code=303)
+        return RedirectResponse(url="/interviews/", status_code=303)
 
     try:
         company = await api.get(f"/organizer/interview-companies/{process['company_id']}")
@@ -611,7 +611,7 @@ async def generate_insights():
         await api.post("/organizer/interview-insights")
     except httpx.HTTPError:
         pass
-    return RedirectResponse(url="/interviews", status_code=303)
+    return RedirectResponse(url="/interviews/", status_code=303)
 
 
 # -- Stage <-> task/note/contact/calendar-event linking -----------------------

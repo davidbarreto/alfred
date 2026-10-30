@@ -124,7 +124,7 @@ class TestTagFilters:
         resp = client.get("/tasks/?filter=all&tag=work")
 
         assert resp.status_code == 200
-        assert 'href="/tasks?filter=all"' in resp.text
+        assert 'href="/tasks/?filter=all"' in resp.text
 
 
 class TestUpdateTask:

@@ -64,7 +64,7 @@ def _add_display_times(events: list[dict], viewer_tz: str) -> None:
 @router.get("/timezone", response_class=RedirectResponse)
 async def set_viewer_timezone(request: Request, tz: str, year: int | None = None, month: int | None = None):
     request.session["calendar_tz"] = tz
-    target = "/calendar"
+    target = "/calendar/"
     if year is not None and month is not None:
         target += f"?year={year}&month={month}"
     return RedirectResponse(target, status_code=303)

@@ -4,7 +4,7 @@
 
 {% block content %}
 <div class="p-6 space-y-8">
-  <a href="/tasks" class="text-xs text-[#378ADD] hover:underline">← Tasks</a>
+  <a href="/tasks/" class="text-xs text-[#378ADD] hover:underline">← Tasks</a>
   <h1 class="text-base font-semibold text-gray-900">Tasks Insights</h1>
 
   <!-- ── Habits ─────────────────────────────────────────────── -->
@@ -13,11 +13,11 @@
 
     <!-- Stat cards -->
     <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
-      <a href="/tasks?filter=habits" class="card bg-white hover:shadow-sm transition-shadow"><div class="card-body p-4">
+      <a href="/tasks/?filter=habits" class="card bg-white hover:shadow-sm transition-shadow"><div class="card-body p-4">
         <p class="text-xs text-gray-400 uppercase tracking-wide">Active habits</p>
         <p class="text-2xl font-semibold text-gray-900 mt-1">{{ active_habits }}</p>
       </div></a>
-      <a href="/tasks?filter=habits" class="card bg-white hover:shadow-sm transition-shadow"><div class="card-body p-4">
+      <a href="/tasks/?filter=habits" class="card bg-white hover:shadow-sm transition-shadow"><div class="card-body p-4">
         <p class="text-xs text-gray-400 uppercase tracking-wide">Done this week</p>
         <p class="text-2xl font-semibold text-[#378ADD] mt-1">{{ done_this_week }}</p>
       </div></a>
@@ -27,7 +27,7 @@
           {% if best_streak %}🔥 {{ best_streak }}{% else %}—{% endif %}
         </p>
       </div></a>
-      <a href="/tasks?filter=habits" class="card bg-white hover:shadow-sm transition-shadow"><div class="card-body p-4">
+      <a href="/tasks/?filter=habits" class="card bg-white hover:shadow-sm transition-shadow"><div class="card-body p-4">
         <p class="text-xs text-gray-400 uppercase tracking-wide">Need attention</p>
         <p class="text-2xl font-semibold mt-1 {% if needs_attention %}text-[#E24B4A]{% else %}text-gray-900{% endif %}">
           {{ needs_attention }}
@@ -109,7 +109,7 @@
 
           <tr class="hover:bg-gray-50">
             <td class="px-4 py-2.5 font-medium text-gray-800">
-              <a href="/tasks?filter=habits" class="hover:text-[#378ADD] transition-colors">{{ t.title }}</a>
+              <a href="/tasks/?filter=habits" class="hover:text-[#378ADD] transition-colors">{{ t.title }}</a>
             </td>
             <td class="px-4 py-2.5 text-gray-500 text-xs">{{ freq }}</td>
             <td class="px-4 py-2.5 text-center">
@@ -167,7 +167,7 @@
             {% for t in missed_one_off %}
             <tr class="hover:bg-gray-50">
               <td class="px-4 py-2.5 font-medium text-gray-800">
-                <a href="/tasks" class="hover:text-[#378ADD] transition-colors">{{ t.title }}</a>
+                <a href="/tasks/" class="hover:text-[#378ADD] transition-colors">{{ t.title }}</a>
               </td>
               <td class="px-4 py-2.5 text-right text-[#E24B4A] text-xs">{{ t.deadline[:10] }}</td>
             </tr>
@@ -188,7 +188,7 @@
             {% for t in missed_habits %}
             <tr class="hover:bg-gray-50">
               <td class="px-4 py-2.5 font-medium text-gray-800">
-                <a href="/tasks?filter=habits" class="hover:text-[#378ADD] transition-colors">{{ t.title }}</a>
+                <a href="/tasks/?filter=habits" class="hover:text-[#378ADD] transition-colors">{{ t.title }}</a>
               </td>
               <td class="px-4 py-2.5 text-right text-[#E24B4A] text-xs">{{ t.missed_count }} missed</td>
             </tr>

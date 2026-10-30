@@ -11,7 +11,7 @@
     <div class="flex gap-1.5 flex-wrap">
       {% for p, label in [("this month", "This month"), ("last month", "Last month"), ("this quarter", "This quarter"), ("this semester", "This semester"), ("this year", "This year")] %}
       <a
-        href="/finance?period={{ p }}&currency={{ currency }}"
+        href="/finance/?period={{ p }}&currency={{ currency }}"
         class="px-3 py-1 rounded-full text-xs font-medium transition-colors
           {% if not is_custom and period == p %}bg-[#E6F1FB] text-[#0C447C]{% else %}text-gray-500 hover:bg-gray-100{% endif %}"
       >{{ label }}</a>
@@ -29,7 +29,7 @@
     <div class="flex gap-1.5 flex-wrap border-l border-gray-200 pl-3">
       {% for c in account_currencies %}
       <a
-        href="/finance?{{ range_qs }}&currency={{ c }}"
+        href="/finance/?{{ range_qs }}&currency={{ c }}"
         class="px-3 py-1 rounded-full text-xs font-medium transition-colors
           {% if currency == c %}bg-[#FDF1E2] text-[#8A5A0B]{% else %}text-gray-500 hover:bg-gray-100{% endif %}"
       >{{ "Global" if c == "GLOBAL" else c }}</a>
@@ -581,7 +581,7 @@ function submitCustomRange(e) {
     return;
   }
   const params = new URLSearchParams({ from_date: from, to_date: to, currency: {{ currency | tojson }} });
-  window.location.href = "/finance?" + params.toString();
+  window.location.href = "/finance/?" + params.toString();
 }
 
 async function submitNewTxn(e) {

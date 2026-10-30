@@ -36,7 +36,7 @@
         Status
         {% if selected_statuses %}({{ selected_statuses | length }}){% else %}(All){% endif %}
       </summary>
-      <form method="get" action="/interviews" class="dropdown-content menu bg-white border border-gray-200 rounded-lg shadow z-10 w-56 p-2 gap-0.5 mt-1">
+      <form method="get" action="/interviews/" class="dropdown-content menu bg-white border border-gray-200 rounded-lg shadow z-10 w-56 p-2 gap-0.5 mt-1">
         <input type="hidden" name="filtered" value="1" />
         {% for s in status_options %}
         <label class="flex items-center gap-2 text-sm px-2 py-1 hover:bg-gray-50 rounded cursor-pointer">

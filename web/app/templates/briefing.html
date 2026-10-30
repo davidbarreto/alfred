@@ -104,7 +104,7 @@
       <div class="card-body p-4">
         <div class="flex items-center justify-between mb-3">
           <h2 class="text-sm font-medium text-gray-900"><i class="ti ti-checklist mr-1"></i>Priority tasks</h2>
-          <a href="/tasks" class="text-xs text-[#378ADD] hover:underline">View all →</a>
+          <a href="/tasks/" class="text-xs text-[#378ADD] hover:underline">View all →</a>
         </div>
         {% if briefing.tasks %}
         <ul class="space-y-2">
@@ -138,7 +138,7 @@
       <div class="card-body p-4">
         <div class="flex items-center justify-between mb-3">
           <h2 class="text-sm font-medium text-gray-900"><i class="ti ti-calendar mr-1"></i>Upcoming events</h2>
-          <a href="/calendar" class="text-xs text-[#378ADD] hover:underline">Calendar →</a>
+          <a href="/calendar/" class="text-xs text-[#378ADD] hover:underline">Calendar →</a>
         </div>
         {% if briefing.events %}
         <ul class="space-y-2">
@@ -235,7 +235,7 @@
     <div class="card-body p-4">
       <div class="flex items-center justify-between mb-3">
         <h2 class="text-sm font-medium text-gray-900"><i class="ti ti-shopping-cart mr-1"></i>Pending shopping</h2>
-        <a href="/shopping" class="text-xs text-[#378ADD] hover:underline">View all →</a>
+        <a href="/shopping/" class="text-xs text-[#378ADD] hover:underline">View all →</a>
       </div>
       <ul class="space-y-2">
         {% for s in briefing.shopping %}

@@ -52,7 +52,7 @@ def _build_params(active_filter: str, extra_tags: list[str] | None = None) -> di
 def _tag_toggle_href(active_filter: str, selected_tags: list[str], tag: str) -> str:
     new_tags = [t for t in selected_tags if t != tag] if tag in selected_tags else selected_tags + [tag]
     query = [("filter", active_filter)] + [("tag", t) for t in new_tags]
-    return "/tasks?" + urlencode(query)
+    return "/tasks/?" + urlencode(query)
 
 
 def _apply_recurrence_filter(tasks: list[dict], active_filter: str) -> list[dict]:

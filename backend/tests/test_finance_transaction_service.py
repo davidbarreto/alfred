@@ -1539,8 +1539,8 @@ class TestNetWorthHistory:
 
     async def test_from_date_injects_anchor_point_for_prior_history(self, service):
         service._account_repo.list.return_value = []
+        service._repo.get_ledger_total_before.return_value = Decimal("1000.00")
         service._repo.get_ledger_events.return_value = [
-            (1, date(2026, 1, 1), Decimal("1000.00")),
             (1, date(2026, 6, 1), Decimal("-200.00")),
         ]
         filters = NetWorthFilters(
@@ -1552,6 +1552,45 @@ class TestNetWorthHistory:
         assert result.items[0].period == "2026-05"
         assert result.items[0].total == Decimal("1000.00")
         assert result.items[-1].total == Decimal("800.00")
+
+    async def test_from_date_loads_only_window_events_and_sums_the_rest_in_sql(self, service):
+        service._account_repo.list.return_value = []
+        service._repo.get_ledger_total_before.return_value = Decimal("0")
+        service._repo.get_ledger_events.return_value = []
+        filters = NetWorthFilters(
+            from_date=date(2026, 5, 15), to_date=date(2026, 6, 30), currency="EUR"
+        )
+
+        await service.net_worth_history(filters, group_by="month")
+
+        service._repo.get_ledger_total_before.assert_awaited_once_with(date(2026, 5, 15), "EUR")
+        service._repo.get_ledger_events.assert_awaited_once_with(
+            date(2026, 6, 30), "EUR", date(2026, 5, 15)
+        )
+
+    async def test_opening_balance_before_from_date_is_part_of_the_starting_total(self, service):
+        account = MagicMock(id=1, opening_balance=Decimal("500.00"), opening_balance_date=date(2026, 1, 1))
+        service._account_repo.list.return_value = [account]
+        service._repo.get_ledger_total_before.return_value = Decimal("100.00")
+        service._repo.get_ledger_events.return_value = [(1, date(2026, 6, 1), Decimal("50.00"))]
+        filters = NetWorthFilters(
+            from_date=date(2026, 5, 15), to_date=date(2026, 6, 30), currency="EUR"
+        )
+
+        result = await service.net_worth_history(filters, group_by="month")
+
+        totals = {i.period: i.total for i in result.items}
+        assert totals["2026-05"] == Decimal("600.00")
+        assert totals["2026-06"] == Decimal("650.00")
+
+    async def test_without_from_date_no_prior_total_is_queried(self, service):
+        service._account_repo.list.return_value = []
+        service._repo.get_ledger_events.return_value = []
+        filters = NetWorthFilters(to_date=date(2026, 6, 30), currency="EUR")
+
+        await service.net_worth_history(filters, group_by="month")
+
+        service._repo.get_ledger_total_before.assert_not_called()
 
     async def test_global_currency_passes_none_account_currency_filter(self, service):
         service._account_repo.list.return_value = []

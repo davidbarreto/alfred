@@ -1062,6 +1062,59 @@ class TestGetLedgerEvents:
         assert "case when (finance.transactions.type = 'expense')" in sql
 
 
+class TestGetLedgerEventsWindow:
+    async def test_from_date_adds_a_lower_bound(self):
+        session = _make_session()
+        result = MagicMock()
+        result.all.return_value = []
+        session.execute.return_value = result
+        await TransactionRepository(session).get_ledger_events(
+            date(2026, 6, 30), from_date=date(2026, 6, 1)
+        )
+        sql = str(session.execute.call_args.args[0].compile(compile_kwargs={"literal_binds": True}))
+        assert "transactions.date >= '2026-06-01'" in sql
+
+    async def test_no_lower_bound_by_default(self):
+        session = _make_session()
+        result = MagicMock()
+        result.all.return_value = []
+        session.execute.return_value = result
+        await TransactionRepository(session).get_ledger_events(date(2026, 6, 30))
+        sql = str(session.execute.call_args.args[0].compile(compile_kwargs={"literal_binds": True}))
+        assert "transactions.date >=" not in sql
+
+
+class TestGetLedgerTotalBefore:
+    async def test_returns_the_sql_sum_as_decimal(self):
+        session = _make_session()
+        result = MagicMock()
+        result.scalar.return_value = Decimal("1234.50")
+        session.execute.return_value = result
+        total = await TransactionRepository(session).get_ledger_total_before(date(2026, 6, 1))
+        assert total == Decimal("1234.50")
+
+    async def test_sums_the_same_signed_delta_strictly_before_the_date(self):
+        session = _make_session()
+        result = MagicMock()
+        result.scalar.return_value = 0
+        session.execute.return_value = result
+        await TransactionRepository(session).get_ledger_total_before(date(2026, 6, 1))
+        sql = str(session.execute.call_args.args[0].compile(compile_kwargs={"literal_binds": True})).lower()
+        assert "sum(case when (finance.transactions.type = 'expense')" in sql
+        assert "finance.transactions.date < '2026-06-01'" in sql
+        assert "finance.transactions.currency = 'eur'" in sql
+
+    async def test_global_currency_uses_amount_eur_without_currency_filter(self):
+        session = _make_session()
+        result = MagicMock()
+        result.scalar.return_value = 0
+        session.execute.return_value = result
+        await TransactionRepository(session).get_ledger_total_before(date(2026, 6, 1), currency="GLOBAL")
+        sql = str(session.execute.call_args.args[0].compile(compile_kwargs={"literal_binds": True}))
+        assert "amount_eur" in sql
+        assert "transactions.currency =" not in sql
+
+
 class TestGetMirror:
     async def test_returns_mirror_row(self):
         session = _make_session()

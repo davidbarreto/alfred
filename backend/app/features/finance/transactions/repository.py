@@ -863,7 +863,7 @@ class TransactionRepository:
         ]
 
     async def get_ledger_events(
-        self, to_date: date, currency: str = "EUR"
+        self, to_date: date, currency: str = "EUR", from_date: date | None = None
     ) -> list[tuple[int, date, Decimal]]:
         """Every balance-affecting event across all tracked accounts, as
         (account_id, date, signed delta) triples -- the raw material for
@@ -878,6 +878,10 @@ class TransactionRepository:
         (an independently-imported/confirmed leg, or a mirror), so crediting it a
         second time from this row would double-count it -- mirrors
         Account.balance's own incremental maintenance so the two never disagree.
+
+        With from_date only events on or after it are returned; their predecessors
+        collapse into get_ledger_total_before so a trailing-window chart doesn't load
+        the whole history.
         """
         amount_column = _amount_column(currency)
         delta = case((Transaction.type == "expense", -amount_column), else_=amount_column)
@@ -885,6 +889,8 @@ class TransactionRepository:
         query = select(Transaction.account_id, Transaction.date, delta).where(
             Transaction.date <= to_date
         )
+        if from_date is not None:
+            query = query.where(Transaction.date >= from_date)
         if currency != GLOBAL_CURRENCY:
             query = query.where(Transaction.currency == currency)
 
@@ -893,6 +899,18 @@ class TransactionRepository:
             (row[0], row[1].date() if hasattr(row[1], "date") else row[1], Decimal(str(row[2])))
             for row in result.all()
         ]
+
+    async def get_ledger_total_before(self, before_date: date, currency: str = "EUR") -> Decimal:
+        """Sum of every get_ledger_events delta strictly before before_date, computed in SQL."""
+        amount_column = _amount_column(currency)
+        delta = case((Transaction.type == "expense", -amount_column), else_=amount_column)
+
+        query = select(func.coalesce(func.sum(delta), 0)).where(Transaction.date < before_date)
+        if currency != GLOBAL_CURRENCY:
+            query = query.where(Transaction.currency == currency)
+
+        result = await self._session.execute(query)
+        return Decimal(str(result.scalar()))
 
     async def get_category_spent(
         self,

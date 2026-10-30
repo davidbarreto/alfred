@@ -838,23 +838,28 @@ class TransactionService:
         )
         accounts = await self._account_repo.list(account_filters)
 
-        events: list[tuple[int, date, Decimal]] = [
-            (account.id, account.opening_balance_date, account.opening_balance)
-            for account in accounts
-            if account.opening_balance_date is not None and account.opening_balance is not None
-        ]
-        events.extend(await self._repo.get_ledger_events(filters.to_date, filters.currency))
+        # History before from_date only matters as one starting balance, so it is summed in
+        # SQL instead of loading every older ledger row just to fold it into a running total.
+        running_total = Decimal("0")
+        if filters.from_date is not None:
+            running_total = await self._repo.get_ledger_total_before(filters.from_date, filters.currency)
+
+        events: list[tuple[int, date, Decimal]] = []
+        for account in accounts:
+            if account.opening_balance_date is None or account.opening_balance is None:
+                continue
+            if filters.from_date is not None and account.opening_balance_date < filters.from_date:
+                running_total += account.opening_balance
+            else:
+                events.append((account.id, account.opening_balance_date, account.opening_balance))
+        events.extend(await self._repo.get_ledger_events(filters.to_date, filters.currency, filters.from_date))
         events.sort(key=lambda event: event[1])
+        total_before_from_date = running_total
 
         key_format = "%Y-%m" if group_by == "month" else "%Y-%m-%d"
-        running_total = Decimal("0")
         bucket_totals: dict[str, Decimal] = {}
-        total_before_from_date = Decimal("0")
         for _account_id, event_date, delta in events:
             running_total += delta
-            if filters.from_date is not None and event_date < filters.from_date:
-                total_before_from_date = running_total
-                continue
             bucket_totals[event_date.strftime(key_format)] = running_total
 
         items = [

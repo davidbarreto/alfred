@@ -666,14 +666,13 @@
         "method": "GET",
         "header": [],
         "url": {
-          "raw": "{{base_url}}/organizer/calendar-events/{{recurring_event_id}}?start_from=2026-09-01T00:00:00&start_to=2026-09-30T23:59:59&limit=100",
+          "raw": "{{base_url}}/organizer/calendar-events?start_from=2026-09-01T00:00:00&start_to=2026-09-30T23:59:59&limit=100",
           "host": [
             "{{base_url}}"
           ],
           "path": [
             "organizer",
-            "calendar-events",
-            "{{recurring_event_id}}"
+            "calendar-events"
           ],
           "query": [
             {
@@ -867,14 +866,13 @@
         "method": "GET",
         "header": [],
         "url": {
-          "raw": "{{base_url}}/organizer/calendar-events/{{recurring_event_id}}?start_from=2026-09-01T00:00:00&start_to=2026-09-30T23:59:59&limit=100",
+          "raw": "{{base_url}}/organizer/calendar-events?start_from=2026-09-01T00:00:00&start_to=2026-09-30T23:59:59&limit=100",
           "host": [
             "{{base_url}}"
           ],
           "path": [
             "organizer",
-            "calendar-events",
-            "{{recurring_event_id}}"
+            "calendar-events"
           ],
           "query": [
             {

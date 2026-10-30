@@ -1359,3 +1359,50 @@ class TestBulkReassignAccount:
         values_by_name = {col.name: val for col, val in compiled_values.items()}
         assert values_by_name["account_id"].value == 2
         assert values_by_name["deduplication_hash"].value is None
+
+
+class TestSpendSumsUseMagnitude:
+    """Unmatched outgoing transfers count as spend but are stored with a negative
+    amount, while expenses are stored as positive magnitudes. Summing the raw column
+    let transfers cancel expenses (a negative "Spent" total)."""
+
+    async def _sql(self, session) -> str:
+        return str(session.execute.call_args.args[0].compile(compile_kwargs={"literal_binds": True}))
+
+    async def test_spending_total(self):
+        session = _make_session()
+        session.execute.return_value = _one_result((Decimal("0"), 0))
+        await TransactionRepository(session).get_spending_total(date(2026, 10, 1), date(2026, 10, 31))
+        assert "sum(abs(finance.transactions.amount))" in (await self._sql(session)).lower()
+
+    async def test_spending_total_income_is_not_abs(self):
+        session = _make_session()
+        session.execute.return_value = _one_result((Decimal("0"), 0))
+        await TransactionRepository(session).get_spending_total(
+            date(2026, 10, 1), date(2026, 10, 31), transaction_type="income"
+        )
+        assert "abs(" not in (await self._sql(session)).lower()
+
+    async def test_spending_by_category(self):
+        session = _make_session()
+        session.execute.return_value = _rows_all([])
+        await TransactionRepository(session).get_spending_by_category(date(2026, 10, 1), date(2026, 10, 31))
+        assert "sum(abs(finance.transactions.amount))" in (await self._sql(session)).lower()
+
+    async def test_spending_over_time(self):
+        session = _make_session()
+        session.execute.return_value = _rows_all([])
+        await TransactionRepository(session).get_spending_over_time(date(2026, 10, 1), date(2026, 10, 31), "month")
+        assert "sum(abs(finance.transactions.amount))" in (await self._sql(session)).lower()
+
+    async def test_spending_by_account(self):
+        session = _make_session()
+        session.execute.return_value = _rows_all([])
+        await TransactionRepository(session).get_spending_by_account(date(2026, 10, 1), date(2026, 10, 31))
+        assert "sum(abs(finance.transactions.amount))" in (await self._sql(session)).lower()
+
+    async def test_category_spent(self):
+        session = _make_session()
+        session.execute.return_value = _scalar_result(Decimal("0"))
+        await TransactionRepository(session).get_category_spent(1, date(2026, 10, 1), date(2026, 10, 31))
+        assert "sum(abs(finance.transactions.amount))" in (await self._sql(session)).lower()

@@ -27,6 +27,16 @@ def _amount_column(currency: str):
     return Transaction.amount_eur if currency == GLOBAL_CURRENCY else Transaction.amount
 
 
+def _spend_amount(currency: str, transaction_type: str = "expense"):
+    """Column to sum for spend reports. Unmatched outgoing transfers count as spend
+    (see _spend_condition) but are stored negative, while expenses are stored as
+    positive magnitudes -- summing the raw column would let transfers cancel
+    expenses, so spend is always the magnitude. Income is summed as stored.
+    """
+    column = _amount_column(currency)
+    return func.abs(column) if transaction_type == "expense" else column
+
+
 def _signed_eur(amount: Decimal, amount_eur: Decimal | None) -> Decimal | None:
     """Normalizes amount_eur to carry the same sign as `amount`. FX conversion
     (amount / a positive rate) already derives amount_eur from amount so the two
@@ -640,7 +650,7 @@ class TransactionRepository:
         currency: str = "EUR",
         transaction_type: str = "expense",
     ) -> tuple[Decimal, int]:
-        amount_column = _amount_column(currency)
+        amount_column = _spend_amount(currency, transaction_type)
         query = select(
             func.coalesce(func.sum(amount_column), 0),
             func.count(Transaction.id),
@@ -695,7 +705,7 @@ class TransactionRepository:
     ) -> list[tuple[int | None, str | None, Decimal, int]]:
         from app.features.finance.categories.tables import Category
 
-        amount_column = _amount_column(currency)
+        amount_column = _spend_amount(currency)
         query = (
             select(
                 Transaction.category_id,
@@ -735,7 +745,7 @@ class TransactionRepository:
         in SQL -- unlike fetching raw transactions, this scales to any date range
         without a row cap silently dropping older buckets.
         """
-        amount_column = _amount_column(currency)
+        amount_column = _spend_amount(currency, transaction_type)
         bucket = func.date_trunc(group_by, Transaction.date)
         query = (
             select(bucket, func.coalesce(func.sum(amount_column), 0))
@@ -825,7 +835,7 @@ class TransactionRepository:
     ) -> list[tuple[int | None, str | None, Decimal, int]]:
         from app.features.finance.accounts.tables import Account
 
-        amount_column = _amount_column(currency)
+        amount_column = _spend_amount(currency)
         query = (
             select(
                 Transaction.account_id,
@@ -892,7 +902,7 @@ class TransactionRepository:
         currency: str = "EUR",
     ) -> Decimal:
         query = select(
-            func.coalesce(func.sum(_amount_column(currency)), 0)
+            func.coalesce(func.sum(_spend_amount(currency)), 0)
         ).where(
             _spend_condition("expense"),
             Transaction.category_id == category_id,

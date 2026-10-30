@@ -41,3 +41,13 @@ def mock_api(monkeypatch):
     for name, mock in mocks.items():
         monkeypatch.setattr(api, name, mock)
     return mocks
+
+
+@pytest.fixture(autouse=True)
+def _fresh_http_client():
+    """app.client caches one httpx client; tests run on different event loops, so never share it."""
+    import app.client as api
+
+    api._client = None
+    yield
+    api._client = None

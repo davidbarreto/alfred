@@ -1,3 +1,4 @@
+import asyncio
 import html
 import json
 from datetime import date, timedelta
@@ -165,183 +166,104 @@ async def _dashboard_txn_list_context(range_params: dict, currency: str) -> dict
     }
 
 
+async def _none() -> None:
+    return None
+
+
+async def _try_get(path: str, params: dict | None = None):
+    """GET that returns None instead of raising, so one failing widget can't blank the page."""
+    try:
+        return await api.get(path, params=params)
+    except httpx.HTTPError:
+        return None
+
+
+def _period_context(base_path: str, currency: str, range_params: dict) -> dict:
+    """Template variables shared by the period/currency bar of the dashboard and insights pages."""
+    is_custom = "from_date" in range_params
+    return {
+        "base_path": base_path,
+        "is_custom": is_custom,
+        "period": None if is_custom else range_params["period"],
+        "custom_from": range_params.get("from_date"),
+        "custom_to": range_params.get("to_date"),
+        "range_qs": urlencode(range_params),
+        "currency": currency,
+    }
+
+
+def _currency_context(accounts: list, currencies: list, currency: str) -> dict:
+    currency_symbols = {c["code"]: c["symbol"] for c in currencies if c.get("symbol")}
+    distinct_currencies = sorted({a["currency"] for a in accounts} | {"EUR"})
+    account_currencies = distinct_currencies + ["GLOBAL"] if len(distinct_currencies) > 1 else distinct_currencies
+    return {
+        "accounts": accounts,
+        "currencies": currencies,
+        "currency_symbol": currency_symbols.get("EUR", "€ ") if currency == "GLOBAL" else currency_symbols.get(currency, currency + " "),
+        "currency_symbols": currency_symbols,
+        "account_currencies": account_currencies,
+    }
+
+
+def _budget_chart(budgets: list) -> dict:
+    return {
+        b["category_name"]: {"spent": float(b["spent"]), "budget": float(b["limit_amount"])}
+        for b in budgets
+        if b.get("limit_amount") is not None and b.get("category_name")
+    }
+
+
 @router.get("/", response_class=HTMLResponse)
 async def finance_page(request: Request):
     range_params = _range_params(request)
-    is_custom = "from_date" in range_params
-    period = None if is_custom else range_params["period"]
-    custom_from = range_params.get("from_date")
-    custom_to = range_params.get("to_date")
-    range_qs = urlencode(range_params)
     currency = _resolve_currency(request)
+    report_params = {**range_params, "currency": currency}
 
-    spending, income, by_category, transactions, budgets = None, None, None, [], []
-    accounts, categories, tags, currencies, recurring, errors = [], [], [], [], [], []
-
-    try:
-        accounts = await api.get("/finance/accounts", params={"is_active": "true"})
-    except httpx.HTTPError:
-        pass
-
-    try:
-        categories = await api.get("/finance/categories")
-    except httpx.HTTPError:
-        pass
-
-    try:
-        tags = await api.get("/finance/tags")
-    except httpx.HTTPError:
-        pass
-
-    try:
-        currencies = await api.get("/finance/currencies")
-    except httpx.HTTPError:
-        pass
-
-    try:
-        spending = await api.get("/finance/transactions/report", params={**range_params, "currency": currency})
-    except httpx.HTTPError:
-        errors.append("spending")
-
-    try:
-        income = await api.get("/finance/transactions/income-report", params={**range_params, "currency": currency})
-    except httpx.HTTPError:
-        errors.append("income")
-
-    try:
-        by_category = await api.get("/finance/transactions/by-category", params={**range_params, "currency": currency})
-    except httpx.HTTPError:
-        errors.append("by_category")
-
-    try:
-        transactions = await api.get(
-            "/finance/transactions",
-            params={"type": "expense", "limit": 15, "currency": currency, **range_params},
+    (
+        accounts, categories, tags, currencies, spending, income, by_category, transactions, budgets, recurring,
+    ) = await asyncio.gather(
+        _try_get("/finance/accounts", {"is_active": "true"}),
+        _try_get("/finance/categories"),
+        _try_get("/finance/tags"),
+        _try_get("/finance/currencies"),
+        _try_get("/finance/transactions/report", report_params),
+        _try_get("/finance/transactions/income-report", report_params),
+        _try_get("/finance/transactions/by-category", report_params),
+        _try_get("/finance/transactions", {"type": "expense", "limit": 15, **report_params}),
+        _try_get("/finance/budgets/status") if currency == "EUR" else _none(),  # budgets are EUR-scoped
+        _try_get("/finance/recurring-transactions"),
+    )
+    errors = [
+        name
+        for name, value in (
+            ("spending", spending), ("income", income), ("by_category", by_category), ("transactions", transactions),
+            *((("budgets", budgets),) if currency == "EUR" else ()),
         )
-    except httpx.HTTPError:
-        errors.append("transactions")
-
-    if currency == "EUR":  # budgets are EUR-scoped
-        try:
-            budgets = await api.get("/finance/budgets/status")
-        except httpx.HTTPError:
-            errors.append("budgets")
-
-    try:
-        recurring = await api.get("/finance/recurring-transactions")
-    except httpx.HTTPError:
-        pass
+        if value is None
+    ]
+    accounts, categories, tags, currencies = accounts or [], categories or [], tags or [], currencies or []
+    transactions, budgets, recurring = transactions or [], budgets or [], recurring or []
 
     category_items = (by_category or {}).get("items", [])
     max_total = max((float(i["total"]) for i in category_items), default=1) or 1
     top_category = category_items[0] if category_items else None
 
     # Budget totals for the "remaining" summary card
-    tracked_budgets = [b for b in (budgets or []) if b.get("limit_amount") is not None]
+    tracked_budgets = [b for b in budgets if b.get("limit_amount") is not None]
     total_budget = sum(float(b["limit_amount"]) for b in tracked_budgets) if tracked_budgets else None
     total_spent_budget = sum(float(b["spent"]) for b in tracked_budgets) if tracked_budgets else None
     total_remaining = (total_budget - total_spent_budget) if total_budget is not None else None
 
-    # Spending over time: group by day for short ranges, by month for long ones
-    # (year/quarter/semester/wide custom ranges), based on the range the API resolved.
+    # Query string for "drill down to transactions" links on the summary cards.
     resolved_from = (spending or {}).get("from_date") or (by_category or {}).get("from_date")
     resolved_to = (spending or {}).get("to_date") or (by_category or {}).get("to_date")
-    group_by_month = False
-    if resolved_from and resolved_to:
-        from datetime import date as _date
-        span_days = (_date.fromisoformat(resolved_to) - _date.fromisoformat(resolved_from)).days + 1
-        group_by_month = span_days > _MONTH_GROUPING_THRESHOLD_DAYS
-
-    # Query string for "drill down to transactions" links on the summary cards.
     txn_range_qs = urlencode(
         {k: v for k, v in {"from_date": resolved_from, "to_date": resolved_to, "currency": currency}.items() if v}
     )
 
-    # Fetched as a server-side SQL aggregate (not a capped raw-transaction fetch) so
-    # wide ranges with many transactions don't silently drop their oldest buckets.
-    over_time = None
-    try:
-        over_time = await api.get(
-            "/finance/transactions/over-time",
-            params={
-                "currency": currency,
-                "group_by": "month" if group_by_month else "day",
-                **range_params,
-            },
-        )
-    except httpx.HTTPError:
-        errors.append("over_time")
-    time_spending_sorted = {
-        item["period"]: float(item["total"]) for item in (over_time or {}).get("items", [])
-    }
-
-    by_account = None
-    try:
-        by_account = await api.get(
-            "/finance/transactions/by-account", params={**range_params, "currency": currency}
-        )
-    except httpx.HTTPError:
-        errors.append("by_account")
-    account_chart = {
-        (i["account_name"] or "Unknown"): float(i["total"])
-        for i in (by_account or {}).get("items", [])
-    }
-
-    income_vs_expense = None
-    try:
-        income_vs_expense = await api.get(
-            "/finance/transactions/income-vs-expense-over-time",
-            params={
-                "currency": currency,
-                "group_by": "month" if group_by_month else "day",
-                **range_params,
-            },
-        )
-    except httpx.HTTPError:
-        errors.append("income_vs_expense")
-    income_expense_chart = {
-        item["period"]: {"income": float(item["income"]), "expense": float(item["expense"])}
-        for item in (income_vs_expense or {}).get("items", [])
-    }
-
-    # Net worth is a running-balance trend, independent of the page's selected
-    # cycle/period -- always show a trailing 12 months so it reads as a trend,
-    # not a single cycle's start/end balance.
-    net_worth = None
-    try:
-        from datetime import timedelta as _timedelta
-        net_worth_from = (local_today() - _timedelta(days=365)).isoformat()
-        net_worth = await api.get(
-            "/finance/transactions/net-worth",
-            params={"currency": currency, "group_by": "month", "from_date": net_worth_from},
-        )
-    except httpx.HTTPError:
-        errors.append("net_worth")
-    net_worth_chart = {
-        item["period"]: float(item["total"]) for item in (net_worth or {}).get("items", [])
-    }
-
-    # Category chart data
-    category_chart = {
-        (i["category_name"] or "Uncategorized"): float(i["total"])
-        for i in category_items
-    }
-
-    # Budget utilization chart data
-    budget_chart = {
-        b["category_name"]: {
-            "spent": float(b["spent"]),
-            "budget": float(b["limit_amount"]),
-        }
-        for b in tracked_budgets
-        if b.get("category_name")
-    }
-
-    currency_symbols = {c["code"]: c["symbol"] for c in currencies if c.get("symbol")}
-    distinct_currencies = sorted({a["currency"] for a in accounts} | {"EUR"})
-    account_currencies = distinct_currencies + ["GLOBAL"] if len(distinct_currencies) > 1 else distinct_currencies
-
     return templates.TemplateResponse(request, "finance.html", {
+        **_period_context("/finance/", currency, range_params),
+        **_currency_context(accounts, currencies, currency),
         "spending": spending,
         "income": income,
         "category_items": category_items,
@@ -350,31 +272,74 @@ async def finance_page(request: Request):
         "transactions": transactions,
         "budgets": budgets,
         "total_remaining": total_remaining,
-        "period": period,
-        "is_custom": is_custom,
-        "custom_from": custom_from,
-        "custom_to": custom_to,
-        "range_qs": range_qs,
         "txn_range_qs": txn_range_qs,
         "errors": errors,
-        "time_spending": time_spending_sorted,
-        "category_chart": category_chart,
-        "account_chart": account_chart,
-        "income_expense_chart": income_expense_chart,
-        "net_worth_chart": net_worth_chart,
-        "budget_chart": budget_chart,
-        "time_label": "Month" if group_by_month else "Day",
-        "accounts": accounts,
-        "categories": categories,
         "tags": tags,
-        "currencies": currencies,
+        "categories": categories,
         "recurring": recurring,
-        "currency": currency,
-        "currency_symbol": currency_symbols.get("EUR", "€ ") if currency == "GLOBAL" else currency_symbols.get(currency, currency + " "),
-        "currency_symbols": currency_symbols,
-        "account_currencies": account_currencies,
         "accounts_by_id": {a["id"]: a["name"] for a in accounts},
         "categories_by_id": {c["id"]: c["name"] for c in categories},
+    })
+
+
+@router.get("/insights", response_class=HTMLResponse)
+async def finance_insights_page(request: Request):
+    range_params = _range_params(request)
+    currency = _resolve_currency(request)
+    report_params = {**range_params, "currency": currency}
+
+    # The spending report resolves the concrete dates of a named period, which decides
+    # whether the time charts group by day or by month, so it has to come first.
+    spending = await _try_get("/finance/transactions/report", report_params)
+    resolved_from = (spending or {}).get("from_date")
+    resolved_to = (spending or {}).get("to_date")
+    group_by_month = False
+    if resolved_from and resolved_to:
+        span_days = (date.fromisoformat(resolved_to) - date.fromisoformat(resolved_from)).days + 1
+        group_by_month = span_days > _MONTH_GROUPING_THRESHOLD_DAYS
+    group_by = "month" if group_by_month else "day"
+
+    # Net worth is a running-balance trend independent of the selected range: always
+    # the trailing 12 months so it reads as a trend, not one cycle's start/end balance.
+    net_worth_from = (local_today() - timedelta(days=365)).isoformat()
+
+    # Over-time, by-account and income-vs-expense are server-side SQL aggregates (not a
+    # capped raw-transaction fetch) so wide ranges don't silently drop their oldest buckets.
+    (
+        accounts, currencies, by_category, over_time, by_account, income_vs_expense, net_worth, budgets,
+    ) = await asyncio.gather(
+        _try_get("/finance/accounts", {"is_active": "true"}),
+        _try_get("/finance/currencies"),
+        _try_get("/finance/transactions/by-category", report_params),
+        _try_get("/finance/transactions/over-time", {**report_params, "group_by": group_by}),
+        _try_get("/finance/transactions/by-account", report_params),
+        _try_get("/finance/transactions/income-vs-expense-over-time", {**report_params, "group_by": group_by}),
+        _try_get(
+            "/finance/transactions/net-worth",
+            {"currency": currency, "group_by": "month", "from_date": net_worth_from},
+        ),
+        _try_get("/finance/budgets/status") if currency == "EUR" else _none(),  # budgets are EUR-scoped
+    )
+
+    return templates.TemplateResponse(request, "finance_insights.html", {
+        **_period_context("/finance/insights", currency, range_params),
+        **_currency_context(accounts or [], currencies or [], currency),
+        "time_label": "Month" if group_by_month else "Day",
+        "category_chart": {
+            (i["category_name"] or "Uncategorized"): float(i["total"])
+            for i in (by_category or {}).get("items", [])
+        },
+        "time_spending": {i["period"]: float(i["total"]) for i in (over_time or {}).get("items", [])},
+        "account_chart": {
+            (i["account_name"] or "Unknown"): float(i["total"])
+            for i in (by_account or {}).get("items", [])
+        },
+        "income_expense_chart": {
+            i["period"]: {"income": float(i["income"]), "expense": float(i["expense"])}
+            for i in (income_vs_expense or {}).get("items", [])
+        },
+        "net_worth_chart": {i["period"]: float(i["total"]) for i in (net_worth or {}).get("items", [])},
+        "budget_chart": _budget_chart(budgets or []),
     })
 
 

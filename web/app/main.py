@@ -1,4 +1,5 @@
 import logging
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI, Request
@@ -7,6 +8,7 @@ from fastapi.staticfiles import StaticFiles
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.middleware.sessions import SessionMiddleware
 
+import app.client as api
 from app.config import get_settings
 from app.routes import (
     auth, briefing, contacts, dashboard, overload, pause, tasks, tasks_insights, shopping, shopping_insights,
@@ -16,7 +18,13 @@ from app.routes import (
 
 logging.basicConfig(level=logging.INFO)
 
-app = FastAPI(title="Alfred Portal", docs_url=None, redoc_url=None)
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    yield
+    await api.close()
+
+
+app = FastAPI(title="Alfred Portal", docs_url=None, redoc_url=None, lifespan=lifespan)
 
 _PUBLIC_PATHS = {"/login", "/logout"}
 

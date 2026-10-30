@@ -64,3 +64,23 @@ class TestClientHeader:
 
         assert headers["X-Alfred-Client"] == "web"
         assert headers["Authorization"].startswith("Bearer ")
+
+
+class TestSharedClient:
+    """Requests reuse one pooled httpx client instead of opening a connection per call."""
+
+    async def test_consecutive_calls_reuse_the_same_client(self):
+        first = api._http()
+        second = api._http()
+
+        assert first is second
+        await api.close()
+
+    async def test_close_releases_the_client_and_a_new_one_is_created_on_demand(self):
+        first = api._http()
+
+        await api.close()
+
+        assert first.is_closed
+        assert api._http() is not first
+        await api.close()

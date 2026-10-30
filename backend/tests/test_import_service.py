@@ -790,7 +790,20 @@ class TestCommit:
         await service.commit(_commit_request(rows))
 
         assert service._created[0].deduplication_hash != "hash-dup"
-        assert service._created[0].deduplication_hash.startswith("hash-dup|forced:")
+
+    @pytest.mark.asyncio
+    async def test_forced_row_hash_fits_the_64_char_column(self):
+        service = _service()
+        self._prepare(service)
+        full_hash = "a" * 64
+        service._txn_repo.get_existing_dedup_hashes.return_value = {full_hash}
+        rows = [_commit_row(deduplication_hash=full_hash, force=True)]
+
+        await service.commit(_commit_request(rows))
+
+        forced = service._created[0].deduplication_hash
+        assert forced != full_hash
+        assert len(forced) <= 64
 
     @pytest.mark.asyncio
     async def test_expense_amount_stored_positive(self):

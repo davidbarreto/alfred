@@ -111,6 +111,11 @@ def _normalize_posted_at(raw: str | None) -> str:
         return raw
 
 
+def _forced_hash(original: str) -> str:
+    """Fresh 64-char hash for a user-confirmed duplicate (the column is varchar(64))."""
+    return hashlib.sha256(f"{original}|forced:{uuid4().hex}".encode("utf-8")).hexdigest()
+
+
 def _compute_dedup_hash(account_id: int, row: ParsedRow, occurrence: int) -> str:
     # balance_after alone isn't always a reliable disambiguator: two distinct same-day,
     # same-amount, same-description rows can still coincidentally leave the same running
@@ -871,7 +876,7 @@ class ImportService:
             if row.force:
                 # User confirmed this preview-flagged duplicate is genuinely new; mint a
                 # fresh hash so it can't collide with the row it was flagged against.
-                row.deduplication_hash = f"{row.deduplication_hash}|forced:{uuid4().hex}"
+                row.deduplication_hash = _forced_hash(row.deduplication_hash)
                 to_insert.append(row)
                 continue
             if row.deduplication_hash in existing or row.deduplication_hash in seen:
@@ -1243,7 +1248,7 @@ class ImportService:
             to_insert = []
             for row in rows:
                 if row.force:
-                    row.deduplication_hash = f"{row.deduplication_hash}|forced:{uuid4().hex}"
+                    row.deduplication_hash = _forced_hash(row.deduplication_hash)
                     to_insert.append(row)
                     continue
                 if row.deduplication_hash in existing or row.deduplication_hash in seen:

@@ -114,13 +114,19 @@ jobs:
         run: |
           set -e
           collections=(
+            activities.collection.json
             briefing.collection.json
             commands.collection.json
             core.collection.json
             calendar_events.collection.json
             contacts.collection.json
             finance.collection.json
+            interview_prep.collection.json
+            interviews.collection.json
+            metrics.collection.json
             notes.collection.json
+            planning.collection.json
+            routines.collection.json
             shopping.collection.json
             tasks.collection.json
             watchers.collection.json

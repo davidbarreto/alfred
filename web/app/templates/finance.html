@@ -208,7 +208,7 @@
       {% for item in category_items %}
       <div>
         <div class="flex justify-between text-xs mb-1">
-          <span class="font-medium text-gray-700">{{ item.category_name or "Uncategorized" }}</span>
+          <a href="/finance/transactions?type=expense&{% if item.category_id %}category_id={{ item.category_id }}{% else %}uncategorized=true{% endif %}&{{ txn_range_qs }}" class="font-medium text-gray-700 hover:text-[#378ADD] hover:underline">{{ item.category_name or "Uncategorized" }}</a>
           <span class="text-gray-400">
             {{ currency_symbol }}{{ item.total | money }}
             <span class="text-gray-300 ml-1">({{ item.transaction_count }})</span>

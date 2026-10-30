@@ -342,6 +342,27 @@ class TestFinanceDashboardCurrency:
         assert "Groceries" in resp.text
 
 
+class TestFinanceDashboardCategoryLinks:
+    def test_breakdown_rows_link_to_filtered_transactions(self, client, mock_api):
+        async def fake(path, params=None):
+            if path == "/finance/accounts":
+                return [{"id": 1, "name": "Checking", "currency": "EUR"}]
+            if path == "/finance/transactions/by-category":
+                return {"items": [
+                    {"category_id": 7, "category_name": "Groceries", "total": "50.00", "transaction_count": 3},
+                    {"category_id": None, "category_name": None, "total": "20.00", "transaction_count": 2},
+                ]}
+            return []
+
+        mock_api["get"].side_effect = fake
+
+        resp = client.get("/finance/")
+
+        assert resp.status_code == 200
+        assert 'href="/finance/transactions?type=expense&category_id=7&currency=EUR' in resp.text
+        assert 'href="/finance/transactions?type=expense&uncategorized=true&currency=EUR' in resp.text
+
+
 class TestFinanceDashboardPeriods:
     def _fake_get(self, calls, accounts, spending=None, by_category=None, over_time=None):
         async def fake(path, params=None):

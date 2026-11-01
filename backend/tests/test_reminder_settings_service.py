@@ -76,10 +76,13 @@ class TestUpdate:
 
         service._settings.set_value.assert_not_awaited()
 
+    def test_undated_escalation_accepts_zero_for_never(self):
+        assert ReminderSettingsUpdate(undated_escalation_days_low=0).undated_escalation_days_low == 0
+
     @pytest.mark.parametrize(
         "field,value",
         [("overload_max_listed", 0), ("overload_urgent_threshold", 0), ("overload_urgent_interval_hours", 25),
-         ("undated_escalation_days_low", 0), ("overdue_grace_hours_low", -1),
+         ("overdue_grace_hours_low", -1),
          ("catchup_tasks_per_day", 0), ("catchup_stale_days", 6), ("catchup_missed_habit_threshold", 8)],
     )
     def test_rejects_out_of_range(self, field, value):

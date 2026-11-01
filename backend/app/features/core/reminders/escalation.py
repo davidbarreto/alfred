@@ -1,5 +1,5 @@
 """Pure rules for when a task escalates to URGENT and how often it is re-reminded."""
-from datetime import timedelta
+from datetime import datetime, timedelta
 
 from app.features.core.reminders.schemas import ReminderSettingsRead
 
@@ -29,13 +29,19 @@ def overdue_grace(priority: str, settings: ReminderSettingsRead) -> timedelta:
     return timedelta(hours=hours)
 
 
-def undated_escalation_age(priority: str, settings: ReminderSettingsRead) -> timedelta:
-    """How old an undated task may get before it escalates to URGENT."""
+def undated_escalation_age(priority: str, settings: ReminderSettingsRead) -> timedelta | None:
+    """How old an undated task may get before it escalates to URGENT; None (setting 0) means never."""
     days = {
         "HIGH": settings.undated_escalation_days_high,
         "MEDIUM": settings.undated_escalation_days_medium,
     }.get(priority, settings.undated_escalation_days_low)
-    return timedelta(days=days)
+    return timedelta(days=days) if days > 0 else None
+
+
+def is_stale_undated(created_at: datetime, now: datetime, priority: str, settings: ReminderSettingsRead) -> bool:
+    """True when an undated task is old enough to escalate by age for its priority."""
+    age = undated_escalation_age(priority, settings)
+    return age is not None and now - created_at >= age
 
 
 def task_dedup_ttl(urgency: str, priority: str, overloaded: bool, settings: ReminderSettingsRead) -> timedelta:

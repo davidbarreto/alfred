@@ -82,4 +82,4 @@ class UrgencyResetService:
 
 
 def _is_age_escalation_candidate(task: TaskRead, now: datetime, settings: ReminderSettingsRead) -> bool:
-    return now - task.created_at >= escalation.undated_escalation_age(task.priority, settings)
+    return escalation.is_stale_undated(task.created_at, now, task.priority, settings)

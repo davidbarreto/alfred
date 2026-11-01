@@ -1,4 +1,4 @@
-from datetime import timedelta
+from datetime import datetime, timedelta
 
 from app.features.core.reminders import escalation
 from app.features.core.reminders.schemas import ReminderSettingsRead
@@ -44,6 +44,24 @@ class TestUndatedEscalationAge:
     def test_reads_configured_values(self):
         settings = _settings(undated_escalation_days_high=3)
         assert escalation.undated_escalation_age("HIGH", settings) == timedelta(days=3)
+
+    def test_zero_days_means_never(self):
+        settings = _settings(undated_escalation_days_low=0)
+        assert escalation.undated_escalation_age("LOW", settings) is None
+
+
+class TestIsStaleUndated:
+    NOW = datetime(2026, 11, 1, 12, 0)
+
+    def test_old_task_is_stale(self):
+        assert escalation.is_stale_undated(self.NOW - timedelta(days=50), self.NOW, "LOW", _settings())
+
+    def test_young_task_is_not_stale(self):
+        assert not escalation.is_stale_undated(self.NOW - timedelta(days=10), self.NOW, "LOW", _settings())
+
+    def test_never_setting_ignores_age(self):
+        settings = _settings(undated_escalation_days_low=0)
+        assert not escalation.is_stale_undated(self.NOW - timedelta(days=1000), self.NOW, "LOW", settings)
 
 
 class TestTaskDedupTtl:

@@ -236,7 +236,7 @@ class ReminderService:
             if (
                 task.urgency == "NORMAL"
                 and task.recurrence_rule is None
-                and now - task.created_at >= escalation.undated_escalation_age(task.priority, settings)
+                and escalation.is_stale_undated(task.created_at, now, task.priority, settings)
             ):
                 task = await self._task_service.update_task(task.id, TaskUpdate(urgency="URGENT"))
                 logger.info(

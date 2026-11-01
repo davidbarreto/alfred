@@ -25,7 +25,7 @@ _SETTINGS_GROUPS = [
         ("overdue_grace_hours_low", "Low priority", "hours overdue", ""),
     ]),
     ("Escalate undated tasks to Urgent after", [
-        ("undated_escalation_days_high", "High priority", "days old", ""),
+        ("undated_escalation_days_high", "High priority", "days old", "0 = never escalate by age."),
         ("undated_escalation_days_medium", "Medium priority", "days old", ""),
         ("undated_escalation_days_low", "Low priority", "days old", ""),
     ]),

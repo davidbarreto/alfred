@@ -107,6 +107,7 @@ class RoutineRepository:
         step = RoutineStep(routine_id=routine_id, position=position, **data.model_dump())
         self._session.add(step)
         await self._session.commit()
+        await self._session.refresh(step)
         return step
 
     async def update_step(self, step: RoutineStep, position: int, data: RoutineStepBase) -> RoutineStep:
@@ -114,6 +115,7 @@ class RoutineRepository:
         for field, value in data.model_dump().items():
             setattr(step, field, value)
         await self._session.commit()
+        await self._session.refresh(step)
         return step
 
     async def delete_step(self, step_id: int) -> None:

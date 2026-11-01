@@ -166,6 +166,29 @@ class ShoppingRepository:
         )
         return list(result.all())
 
+    async def get_bought_history(self, category_id: int | None = None) -> list[Row]:
+        """One row per bought entry of a live product, ordered for per-product grouping."""
+        query = (
+            select(
+                ShoppingItem.product_id,
+                ShoppingProduct.name,
+                ShoppingProduct.category_id,
+                ShoppingItem.last_bought_at,
+            )
+            .join(ShoppingProduct, ShoppingItem.product_id == ShoppingProduct.id)
+            .where(
+                ShoppingItem.status == "bought",
+                ShoppingItem.deleted_at.is_(None),
+                ShoppingItem.last_bought_at.is_not(None),
+                ShoppingProduct.deleted_at.is_(None),
+            )
+            .order_by(ShoppingItem.product_id, ShoppingItem.last_bought_at)
+        )
+        if category_id is not None:
+            query = query.where(ShoppingProduct.category_id == category_id)
+        result = await self._session.execute(query)
+        return list(result.all())
+
     async def get_purchases_by_month(self, months: int) -> list[Row]:
         since = datetime.now(timezone.utc) - timedelta(days=30 * months)
         month = func.to_char(ShoppingItem.last_bought_at, "YYYY-MM").label("month")

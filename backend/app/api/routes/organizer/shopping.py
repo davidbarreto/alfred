@@ -9,6 +9,8 @@ from app.features.organizer.shopping.schemas import (
     FrequentItemRead,
     MonthlyPurchaseRead,
     PriorityCountRead,
+    PurchaseFrequencyFilters,
+    PurchaseFrequencyRead,
     RecurrenceItemCreate,
     RecurrenceItemRead,
     RecurrenceItemUpdate,
@@ -73,6 +75,11 @@ async def list_shopping_priority_split(service: ShoppingServiceDep):
 @shopping_router.get("/insights/by-store", response_model=list[StorePurchaseRead])
 async def list_shopping_purchases_by_store(service: ShoppingServiceDep):
     return await service.list_purchases_by_store()
+
+
+@shopping_router.get("/insights/frequency", response_model=list[PurchaseFrequencyRead])
+async def list_shopping_purchase_frequency(service: ShoppingServiceDep, filters: PurchaseFrequencyFilters = Depends()):
+    return await service.list_purchase_frequency(filters)
 
 
 @shopping_router.get("/{item_id}", response_model=ShoppingItemRead)

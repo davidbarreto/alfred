@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 import logging
+from collections import defaultdict
 from datetime import datetime
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.features.organizer.shopping.errors import ShoppingItemAlreadyPendingError
+from app.features.organizer.shopping.frequency import average_interval_days, next_expected_on, purchase_days
 from app.features.organizer.shopping.recurrence import is_recurrence_due
 from app.features.organizer.shopping.repository import (
     RecurrenceRepository,
@@ -18,6 +20,8 @@ from app.features.organizer.shopping.schemas import (
     FrequentItemRead,
     MonthlyPurchaseRead,
     PriorityCountRead,
+    PurchaseFrequencyFilters,
+    PurchaseFrequencyRead,
     RecurrenceItemCreate,
     RecurrenceItemRead,
     RecurrenceItemUpdate,
@@ -34,6 +38,7 @@ from app.features.organizer.shopping.schemas import (
     WishlistItemUpdate,
 )
 from app.features.organizer.shopping_categories.repository import ShoppingCategoryRepository
+from app.shared.timezone import local_timezone, local_today
 from app.features.organizer.shopping_products.repository import ShoppingProductRepository
 from app.features.organizer.shopping_products.schemas import ShoppingProductCreate, ShoppingProductUpdate
 
@@ -151,6 +156,42 @@ class ShoppingService:
     async def list_purchases_by_month(self, months: int = 6) -> list[MonthlyPurchaseRead]:
         rows = await self._shopping.get_purchases_by_month(months)
         return [MonthlyPurchaseRead(month=row.month, purchase_count=row.purchase_count) for row in rows]
+
+    async def list_purchase_frequency(self, filters: PurchaseFrequencyFilters) -> list[PurchaseFrequencyRead]:
+        """How often each product is bought, most frequently bought first.
+
+        Products with fewer than `min_purchases` purchase days are left out; those with a single
+        purchase day have no interval, so they only appear when min_purchases is 1 (and sort last)."""
+        rows = await self._shopping.get_bought_history(filters.category_id)
+        by_product: dict[int, list[datetime]] = defaultdict(list)
+        names: dict[int, tuple[str, int | None]] = {}
+        for row in rows:
+            by_product[row.product_id].append(row.last_bought_at)
+            names[row.product_id] = (row.name, row.category_id)
+
+        tz, today = local_timezone(), local_today()
+        result: list[PurchaseFrequencyRead] = []
+        for product_id, moments in by_product.items():
+            days = purchase_days(moments, tz)
+            if len(days) < filters.min_purchases:
+                continue
+            average = average_interval_days(days)
+            name, category_id = names[product_id]
+            result.append(
+                PurchaseFrequencyRead(
+                    product_id=product_id,
+                    name=name,
+                    category_id=category_id,
+                    purchase_count=len(days),
+                    first_bought_on=days[0],
+                    last_bought_on=days[-1],
+                    avg_interval_days=round(average, 1) if average is not None else None,
+                    days_since_last=(today - days[-1]).days,
+                    next_expected_on=next_expected_on(days[-1], average) if average is not None else None,
+                )
+            )
+        result.sort(key=lambda r: (r.avg_interval_days is None, r.avg_interval_days or 0, r.name.lower()))
+        return result[: filters.limit]
 
     async def list_priority_counts(self) -> list[PriorityCountRead]:
         rows = await self._shopping.get_priority_counts()

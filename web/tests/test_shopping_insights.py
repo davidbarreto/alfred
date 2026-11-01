@@ -6,13 +6,14 @@ def _category(id=1, name="Grocery"):
     return {"id": id, "name": name}
 
 
-def _fake_get(frequent=None, by_category=None, by_month=None, priority_split=None, by_store=None, categories=None):
+def _fake_get(frequent=None, by_category=None, by_month=None, priority_split=None, by_store=None, categories=None, frequency=None):
     frequent = frequent or []
     by_category = by_category or []
     by_month = by_month or []
     priority_split = priority_split or []
     by_store = by_store or []
     categories = categories or []
+    frequency = frequency or []
 
     async def fake_get(path, params=None):
         if path == "/organizer/shopping/frequent":
@@ -25,11 +26,21 @@ def _fake_get(frequent=None, by_category=None, by_month=None, priority_split=Non
             return priority_split
         if path == "/organizer/shopping/insights/by-store":
             return by_store
+        if path == "/organizer/shopping/insights/frequency":
+            return frequency
         if path == "/organizer/shopping-categories":
             return categories
         return []
 
     return fake_get
+
+
+def _frequency(name="Milk", category_id=1, purchase_count=4, avg=6.0, days_since=3, next_on="2026-10-19"):
+    return {
+        "product_id": 1, "name": name, "category_id": category_id, "purchase_count": purchase_count,
+        "first_bought_on": "2026-09-01", "last_bought_on": "2026-10-13", "avg_interval_days": avg,
+        "days_since_last": days_since, "next_expected_on": next_on,
+    }
 
 
 class TestFrequentProducts:
@@ -138,3 +149,59 @@ class TestByStoreConditional:
 
         assert resp.status_code == 200
         assert 'id="chart-by-store"' in resp.text
+
+
+class TestPurchaseFrequencyTable:
+    def test_shows_average_interval_category_and_last_purchase(self, client, mock_api):
+        mock_api["get"].side_effect = _fake_get(
+            frequency=[_frequency(name="Milk", avg=6.5, purchase_count=4)],
+            categories=[_category(id=1, name="Grocery")],
+        )
+
+        resp = client.get("/shopping/insights")
+
+        assert resp.status_code == 200
+        assert "How often you buy" in resp.text
+        assert "6.5 days" in resp.text
+        assert "4×" in resp.text
+        assert "Grocery" in resp.text
+        assert "2026-10-13" in resp.text
+
+    def test_flags_products_past_their_usual_interval(self, client, mock_api):
+        mock_api["get"].side_effect = _fake_get(frequency=[_frequency(avg=6.0, days_since=10)])
+
+        resp = client.get("/shopping/insights")
+
+        assert "4 days late" in resp.text
+
+    def test_shows_time_until_next_purchase_when_not_late(self, client, mock_api):
+        mock_api["get"].side_effect = _fake_get(frequency=[_frequency(avg=6.0, days_since=2)])
+
+        resp = client.get("/shopping/insights")
+
+        assert "in 4 days" in resp.text
+        assert "days late" not in resp.text
+
+    def test_requests_the_frequency_endpoint(self, client, mock_api):
+        mock_api["get"].side_effect = _fake_get()
+
+        client.get("/shopping/insights")
+
+        mock_api["get"].assert_any_await("/organizer/shopping/insights/frequency")
+
+    def test_backend_failure_does_not_break_the_page(self, client, mock_api):
+        import httpx
+
+        base = _fake_get()
+
+        async def failing(path, params=None):
+            if path.endswith("/insights/frequency"):
+                raise httpx.ConnectError("down", request=httpx.Request("GET", "http://api" + path))
+            return await base(path, params)
+
+        mock_api["get"].side_effect = failing
+
+        resp = client.get("/shopping/insights")
+
+        assert resp.status_code == 200
+        assert "How often you buy" in resp.text

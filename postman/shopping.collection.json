@@ -787,6 +787,67 @@
           }
         },
         {
+          "name": "08g - List Purchase Frequency (include single purchases)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Bought product appears with frequency fields', () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.be.an('array');",
+                  "    const beans = json.find((r) => r.name === 'Beans');",
+                  "    pm.expect(beans, 'Beans').to.exist;",
+                  "    pm.expect(beans.purchase_count).to.be.at.least(1);",
+                  "    pm.expect(beans).to.have.all.keys('product_id', 'name', 'category_id', 'purchase_count', 'first_bought_on', 'last_bought_on', 'avg_interval_days', 'days_since_last', 'next_expected_on');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/organizer/shopping/insights/frequency?min_purchases=1",
+              "host": ["{{base_url}}"],
+              "path": ["organizer", "shopping", "insights", "frequency"],
+              "query": [{ "key": "min_purchases", "value": "1" }]
+            }
+          }
+        },
+        {
+          "name": "08h - List Purchase Frequency (default hides products bought on fewer than two days)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Every row has an interval and at least two purchase days', () => {",
+                  "    pm.response.json().forEach((r) => {",
+                  "        pm.expect(r.purchase_count).to.be.at.least(2);",
+                  "        pm.expect(r.avg_interval_days).to.be.a('number');",
+                  "    });",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/organizer/shopping/insights/frequency",
+              "host": ["{{base_url}}"],
+              "path": ["organizer", "shopping", "insights", "frequency"]
+            }
+          }
+        },
+        {
           "name": "09 - Create Shopping Item (for skipped test)",
           "event": [
             {

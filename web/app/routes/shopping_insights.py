@@ -24,7 +24,7 @@ async def _get_categories() -> list[dict]:
 
 @router.get("", response_class=HTMLResponse)
 async def shopping_insights_page(request: Request):
-    frequent_items, by_category, by_month, priority_split, by_store = [], [], [], [], []
+    frequent_items, by_category, by_month, priority_split, by_store, frequency = [], [], [], [], [], []
 
     try:
         frequent_items = await api.get("/organizer/shopping/frequent", params={"limit": 15})
@@ -51,6 +51,11 @@ async def shopping_insights_page(request: Request):
     except httpx.HTTPError as e:
         logger.error("Failed to load shopping purchases by store: error=%s", e)
 
+    try:
+        frequency = await api.get("/organizer/shopping/insights/frequency")
+    except httpx.HTTPError as e:
+        logger.error("Failed to load shopping purchase frequency: error=%s", e)
+
     categories_by_id = {c["id"]: c["name"] for c in await _get_categories()}
 
     frequent_chart = {i["name"]: i["purchase_count"] for i in frequent_items[:_FREQUENT_CHART_SIZE]}
@@ -63,6 +68,8 @@ async def shopping_insights_page(request: Request):
 
     return templates.TemplateResponse(request, "shopping_insights.html", {
         "frequent_items": frequent_items,
+        "frequency": frequency,
+        "categories_by_id": categories_by_id,
         "frequent_chart": frequent_chart,
         "by_category_chart": by_category_chart,
         "by_month_chart": by_month_chart,

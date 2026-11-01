@@ -433,6 +433,7 @@ An LLM client (Claude via MCP) plans a day or week from Alfred's data. Alfred on
 - Domain conflicts (`app/features/organizer/shopping/errors.py`) become 409 through one handler in `app/main.py`; the command handler wraps them in `HTTPException(409)` so Telegram/MCP logs a warning, not an error.
 - Deleting a product is soft, blocked while it has a pending entry, and clears `category_id` so the category can be deleted. Merging A into B repoints A's entries (history) to B and refuses if both are pending.
 - **Frequent chips** = most-bought products with no pending entry, excluded in SQL before the limit, default 5.
+- **Purchase frequency** (`GET /organizer/shopping/insights/frequency`, portal `/shopping/insights` "How often you buy"): per product, the mean days between purchase *days* (entries ticked on the same local day count once; pure maths in `shopping/frequency.py`), last purchase, days since and expected next date. Hides products with fewer than `min_purchases` (default 2) purchase days. Intervals follow when items are ticked as bought, not when they ran out.
 - `recurrence_items` still carry their own `name`/`category_id`; accepting one resolves the product by name (a `product_id` FK there is a possible follow-up).
 
 ---

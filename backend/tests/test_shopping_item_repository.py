@@ -132,3 +132,24 @@ class TestGetPurchasesByStore:
         assert "status = 'bought'" in compiled
         assert "store IS NOT NULL" in compiled
         assert "GROUP BY organizer.shopping_items.store" in compiled
+
+
+class TestGetBoughtHistory:
+    async def test_only_bought_dated_entries_of_live_products_in_product_order(self):
+        session = _make_session()
+
+        await ShoppingRepository(session).get_bought_history()
+
+        compiled = _compiled(session)
+        assert "status = 'bought'" in compiled
+        assert "last_bought_at IS NOT NULL" in compiled
+        assert "shopping_products.deleted_at IS NULL" in compiled
+        assert "shopping_items.deleted_at IS NULL" in compiled
+        assert "ORDER BY organizer.shopping_items.product_id, organizer.shopping_items.last_bought_at" in compiled
+
+    async def test_category_filter_goes_through_the_product(self):
+        session = _make_session()
+
+        await ShoppingRepository(session).get_bought_history(category_id=3)
+
+        assert "organizer.shopping_products.category_id = 3" in _compiled(session)

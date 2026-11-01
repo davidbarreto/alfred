@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import date, datetime
 from decimal import Decimal
 from typing import Annotated, Literal, Optional, TypeAlias
 
@@ -103,6 +103,41 @@ class FrequentItemFilters:
 
     def __repr__(self) -> str:
         return f"FrequentItemFilters(category_id={self.category_id!r}, limit={self.limit})"
+
+
+# --- Purchase frequency (how often each product is bought) ---
+
+class PurchaseFrequencyRead(BaseModel):
+    product_id: int
+    name: str
+    category_id: Optional[int]
+    purchase_count: int
+    first_bought_on: date
+    last_bought_on: date
+    avg_interval_days: Optional[float]
+    days_since_last: int
+    next_expected_on: Optional[date]
+
+
+class PurchaseFrequencyFilters:
+    def __init__(
+        self,
+        min_purchases: Annotated[int, Query(ge=1)] = 2,
+        category_id: Annotated[Optional[int], Query()] = None,
+        limit: Annotated[int, Query(ge=1, le=500)] = 100,
+    ) -> None:
+        self.min_purchases = min_purchases
+        self.category_id = category_id
+        self.limit = limit
+
+    def __eq__(self, other: object) -> bool:
+        return isinstance(other, PurchaseFrequencyFilters) and vars(self) == vars(other)
+
+    def __repr__(self) -> str:
+        return (
+            f"PurchaseFrequencyFilters(min_purchases={self.min_purchases}, "
+            f"category_id={self.category_id!r}, limit={self.limit})"
+        )
 
 
 # --- Purchase insights (derived aggregates, no filters — small result sets) ---

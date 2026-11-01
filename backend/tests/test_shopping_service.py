@@ -1,11 +1,12 @@
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
+from freezegun import freeze_time
 
 from app.features.organizer.shopping.errors import ShoppingItemAlreadyPendingError
 from app.features.organizer.shopping.schemas import (
@@ -14,6 +15,8 @@ from app.features.organizer.shopping.schemas import (
     FrequentItemRead,
     MonthlyPurchaseRead,
     PriorityCountRead,
+    PurchaseFrequencyFilters,
+    PurchaseFrequencyRead,
     RecurrenceItemCreate,
     RecurrenceItemRead,
     ShoppingItemCreate,
@@ -554,3 +557,88 @@ class TestSuggestNamesDefaultUnit:
         result = await service.suggest_names("mi")
 
         assert result[0].default_unit == "l"
+
+
+# --- Purchase frequency ---
+
+class TestListPurchaseFrequency:
+    @staticmethod
+    def _row(product_id, name, bought_at, category_id=_GROCERY_ID):
+        return SimpleNamespace(product_id=product_id, name=name, category_id=category_id, last_bought_at=bought_at)
+
+    @staticmethod
+    def _at(day, month=10):
+        return datetime(2026, month, day, 12, 0, tzinfo=timezone.utc)
+
+    @freeze_time("2026-10-20 12:00:00")
+    async def test_average_interval_last_purchase_and_next_expected(self, service):
+        service._shopping.get_bought_history.return_value = [
+            self._row(1, "Milk", self._at(1)),
+            self._row(1, "Milk", self._at(5)),
+            self._row(1, "Milk", self._at(13)),
+        ]
+
+        result = await service.list_purchase_frequency(PurchaseFrequencyFilters())
+
+        assert len(result) == 1
+        milk = result[0]
+        assert isinstance(milk, PurchaseFrequencyRead)
+        assert (milk.purchase_count, milk.avg_interval_days) == (3, 6.0)
+        assert (milk.first_bought_on, milk.last_bought_on) == (date(2026, 10, 1), date(2026, 10, 13))
+        assert milk.days_since_last == 7
+        assert milk.next_expected_on == date(2026, 10, 19)
+
+    @freeze_time("2026-10-20 12:00:00")
+    async def test_same_day_entries_count_once(self, service):
+        service._shopping.get_bought_history.return_value = [
+            self._row(1, "Milk", self._at(1)),
+            self._row(1, "Milk", datetime(2026, 10, 1, 13, 0, tzinfo=timezone.utc)),
+            self._row(1, "Milk", self._at(8)),
+        ]
+
+        result = await service.list_purchase_frequency(PurchaseFrequencyFilters())
+
+        assert (result[0].purchase_count, result[0].avg_interval_days) == (2, 7.0)
+
+    @freeze_time("2026-10-20 12:00:00")
+    async def test_products_below_min_purchases_are_left_out(self, service):
+        service._shopping.get_bought_history.return_value = [
+            self._row(1, "Milk", self._at(1)),
+            self._row(1, "Milk", self._at(8)),
+            self._row(2, "Fan", self._at(3)),
+        ]
+
+        assert [r.name for r in await service.list_purchase_frequency(PurchaseFrequencyFilters())] == ["Milk"]
+
+    @freeze_time("2026-10-20 12:00:00")
+    async def test_single_purchase_has_no_interval_and_sorts_last_when_included(self, service):
+        service._shopping.get_bought_history.return_value = [
+            self._row(2, "Fan", self._at(3)),
+            self._row(1, "Milk", self._at(1)),
+            self._row(1, "Milk", self._at(8)),
+        ]
+
+        result = await service.list_purchase_frequency(PurchaseFrequencyFilters(min_purchases=1))
+
+        assert [r.name for r in result] == ["Milk", "Fan"]
+        assert result[1].avg_interval_days is None
+        assert result[1].next_expected_on is None
+
+    @freeze_time("2026-10-20 12:00:00")
+    async def test_most_frequently_bought_first_and_limit_applied(self, service):
+        service._shopping.get_bought_history.return_value = [
+            self._row(1, "Rice", self._at(1)), self._row(1, "Rice", self._at(15)),
+            self._row(2, "Milk", self._at(1)), self._row(2, "Milk", self._at(4)),
+            self._row(3, "Eggs", self._at(1)), self._row(3, "Eggs", self._at(8)),
+        ]
+
+        result = await service.list_purchase_frequency(PurchaseFrequencyFilters(limit=2))
+
+        assert [(r.name, r.avg_interval_days) for r in result] == [("Milk", 3.0), ("Eggs", 7.0)]
+
+    async def test_passes_category_filter_to_repo(self, service):
+        service._shopping.get_bought_history.return_value = []
+
+        await service.list_purchase_frequency(PurchaseFrequencyFilters(category_id=_GROCERY_ID))
+
+        service._shopping.get_bought_history.assert_called_once_with(_GROCERY_ID)

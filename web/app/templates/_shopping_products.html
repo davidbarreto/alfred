@@ -1,0 +1,41 @@
+{% if products %}
+<div class="divide-y divide-gray-100">
+  {% for p in products %}
+  <div id="product-{{ p.id }}" class="flex flex-wrap items-center gap-2 py-2">
+    <input name="name" value="{{ p.name }}" required
+      class="input input-sm w-52 border border-gray-200 bg-white rounded-lg px-3 text-sm" />
+    <select name="category_id" class="border border-gray-200 rounded-lg px-2 py-1.5 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-[#378ADD]">
+      {% for cat in categories %}
+      <option value="{{ cat.id }}" {% if cat.id == p.category_id %}selected{% endif %}>{{ cat.name }}</option>
+      {% endfor %}
+    </select>
+    <input name="default_unit" value="{{ p.default_unit or '' }}" list="shopping-units" placeholder="Unit"
+      class="input input-sm w-24 border border-gray-200 bg-white rounded-lg px-3 text-sm" />
+    <input name="default_quantity" type="number" step="0.01" min="0"
+      value="{% if p.default_quantity %}{{ '%g'|format(p.default_quantity|float) }}{% endif %}" placeholder="Qty"
+      class="input input-sm w-20 border border-gray-200 bg-white rounded-lg px-3 text-sm" />
+    <button
+      class="btn btn-sm btn-ghost text-[#0C447C]"
+      hx-post="/shopping/products/{{ p.id }}"
+      hx-include="closest div"
+      hx-target="#shopping-products-list"
+      hx-swap="innerHTML"
+    >Save</button>
+    <span class="text-xs text-gray-400">{{ p.purchase_count }} bought</span>
+    {% if p.pending %}
+    <span class="text-[10px] px-1.5 py-0.5 rounded bg-[#E6F1FB] text-[#0C447C]">on list</span>
+    {% endif %}
+    <button
+      class="ml-auto text-gray-300 hover:text-[#E24B4A] transition-colors"
+      hx-delete="/shopping/products/{{ p.id }}"
+      hx-target="#shopping-products-list"
+      hx-swap="innerHTML"
+      hx-confirm="Delete product '{{ p.name }}'? Its purchase history stops counting in frequent items."
+      title="Delete"
+    ><i class="ti ti-trash text-base"></i></button>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<p class="text-sm text-gray-400 py-3 text-center">No products.</p>
+{% endif %}

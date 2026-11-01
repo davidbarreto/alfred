@@ -30,6 +30,10 @@
         class="px-3 py-1.5 text-xs font-medium text-gray-500 hover:text-gray-700 border-b-2 border-transparent transition-colors">
         Categories
       </button>
+      <button onclick="showShoppingTab('products')" id="stab-products"
+        class="px-3 py-1.5 text-xs font-medium text-gray-500 hover:text-gray-700 border-b-2 border-transparent transition-colors">
+        Products <span class="ml-1 text-gray-300 font-normal">{{ products | length }}</span>
+      </button>
     </div>
     <button
       class="text-xs text-gray-400 hover:text-gray-600 px-2 py-1 rounded hover:bg-gray-100"
@@ -69,6 +73,10 @@
           />
           <div id="shopping-name-suggestions" class="absolute z-10 left-0 right-0 mt-1"></div>
         </div>
+        <input name="quantity" type="number" step="0.01" min="0" placeholder="Qty"
+          class="input input-sm w-20 border border-gray-200 bg-white rounded-lg px-3 text-sm" />
+        <input name="unit" type="text" placeholder="Unit" list="shopping-units"
+          class="input input-sm w-24 border border-gray-200 bg-white rounded-lg px-3 text-sm" />
         <select name="category_id" class="border border-gray-200 rounded-lg px-2 py-1.5 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-[#378ADD]">
           {% for cat in categories %}
           <option value="{{ cat.id }}" {% if cat.name == "grocery" %}selected{% endif %}>{{ cat.name }}</option>
@@ -83,10 +91,6 @@
       <details class="text-xs">
         <summary class="text-gray-400 hover:text-gray-600 cursor-pointer select-none w-fit">More options</summary>
         <div class="flex flex-wrap gap-2 mt-2">
-          <input name="quantity" type="number" step="0.01" min="0" placeholder="Qty"
-            class="input input-sm w-20 border border-gray-200 bg-white rounded-lg px-3 text-sm" />
-          <input name="unit" type="text" placeholder="Unit"
-            class="input input-sm w-20 border border-gray-200 bg-white rounded-lg px-3 text-sm" />
           <input name="estimated_price" type="number" step="0.01" min="0" placeholder="€"
             class="input input-sm w-20 border border-gray-200 bg-white rounded-lg px-3 text-sm" />
           <input name="brand" type="text" placeholder="Brand"
@@ -100,6 +104,10 @@
         </div>
       </details>
     </form>
+    <div id="shopping-add-error"></div>
+    <datalist id="shopping-units">
+      {% for u in ["kg", "g", "l", "ml", "units", "pack", "box", "bottle", "can", "dozen"] %}<option value="{{ u }}">{% endfor %}
+    </datalist>
 
     <!-- Filter pills: status -->
     <div class="flex gap-1.5 flex-wrap items-center">
@@ -167,17 +175,59 @@
     </form>
   </div>
 
+  <!-- Products panel (hidden by default) -->
+  <div id="panel-products" class="hidden space-y-3">
+    <form class="flex flex-wrap gap-2" hx-post="/shopping/products" hx-target="#shopping-products-list" hx-swap="innerHTML"
+      hx-on::after-request="if (event.detail.successful) this.reset()">
+      <input name="name" required placeholder="New product"
+        class="input input-sm flex-1 min-w-[10rem] border border-gray-200 bg-white rounded-lg px-3 text-sm" />
+      <select name="category_id" class="border border-gray-200 rounded-lg px-2 py-1.5 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-[#378ADD]">
+        {% for cat in categories %}
+        <option value="{{ cat.id }}" {% if cat.name == "grocery" %}selected{% endif %}>{{ cat.name }}</option>
+        {% endfor %}
+      </select>
+      <input name="default_unit" list="shopping-units" placeholder="Unit"
+        class="input input-sm w-24 border border-gray-200 bg-white rounded-lg px-3 text-sm" />
+      <button type="submit" class="btn btn-sm btn-primary">Add</button>
+    </form>
+
+    <details class="text-xs">
+      <summary class="text-gray-400 hover:text-gray-600 cursor-pointer select-none w-fit">Merge duplicates</summary>
+      <form class="flex flex-wrap items-center gap-2 mt-2" onsubmit="submitProductMerge(event)">
+        <select name="source_id" required class="border border-gray-200 rounded-lg px-2 py-1.5 text-sm bg-white">
+          {% for p in products %}<option value="{{ p.id }}">{{ p.name }}</option>{% endfor %}
+        </select>
+        <span class="text-gray-400">into</span>
+        <select name="into_id" required class="border border-gray-200 rounded-lg px-2 py-1.5 text-sm bg-white">
+          {% for p in products %}<option value="{{ p.id }}">{{ p.name }}</option>{% endfor %}
+        </select>
+        <button type="submit" class="btn btn-sm btn-ghost text-[#0C447C]">Merge</button>
+        <span class="text-gray-400">Moves the purchase history; the first product is removed.</span>
+      </form>
+    </details>
+
+    <input type="search" name="q" placeholder="Search products…"
+      class="input input-sm w-full border border-gray-200 bg-white rounded-lg px-3 text-sm"
+      hx-get="/shopping/products" hx-trigger="keyup changed delay:300ms, search"
+      hx-target="#shopping-products-list" hx-swap="innerHTML" />
+    <div id="products-error"></div>
+    <div id="shopping-products-list">
+      {% include "_shopping_products.html" %}
+    </div>
+  </div>
+
 <script>
-function pickShoppingSuggestion(name, categoryId) {
+function pickShoppingSuggestion(name, categoryId, unit) {
   const input = document.getElementById('shopping-name-input');
   input.value = name;
   const form = input.closest('form');
   form.querySelector('select[name="category_id"]').value = categoryId;
+  form.querySelector('input[name="unit"]').value = unit || '';
   document.getElementById('shopping-name-suggestions').innerHTML = '';
 }
 
 function showShoppingTab(name) {
-  ['list', 'wishlist', 'categories'].forEach(t => {
+  ['list', 'wishlist', 'categories', 'products'].forEach(t => {
     document.getElementById('panel-' + t).classList.toggle('hidden', t !== name);
     const btn = document.getElementById('stab-' + t);
     const active = t === name;
@@ -188,6 +238,24 @@ function showShoppingTab(name) {
   });
   document.getElementById('clear-checked-btn').classList.toggle('hidden', name !== 'list');
 }
+
+async function submitProductMerge(e) {
+  e.preventDefault();
+  const form = e.target;
+  const btn = form.querySelector('[type="submit"]');
+  btn.disabled = true;
+  try {
+    const res = await fetch('/shopping/products/merge', { method: 'POST', body: new FormData(form) });
+    if (!res.ok) throw new Error(await res.text());
+    location.hash = 'products';
+    location.reload();
+  } catch (err) {
+    alert(err.message || 'Failed.');
+    btn.disabled = false;
+  }
+}
+
+if (location.hash === '#products') showShoppingTab('products');
 
 async function submitWishlistForm(e) {
   e.preventDefault();

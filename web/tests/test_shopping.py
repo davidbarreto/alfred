@@ -50,7 +50,7 @@ class TestAddShoppingItem:
             "/organizer/shopping", params={"status": "pending", "limit": 100}
         )
         mock_api["get"].assert_any_await(
-            "/organizer/shopping/frequent", params={"limit": 15}
+            "/organizer/shopping/frequent", params={"limit": 5}
         )
 
     def test_creates_item_with_optional_fields(self, client, mock_api):
@@ -83,6 +83,38 @@ class TestAddShoppingItem:
         resp = client.post("/shopping/", data={"name": "Milk", "category_id": "1"})
 
         assert resp.status_code == 422
+
+
+def _conflict(path: str, detail: str, method: str = "POST") -> httpx.HTTPStatusError:
+    request = httpx.Request(method, f"http://api{path}")
+    return httpx.HTTPStatusError(
+        "409", request=request, response=httpx.Response(409, json={"detail": detail}, request=request)
+    )
+
+
+class TestAddRejectedAsDuplicate:
+    def test_shows_the_backend_message_and_keeps_the_list(self, client, mock_api):
+        mock_api["post"].side_effect = _conflict("/organizer/shopping", "'Milk' is already on the shopping list (item 3)")
+        mock_api["get"].side_effect = _route_get({
+            "/organizer/shopping-categories": [_category()],
+            "/organizer/shopping/frequent": [],
+            "/organizer/shopping": [_item(id=3)],
+        })
+
+        resp = client.post("/shopping/", data={"name": "Milk", "category_id": "1"})
+
+        assert resp.status_code == 200
+        assert "already on the shopping list (item 3)" in resp.text
+        assert 'id="shopping-add-error"' in resp.text
+        assert "Milk" in resp.text
+
+    def test_success_clears_any_previous_error(self, client, mock_api):
+        mock_api["post"].return_value = _item()
+
+        resp = client.post("/shopping/", data={"name": "Milk", "category_id": "1"})
+
+        assert 'id="shopping-add-error"' in resp.text
+        assert "already on the shopping list" not in resp.text
 
 
 class TestShoppingNameSuggestions:
@@ -213,3 +245,114 @@ class TestShoppingCategories:
         resp = client.delete("/shopping/categories/5")
 
         assert resp.status_code == 422
+
+
+def _product(id=1, name="Milk", category_id=1, default_unit="l", purchase_count=3, pending=False, default_quantity=None):
+    return {"id": id, "name": name, "category_id": category_id, "default_unit": default_unit,
+            "default_quantity": default_quantity, "purchase_count": purchase_count, "pending": pending}
+
+
+class TestShoppingProducts:
+    def test_page_lists_products_on_their_tab(self, client, mock_api):
+        mock_api["get"].side_effect = _route_get({
+            "/organizer/shopping-categories": [_category()],
+            "/organizer/shopping-products": [_product(name="Olive oil", default_unit="l")],
+        })
+
+        resp = client.get("/shopping/")
+
+        assert resp.status_code == 200
+        assert 'id="panel-products"' in resp.text
+        assert 'value="Olive oil"' in resp.text
+        assert "3 bought" in resp.text
+
+    def test_search_passes_the_query_to_the_backend(self, client, mock_api):
+        mock_api["get"].side_effect = _route_get({
+            "/organizer/shopping-categories": [_category()],
+            "/organizer/shopping-products": [_product()],
+        })
+
+        resp = client.get("/shopping/products", params={"q": "mil"})
+
+        assert resp.status_code == 200
+        mock_api["get"].assert_any_await("/organizer/shopping-products", params={"limit": 500, "q": "mil"})
+
+    def test_update_sends_name_category_unit_and_quantity(self, client, mock_api):
+        mock_api["get"].side_effect = _route_get({
+            "/organizer/shopping-categories": [_category()],
+            "/organizer/shopping-products": [_product(name="Whole milk")],
+        })
+
+        resp = client.post("/shopping/products/4", data={
+            "name": "Whole milk", "category_id": "1", "default_unit": "l", "default_quantity": "2",
+        })
+
+        assert resp.status_code == 200
+        mock_api["patch"].assert_awaited_once_with("/organizer/shopping-products/4", json={
+            "name": "Whole milk", "category_id": 1, "default_unit": "l", "default_quantity": "2",
+        })
+        assert "Whole milk" in resp.text
+
+    def test_update_clears_blank_unit(self, client, mock_api):
+        client.post("/shopping/products/4", data={"name": "Milk", "category_id": "1", "default_unit": ""})
+
+        payload = mock_api["patch"].await_args.kwargs["json"]
+        assert payload["default_unit"] is None
+        assert payload["default_quantity"] is None
+
+    def test_rename_clash_shows_the_message_and_reloads_the_list(self, client, mock_api):
+        mock_api["patch"].side_effect = _conflict(
+            "/organizer/shopping-products/4", "A product named 'Rice' already exists", method="PATCH"
+        )
+        mock_api["get"].side_effect = _route_get({
+            "/organizer/shopping-categories": [_category()],
+            "/organizer/shopping-products": [_product(id=4, name="Milk")],
+        })
+
+        resp = client.post("/shopping/products/4", data={"name": "Rice", "category_id": "1"})
+
+        assert resp.status_code == 200
+        assert "A product named &#39;Rice&#39; already exists" in resp.text or "A product named 'Rice' already exists" in resp.text
+        assert 'value="Milk"' in resp.text
+
+    def test_create_product(self, client, mock_api):
+        mock_api["get"].side_effect = _route_get({
+            "/organizer/shopping-categories": [_category()],
+            "/organizer/shopping-products": [_product(name="Rice", default_unit="kg")],
+        })
+
+        resp = client.post("/shopping/products", data={"name": "Rice", "category_id": "1", "default_unit": "kg"})
+
+        assert resp.status_code == 200
+        mock_api["post"].assert_awaited_once_with(
+            "/organizer/shopping-products", json={"name": "Rice", "category_id": 1, "default_unit": "kg"}
+        )
+
+    def test_delete_blocked_by_pending_entry_shows_the_message(self, client, mock_api):
+        mock_api["delete"].side_effect = _conflict(
+            "/organizer/shopping-products/4", "'Milk' is on the shopping list; remove that entry first", method="DELETE"
+        )
+        mock_api["get"].side_effect = _route_get({
+            "/organizer/shopping-categories": [_category()],
+            "/organizer/shopping-products": [_product(id=4, pending=True)],
+        })
+
+        resp = client.delete("/shopping/products/4")
+
+        assert resp.status_code == 200
+        assert "remove that entry first" in resp.text
+        assert "on list" in resp.text
+
+    def test_merge_posts_to_the_source_product(self, client, mock_api):
+        resp = client.post("/shopping/products/merge", data={"source_id": "4", "into_id": "5"})
+
+        assert resp.status_code == 200
+        mock_api["post"].assert_awaited_once_with("/organizer/shopping-products/4/merge", json={"into_id": 5})
+
+    def test_merge_relays_the_backend_conflict(self, client, mock_api):
+        mock_api["post"].side_effect = _conflict("/organizer/shopping-products/4/merge", "both are on the shopping list")
+
+        resp = client.post("/shopping/products/merge", data={"source_id": "4", "into_id": "5"})
+
+        assert resp.status_code == 409
+        assert "both are on the shopping list" in resp.text

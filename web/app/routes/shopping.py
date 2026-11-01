@@ -6,11 +6,14 @@ from fastapi import APIRouter, Form, Request
 from fastapi.responses import HTMLResponse
 
 import app.client as api
+from app.shared.forward import error_detail
 from app.templates_config import templates
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/shopping")
+
+_FREQUENT_LIMIT = 5
 
 
 async def _get_categories() -> list[dict]:
@@ -48,7 +51,7 @@ async def shopping_page(request: Request):
         api_error = api_error or f"Cannot reach backend: {e}"
 
     try:
-        frequent_items = await api.get("/organizer/shopping/frequent", params={"limit": 15})
+        frequent_items = await api.get("/organizer/shopping/frequent", params={"limit": _FREQUENT_LIMIT})
     except httpx.HTTPError as e:
         logger.error("Failed to load frequent shopping items: error=%s", e)
         api_error = api_error or f"Cannot reach backend: {e}"
@@ -60,8 +63,10 @@ async def shopping_page(request: Request):
         api_error = api_error or f"Cannot reach backend: {e}"
 
     categories = await _get_categories()
+    products = await _get_products()
 
     return templates.TemplateResponse(request, "shopping.html", {
+        "products": products,
         "items": items,
         "wishlist": wishlist,
         "frequent_items": frequent_items,
@@ -137,8 +142,13 @@ async def add_shopping_item(
         payload["url"] = url
     if notes:
         payload["notes"] = notes
+    add_error = ""
     try:
         await api.post("/organizer/shopping", json=payload)
+    except httpx.HTTPStatusError as e:
+        # e.g. 409: the product is already pending. Re-render the list unchanged and say why.
+        logger.warning("Shopping item rejected: name=%r status=%d", name, e.response.status_code)
+        add_error = error_detail(e, "Could not add the item.")
     except httpx.HTTPError as e:
         logger.error("Failed to create shopping item: name=%r error=%s", name, e)
         return HTMLResponse("", status_code=422)
@@ -152,7 +162,7 @@ async def add_shopping_item(
         items = []
 
     try:
-        frequent_items = await api.get("/organizer/shopping/frequent", params={"limit": 15})
+        frequent_items = await api.get("/organizer/shopping/frequent", params={"limit": _FREQUENT_LIMIT})
     except httpx.HTTPError as e:
         logger.error("Failed to reload frequent shopping items after create: error=%s", e)
         frequent_items = []
@@ -167,7 +177,8 @@ async def add_shopping_item(
         "frequent_items": frequent_items,
         "oob": True,
     })
-    return HTMLResponse(list_html + frequent_html)
+    error_html = templates.env.get_template("_shopping_add_error.html").render({"message": add_error})
+    return HTMLResponse(list_html + frequent_html + error_html)
 
 
 @router.post("/{item_id}/bought", response_class=HTMLResponse)
@@ -199,7 +210,7 @@ async def accept_recurring_item(item_id: int, request: Request):
         items = []
 
     try:
-        frequent_items = await api.get("/organizer/shopping/frequent", params={"limit": 15})
+        frequent_items = await api.get("/organizer/shopping/frequent", params={"limit": _FREQUENT_LIMIT})
     except httpx.HTTPError as e:
         logger.error("Failed to reload frequent shopping items after recurrence accept: error=%s", e)
         frequent_items = []
@@ -329,3 +340,107 @@ async def delete_shopping_category(category_id: int, request: Request):
 
     categories = await _get_categories()
     return templates.TemplateResponse(request, "_shopping_categories.html", {"categories": categories})
+
+
+# --- Products ---
+
+async def _get_products(q: str | None = None) -> list[dict]:
+    params: dict = {"limit": 500}
+    if q:
+        params["q"] = q
+    try:
+        return await api.get("/organizer/shopping-products", params=params)
+    except httpx.HTTPError as e:
+        logger.error("Failed to load shopping products: error=%s", e)
+        return []
+
+
+def _products_html(products: list[dict], categories: list[dict], error: str = "") -> HTMLResponse:
+    list_html = templates.env.get_template("_shopping_products.html").render({
+        "products": products,
+        "categories": categories,
+    })
+    error_html = templates.env.get_template("_shopping_products_error.html").render({"message": error})
+    return HTMLResponse(list_html + error_html)
+
+
+@router.get("/products", response_class=HTMLResponse)
+async def products_fragment(request: Request):
+    q = request.query_params.get("q", "").strip()
+    return _products_html(await _get_products(q), await _get_categories())
+
+
+@router.post("/products", response_class=HTMLResponse)
+async def create_product(
+    name: Annotated[str, Form()],
+    category_id: Annotated[int, Form()],
+    default_unit: Annotated[Optional[str], Form()] = None,
+):
+    payload: dict = {"name": name, "category_id": category_id}
+    if default_unit:
+        payload["default_unit"] = default_unit
+    error = ""
+    try:
+        await api.post("/organizer/shopping-products", json=payload)
+    except httpx.HTTPStatusError as e:
+        logger.warning("Shopping product rejected: name=%r status=%d", name, e.response.status_code)
+        error = error_detail(e, "Could not create the product.")
+    except httpx.HTTPError as e:
+        logger.error("Failed to create shopping product: name=%r error=%s", name, e)
+        error = "Could not create the product."
+    return _products_html(await _get_products(), await _get_categories(), error)
+
+
+@router.post("/products/merge")
+async def merge_products(source_id: Annotated[int, Form()], into_id: Annotated[int, Form()]):
+    try:
+        await api.post(f"/organizer/shopping-products/{source_id}/merge", json={"into_id": into_id})
+    except httpx.HTTPStatusError as e:
+        logger.warning("Shopping product merge rejected: source=%d into=%d status=%d", source_id, into_id, e.response.status_code)
+        return HTMLResponse(error_detail(e, "Could not merge the products."), status_code=e.response.status_code)
+    except httpx.HTTPError as e:
+        logger.error("Failed to merge shopping products: source=%d into=%d error=%s", source_id, into_id, e)
+        return HTMLResponse("Could not merge the products.", status_code=502)
+    return HTMLResponse("")
+
+
+@router.post("/products/{product_id}", response_class=HTMLResponse)
+async def update_product(
+    product_id: int,
+    request: Request,
+    name: Annotated[str, Form()],
+    category_id: Annotated[int, Form()],
+    default_unit: Annotated[Optional[str], Form()] = None,
+    default_quantity: Annotated[Optional[str], Form()] = None,
+):
+    payload = {
+        "name": name,
+        "category_id": category_id,
+        "default_unit": default_unit or None,
+        "default_quantity": default_quantity or None,
+    }
+    error = ""
+    try:
+        await api.patch(f"/organizer/shopping-products/{product_id}", json=payload)
+    except httpx.HTTPStatusError as e:
+        logger.warning("Shopping product update rejected: id=%d status=%d", product_id, e.response.status_code)
+        error = error_detail(e, "Could not save the product.")
+    except httpx.HTTPError as e:
+        logger.error("Failed to update shopping product: id=%d error=%s", product_id, e)
+        error = "Could not save the product."
+    # Re-render the whole list so a rejected rename snaps back to what the backend has.
+    return _products_html(await _get_products(), await _get_categories(), error)
+
+
+@router.delete("/products/{product_id}", response_class=HTMLResponse)
+async def delete_product(product_id: int):
+    error = ""
+    try:
+        await api.delete(f"/organizer/shopping-products/{product_id}")
+    except httpx.HTTPStatusError as e:
+        logger.warning("Shopping product delete rejected: id=%d status=%d", product_id, e.response.status_code)
+        error = error_detail(e, "Could not delete the product.")
+    except httpx.HTTPError as e:
+        logger.error("Failed to delete shopping product: id=%d error=%s", product_id, e)
+        error = "Could not delete the product."
+    return _products_html(await _get_products(), await _get_categories(), error)

@@ -12,7 +12,7 @@
     <span class="{% if is_bought %}line-through text-gray-300{% else %}text-gray-800{% endif %}"
       {% if item.notes %}title="{{ item.notes }}"{% endif %}>{{ item.name }}</span>
     {% if item.quantity %}
-    <span class="text-xs text-gray-400 ml-1">× {{ item.quantity }}{{ item.unit or "" }}</span>
+    <span class="text-xs text-gray-400 ml-1">× {{ '%g'|format(item.quantity|float) }}{% if item.unit %} {{ item.unit }}{% endif %}</span>
     {% endif %}
     {% if item.brand %}
     <span class="text-xs text-gray-400 ml-1">({{ item.brand }})</span>

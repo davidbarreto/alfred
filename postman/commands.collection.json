@@ -1182,6 +1182,156 @@
           ]
         }
       }
+    },
+    {
+      "name": "27 - Execute: shopping add (new product with unit)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Entry created for a new product with its unit', () => {",
+              "    const json = pm.response.json();",
+              "    pm.expect(json.status).to.eql('ok');",
+              "    pm.expect(json.result.name).to.eql('Postman Command Oats');",
+              "    pm.expect(json.result.unit).to.eql('kg');",
+              "    pm.expect(json.result.status).to.eql('pending');",
+              "    pm.environment.set('cmd_shopping_item_id', json.result.id);",
+              "    pm.environment.set('cmd_shopping_product_id', json.result.product_id);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"message_id\": {{core_message_id}},\n  \"type\": \"shopping\",\n  \"command\": \"add\",\n  \"args\": {\n    \"name\": \"Postman Command Oats\",\n    \"unit\": \"kg\",\n    \"quantity\": \"2\"\n  }\n}",
+          "options": { "raw": { "language": "json" } }
+        },
+        "url": {
+          "raw": "{{base_url}}/commands/execute",
+          "host": ["{{base_url}}"],
+          "path": ["commands", "execute"]
+        }
+      }
+    },
+    {
+      "name": "28 - Execute: shopping add again while pending is rejected (409)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 409', () => pm.response.to.have.status(409));",
+              "pm.test('Message says it is already on the list', () => {",
+              "    pm.expect(pm.response.json().detail).to.include('already on the shopping list');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"message_id\": {{core_message_id}},\n  \"type\": \"shopping\",\n  \"command\": \"add\",\n  \"args\": {\n    \"name\": \"postman command oats\"\n  }\n}",
+          "options": { "raw": { "language": "json" } }
+        },
+        "url": {
+          "raw": "{{base_url}}/commands/execute",
+          "host": ["{{base_url}}"],
+          "path": ["commands", "execute"]
+        }
+      }
+    },
+    {
+      "name": "29 - Execute: shopping update unit",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Unit was updated', () => pm.expect(pm.response.json().result.unit).to.eql('g'));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"message_id\": {{core_message_id}},\n  \"type\": \"shopping\",\n  \"command\": \"update\",\n  \"args\": {\n    \"id\": \"{{cmd_shopping_item_id}}\",\n    \"unit\": \"g\"\n  }\n}",
+          "options": { "raw": { "language": "json" } }
+        },
+        "url": {
+          "raw": "{{base_url}}/commands/execute",
+          "host": ["{{base_url}}"],
+          "path": ["commands", "execute"]
+        }
+      }
+    },
+    {
+      "name": "30 - Execute: shopping delete (cleanup)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.environment.unset('cmd_shopping_item_id');"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"message_id\": {{core_message_id}},\n  \"type\": \"shopping\",\n  \"command\": \"delete\",\n  \"args\": {\n    \"id\": \"{{cmd_shopping_item_id}}\"\n  }\n}",
+          "options": { "raw": { "language": "json" } }
+        },
+        "url": {
+          "raw": "{{base_url}}/commands/execute",
+          "host": ["{{base_url}}"],
+          "path": ["commands", "execute"]
+        }
+      }
+    },
+    {
+      "name": "31 - Delete shopping product created by the command (cleanup)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 204', () => pm.response.to.have.status(204));",
+              "pm.environment.unset('cmd_shopping_product_id');"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/organizer/shopping-products/{{cmd_shopping_product_id}}",
+          "host": ["{{base_url}}"],
+          "path": ["organizer", "shopping-products", "{{cmd_shopping_product_id}}"]
+        }
+      }
     }
   ]
 }

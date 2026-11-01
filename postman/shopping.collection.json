@@ -2,7 +2,7 @@
   "info": {
     "name": "Alfred - Shopping API",
     "_postman_id": "alfred-shopping-v1",
-    "description": "Run in order: Categories (lookup seeded ids → Create → List → Get → Update → Delete) → Shopping Items (Create → List → Get → Update → Mark Bought → Mark Skipped → Delete) → Wishlist (Create → List → Get → Update → Promote → Cleanup) → Recurrence (Create → List → Get → Update → Deactivate → Delete)",
+    "description": "Run in order: Categories (lookup seeded ids → Create → List → Get → Update → Delete) → Shopping Items (Create → List → Get → Update → Mark Bought → Mark Skipped → Delete) → Wishlist (Create → List → Get → Update → Promote → Cleanup) → Recurrence (Create → List → Get → Update → Deactivate → Delete) → Products (Create → duplicate 409 → Update defaults → Add by name inherits → pending 409 → Merge → Cleanup)",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -180,7 +180,8 @@
               "script": {
                 "exec": [
                   "pm.test('Status is 201', () => pm.response.to.have.status(201));",
-                  "pm.environment.set('shopping_category_test_item_id', pm.response.json().id);"
+                  "pm.environment.set('shopping_category_test_item_id', pm.response.json().id);",
+                  "pm.environment.set('shopping_category_test_product_id', pm.response.json().product_id);"
                 ],
                 "type": "text/javascript"
               }
@@ -245,6 +246,34 @@
               "raw": "{{base_url}}/organizer/shopping/{{shopping_category_test_item_id}}",
               "host": ["{{base_url}}"],
               "path": ["organizer", "shopping", "{{shopping_category_test_item_id}}"]
+            }
+          }
+        },
+        {
+          "name": "07b - Delete Category Test Product (cleanup; releases the category)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 204', () => pm.response.to.have.status(204));",
+                  "pm.environment.unset('shopping_category_test_product_id');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/organizer/shopping-products/{{shopping_category_test_product_id}}",
+              "host": ["{{base_url}}"],
+              "path": [
+                "organizer",
+                "shopping-products",
+                "{{shopping_category_test_product_id}}"
+              ]
             }
           }
         },
@@ -519,6 +548,37 @@
               "host": ["{{base_url}}"],
               "path": ["organizer", "shopping", "frequent"],
               "query": [{ "key": "limit", "value": "20" }]
+            }
+          }
+        },
+        {
+          "name": "08a - List Frequent Shopping Items (default limit is 5)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('At most 5 chips, each with its product', () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.length).to.be.at.most(5);",
+                  "    json.forEach((i) => {",
+                  "        pm.expect(i).to.have.property('product_id');",
+                  "        pm.expect(i).to.have.property('default_unit');",
+                  "    });",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/organizer/shopping/frequent",
+              "host": ["{{base_url}}"],
+              "path": ["organizer", "shopping", "frequent"]
             }
           }
         },
@@ -1352,6 +1412,441 @@
               "raw": "{{base_url}}/organizer/recurrence/{{recurrence_item_id}}",
               "host": ["{{base_url}}"],
               "path": ["organizer", "recurrence", "{{recurrence_item_id}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Products",
+      "item": [
+        {
+          "name": "01 - Create Product",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+                  "pm.test('Product has the given defaults and no history', () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.name).to.eql('Postman Rice');",
+                  "    pm.expect(json.default_unit).to.eql('kg');",
+                  "    pm.expect(json.purchase_count).to.eql(0);",
+                  "    pm.expect(json.pending).to.be.false;",
+                  "    pm.environment.set('shopping_product_id', json.id);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Postman Rice\",\n  \"category_id\": {{shopping_grocery_category_id}},\n  \"default_unit\": \"kg\",\n  \"default_quantity\": 1\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/organizer/shopping-products",
+              "host": ["{{base_url}}"],
+              "path": ["organizer", "shopping-products"]
+            }
+          }
+        },
+        {
+          "name": "02 - Create Product With Same Name, Different Case (409)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 409', () => pm.response.to.have.status(409));",
+                  "pm.test('Message names the clash', () => pm.expect(pm.response.json().detail).to.include('already exists'));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"postman rice\",\n  \"category_id\": {{shopping_grocery_category_id}}\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/organizer/shopping-products",
+              "host": ["{{base_url}}"],
+              "path": ["organizer", "shopping-products"]
+            }
+          }
+        },
+        {
+          "name": "03 - List Products (search)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Search finds the product', () => {",
+                  "    const found = pm.response.json().find((p) => p.name === 'Postman Rice');",
+                  "    pm.expect(found).to.exist;",
+                  "    pm.expect(found).to.have.property('purchase_count');",
+                  "    pm.expect(found).to.have.property('pending');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/organizer/shopping-products?q=postman",
+              "host": ["{{base_url}}"],
+              "path": ["organizer", "shopping-products"],
+              "query": [{ "key": "q", "value": "postman" }]
+            }
+          }
+        },
+        {
+          "name": "04 - Get Product",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Returns the product', () => pm.expect(pm.response.json().default_unit).to.eql('kg'));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/organizer/shopping-products/{{shopping_product_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["organizer", "shopping-products", "{{shopping_product_id}}"]
+            }
+          }
+        },
+        {
+          "name": "05 - Get Non-existent Product (404)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 404', () => pm.response.to.have.status(404));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/organizer/shopping-products/999999",
+              "host": ["{{base_url}}"],
+              "path": ["organizer", "shopping-products", "999999"]
+            }
+          }
+        },
+        {
+          "name": "06 - Update Product Default Unit And Quantity",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Defaults were updated', () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.default_unit).to.eql('g');",
+                  "    pm.expect(Number(json.default_quantity)).to.eql(500);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"default_unit\": \"g\",\n  \"default_quantity\": 500\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/organizer/shopping-products/{{shopping_product_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["organizer", "shopping-products", "{{shopping_product_id}}"]
+            }
+          }
+        },
+        {
+          "name": "07 - Add Shopping Item By Product Name (inherits defaults)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+                  "pm.test('Entry points at the product and takes its unit and quantity', () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(String(json.product_id)).to.eql(String(pm.environment.get('shopping_product_id')));",
+                  "    pm.expect(json.name).to.eql('Postman Rice');",
+                  "    pm.expect(json.unit).to.eql('g');",
+                  "    pm.expect(Number(json.quantity)).to.eql(500);",
+                  "    pm.expect(json.status).to.eql('pending');",
+                  "    pm.environment.set('shopping_product_item_id', json.id);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"POSTMAN RICE\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/organizer/shopping/",
+              "host": ["{{base_url}}"],
+              "path": ["organizer", "shopping", ""]
+            }
+          }
+        },
+        {
+          "name": "08 - Add Same Product Again While Pending (409)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 409', () => pm.response.to.have.status(409));",
+                  "pm.test('Message says it is already on the list', () => {",
+                  "    pm.expect(pm.response.json().detail).to.include('already on the shopping list');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Postman Rice\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/organizer/shopping/",
+              "host": ["{{base_url}}"],
+              "path": ["organizer", "shopping", ""]
+            }
+          }
+        },
+        {
+          "name": "09 - Delete Product Blocked While Pending (409)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 409', () => pm.response.to.have.status(409));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/organizer/shopping-products/{{shopping_product_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["organizer", "shopping-products", "{{shopping_product_id}}"]
+            }
+          }
+        },
+        {
+          "name": "10 - Create Product To Merge",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+                  "pm.environment.set('shopping_product_merge_id', pm.response.json().id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Postman Rice Duplicate\",\n  \"category_id\": {{shopping_grocery_category_id}}\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/organizer/shopping-products",
+              "host": ["{{base_url}}"],
+              "path": ["organizer", "shopping-products"]
+            }
+          }
+        },
+        {
+          "name": "11 - Merge Product Into Another",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Returns the surviving product', () => {",
+                  "    pm.expect(String(pm.response.json().id)).to.eql(String(pm.environment.get('shopping_product_id')));",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"into_id\": {{shopping_product_id}}\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/organizer/shopping-products/{{shopping_product_merge_id}}/merge",
+              "host": ["{{base_url}}"],
+              "path": [
+                "organizer",
+                "shopping-products",
+                "{{shopping_product_merge_id}}",
+                "merge"
+              ]
+            }
+          }
+        },
+        {
+          "name": "12 - Merged Product Is Gone (404)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 404', () => pm.response.to.have.status(404));",
+                  "pm.environment.unset('shopping_product_merge_id');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/organizer/shopping-products/{{shopping_product_merge_id}}",
+              "host": ["{{base_url}}"],
+              "path": [
+                "organizer",
+                "shopping-products",
+                "{{shopping_product_merge_id}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "13 - Delete Pending Entry (cleanup)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 204', () => pm.response.to.have.status(204));",
+                  "pm.environment.unset('shopping_product_item_id');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/organizer/shopping/{{shopping_product_item_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["organizer", "shopping", "{{shopping_product_item_id}}"]
+            }
+          }
+        },
+        {
+          "name": "14 - Delete Product (cleanup)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 204', () => pm.response.to.have.status(204));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/organizer/shopping-products/{{shopping_product_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["organizer", "shopping-products", "{{shopping_product_id}}"]
+            }
+          }
+        },
+        {
+          "name": "15 - Delete Product Again (404)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 404', () => pm.response.to.have.status(404));",
+                  "pm.environment.unset('shopping_product_id');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/organizer/shopping-products/{{shopping_product_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["organizer", "shopping-products", "{{shopping_product_id}}"]
             }
           }
         }

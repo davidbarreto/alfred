@@ -42,6 +42,12 @@ from app.api.routes.organizer.contact_birthday_settings import router as contact
 from app.api.routes.organizer.contact_birthday_notifications import router as contact_birthday_notifications_router
 from app.api.routes.organizer.shopping import shopping_router, wishlist_router, recurrence_router
 from app.api.routes.organizer.shopping_categories import router as shopping_categories_router
+from app.api.routes.organizer.shopping_products import router as shopping_products_router
+from app.features.organizer.shopping.errors import (
+    ShoppingItemAlreadyPendingError,
+    ShoppingProductBlockedError,
+    ShoppingProductNameTakenError,
+)
 from app.api.routes.organizer.interviews.companies import router as interview_companies_router
 from app.api.routes.organizer.interviews.processes import router as interview_processes_router
 from app.api.routes.organizer.interviews.stages import router as interview_stages_router
@@ -169,6 +175,7 @@ app.include_router(shopping_router)
 app.include_router(wishlist_router)
 app.include_router(recurrence_router)
 app.include_router(shopping_categories_router)
+app.include_router(shopping_products_router)
 app.include_router(interview_companies_router)
 app.include_router(interview_processes_router)
 app.include_router(interview_stages_router)
@@ -268,3 +275,11 @@ async def _google_token_expired_handler(request: Request, exc: GoogleTokenExpire
 @app.get("/health")
 async def health():
     return {"status": "ok"}
+
+
+@app.exception_handler(ShoppingItemAlreadyPendingError)
+@app.exception_handler(ShoppingProductNameTakenError)
+@app.exception_handler(ShoppingProductBlockedError)
+async def _shopping_conflict_handler(request: Request, exc: Exception) -> JSONResponse:
+    logger.info("Shopping conflict: %s", exc)
+    return JSONResponse(status_code=409, content={"detail": str(exc)})

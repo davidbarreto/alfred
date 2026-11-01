@@ -100,7 +100,7 @@ class TestDeleteShoppingCategory:
         mock_service.delete.side_effect = ShoppingCategoryDeletionBlockedError(1, 2, 1, 0)
         response = client.delete("/organizer/shopping-categories/1", headers=AUTH)
         assert response.status_code == 409
-        assert "2 shopping item" in response.json()["detail"]
+        assert "2 shopping product" in response.json()["detail"]
 
     def test_requires_auth(self, client):
         assert client.delete("/organizer/shopping-categories/1").status_code == 403

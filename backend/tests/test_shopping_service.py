@@ -7,6 +7,7 @@ from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
+from app.features.organizer.shopping.errors import ShoppingItemAlreadyPendingError
 from app.features.organizer.shopping.schemas import (
     CategoryPurchaseRead,
     FrequentItemFilters,
@@ -85,6 +86,16 @@ def _make_recurrence_orm(**kwargs):
     return item
 
 
+def _make_product_orm(**kwargs):
+    product = MagicMock()
+    product.id = kwargs.get("id", 1)
+    product.name = kwargs.get("name", "Beans")
+    product.category_id = kwargs.get("category_id", _GROCERY_ID)
+    product.default_unit = kwargs.get("default_unit", None)
+    product.default_quantity = kwargs.get("default_quantity", None)
+    return product
+
+
 def _make_category_orm(**kwargs):
     c = MagicMock()
     c.id = kwargs.get("id", _OTHER_ID)
@@ -100,6 +111,10 @@ def service():
     svc._recurrence = AsyncMock()
     svc._categories = AsyncMock()
     svc._categories.get_by_name.return_value = _make_category_orm()
+    svc._products = AsyncMock()
+    svc._products.get_by_name.return_value = _make_product_orm()
+    svc._products.create.return_value = _make_product_orm()
+    svc._shopping.get_pending_by_product.return_value = None
     return svc
 
 
@@ -183,31 +198,79 @@ class TestCreateItem:
         assert isinstance(result, ShoppingItemRead)
         assert result.name == "Beans"
 
-    async def test_delegates_to_repo_when_category_given(self, service):
+    async def test_reuses_existing_product_without_creating_one(self, service):
+        service._products.get_by_name.return_value = _make_product_orm(id=7, name="Eggs")
         service._shopping.create.return_value = _make_shopping_orm()
-        data = ShoppingItemCreate(name="Eggs", category_id=_GROCERY_ID)
-        await service.create_item(data)
-        service._shopping.create.assert_called_once_with(data)
+        await service.create_item(ShoppingItemCreate(name="eggs", category_id=_GROCERY_ID))
+        service._products.create.assert_not_called()
+        assert service._shopping.create.call_args[0][0] == 7
 
-    async def test_resolves_other_category_when_omitted(self, service):
+    async def test_creates_product_on_first_use_with_given_category_and_unit(self, service):
+        service._products.get_by_name.return_value = None
+        service._products.create.return_value = _make_product_orm(id=9, name="Rice")
+        service._shopping.create.return_value = _make_shopping_orm()
+        await service.create_item(ShoppingItemCreate(name="Rice", category_id=_GROCERY_ID, unit="kg"))
+        created = service._products.create.call_args[0][0]
+        assert (created.name, created.category_id, created.default_unit) == ("Rice", _GROCERY_ID, "kg")
+
+    async def test_resolves_other_category_for_new_product_when_omitted(self, service):
         service._categories.get_by_name.return_value = _make_category_orm(id=_OTHER_ID, name="other")
+        service._products.get_by_name.return_value = None
+        service._products.create.return_value = _make_product_orm()
         service._shopping.create.return_value = _make_shopping_orm(category_id=_OTHER_ID)
-        data = ShoppingItemCreate(name="Eggs")
-        await service.create_item(data)
-        called_with = service._shopping.create.call_args[0][0]
-        assert called_with.category_id == _OTHER_ID
+        await service.create_item(ShoppingItemCreate(name="Eggs"))
+        assert service._products.create.call_args[0][0].category_id == _OTHER_ID
+
+    async def test_inherits_default_unit_and_quantity_from_product(self, service):
+        service._products.get_by_name.return_value = _make_product_orm(
+            default_unit="l", default_quantity=Decimal("2")
+        )
+        service._shopping.create.return_value = _make_shopping_orm()
+        await service.create_item(ShoppingItemCreate(name="Milk"))
+        data = service._shopping.create.call_args[0][1]
+        assert (data.unit, data.quantity) == ("l", Decimal("2"))
+
+    async def test_explicit_unit_and_quantity_win_over_defaults(self, service):
+        service._products.get_by_name.return_value = _make_product_orm(
+            default_unit="l", default_quantity=Decimal("2")
+        )
+        service._shopping.create.return_value = _make_shopping_orm()
+        await service.create_item(ShoppingItemCreate(name="Milk", unit="ml", quantity=Decimal("500")))
+        data = service._shopping.create.call_args[0][1]
+        assert (data.unit, data.quantity) == ("ml", Decimal("500"))
+
+    async def test_rejects_when_product_already_pending(self, service):
+        service._products.get_by_name.return_value = _make_product_orm(id=3, name="Milk")
+        service._shopping.get_pending_by_product.return_value = _make_shopping_orm(id=42, name="Milk")
+        with pytest.raises(ShoppingItemAlreadyPendingError) as exc_info:
+            await service.create_item(ShoppingItemCreate(name="milk"))
+        assert exc_info.value.item_id == 42
+        service._shopping.create.assert_not_called()
 
 
 class TestUpdateItem:
     async def test_returns_updated_read(self, service):
+        service._shopping.get.return_value = _make_shopping_orm()
         service._shopping.update.return_value = _make_shopping_orm(priority="want")
         result = await service.update_item(1, ShoppingItemUpdate(priority="want"))
         assert isinstance(result, ShoppingItemRead)
+        service._products.update.assert_not_called()
 
     async def test_returns_none_when_not_found(self, service):
-        service._shopping.update.return_value = None
+        service._shopping.get.return_value = None
         result = await service.update_item(999, ShoppingItemUpdate(priority="want"))
         assert result is None
+        service._shopping.update.assert_not_called()
+
+    async def test_new_name_and_category_are_applied_to_the_product(self, service):
+        item = _make_shopping_orm()
+        item.product_id = 8
+        service._shopping.get.return_value = item
+        service._shopping.update.return_value = item
+        await service.update_item(1, ShoppingItemUpdate(name="Black beans", category_id=_OTHER_ID))
+        product_id, update = service._products.update.call_args[0]
+        assert product_id == 8
+        assert update.model_dump(exclude_unset=True) == {"name": "Black beans", "category_id": _OTHER_ID}
 
 
 class TestDeleteItem:
@@ -243,7 +306,9 @@ class TestMarkSkipped:
 
 class TestListFrequentItems:
     async def test_returns_list_of_reads(self, service):
-        row = SimpleNamespace(name="Milk", category_id=_GROCERY_ID, purchase_count=5, last_bought_at=_NOW)
+        row = SimpleNamespace(
+            product_id=4, name="Milk", category_id=_GROCERY_ID, default_unit="l", purchase_count=5, last_bought_at=_NOW
+        )
         service._shopping.get_frequent.return_value = [row]
 
         result = await service.list_frequent_items(FrequentItemFilters())
@@ -252,6 +317,7 @@ class TestListFrequentItems:
         assert isinstance(result[0], FrequentItemRead)
         assert result[0].name == "Milk"
         assert result[0].purchase_count == 5
+        assert (result[0].product_id, result[0].default_unit) == (4, "l")
 
     async def test_empty_when_no_history(self, service):
         service._shopping.get_frequent.return_value = []
@@ -331,6 +397,8 @@ class TestPromoteWish:
     async def test_creates_shopping_item_and_promotes_wish(self, service):
         wish = _make_wishlist_orm(id=5, name="Headphones", category_id=_ELECTRONICS_ID, estimated_price=Decimal("150"))
         service._wishlist.get.return_value = wish
+        service._products.get_by_name.return_value = None
+        service._products.create.return_value = _make_product_orm(id=2, name="Headphones")
         service._shopping.create.return_value = _make_shopping_orm(id=10, name="Headphones", priority="want")
 
         result = await service.promote_wish(5, priority="want")
@@ -352,13 +420,14 @@ class TestPromoteWish:
             estimated_price=Decimal("25"), brand="Penguin", url="https://example.com", notes="gift idea"
         )
         service._wishlist.get.return_value = wish
+        service._products.get_by_name.return_value = None
+        service._products.create.return_value = _make_product_orm(id=2, name="Book")
         service._shopping.create.return_value = _make_shopping_orm(id=7, name="Book")
 
         await service.promote_wish(3, priority="need")
 
-        call_args = service._shopping.create.call_args[0][0]
-        assert call_args.name == "Book"
-        assert call_args.category_id == _BOOKS_ID
+        assert service._products.create.call_args[0][0].category_id == _BOOKS_ID
+        call_args = service._shopping.create.call_args[0][1]
         assert call_args.priority == "need"
         assert call_args.estimated_price == Decimal("25")
         assert call_args.brand == "Penguin"
@@ -421,15 +490,15 @@ class TestAcceptRecurrence:
     async def test_creates_shopping_item_and_marks_added(self, service):
         recurrence = _make_recurrence_orm(id=5, name="Bananas", category_id=_GROCERY_ID)
         service._recurrence.get.return_value = recurrence
+        service._products.get_by_name.return_value = _make_product_orm(id=6, name="Bananas")
         service._shopping.create.return_value = _make_shopping_orm(id=10, name="Bananas", category_id=_GROCERY_ID)
 
         result = await service.accept_recurrence(5)
 
         assert isinstance(result, ShoppingItemRead)
         assert result.name == "Bananas"
-        call_args = service._shopping.create.call_args[0][0]
-        assert call_args.name == "Bananas"
-        assert call_args.category_id == _GROCERY_ID
+        product_id, call_args = service._shopping.create.call_args[0]
+        assert product_id == 6
         assert call_args.priority == "need"
         service._recurrence.mark_added.assert_called_once_with(5)
 
@@ -446,7 +515,7 @@ class TestAcceptRecurrence:
 class TestSuggestNames:
     async def test_merges_and_dedupes_case_insensitively(self, service):
         older = _NOW - timedelta(days=5)
-        service._shopping.search_names.return_value = [("Banana", _GROCERY_ID, older)]
+        service._products.search_names.return_value = [("Banana", _GROCERY_ID, None, older)]
         service._wishlist.search_names.return_value = [("banana", _GROCERY_ID, _NOW)]
         service._recurrence.search_names.return_value = []
 
@@ -458,7 +527,7 @@ class TestSuggestNames:
 
     async def test_ranks_by_recency_descending(self, service):
         older = _NOW - timedelta(days=5)
-        service._shopping.search_names.return_value = [("Bananas", _GROCERY_ID, older)]
+        service._products.search_names.return_value = [("Bananas", _GROCERY_ID, None, older)]
         service._wishlist.search_names.return_value = []
         service._recurrence.search_names.return_value = [("Banana bread", _GROCERY_ID, _NOW)]
 
@@ -467,10 +536,21 @@ class TestSuggestNames:
         assert [r.name for r in result] == ["Banana bread", "Bananas"]
 
     async def test_empty_when_no_matches(self, service):
-        service._shopping.search_names.return_value = []
+        service._products.search_names.return_value = []
         service._wishlist.search_names.return_value = []
         service._recurrence.search_names.return_value = []
 
         result = await service.suggest_names("xyz")
 
         assert result == []
+
+
+class TestSuggestNamesDefaultUnit:
+    async def test_carries_the_product_default_unit(self, service):
+        service._products.search_names.return_value = [("Milk", _GROCERY_ID, "l", _NOW)]
+        service._wishlist.search_names.return_value = []
+        service._recurrence.search_names.return_value = []
+
+        result = await service.suggest_names("mi")
+
+        assert result[0].default_unit == "l"

@@ -117,7 +117,7 @@ FLAG_UNIT = {"-u": "unit", "--unit": "unit"}
 
 SHOPPING_ADD_FLAGS = {**FLAG_CATEGORY, **FLAG_PRIORITY, **FLAG_QUANTITY, **FLAG_UNIT, **FLAG_STORE, **FLAG_NOTES}
 SHOPPING_LIST_FLAGS = {**FLAG_STATUS, **FLAG_CATEGORY, **FLAG_PRIORITY, **FLAG_LIMIT}
-SHOPPING_UPDATE_FLAGS = {**FLAG_TITLE, **FLAG_CATEGORY, **FLAG_PRIORITY, **FLAG_QUANTITY, **FLAG_STATUS}
+SHOPPING_UPDATE_FLAGS = {**FLAG_TITLE, **FLAG_CATEGORY, **FLAG_PRIORITY, **FLAG_QUANTITY, **FLAG_UNIT, **FLAG_STATUS}
 WISHLIST_ADD_FLAGS = {**FLAG_CATEGORY, **FLAG_NOTES}
 WISHLIST_LIST_FLAGS = {**FLAG_CATEGORY, **FLAG_LIMIT}
 
@@ -423,6 +423,11 @@ COMMAND_DEFINITIONS = {
         "add": {
             "description": "Add an item to the shopping list",
             "aliases": ["/shop", "/sa", "/shopping", "/buy"],
+            "details": (
+                "Each thing you buy is one product (matched by name, ignoring case). A new name creates the product "
+                "with the given category and unit as its defaults; an existing one reuses them, so unit and quantity "
+                "can be omitted. Rejected with 409 when the product is already pending on the list."
+            ),
             "flags": SHOPPING_ADD_FLAGS,
             "requires_args": True,
             "arg_keys": ["name"],

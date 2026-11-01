@@ -6,6 +6,11 @@ from typing import Any
 
 from fastapi import HTTPException, status
 
+from app.features.organizer.shopping.errors import (
+    ShoppingItemAlreadyPendingError,
+    ShoppingProductBlockedError,
+    ShoppingProductNameTakenError,
+)
 from app.features.organizer.shopping.schemas import (
     ShoppingItemCreate,
     ShoppingItemFilters,
@@ -19,7 +24,17 @@ from app.features.organizer.shopping.service import ShoppingService
 logger = logging.getLogger(__name__)
 
 
+_CONFLICT_ERRORS = (ShoppingItemAlreadyPendingError, ShoppingProductNameTakenError, ShoppingProductBlockedError)
+
+
 async def handle_shopping(cmd_type: str, command: str, arguments: dict[str, Any], service: ShoppingService) -> Any:
+    try:
+        return await _dispatch(cmd_type, command, arguments, service)
+    except _CONFLICT_ERRORS as exc:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
+
+
+async def _dispatch(cmd_type: str, command: str, arguments: dict[str, Any], service: ShoppingService) -> Any:
     logger.debug("handle_shopping: type=%s command=%s args_keys=%s", cmd_type, command, list(arguments.keys()))
 
     if cmd_type == "shopping":
@@ -75,6 +90,8 @@ async def handle_shopping(cmd_type: str, command: str, arguments: dict[str, Any]
                 fields["status"] = arguments["status"]
             if "quantity" in arguments:
                 fields["quantity"] = Decimal(str(arguments["quantity"])) if arguments["quantity"] else None
+            if "unit" in arguments:
+                fields["unit"] = arguments["unit"] or None
             result = await service.update_item(item_id, ShoppingItemUpdate(**fields))
             if result is None:
                 raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Shopping item {item_id} not found")

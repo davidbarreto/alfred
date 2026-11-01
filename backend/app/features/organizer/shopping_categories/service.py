@@ -5,10 +5,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.features.organizer.shopping.repository import (
     RecurrenceRepository,
-    ShoppingRepository,
     WishlistRepository,
 )
 from app.features.organizer.shopping_categories.repository import ShoppingCategoryRepository
+from app.features.organizer.shopping_products.repository import ShoppingProductRepository
 from app.features.organizer.shopping_categories.schemas import (
     ShoppingCategoryCreate,
     ShoppingCategoryRead,
@@ -29,7 +29,7 @@ class ShoppingCategoryDeletionBlockedError(Exception):
         self.wishlist_count = wishlist_count
         self.recurrence_count = recurrence_count
         super().__init__(
-            f"Category {category_id} cannot be deleted: {shopping_count} shopping item(s), "
+            f"Category {category_id} cannot be deleted: {shopping_count} shopping product(s), "
             f"{wishlist_count} wishlist item(s), {recurrence_count} recurrence item(s) reference it"
         )
 
@@ -38,7 +38,7 @@ class ShoppingCategoryService:
 
     def __init__(self, session: AsyncSession) -> None:
         self._repo = ShoppingCategoryRepository(session)
-        self._shopping_repo = ShoppingRepository(session)
+        self._product_repo = ShoppingProductRepository(session)
         self._wishlist_repo = WishlistRepository(session)
         self._recurrence_repo = RecurrenceRepository(session)
 
@@ -80,7 +80,7 @@ class ShoppingCategoryService:
         try:
             await self._repo.delete(category_id)
         except IntegrityError:
-            shopping_count = await self._shopping_repo.count_by_category(category_id)
+            shopping_count = await self._product_repo.count_by_category(category_id)
             wishlist_count = await self._wishlist_repo.count_by_category(category_id)
             recurrence_count = await self._recurrence_repo.count_by_category(category_id)
             logger.warning(

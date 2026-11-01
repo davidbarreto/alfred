@@ -44,7 +44,7 @@ async def delete_shopping_category(category_id: int, service: ShoppingCategorySe
         deleted = await service.delete(category_id)
     except ShoppingCategoryDeletionBlockedError as exc:
         detail = (
-            f"Cannot delete this category: it still has {exc.shopping_count} shopping item(s), "
+            f"Cannot delete this category: it still has {exc.shopping_count} shopping product(s), "
             f"{exc.wishlist_count} wishlist item(s), and {exc.recurrence_count} recurring item(s). "
             "Reassign or delete those items first."
         )

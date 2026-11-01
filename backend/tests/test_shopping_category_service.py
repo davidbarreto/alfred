@@ -23,7 +23,7 @@ def _make_category_orm(**kwargs):
 def service():
     svc = ShoppingCategoryService.__new__(ShoppingCategoryService)
     svc._repo = AsyncMock()
-    svc._shopping_repo = AsyncMock()
+    svc._product_repo = AsyncMock()
     svc._wishlist_repo = AsyncMock()
     svc._recurrence_repo = AsyncMock()
     return svc
@@ -86,7 +86,7 @@ class TestDelete:
     async def test_raises_blocked_error_with_counts_on_integrity_error(self, service):
         service._repo.get.return_value = _make_category_orm(id=1, name="grocery")
         service._repo.delete.side_effect = IntegrityError("stmt", {}, Exception("restrict"))
-        service._shopping_repo.count_by_category.return_value = 2
+        service._product_repo.count_by_category.return_value = 2
         service._wishlist_repo.count_by_category.return_value = 1
         service._recurrence_repo.count_by_category.return_value = 0
 

@@ -45,7 +45,8 @@ class ShoppingItemUpdate(BaseModel):
 
 class ShoppingItemRead(ShoppingItemBase):
     id: int
-    category_id: int
+    product_id: int
+    category_id: Optional[int]
     status: ShoppingStatus
     last_bought_at: Optional[datetime]
     created_at: datetime
@@ -80,8 +81,10 @@ class ShoppingItemFilters:
 # --- Frequent item (derived from purchase history) ---
 
 class FrequentItemRead(BaseModel):
+    product_id: int
     name: str
-    category_id: int
+    category_id: Optional[int]
+    default_unit: Optional[str]
     purchase_count: int
     last_bought_at: Optional[datetime]
 
@@ -90,7 +93,7 @@ class FrequentItemFilters:
     def __init__(
         self,
         category_id: Annotated[Optional[int], Query()] = None,
-        limit: Annotated[int, Query(ge=1)] = 20,
+        limit: Annotated[int, Query(ge=1)] = 5,
     ) -> None:
         self.category_id = category_id
         self.limit = limit
@@ -129,6 +132,7 @@ class StorePurchaseRead(BaseModel):
 class ShoppingNameSuggestion(BaseModel):
     name: str
     category_id: int
+    default_unit: Optional[str] = None
 
 
 class ShoppingNameSuggestionFilters:

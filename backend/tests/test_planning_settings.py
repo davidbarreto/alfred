@@ -114,3 +114,23 @@ class TestWorkdays:
     def test_unknown_day_is_rejected(self):
         with pytest.raises(ValidationError):
             PlanningSettingsUpdate(workdays=["funday"])
+
+
+class TestConventions:
+    async def test_unset_by_default(self, service):
+        assert (await service.get()).conventions is None
+
+    async def test_stored_trimmed_and_read_back(self, service, store):
+        result = await service.update(PlanningSettingsUpdate(conventions="  Home by 14:00.\nOnly meds after 22:00.  "))
+        assert store.values["planning.conventions"] == "Home by 14:00.\nOnly meds after 22:00."
+        assert result.conventions == "Home by 14:00.\nOnly meds after 22:00."
+
+    async def test_blank_or_null_resets(self, service, store):
+        store.values["planning.conventions"] = "x"
+        assert (await service.update(PlanningSettingsUpdate(conventions="   "))).conventions is None
+        store.values["planning.conventions"] = "x"
+        assert (await service.update(PlanningSettingsUpdate(conventions=None))).conventions is None
+
+    def test_length_is_capped(self):
+        with pytest.raises(ValidationError):
+            PlanningSettingsUpdate(conventions="x" * 2001)

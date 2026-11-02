@@ -176,6 +176,35 @@ class TestMissedBlocks:
         assert "line-through text-gray-400" in text and "· not done" in text
         assert text.count("· not done") == 1
 
+    def test_done_blocks_are_labelled_and_offer_undo_instead_of_both_buttons(self, client, mock_api):
+        items = [
+            {"start": "2026-10-21T18:00:00+01:00", "end": "2026-10-21T19:00:00+01:00", "kind": "task", "ref_id": 4, "title": "Training", "note": None},
+            {"start": "2026-10-21T20:00:00+01:00", "end": "2026-10-21T20:30:00+01:00", "kind": "task", "ref_id": 5, "title": "Meds",
+             "note": None, "done": True, "done_at": "2026-10-21T21:00:00+01:00"},
+        ]
+        mock_api["get"].side_effect = _routes([_plan(id=5, items=items)], [_plan(id=5, items=items)], _settings())
+
+        text = client.get("/plan?date=2026-10-21").text
+
+        assert 'data-done-action="done" data-plan-id="5" data-block-index="0"' in text
+        assert 'data-done-action="undo" data-plan-id="5" data-block-index="1"' in text
+        assert 'data-missed-action="miss" data-plan-id="5" data-block-index="0"' in text
+        assert 'data-missed-action="miss" data-plan-id="5" data-block-index="1"' not in text
+        assert text.count("· done") == 1
+
+    def test_done_is_forwarded(self, client, mock_api):
+        mock_api["post"].return_value = _plan()
+        mock_api["delete"].return_value = None
+        assert client.post("/plan/saved/3/blocks/1/done").status_code == 200
+        assert client.delete("/plan/saved/3/blocks/1/done").status_code == 200
+        mock_api["post"].assert_awaited_once_with("/planning/saved/3/blocks/1/done")
+        mock_api["delete"].assert_awaited_once_with("/planning/saved/3/blocks/1/done")
+
+    def test_settings_form_has_a_conventions_field(self, client, mock_api):
+        mock_api["get"].side_effect = _routes([], [], _settings(conventions="Home by 14:00"))
+        text = client.get("/plan?date=2026-10-21").text
+        assert 'name="conventions"' in text and "Home by 14:00" in text
+
     def test_work_and_transport_get_their_own_icons(self, client, mock_api):
         items = [
             {"start": "2026-10-21T08:00:00+01:00", "end": "2026-10-21T08:30:00+01:00", "kind": "transport", "ref_id": None, "title": "Commute", "note": None},

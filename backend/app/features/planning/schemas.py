@@ -11,6 +11,7 @@ _WINDOW = re.compile(r"^([01]\d|2[0-3]):[0-5]\d-([01]\d|2[0-3]):[0-5]\d$")
 
 WEEKDAYS = ("mon", "tue", "wed", "thu", "fri", "sat", "sun")
 DEFAULT_WORKDAYS = WEEKDAYS[:5]
+CONVENTIONS_MAX_LENGTH = 2000
 
 
 def _check_hh_mm(value: str | None) -> str | None:
@@ -29,6 +30,7 @@ class PlanningSettingsRead(BaseModel):
     office_tag: str
     office_days_per_week: int | None = None
     office_min_minutes: int | None = None
+    conventions: str | None = None
 
 
 class PlanningSettingsUpdate(BaseModel):
@@ -43,6 +45,7 @@ class PlanningSettingsUpdate(BaseModel):
     office_tag: str | None = None
     office_days_per_week: int | None = Field(default=None, ge=1, le=7)
     office_min_minutes: int | None = Field(default=None, ge=0, le=1440)
+    conventions: str | None = Field(default=None, max_length=CONVENTIONS_MAX_LENGTH)
 
     @field_validator("wake_time", "sleep_time")
     @classmethod
@@ -68,6 +71,11 @@ class PlanningSettingsUpdate(BaseModel):
         if unknown:
             raise ValueError(f"expected weekdays among {', '.join(WEEKDAYS)}, got {unknown!r}")
         return [day for day in WEEKDAYS if day in days]
+
+    @field_validator("conventions")
+    @classmethod
+    def _conventions(cls, value: str | None) -> str | None:
+        return (value.strip() or None) if value is not None else None
 
     @field_validator("work_tag", "office_tag")
     @classmethod

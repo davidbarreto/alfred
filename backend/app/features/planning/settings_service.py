@@ -37,6 +37,7 @@ class PlanningSettingsService:
             office_tag=raw["office_tag"] or DEFAULT_OFFICE_TAG,
             office_days_per_week=int(raw["office_days_per_week"]) if raw["office_days_per_week"] else None,
             office_min_minutes=int(raw["office_min_minutes"]) if raw["office_min_minutes"] else None,
+            conventions=raw["conventions"] or None,
         )
 
     async def update(self, data: PlanningSettingsUpdate) -> PlanningSettingsRead:

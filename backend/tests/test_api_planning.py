@@ -162,6 +162,56 @@ class TestSavedRoutes:
         saved_service.set_block_missed.side_effect = SavedPlanNotFoundError("no block")
         assert saved_client.post("/planning/saved/1/blocks/9/missed", headers=AUTH).status_code == 404
 
+    def test_mark_and_unmark_block_done(self, saved_client, saved_service):
+        saved_service.set_block_done.return_value = saved_service.archive.return_value
+        assert saved_client.post("/planning/saved/1/blocks/2/done", headers=AUTH).status_code == 200
+        assert saved_client.delete("/planning/saved/1/blocks/2/done", headers=AUTH).status_code == 200
+        assert [c.args for c in saved_service.set_block_done.await_args_list] == [(1, 2, True), (1, 2, False)]
+
+    def test_done_unknown_block_is_404(self, saved_client, saved_service):
+        from app.features.planning.saved_plans.service import SavedPlanNotFoundError
+
+        saved_service.set_block_done.side_effect = SavedPlanNotFoundError("no block")
+        assert saved_client.post("/planning/saved/1/blocks/9/done", headers=AUTH).status_code == 404
+
+    _EDIT_BODY = {"days": [{"date": "2026-10-21", "replace_from": "07:50", "replace_to": "08:40", "items": []}]}
+
+    def test_edit_returns_the_summary_not_the_blocks(self, saved_client, saved_service):
+        from app.features.planning.saved_plans.schemas import SavedPlanSummary
+
+        saved_service.edit.return_value = [SavedPlanSummary(id=3, plan_date="2026-10-21", version=2, blocks=5)]
+        response = saved_client.post("/planning/saved/edit", json=self._EDIT_BODY, headers=AUTH)
+        assert response.status_code == 200
+        assert response.json() == [{"id": 3, "plan_date": "2026-10-21", "version": 2, "blocks": 5}]
+        assert saved_service.edit.call_args.args[1] == "mcp"
+
+    @pytest.mark.parametrize("error,code", [("SavedPlanNotFoundError", 404), ("SavedPlanConflictError", 409), ("SavedPlanValidationError", 422)])
+    def test_edit_errors_map_to_status_codes(self, saved_client, saved_service, error, code):
+        from app.features.planning.saved_plans import service as module
+
+        saved_service.edit.side_effect = getattr(module, error)("nope")
+        assert saved_client.post("/planning/saved/edit", json=self._EDIT_BODY, headers=AUTH).status_code == code
+
+    def test_edit_rejects_an_unordered_window(self, saved_client):
+        body = {"days": [{**self._EDIT_BODY["days"][0], "replace_from": "09:00", "replace_to": "08:00"}]}
+        assert saved_client.post("/planning/saved/edit", json=body, headers=AUTH).status_code == 422
+
+    def test_review(self, saved_client, saved_service):
+        from app.features.planning.saved_plans.schemas import ReviewRead
+
+        saved_service.review.return_value = ReviewRead(
+            from_date="2026-10-19", to_date="2026-10-25", items=[], planned=0, done=0, missed=0, unmarked=0, upcoming=0,
+        )
+        response = saved_client.get("/planning/review?from=2026-10-19&to=2026-10-25", headers=AUTH)
+        assert response.status_code == 200 and response.json()["items"] == []
+
+    def test_review_range_error_is_422_and_needs_the_range(self, saved_client, saved_service):
+        from app.features.planning.saved_plans.service import SavedPlanValidationError
+
+        saved_service.review.side_effect = SavedPlanValidationError("bad range")
+        assert saved_client.get("/planning/review?from=2026-10-19&to=2026-10-25", headers=AUTH).status_code == 422
+        assert saved_client.get("/planning/review", headers=AUTH).status_code == 422
+
     def test_delete_is_204(self, saved_client, saved_service):
         response = saved_client.delete("/planning/saved/1", headers=AUTH)
         assert response.status_code == 204

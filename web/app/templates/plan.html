@@ -56,13 +56,22 @@
           <span class="w-24 shrink-0 text-xs text-gray-500 tabular-nums pt-0.5 {% if item.missed %}line-through{% endif %}">{{ item.start_clock }}–{{ item.end_clock }}</span>
           <i class="ti {{ item.icon }} text-gray-400 pt-0.5"></i>
           <div class="min-w-0 flex-1">
-            <p class="text-sm {% if item.missed %}line-through text-gray-400{% else %}text-gray-900{% endif %}">{{ item.title }}{% if item.missed %} <span class="inline-block text-xs text-gray-500">· not done</span>{% endif %}</p>
+            <p class="text-sm {% if item.missed %}line-through text-gray-400{% else %}text-gray-900{% endif %}">{{ item.title }}{% if item.missed %} <span class="inline-block text-xs text-gray-500">· not done</span>{% elif item.done %} <span class="inline-block text-xs text-[#639922]">· done</span>{% endif %}</p>
             {% if item.note %}<p class="text-xs text-gray-400">{{ item.note }}</p>{% endif %}
           </div>
+          {% if not item.missed and not item.done %}
+          <button type="button" class="btn btn-xs btn-ghost text-gray-500 shrink-0"
+                  data-done-action="done" data-plan-id="{{ plan.id }}" data-block-index="{{ item.index }}">Done</button>
+          {% endif %}
+          {% if item.done %}
+          <button type="button" class="btn btn-xs btn-ghost text-gray-500 shrink-0"
+                  data-done-action="undo" data-plan-id="{{ plan.id }}" data-block-index="{{ item.index }}">Undo</button>
+          {% else %}
           <button type="button" class="btn btn-xs btn-ghost text-gray-500 shrink-0"
                   data-missed-action="{{ 'undo' if item.missed else 'miss' }}" data-plan-id="{{ plan.id }}" data-block-index="{{ item.index }}">
             {{ 'Undo' if item.missed else "Didn't do it" }}
           </button>
+          {% endif %}
         </li>
         {% endfor %}
       </ul>
@@ -121,6 +130,8 @@
           <input name="office_days_per_week" type="number" min="1" max="7" value="{{ settings.office_days_per_week or '' }}" class="input input-sm input-bordered w-full"></label>
         <label class="space-y-1"><span class="block text-xs text-gray-500">Minimum minutes for an office day</span>
           <input name="office_min_minutes" type="number" min="0" value="{{ '' if settings.office_min_minutes is none else settings.office_min_minutes }}" class="input input-sm input-bordered w-full"></label>
+        <label class="space-y-1 md:col-span-2"><span class="block text-xs text-gray-500">Conventions: standing rules every plan should follow (free text, max 2000 characters)</span>
+          <textarea name="conventions" rows="4" maxlength="2000" class="textarea textarea-bordered textarea-sm w-full">{{ settings.conventions or '' }}</textarea></label>
         <div class="md:col-span-2 flex items-center gap-3">
           <button type="submit" class="btn btn-sm btn-outline">Save</button>
           <span id="settings-status" class="text-xs"></span>
@@ -133,11 +144,12 @@
 </div>
 
 <script>
-document.querySelectorAll('[data-missed-action]').forEach((button) => {
+[['missed', 'miss'], ['done', 'done']].forEach(([flag, apply]) => {
+document.querySelectorAll(`[data-${flag}-action]`).forEach((button) => {
   button.addEventListener('click', async () => {
     button.disabled = true;
-    const url = `/plan/saved/${button.dataset.planId}/blocks/${button.dataset.blockIndex}/missed`;
-    const res = await fetch(url, { method: button.dataset.missedAction === 'miss' ? 'POST' : 'DELETE' });
+    const url = `/plan/saved/${button.dataset.planId}/blocks/${button.dataset.blockIndex}/${flag}`;
+    const res = await fetch(url, { method: button.dataset[`${flag}Action`] === apply ? 'POST' : 'DELETE' });
     if (!res.ok) {
       const data = await res.json().catch(() => ({}));
       alert(data.error || 'Something went wrong.');
@@ -146,6 +158,7 @@ document.querySelectorAll('[data-missed-action]').forEach((button) => {
     }
     location.reload();
   });
+});
 });
 
 document.querySelectorAll('[data-plan-action]').forEach((button) => {
@@ -177,6 +190,7 @@ document.getElementById('settings-form')?.addEventListener('submit', async (even
     work_target_minutes: number('work_target_minutes'), preferred_work_windows: windows, workdays,
     work_tag: text('work_tag'), office_tag: text('office_tag'),
     office_days_per_week: number('office_days_per_week'), office_min_minutes: number('office_min_minutes'),
+    conventions: text('conventions'),
   };
   const status = document.getElementById('settings-status');
   status.className = 'text-xs text-gray-400';

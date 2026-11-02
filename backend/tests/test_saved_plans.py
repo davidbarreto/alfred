@@ -3,13 +3,14 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
+from freezegun import freeze_time
 from pydantic import ValidationError
 from sqlalchemy.dialects import postgresql
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.features.planning.saved_plans.repository import DayPlanRepository
-from app.features.planning.saved_plans.schemas import DayPlanSave, DayPlansSave, PlanBlock
+from app.features.planning.saved_plans.schemas import DayPlanEdit, DayPlanSave, DayPlansEdit, DayPlansSave, PlanBlock
 from app.features.planning.saved_plans.service import (
     SavedPlanConflictError,
     SavedPlanNotFoundError,
@@ -440,6 +441,23 @@ class TestRepository:
         await DayPlanRepository(session).set_block_missed(plan, 0, None)
         assert "missed" not in plan.items[0] and "missed_at" not in plan.items[0]
 
+    async def test_marking_done_clears_missed_and_the_reverse(self):
+        session = _session()
+        plan = _row(items=[{**_block_item(), "missed": True, "missed_at": "x"}])
+        repo = DayPlanRepository(session)
+
+        await repo.set_block_done(plan, 0, "2026-10-21T21:00:00+01:00")
+        assert plan.items[0]["done"] is True and "missed" not in plan.items[0] and "missed_at" not in plan.items[0]
+
+        await repo.set_block_missed(plan, 0, "2026-10-21T22:00:00+01:00")
+        assert plan.items[0]["missed"] is True and "done" not in plan.items[0] and "done_at" not in plan.items[0]
+
+    async def test_unmarking_done_leaves_a_missed_flag_alone(self):
+        session = _session()
+        plan = _row(items=[{**_block_item(), "done": True, "done_at": "x"}])
+        await DayPlanRepository(session).set_block_done(plan, 0, None)
+        assert "done" not in plan.items[0] and "done_at" not in plan.items[0]
+
     async def test_get_plan_by_id(self):
         session = _session()
         await DayPlanRepository(session).get_plan(5)
@@ -492,3 +510,160 @@ class TestRepository:
         found = await DayPlanRepository(session).existing_ref_ids("task", {4, 5})
         assert found == {4}
         assert "tasks.deleted_at IS NULL" in _sql(session.execute.call_args.args[0])
+
+
+def _edit(*days) -> DayPlansEdit:
+    return DayPlansEdit.model_validate({"days": list(days)})
+
+
+def _edit_day(day="2026-10-21", replace_from="07:50", replace_to="08:40", items=None, notes=None):
+    return {"date": day, "replace_from": replace_from, "replace_to": replace_to, "items": items or [], "notes": notes}
+
+
+def _at(hour, minute=0, day="2026-10-21"):
+    return f"{day}T{hour:02d}:{minute:02d}:00+00:00"
+
+
+class TestEditSchema:
+    def test_window_must_be_ordered_hh_mm(self):
+        DayPlanEdit(**_edit_day())
+        for bad in [("08:40", "07:50"), ("07:50", "07:50"), ("7:50", "08:40"), ("07:50", "24:00")]:
+            with pytest.raises(ValidationError):
+                DayPlanEdit(**_edit_day(replace_from=bad[0], replace_to=bad[1]))
+
+
+class TestEdit:
+    @pytest.fixture
+    def stored(self, repo_mock):
+        plan = _row(id=5, version=3, notes="old notes", items=[
+            _block(_at(7), _at(7, 30), title="Breakfast"),
+            _block(_at(7, 50), _at(8), title="Leave home", missed=True, missed_at="x"),
+            _block(_at(8), _at(8, 15), title="Duolingo"),
+            _block(_at(8, 40), _at(10, 40), title="PPR form", done=True, done_at="y"),
+        ])
+        repo_mock.get_active_plans.return_value = [plan]
+        return repo_mock
+
+    async def test_blocks_starting_in_the_window_are_replaced_and_the_rest_is_kept_in_order(self, service, stored):
+        new = _block(_at(7, 55), _at(8, 45), title="Metro", kind="transport")
+
+        summary = await service.edit(_edit(_edit_day(items=[new])), "mcp")
+
+        entries, source = stored.save_days.call_args.args
+        _, items, notes = entries[0]
+        assert source == "mcp" and notes == "old notes"
+        assert [i["title"] for i in items] == ["Breakfast", "Metro", "PPR form"]
+        assert items[2]["done"] is True
+        assert summary[0].blocks == 3 and summary[0].version == 2
+
+    async def test_window_end_is_exclusive(self, service, stored):
+        await service.edit(_edit(_edit_day(replace_from="08:00", replace_to="08:40")), "mcp")
+        titles = [i["title"] for i in stored.save_days.call_args.args[0][0][1]]
+        assert "PPR form" in titles and "Duolingo" not in titles
+
+    async def test_empty_items_only_removes(self, service, stored):
+        await service.edit(_edit(_edit_day(replace_from="07:00", replace_to="08:00")), "mcp")
+        assert [i["title"] for i in stored.save_days.call_args.args[0][0][1]] == ["Duolingo", "PPR form"]
+
+    async def test_notes_are_replaced_when_given(self, service, stored):
+        await service.edit(_edit(_edit_day(notes="new notes")), "mcp")
+        assert stored.save_days.call_args.args[0][0][2] == "new notes"
+
+    async def test_a_date_without_an_active_plan_is_not_found(self, service, stored):
+        with pytest.raises(SavedPlanNotFoundError, match="2026-10-22"):
+            await service.edit(_edit(_edit_day(), _edit_day(day="2026-10-22")), "mcp")
+        stored.save_days.assert_not_called()
+
+    async def test_repeated_date_is_rejected(self, service, stored):
+        with pytest.raises(SavedPlanValidationError, match="repeated"):
+            await service.edit(_edit(_edit_day(), _edit_day()), "mcp")
+
+    async def test_new_blocks_are_validated_like_a_save(self, service, stored):
+        wrong_day = _block("2026-10-22T09:00:00+00:00", "2026-10-22T10:00:00+00:00", title="Elsewhere")
+        with pytest.raises(SavedPlanValidationError, match="starts on 2026-10-22"):
+            await service.edit(_edit(_edit_day(items=[wrong_day])), "mcp")
+        stored.existing_ref_ids.side_effect = lambda kind, ids: set()
+        with pytest.raises(SavedPlanValidationError, match="Unknown task ref_id"):
+            await service.edit(_edit(_edit_day(items=[_block(ref_id=99)])), "mcp")
+        stored.save_days.assert_not_called()
+
+    async def test_a_concurrent_save_is_a_conflict(self, service, stored):
+        stored.save_days.side_effect = IntegrityError("x", {}, Exception())
+        with pytest.raises(SavedPlanConflictError):
+            await service.edit(_edit(_edit_day()), "mcp")
+
+
+class TestDoneBlocks:
+    async def test_marking_flags_the_block_with_a_local_timestamp(self, service, repo_mock):
+        repo_mock.get_plan.return_value = _row(id=3, items=[_block_item(), _block_item()])
+        repo_mock.set_block_done.side_effect = lambda plan, i, at: _row(
+            id=plan.id, items=[plan.items[0], {**plan.items[1], "done": True, "done_at": at}]
+        )
+
+        plan = await service.set_block_done(3, 1, True)
+
+        _, index, stamp = repo_mock.set_block_done.call_args.args
+        assert index == 1 and stamp[-6] in "+-"
+        assert plan.items[1].done is True and plan.items[0].done is None
+
+    async def test_unmarking_passes_none(self, service, repo_mock):
+        repo_mock.get_plan.return_value = _row(items=[_block_item()])
+        repo_mock.set_block_done.side_effect = lambda plan, i, at: plan
+        await service.set_block_done(1, 0, False)
+        assert repo_mock.set_block_done.call_args.args[2] is None
+
+    async def test_block_index_must_exist(self, service, repo_mock):
+        repo_mock.get_plan.return_value = _row(items=[_block_item()])
+        with pytest.raises(SavedPlanNotFoundError, match="no block"):
+            await service.set_block_done(1, 4, True)
+
+    async def test_done_by_reference_uses_the_same_lookup_as_missed(self, service, repo_mock):
+        repo_mock.get_active_plans.return_value = [_row(id=8, items=[{**_block_item(), "title": "Meds", "ref_id": 7}])]
+        repo_mock.get_plan.return_value = repo_mock.get_active_plans.return_value[0]
+        repo_mock.set_block_done.side_effect = lambda plan, i, at: plan
+
+        await service.set_done_on(date(2026, 10, 21), True, ref_id=7)
+
+        assert repo_mock.set_block_done.call_args.args[1] == 0
+
+
+class TestReview:
+    @freeze_time("2026-10-22 12:00:00")
+    async def test_counts_done_missed_unmarked_and_upcoming_per_item(self, service, repo_mock):
+        meds = {**_block_item(), "ref_id": 7, "title": "Night meds"}
+        repo_mock.get_active_plans.return_value = [
+            _row(plan_date=date(2026, 10, 20), items=[
+                {**meds, "start": _at(21, 45, "2026-10-20"), "end": _at(22, day="2026-10-20"), "done": True, "done_at": "x"},
+                {**_block_item(), "ref_id": 4, "title": "Gym", "start": _at(9, day="2026-10-20"), "end": _at(10, day="2026-10-20"), "missed": True, "missed_at": "x"},
+            ]),
+            _row(plan_date=date(2026, 10, 21), items=[
+                {**meds, "start": _at(21, 45), "end": _at(22)},
+                {**_block_item(), "ref_id": 4, "title": "Gym", "start": _at(9), "end": _at(10), "missed": True, "missed_at": "x"},
+                {**_block_item(), "kind": "event", "ref_id": 2, "title": "Standup", "start": _at(14), "end": _at(14, 30)},
+            ]),
+            _row(plan_date=date(2026, 10, 23), items=[
+                {**meds, "start": _at(21, 45, "2026-10-23"), "end": _at(22, day="2026-10-23")},
+            ]),
+        ]
+
+        review = await service.review(date(2026, 10, 20), date(2026, 10, 26))
+
+        by_title = {i.title: i for i in review.items}
+        assert "Standup" not in by_title
+        assert [i.title for i in review.items] == ["Gym", "Night meds"]
+        gym, meds_item = by_title["Gym"], by_title["Night meds"]
+        assert (gym.planned, gym.missed, gym.done, gym.missed_dates) == (2, 2, 0, ["2026-10-20", "2026-10-21"])
+        assert (meds_item.planned, meds_item.done, meds_item.unmarked, meds_item.upcoming) == (3, 1, 1, 1)
+        assert (review.planned, review.done, review.missed, review.unmarked, review.upcoming) == (5, 1, 2, 1, 1)
+
+    async def test_free_form_blocks_group_by_kind_and_title_ignoring_case(self, service, repo_mock):
+        repo_mock.get_active_plans.return_value = [
+            _row(plan_date=date(2026, 10, 20), items=[{**_block_item(), "kind": "work", "ref_id": None, "title": "Deep work"}]),
+            _row(plan_date=date(2026, 10, 21), items=[{**_block_item(), "kind": "work", "ref_id": None, "title": "deep work"}]),
+        ]
+        review = await service.review(date(2026, 10, 20), date(2026, 10, 21))
+        assert len(review.items) == 1 and review.items[0].planned == 2
+
+    async def test_range_is_validated_like_get_saved(self, service):
+        with pytest.raises(SavedPlanValidationError):
+            await service.review(date(2026, 10, 21), date(2026, 10, 20))

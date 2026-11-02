@@ -403,6 +403,11 @@ class TestOtherSections:
             "preferred_work_windows": ["10:00-14:00"],
         }
 
+    async def test_conventions_are_part_of_the_preferences(self, service, parts):
+        parts.settings.get.return_value = _settings(conventions="Home by 14:00")
+        plan = _dump(await service.get_plan(date(2026, 10, 21)))
+        assert plan["preferences"]["conventions"] == "Home by 14:00"
+
 
 @freeze_time("2026-10-21 08:00:00")
 class TestSavedPlanSection:

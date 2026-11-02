@@ -301,3 +301,69 @@ class TestSaveRegistry:
     def test_save_requires_days(self):
         config = COMMAND_DEFINITIONS["day_plan"]["save"]
         assert config["requires_args"] and config["arg_keys"] == ["days"]
+
+
+class TestSaveEditReviewCommands:
+    _EDIT = (
+        '[{"date": "2026-10-21", "replace_from": "07:50", "replace_to": "08:40", '
+        '"items": [{"start": "2026-10-21T08:00:00+01:00", "end": "2026-10-21T08:40:00+01:00", "kind": "transport", "title": "Metro"}]}]'
+    )
+
+    async def test_save_returns_only_ids_versions_and_block_counts(self, plans, settings, saved):
+        from datetime import datetime, timezone
+
+        from app.features.planning.saved_plans.schemas import PlanBlockRead, SavedDayPlanRead
+
+        now = datetime(2026, 10, 21, tzinfo=timezone.utc)
+        block = PlanBlockRead(start="2026-10-21T09:00:00+01:00", end="2026-10-21T10:00:00+01:00", kind="task", title="x")
+        saved.save.return_value = [SavedDayPlanRead(
+            id=4, plan_date=date(2026, 10, 21), version=2, items=[block, block], source="mcp", created_at=now, updated_at=now,
+        )]
+
+        result = await handle_day_plan("save", {"days": TestSaveCommand._DAYS}, plans, settings, saved)
+
+        assert result == [{"id": 4, "plan_date": "2026-10-21", "version": 2, "blocks": 2}]
+
+    async def test_edit_parses_the_days_json(self, plans, settings, saved):
+        saved.edit.return_value = []
+        await handle_day_plan("edit", {"days": self._EDIT}, plans, settings, saved, source="web")
+        payload, source = saved.edit.call_args.args
+        assert source == "portal"
+        assert (payload.days[0].replace_from, payload.days[0].replace_to) == ("07:50", "08:40")
+        assert payload.days[0].items[0].title == "Metro"
+
+    @pytest.mark.parametrize("days", ["not json", '{"a": 1}', '[{"date": "2026-10-21", "replace_from": "09:00", "replace_to": "08:00"}]'])
+    async def test_edit_with_invalid_days_is_400(self, plans, settings, saved, days):
+        with pytest.raises(HTTPException) as exc:
+            await handle_day_plan("edit", {"days": days}, plans, settings, saved)
+        assert exc.value.status_code == 400
+        saved.edit.assert_not_called()
+
+    async def test_review_defaults_to_a_week(self, plans, settings, saved):
+        saved.review.return_value = MagicMock(model_dump=MagicMock(return_value={"items": []}))
+        await handle_day_plan("review", {"from": "2026-10-26"}, plans, settings, saved)
+        saved.review.assert_awaited_once_with(date(2026, 10, 26), date(2026, 11, 1))
+
+    async def test_review_needs_a_start_date(self, plans, settings, saved):
+        with pytest.raises(HTTPException) as exc:
+            await handle_day_plan("review", {}, plans, settings, saved)
+        assert exc.value.status_code == 400
+
+    @pytest.mark.parametrize("command,method,flag", [
+        ("miss", "set_missed_on", True), ("unmiss", "set_missed_on", False),
+        ("done", "set_done_on", True), ("undone", "set_done_on", False),
+    ])
+    async def test_mark_commands_route_to_the_right_flag(self, plans, settings, saved, command, method, flag):
+        getattr(saved, method).return_value = MagicMock(model_dump=MagicMock(return_value={}))
+        await handle_day_plan(command, {"date": "2026-10-21", "ref_id": "7"}, plans, settings, saved)
+        call = getattr(saved, method).call_args
+        assert call.args == (date(2026, 10, 21), flag)
+        assert call.kwargs["ref_id"] == 7
+
+    async def test_conventions_are_set_as_text(self, plans, settings, saved):
+        await handle_day_plan("set_settings", {"conventions": " home by 14:00 "}, plans, settings, saved)
+        assert settings.update.call_args.args[0].conventions == "home by 14:00"
+
+    def test_new_commands_are_registered(self):
+        for action in ("edit", "review", "done", "undone"):
+            assert action in COMMAND_DEFINITIONS["day_plan"]

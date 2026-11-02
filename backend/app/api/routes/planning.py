@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 
 from app.api.auth import require_auth
 from app.dependencies import DayPlanServiceDep, PlanningSettingsServiceDep, SavedPlanServiceDep
-from app.features.planning.saved_plans.schemas import DayPlansSave, SavedDayPlanRead
+from app.features.planning.saved_plans.schemas import DayPlansEdit, DayPlansSave, ReviewRead, SavedDayPlanRead, SavedPlanSummary
 from app.features.planning.saved_plans.service import (
     SavedPlanConflictError,
     SavedPlanNotFoundError,
@@ -61,6 +61,14 @@ async def save_day_plans(request: Request, body: DayPlansSave, service: SavedPla
         raise _http_error(exc)
 
 
+@router.post("/saved/edit", response_model=list[SavedPlanSummary])
+async def edit_saved_plans(request: Request, body: DayPlansEdit, service: SavedPlanServiceDep):
+    try:
+        return await service.edit(body, _source(request))
+    except (SavedPlanValidationError, SavedPlanConflictError, SavedPlanNotFoundError) as exc:
+        raise _http_error(exc)
+
+
 @router.get("/saved/history", response_model=list[SavedDayPlanRead])
 async def get_saved_history(
     service: SavedPlanServiceDep, date: Annotated[date, Query(description="Local date whose versions to list")],
@@ -77,6 +85,18 @@ async def get_saved_plans(
 ):
     try:
         return await service.get_saved(from_date, to_date, version)
+    except SavedPlanValidationError as exc:
+        raise _http_error(exc)
+
+
+@router.get("/review", response_model=ReviewRead)
+async def get_review(
+    service: SavedPlanServiceDep,
+    from_date: Annotated[date, Query(alias="from", description="First local date (inclusive)")],
+    to_date: Annotated[date, Query(alias="to", description="Last local date (inclusive)")],
+):
+    try:
+        return await service.review(from_date, to_date)
     except SavedPlanValidationError as exc:
         raise _http_error(exc)
 
@@ -117,5 +137,21 @@ async def mark_block_missed(plan_id: int, index: int, service: SavedPlanServiceD
 async def unmark_block_missed(plan_id: int, index: int, service: SavedPlanServiceDep):
     try:
         return await service.set_block_missed(plan_id, index, False)
+    except SavedPlanNotFoundError as exc:
+        raise _http_error(exc)
+
+
+@router.post("/saved/{plan_id}/blocks/{index}/done", response_model=SavedDayPlanRead)
+async def mark_block_done(plan_id: int, index: int, service: SavedPlanServiceDep):
+    try:
+        return await service.set_block_done(plan_id, index, True)
+    except SavedPlanNotFoundError as exc:
+        raise _http_error(exc)
+
+
+@router.delete("/saved/{plan_id}/blocks/{index}/done", response_model=SavedDayPlanRead)
+async def unmark_block_done(plan_id: int, index: int, service: SavedPlanServiceDep):
+    try:
+        return await service.set_block_done(plan_id, index, False)
     except SavedPlanNotFoundError as exc:
         raise _http_error(exc)

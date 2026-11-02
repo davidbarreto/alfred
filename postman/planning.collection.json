@@ -1367,6 +1367,549 @@
           }
         }
       }
+    },
+    {
+      "name": "27a - Get Saved For Edit Date",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Active plan found', () => { const j = pm.response.json(); pm.expect(j).to.have.length(1); pm.environment.set('saved_plan_edit_id', j[0].id); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/planning/saved?from=2031-03-10&to=2031-03-10",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "planning",
+            "saved"
+          ]
+        }
+      }
+    },
+    {
+      "name": "27b - Mark Block Done",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Block flagged done', () => { const b = pm.response.json().items[1]; pm.expect(b.done).to.eql(true); pm.expect(b.done_at).to.match(/[+-]\\d{2}:\\d{2}$/); pm.expect(b.missed).to.be.oneOf([null, undefined]); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/planning/saved/{{saved_plan_edit_id}}/blocks/1/done",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "planning",
+            "saved",
+            "{{saved_plan_edit_id}}",
+            "blocks",
+            "1",
+            "done"
+          ]
+        }
+      }
+    },
+    {
+      "name": "27c - Mark Done Unknown Block (404)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 404', () => pm.response.to.have.status(404));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/planning/saved/{{saved_plan_edit_id}}/blocks/99/done",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "planning",
+            "saved",
+            "{{saved_plan_edit_id}}",
+            "blocks",
+            "99",
+            "done"
+          ]
+        }
+      }
+    },
+    {
+      "name": "27d - Edit Slice Of Saved Day",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Summary only, new version, blocks kept', () => { const j = pm.response.json(); pm.expect(j).to.have.length(1); pm.expect(Object.keys(j[0]).sort()).to.eql(['blocks','id','plan_date','version']); pm.expect(j[0].blocks).to.eql(3); pm.expect(j[0].version).to.be.at.least(2); pm.environment.set('saved_plan_edit_id', j[0].id); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/planning/saved/edit",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "planning",
+            "saved",
+            "edit"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"days\": [\n    {\n      \"date\": \"2031-03-10\",\n      \"replace_from\": \"08:00\",\n      \"replace_to\": \"08:30\",\n      \"items\": [\n        {\n          \"start\": \"2031-03-10T08:00:00+00:00\",\n          \"end\": \"2031-03-10T08:10:00+00:00\",\n          \"kind\": \"transport\",\n          \"title\": \"Postman walk\"\n        },\n        {\n          \"start\": \"2031-03-10T08:10:00+00:00\",\n          \"end\": \"2031-03-10T08:30:00+00:00\",\n          \"kind\": \"transport\",\n          \"title\": \"Postman metro\"\n        }\n      ],\n      \"notes\": \"Postman edit note\"\n    }\n  ]\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "27e - Edited Day Keeps Done Flag",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Slice replaced, work block still done', () => { const items = pm.response.json()[0].items; pm.expect(items.map(i => i.title)).to.eql(['Postman walk','Postman metro','Postman focus block']); pm.expect(items[2].done).to.eql(true); pm.expect(pm.response.json()[0].notes).to.eql('Postman edit note'); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/planning/saved?from=2031-03-10&to=2031-03-10",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "planning",
+            "saved"
+          ]
+        }
+      }
+    },
+    {
+      "name": "27f - Edit Date Without Plan (404)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 404', () => pm.response.to.have.status(404));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/planning/saved/edit",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "planning",
+            "saved",
+            "edit"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"days\": [\n    {\n      \"date\": \"2031-04-20\",\n      \"replace_from\": \"08:00\",\n      \"replace_to\": \"08:30\",\n      \"items\": [],\n      \"notes\": \"Postman edit note\"\n    }\n  ]\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "27g - Edit Unordered Window (422)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 422', () => pm.response.to.have.status(422));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/planning/saved/edit",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "planning",
+            "saved",
+            "edit"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"days\": [\n    {\n      \"date\": \"2031-03-10\",\n      \"replace_from\": \"09:00\",\n      \"replace_to\": \"08:00\",\n      \"items\": [],\n      \"notes\": \"Postman edit note\"\n    }\n  ]\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "27h - Edit Block On Another Date (422)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 422', () => pm.response.to.have.status(422));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/planning/saved/edit",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "planning",
+            "saved",
+            "edit"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"days\": [\n    {\n      \"date\": \"2031-03-10\",\n      \"replace_from\": \"08:00\",\n      \"replace_to\": \"08:30\",\n      \"items\": [\n        {\n          \"start\": \"2031-03-11T08:00:00+00:00\",\n          \"end\": \"2031-03-11T08:30:00+00:00\",\n          \"kind\": \"other\",\n          \"title\": \"Bad\"\n        }\n      ],\n      \"notes\": \"Postman edit note\"\n    }\n  ]\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "27i - Weekly Review",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Counts per item', () => { const j = pm.response.json(); const work = j.items.find(i => i.title === 'Postman focus block'); pm.expect(work.planned).to.eql(1); pm.expect(work.done).to.eql(1); pm.expect(work.missed).to.eql(0); pm.expect(j.planned).to.be.at.least(3); pm.expect(j.done).to.be.at.least(1); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/planning/review?from=2031-03-10&to=2031-03-16",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "planning",
+            "review"
+          ]
+        }
+      }
+    },
+    {
+      "name": "27j - Review Missing Range (422)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 422', () => pm.response.to.have.status(422));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/planning/review",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "planning",
+            "review"
+          ]
+        }
+      }
+    },
+    {
+      "name": "27k - Unmark Block Done",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Flag removed', () => { const b = pm.response.json().items[2]; pm.expect(b.done).to.be.oneOf([null, undefined]); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/planning/saved/{{saved_plan_edit_id}}/blocks/2/done",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "planning",
+            "saved",
+            "{{saved_plan_edit_id}}",
+            "blocks",
+            "2",
+            "done"
+          ]
+        }
+      }
+    },
+    {
+      "name": "27l - Set Conventions",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Stored', () => pm.expect(pm.response.json().conventions).to.eql('Postman rule: home by 14:00'));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/planning/settings",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "planning",
+            "settings"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"conventions\": \"Postman rule: home by 14:00\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "27m - Day Plan Returns Conventions",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('In preferences', () => pm.expect(pm.response.json().preferences.conventions).to.eql('Postman rule: home by 14:00'));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/planning/day?date=2031-03-10",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "planning",
+            "day"
+          ]
+        }
+      }
+    },
+    {
+      "name": "27n - Conventions Too Long (422)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 422', () => pm.response.to.have.status(422));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/planning/settings",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "planning",
+            "settings"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"conventions\": \"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "27o - Reset Conventions",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Reset', () => pm.expect(pm.response.json().conventions).to.be.null);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/planning/settings",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "planning",
+            "settings"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"conventions\": null\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
     }
   ]
 }

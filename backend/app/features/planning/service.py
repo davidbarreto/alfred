@@ -328,6 +328,7 @@ def _preferences(settings: Any) -> dict[str, Any]:
         "sleep_time": settings.sleep_time,
         "work_target_minutes": settings.work_target_minutes,
         "preferred_work_windows": settings.preferred_work_windows or None,
+        "conventions": settings.conventions,
     }
     return {k: v for k, v in prefs.items() if v is not None}
 

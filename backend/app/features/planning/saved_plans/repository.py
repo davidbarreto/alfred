@@ -45,12 +45,22 @@ class DayPlanRepository:
 
     async def set_block_missed(self, plan: DayPlan, index: int, missed_at: str | None) -> DayPlan:
         """Mark (ISO timestamp) or unmark (None) one block as not done. Edits the version in place."""
+        return await self._set_block_flag(plan, index, "missed", missed_at, clears="done")
+
+    async def set_block_done(self, plan: DayPlan, index: int, done_at: str | None) -> DayPlan:
+        """Mark (ISO timestamp) or unmark (None) one block as done. Edits the version in place."""
+        return await self._set_block_flag(plan, index, "done", done_at, clears="missed")
+
+    async def _set_block_flag(self, plan: DayPlan, index: int, flag: str, stamp: str | None, clears: str) -> DayPlan:
         items = [dict(item) for item in plan.items]
-        if missed_at is None:
-            items[index].pop("missed", None)
-            items[index].pop("missed_at", None)
+        if stamp is None:
+            items[index].pop(flag, None)
+            items[index].pop(f"{flag}_at", None)
         else:
-            items[index].update(missed=True, missed_at=missed_at)
+            # A block is either done or missed, never both.
+            items[index].pop(clears, None)
+            items[index].pop(f"{clears}_at", None)
+            items[index].update({flag: True, f"{flag}_at": stamp})
         plan.items = items
         await self._session.commit()
         await self._session.refresh(plan)

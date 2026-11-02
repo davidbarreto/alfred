@@ -1,17 +1,18 @@
 import json
 import logging
-from datetime import date
+from datetime import date, timedelta
 from typing import Any
 
 from fastapi import HTTPException, status
 
 from app.assistant.commands.handlers._utils import build_model, parse_int
-from app.features.planning.saved_plans.schemas import DayPlansSave
+from app.features.planning.saved_plans.schemas import DayPlansEdit, DayPlansSave
 from app.features.planning.saved_plans.service import (
     SavedPlanConflictError,
     SavedPlanNotFoundError,
     SavedPlanService,
     SavedPlanValidationError,
+    summarise,
 )
 from app.features.planning.schemas import PlanningSettingsUpdate
 from app.features.planning.service import MAX_DAYS, DayPlanService
@@ -22,7 +23,7 @@ logger = logging.getLogger(__name__)
 _PORTAL_SOURCES = {"web", "portal"}
 _INT_SETTINGS = ("work_target_minutes", "office_days_per_week", "office_min_minutes")
 _LIST_SETTINGS = ("preferred_work_windows", "workdays")
-_TEXT_SETTINGS = ("wake_time", "sleep_time", "work_tag", "office_tag")
+_TEXT_SETTINGS = ("wake_time", "sleep_time", "work_tag", "office_tag", "conventions")
 
 
 def _parse_date(raw: Any) -> date | None:
@@ -124,7 +125,17 @@ async def _dispatch(
     if command == "save":
         payload = build_model(DayPlansSave, **_parse_days_json(arguments.get("days")))
         plans = await saved_plan_service.save(payload, "portal" if source in _PORTAL_SOURCES else "mcp")
+        return [summarise(p).model_dump(mode="json") for p in plans]
+
+    if command == "edit":
+        payload = build_model(DayPlansEdit, **_parse_days_json(arguments.get("days")))
+        plans = await saved_plan_service.edit(payload, "portal" if source in _PORTAL_SOURCES else "mcp")
         return [p.model_dump(mode="json") for p in plans]
+
+    if command == "review":
+        start = _required_date(arguments, "from")
+        end = _parse_date(arguments.get("to")) or start + timedelta(days=6)
+        return (await saved_plan_service.review(start, end)).model_dump(mode="json")
 
     if command == "get_saved":
         start = _required_date(arguments, "from")
@@ -137,10 +148,11 @@ async def _dispatch(
         plans = await saved_plan_service.get_history(_required_date(arguments, "date"))
         return [p.model_dump(mode="json") for p in plans]
 
-    if command in ("miss", "unmiss"):
-        plan = await saved_plan_service.set_missed_on(
+    if command in ("miss", "unmiss", "done", "undone"):
+        flag = saved_plan_service.set_missed_on if command in ("miss", "unmiss") else saved_plan_service.set_done_on
+        plan = await flag(
             _required_date(arguments, "date"),
-            command == "miss",
+            command in ("miss", "done"),
             kind=str(arguments.get("kind") or "task"),
             ref_id=parse_int(arguments.get("ref_id"), "ref_id"),
             title=str(arguments["title"]) if arguments.get("title") else None,

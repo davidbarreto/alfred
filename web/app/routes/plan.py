@@ -100,6 +100,16 @@ async def unmark_missed(plan_id: int, index: int):
     return await forward(api.delete(f"/planning/saved/{plan_id}/blocks/{index}/missed"), "Could not undo this.")
 
 
+@router.post("/saved/{plan_id}/blocks/{index}/done")
+async def mark_done(plan_id: int, index: int):
+    return await forward(api.post(f"/planning/saved/{plan_id}/blocks/{index}/done"), "Could not mark this block as done.")
+
+
+@router.delete("/saved/{plan_id}/blocks/{index}/done")
+async def unmark_done(plan_id: int, index: int):
+    return await forward(api.delete(f"/planning/saved/{plan_id}/blocks/{index}/done"), "Could not undo this.")
+
+
 @router.delete("/saved/{plan_id}")
 async def delete_plan(plan_id: int):
     return await forward(api.delete(f"/planning/saved/{plan_id}"), "Could not delete this version.")

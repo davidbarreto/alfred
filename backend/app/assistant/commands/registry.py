@@ -162,7 +162,7 @@ _ACTIVITY_DETAILS = (
 PLANNING_SETTINGS_FLAGS = {
     "--wake": "wake_time", "--sleep": "sleep_time", "--work-target": "work_target_minutes",
     "--work-windows": "preferred_work_windows", "--workdays": "workdays", "--work-tag": "work_tag", "--office-tag": "office_tag",
-    "--office-days": "office_days_per_week", "--office-min": "office_min_minutes",
+    "--office-days": "office_days_per_week", "--office-min": "office_min_minutes", "--conventions": "conventions",
 }
 _PLANNING_SETTINGS_DETAILS = (
     "wake_time and sleep_time are HH:MM; work_target_minutes is the daily work target in minutes (default 480); "
@@ -170,7 +170,9 @@ _PLANNING_SETTINGS_DETAILS = (
     "list of mon,tue,wed,thu,fri,sat,sun (default mon-fri) and days outside it get a work target of 0; work_tag (default work) and "
     "office_tag (default office) name the event tags that count as work time and office days; office_days_per_week "
     "(1-7) turns the office section on and office_min_minutes is the minimum length of an event to count as an "
-    "office day. Unset values switch the related section off."
+    "office day; conventions is free text (max 2000 characters) with the user's standing planning rules, returned in "
+    "the preferences of every day plan get so each client applies them without being told again. "
+    "Unset values switch the related section off."
 )
 _DAY_PLAN_GET_DETAILS = (
     "date is the first local day (YYYY-MM-DD, default today), days is 1-7 (default 1), work_minutes overrides the "
@@ -201,11 +203,29 @@ _DAY_PLAN_SAVE_DETAILS = (
     "blocks), meal, break and other. Choose the kind by what the block is: ANY eating block (breakfast, lunch, dinner, snack, eat, have lunch) "
     "is kind meal, never break; break is only a pause to rest with no meal in it (coffee, walk, nap, stretch); other is for what fits none of the kinds. "
     "A saved block may carry missed=true: the user marked it as not done (the task stays open, it is not done or overdue because of it). "
+    "A block may instead carry done=true (the user confirmed it; marking one clears the other). Blocks with neither flag whose end has "
+    "passed are unmarked: do not assume they happened. "
     "Missed blocks do not count as committed work; when you re-plan that task for another day, place it once there and do not treat the "
     "missed block as a second occurrence. "
     "Every block must start on its date (local). Only the dates in the call get a new version; other dates are untouched. "
     "Typical flow: day_plan get for the week, propose, create office events once accepted, save with per-day notes; later "
-    "get_saved for the range, modify and save the changed days again."
+    "get_saved for the range, modify and save the changed days again (for a small change use edit instead of resending whole days). "
+    "The response lists only id, plan_date, version and block count per date, not the blocks."
+)
+
+_DAY_PLAN_EDIT_DETAILS = (
+    "Changes part of days that are already saved without resending them. days is a JSON string: a list of "
+    "{\"date\": \"YYYY-MM-DD\", \"replace_from\": \"HH:MM\", \"replace_to\": \"HH:MM\", \"items\": [...], \"notes\": optional}. "
+    "Every block of that date whose start is in [replace_from, replace_to) (local time) is removed and replaced by items (same shape as in "
+    "save; an empty list just removes them). All other blocks, including their done/missed flags, are kept. notes replaces the day's notes "
+    "when given. Each edited date gets a new version, like save, and must already have an active saved plan. Several dates can "
+    "be edited in one call (e.g. the same slice on Mon-Thu, with items per date). Returns id, plan_date, version and block count per date."
+)
+
+_DAY_PLAN_REVIEW_DETAILS = (
+    "from is YYYY-MM-DD and to defaults to from + 6 days (a week). Counts, per planned thing in the active saved plans of the range "
+    "(calendar events are left out), how often it was planned, done, missed, unmarked (ended without any mark: not known to have "
+    "happened) or upcoming, plus the dates it was missed. Worst first. Use it to plan the next week instead of loading every saved day."
 )
 
 _DAY_PLAN_MISS_DETAILS = (
@@ -213,7 +233,8 @@ _DAY_PLAN_MISS_DETAILS = (
     "saving the day again: it only flags the block (missed=true) in the day's active saved plan and creates no new version. "
     "date is the plan's day (YYYY-MM-DD). Identify the block with ref_id (kind defaults to task; use the same kind as in the "
     "saved plan) or with part of its title for free-form blocks; start (HH:MM, local) picks one when the same thing is planned "
-    "twice that day. The task itself is not touched: it stays open and can be placed on another day. unmiss undoes it."
+    "twice that day. The task itself is not touched: it stays open and can be placed on another day. unmiss undoes it. "
+    "done flags a block as done in the same way (and clears a missed mark); undone removes the done flag."
 )
 
 COMMAND_DEFINITIONS = {
@@ -1184,6 +1205,38 @@ COMMAND_DEFINITIONS = {
             "flags": {"--ref": "ref_id", "--kind": "kind", "--title": "title", "--start": "start"},
             "requires_args": True,
             "arg_keys": ["date"],
+        },
+        "done": {
+            "description": "Mark a block of a date's saved plan as done (distinguishes done from never marked)",
+            "details": _DAY_PLAN_MISS_DETAILS,
+            "aliases": ["/dayplandone"],
+            "flags": {"--ref": "ref_id", "--kind": "kind", "--title": "title", "--start": "start"},
+            "requires_args": True,
+            "arg_keys": ["date"],
+        },
+        "undone": {
+            "description": "Undo a done mark on a block of a date's saved plan",
+            "details": _DAY_PLAN_MISS_DETAILS,
+            "aliases": ["/dayplanundone"],
+            "flags": {"--ref": "ref_id", "--kind": "kind", "--title": "title", "--start": "start"},
+            "requires_args": True,
+            "arg_keys": ["date"],
+        },
+        "edit": {
+            "description": "Replace the blocks in a time slice of already saved days without resending the whole days",
+            "details": _DAY_PLAN_EDIT_DETAILS,
+            "aliases": ["/dayplanedit"],
+            "flags": {},
+            "requires_args": True,
+            "arg_keys": ["days"],
+        },
+        "review": {
+            "description": "Per item: how many times it was planned, done, missed or left unmarked over a week",
+            "details": _DAY_PLAN_REVIEW_DETAILS,
+            "aliases": ["/dayplanreview"],
+            "flags": {"--to": "to"},
+            "requires_args": True,
+            "arg_keys": ["from"],
         },
         "unmiss": {
             "description": "Undo a not-done mark on a block of a date's saved plan",

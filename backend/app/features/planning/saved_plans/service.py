@@ -1,5 +1,5 @@
 import logging
-from datetime import date
+from datetime import date, datetime, timezone
 
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -8,9 +8,13 @@ from app.features.planning.saved_plans.repository import DayPlanRepository
 from app.features.planning.saved_plans.schemas import (
     MAX_RANGE_DAYS,
     REF_KINDS,
+    DayPlansEdit,
     DayPlansSave,
     PlanBlock,
+    ReviewItem,
+    ReviewRead,
     SavedDayPlanRead,
+    SavedPlanSummary,
 )
 from app.features.planning.timeline import iso_local
 from app.shared.timezone import local_now, local_timezone
@@ -75,6 +79,73 @@ class SavedPlanService:
     async def get_history(self, plan_date: date) -> list[SavedDayPlanRead]:
         return [SavedDayPlanRead.model_validate(p) for p in await self._repo.get_history(plan_date)]
 
+    async def edit(self, data: DayPlansEdit, source: str) -> list[SavedPlanSummary]:
+        """Replace a slice of already saved days; each edited date gets a new version, the other blocks are kept."""
+        dates = [day.date for day in data.days]
+        duplicates = sorted({d for d in dates if dates.count(d) > 1})
+        if duplicates:
+            raise SavedPlanValidationError(
+                "Each date can appear once per call; repeated: " + ", ".join(d.isoformat() for d in duplicates)
+            )
+        active = {p.plan_date: p for p in await self._repo.get_active_plans(min(dates), max(dates))}
+        absent = sorted(d for d in dates if d not in active)
+        if absent:
+            raise SavedPlanNotFoundError("No active plan saved for " + ", ".join(d.isoformat() for d in absent))
+        problems = _date_problems(data) + await self._ref_problems(data)
+        if problems:
+            raise SavedPlanValidationError("; ".join(problems))
+
+        entries = []
+        for day in data.days:
+            plan = active[day.date]
+            kept = [
+                item for item in plan.items
+                if not day.replace_from <= item["start"][11:16] < day.replace_to
+            ]
+            merged = sorted(kept + [_block_dict(b) for b in day.items], key=lambda item: datetime.fromisoformat(item["start"]))
+            entries.append((day.date, merged, day.notes if day.notes is not None else plan.notes))
+        try:
+            plans = await self._repo.save_days(entries, source)
+        except IntegrityError as exc:
+            raise SavedPlanConflictError("Another save for one of these dates ran at the same time; try again") from exc
+        logger.info(
+            "Day plans edited: dates=%s versions=%s source=%s",
+            [p.plan_date.isoformat() for p in plans], [p.version for p in plans], source,
+        )
+        return [summarise(p) for p in plans]
+
+    async def review(self, start: date, end: date) -> ReviewRead:
+        """Per planned thing over a range: how often it was planned, done, missed, still unmarked or not yet due."""
+        plans = await self.get_saved(start, end)
+        now = datetime.now(timezone.utc)
+        groups: dict[tuple, ReviewItem] = {}
+        for plan in plans:
+            for block in plan.items:
+                if block.kind == "event":
+                    continue
+                key = (block.kind, block.ref_id) if block.ref_id is not None else (block.kind, block.title.lower())
+                item = groups.setdefault(
+                    key, ReviewItem(kind=block.kind, ref_id=block.ref_id, title=block.title,
+                                    planned=0, done=0, missed=0, unmarked=0, upcoming=0),
+                )
+                item.planned += 1
+                if block.done:
+                    item.done += 1
+                elif block.missed:
+                    item.missed += 1
+                    item.missed_dates.append(plan.plan_date.isoformat())
+                elif datetime.fromisoformat(block.end) <= now:
+                    item.unmarked += 1
+                else:
+                    item.upcoming += 1
+        items = sorted(groups.values(), key=lambda i: (-i.missed, -i.unmarked, i.title.lower()))
+        logger.debug("Day plan review: from=%s to=%s items=%d", start, end, len(items))
+        return ReviewRead(
+            from_date=start, to_date=end, items=items,
+            planned=sum(i.planned for i in items), done=sum(i.done for i in items), missed=sum(i.missed for i in items),
+            unmarked=sum(i.unmarked for i in items), upcoming=sum(i.upcoming for i in items),
+        )
+
     async def archive(self, plan_id: int) -> SavedDayPlanRead:
         plan = await self._get_or_raise(plan_id)
         if plan.archived_at is not None:
@@ -105,6 +176,17 @@ class SavedPlanService:
         )
         return SavedDayPlanRead.model_validate(plan)
 
+    async def set_block_done(self, plan_id: int, index: int, done: bool) -> SavedDayPlanRead:
+        """Record that a block was done, or undo that. Done and missed exclude each other."""
+        plan = await self._get_or_raise(plan_id)
+        if not 0 <= index < len(plan.items):
+            raise SavedPlanNotFoundError(f"Saved plan {plan_id} has no block {index}")
+        plan = await self._repo.set_block_done(plan, index, iso_local(local_now()) if done else None)
+        logger.info(
+            "Day plan block %s: id=%d date=%s block=%d", "done" if done else "undone", plan.id, plan.plan_date, index
+        )
+        return SavedDayPlanRead.model_validate(plan)
+
     async def set_missed_on(
         self, plan_date: date, missed: bool, kind: str = "task", ref_id: int | None = None,
         title: str | None = None, start: str | None = None,
@@ -113,6 +195,20 @@ class SavedPlanService:
 
         `start` (HH:MM, local) picks one when the same thing is planned more than once that day.
         """
+        plan_id, index = await self._find_block(plan_date, kind, ref_id, title, start)
+        return await self.set_block_missed(plan_id, index, missed)
+
+    async def set_done_on(
+        self, plan_date: date, done: bool, kind: str = "task", ref_id: int | None = None,
+        title: str | None = None, start: str | None = None,
+    ) -> SavedDayPlanRead:
+        """Same lookup as set_missed_on, to flag (or unflag) a block as done."""
+        plan_id, index = await self._find_block(plan_date, kind, ref_id, title, start)
+        return await self.set_block_done(plan_id, index, done)
+
+    async def _find_block(
+        self, plan_date: date, kind: str, ref_id: int | None, title: str | None, start: str | None
+    ) -> tuple[int, int]:
         if ref_id is None and not title:
             raise SavedPlanValidationError("Give the ref_id of the block, or part of its title")
         plans = await self._repo.get_active_plans(plan_date, plan_date)
@@ -128,7 +224,7 @@ class SavedPlanService:
         if len(matches) > 1:
             times = ", ".join(plan.items[i]["start"][11:16] for i in matches)
             raise SavedPlanValidationError(f"{len(matches)} blocks match (starting at {times}); pass start as HH:MM to pick one")
-        return await self.set_block_missed(plan.id, matches[0], missed)
+        return plan.id, matches[0]
 
     async def delete(self, plan_id: int) -> None:
         plan = await self._get_or_raise(plan_id)
@@ -142,7 +238,7 @@ class SavedPlanService:
             raise SavedPlanNotFoundError(f"Saved plan {plan_id} not found")
         return plan
 
-    async def _ref_problems(self, data: DayPlansSave) -> list[str]:
+    async def _ref_problems(self, data: DayPlansSave | DayPlansEdit) -> list[str]:
         wanted: dict[str, set[int]] = {}
         for day in data.days:
             for block in day.items:
@@ -165,7 +261,11 @@ def _block_matches(item: dict, kind: str, ref_id: int | None, title: str | None,
     return start is None or item["start"][11:16] == start
 
 
-def _date_problems(data: DayPlansSave) -> list[str]:
+def summarise(plan) -> SavedPlanSummary:
+    return SavedPlanSummary(id=plan.id, plan_date=plan.plan_date, version=plan.version, blocks=len(plan.items))
+
+
+def _date_problems(data: DayPlansSave | DayPlansEdit) -> list[str]:
     problems = []
     for day in data.days:
         for block in day.items:

@@ -106,6 +106,41 @@ class TestParseTextInstallments:
         assert result.installment_plans_opened[0].plan_ref == "00001"
 
 
+_THOUSANDS_STATEMENT_TEXT = """\
+EXTRATO VISA CLASSIC ACTIVOBANK N. 2026/005
+Extrato de: 2026/05/01 a 2026/05/31 Moeda: EUR
+DETALHE DE TRANSAÇÕES COM PAGAMENTO FRACIONADO
+2026/05/31  COMPRA 4681 SAMPLE SHOP C
+ 2 400.00 1 800.00 7.900% 00002/3 300.00 11.00 0.40 311.40
+2026/06/30  COMPRA 4681 SAMPLE SHOP C
+ 2 400.00 900.50 7.900% 00002/4 300.00 9.00 0.35 309.35
+2026/05/31  COMPRA 4681 SAMPLE SHOP D
+ 1 000.00 500.00 9.900% 00003/2 100.00 5.00 0.20 105.20
+2026/05/31  COMPRA 4681 SAMPLE SHOP E
+ 150.00 80.00 9.900% 00004/2 1 050.00 5.00 0.20 1 055.20
+DETALHE DOS MOVIMENTOS
+"""
+
+
+class TestParseTextThousandsSeparator:
+    """Amounts >= 1 000 print with a space ("2 400.00"), changing the field count."""
+
+    def test_rows_with_thousands_amounts_are_captured(self):
+        result = _parse_text(_THOUSANDS_STATEMENT_TEXT, _PERIOD_START, _PERIOD_END, installments_only=True)
+        by_desc = {r.raw_description: r for r in result.rows}
+        assert by_desc["COMPRA 4681 SAMPLE SHOP C (00002/3)"].amount == Decimal("-300.00")
+        assert by_desc["COMPRA 4681 SAMPLE SHOP D (00003/2)"].amount == Decimal("-100.00")
+        assert by_desc["COMPRA 4681 SAMPLE SHOP E (00004/2)"].amount == Decimal("-1050.00")
+        assert by_desc["COMPRA 4681 SAMPLE SHOP E (00004/2)"].installment_duty == Decimal("0.20")
+
+    def test_plan_signals_carry_thousands_original_amount(self):
+        result = _parse_text(_THOUSANDS_STATEMENT_TEXT, _PERIOD_START, _PERIOD_END, installments_only=True)
+        signals = {s.plan_ref: s for s in result.installment_plans_opened}
+        assert signals["00002"].original_amount == Decimal("-2400.00")
+        assert signals["00002"].total_installments == 4
+        assert signals["00003"].original_amount == Decimal("-1000.00")
+
+
 _SHORT_DATE_STATEMENT_TEXT = """\
 EXTRATO VISA CLASSIC ACTIVOBANK N. 2026/011
 Extrato de: 2026/10/01 a 2026/10/31 Moeda: EUR

@@ -97,6 +97,12 @@ _ROW_RE = re.compile(rf"^({_DATE}) ({_DATE}) (.+?) ({_AMOUNT})$")
 _ROW_START_RE = re.compile(rf"^({_DATE}) ({_DATE}) (.+)$")
 _WRAPPED_TAIL_RE = re.compile(rf"^(?:(?:VIS|MB) )?({_AMOUNT})$")
 _NETWORK_SUFFIX_RE = re.compile(r" (?:VIS|MB)$")
+# Schedule data line: Valor Transação, Capital em Dívida, TAN, Plano, Capital, Juros,
+# IS, Mensalidade. Amounts >= 1 000 print with a space ("2 265.17"), so the field
+# count varies and the line can't be split on whitespace.
+_SCHEDULE_DATA_RE = re.compile(
+    rf"^({_AMOUNT}) {_AMOUNT} [\d.]+% (\d+/\d+) ({_AMOUNT}) ({_AMOUNT}) ({_AMOUNT}) {_AMOUNT}$"
+)
 _INSTALLMENT_LINE_RE = re.compile(r"^(\d{2,4}/\d{2}/\d{2})\s+(.+)$")
 _CARD_RE = re.compile(r"Conta Cart.o:\s*([\d-]+)", re.IGNORECASE)
 _PERIOD_RE = re.compile(r"Extrato de:\s*(\d{4})/(\d{2})/(\d{2}) a (\d{4})/(\d{2})/(\d{2})")
@@ -256,34 +262,30 @@ def _parse_text(
             if match is not None and i + 1 < n:
                 row_date = _parse_date(match.group(1), period_end)
                 description = match.group(2).strip()
-                parts = lines[i + 1].split()
-                if len(parts) == 8:
-                    valor_transacao = _parse_amount(parts[0])
-                    plano_parts = parts[3].split("/")
-                    if valor_transacao is not None and len(plano_parts) == 2 and plano_parts[1].isdigit():
-                        ref, position = plano_parts[0], int(plano_parts[1])
-                        existing = plan_info.get(ref)
-                        if existing is None:
-                            plan_info[ref] = _PlanInfo(
-                                # "Valor Transação" prints unsigned like every other
-                                # amount column here -- negate to match the expense
-                                # sign convention used everywhere else (e.g. -capital
-                                # below), since this value is later compared directly
-                                # against a real Transaction.amount (find_unmatched_transaction)
-                                # and substituted as one for transfer matching
-                                # (get_transfer_match_candidates).
-                                description=description, original_amount=-valor_transacao, max_position=position
-                            )
-                        else:
-                            existing.max_position = max(existing.max_position, position)
-                if row_date is not None and len(parts) == 8 and _within_period(
-                    row_date, period_start, period_end
-                ):
-                    capital = _parse_amount(parts[4])
-                    juros = _parse_amount(parts[5])
-                    imposto_selo = _parse_amount(parts[6])
-                    plano = parts[3]
-                    if capital is not None:
+                data = _SCHEDULE_DATA_RE.match(lines[i + 1])
+                if data is not None:
+                    valor_transacao = _parse_amount(data.group(1))
+                    plano = data.group(2)
+                    ref, position = plano.split("/")
+                    position = int(position)
+                    existing = plan_info.get(ref)
+                    if existing is None:
+                        plan_info[ref] = _PlanInfo(
+                            # "Valor Transação" prints unsigned like every other
+                            # amount column here -- negate to match the expense
+                            # sign convention used everywhere else (e.g. -capital
+                            # below), since this value is later compared directly
+                            # against a real Transaction.amount (find_unmatched_transaction)
+                            # and substituted as one for transfer matching
+                            # (get_transfer_match_candidates).
+                            description=description, original_amount=-valor_transacao, max_position=position
+                        )
+                    else:
+                        existing.max_position = max(existing.max_position, position)
+                    capital = _parse_amount(data.group(3))
+                    if row_date is not None and capital is not None and _within_period(
+                        row_date, period_start, period_end
+                    ):
                         rows.append(
                             ParsedRow(
                                 date_posted=row_date,
@@ -293,8 +295,8 @@ def _parse_text(
                                 currency="EUR",
                                 balance_after=None,
                                 flag_reason="installment_capital",
-                                installment_juros=juros,
-                                installment_duty=imposto_selo,
+                                installment_juros=_parse_amount(data.group(4)),
+                                installment_duty=_parse_amount(data.group(5)),
                                 note=f"Installment {plano}",
                             )
                         )

@@ -1919,7 +1919,7 @@
           "script": {
             "exec": [
               "pm.test('Status is 200', () => pm.response.to.have.status(200));",
-              "pm.test('Normalised and stored', () => pm.expect(pm.response.json().travel_times).to.eql([{place:'postman office',mode:'metro',minutes:50},{place:'postman office',mode:'car',minutes:20}]));"
+              "pm.test('Normalised and stored', () => pm.expect(pm.response.json().travel_times).to.eql([{origin:'home',place:'postman office',mode:'metro',minutes:50},{origin:'postman office',place:'postman school',mode:'car',minutes:20}]));"
             ],
             "type": "text/javascript"
           }
@@ -1945,7 +1945,7 @@
         },
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"travel_times\": [\n    {\n      \"place\": \"Postman Office\",\n      \"mode\": \"Metro\",\n      \"minutes\": 50\n    },\n    {\n      \"place\": \"postman office\",\n      \"mode\": \"car\",\n      \"minutes\": 20\n    }\n  ]\n}",
+          "raw": "{\n  \"travel_times\": [\n    {\n      \"place\": \"Postman Office\",\n      \"mode\": \"Metro\",\n      \"minutes\": 50\n    },\n    {\n      \"origin\": \"Postman Office\",\n      \"place\": \"Postman School\",\n      \"mode\": \"car\",\n      \"minutes\": 20\n    }\n  ]\n}",
           "options": {
             "raw": {
               "language": "json"
@@ -1984,7 +1984,7 @@
       }
     },
     {
-      "name": "28c - Duplicate Place And Mode (422)",
+      "name": "28c - Duplicate Route And Mode (422)",
       "event": [
         {
           "listen": "test",
@@ -2016,7 +2016,49 @@
         },
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"travel_times\": [\n    {\n      \"place\": \"postman office\",\n      \"mode\": \"car\",\n      \"minutes\": 20\n    },\n    {\n      \"place\": \"postman office\",\n      \"mode\": \"car\",\n      \"minutes\": 20\n    }\n  ]\n}",
+          "raw": "{\n  \"travel_times\": [\n    {\n      \"place\": \"postman office\",\n      \"mode\": \"car\",\n      \"minutes\": 20\n    },\n    {\n      \"origin\": \"HOME\",\n      \"place\": \"postman office\",\n      \"mode\": \"car\",\n      \"minutes\": 25\n    }\n  ]\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "28d1 - Place As Its Own Origin (422)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 422', () => pm.response.to.have.status(422));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/planning/settings",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "planning",
+            "settings"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"travel_times\": [\n    {\n      \"origin\": \"x\",\n      \"place\": \"X\",\n      \"mode\": \"car\",\n      \"minutes\": 5\n    }\n  ]\n}",
           "options": {
             "raw": {
               "language": "json"

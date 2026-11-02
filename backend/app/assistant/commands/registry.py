@@ -180,10 +180,10 @@ _PLANNING_SETTINGS_DETAILS = (
     "office_tag (default office) name the event tags that count as work time and office days; office_days_per_week "
     "(1-7) turns the office section on and office_min_minutes is the minimum length of an event to count as an "
     "office day; conventions is free text (max 2000 characters) with the user's standing planning rules, returned in "
-    "the preferences of every day plan get so each client applies them without being told again; travel_times lists the door-to-door "
-    "minutes from home to a place by each mode, written place:mode=minutes[,mode=minutes];place2:... (e.g. office:metro=50,car=20;school:walk=10; "
-    "up to 20 entries, empty resets). They come back in the preferences as [{place, mode, minutes}] so clients derive leave-home times "
-    "and transport blocks without asking. "
+    "the preferences of every day plan get so each client applies them without being told again; travel_times lists door-to-door minutes between two places by each mode, written [origin>]place:mode=minutes[,mode=minutes];... "
+    "where the origin defaults to home (e.g. office:metro=50,car=20;office>school:car=20,walk=10; up to 20 entries, empty resets). "
+    "A trip counts both ways unless the reverse is listed too. They come back in the preferences as [{origin, place, mode, minutes}] so clients "
+    "derive leave-home times and transport blocks without asking. "
     "Unset values switch the related section off."
 )
 _DAY_PLAN_GET_DETAILS = (

@@ -43,6 +43,9 @@ class PlanningSettingsService:
 
     async def update(self, data: PlanningSettingsUpdate) -> PlanningSettingsRead:
         changes = data.model_dump(exclude_unset=True)
+        if changes.get("travel_times"):
+            # exclude_unset would drop an origin left at its default; store it explicitly.
+            changes["travel_times"] = [entry.model_dump() for entry in data.travel_times]
         for field, value in changes.items():
             if value is None:
                 stored = ""

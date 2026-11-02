@@ -404,9 +404,15 @@ class TestOtherSections:
         }
 
     async def test_travel_times_are_part_of_the_preferences(self, service, parts):
-        parts.settings.get.return_value = _settings(travel_times=[{"place": "office", "mode": "metro", "minutes": 50}])
+        parts.settings.get.return_value = _settings(travel_times=[
+            {"place": "office", "mode": "metro", "minutes": 50},
+            {"origin": "office", "place": "school", "mode": "car", "minutes": 20},
+        ])
         plan = _dump(await service.get_plan(date(2026, 10, 21)))
-        assert plan["preferences"]["travel_times"] == [{"place": "office", "mode": "metro", "minutes": 50}]
+        assert plan["preferences"]["travel_times"] == [
+            {"origin": "home", "place": "office", "mode": "metro", "minutes": 50},
+            {"origin": "office", "place": "school", "mode": "car", "minutes": 20},
+        ]
 
     async def test_conventions_are_part_of_the_preferences(self, service, parts):
         parts.settings.get.return_value = _settings(conventions="Home by 14:00")

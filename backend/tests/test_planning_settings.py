@@ -145,9 +145,25 @@ class TestTravelTimes:
             {"place": " Office ", "mode": "Metro", "minutes": 50}, {"place": "office", "mode": "car", "minutes": 20},
         ]))
         assert json.loads(store.values["planning.travel_times"]) == [
-            {"place": "office", "mode": "metro", "minutes": 50}, {"place": "office", "mode": "car", "minutes": 20},
+            {"origin": "home", "place": "office", "mode": "metro", "minutes": 50},
+            {"origin": "home", "place": "office", "mode": "car", "minutes": 20},
         ]
-        assert [(t.place, t.mode, t.minutes) for t in result.travel_times] == [("office", "metro", 50), ("office", "car", 20)]
+        assert [(t.origin, t.place, t.mode, t.minutes) for t in result.travel_times] == [
+            ("home", "office", "metro", 50), ("home", "office", "car", 20),
+        ]
+
+    async def test_trips_between_other_places_keep_their_origin(self, service, store):
+        result = await service.update(PlanningSettingsUpdate(travel_times=[
+            {"origin": " Office ", "place": "School", "mode": "car", "minutes": 20},
+        ]))
+        assert json.loads(store.values["planning.travel_times"]) == [
+            {"origin": "office", "place": "school", "mode": "car", "minutes": 20},
+        ]
+        assert result.travel_times[0].origin == "office"
+
+    async def test_entries_stored_before_origins_existed_start_at_home(self, service, store):
+        store.values["planning.travel_times"] = json.dumps([{"place": "office", "mode": "car", "minutes": 20}])
+        assert (await service.get()).travel_times[0].origin == "home"
 
     async def test_empty_list_or_null_resets(self, service, store):
         store.values["planning.travel_times"] = json.dumps([{"place": "office", "mode": "car", "minutes": 20}])
@@ -163,10 +179,20 @@ class TestTravelTimes:
         with pytest.raises(ValidationError):
             PlanningSettingsUpdate(travel_times=[entry])
 
-    def test_a_place_and_mode_pair_can_only_be_listed_once(self):
+    def test_a_route_and_mode_can_only_be_listed_once(self):
         entry = {"place": "office", "mode": "car", "minutes": 20}
         with pytest.raises(ValidationError, match="listed twice"):
             PlanningSettingsUpdate(travel_times=[entry, {**entry, "place": "Office", "minutes": 25}])
+        with pytest.raises(ValidationError, match="listed twice"):
+            PlanningSettingsUpdate(travel_times=[entry, {**entry, "origin": "HOME"}])
+
+    def test_the_same_place_by_the_same_mode_from_different_origins_is_fine(self):
+        entry = {"place": "school", "mode": "car", "minutes": 20}
+        PlanningSettingsUpdate(travel_times=[entry, {**entry, "origin": "office", "minutes": 25}])
+
+    def test_a_place_cannot_be_its_own_origin(self):
+        with pytest.raises(ValidationError, match="from itself"):
+            PlanningSettingsUpdate(travel_times=[{"origin": "Office", "place": "office", "mode": "car", "minutes": 5}])
 
     def test_the_list_is_capped(self):
         with pytest.raises(ValidationError):
@@ -179,6 +205,13 @@ class TestParseTravelTimes:
             {"place": "office", "mode": "metro", "minutes": 50},
             {"place": "office", "mode": "car", "minutes": 20},
             {"place": "school", "mode": "walk", "minutes": 10},
+        ]
+
+    def test_an_origin_before_the_arrow_replaces_home(self):
+        assert parse_travel_times("office>school:car=20,walk=45;home>office:metro=50") == [
+            {"origin": "office", "place": "school", "mode": "car", "minutes": 20},
+            {"origin": "office", "place": "school", "mode": "walk", "minutes": 45},
+            {"origin": "home", "place": "office", "mode": "metro", "minutes": 50},
         ]
 
     def test_empty_text_is_an_empty_list(self):

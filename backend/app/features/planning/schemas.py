@@ -1,7 +1,7 @@
 import re
 from typing import Any
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 from app.features.organizer.activities.schemas import ActivitySuggestion
 
@@ -15,14 +15,22 @@ CONVENTIONS_MAX_LENGTH = 2000
 MAX_TRAVEL_TIMES = 20
 
 
-class TravelTime(BaseModel):
-    """Door-to-door minutes from home to a place by one mode, e.g. office by metro: 50."""
+HOME = "home"
 
+
+class TravelTime(BaseModel):
+    """Minutes door to door between two places by one mode, e.g. home to office by metro: 50.
+
+    Two-way: the same minutes apply the other way round unless the reverse trip is listed too.
+    `origin` defaults to home; `place` is the destination.
+    """
+
+    origin: str = Field(default=HOME, min_length=1, max_length=60)
     place: str = Field(min_length=1, max_length=60)
     mode: str = Field(min_length=1, max_length=40)
     minutes: int = Field(ge=1, le=600)
 
-    @field_validator("place", "mode")
+    @field_validator("origin", "place", "mode")
     @classmethod
     def _normalised(cls, value: str) -> str:
         value = value.strip().lower()
@@ -30,28 +38,42 @@ class TravelTime(BaseModel):
             raise ValueError("cannot be blank")
         return value
 
+    @model_validator(mode="after")
+    def _distinct_places(self) -> "TravelTime":
+        if self.origin == self.place:
+            raise ValueError(f"{self.place} cannot be travelled to from itself")
+        return self
+
 
 def _unique_travel_times(value: list[TravelTime] | None) -> list[TravelTime] | None:
     seen = set()
     for entry in value or []:
-        if (entry.place, entry.mode) in seen:
-            raise ValueError(f"{entry.place} by {entry.mode} is listed twice")
-        seen.add((entry.place, entry.mode))
+        key = (entry.origin, entry.place, entry.mode)
+        if key in seen:
+            raise ValueError(f"{entry.origin} to {entry.place} by {entry.mode} is listed twice")
+        seen.add(key)
     return value
 
 
 def parse_travel_times(text: str) -> list[dict[str, Any]]:
-    """Parse "office:metro=50,car=20;school:walk=10" into [{place, mode, minutes}, ...]."""
+    """Parse "office:metro=50,car=20;office>school:walk=10" into [{origin, place, mode, minutes}, ...].
+
+    A group is `[origin>]place:mode=minutes[,mode=minutes]`; without an origin the trip starts at home.
+    """
     entries = []
     for group in filter(None, (part.strip() for part in text.split(";"))):
-        place, separator, modes = group.partition(":")
+        route, separator, modes = group.partition(":")
         if not separator or not modes.strip():
-            raise ValueError(f"expected place:mode=minutes[,mode=minutes], got {group!r}")
+            raise ValueError(f"expected [origin>]place:mode=minutes[,mode=minutes], got {group!r}")
+        origin, arrow, place = route.rpartition(">")
         for pair in filter(None, (part.strip() for part in modes.split(","))):
             mode, equals, minutes = pair.partition("=")
             if not equals or not minutes.strip().isdigit():
                 raise ValueError(f"expected mode=minutes (whole minutes), got {pair!r}")
-            entries.append({"place": place, "mode": mode, "minutes": int(minutes)})
+            entry = {"place": place, "mode": mode, "minutes": int(minutes)}
+            if arrow:
+                entry["origin"] = origin
+            entries.append(entry)
     return entries
 
 

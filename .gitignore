@@ -230,7 +230,8 @@ __marimo__/
 # never commit credentials or execution data
 docker_volumes
 n8n_export
-docs
+infra/docs
+docs/plans
 creds_export.json
 
 # MCP OAuth store (test artifacts / local runs)

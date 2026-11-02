@@ -14,7 +14,7 @@ from app.features.planning.saved_plans.service import (
     SavedPlanValidationError,
     summarise,
 )
-from app.features.planning.schemas import PlanningSettingsUpdate
+from app.features.planning.schemas import PlanningSettingsUpdate, parse_travel_times
 from app.features.planning.service import MAX_DAYS, DayPlanService
 from app.features.planning.settings_service import PlanningSettingsService
 
@@ -47,6 +47,12 @@ def _settings_fields(arguments: dict[str, Any]) -> dict[str, Any]:
         if key in arguments:
             raw = str(arguments[key] or "")
             fields[key] = [item.strip() for item in raw.split(",") if item.strip()] or None
+    if "travel_times" in arguments:
+        raw = str(arguments["travel_times"] or "").strip()
+        try:
+            fields["travel_times"] = parse_travel_times(raw) or None
+        except ValueError as exc:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"travel_times: {exc}")
     return fields
 
 

@@ -1910,6 +1910,205 @@
           }
         }
       }
+    },
+    {
+      "name": "28a - Set Travel Times",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Normalised and stored', () => pm.expect(pm.response.json().travel_times).to.eql([{place:'postman office',mode:'metro',minutes:50},{place:'postman office',mode:'car',minutes:20}]));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/planning/settings",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "planning",
+            "settings"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"travel_times\": [\n    {\n      \"place\": \"Postman Office\",\n      \"mode\": \"Metro\",\n      \"minutes\": 50\n    },\n    {\n      \"place\": \"postman office\",\n      \"mode\": \"car\",\n      \"minutes\": 20\n    }\n  ]\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "28b - Day Plan Returns Travel Times",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('In preferences', () => pm.expect(pm.response.json().preferences.travel_times).to.have.length(2));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/planning/day?date=2031-03-10",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "planning",
+            "day"
+          ]
+        }
+      }
+    },
+    {
+      "name": "28c - Duplicate Place And Mode (422)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 422', () => pm.response.to.have.status(422));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/planning/settings",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "planning",
+            "settings"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"travel_times\": [\n    {\n      \"place\": \"postman office\",\n      \"mode\": \"car\",\n      \"minutes\": 20\n    },\n    {\n      \"place\": \"postman office\",\n      \"mode\": \"car\",\n      \"minutes\": 20\n    }\n  ]\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "28d - Zero Minutes (422)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 422', () => pm.response.to.have.status(422));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/planning/settings",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "planning",
+            "settings"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"travel_times\": [\n    {\n      \"place\": \"x\",\n      \"mode\": \"car\",\n      \"minutes\": 0\n    }\n  ]\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "28e - Reset Travel Times",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Reset', () => pm.expect(pm.response.json().travel_times).to.eql([]));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/planning/settings",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "planning",
+            "settings"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"travel_times\": null\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
     }
   ]
 }

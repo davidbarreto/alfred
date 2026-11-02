@@ -364,6 +364,22 @@ class TestSaveEditReviewCommands:
         await handle_day_plan("set_settings", {"conventions": " home by 14:00 "}, plans, settings, saved)
         assert settings.update.call_args.args[0].conventions == "home by 14:00"
 
+    async def test_travel_times_are_parsed_from_the_compact_syntax(self, plans, settings, saved):
+        await handle_day_plan("set_settings", {"travel_times": "office:metro=50,car=20;school:walk=10"}, plans, settings, saved)
+        entries = settings.update.call_args.args[0].travel_times
+        assert [(t.place, t.mode, t.minutes) for t in entries] == [("office", "metro", 50), ("office", "car", 20), ("school", "walk", 10)]
+
+    async def test_empty_travel_times_reset_the_setting(self, plans, settings, saved):
+        await handle_day_plan("set_settings", {"travel_times": ""}, plans, settings, saved)
+        update = settings.update.call_args.args[0]
+        assert "travel_times" in update.model_fields_set and update.travel_times is None
+
+    @pytest.mark.parametrize("text", ["office", "office:metro=x", "a:car=5;a:car=6", "a:car=0"])
+    async def test_bad_travel_times_are_400(self, plans, settings, saved, text):
+        with pytest.raises(HTTPException) as exc:
+            await handle_day_plan("set_settings", {"travel_times": text}, plans, settings, saved)
+        assert exc.value.status_code == 400
+
     def test_new_commands_are_registered(self):
         for action in ("edit", "review", "done", "undone"):
             assert action in COMMAND_DEFINITIONS["day_plan"]

@@ -12,6 +12,47 @@ _WINDOW = re.compile(r"^([01]\d|2[0-3]):[0-5]\d-([01]\d|2[0-3]):[0-5]\d$")
 WEEKDAYS = ("mon", "tue", "wed", "thu", "fri", "sat", "sun")
 DEFAULT_WORKDAYS = WEEKDAYS[:5]
 CONVENTIONS_MAX_LENGTH = 2000
+MAX_TRAVEL_TIMES = 20
+
+
+class TravelTime(BaseModel):
+    """Door-to-door minutes from home to a place by one mode, e.g. office by metro: 50."""
+
+    place: str = Field(min_length=1, max_length=60)
+    mode: str = Field(min_length=1, max_length=40)
+    minutes: int = Field(ge=1, le=600)
+
+    @field_validator("place", "mode")
+    @classmethod
+    def _normalised(cls, value: str) -> str:
+        value = value.strip().lower()
+        if not value:
+            raise ValueError("cannot be blank")
+        return value
+
+
+def _unique_travel_times(value: list[TravelTime] | None) -> list[TravelTime] | None:
+    seen = set()
+    for entry in value or []:
+        if (entry.place, entry.mode) in seen:
+            raise ValueError(f"{entry.place} by {entry.mode} is listed twice")
+        seen.add((entry.place, entry.mode))
+    return value
+
+
+def parse_travel_times(text: str) -> list[dict[str, Any]]:
+    """Parse "office:metro=50,car=20;school:walk=10" into [{place, mode, minutes}, ...]."""
+    entries = []
+    for group in filter(None, (part.strip() for part in text.split(";"))):
+        place, separator, modes = group.partition(":")
+        if not separator or not modes.strip():
+            raise ValueError(f"expected place:mode=minutes[,mode=minutes], got {group!r}")
+        for pair in filter(None, (part.strip() for part in modes.split(","))):
+            mode, equals, minutes = pair.partition("=")
+            if not equals or not minutes.strip().isdigit():
+                raise ValueError(f"expected mode=minutes (whole minutes), got {pair!r}")
+            entries.append({"place": place, "mode": mode, "minutes": int(minutes)})
+    return entries
 
 
 def _check_hh_mm(value: str | None) -> str | None:
@@ -31,6 +72,7 @@ class PlanningSettingsRead(BaseModel):
     office_days_per_week: int | None = None
     office_min_minutes: int | None = None
     conventions: str | None = None
+    travel_times: list[TravelTime] = []
 
 
 class PlanningSettingsUpdate(BaseModel):
@@ -46,6 +88,7 @@ class PlanningSettingsUpdate(BaseModel):
     office_days_per_week: int | None = Field(default=None, ge=1, le=7)
     office_min_minutes: int | None = Field(default=None, ge=0, le=1440)
     conventions: str | None = Field(default=None, max_length=CONVENTIONS_MAX_LENGTH)
+    travel_times: list[TravelTime] | None = Field(default=None, max_length=MAX_TRAVEL_TIMES)
 
     @field_validator("wake_time", "sleep_time")
     @classmethod
@@ -71,6 +114,11 @@ class PlanningSettingsUpdate(BaseModel):
         if unknown:
             raise ValueError(f"expected weekdays among {', '.join(WEEKDAYS)}, got {unknown!r}")
         return [day for day in WEEKDAYS if day in days]
+
+    @field_validator("travel_times")
+    @classmethod
+    def _travel_times(cls, value: list[TravelTime] | None) -> list[TravelTime] | None:
+        return _unique_travel_times(value)
 
     @field_validator("conventions")
     @classmethod

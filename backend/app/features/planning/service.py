@@ -329,6 +329,7 @@ def _preferences(settings: Any) -> dict[str, Any]:
         "work_target_minutes": settings.work_target_minutes,
         "preferred_work_windows": settings.preferred_work_windows or None,
         "conventions": settings.conventions,
+        "travel_times": [t.model_dump() for t in settings.travel_times] or None,
     }
     return {k: v for k, v in prefs.items() if v is not None}
 

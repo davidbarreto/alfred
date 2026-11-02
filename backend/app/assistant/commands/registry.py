@@ -163,6 +163,7 @@ PLANNING_SETTINGS_FLAGS = {
     "--wake": "wake_time", "--sleep": "sleep_time", "--work-target": "work_target_minutes",
     "--work-windows": "preferred_work_windows", "--workdays": "workdays", "--work-tag": "work_tag", "--office-tag": "office_tag",
     "--office-days": "office_days_per_week", "--office-min": "office_min_minutes", "--conventions": "conventions",
+    "--travel": "travel_times",
 }
 _PLANNING_SETTINGS_DETAILS = (
     "wake_time and sleep_time are HH:MM; work_target_minutes is the daily work target in minutes (default 480); "
@@ -171,7 +172,10 @@ _PLANNING_SETTINGS_DETAILS = (
     "office_tag (default office) name the event tags that count as work time and office days; office_days_per_week "
     "(1-7) turns the office section on and office_min_minutes is the minimum length of an event to count as an "
     "office day; conventions is free text (max 2000 characters) with the user's standing planning rules, returned in "
-    "the preferences of every day plan get so each client applies them without being told again. "
+    "the preferences of every day plan get so each client applies them without being told again; travel_times lists the door-to-door "
+    "minutes from home to a place by each mode, written place:mode=minutes[,mode=minutes];place2:... (e.g. office:metro=50,car=20;school:walk=10; "
+    "up to 20 entries, empty resets). They come back in the preferences as [{place, mode, minutes}] so clients derive leave-home times "
+    "and transport blocks without asking. "
     "Unset values switch the related section off."
 )
 _DAY_PLAN_GET_DETAILS = (

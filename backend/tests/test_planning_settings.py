@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock
 import pytest
 from pydantic import ValidationError
 
-from app.features.planning.schemas import PlanningSettingsUpdate
+from app.features.planning.schemas import PlanningSettingsUpdate, parse_travel_times
 from app.features.planning.settings_service import (
     DEFAULT_OFFICE_TAG,
     DEFAULT_WORK_TAG,
@@ -134,3 +134,57 @@ class TestConventions:
     def test_length_is_capped(self):
         with pytest.raises(ValidationError):
             PlanningSettingsUpdate(conventions="x" * 2001)
+
+
+class TestTravelTimes:
+    async def test_empty_by_default(self, service):
+        assert (await service.get()).travel_times == []
+
+    async def test_stored_as_json_and_read_back(self, service, store):
+        result = await service.update(PlanningSettingsUpdate(travel_times=[
+            {"place": " Office ", "mode": "Metro", "minutes": 50}, {"place": "office", "mode": "car", "minutes": 20},
+        ]))
+        assert json.loads(store.values["planning.travel_times"]) == [
+            {"place": "office", "mode": "metro", "minutes": 50}, {"place": "office", "mode": "car", "minutes": 20},
+        ]
+        assert [(t.place, t.mode, t.minutes) for t in result.travel_times] == [("office", "metro", 50), ("office", "car", 20)]
+
+    async def test_empty_list_or_null_resets(self, service, store):
+        store.values["planning.travel_times"] = json.dumps([{"place": "office", "mode": "car", "minutes": 20}])
+        assert (await service.update(PlanningSettingsUpdate(travel_times=[]))).travel_times == []
+        store.values["planning.travel_times"] = json.dumps([{"place": "office", "mode": "car", "minutes": 20}])
+        assert (await service.update(PlanningSettingsUpdate(travel_times=None))).travel_times == []
+
+    @pytest.mark.parametrize("entry", [
+        {"place": "", "mode": "car", "minutes": 20}, {"place": "office", "mode": "  ", "minutes": 20},
+        {"place": "office", "mode": "car", "minutes": 0}, {"place": "office", "mode": "car", "minutes": 601},
+    ])
+    def test_invalid_entries_rejected(self, entry):
+        with pytest.raises(ValidationError):
+            PlanningSettingsUpdate(travel_times=[entry])
+
+    def test_a_place_and_mode_pair_can_only_be_listed_once(self):
+        entry = {"place": "office", "mode": "car", "minutes": 20}
+        with pytest.raises(ValidationError, match="listed twice"):
+            PlanningSettingsUpdate(travel_times=[entry, {**entry, "place": "Office", "minutes": 25}])
+
+    def test_the_list_is_capped(self):
+        with pytest.raises(ValidationError):
+            PlanningSettingsUpdate(travel_times=[{"place": f"p{i}", "mode": "car", "minutes": 5} for i in range(21)])
+
+
+class TestParseTravelTimes:
+    def test_places_separated_by_semicolons_and_modes_by_commas(self):
+        assert parse_travel_times("office:metro=50,car=20; school:walk=10") == [
+            {"place": "office", "mode": "metro", "minutes": 50},
+            {"place": "office", "mode": "car", "minutes": 20},
+            {"place": "school", "mode": "walk", "minutes": 10},
+        ]
+
+    def test_empty_text_is_an_empty_list(self):
+        assert parse_travel_times("  ") == []
+
+    @pytest.mark.parametrize("text", ["office", "office:", "office:metro", "office:metro=fifty", "office:metro=-5", "office:metro=5.5"])
+    def test_malformed_text_is_rejected(self, text):
+        with pytest.raises(ValueError):
+            parse_travel_times(text)

@@ -38,6 +38,7 @@ class PlanningSettingsService:
             office_days_per_week=int(raw["office_days_per_week"]) if raw["office_days_per_week"] else None,
             office_min_minutes=int(raw["office_min_minutes"]) if raw["office_min_minutes"] else None,
             conventions=raw["conventions"] or None,
+            travel_times=json.loads(raw["travel_times"]) if raw["travel_times"] else [],
         )
 
     async def update(self, data: PlanningSettingsUpdate) -> PlanningSettingsRead:
@@ -45,7 +46,7 @@ class PlanningSettingsService:
         for field, value in changes.items():
             if value is None:
                 stored = ""
-            elif field in ("preferred_work_windows", "workdays"):
+            elif field in ("preferred_work_windows", "workdays", "travel_times"):
                 stored = json.dumps(value) if value else ""
             else:
                 stored = str(value)

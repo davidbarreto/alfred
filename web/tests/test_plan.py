@@ -205,6 +205,13 @@ class TestMissedBlocks:
         text = client.get("/plan?date=2026-10-21").text
         assert 'name="conventions"' in text and "Home by 14:00" in text
 
+    def test_settings_form_lists_travel_times_one_per_line(self, client, mock_api):
+        mock_api["get"].side_effect = _routes([], [], _settings(travel_times=[
+            {"place": "office", "mode": "metro", "minutes": 50}, {"place": "office", "mode": "car", "minutes": 20},
+        ]))
+        text = client.get("/plan?date=2026-10-21").text
+        assert 'name="travel_times"' in text and "office, metro, 50\noffice, car, 20" in text
+
     def test_work_and_transport_get_their_own_icons(self, client, mock_api):
         items = [
             {"start": "2026-10-21T08:00:00+01:00", "end": "2026-10-21T08:30:00+01:00", "kind": "transport", "ref_id": None, "title": "Commute", "note": None},

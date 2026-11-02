@@ -26,6 +26,7 @@ def mock_service():
             ],
         )
     ]
+    svc.relink_orphans.return_value = 4
     svc.get_slots.return_value = [InstallmentSlot(position=1, status="missing", expected_month="2025-01")]
     return svc
 
@@ -65,3 +66,11 @@ class TestGetSlots:
     def test_unknown_plan_is_404(self, client, mock_service):
         mock_service.get_slots.return_value = None
         assert client.get("/finance/installment-plans/9/slots", headers=AUTH).status_code == 404
+
+
+class TestRelink:
+    def test_returns_linked_count(self, client, mock_service):
+        response = client.post("/finance/installment-plans/relink", headers=AUTH)
+        assert response.status_code == 200
+        assert response.json() == {"linked": 4}
+        mock_service.relink_orphans.assert_awaited_once()

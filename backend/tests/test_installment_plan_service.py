@@ -268,3 +268,37 @@ class TestSlotsAndMissing:
             (2, 2, "missing"),
         ]
         assert months[0].items[0].plan_ref == "00001"
+
+
+class TestRelinkOrphans:
+    async def test_links_orphans_to_plan_with_same_account_and_ref(self):
+        service = _service()
+        service._repo.list.return_value = [
+            (_plan(id=27, account_id=5, plan_ref="00009"), 4),
+            (_plan(id=28, account_id=5, plan_ref="00010"), 4),
+        ]
+        orphans = [
+            _txn(1, None, "REVOLUT (00009/2)", datetime(2024, 8, 30)),
+            _txn(2, None, "REVOLUT (00009/4)", datetime(2024, 10, 31)),
+            _txn(3, None, "RYANAIR (00010/2)", datetime(2024, 8, 30)),
+            _txn(4, None, "OTHER (00099/1)", datetime(2024, 8, 30)),
+        ]
+        for o in orphans:
+            o.account_id = 5
+        service._repo.list_unlinked_installment_transactions.return_value = orphans
+
+        assert await service.relink_orphans() == 3
+
+        service._repo.link_transactions.assert_any_await(27, [1, 2])
+        service._repo.link_transactions.assert_any_await(28, [3])
+        service._repo.recompute_status.assert_any_await(27)
+
+    async def test_other_account_with_same_ref_is_not_linked(self):
+        service = _service()
+        service._repo.list.return_value = [(_plan(id=27, account_id=5, plan_ref="00009"), 0)]
+        orphan = _txn(1, None, "X (00009/2)", datetime(2024, 8, 30))
+        orphan.account_id = 6
+        service._repo.list_unlinked_installment_transactions.return_value = [orphan]
+
+        assert await service.relink_orphans() == 0
+        service._repo.link_transactions.assert_not_awaited()

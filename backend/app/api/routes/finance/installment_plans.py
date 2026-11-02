@@ -11,6 +11,7 @@ from app.features.finance.installment_plans.schemas import (
     InstallmentPlanUpdate,
     InstallmentSlot,
     MissingInstallmentsMonth,
+    RelinkResult,
 )
 
 router = APIRouter(
@@ -30,6 +31,11 @@ async def list_missing_installments(
     service: InstallmentPlanServiceDep, account_id: Annotated[int | None, Query()] = None
 ):
     return await service.get_missing(account_id=account_id)
+
+
+@router.post("/relink", response_model=RelinkResult)
+async def relink_installment_orphans(service: InstallmentPlanServiceDep):
+    return RelinkResult(linked=await service.relink_orphans())
 
 
 @router.post("", response_model=InstallmentPlanRead, status_code=status.HTTP_201_CREATED)

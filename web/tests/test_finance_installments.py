@@ -158,6 +158,17 @@ class TestInstallmentPlansMissing:
         assert "Cetelem — sofa" in resp.text
 
 
+class TestRelinkInstallments:
+    def test_posts_to_backend_and_redirects(self, client, mock_api):
+        mock_api["post"].return_value = {"linked": 3}
+
+        resp = client.post("/finance/installments/relink", follow_redirects=False)
+
+        assert resp.status_code == 303
+        assert resp.headers["location"] == "/finance/installments"
+        mock_api["post"].assert_awaited_once_with("/finance/installment-plans/relink")
+
+
 class TestCreateInstallmentPlan:
     def test_creates_and_redirects(self, client, mock_api):
         mock_api["post"].return_value = _plan()

@@ -1,7 +1,7 @@
 from datetime import date
 from decimal import Decimal
 
-from app.features.finance.installment_plans.gaps import CapturedInstallment, build_slots, parse_position
+from app.features.finance.installment_plans.gaps import CapturedInstallment, build_slots, parse_plan_ref, parse_position
 
 
 def _cap(position: int, day: date) -> CapturedInstallment:
@@ -18,6 +18,14 @@ class TestParsePosition:
 
     def test_ignores_position_not_at_the_end(self):
         assert parse_position("SHOP (00014/3) EXTRA") is None
+
+
+class TestParsePlanRef:
+    def test_reads_plan_ref(self):
+        assert parse_plan_ref("COMPRA 4681 SAMPLE SHOP (00014/3)") == "00014"
+
+    def test_none_without_ref(self):
+        assert parse_plan_ref("COMPRA 4681 SAMPLE SHOP") is None
 
 
 class TestBuildSlots:

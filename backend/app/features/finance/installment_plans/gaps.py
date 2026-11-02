@@ -32,6 +32,14 @@ def parse_position(description: str | None) -> int | None:
     return int(match.group(2)) if match else None
 
 
+def parse_plan_ref(description: str | None) -> str | None:
+    """Plan reference from a trailing ``(<plan_ref>/<position>)``, else None."""
+    if not description:
+        return None
+    match = _POSITION_RE.search(description)
+    return match.group(1) if match else None
+
+
 def _month_index(day: date) -> int:
     return day.year * 12 + day.month - 1
 

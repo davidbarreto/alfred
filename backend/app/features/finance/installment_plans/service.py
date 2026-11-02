@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.features.finance.imports.repository import ImportRepository
 from app.features.finance.imports.schemas import ImportRuleCreate
 from app.features.finance.installment_plans.repository import InstallmentPlanRepository
-from app.features.finance.installment_plans.gaps import CapturedInstallment, build_slots, parse_position
+from app.features.finance.installment_plans.gaps import CapturedInstallment, build_slots, parse_plan_ref, parse_position
 from app.features.finance.installment_plans.schemas import (
     InstallmentPlanCreate,
     InstallmentPlanRead,
@@ -171,6 +171,27 @@ class InstallmentPlanService:
                     )
         logger.debug("Missing installments: months=%d", len(by_month))
         return [MissingInstallmentsMonth(month=month, items=by_month[month]) for month in sorted(by_month)]
+
+    async def relink_orphans(self) -> int:
+        """Link already-imported installment transactions that never joined their plan.
+
+        Before the rule-ordering fix, a generic rule listed ahead of a plan's own rule
+        hid the plan link, and a re-import skips those rows as duplicates. Matches by
+        account + plan_ref in the description. Interest/duty totals are not recomputed
+        (the per-row figures only exist in the original statement).
+        """
+        plans = {(plan.account_id, plan.plan_ref): plan for plan, _ in await self._repo.list() if plan.plan_ref}
+        to_link: dict[int, list[int]] = defaultdict(list)
+        for txn in await self._repo.list_unlinked_installment_transactions():
+            plan = plans.get((txn.account_id, parse_plan_ref(txn.bank_description)))
+            if plan is not None:
+                to_link[plan.id].append(txn.id)
+        for plan_id, transaction_ids in to_link.items():
+            await self._repo.link_transactions(plan_id, transaction_ids)
+            await self._repo.recompute_status(plan_id)
+        linked = sum(len(ids) for ids in to_link.values())
+        logger.info("Installment orphans relinked: transactions=%d plans=%d", linked, len(to_link))
+        return linked
 
     async def update(
         self, plan_id: int, description: str | None, total_installments: int | None

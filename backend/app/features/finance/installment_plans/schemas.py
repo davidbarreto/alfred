@@ -80,6 +80,10 @@ class MissingInstallmentsMonth(BaseModel):
     items: list[MissingInstallment]
 
 
+class RelinkResult(BaseModel):
+    linked: int
+
+
 class InstallmentPlanFilters:
     def __init__(
         self,

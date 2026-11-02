@@ -97,6 +97,24 @@ class InstallmentPlanRepository:
         )
         return list(result.scalars().all())
 
+    async def list_unlinked_installment_transactions(self) -> list[Transaction]:
+        """Non-linked transactions whose description ends in ``(<plan_ref>/<position>)``."""
+        result = await self._session.execute(
+            select(Transaction).where(
+                Transaction.installment_plan_id.is_(None),
+                Transaction.amount != 0,
+                Transaction.bank_description.op("~")(r"\(\d+/\d+\)\s*$"),
+            )
+        )
+        return list(result.scalars().all())
+
+    async def link_transactions(self, plan_id: int, transaction_ids: list[int]) -> None:
+        for transaction_id in transaction_ids:
+            transaction = await self._session.get(Transaction, transaction_id)
+            if transaction is not None:
+                transaction.installment_plan_id = plan_id
+        await self._session.commit()
+
     async def list_open_by_account(self, account_id: int) -> list[tuple[InstallmentPlan, int]]:
         return await self.list(account_id=account_id, status="open")
 

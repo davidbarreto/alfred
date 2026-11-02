@@ -64,6 +64,10 @@
     <h2 class="text-sm font-semibold text-gray-900 mb-1">Statements to import</h2>
     <p class="text-xs text-gray-400 mb-3">
       Installments that should exist but aren't captured, grouped by the statement month that contains them.
+      If a statement is already imported, the installment may exist but not be linked to its plan:
+      <form method="post" action="/finance/installments/relink" class="inline">
+        <button type="submit" class="underline text-[#378ADD]">link unlinked installments</button>
+      </form>.
       <span class="text-amber-700">Missing</span> sits between captured installments, so it certainly exists;
       <span class="text-gray-500">overdue</span> is after the last captured one and may just not be imported yet.
     </p>

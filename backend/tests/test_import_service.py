@@ -1872,6 +1872,39 @@ class TestApplyRulesInstallmentPlan:
         assert result.rows[0].installment_plan_id is None
 
 
+class TestApplyRulesPlanRuleShadowedByGenericRule:
+    """Rules are first-match-wins, but a plan rule must still link the row when a
+    generic category rule earlier in the list also matches it -- otherwise installments
+    of a merchant with its own category rule (e.g. RYANAIR) never join their plan."""
+
+    @pytest.mark.asyncio
+    async def test_plan_link_applied_when_generic_rule_matches_first(self):
+        rows = [_row(raw_description="COMPRA 4681 RYANAIR ABC (00010/2)", amount=Decimal("-18.21"))]
+        service = _service(_statement(rows))
+        service._repo.list_rules.return_value = [
+            _rule(pattern="RYANAIR", category_id=9, installment_plan_id=None, transfer_account_id=None),
+            _rule(pattern="00010", installment_plan_id=28, category_id=None, transfer_account_id=None),
+        ]
+
+        result = await service.preview(1, "x.csv", b"data")
+
+        assert result.rows[0].installment_plan_id == 28
+        assert result.rows[0].category_id == 9
+
+    @pytest.mark.asyncio
+    async def test_plan_link_not_applied_when_no_plan_rule_matches(self):
+        rows = [_row(raw_description="COMPRA 4681 RYANAIR ABC (00011/2)", amount=Decimal("-18.21"))]
+        service = _service(_statement(rows))
+        service._repo.list_rules.return_value = [
+            _rule(pattern="RYANAIR", category_id=9, installment_plan_id=None, transfer_account_id=None),
+            _rule(pattern="00010", installment_plan_id=28, category_id=None, transfer_account_id=None),
+        ]
+
+        result = await service.preview(1, "x.csv", b"data")
+
+        assert result.rows[0].installment_plan_id is None
+
+
 def _plan_action(**kwargs) -> InstallmentPlanActionCommit:
     defaults = dict(
         plan_ref="00024",

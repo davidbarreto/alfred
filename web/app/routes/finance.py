@@ -1568,6 +1568,15 @@ async def delete_installment_plan(plan_id: int):
     return RedirectResponse("/finance/installments", status_code=303)
 
 
+@router.post("/installments/relink", response_class=HTMLResponse)
+async def relink_installment_orphans():
+    try:
+        await api.post("/finance/installment-plans/relink")
+    except httpx.HTTPError:
+        pass
+    return RedirectResponse("/finance/installments", status_code=303)
+
+
 @router.post("/installments/{plan_id}/transactions/{transaction_id}/unlink", response_class=HTMLResponse)
 async def unlink_installment_plan_transaction(plan_id: int, transaction_id: int):
     try:

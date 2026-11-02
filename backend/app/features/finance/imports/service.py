@@ -543,6 +543,13 @@ class ImportService:
                     row.installment_plan_id = rule.installment_plan_id
                 row.suggestion_source = "rule_auto" if rule.mode == "auto" else "rule_suggest"
                 break
+            if row.installment_plan_id is None:
+                # First match wins above, so a generic rule (e.g. a merchant's category)
+                # listed before the plan's own rule would otherwise hide the plan link.
+                for rule in rules:
+                    if rule.installment_plan_id is not None and _rule_matches(rule, row.bank_description, row.amount):
+                        row.installment_plan_id = rule.installment_plan_id
+                        break
 
     async def _apply_knn(
         self, rows: list[ImportPreviewRow], categories: dict[int, str]

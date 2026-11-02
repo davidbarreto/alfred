@@ -196,6 +196,10 @@
           class="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white w-full focus:outline-none focus:ring-1 focus:ring-[#378ADD]"
         />
       </div>
+      <div id="event-moves-row" class="hidden">
+        <label class="text-xs text-gray-500 mb-1 block">Moved occurrences <span class="text-gray-300">(click to put one back)</span></label>
+        <div id="event-moves-list" class="flex flex-wrap gap-1.5"></div>
+      </div>
       <div id="event-skips-row" class="hidden">
         <label class="text-xs text-gray-500 mb-1 block">Skipped occurrences <span class="text-gray-300">(click to bring one back)</span></label>
         <div id="event-skips-list" class="flex flex-wrap gap-1.5"></div>
@@ -336,6 +340,39 @@
   </form>
 </dialog>
 
+<!-- Move one occurrence -->
+<dialog id="move-occurrence-modal" class="modal">
+  <div class="modal-box bg-white rounded-xl border border-gray-200 shadow-lg max-w-sm w-full p-6">
+    <h3 class="text-sm font-semibold text-gray-900">Move this occurrence</h3>
+    <p id="move-occurrence-title" class="text-xs text-gray-400 mb-1"></p>
+    <p class="text-xs text-gray-400 mb-4">Only this one moves; the rest of the series stays. It is also changed in Google Calendar. Times are in the app's time zone.</p>
+    <form id="move-occurrence-form" onsubmit="submitMoveOccurrence(event)" class="space-y-3">
+      <input type="hidden" name="event_id">
+      <input type="hidden" name="occurrence_date">
+      <div>
+        <label class="text-xs text-gray-500 mb-1 block">Date</label>
+        <input name="date" type="date" required class="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white w-full focus:outline-none focus:ring-1 focus:ring-[#378ADD]">
+      </div>
+      <div class="flex gap-3">
+        <div class="flex-1">
+          <label class="text-xs text-gray-500 mb-1 block">Start</label>
+          <input name="start_time" type="time" required class="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white w-full focus:outline-none focus:ring-1 focus:ring-[#378ADD]">
+        </div>
+        <div class="flex-1">
+          <label class="text-xs text-gray-500 mb-1 block">End</label>
+          <input name="end_time" type="time" required class="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white w-full focus:outline-none focus:ring-1 focus:ring-[#378ADD]">
+        </div>
+      </div>
+      <p id="move-occurrence-error" class="hidden text-xs text-red-600"></p>
+      <div class="flex justify-end gap-2 pt-1">
+        <button type="button" onclick="document.getElementById('move-occurrence-modal').close()" class="text-xs text-gray-500 px-3 py-2">Cancel</button>
+        <button type="submit" class="text-xs bg-[#378ADD] text-white rounded-lg px-4 py-2">Move</button>
+      </div>
+    </form>
+  </div>
+  <form method="dialog" class="modal-backdrop"><button>close</button></form>
+</dialog>
+
 <!-- Day detail modal -->
 <dialog id="calendar-day-modal" class="modal">
   <div class="modal-box bg-white rounded-xl border border-gray-200 shadow-lg max-w-2xl w-full p-6">
@@ -398,6 +435,7 @@ function _setEventRecurrenceChip(value) {
 function openNewEvent(prefillDate) {
   document.getElementById("event-error").classList.add("hidden");
   document.getElementById("event-skips-row").classList.add("hidden");
+  document.getElementById("event-moves-row").classList.add("hidden");
   document.getElementById("new-event-form").reset();
   document.getElementById("event-form-title").textContent = "New event";
   document.getElementById("event-id-label").textContent = "";
@@ -427,6 +465,7 @@ function openEditEvent(ev) {
   form.querySelector('[name="location"]').value = ev.location || "";
   form.querySelector('[name="tags"]').value = (ev.tags || []).join(", ");
   _renderSkippedDates(ev);
+  _renderMovedDates(ev);
   form.querySelector('[name="notification_profile"]').value = ev.notification_profile || "";
   form.querySelector('[name="availability"]').value = ev.availability || "";
   form.querySelector('[name="presence"]').value = ev.presence || "in_person";
@@ -485,6 +524,59 @@ function endSeriesFrom(eventId, occurrenceDate) {
   const body = new FormData();
   body.append("from_date", occurrenceDate);
   _postEventAction(`/calendar/${eventId}/end-series`, "POST", body, "Failed to end the series.");
+}
+
+function openMoveOccurrence(occurrence) {
+  const form = document.getElementById("move-occurrence-form");
+  form.querySelector('[name="event_id"]').value = occurrence.id;
+  form.querySelector('[name="occurrence_date"]').value = occurrence.occurrence_date;
+  form.querySelector('[name="date"]').value = occurrence.start.slice(0, 10);
+  form.querySelector('[name="start_time"]').value = occurrence.start.slice(11, 16);
+  form.querySelector('[name="end_time"]').value = occurrence.end.slice(11, 16);
+  document.getElementById("move-occurrence-title").textContent = `${occurrence.title} · ${occurrence.occurrence_date}`;
+  document.getElementById("move-occurrence-error").classList.add("hidden");
+  document.getElementById("calendar-day-modal").close();
+  document.getElementById("move-occurrence-modal").showModal();
+}
+
+async function submitMoveOccurrence(event) {
+  event.preventDefault();
+  const form = event.target;
+  const day = form.querySelector('[name="date"]').value;
+  const body = new FormData();
+  body.append("occurrence_date", form.querySelector('[name="occurrence_date"]').value);
+  body.append("start_datetime", `${day}T${form.querySelector('[name="start_time"]').value}:00`);
+  body.append("end_datetime", `${day}T${form.querySelector('[name="end_time"]').value}:00`);
+  const error = document.getElementById("move-occurrence-error");
+  error.classList.add("hidden");
+  const res = await fetch(`/calendar/${form.querySelector('[name="event_id"]').value}/move`, { method: "POST", body });
+  if (!res.ok) {
+    error.textContent = (await res.text()) || "Failed to move this occurrence.";
+    error.classList.remove("hidden");
+    return;
+  }
+  window.location.reload();
+}
+
+function putOccurrenceBack(eventId, occurrenceDate) {
+  _postEventAction(`/calendar/${eventId}/move/${occurrenceDate}`, "DELETE", null, "Failed to put this occurrence back.");
+}
+
+function _renderMovedDates(ev) {
+  const row = document.getElementById("event-moves-row");
+  const list = document.getElementById("event-moves-list");
+  list.replaceChildren();
+  const moves = ev.overrides || [];
+  row.classList.toggle("hidden", moves.length === 0);
+  moves.forEach(move => {
+    const chip = document.createElement("button");
+    chip.type = "button";
+    chip.className = "text-xs px-2 py-1 rounded-full border border-gray-200 text-gray-500 hover:bg-gray-50";
+    chip.textContent = `${move.occurrence_date} → ${move.start_datetime.slice(0, 10)} ${move.start_datetime.slice(11, 16)} ↶`;
+    chip.title = "Put this occurrence back at its usual time";
+    chip.onclick = () => putOccurrenceBack(ev.id, move.occurrence_date);
+    list.appendChild(chip);
+  });
 }
 
 function _renderSkippedDates(ev) {

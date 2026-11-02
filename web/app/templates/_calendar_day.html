@@ -29,10 +29,10 @@
       <i class="ti ti-pencil" style="font-size:0.85rem"></i>
     </button>
     {% if ev.recurrence_rule %}
-    <button onclick='skipOccurrence({{ ev.id }}, {{ ev.start_datetime[:10] | tojson }})' title="Skip this occurrence" class="text-white/60 hover:text-white flex-shrink-0">
+    <button onclick='skipOccurrence({{ ev.id }}, {{ ev.occurrence_date | tojson }})' title="Skip this occurrence" class="text-white/60 hover:text-white flex-shrink-0">
       <i class="ti ti-player-skip-forward" style="font-size:0.85rem"></i>
     </button>
-    <button onclick='endSeriesFrom({{ ev.id }}, {{ ev.start_datetime[:10] | tojson }})' title="End the series from this one" class="text-white/60 hover:text-white flex-shrink-0">
+    <button onclick='endSeriesFrom({{ ev.id }}, {{ ev.occurrence_date | tojson }})' title="End the series from this one" class="text-white/60 hover:text-white flex-shrink-0">
       <i class="ti ti-calendar-off" style="font-size:0.85rem"></i>
     </button>
     {% endif %}
@@ -53,7 +53,7 @@
       {{ ev.display_start[11:16] }}&ndash;{{ ev.display_end[11:16] }}
     </span>
     <div class="min-w-0 flex-1">
-      <div class="text-sm text-gray-800 break-words">{{ ev.title }}</div>
+      <div class="text-sm text-gray-800 break-words">{{ ev.title }}{% if ev.moved %} <span class="text-[10px] px-1.5 py-0.5 rounded bg-[#E6F1FB] text-[#0C447C] align-middle">moved</span>{% endif %}</div>
       {% if ev.location %}
       <div class="text-xs text-gray-400 truncate">{{ ev.location }}</div>
       {% endif %}
@@ -72,10 +72,18 @@
       <i class="ti ti-pencil" style="font-size:0.85rem"></i>
     </button>
     {% if ev.recurrence_rule %}
-    <button onclick='skipOccurrence({{ ev.id }}, {{ ev.start_datetime[:10] | tojson }})' title="Skip this occurrence" class="text-gray-300 hover:text-gray-500 flex-shrink-0">
+    {% if ev.moved %}
+    <button onclick='putOccurrenceBack({{ ev.id }}, {{ ev.occurrence_date | tojson }})' title="Put this occurrence back at its usual time" class="text-[#378ADD] hover:text-[#0C447C] flex-shrink-0">
+      <i class="ti ti-arrow-back-up" style="font-size:0.85rem"></i>
+    </button>
+    {% endif %}
+    <button onclick='openMoveOccurrence({{ {"id": ev.id, "title": ev.title, "occurrence_date": ev.occurrence_date, "start": ev.start_datetime, "end": ev.end_datetime} | tojson }})' title="Move this occurrence" class="text-gray-300 hover:text-gray-500 flex-shrink-0">
+      <i class="ti ti-clock-edit" style="font-size:0.85rem"></i>
+    </button>
+    <button onclick='skipOccurrence({{ ev.id }}, {{ ev.occurrence_date | tojson }})' title="Skip this occurrence" class="text-gray-300 hover:text-gray-500 flex-shrink-0">
       <i class="ti ti-player-skip-forward" style="font-size:0.85rem"></i>
     </button>
-    <button onclick='endSeriesFrom({{ ev.id }}, {{ ev.start_datetime[:10] | tojson }})' title="End the series from this one" class="text-gray-300 hover:text-gray-500 flex-shrink-0">
+    <button onclick='endSeriesFrom({{ ev.id }}, {{ ev.occurrence_date | tojson }})' title="End the series from this one" class="text-gray-300 hover:text-gray-500 flex-shrink-0">
       <i class="ti ti-calendar-off" style="font-size:0.85rem"></i>
     </button>
     {% endif %}

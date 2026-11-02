@@ -824,3 +824,95 @@ class TestPlanningFields:
         mock_api["get"].side_effect = fake_get
 
         assert client.get("/calendar?year=2026&month=7").status_code == 200
+
+
+class TestMoveOccurrence:
+    def test_posts_the_original_date_and_new_span_to_the_backend(self, client, mock_api):
+        resp = client.post("/calendar/3/move", data={
+            "occurrence_date": "2026-11-06", "start_datetime": "2026-11-06T16:00:00", "end_datetime": "2026-11-06T16:30:00",
+        })
+
+        assert resp.status_code == 204
+        mock_api["post"].assert_awaited_once_with(
+            "/organizer/calendar-events/3/overrides",
+            json={"occurrence_date": "2026-11-06", "start_datetime": "2026-11-06T16:00:00", "end_datetime": "2026-11-06T16:30:00"},
+            timeout=30.0,
+        )
+
+    def test_relays_the_backend_message(self, client, mock_api):
+        mock_api["post"].side_effect = _http_error(400, "The event has no occurrence on 2026-11-07")
+
+        resp = client.post("/calendar/3/move", data={
+            "occurrence_date": "2026-11-07", "start_datetime": "2026-11-07T16:00:00", "end_datetime": "2026-11-07T16:30:00",
+        })
+
+        assert resp.status_code == 422
+        assert "no occurrence on 2026-11-07" in resp.text
+
+    def test_a_network_failure_gets_a_generic_message(self, client, mock_api):
+        mock_api["post"].side_effect = httpx.ConnectError("down")
+
+        resp = client.post("/calendar/3/move", data={
+            "occurrence_date": "2026-11-06", "start_datetime": "2026-11-06T16:00:00", "end_datetime": "2026-11-06T16:30:00",
+        })
+
+        assert resp.status_code == 422 and "Failed to move this occurrence." in resp.text
+
+    def test_requires_all_fields(self, client, mock_api):
+        assert client.post("/calendar/3/move", data={"occurrence_date": "2026-11-06"}).status_code == 422
+        mock_api["post"].assert_not_called()
+
+    def test_putting_back_deletes_the_override_on_the_backend(self, client, mock_api):
+        resp = client.delete("/calendar/3/move/2026-11-06")
+
+        assert resp.status_code == 204
+        mock_api["delete"].assert_awaited_once_with("/organizer/calendar-events/3/overrides/2026-11-06", timeout=30.0)
+
+    def test_putting_back_relays_the_backend_message(self, client, mock_api):
+        mock_api["delete"].side_effect = _http_error(404, "2026-11-06 is not a moved date of this event", "DELETE")
+
+        resp = client.delete("/calendar/3/move/2026-11-06")
+
+        assert resp.status_code == 422 and "not a moved date" in resp.text
+
+
+class TestMoveInTheDayView:
+    def _recurring(self, **extra):
+        ev = _event(id=7, title="Pickup", start="2026-11-06T16:00:00+00:00", end="2026-11-06T16:30:00+00:00")
+        ev["recurrence_rule"] = "FREQ=WEEKLY"
+        ev.update(extra)
+        return ev
+
+    def test_recurring_timed_events_offer_move_with_the_series_date(self, client, mock_api):
+        mock_api["get"].return_value = [self._recurring()]
+
+        text = client.get("/calendar/day/2026-11-06").text
+
+        assert "openMoveOccurrence(" in text and "Move this occurrence" in text
+        assert "putOccurrenceBack(7" not in text and ">moved<" not in text
+
+    def test_a_moved_occurrence_is_badged_and_acts_on_its_original_date(self, client, mock_api):
+        moved = self._recurring(overrides=[{
+            "occurrence_date": "2026-11-13", "start_datetime": "2026-11-06T16:00:00+00:00", "end_datetime": "2026-11-06T16:30:00+00:00",
+        }])
+        mock_api["get"].return_value = [moved]
+
+        text = client.get("/calendar/day/2026-11-06").text
+
+        assert ">moved<" in text
+        assert 'putOccurrenceBack(7, "2026-11-13")' in text
+        assert 'skipOccurrence(7, "2026-11-13")' in text
+        assert 'endSeriesFrom(7, "2026-11-13")' in text
+
+    def test_single_and_all_day_events_cannot_be_moved(self, client, mock_api):
+        all_day = self._recurring(all_day=True, start="2026-11-06T00:00:00+00:00", end="2026-11-06T23:59:59+00:00")
+        mock_api["get"].return_value = [_event(id=8, title="Dentist", start="2026-11-06T09:00:00+00:00", end="2026-11-06T09:30:00+00:00"), all_day]
+
+        assert "openMoveOccurrence(" not in client.get("/calendar/day/2026-11-06").text
+
+    def test_edit_form_lists_moved_dates_and_has_the_move_dialog(self, client, mock_api):
+        mock_api["get"].return_value = []
+
+        text = client.get("/calendar/?year=2026&month=11").text
+
+        assert 'id="event-moves-list"' in text and 'id="move-occurrence-form"' in text

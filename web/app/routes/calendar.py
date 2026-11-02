@@ -162,6 +162,21 @@ async def calendar_page(request: Request):
     })
 
 
+def _add_occurrence_dates(events: list[dict]) -> None:
+    """Tag each recurring occurrence with the date its series has it on (`occurrence_date`) and whether it was moved.
+
+    A moved occurrence is listed where it is now, but skip, move and end-series identify it by the original date.
+    """
+    for ev in events:
+        if not ev.get("recurrence_rule"):
+            continue
+        original = next(
+            (o["occurrence_date"] for o in ev.get("overrides", []) if o["start_datetime"] == ev["start_datetime"]), None
+        )
+        ev["occurrence_date"] = original or ev["start_datetime"][:10]
+        ev["moved"] = original is not None
+
+
 @router.get("/day/{date_str}", response_class=HTMLResponse)
 async def calendar_day(date_str: str, request: Request):
     try:
@@ -184,6 +199,7 @@ async def calendar_day(date_str: str, request: Request):
         return HTMLResponse('<p class="text-sm text-gray-400 p-4">Could not load events.</p>')
 
     _add_display_times(events, _viewer_timezone(request))
+    _add_occurrence_dates(events)
 
     def _covers_day(ev: dict) -> bool:
         if ev["all_day"]:
@@ -354,6 +370,34 @@ async def restore_occurrence(event_id: int, occurrence_date: str):
         return HTMLResponse(_backend_detail(e, "Failed to restore this occurrence."), status_code=422)
     except httpx.HTTPError:
         return HTMLResponse("Failed to restore this occurrence.", status_code=422)
+    return HTMLResponse("", status_code=204)
+
+
+@router.post("/{event_id}/move", response_class=HTMLResponse)
+async def move_occurrence(
+    event_id: int,
+    occurrence_date: Annotated[str, Form()],
+    start_datetime: Annotated[str, Form()],
+    end_datetime: Annotated[str, Form()],
+):
+    body = {"occurrence_date": occurrence_date, "start_datetime": start_datetime, "end_datetime": end_datetime}
+    try:
+        await api.post(f"/organizer/calendar-events/{event_id}/overrides", json=body, timeout=30.0)
+    except httpx.HTTPStatusError as e:
+        return HTMLResponse(_backend_detail(e, "Failed to move this occurrence."), status_code=422)
+    except httpx.HTTPError:
+        return HTMLResponse("Failed to move this occurrence.", status_code=422)
+    return HTMLResponse("", status_code=204)
+
+
+@router.delete("/{event_id}/move/{occurrence_date}", response_class=HTMLResponse)
+async def put_occurrence_back(event_id: int, occurrence_date: str):
+    try:
+        await api.delete(f"/organizer/calendar-events/{event_id}/overrides/{occurrence_date}", timeout=30.0)
+    except httpx.HTTPStatusError as e:
+        return HTMLResponse(_backend_detail(e, "Failed to put this occurrence back."), status_code=422)
+    except httpx.HTTPError:
+        return HTMLResponse("Failed to put this occurrence back.", status_code=422)
     return HTMLResponse("", status_code=204)
 
 

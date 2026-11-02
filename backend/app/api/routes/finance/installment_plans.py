@@ -1,4 +1,6 @@
-from fastapi import APIRouter, Depends, HTTPException, Response, status
+from typing import Annotated
+
+from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 
 from app.api.auth import require_auth
 from app.dependencies import InstallmentPlanServiceDep
@@ -7,6 +9,8 @@ from app.features.finance.installment_plans.schemas import (
     InstallmentPlanFilters,
     InstallmentPlanRead,
     InstallmentPlanUpdate,
+    InstallmentSlot,
+    MissingInstallmentsMonth,
 )
 
 router = APIRouter(
@@ -21,6 +25,13 @@ async def list_installment_plans(
     return await service.list(account_id=filters.account_id, status=filters.status)
 
 
+@router.get("/missing", response_model=list[MissingInstallmentsMonth])
+async def list_missing_installments(
+    service: InstallmentPlanServiceDep, account_id: Annotated[int | None, Query()] = None
+):
+    return await service.get_missing(account_id=account_id)
+
+
 @router.post("", response_model=InstallmentPlanRead, status_code=status.HTTP_201_CREATED)
 async def create_installment_plan(request: InstallmentPlanCreate, service: InstallmentPlanServiceDep):
     return await service.create_plan_with_rule(request)
@@ -32,6 +43,14 @@ async def get_installment_plan(plan_id: int, service: InstallmentPlanServiceDep)
     if plan is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Installment plan not found")
     return plan
+
+
+@router.get("/{plan_id}/slots", response_model=list[InstallmentSlot])
+async def get_installment_plan_slots(plan_id: int, service: InstallmentPlanServiceDep):
+    slots = await service.get_slots(plan_id)
+    if slots is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Installment plan not found")
+    return slots
 
 
 @router.patch("/{plan_id}", response_model=InstallmentPlanRead)

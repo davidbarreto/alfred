@@ -4136,6 +4136,107 @@
           }
         },
         {
+          "name": "03a - List Missing Installments",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Months are grouped with items', () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.be.an('array');",
+                  "    json.forEach(m => {",
+                  "        pm.expect(m.month).to.match(/^\\d{4}-\\d{2}$/);",
+                  "        pm.expect(m.items).to.be.an('array');",
+                  "        m.items.forEach(i => pm.expect(['missing', 'overdue']).to.include(i.status));",
+                  "    });",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/finance/installment-plans/missing",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "finance",
+                "installment-plans",
+                "missing"
+              ]
+            }
+          }
+        },
+        {
+          "name": "03b - Get Plan Slots",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Slots is an array (empty for a plan with no positioned installments)', () => {",
+                  "    pm.expect(pm.response.json()).to.be.an('array');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/finance/installment-plans/{{installment_plan_id}}/slots",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "finance",
+                "installment-plans",
+                "{{installment_plan_id}}",
+                "slots"
+              ]
+            }
+          }
+        },
+        {
+          "name": "03c - Get Slots Unknown Plan Returns 404",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 404', () => pm.response.to.have.status(404));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/finance/installment-plans/999999999/slots",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "finance",
+                "installment-plans",
+                "999999999",
+                "slots"
+              ]
+            }
+          }
+        },
+        {
           "name": "04 - Update Installment Plan",
           "event": [
             {

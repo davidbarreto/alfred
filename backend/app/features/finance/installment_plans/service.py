@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+from collections import defaultdict
 from datetime import date
 from decimal import Decimal
 
@@ -9,9 +10,18 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.features.finance.imports.repository import ImportRepository
 from app.features.finance.imports.schemas import ImportRuleCreate
 from app.features.finance.installment_plans.repository import InstallmentPlanRepository
-from app.features.finance.installment_plans.schemas import InstallmentPlanCreate, InstallmentPlanRead
+from app.features.finance.installment_plans.gaps import CapturedInstallment, build_slots, parse_position
+from app.features.finance.installment_plans.schemas import (
+    InstallmentPlanCreate,
+    InstallmentPlanRead,
+    InstallmentSlot,
+    MissingInstallment,
+    MissingInstallmentsMonth,
+)
 from app.features.finance.installment_plans.tables import InstallmentPlan
 from app.features.finance.transactions.repository import TransactionRepository
+from app.features.finance.transactions.tables import Transaction
+from app.shared.timezone import local_today
 
 logger = logging.getLogger(__name__)
 
@@ -31,6 +41,15 @@ def _to_read(plan: InstallmentPlan, captured: int) -> InstallmentPlanRead:
         total_duty_paid=plan.total_duty_paid,
         created_at=plan.created_at,
     )
+
+
+def _slots_for_plan(plan: InstallmentPlan, transactions: list[Transaction], today: date) -> list[InstallmentSlot]:
+    captured = [
+        CapturedInstallment(position, txn.id, txn.date.date(), txn.amount)
+        for txn in transactions
+        if (position := parse_position(txn.bank_description)) is not None
+    ]
+    return build_slots(plan.total_installments, captured, today)
 
 
 class InstallmentPlanService:
@@ -118,6 +137,40 @@ class InstallmentPlanService:
         self, account_id: int | None = None, status: str | None = None
     ) -> list[InstallmentPlanRead]:
         return [_to_read(plan, captured) for plan, captured in await self._repo.list(account_id, status)]
+
+    async def get_slots(self, plan_id: int) -> list[InstallmentSlot] | None:
+        plan = await self._repo.get(plan_id)
+        if plan is None:
+            return None
+        slots = _slots_for_plan(plan, await self._repo.list_captured_transactions([plan_id]), local_today())
+        logger.debug("Installment slots: plan_id=%d slots=%d", plan_id, len(slots))
+        return slots
+
+    async def get_missing(self, account_id: int | None = None) -> list[MissingInstallmentsMonth]:
+        """Missing/overdue installments of open plans, grouped by the statement month to import."""
+        plans = [plan for plan, _ in await self._repo.list(account_id=account_id, status="open")]
+        transactions = await self._repo.list_captured_transactions([plan.id for plan in plans])
+        by_plan: dict[int, list[Transaction]] = defaultdict(list)
+        for txn in transactions:
+            by_plan[txn.installment_plan_id].append(txn)
+
+        today = local_today()
+        by_month: dict[str, list[MissingInstallment]] = defaultdict(list)
+        for plan in plans:
+            for slot in _slots_for_plan(plan, by_plan[plan.id], today):
+                if slot.status in ("missing", "overdue"):
+                    by_month[slot.expected_month].append(
+                        MissingInstallment(
+                            plan_id=plan.id,
+                            description=plan.description,
+                            plan_ref=plan.plan_ref,
+                            position=slot.position,
+                            total_installments=plan.total_installments,
+                            status=slot.status,
+                        )
+                    )
+        logger.debug("Missing installments: months=%d", len(by_month))
+        return [MissingInstallmentsMonth(month=month, items=by_month[month]) for month in sorted(by_month)]
 
     async def update(
         self, plan_id: int, description: str | None, total_installments: int | None

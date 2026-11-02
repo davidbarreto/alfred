@@ -52,6 +52,27 @@
     {% endif %}
   </div>
 
+  {% if slots %}
+  <div class="bg-white border border-gray-200 rounded-lg p-4">
+    <h2 class="text-sm font-semibold text-gray-900 mb-3">Installments</h2>
+    <div class="flex flex-wrap gap-2">
+      {% for slot in slots %}
+      <div class="w-24 rounded-lg border px-2 py-1.5 text-center
+                  {% if slot.status == 'captured' %}border-gray-200 bg-white
+                  {% elif slot.status == 'missing' %}border-amber-300 bg-amber-50
+                  {% elif slot.status == 'overdue' %}border-dashed border-gray-300 bg-gray-50
+                  {% else %}border-dashed border-gray-200 bg-white{% endif %}"
+           title="{{ slot.status }}">
+        <div class="text-xs font-medium {% if slot.status == 'missing' %}text-amber-800{% else %}text-gray-700{% endif %}">#{{ slot.position }}</div>
+        <div class="text-[11px] {% if slot.status == 'captured' %}text-gray-500{% elif slot.status == 'missing' %}text-amber-700{% else %}text-gray-400{% endif %}">
+          {% if slot.status == 'captured' %}{{ slot.transaction_date }}{% else %}{{ slot.status }} · {{ slot.expected_month }}{% endif %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
   <div class="bg-white border border-gray-200 rounded-lg p-4">
     <h2 class="text-sm font-semibold text-gray-900 mb-3">Transactions</h2>
     {% if transactions %}

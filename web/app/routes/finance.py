@@ -1473,8 +1473,25 @@ async def installment_plans_page(request: Request):
     except httpx.HTTPError:
         pass
     plans.sort(key=lambda p: (p["status"] != "open", -float(p.get("original_amount") or 0)))
+    missing_months = []
+    try:
+        missing_months = await api.get(
+            "/finance/installment-plans/missing", params={"account_id": account_id} if account_id else None
+        )
+    except httpx.HTTPError:
+        pass
+    missing_by_plan: dict[int, int] = {}
+    for month in missing_months:
+        for item in month["items"]:
+            missing_by_plan[item["plan_id"]] = missing_by_plan.get(item["plan_id"], 0) + 1
     context = await _installment_plan_accounts_context()
-    context.update({"plans": plans, "query_account_id": account_id, "hide_completed": hide_completed})
+    context.update({
+        "plans": plans,
+        "query_account_id": account_id,
+        "hide_completed": hide_completed,
+        "missing_months": missing_months,
+        "missing_by_plan": missing_by_plan,
+    })
     return templates.TemplateResponse(request, "finance_installments.html", context)
 
 
@@ -1521,6 +1538,11 @@ async def installment_plan_detail_page(plan_id: int, request: Request):
         )
     except httpx.HTTPError:
         pass
+    slots = []
+    try:
+        slots = await api.get(f"/finance/installment-plans/{plan_id}/slots")
+    except httpx.HTTPError:
+        pass
     categories = []
     try:
         categories = await api.get("/finance/categories")
@@ -1530,6 +1552,7 @@ async def installment_plan_detail_page(plan_id: int, request: Request):
     context.update({
         "plan": plan,
         "transactions": transactions,
+        "slots": slots,
         "categories": categories,
         "currency_symbols": await _currency_symbols(),
     })

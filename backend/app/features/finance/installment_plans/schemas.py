@@ -52,6 +52,34 @@ class InstallmentPlanRead(BaseModel):
     model_config = {"from_attributes": True}
 
 
+InstallmentSlotStatus = Literal["captured", "missing", "overdue", "upcoming"]
+
+
+class InstallmentSlot(BaseModel):
+    position: int
+    status: InstallmentSlotStatus
+    expected_month: str
+    """``YYYY-MM`` of the statement this installment belongs to (its actual month when captured)."""
+    transaction_date: date | None = None
+    amount: Decimal | None = None
+    transaction_id: int | None = None
+
+
+class MissingInstallment(BaseModel):
+    plan_id: int
+    description: str
+    plan_ref: str | None = None
+    position: int
+    total_installments: int
+    status: Literal["missing", "overdue"]
+
+
+class MissingInstallmentsMonth(BaseModel):
+    month: str
+    """``YYYY-MM`` -- import the statement covering this month."""
+    items: list[MissingInstallment]
+
+
 class InstallmentPlanFilters:
     def __init__(
         self,

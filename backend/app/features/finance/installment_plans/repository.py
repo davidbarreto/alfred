@@ -86,6 +86,17 @@ class InstallmentPlanRepository:
         result = await self._session.execute(query)
         return [(row[0], row[1]) for row in result.all()]
 
+    async def list_captured_transactions(self, plan_ids: list[int]) -> list[Transaction]:
+        """Transactions that count as captured installments (non-zero) for the plans."""
+        if not plan_ids:
+            return []
+        result = await self._session.execute(
+            select(Transaction)
+            .where(Transaction.installment_plan_id.in_(plan_ids), Transaction.amount != 0)
+            .order_by(Transaction.date, Transaction.id)
+        )
+        return list(result.scalars().all())
+
     async def list_open_by_account(self, account_id: int) -> list[tuple[InstallmentPlan, int]]:
         return await self.list(account_id=account_id, status="open")
 

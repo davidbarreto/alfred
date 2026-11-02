@@ -216,3 +216,55 @@ class TestUnlinkTransaction:
 
         assert await service.unlink_transaction(plan_id=5, transaction_id=42) is False
         service._txn_repo.unlink_installment_plan.assert_not_awaited()
+
+
+def _txn(txn_id: int, plan_id: int, description: str, day: datetime):
+    from unittest.mock import MagicMock
+
+    t = MagicMock()
+    t.id = txn_id
+    t.installment_plan_id = plan_id
+    t.bank_description = description
+    t.date = day
+    t.amount = Decimal("-20.00")
+    return t
+
+
+class TestSlotsAndMissing:
+    async def test_get_slots_unknown_plan_is_none(self):
+        service = _service()
+        service._repo.get.return_value = None
+        assert await service.get_slots(99) is None
+
+    async def test_get_slots_marks_the_gap(self):
+        service = _service()
+        service._repo.get.return_value = _plan(id=1, total_installments=3)
+        service._repo.list_captured_transactions.return_value = [
+            _txn(1, 1, "SHOP (00001/1)", datetime(2025, 1, 31)),
+            _txn(3, 1, "SHOP (00001/3)", datetime(2025, 3, 31)),
+        ]
+        slots = await service.get_slots(1)
+        assert [s.status for s in slots] == ["captured", "missing", "captured"]
+        assert slots[1].expected_month == "2025-02"
+
+    async def test_get_missing_groups_plans_by_statement_month(self):
+        service = _service()
+        service._repo.list.return_value = [
+            (_plan(id=1, description="SHOP A", plan_ref="00001", total_installments=3), 2),
+            (_plan(id=2, description="SHOP B", plan_ref="00002", total_installments=3), 2),
+            (_plan(id=3, description="MANUAL", total_installments=12), 1),
+        ]
+        service._repo.list_captured_transactions.return_value = [
+            _txn(1, 1, "SHOP A (00001/1)", datetime(2025, 1, 31)),
+            _txn(2, 1, "SHOP A (00001/3)", datetime(2025, 3, 31)),
+            _txn(3, 2, "SHOP B (00002/1)", datetime(2025, 1, 31)),
+            _txn(4, 2, "SHOP B (00002/3)", datetime(2025, 3, 31)),
+            _txn(5, 3, "Cetelem sofa", datetime(2025, 2, 10)),
+        ]
+        months = await service.get_missing()
+        assert [m.month for m in months] == ["2025-02"]
+        assert [(i.plan_id, i.position, i.status) for i in months[0].items] == [
+            (1, 2, "missing"),
+            (2, 2, "missing"),
+        ]
+        assert months[0].items[0].plan_ref == "00001"

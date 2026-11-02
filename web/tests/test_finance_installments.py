@@ -44,6 +44,7 @@ class TestInstallmentPlansPage:
     def test_renders_list_and_create_form(self, client, mock_api):
         mock_api["get"].side_effect = [
             [_plan()],       # plans
+            [],              # missing
             [_account()],    # accounts
         ]
 
@@ -64,6 +65,7 @@ class TestInstallmentPlansPage:
         open_big = _plan(id=3, description="Open big", status="open", original_amount="500.00")
         mock_api["get"].side_effect = [
             [closed_big, open_small, open_big],
+            [],
             [_account()],
         ]
 
@@ -78,6 +80,7 @@ class TestInstallmentPlansPage:
     def test_hide_completed_filters_to_open_plans(self, client, mock_api):
         mock_api["get"].side_effect = [
             [_plan()],
+            [],
             [_account()],
         ]
 
@@ -90,6 +93,7 @@ class TestInstallmentPlansPage:
     def test_account_filter_is_passed_to_api_and_preselected(self, client, mock_api):
         mock_api["get"].side_effect = [
             [_plan()],
+            [],
             [_account()],
         ]
 
@@ -102,6 +106,56 @@ class TestInstallmentPlansPage:
         assert 'name="account_id"' in resp.text
         assert 'value="1" selected' in resp.text
         assert 'name="hide_completed" value="true"' in resp.text
+
+
+_MISSING = [
+    {
+        "month": "2025-01",
+        "items": [
+            {
+                "plan_id": 1, "description": "Cetelem — sofa", "plan_ref": "00001",
+                "position": 3, "total_installments": 12, "status": "missing",
+            }
+        ],
+    }
+]
+
+
+class TestInstallmentPlansMissing:
+    def test_shows_statements_to_import_and_plan_badge(self, client, mock_api):
+        mock_api["get"].side_effect = [[_plan()], _MISSING, [_account()]]
+
+        resp = client.get("/finance/installments")
+
+        assert "Statements to import" in resp.text
+        assert "2025-01" in resp.text
+        assert "Cetelem — sofa 3/12" in resp.text
+        assert "1 missing" in resp.text
+
+    def test_hidden_when_nothing_is_missing(self, client, mock_api):
+        mock_api["get"].side_effect = [[_plan()], [], [_account()]]
+
+        resp = client.get("/finance/installments")
+
+        assert "Statements to import" not in resp.text
+        assert " missing" not in resp.text
+
+    def test_account_filter_is_forwarded_to_missing_endpoint(self, client, mock_api):
+        mock_api["get"].side_effect = [[_plan()], [], [_account()]]
+
+        client.get("/finance/installments?account_id=1")
+
+        mock_api["get"].assert_any_call("/finance/installment-plans/missing", params={"account_id": "1"})
+
+    def test_page_still_renders_when_missing_endpoint_fails(self, client, mock_api):
+        import httpx
+
+        mock_api["get"].side_effect = [[_plan()], httpx.ConnectError("down"), [_account()]]
+
+        resp = client.get("/finance/installments")
+
+        assert resp.status_code == 200
+        assert "Cetelem — sofa" in resp.text
 
 
 class TestCreateInstallmentPlan:
@@ -131,6 +185,7 @@ class TestInstallmentPlanDetailPage:
         mock_api["get"].side_effect = [
             _plan(),                    # plan detail
             [_transaction()],           # linked transactions
+            [],                         # slots
             [],                         # categories
             [_account()],               # accounts
             [{"code": "EUR", "symbol": "€ "}],  # currencies
@@ -150,3 +205,22 @@ class TestDeleteInstallmentPlan:
         assert resp.status_code == 303
         assert resp.headers["location"] == "/finance/installments"
         mock_api["delete"].assert_awaited_once_with("/finance/installment-plans/1")
+
+
+class TestInstallmentPlanDetailSlots:
+    def test_renders_slot_grid_with_missing_month(self, client, mock_api):
+        slots = [
+            {"position": 1, "status": "captured", "expected_month": "2024-12",
+             "transaction_date": "2024-12-31", "amount": "-20.00", "transaction_id": 10},
+            {"position": 2, "status": "missing", "expected_month": "2025-01"},
+        ]
+        mock_api["get"].side_effect = [
+            _plan(), [_transaction()], slots, [], [_account()], [{"code": "EUR", "symbol": "€ "}],
+        ]
+
+        resp = client.get("/finance/installments/1")
+
+        assert resp.status_code == 200
+        assert "#2" in resp.text
+        assert "missing · 2025-01" in resp.text
+        assert "2024-12-31" in resp.text

@@ -59,6 +59,31 @@
     </p>
   </div>
 
+  {% if missing_months %}
+  <div class="bg-white border border-amber-200 rounded-lg p-4">
+    <h2 class="text-sm font-semibold text-gray-900 mb-1">Statements to import</h2>
+    <p class="text-xs text-gray-400 mb-3">
+      Installments that should exist but aren't captured, grouped by the statement month that contains them.
+      <span class="text-amber-700">Missing</span> sits between captured installments, so it certainly exists;
+      <span class="text-gray-500">overdue</span> is after the last captured one and may just not be imported yet.
+    </p>
+    <ul>
+      {% for month in missing_months %}
+      <li class="py-2 border-b border-gray-100 last:border-0">
+        <div class="text-sm font-medium text-gray-800">{{ month.month }} <span class="text-xs font-normal text-gray-400">· {{ month['items'] | length }} installment{{ '' if month['items'] | length == 1 else 's' }}</span></div>
+        <div class="flex flex-wrap gap-1.5 mt-1">
+          {% for item in month['items'] %}
+          <a href="/finance/installments/{{ item.plan_id }}"
+             class="px-1.5 py-0.5 rounded text-[11px] {% if item.status == 'missing' %}bg-amber-50 text-amber-800{% else %}bg-gray-100 text-gray-500{% endif %} hover:underline"
+             title="{{ item.status }}">{{ item.description }} {{ item.position }}/{{ item.total_installments }}</a>
+          {% endfor %}
+        </div>
+      </li>
+      {% endfor %}
+    </ul>
+  </div>
+  {% endif %}
+
   <div class="bg-white border border-gray-200 rounded-lg p-4">
     <div class="flex items-center justify-between mb-2">
       <form method="get" action="/finance/installments" class="flex items-center gap-2">
@@ -104,6 +129,10 @@
             <span class="text-[10px] text-gray-400 flex-shrink-0">{{ plan.captured_installments }}/{{ plan.total_installments }}</span>
           </div>
         </div>
+        {% if missing_by_plan.get(plan.id) %}
+        <span class="px-2 py-0.5 rounded-full text-xs font-medium flex-shrink-0 bg-amber-50 text-amber-800"
+              title="Installments not captured -- see Statements to import">{{ missing_by_plan[plan.id] }} missing</span>
+        {% endif %}
         <span class="px-2 py-0.5 rounded-full text-xs font-medium flex-shrink-0 {% if plan.status == 'closed' %}bg-gray-100 text-gray-500{% else %}bg-[#E6F1FB] text-[#0C447C]{% endif %}">
           {{ plan.status }}
         </span>

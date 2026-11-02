@@ -70,6 +70,14 @@ _EVENT_SKIP_DETAILS = (
     "and reminders. The date must be a real occurrence of a recurring event. Undo with unskip; the skipped dates of a "
     "series are listed in its `skips`."
 )
+_EVENT_RESCHEDULE_DETAILS = (
+    "Moves ONE occurrence of a recurring event without touching the series: id is the event id, date the day the series has "
+    "that occurrence on (YYYY-MM-DD), start the new start (HH:MM on that day, or an ISO datetime to move it to another day) and "
+    "end the new end (optional: the occurrence keeps its length). It is written through to Google Calendar as an exception of "
+    "that instance, so attendees' calendars show it too; all-day occurrences cannot be moved. Use skip instead for a meeting "
+    "you will not attend, update to change the whole series. A moved occurrence appears at its new time in lists, the day "
+    "plan and reminders, and is listed in the series' `overrides`. Undo with unreschedule."
+)
 _EVENT_END_SERIES_DETAILS = (
     "id is the event id and date the first day the series no longer happens, so the last occurrence is the one before "
     "it. Past occurrences are kept. Replaces any UNTIL/COUNT of the rule and is written through to Google Calendar. "
@@ -423,6 +431,21 @@ COMMAND_DEFINITIONS = {
         "unskip": {
             "description": "Bring back a skipped occurrence of a recurring event (a date, YYYY-MM-DD)",
             "aliases": ["/eventunskip", "/unskip"],
+            "flags": {},
+            "requires_args": True,
+            "arg_keys": ["id", "date"]
+        },
+        "reschedule": {
+            "description": "Move one occurrence of a recurring event to another time (the series is untouched)",
+            "details": _EVENT_RESCHEDULE_DETAILS,
+            "aliases": ["/eventreschedule", "/reschedule"],
+            "flags": {**FLAG_START, **FLAG_END},
+            "requires_args": True,
+            "arg_keys": ["id", "date"]
+        },
+        "unreschedule": {
+            "description": "Put a moved occurrence of a recurring event back at its series time (a date, YYYY-MM-DD)",
+            "aliases": ["/eventunreschedule", "/unreschedule"],
             "flags": {},
             "requires_args": True,
             "arg_keys": ["id", "date"]

@@ -17,7 +17,7 @@ from app.features.organizer.calendar_events.schemas import (
     EventRead,
 )
 from app.features.organizer.calendar_events.repository import CalendarEventRepository
-from app.features.organizer.calendar_events.recurrence import end_rule_before, expand_occurrences
+from app.features.organizer.calendar_events.recurrence import end_rule_before, expand_occurrences, occurrence_instance_id
 
 logger = logging.getLogger(__name__)
 
@@ -62,16 +62,27 @@ def _require_recurring(event: Any) -> None:
         )
 
 
-def _require_occurrence(event: Any, day: date) -> None:
+def _occurrence_span(event: Any, day: date) -> tuple[datetime, datetime]:
+    """The (start, end) the series has on `day`; 400 when it does not repeat or has no occurrence that day."""
     _require_recurring(event)
     spans = expand_occurrences(
         event.start_datetime, event.end_datetime, event.recurrence_rule,
         datetime.combine(day, time.min), datetime.combine(day, time.max), event.timezone,
     )
-    if not any(start.date() == day for start, _ in spans):
+    on_day = [span for span in spans if span[0].date() == day]
+    if not on_day:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST, detail=f"The event has no occurrence on {day.isoformat()}"
         )
+    return on_day[0]
+
+
+def _require_occurrence(event: Any, day: date) -> None:
+    _occurrence_span(event, day)
+
+
+def _overlaps(start: datetime, end: datetime, range_start: datetime | None, range_end: datetime | None) -> bool:
+    return (range_end is None or start <= range_end) and (range_start is None or end >= range_start)
 
 
 class CalendarEventService:
@@ -112,10 +123,19 @@ class CalendarEventService:
                 occurrences.append(event_read)
                 continue
             skipped = set(event_read.skips)
+            moved = {o.occurrence_date: o for o in event_read.overrides}
             occurrences.extend(
                 event_read.model_copy(update={"start_datetime": s, "end_datetime": e})
                 for s, e in spans
-                if s.date() not in skipped
+                if s.date() not in skipped and s.date() not in moved
+            )
+            # A moved occurrence is listed by where it is now, which can fall in the range
+            # even when the series' own occurrence does not (and the other way around).
+            occurrences.extend(
+                event_read.model_copy(update={"start_datetime": o.start_datetime, "end_datetime": o.end_datetime})
+                for o in moved.values()
+                if o.occurrence_date not in skipped
+                and _overlaps(o.start_datetime, o.end_datetime, filters.start_from, filters.start_to)
             )
         occurrences.sort(key=lambda e: e.start_datetime)
         return occurrences
@@ -138,6 +158,12 @@ class CalendarEventService:
         updated = 0
         for record in records:
             provider_id = record.pop("id")
+            series_id = record.pop("recurring_event_id", None)
+            original_start = record.pop("original_start", None)
+            if series_id is not None:
+                if await self._sync_exception(provider_id, series_id, original_start, record):
+                    updated += 1
+                continue
             existing = await self._repo.get_event_by_provider_id(provider_id)
             if existing is not None:
                 await self._repo.update_event(existing.id, EventUpdate(**record))
@@ -151,6 +177,21 @@ class CalendarEventService:
             sync_start, sync_end, created, updated,
         )
         return CalendarSyncResult(created=created, updated=updated, start=sync_start, end=sync_end)
+
+    async def _sync_exception(
+        self, provider_id: str, series_id: str, original_start: datetime | None, record: dict[str, Any]
+    ) -> bool:
+        """Store a modified instance of a synced series as an override of that series, not as an event of its own."""
+        series = await self._repo.get_event_by_provider_id(series_id)
+        if series is None or original_start is None:
+            logger.debug("CalendarEvent sync: exception %s skipped (series not stored or no original start)", provider_id)
+            return False
+        await self._repo.set_override(series, original_start.date(), record["start_datetime"], record["end_datetime"])
+        # Earlier syncs imported the instance as a standalone event, which would now show twice.
+        duplicate = await self._repo.get_event_by_provider_id(provider_id)
+        if duplicate is not None:
+            await self._repo.delete_event(duplicate.id)
+        return True
 
     async def create_event(self, event_create: EventCreate) -> EventRead:
         if self._provider is None:
@@ -230,6 +271,65 @@ class CalendarEventService:
         logger.info("CalendarEvent occurrence restored: id=%d title=%r date=%s", event_id, event.title, occurrence_date)
         return EventRead.model_validate(event)
 
+    async def reschedule_occurrence(
+        self, event_id: int, occurrence_date: date, start: datetime, end: datetime | None = None
+    ) -> EventRead | None:
+        """Move one occurrence of a recurring event to another time, written through to Google as an exception.
+
+        Without an `end` the occurrence keeps its original length."""
+        event = await self._repo.get_event(event_id)
+        if event is None:
+            logger.debug("CalendarEvent reschedule: id=%d not found", event_id)
+            return None
+        original_start, original_end = _occurrence_span(event, occurrence_date)
+        if end is None:
+            end = start + (original_end - original_start)
+        if event.all_day:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST, detail="Moving a single all-day occurrence is not supported"
+            )
+        if any(skip.occurrence_date == occurrence_date for skip in event.skips):
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail=f"{occurrence_date.isoformat()} is skipped; unskip it before moving it",
+            )
+        if end <= start:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="The end must be after the start")
+        if self._provider is None:
+            logger.warning("CalendarEvent reschedule: Google Calendar not authorized")
+            raise _OAUTH_REQUIRED
+        record = await self._provider.update(
+            occurrence_instance_id(event.provider_id, original_start),
+            {"start_datetime": start, "end_datetime": end},
+            self._session,
+        )
+        await self._repo.set_override(event, occurrence_date, record["start_datetime"], record["end_datetime"])
+        logger.info("CalendarEvent occurrence moved: id=%d title=%r date=%s", event_id, event.title, occurrence_date)
+        return EventRead.model_validate(event)
+
+    async def restore_occurrence(self, event_id: int, occurrence_date: date) -> EventRead | None:
+        """Put a moved occurrence back at its series time (also written through to Google)."""
+        event = await self._repo.get_event(event_id)
+        if event is None:
+            logger.debug("CalendarEvent restore time: id=%d not found", event_id)
+            return None
+        if not any(o.occurrence_date == occurrence_date for o in event.overrides):
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, detail=f"{occurrence_date} is not a moved date of this event"
+            )
+        if self._provider is None:
+            logger.warning("CalendarEvent restore time: Google Calendar not authorized")
+            raise _OAUTH_REQUIRED
+        original_start, original_end = _occurrence_span(event, occurrence_date)
+        await self._provider.update(
+            occurrence_instance_id(event.provider_id, original_start),
+            {"start_datetime": original_start, "end_datetime": original_end},
+            self._session,
+        )
+        await self._repo.remove_override(event, occurrence_date)
+        logger.info("CalendarEvent occurrence restored to series time: id=%d title=%r date=%s", event_id, event.title, occurrence_date)
+        return EventRead.model_validate(event)
+
     async def end_series(self, event_id: int, from_date: date) -> EventRead | None:
         """Stop a recurring event so its last occurrence is the one before `from_date` (written through to Google)."""
         event = await self._repo.get_event(event_id)
@@ -252,7 +352,13 @@ class CalendarEventService:
             )
         rule = end_rule_before(event.recurrence_rule, from_date, event.all_day)
         logger.info("CalendarEvent series ended: id=%d title=%r from=%s", event_id, event.title, from_date)
-        return await self.update_event(event_id, EventUpdate(recurrence_rule=rule))
+        has_stale_overrides = any(o.occurrence_date >= from_date for o in event.overrides)
+        updated = await self.update_event(event_id, EventUpdate(recurrence_rule=rule))
+        if updated is None or not has_stale_overrides:
+            return updated
+        # Moved occurrences on or after the new end no longer exist in the series.
+        await self._repo.remove_overrides_from(event, from_date)
+        return await self.get_event(event_id)
 
     async def delete_event(self, event_id: int) -> None:
         if self._provider is None:

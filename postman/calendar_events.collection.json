@@ -892,6 +892,290 @@
       }
     },
     {
+      "name": "13i - Move One Occurrence",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('The move is listed on the series', () => { const o = pm.response.json().overrides; pm.expect(o).to.have.length(1); pm.expect(o[0].occurrence_date).to.eql('2026-09-07'); pm.expect(o[0].start_datetime).to.match(/^2026-09-08T10:00:00[+-]\\d{2}:\\d{2}$/); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/organizer/calendar-events/{{recurring_event_id}}/overrides",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "calendar-events",
+            "{{recurring_event_id}}",
+            "overrides"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"occurrence_date\": \"2026-09-07\",\n  \"start_datetime\": \"2026-09-08T10:00:00\",\n  \"end_datetime\": \"2026-09-08T10:30:00\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "13j - List Events (Moved Occurrence Shows At Its New Time)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "const days = pm.response.json().filter(e => e.id === pm.environment.get('recurring_event_id')).map(e => e.start_datetime.slice(0, 16));",
+              "pm.test('Moved occurrence replaces the original, the rest stay', () => pm.expect(days).to.eql(['2026-09-08T10:00', '2026-09-14T09:00']));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/organizer/calendar-events?start_from=2026-09-01T00:00:00&start_to=2026-09-30T23:59:59&limit=100",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "calendar-events"
+          ],
+          "query": [
+            {
+              "key": "start_from",
+              "value": "2026-09-01T00:00:00"
+            },
+            {
+              "key": "start_to",
+              "value": "2026-09-30T23:59:59"
+            },
+            {
+              "key": "limit",
+              "value": "100"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "13k - Move A Date That Is Not An Occurrence (400)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 400', () => pm.response.to.have.status(400));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/organizer/calendar-events/{{recurring_event_id}}/overrides",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "calendar-events",
+            "{{recurring_event_id}}",
+            "overrides"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"occurrence_date\": \"2026-09-09\",\n  \"start_datetime\": \"2026-09-09T10:00:00\",\n  \"end_datetime\": \"2026-09-09T10:30:00\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "13l - Move With End Before Start (422)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 422', () => pm.response.to.have.status(422));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/organizer/calendar-events/{{recurring_event_id}}/overrides",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "calendar-events",
+            "{{recurring_event_id}}",
+            "overrides"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"occurrence_date\": \"2026-09-14\",\n  \"start_datetime\": \"2026-09-14T10:00:00\",\n  \"end_datetime\": \"2026-09-14T09:00:00\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "13m - Put The Occurrence Back",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('No overrides left', () => pm.expect(pm.response.json().overrides).to.eql([]));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/organizer/calendar-events/{{recurring_event_id}}/overrides/2026-09-07",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "calendar-events",
+            "{{recurring_event_id}}",
+            "overrides",
+            "2026-09-07"
+          ]
+        }
+      }
+    },
+    {
+      "name": "13n - Put Back A Date That Was Not Moved (404)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 404', () => pm.response.to.have.status(404));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/organizer/calendar-events/{{recurring_event_id}}/overrides/2026-09-07",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "calendar-events",
+            "{{recurring_event_id}}",
+            "overrides",
+            "2026-09-07"
+          ]
+        }
+      }
+    },
+    {
+      "name": "13o - List Events (Occurrence Is Back At Its Series Time)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "const days = pm.response.json().filter(e => e.id === pm.environment.get('recurring_event_id')).map(e => e.start_datetime.slice(0, 16));",
+              "pm.test('Original times again', () => pm.expect(days).to.eql(['2026-09-07T09:00', '2026-09-14T09:00']));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/organizer/calendar-events?start_from=2026-09-01T00:00:00&start_to=2026-09-30T23:59:59&limit=100",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "calendar-events"
+          ],
+          "query": [
+            {
+              "key": "start_from",
+              "value": "2026-09-01T00:00:00"
+            },
+            {
+              "key": "start_to",
+              "value": "2026-09-30T23:59:59"
+            },
+            {
+              "key": "limit",
+              "value": "100"
+            }
+          ]
+        }
+      }
+    },
+    {
       "name": "14 - Delete Recurring Event",
       "event": [
         {

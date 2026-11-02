@@ -14,6 +14,15 @@ from .client import GoogleCalendarClient
 logger = logging.getLogger(__name__)
 
 
+def _original_start(original: dict[str, Any]) -> datetime | None:
+    """Where the series had a modified instance, as naive local time (None when Google does not say)."""
+    if "dateTime" in original:
+        return datetime.fromisoformat(original["dateTime"].replace("Z", "+00:00")).astimezone(local_timezone()).replace(tzinfo=None)
+    if "date" in original:
+        return datetime.fromisoformat(original["date"])
+    return None
+
+
 class GoogleCalendarProvider:
     def __init__(
         self,
@@ -90,7 +99,7 @@ class GoogleCalendarProvider:
                 recurrence_rule = rule.removeprefix("RRULE:")
                 break
 
-        return {
+        record = {
             "id": google_event["id"],
             "title": google_event.get("summary", ""),
             "description": google_event.get("description"),
@@ -103,6 +112,11 @@ class GoogleCalendarProvider:
             "host": google_event.get("organizer", {}).get("email"),
             "invitees": [a["email"] for a in google_event.get("attendees", []) if "email" in a],
         }
+        if "recurringEventId" in google_event:
+            # An exception of one occurrence of a series (e.g. moved in Google): sync turns it into an override.
+            record["recurring_event_id"] = google_event["recurringEventId"]
+            record["original_start"] = _original_start(google_event.get("originalStartTime", {}))
+        return record
 
     async def create(
         self, record: dict[str, Any], session: AsyncSession | None = None

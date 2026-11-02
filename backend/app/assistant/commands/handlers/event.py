@@ -13,6 +13,7 @@ logger = logging.getLogger(__name__)
 
 _DEFAULT_LIST_DAYS = 14
 _DATE_ONLY_LENGTH = 10
+_CLOCK_MAX_LENGTH = 8
 
 
 def _parse_local(value: Any, end_of_day: bool = False) -> datetime | None:
@@ -32,6 +33,29 @@ def _parse_day(value: Any) -> date:
     if parsed is None:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="A date (YYYY-MM-DD) is required")
     return parsed.date()
+
+
+def _new_span(day: date, arguments: dict[str, Any]) -> tuple[datetime, datetime | None]:
+    """New start and end of a moved occurrence. A bare HH:MM means that time on `day`; no end (None) keeps the original length."""
+    start = _parse_clock_or_datetime(arguments.get("start"), day)
+    if start is None:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="start is required (HH:MM or an ISO datetime)")
+    return start, _parse_clock_or_datetime(arguments.get("end"), start.date())
+
+
+def _parse_clock_or_datetime(value: Any, day: date) -> datetime | None:
+    if value is None or str(value).strip() == "":
+        return None
+    text = str(value).strip()
+    if len(text) <= _CLOCK_MAX_LENGTH and ":" in text and "T" not in text and "-" not in text:
+        try:
+            return datetime.combine(day, time.fromisoformat(text))
+        except ValueError:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Time must be HH:MM, got {value!r}")
+    parsed = _parse_local(text)
+    if parsed is None:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Could not read {value!r} as a time")
+    return parsed
 
 
 def _planning_fields(arguments: dict[str, Any]) -> dict[str, Any]:
@@ -124,6 +148,18 @@ async def handle_event(command: str, arguments: dict[str, Any], service: Calenda
             result = await service.unskip_occurrence(event_id, day)
         else:
             result = await service.end_series(event_id, day)
+        if result is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Event {event_id} not found")
+        return result.model_dump(mode="json")
+
+    if command in ("reschedule", "unreschedule"):
+        event_id = int(arguments["id"])
+        day = _parse_day(arguments.get("date"))
+        if command == "reschedule":
+            start, end = _new_span(day, arguments)
+            result = await service.reschedule_occurrence(event_id, day, start, end)
+        else:
+            result = await service.restore_occurrence(event_id, day)
         if result is None:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Event {event_id} not found")
         return result.model_dump(mode="json")

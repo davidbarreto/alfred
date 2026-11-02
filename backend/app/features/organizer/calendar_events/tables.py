@@ -34,6 +34,32 @@ class CalendarEventSkip(Base):
     event: Mapped["CalendarEvent"] = relationship("CalendarEvent", back_populates="skips")
 
 
+class CalendarEventOverride(Base):
+    """One occurrence of a recurring event moved to another time; the series itself is untouched."""
+
+    __tablename__ = "calendar_event_overrides"
+    __table_args__ = (
+        UniqueConstraint("event_id", "occurrence_date", name="uq_calendar_event_overrides_event_date"),
+        CheckConstraint("end_datetime >= start_datetime", name="ck_calendar_event_overrides_order"),
+        {"schema": "organizer"},
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    event_id: Mapped[int] = mapped_column(
+        ForeignKey("organizer.calendar_events.id", ondelete="CASCADE"), nullable=False
+    )
+    # The local date the series would have had this occurrence on (its identity), not the new date.
+    occurrence_date: Mapped[date] = mapped_column(Date, nullable=False)
+    start_datetime: Mapped[datetime] = mapped_column(LocalDateTime, nullable=False)
+    end_datetime: Mapped[datetime] = mapped_column(LocalDateTime, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
+    )
+
+    event: Mapped["CalendarEvent"] = relationship("CalendarEvent", back_populates="overrides")
+
+
 class CalendarEventInvitee(Base):
     __tablename__ = "calendar_event_invitees"
     __table_args__ = {"schema": "organizer"}
@@ -99,4 +125,11 @@ class CalendarEvent(Base):
         cascade="all, delete-orphan",
         lazy="selectin",
         order_by="CalendarEventSkip.occurrence_date",
+    )
+    overrides: Mapped[List["CalendarEventOverride"]] = relationship(
+        "CalendarEventOverride",
+        back_populates="event",
+        cascade="all, delete-orphan",
+        lazy="selectin",
+        order_by="CalendarEventOverride.occurrence_date",
     )

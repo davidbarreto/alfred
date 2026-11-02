@@ -17,12 +17,15 @@ _START = datetime(2026, 11, 4, 14, 30)  # a Wednesday
 _END = datetime(2026, 11, 4, 15, 0)
 
 
-def _orm(skipped: list[date] | None = None, **overrides) -> SimpleNamespace:
+def _orm(skipped: list[date] | None = None, moved: list[tuple[date, datetime, datetime]] | None = None, **overrides) -> SimpleNamespace:
     defaults = dict(
         id=1, provider_id="g-1", title="Touchpoint", description=None, location=None, start_datetime=_START,
         end_datetime=_END, all_day=False, host=None, invitees=[], tags=[], recurrence_rule="FREQ=WEEKLY",
         timezone=None, notification_profile=None, availability=None, presence="in_person", travel_minutes=0,
         routine_id=None, skips=[SimpleNamespace(occurrence_date=d) for d in skipped or []],
+        overrides=[
+            SimpleNamespace(occurrence_date=d, start_datetime=s, end_datetime=e) for d, s, e in moved or []
+        ],
     )
     defaults.update(overrides)
     return SimpleNamespace(**defaults)

@@ -60,9 +60,25 @@ class EventUpdate(BaseModel):
         return self
 
 
+class OccurrenceOverrideRead(BaseModel):
+    """One moved occurrence: `occurrence_date` is where the series had it, start/end where it is now."""
+
+    occurrence_date: date
+    start_datetime: datetime
+    end_datetime: datetime
+
+    model_config = {"from_attributes": True}
+
+    @field_serializer("start_datetime", "end_datetime", when_used="json")
+    def serialize_with_offset(self, value: datetime) -> str:
+        aware = value.replace(tzinfo=local_timezone()) if value.tzinfo is None else value
+        return aware.isoformat()
+
+
 class EventRead(EventBase):
     id: int
     skips: list[date] = []
+    overrides: list[OccurrenceOverrideRead] = []
 
     model_config = {"from_attributes": True}
 
@@ -130,6 +146,22 @@ class CalendarSyncResult(BaseModel):
 
 class EventSkipRequest(BaseModel):
     occurrence_date: date
+
+
+class EventRescheduleRequest(BaseModel):
+    """Move one occurrence (identified by the date the series has it on) to a new start and end."""
+
+    occurrence_date: date
+    start_datetime: datetime
+    end_datetime: datetime
+
+    @model_validator(mode="after")
+    def _ordered_local(self) -> "EventRescheduleRequest":
+        self.start_datetime = _to_local_naive(self.start_datetime)
+        self.end_datetime = _to_local_naive(self.end_datetime)
+        if self.end_datetime <= self.start_datetime:
+            raise ValueError("end_datetime must be after start_datetime")
+        return self
 
 
 class EventEndSeriesRequest(BaseModel):

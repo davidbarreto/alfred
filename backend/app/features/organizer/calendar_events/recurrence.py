@@ -90,3 +90,10 @@ def end_rule_before(recurrence_rule: str, first_excluded_day: date, all_day: boo
         midnight = datetime.combine(first_excluded_day, time.min, tzinfo=local_timezone())
         until = (midnight - timedelta(seconds=1)).astimezone(dt_timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     return f"{base};UNTIL={until}"
+
+
+def occurrence_instance_id(series_provider_id: str, original_start: datetime) -> str:
+    """Google's id of one instance of a recurring event: the series id, an underscore and the instance's
+    original start as a UTC basic timestamp. `original_start` is naive local time, as expanded."""
+    start_utc = original_start.replace(tzinfo=local_timezone()).astimezone(dt_timezone.utc)
+    return f"{series_provider_id}_{start_utc.strftime('%Y%m%dT%H%M%SZ')}"

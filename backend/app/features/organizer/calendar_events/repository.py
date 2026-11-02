@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, datetime
 
 from sqlalchemy import and_, delete, or_, select
 from sqlalchemy.orm import selectinload
@@ -12,7 +12,9 @@ def _naive_utc(dt: object) -> object:
     return dt
 
 from app.features.organizer.tags.tables import Tag
-from app.features.organizer.calendar_events.tables import CalendarEvent, CalendarEventInvitee, CalendarEventSkip
+from app.features.organizer.calendar_events.tables import (
+    CalendarEvent, CalendarEventInvitee, CalendarEventOverride, CalendarEventSkip,
+)
 from app.features.organizer.calendar_events.schemas import EventCreate, EventUpdate, EventFilters
 
 _EVENT_EXCLUDE = {"tags", "invitees"}
@@ -142,3 +144,32 @@ class CalendarEventRepository:
                 await self._session.commit()
                 return True
         return False
+
+    async def set_override(self, event: CalendarEvent, occurrence_date: date, start: datetime, end: datetime) -> None:
+        """Move one occurrence of the loaded event: updates its override, or creates it."""
+        for override in event.overrides:
+            if override.occurrence_date == occurrence_date:
+                override.start_datetime, override.end_datetime = start, end
+                break
+        else:
+            event.overrides.append(
+                CalendarEventOverride(occurrence_date=occurrence_date, start_datetime=start, end_datetime=end)
+            )
+        await self._session.commit()
+
+    async def remove_override(self, event: CalendarEvent, occurrence_date: date) -> bool:
+        """Put one occurrence back at its series time; False when it was not moved."""
+        for override in event.overrides:
+            if override.occurrence_date == occurrence_date:
+                event.overrides.remove(override)
+                await self._session.commit()
+                return True
+        return False
+
+    async def remove_overrides_from(self, event: CalendarEvent, from_date: date) -> None:
+        """Forget the overrides of occurrences on or after `from_date` (the series no longer has them)."""
+        stale = [o for o in event.overrides if o.occurrence_date >= from_date]
+        for override in stale:
+            event.overrides.remove(override)
+        if stale:
+            await self._session.commit()

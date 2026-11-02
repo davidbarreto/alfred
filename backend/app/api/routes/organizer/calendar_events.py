@@ -6,6 +6,7 @@ from app.features.organizer.calendar_events.schemas import (
     EventEndSeriesRequest,
     EventFilters,
     EventRead,
+    EventRescheduleRequest,
     EventSkipRequest,
     EventUpdate,
 )
@@ -52,6 +53,24 @@ async def skip_occurrence(event_id: int, request: EventSkipRequest, service: Cal
 @router.delete("/{event_id}/skips/{occurrence_date}", response_model=EventRead)
 async def unskip_occurrence(event_id: int, occurrence_date: date, service: CalendarEventServiceDep):
     event_read = await service.unskip_occurrence(event_id, occurrence_date)
+    if event_read is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Event not found")
+    return event_read
+
+
+@router.post("/{event_id}/overrides", response_model=EventRead)
+async def reschedule_occurrence(event_id: int, request: EventRescheduleRequest, service: CalendarEventServiceDep):
+    event_read = await service.reschedule_occurrence(
+        event_id, request.occurrence_date, request.start_datetime, request.end_datetime
+    )
+    if event_read is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Event not found")
+    return event_read
+
+
+@router.delete("/{event_id}/overrides/{occurrence_date}", response_model=EventRead)
+async def restore_occurrence(event_id: int, occurrence_date: date, service: CalendarEventServiceDep):
+    event_read = await service.restore_occurrence(event_id, occurrence_date)
     if event_read is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Event not found")
     return event_read

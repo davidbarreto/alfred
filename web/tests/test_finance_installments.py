@@ -87,6 +87,22 @@ class TestInstallmentPlansPage:
         mock_api["get"].assert_any_call("/finance/installment-plans", params={"status": "open"})
         assert "Show completed" in resp.text
 
+    def test_account_filter_is_passed_to_api_and_preselected(self, client, mock_api):
+        mock_api["get"].side_effect = [
+            [_plan()],
+            [_account()],
+        ]
+
+        resp = client.get("/finance/installments?account_id=1&hide_completed=true")
+
+        assert resp.status_code == 200
+        mock_api["get"].assert_any_call(
+            "/finance/installment-plans", params={"account_id": "1", "status": "open"}
+        )
+        assert 'name="account_id"' in resp.text
+        assert 'value="1" selected' in resp.text
+        assert 'name="hide_completed" value="true"' in resp.text
+
 
 class TestCreateInstallmentPlan:
     def test_creates_and_redirects(self, client, mock_api):

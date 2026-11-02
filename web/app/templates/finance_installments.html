@@ -60,7 +60,19 @@
   </div>
 
   <div class="bg-white border border-gray-200 rounded-lg p-4">
-    <div class="flex items-center justify-end mb-2">
+    <div class="flex items-center justify-between mb-2">
+      <form method="get" action="/finance/installments" class="flex items-center gap-2">
+        {% if hide_completed %}<input type="hidden" name="hide_completed" value="true" />{% endif %}
+        <label for="plan-account-filter" class="text-xs text-gray-500">Account</label>
+        <select id="plan-account-filter" name="account_id" onchange="this.form.submit()"
+                class="border border-gray-200 rounded-lg px-2 py-1 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-[#378ADD]">
+          <option value="">All accounts</option>
+          {% for acc in accounts %}
+          <option value="{{ acc.id }}" {% if query_account_id | string == acc.id | string %}selected{% endif %}>{{ acc.name }}</option>
+          {% endfor %}
+        </select>
+        <noscript><button type="submit" class="btn btn-xs">Filter</button></noscript>
+      </form>
       <a href="/finance/installments?{% if query_account_id %}account_id={{ query_account_id }}&{% endif %}hide_completed={{ 'false' if hide_completed else 'true' }}"
          class="btn btn-xs btn-ghost text-gray-500 gap-1">
         <i class="ti ti-{{ 'eye' if hide_completed else 'eye-off' }} text-xs"></i>

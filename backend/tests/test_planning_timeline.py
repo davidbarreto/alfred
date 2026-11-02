@@ -147,6 +147,27 @@ class TestOverlapWarnings:
         _, warnings = timeline.build_timeline(events, {3: routine}, {}, WED)
         assert len(warnings) == 1 and "Reminder" not in warnings[0]
 
+    def test_meeting_inside_an_office_event_is_not_an_overlap(self):
+        events = [
+            _event(1, "Office", (2026, 10, 21, 9, 0), (2026, 10, 21, 18, 0), tags=["office"], presence="in_person"),
+            _event(2, "Standup", (2026, 10, 21, 10, 0), (2026, 10, 21, 10, 30)),
+        ]
+        assert timeline.build_timeline(events, {}, {}, WED, "office")[1] == []
+
+    def test_meeting_sticking_out_of_an_office_event_is_reported(self):
+        events = [
+            _event(1, "Office", (2026, 10, 21, 9, 0), (2026, 10, 21, 18, 0), tags=["office"], presence="in_person"),
+            _event(2, "Late call", (2026, 10, 21, 17, 30), (2026, 10, 21, 18, 30)),
+        ]
+        assert len(timeline.build_timeline(events, {}, {}, WED, "office")[1]) == 1
+
+    def test_containment_in_an_untagged_event_is_still_an_overlap(self):
+        events = [
+            _event(1, "Long", (2026, 10, 21, 9, 0), (2026, 10, 21, 18, 0)),
+            _event(2, "Short", (2026, 10, 21, 10, 0), (2026, 10, 21, 10, 30)),
+        ]
+        assert len(timeline.build_timeline(events, {}, {}, WED, "office")[1]) == 1
+
     def test_free_events_never_overlap(self):
         events = [_event(1, "A", availability="free"), _event(2, "B", availability="free")]
         assert timeline.build_timeline(events, {}, {}, WED)[1] == []

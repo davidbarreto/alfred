@@ -335,6 +335,11 @@ class TestTaskSections:
             "Task 2 has no context; assumed anywhere.",
         ]
 
+    async def test_many_tasks_without_estimate_are_counted_not_listed(self, service, parts):
+        parts.tasks.get_tasks.return_value = [_task(i, context="home") for i in range(1, 27)]
+        plan = _dump(await service.get_plan(date(2026, 10, 21)))
+        assert plan["warnings"] == ["26 tasks have no estimate; assumed 30 min."]
+
     async def test_assumed_values_are_never_stored_or_shown_as_data(self, service, parts):
         parts.tasks.get_tasks.return_value = [_task(1)]
         plan = _dump(await service.get_plan(date(2026, 10, 21)))

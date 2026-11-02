@@ -29,6 +29,7 @@ class _Block:
     start: datetime  # UTC instant
     end: datetime  # UTC instant
     blocking: bool
+    container: bool = False  # an in-person office event: meetings inside it are not overlaps
 
 
 def iso_local(moment: datetime) -> str:
@@ -70,11 +71,13 @@ def build_timeline(
     routines_by_id: dict[int, Any],
     note_titles: dict[int, str],
     day: date,
+    office_tag: str | None = None,
 ) -> tuple[list[TimelineItem], list[str]]:
     """Timeline for one day: events, routine steps around them and derived travel blocks, sorted by start.
 
     Returns the items and warnings for overlaps between things that occupy time (blocked events, travel
-    and routine steps with a duration). Overlaps are only reported, never resolved.
+    and routine steps with a duration). Overlaps are only reported, never resolved. Something that sits
+    entirely inside an in-person event tagged `office_tag` (a standup during an office day) is not one.
     """
     blocks: list[_Block] = []
     for event in events_for_day(events, day):
@@ -97,6 +100,7 @@ def build_timeline(
                 start=start.astimezone(_UTC),
                 end=end.astimezone(_UTC),
                 blocking=availability == "blocked",
+                container=bool(office_tag) and event.presence == "in_person" and has_tag(event, office_tag),
             )
         )
         if event.travel_minutes > 0:
@@ -164,11 +168,17 @@ def _overlap_warnings(blocks: Sequence[_Block], day: date) -> list[str]:
             if second.start >= first.end:
                 continue
             if first.start < second.end and second.start < first.end:
+                if _inside_container(first, second) or _inside_container(second, first):
+                    continue
                 warnings.append(
                     f"Overlap on {day.isoformat()}: '{first.item.title}' ({_hh_mm(first.item.start)}-{_hh_mm(first.item.end)})"
                     f" overlaps '{second.item.title}' ({_hh_mm(second.item.start)}-{_hh_mm(second.item.end)})."
                 )
     return warnings
+
+
+def _inside_container(inner: _Block, outer: _Block) -> bool:
+    return outer.container and not inner.container and outer.start <= inner.start and inner.end <= outer.end
 
 
 def _hh_mm(iso: str) -> str:

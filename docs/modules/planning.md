@@ -56,7 +56,8 @@ Rule of thumb: if skipping it counts as a miss it is a recurring task, otherwise
 `DayPlanService`, MCP `alfred_day_plan get`, 1-7 days. Aggregates events, event-routine steps, derived travel blocks, scheduled-routine windows, work and office totals, overdue/due/recurring/backlog tasks, study, language quota, shopping, activity suggestions and the saved plan.
 
 - Free slots are intentionally not returned.
-- Overlaps are reported in `warnings`, never resolved.
+- Overlaps are reported in `warnings`, never resolved. Anything entirely inside an in-person event tagged with the office tag (a standup during an office day) is not an overlap.
+- Tasks missing an estimate/context are named in one warning line each, or only counted when there are more than 5.
 - Days outside the `workdays` preference (default mon-fri) get a work target of 0 unless `work_minutes` is passed.
 - Completing a recurring task that has a deadline advances the deadline to the next cycle (`next_deadline` in `tasks/recurrence.py`), written through `TaskService`.
 - `work.committed_minutes` counts work-tagged events plus the saved plan's blocks of work-tagged tasks, overlaps once (`timeline.merged_minutes`).

@@ -156,7 +156,7 @@ class DayPlanService:
         warnings: list[str],
         work_task_blocks: list[tuple[datetime, datetime]],
     ) -> DayRead:
-        items, overlaps = timeline.build_timeline(events, routines_by_id, note_titles, day)
+        items, overlaps = timeline.build_timeline(events, routines_by_id, note_titles, day, settings.office_tag)
         warnings.extend(overlaps)
         blocks: list[RoutineBlock] = []
         for routine in scheduled_routines:
@@ -366,6 +366,9 @@ def _recurring_item(task: TaskRead, dates: list[date], today: date) -> Recurring
     return RecurringTaskItem(**_task_fields(task), due_dates=[d.isoformat() for d in due_dates])
 
 
+_MAX_LISTED_IDS = 5
+
+
 def _assumption_warnings(items: list[TaskItem]) -> list[str]:
     missing_estimate = [t.id for t in items if t.estimate_minutes is None]
     missing_context = [t.id for t in items if t.context is None]
@@ -384,6 +387,9 @@ def _assumption_warnings(items: list[TaskItem]) -> list[str]:
 
 
 def _ids(ids: list[int]) -> str:
+    """Names the tasks, or only counts them past `_MAX_LISTED_IDS` so a big backlog is one short line."""
+    if len(ids) > _MAX_LISTED_IDS:
+        return f"{len(ids)} tasks have"
     label = "Task" if len(ids) == 1 else "Tasks"
     verb = "has" if len(ids) == 1 else "have"
     return f"{label} {', '.join(str(i) for i in ids)} {verb}"

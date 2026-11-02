@@ -5,7 +5,7 @@ from pydantic import BaseModel
 
 from app.api.auth import require_auth
 from app.dependencies import InterviewProcessServiceDep, JdExtractionServiceDep
-from app.features.organizer.interviews.processes.jd_extraction_service import JobPostingExtraction
+from app.features.organizer.interviews.processes.jd_extraction_service import JobPostingExtraction, JobPostingExtractionError
 from app.features.organizer.interviews.processes.schemas import (
     InterviewProcessCreate,
     InterviewProcessCreateWithFirstStage,
@@ -52,7 +52,10 @@ async def create_process(
 async def extract_from_url(
     request: ExtractFromUrlRequest, service: JdExtractionServiceDep
 ) -> JobPostingExtraction:
-    return await service.extract_from_url(request.url)
+    try:
+        return await service.extract_from_url(request.url)
+    except JobPostingExtractionError as exc:
+        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(exc))
 
 
 @router.patch("/{process_id}", response_model=InterviewProcessRead)

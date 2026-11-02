@@ -6,7 +6,7 @@ import time
 
 import requests
 from bs4 import BeautifulSoup
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.concurrency import run_in_threadpool
 
@@ -18,6 +18,10 @@ logger = logging.getLogger(__name__)
 
 _MAX_PAGE_TEXT_CHARS = 8000
 _FETCH_TIMEOUT_SECONDS = 10
+
+
+class JobPostingExtractionError(Exception):
+    """The posting could not be fetched, or the LLM returned something that is not a valid extraction."""
 
 
 class JobPostingExtraction(BaseModel):
@@ -46,7 +50,11 @@ class JdExtractionService:
         self._llm_provider = llm_provider
 
     async def extract_from_url(self, url: str) -> JobPostingExtraction:
-        page_text = await run_in_threadpool(_fetch_page_text, url)
+        try:
+            page_text = await run_in_threadpool(_fetch_page_text, url)
+        except requests.RequestException as exc:
+            logger.warning("JD extraction: fetch failed url=%s error=%s", url, exc)
+            raise JobPostingExtractionError(f"Could not fetch the job posting: {exc}") from exc
 
         schema_str = json.dumps(JobPostingExtraction.model_json_schema(), indent=2)
         system_prompt = JD_EXTRACTION_PROMPT_TEMPLATE.format(schema=schema_str, text=page_text)
@@ -72,6 +80,10 @@ class JdExtractionService:
         raw = llm_response.text.strip()
         if raw.startswith("```"):
             raw = raw.split("\n", 1)[-1].rsplit("```", 1)[0].strip()
-        extraction = JobPostingExtraction.model_validate_json(raw)
+        try:
+            extraction = JobPostingExtraction.model_validate_json(raw)
+        except ValidationError as exc:
+            logger.error("JD extraction: unparseable LLM output url=%s error=%s", url, exc)
+            raise JobPostingExtractionError("The LLM did not return a valid extraction") from exc
         logger.debug("JD extraction successful: url=%s fields=%s", url, list(extraction.model_dump(exclude_none=True).keys()))
         return extraction

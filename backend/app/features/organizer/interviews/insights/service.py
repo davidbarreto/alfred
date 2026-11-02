@@ -5,6 +5,7 @@ import logging
 import time
 from datetime import datetime, timezone
 
+from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.features.organizer.interviews.companies.repository import CompanyRepository
@@ -22,6 +23,10 @@ from app.integrations.llm_calls.repository import create_llm_call
 from app.shared.llm import LlmProvider
 
 logger = logging.getLogger(__name__)
+
+
+class InsightsGenerationError(Exception):
+    """The LLM returned something that is not valid insights."""
 
 
 class InterviewInsightService:
@@ -126,7 +131,11 @@ class InterviewInsightService:
         raw = llm_response.text.strip()
         if raw.startswith("```"):
             raw = raw.split("\n", 1)[-1].rsplit("```", 1)[0].strip()
-        parsed = InsightsResult.model_validate_json(raw)
+        try:
+            parsed = InsightsResult.model_validate_json(raw)
+        except ValidationError as exc:
+            logger.error("Interview insights: unparseable LLM output error=%s", exc)
+            raise InsightsGenerationError("The LLM did not return valid insights") from exc
 
         insight = await self._repo.create_insight(
             content=parsed.content,

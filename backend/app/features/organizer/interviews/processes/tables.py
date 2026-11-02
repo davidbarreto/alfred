@@ -47,5 +47,9 @@ class InterviewProcess(Base):
     )
 
     stages: Mapped[list["InterviewStage"]] = relationship(
-        "InterviewStage", back_populates="process", order_by="InterviewStage.sequence"
+        "InterviewStage",
+        back_populates="process",
+        order_by="InterviewStage.sequence",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
     )

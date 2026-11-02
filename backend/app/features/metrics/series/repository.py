@@ -45,6 +45,9 @@ class MetricSeriesRepository:
         for key, value in fields.items():
             setattr(series, key, value)
         await self._session.commit()
+        # updated_at is refreshed by the database; sessions keep expire_on_commit off, so reload it
+        # here rather than let serialisation lazy-load it outside the async context.
+        await self._session.refresh(series)
         return series
 
     async def count_entries(self, series_id: int) -> int:

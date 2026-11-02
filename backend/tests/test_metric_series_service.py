@@ -129,3 +129,23 @@ class TestMerge:
     async def test_unknown_series(self, service):
         service._repo.get_series_by_name.side_effect = [None, _series()]
         assert await service.merge_series("ghost", MetricSeriesMerge(into="commute-work")) is None
+
+
+class TestRepositoryUpdateReloadsServerSideColumns:
+    async def test_update_refreshes_series_after_commit(self):
+        """Regression: updated_at is set by the database on UPDATE and sessions keep
+        expire_on_commit off, so without a refresh serialising the row lazy-loaded it outside the
+        async context (MissingGreenlet) and PATCH /metrics/series/{name} returned 500."""
+        from app.features.metrics.series.repository import MetricSeriesRepository
+
+        session = AsyncMock()
+        series = _series()
+        session.get = AsyncMock(return_value=series)
+        session.commit = AsyncMock()
+        session.refresh = AsyncMock()
+        result = await MetricSeriesRepository(session).update_series(1, {"is_archived": True})
+
+        assert result is series
+        assert series.is_archived is True
+        session.refresh.assert_awaited_once_with(series)
+        assert [c[0] for c in session.method_calls if c[0] in ('commit', 'refresh')] == ['commit', 'refresh']

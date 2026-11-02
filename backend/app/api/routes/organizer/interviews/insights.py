@@ -1,10 +1,11 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, HTTPException, status
 
 from app.api.auth import require_auth
 from app.dependencies import InterviewInsightServiceDep
 from app.features.organizer.interviews.insights.schemas import InterviewInsightFilters, InterviewInsightRead
+from app.features.organizer.interviews.insights.service import InsightsGenerationError
 
 router = APIRouter(
     prefix="/organizer/interview-insights",
@@ -15,7 +16,10 @@ router = APIRouter(
 
 @router.post("", response_model=InterviewInsightRead, status_code=status.HTTP_201_CREATED)
 async def generate_insights(service: InterviewInsightServiceDep) -> InterviewInsightRead:
-    return await service.generate_insights()
+    try:
+        return await service.generate_insights()
+    except InsightsGenerationError as exc:
+        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=str(exc))
 
 
 @router.get("", response_model=list[InterviewInsightRead])

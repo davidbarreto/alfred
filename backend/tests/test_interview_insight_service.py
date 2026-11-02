@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from app.features.organizer.interviews.insights.schemas import InterviewInsightFilters
-from app.features.organizer.interviews.insights.service import InterviewInsightService
+from app.features.organizer.interviews.insights.service import InsightsGenerationError, InterviewInsightService
 from app.shared.llm import LlmResponse
 
 
@@ -224,3 +224,16 @@ class TestGetInsightsHistory:
         result = await svc.get_insights_history(filters)
         svc._repo.get_insights.assert_called_once_with(filters)
         assert [i.id for i in result] == [1, 2]
+
+
+class TestUnparseableLlmOutput:
+    async def test_non_json_reply_raises_generation_error(self, service):
+        svc, llm_provider = service
+        svc._process_repo.get_active_processes.return_value = []
+        llm_provider.complete.return_value = LlmResponse(
+            text="[stubbed LLM response — integrations disabled]", tokens_input=1, tokens_output=1, finish_reason="STOP"
+        )
+        with patch("app.features.organizer.interviews.insights.service.create_llm_call", new=AsyncMock()):
+            with pytest.raises(InsightsGenerationError):
+                await svc.generate_insights()
+        svc._repo.create_insight.assert_not_called()

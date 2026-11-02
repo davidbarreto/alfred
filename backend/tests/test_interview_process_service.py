@@ -2,10 +2,12 @@ from datetime import datetime, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+import requests
 from fastapi import HTTPException
 
 from app.features.organizer.interviews.processes.jd_extraction_service import (
     JdExtractionService,
+    JobPostingExtractionError,
     JobPostingExtraction,
 )
 from app.features.organizer.interviews.processes.schemas import (
@@ -167,3 +169,47 @@ class TestJdExtractionService:
             result = await svc.extract_from_url("https://example.com/job/123")
 
         assert result.role_title == "Backend Engineer"
+
+    async def test_unreachable_posting_is_reported_not_raised_raw(self, jd_service):
+        svc, llm_provider = jd_service
+        with patch(
+            "app.features.organizer.interviews.processes.jd_extraction_service.requests.get",
+            side_effect=requests.ConnectionError("down"),
+        ):
+            with pytest.raises(JobPostingExtractionError):
+                await svc.extract_from_url("https://example.com/job/123")
+        llm_provider.complete.assert_not_called()
+
+    async def test_http_error_status_is_reported(self, jd_service):
+        svc, _ = jd_service
+        fake_response = MagicMock()
+        fake_response.raise_for_status.side_effect = requests.HTTPError("404 Client Error")
+        with patch(
+            "app.features.organizer.interviews.processes.jd_extraction_service.requests.get", return_value=fake_response
+        ):
+            with pytest.raises(JobPostingExtractionError):
+                await svc.extract_from_url("https://example.com/job/123")
+
+    async def test_unparseable_llm_output_is_reported(self, jd_service):
+        svc, llm_provider = jd_service
+        llm_provider.complete.return_value = LlmResponse(
+            text="[stubbed LLM response — integrations disabled]", tokens_input=1, tokens_output=1, finish_reason="STOP"
+        )
+        fake_response = MagicMock()
+        fake_response.text = "<html></html>"
+        fake_response.raise_for_status = MagicMock()
+        with patch("app.features.organizer.interviews.processes.jd_extraction_service.requests.get", return_value=fake_response), \
+             patch("app.features.organizer.interviews.processes.jd_extraction_service.create_llm_call", new=AsyncMock()):
+            with pytest.raises(JobPostingExtractionError):
+                await svc.extract_from_url("https://example.com/job/123")
+
+
+class TestProcessStageCascade:
+    def test_deleting_a_process_deletes_its_stages_instead_of_nulling_process_id(self):
+        """Regression: without a delete cascade the ORM issued UPDATE interview_stages SET
+        process_id=NULL, violating NOT NULL, so DELETE /organizer/interview-processes/{id} returned 500."""
+        from app.features.organizer.interviews.processes.tables import InterviewProcess
+
+        cascade = InterviewProcess.stages.property.cascade
+        assert cascade.delete
+        assert cascade.delete_orphan

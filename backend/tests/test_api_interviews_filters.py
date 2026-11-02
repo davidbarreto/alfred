@@ -41,3 +41,35 @@ class TestListFiltersDependencyResolves:
     def test_list_insights(self, client):
         response = client.get("/organizer/interview-insights?limit=5", headers=AUTH)
         assert response.status_code == 200
+
+
+class TestLlmAndFetchFailuresAreBadGateway:
+    """Regression: an unreachable posting or an unparseable LLM reply used to escape as a 500."""
+
+    def test_extract_from_url_failure_is_502(self):
+        from app.dependencies import get_jd_extraction_service
+        from app.features.organizer.interviews.processes.jd_extraction_service import JobPostingExtractionError
+        from app.main import app
+
+        service = AsyncMock(extract_from_url=AsyncMock(side_effect=JobPostingExtractionError("404")))
+        app.dependency_overrides[get_jd_extraction_service] = lambda: service
+        try:
+            response = TestClient(app).post(
+                "/organizer/interview-processes/extract-from-url", json={"url": "https://example.com/x"}, headers=AUTH
+            )
+        finally:
+            app.dependency_overrides.clear()
+        assert response.status_code == 502
+
+    def test_generate_insights_failure_is_502(self):
+        from app.dependencies import get_interview_insight_service
+        from app.features.organizer.interviews.insights.service import InsightsGenerationError
+        from app.main import app
+
+        service = AsyncMock(generate_insights=AsyncMock(side_effect=InsightsGenerationError("bad")))
+        app.dependency_overrides[get_interview_insight_service] = lambda: service
+        try:
+            response = TestClient(app).post("/organizer/interview-insights", headers=AUTH)
+        finally:
+            app.dependency_overrides.clear()
+        assert response.status_code == 502

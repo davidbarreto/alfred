@@ -106,6 +106,81 @@ class TestParseTextInstallments:
         assert result.installment_plans_opened[0].plan_ref == "00001"
 
 
+_SHORT_DATE_STATEMENT_TEXT = """\
+EXTRATO VISA CLASSIC ACTIVOBANK N. 2026/011
+Extrato de: 2026/10/01 a 2026/10/31 Moeda: EUR
+Conta Cartão: 111111-2222222-00-0 Total a Pagar: 500.00
+DETALHE DE TRANSAÇÕES COM PAGAMENTO FRACIONADO
+MENSALIDADES A PAGAR
+Data
+Mov.
+Descritivo
+Valor Transação
+Capital em
+Dívida
+TAN Plano Capital Juros IS Mensalidade
+26/10/30  COMPRA 4681 SAMPLE SHOP A
+ 200.00 100.00 9.900% 00001/2 48.00 1.50 0.50 50.00
+26/11/30  COMPRA 4681 SAMPLE SHOP A
+ 200.00 50.00 9.900% 00001/3 48.00 1.40 0.45 49.85
+DETALHE DOS MOVIMENTOS
+Data
+Mov.
+Data
+Valor
+Descritivo Rede Débito Crédito
+10/06 10/07 COMPRA 4681 SAMPLE SHOP B 60.00
+10/01 10/05 PAGAMENTO CARTAO CREDITO 300.00
+10/06 10/22 COMPRA 4681 SAMPLE SHOP A 200.00
+Fracionada x4
+10/25 10/30 COMPRA 4681 SAMPLE SHOP C
+123-SAMPLE LINE TWO
+VIS 80.00
+Fracionada x3
+10/26 10/27 COMPRA 4681 SAMPLE SHOP D
+456-WRAPPED LINE
+VIS 12.50
+10/30 10/30 JUROS PAG FRACIONADO 1.50
+"""
+
+
+class TestParseTextShortDateFormat:
+    """Statements from late 2026 print installment dates as YY/MM/DD and movement
+    dates as MM/DD (no year, inferred from the statement period)."""
+
+    def test_installment_due_this_period_captured(self):
+        result = _parse_text(_SHORT_DATE_STATEMENT_TEXT, date(2026, 10, 1), date(2026, 10, 31), installments_only=True)
+        assert [(r.date_posted, r.amount, r.raw_description) for r in result.rows] == [
+            (date(2026, 10, 30), Decimal("-48.00"), "COMPRA 4681 SAMPLE SHOP A (00001/2)")
+        ]
+
+    def test_plan_signal_detected(self):
+        result = _parse_text(_SHORT_DATE_STATEMENT_TEXT, date(2026, 10, 1), date(2026, 10, 31), installments_only=True)
+        assert [(s.plan_ref, s.total_installments) for s in result.installment_plans_opened] == [("00001", 3)]
+
+    def test_full_mode_movements_get_year_from_period(self):
+        result = _parse_text(_SHORT_DATE_STATEMENT_TEXT, date(2026, 10, 1), date(2026, 10, 31), installments_only=False)
+        movements = {r.raw_description: r for r in result.rows if r.flag_reason is None}
+        assert movements["COMPRA 4681 SAMPLE SHOP B"].date_posted == date(2026, 10, 7)
+        assert movements["COMPRA 4681 SAMPLE SHOP B"].date_value == date(2026, 10, 6)
+        assert movements["COMPRA 4681 SAMPLE SHOP B"].amount == Decimal("-60.00")
+        assert movements["PAGAMENTO CARTAO CREDITO"].amount == Decimal("300.00")
+
+    def test_full_mode_joins_wrapped_description_and_skips_fracionada(self):
+        result = _parse_text(_SHORT_DATE_STATEMENT_TEXT, date(2026, 10, 1), date(2026, 10, 31), installments_only=False)
+        descriptions = [r.raw_description for r in result.rows]
+        assert "COMPRA 4681 SAMPLE SHOP D 456-WRAPPED LINE" in descriptions
+        assert not any("SHOP C" in d for d in descriptions)
+        assert all(r.amount != Decimal("-200.00") for r in result.rows)
+
+    def test_december_movement_in_january_statement_uses_previous_year(self):
+        text = _SHORT_DATE_STATEMENT_TEXT.replace("10/06 10/07", "12/30 01/02")
+        result = _parse_text(text, date(2027, 1, 1), date(2027, 1, 31), installments_only=False)
+        shop_b = next(r for r in result.rows if "SHOP B" in r.raw_description)
+        assert shop_b.date_value == date(2026, 12, 30)
+        assert shop_b.date_posted == date(2027, 1, 2)
+
+
 class TestParseTextMovementsInstallmentsOnly:
     def test_no_ordinary_movements_emitted(self):
         result = _parse_text(_STATEMENT_TEXT, _PERIOD_START, _PERIOD_END, installments_only=True)

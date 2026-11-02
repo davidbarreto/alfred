@@ -6,6 +6,11 @@ Format notes (differs from the account-history and card-CSV exports):
   (Data Movimento, Data Valor, description, amount) -- network markers
   (``VIS``/``MB``), FX sub-lines, and "Fracionada xN" continuation lines sit
   on their own following line and are simply not matched by the row pattern.
+- Statements from ~Oct 2026 on print shorter dates: ``MM/DD`` in movements
+  (year inferred from the period end, see ``_parse_date``) and ``YY/MM/DD``
+  in the installment table. Long descriptions also wrap, leaving the network
+  marker and amount on a later line (``10/25 10/30 COMPRA 4681 X`` /
+  ``789-Y`` / ``VIS 116.29``); ``_join_wrapped_row`` re-joins those.
   ``ParsedRow.date_posted`` (the field the import service treats as the
   transaction's actual date) is populated from Data Valor, not Data
   Movimento -- see ``_build_movement_row``.
@@ -86,10 +91,13 @@ _INSTALLMENTS_START = "DETALHE DE TRANSAÇÕES COM PAGAMENTO FRACIONADO"
 _MOVEMENTS_START = "DETALHE DOS MOVIMENTOS"
 _MOVEMENTS_END = "TRANSAÇÕES EM MOEDA DIFERENTE"
 
-_ROW_RE = re.compile(
-    r"^(\d{4}/\d{2}/\d{2}) (\d{4}/\d{2}/\d{2}) (.+?) (\d{1,3}(?: \d{3})*\.\d{2})$"
-)
-_INSTALLMENT_LINE_RE = re.compile(r"^(\d{4}/\d{2}/\d{2})\s+(.+)$")
+_DATE = r"(?:\d{4}/\d{2}/\d{2}|\d{2}/\d{2})"
+_AMOUNT = r"\d{1,3}(?: \d{3})*\.\d{2}"
+_ROW_RE = re.compile(rf"^({_DATE}) ({_DATE}) (.+?) ({_AMOUNT})$")
+_ROW_START_RE = re.compile(rf"^({_DATE}) ({_DATE}) (.+)$")
+_WRAPPED_TAIL_RE = re.compile(rf"^(?:(?:VIS|MB) )?({_AMOUNT})$")
+_NETWORK_SUFFIX_RE = re.compile(r" (?:VIS|MB)$")
+_INSTALLMENT_LINE_RE = re.compile(r"^(\d{2,4}/\d{2}/\d{2})\s+(.+)$")
 _CARD_RE = re.compile(r"Conta Cart.o:\s*([\d-]+)", re.IGNORECASE)
 _PERIOD_RE = re.compile(r"Extrato de:\s*(\d{4})/(\d{2})/(\d{2}) a (\d{4})/(\d{2})/(\d{2})")
 _FRACIONADA_RE = re.compile(r"^Fracionada x(\d+)", re.IGNORECASE)
@@ -117,20 +125,54 @@ def _parse_amount(raw: str) -> Decimal | None:
         return None
 
 
-def _parse_date(raw: str) -> date | None:
+def _parse_date(raw: str, period_end: date | None = None) -> date | None:
+    """Parse ``YYYY/MM/DD``, ``YY/MM/DD`` or year-less ``MM/DD``.
+
+    ``MM/DD`` takes its year from ``period_end``: the latest such date not after
+    it, so a December movement on a January statement lands in the prior year.
+    """
     parts = raw.split("/")
-    if len(parts) != 3:
-        return None
     try:
-        return date(int(parts[0]), int(parts[1]), int(parts[2]))
+        if len(parts) == 3:
+            year = int(parts[0])
+            return date(year + 2000 if year < 100 else year, int(parts[1]), int(parts[2]))
+        if len(parts) == 2 and period_end is not None:
+            month, day = int(parts[0]), int(parts[1])
+            candidate = date(period_end.year, month, day)
+            return candidate if candidate <= period_end else date(period_end.year - 1, month, day)
     except ValueError:
         return None
+    return None
 
 
 def _within_period(day: date, period_start: date | None, period_end: date | None) -> bool:
     if period_start is None or period_end is None:
         return False
     return period_start <= day <= period_end
+
+
+def _join_wrapped_row(lines: list[str], i: int) -> tuple[str, int]:
+    """Re-join a movement whose description wraps onto following lines.
+
+    Returns the single-line form (``<dates> <description> <amount>``) and the
+    number of lines consumed; a line that already carries its amount is returned
+    unchanged (consumed=1). Anything that isn't a clean wrap is left untouched.
+    """
+    line = lines[i]
+    if _ROW_RE.match(line) or _ROW_START_RE.match(line) is None:
+        return line, 1
+    parts = [line]
+    for offset in range(1, 4):
+        if i + offset >= len(lines):
+            break
+        nxt = lines[i + offset]
+        tail = _WRAPPED_TAIL_RE.match(nxt)
+        if tail is not None:
+            return f"{' '.join(parts)} {tail.group(1)}", offset + 1
+        if _ROW_START_RE.match(nxt) or not nxt:
+            break
+        parts.append(nxt)
+    return line, 1
 
 
 def _build_movement_row(description: str, amount: Decimal, date_movimento: date, date_valor: date) -> ParsedRow:
@@ -212,7 +254,7 @@ def _parse_text(
         if state == "installments":
             match = _INSTALLMENT_LINE_RE.match(line)
             if match is not None and i + 1 < n:
-                row_date = _parse_date(match.group(1))
+                row_date = _parse_date(match.group(1), period_end)
                 description = match.group(2).strip()
                 parts = lines[i + 1].split()
                 if len(parts) == 8:
@@ -262,37 +304,39 @@ def _parse_text(
             continue
 
         if state == "movements":
-            match = _ROW_RE.match(line)
+            joined, consumed = _join_wrapped_row(lines, i)
+            match = _ROW_RE.match(joined)
             if match is None:
                 i += 1
                 continue
 
             posted_raw, value_raw, description, amount_raw = match.groups()
+            description = _NETWORK_SUFFIX_RE.sub("", description)
 
-            next_line = lines[i + 1] if i + 1 < n else ""
+            next_line = lines[i + consumed] if i + consumed < n else ""
             if _FRACIONADA_RE.match(next_line) is not None:
                 # The full purchase price is never actually charged in one go -- it's
                 # replaced by the real monthly installment(s), so this row is always
                 # skipped (both modes). Plan identity/tracking comes from the
                 # installment schedule table instead (see module docstring).
-                i += 1
+                i += consumed
                 continue
 
             if installments_only:
-                i += 1
+                i += consumed
                 continue
 
-            date_movimento = _parse_date(posted_raw)
-            date_valor = _parse_date(value_raw)
+            date_movimento = _parse_date(posted_raw, period_end)
+            date_valor = _parse_date(value_raw, period_end)
             amount = _parse_amount(amount_raw)
             if date_movimento is None or amount is None:
-                i += 1
+                i += consumed
                 continue
 
             rows.append(
                 _build_movement_row(description, amount, date_movimento, date_valor or date_movimento)
             )
-            i += 1
+            i += consumed
             continue
 
         i += 1

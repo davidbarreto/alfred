@@ -3,7 +3,9 @@ import os
 # Must be set before any app module is imported — db/session.py and config.py
 # read env vars at import time, and get_settings() is @lru_cache.
 os.environ.setdefault("DATABASE_URL", "postgresql+asyncpg://user:pass@localhost/testdb")
-os.environ.setdefault("ALFRED_API_TOKEN", "test-api-token")
+# Assigned, not setdefault: a real token exported in the shell must not leak in, or every
+# authenticated test gets 401 (TEST_TOKEN below is what the tests send).
+os.environ["ALFRED_API_TOKEN"] = "test-api-token"
 os.environ.setdefault("NOTION_API_KEY", "test-notion-key")
 os.environ.setdefault("NOTION_BASE_URL", "https://api.notion.com/v1")
 os.environ.setdefault("NOTION_API_VERSION", "2022-06-28")

@@ -239,6 +239,7 @@ logger.warning("Auth failed: invalid token")
 - Unit tests mock DB and external services; no real I/O
 - Use `pytest` with fixtures for DB sessions and app client
 - Don't ignore warnings. Solve them whenever possible
+- Backend tests need `ALFRED_API_TOKEN=test-api-token` (exactly that value, the `TEST_TOKEN` in `tests/conftest.py`). `conftest.py` forces it, but if you ever see mass `401 == 200` failures, a real token in the shell is the cause: run `env -u ALFRED_API_TOKEN .venv/bin/python -m pytest` or set it to `test-api-token`. Never use another value like `test`.
 - Test file mirrors source structure: `tests/test_task_service.py` → `app/features/organizer/tasks/service.py`
 - Aim for behaviour coverage, not line coverage — test contracts, not internals
 - For every bug fix: first write a unit test that reproduces the bug (it should fail against the unfixed code), then write the fix that makes it pass. Keep the regression test after the fix lands.

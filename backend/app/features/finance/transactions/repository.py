@@ -494,6 +494,39 @@ class TransactionRepository:
         )
         return {(row[0].date(), row[1], row[2]) for row in result.all()}
 
+    async def find_unlinked_by_key(
+        self, account_id: int, day: date, bank_description: str, amount: Decimal
+    ) -> Transaction | None:
+        """An existing transaction with this (date, bank_description, amount) that isn't
+        linked to an installment plan -- the target of an import row that duplicates it."""
+        result = await self._session.execute(
+            select(Transaction)
+            .where(
+                Transaction.account_id == account_id,
+                func.date(Transaction.date) == day,
+                Transaction.bank_description == bank_description,
+                Transaction.amount == amount,
+                Transaction.installment_plan_id.is_(None),
+            )
+            .order_by(Transaction.id)
+            .limit(1)
+        )
+        return result.scalars().first()
+
+    async def link_to_installment_plan(self, transaction_id: int, plan_id: int, account_id: int) -> bool:
+        """Link a still-unlinked transaction of this account to a plan; False if it is gone,
+        belongs to another account or is already linked (so a repeat is a no-op)."""
+        transaction = await self.get(transaction_id)
+        if (
+            transaction is None
+            or transaction.account_id != account_id
+            or transaction.installment_plan_id is not None
+        ):
+            return False
+        transaction.installment_plan_id = plan_id
+        await self._session.commit()
+        return True
+
     async def find_unmatched_transaction(
         self, account_id: int, bank_description: str, amount: Decimal
     ) -> Transaction | None:

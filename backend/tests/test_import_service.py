@@ -2158,6 +2158,102 @@ class TestCommitRecordsInstallmentCapture:
         service._installment_plan_repo.record_capture.assert_not_awaited()
 
 
+class TestPreviewOffersToLinkUnlinkedDuplicate:
+    """A re-imported installment that already exists but was never linked to its plan
+    (rule-ordering bug) is offered as 'link existing' so its interest/duty get counted."""
+
+    def _service(self, existing_id=77):
+        rows = [
+            _row(
+                balance_after=None,
+                raw_description="COMPRA 4681 SHOP (00010/2)",
+                amount=Decimal("-18.21"),
+                installment_juros=Decimal("0.90"),
+                installment_duty=Decimal("0.04"),
+            )
+        ]
+        service = _service(_statement(rows))
+        service._txn_repo.get_existing_keys.return_value = {
+            (date(2026, 6, 1), "COMPRA 4681 SHOP (00010/2)", Decimal("18.21"))
+        }
+        service._repo.list_rules.return_value = [
+            _rule(pattern="SHOP", category_id=9, installment_plan_id=None, transfer_account_id=None),
+            _rule(pattern="00010", installment_plan_id=28, category_id=None, transfer_account_id=None),
+        ]
+        found = MagicMock()
+        found.id = existing_id
+        service._txn_repo.find_unlinked_by_key.return_value = found if existing_id else None
+        return service
+
+    @pytest.mark.asyncio
+    async def test_duplicate_matching_plan_rule_is_offered_for_linking(self):
+        preview = await self._service().preview(1, "x.csv", b"")
+
+        row = preview.rows[0]
+        assert row.status == "duplicate"
+        assert row.existing_transaction_id == 77
+        assert row.installment_plan_id == 28
+
+    @pytest.mark.asyncio
+    async def test_not_offered_when_existing_transaction_already_linked(self):
+        preview = await self._service(existing_id=None).preview(1, "x.csv", b"")
+
+        assert preview.rows[0].existing_transaction_id is None
+        assert preview.rows[0].installment_plan_id is None
+
+    @pytest.mark.asyncio
+    async def test_not_offered_when_no_plan_rule_matches(self):
+        service = self._service()
+        service._repo.list_rules.return_value = [
+            _rule(pattern="SHOP", category_id=9, installment_plan_id=None, transfer_account_id=None)
+        ]
+
+        preview = await service.preview(1, "x.csv", b"")
+
+        assert preview.rows[0].existing_transaction_id is None
+
+
+class TestCommitLinksExistingTransaction:
+    def _prepare(self, service: ImportService) -> None:
+        batch = ImportBatch()
+        batch.id = 7
+        service._repo.add_batch.return_value = batch
+
+    @pytest.mark.asyncio
+    async def test_links_existing_and_records_capture_without_inserting(self):
+        service = _service()
+        self._prepare(service)
+        service._txn_repo.link_to_installment_plan.return_value = True
+        rows = [
+            _commit_row(
+                existing_transaction_id=77, installment_plan_id=28,
+                installment_juros=Decimal("0.90"), installment_duty=Decimal("0.04"),
+            )
+        ]
+
+        result = await service.commit(_commit_request(rows))
+
+        service._txn_repo.link_to_installment_plan.assert_awaited_once_with(77, 28, account_id=1)
+        service._installment_plan_repo.record_capture.assert_awaited_once_with(
+            28, juros=Decimal("0.90"), imposto_selo=Decimal("0.04")
+        )
+        service._txn_repo.add.assert_not_awaited()
+        assert result.inserted == 0
+        assert result.linked_existing == 1
+
+    @pytest.mark.asyncio
+    async def test_no_capture_when_transaction_is_already_linked_or_gone(self):
+        service = _service()
+        self._prepare(service)
+        service._txn_repo.link_to_installment_plan.return_value = False
+        rows = [_commit_row(existing_transaction_id=77, installment_plan_id=28)]
+
+        result = await service.commit(_commit_request(rows))
+
+        service._installment_plan_repo.record_capture.assert_not_awaited()
+        assert result.linked_existing == 0
+
+
 class TestCommitInsertsSupersedingRowAtZero:
     def _prepare(self, service: ImportService) -> None:
         batch = ImportBatch()

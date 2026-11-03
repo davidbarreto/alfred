@@ -107,7 +107,31 @@
         <tbody>
           {% for row in preview.rows %}
           {% set i = loop.index0 %}
-          {% if row.status == "duplicate" %}
+          {% if row.status == "duplicate" and row.existing_transaction_id %}
+          <tr>
+            <td>
+              <input type="checkbox" name="include_{{ i }}" checked class="checkbox checkbox-xs" title="Link the existing transaction to its installment plan" />
+              <input type="hidden" name="date_{{ i }}" value="{{ row.date_posted }}" />
+              <input type="hidden" name="bank_description_{{ i }}" value="{{ row.bank_description }}" />
+              <input type="hidden" name="amount_{{ i }}" value="{{ row.amount }}" />
+              <input type="hidden" name="type_{{ i }}" value="{{ row.type }}" />
+              <input type="hidden" name="hash_{{ i }}" value="{{ row.deduplication_hash }}" />
+              <input type="hidden" name="existing_transaction_id_{{ i }}" value="{{ row.existing_transaction_id }}" />
+              <input type="hidden" name="installment_plan_id_{{ i }}" value="{{ row.installment_plan_id }}" />
+              {% if row.installment_juros is not none %}
+              <input type="hidden" name="installment_juros_{{ i }}" value="{{ row.installment_juros }}" />
+              {% endif %}
+              {% if row.installment_duty is not none %}
+              <input type="hidden" name="installment_duty_{{ i }}" value="{{ row.installment_duty }}" />
+              {% endif %}
+              <i class="ti ti-link text-sm text-[#378ADD]" title="Already imported, not linked to its plan"></i>
+            </td>
+            <td class="whitespace-nowrap text-xs">{{ row.date_posted }}</td>
+            <td class="text-xs max-w-64 truncate" title="{{ row.bank_description }}">{{ row.bank_description }}</td>
+            <td class="text-right text-xs whitespace-nowrap">{{ currency_symbol }}{{ row.amount | money }}</td>
+            <td colspan="5" class="text-xs text-[#378ADD]">Already imported — will be linked to its installment plan (adds its interest and duty); nothing new is inserted</td>
+          </tr>
+          {% elif row.status == "duplicate" %}
           <tr class="opacity-40">
             <td>
               <input type="checkbox" name="include_{{ i }}" class="checkbox checkbox-xs" title="Import anyway" />

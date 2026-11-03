@@ -157,6 +157,29 @@ class TestImportPreview:
 
         assert "already imported" in resp.text
 
+    def test_unlinked_duplicate_rendered_as_link_existing_and_preticked(self, client, mock_api):
+        rows = [
+            _preview_row(
+                status="duplicate", deduplication_hash="dup1", duplicate_reason="already_imported",
+                existing_transaction_id=77, installment_plan_id=28, installment_juros="0.90",
+            )
+        ]
+        mock_api["post_multipart"].return_value = _preview(rows)
+        mock_api["get"].side_effect = [[_account()], [_category()], [], _currencies()]
+
+        resp = client.post(
+            "/finance/import/preview",
+            data={"account_id": "1"},
+            files={"file": ("mov.pdf", b"x", "application/pdf")},
+        )
+
+        assert 'name="existing_transaction_id_0" value="77"' in resp.text
+        assert 'name="installment_plan_id_0" value="28"' in resp.text
+        assert 'name="installment_juros_0" value="0.90"' in resp.text
+        assert "will be linked to its installment plan" in resp.text
+        assert 'name="include_0" checked' in resp.text
+        assert 'name="force_0"' not in resp.text
+
     def test_repeated_in_file_duplicate_labeled_distinctly(self, client, mock_api):
         rows = [
             _preview_row(),
@@ -385,6 +408,37 @@ class TestImportCommit:
         assert resp.status_code == 422
         assert "Import failed." not in resp.text
         assert "may have completed" in resp.text
+
+    def test_forwards_existing_transaction_id_for_link_only_rows(self, client, mock_api):
+        mock_api["post"].return_value = {
+            "batch_id": 7, "inserted": 0, "skipped_duplicates": 0, "rules_created": 0, "linked_existing": 1
+        }
+
+        resp = client.post(
+            "/finance/import/commit",
+            json={
+                "account_id": "1",
+                "provider": "activobank_card_pdf",
+                "currency": "EUR",
+                "row_count": "1",
+                "include_0": "on",
+                "date_0": "2026-07-03",
+                "bank_description_0": "COMPRA 4681 SHOP (00010/2)",
+                "amount_0": "-18.21",
+                "type_0": "expense",
+                "hash_0": "hash-link",
+                "existing_transaction_id_0": "77",
+                "installment_plan_id_0": "28",
+                "installment_juros_0": "0.90",
+            },
+        )
+
+        assert resp.status_code == 200
+        row = mock_api["post"].call_args.kwargs["json"]["rows"][0]
+        assert row["existing_transaction_id"] == 77
+        assert row["installment_plan_id"] == 28
+        assert row["installment_juros"] == "0.90"
+        assert "force" not in row
 
     def test_commit_uses_extended_timeout(self, client, mock_api):
         mock_api["post"].return_value = {

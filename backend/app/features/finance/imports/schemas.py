@@ -123,6 +123,10 @@ class ImportPreviewRow(BaseModel):
     from the ActivoBank PDF parser's own Capital-installment rows."""
     installment_juros: Decimal | None = None
     installment_duty: Decimal | None = None
+    existing_transaction_id: int | None = None
+    """Set on a duplicate row whose already-imported transaction was never linked to its
+    installment plan -- committing it links that transaction (and counts this row's
+    interest/duty on the plan) instead of inserting anything."""
     supersedes_installment_plan_id: int | None = None
     """Set when this row itself IS an open plan's original lump-sum purchase (matched
     by account+description+amount against TransactionRepository.find_open_plan_match)
@@ -192,6 +196,7 @@ class ImportCommitRow(BaseModel):
     installment_plan_id: int | None = None
     installment_juros: Decimal | None = None
     installment_duty: Decimal | None = None
+    existing_transaction_id: int | None = None
     supersedes_installment_plan_id: int | None = None
 
 
@@ -230,6 +235,7 @@ class ImportCommitResponse(BaseModel):
     inserted: int
     skipped_duplicates: int
     rules_created: int
+    linked_existing: int = 0
 
 
 # --- Multi-currency (grouped) import: Revolut today, any future multi-wallet bank later.

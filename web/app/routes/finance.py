@@ -1484,9 +1484,13 @@ async def installment_plans_page(request: Request):
     for month in missing_months:
         for item in month["items"]:
             missing_by_plan[item["plan_id"]] = missing_by_plan.get(item["plan_id"], 0) + 1
+    interest_total = sum(float(p["total_interest_paid"]) for p in plans)
+    duty_total = sum(float(p["total_duty_paid"]) for p in plans)
     context = await _installment_plan_accounts_context()
     context.update({
         "plans": plans,
+        "interest_total": interest_total,
+        "duty_total": duty_total,
         "query_account_id": account_id,
         "hide_completed": hide_completed,
         "missing_months": missing_months,
@@ -1723,6 +1727,9 @@ async def import_commit(request: Request):
         installment_duty = _form_value(form, f"installment_duty_{i}")
         if installment_duty:
             row["installment_duty"] = installment_duty
+        existing_transaction_id = _form_value(form, f"existing_transaction_id_{i}")
+        if existing_transaction_id:
+            row["existing_transaction_id"] = int(existing_transaction_id)
         supersedes_installment_plan_id = _form_value(form, f"supersedes_installment_plan_id_{i}")
         if supersedes_installment_plan_id:
             row["supersedes_installment_plan_id"] = int(supersedes_installment_plan_id)

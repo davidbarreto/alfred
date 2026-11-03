@@ -158,6 +158,28 @@ class TestInstallmentPlansMissing:
         assert "Cetelem — sofa" in resp.text
 
 
+class TestInstallmentCostTotals:
+    def test_sums_interest_and_duty_of_listed_plans(self, client, mock_api):
+        plans = [
+            _plan(id=1, total_interest_paid="10.00", total_duty_paid="0.40"),
+            _plan(id=2, description="Other", total_interest_paid="5.50", total_duty_paid="0.20"),
+        ]
+        mock_api["get"].side_effect = [plans, [], [_account()]]
+
+        resp = client.get("/finance/installments")
+
+        assert "Interest: €15.50" in resp.text
+        assert "Duty: €0.60" in resp.text
+        assert "Total cost: €16.10" in resp.text
+
+    def test_no_totals_strip_without_plans(self, client, mock_api):
+        mock_api["get"].side_effect = [[], [], [_account()]]
+
+        resp = client.get("/finance/installments")
+
+        assert "plan-cost-totals" not in resp.text
+
+
 class TestRelinkInstallments:
     def test_posts_to_backend_and_redirects(self, client, mock_api):
         mock_api["post"].return_value = {"linked": 3}

@@ -243,6 +243,7 @@ class ImportService:
         await self._mark_duplicates(account_id, rows)
         categories = {c.id: c.name for c in await self._category_repo.list()}
         self._apply_rules(rows, rules, categories)
+        await self._offer_linking_unlinked_duplicates(account_id, rows, rules)
         await self._apply_knn(rows, categories)
         await self._apply_llm(rows, categories)
 
@@ -500,6 +501,31 @@ class ImportService:
                 row.duplicate_reason = "repeated_in_file"
             else:
                 seen.add(row.deduplication_hash)
+
+    async def _offer_linking_unlinked_duplicates(
+        self, account_id: int, rows: list[ImportPreviewRow], rules: list[ImportRule]
+    ) -> None:
+        """Flag already-imported rows that match a plan rule but whose stored transaction
+        was never linked to the plan (an earlier import let a generic rule hide the plan
+        link), so committing can link it and count the row's interest/duty."""
+        plan_rules = [r for r in rules if r.installment_plan_id is not None]
+        if not plan_rules:
+            return
+        for row in rows:
+            if row.status != "duplicate" or row.duplicate_reason != "already_imported":
+                continue
+            rule = next((r for r in plan_rules if _rule_matches(r, row.bank_description, row.amount)), None)
+            if rule is None:
+                continue
+            existing = await self._txn_repo.find_unlinked_by_key(
+                account_id,
+                row.date_posted,
+                row.bank_description,
+                row.amount if row.type == "transfer" else abs(row.amount),
+            )
+            if existing is not None:
+                row.existing_transaction_id = existing.id
+                row.installment_plan_id = rule.installment_plan_id
 
     def _apply_rule_types(self, rows: list[ImportPreviewRow], rules: list[ImportRule]) -> None:
         """Classify transfer rows before _mark_duplicates runs, so the dedup key's
@@ -867,9 +893,26 @@ class ImportService:
                     row.installment_plan_id = rule.installment_plan_id
                     break
 
+    async def _link_existing_rows(self, request: ImportCommitRequest) -> int:
+        linked = 0
+        for row in request.rows:
+            if row.existing_transaction_id is None or row.installment_plan_id is None:
+                continue
+            if await self._txn_repo.link_to_installment_plan(
+                row.existing_transaction_id, row.installment_plan_id, account_id=request.account_id
+            ):
+                await self._installment_plan_repo.record_capture(
+                    row.installment_plan_id,
+                    juros=row.installment_juros, imposto_selo=row.installment_duty,
+                )
+                linked += 1
+        return linked
+
     async def commit(self, request: ImportCommitRequest) -> ImportCommitResponse:
         await self._apply_installment_plan_actions(request)
         await self._relink_new_plan_rows(request)
+        linked_existing = await self._link_existing_rows(request)
+        request.rows = [r for r in request.rows if r.existing_transaction_id is None]
 
         existing = await self._txn_repo.get_existing_dedup_hashes(
             [r.deduplication_hash for r in request.rows]
@@ -979,8 +1022,8 @@ class ImportService:
         await self._sync_account_balance(request.account_id, to_insert)
         await self._create_transfer_mirrors(transactions)
         logger.info(
-            "Import committed: batch_id=%d account_id=%d inserted=%d skipped=%d rules=%d",
-            batch.id, request.account_id, len(transactions), skipped, rules_created,
+            "Import committed: batch_id=%d account_id=%d inserted=%d skipped=%d rules=%d linked_existing=%d",
+            batch.id, request.account_id, len(transactions), skipped, rules_created, linked_existing,
         )
 
         await self._embed_transactions(transactions)
@@ -990,6 +1033,7 @@ class ImportService:
             inserted=len(transactions),
             skipped_duplicates=skipped,
             rules_created=rules_created,
+            linked_existing=linked_existing,
         )
 
     async def _embed_transactions(self, transactions: list) -> None:

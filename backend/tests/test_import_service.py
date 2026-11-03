@@ -752,6 +752,38 @@ class TestCommit:
         service._account_repo.set_balance.assert_not_awaited()
 
     @pytest.mark.asyncio
+    async def test_same_day_balance_after_uses_the_last_row_of_the_statement(self):
+        """Statement rows on one date are in chronological order, so the last one carries
+        the account's real running balance -- not the first."""
+        service = _service()
+        self._prepare(service)
+        rows = [
+            _commit_row(deduplication_hash="h1", balance_after=Decimal("1705.63")),
+            _commit_row(deduplication_hash="h2", balance_after=Decimal("1644.52")),
+            _commit_row(deduplication_hash="h3", balance_after=Decimal("1599.26")),
+        ]
+
+        await service.commit(_commit_request(rows))
+
+        service._account_repo.set_balance.assert_awaited_once_with(1, Decimal("1599.26"))
+
+    @pytest.mark.asyncio
+    async def test_incremental_sync_ignores_rows_before_opening_balance_date(self):
+        """opening_balance already reflects history older than opening_balance_date, so
+        importing those rows must not move the balance again."""
+        service = _service()
+        self._prepare(service)
+        service._account_repo.get.return_value = MagicMock(opening_balance_date=date(2025, 8, 1))
+        rows = [
+            _commit_row(deduplication_hash="h1", date_posted=date(2025, 7, 31), type="expense", amount=Decimal("-20.00")),
+            _commit_row(deduplication_hash="h2", date_posted=date(2025, 8, 1), type="expense", amount=Decimal("-5.00")),
+        ]
+
+        await service.commit(_commit_request(rows))
+
+        service._account_repo.adjust_balance.assert_awaited_once_with(1, Decimal("-5.00"))
+
+    @pytest.mark.asyncio
     async def test_transfer_row_only_moves_its_own_account_never_the_counterpart(self):
         """counterpart_account_id is pure linking metadata (see
         TransactionService.create's note) -- an imported transfer row must never
@@ -887,7 +919,7 @@ class TestCreateTransferMirrors:
             amount=Decimal("100.00"), amount_eur=Decimal("100.00"), currency="EUR",
             date="2026-06-12", description=None, bank_description="TRF POUPUP", merchant=None,
         )
-        service._account_repo.get.return_value = MagicMock(auto_mirror_transfers=True)
+        service._account_repo.get.return_value = MagicMock(auto_mirror_transfers=True, opening_balance_date=None)
         service._txn_repo.create.return_value = MagicMock(
             id=200, account_id=9, type="transfer", amount=Decimal("-100.00")
         )
@@ -915,7 +947,7 @@ class TestCreateTransferMirrors:
         source = MagicMock(
             id=100, type="transfer", counterpart_account_id=9, counterpart_transaction_id=555,
         )
-        service._account_repo.get.return_value = MagicMock(auto_mirror_transfers=True)
+        service._account_repo.get.return_value = MagicMock(auto_mirror_transfers=True, opening_balance_date=None)
 
         await service._create_transfer_mirrors([source])
 
@@ -926,7 +958,7 @@ class TestCreateTransferMirrors:
     async def test_skips_when_counterpart_flag_disabled(self):
         service = _service()
         source = MagicMock(type="transfer", counterpart_account_id=9)
-        service._account_repo.get.return_value = MagicMock(auto_mirror_transfers=False)
+        service._account_repo.get.return_value = MagicMock(auto_mirror_transfers=False, opening_balance_date=None)
 
         await service._create_transfer_mirrors([source])
 
@@ -1436,7 +1468,7 @@ class TestCommitGrouped:
             return txn
         service._txn_repo.add.side_effect = _add_txn
         service._repo.add_rule = MagicMock()
-        service._account_repo.get.return_value = MagicMock(auto_mirror_transfers=False)
+        service._account_repo.get.return_value = MagicMock(auto_mirror_transfers=False, opening_balance_date=None)
         return created, batches
 
     @pytest.mark.asyncio

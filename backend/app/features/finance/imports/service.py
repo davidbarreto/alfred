@@ -714,13 +714,20 @@ class ImportService:
         """
         if not rows:
             return
-        balance_rows = [r for r in rows if r.balance_after is not None]
+        balance_rows = [(i, r) for i, r in enumerate(rows) if r.balance_after is not None]
         if balance_rows:
-            latest = max(balance_rows, key=lambda r: r.date_posted)
+            # Rows on the same date arrive in statement (chronological) order, so the
+            # last one of the latest date holds the real running balance.
+            _, latest = max(balance_rows, key=lambda ir: (ir[1].date_posted, ir[0]))
             await self._account_repo.set_balance(account_id, latest.balance_after)
         else:
+            account = await self._account_repo.get(account_id)
+            opening_date = account.opening_balance_date if account is not None else None
             delta = Decimal("0")
             for row in rows:
+                # opening_balance already reflects everything before its date.
+                if opening_date is not None and row.date_posted < opening_date:
+                    continue
                 # A row superseding a plan's original purchase is inserted at €0.00
                 # regardless of its parsed amount (see commit()) -- it must contribute
                 # nothing to the balance delta, or the account would be double-counted

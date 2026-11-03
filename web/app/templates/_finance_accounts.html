@@ -30,6 +30,10 @@
       </div>
       {% endif %}
     </div>
+    <span
+      id="balance-{{ acc.id }}"
+      class="flex-shrink-0 font-medium tabular-nums {% if (acc.balance | float) < 0 %}text-[#E24B4A]{% else %}text-gray-800{% endif %}"
+    >{{ acc.balance | money }} <span class="text-xs font-normal text-gray-400">{{ acc.currency }}</span></span>
     <a
       href="/finance/accounts/{{ acc.id }}/edit"
       class="text-gray-300 hover:text-[#378ADD] transition-colors flex-shrink-0"

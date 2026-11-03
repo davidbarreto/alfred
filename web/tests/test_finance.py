@@ -958,6 +958,24 @@ class TestAccountsPage:
         assert resp.status_code == 200
         assert "PoupUP" in resp.text
 
+    def test_shows_balance_for_non_credit_accounts(self, client, mock_api):
+        mock_api["get"].side_effect = [[_full_account(name="Checking", type="checking")], []]
+
+        resp = client.get("/finance/accounts")
+
+        assert 'id="balance-1"' in resp.text
+        assert "500.00" in resp.text
+
+    def test_shows_balance_and_available_for_credit_cards(self, client, mock_api):
+        card = _full_account(name="Visa", type="credit_card")
+        card.update(balance="-200.00", credit_limit="1000.00")
+        mock_api["get"].side_effect = [[card], []]
+
+        resp = client.get("/finance/accounts")
+
+        assert "-200.00" in resp.text
+        assert "available 800.00" in " ".join(resp.text.split())
+
     def test_requires_authentication(self, anon_client):
         resp = anon_client.get("/finance/accounts", follow_redirects=False)
 
@@ -968,7 +986,7 @@ class TestAccountsPage:
 class TestUpdateAccount:
     def test_submits_expected_payload(self, client, mock_api):
         mock_api["patch"].return_value = _full_account()
-        mock_api["get"].side_effect = [_full_account(), []]
+        mock_api["get"].side_effect = [[_full_account()], []]
 
         resp = client.post(
             "/finance/accounts/1/edit",
@@ -991,7 +1009,7 @@ class TestUpdateAccount:
 
     def test_unchecked_boxes_are_false(self, client, mock_api):
         mock_api["patch"].return_value = _full_account()
-        mock_api["get"].side_effect = [_full_account(), []]
+        mock_api["get"].side_effect = [[_full_account()], []]
 
         client.post(
             "/finance/accounts/1/edit",

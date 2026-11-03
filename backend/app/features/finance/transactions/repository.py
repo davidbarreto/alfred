@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import date, datetime
+from datetime import date, datetime, time
 from decimal import Decimal
 from typing import Any
 from sqlalchemy import and_, case, func, or_, select, update
@@ -371,6 +371,19 @@ class TransactionRepository:
         result = await self._session.execute(query)
         total, count = result.one()
         return Decimal(str(total)), count
+
+    async def sum_account_delta_from(self, account_id: int, from_date: date) -> Decimal:
+        """Net signed effect on one account of every transaction dated on/after from_date
+        (same sign convention as get_filtered_sum). Used to roll an account forward from a
+        statement's closing balance."""
+        delta = case((Transaction.type == "expense", -Transaction.amount), else_=Transaction.amount)
+        result = await self._session.execute(
+            select(func.coalesce(func.sum(delta), 0)).where(
+                Transaction.account_id == account_id,
+                Transaction.date >= datetime.combine(from_date, time.min),
+            )
+        )
+        return Decimal(str(result.scalar_one()))
 
     async def get_filtered_sum_by_currency(
         self, filters: TransactionFilters, cycle_start_day: int = 1

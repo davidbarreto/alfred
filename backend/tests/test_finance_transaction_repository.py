@@ -1459,3 +1459,34 @@ class TestSpendSumsUseMagnitude:
         session.execute.return_value = _scalar_result(Decimal("0"))
         await TransactionRepository(session).get_category_spent(1, date(2026, 10, 1), date(2026, 10, 31))
         assert "sum(abs(finance.transactions.amount))" in (await self._sql(session)).lower()
+
+
+class TestSumAccountDeltaFrom:
+    @pytest.mark.asyncio
+    async def test_returns_net_signed_total(self):
+        session = _make_session()
+        result = MagicMock()
+        result.scalar_one.return_value = Decimal("-40.00")
+        session.execute.return_value = result
+
+        total = await TransactionRepository(session).sum_account_delta_from(5, date(2026, 11, 1))
+
+        assert total == Decimal("-40.00")
+
+    @pytest.mark.asyncio
+    async def test_query_binds_a_datetime_that_the_local_column_accepts(self):
+        """LocalDateTime.process_bind_param needs a datetime (it reads .tzinfo); a bare date
+        would only blow up against a real dialect, never against a mocked session."""
+        from sqlalchemy.dialects import postgresql
+
+        session = _make_session()
+        result = MagicMock()
+        result.scalar_one.return_value = Decimal("0")
+        session.execute.return_value = result
+
+        await TransactionRepository(session).sum_account_delta_from(5, date(2026, 11, 1))
+
+        stmt = session.execute.await_args.args[0]
+        compiled = stmt.compile(dialect=postgresql.dialect())
+        assert all(not (type(v) is date) for v in compiled.params.values())
+        assert datetime(2026, 11, 1) in compiled.params.values()

@@ -26,7 +26,12 @@ exactly:
    account's entire history. Trusting the statement's own number sidesteps all
    of it -- opening_balance_date plays no role in this branch at all.
 
-2. Only accounts with NO balance_after anywhere in their history (card-format
+2. An account with no balance_after but with an import batch that reported a
+   closing_balance (the ActivoBank card PDF's "Saldo em Dívida") is set to the
+   latest such closing balance plus every transaction dated after that
+   statement's period_end.
+
+3. Only accounts with NO balance_after anywhere in their history (card-format
    statements, manual entries) fall back to summing signed transaction deltas.
    expense stores an unsigned magnitude (sign implied by type, always a debit);
    income and transfer both store their real signed delta directly -- positive
@@ -60,6 +65,7 @@ import app.main  # noqa: F401 -- importing every router transitively imports eve
 # relationships (see fix_installment_plan_original_amount_sign.py for the same need).
 from app.db.session import async_session
 from app.features.finance.accounts.tables import Account
+from app.features.finance.imports.tables import ImportBatch
 from app.features.finance.transactions.tables import Transaction
 
 
@@ -79,11 +85,21 @@ def compute_account_balance(
     opening_balance: Decimal | None,
     opening_balance_date: date | None,
     transactions: list[LedgerTransaction],
+    anchor: tuple[Decimal, date] | None = None,
 ) -> Decimal:
     balance_rows = [t for t in transactions if t.balance_after is not None]
     if balance_rows:
         latest = max(balance_rows, key=lambda t: (t.date, t.id))
         return latest.balance_after
+
+    if anchor is not None:
+        # (closing_balance, statement period_end) of the latest statement that reported
+        # one -- see ImportService._sync_account_balance. opening_balance plays no role.
+        closing_balance, period_end = anchor
+        return closing_balance + sum(
+            (-t.amount if t.type == "expense" else t.amount for t in transactions if t.date > period_end),
+            Decimal("0"),
+        )
 
     relevant = [
         t for t in transactions
@@ -109,10 +125,21 @@ async def main() -> None:
                 )
             )
 
+        anchors: dict[int, tuple[Decimal, date]] = {}
+        batches = (
+            await session.execute(
+                select(ImportBatch)
+                .where(ImportBatch.closing_balance.is_not(None), ImportBatch.period_end.is_not(None))
+                .order_by(ImportBatch.period_end, ImportBatch.id)
+            )
+        ).scalars().all()
+        for batch in batches:  # ascending, so the latest statement overwrites earlier ones
+            anchors[batch.account_id] = (batch.closing_balance, batch.period_end)
+
         for account in accounts:
             account.balance = compute_account_balance(
                 account.opening_balance, account.opening_balance_date,
-                by_account.get(account.id, []),
+                by_account.get(account.id, []), anchors.get(account.id),
             )
             print(f"  account_id={account.id} name={account.name!r} balance -> {account.balance}")
         await session.commit()

@@ -124,3 +124,27 @@ class TestBalanceAfterTrusted:
         ]
         balance = compute_account_balance(Decimal("0"), None, transactions)
         assert balance == Decimal("105.00")
+
+
+class TestStatementClosingBalanceAnchor:
+    """A statement's own closing balance (ActivoBank card PDF) beats a ledger replay."""
+
+    def test_anchor_plus_only_transactions_after_its_date(self):
+        transactions = [
+            _txn(1, date(2026, 10, 20), type_="expense", amount="500.00"),
+            _txn(2, date(2026, 10, 31), type_="expense", amount="30.00"),
+            _txn(3, date(2026, 11, 2), type_="expense", amount="40.00"),
+            _txn(4, date(2026, 11, 3), type_="income", amount="5.00"),
+        ]
+        balance = compute_account_balance(
+            Decimal("-23.07"), date(2025, 8, 1), transactions,
+            anchor=(Decimal("-2968.52"), date(2026, 10, 31)),
+        )
+        assert balance == Decimal("-2968.52") - Decimal("40.00") + Decimal("5.00")
+
+    def test_balance_after_still_wins_over_an_anchor(self):
+        transactions = [_txn(1, date(2026, 11, 1), balance_after="1599.26")]
+        balance = compute_account_balance(
+            None, None, transactions, anchor=(Decimal("-1.00"), date(2026, 10, 31)),
+        )
+        assert balance == Decimal("1599.26")

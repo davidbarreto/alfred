@@ -120,6 +120,7 @@ def _service(statement: ParsedStatement | None = None, llm=None, files=None) -> 
     # session.add() is sync on a real AsyncSession; AsyncMock would otherwise turn it
     # into a coroutine-returning attribute that nothing awaits.
     service._session.add = MagicMock()
+    service._repo.get_latest_closing_balance_batch.return_value = None
     service._txn_repo.get_existing_dedup_hashes.return_value = set()
     service._txn_repo.get_existing_keys.return_value = set()
     service._txn_repo.find_unmatched_transaction.return_value = None
@@ -782,6 +783,24 @@ class TestCommit:
         await service.commit(_commit_request(rows))
 
         service._account_repo.adjust_balance.assert_awaited_once_with(1, Decimal("-5.00"))
+
+    @pytest.mark.asyncio
+    async def test_balance_anchors_to_latest_statement_closing_balance(self):
+        """Card statements report the bank's own debt; the balance is that figure plus
+        whatever was posted after the statement ended, not a replay of the ledger."""
+        service = _service()
+        self._prepare(service)
+        service._repo.get_latest_closing_balance_batch.return_value = MagicMock(
+            closing_balance=Decimal("-2968.52"), period_end=date(2026, 10, 31)
+        )
+        service._txn_repo.sum_account_delta_from.return_value = Decimal("-40.00")
+        rows = [_commit_row(deduplication_hash="h1", type="expense", amount=Decimal("-40.00"))]
+
+        await service.commit(_commit_request(rows))
+
+        service._txn_repo.sum_account_delta_from.assert_awaited_once_with(1, date(2026, 11, 1))
+        service._account_repo.set_balance.assert_awaited_once_with(1, Decimal("-3008.52"))
+        service._account_repo.adjust_balance.assert_not_awaited()
 
     @pytest.mark.asyncio
     async def test_transfer_row_only_moves_its_own_account_never_the_counterpart(self):

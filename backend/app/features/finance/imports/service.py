@@ -4,7 +4,7 @@ import logging
 import re
 import time
 from collections import defaultdict
-from datetime import datetime
+from datetime import datetime, timedelta
 from decimal import Decimal
 from uuid import uuid4
 
@@ -704,7 +704,10 @@ class ImportService:
         self-correcting, and cheaper than replaying the full transaction history.
         Otherwise (card-format statements, which never report one) apply the
         batch's net delta incrementally on top of whatever balance is already
-        stored.
+        stored -- unless an earlier statement reported a closing balance (the
+        ActivoBank card PDF's "Saldo em Dívida"), in which case the balance is
+        re-anchored to the latest such closing balance plus everything posted
+        after that statement ended.
 
         Only ever touches this account -- a transfer row's counterpart_account_id is
         pure linking metadata here too (see TransactionService.create's note); the
@@ -721,6 +724,16 @@ class ImportService:
             _, latest = max(balance_rows, key=lambda ir: (ir[1].date_posted, ir[0]))
             await self._account_repo.set_balance(account_id, latest.balance_after)
         else:
+            anchor = await self._repo.get_latest_closing_balance_batch(account_id)
+            if anchor is not None:
+                # The statement's own closing balance is the bank's truth (for a card it
+                # includes unbilled installment principal that a ledger replay can't
+                # reproduce); only what posted after it is added.
+                after = await self._txn_repo.sum_account_delta_from(
+                    account_id, anchor.period_end + timedelta(days=1)
+                )
+                await self._account_repo.set_balance(account_id, anchor.closing_balance + after)
+                return
             account = await self._account_repo.get(account_id)
             opening_date = account.opening_balance_date if account is not None else None
             delta = Decimal("0")

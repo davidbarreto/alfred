@@ -107,6 +107,11 @@ _INSTALLMENT_LINE_RE = re.compile(r"^(\d{2,4}/\d{2}/\d{2})\s+(.+)$")
 _CARD_RE = re.compile(r"Conta Cart.o:\s*([\d-]+)", re.IGNORECASE)
 _PERIOD_RE = re.compile(r"Extrato de:\s*(\d{4})/(\d{2})/(\d{2}) a (\d{4})/(\d{2})/(\d{2})")
 _FRACIONADA_RE = re.compile(r"^Fracionada x(\d+)", re.IGNORECASE)
+# RESUMO DE MOVIMENTOS: previous debt, credits, debits, current debt -- four amounts on one
+# line right after the "do Extrato Atual" column header.
+_SUMMARY_RE = re.compile(
+    rf"do Extrato Atual\s*\n\s*{_AMOUNT} {_AMOUNT} {_AMOUNT} ({_AMOUNT})\s*\n"
+)
 
 
 def _pdf_text(content: bytes) -> str | None:
@@ -355,6 +360,18 @@ def _parse_text(
     return _ParseResult(rows=rows, installment_plans_opened=plans_opened)
 
 
+def _parse_closing_balance(text: str) -> Decimal | None:
+    """The statement's own "Saldo em Dívida" at issue, as a (negative) account balance.
+    It is the bank's full debt -- including the unbilled remaining principal of every
+    installment plan -- which a ledger of monthly installment charges can't reproduce,
+    so it anchors the card balance (see ImportService._sync_account_balance)."""
+    match = _SUMMARY_RE.search(text)
+    if not match:
+        return None
+    debt = _parse_amount(match.group(1))
+    return -debt if debt is not None else None
+
+
 class ActivoBankCardPdfStatementParser:
 
     def __init__(self, installments_only: bool = True) -> None:
@@ -395,7 +412,7 @@ class ActivoBankCardPdfStatementParser:
             currency="EUR",
             period_start=period_start,
             period_end=period_end,
-            closing_balance=None,
+            closing_balance=_parse_closing_balance(text),
             rows=result.rows,
             installment_plans_opened=result.installment_plans_opened,
         )

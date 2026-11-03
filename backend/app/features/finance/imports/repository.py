@@ -106,6 +106,22 @@ class ImportRepository:
         )
         return result.scalars().first()
 
+    async def get_latest_closing_balance_batch(self, account_id: int) -> ImportBatch | None:
+        """The batch whose statement ends latest among those that reported the account's
+        own closing balance -- the anchor for balance sync (a re-imported older statement
+        never wins, whatever its id)."""
+        result = await self._session.execute(
+            select(ImportBatch)
+            .where(
+                ImportBatch.account_id == account_id,
+                ImportBatch.closing_balance.is_not(None),
+                ImportBatch.period_end.is_not(None),
+            )
+            .order_by(ImportBatch.period_end.desc(), ImportBatch.id.desc())
+            .limit(1)
+        )
+        return result.scalars().first()
+
     async def list_batches(self, filters: ImportBatchFilters) -> list[ImportBatch]:
         result = await self._session.execute(
             select(ImportBatch)

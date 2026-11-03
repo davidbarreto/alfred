@@ -3,6 +3,7 @@ from decimal import Decimal
 
 from app.integrations.activobank.card_pdf_statement_parser import (
     ActivoBankCardPdfStatementParser,
+    _parse_closing_balance,
     _parse_text,
     _pdf_text,
 )
@@ -376,3 +377,41 @@ class TestParse:
 
         assert statement.rows == []
         assert statement.installment_plans_opened == []
+
+
+_SUMMARY_TEXT = """\
+RESUMO DE MOVIMENTOS
+Saldo em Dívida à Data do
+Extrato Anterior
+Créditos Débitos Saldo em Dívida à Data
+do Extrato Atual
+1 234.50 800.00 2 100.25 2 534.75
+Para solicitar a transferência de eventual saldo credor
+"""
+
+
+class TestParseClosingBalance:
+    def test_reads_current_debt_as_negative_balance(self):
+        assert _parse_closing_balance(_SUMMARY_TEXT) == Decimal("-2534.75")
+
+    def test_debt_below_one_thousand(self):
+        text = _SUMMARY_TEXT.replace("1 234.50 800.00 2 100.25 2 534.75", "10.00 0.00 5.50 15.50")
+
+        assert _parse_closing_balance(text) == Decimal("-15.50")
+
+    def test_zero_debt_is_zero(self):
+        text = _SUMMARY_TEXT.replace("1 234.50 800.00 2 100.25 2 534.75", "10.00 10.00 0.00 0.00")
+
+        assert _parse_closing_balance(text) == Decimal("0.00")
+
+    def test_missing_summary_returns_none(self):
+        assert _parse_closing_balance("EXTRATO VISA CLASSIC ACTIVOBANK") is None
+
+    def test_parse_populates_closing_balance(self, monkeypatch):
+        import app.integrations.activobank.card_pdf_statement_parser as module
+
+        monkeypatch.setattr(module, "_pdf_text", lambda content: _STATEMENT_TEXT + _SUMMARY_TEXT)
+
+        statement = ActivoBankCardPdfStatementParser().parse(b"%PDF fake")
+
+        assert statement.closing_balance == Decimal("-2534.75")

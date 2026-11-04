@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% set active_page = "finance" %}
+{% block title %}Budgets{% endblock %}
+
+{% block content %}
+<div class="p-6 space-y-4">
+
+  <div class="flex items-center justify-between gap-3 flex-wrap">
+    <div class="flex items-center gap-2">
+      <a href="/finance/" class="text-gray-400 hover:text-gray-600"><i class="ti ti-arrow-left text-sm"></i></a>
+      <h1 class="text-base font-semibold text-gray-900">Budgets</h1>
+      <div class="flex items-center gap-2 ml-3">
+        <a href="/finance/budgets/overview?year_month={{ prev_year_month }}" class="text-gray-400 hover:text-gray-600" title="Previous month"><i class="ti ti-chevron-left"></i></a>
+        <span class="text-xs text-gray-500 w-16 text-center">{{ year_month }}</span>
+        <a href="/finance/budgets/overview?year_month={{ next_year_month }}" class="text-gray-400 hover:text-gray-600" title="Next month"><i class="ti ti-chevron-right"></i></a>
+        {% if not is_current %}
+        <a href="/finance/budgets/overview" class="text-xs text-gray-400 hover:text-gray-600">current</a>
+        {% endif %}
+      </div>
+    </div>
+    <a href="/finance/budgets" class="btn btn-sm btn-primary gap-1">
+      <i class="ti ti-edit text-sm"></i>Edit budgets
+    </a>
+  </div>
+
+  <div class="bg-white border border-gray-200 rounded-lg p-4">
+    {% if rows %}
+    <div class="divide-y divide-gray-100">
+      {% for r in rows %}
+      {% set pct = (r.spent / r.limit * 100) if r.limit > 0 else (100 if r.spent > 0 else 0) %}
+      <div class="py-2 px-2 text-sm space-y-1 hover:bg-gray-50">
+        <div class="flex items-center justify-between gap-3">
+          <span class="text-gray-800">{{ r.category_name }}</span>
+          <span class="text-xs text-gray-500">
+            {{ currency_symbol }}{{ r.spent | money }} of {{ currency_symbol }}{{ r.limit | money }}
+            <span class="ml-2 font-medium {% if r.remaining < 0 %}text-[#E24B4A]{% else %}text-[#639922]{% endif %}">
+              {% if r.remaining < 0 %}{{ currency_symbol }}{{ (-r.remaining) | money }} over{% else %}{{ currency_symbol }}{{ r.remaining | money }} left{% endif %}
+            </span>
+          </span>
+        </div>
+        <div class="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+          <div class="h-full rounded-full {% if pct > 100 %}bg-[#E24B4A]{% elif pct >= 80 %}bg-[#EF9F27]{% else %}bg-[#639922]{% endif %}" style="width: {{ [pct, 100] | min }}%"></div>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+    <div class="flex items-center justify-between gap-3 pt-3 mt-2 border-t border-gray-200 px-2 text-sm font-medium text-gray-900">
+      <span>Total</span>
+      <span class="text-xs">
+        {{ currency_symbol }}{{ total_spent | money }} of {{ currency_symbol }}{{ total_limit | money }}
+        <span class="ml-2 {% if total_remaining < 0 %}text-[#E24B4A]{% else %}text-[#639922]{% endif %}">
+          {% if total_remaining < 0 %}{{ currency_symbol }}{{ (-total_remaining) | money }} over{% else %}{{ currency_symbol }}{{ total_remaining | money }} left{% endif %}
+        </span>
+      </span>
+    </div>
+    {% else %}
+    <div class="text-sm text-gray-400 py-3 text-center">
+      No tracked categories for this month. <a href="/finance/budgets" class="text-[#378ADD] hover:underline">Set budgets</a>
+    </div>
+    {% endif %}
+  </div>
+
+</div>
+{% endblock %}

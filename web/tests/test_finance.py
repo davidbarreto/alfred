@@ -247,6 +247,7 @@ class TestFinanceDashboardCurrency:
 
         assert 'href="/finance/budgets"' in resp.text
         assert "ti-target" in resp.text
+        assert 'href="/finance/budgets/overview"' in resp.text
 
     def test_brl_view_filters_and_skips_budgets(self, client, mock_api):
         calls = []
@@ -1427,9 +1428,8 @@ def _budget_status(category_id=1, category_name="Groceries", limit_amount="300.0
 
 
 class TestBudgetsPage:
-    def _fake_get(self, targets=None, status=None):
+    def _fake_get(self, targets=None):
         targets = targets if targets is not None else [_budget_target()]
-        status = status if status is not None else [_budget_status()]
 
         async def fake(path, params=None):
             if path == "/finance/categories":
@@ -1438,10 +1438,6 @@ class TestBudgetsPage:
                 return targets
             if path == "/finance/currencies":
                 return [{"code": "EUR", "symbol": "€", "name": "Euro"}]
-            if path == "/finance/budgets/status":
-                return status
-            if path == "/finance/budgets/current-period":
-                return {"year_month": "2026-07"}
             if path == "/finance/budgets/averages":
                 return [{"category_id": 1, "category_name": "Groceries", "average": "150.00", "months": 3}]
             return []
@@ -1479,7 +1475,7 @@ class TestBudgetsPage:
         assert "Groceries" in resp.text
         assert "data-average" not in resp.text
 
-    def test_renders_targets_and_chart(self, client, mock_api):
+    def test_renders_targets(self, client, mock_api):
         mock_api["get"].side_effect = self._fake_get()
 
         resp = client.get("/finance/budgets")
@@ -1487,14 +1483,6 @@ class TestBudgetsPage:
         assert resp.status_code == 200
         assert "Groceries" in resp.text
         assert 'value="300.00"' in resp.text
-
-    def test_empty_state_when_no_target_set(self, client, mock_api):
-        mock_api["get"].side_effect = self._fake_get(targets=[], status=[])
-
-        resp = client.get("/finance/budgets")
-
-        assert resp.status_code == 200
-        assert "No tracked categories for this month" in resp.text
 
     def test_requires_authentication(self, anon_client):
         resp = anon_client.get("/finance/budgets", follow_redirects=False)
@@ -1546,34 +1534,72 @@ class TestSetBudgetTargets:
         assert resp.headers["location"].startswith("/login")
 
 
-class TestBudgetStatusJson:
-    def test_returns_status_list(self, client, mock_api):
-        mock_api["get"].return_value = [_budget_status()]
+class TestBudgetsOverviewPage:
+    def _fake_get(self, status):
+        async def fake(path, params=None):
+            if path == "/finance/budgets/status":
+                return status
+            if path == "/finance/budgets/current-period":
+                return {"year_month": "2026-07"}
+            if path == "/finance/currencies":
+                return [{"code": "EUR", "symbol": "€", "name": "Euro"}]
+            return []
+        return fake
 
-        resp = client.get("/finance/budgets/status.json?year_month=2026-07")
+    def test_lists_spent_vs_planned_per_category_most_over_first(self, client, mock_api):
+        mock_api["get"].side_effect = self._fake_get([
+            _budget_status(category_id=1, category_name="Groceries", limit_amount="300.00", spent="120.00"),
+            _budget_status(category_id=2, category_name="Dining", limit_amount="50.00", spent="80.00"),
+        ])
 
-        assert resp.status_code == 200
-        assert resp.json()[0]["category_name"] == "Groceries"
-        mock_api["get"].assert_awaited_once_with("/finance/budgets/status", params={"year_month": "2026-07"})
-
-    def test_defaults_to_no_params(self, client, mock_api):
-        mock_api["get"].return_value = []
-
-        resp = client.get("/finance/budgets/status.json")
-
-        assert resp.status_code == 200
-        mock_api["get"].assert_awaited_once_with("/finance/budgets/status", params={})
-
-    def test_upstream_failure_returns_empty_list(self, client, mock_api):
-        mock_api["get"].side_effect = httpx.HTTPError("boom")
-
-        resp = client.get("/finance/budgets/status.json")
+        resp = client.get("/finance/budgets/overview")
 
         assert resp.status_code == 200
-        assert resp.json() == []
+        assert resp.text.index("Dining") < resp.text.index("Groceries")
+        assert "€120.00 of €300.00" in resp.text
+        assert "€30.00 over" in resp.text
+        assert "€180.00 left" in resp.text
+        assert "€200.00 of €350.00" in resp.text
+        assert 'href="/finance/budgets"' in resp.text
+
+    def test_month_navigation_and_requested_month(self, client, mock_api):
+        calls = []
+        base = self._fake_get([])
+
+        async def fake(path, params=None):
+            calls.append((path, params))
+            return await base(path, params)
+        mock_api["get"].side_effect = fake
+
+        resp = client.get("/finance/budgets/overview?year_month=2026-01")
+
+        assert ("/finance/budgets/status", {"year_month": "2026-01"}) in calls
+        assert "year_month=2025-12" in resp.text
+        assert "year_month=2026-02" in resp.text
+
+    def test_empty_state(self, client, mock_api):
+        mock_api["get"].side_effect = self._fake_get([])
+
+        resp = client.get("/finance/budgets/overview")
+
+        assert "No tracked categories for this month" in resp.text
+
+    def test_status_failure_renders_empty_state(self, client, mock_api):
+        base = self._fake_get([])
+
+        async def fake(path, params=None):
+            if path == "/finance/budgets/status":
+                raise httpx.HTTPError("boom")
+            return await base(path, params)
+        mock_api["get"].side_effect = fake
+
+        resp = client.get("/finance/budgets/overview")
+
+        assert resp.status_code == 200
+        assert "No tracked categories for this month" in resp.text
 
     def test_requires_authentication(self, anon_client):
-        resp = anon_client.get("/finance/budgets/status.json", follow_redirects=False)
+        resp = anon_client.get("/finance/budgets/overview", follow_redirects=False)
         assert resp.status_code == 302
         assert resp.headers["location"].startswith("/login")
 

@@ -990,6 +990,15 @@ async def delete_currency(code: str, request: Request):
 
 # --- Budgets ---
 
+def _shift_year_month(year_month: str, delta: int) -> str:
+    try:
+        year, month = (int(part) for part in year_month.split("-", 1))
+        index = year * 12 + (month - 1) + delta
+    except ValueError:
+        return year_month
+    return f"{index // 12:04d}-{index % 12 + 1:02d}"
+
+
 async def _budget_targets_context() -> dict:
     categories, targets, currencies = [], [], []
     try:
@@ -1023,18 +1032,54 @@ async def _budget_targets_context() -> dict:
 @router.get("/budgets", response_class=HTMLResponse)
 async def budgets_page(request: Request):
     context = await _budget_targets_context()
+    return templates.TemplateResponse(request, "finance_budgets.html", context)
+
+
+@router.get("/budgets/overview", response_class=HTMLResponse)
+async def budgets_overview_page(request: Request, year_month: Optional[str] = None):
     try:
         current_period = await api.get("/finance/budgets/current-period")
-        year_month = current_period["year_month"]
+        current_year_month = current_period["year_month"]
     except httpx.HTTPError:
-        year_month = local_today().strftime("%Y-%m")
+        current_year_month = local_today().strftime("%Y-%m")
+    year_month = year_month or current_year_month
+    status_params = {"year_month": year_month}
     budget_status = []
     try:
-        budget_status = await api.get("/finance/budgets/status", params={"year_month": year_month})
+        budget_status = await api.get("/finance/budgets/status", params=status_params)
     except httpx.HTTPError:
         pass
-    context.update({"budget_status": budget_status, "year_month": year_month})
-    return templates.TemplateResponse(request, "finance_budgets.html", context)
+    currency_symbol = "€"
+    try:
+        currencies = await api.get("/finance/currencies")
+        currency_symbol = next((c["symbol"] for c in currencies if c["code"] == "EUR" and c.get("symbol")), "€")
+    except httpx.HTTPError:
+        pass
+    rows = sorted(
+        (
+            {
+                "category_name": b["category_name"],
+                "limit": float(b["limit_amount"]),
+                "spent": float(b["spent"]),
+                "remaining": float(b["limit_amount"]) - float(b["spent"]),
+            }
+            for b in budget_status
+        ),
+        key=lambda r: r["remaining"],
+    )
+    total_limit = sum(r["limit"] for r in rows)
+    total_spent = sum(r["spent"] for r in rows)
+    return templates.TemplateResponse(request, "finance_budgets_overview.html", {
+        "rows": rows,
+        "total_limit": total_limit,
+        "total_spent": total_spent,
+        "total_remaining": total_limit - total_spent,
+        "year_month": year_month,
+        "prev_year_month": _shift_year_month(year_month, -1),
+        "next_year_month": _shift_year_month(year_month, 1),
+        "is_current": year_month == current_year_month,
+        "currency_symbol": currency_symbol,
+    })
 
 
 @router.put("/budgets/targets", response_class=HTMLResponse)
@@ -1052,16 +1097,6 @@ async def set_budget_targets(request: Request):
 
     context = await _budget_targets_context()
     return templates.TemplateResponse(request, "_finance_budgets_targets.html", context)
-
-
-@router.get("/budgets/status.json")
-async def budget_status_json(year_month: Optional[str] = None):
-    params = {"year_month": year_month} if year_month else {}
-    try:
-        status = await api.get("/finance/budgets/status", params=params)
-    except httpx.HTTPError:
-        status = []
-    return status
 
 
 # --- Settings ---

@@ -84,20 +84,20 @@ class BudgetTargetService:
         targets = await self._repo.list_effective(next_month_start)
         categories = {c.id: c.name for c in await self._category_repo.list()}
 
+        spent_by_category = {
+            category_id: total
+            for category_id, _name, total, _count in await self._txn_repo.get_spending_by_category(from_date, to_date)
+        }
+
         results = []
         for target in targets:
-            spent = await self._txn_repo.get_category_spent(
-                category_id=target.category_id,
-                from_date=from_date,
-                to_date=to_date,
-            )
             results.append(
                 CategoryBudgetStatus(
                     category_id=target.category_id,
                     category_name=categories.get(target.category_id, ""),
                     year_month=label,
                     limit_amount=target.amount,
-                    spent=spent,
+                    spent=spent_by_category.get(target.category_id, Decimal("0")),
                 )
             )
         return results

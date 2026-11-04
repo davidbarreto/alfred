@@ -1298,44 +1298,6 @@ class TestGetEarliestTransactionDate:
         assert "transactions.account_id = 3" in sql
 
 
-class TestGetCategorySpent:
-    async def test_returns_decimal_total(self):
-        session = _make_session()
-        session.execute.return_value = _scalar_result(Decimal("80.00"))
-        result = await TransactionRepository(session).get_category_spent(
-            category_id=1,
-            from_date=date(2026, 6, 1),
-            to_date=date(2026, 6, 30),
-        )
-        assert result == Decimal("80.00")
-
-    async def test_includes_untracked_transfers(self):
-        session = _make_session()
-        session.execute.return_value = _scalar_result(Decimal("0"))
-        await TransactionRepository(session).get_category_spent(
-            category_id=1,
-            from_date=date(2026, 6, 1),
-            to_date=date(2026, 6, 30),
-        )
-        query = session.execute.call_args.args[0]
-        sql = str(query.compile(compile_kwargs={"literal_binds": True}))
-        assert "counterpart_transaction_id" in sql
-
-    async def test_global_currency_sums_amount_eur(self):
-        session = _make_session()
-        session.execute.return_value = _scalar_result(Decimal("0"))
-        await TransactionRepository(session).get_category_spent(
-            category_id=1,
-            from_date=date(2026, 6, 1),
-            to_date=date(2026, 6, 30),
-            currency="GLOBAL",
-        )
-        query = session.execute.call_args.args[0]
-        sql = str(query.compile(compile_kwargs={"literal_binds": True}))
-        assert "amount_eur" in sql
-        assert "transactions.currency =" not in sql
-
-
 class TestMissingAmountEur:
     async def test_list_missing_amount_eur_returns_rows(self):
         session = _make_session()
@@ -1452,12 +1414,6 @@ class TestSpendSumsUseMagnitude:
         session = _make_session()
         session.execute.return_value = _rows_all([])
         await TransactionRepository(session).get_spending_by_account(date(2026, 10, 1), date(2026, 10, 31))
-        assert "sum(abs(finance.transactions.amount))" in (await self._sql(session)).lower()
-
-    async def test_category_spent(self):
-        session = _make_session()
-        session.execute.return_value = _scalar_result(Decimal("0"))
-        await TransactionRepository(session).get_category_spent(1, date(2026, 10, 1), date(2026, 10, 31))
         assert "sum(abs(finance.transactions.amount))" in (await self._sql(session)).lower()
 
 

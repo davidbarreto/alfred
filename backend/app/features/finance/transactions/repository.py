@@ -958,26 +958,6 @@ class TransactionRepository:
         result = await self._session.execute(query)
         return Decimal(str(result.scalar()))
 
-    async def get_category_spent(
-        self,
-        category_id: int,
-        from_date: date,
-        to_date: date,
-        currency: str = "EUR",
-    ) -> Decimal:
-        query = select(
-            func.coalesce(func.sum(_spend_amount(currency)), 0)
-        ).where(
-            _spend_condition("expense"),
-            Transaction.category_id == category_id,
-            Transaction.date >= from_date,
-            Transaction.date <= to_date,
-        )
-        if currency != GLOBAL_CURRENCY:
-            query = query.where(Transaction.currency == currency)
-        result = await self._session.execute(query)
-        return Decimal(str(result.scalar()))
-
     async def list_missing_amount_eur(self, limit: int = 1000) -> list[Transaction]:
         result = await self._session.execute(
             select(Transaction)

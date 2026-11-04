@@ -138,7 +138,7 @@ class TestGetStatus:
         target = _make_target_orm(category_id=1, amount=Decimal("300.00"))
         service._repo.list_effective.return_value = [target]
         service._category_repo.list.return_value = [_make_category_orm(1, "Groceries")]
-        service._txn_repo.get_category_spent.return_value = Decimal("120.00")
+        service._txn_repo.get_spending_by_category.return_value = [(1, "Groceries", Decimal("120.00"), 4)]
 
         results = await service.get_status("2026-07")
 
@@ -149,6 +149,19 @@ class TestGetStatus:
         assert results[0].limit_amount == Decimal("300.00")
         assert results[0].spent == Decimal("120.00")
         assert results[0].year_month == date(2026, 7, 1)
+
+    async def test_spent_is_zero_without_spending_and_uses_one_query(self, service):
+        service._repo.list_effective.return_value = [
+            _make_target_orm(category_id=1, amount=Decimal("300.00")),
+            _make_target_orm(category_id=2, amount=Decimal("50.00")),
+        ]
+        service._category_repo.list.return_value = [_make_category_orm(1, "Groceries"), _make_category_orm(2, "Fun")]
+        service._txn_repo.get_spending_by_category.return_value = [(1, "Groceries", Decimal("120.00"), 4)]
+
+        results = await service.get_status("2026-07")
+
+        assert [r.spent for r in results] == [Decimal("120.00"), Decimal("0")]
+        service._txn_repo.get_spending_by_category.assert_awaited_once()
 
     async def test_passes_exclusive_next_month_boundary(self, service):
         service._repo.list_effective.return_value = []

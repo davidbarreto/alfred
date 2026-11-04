@@ -1399,6 +1399,16 @@
           "path": [
             "planning",
             "saved"
+          ],
+          "query": [
+            {
+              "key": "from",
+              "value": "2031-03-10"
+            },
+            {
+              "key": "to",
+              "value": "2031-03-10"
+            }
           ]
         }
       }
@@ -1537,6 +1547,16 @@
           "path": [
             "planning",
             "saved"
+          ],
+          "query": [
+            {
+              "key": "from",
+              "value": "2031-03-10"
+            },
+            {
+              "key": "to",
+              "value": "2031-03-10"
+            }
           ]
         }
       }
@@ -1695,6 +1715,16 @@
           "path": [
             "planning",
             "review"
+          ],
+          "query": [
+            {
+              "key": "from",
+              "value": "2031-03-10"
+            },
+            {
+              "key": "to",
+              "value": "2031-03-16"
+            }
           ]
         }
       }
@@ -1828,6 +1858,12 @@
           "path": [
             "planning",
             "day"
+          ],
+          "query": [
+            {
+              "key": "date",
+              "value": "2031-03-10"
+            }
           ]
         }
       }
@@ -1985,6 +2021,12 @@
           "path": [
             "planning",
             "day"
+          ],
+          "query": [
+            {
+              "key": "date",
+              "value": "2031-03-10"
+            }
           ]
         }
       }

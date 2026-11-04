@@ -93,6 +93,16 @@ Saving a date archives its active version (`archived_at`) and inserts the next; 
   - Command syntax `[origin>]place:mode=minutes[,...];...` (`office:metro=50,car=20;office>school:car=20`); form on `/plan` (one line per entry, `place, mode, minutes` or `origin, place, mode, minutes`).
   - Also returned in `preferences`, so clients derive leave-home times and `transport` blocks for days with no event (office days are decided inside the plan, so they have no event to carry `travel_minutes`).
 
+## Planning workflow for clients
+
+The recommended flow for an LLM client is the committed skill `.claude/skills/alfred-day-planning/SKILL.md`; this section is the contract it relies on.
+
+- One `get` for the whole week (`days` through Sunday, max 7) is enough: it already carries `saved_plan`, `preferences` and `warnings`. `get_saved` / `review` are only for looking back at last week.
+- Personal rules never live in the repo: they belong in `planning.conventions`, `travel_times`, the other `planning.*` preferences and memory, all of which come back in `preferences`. A full skill with names and routines can be kept in `docs/skills/` (gitignored) or in the Claude web skill.
+- Save only the dates that changed (`days` is a JSON string); use `edit` for a window inside an already saved day. Mark outcomes with `miss`/`done` rather than re-saving.
+- Commute legs not covered by an event's `travel_minutes` are `transport` blocks; focused non-task work is `work`.
+- The mcp container fetches the catalog once at startup, so after adding a kind or action restart it before the client sees it.
+
 ## DST
 
 A local day is 23-25 hours. In `expansion.py` and `planning/timeline.py` every sum, difference and comparison goes through UTC instants (`shift_minutes`, `elapsed_minutes`): Python subtracts and compares aware datetimes that share a `tzinfo` by wall clock, which is wrong across a clock change.

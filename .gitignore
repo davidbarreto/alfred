@@ -232,6 +232,7 @@ docker_volumes
 n8n_export
 infra/docs
 docs/plans
+docs/skills
 creds_export.json
 
 # MCP OAuth store (test artifacts / local runs)

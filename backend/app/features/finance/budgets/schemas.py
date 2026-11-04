@@ -36,3 +36,10 @@ class CategoryBudgetStatus(BaseModel):
 
 class CurrentPeriodResponse(BaseModel):
     year_month: str
+
+
+class CategoryAverageSpend(BaseModel):
+    category_id: int
+    category_name: str
+    average: Decimal
+    months: int

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 from datetime import datetime, timedelta, timezone
-from decimal import Decimal
+from decimal import ROUND_HALF_UP, Decimal
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.features.finance import cycle
@@ -10,6 +10,7 @@ from app.features.finance.budgets.repository import BudgetTargetRepository
 from app.features.finance.budgets.schemas import (
     BudgetTargetBulkSetItem,
     BudgetTargetRead,
+    CategoryAverageSpend,
     CategoryBudgetStatus,
 )
 from app.features.finance.categories.repository import CategoryRepository
@@ -99,6 +100,39 @@ class BudgetTargetService:
                     spent=spent,
                 )
             )
+        return results
+
+    async def get_average_spend(self, months: int) -> list[CategoryAverageSpend]:
+        """Average EUR spend per category over the last `months` completed cycles.
+
+        Cycles with no spend in a category count as zero, so the average is the
+        total divided by `months`. The in-progress cycle is excluded because a
+        partial month would drag the baseline down.
+        """
+        cycle_start_day = await self._settings.get_cycle_start_day()
+        reference = local_today()
+        totals: dict[int, Decimal] = {}
+        names: dict[int, str] = {}
+        for _ in range(months):
+            from_date, to_date = cycle.previous_cycle_range(reference, cycle_start_day)
+            reference = from_date
+            rows = await self._txn_repo.get_spending_by_category(from_date, to_date)
+            for category_id, category_name, total, _count in rows:
+                if category_id is None:
+                    continue
+                totals[category_id] = totals.get(category_id, Decimal("0")) + total
+                names[category_id] = category_name or ""
+
+        results = [
+            CategoryAverageSpend(
+                category_id=category_id,
+                category_name=names[category_id],
+                average=(total / months).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP),
+                months=months,
+            )
+            for category_id, total in totals.items()
+        ]
+        logger.debug("Budget averages computed: months=%d categories=%d", months, len(results))
         return results
 
     async def current_period_label(self) -> str:

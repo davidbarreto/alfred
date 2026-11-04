@@ -1,4 +1,6 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from typing import Annotated
+
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 
 from app.api.auth import require_auth
 from app.dependencies import BudgetTargetServiceDep
@@ -6,6 +8,7 @@ from app.features.finance.budgets.schemas import (
     BudgetTargetBulkSet,
     BudgetTargetRead,
     BudgetTargetSet,
+    CategoryAverageSpend,
     CategoryBudgetStatus,
     CurrentPeriodResponse,
 )
@@ -34,6 +37,11 @@ async def budget_status(service: BudgetTargetServiceDep, year_month: str | None 
         return await service.get_status(year_month)
     except ValueError:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="year_month must be in YYYY-MM format")
+
+
+@router.get("/averages", response_model=list[CategoryAverageSpend])
+async def budget_averages(service: BudgetTargetServiceDep, months: Annotated[int, Query(ge=1, le=12)] = 12):
+    return await service.get_average_spend(months)
 
 
 @router.get("/current-period", response_model=CurrentPeriodResponse)

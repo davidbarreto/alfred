@@ -1003,11 +1003,18 @@ async def _budget_targets_context() -> dict:
         currencies = await api.get("/finance/currencies")
     except httpx.HTTPError:
         pass
+    averages = []
+    try:
+        averages = await api.get("/finance/budgets/averages")
+    except httpx.HTTPError:
+        pass
     targets_by_category = {t["category_id"]: t["amount"] for t in targets}
+    averages_by_category = {a["category_id"]: a["average"] for a in averages}
     currency_symbols = {c["code"]: c["symbol"] for c in currencies if c.get("symbol")}
     return {
         "categories": categories,
         "targets_by_category": targets_by_category,
+        "averages_by_category": averages_by_category,
         "currency_symbol": currency_symbols.get("EUR", "€"),
     }
 

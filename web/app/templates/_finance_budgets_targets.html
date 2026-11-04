@@ -3,7 +3,14 @@
   {% for cat in categories %}
   <div class="flex items-center justify-between py-2 text-sm gap-3">
     <span class="text-gray-800">{{ cat.name }}</span>
-    <div class="flex items-center gap-1">
+    <div class="flex items-center gap-2">
+      {% set avg = averages_by_category.get(cat.id) %}
+      {% if avg is not none and avg | float > 0 %}
+      <button type="button" onclick="useBudgetAverage(this)" data-average="{{ avg }}"
+        class="budget-average text-xs text-gray-400 hover:text-[#378ADD]" title="Average over the last 12 completed months. Click to use it.">
+        avg {{ currency_symbol }}{{ '%.2f' | format(avg | float) }}
+      </button>
+      {% endif %}
       <span class="text-gray-400 text-xs">{{ currency_symbol }}</span>
       <input
         type="number" step="0.01" min="0"

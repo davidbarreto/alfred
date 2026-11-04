@@ -5,7 +5,7 @@ from decimal import Decimal
 from unittest.mock import AsyncMock, MagicMock, patch
 from app.features.finance.budgets.service import BudgetTargetService
 from app.features.finance.cycle import current_cycle_range
-from app.features.finance.budgets.schemas import BudgetTargetRead, CategoryBudgetStatus
+from app.features.finance.budgets.schemas import BudgetTargetRead, CategoryAverageSpend, CategoryBudgetStatus
 
 FIXED_NOW = datetime(2026, 7, 15, 12, 0, 0)
 
@@ -180,3 +180,46 @@ class TestGetStatus:
         # Aug 15 with cycle_start_day=25 -> active cycle started July 25 -> ends Aug 24
         called_with = service._repo.list_effective.call_args[0][0]
         assert called_with == datetime(2026, 8, 25, 0, 0, 0)
+
+
+class TestGetAverageSpend:
+    async def test_averages_over_completed_cycles_counting_empty_ones_as_zero(self, service):
+        # Today is Jul 15: the completed cycles are Jun, May, Apr (Jul is in progress).
+        service._txn_repo.get_spending_by_category.side_effect = [
+            [(1, "Groceries", Decimal("300.00"), 5)],
+            [(1, "Groceries", Decimal("150.00"), 3), (2, "Fun", Decimal("90.00"), 2)],
+            [],
+        ]
+
+        with patch("app.features.finance.budgets.service.local_today", return_value=date(2026, 7, 15)):
+            results = await service.get_average_spend(3)
+
+        by_id = {r.category_id: r for r in results}
+        assert all(isinstance(r, CategoryAverageSpend) for r in results)
+        assert by_id[1].average == Decimal("150.00")
+        assert by_id[2].average == Decimal("30.00")
+        assert by_id[1].category_name == "Groceries"
+        assert by_id[1].months == 3
+        ranges = [c.args[:2] for c in service._txn_repo.get_spending_by_category.call_args_list]
+        assert ranges == [
+            (date(2026, 6, 1), date(2026, 6, 30)),
+            (date(2026, 5, 1), date(2026, 5, 31)),
+            (date(2026, 4, 1), date(2026, 4, 30)),
+        ]
+
+    async def test_uncategorized_spend_is_ignored(self, service):
+        service._txn_repo.get_spending_by_category.return_value = [(None, None, Decimal("80.00"), 1)]
+
+        results = await service.get_average_spend(1)
+
+        assert results == []
+
+    async def test_respects_cycle_start_day(self, service):
+        service._settings.get_cycle_start_day.return_value = 25
+        service._txn_repo.get_spending_by_category.return_value = []
+
+        with patch("app.features.finance.budgets.service.local_today", return_value=date(2026, 8, 15)):
+            await service.get_average_spend(1)
+
+        # Aug 15 sits in the Jul 25 - Aug 24 cycle; the last completed one is Jun 25 - Jul 24.
+        assert service._txn_repo.get_spending_by_category.call_args.args[:2] == (date(2026, 6, 25), date(2026, 7, 24))

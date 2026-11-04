@@ -2,7 +2,7 @@
   "info": {
     "name": "Alfred - Finance API",
     "_postman_id": "alfred-finance-v1",
-    "description": "Run folders in order: Accounts \u2192 Categories \u2192 Tags \u2192 Transactions \u2192 Budgets \u2192 Recurring Transactions \u2192 Imports. Within each folder run items in order (Create \u2192 List \u2192 Get \u2192 Update \u2192 Delete). Transactions depend on account_id and category_id, so create those first.",
+    "description": "Run folders in order: Accounts → Categories → Tags → Transactions → Budgets → Recurring Transactions → Imports. Within each folder run items in order (Create → List → Get → Update → Delete). Transactions depend on account_id and category_id, so create those first.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -2948,6 +2948,50 @@
                 "budgets",
                 "targets",
                 "{{finance_category_id}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "06 - Budget Averages",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Returns per-category averages', () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.be.an('array');",
+                  "    json.forEach(row => {",
+                  "        pm.expect(row).to.have.property('category_id');",
+                  "        pm.expect(row).to.have.property('average');",
+                  "        pm.expect(row.months).to.eql(12);",
+                  "    });",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/finance/budgets/averages?months=12",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "finance",
+                "budgets",
+                "averages"
+              ],
+              "query": [
+                {
+                  "key": "months",
+                  "value": "12"
+                }
               ]
             }
           }

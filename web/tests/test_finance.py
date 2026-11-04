@@ -1419,8 +1419,34 @@ class TestBudgetsPage:
                 return status
             if path == "/finance/budgets/current-period":
                 return {"year_month": "2026-07"}
+            if path == "/finance/budgets/averages":
+                return [{"category_id": 1, "category_name": "Groceries", "average": "150.00", "months": 3}]
             return []
         return fake
+
+    def test_shows_average_suggestion_per_category(self, client, mock_api):
+        mock_api["get"].side_effect = self._fake_get()
+
+        resp = client.get("/finance/budgets")
+
+        assert 'data-average="150.00"' in resp.text
+        assert "avg €150.00" in resp.text
+
+    def test_page_still_renders_when_averages_fail(self, client, mock_api):
+        import httpx
+        base = self._fake_get()
+
+        async def fake(path, params=None):
+            if path == "/finance/budgets/averages":
+                raise httpx.HTTPError("boom")
+            return await base(path, params)
+        mock_api["get"].side_effect = fake
+
+        resp = client.get("/finance/budgets")
+
+        assert resp.status_code == 200
+        assert "Groceries" in resp.text
+        assert "data-average" not in resp.text
 
     def test_renders_targets_and_chart(self, client, mock_api):
         mock_api["get"].side_effect = self._fake_get()

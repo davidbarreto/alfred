@@ -3,7 +3,7 @@ from datetime import date, datetime
 from decimal import Decimal
 from fastapi.testclient import TestClient
 from unittest.mock import AsyncMock
-from app.features.finance.budgets.schemas import BudgetTargetRead, CategoryBudgetStatus
+from app.features.finance.budgets.schemas import BudgetTargetRead, CategoryAverageSpend, CategoryBudgetStatus
 
 AUTH = {"Authorization": "Bearer test-api-token"}
 
@@ -33,6 +33,9 @@ def mock_service():
     svc.set_target.return_value = _target_read(amount=Decimal("350.00"))
     svc.set_targets_bulk.return_value = [_target_read()]
     svc.get_status.return_value = [_status()]
+    svc.get_average_spend.return_value = [
+        CategoryAverageSpend(category_id=1, category_name="Groceries", average=Decimal("150.00"), months=3)
+    ]
     return svc
 
 
@@ -110,3 +113,17 @@ class TestBudgetStatus:
 
     def test_requires_auth(self, client):
         assert client.get("/finance/budgets/status").status_code == 403
+
+
+class TestBudgetAverages:
+    def test_returns_averages_with_default_months(self, client, mock_service):
+        response = client.get("/finance/budgets/averages", headers=AUTH)
+        assert response.status_code == 200
+        assert response.json()[0]["average"] == "150.00"
+        mock_service.get_average_spend.assert_awaited_once_with(12)
+
+    def test_rejects_out_of_range_months(self, client):
+        assert client.get("/finance/budgets/averages?months=0", headers=AUTH).status_code == 422
+
+    def test_requires_auth(self, client):
+        assert client.get("/finance/budgets/averages").status_code == 403

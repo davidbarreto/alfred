@@ -14,7 +14,10 @@
   <div class="bg-white border border-gray-200 rounded-lg p-4">
     <div class="flex items-center justify-between mb-3">
       <h2 class="text-sm font-medium text-gray-900">Monthly targets</h2>
-      <button id="budget-targets-save" onclick="saveBudgetTargets()" class="btn btn-sm btn-primary">Save</button>
+      <div class="flex items-center gap-2">
+        <button type="button" onclick="fillBudgetAverages()" class="btn btn-sm btn-ghost" title="Fill empty limits with the average of the last 12 completed months (not saved until you click Save)">Use averages</button>
+        <button id="budget-targets-save" onclick="saveBudgetTargets()" class="btn btn-sm btn-primary">Save</button>
+      </div>
     </div>
     <p id="budget-targets-error" class="text-xs text-[#E24B4A] hidden mb-2"></p>
     <div id="budget-targets-list">
@@ -111,6 +114,17 @@ async function loadBudgetStatus(yearMonth) {
 function shiftBudgetMonth(delta) {
   _budgetMonth = _shiftMonth(_budgetMonth, delta);
   loadBudgetStatus(_budgetMonth);
+}
+
+function useBudgetAverage(btn) {
+  btn.closest("div.flex.items-center.justify-between").querySelector(".budget-target-input").value = btn.dataset.average;
+}
+
+function fillBudgetAverages() {
+  document.querySelectorAll(".budget-average").forEach(btn => {
+    const input = btn.closest("div.flex.items-center.justify-between").querySelector(".budget-target-input");
+    if (input.value === "") input.value = btn.dataset.average;
+  });
 }
 
 async function saveBudgetTargets() {

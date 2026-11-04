@@ -134,7 +134,7 @@ class InterviewInsightService:
         try:
             parsed = InsightsResult.model_validate_json(raw)
         except ValidationError as exc:
-            logger.error("Interview insights: unparseable LLM output error=%s", exc)
+            logger.warning("Interview insights: unparseable LLM output error=%s", exc)
             raise InsightsGenerationError("The LLM did not return valid insights") from exc
 
         insight = await self._repo.create_insight(

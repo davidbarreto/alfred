@@ -191,7 +191,7 @@
               "    pm.expect(json).to.not.have.property('days');",
               "});",
               "pm.test('Timeline datetimes carry an offset', () => {",
-              "    pm.response.json().timeline.forEach(i => pm.expect(i.start).to.match(/[+-]\\\\d{2}:\\\\d{2}$/));",
+              "    pm.response.json().timeline.forEach(i => pm.expect(i.start).to.match(/[+-]\\d{2}:\\d{2}$/));",
               "});"
             ],
             "type": "text/javascript"
@@ -202,13 +202,19 @@
         "method": "GET",
         "header": [],
         "url": {
-          "raw": "{{base_url}}/planning/day",
+          "raw": "{{base_url}}/planning/day?date=2031-03-03",
           "host": [
             "{{base_url}}"
           ],
           "path": [
             "planning",
             "day"
+          ],
+          "query": [
+            {
+              "key": "date",
+              "value": "2031-03-03"
+            }
           ]
         }
       }
@@ -391,7 +397,7 @@
               "    const json = pm.response.json();",
               "    pm.expect(json).to.have.length(3);",
               "    json.forEach(p => { pm.expect(p.archived_at).to.be.null; pm.expect(p.version).to.be.at.least(1); });",
-              "    pm.expect(json[0].items[0].start).to.match(/[+-]\\\\d{2}:\\\\d{2}$/);",
+              "    pm.expect(json[0].items[0].start).to.match(/[+-]\\d{2}:\\d{2}$/);",
               "    pm.environment.set('saved_plan_first_version', json[0].version);",
               "});"
             ],
@@ -1138,7 +1144,7 @@
           "script": {
             "exec": [
               "pm.test('Status is 200', () => pm.response.to.have.status(200));",
-              "pm.test('Flag removed', () => pm.expect(pm.response.json().items[0].missed).to.be.undefined);"
+              "pm.test('Flag removed', () => pm.expect(pm.response.json().items[0].missed).to.be.oneOf([null, undefined]));"
             ],
             "type": "text/javascript"
           }

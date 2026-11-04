@@ -325,6 +325,21 @@ class TestFinanceDashboardCurrency:
         assert report_call["currency"] == "GLOBAL"
         assert not any(path == "/finance/budgets/status" for path, _ in calls)
 
+    def test_global_view_explains_budgets_are_eur_only(self, client, mock_api):
+        calls = []
+        mock_api["get"].side_effect = self._fake_get(
+            calls,
+            [
+                {"id": 1, "name": "Checking", "currency": "EUR"},
+                {"id": 2, "name": "Conta BR", "currency": "BRL"},
+            ],
+        )
+
+        resp = client.get("/finance/?currency=GLOBAL")
+
+        assert "no budgets configured" not in resp.text
+        assert "budgets are EUR only" in resp.text
+
     def test_renders_transaction_list_with_account_and_category_names(self, client, mock_api):
         async def fake(path, params=None):
             if path == "/finance/accounts":

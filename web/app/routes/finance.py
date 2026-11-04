@@ -271,6 +271,7 @@ async def finance_page(request: Request):
         "top_category": top_category,
         "transactions": transactions,
         "budgets": budgets,
+        "budgets_applicable": currency == "EUR",
         "total_remaining": total_remaining,
         "txn_range_qs": txn_range_qs,
         "errors": errors,

@@ -75,6 +75,8 @@
       </div>
       {% if budgets %}
       <div class="text-xs text-gray-400 mt-1">across {{ budgets | length }} budget{{ "s" if budgets | length != 1 }}</div>
+      {% elif not budgets_applicable %}
+      <div class="text-xs text-gray-400 mt-1">budgets are EUR only — switch to EUR</div>
       {% else %}
       <div class="text-xs text-gray-400 mt-1">no budgets configured</div>
       {% endif %}

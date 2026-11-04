@@ -272,6 +272,8 @@
           {% for chip in [
             {"label": "Does not repeat", "value": ""},
             {"label": "Daily",   "value": "FREQ=DAILY"},
+            {"label": "Weekdays", "value": "FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR"},
+            {"label": "Weekends", "value": "FREQ=WEEKLY;BYDAY=SA,SU"},
             {"label": "Weekly",  "value": "FREQ=WEEKLY"},
             {"label": "Monthly", "value": "FREQ=MONTHLY"},
             {"label": "Yearly",  "value": "FREQ=YEARLY"},
@@ -473,7 +475,9 @@ function openEditEvent(ev) {
   form.querySelector('[name="routine_id"]').value = ev.routine_id || "";
 
   const rr = ev.recurrence_rule || "";
-  const knownRecurrences = ["", "FREQ=DAILY", "FREQ=WEEKLY", "FREQ=MONTHLY", "FREQ=YEARLY"];
+  const knownRecurrences = Array.from(document.querySelectorAll(".event-recurrence-chip"))
+    .map(el => el.dataset.value)
+    .filter(v => v !== "__custom__");
   document.getElementById("event-recurrence-custom").value = knownRecurrences.includes(rr) ? "" : rr;
   _setEventRecurrenceChip(knownRecurrences.includes(rr) ? rr : "__custom__");
 

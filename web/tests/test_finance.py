@@ -1432,6 +1432,14 @@ class TestBudgetsPage:
         assert 'data-average="150.00"' in resp.text
         assert "avg €150.00" in resp.text
 
+    def test_renders_totals_row_for_averages_and_limits(self, client, mock_api):
+        mock_api["get"].side_effect = self._fake_get()
+
+        resp = client.get("/finance/budgets")
+
+        assert 'id="budget-total-average"' in resp.text
+        assert 'id="budget-total-limits"' in resp.text
+
     def test_page_still_renders_when_averages_fail(self, client, mock_api):
         import httpx
         base = self._fake_get()

@@ -22,6 +22,13 @@
     </div>
   </div>
   {% endfor %}
+  <div class="flex items-center justify-between py-2 text-sm gap-3 font-medium text-gray-900">
+    <span>Total</span>
+    <div class="flex items-center gap-4">
+      <span class="text-xs text-gray-500 font-normal">avg <span id="budget-total-average">{{ currency_symbol }}0.00</span></span>
+      <span class="w-28 text-right">limits <span id="budget-total-limits">{{ currency_symbol }}0.00</span></span>
+    </div>
+  </div>
 </div>
 {% else %}
 <p class="text-sm text-gray-400 py-3 text-center">No categories yet.</p>

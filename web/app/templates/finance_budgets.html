@@ -116,8 +116,19 @@ function shiftBudgetMonth(delta) {
   loadBudgetStatus(_budgetMonth);
 }
 
+function updateBudgetTotals() {
+  const sum = sel => Array.from(document.querySelectorAll(sel))
+    .reduce((acc, el) => acc + (parseFloat(el.dataset.average ?? el.value) || 0), 0);
+  const avgEl = document.getElementById("budget-total-average");
+  const limEl = document.getElementById("budget-total-limits");
+  if (!avgEl || !limEl) return;
+  avgEl.textContent = CURRENCY_SYMBOL + fmtMoney(sum(".budget-average"));
+  limEl.textContent = CURRENCY_SYMBOL + fmtMoney(sum(".budget-target-input"));
+}
+
 function useBudgetAverage(btn) {
   btn.closest("div.flex.items-center.justify-between").querySelector(".budget-target-input").value = btn.dataset.average;
+  updateBudgetTotals();
 }
 
 function fillBudgetAverages() {
@@ -125,6 +136,7 @@ function fillBudgetAverages() {
     const input = btn.closest("div.flex.items-center.justify-between").querySelector(".budget-target-input");
     if (input.value === "") input.value = btn.dataset.average;
   });
+  updateBudgetTotals();
 }
 
 async function saveBudgetTargets() {
@@ -144,6 +156,7 @@ async function saveBudgetTargets() {
     });
     if (!res.ok) throw new Error(await res.text());
     document.getElementById("budget-targets-list").innerHTML = await res.text();
+    updateBudgetTotals();
     loadBudgetStatus(_budgetMonth);
   } catch (err) {
     errEl.textContent = "Failed to save budgets.";
@@ -152,6 +165,9 @@ async function saveBudgetTargets() {
     btn.disabled = false;
   }
 }
+
+document.getElementById("budget-targets-list").addEventListener("input", updateBudgetTotals);
+updateBudgetTotals();
 
 {% if budget_status %}
 _buildBudgetChart({{ budget_status | tojson }});

@@ -183,12 +183,11 @@ class TestGetStatus:
 
 
 class TestGetAverageSpend:
-    async def test_averages_over_completed_cycles_counting_empty_ones_as_zero(self, service):
-        # Today is Jul 15: the completed cycles are Jun, May, Apr (Jul is in progress).
-        service._txn_repo.get_spending_by_category.side_effect = [
-            [(1, "Groceries", Decimal("300.00"), 5)],
-            [(1, "Groceries", Decimal("150.00"), 3), (2, "Fun", Decimal("90.00"), 2)],
-            [],
+    async def test_averages_total_over_completed_cycles_with_one_query(self, service):
+        # Today is Jul 15: the completed cycles are Apr, May, Jun (Jul is in progress).
+        service._txn_repo.get_spending_by_category.return_value = [
+            (1, "Groceries", Decimal("450.00"), 8),
+            (2, "Fun", Decimal("90.00"), 2),
         ]
 
         with patch("app.features.finance.budgets.service.local_today", return_value=date(2026, 7, 15)):
@@ -200,12 +199,7 @@ class TestGetAverageSpend:
         assert by_id[2].average == Decimal("30.00")
         assert by_id[1].category_name == "Groceries"
         assert by_id[1].months == 3
-        ranges = [c.args[:2] for c in service._txn_repo.get_spending_by_category.call_args_list]
-        assert ranges == [
-            (date(2026, 6, 1), date(2026, 6, 30)),
-            (date(2026, 5, 1), date(2026, 5, 31)),
-            (date(2026, 4, 1), date(2026, 4, 30)),
-        ]
+        service._txn_repo.get_spending_by_category.assert_awaited_once_with(date(2026, 4, 1), date(2026, 6, 30))
 
     async def test_uncategorized_spend_is_ignored(self, service):
         service._txn_repo.get_spending_by_category.return_value = [(None, None, Decimal("80.00"), 1)]
@@ -219,7 +213,7 @@ class TestGetAverageSpend:
         service._txn_repo.get_spending_by_category.return_value = []
 
         with patch("app.features.finance.budgets.service.local_today", return_value=date(2026, 8, 15)):
-            await service.get_average_spend(1)
+            await service.get_average_spend(2)
 
-        # Aug 15 sits in the Jul 25 - Aug 24 cycle; the last completed one is Jun 25 - Jul 24.
-        assert service._txn_repo.get_spending_by_category.call_args.args[:2] == (date(2026, 6, 25), date(2026, 7, 24))
+        # Aug 15 sits in the Jul 25 - Aug 24 cycle; the last two completed are May 25 - Jul 24.
+        service._txn_repo.get_spending_by_category.assert_awaited_once_with(date(2026, 5, 25), date(2026, 7, 24))

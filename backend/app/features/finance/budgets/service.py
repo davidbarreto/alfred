@@ -110,18 +110,22 @@ class BudgetTargetService:
         partial month would drag the baseline down.
         """
         cycle_start_day = await self._settings.get_cycle_start_day()
+        # Cycles are contiguous, so one query over the whole span gives the same
+        # per-category totals as summing each cycle separately.
         reference = local_today()
+        _, to_date = cycle.previous_cycle_range(reference, cycle_start_day)
+        from_date = to_date
+        for _ in range(months):
+            from_date, _ = cycle.previous_cycle_range(reference, cycle_start_day)
+            reference = from_date
+        rows = await self._txn_repo.get_spending_by_category(from_date, to_date)
         totals: dict[int, Decimal] = {}
         names: dict[int, str] = {}
-        for _ in range(months):
-            from_date, to_date = cycle.previous_cycle_range(reference, cycle_start_day)
-            reference = from_date
-            rows = await self._txn_repo.get_spending_by_category(from_date, to_date)
-            for category_id, category_name, total, _count in rows:
-                if category_id is None:
-                    continue
-                totals[category_id] = totals.get(category_id, Decimal("0")) + total
-                names[category_id] = category_name or ""
+        for category_id, category_name, total, _count in rows:
+            if category_id is None:
+                continue
+            totals[category_id] = total
+            names[category_id] = category_name or ""
 
         results = [
             CategoryAverageSpend(

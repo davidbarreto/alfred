@@ -3,7 +3,9 @@ from datetime import date, datetime
 from decimal import Decimal
 from fastapi.testclient import TestClient
 from unittest.mock import AsyncMock
-from app.features.finance.budgets.schemas import BudgetTargetRead, CategoryAverageSpend, CategoryBudgetStatus
+from app.features.finance.budgets.schemas import (
+    BudgetTargetRead, CategoryAverageSpend, CategoryBudgetStatus, CurrentPeriodResponse,
+)
 
 AUTH = {"Authorization": "Bearer test-api-token"}
 
@@ -127,3 +129,26 @@ class TestBudgetAverages:
 
     def test_requires_auth(self, client):
         assert client.get("/finance/budgets/averages").status_code == 403
+
+
+class TestCurrentPeriod:
+    def test_returns_label_and_range(self, client, mock_service):
+        mock_service.get_period.return_value = CurrentPeriodResponse(
+            year_month="2026-10", from_date=date(2026, 10, 25), to_date=date(2026, 11, 24)
+        )
+
+        response = client.get("/finance/budgets/current-period?year_month=2026-10", headers=AUTH)
+
+        assert response.status_code == 200
+        assert response.json() == {"year_month": "2026-10", "from_date": "2026-10-25", "to_date": "2026-11-24"}
+        mock_service.get_period.assert_awaited_once_with("2026-10")
+
+    def test_invalid_year_month_returns_422(self, client, mock_service):
+        mock_service.get_period.side_effect = ValueError("bad")
+
+        response = client.get("/finance/budgets/current-period?year_month=nope", headers=AUTH)
+
+        assert response.status_code == 422
+
+    def test_requires_auth(self, client):
+        assert client.get("/finance/budgets/current-period").status_code == 403

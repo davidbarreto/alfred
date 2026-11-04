@@ -11,7 +11,7 @@
       <h1 class="text-base font-semibold text-gray-900">Budgets</h1>
       <div class="flex items-center gap-2 ml-3">
         <a href="/finance/budgets/overview?year_month={{ prev_year_month }}" class="text-gray-400 hover:text-gray-600" title="Previous month"><i class="ti ti-chevron-left"></i></a>
-        <span class="text-xs text-gray-500 w-16 text-center">{{ year_month }}</span>
+        <span class="text-xs text-gray-500 text-center min-w-40" title="Cycle {{ year_month }}">{{ period_range or year_month }}</span>
         <a href="/finance/budgets/overview?year_month={{ next_year_month }}" class="text-gray-400 hover:text-gray-600" title="Next month"><i class="ti ti-chevron-right"></i></a>
         {% if not is_current %}
         <a href="/finance/budgets/overview" class="text-xs text-gray-400 hover:text-gray-600">current</a>

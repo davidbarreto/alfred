@@ -36,6 +36,8 @@ class CategoryBudgetStatus(BaseModel):
 
 class CurrentPeriodResponse(BaseModel):
     year_month: str
+    from_date: date
+    to_date: date
 
 
 class CategoryAverageSpend(BaseModel):

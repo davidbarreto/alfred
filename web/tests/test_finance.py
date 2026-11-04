@@ -1540,7 +1540,9 @@ class TestBudgetsOverviewPage:
             if path == "/finance/budgets/status":
                 return status
             if path == "/finance/budgets/current-period":
-                return {"year_month": "2026-07"}
+                if params and params.get("year_month") == "2026-01":
+                    return {"year_month": "2026-01", "from_date": "2026-01-25", "to_date": "2026-02-24"}
+                return {"year_month": "2026-07", "from_date": "2026-07-25", "to_date": "2026-08-24"}
             if path == "/finance/currencies":
                 return [{"code": "EUR", "symbol": "€", "name": "Euro"}]
             return []
@@ -1561,6 +1563,34 @@ class TestBudgetsOverviewPage:
         assert "€180.00 left" in resp.text
         assert "€200.00 of €350.00" in resp.text
         assert 'href="/finance/budgets"' in resp.text
+
+    def test_header_shows_cycle_date_range(self, client, mock_api):
+        mock_api["get"].side_effect = self._fake_get([])
+
+        resp = client.get("/finance/budgets/overview")
+
+        assert "25 Jul – 24 Aug 2026" in resp.text
+
+    def test_requested_month_shows_its_own_range(self, client, mock_api):
+        mock_api["get"].side_effect = self._fake_get([])
+
+        resp = client.get("/finance/budgets/overview?year_month=2026-01")
+
+        assert "25 Jan – 24 Feb 2026" in resp.text
+
+    def test_falls_back_to_label_when_period_unavailable(self, client, mock_api):
+        base = self._fake_get([])
+
+        async def fake(path, params=None):
+            if path == "/finance/budgets/current-period":
+                raise httpx.HTTPError("boom")
+            return await base(path, params)
+        mock_api["get"].side_effect = fake
+
+        resp = client.get("/finance/budgets/overview?year_month=2026-01")
+
+        assert resp.status_code == 200
+        assert "2026-01" in resp.text
 
     def test_month_navigation_and_requested_month(self, client, mock_api):
         calls = []

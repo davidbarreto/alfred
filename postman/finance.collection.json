@@ -2995,6 +2995,120 @@
               ]
             }
           }
+        },
+        {
+          "name": "07 - Current Budget Period",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Returns the cycle label and date range', () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.year_month).to.match(/^\\d{4}-\\d{2}$/);",
+                  "    pm.expect(json).to.have.property('from_date');",
+                  "    pm.expect(json).to.have.property('to_date');",
+                  "    pm.expect(json.from_date < json.to_date).to.be.true;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/finance/budgets/current-period",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "finance",
+                "budgets",
+                "current-period"
+              ]
+            }
+          }
+        },
+        {
+          "name": "08 - Budget Period For Month",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Returns the cycle label and date range', () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.year_month).to.match(/^\\d{4}-\\d{2}$/);",
+                  "    pm.expect(json).to.have.property('from_date');",
+                  "    pm.expect(json).to.have.property('to_date');",
+                  "    pm.expect(json.from_date < json.to_date).to.be.true;",
+                  "});",
+                  "pm.test('Label matches the requested month', () => pm.expect(pm.response.json().year_month).to.eql('2026-01'));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/finance/budgets/current-period?year_month=2026-01",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "finance",
+                "budgets",
+                "current-period"
+              ],
+              "query": [
+                {
+                  "key": "year_month",
+                  "value": "2026-01"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "09 - Budget Period Rejects Bad Month",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 422', () => pm.response.to.have.status(422));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/finance/budgets/current-period?year_month=nope",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "finance",
+                "budgets",
+                "current-period"
+              ],
+              "query": [
+                {
+                  "key": "year_month",
+                  "value": "nope"
+                }
+              ]
+            }
+          }
         }
       ]
     },

@@ -45,5 +45,8 @@ async def budget_averages(service: BudgetTargetServiceDep, months: Annotated[int
 
 
 @router.get("/current-period", response_model=CurrentPeriodResponse)
-async def current_budget_period(service: BudgetTargetServiceDep):
-    return CurrentPeriodResponse(year_month=await service.current_period_label())
+async def budget_period(service: BudgetTargetServiceDep, year_month: str | None = None):
+    try:
+        return await service.get_period(year_month)
+    except ValueError:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="year_month must be in YYYY-MM format")

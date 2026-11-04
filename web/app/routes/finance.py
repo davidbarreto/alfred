@@ -990,6 +990,13 @@ async def delete_currency(code: str, request: Request):
 
 # --- Budgets ---
 
+def _format_cycle_range(period: dict | None) -> str | None:
+    if not period:
+        return None
+    start, end = date.fromisoformat(period["from_date"]), date.fromisoformat(period["to_date"])
+    return f"{start:%-d %b} – {end:%-d %b %Y}"
+
+
 def _shift_year_month(year_month: str, delta: int) -> str:
     try:
         year, month = (int(part) for part in year_month.split("-", 1))
@@ -1041,8 +1048,15 @@ async def budgets_overview_page(request: Request, year_month: Optional[str] = No
         current_period = await api.get("/finance/budgets/current-period")
         current_year_month = current_period["year_month"]
     except httpx.HTTPError:
+        current_period = None
         current_year_month = local_today().strftime("%Y-%m")
     year_month = year_month or current_year_month
+    period = current_period if year_month == current_year_month else None
+    if period is None:
+        try:
+            period = await api.get("/finance/budgets/current-period", params={"year_month": year_month})
+        except httpx.HTTPError:
+            pass
     status_params = {"year_month": year_month}
     budget_status = []
     try:
@@ -1089,6 +1103,7 @@ async def budgets_overview_page(request: Request, year_month: Optional[str] = No
         "total_spent": total_spent,
         "total_remaining": total_limit - total_spent,
         "year_month": year_month,
+        "period_range": _format_cycle_range(period),
         "prev_year_month": _shift_year_month(year_month, -1),
         "next_year_month": _shift_year_month(year_month, 1),
         "is_current": year_month == current_year_month,

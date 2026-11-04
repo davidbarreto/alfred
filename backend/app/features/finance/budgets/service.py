@@ -12,6 +12,7 @@ from app.features.finance.budgets.schemas import (
     BudgetTargetRead,
     CategoryAverageSpend,
     CategoryBudgetStatus,
+    CurrentPeriodResponse,
 )
 from app.features.finance.categories.repository import CategoryRepository
 from app.features.finance.settings.service import FinanceSettingsService
@@ -139,7 +140,11 @@ class BudgetTargetService:
         logger.debug("Budget averages computed: months=%d categories=%d", months, len(results))
         return results
 
-    async def current_period_label(self) -> str:
+    async def get_period(self, year_month: str | None) -> CurrentPeriodResponse:
+        """The cycle named by `year_month` (today's when omitted) with its date range."""
         cycle_start_day = await self._settings.get_cycle_start_day()
-        from_date, _ = cycle.current_cycle_range(local_today(), cycle_start_day)
-        return from_date.strftime("%Y-%m")
+        reference = cycle.parse_year_month_reference(year_month, cycle_start_day)
+        from_date, to_date = cycle.current_cycle_range(reference, cycle_start_day)
+        return CurrentPeriodResponse(
+            year_month=from_date.strftime("%Y-%m"), from_date=from_date, to_date=to_date
+        )

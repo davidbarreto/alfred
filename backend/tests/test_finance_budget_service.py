@@ -230,3 +230,26 @@ class TestGetAverageSpend:
 
         # Aug 15 sits in the Jul 25 - Aug 24 cycle; the last two completed are May 25 - Jul 24.
         service._txn_repo.get_spending_by_category.assert_awaited_once_with(date(2026, 5, 25), date(2026, 7, 24))
+
+
+class TestGetPeriod:
+    async def test_defaults_to_todays_cycle_with_range(self, service):
+        service._settings.get_cycle_start_day.return_value = 25
+
+        with patch("app.features.finance.cycle.local_today", return_value=date(2026, 11, 4)):
+            period = await service.get_period(None)
+
+        assert period.year_month == "2026-10"
+        assert period.from_date == date(2026, 10, 25)
+        assert period.to_date == date(2026, 11, 24)
+
+    async def test_requested_label_returns_its_range(self, service):
+        service._settings.get_cycle_start_day.return_value = 25
+
+        period = await service.get_period("2026-12")
+
+        assert (period.year_month, period.from_date, period.to_date) == ("2026-12", date(2026, 12, 25), date(2027, 1, 24))
+
+    async def test_invalid_label_raises_value_error(self, service):
+        with pytest.raises(ValueError):
+            await service.get_period("nope")

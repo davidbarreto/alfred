@@ -45,3 +45,10 @@ class CategoryAverageSpend(BaseModel):
     category_name: str
     average: Decimal
     months: int
+
+
+class BudgetHistoryCycle(BaseModel):
+    year_month: str
+    from_date: date
+    to_date: date
+    items: list[CategoryBudgetStatus]

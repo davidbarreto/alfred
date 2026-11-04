@@ -1,3 +1,4 @@
+from sqlalchemy.dialects import postgresql
 import pytest
 from datetime import datetime
 from decimal import Decimal
@@ -59,9 +60,18 @@ class TestListEffective:
         session = _make_session()
         targets = [_make_target_orm(category_id=1), _make_target_orm(category_id=2, id=2)]
         session.execute.return_value = _scalar_all(targets)
-        result = await BudgetTargetRepository(session).list_effective(datetime(2026, 8, 1))
+        result = await BudgetTargetRepository(session).list_effective(datetime(2026, 7, 1), datetime(2026, 8, 1))
         assert len(result) == 2
         session.execute.assert_called_once()
+
+    async def test_excludes_targets_closed_before_the_cycle(self):
+        session = _make_session()
+        session.execute.return_value = _scalar_all([])
+        await BudgetTargetRepository(session).list_effective(datetime(2026, 7, 1), datetime(2026, 8, 1))
+        sql = str(session.execute.call_args.args[0].compile(dialect=postgresql.dialect(), compile_kwargs={"literal_binds": True}))
+        assert "effective_from < '2026-08-01" in sql
+        assert "effective_to > '2026-07-01" in sql
+        assert "effective_to IS NULL" in sql
 
 
 class TestCountByCategory:

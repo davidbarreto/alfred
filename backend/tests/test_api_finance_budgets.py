@@ -4,7 +4,7 @@ from decimal import Decimal
 from fastapi.testclient import TestClient
 from unittest.mock import AsyncMock
 from app.features.finance.budgets.schemas import (
-    BudgetTargetRead, CategoryAverageSpend, CategoryBudgetStatus, CurrentPeriodResponse,
+    BudgetTargetRead, CategoryAverageSpend, BudgetHistoryCycle, CategoryBudgetStatus, CurrentPeriodResponse,
 )
 
 AUTH = {"Authorization": "Bearer test-api-token"}
@@ -152,3 +152,27 @@ class TestCurrentPeriod:
 
     def test_requires_auth(self, client):
         assert client.get("/finance/budgets/current-period").status_code == 403
+
+
+class TestBudgetHistory:
+    def test_returns_cycles_with_default_count(self, client, mock_service):
+        mock_service.get_history.return_value = [
+            BudgetHistoryCycle(
+                year_month="2026-10", from_date=date(2026, 10, 25), to_date=date(2026, 11, 24), items=[_status()]
+            )
+        ]
+
+        response = client.get("/finance/budgets/history", headers=AUTH)
+
+        assert response.status_code == 200
+        body = response.json()
+        assert body[0]["year_month"] == "2026-10"
+        assert body[0]["items"][0]["category_name"] == "Groceries"
+        mock_service.get_history.assert_awaited_once_with(6)
+
+    def test_rejects_out_of_range_cycles(self, client):
+        assert client.get("/finance/budgets/history?cycles=0", headers=AUTH).status_code == 422
+        assert client.get("/finance/budgets/history?cycles=25", headers=AUTH).status_code == 422
+
+    def test_requires_auth(self, client):
+        assert client.get("/finance/budgets/history").status_code == 403

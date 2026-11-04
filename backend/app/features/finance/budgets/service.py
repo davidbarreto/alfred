@@ -1,13 +1,14 @@
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, time, timedelta
 from decimal import ROUND_HALF_UP, Decimal
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.features.finance import cycle
 from app.features.finance.budgets.repository import BudgetTargetRepository
 from app.features.finance.budgets.schemas import (
+    BudgetHistoryCycle,
     BudgetTargetBulkSetItem,
     BudgetTargetRead,
     CategoryAverageSpend,
@@ -36,22 +37,26 @@ class BudgetTargetService:
         return [BudgetTargetRead.model_validate(t) for t in targets]
 
     async def set_target(self, category_id: int, amount: Decimal | None) -> BudgetTargetRead | None:
-        now = datetime.now(timezone.utc).replace(tzinfo=None)
+        """Set or clear a category's budget, versioned per cycle.
+
+        A change takes effect from the start of the current cycle. Editing again
+        within the same cycle overwrites that version; editing in a later cycle
+        closes the old version at the cycle boundary and opens a new one, so past
+        cycles keep the budget that applied then.
+        """
+        cycle_start_day = await self._settings.get_cycle_start_day()
+        from_date, _ = cycle.current_cycle_range(local_today(), cycle_start_day)
+        cycle_start = datetime.combine(from_date, time.min)
         open_target = await self._repo.get_open(category_id)
 
         if amount is None:
             if open_target is not None:
-                open_target.effective_to = now
+                open_target.effective_to = cycle_start
                 await self._session.commit()
                 logger.info("Budget target cleared: category_id=%d", category_id)
             return None
 
-        same_month = (
-            open_target is not None
-            and open_target.effective_from.year == now.year
-            and open_target.effective_from.month == now.month
-        )
-        if same_month:
+        if open_target is not None and open_target.effective_from >= cycle_start:
             open_target.amount = amount
             await self._session.commit()
             await self._session.refresh(open_target)
@@ -59,9 +64,9 @@ class BudgetTargetService:
             return BudgetTargetRead.model_validate(open_target)
 
         if open_target is not None:
-            open_target.effective_to = now
+            open_target.effective_to = cycle_start
 
-        new_target = self._repo.add(category_id=category_id, amount=amount, effective_from=now)
+        new_target = self._repo.add(category_id=category_id, amount=amount, effective_from=cycle_start)
         await self._session.commit()
         await self._session.refresh(new_target)
         logger.info("Budget target set: category_id=%d amount=%s", category_id, amount)
@@ -79,29 +84,48 @@ class BudgetTargetService:
         cycle_start_day = await self._settings.get_cycle_start_day()
         reference = cycle.parse_year_month_reference(year_month, cycle_start_day)
         from_date, to_date = cycle.current_cycle_range(reference, cycle_start_day)
-        label = from_date.replace(day=1)
-
-        next_month_start = datetime.combine(to_date + timedelta(days=1), datetime.min.time())
-        targets = await self._repo.list_effective(next_month_start)
         categories = {c.id: c.name for c in await self._category_repo.list()}
+        return await self._status_for_cycle(from_date, to_date, categories)
 
+    async def get_history(self, cycles: int) -> list[BudgetHistoryCycle]:
+        """Budget vs. spend for the current cycle and the `cycles - 1` before it, newest first."""
+        cycle_start_day = await self._settings.get_cycle_start_day()
+        categories = {c.id: c.name for c in await self._category_repo.list()}
+        from_date, to_date = cycle.current_cycle_range(local_today(), cycle_start_day)
+        history = []
+        for _ in range(cycles):
+            history.append(
+                BudgetHistoryCycle(
+                    year_month=from_date.strftime("%Y-%m"),
+                    from_date=from_date,
+                    to_date=to_date,
+                    items=await self._status_for_cycle(from_date, to_date, categories),
+                )
+            )
+            from_date, to_date = cycle.previous_cycle_range(from_date, cycle_start_day)
+        return history
+
+    async def _status_for_cycle(
+        self, from_date: date, to_date: date, categories: dict[int, str]
+    ) -> list[CategoryBudgetStatus]:
+        targets = await self._repo.list_effective(
+            datetime.combine(from_date, time.min),
+            datetime.combine(to_date + timedelta(days=1), time.min),
+        )
         spent_by_category = {
             category_id: total
             for category_id, _name, total, _count in await self._txn_repo.get_spending_by_category(from_date, to_date)
         }
-
-        results = []
-        for target in targets:
-            results.append(
-                CategoryBudgetStatus(
-                    category_id=target.category_id,
-                    category_name=categories.get(target.category_id, ""),
-                    year_month=label,
-                    limit_amount=target.amount,
-                    spent=spent_by_category.get(target.category_id, Decimal("0")),
-                )
+        return [
+            CategoryBudgetStatus(
+                category_id=target.category_id,
+                category_name=categories.get(target.category_id, ""),
+                year_month=from_date.replace(day=1),
+                limit_amount=target.amount,
+                spent=spent_by_category.get(target.category_id, Decimal("0")),
             )
-        return results
+            for target in targets
+        ]
 
     async def get_average_spend(self, months: int) -> list[CategoryAverageSpend]:
         """Average EUR spend per category over the last `months` completed cycles.

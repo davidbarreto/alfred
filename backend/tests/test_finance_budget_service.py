@@ -60,20 +60,22 @@ class TestListCurrentTargets:
         assert all(isinstance(t, BudgetTargetRead) for t in result)
 
 
+CYCLE_START = datetime(2026, 7, 1)  # FIXED_NOW is 15 Jul with a cycle starting on the 1st
+
+
 class TestSetTarget:
-    async def test_first_ever_target_creates_open_row(self, service):
+    async def test_first_ever_target_starts_at_cycle_start(self, service):
         service._repo.get_open.return_value = None
-        new_target = _make_target_orm(category_id=1, amount=Decimal("300"), effective_from=FIXED_NOW)
-        service._repo.add.return_value = new_target
+        service._repo.add.return_value = _make_target_orm(category_id=1, amount=Decimal("300"), effective_from=CYCLE_START)
 
         with freeze_time(FIXED_NOW):
             result = await service.set_target(1, Decimal("300"))
 
-        service._repo.add.assert_called_once_with(category_id=1, amount=Decimal("300"), effective_from=FIXED_NOW)
+        service._repo.add.assert_called_once_with(category_id=1, amount=Decimal("300"), effective_from=CYCLE_START)
         assert isinstance(result, BudgetTargetRead)
 
-    async def test_same_month_edit_updates_in_place(self, service):
-        open_target = _make_target_orm(category_id=1, amount=Decimal("300"), effective_from=datetime(2026, 7, 1))
+    async def test_same_cycle_edit_updates_in_place(self, service):
+        open_target = _make_target_orm(category_id=1, amount=Decimal("300"), effective_from=datetime(2026, 7, 3, 9, 0))
         service._repo.get_open.return_value = open_target
 
         with freeze_time(FIXED_NOW):
@@ -84,27 +86,53 @@ class TestSetTarget:
         service._repo.add.assert_not_called()
         assert isinstance(result, BudgetTargetRead)
 
-    async def test_new_month_edit_closes_old_and_opens_new(self, service):
+    async def test_new_cycle_edit_closes_old_and_opens_new_at_cycle_boundary(self, service):
         open_target = _make_target_orm(category_id=1, amount=Decimal("300"), effective_from=datetime(2026, 6, 10))
         service._repo.get_open.return_value = open_target
-        new_target = _make_target_orm(category_id=1, amount=Decimal("450"), effective_from=FIXED_NOW)
-        service._repo.add.return_value = new_target
+        service._repo.add.return_value = _make_target_orm(category_id=1, amount=Decimal("450"), effective_from=CYCLE_START)
 
         with freeze_time(FIXED_NOW):
             result = await service.set_target(1, Decimal("450"))
 
-        assert open_target.effective_to == FIXED_NOW
-        service._repo.add.assert_called_once_with(category_id=1, amount=Decimal("450"), effective_from=FIXED_NOW)
+        assert open_target.effective_to == CYCLE_START
+        service._repo.add.assert_called_once_with(category_id=1, amount=Decimal("450"), effective_from=CYCLE_START)
         assert isinstance(result, BudgetTargetRead)
 
-    async def test_clear_closes_open_row_and_returns_none(self, service):
-        open_target = _make_target_orm(category_id=1, effective_from=datetime(2026, 7, 1))
+    async def test_edit_on_cycle_start_day_offset_keeps_version_in_the_same_cycle(self, service):
+        # Cycle starts on the 25th: on 4 Nov the active cycle began 25 Oct, so a
+        # version created 28 Oct belongs to it and is overwritten, not versioned.
+        service._settings.get_cycle_start_day.return_value = 25
+        open_target = _make_target_orm(category_id=1, amount=Decimal("300"), effective_from=datetime(2026, 10, 28))
+        service._repo.get_open.return_value = open_target
+
+        with freeze_time("2026-11-04 10:00:00"):
+            await service.set_target(1, Decimal("450"))
+
+        assert open_target.amount == Decimal("450")
+        service._repo.add.assert_not_called()
+
+    async def test_edit_in_new_offset_cycle_creates_version_starting_on_the_25th(self, service):
+        service._settings.get_cycle_start_day.return_value = 25
+        open_target = _make_target_orm(category_id=1, amount=Decimal("300"), effective_from=datetime(2026, 10, 10))
+        service._repo.get_open.return_value = open_target
+        service._repo.add.return_value = _make_target_orm(category_id=1, amount=Decimal("450"))
+
+        with freeze_time("2026-11-04 10:00:00"):
+            await service.set_target(1, Decimal("450"))
+
+        assert open_target.effective_to == datetime(2026, 10, 25)
+        service._repo.add.assert_called_once_with(
+            category_id=1, amount=Decimal("450"), effective_from=datetime(2026, 10, 25)
+        )
+
+    async def test_clear_closes_open_row_at_cycle_start_and_returns_none(self, service):
+        open_target = _make_target_orm(category_id=1, effective_from=datetime(2026, 6, 1))
         service._repo.get_open.return_value = open_target
 
         with freeze_time(FIXED_NOW):
             result = await service.set_target(1, None)
 
-        assert open_target.effective_to == FIXED_NOW
+        assert open_target.effective_to == CYCLE_START
         service._repo.add.assert_not_called()
         assert result is None
 
@@ -169,8 +197,7 @@ class TestGetStatus:
 
         await service.get_status("2026-07")
 
-        called_with = service._repo.list_effective.call_args[0][0]
-        assert called_with == datetime(2026, 8, 1, 0, 0, 0)
+        assert service._repo.list_effective.call_args[0] == (datetime(2026, 7, 1), datetime(2026, 8, 1))
 
     async def test_empty_targets_returns_empty_list(self, service):
         service._repo.list_effective.return_value = []
@@ -191,8 +218,7 @@ class TestGetStatus:
             await service.get_status(None)
 
         # Aug 15 with cycle_start_day=25 -> active cycle started July 25 -> ends Aug 24
-        called_with = service._repo.list_effective.call_args[0][0]
-        assert called_with == datetime(2026, 8, 25, 0, 0, 0)
+        assert service._repo.list_effective.call_args[0] == (datetime(2026, 7, 25), datetime(2026, 8, 25))
 
 
 class TestGetAverageSpend:
@@ -253,3 +279,25 @@ class TestGetPeriod:
     async def test_invalid_label_raises_value_error(self, service):
         with pytest.raises(ValueError):
             await service.get_period("nope")
+
+
+class TestGetHistory:
+    async def test_returns_current_and_previous_cycles_newest_first(self, service):
+        service._settings.get_cycle_start_day.return_value = 25
+        service._category_repo.list.return_value = [_make_category_orm(1, "Groceries")]
+        service._repo.list_effective.side_effect = [
+            [_make_target_orm(category_id=1, amount=Decimal("300"))],
+            [_make_target_orm(category_id=1, amount=Decimal("250"))],
+            [],
+        ]
+        service._txn_repo.get_spending_by_category.return_value = [(1, "Groceries", Decimal("100"), 2)]
+
+        with patch("app.features.finance.budgets.service.local_today", return_value=date(2026, 11, 4)):
+            history = await service.get_history(3)
+
+        assert [h.year_month for h in history] == ["2026-10", "2026-09", "2026-08"]
+        assert (history[0].from_date, history[0].to_date) == (date(2026, 10, 25), date(2026, 11, 24))
+        assert (history[1].from_date, history[1].to_date) == (date(2026, 9, 25), date(2026, 10, 24))
+        assert [h.items[0].limit_amount if h.items else None for h in history] == [Decimal("300"), Decimal("250"), None]
+        assert history[0].items[0].spent == Decimal("100")
+        service._category_repo.list.assert_awaited_once()

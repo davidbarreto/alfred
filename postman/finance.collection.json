@@ -3109,6 +3109,86 @@
               ]
             }
           }
+        },
+        {
+          "name": "10 - Budget History",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Returns the requested cycles newest first', () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.be.an('array').with.lengthOf(3);",
+                  "    json.forEach(c => {",
+                  "        pm.expect(c).to.have.property('year_month');",
+                  "        pm.expect(c).to.have.property('from_date');",
+                  "        pm.expect(c.items).to.be.an('array');",
+                  "    });",
+                  "    pm.expect(json[0].from_date > json[1].from_date).to.be.true;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/finance/budgets/history?cycles=3",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "finance",
+                "budgets",
+                "history"
+              ],
+              "query": [
+                {
+                  "key": "cycles",
+                  "value": "3"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "11 - Budget History Rejects Bad Cycles",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 422', () => pm.response.to.have.status(422));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/finance/budgets/history?cycles=0",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "finance",
+                "budgets",
+                "history"
+              ],
+              "query": [
+                {
+                  "key": "cycles",
+                  "value": "0"
+                }
+              ]
+            }
+          }
         }
       ]
     },

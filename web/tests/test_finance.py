@@ -1563,6 +1563,7 @@ class TestBudgetsOverviewPage:
         assert "€180.00 left" in resp.text
         assert "€200.00 of €350.00" in resp.text
         assert 'href="/finance/budgets"' in resp.text
+        assert 'href="/finance/budgets/history"' in resp.text
 
     def test_header_shows_cycle_date_range(self, client, mock_api):
         mock_api["get"].side_effect = self._fake_get([])
@@ -1661,6 +1662,89 @@ class TestBudgetsOverviewPage:
 
     def test_requires_authentication(self, anon_client):
         resp = anon_client.get("/finance/budgets/overview", follow_redirects=False)
+        assert resp.status_code == 302
+        assert resp.headers["location"].startswith("/login")
+
+
+def _history_cycle(year_month, range_from, range_to, items):
+    return {"year_month": year_month, "from_date": range_from, "to_date": range_to, "items": items}
+
+
+class TestBudgetsHistoryPage:
+    def _fake_get(self, history):
+        async def fake(path, params=None):
+            if path == "/finance/budgets/history":
+                return history
+            if path == "/finance/currencies":
+                return [{"code": "EUR", "symbol": "€", "name": "Euro"}]
+            return []
+        return fake
+
+    def _history(self):
+        return [
+            _history_cycle("2026-10", "2026-10-25", "2026-11-24", [
+                _budget_status(category_id=1, category_name="Groceries", limit_amount="350.00", spent="400.00"),
+                _budget_status(category_id=2, category_name="Dining", limit_amount="50.00", spent="10.00"),
+            ]),
+            _history_cycle("2026-09", "2026-09-25", "2026-10-24", [
+                _budget_status(category_id=1, category_name="Groceries", limit_amount="300.00", spent="120.00"),
+            ]),
+        ]
+
+    def test_shows_each_cycles_budget_and_marks_changes(self, client, mock_api):
+        mock_api["get"].side_effect = self._fake_get(self._history())
+
+        resp = client.get("/finance/budgets/history")
+
+        assert resp.status_code == 200
+        assert "25 Oct – 24 Nov 2026" in resp.text
+        assert "25 Sep – 24 Oct 2026" in resp.text
+        assert "€350.00" in resp.text and "€300.00" in resp.text
+        assert resp.text.count("Budget changed from the previous cycle") == 1  # Groceries 300 -> 350
+        assert "spent €400.00" in resp.text
+        assert resp.text.index("Dining") < resp.text.index("Groceries")
+
+    def test_cells_without_a_budget_in_a_cycle_are_blank(self, client, mock_api):
+        mock_api["get"].side_effect = self._fake_get(self._history())
+
+        resp = client.get("/finance/budgets/history")
+
+        assert "—" in resp.text  # Dining had no budget in the older cycle
+
+    def test_is_read_only(self, client, mock_api):
+        mock_api["get"].side_effect = self._fake_get(self._history())
+
+        resp = client.get("/finance/budgets/history")
+
+        assert "<input" not in resp.text
+
+    def test_requests_the_configured_number_of_cycles(self, client, mock_api):
+        calls = []
+        base = self._fake_get([])
+
+        async def fake(path, params=None):
+            calls.append((path, params))
+            return await base(path, params)
+        mock_api["get"].side_effect = fake
+
+        client.get("/finance/budgets/history")
+
+        assert ("/finance/budgets/history", {"cycles": 6}) in calls
+
+    def test_empty_state_when_history_unavailable(self, client, mock_api):
+        async def fake(path, params=None):
+            if path == "/finance/budgets/history":
+                raise httpx.HTTPError("boom")
+            return []
+        mock_api["get"].side_effect = fake
+
+        resp = client.get("/finance/budgets/history")
+
+        assert resp.status_code == 200
+        assert "No budget history yet" in resp.text
+
+    def test_requires_authentication(self, anon_client):
+        resp = anon_client.get("/finance/budgets/history", follow_redirects=False)
         assert resp.status_code == 302
         assert resp.headers["location"].startswith("/login")
 

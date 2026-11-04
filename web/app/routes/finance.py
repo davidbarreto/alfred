@@ -990,6 +990,9 @@ async def delete_currency(code: str, request: Request):
 
 # --- Budgets ---
 
+_BUDGET_HISTORY_CYCLES = 6
+
+
 def _format_cycle_range(period: dict | None) -> str | None:
     if not period:
         return None
@@ -1108,6 +1111,59 @@ async def budgets_overview_page(request: Request, year_month: Optional[str] = No
         "next_year_month": _shift_year_month(year_month, 1),
         "is_current": year_month == current_year_month,
         "currency_symbol": currency_symbol,
+    })
+
+
+@router.get("/budgets/history", response_class=HTMLResponse)
+async def budgets_history_page(request: Request):
+    history = []
+    try:
+        history = await api.get("/finance/budgets/history", params={"cycles": _BUDGET_HISTORY_CYCLES})
+    except httpx.HTTPError:
+        pass
+    currency_symbol = "€"
+    try:
+        currencies = await api.get("/finance/currencies")
+        currency_symbol = next((c["symbol"] for c in currencies if c["code"] == "EUR" and c.get("symbol")), "€")
+    except httpx.HTTPError:
+        pass
+
+    cycles = [
+        {
+            "year_month": cycle["year_month"],
+            "range": _format_cycle_range(cycle),
+            "items": {i["category_id"]: i for i in cycle["items"]},
+            "total_limit": sum(float(i["limit_amount"]) for i in cycle["items"]),
+            "total_spent": sum(float(i["spent"]) for i in cycle["items"]),
+        }
+        for cycle in history
+    ]
+    names = {i["category_id"]: i["category_name"] for cycle in history for i in cycle["items"]}
+    rows = []
+    for category_id, name in sorted(names.items(), key=lambda kv: kv[1].lower()):
+        cells = []
+        for index, cycle in enumerate(cycles):
+            item = cycle["items"].get(category_id)
+            older = cycles[index + 1]["items"].get(category_id) if index + 1 < len(cycles) else None
+            limit = float(item["limit_amount"]) if item else None
+            older_limit = float(older["limit_amount"]) if older else None
+            cells.append({
+                "limit": limit,
+                "spent": float(item["spent"]) if item else None,
+                "changed": limit is not None and older_limit is not None and limit != older_limit,
+            })
+        rows.append({"category_name": name, "cells": cells})
+
+    chronological = list(reversed(cycles))
+    return templates.TemplateResponse(request, "finance_budgets_history.html", {
+        "cycles": cycles,
+        "rows": rows,
+        "currency_symbol": currency_symbol,
+        "trend_chart": {
+            "labels": [c["year_month"] for c in chronological],
+            "budget": [c["total_limit"] for c in chronological],
+            "spent": [c["total_spent"] for c in chronological],
+        },
     })
 
 

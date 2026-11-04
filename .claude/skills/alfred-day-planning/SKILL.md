@@ -7,6 +7,8 @@ description: Plan or replan a day or a week with Alfred's day_plan tool. Use whe
 
 Alfred only gathers facts and stores what was agreed; you do the scheduling. Mechanics and field semantics: `docs/modules/planning.md`. The user's own routines, people and habits are **not** in this file: they come from the `preferences` of every `day_plan get` (wake/sleep, work target, office goal, `travel_times`, `conventions`) and from memory. If a rule you need is missing, ask once and offer to store it in `planning.conventions`.
 
+Fixed commitments (pickups, classes, appointments), recurring tasks and activity targets are Alfred data and come back from `get`; don't ask the user to repeat them and don't hard-code them here.
+
 Always look at the whole week, even when asked about one day, to check constraints and spread tasks.
 
 ## Flow (one round when possible)

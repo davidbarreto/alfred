@@ -1,8 +1,8 @@
 {% if categories %}
 <div class="divide-y divide-gray-100">
   {% for cat in categories %}
-  <div class="flex items-center justify-between py-2 text-sm gap-3">
-    <span class="text-gray-800">{{ cat.name }}</span>
+  <div class="budget-row flex items-center justify-between py-2 px-2 text-sm gap-3 hover:bg-gray-100 focus-within:shadow-[inset_3px_0_0_#378ADD] group">
+    <span class="text-gray-800 group-focus-within:text-[#378ADD] group-focus-within:font-medium">{{ cat.name }}</span>
     <div class="flex items-center gap-2">
       {% set avg = averages_by_category.get(cat.id) %}
       {% if avg is not none and avg | float > 0 %}

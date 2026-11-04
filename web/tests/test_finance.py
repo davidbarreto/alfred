@@ -240,6 +240,14 @@ class TestFinanceDashboardCurrency:
         assert report_call["currency"] == "EUR"
         assert any(path == "/finance/budgets/status" for path, _ in calls)
 
+    def test_header_links_to_budgets_page(self, client, mock_api):
+        mock_api["get"].side_effect = self._fake_get([], [{"id": 1, "name": "Checking", "currency": "EUR"}])
+
+        resp = client.get("/finance/")
+
+        assert 'href="/finance/budgets"' in resp.text
+        assert "ti-target" in resp.text
+
     def test_brl_view_filters_and_skips_budgets(self, client, mock_api):
         calls = []
         mock_api["get"].side_effect = self._fake_get(

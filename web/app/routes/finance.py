@@ -1055,10 +1055,18 @@ async def budgets_overview_page(request: Request, year_month: Optional[str] = No
         currency_symbol = next((c["symbol"] for c in currencies if c["code"] == "EUR" and c.get("symbol")), "€")
     except httpx.HTTPError:
         pass
+    averages_by_category = {}
+    averages_available = True
+    try:
+        averages = await api.get("/finance/budgets/averages")
+        averages_by_category = {a["category_id"]: float(a["average"]) for a in averages}
+    except httpx.HTTPError:
+        averages_available = False
     rows = sorted(
         (
             {
                 "category_name": b["category_name"],
+                "average": averages_by_category.get(b["category_id"], 0.0),
                 "limit": float(b["limit_amount"]),
                 "spent": float(b["spent"]),
                 "remaining": float(b["limit_amount"]) - float(b["spent"]),
@@ -1071,6 +1079,12 @@ async def budgets_overview_page(request: Request, year_month: Optional[str] = No
     total_spent = sum(r["spent"] for r in rows)
     return templates.TemplateResponse(request, "finance_budgets_overview.html", {
         "rows": rows,
+        "averages_available": averages_available,
+        "average_chart": {
+            "labels": [r["category_name"] for r in rows],
+            "budget": [r["limit"] for r in rows],
+            "average": [r["average"] for r in rows],
+        },
         "total_limit": total_limit,
         "total_spent": total_spent,
         "total_remaining": total_limit - total_spent,

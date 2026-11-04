@@ -60,5 +60,46 @@
     {% endif %}
   </div>
 
+  {% if rows and averages_available %}
+  <div class="bg-white border border-gray-200 rounded-lg p-4">
+    <h2 class="text-sm font-medium text-gray-900 mb-3">Budget vs. 12-month average</h2>
+    <div class="relative h-64">
+      <canvas id="chart-budget-average"></canvas>
+    </div>
+  </div>
+  {% endif %}
+
 </div>
+
+{% if rows and averages_available %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+<script>
+(function () {
+  const symbol = {{ currency_symbol | tojson }};
+  const data = {{ average_chart | tojson }};
+  const fmt = n => n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  new Chart(document.getElementById("chart-budget-average"), {
+    type: "bar",
+    data: {
+      labels: data.labels,
+      datasets: [
+        { label: "Budget", data: data.budget, backgroundColor: "#378ADD", borderRadius: 3, borderSkipped: false },
+        { label: "12-month average", data: data.average, backgroundColor: "#E5E7EB", borderRadius: 3, borderSkipped: false }
+      ]
+    },
+    options: {
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { position: "bottom", labels: { boxWidth: 10, font: { size: 11 } } },
+        tooltip: { callbacks: { label: ctx => ` ${ctx.dataset.label}: ${symbol}${fmt(ctx.parsed.y)}` } }
+      },
+      scales: {
+        x: { grid: { display: false }, ticks: { font: { size: 10 } } },
+        y: { grid: { color: "#F3F4F6" }, ticks: { font: { size: 10 }, callback: v => symbol + v } }
+      }
+    }
+  });
+})();
+</script>
+{% endif %}
 {% endblock %}

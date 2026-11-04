@@ -1577,6 +1577,37 @@ class TestBudgetsOverviewPage:
         assert "year_month=2025-12" in resp.text
         assert "year_month=2026-02" in resp.text
 
+    def test_chart_compares_budget_with_twelve_month_average(self, client, mock_api):
+        base = self._fake_get([
+            _budget_status(category_id=1, category_name="Groceries", limit_amount="300.00", spent="120.00"),
+            _budget_status(category_id=2, category_name="Dining", limit_amount="50.00", spent="20.00"),
+        ])
+
+        async def fake(path, params=None):
+            if path == "/finance/budgets/averages":
+                return [{"category_id": 1, "category_name": "Groceries", "average": "250.00", "months": 12}]
+            return await base(path, params)
+        mock_api["get"].side_effect = fake
+
+        resp = client.get("/finance/budgets/overview")
+
+        assert 'id="chart-budget-average"' in resp.text
+        assert '"average":[0.0,250.0]' in resp.text.replace(" ", "")
+
+    def test_chart_hidden_when_averages_fail(self, client, mock_api):
+        base = self._fake_get([_budget_status()])
+
+        async def fake(path, params=None):
+            if path == "/finance/budgets/averages":
+                raise httpx.HTTPError("boom")
+            return await base(path, params)
+        mock_api["get"].side_effect = fake
+
+        resp = client.get("/finance/budgets/overview")
+
+        assert resp.status_code == 200
+        assert "chart-budget-average" not in resp.text
+
     def test_empty_state(self, client, mock_api):
         mock_api["get"].side_effect = self._fake_get([])
 

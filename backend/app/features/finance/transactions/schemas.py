@@ -428,6 +428,8 @@ class AnalyticsFilters:
         merchant: Annotated[str | None, Query()] = None,
         top_n: Annotated[int, Query(ge=1, le=50)] = 5,
         currency: Annotated[str, Query()] = "EUR",
+        tags: Annotated[list[str] | None, Query()] = None,
+        tags_mode: Annotated[Literal["all", "any"], Query()] = "all",
     ) -> None:
         self.period = period
         self.from_date = from_date
@@ -437,3 +439,5 @@ class AnalyticsFilters:
         self.merchant = merchant
         self.top_n = top_n
         self.currency = currency.upper()
+        self.tags = tags
+        self.tags_mode = tags_mode

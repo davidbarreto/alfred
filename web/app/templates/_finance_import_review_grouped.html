@@ -30,17 +30,16 @@
 
     <div class="mb-3 flex items-center gap-2">
       <label class="text-xs text-gray-500 whitespace-nowrap">Tags for this import</label>
+      <div class="flex-1 max-w-md">
       <input
         type="text"
         name="tag_names"
         placeholder="e.g. Travel"
-        list="finance-tag-options"
-        class="border border-gray-200 rounded-lg px-3 py-1.5 text-sm bg-white flex-1 max-w-xs focus:outline-none focus:ring-1 focus:ring-[#378ADD]"
+        data-tag-input data-known='{{ tags | map(attribute="name") | list | tojson }}'
+        class="border border-gray-200 rounded-lg px-3 py-1.5 text-sm bg-white w-full focus:outline-none focus:ring-1 focus:ring-[#378ADD]"
       />
-      <datalist id="finance-tag-options">
-        {% for tag in tags %}<option value="{{ tag.name }}"></option>{% endfor %}
-      </datalist>
-      <span class="text-[10px] text-gray-400">Comma-separated. Applied to every row committed below. New names are created automatically.</span>
+      </div>
+      <span class="text-[10px] text-gray-400"> Applied to every row committed below. New names are created automatically.</span>
     </div>
     {% set ns = namespace(i=0) %}
 
@@ -63,7 +62,7 @@
               <th>Type</th>
               <th>Category</th>
               <th>Description</th>
-              <th>Note</th>
+              <th>Note / tags</th>
               <th>Rule</th>
             </tr>
           </thead>
@@ -156,7 +155,10 @@
               </td>
               <td>
                 <input type="text" name="note_{{ i }}" value="" placeholder="Note"
-                       class="input input-xs border-gray-200 bg-white w-28" />
+                       class="input input-xs border-gray-200 bg-white w-40" />
+                <input type="text" name="tag_names_{{ i }}" placeholder="Row tags"
+                       data-tag-input data-known='{{ tags | map(attribute="name") | list | tojson }}'
+                       class="w-40" />
               </td>
               <td class="text-xs">
                 <label class="flex items-center gap-1 cursor-pointer whitespace-nowrap">

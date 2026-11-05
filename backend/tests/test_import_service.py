@@ -19,6 +19,7 @@ from app.features.finance.imports.service import (
     _clean_description,
     _compute_dedup_hash,
     _extract_json,
+    _merge_tags,
     _rule_matches,
 )
 from app.features.finance.imports.tables import ImportBatch, ImportRule
@@ -690,6 +691,22 @@ class TestCommit:
 
         assert len(service._created) == 2
         assert all(data.tags == ["Travel"] for data in service._created)
+
+    @pytest.mark.asyncio
+    async def test_row_tags_are_added_on_top_of_batch_tags(self):
+        service = _service()
+        self._prepare(service)
+        service._txn_repo.get_existing_dedup_hashes.return_value = set()
+        rows = [
+            _commit_row(deduplication_hash="hash-a", tag_names=["Rome", "travel"]),
+            _commit_row(deduplication_hash="hash-b"),
+        ]
+
+        await service.commit(_commit_request(rows, tag_names=["Travel"]))
+
+        by_hash = {d.deduplication_hash: d.tags for d in service._created}
+        assert by_hash["hash-a"] == ["Travel", "Rome"]
+        assert by_hash["hash-b"] == ["Travel"]
 
     @pytest.mark.asyncio
     async def test_converts_amount_to_eur_via_fx_service(self):
@@ -1506,6 +1523,24 @@ class TestCommitGrouped:
 
         with pytest.raises(InvalidGroupedImportError):
             await service.commit_grouped(request)
+
+    @pytest.mark.asyncio
+    async def test_row_tags_are_added_on_top_of_batch_tags(self):
+        service = _service()
+        created, _ = self._prepare(service)
+        request = _grouped_commit_request(
+            [
+                _grouped_commit_row(deduplication_hash="h1", tag_names=["Rome"]),
+                _grouped_commit_row(deduplication_hash="h2"),
+            ]
+        )
+        request.tag_names = ["Travel"]
+
+        await service.commit_grouped(request)
+
+        by_hash = {d.deduplication_hash: d.tags for d in created}
+        assert by_hash["h1"] == ["Travel", "Rome"]
+        assert by_hash["h2"] == ["Travel"]
 
     @pytest.mark.asyncio
     async def test_creates_one_batch_per_currency(self):
@@ -2365,3 +2400,11 @@ class TestCommitInsertsSupersedingRowAtZero:
         # Only the ordinary -10.00 row should move the balance; the superseded
         # original contributes 0, not its real -248.46 amount.
         service._account_repo.adjust_balance.assert_awaited_once_with(1, Decimal("-10.00"))
+
+
+class TestMergeTags:
+    def test_batch_tags_come_first_and_duplicates_collapse_case_insensitively(self):
+        assert _merge_tags(["Travel"], ["travel", "Rome", " Rome "]) == ["Travel", "Rome"]
+
+    def test_blank_names_are_dropped(self):
+        assert _merge_tags([], ["", "  "]) == []

@@ -440,6 +440,40 @@ class TestImportCommit:
         assert row["installment_juros"] == "0.90"
         assert "force" not in row
 
+    def test_forwards_batch_and_per_row_tags(self, client, mock_api):
+        mock_api["post"].return_value = {
+            "batch_id": 7, "inserted": 2, "skipped_duplicates": 0, "rules_created": 0
+        }
+
+        client.post(
+            "/finance/import/commit",
+            json={
+                "account_id": "1",
+                "provider": "activobank",
+                "row_count": "2",
+                "tag_names": "Travel",
+                "include_0": "on",
+                "date_0": "2026-07-03",
+                "bank_description_0": "SHOP A",
+                "amount_0": "-10.00",
+                "type_0": "expense",
+                "hash_0": "h0",
+                "tag_names_0": "Rome, Dinner",
+                "include_1": "on",
+                "date_1": "2026-07-04",
+                "bank_description_1": "SHOP B",
+                "amount_1": "-5.00",
+                "type_1": "expense",
+                "hash_1": "h1",
+                "tag_names_1": "",
+            },
+        )
+
+        payload = mock_api["post"].call_args.kwargs["json"]
+        assert payload["tag_names"] == ["Travel"]
+        assert payload["rows"][0]["tag_names"] == ["Rome", "Dinner"]
+        assert "tag_names" not in payload["rows"][1]
+
     def test_commit_uses_extended_timeout(self, client, mock_api):
         mock_api["post"].return_value = {
             "batch_id": 7, "inserted": 1, "skipped_duplicates": 0, "rules_created": 0
@@ -869,6 +903,33 @@ class TestPreviewGrouped:
 
 
 class TestCommitGrouped:
+    def test_forwards_per_row_tags(self, client, mock_api):
+        mock_api["post"].return_value = {
+            "batches": [], "total_inserted": 0, "total_skipped_duplicates": 0, "rules_created": 0,
+        }
+
+        client.post(
+            "/finance/import/commit-grouped",
+            json={
+                "provider": "revolut",
+                "account_map": '{"EUR": 1}',
+                "row_count": "1",
+                "tag_names": "Travel",
+                "include_0": "on",
+                "date_0": "2026-06-01",
+                "bank_description_0": "Bolt",
+                "amount_0": "-20.63",
+                "type_0": "expense",
+                "currency_0": "EUR",
+                "hash_0": "h1",
+                "tag_names_0": "Rome",
+            },
+        )
+
+        payload = mock_api["post"].call_args.kwargs["json"]
+        assert payload["tag_names"] == ["Travel"]
+        assert payload["rows"][0]["tag_names"] == ["Rome"]
+
     def test_builds_grouped_payload(self, client, mock_api):
         mock_api["post"].return_value = {
             "batches": [{"batch_id": 1, "currency": "EUR", "account_id": 1, "inserted": 1, "skipped_duplicates": 0}],

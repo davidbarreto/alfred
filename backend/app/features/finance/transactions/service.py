@@ -639,6 +639,8 @@ class TransactionService:
             account_id=filters.account_id,
             merchant=filters.merchant,
             currency=filters.currency,
+            tags=filters.tags,
+            tags_mode=filters.tags_mode,
         )
         return SpendingReportResponse(
             total=total,
@@ -658,6 +660,8 @@ class TransactionService:
             merchant=filters.merchant,
             currency=filters.currency,
             transaction_type="income",
+            tags=filters.tags,
+            tags_mode=filters.tags_mode,
         )
         return SpendingReportResponse(
             total=total,
@@ -674,6 +678,8 @@ class TransactionService:
             to_date=to_date,
             category_id=filters.category_id,
             currency=filters.currency,
+            tags=filters.tags,
+            tags_mode=filters.tags_mode,
         )
         days = max((to_date - from_date).days + 1, 1)
         average_per_day = total / days if days > 0 else Decimal("0")
@@ -692,6 +698,8 @@ class TransactionService:
             to_date=to_date,
             account_id=filters.account_id,
             currency=filters.currency,
+            tags=filters.tags,
+            tags_mode=filters.tags_mode,
         )
         items = [
             CategorySpendingItem(
@@ -717,6 +725,8 @@ class TransactionService:
             group_by=group_by,
             account_id=filters.account_id,
             currency=filters.currency,
+            tags=filters.tags,
+            tags_mode=filters.tags_mode,
         )
         items = [SpendingOverTimeItem(period=period, total=total) for period, total in rows]
         return SpendingOverTimeResponse(
@@ -889,6 +899,8 @@ class TransactionService:
             top_n=filters.top_n,
             category_id=filters.category_id,
             currency=filters.currency,
+            tags=filters.tags,
+            tags_mode=filters.tags_mode,
         )
         return SpendingTopResponse(
             transactions=[TransactionRead.model_validate(t) for t in txns],

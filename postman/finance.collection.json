@@ -777,6 +777,7 @@
                   "    pm.expect(json.currency).to.eql('EUR');",
                   "    pm.expect(json.merchant).to.eql('Supermarket');",
                   "    pm.environment.set('finance_transaction_id', json.id);",
+                  "    pm.expect(json.tags.map(t => t.name || t)).to.include('PostmanTrip');",
                   "});"
                 ],
                 "type": "text/javascript"
@@ -793,7 +794,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"account_id\": {{finance_account_id}},\n  \"date\": \"2026-06-12T10:00:00\",\n  \"amount\": \"45.50\",\n  \"currency\": \"EUR\",\n  \"type\": \"expense\",\n  \"category_id\": {{finance_category_id}},\n  \"description\": \"Weekly grocery run\",\n  \"merchant\": \"Supermarket\"\n}",
+              "raw": "{\n  \"account_id\": {{finance_account_id}},\n  \"date\": \"2026-06-12T10:00:00\",\n  \"amount\": \"45.50\",\n  \"currency\": \"EUR\",\n  \"type\": \"expense\",\n  \"category_id\": {{finance_category_id}},\n  \"description\": \"Weekly grocery run\",\n  \"merchant\": \"Supermarket\",\n  \"tags\": [\"PostmanTrip\"]\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -1360,6 +1361,295 @@
                 {
                   "key": "group_by",
                   "value": "month"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "04h - Spending By Category Scoped To Tag",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Only the tagged transaction is counted', () => {",
+                  "    const items = pm.response.json().items;",
+                  "    pm.expect(items.length).to.eql(1);",
+                  "    pm.expect(items[0].transaction_count).to.eql(1);",
+                  "    pm.expect(items[0].total).to.eql('45.50');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/finance/transactions/by-category?from_date=2026-06-01&to_date=2026-06-30&tags=PostmanTrip",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "finance",
+                "transactions",
+                "by-category"
+              ],
+              "query": [
+                {
+                  "key": "from_date",
+                  "value": "2026-06-01"
+                },
+                {
+                  "key": "to_date",
+                  "value": "2026-06-30"
+                },
+                {
+                  "key": "tags",
+                  "value": "PostmanTrip"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "04i - Spending By Category Unknown Tag Is Empty",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('No items for a tag nothing carries', () => pm.expect(pm.response.json().items).to.eql([]));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/finance/transactions/by-category?from_date=2026-06-01&to_date=2026-06-30&tags=PostmanNoSuchTag",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "finance",
+                "transactions",
+                "by-category"
+              ],
+              "query": [
+                {
+                  "key": "from_date",
+                  "value": "2026-06-01"
+                },
+                {
+                  "key": "to_date",
+                  "value": "2026-06-30"
+                },
+                {
+                  "key": "tags",
+                  "value": "PostmanNoSuchTag"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "04j - Spending Report Tags Match All Requires Every Tag",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('AND mode excludes the transaction', () => pm.expect(pm.response.json().transaction_count).to.eql(0));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/finance/transactions/report?from_date=2026-06-01&to_date=2026-06-30&tags=PostmanTrip&tags=PostmanNoSuchTag",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "finance",
+                "transactions",
+                "report"
+              ],
+              "query": [
+                {
+                  "key": "from_date",
+                  "value": "2026-06-01"
+                },
+                {
+                  "key": "to_date",
+                  "value": "2026-06-30"
+                },
+                {
+                  "key": "tags",
+                  "value": "PostmanTrip"
+                },
+                {
+                  "key": "tags",
+                  "value": "PostmanNoSuchTag"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "04k - Spending Report Tags Match Any",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('OR mode includes the transaction', () => pm.expect(pm.response.json().transaction_count).to.eql(1));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/finance/transactions/report?from_date=2026-06-01&to_date=2026-06-30&tags=PostmanTrip&tags=PostmanNoSuchTag&tags_mode=any",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "finance",
+                "transactions",
+                "report"
+              ],
+              "query": [
+                {
+                  "key": "from_date",
+                  "value": "2026-06-01"
+                },
+                {
+                  "key": "to_date",
+                  "value": "2026-06-30"
+                },
+                {
+                  "key": "tags",
+                  "value": "PostmanTrip"
+                },
+                {
+                  "key": "tags",
+                  "value": "PostmanNoSuchTag"
+                },
+                {
+                  "key": "tags_mode",
+                  "value": "any"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "04l - Spending Over Time Scoped To Tag",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('One tagged day bucket', () => pm.expect(pm.response.json().items.length).to.eql(1));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/finance/transactions/over-time?from_date=2026-06-01&to_date=2026-06-30&group_by=day&tags=PostmanTrip",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "finance",
+                "transactions",
+                "over-time"
+              ],
+              "query": [
+                {
+                  "key": "from_date",
+                  "value": "2026-06-01"
+                },
+                {
+                  "key": "to_date",
+                  "value": "2026-06-30"
+                },
+                {
+                  "key": "group_by",
+                  "value": "day"
+                },
+                {
+                  "key": "tags",
+                  "value": "PostmanTrip"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "04m - Spending Top Scoped To Tag",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Only tagged transactions', () => pm.expect(pm.response.json().transactions.length).to.eql(1));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/finance/transactions/top?from_date=2026-06-01&to_date=2026-06-30&top_n=5&tags=PostmanTrip",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "finance",
+                "transactions",
+                "top"
+              ],
+              "query": [
+                {
+                  "key": "from_date",
+                  "value": "2026-06-01"
+                },
+                {
+                  "key": "to_date",
+                  "value": "2026-06-30"
+                },
+                {
+                  "key": "top_n",
+                  "value": "5"
+                },
+                {
+                  "key": "tags",
+                  "value": "PostmanTrip"
                 }
               ]
             }
@@ -3667,7 +3957,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"account_id\": {{finance_account_id}},\n  \"provider\": \"activobank\",\n  \"source_file\": \"activobank_sample.csv\",\n  \"currency\": \"EUR\",\n  \"period_start\": \"2026-06-01\",\n  \"period_end\": \"2026-06-30\",\n  \"closing_balance\": \"6345.24\",\n  \"rows\": [\n    {\n      \"date_posted\": \"{{import_row_date}}\",\n      \"bank_description\": \"{{import_row_bank_description}}\",\n      \"amount\": \"{{import_row_amount}}\",\n      \"type\": \"expense\",\n      \"deduplication_hash\": \"{{import_dedup_hash}}\",\n      \"description\": \"Pingo Doce\",\n      \"merchant\": \"Pingo Doce\"\n    }\n  ]\n}",
+              "raw": "{\n  \"account_id\": {{finance_account_id}},\n  \"provider\": \"activobank\",\n  \"source_file\": \"activobank_sample.csv\",\n  \"currency\": \"EUR\",\n  \"period_start\": \"2026-06-01\",\n  \"period_end\": \"2026-06-30\",\n  \"closing_balance\": \"6345.24\",\n  \"tag_names\": [\"PostmanImport\"],\n  \"rows\": [\n    {\n      \"date_posted\": \"{{import_row_date}}\",\n      \"bank_description\": \"{{import_row_bank_description}}\",\n      \"amount\": \"{{import_row_amount}}\",\n      \"type\": \"expense\",\n      \"deduplication_hash\": \"{{import_dedup_hash}}\",\n      \"description\": \"Pingo Doce\",\n      \"merchant\": \"Pingo Doce\",\n      \"tag_names\": [\"PostmanRow\"]\n    }\n  ]\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -3683,6 +3973,55 @@
                 "finance",
                 "imports",
                 "commit"
+              ]
+            }
+          }
+        },
+        {
+          "name": "06b - Imported Row Carries Batch And Row Tags",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Imported transaction has both batch-wide and per-row tags', () => {",
+                  "    const rows = pm.response.json();",
+                  "    pm.expect(rows.length).to.eql(1);",
+                  "    const names = rows[0].tags.map(t => t.name || t);",
+                  "    pm.expect(names).to.include.members(['PostmanImport', 'PostmanRow']);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/finance/transactions/?limit=50&tags=PostmanImport&tags=PostmanRow",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "finance",
+                "transactions",
+                ""
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "50"
+                },
+                {
+                  "key": "tags",
+                  "value": "PostmanImport"
+                },
+                {
+                  "key": "tags",
+                  "value": "PostmanRow"
+                }
               ]
             }
           }

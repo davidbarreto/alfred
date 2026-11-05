@@ -85,6 +85,18 @@ _NOISE_PATTERNS = [
 _WHITESPACE = re.compile(r"\s+")
 
 
+def _merge_tags(batch_tags: list[str], row_tags: list[str]) -> list[str]:
+    """Batch-wide tags followed by the row's own, without case-insensitive duplicates."""
+    merged: list[str] = []
+    seen: set[str] = set()
+    for name in [*batch_tags, *row_tags]:
+        key = name.strip().lower()
+        if key and key not in seen:
+            seen.add(key)
+            merged.append(name.strip())
+    return merged
+
+
 def _clean_description(raw: str) -> str:
     text = raw.strip()
     for pattern in _NOISE_PATTERNS:
@@ -1002,7 +1014,7 @@ class ImportService:
                     deduplication_hash=row.deduplication_hash,
                     import_batch_id=batch.id,
                     installment_plan_id=row.installment_plan_id or row.supersedes_installment_plan_id,
-                    tags=request.tag_names,
+                    tags=_merge_tags(request.tag_names, row.tag_names),
                 ),
                 amount_eur=amount_eur,
             )
@@ -1364,7 +1376,7 @@ class ImportService:
                         balance_after=row.balance_after,
                         deduplication_hash=row.deduplication_hash,
                         import_batch_id=batch.id,
-                        tags=request.tag_names,
+                        tags=_merge_tags(request.tag_names, row.tag_names),
                     ),
                     amount_eur=amount_eur,
                 )

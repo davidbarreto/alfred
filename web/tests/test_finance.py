@@ -523,6 +523,61 @@ class TestFinanceInsightsPage:
         assert resp.status_code == 200
         assert "No data to chart" in resp.text
 
+    def _tagged_responses(self):
+        return {
+            "/finance/tags": [{"id": 1, "name": "Travel"}, {"id": 2, "name": "Rome"}],
+            "/finance/transactions/report": {
+                "total": "120.00", "currency": "EUR", "from_date": "2026-06-01", "to_date": "2026-06-30",
+                "transaction_count": 3,
+            },
+            "/finance/transactions/by-category": {"items": [
+                {"category_id": 1, "category_name": "Restaurant", "total": "80.00", "transaction_count": 2},
+            ]},
+            "/finance/transactions/over-time": {"items": [{"period": "2026-06-02", "total": "120.00"}]},
+            "/finance/transactions/top": {"transactions": [
+                {"date": "2026-06-02T00:00:00", "description": "Trattoria", "amount": "-60.00"},
+            ]},
+        }
+
+    def test_by_tag_section_scopes_calls_to_selected_tags(self, client, mock_api):
+        calls = []
+        mock_api["get"].side_effect = self._fake_get(calls, **self._tagged_responses())
+
+        resp = client.get("/finance/insights?tags=Travel,Rome&tags_mode=any")
+
+        assert resp.status_code == 200
+        scoped = [p for path, p in calls if path == "/finance/transactions/by-category" and p.get("tags")]
+        assert scoped and scoped[0]["tags"] == ["Travel", "Rome"]
+        assert scoped[0]["tags_mode"] == "any"
+        assert 'id="chart-tag-category"' in resp.text
+        assert 'id="chart-tag-time"' in resp.text
+        assert "Trattoria" in resp.text
+
+    def test_category_charts_stay_unscoped_when_tags_selected(self, client, mock_api):
+        calls = []
+        mock_api["get"].side_effect = self._fake_get(calls, **self._tagged_responses())
+
+        client.get("/finance/insights?tags=Travel")
+
+        unscoped = [p for path, p in calls if path == "/finance/transactions/by-category" and "tags" not in p]
+        assert len(unscoped) == 1
+
+    def test_by_tag_section_prompts_when_no_tag_selected(self, client, mock_api):
+        calls = []
+        mock_api["get"].side_effect = self._fake_get(calls, **self._tagged_responses())
+
+        resp = client.get("/finance/insights")
+
+        assert "Pick one or more tags" in resp.text
+        assert not any(p.get("tags") for _, p in calls)
+
+    def test_by_tag_section_explains_when_no_tags_exist(self, client, mock_api):
+        mock_api["get"].side_effect = self._fake_get([])
+
+        resp = client.get("/finance/insights")
+
+        assert "No tags yet" in resp.text
+
     def test_requires_authentication(self, anon_client):
         resp = anon_client.get("/finance/insights", follow_redirects=False)
 

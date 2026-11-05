@@ -283,6 +283,42 @@ async def finance_page(request: Request):
     })
 
 
+async def _tag_insights(request: Request, report_params: dict, group_by: str) -> dict:
+    """Context for the "By tag" insights section: the tag picker plus, once tags are
+    selected, the same spend breakdowns as the category charts scoped to those tags."""
+    qp = request.query_params
+    selected = [name.strip() for raw in qp.getlist("tags") for name in raw.split(",") if name.strip()]
+    tags_mode = "any" if qp.get("tags_mode") == "any" else "all"
+    available = await _try_get("/finance/tags") or []
+    context: dict = {
+        "tag_options": [t["name"] for t in available],
+        "selected_tags": selected,
+        "tags_mode": tags_mode,
+        "tag_report": None,
+        "tag_category_chart": {},
+        "tag_time_spending": {},
+        "tag_top": [],
+    }
+    if not selected:
+        return context
+
+    params = {**report_params, "tags": selected, "tags_mode": tags_mode}
+    report, by_category, over_time, top = await asyncio.gather(
+        _try_get("/finance/transactions/report", params),
+        _try_get("/finance/transactions/by-category", params),
+        _try_get("/finance/transactions/over-time", {**params, "group_by": group_by}),
+        _try_get("/finance/transactions/top", {**params, "top_n": 10}),
+    )
+    context["tag_report"] = report
+    context["tag_category_chart"] = {
+        (i["category_name"] or "Uncategorized"): float(i["total"])
+        for i in (by_category or {}).get("items", [])
+    }
+    context["tag_time_spending"] = {i["period"]: float(i["total"]) for i in (over_time or {}).get("items", [])}
+    context["tag_top"] = (top or {}).get("transactions", [])
+    return context
+
+
 @router.get("/insights", response_class=HTMLResponse)
 async def finance_insights_page(request: Request):
     range_params = _range_params(request)
@@ -322,8 +358,11 @@ async def finance_insights_page(request: Request):
         _try_get("/finance/budgets/status") if currency == "EUR" else _none(),  # budgets are EUR-scoped
     )
 
+    tag_section = await _tag_insights(request, report_params, group_by)
+
     return templates.TemplateResponse(request, "finance_insights.html", {
         **_period_context("/finance/insights", currency, range_params),
+        **tag_section,
         **_currency_context(accounts or [], currencies or [], currency),
         "time_label": "Month" if group_by_month else "Day",
         "category_chart": {
@@ -1840,6 +1879,9 @@ async def import_commit(request: Request):
             value = _form_value(form, f"{field}_{i}").strip()
             if value:
                 row[field] = value
+        row_tags = _parse_tags_field(_form_value(form, f"tag_names_{i}"))
+        if row_tags:
+            row["tag_names"] = row_tags
         category_id = _form_value(form, f"category_{i}")
         if category_id:
             row["category_id"] = int(category_id)
@@ -2005,6 +2047,9 @@ async def import_commit_grouped(request: Request):
             value = _form_value(form, f"{field}_{i}").strip()
             if value:
                 row[field] = value
+        row_tags = _parse_tags_field(_form_value(form, f"tag_names_{i}"))
+        if row_tags:
+            row["tag_names"] = row_tags
         category_id = _form_value(form, f"category_{i}")
         if category_id:
             row["category_id"] = int(category_id)

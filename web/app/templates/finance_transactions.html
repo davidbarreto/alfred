@@ -218,12 +218,9 @@
       </div>
       <div>
         <label class="text-xs text-gray-500 mb-1 block">Tags</label>
-        <input name="tags" type="text" placeholder="e.g. Travel, Work" list="finance-tag-options"
+        <input name="tags" type="text" placeholder="e.g. Travel, Work" data-tag-input data-known='{{ tags | map(attribute="name") | list | tojson }}'
                class="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white w-full focus:outline-none focus:ring-1 focus:ring-[#378ADD]" />
-        <p class="text-[10px] text-gray-400 mt-1">Comma-separated. Context labels like Travel or Work, on top of the category.</p>
-        <datalist id="finance-tag-options">
-          {% for tag in tags %}<option value="{{ tag.name }}"></option>{% endfor %}
-        </datalist>
+        <p class="text-[10px] text-gray-400 mt-1">Context labels like Travel or Work, on top of the category. Press Enter or comma to add; orange chips are new tags.</p>
       </div>
       <div>
         <label class="text-xs text-gray-500 mb-1 block">Description</label>

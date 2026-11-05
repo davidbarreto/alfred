@@ -1285,7 +1285,21 @@ class TestSpendingReport:
             account_id=None,
             merchant=None,
             currency="EUR",
+            tags=None,
+            tags_mode="all",
         )
+
+    async def test_tags_passed_through(self, service):
+        service._repo.get_spending_total.return_value = (Decimal("0"), 0)
+        filters = AnalyticsFilters(
+            from_date=date(2026, 6, 1), to_date=date(2026, 6, 30), tags=["Travel"], tags_mode="any"
+        )
+
+        await service.spending_report(filters)
+
+        kwargs = service._repo.get_spending_total.call_args.kwargs
+        assert kwargs["tags"] == ["Travel"]
+        assert kwargs["tags_mode"] == "any"
 
     async def test_currency_passed_through(self, service):
         service._repo.get_spending_total.return_value = (Decimal("0"), 0)
@@ -1325,6 +1339,8 @@ class TestIncomeReport:
             merchant=None,
             currency="EUR",
             transaction_type="income",
+            tags=None,
+            tags_mode="all",
         )
 
 
@@ -1394,6 +1410,29 @@ class TestSpendingOverTime:
 
         call_kwargs = service._repo.get_spending_over_time.call_args[1]
         assert call_kwargs["group_by"] == "month"
+
+
+class TestAnalyticsTagsPassThrough:
+    async def test_by_category_over_time_and_top_forward_tags(self, service):
+        service._repo.get_spending_by_category.return_value = []
+        service._repo.get_spending_over_time.return_value = []
+        service._repo.get_top_expenses.return_value = []
+        filters = AnalyticsFilters(
+            from_date=date(2026, 6, 1), to_date=date(2026, 6, 30), tags=["Travel", "Rome"]
+        )
+
+        await service.spending_by_category(filters)
+        await service.spending_over_time(filters, group_by="day")
+        await service.spending_top(filters)
+
+        for repo_method in (
+            service._repo.get_spending_by_category,
+            service._repo.get_spending_over_time,
+            service._repo.get_top_expenses,
+        ):
+            kwargs = repo_method.call_args.kwargs
+            assert kwargs["tags"] == ["Travel", "Rome"]
+            assert kwargs["tags_mode"] == "all"
 
 
 class TestTransactionCoverage:

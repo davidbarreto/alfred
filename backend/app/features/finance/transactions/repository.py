@@ -132,6 +132,19 @@ def _build_order_by(sort: str):
     return column.asc() if direction == "asc" else column.desc()
 
 
+def _tag_conditions(tags: list[str] | None, tags_mode: str = "all") -> list:
+    """WHERE conditions restricting transactions to those carrying the given tags.
+
+    "any" is OR (at least one of the tags); anything else is AND -- a separate .any()
+    per tag name, so a transaction must carry every tag (e.g. Travel AND Barcelona).
+    """
+    if not tags:
+        return []
+    if tags_mode == "any":
+        return [Transaction.tags.any(FinanceTag.name.in_(tags))]
+    return [Transaction.tags.any(FinanceTag.name == name) for name in tags]
+
+
 def _filter_conditions(filters: Any, cycle_start_day: int = 1) -> list:
     """Shared WHERE-clause building for anything shaped like TransactionFilters
     (duck-typed: also used by TransactionBulkMoveRequest, which carries the same
@@ -158,15 +171,7 @@ def _filter_conditions(filters: Any, cycle_start_day: int = 1) -> list:
         )
     if filters.merchant is not None:
         conditions.append(Transaction.merchant.ilike(f"%{filters.merchant}%"))
-    if getattr(filters, "tags", None):
-        if getattr(filters, "tags_mode", "all") == "any":
-            # OR -- carrying at least one of the requested tags is enough.
-            conditions.append(Transaction.tags.any(FinanceTag.name.in_(filters.tags)))
-        else:
-            # AND (default) -- a separate .any() per tag name, so a transaction must
-            # carry every requested tag (e.g. Travel AND Barcelona), not just one.
-            for tag_name in filters.tags:
-                conditions.append(Transaction.tags.any(FinanceTag.name == tag_name))
+    conditions.extend(_tag_conditions(getattr(filters, "tags", None), getattr(filters, "tags_mode", "all")))
     if getattr(filters, "search", None):
         conditions.append(_NAME_COLUMN.ilike(f"%{filters.search}%"))
     if filters.currency is not None and filters.currency != GLOBAL_CURRENCY:
@@ -695,6 +700,8 @@ class TransactionRepository:
         merchant: str | None = None,
         currency: str = "EUR",
         transaction_type: str = "expense",
+        tags: list[str] | None = None,
+        tags_mode: str = "all",
     ) -> tuple[Decimal, int]:
         amount_column = _spend_amount(currency, transaction_type)
         query = select(
@@ -713,6 +720,7 @@ class TransactionRepository:
             query = query.where(Transaction.account_id == account_id)
         if merchant is not None:
             query = query.where(Transaction.merchant.ilike(f"%{merchant}%"))
+        query = query.where(*_tag_conditions(tags, tags_mode))
         result = await self._session.execute(query)
         total, count = result.one()
         return Decimal(str(total)), count
@@ -724,6 +732,8 @@ class TransactionRepository:
         top_n: int,
         category_id: int | None = None,
         currency: str = "EUR",
+        tags: list[str] | None = None,
+        tags_mode: str = "all",
     ) -> list[Transaction]:
         query = (
             select(Transaction)
@@ -739,6 +749,7 @@ class TransactionRepository:
             query = query.where(Transaction.currency == currency)
         if category_id is not None:
             query = query.where(Transaction.category_id == category_id)
+        query = query.where(*_tag_conditions(tags, tags_mode))
         result = await self._session.execute(query)
         return list(result.scalars().all())
 
@@ -748,6 +759,8 @@ class TransactionRepository:
         to_date: date,
         account_id: int | None = None,
         currency: str = "EUR",
+        tags: list[str] | None = None,
+        tags_mode: str = "all",
     ) -> list[tuple[int | None, str | None, Decimal, int]]:
         from app.features.finance.categories.tables import Category
 
@@ -772,6 +785,7 @@ class TransactionRepository:
             query = query.where(Transaction.currency == currency)
         if account_id is not None:
             query = query.where(Transaction.account_id == account_id)
+        query = query.where(*_tag_conditions(tags, tags_mode))
         result = await self._session.execute(query)
         return [
             (row[0], row[1], Decimal(str(row[2])), row[3])
@@ -786,6 +800,8 @@ class TransactionRepository:
         account_id: int | None = None,
         currency: str = "EUR",
         transaction_type: str = "expense",
+        tags: list[str] | None = None,
+        tags_mode: str = "all",
     ) -> list[tuple[str, Decimal]]:
         """Aggregate expense (or income) totals bucketed by day or month, entirely
         in SQL -- unlike fetching raw transactions, this scales to any date range
@@ -807,6 +823,7 @@ class TransactionRepository:
             query = query.where(Transaction.currency == currency)
         if account_id is not None:
             query = query.where(Transaction.account_id == account_id)
+        query = query.where(*_tag_conditions(tags, tags_mode))
         result = await self._session.execute(query)
         key_format = "%Y-%m" if group_by == "month" else "%Y-%m-%d"
         return [(row[0].strftime(key_format), Decimal(str(row[1]))) for row in result.all()]

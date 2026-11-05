@@ -45,6 +45,76 @@
   </div>
   {% endif %}
 
+  <!-- By tag: scope the spend breakdowns to one or more context tags (Travel, Work, ...) -->
+  <div class="bg-white border border-gray-200 rounded-lg p-4 space-y-4" id="tag-insights">
+    <div class="flex items-center justify-between gap-3 flex-wrap">
+      <h2 class="text-sm font-medium text-gray-900">By tag</h2>
+      <form method="get" action="/finance/insights" class="flex items-center gap-2 flex-wrap">
+        <input type="hidden" name="currency" value="{{ currency }}" />
+        {% if is_custom %}
+        <input type="hidden" name="from_date" value="{{ custom_from }}" />
+        <input type="hidden" name="to_date" value="{{ custom_to }}" />
+        {% else %}
+        <input type="hidden" name="period" value="{{ period }}" />
+        {% endif %}
+        <div class="w-72">
+          <input type="text" name="tags" value="{{ selected_tags | join(', ') }}" placeholder="Pick tags"
+                 data-tag-input data-known='{{ tag_options | tojson }}' />
+        </div>
+        <select name="tags_mode" class="border border-gray-200 rounded-lg px-2 py-1.5 text-sm bg-white" title="Match all tags (AND) or any of them (OR)">
+          <option value="all" {% if tags_mode == "all" %}selected{% endif %}>Match all</option>
+          <option value="any" {% if tags_mode == "any" %}selected{% endif %}>Match any</option>
+        </select>
+        <button type="submit" class="btn btn-sm btn-primary">Apply</button>
+        {% if selected_tags %}<a href="/finance/insights" class="btn btn-sm btn-ghost">Clear</a>{% endif %}
+      </form>
+    </div>
+
+    {% if not tag_options %}
+    <p class="text-sm text-gray-400">No tags yet. Add tags to transactions (or to a statement import) to analyse them here.</p>
+    {% elif not selected_tags %}
+    <p class="text-sm text-gray-400">Pick one or more tags to see their spend by category, over time and the biggest expenses.</p>
+    {% elif not tag_report or not tag_report.transaction_count %}
+    <p class="text-sm text-gray-400">No expenses with {{ "all of" if tags_mode == "all" and selected_tags | length > 1 else "" }} these tags in this range.</p>
+    {% else %}
+    <p class="text-sm text-gray-700">
+      <span class="text-lg font-semibold text-gray-900">{{ currency_symbol }}{{ "{:,.2f}".format(tag_report.total | float) }}</span>
+      across {{ tag_report.transaction_count }} expense{{ "s" if tag_report.transaction_count != 1 else "" }}
+      <span class="text-gray-400">· {{ selected_tags | join(" + " if tags_mode == "all" else " or ") }}</span>
+    </p>
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      {% if tag_category_chart %}
+      <div class="border border-gray-100 rounded-lg p-3 cursor-pointer" onclick="openChartModal('tag-category')">
+        <h3 class="text-xs font-medium text-gray-500 mb-2">By category</h3>
+        <div class="relative h-56"><canvas id="chart-tag-category"></canvas></div>
+      </div>
+      {% endif %}
+      {% if tag_time_spending %}
+      <div class="border border-gray-100 rounded-lg p-3 cursor-pointer sm:col-span-2" onclick="openChartModal('tag-time')">
+        <h3 class="text-xs font-medium text-gray-500 mb-2">Over time <span class="text-gray-400">({{ time_label | lower }})</span></h3>
+        <div class="relative h-56"><canvas id="chart-tag-time"></canvas></div>
+      </div>
+      {% endif %}
+    </div>
+    {% if tag_top %}
+    <div>
+      <h3 class="text-xs font-medium text-gray-500 mb-2">Biggest expenses</h3>
+      <table class="table table-sm w-full text-sm">
+        <tbody>
+          {% for t in tag_top %}
+          <tr>
+            <td class="text-gray-400 whitespace-nowrap">{{ (t.date or "")[:10] }}</td>
+            <td>{{ t.description or t.merchant or t.bank_description or "—" }}</td>
+            <td class="text-right whitespace-nowrap">{{ currency_symbol }}{{ "{:,.2f}".format(t.amount | float | abs) }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% endif %}
+    {% endif %}
+  </div>
+
   <!-- Charts row: by account + income vs expense -->
   {% if account_chart or income_expense_chart %}
   <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -213,6 +283,56 @@ function closeChartModal() {
   }
   build(document.getElementById("chart-time"));
   registerChart("time", "Spending over time", build);
+})();
+{% endif %}
+
+{% if tag_category_chart %}
+(function() {
+  const data = {{ tag_category_chart | tojson }};
+  function build(canvas) {
+    return new Chart(canvas, {
+      type: "doughnut",
+      data: {
+        labels: Object.keys(data),
+        datasets: [{ data: Object.values(data), backgroundColor: PALETTE.slice(0, Object.keys(data).length), borderWidth: 0 }]
+      },
+      options: {
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { position: "bottom", labels: { boxWidth: 10, font: { size: 11 } } },
+          tooltip: { callbacks: { label: ctx => ` ${CURRENCY_SYMBOL}${fmtMoney(ctx.parsed)}` } }
+        },
+        cutout: "60%"
+      }
+    });
+  }
+  build(document.getElementById("chart-tag-category"));
+  registerChart("tag-category", "Tagged spend by category", build);
+})();
+{% endif %}
+
+{% if tag_time_spending %}
+(function() {
+  const data = {{ tag_time_spending | tojson }};
+  function build(canvas) {
+    return new Chart(canvas, {
+      type: "bar",
+      data: { labels: Object.keys(data), datasets: [{ data: Object.values(data), backgroundColor: "#BA7517", borderRadius: 3, borderSkipped: false }] },
+      options: {
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: { callbacks: { label: ctx => ` ${CURRENCY_SYMBOL}${fmtMoney(ctx.parsed.y)}` } }
+        },
+        scales: {
+          x: { grid: { display: false }, ticks: { font: { size: 10 } } },
+          y: { grid: { color: "#F3F4F6" }, ticks: { font: { size: 10 }, callback: v => CURRENCY_SYMBOL + v.toLocaleString("en-US") } }
+        }
+      }
+    });
+  }
+  build(document.getElementById("chart-tag-time"));
+  registerChart("tag-time", "Tagged spend over time", build);
 })();
 {% endif %}
 

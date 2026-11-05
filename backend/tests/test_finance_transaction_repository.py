@@ -1446,3 +1446,64 @@ class TestSumAccountDeltaFrom:
         compiled = stmt.compile(dialect=postgresql.dialect())
         assert all(not (type(v) is date) for v in compiled.params.values())
         assert datetime(2026, 11, 1) in compiled.params.values()
+
+
+class TestAnalyticsTagFilter:
+    """The analytics aggregates scope to tags with the same AND/OR rules as the list."""
+
+    @staticmethod
+    def _sql(session) -> str:
+        return str(session.execute.call_args.args[0].compile(compile_kwargs={"literal_binds": True}))
+
+    async def test_spending_total_requires_all_tags_by_default(self):
+        session = _make_session()
+        session.execute.return_value = _one_result((Decimal("0"), 0))
+        await TransactionRepository(session).get_spending_total(
+            from_date=date(2026, 6, 1), to_date=date(2026, 6, 30), tags=["Travel", "Rome"]
+        )
+        sql = self._sql(session)
+        # One tag-name subquery per tag, ANDed (the spend condition has its own EXISTS).
+        assert sql.count("finance.tags.name =") == 2
+        assert "finance.tags.name IN" not in sql
+
+    async def test_spending_total_any_mode_uses_single_in(self):
+        session = _make_session()
+        session.execute.return_value = _one_result((Decimal("0"), 0))
+        await TransactionRepository(session).get_spending_total(
+            from_date=date(2026, 6, 1), to_date=date(2026, 6, 30), tags=["Travel", "Work"], tags_mode="any"
+        )
+        sql = self._sql(session)
+        assert sql.count("finance.tags.name") == 1
+        assert "finance.tags.name IN ('Travel', 'Work')" in sql
+
+    async def test_no_tags_adds_no_tag_subquery(self):
+        session = _make_session()
+        session.execute.return_value = _one_result((Decimal("0"), 0))
+        await TransactionRepository(session).get_spending_total(
+            from_date=date(2026, 6, 1), to_date=date(2026, 6, 30)
+        )
+        assert "finance.tags" not in self._sql(session)
+
+    async def test_by_category_filters_by_tag(self):
+        session = _make_session()
+        session.execute.return_value = _rows_all([])
+        await TransactionRepository(session).get_spending_by_category(
+            from_date=date(2026, 6, 1), to_date=date(2026, 6, 30), tags=["Travel"]
+        )
+        assert "'Travel'" in self._sql(session)
+
+    async def test_over_time_filters_by_tag(self):
+        session = _make_session()
+        session.execute.return_value = _rows_all([])
+        await TransactionRepository(session).get_spending_over_time(
+            from_date=date(2026, 6, 1), to_date=date(2026, 6, 30), group_by="day", tags=["Travel"]
+        )
+        assert "'Travel'" in self._sql(session)
+
+    async def test_top_expenses_filters_by_tag(self):
+        session = _make_session()
+        session.execute.return_value = _scalar_all([])
+        await TransactionRepository(session).get_top_expenses(
+            from_date=date(2026, 6, 1), to_date=date(2026, 6, 30), top_n=5, tags=["Travel"]
+        )
+        assert "'Travel'" in self._sql(session)

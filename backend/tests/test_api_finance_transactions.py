@@ -531,6 +531,20 @@ class TestSpendingByCategory:
         filters = mock_txn_service.spending_by_category.call_args[0][0]
         assert filters.period == "this month"
 
+    def test_tags_filter_forwarded(self, client, mock_txn_service):
+        client.get(
+            "/finance/transactions/by-category?tags=Travel&tags=Rome&tags_mode=any", headers=AUTH
+        )
+        filters = mock_txn_service.spending_by_category.call_args[0][0]
+        assert filters.tags == ["Travel", "Rome"]
+        assert filters.tags_mode == "any"
+
+    def test_tags_default_to_unfiltered_all_mode(self, client, mock_txn_service):
+        client.get("/finance/transactions/by-category", headers=AUTH)
+        filters = mock_txn_service.spending_by_category.call_args[0][0]
+        assert filters.tags is None
+        assert filters.tags_mode == "all"
+
     def test_requires_auth(self, client):
         assert client.get("/finance/transactions/by-category").status_code == 403
 

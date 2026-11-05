@@ -198,6 +198,9 @@ class ImportCommitRow(BaseModel):
     installment_duty: Decimal | None = None
     existing_transaction_id: int | None = None
     supersedes_installment_plan_id: int | None = None
+    tag_names: list[str] = Field(default_factory=list)
+    """Extra context tags for this row only, added on top of the batch-wide
+    ImportCommitRequest.tag_names (e.g. only the trip rows of a mixed statement)."""
 
 
 class InstallmentPlanActionCommit(BaseModel):

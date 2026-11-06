@@ -3,9 +3,16 @@ import pytest
 from datetime import date, datetime
 from decimal import Decimal
 from unittest.mock import AsyncMock, MagicMock, patch
-from app.features.finance.budgets.service import BudgetTargetService
+from app.features.finance.budgets.service import BudgetTagNotFoundError, BudgetTargetService
 from app.features.finance.cycle import current_cycle_range
-from app.features.finance.budgets.schemas import BudgetTargetRead, CategoryAverageSpend, CategoryBudgetStatus
+from app.features.finance.budgets.schemas import (
+    BudgetTargetRead,
+    CategoryAverageSpend,
+    CategoryBudgetStatus,
+    TagBudgetStatus,
+    TagBudgetTargetBulkSetItem,
+    BudgetTargetBulkSetItem,
+)
 
 FIXED_NOW = datetime(2026, 7, 15, 12, 0, 0)
 
@@ -21,6 +28,7 @@ def _make_target_orm(**kwargs):
     t = MagicMock()
     t.id = kwargs.get("id", 1)
     t.category_id = kwargs.get("category_id", 1)
+    t.tag_id = kwargs.get("tag_id", None)
     t.amount = kwargs.get("amount", Decimal("300.00"))
     t.effective_from = kwargs.get("effective_from", datetime(2026, 7, 1))
     t.effective_to = kwargs.get("effective_to", None)
@@ -33,7 +41,9 @@ def service():
     svc._session = AsyncMock()
     svc._repo = AsyncMock()
     svc._repo.add = MagicMock()  # add() is sync in the real repository
+    svc._repo.list_effective_tags.return_value = []
     svc._category_repo = AsyncMock()
+    svc._tag_repo = AsyncMock()
     svc._txn_repo = AsyncMock()
     svc._settings = AsyncMock()
     svc._settings.get_cycle_start_day.return_value = 1
@@ -301,3 +311,132 @@ class TestGetHistory:
         assert [h.items[0].limit_amount if h.items else None for h in history] == [Decimal("300"), Decimal("250"), None]
         assert history[0].items[0].spent == Decimal("100")
         service._category_repo.list.assert_awaited_once()
+
+
+def _tag_orm(id, name):
+    t = MagicMock()
+    t.id = id
+    t.name = name
+    return t
+
+
+class TestSetTagTarget:
+    async def test_first_tag_target_starts_at_cycle_start(self, service):
+        service._tag_repo.get_tag.return_value = _tag_orm(5, "Travel")
+        service._repo.get_open_tag.return_value = None
+        service._repo.add.return_value = _make_target_orm(
+            category_id=None, tag_id=5, amount=Decimal("1500"), effective_from=CYCLE_START
+        )
+
+        with freeze_time(FIXED_NOW):
+            result = await service.set_tag_target(5, Decimal("1500"))
+
+        service._repo.add.assert_called_once_with(tag_id=5, amount=Decimal("1500"), effective_from=CYCLE_START)
+        assert result.tag_id == 5
+
+    async def test_unknown_tag_is_rejected(self, service):
+        service._tag_repo.get_tag.return_value = None
+        with pytest.raises(BudgetTagNotFoundError):
+            await service.set_tag_target(99, Decimal("100"))
+        service._repo.add.assert_not_called()
+
+    async def test_new_cycle_edit_closes_old_version_at_boundary(self, service):
+        service._tag_repo.get_tag.return_value = _tag_orm(5, "Travel")
+        old = _make_target_orm(category_id=None, tag_id=5, effective_from=datetime(2026, 6, 1))
+        service._repo.get_open_tag.return_value = old
+        service._repo.add.return_value = _make_target_orm(category_id=None, tag_id=5, effective_from=CYCLE_START)
+
+        with freeze_time(FIXED_NOW):
+            await service.set_tag_target(5, Decimal("900"))
+
+        assert old.effective_to == CYCLE_START
+
+    async def test_clear_closes_open_tag_target_without_needing_the_tag(self, service):
+        open_target = _make_target_orm(category_id=None, tag_id=5, effective_from=datetime(2026, 6, 1))
+        service._repo.get_open_tag.return_value = open_target
+
+        with freeze_time(FIXED_NOW):
+            result = await service.set_tag_target(5, None)
+
+        assert result is None
+        assert open_target.effective_to == CYCLE_START
+        service._tag_repo.get_tag.assert_not_called()
+
+    async def test_bulk_set_handles_category_and_tag_items(self, service):
+        service._tag_repo.get_tag.return_value = _tag_orm(5, "Travel")
+        service._repo.get_open.return_value = None
+        service._repo.get_open_tag.return_value = None
+        service._repo.add.side_effect = lambda **kw: _make_target_orm(
+            category_id=kw.get("category_id"), tag_id=kw.get("tag_id"), amount=kw["amount"]
+        )
+
+        with freeze_time(FIXED_NOW):
+            results = await service.set_targets_bulk(
+                [BudgetTargetBulkSetItem(category_id=1, amount=Decimal("300"))],
+                [TagBudgetTargetBulkSetItem(tag_id=5, amount=Decimal("1500"))],
+            )
+
+        assert [(r.category_id, r.tag_id) for r in results] == [(1, None), (None, 5)]
+
+
+class TestTagBudgetStatus:
+    async def test_tag_spend_and_exclusion_of_budgeted_tags_from_categories(self, service):
+        service._repo.list_effective.return_value = [_make_target_orm(category_id=1, amount=Decimal("300"))]
+        service._repo.list_effective_tags.return_value = [
+            _make_target_orm(id=10, category_id=None, tag_id=5, amount=Decimal("1500")),
+        ]
+        service._category_repo.list.return_value = [_make_category_orm(1, "Restaurant")]
+        service._tag_repo.get_tags.return_value = [_tag_orm(5, "Travel")]
+        service._txn_repo.get_tag_budget_spending.return_value = (Decimal("200.00"), 0)
+        service._txn_repo.get_spending_by_category.return_value = [(1, "Restaurant", Decimal("40.00"), 2)]
+
+        categories = await service.get_status("2026-07")
+        tags = await service.get_tag_status("2026-07")
+
+        assert categories[0].spent == Decimal("40.00")
+        assert service._txn_repo.get_spending_by_category.call_args.kwargs["exclude_tag_ids"] == [5]
+        assert isinstance(tags[0], TagBudgetStatus)
+        assert (tags[0].tag_name, tags[0].limit_amount, tags[0].spent) == ("Travel", Decimal("1500"), Decimal("200.00"))
+
+    async def test_oldest_budget_wins_overlapping_transactions(self, service):
+        service._repo.list_effective.return_value = []
+        # list_effective_tags yields oldest budget first; the later one must exclude the earlier tag
+        service._repo.list_effective_tags.return_value = [
+            _make_target_orm(id=10, category_id=None, tag_id=5, amount=Decimal("1500")),
+            _make_target_orm(id=11, category_id=None, tag_id=6, amount=Decimal("400")),
+        ]
+        service._tag_repo.get_tags.return_value = [_tag_orm(5, "Travel"), _tag_orm(6, "Rome")]
+        service._txn_repo.get_tag_budget_spending.side_effect = [
+            (Decimal("300"), 0),
+            (Decimal("50"), 2),
+        ]
+        service._txn_repo.get_spending_by_category.return_value = []
+
+        tags = await service.get_tag_status("2026-07")
+
+        calls = service._txn_repo.get_tag_budget_spending.await_args_list
+        assert calls[0].args[3] == []
+        assert calls[1].args[3] == [5]
+        assert [t.overlap_count for t in tags] == [0, 2]
+
+    async def test_no_tag_budgets_means_no_exclusion(self, service):
+        service._repo.list_effective.return_value = []
+        service._txn_repo.get_spending_by_category.return_value = []
+
+        assert await service.get_tag_status("2026-07") == []
+        service._txn_repo.get_tag_budget_spending.assert_not_called()
+
+    async def test_history_includes_tag_items(self, service):
+        service._repo.list_effective.return_value = []
+        service._repo.list_effective_tags.return_value = [
+            _make_target_orm(id=10, category_id=None, tag_id=5, amount=Decimal("1500")),
+        ]
+        service._tag_repo.get_tags.return_value = [_tag_orm(5, "Travel")]
+        service._txn_repo.get_tag_budget_spending.return_value = (Decimal("10"), 0)
+        service._txn_repo.get_spending_by_category.return_value = []
+        service._category_repo.list.return_value = []
+
+        with freeze_time(FIXED_NOW):
+            history = await service.get_history(2)
+
+        assert all(len(c.tag_items) == 1 for c in history)

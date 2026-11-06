@@ -25,6 +25,17 @@
     return prev[b.length];
   }
 
+  // Tags that have a budget; fetched once per page and shared by every input.
+  let budgetedPromise = null;
+  function budgetedTags() {
+    if (!budgetedPromise) {
+      budgetedPromise = fetch("/finance/tags/budgeted")
+        .then((r) => (r.ok ? r.json() : []))
+        .catch(() => []);
+    }
+    return budgetedPromise;
+  }
+
   function parse(raw) {
     const seen = new Set();
     const out = [];
@@ -71,12 +82,30 @@
     typed.className = "flex-1 min-w-[90px] text-sm bg-transparent outline-none py-0.5";
     const menu = document.createElement("div");
     menu.className = "hidden absolute left-0 top-full mt-1 z-20 bg-white border border-gray-100 rounded-lg shadow-lg py-1 min-w-[180px] max-h-56 overflow-y-auto text-sm";
+    const warning = document.createElement("p");
+    warning.className = "hidden text-[11px] text-amber-600 mt-1";
     wrap.append(chips, typed, menu);
     input.after(wrap);
+    wrap.after(warning);
     input.style.display = "none";
+
+    let budgeted = [];
+    if (!("noBudgetWarning" in input.dataset)) {
+      budgetedTags().then((names) => { budgeted = names; render(); });
+    }
 
     function sync() {
       valueDesc.set.call(input, tags.join(", "));
+    }
+
+    function updateWarning() {
+      const picked = tags.filter((t) => budgeted.some((b) => b.toLowerCase() === t.toLowerCase()));
+      if (picked.length > 1) {
+        warning.textContent = picked.join(" and ") + " both have a budget. The transaction counts toward the older budget only.";
+        warning.classList.remove("hidden");
+      } else {
+        warning.classList.add("hidden");
+      }
     }
 
     function render() {
@@ -102,6 +131,7 @@
         chip.append(label, remove);
         chips.append(chip);
       });
+      updateWarning();
     }
 
     function add(raw) {

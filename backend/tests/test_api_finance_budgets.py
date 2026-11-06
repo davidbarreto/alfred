@@ -5,6 +5,7 @@ from fastapi.testclient import TestClient
 from unittest.mock import AsyncMock
 from app.features.finance.budgets.schemas import (
     BudgetTargetRead, CategoryAverageSpend, BudgetHistoryCycle, CategoryBudgetStatus, CurrentPeriodResponse,
+    TagBudgetStatus,
 )
 
 AUTH = {"Authorization": "Bearer test-api-token"}
@@ -176,3 +177,46 @@ class TestBudgetHistory:
 
     def test_requires_auth(self, client):
         assert client.get("/finance/budgets/history").status_code == 403
+
+
+class TestTagBudgets:
+    def test_tag_status_returns_items(self, client, mock_service):
+        mock_service.get_tag_status.return_value = [
+            TagBudgetStatus(
+                tag_id=5, tag_name="Travel", year_month=date(2026, 7, 1),
+                limit_amount=Decimal("1500.00"), spent=Decimal("200.00"), overlap_count=1,
+            )
+        ]
+        response = client.get("/finance/budgets/tag-status?year_month=2026-07", headers=AUTH)
+        assert response.status_code == 200
+        item = response.json()[0]
+        assert (item["tag_name"], item["overlap_count"]) == ("Travel", 1)
+        mock_service.get_tag_status.assert_awaited_once_with("2026-07")
+
+    def test_tag_status_rejects_bad_month(self, client, mock_service):
+        mock_service.get_tag_status.side_effect = ValueError
+        assert client.get("/finance/budgets/tag-status?year_month=nope", headers=AUTH).status_code == 422
+
+    def test_set_tag_target(self, client, mock_service):
+        mock_service.set_tag_target.return_value = _target_read(category_id=None, tag_id=5, amount=Decimal("1500.00"))
+        response = client.put("/finance/budgets/tag-targets/5", json={"amount": "1500.00"}, headers=AUTH)
+        assert response.status_code == 200
+        assert response.json()["tag_id"] == 5
+        mock_service.set_tag_target.assert_awaited_once_with(5, Decimal("1500.00"))
+
+    def test_set_tag_target_unknown_tag_is_404(self, client, mock_service):
+        from app.features.finance.budgets.service import BudgetTagNotFoundError
+        mock_service.set_tag_target.side_effect = BudgetTagNotFoundError(99)
+        assert client.put("/finance/budgets/tag-targets/99", json={"amount": "10"}, headers=AUTH).status_code == 404
+
+    def test_bulk_forwards_tag_targets(self, client, mock_service):
+        client.put(
+            "/finance/budgets/targets",
+            json={"targets": [], "tag_targets": [{"tag_id": 5, "amount": "100"}]},
+            headers=AUTH,
+        )
+        tag_items = mock_service.set_targets_bulk.call_args.args[1]
+        assert tag_items[0].tag_id == 5
+
+    def test_requires_auth(self, client):
+        assert client.get("/finance/budgets/tag-status").status_code == 403

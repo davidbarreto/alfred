@@ -152,7 +152,9 @@ async def handle_finance(
         if arguments.get("category"):
             category_id = await _resolve_category_id(arguments["category"], category_service)
             results = [r for r in results if r.category_id == category_id]
-        return [r.model_dump(mode='json') for r in results]
+            return [r.model_dump(mode='json') for r in results]
+        tag_results = await budget_service.get_tag_status(year_month)
+        return [r.model_dump(mode='json') for r in results] + [r.model_dump(mode='json') for r in tag_results]
 
     # --- Analytics ---
 

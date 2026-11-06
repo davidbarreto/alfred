@@ -16,7 +16,7 @@
     </a>
   </div>
 
-  {% if rows %}
+  {% if rows or tag_rows %}
   <div class="bg-white border border-gray-200 rounded-lg p-4 overflow-x-auto">
     <table class="w-full text-sm">
       <thead>
@@ -52,6 +52,31 @@
           {% endfor %}
         </tr>
         {% endfor %}
+        {% if tag_rows %}
+        <tr class="bg-gray-50">
+          <td colspan="{{ cycles | length + 1 }}" class="py-1.5 px-1 text-xs font-semibold uppercase tracking-wide text-gray-500">Tags</td>
+        </tr>
+        {% for row in tag_rows %}
+        <tr class="hover:bg-gray-50">
+          <td class="py-2 pr-4 text-gray-800">{{ row.category_name }} <span class="ml-1 rounded-full bg-[#FDF1E2] text-[#8A5A0B] px-1.5 py-0.5 text-[10px] font-medium align-middle">tag</span></td>
+          {% for cell in row.cells %}
+          <td class="py-2 px-3 text-right whitespace-nowrap">
+            {% if cell.limit is none %}
+            <span class="text-gray-300">—</span>
+            {% else %}
+            <div class="{% if cell.changed %}text-[#378ADD] font-medium{% else %}text-gray-800{% endif %}"
+                 {% if cell.changed %}title="Budget changed from the previous cycle"{% endif %}>
+              {{ currency_symbol }}{{ cell.limit | money }}
+            </div>
+            <div class="text-xs {% if cell.spent > cell.limit %}text-[#E24B4A]{% else %}text-gray-400{% endif %}">
+              spent {{ currency_symbol }}{{ cell.spent | money }}
+            </div>
+            {% endif %}
+          </td>
+          {% endfor %}
+        </tr>
+        {% endfor %}
+        {% endif %}
       </tbody>
       <tfoot>
         <tr class="border-t border-gray-200 font-medium text-gray-900">
@@ -84,7 +109,7 @@
 
 </div>
 
-{% if rows %}
+{% if rows or tag_rows %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
 <script>
 (function () {

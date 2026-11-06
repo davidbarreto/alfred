@@ -1,6 +1,6 @@
 import pytest
 from unittest.mock import AsyncMock, MagicMock
-from app.features.finance.tags.service import TagService
+from app.features.finance.tags.service import TagDeletionBlockedError, TagService
 from app.features.finance.tags.schemas import TagCreate, TagUpdate, TagRead
 
 
@@ -15,6 +15,8 @@ def _make_tag_orm(**kwargs):
 def service():
     svc = TagService.__new__(TagService)
     svc._repo = AsyncMock()
+    svc._budget_repo = AsyncMock()
+    svc._budget_repo.has_open_tag_target.return_value = False
     return svc
 
 
@@ -69,3 +71,11 @@ class TestDelete:
     async def test_returns_false_when_not_found(self, service):
         service._repo.delete_tag.return_value = False
         assert await service.delete(999) is False
+
+
+class TestDeleteWithBudget:
+    async def test_blocked_when_tag_has_an_open_budget(self, service):
+        service._budget_repo.has_open_tag_target.return_value = True
+        with pytest.raises(TagDeletionBlockedError):
+            await service.delete(1)
+        service._repo.delete_tag.assert_not_called()

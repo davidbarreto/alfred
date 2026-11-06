@@ -2010,3 +2010,222 @@ class TestCoverageDaysFragment:
         resp = anon_client.get("/finance/coverage/days", follow_redirects=False)
         assert resp.status_code == 302
         assert resp.headers["location"].startswith("/login")
+
+
+def _tag_status(tag_id=5, tag_name="Travel", limit_amount="1500.00", spent="200.00", overlap_count=0):
+    return {
+        "tag_id": tag_id, "tag_name": tag_name, "year_month": "2026-07-01",
+        "limit_amount": limit_amount, "spent": spent, "overlap_count": overlap_count,
+    }
+
+
+class TestTagBudgetsEditPage:
+    def _fake_get(self, targets, overlap=0):
+        async def fake(path, params=None):
+            if path == "/finance/categories":
+                return [_category(id=1, name="Groceries")]
+            if path == "/finance/tags":
+                return [{"id": 5, "name": "Travel"}, {"id": 6, "name": "Work"}]
+            if path == "/finance/budgets/targets":
+                return targets
+            if path == "/finance/budgets/tag-status":
+                return [_tag_status(overlap_count=overlap)]
+            if path == "/finance/currencies":
+                return [{"code": "EUR", "symbol": "€", "name": "Euro"}]
+            return []
+        return fake
+
+    def test_tags_form_their_own_group_after_all_categories(self, client, mock_api):
+        mock_api["get"].side_effect = self._fake_get(
+            [_budget_target(), {"id": 9, "category_id": None, "tag_id": 5, "amount": "1500.00"}]
+        )
+
+        resp = client.get("/finance/budgets")
+
+        assert "Tag budgets" in resp.text
+        assert resp.text.index("Groceries") < resp.text.index("Tag budgets") < resp.text.index("Travel")
+        assert 'data-tag-id="5"' in resp.text and 'value="1500.00"' in resp.text
+        assert 'data-tag-id="6"' in resp.text  # tags without a budget are still listed to be set
+
+    def test_category_inputs_ignore_tag_targets(self, client, mock_api):
+        mock_api["get"].side_effect = self._fake_get(
+            [{"id": 9, "category_id": None, "tag_id": 5, "amount": "1500.00"}]
+        )
+
+        resp = client.get("/finance/budgets")
+
+        category_input = resp.text[resp.text.index('data-category-id="1"'):][:300]
+        assert 'value=""' in category_input
+
+    def test_warns_when_transactions_overlap_an_older_tag_budget(self, client, mock_api):
+        mock_api["get"].side_effect = self._fake_get([], overlap=2)
+
+        resp = client.get("/finance/budgets")
+
+        assert "2 transactions this month also in an older tag budget" in resp.text
+
+    def test_save_forwards_tag_targets_only_when_present(self, client, mock_api):
+        mock_api["get"].side_effect = self._fake_get([])
+        mock_api["put"].return_value = []
+
+        client.put(
+            "/finance/budgets/targets",
+            json={"targets": [], "tag_targets": [{"tag_id": 5, "amount": 1500}]},
+        )
+
+        mock_api["put"].assert_awaited_once_with(
+            "/finance/budgets/targets", json={"targets": [], "tag_targets": [{"tag_id": 5, "amount": 1500}]}
+        )
+
+
+class TestTagBudgetsInOverviewAndHistory:
+    def test_overview_lists_tag_budgets_in_their_own_group_and_totals_include_them(self, client, mock_api):
+        async def fake(path, params=None):
+            if path == "/finance/budgets/status":
+                return [_budget_status(category_id=1, category_name="Groceries", limit_amount="300.00", spent="120.00")]
+            if path == "/finance/budgets/tag-status":
+                return [_tag_status(overlap_count=1)]
+            if path == "/finance/budgets/current-period":
+                return {"year_month": "2026-07", "from_date": "2026-07-25", "to_date": "2026-08-24"}
+            if path == "/finance/currencies":
+                return [{"code": "EUR", "symbol": "€", "name": "Euro"}]
+            return []
+        mock_api["get"].side_effect = fake
+
+        resp = client.get("/finance/budgets/overview")
+
+        assert resp.text.index("Groceries") < resp.text.index(">Tags<") < resp.text.index("Travel")
+        assert "€200.00 of €1,500.00" in resp.text
+        assert "€320.00 of €1,800.00" in resp.text  # total spans categories and tags
+        assert "1 counted in an older tag budget" in resp.text
+
+    def test_overview_with_only_tag_budgets_still_renders_them(self, client, mock_api):
+        async def fake(path, params=None):
+            if path == "/finance/budgets/tag-status":
+                return [_tag_status()]
+            if path == "/finance/budgets/current-period":
+                return {"year_month": "2026-07", "from_date": "2026-07-25", "to_date": "2026-08-24"}
+            if path == "/finance/currencies":
+                return [{"code": "EUR", "symbol": "€", "name": "Euro"}]
+            return []
+        mock_api["get"].side_effect = fake
+
+        resp = client.get("/finance/budgets/overview")
+
+        assert "Travel" in resp.text
+        assert "No tracked categories" not in resp.text
+
+    def test_history_shows_tag_group_with_tag_label_and_totals(self, client, mock_api):
+        history = [
+            {
+                "year_month": "2026-10", "from_date": "2026-10-25", "to_date": "2026-11-24",
+                "items": [_budget_status(category_id=1, category_name="Groceries", limit_amount="300.00", spent="100.00")],
+                "tag_items": [_tag_status(limit_amount="1500.00", spent="200.00")],
+            },
+        ]
+
+        async def fake(path, params=None):
+            if path == "/finance/budgets/history":
+                return history
+            if path == "/finance/currencies":
+                return [{"code": "EUR", "symbol": "€", "name": "Euro"}]
+            return []
+        mock_api["get"].side_effect = fake
+
+        resp = client.get("/finance/budgets/history")
+
+        assert resp.text.index("Groceries") < resp.text.index(">Tags<") < resp.text.index("Travel")
+        assert "€1,800.00" in resp.text
+        assert "spent €300.00" in resp.text
+
+    def test_history_without_tag_items_is_unchanged(self, client, mock_api):
+        async def fake(path, params=None):
+            if path == "/finance/budgets/history":
+                return [{
+                    "year_month": "2026-10", "from_date": "2026-10-25", "to_date": "2026-11-24",
+                    "items": [_budget_status()],
+                }]
+            return []
+        mock_api["get"].side_effect = fake
+
+        resp = client.get("/finance/budgets/history")
+
+        assert resp.status_code == 200
+        assert ">Tags<" not in resp.text
+
+
+class TestTagBudgetsOnDashboardAndInsights:
+    def test_dashboard_remaining_includes_tag_budgets(self, client, mock_api):
+        async def fake(path, params=None):
+            if path == "/finance/accounts":
+                return [{"id": 1, "name": "Checking", "currency": "EUR"}]
+            if path == "/finance/budgets/status":
+                return [_budget_status(limit_amount="300.00", spent="100.00")]
+            if path == "/finance/budgets/tag-status":
+                return [_tag_status(limit_amount="1000.00", spent="400.00")]
+            if path == "/finance/currencies":
+                return [{"code": "EUR", "symbol": "€", "name": "Euro"}]
+            return []
+        mock_api["get"].side_effect = fake
+
+        resp = client.get("/finance/")
+
+        assert "€800.00" in resp.text  # (300 - 100) + (1000 - 400)
+        assert "across 2 budgets" in resp.text
+
+    def test_dashboard_skips_tag_budgets_outside_eur(self, client, mock_api):
+        calls = []
+
+        async def fake(path, params=None):
+            calls.append(path)
+            if path == "/finance/accounts":
+                return [{"id": 1, "name": "Checking", "currency": "EUR"}]
+            return []
+        mock_api["get"].side_effect = fake
+
+        client.get("/finance/?currency=BRL")
+
+        assert "/finance/budgets/tag-status" not in calls
+
+    def test_insights_budget_chart_labels_tag_budgets(self, client, mock_api):
+        async def fake(path, params=None):
+            if path == "/finance/accounts":
+                return [{"id": 1, "name": "Checking", "currency": "EUR"}]
+            if path == "/finance/budgets/status":
+                return [_budget_status(category_name="Groceries")]
+            if path == "/finance/budgets/tag-status":
+                return [_tag_status()]
+            return []
+        mock_api["get"].side_effect = fake
+
+        resp = client.get("/finance/insights")
+
+        assert "Travel (tag)" in resp.text
+
+
+class TestBudgetedTagNames:
+    def test_returns_names_of_tags_with_a_budget(self, client, mock_api):
+        async def fake(path, params=None):
+            if path == "/finance/budgets/targets":
+                return [_budget_target(), {"id": 9, "category_id": None, "tag_id": 5, "amount": "10"}]
+            if path == "/finance/tags":
+                return [{"id": 5, "name": "Travel"}, {"id": 6, "name": "Work"}]
+            return []
+        mock_api["get"].side_effect = fake
+
+        resp = client.get("/finance/tags/budgeted")
+
+        assert resp.json() == ["Travel"]
+
+    def test_empty_when_no_tag_budgets(self, client, mock_api):
+        async def fake(path, params=None):
+            return [_budget_target()]
+        mock_api["get"].side_effect = fake
+
+        resp = client.get("/finance/tags/budgeted")
+
+        assert resp.json() == []
+
+    def test_requires_authentication(self, anon_client):
+        resp = anon_client.get("/finance/tags/budgeted", follow_redirects=False)
+        assert resp.status_code == 302

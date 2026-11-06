@@ -28,27 +28,47 @@
     </div>
   </div>
 
+  {% macro budget_rows(items, show_overlap=False) %}
+    {% for r in items %}
+    {% set pct = (r.spent / r.limit * 100) if r.limit > 0 else (100 if r.spent > 0 else 0) %}
+    <div class="py-2 px-2 text-sm space-y-1 hover:bg-gray-50">
+      <div class="flex items-center justify-between gap-3">
+        <span class="text-gray-800">
+          {{ r.category_name }}
+          {% if show_overlap and r.overlap_count %}
+          <span class="ml-2 text-[11px] text-amber-600" title="These transactions also carry a tag with an older budget, so they count toward that older budget.">
+            <i class="ti ti-alert-triangle"></i> {{ r.overlap_count }} counted in an older tag budget
+          </span>
+          {% endif %}
+        </span>
+        <span class="text-xs text-gray-500">
+          {{ currency_symbol }}{{ r.spent | money }} of {{ currency_symbol }}{{ r.limit | money }}
+          <span class="ml-2 font-medium {% if r.remaining < 0 %}text-[#E24B4A]{% else %}text-[#639922]{% endif %}">
+            {% if r.remaining < 0 %}{{ currency_symbol }}{{ (-r.remaining) | money }} over{% else %}{{ currency_symbol }}{{ r.remaining | money }} left{% endif %}
+          </span>
+        </span>
+      </div>
+      <div class="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+        <div class="h-full rounded-full {% if pct > 100 %}bg-[#E24B4A]{% elif pct >= 80 %}bg-[#EF9F27]{% else %}bg-[#639922]{% endif %}" style="width: {{ [pct, 100] | min }}%"></div>
+      </div>
+    </div>
+    {% endfor %}
+  {% endmacro %}
+
   <div class="bg-white border border-gray-200 rounded-lg p-4">
+    {% if rows or tag_rows %}
     {% if rows %}
     <div class="divide-y divide-gray-100">
-      {% for r in rows %}
-      {% set pct = (r.spent / r.limit * 100) if r.limit > 0 else (100 if r.spent > 0 else 0) %}
-      <div class="py-2 px-2 text-sm space-y-1 hover:bg-gray-50">
-        <div class="flex items-center justify-between gap-3">
-          <span class="text-gray-800">{{ r.category_name }}</span>
-          <span class="text-xs text-gray-500">
-            {{ currency_symbol }}{{ r.spent | money }} of {{ currency_symbol }}{{ r.limit | money }}
-            <span class="ml-2 font-medium {% if r.remaining < 0 %}text-[#E24B4A]{% else %}text-[#639922]{% endif %}">
-              {% if r.remaining < 0 %}{{ currency_symbol }}{{ (-r.remaining) | money }} over{% else %}{{ currency_symbol }}{{ r.remaining | money }} left{% endif %}
-            </span>
-          </span>
-        </div>
-        <div class="h-1.5 bg-gray-100 rounded-full overflow-hidden">
-          <div class="h-full rounded-full {% if pct > 100 %}bg-[#E24B4A]{% elif pct >= 80 %}bg-[#EF9F27]{% else %}bg-[#639922]{% endif %}" style="width: {{ [pct, 100] | min }}%"></div>
-        </div>
-      </div>
-      {% endfor %}
+      {{ budget_rows(rows) }}
     </div>
+    {% endif %}
+    {% if tag_rows %}
+    <h2 class="text-xs font-semibold uppercase tracking-wide text-gray-500 mt-4 mb-1 px-2">Tags</h2>
+    <p class="text-xs text-gray-400 mb-1 px-2">Transactions with a budgeted tag count here instead of in their category.</p>
+    <div class="divide-y divide-gray-100">
+      {{ budget_rows(tag_rows, True) }}
+    </div>
+    {% endif %}
     <div class="flex items-center justify-between gap-3 pt-3 mt-2 border-t border-gray-200 px-2 text-sm font-medium text-gray-900">
       <span>Total</span>
       <span class="text-xs">

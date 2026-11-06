@@ -1507,3 +1507,46 @@ class TestAnalyticsTagFilter:
             from_date=date(2026, 6, 1), to_date=date(2026, 6, 30), top_n=5, tags=["Travel"]
         )
         assert "'Travel'" in self._sql(session)
+
+
+class TestBudgetedTagExclusion:
+    @staticmethod
+    def _sql(session) -> str:
+        return str(session.execute.call_args.args[0].compile(compile_kwargs={"literal_binds": True}))
+
+    async def test_by_category_excludes_transactions_with_budgeted_tags(self):
+        session = _make_session()
+        session.execute.return_value = _rows_all([])
+        await TransactionRepository(session).get_spending_by_category(
+            from_date=date(2026, 6, 1), to_date=date(2026, 6, 30), exclude_tag_ids=[5, 6]
+        )
+        sql = self._sql(session)
+        assert "NOT (EXISTS" in sql
+        assert "finance.tags.id IN (5, 6)" in sql
+
+    async def test_by_category_without_exclusion_is_unchanged(self):
+        session = _make_session()
+        session.execute.return_value = _rows_all([])
+        await TransactionRepository(session).get_spending_by_category(
+            from_date=date(2026, 6, 1), to_date=date(2026, 6, 30)
+        )
+        assert "finance.tags" not in self._sql(session)
+
+    async def test_tag_budget_spending_leaves_out_older_budget_overlap(self):
+        session = _make_session()
+        session.execute.return_value = _one_result((Decimal("80.00"), 2))
+        total, overlap = await TransactionRepository(session).get_tag_budget_spending(
+            date(2026, 6, 1), date(2026, 6, 30), tag_id=6, older_tag_ids=[5]
+        )
+        sql = self._sql(session)
+        assert (total, overlap) == (Decimal("80.00"), 2)
+        assert "finance.tags.id = 6" in sql
+        assert "finance.tags.id IN (5)" in sql
+
+    async def test_tag_budget_spending_without_older_tags_has_no_overlap_filter(self):
+        session = _make_session()
+        session.execute.return_value = _one_result((Decimal("10.00"), 0))
+        await TransactionRepository(session).get_tag_budget_spending(
+            date(2026, 6, 1), date(2026, 6, 30), tag_id=5, older_tag_ids=[]
+        )
+        assert "IN (" not in self._sql(session)

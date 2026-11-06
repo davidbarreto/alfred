@@ -15,9 +15,14 @@ class BudgetTarget(Base):
     __table_args__ = {"schema": "finance"}
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
-    category_id: Mapped[int] = mapped_column(
-        Integer, ForeignKey("finance.categories.id", ondelete="RESTRICT"), nullable=False
+    category_id: Mapped[Optional[int]] = mapped_column(
+        Integer, ForeignKey("finance.categories.id", ondelete="RESTRICT"), nullable=True
     )
+    tag_id: Mapped[Optional[int]] = mapped_column(
+        Integer, ForeignKey("finance.tags.id", ondelete="CASCADE"), nullable=True
+    )
+    """Exactly one of category_id / tag_id is set (ck_budget_targets_one_subject). A tag
+    target takes the budgeted tag's transactions out of their categories' budgets."""
     amount: Mapped[Decimal] = mapped_column(Numeric(12, 2), nullable=False)
     effective_from: Mapped[datetime] = mapped_column(DateTime, nullable=False)
     effective_to: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
@@ -25,4 +30,4 @@ class BudgetTarget(Base):
         DateTime, server_default=func.now(), nullable=False
     )
 
-    category: Mapped["Category"] = relationship("Category", back_populates="budget_targets")
+    category: Mapped[Optional["Category"]] = relationship("Category", back_populates="budget_targets")

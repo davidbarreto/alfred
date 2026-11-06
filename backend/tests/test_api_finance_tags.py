@@ -101,3 +101,12 @@ class TestDeleteTag:
     def test_service_called_with_correct_id(self, client, mock_service):
         client.delete("/finance/tags/5", headers=AUTH)
         mock_service.delete.assert_called_once_with(5)
+
+
+class TestDeleteBlockedByBudget:
+    def test_returns_409_with_hint(self, client, mock_service):
+        from app.features.finance.tags.service import TagDeletionBlockedError
+        mock_service.delete.side_effect = TagDeletionBlockedError(1)
+        response = client.delete("/finance/tags/1", headers=AUTH)
+        assert response.status_code == 409
+        assert "budget" in response.json()["detail"].lower()

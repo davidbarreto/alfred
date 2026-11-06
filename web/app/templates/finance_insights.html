@@ -59,7 +59,7 @@
         {% endif %}
         <div class="w-72">
           <input type="text" name="tags" value="{{ selected_tags | join(', ') }}" placeholder="Pick tags"
-                 data-tag-input data-known='{{ tag_options | tojson }}' />
+                 data-tag-input data-no-budget-warning data-known='{{ tag_options | tojson }}' />
         </div>
         <select name="tags_mode" class="border border-gray-200 rounded-lg px-2 py-1.5 text-sm bg-white" title="Match all tags (AND) or any of them (OR)">
           <option value="all" {% if tags_mode == "all" %}selected{% endif %}>Match all</option>

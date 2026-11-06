@@ -2,16 +2,26 @@ import logging
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.features.finance.budgets.repository import BudgetTargetRepository
 from app.features.finance.tags.repository import TagRepository
 from app.features.finance.tags.schemas import TagCreate, TagRead, TagUpdate
 
 logger = logging.getLogger(__name__)
 
 
+class TagDeletionBlockedError(Exception):
+    """Raised when a tag can't be deleted because it still has an open budget target."""
+
+    def __init__(self, tag_id: int) -> None:
+        self.tag_id = tag_id
+        super().__init__(f"Tag {tag_id} cannot be deleted: it has an open budget target")
+
+
 class TagService:
 
     def __init__(self, session: AsyncSession) -> None:
         self._repo = TagRepository(session)
+        self._budget_repo = BudgetTargetRepository(session)
 
     async def get(self, tag_id: int) -> TagRead | None:
         tag = await self._repo.get_tag(tag_id)
@@ -37,6 +47,9 @@ class TagService:
         return TagRead.model_validate(tag)
 
     async def delete(self, tag_id: int) -> bool:
+        if await self._budget_repo.has_open_tag_target(tag_id):
+            logger.warning("Tag delete blocked: id=%d has an open budget target", tag_id)
+            raise TagDeletionBlockedError(tag_id)
         deleted = await self._repo.delete_tag(tag_id)
         if deleted:
             logger.info("Tag deleted: id=%d", tag_id)

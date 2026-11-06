@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import date, datetime, time
 from decimal import Decimal
 from typing import Any
-from sqlalchemy import and_, case, func, or_, select, update
+from sqlalchemy import and_, case, false, func, or_, select, update
 from sqlalchemy.orm import aliased, selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -761,6 +761,7 @@ class TransactionRepository:
         currency: str = "EUR",
         tags: list[str] | None = None,
         tags_mode: str = "all",
+        exclude_tag_ids: list[int] | None = None,
     ) -> list[tuple[int | None, str | None, Decimal, int]]:
         from app.features.finance.categories.tables import Category
 
@@ -786,11 +787,42 @@ class TransactionRepository:
         if account_id is not None:
             query = query.where(Transaction.account_id == account_id)
         query = query.where(*_tag_conditions(tags, tags_mode))
+        if exclude_tag_ids:
+            # Transactions carrying a budgeted tag count toward that tag's budget, not their category's.
+            query = query.where(~Transaction.tags.any(FinanceTag.id.in_(exclude_tag_ids)))
         result = await self._session.execute(query)
         return [
             (row[0], row[1], Decimal(str(row[2])), row[3])
             for row in result.all()
         ]
+
+    async def get_tag_budget_spending(
+        self,
+        from_date: date,
+        to_date: date,
+        tag_id: int,
+        older_tag_ids: list[int],
+        currency: str = "EUR",
+    ) -> tuple[Decimal, int]:
+        """Spend carrying `tag_id`, plus how many transactions were left out because they
+        also carry a tag whose budget is older (those count toward the older budget)."""
+        amount_column = _spend_amount(currency)
+        has_older_tag = (
+            Transaction.tags.any(FinanceTag.id.in_(older_tag_ids)) if older_tag_ids else false()
+        )
+        query = select(
+            func.coalesce(func.sum(amount_column).filter(~has_older_tag), 0),
+            func.count(Transaction.id).filter(has_older_tag),
+        ).where(
+            _spend_condition("expense"),
+            Transaction.date >= from_date,
+            Transaction.date <= to_date,
+            Transaction.tags.any(FinanceTag.id == tag_id),
+        )
+        if currency != GLOBAL_CURRENCY:
+            query = query.where(Transaction.currency == currency)
+        total, overlap = (await self._session.execute(query)).one()
+        return Decimal(str(total)), overlap
 
     async def get_spending_over_time(
         self,

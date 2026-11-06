@@ -65,11 +65,15 @@ async function saveBudgetTargets() {
     category_id: parseInt(input.dataset.categoryId, 10),
     amount: input.value === "" ? null : parseFloat(input.value),
   }));
+  const tag_targets = Array.from(document.querySelectorAll(".budget-tag-input")).map(input => ({
+    tag_id: parseInt(input.dataset.tagId, 10),
+    amount: input.value === "" ? null : parseFloat(input.value),
+  }));
   try {
     const res = await fetch("/finance/budgets/targets", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ targets }),
+      body: JSON.stringify({ targets, tag_targets }),
     });
     if (!res.ok) throw new Error(await res.text());
     document.getElementById("budget-targets-list").innerHTML = await res.text();

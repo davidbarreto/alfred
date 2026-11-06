@@ -205,12 +205,15 @@ def _currency_context(accounts: list, currencies: list, currency: str) -> dict:
     }
 
 
-def _budget_chart(budgets: list) -> dict:
-    return {
+def _budget_chart(budgets: list, tag_budgets: list | None = None) -> dict:
+    chart = {
         b["category_name"]: {"spent": float(b["spent"]), "budget": float(b["limit_amount"])}
         for b in budgets
         if b.get("limit_amount") is not None and b.get("category_name")
     }
+    for t in tag_budgets or []:
+        chart[f'{t["tag_name"]} (tag)'] = {"spent": float(t["spent"]), "budget": float(t["limit_amount"])}
+    return chart
 
 
 @router.get("/", response_class=HTMLResponse)
@@ -221,6 +224,7 @@ async def finance_page(request: Request):
 
     (
         accounts, categories, tags, currencies, spending, income, by_category, transactions, budgets, recurring,
+        tag_budgets,
     ) = await asyncio.gather(
         _try_get("/finance/accounts", {"is_active": "true"}),
         _try_get("/finance/categories"),
@@ -232,6 +236,7 @@ async def finance_page(request: Request):
         _try_get("/finance/transactions", {"type": "expense", "limit": 15, **report_params}),
         _try_get("/finance/budgets/status") if currency == "EUR" else _none(),  # budgets are EUR-scoped
         _try_get("/finance/recurring-transactions"),
+        _try_get("/finance/budgets/tag-status") if currency == "EUR" else _none(),
     )
     errors = [
         name
@@ -243,6 +248,8 @@ async def finance_page(request: Request):
     ]
     accounts, categories, tags, currencies = accounts or [], categories or [], tags or [], currencies or []
     transactions, budgets, recurring = transactions or [], budgets or [], recurring or []
+    # Tag budgets count in the Remaining card like category ones (a transaction is in exactly one).
+    budgets = [*budgets, *(tag_budgets or [])]
 
     category_items = (by_category or {}).get("items", [])
     max_total = max((float(i["total"]) for i in category_items), default=1) or 1
@@ -344,6 +351,7 @@ async def finance_insights_page(request: Request):
     # capped raw-transaction fetch) so wide ranges don't silently drop their oldest buckets.
     (
         accounts, currencies, by_category, over_time, by_account, income_vs_expense, net_worth, budgets,
+        tag_budgets,
     ) = await asyncio.gather(
         _try_get("/finance/accounts", {"is_active": "true"}),
         _try_get("/finance/currencies"),
@@ -356,6 +364,7 @@ async def finance_insights_page(request: Request):
             {"currency": currency, "group_by": "month", "from_date": net_worth_from},
         ),
         _try_get("/finance/budgets/status") if currency == "EUR" else _none(),  # budgets are EUR-scoped
+        _try_get("/finance/budgets/tag-status") if currency == "EUR" else _none(),
     )
 
     tag_section = await _tag_insights(request, report_params, group_by)
@@ -379,7 +388,7 @@ async def finance_insights_page(request: Request):
             for i in (income_vs_expense or {}).get("items", [])
         },
         "net_worth_chart": {i["period"]: float(i["total"]) for i in (net_worth or {}).get("items", [])},
-        "budget_chart": _budget_chart(budgets or []),
+        "budget_chart": _budget_chart(budgets or [], tag_budgets or []),
     })
 
 
@@ -954,6 +963,17 @@ async def delete_category(category_id: int, request: Request):
 
 # --- Tags ---
 
+@router.get("/tags/budgeted")
+async def budgeted_tag_names():
+    """Names of the tags that currently have a budget, for the tag input's overlap warning."""
+    targets = await _try_get("/finance/budgets/targets") or []
+    budgeted_ids = {t["tag_id"] for t in targets if t.get("tag_id") is not None}
+    if not budgeted_ids:
+        return JSONResponse([])
+    tags = await _try_get("/finance/tags") or []
+    return JSONResponse(sorted(t["name"] for t in tags if t["id"] in budgeted_ids))
+
+
 @router.post("/tags", response_class=HTMLResponse)
 async def create_tag(
     request: Request,
@@ -1067,12 +1087,26 @@ async def _budget_targets_context() -> dict:
         averages = await api.get("/finance/budgets/averages")
     except httpx.HTTPError:
         pass
-    targets_by_category = {t["category_id"]: t["amount"] for t in targets}
+    tags, tag_status = [], []
+    try:
+        tags = await api.get("/finance/tags")
+    except httpx.HTTPError:
+        pass
+    try:
+        tag_status = await api.get("/finance/budgets/tag-status")
+    except httpx.HTTPError:
+        pass
+    targets_by_category = {t["category_id"]: t["amount"] for t in targets if t.get("category_id") is not None}
+    targets_by_tag = {t["tag_id"]: t["amount"] for t in targets if t.get("tag_id") is not None}
+    overlap_by_tag = {t["tag_id"]: t["overlap_count"] for t in tag_status if t.get("overlap_count")}
     averages_by_category = {a["category_id"]: a["average"] for a in averages}
     currency_symbols = {c["code"]: c["symbol"] for c in currencies if c.get("symbol")}
     return {
         "categories": categories,
         "targets_by_category": targets_by_category,
+        "tags": tags,
+        "targets_by_tag": targets_by_tag,
+        "overlap_by_tag": overlap_by_tag,
         "averages_by_category": averages_by_category,
         "currency_symbol": currency_symbols.get("EUR", "€"),
     }
@@ -1105,6 +1139,11 @@ async def budgets_overview_page(request: Request, year_month: Optional[str] = No
         budget_status = await api.get("/finance/budgets/status", params=status_params)
     except httpx.HTTPError:
         pass
+    tag_status = []
+    try:
+        tag_status = await api.get("/finance/budgets/tag-status", params=status_params)
+    except httpx.HTTPError:
+        pass
     currency_symbol = "€"
     try:
         currencies = await api.get("/finance/currencies")
@@ -1131,10 +1170,24 @@ async def budgets_overview_page(request: Request, year_month: Optional[str] = No
         ),
         key=lambda r: r["remaining"],
     )
-    total_limit = sum(r["limit"] for r in rows)
-    total_spent = sum(r["spent"] for r in rows)
+    tag_rows = sorted(
+        (
+            {
+                "category_name": t["tag_name"],
+                "limit": float(t["limit_amount"]),
+                "spent": float(t["spent"]),
+                "remaining": float(t["limit_amount"]) - float(t["spent"]),
+                "overlap_count": t.get("overlap_count", 0),
+            }
+            for t in tag_status
+        ),
+        key=lambda r: r["remaining"],
+    )
+    total_limit = sum(r["limit"] for r in rows) + sum(r["limit"] for r in tag_rows)
+    total_spent = sum(r["spent"] for r in rows) + sum(r["spent"] for r in tag_rows)
     return templates.TemplateResponse(request, "finance_budgets_overview.html", {
         "rows": rows,
+        "tag_rows": tag_rows,
         "averages_available": averages_available,
         "average_chart": {
             "labels": [r["category_name"] for r in rows],
@@ -1151,6 +1204,25 @@ async def budgets_overview_page(request: Request, year_month: Optional[str] = No
         "is_current": year_month == current_year_month,
         "currency_symbol": currency_symbol,
     })
+
+
+def _history_rows(cycles: list[dict], names: dict[int, str], key: str) -> list[dict]:
+    """One row per budgeted category (or tag) with a cell per cycle, flagging limits that changed."""
+    rows = []
+    for subject_id, name in sorted(names.items(), key=lambda kv: kv[1].lower()):
+        cells = []
+        for index, cycle in enumerate(cycles):
+            item = cycle[key].get(subject_id)
+            older = cycles[index + 1][key].get(subject_id) if index + 1 < len(cycles) else None
+            limit = float(item["limit_amount"]) if item else None
+            older_limit = float(older["limit_amount"]) if older else None
+            cells.append({
+                "limit": limit,
+                "spent": float(item["spent"]) if item else None,
+                "changed": limit is not None and older_limit is not None and limit != older_limit,
+            })
+        rows.append({"category_name": name, "cells": cells})
+    return rows
 
 
 @router.get("/budgets/history", response_class=HTMLResponse)
@@ -1172,31 +1244,22 @@ async def budgets_history_page(request: Request):
             "year_month": cycle["year_month"],
             "range": _format_cycle_range(cycle),
             "items": {i["category_id"]: i for i in cycle["items"]},
-            "total_limit": sum(float(i["limit_amount"]) for i in cycle["items"]),
-            "total_spent": sum(float(i["spent"]) for i in cycle["items"]),
+            "tag_items": {i["tag_id"]: i for i in cycle.get("tag_items", [])},
+            "total_limit": sum(float(i["limit_amount"]) for i in [*cycle["items"], *cycle.get("tag_items", [])]),
+            "total_spent": sum(float(i["spent"]) for i in [*cycle["items"], *cycle.get("tag_items", [])]),
         }
         for cycle in history
     ]
     names = {i["category_id"]: i["category_name"] for cycle in history for i in cycle["items"]}
-    rows = []
-    for category_id, name in sorted(names.items(), key=lambda kv: kv[1].lower()):
-        cells = []
-        for index, cycle in enumerate(cycles):
-            item = cycle["items"].get(category_id)
-            older = cycles[index + 1]["items"].get(category_id) if index + 1 < len(cycles) else None
-            limit = float(item["limit_amount"]) if item else None
-            older_limit = float(older["limit_amount"]) if older else None
-            cells.append({
-                "limit": limit,
-                "spent": float(item["spent"]) if item else None,
-                "changed": limit is not None and older_limit is not None and limit != older_limit,
-            })
-        rows.append({"category_name": name, "cells": cells})
+    tag_names = {i["tag_id"]: i["tag_name"] for cycle in history for i in cycle.get("tag_items", [])}
+    rows = _history_rows(cycles, names, "items")
+    tag_rows = _history_rows(cycles, tag_names, "tag_items")
 
     chronological = list(reversed(cycles))
     return templates.TemplateResponse(request, "finance_budgets_history.html", {
         "cycles": cycles,
         "rows": rows,
+        "tag_rows": tag_rows,
         "currency_symbol": currency_symbol,
         "trend_chart": {
             "labels": [c["year_month"] for c in chronological],
@@ -1214,8 +1277,11 @@ async def set_budget_targets(request: Request):
     except (ValueError, KeyError, TypeError):
         return HTMLResponse('<p class="text-[#E24B4A] text-sm">Invalid payload.</p>', status_code=422)
 
+    payload: dict = {"targets": items}
+    if body.get("tag_targets"):
+        payload["tag_targets"] = body["tag_targets"]
     try:
-        await api.put("/finance/budgets/targets", json={"targets": items})
+        await api.put("/finance/budgets/targets", json=payload)
     except httpx.HTTPError:
         return HTMLResponse('<p class="text-[#E24B4A] text-sm">Failed to save budgets.</p>', status_code=422)
 

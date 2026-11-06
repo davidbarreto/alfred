@@ -3,6 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException, Response, status
 from app.api.auth import require_auth
 from app.dependencies import TagServiceDep
 from app.features.finance.tags.schemas import TagCreate, TagRead, TagUpdate
+from app.features.finance.tags.service import TagDeletionBlockedError
 
 router = APIRouter(prefix="/finance/tags", tags=["finance"], dependencies=[Depends(require_auth)])
 
@@ -35,7 +36,13 @@ async def update_tag(tag_id: int, request: TagUpdate, service: TagServiceDep):
 
 @router.delete("/{tag_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_tag(tag_id: int, service: TagServiceDep):
-    deleted = await service.delete(tag_id)
+    try:
+        deleted = await service.delete(tag_id)
+    except TagDeletionBlockedError:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Cannot delete this tag: it has a budget. Clear its budget first.",
+        )
     if not deleted:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tag not found")
     return Response(status_code=status.HTTP_204_NO_CONTENT)

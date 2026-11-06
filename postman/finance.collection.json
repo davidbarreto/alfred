@@ -3479,6 +3479,372 @@
               ]
             }
           }
+        },
+        {
+          "name": "12 - Create Tag For Tag Budget",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+                  "pm.test('Saves the tag id', () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json.name).to.eql('PostmanBudgetTag');",
+                  "    pm.environment.set('finance_budget_tag_id', json.id);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/finance/tags/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "finance",
+                "tags",
+                ""
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"PostmanBudgetTag\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "13 - Set Tag Budget Target",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Target is for the tag, not a category', () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(String(json.tag_id)).to.eql(String(pm.environment.get('finance_budget_tag_id')));",
+                  "    pm.expect(json.category_id).to.eql(null);",
+                  "    pm.expect(json.amount).to.eql('500.00');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/finance/budgets/tag-targets/{{finance_budget_tag_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "finance",
+                "budgets",
+                "tag-targets",
+                "{{finance_budget_tag_id}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": \"500.00\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "14 - Tag Budget Status Lists The Tag",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Tag appears with its limit, spent and overlap count', () => {",
+                  "    const item = pm.response.json().find(i => String(i.tag_id) === String(pm.environment.get('finance_budget_tag_id')));",
+                  "    pm.expect(item).to.not.eql(undefined);",
+                  "    pm.expect(item.tag_name).to.eql('PostmanBudgetTag');",
+                  "    pm.expect(item.limit_amount).to.eql('500.00');",
+                  "    pm.expect(item).to.have.property('spent');",
+                  "    pm.expect(item.overlap_count).to.eql(0);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/finance/budgets/tag-status",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "finance",
+                "budgets",
+                "tag-status"
+              ]
+            }
+          }
+        },
+        {
+          "name": "15 - Tag Budget Status Rejects Bad Month",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 422', () => pm.response.to.have.status(422));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/finance/budgets/tag-status?year_month=nope",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "finance",
+                "budgets",
+                "tag-status"
+              ],
+              "query": [
+                {
+                  "key": "year_month",
+                  "value": "nope"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "16 - Set Tag Target Unknown Tag Returns 404",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 404', () => pm.response.to.have.status(404));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/finance/budgets/tag-targets/999999999",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "finance",
+                "budgets",
+                "tag-targets",
+                "999999999"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": \"10.00\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "17 - Bulk Set Accepts Tag Targets",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Tag target updated in place', () => {",
+                  "    const rows = pm.response.json();",
+                  "    const row = rows.find(r => String(r.tag_id) === String(pm.environment.get('finance_budget_tag_id')));",
+                  "    pm.expect(row.amount).to.eql('600.00');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/finance/budgets/targets",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "finance",
+                "budgets",
+                "targets"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"targets\": [],\n  \"tag_targets\": [\n    { \"tag_id\": {{finance_budget_tag_id}}, \"amount\": \"600.00\" }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "18 - Tag With A Budget Cannot Be Deleted",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 409', () => pm.response.to.have.status(409));",
+                  "pm.test('Explains the budget is the blocker', () => pm.expect(pm.response.json().detail).to.include('budget'));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/finance/tags/{{finance_budget_tag_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "finance",
+                "tags",
+                "{{finance_budget_tag_id}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "19 - Clear Tag Budget Target",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Clearing returns null', () => pm.expect(pm.response.json()).to.eql(null));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/finance/budgets/tag-targets/{{finance_budget_tag_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "finance",
+                "budgets",
+                "tag-targets",
+                "{{finance_budget_tag_id}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": null\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "20 - Cleanup - Delete Budget Tag",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 204', () => pm.response.to.have.status(204));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/finance/tags/{{finance_budget_tag_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "finance",
+                "tags",
+                "{{finance_budget_tag_id}}"
+              ]
+            }
+          }
         }
       ]
     },

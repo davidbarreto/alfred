@@ -418,6 +418,30 @@ function openEditTransaction(txn, filtersQs) {
   document.getElementById("edit-txn-modal").dataset.txnId = txn.id;
 }
 
+// Tags created while editing: let the inputs stop flagging them "new" and add them to the filter.
+async function refreshKnownTags() {
+  try {
+    const res = await fetch("/finance/tags/names");
+    if (!res.ok) return;
+    const names = await res.json();
+    if (window.TagInput) window.TagInput.refreshKnown(names);
+    const box = document.querySelector(".txn-filter-tag-checkbox")?.closest("div");
+    if (!box) return;
+    const have = new Set(Array.from(box.querySelectorAll(".txn-filter-tag-checkbox")).map(el => el.value));
+    names.filter(n => !have.has(n)).forEach(name => {
+      const label = document.createElement("label");
+      label.className = "flex items-center gap-2 py-1 px-1 text-sm text-gray-700 hover:bg-gray-50 rounded cursor-pointer whitespace-nowrap";
+      const cb = document.createElement("input");
+      cb.type = "checkbox";
+      cb.className = "txn-filter-tag-checkbox";
+      cb.value = name;
+      cb.addEventListener("change", applyTxnFilters);
+      label.append(cb, document.createTextNode(" " + name));
+      box.append(label);
+    });
+  } catch (e) { /* the page still works; a reload refreshes the lists */ }
+}
+
 async function submitEditTransaction(e) {
   e.preventDefault();
   const btn = document.getElementById("edit-txn-submit-btn");
@@ -443,6 +467,7 @@ async function submitEditTransaction(e) {
     document.getElementById("txn-list-full").innerHTML = html;
     if (window.htmx) htmx.process(document.getElementById("txn-list-full"));
     document.getElementById("edit-txn-modal").close();
+    refreshKnownTags();
   } catch (err) {
     errEl.textContent = err.message || "Failed to save transaction.";
     errEl.classList.remove("hidden");
@@ -661,6 +686,7 @@ function _renderTxnDetailRows(c, listElId, { showRelatedLink = false } = {}) {
     ["Description", c.description],
     ["Bank description", c.bank_description],
     ["Merchant", c.merchant],
+    ["Tags", (c.tags || []).join(", ")],
     ["Note", c.note],
     ["Source", c.source],
   ];

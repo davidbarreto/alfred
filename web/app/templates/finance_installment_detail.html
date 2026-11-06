@@ -465,6 +465,7 @@ function openTransferMatchDetailModal(c, showActions) {
     ["Description", c.description],
     ["Bank description", c.bank_description],
     ["Merchant", c.merchant],
+    ["Tags", (c.tags || []).join(", ")],
     ["Note", c.note],
     ["Source", c.source],
   ];

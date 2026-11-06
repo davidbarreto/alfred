@@ -963,6 +963,13 @@ async def delete_category(category_id: int, request: Request):
 
 # --- Tags ---
 
+@router.get("/tags/names")
+async def tag_names():
+    """All tag names, so the tag inputs and the tag filter can pick up tags created since page load."""
+    tags = await _try_get("/finance/tags") or []
+    return JSONResponse(sorted((t["name"] for t in tags), key=str.lower))
+
+
 @router.get("/tags/budgeted")
 async def budgeted_tag_names():
     """Names of the tags that currently have a budget, for the tag input's overlap warning."""

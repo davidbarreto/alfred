@@ -23,6 +23,21 @@ def _account(id=1, name="Checking"):
 
 
 class TestTransactionsPage:
+    def test_list_rows_show_the_transaction_tags(self, client, mock_api):
+        mock_api["get"].side_effect = [
+            [{**_txn(id=1, merchant="Continente"), "tags": ["Travel", "Work"]}],
+            None,
+            [_category()],
+            [],
+            [_account()],
+            [],
+            [],
+        ]
+
+        resp = client.get("/finance/transactions")
+
+        assert ">Travel</span>" in resp.text and ">Work</span>" in resp.text
+
     def test_renders_transactions(self, client, mock_api):
         mock_api["get"].side_effect = [
             [_txn(id=1, merchant="Continente")],
@@ -2214,6 +2229,21 @@ class TestTagBudgetsOnDashboardAndInsights:
         resp = client.get("/finance/insights")
 
         assert "Travel (tag)" in resp.text
+
+
+class TestTagNames:
+    def test_returns_all_tag_names_sorted_ignoring_case(self, client, mock_api):
+        async def fake(path, params=None):
+            return [{"id": 1, "name": "work"}, {"id": 2, "name": "Travel"}] if path == "/finance/tags" else []
+        mock_api["get"].side_effect = fake
+
+        resp = client.get("/finance/tags/names")
+
+        assert resp.json() == ["Travel", "work"]
+
+    def test_requires_authentication(self, anon_client):
+        resp = anon_client.get("/finance/tags/names", follow_redirects=False)
+        assert resp.status_code == 302
 
 
 class TestBudgetedTagNames:

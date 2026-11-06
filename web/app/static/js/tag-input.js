@@ -53,14 +53,23 @@
     if (input.dataset.tagInputReady) return;
     input.dataset.tagInputReady = "1";
 
-    let known = [];
-    try { known = JSON.parse(input.dataset.known || "[]"); } catch (e) { known = []; }
-    const canonical = (name) => known.find((k) => k.toLowerCase() === name.toLowerCase());
+    // Read lazily: refreshKnown() rewrites data-known after a save creates new tags.
+    let knownRaw = null;
+    let knownCache = [];
+    const getKnown = () => {
+      const raw = input.dataset.known || "[]";
+      if (raw !== knownRaw) {
+        knownRaw = raw;
+        try { knownCache = JSON.parse(raw); } catch (e) { knownCache = []; }
+      }
+      return knownCache;
+    };
+    const canonical = (name) => getKnown().find((k) => k.toLowerCase() === name.toLowerCase());
     const closest = (name) => {
       const lower = name.toLowerCase();
       let best = null;
       let bestDist = Infinity;
-      known.forEach((k) => {
+      getKnown().forEach((k) => {
         const d = distance(lower, k.toLowerCase());
         if (d < bestDist) { best = k; bestDist = d; }
       });
@@ -170,7 +179,7 @@
       const lower = query.toLowerCase();
       const taken = new Set(tags.map((t) => t.toLowerCase()));
       menu.replaceChildren();
-      known
+      getKnown()
         .filter((k) => !taken.has(k.toLowerCase()) && (!lower || k.toLowerCase().includes(lower)))
         .slice(0, 8)
         .forEach((k) => menu.append(option(k, "", () => add(k))));
@@ -227,5 +236,13 @@
 
   document.addEventListener("DOMContentLoaded", () => init(document));
   document.addEventListener("htmx:load", (e) => init(e.target));
-  window.TagInput = { init };
+  // Push a fresh list of tag names into every input (and re-render, so "new" flags clear).
+  function refreshKnown(names) {
+    document.querySelectorAll("input[data-tag-input]").forEach((el) => {
+      el.dataset.known = JSON.stringify(names);
+      if (el.dataset.tagInputReady) el.value = el.value;
+    });
+  }
+
+  window.TagInput = { init, refreshKnown };
 })();

@@ -69,6 +69,26 @@ class TestTransactionsPage:
         assert "checked" in resp.text[resp.text.index('value="Travel"'):][:120]
         assert "history.replaceState" in resp.text
 
+    def test_clear_buttons_exist_and_start_hidden_without_filters(self, client, mock_api):
+        mock_api["get"].side_effect = [[], None, [_category()], [{"id": 5, "name": "Travel"}], [_account()], [], []]
+
+        resp = client.get("/finance/transactions")
+
+        clear_all = resp.text[resp.text.index('id="txn-clear-filters"'):][:250]
+        clear_tags = resp.text[resp.text.index('id="txn-filter-tags-clear"'):][:250]
+        assert "hidden" in clear_all and "clearTxnFilters()" in resp.text
+        assert "hidden" in clear_tags and "clearTxnTagFilters()" in resp.text
+
+    def test_clear_buttons_visible_when_tags_are_filtered(self, client, mock_api):
+        mock_api["get"].side_effect = [[], None, [_category()], [{"id": 5, "name": "Travel"}], [_account()], [], []]
+
+        resp = client.get("/finance/transactions?tags=Travel")
+
+        clear_all = resp.text[resp.text.index('id="txn-clear-filters"'):][:250]
+        clear_tags = resp.text[resp.text.index('id="txn-filter-tags-clear"'):][:250]
+        assert "hidden" not in clear_all.split(">")[0]
+        assert "hidden" not in clear_tags.split(">")[0]
+
     def test_renders_transactions(self, client, mock_api):
         mock_api["get"].side_effect = [
             [_txn(id=1, merchant="Continente")],

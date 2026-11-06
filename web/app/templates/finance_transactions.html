@@ -57,6 +57,8 @@
                 onchange="applyTxnFilters()" />
               Any
             </label>
+            <button type="button" id="txn-filter-tags-clear" onclick="clearTxnTagFilters()"
+              class="ml-auto text-[11px] text-gray-400 hover:text-[#378ADD] {% if not query_filters.tags %}hidden{% endif %}">Clear</button>
           </div>
           {% for tag in tags %}
           <label class="flex items-center gap-2 py-1 px-1 text-sm text-gray-700 hover:bg-gray-50 rounded cursor-pointer whitespace-nowrap">
@@ -129,11 +131,10 @@
         Unconfirmed transfers
       </label>
     </div>
-    {% if query_filters.type or query_filters.category_id or query_filters.uncategorized or query_filters.tags or query_filters.account_id or query_filters.merchant or query_filters.from_date or query_filters.to_date or query_filters.currency or query_filters.unconfirmed_transfer %}
-    <button onclick="clearTxnFilters()" class="btn btn-sm btn-ghost text-gray-500 gap-1">
+    <button id="txn-clear-filters" onclick="clearTxnFilters()"
+      class="btn btn-sm btn-ghost text-gray-500 gap-1{% if not (query_filters.type or query_filters.category_id or query_filters.uncategorized or query_filters.tags or query_filters.account_id or query_filters.merchant or query_filters.from_date or query_filters.to_date or query_filters.currency or query_filters.unconfirmed_transfer) %} hidden{% endif %}">
       <i class="ti ti-x text-xs"></i>Clear filters
     </button>
-    {% endif %}
     {% if query_filters.account_id %}
     <button onclick="openBulkMoveModal()" class="btn btn-sm btn-ghost text-gray-500 gap-1">
       <i class="ti ti-transfer text-xs"></i>Move to account…
@@ -376,8 +377,24 @@ function refreshTxnList() {
   });
 }
 
+function _hasTxnFilters() {
+  const ids = ["type", "category", "account", "merchant", "from", "to"];
+  return ids.some(id => document.getElementById("txn-filter-" + id).value)
+    || document.getElementById("txn-filter-unconfirmed-transfer").checked
+    || document.querySelector(".txn-filter-tag-checkbox:checked") !== null
+    || Boolean(_txnCurrency);
+}
+
+function clearTxnTagFilters() {
+  document.querySelectorAll(".txn-filter-tag-checkbox:checked").forEach(el => { el.checked = false; });
+  applyTxnFilters();
+}
+
 function applyTxnFilters() {
   _txnOffset = 0;
+  document.getElementById("txn-clear-filters").classList.toggle("hidden", !_hasTxnFilters());
+  const tagsClear = document.getElementById("txn-filter-tags-clear");
+  if (tagsClear) tagsClear.classList.toggle("hidden", !document.querySelector(".txn-filter-tag-checkbox:checked"));
   const checked = document.querySelectorAll(".txn-filter-tag-checkbox:checked");
   const tagsModeEl = document.querySelector('input[name="txn-filter-tags-mode"]:checked');
   const modeSuffix = checked.length > 1 && tagsModeEl && tagsModeEl.value === "any" ? " (any)" : "";

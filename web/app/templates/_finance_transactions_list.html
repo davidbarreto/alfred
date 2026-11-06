@@ -63,7 +63,9 @@
         {%- if accounts_by_id.get(txn.account_id) %}{{ accounts_by_id.get(txn.account_id) }}{% endif %}
         {% if txn.category_id and categories_by_id.get(txn.category_id) %} · {{ categories_by_id.get(txn.category_id) }}{% endif %}
         {% if txn.type == 'transfer' and txn.counterpart_account_id %} · → {{ accounts_by_id.get(txn.counterpart_account_id, "?") }}{% endif %}
-        {%- for tag in txn.tags or [] %} <span class="rounded-full bg-[#E6F1FB] text-[#0C447C] px-1.5 py-0.5 text-[10px]">{{ tag }}</span>{% endfor %}
+        {%- set txn_tags = txn.tags or [] %}
+        {%- for tag in txn_tags[:3] %} <span class="rounded-full bg-[#E6F1FB] text-[#0C447C] px-1.5 py-0.5 text-[10px]">{{ tag }}</span>{% endfor %}
+        {%- if txn_tags | length > 3 %} <span class="text-[10px] text-gray-400" title="{{ txn_tags[3:] | join(', ') }}">+{{ txn_tags | length - 3 }} tags</span>{% endif %}
       </div>
     </div>
     <span class="text-sm font-medium {% if txn.type == 'income' %}text-[#639922]{% elif txn.type == 'transfer' and not counts_as_spend %}text-gray-500{% else %}text-[#E24B4A]{% endif %} flex-shrink-0">

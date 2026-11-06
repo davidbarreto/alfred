@@ -38,6 +38,23 @@ class TestTransactionsPage:
 
         assert ">Travel</span>" in resp.text and ">Work</span>" in resp.text
 
+    def test_list_rows_cap_tags_and_count_the_rest(self, client, mock_api):
+        mock_api["get"].side_effect = [
+            [{**_txn(id=1, merchant="Continente"), "tags": ["A1", "B2", "C3", "D4", "E5"]}],
+            None,
+            [_category()],
+            [],
+            [_account()],
+            [],
+            [],
+        ]
+
+        resp = client.get("/finance/transactions")
+
+        assert ">C3</span>" in resp.text
+        assert ">D4</span>" not in resp.text
+        assert "+2 tags" in resp.text and 'title="D4, E5"' in resp.text
+
     def test_renders_transactions(self, client, mock_api):
         mock_api["get"].side_effect = [
             [_txn(id=1, merchant="Continente")],

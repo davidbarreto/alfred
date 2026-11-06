@@ -55,6 +55,20 @@ class TestTransactionsPage:
         assert ">D4</span>" not in resp.text
         assert "+2 tags" in resp.text and 'title="D4, E5"' in resp.text
 
+    def test_filters_in_the_query_string_are_restored_and_kept_in_the_url(self, client, mock_api):
+        mock_api["get"].side_effect = [
+            [], None, [_category()], [{"id": 5, "name": "Travel"}], [_account()], [], [],
+        ]
+
+        resp = client.get(
+            "/finance/transactions?tags=Travel&tags_mode=any&sort=amount_desc&merchant=Cafe&from_date=2026-07-01"
+        )
+
+        assert 'value="Cafe"' in resp.text and 'value="2026-07-01"' in resp.text
+        assert 'value="amount_desc" selected' in resp.text
+        assert "checked" in resp.text[resp.text.index('value="Travel"'):][:120]
+        assert "history.replaceState" in resp.text
+
     def test_renders_transactions(self, client, mock_api):
         mock_api["get"].side_effect = [
             [_txn(id=1, merchant="Continente")],

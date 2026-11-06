@@ -367,6 +367,9 @@ function _txnQuery() {
 }
 
 function refreshTxnList() {
+  // Keep the filters in the address bar so a refresh (or a copied link) restores them.
+  const qs = _txnQuery().replace(/(^|&)offset=0(&|$)/, "$1$2").replace(/&$/, "");
+  history.replaceState(null, "", location.pathname + (qs ? "?" + qs : ""));
   htmx.ajax("GET", TXN_LIST_URL + "?" + _txnQuery(), {
     target: "#txn-list-full",
     swap: "innerHTML",

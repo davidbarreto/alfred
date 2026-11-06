@@ -1,4 +1,4 @@
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -19,18 +19,32 @@ class TagRepository:
         result = await self._session.execute(select(FinanceTag).order_by(FinanceTag.name))
         return list(result.scalars().all())
 
+    async def get_tag_by_name(self, name: str, exclude_id: int | None = None) -> FinanceTag | None:
+        """Case-insensitive lookup, so "travel" finds "Travel"."""
+        query = select(FinanceTag).where(func.lower(FinanceTag.name) == name.strip().lower())
+        if exclude_id is not None:
+            query = query.where(FinanceTag.id != exclude_id)
+        result = await self._session.execute(query)
+        return result.scalars().first()
+
     async def resolve_tags(self, names: list[str]) -> list[FinanceTag]:
-        """Get-or-create every tag by name, e.g. for wiring TransactionCreate.tags
-        onto a Transaction -- mirrors organizer.tags' _resolve_tags pattern, minus
-        the provider_id scoping (finance tags aren't a Notion write-through cache)."""
-        tags = []
+        """Get-or-create every tag by name (case-insensitive: "travel" reuses "Travel"),
+        e.g. for wiring TransactionCreate.tags onto a Transaction -- mirrors
+        organizer.tags' _resolve_tags pattern, minus the provider_id scoping (finance
+        tags aren't a Notion write-through cache). Names repeated in a different case
+        within one call resolve to a single tag."""
+        tags: list[FinanceTag] = []
+        seen: dict[str, FinanceTag] = {}
         for name in names:
-            result = await self._session.execute(select(FinanceTag).where(FinanceTag.name == name))
-            tag = result.scalars().first()
+            key = name.strip().lower()
+            tag = seen.get(key)
             if tag is None:
-                tag = FinanceTag(name=name)
-                self._session.add(tag)
-            tags.append(tag)
+                tag = await self.get_tag_by_name(name)
+                if tag is None:
+                    tag = FinanceTag(name=name.strip())
+                    self._session.add(tag)
+                seen[key] = tag
+                tags.append(tag)
         return tags
 
     async def create_tag(self, data: TagCreate) -> FinanceTag:

@@ -17,6 +17,14 @@ class TagDeletionBlockedError(Exception):
         super().__init__(f"Tag {tag_id} cannot be deleted: it has an open budget target")
 
 
+class TagNameConflictError(Exception):
+    """Raised when a tag name is already taken, ignoring case ("travel" vs "Travel")."""
+
+    def __init__(self, name: str) -> None:
+        self.name = name
+        super().__init__(f"A tag named {name!r} already exists")
+
+
 class TagService:
 
     def __init__(self, session: AsyncSession) -> None:
@@ -34,11 +42,17 @@ class TagService:
         return [TagRead.model_validate(t) for t in tags]
 
     async def create(self, data: TagCreate) -> TagRead:
+        if await self._repo.get_tag_by_name(data.name) is not None:
+            logger.warning("Tag create blocked: name=%r already exists", data.name)
+            raise TagNameConflictError(data.name)
         tag = await self._repo.create_tag(data)
         logger.info("Tag created: id=%d name=%r", tag.id, data.name)
         return TagRead.model_validate(tag)
 
     async def update(self, tag_id: int, data: TagUpdate) -> TagRead | None:
+        if data.name is not None and await self._repo.get_tag_by_name(data.name, exclude_id=tag_id) is not None:
+            logger.warning("Tag update blocked: id=%d name=%r already exists", tag_id, data.name)
+            raise TagNameConflictError(data.name)
         tag = await self._repo.update_tag(tag_id, data)
         if tag is None:
             logger.debug("Tag update: id=%d not found", tag_id)

@@ -1,6 +1,6 @@
 import pytest
 from unittest.mock import AsyncMock, MagicMock
-from app.features.finance.tags.service import TagDeletionBlockedError, TagService
+from app.features.finance.tags.service import TagDeletionBlockedError, TagNameConflictError, TagService
 from app.features.finance.tags.schemas import TagCreate, TagUpdate, TagRead
 
 
@@ -15,6 +15,7 @@ def _make_tag_orm(**kwargs):
 def service():
     svc = TagService.__new__(TagService)
     svc._repo = AsyncMock()
+    svc._repo.get_tag_by_name.return_value = None
     svc._budget_repo = AsyncMock()
     svc._budget_repo.has_open_tag_target.return_value = False
     return svc
@@ -50,6 +51,26 @@ class TestCreate:
         result = await service.create(TagCreate(name="Work"))
         assert isinstance(result, TagRead)
         assert result.name == "Work"
+
+
+class TestNameConflicts:
+    async def test_create_rejects_name_taken_in_another_case(self, service):
+        service._repo.get_tag_by_name.return_value = _make_tag_orm(name="Travel")
+        with pytest.raises(TagNameConflictError):
+            await service.create(TagCreate(name="travel"))
+        service._repo.create_tag.assert_not_called()
+
+    async def test_rename_rejects_name_taken_by_another_tag(self, service):
+        service._repo.get_tag_by_name.return_value = _make_tag_orm(id=2, name="Work")
+        with pytest.raises(TagNameConflictError):
+            await service.update(1, TagUpdate(name="WORK"))
+        service._repo.get_tag_by_name.assert_awaited_once_with("WORK", exclude_id=1)
+        service._repo.update_tag.assert_not_called()
+
+    async def test_rename_to_other_case_of_itself_is_allowed(self, service):
+        service._repo.update_tag.return_value = _make_tag_orm(name="TRAVEL")
+        result = await service.update(1, TagUpdate(name="TRAVEL"))
+        assert result.name == "TRAVEL"
 
 
 class TestUpdate:

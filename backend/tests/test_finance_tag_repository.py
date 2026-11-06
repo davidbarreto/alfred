@@ -73,11 +73,43 @@ class TestResolveTags:
         assert result[0].name == "Work"
         session.add.assert_called_once()
 
+    async def test_lookup_is_case_insensitive(self):
+        session = _make_session()
+        session.execute.return_value = _scalar_first(_make_tag_orm(name="Travel"))
+        await TagRepository(session).resolve_tags(["TRAVEL"])
+        sql = str(session.execute.call_args.args[0].compile(compile_kwargs={"literal_binds": True}))
+        assert "lower(finance.tags.name) = 'travel'" in sql
+
+    async def test_same_name_in_different_case_resolves_to_one_tag(self):
+        session = _make_session()
+        session.execute.return_value = _scalar_first(None)
+        result = await TagRepository(session).resolve_tags(["Rome", "rome", "ROME"])
+        assert len(result) == 1
+        assert result[0].name == "Rome"
+        session.add.assert_called_once()
+
     async def test_empty_names_returns_empty_list(self):
         session = _make_session()
         result = await TagRepository(session).resolve_tags([])
         assert result == []
         session.execute.assert_not_called()
+
+
+class TestGetTagByName:
+    async def test_matches_ignoring_case(self):
+        session = _make_session()
+        tag = _make_tag_orm()
+        session.execute.return_value = _scalar_first(tag)
+        assert await TagRepository(session).get_tag_by_name(" TRAVEL ") == tag
+        sql = str(session.execute.call_args.args[0].compile(compile_kwargs={"literal_binds": True}))
+        assert "lower(finance.tags.name) = 'travel'" in sql
+
+    async def test_exclude_id_leaves_out_that_tag(self):
+        session = _make_session()
+        session.execute.return_value = _scalar_first(None)
+        await TagRepository(session).get_tag_by_name("Travel", exclude_id=3)
+        sql = str(session.execute.call_args.args[0].compile(compile_kwargs={"literal_binds": True}))
+        assert "finance.tags.id != 3" in sql
 
 
 class TestCreateTag:

@@ -375,8 +375,8 @@ class TestList:
         sql = str(query.compile(compile_kwargs={"literal_binds": True}))
         # One EXISTS subquery per tag, ANDed together (not one IN-based OR subquery).
         assert sql.count("EXISTS") == 2
-        assert "'Travel'" in sql
-        assert "'Barcelona'" in sql
+        assert "lower(finance.tags.name) = 'travel'" in sql
+        assert "lower(finance.tags.name) = 'barcelona'" in sql
         assert " IN " not in sql
 
     async def test_multiple_tags_filter_any_mode_uses_or(self):
@@ -1463,8 +1463,8 @@ class TestAnalyticsTagFilter:
         )
         sql = self._sql(session)
         # One tag-name subquery per tag, ANDed (the spend condition has its own EXISTS).
-        assert sql.count("finance.tags.name =") == 2
-        assert "finance.tags.name IN" not in sql
+        assert sql.count("lower(finance.tags.name) =") == 2
+        assert "IN (" not in sql.split("finance.tags")[-1]
 
     async def test_spending_total_any_mode_uses_single_in(self):
         session = _make_session()
@@ -1474,7 +1474,7 @@ class TestAnalyticsTagFilter:
         )
         sql = self._sql(session)
         assert sql.count("finance.tags.name") == 1
-        assert "finance.tags.name IN ('Travel', 'Work')" in sql
+        assert "lower(finance.tags.name) IN ('travel', 'work')" in sql
 
     async def test_no_tags_adds_no_tag_subquery(self):
         session = _make_session()
@@ -1490,7 +1490,7 @@ class TestAnalyticsTagFilter:
         await TransactionRepository(session).get_spending_by_category(
             from_date=date(2026, 6, 1), to_date=date(2026, 6, 30), tags=["Travel"]
         )
-        assert "'Travel'" in self._sql(session)
+        assert "lower(finance.tags.name) = 'travel'" in self._sql(session)
 
     async def test_over_time_filters_by_tag(self):
         session = _make_session()
@@ -1498,7 +1498,7 @@ class TestAnalyticsTagFilter:
         await TransactionRepository(session).get_spending_over_time(
             from_date=date(2026, 6, 1), to_date=date(2026, 6, 30), group_by="day", tags=["Travel"]
         )
-        assert "'Travel'" in self._sql(session)
+        assert "lower(finance.tags.name) = 'travel'" in self._sql(session)
 
     async def test_top_expenses_filters_by_tag(self):
         session = _make_session()
@@ -1506,7 +1506,15 @@ class TestAnalyticsTagFilter:
         await TransactionRepository(session).get_top_expenses(
             from_date=date(2026, 6, 1), to_date=date(2026, 6, 30), top_n=5, tags=["Travel"]
         )
-        assert "'Travel'" in self._sql(session)
+        assert "lower(finance.tags.name) = 'travel'" in self._sql(session)
+
+    async def test_tag_names_compare_case_insensitively(self):
+        session = _make_session()
+        session.execute.return_value = _one_result((Decimal("0"), 0))
+        await TransactionRepository(session).get_spending_total(
+            from_date=date(2026, 6, 1), to_date=date(2026, 6, 30), tags=["TRAVEL"]
+        )
+        assert "lower(finance.tags.name) = 'travel'" in self._sql(session)
 
 
 class TestBudgetedTagExclusion:

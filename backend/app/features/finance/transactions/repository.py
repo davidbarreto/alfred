@@ -137,12 +137,13 @@ def _tag_conditions(tags: list[str] | None, tags_mode: str = "all") -> list:
 
     "any" is OR (at least one of the tags); anything else is AND -- a separate .any()
     per tag name, so a transaction must carry every tag (e.g. Travel AND Barcelona).
+    Names compare case-insensitively.
     """
     if not tags:
         return []
     if tags_mode == "any":
-        return [Transaction.tags.any(FinanceTag.name.in_(tags))]
-    return [Transaction.tags.any(FinanceTag.name == name) for name in tags]
+        return [Transaction.tags.any(func.lower(FinanceTag.name).in_([t.lower() for t in tags]))]
+    return [Transaction.tags.any(func.lower(FinanceTag.name) == name.lower()) for name in tags]
 
 
 def _filter_conditions(filters: Any, cycle_start_day: int = 1) -> list:

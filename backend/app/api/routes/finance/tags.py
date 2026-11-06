@@ -3,14 +3,19 @@ from fastapi import APIRouter, Depends, HTTPException, Response, status
 from app.api.auth import require_auth
 from app.dependencies import TagServiceDep
 from app.features.finance.tags.schemas import TagCreate, TagRead, TagUpdate
-from app.features.finance.tags.service import TagDeletionBlockedError
+from app.features.finance.tags.service import TagDeletionBlockedError, TagNameConflictError
 
 router = APIRouter(prefix="/finance/tags", tags=["finance"], dependencies=[Depends(require_auth)])
+
+_NAME_TAKEN = "A tag with this name already exists (names are case-insensitive)."
 
 
 @router.post("", response_model=TagRead, status_code=status.HTTP_201_CREATED)
 async def create_tag(request: TagCreate, service: TagServiceDep):
-    return await service.create(request)
+    try:
+        return await service.create(request)
+    except TagNameConflictError:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=_NAME_TAKEN)
 
 
 @router.get("", response_model=list[TagRead])
@@ -28,7 +33,10 @@ async def get_tag(tag_id: int, service: TagServiceDep):
 
 @router.patch("/{tag_id}", response_model=TagRead)
 async def update_tag(tag_id: int, request: TagUpdate, service: TagServiceDep):
-    tag = await service.update(tag_id, request)
+    try:
+        tag = await service.update(tag_id, request)
+    except TagNameConflictError:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=_NAME_TAKEN)
     if tag is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tag not found")
     return tag

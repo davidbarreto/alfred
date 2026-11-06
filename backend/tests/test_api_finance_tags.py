@@ -110,3 +110,18 @@ class TestDeleteBlockedByBudget:
         response = client.delete("/finance/tags/1", headers=AUTH)
         assert response.status_code == 409
         assert "budget" in response.json()["detail"].lower()
+
+
+class TestNameConflict:
+    def test_create_duplicate_returns_409(self, client, mock_service):
+        from app.features.finance.tags.service import TagNameConflictError
+        mock_service.create.side_effect = TagNameConflictError("travel")
+        response = client.post("/finance/tags/", json={"name": "travel"}, headers=AUTH)
+        assert response.status_code == 409
+        assert "case-insensitive" in response.json()["detail"]
+
+    def test_rename_duplicate_returns_409(self, client, mock_service):
+        from app.features.finance.tags.service import TagNameConflictError
+        mock_service.update.side_effect = TagNameConflictError("Work")
+        response = client.patch("/finance/tags/1", json={"name": "Work"}, headers=AUTH)
+        assert response.status_code == 409

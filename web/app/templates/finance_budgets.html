@@ -56,6 +56,36 @@ function fillBudgetAverages() {
   updateBudgetTotals();
 }
 
+function refreshTagPicker() {
+  const picker = document.getElementById("budget-tag-picker");
+  if (!picker) return;
+  picker.replaceChildren();
+  document.querySelectorAll(".budget-tag-row.hidden").forEach(row => {
+    picker.append(new Option(row.dataset.tagName, row.dataset.tagId));
+  });
+  const none = picker.options.length === 0;
+  picker.disabled = none;
+  picker.nextElementSibling.disabled = none;
+  if (none) picker.append(new Option("All tags added", ""));
+}
+
+function addTagBudget() {
+  const picker = document.getElementById("budget-tag-picker");
+  if (!picker.value) return;
+  const row = document.querySelector(`.budget-tag-row[data-tag-id="${picker.value}"]`);
+  row.classList.remove("hidden");
+  row.querySelector("input").focus();
+  refreshTagPicker();
+}
+
+// Hidden rows keep an empty value, so saving sends amount null and clears the budget.
+function removeTagBudget(btn) {
+  const row = btn.closest(".budget-tag-row");
+  row.querySelector("input").value = "";
+  row.classList.add("hidden");
+  refreshTagPicker();
+}
+
 async function saveBudgetTargets() {
   const btn = document.getElementById("budget-targets-save");
   const errEl = document.getElementById("budget-targets-error");
@@ -78,6 +108,7 @@ async function saveBudgetTargets() {
     if (!res.ok) throw new Error(await res.text());
     document.getElementById("budget-targets-list").innerHTML = await res.text();
     updateBudgetTotals();
+    refreshTagPicker();
   } catch (err) {
     errEl.textContent = "Failed to save budgets.";
     errEl.classList.remove("hidden");
@@ -88,6 +119,7 @@ async function saveBudgetTargets() {
 
 document.getElementById("budget-targets-list").addEventListener("input", updateBudgetTotals);
 updateBudgetTotals();
+refreshTagPicker();
 
 </script>
 {% endblock %}

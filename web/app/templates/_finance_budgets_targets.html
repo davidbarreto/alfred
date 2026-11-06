@@ -38,9 +38,10 @@
   <h3 class="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1">Tag budgets</h3>
   <p class="text-xs text-gray-400 mb-2">A transaction with a budgeted tag counts here instead of in its category's budget. Clear a limit to hand its transactions back to their categories from the next cycle.</p>
   {% if tags %}
-  <div class="divide-y divide-gray-100">
+  <div id="budget-tag-rows" class="divide-y divide-gray-100">
     {% for tag in tags %}
-    <div class="budget-row flex items-center justify-between py-2 px-2 text-sm gap-3 hover:bg-gray-100 focus-within:shadow-[inset_3px_0_0_#378ADD] group">
+    <div class="budget-row budget-tag-row flex items-center justify-between py-2 px-2 text-sm gap-3 hover:bg-gray-100 focus-within:shadow-[inset_3px_0_0_#378ADD] group{% if tag.id not in targets_by_tag %} hidden{% endif %}"
+         data-tag-id="{{ tag.id }}" data-tag-name="{{ tag.name }}">
       <span class="text-gray-800 group-focus-within:text-[#378ADD] group-focus-within:font-medium">
         {{ tag.name }}
         <span class="ml-1 rounded-full bg-[#FDF1E2] text-[#8A5A0B] px-1.5 py-0.5 text-[10px] font-medium align-middle">tag</span>
@@ -59,9 +60,14 @@
           placeholder="No limit"
           value="{{ targets_by_tag.get(tag.id, '') }}"
         />
+        <button type="button" onclick="removeTagBudget(this)" class="text-gray-300 hover:text-[#E24B4A] leading-none" title="Remove this tag budget (applies when you save)" aria-label="Remove {{ tag.name }} budget"><i class="ti ti-x text-sm"></i></button>
       </div>
     </div>
     {% endfor %}
+  </div>
+  <div class="flex items-center gap-2 mt-2 px-2">
+    <select id="budget-tag-picker" class="border border-gray-200 rounded-lg px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-[#378ADD]"></select>
+    <button type="button" onclick="addTagBudget()" class="btn btn-sm btn-ghost gap-1"><i class="ti ti-plus text-sm"></i>Add tag</button>
   </div>
   {% else %}
   <p class="text-sm text-gray-400 py-3 text-center">No tags yet. Tag a transaction to budget it here.</p>

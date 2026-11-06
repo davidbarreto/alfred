@@ -2045,7 +2045,20 @@ class TestTagBudgetsEditPage:
         assert "Tag budgets" in resp.text
         assert resp.text.index("Groceries") < resp.text.index("Tag budgets") < resp.text.index("Travel")
         assert 'data-tag-id="5"' in resp.text and 'value="1500.00"' in resp.text
-        assert 'data-tag-id="6"' in resp.text  # tags without a budget are still listed to be set
+
+    def test_only_budgeted_tags_are_shown_others_wait_in_the_picker(self, client, mock_api):
+        mock_api["get"].side_effect = self._fake_get(
+            [{"id": 9, "category_id": None, "tag_id": 5, "amount": "1500.00"}]
+        )
+
+        resp = client.get("/finance/budgets")
+
+        travel_row = resp.text[resp.text.index('data-tag-id="5" data-tag-name="Travel"') - 400:][:400]
+        work_row = resp.text[resp.text.index('data-tag-id="6" data-tag-name="Work"') - 400:][:400]
+        assert " hidden" not in travel_row.split("data-tag-id")[0].split('class="')[-1]
+        assert " hidden" in work_row.split("data-tag-id")[0].split('class="')[-1]
+        assert 'id="budget-tag-picker"' in resp.text
+        assert "removeTagBudget(this)" in resp.text
 
     def test_category_inputs_ignore_tag_targets(self, client, mock_api):
         mock_api["get"].side_effect = self._fake_get(

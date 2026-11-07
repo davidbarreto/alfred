@@ -291,6 +291,38 @@ async def mark_task_done(
     })
 
 
+def _row_response(request: Request, task: dict, **extra) -> HTMLResponse:
+    return templates.TemplateResponse(request, "_task_row.html", {
+        "task": task,
+        "today": local_today().isoformat(),
+        "tomorrow": (local_today() + timedelta(days=1)).isoformat(),
+        **extra,
+    })
+
+
+@router.get("/{task_id}/row", response_class=HTMLResponse)
+async def task_row(task_id: int, request: Request):
+    try:
+        task = await api.get(f"/organizer/tasks/{task_id}")
+    except httpx.HTTPError:
+        return HTMLResponse("Could not load task.", status_code=502)
+    return _row_response(request, task)
+
+
+@router.post("/{task_id}/undo", response_class=HTMLResponse)
+async def undo_task_done(task_id: int, request: Request):
+    # Removes the most recent completion (the API lists them newest first) and re-renders the row.
+    try:
+        completions = await api.get(f"/organizer/tasks/{task_id}/completions")
+        if not completions:
+            return HTMLResponse("Nothing to undo.", status_code=409)
+        await api.delete(f"/organizer/tasks/{task_id}/completions/{completions[0]['id']}")
+        task = await api.get(f"/organizer/tasks/{task_id}")
+    except httpx.HTTPError:
+        return HTMLResponse("Could not undo completion.", status_code=502)
+    return _row_response(request, task)
+
+
 @router.post("/{task_id}/end", response_class=HTMLResponse)
 async def end_recurring_task(task_id: int):
     # Empty body + hx-swap="outerHTML" removes the row: an ended task leaves the active list.
@@ -384,4 +416,13 @@ async def update_task_completion(
         return await _render_history(request, task_id, editing_id=completion_id, error=str(detail))
     except httpx.HTTPError:
         return await _render_history(request, task_id, editing_id=completion_id, error="Could not save changes.")
+    return await _render_history(request, task_id)
+
+
+@router.delete("/{task_id}/completions/{completion_id}", response_class=HTMLResponse)
+async def delete_task_completion(task_id: int, completion_id: int, request: Request):
+    try:
+        await api.delete(f"/organizer/tasks/{task_id}/completions/{completion_id}")
+    except httpx.HTTPError:
+        return await _render_history(request, task_id, error="Could not remove the completion.")
     return await _render_history(request, task_id)

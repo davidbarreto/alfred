@@ -72,6 +72,14 @@
     </span>
     {% endif %}
     <button class="ml-auto text-gray-300 hover:text-gray-600 opacity-0 group-hover/row:opacity-100 transition-opacity"
+            title="Remove this completion"
+            hx-delete="/tasks/{{ task.id }}/completions/{{ c.id }}"
+            hx-target="#task-history-content" hx-swap="innerHTML"
+            hx-confirm="Remove the completion for {{ c.date }}?"
+            hx-on::after-request="if (event.detail.successful) htmx.ajax('GET', '/tasks/{{ task.id }}/row', {target: '#task-{{ task.id }}', swap: 'outerHTML'})">
+      <i class="ti ti-arrow-back-up" style="font-size:0.85rem"></i>
+    </button>
+    <button class="text-gray-300 hover:text-gray-600 opacity-0 group-hover/row:opacity-100 transition-opacity"
             title="Edit dates"
             hx-get="/tasks/{{ task.id }}/completions/{{ c.id }}/edit"
             hx-target="#task-history-content" hx-swap="innerHTML">
@@ -84,3 +92,4 @@
 {% else %}
 <p class="text-sm text-gray-400 text-center py-4">No completions yet.</p>
 {% endif %}
+{% if error and not editing_id %}<p class="text-xs text-[#E24B4A] mt-2">{{ error }}</p>{% endif %}

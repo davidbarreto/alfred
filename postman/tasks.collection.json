@@ -442,6 +442,65 @@
       }
     },
     {
+      "name": "09e - Delete Completion (undo)",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "pm.sendRequest({ url: pm.variables.replaceIn('{{base_url}}/organizer/tasks/{{task_id}}/completions'), method: 'GET', header: { 'Authorization': 'Bearer ' + pm.variables.get('api_token') } }, (err, res) => {",
+              "    const rows = res.json();",
+              "    pm.variables.set('completion_id', rows[rows.length - 1].id);",
+              "    pm.environment.set('deleted_completion_id', rows[rows.length - 1].id);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 204', () => pm.response.to.have.status(204));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/organizer/tasks/{{task_id}}/completions/{{completion_id}}",
+          "host": ["{{base_url}}"],
+          "path": ["organizer", "tasks", "{{task_id}}", "completions", "{{completion_id}}"]
+        }
+      }
+    },
+    {
+      "name": "09f - Delete Completion Again (404)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 404', () => pm.response.to.have.status(404));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/organizer/tasks/{{task_id}}/completions/{{deleted_completion_id}}",
+          "host": ["{{base_url}}"],
+          "path": ["organizer", "tasks", "{{task_id}}", "completions", "{{deleted_completion_id}}"]
+        }
+      }
+    },
+    {
       "name": "10 - List Tasks (Filter by Status TODO — recurring still active)",
       "event": [
         {

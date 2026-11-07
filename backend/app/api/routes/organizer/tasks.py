@@ -82,6 +82,13 @@ async def update_task_completion(
     return result
 
 
+@router.delete("/{task_id}/completions/{completion_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_task_completion(task_id: int, completion_id: int, service: TaskServiceDep):
+    if not await service.delete_completion(task_id, completion_id):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Completion not found")
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
 @router.post("/{task_id}/snooze", response_model=TaskSnoozeRead)
 async def snooze_task(
     task_id: int,

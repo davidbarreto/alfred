@@ -15,7 +15,7 @@ Todo items with status, priority, deadline, tags and recurrence, stored in Notio
 
 - Create, list, search, update, complete, cancel, delete; "pending" shows overdue and today's tasks.
 - Priority and **urgency**: overdue or long-undated tasks escalate to URGENT automatically; **snooze** silences the no-deadline reminder for one task.
-- Recurring tasks (RRULE-style): completing one advances the deadline to the next cycle; completion history is kept (`/organizer/tasks/{id}/completions`).
+- Recurring tasks (RRULE-style): completing one advances the deadline to the next cycle; completion history is kept (`/organizer/tasks/{id}/completions`). A misclicked completion can be undone: `DELETE /organizer/tasks/{id}/completions/{completion_id}` removes it and, when it was the latest one, moves the deadline back a cycle (urgency is not restored). The portal offers an **Undo** link on a row that is done for the cycle and a remove button per entry in the History modal.
 - Planning fields: `estimate_minutes`, `context`, `available_from` (Alfred-only, never sent to Notion).
 - **Portal:** `/tasks` (list with history), `/tasks/insights` (charts, overload section and settings).
 - **Commands:** `task` add / list / search / pending / update / complete / cancel / snooze / delete.

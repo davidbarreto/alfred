@@ -291,6 +291,24 @@ class TestCancelTask:
         assert response.status_code == 403
 
 
+class TestDeleteTaskCompletion:
+    def test_deletes_completion(self, client, mock_service):
+        mock_service.delete_completion.return_value = True
+
+        response = client.delete("/organizer/tasks/1/completions/7", headers=AUTH)
+
+        assert response.status_code == 204
+        mock_service.delete_completion.assert_awaited_once_with(1, 7)
+
+    def test_not_found_is_404(self, client, mock_service):
+        mock_service.delete_completion.return_value = False
+
+        assert client.delete("/organizer/tasks/1/completions/9", headers=AUTH).status_code == 404
+
+    def test_requires_auth(self, client):
+        assert client.delete("/organizer/tasks/1/completions/7").status_code == 403
+
+
 class TestUpdateTaskCompletion:
     def _read(self):
         from datetime import date, datetime, timezone

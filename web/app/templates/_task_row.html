@@ -140,6 +140,15 @@
       <span class="flex items-center gap-1 text-emerald-500 font-medium">
         <i class="ti ti-check" style="font-size:0.8rem"></i>{{ done_label }}
       </span>
+      <button type="button"
+              class="flex items-center gap-1 text-gray-400 hover:text-gray-700 underline decoration-dotted"
+              title="Remove the latest completion"
+              hx-post="/tasks/{{ task.id }}/undo"
+              hx-target="#task-{{ task.id }}"
+              hx-swap="outerHTML"
+              hx-confirm="Undo the latest completion of this task?">
+        <i class="ti ti-arrow-back-up" style="font-size:0.8rem"></i>Undo
+      </button>
       {% endif %}
 
       <!-- In-progress status -->

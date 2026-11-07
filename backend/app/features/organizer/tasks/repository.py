@@ -244,6 +244,10 @@ class TaskRepository:
         await self._session.refresh(completion)
         return completion
 
+    async def delete_completion(self, completion: TaskCompletion) -> None:
+        await self._session.delete(completion)
+        await self._session.commit()
+
     async def complete_occurrence(
         self, task_id: int, occurrence_date: date, completed_on: date | None = None
     ) -> TaskCompletion:

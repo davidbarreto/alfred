@@ -391,6 +391,77 @@ class TestTaskHistoryEditing:
         assert 'name="occurrence_date"' in resp.text
 
 
+class TestUndoCompletion:
+    def test_done_this_cycle_row_has_an_undo_button(self, client, mock_api):
+        done = _task(id=4, recurrence_rule="FREQ=DAILY")
+        done["is_done_in_cycle"] = True
+        mock_api["get"].return_value = [done]
+
+        resp = client.get("/tasks/")
+
+        assert 'hx-post="/tasks/4/undo"' in resp.text
+
+    def test_open_recurring_row_has_no_undo_button(self, client, mock_api):
+        mock_api["get"].return_value = [_task(id=4, recurrence_rule="FREQ=DAILY")]
+
+        assert "/undo" not in client.get("/tasks/").text
+
+    def test_undo_deletes_the_latest_completion_and_rerenders_the_row(self, client, mock_api):
+        mock_api["get"].side_effect = [
+            [_completion(id=9, occurrence_date="2026-09-02"), _completion(id=7)],
+            _task(id=4, title="Water plants", recurrence_rule="FREQ=DAILY"),
+        ]
+
+        resp = client.post("/tasks/4/undo")
+
+        assert resp.status_code == 200
+        assert "Water plants" in resp.text
+        assert 'hx-post="/tasks/4/undo"' not in resp.text
+        mock_api["delete"].assert_called_once_with("/organizer/tasks/4/completions/9")
+
+    def test_undo_without_completions_is_a_conflict(self, client, mock_api):
+        mock_api["get"].return_value = []
+
+        assert client.post("/tasks/4/undo").status_code == 409
+        mock_api["delete"].assert_not_called()
+
+    def test_undo_backend_failure_returns_502(self, client, mock_api):
+        mock_api["get"].return_value = [_completion(id=9)]
+        mock_api["delete"].side_effect = httpx.HTTPError("boom")
+
+        assert client.post("/tasks/4/undo").status_code == 502
+
+    def test_history_delete_removes_the_completion_and_returns_history(self, client, mock_api):
+        mock_api["get"].side_effect = [_task(id=1, recurrence_rule="FREQ=MONTHLY"), []]
+
+        resp = client.delete("/tasks/1/completions/7")
+
+        assert resp.status_code == 200
+        mock_api["delete"].assert_called_once_with("/organizer/tasks/1/completions/7")
+        assert "No completions yet." in resp.text
+
+    def test_history_delete_failure_shows_the_error(self, client, mock_api):
+        mock_api["delete"].side_effect = httpx.HTTPError("boom")
+        mock_api["get"].side_effect = [_task(id=1, recurrence_rule="FREQ=MONTHLY"), [_completion()]]
+
+        resp = client.delete("/tasks/1/completions/7")
+
+        assert "Could not remove the completion." in resp.text
+
+    def test_history_rows_offer_removal(self, client, mock_api):
+        mock_api["get"].side_effect = [_task(id=1, recurrence_rule="FREQ=MONTHLY"), [_completion()]]
+
+        assert 'hx-delete="/tasks/1/completions/7"' in client.get("/tasks/1/history").text
+
+    def test_row_partial_renders_the_current_task(self, client, mock_api):
+        mock_api["get"].return_value = _task(id=4, title="Water plants")
+
+        resp = client.get("/tasks/4/row")
+
+        assert resp.status_code == 200
+        assert "Water plants" in resp.text
+
+
 class TestCreateTaskPlanningFields:
     def test_create_sends_only_the_planning_fields_that_are_set(self, client, mock_api):
         mock_api["post"].return_value = _task(id=9)

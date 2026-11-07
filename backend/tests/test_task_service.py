@@ -9,6 +9,7 @@ from app.features.organizer.tasks.recurrence import (
     is_pending_today,
     missed_count,
     next_deadline,
+    previous_deadline,
     parse_byday as _parse_byday,
 )
 from app.features.organizer.tasks.schemas import TaskCompletionRead, TaskCreate, TaskUpdate, TaskFilters, TaskRead
@@ -479,6 +480,78 @@ class TestNextDeadline:
     ])
     def test_steps_to_the_cycle_after_the_completed_one(self, deadline, rule, done, expected):
         assert next_deadline(deadline, rule, done) == expected
+
+
+class TestPreviousDeadline:
+    @pytest.mark.parametrize("deadline,rule,done", [
+        (datetime(2026, 11, 8, 3, 0), "FREQ=MONTHLY", date(2026, 10, 5)),
+        (datetime(2026, 11, 15, 9, 0), "FREQ=MONTHLY;INTERVAL=3", date(2026, 8, 15)),
+        (datetime(2026, 10, 21, 9, 0), "FREQ=DAILY", date(2026, 10, 20)),
+        (datetime(2026, 10, 26, 9, 0), "FREQ=WEEKLY", date(2026, 10, 21)),
+        (datetime(2026, 10, 30, 9, 0), "FREQ=WEEKLY;BYDAY=FR", date(2026, 10, 23)),
+        (datetime(2026, 10, 22, 9, 0), "FREQ=WEEKLY;BYDAY=MO,TH", date(2026, 10, 19)),
+    ])
+    def test_inverts_next_deadline(self, deadline, rule, done):
+        previous = previous_deadline(deadline, rule, done)
+
+        assert previous is not None
+        assert previous < deadline
+        assert next_deadline(previous, rule, done) == deadline
+
+    def test_deadline_that_was_never_advanced_has_no_previous(self):
+        assert previous_deadline(datetime(2026, 10, 23, 9, 0), "FREQ=WEEKLY;BYDAY=FR", date(2026, 10, 23)) is None
+
+    def test_deadline_edited_by_hand_has_no_previous(self):
+        assert previous_deadline(datetime(2027, 3, 1, 9, 0), "FREQ=MONTHLY", date(2026, 10, 5)) is None
+
+
+class TestDeleteCompletion:
+    def _completion(self, id=7, occ=date(2026, 10, 5)):
+        return MagicMock(id=id, task_id=1, occurrence_date=occ)
+
+    async def test_not_found_returns_false(self, service):
+        service._repo.get_task_completion.return_value = None
+
+        assert await service.delete_completion(1, 99) is False
+        service._repo.delete_completion.assert_not_called()
+
+    async def test_latest_completion_restores_the_deadline(self, service, mock_provider):
+        completion = self._completion()
+        service._repo.get_task_completion.return_value = completion
+        service._repo.get_task_completions.return_value = [completion]
+        service._repo.get_task.return_value = _make_task_orm(
+            recurrence_rule="FREQ=MONTHLY", deadline=datetime(2026, 11, 8, 3, 0)
+        )
+        service._repo.update_task.return_value = _make_task_orm()
+
+        assert await service.delete_completion(1, 7) is True
+
+        service._repo.delete_completion.assert_awaited_once_with(completion)
+        service._repo.update_task.assert_called_once_with(1, TaskUpdate(deadline=datetime(2026, 10, 8, 3, 0)))
+
+    async def test_older_completion_leaves_the_deadline_alone(self, service):
+        newer = self._completion(id=8, occ=date(2026, 10, 12))
+        older = self._completion(id=7, occ=date(2026, 10, 5))
+        service._repo.get_task_completion.return_value = older
+        service._repo.get_task_completions.return_value = [newer, older]
+        service._repo.get_task.return_value = _make_task_orm(
+            recurrence_rule="FREQ=WEEKLY", deadline=datetime(2026, 10, 19, 9, 0)
+        )
+
+        assert await service.delete_completion(1, 7) is True
+
+        service._repo.delete_completion.assert_awaited_once_with(older)
+        service._repo.update_task.assert_not_called()
+
+    async def test_task_without_deadline_is_left_alone(self, service):
+        completion = self._completion()
+        service._repo.get_task_completion.return_value = completion
+        service._repo.get_task_completions.return_value = [completion]
+        service._repo.get_task.return_value = _make_task_orm(recurrence_rule="FREQ=DAILY", deadline=None)
+
+        assert await service.delete_completion(1, 7) is True
+
+        service._repo.update_task.assert_not_called()
 
 
 class TestCancelTask:

@@ -13,7 +13,7 @@ from app.features.organizer.tasks.schemas import (
     TaskUpdate,
     TaskFilters,
 )
-from app.features.organizer.tasks.recurrence import compute_streak, is_done_in_cycle, is_due_today, missed_count, next_deadline
+from app.features.organizer.tasks.recurrence import compute_streak, is_done_in_cycle, is_due_today, missed_count, next_deadline, previous_deadline
 from app.features.organizer.tasks.repository import TaskRepository
 from app.features.core.embeddings.schemas import EmbeddingCreate
 from app.features.core.embeddings.service import EmbeddingService
@@ -213,6 +213,32 @@ class TaskService:
             task_id, completion_id, list(data.model_dump(exclude_unset=True).keys()),
         )
         return TaskCompletionRead.model_validate(updated)
+
+    async def delete_completion(self, task_id: int, completion_id: int) -> bool:
+        """Undo a completion. Returns False when it does not exist.
+
+        When it is the task's latest completion, the deadline that completing it advanced is moved
+        back too. Urgency is not restored: a reset to NORMAL is what the next escalation re-derives.
+        """
+        completion = await self._repo.get_task_completion(task_id, completion_id)
+        if completion is None:
+            logger.debug("Completion delete: task_id=%d completion_id=%d not found", task_id, completion_id)
+            return False
+
+        task = await self._repo.get_task(task_id)
+        completions = await self._repo.get_task_completions(task_id)
+        is_latest = bool(completions) and completions[0].id == completion.id
+        occ_date = completion.occurrence_date
+
+        await self._repo.delete_completion(completion)
+        logger.info("Task completion deleted: task_id=%d completion_id=%d occurrence_date=%s", task_id, completion_id, occ_date)
+
+        if is_latest and task is not None and task.recurrence_rule is not None and task.deadline is not None:
+            previous = previous_deadline(task.deadline, task.recurrence_rule, occ_date)
+            if previous is not None:
+                await self.update_task(task_id, TaskUpdate(deadline=previous))
+                logger.info("Recurring task deadline restored: id=%d", task_id)
+        return True
 
     async def get_completions_history(self, days: int) -> list[TaskCompletionRead]:
         since = local_today() - timedelta(days=days)

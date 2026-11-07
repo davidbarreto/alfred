@@ -183,3 +183,25 @@ def next_deadline(deadline: datetime, rule: str, completed_for: date) -> datetim
         while current.date() <= completed_for:
             current += timedelta(days=interval)
     return current
+
+
+def previous_deadline(deadline: datetime, rule: str, completed_for: date) -> datetime | None:
+    """The deadline `next_deadline` moved on from when `completed_for` was completed, or None.
+
+    Steps the deadline back one period and keeps the result only if completing `completed_for`
+    from there lands exactly on `deadline`. Anything else (a deadline edited by hand since, a rule
+    that cannot be stepped) returns None so an undo never invents a date.
+    """
+    interval = _interval(rule)
+    byday = parse_byday(rule) if "FREQ=WEEKLY" in rule else None
+    if "FREQ=MONTHLY" in rule:
+        candidate = deadline - relativedelta(months=interval)
+    elif "FREQ=WEEKLY" in rule and byday:
+        candidate = deadline - timedelta(days=1)
+        while candidate.weekday() not in byday:
+            candidate -= timedelta(days=1)
+    elif "FREQ=WEEKLY" in rule:
+        candidate = deadline - timedelta(weeks=interval)
+    else:
+        candidate = deadline - timedelta(days=interval)
+    return candidate if next_deadline(candidate, rule, completed_for) == deadline else None

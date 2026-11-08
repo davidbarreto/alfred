@@ -201,6 +201,42 @@ class TestTransactionsPage:
         assert "3 transactions matching filters" in resp.text
 
 
+class TestInstallmentPlanDetailTags:
+    def _get(self, client, mock_api, txn):
+        plan = {
+            "id": 5, "description": "Laptop", "total_installments": 3, "captured_installments": 1,
+            "account_id": 1, "opened_date": "2026-07-01", "original_amount": "300.00",
+            "plan_ref": "REF1", "status": "active", "total_duty_paid": "0.00", "total_interest_paid": "0.00",
+        }
+        data = {
+            "/finance/installment-plans/5": plan,
+            "/finance/transactions": [txn],
+            "/finance/installment-plans/5/slots": [],
+            "/finance/categories": [_category()],
+            "/finance/accounts": [_account()],
+            "/finance/tags": [{"id": 1, "name": "Travel"}],
+        }
+
+        async def fake_get(path, *args, **kwargs):
+            return data.get(path, [])
+
+        mock_api["get"].side_effect = fake_get
+        return client.get("/finance/installments/5")
+
+    def test_rows_show_tags_and_edit_modal_has_a_tags_input(self, client, mock_api):
+        resp = self._get(client, mock_api, {**_txn(id=1), "tags": ["Travel", "Work"]})
+
+        assert ">Travel</span>" in resp.text and ">Work</span>" in resp.text
+        assert 'name="tags"' in resp.text and "data-tag-input" in resp.text
+        assert "&#34;Travel&#34;" in resp.text or '["Travel"]' in resp.text
+
+    def test_rows_cap_tags_and_count_the_rest(self, client, mock_api):
+        resp = self._get(client, mock_api, {**_txn(id=1), "tags": ["A1", "B2", "C3", "D4", "E5"]})
+
+        assert ">C3</span>" in resp.text and ">D4</span>" not in resp.text
+        assert "+2" in resp.text
+
+
 class TestTransactionsListFragment:
     def test_shows_next_when_more_than_page_size(self, client, mock_api):
         mock_api["get"].side_effect = [

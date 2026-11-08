@@ -1792,12 +1792,14 @@ async def installment_plan_detail_page(plan_id: int, request: Request):
         categories = await api.get("/finance/categories")
     except httpx.HTTPError:
         pass
+    tags = await _try_get("/finance/tags") or []
     context = await _installment_plan_accounts_context()
     context.update({
         "plan": plan,
         "transactions": transactions,
         "slots": slots,
         "categories": categories,
+        "tags": tags,
         "currency_symbols": await _currency_symbols(),
     })
     return templates.TemplateResponse(request, "finance_installment_detail.html", context)

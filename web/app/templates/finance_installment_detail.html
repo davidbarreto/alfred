@@ -87,6 +87,8 @@
             {% if txn.note %}
             <i class="ti ti-note flex-shrink-0 text-gray-400 text-xs" title="{{ txn.note }}"></i>
             {% endif %}
+            {% for tag in (txn.tags or [])[:3] %}<span class="flex-shrink-0 rounded-full bg-[#E6F1FB] text-[#0C447C] px-1.5 py-0.5 text-[10px]">{{ tag }}</span>{% endfor %}
+            {% if (txn.tags or []) | length > 3 %}<span class="flex-shrink-0 text-[10px] text-gray-400">+{{ (txn.tags | length) - 3 }}</span>{% endif %}
             {% if can_find_match %}
             <button type="button" onclick="event.stopPropagation(); openTransferMatchModal({{ txn.id }})" class="flex-shrink-0 px-1.5 py-0.5 rounded text-[10px] font-medium bg-blue-50 text-[#378ADD] hover:bg-blue-100" title="Look for a matching transfer leg on another account">find match</button>
             {% endif %}
@@ -184,6 +186,12 @@
         </select>
       </div>
       <div>
+        <label class="text-xs text-gray-500 mb-1 block">Tags</label>
+        <input name="tags" type="text" placeholder="e.g. Travel, Work" data-tag-input data-known='{{ tags | map(attribute="name") | list | tojson }}'
+               class="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white w-full focus:outline-none focus:ring-1 focus:ring-[#378ADD]" />
+        <p class="text-[10px] text-gray-400 mt-1">Context labels like Travel or Work, on top of the category. Press Enter or comma to add; orange chips are new tags.</p>
+      </div>
+      <div>
         <label class="text-xs text-gray-500 mb-1 block">Description</label>
         <input name="description" type="text" placeholder="A more readable description"
                class="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white w-full focus:outline-none focus:ring-1 focus:ring-[#378ADD]" />
@@ -273,6 +281,7 @@ function openEditTransaction(txn) {
   form.querySelector('[name="counterpart_account_id"]').value = txn.counterpart_account_id || "";
   form.querySelector('[name="merchant"]').value = txn.merchant || "";
   form.querySelector('[name="category_id"]').value = txn.category_id || "";
+  form.querySelector('[name="tags"]').value = (txn.tags || []).join(", ");
   form.querySelector('[name="description"]').value = txn.description || "";
   form.querySelector('[name="note"]').value = txn.note || "";
   toggleTxnCounterpartField(txn.type);

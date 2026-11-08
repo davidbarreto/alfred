@@ -220,6 +220,7 @@ class TestInstallmentPlanDetailPage:
             [_transaction()],           # linked transactions
             [],                         # slots
             [],                         # categories
+            [],                         # tags
             [_account()],               # accounts
             [{"code": "EUR", "symbol": "€ "}],  # currencies
         ]
@@ -248,7 +249,7 @@ class TestInstallmentPlanDetailSlots:
             {"position": 2, "status": "missing", "expected_month": "2025-01"},
         ]
         mock_api["get"].side_effect = [
-            _plan(), [_transaction()], slots, [], [_account()], [{"code": "EUR", "symbol": "€ "}],
+            _plan(), [_transaction()], slots, [], [], [_account()], [{"code": "EUR", "symbol": "€ "}],
         ]
 
         resp = client.get("/finance/installments/1")

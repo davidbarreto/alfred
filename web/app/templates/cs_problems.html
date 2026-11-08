@@ -43,7 +43,7 @@
         </div>
         <div>
           <label class="block text-xs text-gray-400 mb-1">Category</label>
-          <select name="tag" class="select select-sm select-bordered text-sm">
+          <select name="tag" data-searchable class="select select-sm select-bordered text-sm">
             <option value="">All</option>
             {% for t in tags %}
             <option value="{{ t }}" {% if filters.tag == t %}selected{% endif %}>{{ t | title }}</option>

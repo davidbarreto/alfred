@@ -54,7 +54,7 @@
         <option value="{{ value }}" {% if value == window %}selected{% endif %}>{{ label }}</option>
         {% endfor %}
       </select>
-      <select name="tag" onchange="this.form.submit()" class="select select-sm select-bordered">
+      <select name="tag" data-searchable onchange="this.form.submit()" class="select select-sm select-bordered">
         <option value="">All tags</option>
         {% for t in tag_options %}
         <option value="{{ t }}" {% if selected_tag and t | lower == selected_tag | lower %}selected{% endif %}>{{ t }}</option>

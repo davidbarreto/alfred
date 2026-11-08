@@ -181,7 +181,6 @@
       menu.replaceChildren();
       getKnown()
         .filter((k) => !taken.has(k.toLowerCase()) && (!lower || k.toLowerCase().includes(lower)))
-        .slice(0, 8)
         .forEach((k) => menu.append(option(k, "", () => add(k))));
       if (query && !canonical(query)) {
         const near = closest(query);

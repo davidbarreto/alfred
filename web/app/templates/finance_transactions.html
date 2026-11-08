@@ -60,6 +60,9 @@
             <button type="button" id="txn-filter-tags-clear" onclick="clearTxnTagFilters()"
               class="ml-auto text-[11px] text-gray-400 hover:text-[#378ADD] {% if not query_filters.tags %}hidden{% endif %}">Clear</button>
           </div>
+          <input type="search" id="txn-filter-tags-search" placeholder="Search tags…" autocomplete="off"
+            oninput="filterTxnTagOptions()"
+            class="w-full mb-2 border border-gray-200 rounded px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-[#378ADD]" />
           {% for tag in tags %}
           <label class="flex items-center gap-2 py-1 px-1 text-sm text-gray-700 hover:bg-gray-50 rounded cursor-pointer whitespace-nowrap">
             <input
@@ -397,6 +400,20 @@ function _hasTxnFilters() {
     || document.querySelector(".txn-filter-tag-checkbox:checked") !== null
     || Boolean(_txnCurrency);
 }
+
+function filterTxnTagOptions() {
+  const q = document.getElementById("txn-filter-tags-search").value.trim().toLowerCase();
+  document.querySelectorAll(".txn-filter-tag-checkbox").forEach(cb => {
+    cb.parentElement.classList.toggle("hidden", q !== "" && !cb.value.toLowerCase().includes(q));
+  });
+}
+
+document.getElementById("txn-filter-tags-details")?.addEventListener("toggle", e => {
+  const search = document.getElementById("txn-filter-tags-search");
+  if (!search) return;
+  if (e.target.open) search.focus();
+  else { search.value = ""; filterTxnTagOptions(); }
+});
 
 function clearTxnTagFilters() {
   document.querySelectorAll(".txn-filter-tag-checkbox:checked").forEach(el => { el.checked = false; });

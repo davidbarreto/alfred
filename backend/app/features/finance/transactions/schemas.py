@@ -207,11 +207,11 @@ class TransactionFilters:
         e.g. ["Travel", "Barcelona"] means both. "any": carrying at least one is
         enough (OR)."""
         self.search = search
-        """Free-text match across description/merchant/bank_description (whichever
-        is set -- see TransactionRepository._NAME_COLUMN), unlike `merchant` which
-        only matches the merchant column. Used by the manual transfer-link search
-        (see TransactionService.search_link_candidates), where the target
-        transaction's own text is unknown ahead of time."""
+        """Free-text match against any of description / merchant / bank_description
+        (the name given by the user and the raw name from the import file), unlike
+        `merchant` which only matches the merchant column. Used by the portal's
+        transaction search and the manual transfer-link search (see
+        TransactionService.search_link_candidates)."""
         self.from_date = from_date
         self.to_date = to_date
         self.period = period

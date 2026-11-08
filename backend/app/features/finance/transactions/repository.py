@@ -174,7 +174,14 @@ def _filter_conditions(filters: Any, cycle_start_day: int = 1) -> list:
         conditions.append(Transaction.merchant.ilike(f"%{filters.merchant}%"))
     conditions.extend(_tag_conditions(getattr(filters, "tags", None), getattr(filters, "tags_mode", "all")))
     if getattr(filters, "search", None):
-        conditions.append(_NAME_COLUMN.ilike(f"%{filters.search}%"))
+        pattern = f"%{filters.search}%"
+        conditions.append(
+            or_(
+                Transaction.description.ilike(pattern),
+                Transaction.merchant.ilike(pattern),
+                Transaction.bank_description.ilike(pattern),
+            )
+        )
     if filters.currency is not None and filters.currency != GLOBAL_CURRENCY:
         conditions.append(Transaction.currency == filters.currency)
     if filters.from_date is not None:

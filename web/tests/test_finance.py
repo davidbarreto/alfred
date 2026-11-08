@@ -148,6 +148,16 @@ class TestTransactionsPage:
         txn_call = next(c for c in calls if c.args[0] == "/finance/transactions")
         assert txn_call.kwargs["params"]["merchant"] == "Continente"
 
+    def test_search_filter_passed_to_api_and_restored_in_the_input(self, client, mock_api):
+        mock_api["get"].side_effect = [[], None, [], [], [], [], []]
+
+        resp = client.get("/finance/transactions?search=PAGAMENTO")
+
+        calls = mock_api["get"].call_args_list
+        txn_call = next(c for c in calls if c.args[0] == "/finance/transactions")
+        assert txn_call.kwargs["params"]["search"] == "PAGAMENTO"
+        assert 'id="txn-filter-search"' in resp.text and 'value="PAGAMENTO"' in resp.text
+
     def test_uncategorized_filter_passed_to_api(self, client, mock_api):
         mock_api["get"].side_effect = [[], None, [], [], [], [], []]
 

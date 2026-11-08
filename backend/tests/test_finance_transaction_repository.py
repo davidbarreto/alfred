@@ -425,8 +425,10 @@ class TestList:
         await TransactionRepository(session).list(TransactionFilters(search="Revolut"))
         query = session.execute.call_args.args[0]
         sql = str(query.compile(compile_kwargs={"literal_binds": True}))
-        assert "Revolut" in sql
-        assert "coalesce" in sql.lower()
+        where = sql[sql.lower().index("where"):].lower()
+        assert "coalesce" not in where
+        for column in ("description", "merchant", "bank_description"):
+            assert f"lower(finance.transactions.{column}) like lower('%revolut%')" in where
 
     async def test_unconfirmed_transfer_filter(self):
         session = _make_session()

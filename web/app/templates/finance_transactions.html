@@ -97,6 +97,17 @@
       />
     </div>
     <div>
+      <label class="text-xs text-gray-500 mb-1 block">Name</label>
+      <input
+        id="txn-filter-search"
+        type="text"
+        value="{{ query_filters.search or '' }}"
+        placeholder="Search name or bank text…"
+        class="border border-gray-200 rounded-lg px-3 py-1.5 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-[#378ADD]"
+        onchange="applyTxnFilters()"
+      />
+    </div>
+    <div>
       <label class="text-xs text-gray-500 mb-1 block">From</label>
       <input id="txn-filter-from" type="date" value="{{ query_filters.from_date or '' }}"
         class="border border-gray-200 rounded-lg px-2 py-1.5 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-[#378ADD]"
@@ -132,7 +143,7 @@
       </label>
     </div>
     <button id="txn-clear-filters" onclick="clearTxnFilters()"
-      class="btn btn-sm btn-ghost text-gray-500 gap-1{% if not (query_filters.type or query_filters.category_id or query_filters.uncategorized or query_filters.tags or query_filters.account_id or query_filters.merchant or query_filters.from_date or query_filters.to_date or query_filters.currency or query_filters.unconfirmed_transfer) %} hidden{% endif %}">
+      class="btn btn-sm btn-ghost text-gray-500 gap-1{% if not (query_filters.type or query_filters.category_id or query_filters.uncategorized or query_filters.tags or query_filters.account_id or query_filters.merchant or query_filters.search or query_filters.from_date or query_filters.to_date or query_filters.currency or query_filters.unconfirmed_transfer) %} hidden{% endif %}">
       <i class="ti ti-x text-xs"></i>Clear filters
     </button>
     {% if query_filters.account_id %}
@@ -347,6 +358,7 @@ function _txnQuery() {
   const tagsMode = tagsModeEl ? tagsModeEl.value : "all";
   const account = document.getElementById("txn-filter-account").value;
   const merchant = document.getElementById("txn-filter-merchant").value;
+  const search = document.getElementById("txn-filter-search").value.trim();
   const fromDate = document.getElementById("txn-filter-from").value;
   const toDate = document.getElementById("txn-filter-to").value;
   const sort = document.getElementById("txn-filter-sort").value;
@@ -358,6 +370,7 @@ function _txnQuery() {
   if (tags.length && tagsMode !== "all") params.set("tags_mode", tagsMode);
   if (account) params.set("account_id", account);
   if (merchant) params.set("merchant", merchant);
+  if (search) params.set("search", search);
   if (fromDate) params.set("from_date", fromDate);
   if (toDate) params.set("to_date", toDate);
   if (unconfirmedTransfer) params.set("unconfirmed_transfer", "true");
@@ -378,7 +391,7 @@ function refreshTxnList() {
 }
 
 function _hasTxnFilters() {
-  const ids = ["type", "category", "account", "merchant", "from", "to"];
+  const ids = ["type", "category", "account", "merchant", "search", "from", "to"];
   return ids.some(id => document.getElementById("txn-filter-" + id).value)
     || document.getElementById("txn-filter-unconfirmed-transfer").checked
     || document.querySelector(".txn-filter-tag-checkbox:checked") !== null

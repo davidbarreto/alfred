@@ -29,6 +29,7 @@ def _parse_txn_query(request: Request) -> tuple[dict, int]:
         "tags_mode": qp.get("tags_mode") or None,
         "account_id": qp.get("account_id") or None,
         "merchant": qp.get("merchant") or None,
+        "search": qp.get("search") or None,
         "from_date": qp.get("from_date") or None,
         "to_date": qp.get("to_date") or None,
         "currency": qp.get("currency") or None,

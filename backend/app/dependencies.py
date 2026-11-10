@@ -122,6 +122,7 @@ from app.features.travel.default_tags import TripDefaultTagService
 from app.features.travel.legs.service import LegService
 from app.features.travel.transaction_links.service import TransactionLinkService
 from app.features.travel.places.service import PlaceService
+from app.features.travel.recap.service import TripRecapService
 from app.features.travel.settings_service import TravelSettingsService
 from app.features.travel.stays.service import StayService
 from app.features.travel.tags.service import TravelTagService
@@ -674,7 +675,11 @@ def get_travel_services(session: AsyncSession = Depends(get_session)) -> TravelS
         trips=get_trip_service(session), legs=get_leg_service(session), stays=get_stay_service(session),
         places=get_place_service(session), visits=get_visit_service(session),
         links=TransactionLinkService(session), default_tags=TripDefaultTagService(session),
+        recap=TripRecapService(session),
     )
+
+def get_trip_recap_service(session: AsyncSession = Depends(get_session)) -> TripRecapService:
+    return TripRecapService(session)
 
 def get_codeforces_sync_service(session: AsyncSession = Depends(get_session)) -> CodeforcesSyncService:
     return CodeforcesSyncService(session, CodeforcesClient())
@@ -812,4 +817,5 @@ TransactionLinkServiceDep = Annotated[TransactionLinkService, Depends(get_transa
 TripDefaultTagServiceDep = Annotated[TripDefaultTagService, Depends(get_trip_default_tag_service)]
 CalendarImportServiceDep = Annotated[CalendarImportService, Depends(get_calendar_import_service)]
 TravelServicesDep = Annotated[TravelServices, Depends(get_travel_services)]
+TripRecapServiceDep = Annotated[TripRecapService, Depends(get_trip_recap_service)]
 TravelTagServiceDep = Annotated[TravelTagService, Depends(get_travel_tag_service)]

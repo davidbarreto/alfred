@@ -50,13 +50,16 @@ def _filters(request: Request) -> dict:
         "q": (params.get("q") or "").strip(),
         "date_from": params.get("date_from") or "",
         "date_to": params.get("date_to") or "",
+        "city": (params.get("city") or "").strip(),
+        "country": (params.get("country") or "").strip(),
     }
 
 
 def _list_context(request: Request, trips: list | None, offset: int, filters: dict) -> dict:
     page, has_next, has_prev = _pagination(trips or [], offset)
     query = [("status", filters["status"]), ("q", filters["q"]), ("date_from", filters["date_from"]),
-             ("date_to", filters["date_to"]), *[("tag", t) for t in filters["tags"]]]
+             ("date_to", filters["date_to"]), ("city", filters["city"]), ("country", filters["country"]),
+             *[("tag", t) for t in filters["tags"]]]
     return {
         "trips": page,
         "available": trips is not None,
@@ -71,7 +74,7 @@ def _list_context(request: Request, trips: list | None, offset: int, filters: di
 async def _fetch_trips(filters: dict, offset: int) -> list | None:
     params: list[tuple[str, object]] = [("status", filters["status"]), ("limit", _PAGE_SIZE + 1), ("offset", offset)]
     params += [("tag", t) for t in filters["tags"]]
-    for key in ("q", "date_from", "date_to"):
+    for key in ("q", "date_from", "date_to", "city", "country"):
         if filters[key]:
             params.append((key, filters[key]))
     return await safe_get("/travel/trips", params=params)
@@ -209,6 +212,7 @@ def _place_filters(request: Request) -> dict:
         "min_grade": params.get("min_grade") if params.get("min_grade") in ("1", "2", "3", "4", "5") else "",
         "status": status if status in ("planned", "visited", "missed") else "",
         "no_trip": params.get("no_trip") in ("1", "true", "on"),
+        "ungraded": params.get("ungraded") in ("1", "true", "on"),
     }
 
 
@@ -218,6 +222,8 @@ def _places_context(places: list | None, offset: int, filters: dict) -> dict:
     query += [("tag", t) for t in filters["tags"]]
     if filters["no_trip"]:
         query.append(("no_trip", "1"))
+    if filters["ungraded"]:
+        query.append(("ungraded", "1"))
     return {
         "places": page, "available": places is not None, "offset": offset, "has_next": has_next,
         "has_prev": has_prev, "page_size": _PAGE_SIZE, "query": urlencode([(k, v) for k, v in query if v]),
@@ -232,6 +238,8 @@ async def _fetch_places(filters: dict, offset: int) -> list | None:
     params += [("tag", t) for t in filters["tags"]]
     if filters["no_trip"]:
         params.append(("no_trip", "true"))
+    if filters["ungraded"]:
+        params.append(("ungraded", "true"))
     return await safe_get("/travel/places", params=params)
 
 
@@ -290,6 +298,14 @@ async def place_page(place_id: int, request: Request):
     return templates.TemplateResponse(request, "travel_place.html", {
         "place": place, "place_kinds": _PLACE_KINDS, "place_cost": costs["total"] if costs else None,
     })
+
+
+@router.get("/{trip_id}/recap", response_class=HTMLResponse)
+async def recap_page(trip_id: int, request: Request):
+    recap = await safe_get(f"/travel/trips/{trip_id}/recap")
+    if recap is None:
+        return RedirectResponse(f"/travel/{trip_id}", status_code=302)
+    return templates.TemplateResponse(request, "travel_recap.html", {"recap": recap})
 
 
 @router.get("/{trip_id}", response_class=HTMLResponse)

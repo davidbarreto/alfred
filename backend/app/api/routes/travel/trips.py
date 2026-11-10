@@ -3,7 +3,8 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 
 from app.api.auth import require_auth
-from app.dependencies import TripServiceDep
+from app.dependencies import TripRecapServiceDep, TripServiceDep
+from app.features.travel.recap.schemas import TripRecap
 from app.features.travel.trips.schemas import TripCreate, TripDetail, TripFilters, TripRead, TripUpdate
 
 router = APIRouter(prefix="/travel/trips", tags=["travel"], dependencies=[Depends(require_auth)])
@@ -17,6 +18,15 @@ async def get_trips(service: TripServiceDep, filters: Annotated[TripFilters, Dep
 @router.post("", response_model=TripRead, status_code=status.HTTP_201_CREATED)
 async def create_trip(request: TripCreate, service: TripServiceDep) -> TripRead:
     return await service.create_trip(request)
+
+
+@router.get("/{trip_id}/recap", response_model=TripRecap)
+async def get_trip_recap(trip_id: int, service: TripRecapServiceDep) -> TripRecap:
+    """What a finished trip came to: spend, places visited, and what is still to grade or write down."""
+    recap = await service.get_recap(trip_id)
+    if recap is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Trip not found")
+    return recap
 
 
 @router.get("/{trip_id}", response_model=TripDetail)

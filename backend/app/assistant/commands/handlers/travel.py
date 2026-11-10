@@ -11,6 +11,7 @@ from app.features.travel.errors import TravelConflictError, TravelNotFoundError
 from app.features.travel.default_tags import TripDefaultTagService
 from app.features.travel.legs.schemas import LegCreate, LegRead, LegUpdate
 from app.features.travel.legs.service import LegService
+from app.features.travel.recap.service import TripRecapService
 from app.features.travel.places.schemas import PlaceCreate, PlaceFilters, PlaceRead, PlaceUpdate
 from app.features.travel.places.service import PlaceInUseError, PlaceService
 from app.features.travel.stays.schemas import StayCreate, StayRead, StayUpdate
@@ -33,6 +34,7 @@ class TravelServices:
     visits: VisitService
     links: TransactionLinkService
     default_tags: TripDefaultTagService
+    recap: TripRecapService
 
 
 def _bad_request(detail: str) -> HTTPException:
@@ -217,7 +219,8 @@ async def _trip(command: str, arguments: dict[str, Any], services: TravelService
         if status_filter not in TRIP_STATUS_FILTERS:
             raise _bad_request(f"status must be one of {', '.join(TRIP_STATUS_FILTERS)}, got {status_filter!r}")
         filters = TripFilters(
-            status=status_filter, tag=tags or None, q=_text(arguments, "q"), date_from=None, date_to=None, limit=limit, offset=0,
+            status=status_filter, tag=tags or None, q=_text(arguments, "q"), date_from=None, date_to=None,
+            city=_text(arguments, "city"), country=_text(arguments, "country"), limit=limit, offset=0,
         )
         trips = await services.trips.get_trips(filters)
         return {"count": len(trips), "trips": [_trip_summary(t) for t in trips]}
@@ -286,6 +289,16 @@ async def _trip(command: str, arguments: dict[str, Any], services: TravelService
         if costs is None:
             raise _not_found("Trip", trip_id)
         return costs.model_dump(mode="json")
+
+    if command == "recap":
+        ref = _text(arguments, "trip")
+        if not ref:
+            raise _bad_request("trip is required")
+        trip = await _find_trip(services, ref)
+        recap = await services.recap.get_recap(trip.id)
+        if recap is None:
+            raise _not_found("Trip", trip.id)
+        return recap.model_dump(mode="json")
 
     if command == "apply_tags":
         trip_id = require_int(arguments, "id")
@@ -404,7 +417,8 @@ async def _place(command: str, arguments: dict[str, Any], services: TravelServic
         filters = PlaceFilters(
             q=_text(arguments, "q"), kind=_text(arguments, "kind"), city=_text(arguments, "city"),
             country=_text(arguments, "country"), tag=parse_tags(arguments.get("tag")) or None,
-            min_grade=parse_int(arguments.get("min_grade"), "min_grade"), status=_text(arguments, "status"),
+            min_grade=parse_int(arguments.get("min_grade"), "min_grade"), ungraded=_flag(arguments, "ungraded"),
+            status=_text(arguments, "status"),
             no_trip=_flag(arguments, "no_trip"), limit=optional_int(arguments, "limit", 20),
             offset=optional_int(arguments, "offset", 0),
         )

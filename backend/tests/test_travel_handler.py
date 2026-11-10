@@ -62,7 +62,7 @@ def _visit(id=11, status="planned", grade=None):
 def services():
     s = TravelServices(
         trips=AsyncMock(), legs=AsyncMock(), stays=AsyncMock(), places=AsyncMock(), visits=AsyncMock(),
-        links=AsyncMock(), default_tags=AsyncMock(),
+        links=AsyncMock(), default_tags=AsyncMock(), recap=AsyncMock(),
     )
     return s
 
@@ -188,6 +188,36 @@ class TestTrips:
         assert (await run("travel_trip", "apply_tags", {"id": "1"}, services))["added"] == 3
         services.default_tags.apply_to_existing.return_value = ([], 0)
         assert (await run("travel_trip", "apply_tags", {"id": "1"}, services))["tags"] == []
+
+
+class TestRecapAndFilters:
+    async def test_recap_by_name_returns_the_recap(self, services):
+        from app.features.travel.recap.schemas import TripRecap
+
+        services.trips.get_trips.return_value = [_trip()]
+        services.recap.get_recap.return_value = TripRecap(
+            trip_id=1, name="Example trip", start_date=date(2031, 12, 17), end_date=date(2031, 12, 24), status="past", days=8,
+            leg_count=2, stay_count=1, visits_visited=3, visits_missed=1, visits_planned=0, cities=["Lisbon"], countries=[],
+            spend=Cost(total_eur="250.00", transaction_count=3), spend_by_kind=[], to_complete=[], highlights=[],
+        )
+        result = await run("travel_trip", "recap", {"trip": "example"}, services)
+        assert result["days"] == 8 and result["spend"]["total_eur"] == "250.00"
+        services.recap.get_recap.assert_awaited_once_with(1)
+
+    async def test_recap_needs_a_trip(self, services):
+        with pytest.raises(HTTPException):
+            await run("travel_trip", "recap", {}, services)
+
+    async def test_trip_list_filters_by_city_and_country(self, services):
+        services.trips.get_trips.return_value = []
+        await run("travel_trip", "list", {"city": "Lisbon", "country": "Portugal"}, services)
+        f = services.trips.get_trips.await_args.args[0]
+        assert (f.city, f.country) == ("Lisbon", "Portugal")
+
+    async def test_place_list_can_ask_for_ungraded_places(self, services):
+        services.places.get_places.return_value = []
+        await run("travel_place", "list", {"ungraded": "true"}, services)
+        assert services.places.get_places.await_args.args[0].ungraded is True
 
 
 class TestLegs:

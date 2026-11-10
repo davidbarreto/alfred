@@ -48,6 +48,8 @@ class PlaceRepository:
             grades = _grades()
             good = select(grades.c.place_id).group_by(grades.c.place_id).having(func.avg(grades.c.grade) >= filters.min_grade)
             stmt = stmt.where(Place.id.in_(good))
+        if filters.ungraded:
+            stmt = stmt.where(~Place.id.in_(select(_grades().c.place_id)))
         if filters.status:
             stmt = stmt.where(Place.id.in_(select(Visit.place_id).where(Visit.status == filters.status)))
         if filters.no_trip:

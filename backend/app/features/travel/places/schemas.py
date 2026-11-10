@@ -85,6 +85,7 @@ class PlaceFilters:
         country: Annotated[str | None, Query()] = None,
         tag: Annotated[list[str] | None, Query(description="Place must carry every given tag")] = None,
         min_grade: Annotated[int | None, Query(ge=1, le=5, description="Minimum derived grade")] = None,
+        ungraded: Annotated[bool, Query(description="Only places with no grade yet")] = False,
         status: Annotated[VisitStatus | None, Query(description="Has a visit with this status")] = None,
         no_trip: Annotated[bool, Query(description="Only places in no trip (no visit or stay carries a trip)")] = False,
         limit: Annotated[int, Query(ge=1, le=500)] = 50,
@@ -96,6 +97,7 @@ class PlaceFilters:
         self.country = country
         self.tag = tag
         self.min_grade = min_grade
+        self.ungraded = ungraded
         self.status = status
         self.no_trip = no_trip
         self.limit = limit

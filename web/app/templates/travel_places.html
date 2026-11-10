@@ -36,6 +36,9 @@
     <label class="inline-flex items-center gap-1 text-xs text-gray-600 pb-2">
       <input type="checkbox" name="no_trip" value="1" class="checkbox checkbox-xs" {{ 'checked' if filters.no_trip }}>Not in any trip
     </label>
+    <label class="inline-flex items-center gap-1 text-xs text-gray-600 pb-2">
+      <input type="checkbox" name="ungraded" value="1" class="checkbox checkbox-xs" {{ 'checked' if filters.ungraded }}>No grade yet
+    </label>
     {% if all_tags %}
     <div class="flex flex-wrap items-center gap-2 pb-1">
       {% for tag in all_tags %}

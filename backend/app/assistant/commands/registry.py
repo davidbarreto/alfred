@@ -308,7 +308,7 @@ PLACE_FLAGS = {
 }
 PLACE_LIST_FLAGS = {
     "--kind": "kind", "--city": "city", "--country": "country", "--tag": "tag", "--min-grade": "min_grade",
-    "--status": "status", "--no-trip": "no_trip", **FLAG_LIMIT, "--offset": "offset",
+    "--ungraded": "ungraded", "--status": "status", "--no-trip": "no_trip", **FLAG_LIMIT, "--offset": "offset",
 }
 VISIT_FLAGS = {
     "--trip": "trip", "--date": "date", "--time": "time", "--status": "status", "--grade": "grade", "--notes": "notes",
@@ -1146,7 +1146,7 @@ COMMAND_DEFINITIONS = {
             "description": "List trips: current (upcoming + ongoing, default), upcoming, ongoing, past or all; filter by tag or name",
             "details": _TRIP_OVERVIEW + " The first argument is the status filter.",
             "aliases": ["/trips", "/triplist"],
-            "flags": {"--tag": "tag", "--q": "q", **FLAG_LIMIT},
+            "flags": {"--tag": "tag", "--q": "q", "--city": "city", "--country": "country", **FLAG_LIMIT},
             "arg_keys": ["status"],
         },
         "get": {
@@ -1187,6 +1187,14 @@ COMMAND_DEFINITIONS = {
             "flags": {},
             "requires_args": True,
             "arg_keys": ["id"],
+        },
+        "recap": {
+            "description": "Recap of a trip (by id or name): spend, days, cities, visits done and missed, highlights and what is still to grade",
+            "details": "Meant for after the trip. to_complete lists visited visits and stays that still lack a grade or notes; spend is derived from linked transactions.",
+            "aliases": ["/triprecap"],
+            "flags": {},
+            "requires_args": True,
+            "arg_keys": ["trip"],
         },
         "apply_tags": {
             "description": "Tag the expenses already dated within a trip with the trip's finance tags",

@@ -478,3 +478,77 @@ class TestDefaultTagsAndCalendarImport:
         _route(mock_api, {"/travel/trips/1/costs": None, "/travel/trips/1": _detail(), "/travel/places": []})
         html = client.get("/travel/1").text
         assert 'id="import-calendar"' in html and 'id="calendar-dialog"' in html
+
+
+def _recap(**kw):
+    recap = {
+        "trip_id": 1, "name": "Example trip", "start_date": "2031-12-17", "end_date": "2031-12-24", "status": "past", "days": 8,
+        "leg_count": 2, "stay_count": 1, "visits_visited": 3, "visits_missed": 1, "visits_planned": 2,
+        "cities": ["Lisbon", "Porto"], "countries": ["Portugal"],
+        "spend": _cost("250.00", 3, 1), "spend_by_kind": [{"kind": "flight", **_cost("120.00")}],
+        "to_complete": [
+            {"kind": "visit", "id": 11, "place_id": 31, "place_name": "Cafe Example", "day": "2031-12-19", "missing": ["grade", "notes"]},
+            {"kind": "stay", "id": 7, "place_id": 3, "place_name": "Hotel Example", "day": None, "missing": ["grade"]},
+        ],
+        "highlights": [{"kind": "visit", "id": 12, "place_id": 32, "place_name": "Museum Example", "grade": 5}],
+    }
+    recap.update(kw)
+    return recap
+
+
+class TestRecapPage:
+    def test_shows_numbers_highlights_and_what_is_left(self, client, mock_api):
+        _route(mock_api, {"/travel/trips/1/recap": _recap()})
+        html = client.get("/travel/1/recap").text
+        assert "250.00 €" in html and "1 not in EUR yet" in html and "8 days" in html
+        assert "Lisbon, Porto" in html and "Portugal" in html and "flight: <strong>120.00 €</strong>" in html
+        assert "1 missed · 2 never done" in html
+        assert "Museum Example" in html and "5/5" in html
+        assert "grade and notes missing" in html and "grade missing" in html and 'href="/travel/places/31"' in html
+
+    def test_nothing_left_to_write_down(self, client, mock_api):
+        _route(mock_api, {"/travel/trips/1/recap": _recap(to_complete=[], highlights=[])})
+        html = client.get("/travel/1/recap").text
+        assert "Every visit and stay has a grade and notes" in html and 'id="recap-highlights"' not in html
+
+    def test_unfinished_trip_says_so(self, client, mock_api):
+        _route(mock_api, {"/travel/trips/1/recap": _recap(status="upcoming")})
+        assert "not finished yet" in client.get("/travel/1/recap").text
+
+    def test_unknown_trip_goes_back_to_the_trip_page(self, client, mock_api):
+        _route(mock_api, {"/travel/trips/9/recap": httpx.HTTPStatusError("x", request=httpx.Request("GET", "http://a"), response=httpx.Response(404))})
+        resp = client.get("/travel/9/recap", follow_redirects=False)
+        assert resp.status_code == 302 and resp.headers["location"] == "/travel/9"
+
+    def test_trip_page_links_to_the_recap(self, client, mock_api):
+        _route(mock_api, {"/travel/trips/1/costs": None, "/travel/trips/1": _detail(), "/travel/places": []})
+        assert 'href="/travel/1/recap"' in client.get("/travel/1").text
+
+
+class TestSearchFilters:
+    def test_trip_city_and_country_filters_are_forwarded(self, client, mock_api):
+        _route(mock_api, {"/travel/trips": [_trip()]})
+        client.get("/travel/list?status=all&city=Lisbon&country=Portugal")
+        params = mock_api["get"].await_args_list[0].kwargs["params"]
+        assert ("city", "Lisbon") in params and ("country", "Portugal") in params
+
+    def test_trip_pagination_keeps_city_and_country(self, client, mock_api):
+        _route(mock_api, {"/travel/trips": [_trip(id=i) for i in range(1, 23)]})
+        html = client.get("/travel/list?city=Lisbon&country=Portugal").text
+        assert "city=Lisbon" in html and "country=Portugal" in html and "offset=20" in html
+
+    def test_trip_filter_inputs_are_prefilled(self, client, mock_api):
+        _route(mock_api, {"/travel/trips": [], "/travel/tags": [], "/travel/settings": None})
+        html = client.get("/travel?city=Lisbon&country=Portugal").text
+        assert 'name="city" value="Lisbon"' in html and 'name="country" value="Portugal"' in html
+
+    def test_places_can_be_filtered_to_ungraded(self, client, mock_api):
+        _route(mock_api, {"/travel/places": []})
+        client.get("/travel/places/list?ungraded=1&kind=cafe")
+        params = mock_api["get"].await_args_list[0].kwargs["params"]
+        assert ("ungraded", "true") in params and ("kind", "cafe") in params
+
+    def test_places_ungraded_checkbox_and_pagination(self, client, mock_api):
+        _route(mock_api, {"/travel/places": [_place(id=i) for i in range(1, 23)], "/travel/tags": []})
+        assert 'name="ungraded"' in client.get("/travel/places").text
+        assert "ungraded=1" in client.get("/travel/places/list?ungraded=1").text

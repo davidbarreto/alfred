@@ -98,6 +98,8 @@ class TripFilters:
         q: Annotated[str | None, Query(description="Substring of the trip name")] = None,
         date_from: Annotated[date | None, Query(description="Trips ending on or after this date")] = None,
         date_to: Annotated[date | None, Query(description="Trips starting on or before this date")] = None,
+        city: Annotated[str | None, Query(description="Trips with a stay or visit in a place in this city")] = None,
+        country: Annotated[str | None, Query(description="Trips with a stay or visit in a place in this country")] = None,
         limit: Annotated[int, Query(ge=1, le=500)] = 50,
         offset: Annotated[int, Query(ge=0)] = 0,
     ):
@@ -106,6 +108,8 @@ class TripFilters:
         self.q = q
         self.date_from = date_from
         self.date_to = date_to
+        self.city = city
+        self.country = country
         self.limit = limit
         self.offset = offset
 

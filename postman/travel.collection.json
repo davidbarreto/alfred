@@ -1834,7 +1834,219 @@
       }
     },
     {
-      "name": "47 - Get Place Costs",
+      "name": "47 - Get Trip Recap",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "const j = pm.response.json();",
+              "pm.test('Spend and span', () => { pm.expect(j.spend.total_eur).to.eql('25.50'); pm.expect(j.days).to.eql(8); });",
+              "pm.test('Where it went', () => { pm.expect(j.cities).to.eql(['Testville']); pm.expect(j.countries).to.eql(['Testland']); });",
+              "pm.test('One visit done', () => { pm.expect(j.visits_visited).to.eql(1); pm.expect(j.visits_planned).to.eql(0); });",
+              "pm.test('The stay still needs a grade and notes', () => { const stay = j.to_complete.find(i => i.kind === 'stay'); pm.expect(stay.missing).to.eql(['grade', 'notes']); });",
+              "pm.test('The graded visit is complete and a highlight', () => { pm.expect(j.to_complete.find(i => i.kind === 'visit')).to.eql(undefined); pm.expect(j.highlights[0].grade).to.eql(5); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/trips/{{travel_trip_id}}/recap",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "trips",
+            "{{travel_trip_id}}",
+            "recap"
+          ]
+        }
+      }
+    },
+    {
+      "name": "48 - Get Recap Of Unknown Trip",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 404', () => pm.response.to.have.status(404));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/trips/999999999/recap",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "trips",
+            "999999999",
+            "recap"
+          ]
+        }
+      }
+    },
+    {
+      "name": "49 - List Trips By City And Country",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Found through its stay and visit', () => pm.expect(pm.response.json().map(t => t.id)).to.include(Number(pm.environment.get('travel_trip_id'))));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/trips?status=all&city=testville&country=TESTLAND",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "trips"
+          ],
+          "query": [
+            {
+              "key": "status",
+              "value": "all"
+            },
+            {
+              "key": "city",
+              "value": "testville"
+            },
+            {
+              "key": "country",
+              "value": "TESTLAND"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "50 - List Trips In Another City",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Not listed', () => pm.expect(pm.response.json().map(t => t.id)).to.not.include(Number(pm.environment.get('travel_trip_id'))));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/trips?status=all&city=Atlantis Postman",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "trips"
+          ],
+          "query": [
+            {
+              "key": "status",
+              "value": "all"
+            },
+            {
+              "key": "city",
+              "value": "Atlantis Postman"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "51 - List Ungraded Places",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('A graded place is not listed', () => pm.expect(pm.response.json().map(p => p.id)).to.not.include(Number(pm.environment.get('travel_place_id'))));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/places?ungraded=true&city=Testville",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "places"
+          ],
+          "query": [
+            {
+              "key": "ungraded",
+              "value": "true"
+            },
+            {
+              "key": "city",
+              "value": "Testville"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "52 - Get Place Costs",
       "event": [
         {
           "listen": "test",
@@ -1870,7 +2082,7 @@
       }
     },
     {
-      "name": "48 - Apply Default Tags To Existing Expenses",
+      "name": "53 - Apply Default Tags To Existing Expenses",
       "event": [
         {
           "listen": "test",
@@ -1908,7 +2120,7 @@
       }
     },
     {
-      "name": "49 - List Calendar Candidates",
+      "name": "54 - List Calendar Candidates",
       "event": [
         {
           "listen": "test",
@@ -1944,7 +2156,7 @@
       }
     },
     {
-      "name": "50 - List Calendar Candidates Of Unknown Trip",
+      "name": "55 - List Calendar Candidates Of Unknown Trip",
       "event": [
         {
           "listen": "test",
@@ -1979,7 +2191,7 @@
       }
     },
     {
-      "name": "51 - Create Leg From Unknown Calendar Event",
+      "name": "56 - Create Leg From Unknown Calendar Event",
       "event": [
         {
           "listen": "test",
@@ -2016,7 +2228,7 @@
       }
     },
     {
-      "name": "52 - Unlink Refund From Stay",
+      "name": "57 - Unlink Refund From Stay",
       "event": [
         {
           "listen": "test",
@@ -2052,7 +2264,7 @@
       }
     },
     {
-      "name": "53 - Unlink Again",
+      "name": "58 - Unlink Again",
       "event": [
         {
           "listen": "test",
@@ -2088,7 +2300,7 @@
       }
     },
     {
-      "name": "54 - Delete Place With Visit",
+      "name": "59 - Delete Place With Visit",
       "event": [
         {
           "listen": "test",
@@ -2122,7 +2334,7 @@
       }
     },
     {
-      "name": "55 - Delete Visit",
+      "name": "60 - Delete Visit",
       "event": [
         {
           "listen": "test",
@@ -2156,7 +2368,7 @@
       }
     },
     {
-      "name": "56 - Get Deleted Visit",
+      "name": "61 - Get Deleted Visit",
       "event": [
         {
           "listen": "test",
@@ -2190,7 +2402,7 @@
       }
     },
     {
-      "name": "57 - Delete Leg",
+      "name": "62 - Delete Leg",
       "event": [
         {
           "listen": "test",
@@ -2224,7 +2436,7 @@
       }
     },
     {
-      "name": "58 - Get Deleted Leg",
+      "name": "63 - Get Deleted Leg",
       "event": [
         {
           "listen": "test",
@@ -2258,7 +2470,7 @@
       }
     },
     {
-      "name": "59 - Delete Stay",
+      "name": "64 - Delete Stay",
       "event": [
         {
           "listen": "test",
@@ -2292,7 +2504,7 @@
       }
     },
     {
-      "name": "60 - Delete Place",
+      "name": "65 - Delete Place",
       "event": [
         {
           "listen": "test",
@@ -2326,7 +2538,7 @@
       }
     },
     {
-      "name": "61 - Delete Trip",
+      "name": "66 - Delete Trip",
       "event": [
         {
           "listen": "test",
@@ -2360,7 +2572,7 @@
       }
     },
     {
-      "name": "62 - Delete Tag",
+      "name": "67 - Delete Tag",
       "event": [
         {
           "listen": "test",
@@ -2394,7 +2606,7 @@
       }
     },
     {
-      "name": "63 - Get Deleted Trip",
+      "name": "68 - Get Deleted Trip",
       "event": [
         {
           "listen": "test",
@@ -2428,7 +2640,7 @@
       }
     },
     {
-      "name": "64 - Get Settings",
+      "name": "69 - Get Settings",
       "event": [
         {
           "listen": "test",
@@ -2465,7 +2677,7 @@
       }
     },
     {
-      "name": "65 - Update Settings",
+      "name": "70 - Update Settings",
       "event": [
         {
           "listen": "test",
@@ -2503,7 +2715,7 @@
       }
     },
     {
-      "name": "66 - Update Settings Out Of Range",
+      "name": "71 - Update Settings Out Of Range",
       "event": [
         {
           "listen": "test",
@@ -2540,7 +2752,7 @@
       }
     },
     {
-      "name": "67 - Restore Settings",
+      "name": "72 - Restore Settings",
       "event": [
         {
           "listen": "test",
@@ -2578,7 +2790,7 @@
       }
     },
     {
-      "name": "68 - Find Place Tag For Cleanup",
+      "name": "73 - Find Place Tag For Cleanup",
       "event": [
         {
           "listen": "test",
@@ -2614,7 +2826,7 @@
       }
     },
     {
-      "name": "69 - Delete Place Tag",
+      "name": "74 - Delete Place Tag",
       "event": [
         {
           "listen": "test",
@@ -2648,7 +2860,7 @@
       }
     },
     {
-      "name": "70 - Delete Expense Inside The Trip",
+      "name": "75 - Delete Expense Inside The Trip",
       "event": [
         {
           "listen": "test",
@@ -2682,7 +2894,7 @@
       }
     },
     {
-      "name": "71 - Delete Refund",
+      "name": "76 - Delete Refund",
       "event": [
         {
           "listen": "test",
@@ -2716,7 +2928,7 @@
       }
     },
     {
-      "name": "72 - Delete Expense Outside The Trip",
+      "name": "77 - Delete Expense Outside The Trip",
       "event": [
         {
           "listen": "test",
@@ -2750,7 +2962,7 @@
       }
     },
     {
-      "name": "73 - Delete Finance Account",
+      "name": "78 - Delete Finance Account",
       "event": [
         {
           "listen": "test",

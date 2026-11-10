@@ -63,6 +63,10 @@
       </select></label>
     <label class="space-y-1"><span class="block text-xs text-gray-500">Search</span>
       <input id="filter-q" name="q" value="{{ filters.q }}" class="input input-sm input-bordered w-44" placeholder="Trip name"></label>
+    <label class="space-y-1"><span class="block text-xs text-gray-500">City</span>
+      <input name="city" value="{{ filters.city }}" class="input input-sm input-bordered w-32" placeholder="Visited or stayed"></label>
+    <label class="space-y-1"><span class="block text-xs text-gray-500">Country</span>
+      <input name="country" value="{{ filters.country }}" class="input input-sm input-bordered w-32"></label>
     <label class="space-y-1"><span class="block text-xs text-gray-500">From</span>
       <input name="date_from" type="date" value="{{ filters.date_from }}" class="input input-sm input-bordered"></label>
     <label class="space-y-1"><span class="block text-xs text-gray-500">To</span>
@@ -76,7 +80,7 @@
       {% endfor %}
     </div>
     {% endif %}
-    <button type="button" class="btn btn-xs btn-ghost" onclick="this.form.reset(); this.form.querySelectorAll('input[type=checkbox]').forEach(c => c.checked = false); this.form.querySelector('[name=q]').value=''; this.form.querySelectorAll('input[type=date]').forEach(d => d.value=''); this.form.querySelector('[name=status]').value='current'; htmx.trigger(this.form, 'change');">Clear filters</button>
+    <button type="button" class="btn btn-xs btn-ghost" onclick="this.form.reset(); this.form.querySelectorAll('input[type=checkbox]').forEach(c => c.checked = false); this.form.querySelector('[name=q]').value=''; this.form.querySelectorAll('input[type=date]').forEach(d => d.value=''); this.form.querySelectorAll('[name=city],[name=country]').forEach(i => i.value=''); this.form.querySelector('[name=status]').value='current'; htmx.trigger(this.form, 'change');">Clear filters</button>
   </form>
 
   <div id="trips-list">

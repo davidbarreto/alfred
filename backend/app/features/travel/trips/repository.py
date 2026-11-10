@@ -1,10 +1,13 @@
 from datetime import date
 from typing import Any
 
-from sqlalchemy import and_, case, delete, func, select
+from sqlalchemy import and_, case, delete, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.features.travel.places.tables import Place
+from app.features.travel.stays.tables import Stay
 from app.features.travel.tags.tables import TravelTag, trips_tags
+from app.features.travel.visits.tables import Visit
 from app.features.travel.trips.schemas import TripFilters
 from app.features.travel.trips.tables import Trip
 
@@ -33,6 +36,13 @@ class TripRepository:
             stmt = stmt.where(Trip.end_date >= filters.date_from)
         if filters.date_to:
             stmt = stmt.where(Trip.start_date <= filters.date_to)
+        for column, wanted in ((Place.city, filters.city), (Place.country, filters.country)):
+            if wanted:
+                where_place = func.lower(column) == wanted.strip().lower()
+                stmt = stmt.where(or_(
+                    Trip.id.in_(select(Stay.trip_id).join(Place, Place.id == Stay.place_id).where(where_place)),
+                    Trip.id.in_(select(Visit.trip_id).join(Place, Place.id == Visit.place_id).where(where_place)),
+                ))
         for tag_name in filters.tag or []:
             tagged = (
                 select(trips_tags.c.trip_id)

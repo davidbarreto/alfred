@@ -41,6 +41,7 @@ class VisitPlace(BaseModel):
     kind: PlaceKind
     name: str
     city: str | None
+    country: str | None = None
     maps_url: str | None
     lat: float | None
     lng: float | None

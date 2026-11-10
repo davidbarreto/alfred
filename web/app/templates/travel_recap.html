@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% set active_page = "travel" %}
+{% block title %}Recap: {{ recap.name }}{% endblock %}
+
+{% block content %}
+<div class="p-6 space-y-6">
+
+  <a href="/travel/{{ recap.trip_id }}" class="text-xs text-gray-500 hover:text-gray-700"><i class="ti ti-arrow-left"></i> {{ recap.name }}</a>
+
+  <div class="card bg-white">
+    <div class="card-body p-5 space-y-4">
+      <div>
+        <h1 class="text-base font-semibold text-gray-900">{{ recap.name }}</h1>
+        <p class="text-xs text-gray-500">{{ recap.start_date | short_date }} → {{ recap.end_date | short_date }} · {{ recap.days }} day{{ '' if recap.days == 1 else 's' }}
+          {% if recap.status != 'past' %}· <span class="text-amber-600">{{ recap.status }}: not finished yet</span>{% endif %}</p>
+      </div>
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4" id="recap-numbers">
+        <div><p class="text-xs text-gray-400">Spent</p><p class="text-lg font-semibold text-gray-900">{{ recap.spend.total_eur | money }} €</p>
+          <p class="text-[11px] text-gray-400">{{ recap.spend.transaction_count }} transaction(s){% if recap.spend.unconverted_count %} · {{ recap.spend.unconverted_count }} not in EUR yet, not counted{% endif %}</p></div>
+        <div><p class="text-xs text-gray-400">Visited</p><p class="text-lg font-semibold text-gray-900">{{ recap.visits_visited }}</p>
+          <p class="text-[11px] text-gray-400">{{ recap.visits_missed }} missed · {{ recap.visits_planned }} never done</p></div>
+        <div><p class="text-xs text-gray-400">Travel</p><p class="text-lg font-semibold text-gray-900">{{ recap.leg_count }} leg{{ '' if recap.leg_count == 1 else 's' }}</p>
+          <p class="text-[11px] text-gray-400">{{ recap.stay_count }} stay{{ '' if recap.stay_count == 1 else 's' }}</p></div>
+        <div><p class="text-xs text-gray-400">Places</p><p class="text-sm text-gray-700">{{ recap.cities | join(', ') or '—' }}</p>
+          <p class="text-[11px] text-gray-400">{{ recap.countries | join(', ') }}</p></div>
+      </div>
+      {% if recap.spend_by_kind %}
+      <div class="flex flex-wrap gap-x-5 gap-y-1 text-xs text-gray-600" id="recap-kinds">
+        {% for k in recap.spend_by_kind %}<span>{{ k.kind }}: <strong>{{ k.total_eur | money }} €</strong></span>{% endfor %}
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  {% if recap.highlights %}
+  <div class="card bg-white" id="recap-highlights">
+    <div class="card-body p-5 space-y-2">
+      <h2 class="text-sm font-semibold text-gray-900">Highlights</h2>
+      {% for h in recap.highlights %}
+      <p class="text-sm"><a class="hover:underline text-gray-900" href="/travel/places/{{ h.place_id }}">{{ h.place_name }}</a>
+        <span class="text-xs text-amber-600">{{ h.grade }}/5</span> <span class="text-xs text-gray-400">{{ h.kind }}</span></p>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  <div class="card bg-white" id="recap-to-complete">
+    <div class="card-body p-5 space-y-2">
+      <h2 class="text-sm font-semibold text-gray-900">Still to write down</h2>
+      {% for item in recap.to_complete %}
+      <div class="flex items-center justify-between text-sm">
+        <p><a class="hover:underline text-gray-900" href="/travel/places/{{ item.place_id }}">{{ item.place_name }}</a>
+          <span class="text-xs text-gray-400">{{ item.kind }}{% if item.day %} · {{ item.day | short_date }}{% endif %}</span></p>
+        <p class="text-xs text-red-600">{{ item.missing | join(' and ') }} missing</p>
+      </div>
+      {% else %}
+      <p class="text-sm text-gray-400">Every visit and stay has a grade and notes.</p>
+      {% endfor %}
+      {% if recap.to_complete %}<p class="text-xs text-gray-400">Grade visits and stays from <a class="text-[#378ADD] hover:underline" href="/travel/{{ recap.trip_id }}?all_visits=1">the trip page</a>.</p>{% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -61,6 +61,14 @@ def mock_study_plan_service():
         yield MockService
 
 
+@pytest.fixture(autouse=True)
+def mock_travel_reminder_service():
+    # Same reasoning as the study-plan fixture: travel reminders have their own tests.
+    with patch("app.features.core.reminders.service.TravelReminderService") as MockService:
+        MockService.return_value.get_reminders = AsyncMock(return_value=[])
+        yield MockService
+
+
 def default_reminder_settings(**overrides):
     values = {
         "overload_overdue_threshold": 5, "overload_urgent_threshold": 4, "overload_max_listed": 5,

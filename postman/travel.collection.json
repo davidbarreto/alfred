@@ -633,7 +633,8 @@
               "pm.test('Status is 200', () => pm.response.to.have.status(200));",
               "const j = pm.response.json();",
               "pm.test('Has the leg and stay', () => { pm.expect(j.legs.length).to.eql(1); pm.expect(j.stays.length).to.eql(1); });",
-              "pm.test('Timeline is chronological', () => pm.expect(j.timeline.map(i => i.kind)).to.eql(['leg','check_in','check_out']));",
+              "pm.test('Timeline is chronological', () => pm.expect(j.timeline.map(i => i.kind)).to.eql(['leave_home','leg','check_in','check_out']));",
+              "pm.test('Leave-home time is set', () => pm.expect(j.leave_home_at).to.be.a('string'));",
               "pm.test('Long wait warning', () => pm.expect(j.warnings.map(w => w.kind)).to.include('long_wait_before_check_in'));"
             ],
             "type": "text/javascript"
@@ -1081,6 +1082,156 @@
             "trips",
             "{{travel_trip_id}}"
           ]
+        }
+      }
+    },
+    {
+      "name": "29 - Get Settings",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "const j = pm.response.json();",
+              "pm.test('Both settings present', () => { pm.expect(j.airport_buffer_min).to.be.a('number'); pm.expect(j.home_to_airport_min).to.be.a('number'); });",
+              "pm.environment.set('travel_buffer_original', j.airport_buffer_min);",
+              "pm.environment.set('travel_ride_original', j.home_to_airport_min);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/settings",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "settings"
+          ]
+        }
+      }
+    },
+    {
+      "name": "30 - Update Settings",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Only the sent field changed', () => { const j = pm.response.json(); pm.expect(j.airport_buffer_min).to.eql(95); pm.expect(j.home_to_airport_min).to.eql(Number(pm.environment.get('travel_ride_original'))); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/settings",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "settings"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"airport_buffer_min\": 95\n}"
+        }
+      }
+    },
+    {
+      "name": "31 - Update Settings Out Of Range",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 422', () => pm.response.to.have.status(422));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/settings",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "settings"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"airport_buffer_min\": 100000\n}"
+        }
+      }
+    },
+    {
+      "name": "32 - Restore Settings",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Original restored', () => pm.expect(pm.response.json().airport_buffer_min).to.eql(Number(pm.environment.get('travel_buffer_original'))));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/settings",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "settings"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"airport_buffer_min\": {{travel_buffer_original}}\n}"
         }
       }
     }

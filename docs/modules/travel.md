@@ -26,10 +26,14 @@ Create bodies accept naive wall times (read in the matching `*_tz`) or values wi
 
 City matching is a case-insensitive containment between a leg's `destination` and the stay place's `city`.
 
+## Leave-home time and reminders
+
+If a trip's first leg is a flight, the trip detail has `leave_home_at` (departure minus `travel.airport_buffer_min` minus `travel.home_to_airport_min`, both runtime settings in `core.settings`) and a `leave_home` timeline item. Reminders (trip starts, online check-in, time to leave, check-out day) are described in [reminders-overload.md](reminders-overload.md#travel-reminders).
+
 ## API
 
-`/travel/trips` (list filters: `status` = current (default) / upcoming / ongoing / past / all, repeated `tag`, `q`, `date_from`, `date_to`, `limit`, `offset`), `/travel/legs`, `/travel/stays`, `/travel/places` (filters `q`, `kind`, `city`, `country`; deleting a place with stays is a 409), `/travel/tags` (usage counts, rename, delete removes only link rows). Postman: `postman/travel.collection.json`.
+`/travel/trips` (list filters: `status` = current (default) / upcoming / ongoing / past / all, repeated `tag`, `q`, `date_from`, `date_to`, `limit`, `offset`), `/travel/legs`, `/travel/stays`, `/travel/places` (filters `q`, `kind`, `city`, `country`; deleting a place with stays is a 409), `/travel/settings` (GET/PUT), `/travel/tags` (usage counts, rename, delete removes only link rows). Postman: `postman/travel.collection.json`.
 
 ## Portal
 
-`/travel`: trips list with status, text, date-range and tag filters (HTMX partial `/travel/list`, `limit + 1` pagination). `/travel/{id}`: header with inline edit, warnings, day-grouped timeline, legs and stays with add/edit/delete dialogs; a new hotel can be created inline in the stay dialog. Writes proxy through `/travel/{trips,legs,stays,places}`.
+`/travel`: reminder settings form and a trips list with status, text, date-range and tag filters (HTMX partial `/travel/list`, `limit + 1` pagination). `/travel/{id}`: header with inline edit, warnings, day-grouped timeline, legs and stays with add/edit/delete dialogs; a new hotel can be created inline in the stay dialog. Writes proxy through `/travel/{trips,legs,stays,places}`.

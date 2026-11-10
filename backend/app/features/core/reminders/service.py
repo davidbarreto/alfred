@@ -22,6 +22,7 @@ from app.features.organizer.tasks.recurrence import is_due_today
 from app.features.organizer.tasks.schemas import TaskFilters, TaskUpdate
 from app.features.organizer.tasks.service import TaskService
 from app.features.study.plans.service import StudyPlanService
+from app.features.travel.reminders import TravelReminderService
 from app.shared.timezone import local_now
 
 logger = logging.getLogger(__name__)
@@ -132,6 +133,7 @@ class ReminderService:
         self._shopping_repo = ShoppingRepository(session)
         self._working_memory_repo = WorkingMemoryRepository(session)
         self._study_plan_service = StudyPlanService(session)
+        self._travel_reminder_service = TravelReminderService(session)
         self._settings_service = ReminderSettingsService(session)
         self._overload_service = OverloadService(session, task_service)
 
@@ -158,6 +160,7 @@ class ReminderService:
         lines.extend(await self._collect_event_lines(now, today))
         lines.extend(await self._collect_shopping_lines(today))
         lines.extend(await self._collect_study_plan_lines(today))
+        lines.extend(await self._collect_travel_lines(today))
 
         await self._overload_service.record_run(snapshot, listed=len(shown), omitted=len(omitted))
 
@@ -292,6 +295,16 @@ class ReminderService:
             return []
         await self._mark_reminded("study_plans", 0, today, escalation.DAILY_DEDUP_TTL)
         return [f"You have open items in {len(open_plans)} study plan(s)"]
+
+    async def _collect_travel_lines(self, today) -> list[str]:
+        lines: list[str] = []
+        for reminder in await self._travel_reminder_service.get_reminders():
+            recent = [today - timedelta(days=offset) for offset in range(reminder.dedup_days)]
+            if any([await self._already_reminded(reminder.kind, reminder.entity_id, day) for day in recent]):
+                continue
+            await self._mark_reminded(reminder.kind, reminder.entity_id, today, escalation.DAILY_DEDUP_TTL)
+            lines.append(f"\u2708\ufe0f {reminder.text}")
+        return lines
 
     async def _is_escalation_snoozed(self, task_id: int) -> bool:
         existing = await self._working_memory_repo.list(

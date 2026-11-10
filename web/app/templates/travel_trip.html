@@ -75,7 +75,7 @@
           {% for item in items %}
           <li class="flex items-start gap-3 text-sm">
             <span class="w-12 text-xs text-gray-400 pt-0.5">{{ item.local[11:16] }}</span>
-            <i class="ti {{ 'ti-plane' if item.kind == 'leg' else ('ti-login' if item.kind == 'check_in' else 'ti-logout') }} text-gray-400 pt-0.5"></i>
+            <i class="ti {{ {'leg': 'ti-plane', 'check_in': 'ti-login', 'check_out': 'ti-logout', 'leave_home': 'ti-door-exit'}[item.kind] }} text-gray-400 pt-0.5"></i>
             <div class="flex-1">
               <p class="text-gray-900">{{ item.title }}</p>
               <p class="text-xs text-gray-400">{% if item.subtitle %}{{ item.subtitle }} · {% endif %}{{ item.timezone }}</p>

@@ -35,6 +35,23 @@
     </div>
   </div>
 
+  {% if settings %}
+  <details class="card bg-white">
+    <summary class="px-5 py-3 text-xs font-medium text-gray-600 cursor-pointer">Reminder settings</summary>
+    <div class="card-body p-5 pt-2">
+      <form id="travel-settings-form" class="flex flex-wrap items-end gap-3">
+        <label class="space-y-1"><span class="block text-xs text-gray-500">Be at the airport this many minutes before departure</span>
+          <input name="airport_buffer_min" type="number" min="0" max="600" value="{{ settings.airport_buffer_min }}" class="input input-sm input-bordered w-28"></label>
+        <label class="space-y-1"><span class="block text-xs text-gray-500">Minutes from home to the airport</span>
+          <input name="home_to_airport_min" type="number" min="0" max="600" value="{{ settings.home_to_airport_min }}" class="input input-sm input-bordered w-28"></label>
+        <button type="submit" class="btn btn-sm btn-outline">Save</button>
+        <span id="travel-settings-msg" class="text-xs text-gray-500"></span>
+      </form>
+      <p class="text-xs text-gray-400 mt-3">Used for the "time to leave" reminder and the leave-home time on a trip whose first leg is a flight.</p>
+    </div>
+  </details>
+  {% endif %}
+
   <form id="trip-filters" class="flex flex-wrap items-end gap-3"
         hx-get="/travel/list" hx-target="#trips-list" hx-swap="innerHTML" hx-trigger="change, keyup changed delay:300ms from:#filter-q">
     <label class="space-y-1"><span class="block text-xs text-gray-500">Show</span>
@@ -65,6 +82,20 @@
 </div>
 
 <script>
+document.getElementById('travel-settings-form')?.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const form = new FormData(event.target);
+  const message = document.getElementById('travel-settings-msg');
+  const res = await fetch('/travel/settings', {
+    method: 'PUT', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      airport_buffer_min: Number(form.get('airport_buffer_min')), home_to_airport_min: Number(form.get('home_to_airport_min')),
+    }),
+  });
+  const data = await res.json().catch(() => ({}));
+  message.textContent = res.ok ? 'Saved.' : (data.error || 'Something went wrong.');
+});
+
 document.getElementById('new-trip-form')?.addEventListener('submit', async (event) => {
   event.preventDefault();
   const form = new FormData(event.target);

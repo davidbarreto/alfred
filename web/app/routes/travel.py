@@ -75,9 +75,11 @@ async def trips_page(request: Request):
     filters = _filters(request)
     trips = await _fetch_trips(filters, 0)
     tags = await safe_get("/travel/tags", default=[])
+    settings = await safe_get("/travel/settings")
     context = _list_context(request, trips, 0, filters)
     return templates.TemplateResponse(request, "travel.html", {
         **context, "filters": filters, "statuses": _STATUSES, "all_tags": [t["name"] for t in tags or []],
+        "settings": settings,
     })
 
 
@@ -90,6 +92,11 @@ async def trips_list(request: Request):
 
 
 # Writes proxy to the backend and relay its error message. Static paths come before "/{trip_id}".
+
+@router.put("/settings")
+async def update_settings(request: Request):
+    return await forward(api.put("/travel/settings", json=await request.json()), "Could not save the settings.")
+
 
 @router.post("/trips")
 async def create_trip(request: Request):

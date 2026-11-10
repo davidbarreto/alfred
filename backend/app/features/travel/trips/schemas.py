@@ -113,4 +113,5 @@ class TripDetail(TripRead):
     legs: list[LegRead]
     stays: list[StayRead]
     timeline: list[TimelineItem]
+    leave_home_at: datetime | None = None
     warnings: list[TripWarning]

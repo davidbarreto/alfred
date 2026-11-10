@@ -53,6 +53,15 @@ class TripRepository:
         )
         return list((await self._session.scalars(stmt)).all())
 
+    async def get_trips_in_window(self, first_day: date, last_day: date) -> list[Trip]:
+        """Trips that are ongoing or start by `last_day` and have not ended before `first_day`."""
+        stmt = (
+            select(Trip)
+            .where(Trip.end_date >= first_day, Trip.start_date <= last_day)
+            .order_by(Trip.start_date, Trip.id)
+        )
+        return list((await self._session.scalars(stmt)).all())
+
     async def create_trip(self, data: dict[str, Any], tags: list[TravelTag]) -> Trip:
         trip = Trip(**data)
         trip.tags = tags

@@ -4,12 +4,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.features.travel.legs.repository import LegRepository
 from app.features.travel.legs.schemas import LegRead
+from app.features.travel.settings_service import TravelSettingsService
 from app.features.travel.stays.repository import StayRepository
 from app.features.travel.stays.schemas import StayRead
 from app.features.travel.tags.repository import TravelTagRepository
 from app.features.travel.trips.repository import TripRepository
 from app.features.travel.trips.schemas import TripCreate, TripDetail, TripFilters, TripRead, TripUpdate
-from app.features.travel.trips.timeline import build_timeline, find_warnings
+from app.features.travel.trips.timeline import build_timeline, find_warnings, leave_home_at
 from app.shared.timezone import local_today
 
 logger = logging.getLogger(__name__)
@@ -23,6 +24,7 @@ class TripService:
         self._tag_repo = TravelTagRepository(session)
         self._leg_repo = LegRepository(session)
         self._stay_repo = StayRepository(session)
+        self.settings_service = TravelSettingsService(session)
 
     async def get_trips(self, filters: TripFilters) -> list[TripRead]:
         trips = await self._repo.get_trips(filters, local_today())
@@ -39,12 +41,15 @@ class TripService:
             return None
         legs = [LegRead.model_validate(leg) for leg in await self._leg_repo.get_legs(trip_id)]
         stays = [StayRead.model_validate(s) for s in await self._stay_repo.get_stays(trip_id)]
+        settings = await self.settings_service.get()
+        leave_at = leave_home_at(legs, settings.airport_buffer_min + settings.home_to_airport_min)
         return TripDetail(
             **TripRead.model_validate(trip).model_dump(exclude={"status"}),
             legs=legs,
             stays=stays,
-            timeline=build_timeline(legs, stays),
+            timeline=build_timeline(legs, stays, leave_at),
             warnings=find_warnings(legs, stays),
+            leave_home_at=leave_at,
         )
 
     async def create_trip(self, data: TripCreate) -> TripRead:

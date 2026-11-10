@@ -81,19 +81,19 @@ def test_short_date():
 
 class TestTripsPage:
     def test_lists_trips_with_status_and_tags(self, client, mock_api):
-        _route(mock_api, {"/travel/trips": [_trip(tags=["Family"], travelers="Test travelers")], "/travel/tags": [{"id": 1, "name": "Family", "trip_count": 1}]})
+        _route(mock_api, {"/travel/trips": [_trip(tags=["Family"], travelers="Test travelers")], "/travel/tags": [{"id": 1, "name": "Family", "trip_count": 1}], "/travel/settings": None})
         html = client.get("/travel").text
         assert "Example trip" in html and "17 Dec 2026" in html and "upcoming" in html
         assert "Family" in html and 'href="/travel/1"' in html
 
     def test_default_filter_is_current_and_page_size_plus_one(self, client, mock_api):
-        _route(mock_api, {"/travel/trips": [], "/travel/tags": []})
+        _route(mock_api, {"/travel/trips": [], "/travel/tags": [], "/travel/settings": None})
         client.get("/travel")
         params = dict(mock_api["get"].await_args_list[0].kwargs["params"])
         assert params["status"] == "current" and params["limit"] == 21
 
     def test_filters_are_forwarded(self, client, mock_api):
-        _route(mock_api, {"/travel/trips": [], "/travel/tags": []})
+        _route(mock_api, {"/travel/trips": [], "/travel/tags": [], "/travel/settings": None})
         client.get("/travel/list?status=past&tag=Family&tag=Work&q=ex&date_from=2026-01-01")
         params = mock_api["get"].await_args_list[0].kwargs["params"]
         assert ("status", "past") in params and ("tag", "Family") in params and ("tag", "Work") in params
@@ -116,7 +116,7 @@ class TestTripsPage:
         assert "Previous" in html and "offset=0" in html
 
     def test_empty_state(self, client, mock_api):
-        _route(mock_api, {"/travel/trips": [], "/travel/tags": []})
+        _route(mock_api, {"/travel/trips": [], "/travel/tags": [], "/travel/settings": None})
         assert "No trips match" in client.get("/travel").text
 
     def test_backend_down(self, client, mock_api):
@@ -128,7 +128,7 @@ class TestTripsPage:
         assert anon_client.get("/travel", follow_redirects=False).status_code == 302
 
     def test_nav_link_present(self, client, mock_api):
-        _route(mock_api, {"/travel/trips": [], "/travel/tags": []})
+        _route(mock_api, {"/travel/trips": [], "/travel/tags": [], "/travel/settings": None})
         assert 'href="/travel"' in client.get("/travel").text
 
 
@@ -196,3 +196,32 @@ class TestWrites:
     def test_unreachable_backend_is_502(self, client, mock_api):
         mock_api["post"].side_effect = httpx.ConnectError("down")
         assert client.post("/travel/trips", json={}).status_code == 502
+
+
+class TestSettings:
+    def test_page_shows_the_reminder_settings(self, client, mock_api):
+        _route(mock_api, {"/travel/trips": [], "/travel/tags": [], "/travel/settings": {"airport_buffer_min": 150, "home_to_airport_min": 40}})
+        html = client.get("/travel").text
+        assert 'name="airport_buffer_min"' in html and 'value="150"' in html and 'value="40"' in html
+
+    def test_page_works_when_settings_are_unavailable(self, client, mock_api):
+        _route(mock_api, {"/travel/trips": [], "/travel/tags": [], "/travel/settings": httpx.ConnectError("down")})
+        resp = client.get("/travel")
+        assert resp.status_code == 200 and 'name="airport_buffer_min"' not in resp.text
+
+    def test_put_is_proxied(self, client, mock_api):
+        mock_api["put"].return_value = {"airport_buffer_min": 90, "home_to_airport_min": 40}
+        resp = client.put("/travel/settings", json={"airport_buffer_min": 90})
+        assert resp.status_code == 200
+        mock_api["put"].assert_awaited_once_with("/travel/settings", json={"airport_buffer_min": 90})
+
+
+def test_timeline_shows_the_leave_home_item(client, mock_api):
+    detail = _detail()
+    detail["timeline"].insert(0, {
+        "kind": "leave_home", "at": "2026-12-17T03:00:00Z", "local": "2026-12-17T03:00:00", "timezone": "UTC",
+        "title": "Leave home for the airport", "subtitle": "Alpha → Beta", "ref_id": 1, "links": {},
+    })
+    _route(mock_api, {"/travel/trips/1": detail, "/travel/places": []})
+    html = client.get("/travel/1").text
+    assert "Leave home for the airport" in html and "ti-door-exit" in html

@@ -118,6 +118,7 @@ from app.features.metrics.stats.service import MetricStatsService
 from app.features.metrics.tags.service import MetricTagService
 from app.features.travel.legs.service import LegService
 from app.features.travel.places.service import PlaceService
+from app.features.travel.settings_service import TravelSettingsService
 from app.features.travel.stays.service import StayService
 from app.features.travel.tags.service import TravelTagService
 from app.features.travel.trips.service import TripService
@@ -648,6 +649,9 @@ def get_place_service(session: AsyncSession = Depends(get_session)) -> PlaceServ
 def get_travel_tag_service(session: AsyncSession = Depends(get_session)) -> TravelTagService:
     return TravelTagService(session)
 
+def get_travel_settings_service(session: AsyncSession = Depends(get_session)) -> TravelSettingsService:
+    return TravelSettingsService(session)
+
 def get_codeforces_sync_service(session: AsyncSession = Depends(get_session)) -> CodeforcesSyncService:
     return CodeforcesSyncService(session, CodeforcesClient())
 
@@ -778,4 +782,5 @@ TripServiceDep = Annotated[TripService, Depends(get_trip_service)]
 LegServiceDep = Annotated[LegService, Depends(get_leg_service)]
 StayServiceDep = Annotated[StayService, Depends(get_stay_service)]
 PlaceServiceDep = Annotated[PlaceService, Depends(get_place_service)]
+TravelSettingsServiceDep = Annotated[TravelSettingsService, Depends(get_travel_settings_service)]
 TravelTagServiceDep = Annotated[TravelTagService, Depends(get_travel_tag_service)]

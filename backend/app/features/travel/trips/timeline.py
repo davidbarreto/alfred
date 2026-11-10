@@ -15,7 +15,7 @@ TIGHT_CONNECTION = timedelta(minutes=90)
 # How far from check-in a leg is still considered "the arrival for that stay".
 ARRIVAL_WINDOW = timedelta(hours=24)
 
-TimelineKind = Literal["leg", "check_in", "check_out"]
+TimelineKind = Literal["leg", "check_in", "check_out", "leave_home"]
 WarningKind = Literal["long_wait_before_check_in", "tight_connection", "arrives_after_check_out", "overlapping_legs"]
 
 
@@ -82,8 +82,24 @@ def _stay_items(stay: StayRead) -> list[TimelineItem]:
     ]
 
 
-def build_timeline(legs: list[LegRead], stays: list[StayRead]) -> list[TimelineItem]:
+def leave_home_at(legs: list[LegRead], leave_minutes: int) -> datetime | None:
+    """When to leave home for the trip's first leg, if that leg is a flight (the buffer and the ride to the airport)."""
+    first = min(legs, key=lambda leg: (leg.departs_at, leg.id), default=None)
+    if first is None or first.mode != "flight":
+        return None
+    return first.departs_at - timedelta(minutes=leave_minutes)
+
+
+def build_timeline(
+    legs: list[LegRead], stays: list[StayRead], leave_home: datetime | None = None
+) -> list[TimelineItem]:
     items = [_leg_item(leg) for leg in legs]
+    if leave_home is not None:
+        first = min(legs, key=lambda leg: (leg.departs_at, leg.id))
+        items.append(TimelineItem(
+            kind="leave_home", at=leave_home, local=to_local(leave_home, first.departs_tz), timezone=first.departs_tz,
+            title="Leave home for the airport", subtitle=f"{first.origin} \u2192 {first.destination}", ref_id=first.id,
+        ))
     for stay in stays:
         items.extend(_stay_items(stay))
     return sorted(items, key=lambda item: (item.at, item.ref_id))

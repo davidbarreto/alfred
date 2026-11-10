@@ -91,6 +91,7 @@ Stored in the database, so no restart or redeploy. Where each one lives:
 | Setting | What it controls | Where to change it |
 |---|---|---|
 | **Reminders & overload** (`reminders.*` in `core.settings`) | Escalation grace periods, undated-task age, re-remind cadence, overload thresholds, max tasks listed, catch-up tuning, urgency reset days | Portal: Overload section of `/tasks/insights`. API: `GET/PUT /core/reminder-settings` |
+| **Travel settings** (`travel.*`) | `airport_buffer_min` (default 120): how long before departure to be at the airport; `home_to_airport_min` (default 45): the ride there. Together they give the leave-home time and its reminder | Portal: Reminder settings on `/travel`. API: `GET/PUT /travel/settings` |
 | **Global pause** | Stops reminders and briefings and freezes task urgency escalation until resumed | Portal: pause control; Telegram/MCP: `/pause`, resume with the `pause stop` action. API: `POST /core/pause`, `POST /core/pause/resume`, history at `GET /core/pause/history` |
 | **Planning preferences** (`planning.*`) | Wake/sleep time, work target, preferred work windows, workdays, work/office tags, office days per week and minimum minutes, free-text conventions, travel times | Portal: `/plan`. MCP/Telegram: `day_plan settings` / `set_settings`. API: `GET/PUT /planning/settings` |
 | **Finance settings** | `cycle_start_day` (1-28): the day your monthly finance cycle starts. Budget targets per category are separate | Portal: `/finance/settings`, `/finance/budgets`. API: `GET/PUT /finance/settings`, `/finance/budgets/targets` |

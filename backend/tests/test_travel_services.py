@@ -10,6 +10,7 @@ from app.features.travel.legs.schemas import LegCreate, LegUpdate
 from app.features.travel.legs.service import LegService
 from app.features.travel.places.schemas import PlaceCreate, PlaceFilters, PlaceUpdate
 from app.features.travel.places.service import PlaceInUseError, PlaceService
+from app.features.travel.settings_schemas import TravelSettingsRead
 from app.features.travel.stays.schemas import StayCreate, StayUpdate
 from app.features.travel.stays.service import StayService
 from app.features.travel.tags.schemas import TravelTagUpdate
@@ -68,6 +69,8 @@ def trips():
     svc._tag_repo = AsyncMock()
     svc._leg_repo = AsyncMock()
     svc._stay_repo = AsyncMock()
+    svc.settings_service = AsyncMock()
+    svc.settings_service.get.return_value = TravelSettingsRead(airport_buffer_min=120, home_to_airport_min=60)
     return svc
 
 
@@ -123,7 +126,9 @@ class TestTripService:
         trips._stay_repo.get_stays.return_value = [_stay()]
         detail = await trips.get_trip_detail(1)
         assert len(detail.legs) == 1 and len(detail.stays) == 1
-        assert [i.kind for i in detail.timeline] == ["leg", "check_in", "check_out"]
+        # first leg is a flight departing 06:00: leave 3 h earlier
+        assert [i.kind for i in detail.timeline] == ["leave_home", "leg", "check_in", "check_out"]
+        assert detail.leave_home_at == datetime(2026, 12, 17, 3, tzinfo=timezone.utc)
         assert detail.status in ("upcoming", "ongoing", "past")
 
     async def test_detail_unknown_trip(self, trips):

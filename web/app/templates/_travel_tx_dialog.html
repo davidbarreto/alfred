@@ -1,0 +1,17 @@
+<dialog id="tx-dialog" class="modal">
+  <div class="modal-box max-w-xl space-y-3">
+    <h3 class="text-sm font-semibold" id="tx-title">Transactions</h3>
+    <p class="text-xs text-gray-400">Tickets, deposits, meals: link the card charges that paid for this. A charge can be linked to several items and is counted once in the trip total.</p>
+    <div id="tx-linked" class="space-y-1.5"></div>
+    <p class="text-xs text-gray-500" id="tx-cost"></p>
+    <div class="border-t border-gray-100 pt-3 space-y-2">
+      <label class="block space-y-1"><span class="block text-xs text-gray-500">Find a transaction (merchant, description or bank text)</span>
+        <input id="tx-search" class="input input-sm input-bordered w-full" autocomplete="off"></label>
+      <div id="tx-results" class="space-y-1.5"></div>
+    </div>
+    <div class="flex items-center gap-3">
+      <button type="button" class="btn btn-sm btn-ghost" id="tx-close">Close</button>
+      <span class="text-xs text-red-600" id="tx-error"></span>
+    </div>
+  </div>
+</dialog>

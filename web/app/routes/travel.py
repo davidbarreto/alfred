@@ -1,7 +1,7 @@
 from urllib.parse import urlencode
 
-from fastapi import APIRouter, Request
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi import APIRouter, HTTPException, Request
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 
 import app.client as api
 from app.config import get_settings
@@ -20,6 +20,13 @@ _ZONES = [
     "Europe/Stockholm", "Europe/Helsinki", "Europe/Athens", "Europe/Istanbul", "America/New_York",
     "America/Sao_Paulo", "America/Argentina/Buenos_Aires", "Asia/Dubai", "Asia/Tokyo", "UTC",
 ]
+
+
+def _link_kind(kind: str) -> str:
+    """Only the three linkable kinds reach the backend path."""
+    if kind not in ("legs", "stays", "visits"):
+        raise HTTPException(status_code=404)
+    return kind
 
 
 def _pagination(items: list, offset: int) -> tuple[list, bool, bool]:
@@ -96,6 +103,48 @@ async def trips_list(request: Request):
 @router.put("/settings")
 async def update_settings(request: Request):
     return await forward(api.put("/travel/settings", json=await request.json()), "Could not save the settings.")
+
+
+@router.get("/transactions/search")
+async def search_transactions(q: str = ""):
+    """Finance transactions matching a free-text search, for the link dialog."""
+    if not q.strip():
+        return JSONResponse([])
+    found = await safe_get("/finance/transactions", params={"search": q.strip(), "limit": 10})
+    if found is None:
+        return JSONResponse({"error": "Could not search transactions."}, status_code=502)
+    return JSONResponse(found)
+
+
+@router.get("/links/{kind}/{entity_id}")
+async def get_links(kind: str, entity_id: int):
+    return await forward(api.get(f"/travel/{_link_kind(kind)}/{entity_id}/transactions"), "Could not load the transactions.")
+
+
+@router.post("/links/{kind}/{entity_id}")
+async def create_link(kind: str, entity_id: int, request: Request):
+    return await forward(
+        api.post(f"/travel/{_link_kind(kind)}/{entity_id}/transactions", json=await request.json()),
+        "Could not link the transaction.",
+    )
+
+
+@router.delete("/links/{kind}/{entity_id}/{transaction_id}")
+async def delete_link(kind: str, entity_id: int, transaction_id: int):
+    return await forward(
+        api.delete(f"/travel/{_link_kind(kind)}/{entity_id}/transactions/{transaction_id}"),
+        "Could not unlink the transaction.",
+    )
+
+
+@router.post("/trips/{trip_id}/apply-default-tags")
+async def apply_default_tags(trip_id: int):
+    return await forward(api.post(f"/travel/trips/{trip_id}/apply-default-tags"), "Could not tag the expenses.")
+
+
+@router.get("/trips/{trip_id}/calendar-events")
+async def calendar_events(trip_id: int):
+    return await forward(api.get(f"/travel/trips/{trip_id}/calendar-events"), "Could not read the calendar.")
 
 
 @router.post("/trips")
@@ -237,7 +286,10 @@ async def place_page(place_id: int, request: Request):
     place = await safe_get(f"/travel/places/{place_id}")
     if place is None:
         return RedirectResponse("/travel/places", status_code=302)
-    return templates.TemplateResponse(request, "travel_place.html", {"place": place, "place_kinds": _PLACE_KINDS})
+    costs = await safe_get(f"/travel/places/{place_id}/costs")
+    return templates.TemplateResponse(request, "travel_place.html", {
+        "place": place, "place_kinds": _PLACE_KINDS, "place_cost": costs["total"] if costs else None,
+    })
 
 
 @router.get("/{trip_id}", response_class=HTMLResponse)
@@ -250,6 +302,10 @@ async def trip_page(trip_id: int, request: Request):
     days: dict[str, list] = {}
     for item in trip["timeline"]:
         days.setdefault(item["local"][:10], []).append(item)
+    costs = await safe_get(f"/travel/trips/{trip_id}/costs")
+    entity_costs = {
+        kind: {item["id"]: item for item in (costs or {}).get(kind, [])} for kind in ("legs", "stays", "visits")
+    }
     visit_days: dict[str | None, list] = {}
     for visit in trip["visits"]:
         visit_days.setdefault(visit["visit_date"], []).append(visit)
@@ -257,6 +313,8 @@ async def trip_page(trip_id: int, request: Request):
         "trip": trip,
         "days": days,
         "visit_days": visit_days,
+        "costs": costs,
+        "entity_costs": entity_costs,
         "all_visits": all_visits,
         "places": places,
         "place_kinds": _PLACE_KINDS,

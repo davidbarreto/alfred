@@ -43,10 +43,12 @@ from app.features.finance.imports.schemas import (
 from app.features.finance.imports.tables import ImportBatch, ImportRule
 from app.features.finance.installment_plans.repository import InstallmentPlanRepository
 from app.features.finance.installment_plans.service import InstallmentPlanService
+from app.features.finance.tags.names import merge_tag_names
 from app.features.finance.transactions.repository import TransactionRepository
 from app.features.finance.transactions.schemas import TransactionCreate
 from app.features.finance.transactions.service import build_mirror_transaction_create
 from app.features.finance.transactions.tables import Transaction
+from app.features.travel.default_tags import TripDefaultTagService, TripTagWindows
 from app.integrations.llm_calls.repository import create_llm_call
 from app.shared.audio import FileStorage
 from app.shared.llm import LlmProvider
@@ -83,18 +85,6 @@ _NOISE_PATTERNS = [
     re.compile(r"-?\s*Parcela \d+/\d+", re.IGNORECASE),
 ]
 _WHITESPACE = re.compile(r"\s+")
-
-
-def _merge_tags(batch_tags: list[str], row_tags: list[str]) -> list[str]:
-    """Batch-wide tags followed by the row's own, without case-insensitive duplicates."""
-    merged: list[str] = []
-    seen: set[str] = set()
-    for name in [*batch_tags, *row_tags]:
-        key = name.strip().lower()
-        if key and key not in seen:
-            seen.add(key)
-            merged.append(name.strip())
-    return merged
 
 
 def _clean_description(raw: str) -> str:
@@ -213,11 +203,19 @@ class ImportService:
         self._account_repo = AccountRepository(session)
         self._installment_plan_repo = InstallmentPlanRepository(session)
         self._installment_plans = InstallmentPlanService(session)
+        self._trip_tags = TripDefaultTagService(session)
         self._parsers = parsers
         self._embeddings = embedding_service
         self._fx = exchange_rate_service
         self._llm = llm_provider
         self._files = file_storage
+
+    async def _trip_tag_windows(self, rows) -> TripTagWindows:
+        """Default tags of the trips around the rows' dates, loaded once per commit."""
+        if not rows:
+            return TripTagWindows([])
+        days = [row.date_posted for row in rows]
+        return await self._trip_tags.windows_for(min(days), max(days))
 
     # -- preview ---------------------------------------------------------
 
@@ -981,6 +979,7 @@ class ImportService:
             )
         )
 
+        windows = await self._trip_tag_windows(to_insert)
         transactions = []
         for row in to_insert:
             if row.supersedes_installment_plan_id is not None:
@@ -1014,7 +1013,7 @@ class ImportService:
                     deduplication_hash=row.deduplication_hash,
                     import_batch_id=batch.id,
                     installment_plan_id=row.installment_plan_id or row.supersedes_installment_plan_id,
-                    tags=_merge_tags(request.tag_names, row.tag_names),
+                    tags=merge_tag_names(request.tag_names, row.tag_names, windows.names_for(row.date_posted, row.type)),
                 ),
                 amount_eur=amount_eur,
             )
@@ -1356,6 +1355,7 @@ class ImportService:
                 )
             )
 
+            windows = await self._trip_tag_windows(to_insert)
             for row in to_insert:
                 amount = row.amount if row.type == "transfer" else abs(row.amount)
                 amount_eur = await self._fx.convert_to_eur(amount, currency, row.date_posted)
@@ -1376,7 +1376,7 @@ class ImportService:
                         balance_after=row.balance_after,
                         deduplication_hash=row.deduplication_hash,
                         import_batch_id=batch.id,
-                        tags=_merge_tags(request.tag_names, row.tag_names),
+                        tags=merge_tag_names(request.tag_names, row.tag_names, windows.names_for(row.date_posted, row.type)),
                     ),
                     amount_eur=amount_eur,
                 )

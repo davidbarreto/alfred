@@ -1,0 +1,2 @@
+{% macro cost_chip(cost) %}{% if cost and cost.transaction_count %}<span class="px-1.5 py-0.5 rounded-full text-[11px] text-gray-700 bg-gray-100" title="{{ cost.transaction_count }} transaction(s)">{{ cost.total_eur | money }} €{% if cost.unconverted_count %} · {{ cost.unconverted_count }} unconverted{% endif %}</span>{% endif %}{% endmacro %}
+{% macro tx_button(kind, id, title) %}<button class="btn btn-xs btn-ghost tx-open" data-kind="{{ kind }}" data-id="{{ id }}" data-title="{{ title }}" title="Linked transactions"><i class="ti ti-receipt"></i></button>{% endmacro %}

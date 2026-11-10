@@ -410,3 +410,154 @@ class TestTripDetailVisits:
         body = client.get("/travel/trips/1?all_visits=true", headers=AUTH).json()
         assert service.get_trip_detail.await_args.kwargs == {"include_all_visits": True}
         assert body["visits"][0]["id"] == 11 and body["hidden_visit_count"] == 2
+
+
+from decimal import Decimal  # noqa: E402
+
+from app.features.travel.calendar_import.schemas import CalendarCandidate  # noqa: E402
+from app.features.travel.errors import TravelConflictError  # noqa: E402
+from app.features.travel.transaction_links.schemas import (  # noqa: E402
+    ApplyDefaultTagsResult,
+    Cost,
+    EntityCost,
+    KindCost,
+    LinkedTransaction,
+    LinkedTransactions,
+    PlaceCosts,
+    TripCosts,
+)
+from app.features.travel.transaction_links.service import TransferNotLinkableError  # noqa: E402
+
+
+def _linked() -> LinkedTransactions:
+    return LinkedTransactions(
+        transactions=[LinkedTransaction(
+            id=9, date=datetime(2026, 12, 18), merchant="M", description=None, type="expense",
+            amount=Decimal("10.00"), currency="EUR", amount_eur=Decimal("10.00"),
+        )],
+        cost=Cost(total_eur=Decimal("10.00"), transaction_count=1),
+    )
+
+
+@pytest.fixture
+def link_service():
+    client, service = _client("get_transaction_link_service")
+    yield client, service
+    client.app.dependency_overrides.clear()
+
+
+@pytest.fixture
+def tag_service():
+    client, service = _client("get_trip_default_tag_service")
+    yield client, service
+    client.app.dependency_overrides.clear()
+
+
+@pytest.fixture
+def calendar_service():
+    client, service = _client("get_calendar_import_service")
+    yield client, service
+    client.app.dependency_overrides.clear()
+
+
+class TestTransactionLinks:
+    @pytest.mark.parametrize("kind", ["legs", "stays", "visits"])
+    def test_link_and_list(self, link_service, kind):
+        client, service = link_service
+        service.link.return_value = _linked()
+        service.get_linked.return_value = _linked()
+        r = client.post(f"/travel/{kind}/4/transactions", headers=AUTH, json={"transaction_id": 9})
+        assert r.status_code == 200 and r.json()["cost"]["total_eur"] == "10.00"
+        service.link.assert_awaited_once_with(kind, 4, 9)
+        assert client.get(f"/travel/{kind}/4/transactions", headers=AUTH).json()["transactions"][0]["id"] == 9
+
+    def test_unknown_kind_is_422(self, link_service):
+        client, _ = link_service
+        assert client.get("/travel/trips/4/transactions", headers=AUTH).status_code == 422
+
+    def test_link_unknown_target_is_404(self, link_service):
+        client, service = link_service
+        service.link.side_effect = TravelNotFoundError("Transaction 9 not found")
+        assert client.post("/travel/legs/4/transactions", headers=AUTH, json={"transaction_id": 9}).status_code == 404
+
+    def test_linking_a_transfer_is_422(self, link_service):
+        client, service = link_service
+        service.link.side_effect = TransferNotLinkableError("Transfers can't be linked to a trip")
+        r = client.post("/travel/legs/4/transactions", headers=AUTH, json={"transaction_id": 9})
+        assert r.status_code == 422 and "Transfers" in r.json()["detail"]
+
+    def test_unlink(self, link_service):
+        client, service = link_service
+        service.unlink.return_value = True
+        assert client.delete("/travel/stays/4/transactions/9", headers=AUTH).status_code == 204
+        service.unlink.return_value = False
+        assert client.delete("/travel/stays/4/transactions/9", headers=AUTH).status_code == 404
+
+
+class TestCostsAndDefaultTags:
+    def test_trip_costs(self, link_service):
+        client, service = link_service
+        service.get_trip_costs.return_value = TripCosts(
+            total=Cost(total_eur=Decimal("250.00"), transaction_count=3, unconverted_count=1),
+            by_kind=[KindCost(kind="flight", total_eur=Decimal("120.00"), transaction_count=1)],
+            legs=[EntityCost(id=1, total_eur=Decimal("120.00"), transaction_count=1)], stays=[], visits=[],
+        )
+        body = client.get("/travel/trips/1/costs", headers=AUTH).json()
+        assert body["total"]["unconverted_count"] == 1 and body["by_kind"][0]["kind"] == "flight"
+
+    def test_trip_costs_404(self, link_service):
+        client, service = link_service
+        service.get_trip_costs.return_value = None
+        assert client.get("/travel/trips/1/costs", headers=AUTH).status_code == 404
+
+    def test_place_costs(self, link_service):
+        client, service = link_service
+        service.get_place_costs.return_value = PlaceCosts(total=Cost(total_eur=Decimal("80.00"), transaction_count=2))
+        assert client.get("/travel/places/3/costs", headers=AUTH).json()["total"]["transaction_count"] == 2
+        service.get_place_costs.return_value = None
+        assert client.get("/travel/places/3/costs", headers=AUTH).status_code == 404
+
+    def test_apply_default_tags(self, tag_service):
+        client, service = tag_service
+        service.apply_to_existing.return_value = (["Travel", "Hotel"], 5)
+        r = client.post("/travel/trips/1/apply-default-tags", headers=AUTH)
+        assert r.json() == ApplyDefaultTagsResult(tags=["Travel", "Hotel"], added=5).model_dump()
+
+    def test_apply_default_tags_unknown_trip(self, tag_service):
+        client, service = tag_service
+        service.apply_to_existing.side_effect = TravelNotFoundError("Trip 9 not found")
+        assert client.post("/travel/trips/9/apply-default-tags", headers=AUTH).status_code == 404
+
+
+class TestCalendarImport:
+    def test_lists_candidates(self, calendar_service):
+        client, service = calendar_service
+        service.get_candidates.return_value = [CalendarCandidate(
+            event_id=1, title="Flight XX 12", location=None, description=None, all_day=False, timezone="UTC",
+            start_local=datetime(2026, 12, 17, 6), end_local=datetime(2026, 12, 17, 9), imported_as="leg", imported_id=4,
+        )]
+        body = client.get("/travel/trips/1/calendar-events", headers=AUTH).json()
+        assert body[0]["imported_as"] == "leg" and body[0]["start_local"] == "2026-12-17T06:00:00"
+
+    def test_unknown_trip(self, calendar_service):
+        client, service = calendar_service
+        service.get_candidates.return_value = None
+        assert client.get("/travel/trips/1/calendar-events", headers=AUTH).status_code == 404
+
+    def test_importing_the_same_event_twice_is_409(self, legs):
+        client, service = legs
+        service.create_leg.side_effect = TravelConflictError("That calendar event is already imported as a leg")
+        r = client.post("/travel/legs", headers=AUTH, json={
+            "trip_id": 1, "mode": "flight", "origin": "A", "destination": "B", "departs_at": "2026-12-17T06:00",
+            "arrives_at": "2026-12-17T10:00", "departs_tz": "UTC", "arrives_tz": "UTC", "calendar_event_id": 5,
+        })
+        assert r.status_code == 409
+
+    def test_stay_import_conflict_is_409(self, stays):
+        client, service = stays
+        service.create_stay.side_effect = TravelConflictError("already imported")
+        r = client.post("/travel/stays", headers=AUTH, json={
+            "place_id": 3, "check_in_at": "2026-12-18T15:00", "check_out_at": "2026-12-19T11:00", "timezone": "UTC",
+            "calendar_event_id": 5,
+        })
+        assert r.status_code == 409

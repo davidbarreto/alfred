@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Response, status
 
 from app.api.auth import require_auth
 from app.dependencies import LegServiceDep
-from app.features.travel.errors import TravelNotFoundError
+from app.features.travel.errors import TravelConflictError, TravelNotFoundError
 from app.features.travel.legs.schemas import LegCreate, LegRead, LegUpdate
 
 router = APIRouter(prefix="/travel/legs", tags=["travel"], dependencies=[Depends(require_auth)])
@@ -14,6 +14,8 @@ async def create_leg(request: LegCreate, service: LegServiceDep) -> LegRead:
         return await service.create_leg(request)
     except TravelNotFoundError as exc:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))
+    except TravelConflictError as exc:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc))
 
 
 @router.get("/{leg_id}", response_model=LegRead)

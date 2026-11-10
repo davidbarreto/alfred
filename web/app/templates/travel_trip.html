@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "_travel_macros.html" import cost_chip, tx_button %}
 {% set active_page = "travel" %}
 {% block title %}{{ trip.name }}{% endblock %}
 
@@ -17,6 +18,8 @@
         <div class="flex items-center gap-2">
           <span class="px-2 py-0.5 rounded-full text-xs font-medium
             {% if trip.status == 'ongoing' %}text-green-700 bg-green-50{% elif trip.status == 'upcoming' %}text-blue-700 bg-blue-50{% else %}text-gray-500 bg-gray-100{% endif %}">{{ trip.status }}</span>
+          <button class="btn btn-xs btn-outline" id="import-calendar">Import from calendar</button>
+          {% if trip.default_tag_names %}<button class="btn btn-xs btn-outline" id="apply-tags" title="Tag the expenses already dated within this trip">Apply finance tags</button>{% endif %}
           <button class="btn btn-xs btn-outline" onclick="document.getElementById('edit-trip-wrap').classList.toggle('hidden')">Edit</button>
           <button class="btn btn-xs btn-outline btn-error" id="delete-trip">Delete</button>
         </div>
@@ -26,7 +29,7 @@
       {% endif %}
       {% if trip.notes %}<p class="text-sm text-gray-700 whitespace-pre-line">{{ trip.notes }}</p>{% endif %}
       {% if trip.preferences %}<p class="text-xs text-gray-500 whitespace-pre-line"><strong>Preferences:</strong> {{ trip.preferences }}</p>{% endif %}
-      {% if trip.default_tag_names %}<p class="text-xs text-gray-400">Finance tags for its transactions: {{ trip.default_tag_names }}</p>{% endif %}
+      {% if trip.default_tag_names %}<p class="text-xs text-gray-400">Finance tags for its expenses: {{ trip.default_tag_names }} <span id="apply-tags-msg" class="text-gray-500"></span></p>{% endif %}
 
       <div id="edit-trip-wrap" class="hidden">
       <form id="edit-trip" class="flex flex-wrap items-end gap-3 pt-2 border-t border-gray-100">
@@ -58,6 +61,21 @@
     <div class="card-body p-4 space-y-1">
       <p class="text-xs font-semibold text-amber-800"><i class="ti ti-alert-triangle"></i> Worth a look</p>
       {% for w in trip.warnings %}<p class="text-sm text-amber-900">{{ w.message }}</p>{% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  {% if costs and costs.total.transaction_count %}
+  <div class="card bg-white" id="trip-costs">
+    <div class="card-body p-5 space-y-2">
+      <div class="flex items-baseline justify-between">
+        <h2 class="text-sm font-semibold text-gray-900">Cost</h2>
+        <p class="text-lg font-semibold text-gray-900">{{ costs.total.total_eur | money }} €</p>
+      </div>
+      <p class="text-xs text-gray-400">{{ costs.total.transaction_count }} transaction(s), each counted once{% if costs.total.unconverted_count %} · {{ costs.total.unconverted_count }} without an EUR amount yet, not included{% endif %}</p>
+      <div class="flex flex-wrap gap-x-5 gap-y-1 text-xs text-gray-600">
+        {% for k in costs.by_kind %}<span>{{ k.kind }}: <strong>{{ k.total_eur | money }} €</strong></span>{% endfor %}
+      </div>
     </div>
   </div>
   {% endif %}
@@ -129,13 +147,14 @@
         {% for leg in trip.legs %}
         <div class="flex items-start justify-between gap-2 text-sm" id="leg-{{ leg.id }}">
           <div>
-            <p class="text-gray-900">{{ leg.origin }} → {{ leg.destination }} <span class="text-xs text-gray-400">{{ leg.mode }}{% if leg.carrier or leg.number %} · {{ leg.carrier or '' }} {{ leg.number or '' }}{% endif %}</span></p>
+            <p class="text-gray-900">{{ leg.origin }} → {{ leg.destination }} <span class="text-xs text-gray-400">{{ leg.mode }}{% if leg.carrier or leg.number %} · {{ leg.carrier or '' }} {{ leg.number or '' }}{% endif %}</span> {{ cost_chip(entity_costs.legs.get(leg.id)) }}</p>
             <p class="text-xs text-gray-500">{{ leg.departs_local[:10] | short_date }} {{ leg.departs_local[11:16] }} ({{ leg.departs_tz }}) → {{ leg.arrives_local[:10] | short_date }} {{ leg.arrives_local[11:16] }} ({{ leg.arrives_tz }})</p>
             {% if leg.booking_ref or leg.seat %}<p class="text-xs text-gray-400">{% if leg.booking_ref %}Ref {{ leg.booking_ref }}{% endif %}{% if leg.seat %} · Seat {{ leg.seat }}{% endif %}</p>{% endif %}
             {% if leg.booking_url %}<a class="text-xs text-[#378ADD] hover:underline" href="{{ leg.booking_url }}" target="_blank" rel="noopener">Booking</a>{% endif %}
             {% if leg.notes %}<p class="text-xs text-gray-500 whitespace-pre-line">{{ leg.notes }}</p>{% endif %}
           </div>
           <div class="flex gap-1 whitespace-nowrap">
+            {{ tx_button('legs', leg.id, leg.origin ~ ' → ' ~ leg.destination) }}
             <button class="btn btn-xs btn-ghost edit-leg" data-item="{{ leg | tojson | forceescape }}">Edit</button>
             <button class="btn btn-xs btn-ghost text-red-600 delete-item" data-url="/travel/legs/{{ leg.id }}">Delete</button>
           </div>
@@ -155,7 +174,7 @@
         {% for stay in trip.stays %}
         <div class="flex items-start justify-between gap-2 text-sm" id="stay-{{ stay.id }}">
           <div>
-            <p class="text-gray-900">{{ stay.place.name }}{% if stay.place.city %} <span class="text-xs text-gray-400">{{ stay.place.city }}</span>{% endif %}</p>
+            <p class="text-gray-900">{{ stay.place.name }}{% if stay.place.city %} <span class="text-xs text-gray-400">{{ stay.place.city }}</span>{% endif %} {{ cost_chip(entity_costs.stays.get(stay.id)) }}</p>
             <p class="text-xs text-gray-500">{{ stay.check_in_local[:10] | short_date }} {{ stay.check_in_local[11:16] }} → {{ stay.check_out_local[:10] | short_date }} {{ stay.check_out_local[11:16] }} ({{ stay.timezone }})</p>
             {% if stay.booking_ref %}<p class="text-xs text-gray-400">Ref {{ stay.booking_ref }}</p>{% endif %}
             {% if stay.booking_url %}<a class="text-xs text-[#378ADD] hover:underline" href="{{ stay.booking_url }}" target="_blank" rel="noopener">Booking</a>{% endif %}
@@ -163,6 +182,7 @@
             {% if stay.notes %}<p class="text-xs text-gray-500 whitespace-pre-line">{{ stay.notes }}</p>{% endif %}
           </div>
           <div class="flex gap-1 whitespace-nowrap">
+            {{ tx_button('stays', stay.id, stay.place.name) }}
             <button class="btn btn-xs btn-ghost edit-stay" data-item="{{ stay | tojson | forceescape }}">Edit</button>
             <button class="btn btn-xs btn-ghost text-red-600 delete-item" data-url="/travel/stays/{{ stay.id }}">Delete</button>
           </div>
@@ -175,6 +195,20 @@
   </div>
 
   {% with places=places %}{% include "_travel_visit_dialog.html" %}{% endwith %}
+
+  {% include "_travel_tx_dialog.html" %}
+
+  <dialog id="calendar-dialog" class="modal">
+    <div class="modal-box max-w-2xl space-y-3">
+      <h3 class="text-sm font-semibold">Import from calendar</h3>
+      <p class="text-xs text-gray-400">Events in Alfred's calendar copy during the trip. Sync the calendar first if a booking is missing. Pick what each one is, then correct the details.</p>
+      <div id="calendar-list" class="space-y-2"></div>
+      <div class="flex items-center gap-3">
+        <button type="button" class="btn btn-sm btn-ghost" id="calendar-close">Close</button>
+        <span class="text-xs text-red-600" id="calendar-error"></span>
+      </div>
+    </div>
+  </dialog>
 
   <datalist id="zone-options">{% for z in zones %}<option value="{{ z }}">{% endfor %}</datalist>
 
@@ -242,9 +276,13 @@
 </div>
 
 <script src="/static/js/travel-visits.js"></script>
+<script src="/static/js/travel-transactions.js"></script>
 <script>
 initTravelVisits({ tripId: {{ trip.id }}, placeId: null });
+initTravelTransactions();
 const TRIP_ID = {{ trip.id }};
+const TRIP_START = {{ trip.start_date | tojson }};
+const TRIP_END = {{ trip.end_date | tojson }};
 const DEFAULT_ZONE = {{ default_zone | tojson }};
 
 async function send(method, url, body) {
@@ -271,7 +309,23 @@ document.getElementById('edit-trip').addEventListener('submit', async (event) =>
   body.tags = form.elements.tags.value.split(',').map(t => t.trim()).filter(Boolean);
   const { ok, data } = await send('PATCH', `/travel/trips/${TRIP_ID}`, body);
   if (!ok) { form.querySelector('.form-error').textContent = data.error || 'Something went wrong.'; return; }
+  const datesChanged = body.start_date !== TRIP_START || body.end_date !== TRIP_END;
+  if (datesChanged && body.default_tag_names && confirm('The dates changed. Tag the expenses already dated within the trip now?')) {
+    await applyTags();
+  }
   location.reload();
+});
+
+async function applyTags() {
+  const { ok, data } = await send('POST', `/travel/trips/${TRIP_ID}/apply-default-tags`);
+  if (!ok) { alert(data.error || 'Could not tag the expenses.'); return false; }
+  return data;
+}
+
+document.getElementById('apply-tags')?.addEventListener('click', async () => {
+  const message = document.getElementById('apply-tags-msg');
+  const result = await applyTags();
+  if (result) message.textContent = result.added ? `Tagged: ${result.added} tag(s) added.` : 'Nothing to add: every expense already has them.';
 });
 
 document.getElementById('delete-trip').addEventListener('click', async () => {
@@ -297,18 +351,22 @@ const legDialog = document.getElementById('leg-dialog');
 const legForm = document.getElementById('leg-form');
 const LEG_FIELDS = ['origin', 'destination', 'origin_code', 'destination_code', 'carrier', 'number', 'booking_ref', 'seat', 'booking_url', 'notes'];
 let editingLeg = null;
+let legEventId = null;
 
-function openLeg(leg) {
+// `leg` edits an existing leg; `prefill` (same shape) only fills the form, e.g. from a calendar event.
+function openLeg(leg, prefill = null, eventId = null) {
   editingLeg = leg;
+  legEventId = eventId;
+  const source = leg || prefill;
   legForm.reset();
   legForm.querySelector('.form-error').textContent = '';
-  document.getElementById('leg-title').textContent = leg ? 'Edit leg' : 'Add leg';
-  legForm.elements.mode.value = leg ? leg.mode : 'flight';
-  for (const name of LEG_FIELDS) legForm.elements[name].value = leg ? (leg[name] || '') : '';
-  legForm.elements.departs_at.value = leg ? LOCAL(leg.departs_local) : '';
-  legForm.elements.arrives_at.value = leg ? LOCAL(leg.arrives_local) : '';
-  legForm.elements.departs_tz.value = leg ? leg.departs_tz : DEFAULT_ZONE;
-  legForm.elements.arrives_tz.value = leg ? leg.arrives_tz : DEFAULT_ZONE;
+  document.getElementById('leg-title').textContent = leg ? 'Edit leg' : (eventId ? 'Add leg from calendar' : 'Add leg');
+  legForm.elements.mode.value = source ? source.mode : 'flight';
+  for (const name of LEG_FIELDS) legForm.elements[name].value = source ? (source[name] || '') : '';
+  legForm.elements.departs_at.value = source ? LOCAL(source.departs_local) : '';
+  legForm.elements.arrives_at.value = source ? LOCAL(source.arrives_local) : '';
+  legForm.elements.departs_tz.value = source ? source.departs_tz : DEFAULT_ZONE;
+  legForm.elements.arrives_tz.value = source ? source.arrives_tz : DEFAULT_ZONE;
   legDialog.showModal();
 }
 document.getElementById('add-leg').addEventListener('click', () => openLeg(null));
@@ -319,6 +377,7 @@ legForm.addEventListener('submit', async (event) => {
   const body = collect(legForm, LEG_FIELDS, { editing: !!editingLeg });
   for (const name of ['mode', 'departs_at', 'arrives_at', 'departs_tz', 'arrives_tz']) body[name] = legForm.elements[name].value;
   if (!editingLeg) body.trip_id = TRIP_ID;
+  if (!editingLeg && legEventId) body.calendar_event_id = legEventId;
   const { ok, data } = editingLeg
     ? await send('PATCH', `/travel/legs/${editingLeg.id}`, body)
     : await send('POST', '/travel/legs', body);
@@ -332,6 +391,7 @@ const stayForm = document.getElementById('stay-form');
 const newPlaceFields = document.getElementById('new-place-fields');
 const STAY_FIELDS = ['booking_ref', 'booking_url', 'notes'];
 let editingStay = null;
+let stayEventId = null;
 
 function syncPlaceFields() {
   const isNew = stayForm.elements.place_id.value === 'new';
@@ -340,11 +400,14 @@ function syncPlaceFields() {
 }
 stayForm.elements.place_id.addEventListener('change', syncPlaceFields);
 
-function openStay(stay) {
+// `stay` edits an existing stay; `prefill` (check_in_local, check_out_local, timezone, place_name) only fills the form.
+function openStay(stay, prefill = null, eventId = null) {
   editingStay = stay;
+  stayEventId = eventId;
+  const source = stay || prefill;
   stayForm.reset();
   stayForm.querySelector('.form-error').textContent = '';
-  document.getElementById('stay-title').textContent = stay ? 'Edit stay' : 'Add stay';
+  document.getElementById('stay-title').textContent = stay ? 'Edit stay' : (eventId ? 'Add stay from calendar' : 'Add stay');
   stayForm.elements.place_id.value = stay ? String(stay.place_id) : 'new';
   if (stay && stayForm.elements.place_id.value !== String(stay.place_id)) {
     const option = new Option(stay.place.name, stay.place_id, true, true);
@@ -352,9 +415,10 @@ function openStay(stay) {
   }
   for (const name of STAY_FIELDS) stayForm.elements[name].value = stay ? (stay[name] || '') : '';
   stayForm.elements.grade.value = stay && stay.grade ? stay.grade : '';
-  stayForm.elements.check_in_at.value = stay ? LOCAL(stay.check_in_local) : '';
-  stayForm.elements.check_out_at.value = stay ? LOCAL(stay.check_out_local) : '';
-  stayForm.elements.timezone.value = stay ? stay.timezone : DEFAULT_ZONE;
+  stayForm.elements.check_in_at.value = source ? LOCAL(source.check_in_local) : '';
+  stayForm.elements.check_out_at.value = source ? LOCAL(source.check_out_local) : '';
+  stayForm.elements.timezone.value = source ? source.timezone : DEFAULT_ZONE;
+  if (!stay && prefill) stayForm.elements.place_name.value = prefill.place_name || '';
   syncPlaceFields();
   stayDialog.showModal();
 }
@@ -383,11 +447,74 @@ stayForm.addEventListener('submit', async (event) => {
   const grade = stayForm.elements.grade.value;
   if (grade) body.grade = Number(grade); else if (editingStay) body.grade = null;
   if (!editingStay) body.trip_id = TRIP_ID;
+  if (!editingStay && stayEventId) body.calendar_event_id = stayEventId;
   const { ok, data } = editingStay
     ? await send('PATCH', `/travel/stays/${editingStay.id}`, body)
     : await send('POST', '/travel/stays', body);
   if (!ok) { error.textContent = data.error || 'Something went wrong.'; return; }
   location.reload();
+});
+
+// ---- import from calendar ----
+const calendarDialog = document.getElementById('calendar-dialog');
+const calendarList = document.getElementById('calendar-list');
+const calendarError = document.getElementById('calendar-error');
+
+document.getElementById('calendar-close').addEventListener('click', () => calendarDialog.close());
+
+function calendarRow(event) {
+  const row = document.createElement('div');
+  row.className = 'flex items-start justify-between gap-3 text-sm';
+  const info = document.createElement('div');
+  const title = document.createElement('p');
+  title.className = 'text-gray-900';
+  title.textContent = event.title;
+  const when = document.createElement('p');
+  when.className = 'text-xs text-gray-500';
+  when.textContent = `${event.start_local.slice(0, 16).replace('T', ' ')} → ${event.end_local.slice(0, 16).replace('T', ' ')} (${event.timezone})${event.location ? ' · ' + event.location : ''}`;
+  info.append(title, when);
+  const actions = document.createElement('div');
+  actions.className = 'flex gap-1 whitespace-nowrap';
+  if (event.imported_as) {
+    const done = document.createElement('span');
+    done.className = 'text-xs text-gray-400';
+    done.textContent = `Imported as ${event.imported_as}`;
+    actions.append(done);
+  } else {
+    const asLeg = document.createElement('button');
+    asLeg.className = 'btn btn-xs btn-outline';
+    asLeg.textContent = 'As leg';
+    asLeg.addEventListener('click', () => {
+      calendarDialog.close();
+      openLeg(null, {
+        mode: 'flight', notes: event.title, departs_local: event.start_local, arrives_local: event.end_local,
+        departs_tz: event.timezone, arrives_tz: event.timezone,
+      }, event.event_id);
+    });
+    const asStay = document.createElement('button');
+    asStay.className = 'btn btn-xs btn-outline';
+    asStay.textContent = 'As stay';
+    asStay.addEventListener('click', () => {
+      calendarDialog.close();
+      openStay(null, {
+        check_in_local: event.start_local, check_out_local: event.end_local, timezone: event.timezone, place_name: event.title,
+      }, event.event_id);
+    });
+    actions.append(asLeg, asStay);
+  }
+  row.append(info, actions);
+  return row;
+}
+
+document.getElementById('import-calendar').addEventListener('click', async () => {
+  calendarError.textContent = '';
+  calendarList.textContent = 'Loading…';
+  calendarDialog.showModal();
+  const res = await fetch(`/travel/trips/${TRIP_ID}/calendar-events`);
+  const data = await res.json().catch(() => []);
+  if (!res.ok) { calendarList.textContent = ''; calendarError.textContent = data.error || 'Could not read the calendar.'; return; }
+  calendarList.replaceChildren(...data.map(calendarRow));
+  if (!data.length) calendarList.textContent = 'No calendar events during the trip.';
 });
 </script>
 {% endblock %}

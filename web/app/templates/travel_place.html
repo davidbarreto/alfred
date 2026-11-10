@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "_travel_macros.html" import cost_chip %}
 {% set active_page = "travel" %}
 {% block title %}{{ place.name }}{% endblock %}
 
@@ -17,6 +18,7 @@
           <a class="text-xs text-[#378ADD] hover:underline" href="{{ place.maps_link }}" target="_blank" rel="noopener">Open in maps</a>
         </div>
         <div class="flex items-center gap-2">
+          {{ cost_chip(place_cost) }}
           {% if place.grade %}<span class="text-sm font-medium text-amber-600" id="place-grade">{{ place.grade | number }}/5 <span class="text-xs text-gray-400">({{ place.grade_count }} grade{{ '' if place.grade_count == 1 else 's' }})</span></span>{% endif %}
           <button class="btn btn-xs btn-outline" onclick="document.getElementById('edit-place-wrap').classList.toggle('hidden')">Edit</button>
           <button class="btn btn-xs btn-outline btn-error" id="delete-place">Delete</button>
@@ -84,11 +86,14 @@
   {% endif %}
 
   {% include "_travel_visit_dialog.html" %}
+  {% include "_travel_tx_dialog.html" %}
 </div>
 
 <script src="/static/js/travel-visits.js"></script>
+<script src="/static/js/travel-transactions.js"></script>
 <script>
 initTravelVisits({ tripId: null, placeId: {{ place.id }} });
+initTravelTransactions();
 
 async function send(method, url, body) {
   const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: body ? JSON.stringify(body) : undefined });

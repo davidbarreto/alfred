@@ -67,6 +67,8 @@ def service():
     svc._fx.convert_to_eur.return_value = None
     svc._settings = AsyncMock()
     svc._settings.get_cycle_start_day.return_value = 1
+    svc._trip_tags = AsyncMock()
+    svc._trip_tags.names_for.return_value = []
     return svc
 
 

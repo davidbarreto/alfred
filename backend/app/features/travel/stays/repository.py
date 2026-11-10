@@ -13,6 +13,16 @@ class StayRepository:
     async def get_stay(self, stay_id: int) -> Stay | None:
         return await self._session.get(Stay, stay_id)
 
+    async def get_stay_by_calendar_event(self, event_id: int) -> Stay | None:
+        return await self._session.scalar(select(Stay).where(Stay.calendar_event_id == event_id))
+
+    async def get_imported_event_ids(self, event_ids: list[int]) -> dict[int, int]:
+        """Calendar event id -> id of the stay imported from it, for the given events."""
+        if not event_ids:
+            return {}
+        stmt = select(Stay.calendar_event_id, Stay.id).where(Stay.calendar_event_id.in_(event_ids))
+        return {event_id: stay_id for event_id, stay_id in (await self._session.execute(stmt)).all()}
+
     async def get_stays(self, trip_id: int) -> list[Stay]:
         stmt = select(Stay).where(Stay.trip_id == trip_id).order_by(Stay.check_in_at, Stay.id)
         return list((await self._session.scalars(stmt)).all())

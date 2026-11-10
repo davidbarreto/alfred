@@ -147,7 +147,7 @@ class TestTripsPage:
 
 class TestTripPage:
     def test_renders_timeline_warnings_legs_and_stays(self, client, mock_api):
-        _route(mock_api, {"/travel/trips/1": _detail(), "/travel/places": [_place()]})
+        _route(mock_api, {"/travel/trips/1/costs": None, "/travel/trips/1": _detail(), "/travel/places": [_place()]})
         html = client.get("/travel/1").text
         assert "Alpha → Beta" in html and "Check in: Hotel Example" in html
         assert "Arrives 5 h before check-in" in html
@@ -158,16 +158,16 @@ class TestTripPage:
     def test_groups_timeline_by_local_day(self, client, mock_api):
         detail = _detail()
         detail["timeline"][1]["local"] = "2026-12-18T09:00:00"
-        _route(mock_api, {"/travel/trips/1": detail, "/travel/places": []})
+        _route(mock_api, {"/travel/trips/1/costs": None, "/travel/trips/1": detail, "/travel/places": []})
         html = client.get("/travel/1").text
         assert "17 Dec 2026" in html and "18 Dec 2026" in html
 
     def test_no_warnings_block_when_clean(self, client, mock_api):
-        _route(mock_api, {"/travel/trips/1": _detail(warnings=[]), "/travel/places": []})
+        _route(mock_api, {"/travel/trips/1/costs": None, "/travel/trips/1": _detail(warnings=[]), "/travel/places": []})
         assert 'id="warnings"' not in client.get("/travel/1").text
 
     def test_empty_trip_explains_what_to_add(self, client, mock_api):
-        _route(mock_api, {"/travel/trips/1": _detail(legs=[], stays=[], timeline=[], warnings=[]), "/travel/places": []})
+        _route(mock_api, {"/travel/trips/1/costs": None, "/travel/trips/1": _detail(legs=[], stays=[], timeline=[], warnings=[]), "/travel/places": []})
         assert "Nothing booked yet" in client.get("/travel/1").text
 
     def test_unknown_trip_redirects_to_the_list(self, client, mock_api):
@@ -176,7 +176,7 @@ class TestTripPage:
         assert resp.status_code == 302 and resp.headers["location"] == "/travel"
 
     def test_stay_form_offers_known_hotels(self, client, mock_api):
-        _route(mock_api, {"/travel/trips/1": _detail(), "/travel/places": [_place()]})
+        _route(mock_api, {"/travel/trips/1/costs": None, "/travel/trips/1": _detail(), "/travel/places": [_place()]})
         assert 'value="3"' in client.get("/travel/1").text
 
 
@@ -235,7 +235,7 @@ def test_timeline_shows_the_leave_home_item(client, mock_api):
         "kind": "leave_home", "at": "2026-12-17T03:00:00Z", "local": "2026-12-17T03:00:00", "timezone": "UTC",
         "title": "Leave home for the airport", "subtitle": "Alpha → Beta", "ref_id": 1, "links": {},
     })
-    _route(mock_api, {"/travel/trips/1": detail, "/travel/places": []})
+    _route(mock_api, {"/travel/trips/1/costs": None, "/travel/trips/1": detail, "/travel/places": []})
     html = client.get("/travel/1").text
     assert "Leave home for the airport" in html and "ti-door-exit" in html
 
@@ -243,37 +243,37 @@ def test_timeline_shows_the_leave_home_item(client, mock_api):
 class TestItinerary:
     def test_visits_are_grouped_by_day_with_undated_last(self, client, mock_api):
         visits = [_visit(id=1, day="2026-12-18"), _visit(id=2, day="2026-12-19", status="visited", grade=4), _visit(id=3, day=None, time=None)]
-        _route(mock_api, {"/travel/trips/1": _detail(visits=visits), "/travel/places": [_place()]})
+        _route(mock_api, {"/travel/trips/1/costs": None, "/travel/trips/1": _detail(visits=visits), "/travel/places": [_place()]})
         html = client.get("/travel/1").text
         assert html.index("18 Dec 2026") < html.index("19 Dec 2026") < html.index("No day yet")
         assert "Cafe Example" in html and "20:00" in html and "4/5" in html
 
     def test_planned_visit_offers_visited_and_missed(self, client, mock_api):
-        _route(mock_api, {"/travel/trips/1": _detail(visits=[_visit()]), "/travel/places": []})
+        _route(mock_api, {"/travel/trips/1/costs": None, "/travel/trips/1": _detail(visits=[_visit()]), "/travel/places": []})
         html = client.get("/travel/1").text
         assert 'data-status="visited"' in html and 'data-status="missed"' in html
 
     def test_visited_visit_offers_no_status_shortcuts(self, client, mock_api):
-        _route(mock_api, {"/travel/trips/1": _detail(visits=[_visit(status="visited", grade=5)]), "/travel/places": []})
+        _route(mock_api, {"/travel/trips/1/costs": None, "/travel/trips/1": _detail(visits=[_visit(status="visited", grade=5)]), "/travel/places": []})
         assert 'class="btn btn-xs btn-ghost mark-visit"' not in client.get("/travel/1").text
 
     def test_empty_itinerary_explains_itself(self, client, mock_api):
-        _route(mock_api, {"/travel/trips/1": _detail(), "/travel/places": []})
+        _route(mock_api, {"/travel/trips/1/costs": None, "/travel/trips/1": _detail(), "/travel/places": []})
         assert "Nothing planned" in client.get("/travel/1").text
 
     def test_hidden_visits_offer_a_toggle(self, client, mock_api):
-        _route(mock_api, {"/travel/trips/1": _detail(hidden_visit_count=3), "/travel/places": []})
+        _route(mock_api, {"/travel/trips/1/costs": None, "/travel/trips/1": _detail(hidden_visit_count=3), "/travel/places": []})
         html = client.get("/travel/1").text
         assert "Show 3 planned/missed" in html and "all_visits=1" in html
 
     def test_toggle_asks_the_backend_for_everything(self, client, mock_api):
-        _route(mock_api, {"/travel/trips/1": _detail(status="past"), "/travel/places": []})
+        _route(mock_api, {"/travel/trips/1/costs": None, "/travel/trips/1": _detail(status="past"), "/travel/places": []})
         html = client.get("/travel/1?all_visits=1").text
         assert mock_api["get"].await_args_list[0].kwargs["params"] == {"all_visits": "true"}
         assert "Hide planned/missed" in html
 
     def test_visit_dialog_offers_known_places(self, client, mock_api):
-        _route(mock_api, {"/travel/trips/1": _detail(), "/travel/places": [_place(id=9, name="Museum Example", kind="museum")]})
+        _route(mock_api, {"/travel/trips/1/costs": None, "/travel/trips/1": _detail(), "/travel/places": [_place(id=9, name="Museum Example", kind="museum")]})
         html = client.get("/travel/1").text
         assert 'id="visit-dialog"' in html and "Museum Example" in html and 'name="place_kind"' in html
 
@@ -324,7 +324,7 @@ class TestPlacePage:
         )
 
     def test_shows_derived_grade_history_and_stays(self, client, mock_api):
-        _route(mock_api, {"/travel/places/3": self._detail()})
+        _route(mock_api, {"/travel/places/3/costs": None, "/travel/places/3": self._detail()})
         html = client.get("/travel/places/3").text
         assert "4/5" in html and "2 grades" in html
         assert "Book the terrace" in html and "Quiet room" in html
@@ -332,12 +332,12 @@ class TestPlacePage:
         assert 'href="/travel/1"' in html
 
     def test_edit_form_is_prefilled(self, client, mock_api):
-        _route(mock_api, {"/travel/places/3": self._detail()})
+        _route(mock_api, {"/travel/places/3/costs": None, "/travel/places/3": self._detail()})
         html = client.get("/travel/places/3").text
         assert 'value="38.7"' in html and 'value="Would return"' in html
 
     def test_visit_dialog_has_no_place_picker(self, client, mock_api):
-        _route(mock_api, {"/travel/places/3": self._detail()})
+        _route(mock_api, {"/travel/places/3/costs": None, "/travel/places/3": self._detail()})
         html = client.get("/travel/places/3").text
         assert 'id="visit-dialog"' in html and 'name="place_id"' not in html
 
@@ -369,3 +369,112 @@ class TestVisitAndPlaceWrites:
         mock_api["delete"].side_effect = _status_error(409, "Place has visits or stays and can't be deleted")
         resp = client.delete("/travel/places/3")
         assert resp.status_code == 409 and "visits or stays" in resp.json()["error"]
+
+
+def _cost(total="120.00", count=1, unconverted=0, **kw):
+    return {"total_eur": total, "transaction_count": count, "unconverted_count": unconverted, **kw}
+
+
+def _costs(**kw):
+    costs = {
+        "total": _cost("250.00", 3, 1),
+        "by_kind": [{"kind": "flight", **_cost("120.00")}, {"kind": "lodging", **_cost("130.00", 2, 1)}],
+        "legs": [{"id": 1, **_cost("120.00")}],
+        "stays": [{"id": 7, **_cost("130.00", 2, 1)}],
+        "visits": [{"id": 11, **_cost("35.50")}],
+    }
+    costs.update(kw)
+    return costs
+
+
+class TestCosts:
+    def test_trip_page_shows_total_kinds_and_per_item_costs(self, client, mock_api):
+        _route(mock_api, {"/travel/trips/1/costs": _costs(), "/travel/trips/1": _detail(visits=[_visit()]), "/travel/places": []})
+        html = client.get("/travel/1").text
+        assert 'id="trip-costs"' in html and "250.00 €" in html and "each counted once" in html
+        assert "1 without an EUR amount yet" in html
+        assert "flight: <strong>120.00 €</strong>" in html and "lodging: <strong>130.00 €</strong>" in html
+        assert "120.00 €" in html.split('id="leg-1"')[1].split("</div>")[0]
+        assert "1 unconverted" in html.split('id="stay-7"')[1].split("</div>")[0]
+        assert "35.50 €" in html.split('id="visit-11"')[1].split("</div>")[0]
+
+    def test_no_cost_card_without_linked_transactions(self, client, mock_api):
+        _route(mock_api, {"/travel/trips/1/costs": _costs(total=_cost("0.00", 0), legs=[], stays=[], visits=[]),
+                          "/travel/trips/1": _detail(), "/travel/places": []})
+        assert 'id="trip-costs"' not in client.get("/travel/1").text
+
+    def test_page_still_renders_when_costs_are_unavailable(self, client, mock_api):
+        _route(mock_api, {"/travel/trips/1/costs": httpx.ConnectError("down"), "/travel/trips/1": _detail(), "/travel/places": []})
+        resp = client.get("/travel/1")
+        assert resp.status_code == 200 and 'id="trip-costs"' not in resp.text
+
+    def test_every_item_offers_the_transactions_dialog(self, client, mock_api):
+        _route(mock_api, {"/travel/trips/1/costs": None, "/travel/trips/1": _detail(visits=[_visit()]), "/travel/places": []})
+        html = client.get("/travel/1").text
+        for kind in ("legs", "stays", "visits"):
+            assert f'data-kind="{kind}"' in html
+        assert 'id="tx-dialog"' in html
+
+    def test_place_page_shows_lifetime_cost(self, client, mock_api):
+        place = _place(visits=[], stays=[])
+        _route(mock_api, {"/travel/places/3/costs": {"total": _cost("80.00", 2)}, "/travel/places/3": place})
+        assert "80.00 €" in client.get("/travel/places/3").text
+
+
+class TestTransactionLinkProxies:
+    def test_search_needs_a_query(self, client, mock_api):
+        resp = client.get("/travel/transactions/search?q=")
+        assert resp.json() == [] and not mock_api["get"].await_count
+
+    def test_search_uses_the_finance_search(self, client, mock_api):
+        mock_api["get"].return_value = [{"id": 9}]
+        assert client.get("/travel/transactions/search?q=flight").json() == [{"id": 9}]
+        mock_api["get"].assert_awaited_once_with("/finance/transactions", params={"search": "flight", "limit": 10})
+
+    def test_search_backend_down(self, client, mock_api):
+        mock_api["get"].side_effect = httpx.ConnectError("down")
+        assert client.get("/travel/transactions/search?q=x").status_code == 502
+
+    def test_list_link_unlink_are_proxied(self, client, mock_api):
+        mock_api["get"].return_value = {"transactions": [], "cost": _cost("0.00", 0)}
+        mock_api["post"].return_value = {"transactions": [], "cost": _cost()}
+        mock_api["delete"].return_value = None
+        assert client.get("/travel/links/legs/4").status_code == 200
+        assert client.post("/travel/links/stays/4", json={"transaction_id": 9}).status_code == 200
+        assert client.delete("/travel/links/visits/4/9").status_code == 200
+        mock_api["get"].assert_awaited_once_with("/travel/legs/4/transactions")
+        mock_api["post"].assert_awaited_once_with("/travel/stays/4/transactions", json={"transaction_id": 9})
+        mock_api["delete"].assert_awaited_once_with("/travel/visits/4/transactions/9")
+
+    def test_unknown_link_kind_never_reaches_the_backend(self, client, mock_api):
+        assert client.get("/travel/links/trips/4").status_code == 404
+        assert not mock_api["get"].await_count
+
+    def test_transfer_refusal_is_relayed(self, client, mock_api):
+        mock_api["post"].side_effect = _status_error(422, "Transfers can't be linked to a trip")
+        resp = client.post("/travel/links/legs/4", json={"transaction_id": 9})
+        assert resp.status_code == 422 and "Transfers" in resp.json()["error"]
+
+
+class TestDefaultTagsAndCalendarImport:
+    def test_apply_default_tags_is_proxied(self, client, mock_api):
+        mock_api["post"].return_value = {"tags": ["Travel"], "added": 3}
+        assert client.post("/travel/trips/1/apply-default-tags").json() == {"tags": ["Travel"], "added": 3}
+        mock_api["post"].assert_awaited_once_with("/travel/trips/1/apply-default-tags")
+
+    def test_apply_button_only_when_the_trip_has_default_tags(self, client, mock_api):
+        routes = {"/travel/trips/1/costs": None, "/travel/places": []}
+        _route(mock_api, {**routes, "/travel/trips/1": _detail()})
+        assert 'id="apply-tags"' not in client.get("/travel/1").text
+        _route(mock_api, {**routes, "/travel/trips/1": _detail(default_tag_names="Travel, Hotel")})
+        assert 'id="apply-tags"' in client.get("/travel/1").text
+
+    def test_calendar_events_are_proxied(self, client, mock_api):
+        mock_api["get"].return_value = [{"event_id": 1}]
+        assert client.get("/travel/trips/1/calendar-events").json() == [{"event_id": 1}]
+        mock_api["get"].assert_awaited_once_with("/travel/trips/1/calendar-events")
+
+    def test_trip_page_has_the_import_button_and_dialog(self, client, mock_api):
+        _route(mock_api, {"/travel/trips/1/costs": None, "/travel/trips/1": _detail(), "/travel/places": []})
+        html = client.get("/travel/1").text
+        assert 'id="import-calendar"' in html and 'id="calendar-dialog"' in html

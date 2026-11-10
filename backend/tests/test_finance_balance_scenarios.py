@@ -68,6 +68,8 @@ def service_with_state():
         svc._account_repo = _StatefulAccountRepo(auto_mirror_accounts)
         svc._fx = AsyncMock()
         svc._fx.convert_to_eur.return_value = None
+        svc._trip_tags = AsyncMock()
+        svc._trip_tags.names_for.return_value = []
         return svc
     return _make
 

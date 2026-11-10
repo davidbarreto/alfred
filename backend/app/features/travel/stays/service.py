@@ -2,7 +2,8 @@ import logging
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.features.travel.errors import TravelNotFoundError
+from app.features.organizer.calendar_events.repository import CalendarEventRepository
+from app.features.travel.errors import TravelConflictError, TravelNotFoundError
 from app.features.travel.places.repository import PlaceRepository
 from app.features.travel.stays.repository import StayRepository
 from app.features.travel.stays.schemas import StayCreate, StayRead, StayUpdate
@@ -19,6 +20,7 @@ class StayService:
         self._repo = StayRepository(session)
         self._trip_repo = TripRepository(session)
         self._place_repo = PlaceRepository(session)
+        self._calendar_repo = CalendarEventRepository(session)
 
     async def get_stays(self, trip_id: int) -> list[StayRead]:
         stays = await self._repo.get_stays(trip_id)
@@ -37,6 +39,11 @@ class StayService:
 
     async def create_stay(self, data: StayCreate) -> StayRead:
         await self._check_refs(data.trip_id, data.place_id)
+        if data.calendar_event_id is not None:
+            if await self._calendar_repo.get_event(data.calendar_event_id) is None:
+                raise TravelNotFoundError(f"Calendar event {data.calendar_event_id} not found")
+            if await self._repo.get_stay_by_calendar_event(data.calendar_event_id) is not None:
+                raise TravelConflictError("That calendar event is already imported as a stay")
         stay = await self._repo.create_stay(data.model_dump())
         logger.info("Stay created: id=%d trip_id=%s place_id=%d", stay.id, stay.trip_id, stay.place_id)
         return StayRead.model_validate(stay)

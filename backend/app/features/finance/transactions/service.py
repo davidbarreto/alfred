@@ -12,6 +12,7 @@ from app.features.finance.accounts.schemas import AccountFilters
 from app.features.finance.exchange_rates.service import ExchangeRateService
 from app.features.finance.installment_plans.repository import InstallmentPlanRepository
 from app.features.finance.settings.service import FinanceSettingsService
+from app.features.finance.tags.names import merge_tag_names
 from app.features.finance.transactions.repository import TransactionRepository
 from app.features.finance.transactions.tables import Transaction
 from app.features.finance.transactions.schemas import (
@@ -46,6 +47,7 @@ from app.features.finance.transactions.schemas import (
     UnmatchedTransferAccount,
     resolve_period,
 )
+from app.features.travel.default_tags import TripDefaultTagService
 from app.shared.timezone import local_today
 
 
@@ -154,6 +156,7 @@ class TransactionService:
         self._plan_repo = InstallmentPlanRepository(session)
         self._fx = exchange_rate_service
         self._settings = FinanceSettingsService(session)
+        self._trip_tags = TripDefaultTagService(session)
 
     async def _effective_transfer_match(self, txn: Transaction) -> tuple[Decimal, date, Decimal | None]:
         """(amount, reference date, EUR-normalized amount) to validate a transfer link
@@ -214,6 +217,10 @@ class TransactionService:
         )
 
     async def create(self, data: TransactionCreate) -> TransactionRead:
+        # An expense dated inside a trip picks up that trip's default tags next to the ones given.
+        trip_tags = await self._trip_tags.names_for(data.date.date(), data.type)
+        if trip_tags:
+            data = data.model_copy(update={"tags": merge_tag_names(data.tags, trip_tags)})
         amount_eur = await self._fx.convert_to_eur(data.amount, data.currency, data.date.date())
         txn = await self._repo.create(data, amount_eur=amount_eur)
         # Every transaction -- transfer included -- only ever moves its own account's

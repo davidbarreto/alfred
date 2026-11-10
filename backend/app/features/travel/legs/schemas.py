@@ -24,6 +24,7 @@ class LegCreate(_LegFields):
     """departs_at / arrives_at may be naive (wall time in the matching zone) or carry an offset."""
 
     trip_id: int
+    calendar_event_id: int | None = None
     mode: LegMode
     origin: str = Field(min_length=1, max_length=200)
     destination: str = Field(min_length=1, max_length=200)
@@ -81,6 +82,7 @@ class LegRead(BaseModel):
     booking_url: str | None
     seat: str | None
     notes: str | None
+    calendar_event_id: int | None = None
     created_at: datetime
     updated_at: datetime
 

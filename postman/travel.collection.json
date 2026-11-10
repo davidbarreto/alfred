@@ -1328,7 +1328,767 @@
       }
     },
     {
-      "name": "34 - Delete Place With Visit",
+      "name": "34 - Create Finance Account",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+              "pm.environment.set('travel_account_id', pm.response.json().id);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/finance/accounts",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "finance",
+            "accounts"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Postman travel account {{travel_ts}}\",\n  \"type\": \"checking\",\n  \"currency\": \"EUR\",\n  \"balance\": \"1000.00\",\n  \"institution\": \"Test Bank\",\n  \"is_active\": true\n}"
+        }
+      }
+    },
+    {
+      "name": "35 - Create Expense Inside The Trip",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+              "const j = pm.response.json();",
+              "pm.test('Trip default tags were stamped', () => pm.expect(j.tags).to.include.members(['Travel', 'Hotel']));",
+              "pm.environment.set('travel_txn_id', j.id);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/finance/transactions",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "finance",
+            "transactions"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"account_id\": {{travel_account_id}},\n  \"date\": \"2031-12-18T10:00:00\",\n  \"amount\": \"45.50\",\n  \"currency\": \"EUR\",\n  \"type\": \"expense\",\n  \"merchant\": \"Postman Airline\"\n}"
+        }
+      }
+    },
+    {
+      "name": "36 - Create Refund Inside The Trip",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+              "const j = pm.response.json();",
+              "pm.test('Only expenses are stamped', () => pm.expect(j.tags).to.eql([]));",
+              "pm.environment.set('travel_refund_id', j.id);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/finance/transactions",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "finance",
+            "transactions"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"account_id\": {{travel_account_id}},\n  \"date\": \"2031-12-19T10:00:00\",\n  \"amount\": \"20.00\",\n  \"currency\": \"EUR\",\n  \"type\": \"income\",\n  \"merchant\": \"Postman Airline refund\"\n}"
+        }
+      }
+    },
+    {
+      "name": "37 - Create Expense Outside The Trip",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+              "pm.test('Not stamped outside the trip dates', () => pm.expect(pm.response.json().tags).to.eql([]));",
+              "pm.environment.set('travel_outside_id', pm.response.json().id);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/finance/transactions",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "finance",
+            "transactions"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"account_id\": {{travel_account_id}},\n  \"date\": \"2031-12-30T10:00:00\",\n  \"amount\": \"9.00\",\n  \"currency\": \"EUR\",\n  \"type\": \"expense\",\n  \"merchant\": \"Postman Cafe\"\n}"
+        }
+      }
+    },
+    {
+      "name": "38 - Link Expense To Leg",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "const j = pm.response.json();",
+              "pm.test('Cost is the expense', () => { pm.expect(j.cost.total_eur).to.eql('45.50'); pm.expect(j.cost.transaction_count).to.eql(1); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/legs/{{travel_leg_id}}/transactions",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "legs",
+            "{{travel_leg_id}}",
+            "transactions"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"transaction_id\": {{travel_txn_id}}\n}"
+        }
+      }
+    },
+    {
+      "name": "39 - Link Expense To Leg Again",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Linking twice keeps one link', () => pm.expect(pm.response.json().transactions.length).to.eql(1));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/legs/{{travel_leg_id}}/transactions",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "legs",
+            "{{travel_leg_id}}",
+            "transactions"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"transaction_id\": {{travel_txn_id}}\n}"
+        }
+      }
+    },
+    {
+      "name": "40 - Link Same Expense To Stay",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/stays/{{travel_stay_id}}/transactions",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "stays",
+            "{{travel_stay_id}}",
+            "transactions"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"transaction_id\": {{travel_txn_id}}\n}"
+        }
+      }
+    },
+    {
+      "name": "41 - Link Refund To Stay",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Refund counts down', () => pm.expect(pm.response.json().cost.total_eur).to.eql('25.50'));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/stays/{{travel_stay_id}}/transactions",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "stays",
+            "{{travel_stay_id}}",
+            "transactions"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"transaction_id\": {{travel_refund_id}}\n}"
+        }
+      }
+    },
+    {
+      "name": "42 - Link Unknown Transaction",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 404', () => pm.response.to.have.status(404));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/legs/{{travel_leg_id}}/transactions",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "legs",
+            "{{travel_leg_id}}",
+            "transactions"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"transaction_id\": 999999999\n}"
+        }
+      }
+    },
+    {
+      "name": "43 - Link To Unknown Leg",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 404', () => pm.response.to.have.status(404));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/legs/999999999/transactions",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "legs",
+            "999999999",
+            "transactions"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"transaction_id\": {{travel_txn_id}}\n}"
+        }
+      }
+    },
+    {
+      "name": "44 - Link To Unknown Kind",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 422', () => pm.response.to.have.status(422));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/trips/{{travel_trip_id}}/transactions",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "trips",
+            "{{travel_trip_id}}",
+            "transactions"
+          ]
+        }
+      }
+    },
+    {
+      "name": "45 - List Leg Transactions",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('One transaction', () => pm.expect(pm.response.json().transactions[0].id).to.eql(Number(pm.environment.get('travel_txn_id'))));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/legs/{{travel_leg_id}}/transactions",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "legs",
+            "{{travel_leg_id}}",
+            "transactions"
+          ]
+        }
+      }
+    },
+    {
+      "name": "46 - Get Trip Costs",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "const j = pm.response.json();",
+              "pm.test('Shared charge counted once in the total', () => { pm.expect(j.total.total_eur).to.eql('25.50'); pm.expect(j.total.transaction_count).to.eql(2); });",
+              "pm.test('Grouped by kind', () => { const kinds = j.by_kind.map(k => k.kind); pm.expect(kinds).to.include.members(['flight', 'lodging']); });",
+              "pm.test('Per item', () => { pm.expect(j.legs[0].total_eur).to.eql('45.50'); pm.expect(j.stays[0].total_eur).to.eql('25.50'); });",
+              "pm.test('Nothing unconverted', () => pm.expect(j.total.unconverted_count).to.eql(0));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/trips/{{travel_trip_id}}/costs",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "trips",
+            "{{travel_trip_id}}",
+            "costs"
+          ]
+        }
+      }
+    },
+    {
+      "name": "47 - Get Place Costs",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Stay payments counted', () => pm.expect(pm.response.json().total.total_eur).to.eql('25.50'));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/places/{{travel_place_id}}/costs",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "places",
+            "{{travel_place_id}}",
+            "costs"
+          ]
+        }
+      }
+    },
+    {
+      "name": "48 - Apply Default Tags To Existing Expenses",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "const j = pm.response.json();",
+              "pm.test('Tags named', () => pm.expect(j.tags).to.eql(['Travel', 'Hotel']));",
+              "pm.test('Already stamped expenses are not tagged twice', () => pm.expect(j.added).to.eql(0));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/trips/{{travel_trip_id}}/apply-default-tags",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "trips",
+            "{{travel_trip_id}}",
+            "apply-default-tags"
+          ]
+        }
+      }
+    },
+    {
+      "name": "49 - List Calendar Candidates",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('A list', () => pm.expect(pm.response.json()).to.be.an('array'));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/trips/{{travel_trip_id}}/calendar-events",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "trips",
+            "{{travel_trip_id}}",
+            "calendar-events"
+          ]
+        }
+      }
+    },
+    {
+      "name": "50 - List Calendar Candidates Of Unknown Trip",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 404', () => pm.response.to.have.status(404));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/trips/999999999/calendar-events",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "trips",
+            "999999999",
+            "calendar-events"
+          ]
+        }
+      }
+    },
+    {
+      "name": "51 - Create Leg From Unknown Calendar Event",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 404', () => pm.response.to.have.status(404));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/legs",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "legs"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"trip_id\": \"{{travel_trip_id}}\",\n  \"mode\": \"flight\",\n  \"origin\": \"A\",\n  \"destination\": \"B\",\n  \"departs_at\": \"2031-12-17T06:00:00\",\n  \"arrives_at\": \"2031-12-17T08:00:00\",\n  \"departs_tz\": \"UTC\",\n  \"arrives_tz\": \"UTC\",\n  \"calendar_event_id\": 999999999\n}"
+        }
+      }
+    },
+    {
+      "name": "52 - Unlink Refund From Stay",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 204', () => pm.response.to.have.status(204));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "DELETE",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/stays/{{travel_stay_id}}/transactions/{{travel_refund_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "stays",
+            "{{travel_stay_id}}",
+            "transactions",
+            "{{travel_refund_id}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "53 - Unlink Again",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 404', () => pm.response.to.have.status(404));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "DELETE",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/stays/{{travel_stay_id}}/transactions/{{travel_refund_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "stays",
+            "{{travel_stay_id}}",
+            "transactions",
+            "{{travel_refund_id}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "54 - Delete Place With Visit",
       "event": [
         {
           "listen": "test",
@@ -1362,7 +2122,7 @@
       }
     },
     {
-      "name": "35 - Delete Visit",
+      "name": "55 - Delete Visit",
       "event": [
         {
           "listen": "test",
@@ -1396,7 +2156,7 @@
       }
     },
     {
-      "name": "36 - Get Deleted Visit",
+      "name": "56 - Get Deleted Visit",
       "event": [
         {
           "listen": "test",
@@ -1430,7 +2190,7 @@
       }
     },
     {
-      "name": "37 - Delete Leg",
+      "name": "57 - Delete Leg",
       "event": [
         {
           "listen": "test",
@@ -1464,7 +2224,7 @@
       }
     },
     {
-      "name": "38 - Get Deleted Leg",
+      "name": "58 - Get Deleted Leg",
       "event": [
         {
           "listen": "test",
@@ -1498,7 +2258,7 @@
       }
     },
     {
-      "name": "39 - Delete Stay",
+      "name": "59 - Delete Stay",
       "event": [
         {
           "listen": "test",
@@ -1532,7 +2292,7 @@
       }
     },
     {
-      "name": "40 - Delete Place",
+      "name": "60 - Delete Place",
       "event": [
         {
           "listen": "test",
@@ -1566,7 +2326,7 @@
       }
     },
     {
-      "name": "41 - Delete Trip",
+      "name": "61 - Delete Trip",
       "event": [
         {
           "listen": "test",
@@ -1600,7 +2360,7 @@
       }
     },
     {
-      "name": "42 - Delete Tag",
+      "name": "62 - Delete Tag",
       "event": [
         {
           "listen": "test",
@@ -1634,7 +2394,7 @@
       }
     },
     {
-      "name": "43 - Get Deleted Trip",
+      "name": "63 - Get Deleted Trip",
       "event": [
         {
           "listen": "test",
@@ -1668,7 +2428,7 @@
       }
     },
     {
-      "name": "44 - Get Settings",
+      "name": "64 - Get Settings",
       "event": [
         {
           "listen": "test",
@@ -1705,7 +2465,7 @@
       }
     },
     {
-      "name": "45 - Update Settings",
+      "name": "65 - Update Settings",
       "event": [
         {
           "listen": "test",
@@ -1743,7 +2503,7 @@
       }
     },
     {
-      "name": "46 - Update Settings Out Of Range",
+      "name": "66 - Update Settings Out Of Range",
       "event": [
         {
           "listen": "test",
@@ -1780,7 +2540,7 @@
       }
     },
     {
-      "name": "47 - Restore Settings",
+      "name": "67 - Restore Settings",
       "event": [
         {
           "listen": "test",
@@ -1818,7 +2578,7 @@
       }
     },
     {
-      "name": "48 - Find Place Tag For Cleanup",
+      "name": "68 - Find Place Tag For Cleanup",
       "event": [
         {
           "listen": "test",
@@ -1854,7 +2614,7 @@
       }
     },
     {
-      "name": "49 - Delete Place Tag",
+      "name": "69 - Delete Place Tag",
       "event": [
         {
           "listen": "test",
@@ -1883,6 +2643,142 @@
             "travel",
             "tags",
             "{{travel_place_tag_id}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "70 - Delete Expense Inside The Trip",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 204', () => pm.response.to.have.status(204));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "DELETE",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/finance/transactions/{{travel_txn_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "finance",
+            "transactions",
+            "{{travel_txn_id}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "71 - Delete Refund",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 204', () => pm.response.to.have.status(204));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "DELETE",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/finance/transactions/{{travel_refund_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "finance",
+            "transactions",
+            "{{travel_refund_id}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "72 - Delete Expense Outside The Trip",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 204', () => pm.response.to.have.status(204));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "DELETE",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/finance/transactions/{{travel_outside_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "finance",
+            "transactions",
+            "{{travel_outside_id}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "73 - Delete Finance Account",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 204', () => pm.response.to.have.status(204));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "DELETE",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/finance/accounts/{{travel_account_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "finance",
+            "accounts",
+            "{{travel_account_id}}"
           ]
         }
       }

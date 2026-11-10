@@ -116,7 +116,10 @@ from app.features.metrics.entries.service import MetricEntryService
 from app.features.metrics.series.service import MetricSeriesService
 from app.features.metrics.stats.service import MetricStatsService
 from app.features.metrics.tags.service import MetricTagService
+from app.features.travel.calendar_import.service import CalendarImportService
+from app.features.travel.default_tags import TripDefaultTagService
 from app.features.travel.legs.service import LegService
+from app.features.travel.transaction_links.service import TransactionLinkService
 from app.features.travel.places.service import PlaceService
 from app.features.travel.settings_service import TravelSettingsService
 from app.features.travel.stays.service import StayService
@@ -656,6 +659,15 @@ def get_travel_settings_service(session: AsyncSession = Depends(get_session)) ->
 def get_visit_service(session: AsyncSession = Depends(get_session)) -> VisitService:
     return VisitService(session)
 
+def get_transaction_link_service(session: AsyncSession = Depends(get_session)) -> TransactionLinkService:
+    return TransactionLinkService(session)
+
+def get_trip_default_tag_service(session: AsyncSession = Depends(get_session)) -> TripDefaultTagService:
+    return TripDefaultTagService(session)
+
+def get_calendar_import_service(session: AsyncSession = Depends(get_session)) -> CalendarImportService:
+    return CalendarImportService(session)
+
 def get_codeforces_sync_service(session: AsyncSession = Depends(get_session)) -> CodeforcesSyncService:
     return CodeforcesSyncService(session, CodeforcesClient())
 
@@ -788,4 +800,7 @@ StayServiceDep = Annotated[StayService, Depends(get_stay_service)]
 PlaceServiceDep = Annotated[PlaceService, Depends(get_place_service)]
 TravelSettingsServiceDep = Annotated[TravelSettingsService, Depends(get_travel_settings_service)]
 VisitServiceDep = Annotated[VisitService, Depends(get_visit_service)]
+TransactionLinkServiceDep = Annotated[TransactionLinkService, Depends(get_transaction_link_service)]
+TripDefaultTagServiceDep = Annotated[TripDefaultTagService, Depends(get_trip_default_tag_service)]
+CalendarImportServiceDep = Annotated[CalendarImportService, Depends(get_calendar_import_service)]
 TravelTagServiceDep = Annotated[TravelTagService, Depends(get_travel_tag_service)]

@@ -21,6 +21,7 @@ class StayCreate(_StayFields):
     check_in_at: datetime
     check_out_at: datetime
     timezone: str
+    calendar_event_id: int | None = None
 
     @field_validator("timezone")
     @classmethod
@@ -61,6 +62,7 @@ class StayRead(BaseModel):
     booking_url: str | None
     notes: str | None
     grade: int | None
+    calendar_event_id: int | None = None
     created_at: datetime
     updated_at: datetime
 

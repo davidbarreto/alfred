@@ -13,13 +13,14 @@ from app.features.finance.imports.schemas import (
     ImportRuleUpdate,
     InstallmentPlanActionCommit,
 )
+from app.features.finance.tags.names import merge_tag_names
+from app.features.travel.default_tags import TripTagWindows
 from app.features.finance.imports.service import (
     ImportService,
     InvalidGroupedImportError,
     _clean_description,
     _compute_dedup_hash,
     _extract_json,
-    _merge_tags,
     _rule_matches,
 )
 from app.features.finance.imports.tables import ImportBatch, ImportRule
@@ -116,6 +117,8 @@ def _service(statement: ParsedStatement | None = None, llm=None, files=None) -> 
     service._account_repo = AsyncMock()
     service._installment_plan_repo = AsyncMock()
     service._installment_plans = AsyncMock()
+    service._trip_tags = AsyncMock()
+    service._trip_tags.windows_for.return_value = TripTagWindows([])
     service._repo.list_rules.return_value = []
     service._repo.add_rule = MagicMock()
     # session.add() is sync on a real AsyncSession; AsyncMock would otherwise turn it
@@ -2404,7 +2407,7 @@ class TestCommitInsertsSupersedingRowAtZero:
 
 class TestMergeTags:
     def test_batch_tags_come_first_and_duplicates_collapse_case_insensitively(self):
-        assert _merge_tags(["Travel"], ["travel", "Rome", " Rome "]) == ["Travel", "Rome"]
+        assert merge_tag_names(["Travel"], ["travel", "Rome", " Rome "]) == ["Travel", "Rome"]
 
     def test_blank_names_are_dropped(self):
-        assert _merge_tags([], ["", "  "]) == []
+        assert merge_tag_names([], ["", "  "]) == []

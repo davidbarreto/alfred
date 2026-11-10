@@ -8,6 +8,7 @@ from app.features.travel.constants import TripStatusFilter
 from app.features.travel.legs.schemas import LegRead
 from app.features.travel.stays.schemas import StayRead
 from app.features.travel.tags.schemas import normalize_tags
+from app.features.travel.visits.schemas import VisitRead
 from app.features.travel.trips.timeline import TimelineItem, TripWarning
 from app.shared.timezone import local_today
 
@@ -114,4 +115,7 @@ class TripDetail(TripRead):
     stays: list[StayRead]
     timeline: list[TimelineItem]
     leave_home_at: datetime | None = None
+    visits: list[VisitRead] = []
+    # Planned and missed visits of an ended trip are hidden unless asked for; this says how many.
+    hidden_visit_count: int = 0
     warnings: list[TripWarning]

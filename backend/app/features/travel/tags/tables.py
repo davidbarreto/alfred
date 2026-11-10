@@ -5,11 +5,21 @@ from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base
 
-# Describe the trip itself (Family, Work, Would return). Unrelated to trips.default_tag_names, which holds finance tag names.
+# Describe the trip itself (Family, Work). Unrelated to trips.default_tag_names, which holds finance tag names.
 trips_tags = Table(
     "trips_tags",
     Base.metadata,
     Column("trip_id", ForeignKey("travel.trips.id", ondelete="CASCADE"), primary_key=True),
+    Column("tag_id", ForeignKey("travel.tags.id", ondelete="CASCADE"), primary_key=True, index=True),
+    schema="travel",
+)
+
+
+# Describe the place itself (Would return, Family friendly).
+places_tags = Table(
+    "places_tags",
+    Base.metadata,
+    Column("place_id", ForeignKey("travel.places.id", ondelete="CASCADE"), primary_key=True),
     Column("tag_id", ForeignKey("travel.tags.id", ondelete="CASCADE"), primary_key=True, index=True),
     schema="travel",
 )

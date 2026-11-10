@@ -127,9 +127,9 @@ Personal measurement log: timed things (commute), values (weight) and counts (co
 
 ## Travel
 
-Trips with their legs (flights, trains, ...), stays (hotels) and places, a day-grouped timeline with maps links, and gap warnings (long wait before check-in, tight connections, overlapping legs). See [modules/travel.md](modules/travel.md).
+Trips with their legs (flights, trains, ...), stays (hotels), an itinerary of planned/visited/missed visits, and places with tags and a derived grade, a day-grouped timeline with maps links, and gap warnings (long wait before check-in, tight connections, overlapping legs). See [modules/travel.md](modules/travel.md).
 
-- **Portal:** `/travel` (filterable trips list), `/travel/{id}`. **API:** `/travel/*`.
+- **Portal:** `/travel` (filterable trips list), `/travel/{id}`, `/travel/places` (filterable), `/travel/places/{id}`. **API:** `/travel/*`.
 
 ## Planning, routines and activities
 

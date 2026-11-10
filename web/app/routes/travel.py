@@ -148,18 +148,116 @@ async def create_place(request: Request):
     return await forward(api.post("/travel/places", json=await request.json()), "Could not create the place.")
 
 
+def _place_filters(request: Request) -> dict:
+    params = request.query_params
+    status = params.get("status") or ""
+    return {
+        "q": (params.get("q") or "").strip(),
+        "kind": params.get("kind") if params.get("kind") in _PLACE_KINDS else "",
+        "city": (params.get("city") or "").strip(),
+        "country": (params.get("country") or "").strip(),
+        "tags": [t for t in params.getlist("tag") if t],
+        "min_grade": params.get("min_grade") if params.get("min_grade") in ("1", "2", "3", "4", "5") else "",
+        "status": status if status in ("planned", "visited", "missed") else "",
+        "no_trip": params.get("no_trip") in ("1", "true", "on"),
+    }
+
+
+def _places_context(places: list | None, offset: int, filters: dict) -> dict:
+    page, has_next, has_prev = _pagination(places or [], offset)
+    query = [(k, filters[k]) for k in ("q", "kind", "city", "country", "min_grade", "status")]
+    query += [("tag", t) for t in filters["tags"]]
+    if filters["no_trip"]:
+        query.append(("no_trip", "1"))
+    return {
+        "places": page, "available": places is not None, "offset": offset, "has_next": has_next,
+        "has_prev": has_prev, "page_size": _PAGE_SIZE, "query": urlencode([(k, v) for k, v in query if v]),
+    }
+
+
+async def _fetch_places(filters: dict, offset: int) -> list | None:
+    params: list[tuple[str, object]] = [("limit", _PAGE_SIZE + 1), ("offset", offset)]
+    for key in ("q", "kind", "city", "country", "min_grade", "status"):
+        if filters[key]:
+            params.append((key, filters[key]))
+    params += [("tag", t) for t in filters["tags"]]
+    if filters["no_trip"]:
+        params.append(("no_trip", "true"))
+    return await safe_get("/travel/places", params=params)
+
+
+# "/places..." is registered before "/{trip_id}" so it is never read as a trip id.
+
+@router.get("/places", response_class=HTMLResponse)
+async def places_page(request: Request):
+    filters = _place_filters(request)
+    places = await _fetch_places(filters, 0)
+    tags = await safe_get("/travel/tags", default=[])
+    return templates.TemplateResponse(request, "travel_places.html", {
+        **_places_context(places, 0, filters), "filters": filters, "place_kinds": _PLACE_KINDS,
+        "all_tags": [t["name"] for t in tags or []],
+    })
+
+
+@router.get("/places/list", response_class=HTMLResponse)
+async def places_list(request: Request):
+    filters = _place_filters(request)
+    offset = _int_param(request.query_params.get("offset"))
+    places = await _fetch_places(filters, offset)
+    return templates.TemplateResponse(request, "_travel_places_list.html", _places_context(places, offset, filters))
+
+
+@router.patch("/places/{place_id}")
+async def update_place(place_id: int, request: Request):
+    return await forward(api.patch(f"/travel/places/{place_id}", json=await request.json()), "Could not update the place.")
+
+
+@router.delete("/places/{place_id}")
+async def delete_place(place_id: int):
+    return await forward(api.delete(f"/travel/places/{place_id}"), "Could not delete the place.")
+
+
+@router.post("/visits")
+async def create_visit(request: Request):
+    return await forward(api.post("/travel/visits", json=await request.json()), "Could not add the visit.")
+
+
+@router.patch("/visits/{visit_id}")
+async def update_visit(visit_id: int, request: Request):
+    return await forward(api.patch(f"/travel/visits/{visit_id}", json=await request.json()), "Could not update the visit.")
+
+
+@router.delete("/visits/{visit_id}")
+async def delete_visit(visit_id: int):
+    return await forward(api.delete(f"/travel/visits/{visit_id}"), "Could not delete the visit.")
+
+
+@router.get("/places/{place_id}", response_class=HTMLResponse)
+async def place_page(place_id: int, request: Request):
+    place = await safe_get(f"/travel/places/{place_id}")
+    if place is None:
+        return RedirectResponse("/travel/places", status_code=302)
+    return templates.TemplateResponse(request, "travel_place.html", {"place": place, "place_kinds": _PLACE_KINDS})
+
+
 @router.get("/{trip_id}", response_class=HTMLResponse)
 async def trip_page(trip_id: int, request: Request):
-    trip = await safe_get(f"/travel/trips/{trip_id}")
+    all_visits = request.query_params.get("all_visits") in ("1", "true")
+    trip = await safe_get(f"/travel/trips/{trip_id}", params={"all_visits": "true"} if all_visits else None)
     if trip is None:
         return RedirectResponse("/travel", status_code=302)
     places = await safe_get("/travel/places", params={"limit": 500}, default=[])
     days: dict[str, list] = {}
     for item in trip["timeline"]:
         days.setdefault(item["local"][:10], []).append(item)
+    visit_days: dict[str | None, list] = {}
+    for visit in trip["visits"]:
+        visit_days.setdefault(visit["visit_date"], []).append(visit)
     return templates.TemplateResponse(request, "travel_trip.html", {
         "trip": trip,
         "days": days,
+        "visit_days": visit_days,
+        "all_visits": all_visits,
         "places": places,
         "place_kinds": _PLACE_KINDS,
         "leg_modes": _LEG_MODES,

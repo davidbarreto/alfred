@@ -1,0 +1,24 @@
+{# One visit. `show_place` names the place; `show_trip` links the trip. Actions need initTravelVisits on the page. #}
+<div class="flex items-start justify-between gap-2 text-sm" id="visit-{{ v.id }}">
+  <div class="space-y-0.5">
+    <p class="text-gray-900">
+      {% if show_place %}<a href="/travel/places/{{ v.place_id }}" class="hover:underline">{{ v.place.name }}</a>{% else %}{{ v.visit_date | short_date if v.visit_date else 'No day yet' }}{% endif %}
+      <span class="px-1.5 py-0.5 rounded-full text-[11px]
+        {% if v.status == 'visited' %}text-green-700 bg-green-50{% elif v.status == 'missed' %}text-red-700 bg-red-50{% else %}text-blue-700 bg-blue-50{% endif %}">{{ v.status }}</span>
+      {% if v.grade %}<span class="text-xs text-amber-600">{{ v.grade }}/5</span>{% endif %}
+    </p>
+    <p class="text-xs text-gray-500">
+      {% if show_place %}{{ v.visit_date | short_date if v.visit_date else 'No day yet' }}{% endif %}{% if v.visit_time %} {{ v.visit_time[:5] }}{% endif %}
+      {% if show_place and v.place.city %} · {{ v.place.city }}{% endif %}
+      {% if show_trip and v.trip_id %} · <a class="hover:underline" href="/travel/{{ v.trip_id }}">{{ v.trip_name }}</a>{% endif %}
+      · <a class="text-[#378ADD] hover:underline" href="{{ v.place.maps_link }}" target="_blank" rel="noopener">Map</a>
+    </p>
+    {% if v.notes %}<p class="text-xs text-gray-500 whitespace-pre-line">{{ v.notes }}</p>{% endif %}
+  </div>
+  <div class="flex gap-1 whitespace-nowrap">
+    {% if v.status != 'visited' %}<button class="btn btn-xs btn-ghost mark-visit" data-id="{{ v.id }}" data-status="visited">Visited</button>{% endif %}
+    {% if v.status == 'planned' %}<button class="btn btn-xs btn-ghost mark-visit" data-id="{{ v.id }}" data-status="missed">Missed</button>{% endif %}
+    <button class="btn btn-xs btn-ghost edit-visit" data-item="{{ v | tojson | forceescape }}">Edit</button>
+    <button class="btn btn-xs btn-ghost text-red-600 delete-visit" data-id="{{ v.id }}">Delete</button>
+  </div>
+</div>

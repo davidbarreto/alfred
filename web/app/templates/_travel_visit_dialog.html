@@ -1,0 +1,40 @@
+{# Visit dialog. Pass `places` (list) to offer a place picker; pass `place_kinds` for the inline new-place kind. #}
+<dialog id="visit-dialog" class="modal">
+  <form method="dialog" class="modal-box max-w-lg space-y-3" id="visit-form">
+    <h3 class="text-sm font-semibold" id="visit-title">Add visit</h3>
+    <div class="grid grid-cols-2 gap-3">
+      {% if places is defined and places is not none %}
+      <label class="space-y-1 col-span-2"><span class="block text-xs text-gray-500">Place</span>
+        <select name="place_id" class="select select-sm select-bordered w-full">
+          <option value="new">+ New place…</option>
+          {% for p in places %}<option value="{{ p.id }}">{{ p.name }}{% if p.city %} ({{ p.city }}){% endif %}</option>{% endfor %}
+        </select></label>
+      <div class="col-span-2 grid grid-cols-2 gap-3" id="visit-new-place">
+        <label class="space-y-1"><span class="block text-xs text-gray-500">Name</span><input name="place_name" class="input input-sm input-bordered w-full"></label>
+        <label class="space-y-1"><span class="block text-xs text-gray-500">Kind</span>
+          <select name="place_kind" class="select select-sm select-bordered w-full">{% for k in place_kinds %}<option value="{{ k }}" {{ 'selected' if k == 'restaurant' }}>{{ k }}</option>{% endfor %}</select></label>
+        <label class="space-y-1"><span class="block text-xs text-gray-500">City</span><input name="place_city" class="input input-sm input-bordered w-full"></label>
+        <label class="space-y-1"><span class="block text-xs text-gray-500">Country</span><input name="place_country" class="input input-sm input-bordered w-full"></label>
+        <label class="space-y-1 col-span-2"><span class="block text-xs text-gray-500">Maps link (optional)</span><input name="place_maps_url" class="input input-sm input-bordered w-full"></label>
+      </div>
+      {% endif %}
+      <label class="space-y-1"><span class="block text-xs text-gray-500">Status</span>
+        <select name="status" class="select select-sm select-bordered w-full">
+          <option value="planned">planned</option><option value="visited">visited</option><option value="missed">missed</option>
+        </select></label>
+      <label class="space-y-1"><span class="block text-xs text-gray-500">Grade (visited only, 1-5)</span>
+        <input name="grade" type="number" min="1" max="5" class="input input-sm input-bordered w-full"></label>
+      <label class="space-y-1"><span class="block text-xs text-gray-500">Day (optional)</span>
+        <input name="visit_date" type="date" class="input input-sm input-bordered w-full"></label>
+      <label class="space-y-1"><span class="block text-xs text-gray-500">Time (a reservation, or just an order)</span>
+        <input name="visit_time" type="time" class="input input-sm input-bordered w-full"></label>
+      <label class="space-y-1 col-span-2"><span class="block text-xs text-gray-500">Notes</span>
+        <textarea name="notes" rows="2" class="textarea textarea-bordered w-full text-sm"></textarea></label>
+    </div>
+    <div class="flex items-center gap-3">
+      <button type="submit" class="btn btn-sm btn-outline">Save</button>
+      <button type="button" class="btn btn-sm btn-ghost" data-close>Cancel</button>
+      <span class="text-xs text-red-600 form-error"></span>
+    </div>
+  </form>
+</dialog>

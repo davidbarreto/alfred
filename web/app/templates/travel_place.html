@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+{% set active_page = "travel" %}
+{% block title %}{{ place.name }}{% endblock %}
+
+{% block content %}
+<div class="p-6 space-y-6">
+
+  <a href="/travel/places" class="text-xs text-gray-500 hover:text-gray-700"><i class="ti ti-arrow-left"></i> All places</a>
+
+  <div class="card bg-white">
+    <div class="card-body p-5 space-y-3">
+      <div class="flex items-start justify-between gap-3">
+        <div>
+          <h1 class="text-base font-semibold text-gray-900">{{ place.name }}</h1>
+          <p class="text-xs text-gray-500">{{ place.kind }}{% if place.city %} · {{ place.city }}{% endif %}{% if place.country %}, {{ place.country }}{% endif %}</p>
+          {% if place.address %}<p class="text-xs text-gray-400">{{ place.address }}</p>{% endif %}
+          <a class="text-xs text-[#378ADD] hover:underline" href="{{ place.maps_link }}" target="_blank" rel="noopener">Open in maps</a>
+        </div>
+        <div class="flex items-center gap-2">
+          {% if place.grade %}<span class="text-sm font-medium text-amber-600" id="place-grade">{{ place.grade | number }}/5 <span class="text-xs text-gray-400">({{ place.grade_count }} grade{{ '' if place.grade_count == 1 else 's' }})</span></span>{% endif %}
+          <button class="btn btn-xs btn-outline" onclick="document.getElementById('edit-place-wrap').classList.toggle('hidden')">Edit</button>
+          <button class="btn btn-xs btn-outline btn-error" id="delete-place">Delete</button>
+        </div>
+      </div>
+      {% if place.tags %}
+      <div class="flex flex-wrap gap-1">{% for tag in place.tags %}<span class="px-2 py-0.5 rounded-full text-[11px] bg-gray-100 text-gray-600">{{ tag }}</span>{% endfor %}</div>
+      {% endif %}
+      {% if place.notes %}<p class="text-sm text-gray-700 whitespace-pre-line">{{ place.notes }}</p>{% endif %}
+
+      <div id="edit-place-wrap" class="hidden">
+        <form id="edit-place" class="flex flex-wrap items-end gap-3 pt-2 border-t border-gray-100">
+          <label class="space-y-1"><span class="block text-xs text-gray-500">Name</span>
+            <input name="name" value="{{ place.name }}" required class="input input-sm input-bordered w-56"></label>
+          <label class="space-y-1"><span class="block text-xs text-gray-500">Kind</span>
+            <select name="kind" class="select select-sm select-bordered">{% for k in place_kinds %}<option value="{{ k }}" {{ 'selected' if k == place.kind }}>{{ k }}</option>{% endfor %}</select></label>
+          <label class="space-y-1"><span class="block text-xs text-gray-500">City</span>
+            <input name="city" value="{{ place.city or '' }}" class="input input-sm input-bordered w-36"></label>
+          <label class="space-y-1"><span class="block text-xs text-gray-500">Country</span>
+            <input name="country" value="{{ place.country or '' }}" class="input input-sm input-bordered w-36"></label>
+          <label class="space-y-1"><span class="block text-xs text-gray-500">Maps link</span>
+            <input name="maps_url" value="{{ place.maps_url or '' }}" class="input input-sm input-bordered w-64"></label>
+          <label class="space-y-1"><span class="block text-xs text-gray-500">Latitude (optional)</span>
+            <input name="lat" type="number" step="any" min="-90" max="90" value="{{ place.lat if place.lat is not none else '' }}" class="input input-sm input-bordered w-32"></label>
+          <label class="space-y-1"><span class="block text-xs text-gray-500">Longitude (optional)</span>
+            <input name="lng" type="number" step="any" min="-180" max="180" value="{{ place.lng if place.lng is not none else '' }}" class="input input-sm input-bordered w-32"></label>
+          <label class="space-y-1"><span class="block text-xs text-gray-500">Tags (comma separated)</span>
+            <input name="tags" value="{{ place.tags | join(', ') }}" class="input input-sm input-bordered w-56"></label>
+          <label class="space-y-1 w-full"><span class="block text-xs text-gray-500">Address</span>
+            <input name="address" value="{{ place.address or '' }}" class="input input-sm input-bordered w-full"></label>
+          <label class="space-y-1 w-full"><span class="block text-xs text-gray-500">Notes (lasting facts, e.g. "book the terrace")</span>
+            <textarea name="notes" rows="3" class="textarea textarea-bordered w-full text-sm">{{ place.notes or '' }}</textarea></label>
+          <button type="submit" class="btn btn-sm btn-outline">Save</button>
+          <span class="text-xs text-red-600 form-error"></span>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="card bg-white" id="visit-history">
+    <div class="card-body p-5 space-y-3">
+      <div class="flex items-center justify-between">
+        <h2 class="text-sm font-semibold text-gray-900">Visits</h2>
+        <button class="btn btn-xs btn-outline" id="add-visit">Plan a visit</button>
+      </div>
+      {% for v in place.visits %}{% set show_place = false %}{% set show_trip = true %}{% include "_travel_visit_row.html" %}
+      {% else %}<p class="text-sm text-gray-400">No visits yet.</p>{% endfor %}
+    </div>
+  </div>
+
+  {% if place.stays %}
+  <div class="card bg-white" id="stay-history">
+    <div class="card-body p-5 space-y-3">
+      <h2 class="text-sm font-semibold text-gray-900">Stays</h2>
+      {% for stay in place.stays %}
+      <div class="text-sm">
+        <p class="text-gray-900">{{ stay.check_in_local[:10] | short_date }} → {{ stay.check_out_local[:10] | short_date }}
+          {% if stay.trip_id %}<a class="text-xs text-[#378ADD] hover:underline" href="/travel/{{ stay.trip_id }}">trip</a>{% endif %}
+          {% if stay.grade %}<span class="text-xs text-amber-600">{{ stay.grade }}/5</span>{% endif %}</p>
+        {% if stay.notes %}<p class="text-xs text-gray-500 whitespace-pre-line">{{ stay.notes }}</p>{% endif %}
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  {% include "_travel_visit_dialog.html" %}
+</div>
+
+<script src="/static/js/travel-visits.js"></script>
+<script>
+initTravelVisits({ tripId: null, placeId: {{ place.id }} });
+
+async function send(method, url, body) {
+  const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: body ? JSON.stringify(body) : undefined });
+  const data = await res.json().catch(() => ({}));
+  return { ok: res.ok, data };
+}
+
+document.getElementById('edit-place').addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const form = event.target;
+  const body = { name: form.elements.name.value, kind: form.elements.kind.value };
+  for (const name of ['city', 'country', 'maps_url', 'address', 'notes']) body[name] = form.elements[name].value.trim() || null;
+  for (const name of ['lat', 'lng']) body[name] = form.elements[name].value === '' ? null : Number(form.elements[name].value);
+  body.tags = form.elements.tags.value.split(',').map(t => t.trim()).filter(Boolean);
+  const { ok, data } = await send('PATCH', '/travel/places/{{ place.id }}', body);
+  if (!ok) { form.querySelector('.form-error').textContent = data.error || 'Something went wrong.'; return; }
+  location.reload();
+});
+
+document.getElementById('delete-place').addEventListener('click', async () => {
+  if (!confirm('Delete this place?')) return;
+  const { ok, data } = await send('DELETE', '/travel/places/{{ place.id }}');
+  if (!ok) { alert(data.error || 'Could not delete the place.'); return; }
+  location.href = '/travel/places';
+});
+</script>
+{% endblock %}

@@ -109,6 +109,7 @@ from app.api.routes.travel.settings import router as travel_settings_router
 from app.api.routes.travel.stays import router as travel_stays_router
 from app.api.routes.travel.tags import router as travel_tags_router
 from app.api.routes.travel.trips import router as travel_trips_router
+from app.api.routes.travel.visits import router as travel_visits_router
 from app.api.routes.study.plans import router as study_plans_router
 from app.api.routes.study.settings import router as study_settings_router
 from app.api.routes.study.tracks import router as study_tracks_router
@@ -243,6 +244,7 @@ app.include_router(travel_settings_router)
 app.include_router(travel_trips_router)
 app.include_router(travel_legs_router)
 app.include_router(travel_stays_router)
+app.include_router(travel_visits_router)
 app.include_router(travel_places_router)
 app.include_router(travel_tags_router)
 app.include_router(study_plans_router)

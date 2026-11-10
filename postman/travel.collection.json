@@ -848,7 +848,589 @@
       }
     },
     {
-      "name": "22 - Delete Leg",
+      "name": "22 - Tag Place",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Tags saved', () => pm.expect(pm.response.json().tags).to.eql(['postman-place-' + pm.environment.get('travel_ts')]));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/places/{{travel_place_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "places",
+            "{{travel_place_id}}"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"tags\": [\n    \"postman-place-{{travel_ts}}\"\n  ]\n}"
+        }
+      }
+    },
+    {
+      "name": "23 - List Places By Tag And Grade",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Not listed before it has a grade', () => pm.expect(pm.response.json()).to.eql([]));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/places?tag=postman-place-{{travel_ts}}&min_grade=4",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "places"
+          ],
+          "query": [
+            {
+              "key": "tag",
+              "value": "postman-place-{{travel_ts}}"
+            },
+            {
+              "key": "min_grade",
+              "value": "4"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "24 - Create Visit",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+              "const j = pm.response.json();",
+              "pm.test('Defaults to planned', () => pm.expect(j.status).to.eql('planned'));",
+              "pm.test('Place and trip embedded', () => { pm.expect(j.place.name).to.eql('Hotel Postman'); pm.expect(j.trip_name).to.include('Postman trip'); });",
+              "pm.environment.set('travel_visit_id', j.id);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/visits",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "visits"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"place_id\": \"{{travel_place_id}}\",\n  \"trip_id\": \"{{travel_trip_id}}\",\n  \"visit_date\": \"2031-12-18\",\n  \"visit_time\": \"20:00\",\n  \"notes\": \"Dinner\"\n}"
+        }
+      }
+    },
+    {
+      "name": "25 - Create Graded Planned Visit",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 422', () => pm.response.to.have.status(422));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/visits",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "visits"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"place_id\": \"{{travel_place_id}}\",\n  \"grade\": 4\n}"
+        }
+      }
+    },
+    {
+      "name": "26 - Create Visit With Unknown Place",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 404', () => pm.response.to.have.status(404));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/visits",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "visits"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"place_id\": 999999999\n}"
+        }
+      }
+    },
+    {
+      "name": "27 - Grade A Planned Visit",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 422', () => pm.response.to.have.status(422));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/visits/{{travel_visit_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "visits",
+            "{{travel_visit_id}}"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"grade\": 5\n}"
+        }
+      }
+    },
+    {
+      "name": "28 - Mark Visit Visited With Grade",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "const j = pm.response.json();",
+              "pm.test('Visited and graded', () => { pm.expect(j.status).to.eql('visited'); pm.expect(j.grade).to.eql(5); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/visits/{{travel_visit_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "visits",
+            "{{travel_visit_id}}"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"status\": \"visited\",\n  \"grade\": 5\n}"
+        }
+      }
+    },
+    {
+      "name": "29 - List Visits Of The Trip",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Visit is listed', () => pm.expect(pm.response.json().map(v => v.id)).to.include(Number(pm.environment.get('travel_visit_id'))));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/visits?trip_id={{travel_trip_id}}&status=visited",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "visits"
+          ],
+          "query": [
+            {
+              "key": "trip_id",
+              "value": "{{travel_trip_id}}"
+            },
+            {
+              "key": "status",
+              "value": "visited"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "30 - List Places By Tag And Grade After Grading",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "const found = pm.response.json();",
+              "pm.test('Listed with derived grade', () => { pm.expect(found.length).to.eql(1); pm.expect(found[0].grade).to.eql(5); pm.expect(found[0].grade_count).to.eql(1); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/places?tag=postman-place-{{travel_ts}}&min_grade=4",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "places"
+          ],
+          "query": [
+            {
+              "key": "tag",
+              "value": "postman-place-{{travel_ts}}"
+            },
+            {
+              "key": "min_grade",
+              "value": "4"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "31 - Place Not In Any Trip Filter",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('A place with a trip visit is excluded', () => pm.expect(pm.response.json().map(p => p.id)).to.not.include(Number(pm.environment.get('travel_place_id'))));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/places?no_trip=true&q=Hotel Postman",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "places"
+          ],
+          "query": [
+            {
+              "key": "no_trip",
+              "value": "true"
+            },
+            {
+              "key": "q",
+              "value": "Hotel Postman"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "32 - Get Place Detail",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "const j = pm.response.json();",
+              "pm.test('History has the visit and the stay', () => { pm.expect(j.visits.length).to.eql(1); pm.expect(j.stays.length).to.eql(1); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/places/{{travel_place_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "places",
+            "{{travel_place_id}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "33 - Get Trip With Itinerary",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Itinerary has the visit', () => { const j = pm.response.json(); pm.expect(j.visits.length).to.eql(1); pm.expect(j.hidden_visit_count).to.eql(0); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/trips/{{travel_trip_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "trips",
+            "{{travel_trip_id}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "34 - Delete Place With Visit",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 409', () => pm.response.to.have.status(409));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "DELETE",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/places/{{travel_place_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "places",
+            "{{travel_place_id}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "35 - Delete Visit",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 204', () => pm.response.to.have.status(204));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "DELETE",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/visits/{{travel_visit_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "visits",
+            "{{travel_visit_id}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "36 - Get Deleted Visit",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 404', () => pm.response.to.have.status(404));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/visits/{{travel_visit_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "visits",
+            "{{travel_visit_id}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "37 - Delete Leg",
       "event": [
         {
           "listen": "test",
@@ -882,7 +1464,7 @@
       }
     },
     {
-      "name": "23 - Get Deleted Leg",
+      "name": "38 - Get Deleted Leg",
       "event": [
         {
           "listen": "test",
@@ -916,7 +1498,7 @@
       }
     },
     {
-      "name": "24 - Delete Stay",
+      "name": "39 - Delete Stay",
       "event": [
         {
           "listen": "test",
@@ -950,7 +1532,7 @@
       }
     },
     {
-      "name": "25 - Delete Place",
+      "name": "40 - Delete Place",
       "event": [
         {
           "listen": "test",
@@ -984,7 +1566,7 @@
       }
     },
     {
-      "name": "26 - Delete Trip",
+      "name": "41 - Delete Trip",
       "event": [
         {
           "listen": "test",
@@ -1018,7 +1600,7 @@
       }
     },
     {
-      "name": "27 - Delete Tag",
+      "name": "42 - Delete Tag",
       "event": [
         {
           "listen": "test",
@@ -1052,7 +1634,7 @@
       }
     },
     {
-      "name": "28 - Get Deleted Trip",
+      "name": "43 - Get Deleted Trip",
       "event": [
         {
           "listen": "test",
@@ -1086,7 +1668,7 @@
       }
     },
     {
-      "name": "29 - Get Settings",
+      "name": "44 - Get Settings",
       "event": [
         {
           "listen": "test",
@@ -1123,7 +1705,7 @@
       }
     },
     {
-      "name": "30 - Update Settings",
+      "name": "45 - Update Settings",
       "event": [
         {
           "listen": "test",
@@ -1161,7 +1743,7 @@
       }
     },
     {
-      "name": "31 - Update Settings Out Of Range",
+      "name": "46 - Update Settings Out Of Range",
       "event": [
         {
           "listen": "test",
@@ -1198,7 +1780,7 @@
       }
     },
     {
-      "name": "32 - Restore Settings",
+      "name": "47 - Restore Settings",
       "event": [
         {
           "listen": "test",
@@ -1232,6 +1814,76 @@
         "body": {
           "mode": "raw",
           "raw": "{\n  \"airport_buffer_min\": {{travel_buffer_original}}\n}"
+        }
+      }
+    },
+    {
+      "name": "48 - Find Place Tag For Cleanup",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "const mine = pm.response.json().find(t => t.name === 'postman-place-' + pm.environment.get('travel_ts'));",
+              "pm.test('Place tag counted', () => pm.expect(mine.place_count).to.eql(0));",
+              "pm.environment.set('travel_place_tag_id', mine.id);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/tags",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "tags"
+          ]
+        }
+      }
+    },
+    {
+      "name": "49 - Delete Place Tag",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 204', () => pm.response.to.have.status(204));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "DELETE",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/tags/{{travel_place_tag_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "tags",
+            "{{travel_place_tag_id}}"
+          ]
         }
       }
     }

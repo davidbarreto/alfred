@@ -1,4 +1,4 @@
-from datetime import date, datetime, timezone
+from datetime import date, datetime, time, timezone
 from unittest.mock import AsyncMock
 
 import pytest
@@ -6,12 +6,14 @@ from fastapi.testclient import TestClient
 
 from app.features.travel.errors import TravelNotFoundError
 from app.features.travel.legs.schemas import LegRead
+from app.features.travel.places.detail import PlaceDetail
 from app.features.travel.places.schemas import PlaceRead
 from app.features.travel.places.service import PlaceInUseError
 from app.features.travel.stays.schemas import StayRead
 from app.features.travel.tags.schemas import TravelTagRead, TravelTagUsage
 from app.features.travel.tags.service import TravelTagNameTakenError
 from app.features.travel.trips.schemas import TripDetail, TripRead
+from app.features.travel.visits.schemas import VisitPlace, VisitRead
 
 AUTH = {"Authorization": "Bearer test-api-token"}
 NOW = datetime(2026, 11, 1, tzinfo=timezone.utc)
@@ -267,7 +269,7 @@ class TestPlaces:
 
     def test_get_404(self, places):
         client, service = places
-        service.get_place.return_value = None
+        service.get_place_detail.return_value = None
         assert client.get("/travel/places/3", headers=AUTH).status_code == 404
 
     def test_update_null_name_is_422(self, places):
@@ -290,7 +292,7 @@ class TestTags:
     def test_list(self, tags):
         client, service = tags
         service.get_tags.return_value = [TravelTagUsage(id=1, name="Family", trip_count=2)]
-        assert client.get("/travel/tags", headers=AUTH).json() == [{"id": 1, "name": "Family", "trip_count": 2}]
+        assert client.get("/travel/tags", headers=AUTH).json() == [{"id": 1, "name": "Family", "trip_count": 2, "place_count": 0}]
 
     def test_rename_clash_is_409(self, tags):
         client, service = tags
@@ -306,3 +308,105 @@ class TestTags:
         client, service = tags
         service.delete_tag.return_value = False
         assert client.delete("/travel/tags/1", headers=AUTH).status_code == 404
+
+
+def _visit(id=11, status="planned", grade=None) -> VisitRead:
+    return VisitRead(
+        id=id, place_id=3, place=VisitPlace(id=3, kind="restaurant", name="Cafe Example", city="Lisbon", maps_url=None, lat=None, lng=None),
+        trip_id=1, trip_name="Example trip", status=status, visit_date=date(2026, 12, 18), visit_time=time(20, 0),
+        notes=None, grade=grade, created_at=NOW, updated_at=NOW,
+    )
+
+
+@pytest.fixture
+def visits():
+    client, service = _client("get_visit_service")
+    yield client, service
+    client.app.dependency_overrides.clear()
+
+
+class TestVisits:
+    def test_create_defaults_to_planned(self, visits):
+        client, service = visits
+        service.create_visit.return_value = _visit()
+        r = client.post("/travel/visits", headers=AUTH, json={"place_id": 3, "trip_id": 1, "visit_date": "2026-12-18", "visit_time": "20:00"})
+        assert r.status_code == 201
+        assert service.create_visit.await_args.args[0].status == "planned"
+        assert r.json()["place"]["maps_link"].startswith("https://")
+
+    def test_grading_a_planned_visit_is_422(self, visits):
+        client, _ = visits
+        assert client.post("/travel/visits", headers=AUTH, json={"place_id": 3, "grade": 4}).status_code == 422
+
+    def test_unknown_status_is_422(self, visits):
+        client, _ = visits
+        assert client.post("/travel/visits", headers=AUTH, json={"place_id": 3, "status": "maybe"}).status_code == 422
+
+    def test_create_with_unknown_place_is_404(self, visits):
+        client, service = visits
+        service.create_visit.side_effect = TravelNotFoundError("Place 3 not found")
+        assert client.post("/travel/visits", headers=AUTH, json={"place_id": 3}).status_code == 404
+
+    def test_list_filters(self, visits):
+        client, service = visits
+        service.get_visits.return_value = [_visit()]
+        client.get("/travel/visits?trip_id=1&status=planned&no_trip=false&place_id=3", headers=AUTH)
+        filters = service.get_visits.await_args.args[0]
+        assert (filters.trip_id, filters.status, filters.place_id, filters.no_trip) == (1, "planned", 3, False)
+
+    def test_update_value_error_is_422(self, visits):
+        client, service = visits
+        service.update_visit.side_effect = ValueError("Only a visited visit can be graded")
+        assert client.patch("/travel/visits/11", headers=AUTH, json={"grade": 4}).status_code == 422
+
+    def test_update_404(self, visits):
+        client, service = visits
+        service.update_visit.return_value = None
+        assert client.patch("/travel/visits/11", headers=AUTH, json={"notes": "x"}).status_code == 404
+
+    def test_get_and_delete(self, visits):
+        client, service = visits
+        service.get_visit.return_value = _visit()
+        assert client.get("/travel/visits/11", headers=AUTH).json()["trip_name"] == "Example trip"
+        service.delete_visit.return_value = False
+        assert client.delete("/travel/visits/11", headers=AUTH).status_code == 404
+
+
+class TestPlaceDetailAndFilters:
+    def test_place_detail_returns_history_and_derived_grade(self, places):
+        client, service = places
+        service.get_place_detail.return_value = PlaceDetail(
+            **_place().model_dump(), visits=[_visit(status="visited", grade=4)], stays=[_stay()],
+        )
+        body = client.get("/travel/places/3", headers=AUTH).json()
+        assert body["visits"][0]["grade"] == 4 and body["stays"][0]["id"] == 7
+        assert body["tags"] == [] and body["grade"] is None
+
+    def test_list_passes_the_new_filters(self, places):
+        client, service = places
+        service.get_places.return_value = []
+        client.get("/travel/places?tag=Would+return&tag=Family&min_grade=4&status=visited&no_trip=true", headers=AUTH)
+        f = service.get_places.await_args.args[0]
+        assert (f.tag, f.min_grade, f.status, f.no_trip) == (["Would return", "Family"], 4, "visited", True)
+
+    def test_min_grade_out_of_range_is_422(self, places):
+        client, _ = places
+        assert client.get("/travel/places?min_grade=9", headers=AUTH).status_code == 422
+
+    def test_create_with_tags(self, places):
+        client, service = places
+        service.create_place.return_value = _place()
+        client.post("/travel/places", headers=AUTH, json={"kind": "cafe", "name": "X", "tags": [" Would return", "would return"]})
+        assert service.create_place.await_args.args[0].tags == ["Would return"]
+
+
+class TestTripDetailVisits:
+    def test_all_visits_flag_is_forwarded(self, trips):
+        client, service = trips
+        service.get_trip_detail.return_value = TripDetail(
+            **_trip().model_dump(exclude={"status"}), legs=[], stays=[], timeline=[], warnings=[],
+            visits=[_visit()], hidden_visit_count=2,
+        )
+        body = client.get("/travel/trips/1?all_visits=true", headers=AUTH).json()
+        assert service.get_trip_detail.await_args.kwargs == {"include_all_visits": True}
+        assert body["visits"][0]["id"] == 11 and body["hidden_visit_count"] == 2

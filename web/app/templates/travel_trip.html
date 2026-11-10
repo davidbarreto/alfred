@@ -93,6 +93,32 @@
     </div>
   </div>
 
+  <div class="card bg-white" id="itinerary">
+    <div class="card-body p-5 space-y-3">
+      <div class="flex items-center justify-between">
+        <h2 class="text-sm font-semibold text-gray-900">Itinerary</h2>
+        <div class="flex items-center gap-2">
+          {% if trip.hidden_visit_count %}
+          <a class="text-xs text-[#378ADD] hover:underline" href="/travel/{{ trip.id }}?all_visits=1">Show {{ trip.hidden_visit_count }} planned/missed</a>
+          {% elif all_visits and trip.status == 'past' %}
+          <a class="text-xs text-[#378ADD] hover:underline" href="/travel/{{ trip.id }}">Hide planned/missed</a>
+          {% endif %}
+          <button class="btn btn-xs btn-outline" id="add-visit">Add visit</button>
+        </div>
+      </div>
+      {% for day, visits in visit_days.items() %}
+      <div>
+        <p class="text-xs font-semibold text-gray-500 mb-1">{{ day | short_date if day else 'No day yet' }}</p>
+        <div class="space-y-2">
+          {% for v in visits %}{% set show_place = true %}{% set show_trip = false %}{% include "_travel_visit_row.html" %}{% endfor %}
+        </div>
+      </div>
+      {% else %}
+      <p class="text-sm text-gray-400">Nothing planned. Add museums, restaurants and activities as planned visits, with or without a day.</p>
+      {% endfor %}
+    </div>
+  </div>
+
   <div class="grid grid-cols-1 xl:grid-cols-2 gap-4">
     <div class="card bg-white">
       <div class="card-body p-5 space-y-3">
@@ -147,6 +173,8 @@
       </div>
     </div>
   </div>
+
+  {% with places=places %}{% include "_travel_visit_dialog.html" %}{% endwith %}
 
   <datalist id="zone-options">{% for z in zones %}<option value="{{ z }}">{% endfor %}</datalist>
 
@@ -213,7 +241,9 @@
   </dialog>
 </div>
 
+<script src="/static/js/travel-visits.js"></script>
 <script>
+initTravelVisits({ tripId: {{ trip.id }}, placeId: null });
 const TRIP_ID = {{ trip.id }};
 const DEFAULT_ZONE = {{ default_zone | tojson }};
 

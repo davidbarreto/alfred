@@ -1,7 +1,7 @@
 from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.features.travel.tags.tables import TravelTag, trips_tags
+from app.features.travel.tags.tables import TravelTag, places_tags, trips_tags
 
 
 class TravelTagRepository:
@@ -27,16 +27,20 @@ class TravelTagRepository:
             tags.append(tag)
         return tags
 
-    async def get_tags_with_usage(self) -> list[tuple[TravelTag, int]]:
-        counts = (
+    async def get_tags_with_usage(self) -> list[tuple[TravelTag, int, int]]:
+        trip_counts = (
             select(trips_tags.c.tag_id, func.count().label("n")).group_by(trips_tags.c.tag_id).subquery()
         )
+        place_counts = (
+            select(places_tags.c.tag_id, func.count().label("n")).group_by(places_tags.c.tag_id).subquery()
+        )
         stmt = (
-            select(TravelTag, func.coalesce(counts.c.n, 0))
-            .outerjoin(counts, counts.c.tag_id == TravelTag.id)
+            select(TravelTag, func.coalesce(trip_counts.c.n, 0), func.coalesce(place_counts.c.n, 0))
+            .outerjoin(trip_counts, trip_counts.c.tag_id == TravelTag.id)
+            .outerjoin(place_counts, place_counts.c.tag_id == TravelTag.id)
             .order_by(func.lower(TravelTag.name))
         )
-        return [(tag, n) for tag, n in (await self._session.execute(stmt)).all()]
+        return [(tag, trips, places) for tag, trips, places in (await self._session.execute(stmt)).all()]
 
     async def rename_tag(self, tag_id: int, name: str) -> TravelTag | None:
         tag = await self.get_tag(tag_id)

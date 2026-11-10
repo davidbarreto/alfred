@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% set active_page = "travel" %}
+{% block title %}Places{% endblock %}
+
+{% block content %}
+<div class="p-6 space-y-6">
+
+  <div class="flex items-center gap-4">
+    <a href="/travel" class="text-xs text-gray-500 hover:text-gray-700"><i class="ti ti-arrow-left"></i> Trips</a>
+    <h1 class="text-base font-semibold text-gray-900">Places</h1>
+  </div>
+
+  <form id="place-filters" class="flex flex-wrap items-end gap-3"
+        hx-get="/travel/places/list" hx-target="#places-list" hx-swap="innerHTML" hx-trigger="change, keyup changed delay:300ms from:#place-q">
+    <label class="space-y-1"><span class="block text-xs text-gray-500">Search</span>
+      <input id="place-q" name="q" value="{{ filters.q }}" class="input input-sm input-bordered w-40" placeholder="Name or address"></label>
+    <label class="space-y-1"><span class="block text-xs text-gray-500">Kind</span>
+      <select name="kind" class="select select-sm select-bordered">
+        <option value="">Any</option>
+        {% for k in place_kinds %}<option value="{{ k }}" {{ 'selected' if filters.kind == k }}>{{ k }}</option>{% endfor %}
+      </select></label>
+    <label class="space-y-1"><span class="block text-xs text-gray-500">City</span>
+      <input name="city" value="{{ filters.city }}" class="input input-sm input-bordered w-32"></label>
+    <label class="space-y-1"><span class="block text-xs text-gray-500">Country</span>
+      <input name="country" value="{{ filters.country }}" class="input input-sm input-bordered w-32"></label>
+    <label class="space-y-1"><span class="block text-xs text-gray-500">Minimum grade</span>
+      <select name="min_grade" class="select select-sm select-bordered">
+        <option value="">Any</option>
+        {% for g in ['1', '2', '3', '4', '5'] %}<option value="{{ g }}" {{ 'selected' if filters.min_grade == g }}>{{ g }}+</option>{% endfor %}
+      </select></label>
+    <label class="space-y-1"><span class="block text-xs text-gray-500">Has a visit that is</span>
+      <select name="status" class="select select-sm select-bordered">
+        <option value="">Any</option>
+        {% for st in ['planned', 'visited', 'missed'] %}<option value="{{ st }}" {{ 'selected' if filters.status == st }}>{{ st }}</option>{% endfor %}
+      </select></label>
+    <label class="inline-flex items-center gap-1 text-xs text-gray-600 pb-2">
+      <input type="checkbox" name="no_trip" value="1" class="checkbox checkbox-xs" {{ 'checked' if filters.no_trip }}>Not in any trip
+    </label>
+    {% if all_tags %}
+    <div class="flex flex-wrap items-center gap-2 pb-1">
+      {% for tag in all_tags %}
+      <label class="inline-flex items-center gap-1 text-xs text-gray-600">
+        <input type="checkbox" name="tag" value="{{ tag }}" class="checkbox checkbox-xs" {{ 'checked' if tag in filters.tags }}>{{ tag }}
+      </label>
+      {% endfor %}
+    </div>
+    {% endif %}
+    <a href="/travel/places" class="btn btn-xs btn-ghost">Clear filters</a>
+  </form>
+
+  <div id="places-list">
+    {% include "_travel_places_list.html" %}
+  </div>
+</div>
+{% endblock %}

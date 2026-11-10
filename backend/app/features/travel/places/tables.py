@@ -1,11 +1,12 @@
 from datetime import datetime
-from typing import Optional
+from typing import List, Optional
 
 from sqlalchemy import CheckConstraint, DateTime, Float, Integer, String, Text, func
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
 from app.features.travel.constants import PLACE_KINDS, in_clause
+from app.features.travel.tags.tables import TravelTag, places_tags
 
 
 class Place(Base):
@@ -32,4 +33,8 @@ class Place(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
+    )
+
+    tags: Mapped[List[TravelTag]] = relationship(
+        TravelTag, secondary=places_tags, lazy="selectin", order_by=TravelTag.name
     )

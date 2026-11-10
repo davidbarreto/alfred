@@ -7,7 +7,10 @@ from sqlalchemy.dialects import postgresql
 from sqlalchemy.schema import CreateTable
 
 from app.db.base import Base
+from app.features.travel.places.repository import PlaceRepository
 from app.features.travel.places.schemas import PlaceFilters
+from app.features.travel.visits.repository import VisitRepository
+from app.features.travel.visits.schemas import VisitFilters
 from app.features.travel.trips.repository import TripRepository
 from app.features.travel.trips.schemas import TripFilters
 from app.main import app  # noqa: F401  (registers every model)
@@ -66,3 +69,64 @@ def test_place_filters_have_plain_defaults():
 def test_trip_filters_have_plain_defaults():
     filters = TripFilters()
     assert (filters.status, filters.limit, filters.offset) == ("current", 50, 0)
+
+
+class _ExecSession(_CaptureSession):
+    async def execute(self, stmt):
+        self.statement = stmt
+        raise _Stop
+
+
+def _literal(stmt) -> str:
+    return str(stmt.compile(dialect=postgresql.dialect(), compile_kwargs={"literal_binds": True}))
+
+
+class TestPlaceQuery:
+    async def _sql(self, **kw):
+        session = _CaptureSession()
+        try:
+            await PlaceRepository(session).get_places(PlaceFilters(**kw))
+        except _Stop:
+            pass
+        return _literal(session.statement)
+
+    async def test_tag_filter_requires_every_tag(self):
+        sql = await self._sql(tag=["a", "b"])
+        assert sql.count("travel.places_tags") >= 2
+
+    async def test_min_grade_averages_visits_and_stays(self):
+        sql = await self._sql(min_grade=4)
+        assert "UNION ALL" in sql and "avg(" in sql.lower() and "travel.visits" in sql and "travel.stays" in sql
+
+    async def test_no_trip_and_status_compile(self):
+        sql = await self._sql(no_trip=True, status="visited", kind="cafe", city="Lisbon", country="Portugal", q="x")
+        assert "trip_id IS NOT NULL" in sql and "'visited'" in sql
+
+    async def test_grades_query_compiles(self):
+        session = _ExecSession()
+        try:
+            await PlaceRepository(session).get_grades([1, 2])
+        except _Stop:
+            pass
+        assert "GROUP BY" in _literal(session.statement)
+
+
+class TestVisitQuery:
+    async def test_orders_undated_and_untimed_last(self):
+        session = _CaptureSession()
+        try:
+            await VisitRepository(session).get_visits(
+                VisitFilters(trip_id=1, place_id=2, status="planned", date_from=date(2026, 1, 1), date_to=date(2026, 12, 31))
+            )
+        except _Stop:
+            pass
+        sql = _literal(session.statement)
+        assert "NULLS LAST" in sql and sql.index("visit_date") < sql.index("visit_time", sql.index("ORDER BY"))
+
+    async def test_no_trip_filter(self):
+        session = _CaptureSession()
+        try:
+            await VisitRepository(session).get_visits(VisitFilters(no_trip=True))
+        except _Stop:
+            pass
+        assert "trip_id IS NULL" in _literal(session.statement)

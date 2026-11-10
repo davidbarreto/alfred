@@ -10,6 +10,8 @@ from app.features.travel.stays.schemas import StayRead
 from app.features.travel.tags.repository import TravelTagRepository
 from app.features.travel.trips.repository import TripRepository
 from app.features.travel.trips.schemas import TripCreate, TripDetail, TripFilters, TripRead, TripUpdate
+from app.features.travel.visits.repository import VisitRepository
+from app.features.travel.visits.schemas import VisitRead
 from app.features.travel.trips.timeline import build_timeline, find_warnings, leave_home_at
 from app.shared.timezone import local_today
 
@@ -24,6 +26,7 @@ class TripService:
         self._tag_repo = TravelTagRepository(session)
         self._leg_repo = LegRepository(session)
         self._stay_repo = StayRepository(session)
+        self._visit_repo = VisitRepository(session)
         self.settings_service = TravelSettingsService(session)
 
     async def get_trips(self, filters: TripFilters) -> list[TripRead]:
@@ -35,12 +38,18 @@ class TripService:
         trip = await self._repo.get_trip(trip_id)
         return TripRead.model_validate(trip) if trip else None
 
-    async def get_trip_detail(self, trip_id: int) -> TripDetail | None:
+    async def get_trip_detail(self, trip_id: int, include_all_visits: bool = False) -> TripDetail | None:
         trip = await self._repo.get_trip(trip_id)
         if trip is None:
             return None
         legs = [LegRead.model_validate(leg) for leg in await self._leg_repo.get_legs(trip_id)]
         stays = [StayRead.model_validate(s) for s in await self._stay_repo.get_stays(trip_id)]
+        visits = [VisitRead.model_validate(v) for v in await self._visit_repo.get_trip_visits(trip_id)]
+        # Once the trip is over, what stayed planned or missed is noise unless the user asks to see it.
+        hidden = 0
+        if trip.end_date < local_today() and not include_all_visits:
+            shown = [v for v in visits if v.status == "visited"]
+            hidden, visits = len(visits) - len(shown), shown
         settings = await self.settings_service.get()
         leave_at = leave_home_at(legs, settings.airport_buffer_min + settings.home_to_airport_min)
         return TripDetail(
@@ -50,6 +59,8 @@ class TripService:
             timeline=build_timeline(legs, stays, leave_at),
             warnings=find_warnings(legs, stays),
             leave_home_at=leave_at,
+            visits=visits,
+            hidden_visit_count=hidden,
         )
 
     async def create_trip(self, data: TripCreate) -> TripRead:

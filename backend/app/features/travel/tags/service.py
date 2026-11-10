@@ -20,7 +20,7 @@ class TravelTagService:
 
     async def get_tags(self) -> list[TravelTagUsage]:
         rows = await self._repo.get_tags_with_usage()
-        return [TravelTagUsage(id=tag.id, name=tag.name, trip_count=n) for tag, n in rows]
+        return [TravelTagUsage(id=tag.id, name=tag.name, trip_count=trips, place_count=places) for tag, trips, places in rows]
 
     async def rename_tag(self, tag_id: int, data: TravelTagUpdate) -> TravelTagRead | None:
         existing = await self._repo.get_tag_by_name(data.name)

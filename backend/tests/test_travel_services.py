@@ -46,7 +46,7 @@ def _leg(**kw):
 def _place(**kw):
     base = dict(
         id=3, kind="hotel", name="Hotel Example", city="Lisbon", country=None, maps_url=None, lat=None, lng=None,
-        address=None, notes=None, created_at=NOW, updated_at=NOW,
+        address=None, notes=None, tags=[], created_at=NOW, updated_at=NOW,
     )
     base.update(kw)
     return SimpleNamespace(**base)
@@ -69,6 +69,8 @@ def trips():
     svc._tag_repo = AsyncMock()
     svc._leg_repo = AsyncMock()
     svc._stay_repo = AsyncMock()
+    svc._visit_repo = AsyncMock()
+    svc._visit_repo.get_trip_visits.return_value = []
     svc.settings_service = AsyncMock()
     svc.settings_service.get.return_value = TravelSettingsRead(airport_buffer_min=120, home_to_airport_min=60)
     return svc
@@ -242,6 +244,9 @@ class TestStayService:
 def places():
     svc = PlaceService(AsyncMock())
     svc._repo = AsyncMock()
+    svc._repo.get_grades.return_value = {}
+    svc._tag_repo = AsyncMock()
+    svc._tag_repo.get_or_create_tags.return_value = []
     return svc
 
 
@@ -290,8 +295,9 @@ class TestTagService:
             await tags.rename_tag(1, TravelTagUpdate(name="x"))
 
     async def test_usage_counts_trips(self, tags):
-        tags._repo.get_tags_with_usage.return_value = [(TravelTag(id=1, name="Family"), 2)]
-        assert (await tags.get_tags())[0].trip_count == 2
+        tags._repo.get_tags_with_usage.return_value = [(TravelTag(id=1, name="Family"), 2, 3)]
+        usage = (await tags.get_tags())[0]
+        assert (usage.trip_count, usage.place_count) == (2, 3)
 
     async def test_delete_unknown(self, tags):
         tags._repo.delete_tag.return_value = False

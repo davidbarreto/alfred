@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, Response, status
 
 from app.api.auth import require_auth
 from app.dependencies import PlaceServiceDep
+from app.features.travel.places.detail import PlaceDetail
 from app.features.travel.places.schemas import PlaceCreate, PlaceFilters, PlaceRead, PlaceUpdate
 from app.features.travel.places.service import PlaceInUseError
 
@@ -20,9 +21,9 @@ async def create_place(request: PlaceCreate, service: PlaceServiceDep) -> PlaceR
     return await service.create_place(request)
 
 
-@router.get("/{place_id}", response_model=PlaceRead)
-async def get_place(place_id: int, service: PlaceServiceDep) -> PlaceRead:
-    place = await service.get_place(place_id)
+@router.get("/{place_id}", response_model=PlaceDetail)
+async def get_place(place_id: int, service: PlaceServiceDep) -> PlaceDetail:
+    place = await service.get_place_detail(place_id)
     if place is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Place not found")
     return place

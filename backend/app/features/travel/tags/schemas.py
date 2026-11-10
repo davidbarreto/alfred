@@ -31,6 +31,7 @@ class TravelTagUsage(BaseModel):
     id: int
     name: str
     trip_count: int
+    place_count: int = 0
 
 
 class TravelTagUpdate(BaseModel):

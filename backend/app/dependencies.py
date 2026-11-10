@@ -122,6 +122,7 @@ from app.features.travel.settings_service import TravelSettingsService
 from app.features.travel.stays.service import StayService
 from app.features.travel.tags.service import TravelTagService
 from app.features.travel.trips.service import TripService
+from app.features.travel.visits.service import VisitService
 from app.shared.holiday import HolidayProvider
 from app.shared.pronunciation import PronunciationProvider
 from app.shared.conversation import ConversationProvider
@@ -652,6 +653,9 @@ def get_travel_tag_service(session: AsyncSession = Depends(get_session)) -> Trav
 def get_travel_settings_service(session: AsyncSession = Depends(get_session)) -> TravelSettingsService:
     return TravelSettingsService(session)
 
+def get_visit_service(session: AsyncSession = Depends(get_session)) -> VisitService:
+    return VisitService(session)
+
 def get_codeforces_sync_service(session: AsyncSession = Depends(get_session)) -> CodeforcesSyncService:
     return CodeforcesSyncService(session, CodeforcesClient())
 
@@ -783,4 +787,5 @@ LegServiceDep = Annotated[LegService, Depends(get_leg_service)]
 StayServiceDep = Annotated[StayService, Depends(get_stay_service)]
 PlaceServiceDep = Annotated[PlaceService, Depends(get_place_service)]
 TravelSettingsServiceDep = Annotated[TravelSettingsService, Depends(get_travel_settings_service)]
+VisitServiceDep = Annotated[VisitService, Depends(get_visit_service)]
 TravelTagServiceDep = Annotated[TravelTagService, Depends(get_travel_tag_service)]

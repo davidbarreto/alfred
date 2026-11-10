@@ -3,6 +3,8 @@ import logging
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.features.core.embeddings.service import EmbeddingService
+from app.features.travel.notes_index import PLACE_NOTE, TravelNoteIndex
 from app.features.travel.places.detail import PlaceDetail
 from app.features.travel.places.repository import PlaceRepository
 from app.features.travel.places.schemas import PlaceCreate, PlaceFilters, PlaceRead, PlaceUpdate
@@ -21,8 +23,9 @@ class PlaceInUseError(Exception):
 
 
 class PlaceService:
-    def __init__(self, session: AsyncSession):
+    def __init__(self, session: AsyncSession, embedding_service: EmbeddingService | None = None):
         self._session = session
+        self._notes = TravelNoteIndex(embedding_service)
         self._repo = PlaceRepository(session)
         self._tag_repo = TravelTagRepository(session)
         self._visit_repo = VisitRepository(session)
@@ -57,6 +60,7 @@ class PlaceService:
         tags = await self._tag_repo.get_or_create_tags(data.tags)
         place = await self._repo.create_place(data.model_dump(exclude={"tags"}), tags)
         logger.info("Place created: id=%d kind=%s name=%r", place.id, place.kind, place.name)
+        await self._notes.sync(PLACE_NOTE, place.id, place.name, place.notes)
         return (await self._read_all([place]))[0]
 
     async def update_place(self, place_id: int, data: PlaceUpdate) -> PlaceRead | None:
@@ -72,6 +76,8 @@ class PlaceService:
             logger.debug("Place update: id=%d not found", place_id)
             return None
         logger.info("Place updated: id=%d fields=%s", place_id, list(changes.keys()) + (["tags"] if tags is not None else []))
+        if changes.keys() & {"notes", "name"}:
+            await self._notes.sync(PLACE_NOTE, place.id, place.name, place.notes)
         return (await self._read_all([place]))[0]
 
     async def delete_place(self, place_id: int) -> bool:
@@ -82,4 +88,5 @@ class PlaceService:
             raise PlaceInUseError(place_id) from exc
         if deleted:
             logger.info("Place deleted: id=%d", place_id)
+            await self._notes.remove(PLACE_NOTE, place_id)
         return deleted

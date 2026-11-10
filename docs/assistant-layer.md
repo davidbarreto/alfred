@@ -41,6 +41,10 @@ Typed text and Telegram voice go through intent detection (`app/assistant/intent
 
 **Misrouted phrases are fixed by adding examples, not by changing resolver logic.** Sparse examples are the usual cause of misclassification.
 
+## Recall sources
+
+`recall search` embeds-searches the `memory`, `note`, `note_title` and `task` sources plus the travel notes sources (`trip_note`, `leg_note`, `stay_note`, `visit_note`, `place_note`). A module that wants its free text recallable embeds it under its own source type and adds that type to `_SOURCE_TYPES` in `handlers/recall.py`.
+
 ## MCP
 
 The MCP server (`mcp/`) builds one `alfred_*` tool per command group (`alfred_task`, `alfred_metric`, `alfred_day_plan`, ...) from the backend's command catalog. The catalog is fetched once at container startup, so a backend-only deploy does not refresh the tool schema Claude sees until the MCP container restarts. Calls send `X-Alfred-Client: mcp`.

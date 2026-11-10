@@ -36,6 +36,8 @@ _READ_INTENTS: frozenset[str] = frozenset({
     "assistant.focus",
     "weather.current",
     "metric.open",
+    "travel_trip.list",
+    "travel_trip.get",
 })
 
 

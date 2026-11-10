@@ -2,8 +2,10 @@ import logging
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.features.core.embeddings.service import EmbeddingService
 from app.features.travel.legs.repository import LegRepository
 from app.features.travel.legs.schemas import LegRead
+from app.features.travel.notes_index import LEG_NOTE, TRIP_NOTE, TravelNoteIndex
 from app.features.travel.settings_service import TravelSettingsService
 from app.features.travel.stays.repository import StayRepository
 from app.features.travel.stays.schemas import StayRead
@@ -21,7 +23,8 @@ _NOT_NULL = ("name", "start_date", "end_date")
 
 
 class TripService:
-    def __init__(self, session: AsyncSession):
+    def __init__(self, session: AsyncSession, embedding_service: EmbeddingService | None = None):
+        self._notes = TravelNoteIndex(embedding_service)
         self._repo = TripRepository(session)
         self._tag_repo = TravelTagRepository(session)
         self._leg_repo = LegRepository(session)
@@ -68,6 +71,7 @@ class TripService:
         tags = await self._tag_repo.get_or_create_tags(data.tags)
         trip = await self._repo.create_trip(fields, tags)
         logger.info("Trip created: id=%d name=%r", trip.id, trip.name)
+        await self._notes.sync(TRIP_NOTE, trip.id, f"Trip {trip.name}", trip.notes)
         return TripRead.model_validate(trip)
 
     async def update_trip(self, trip_id: int, data: TripUpdate) -> TripRead | None:
@@ -87,10 +91,17 @@ class TripService:
         trip = await self._repo.update_trip(trip, changes, tags)
         fields = list(changes.keys()) + (["tags"] if tags is not None else [])
         logger.info("Trip updated: id=%d fields=%s", trip_id, fields)
+        if "notes" in changes or "name" in changes:
+            await self._notes.sync(TRIP_NOTE, trip.id, f"Trip {trip.name}", trip.notes)
         return TripRead.model_validate(trip)
 
     async def delete_trip(self, trip_id: int) -> bool:
+        # Legs go with the trip, so their note embeddings must too; stays and visits keep theirs.
+        leg_ids = [leg.id for leg in await self._leg_repo.get_legs(trip_id)]
         deleted = await self._repo.delete_trip(trip_id)
         if deleted:
             logger.info("Trip deleted: id=%d", trip_id)
+            await self._notes.remove(TRIP_NOTE, trip_id)
+            for leg_id in leg_ids:
+                await self._notes.remove(LEG_NOTE, leg_id)
         return deleted

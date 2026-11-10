@@ -249,6 +249,76 @@ _DAY_PLAN_MISS_DETAILS = (
     "done flags a block as done in the same way (and clears a missed mark); undone removes the done flag."
 )
 
+# --- Travel ---
+_TRAVEL_FORMATS = (
+    "Dates are YYYY-MM-DD; date-times are ISO local wall time (2026-12-17T06:30) read in the matching IANA zone "
+    "(Europe/Lisbon). Ids come from the list/get actions. An empty value clears an optional field."
+)
+_TRIP_OVERVIEW = (
+    "A trip is a journey with dates, legs (flights, trains, ...), stays (hotels) and visits (museums, dinners). "
+    "tags describe the trip (Family, Work); finance_tags is a comma-separated list of finance tags stamped on expenses "
+    "dated within the trip. " + _TRAVEL_FORMATS
+)
+_LEG_OVERVIEW = (
+    "A leg is one flight, train, bus, ferry or car ride of a trip. mode is one of flight/train/bus/ferry/car/other. "
+    "departs and arrives are the local wall times at origin and destination with their own zones (departs_tz, "
+    "arrives_tz), so both zones are required. from_code/to_code are IATA airport codes; ref is the booking code (PNR), "
+    "url the booking link. " + _TRAVEL_FORMATS
+)
+_STAY_OVERVIEW = (
+    "A stay is a lodging period. Give place (id of an existing place) or hotel (a name, with optional city/country/"
+    "maps_url, reused if a hotel with that name and city exists). check_in/check_out are local wall times at the hotel "
+    "in its zone (tz); grade is 1-5 after the stay. trip is optional (a weekend away needs no trip). " + _TRAVEL_FORMATS
+)
+_PLACE_OVERVIEW = (
+    "A place is a hotel, restaurant, cafe, activity, museum, attraction, shop or other, independent of any trip. "
+    "kind is one of hotel/restaurant/cafe/activity/museum/attraction/shop/other. maps_url is the user's own link; lat/lng "
+    "are optional and user-supplied. notes holds lasting facts (\"book the terrace\"). A place's grade is the average of "
+    "its graded visits and stays. " + _TRAVEL_FORMATS
+)
+_VISIT_OVERVIEW = (
+    "A visit is one occurrence of going to a place: status planned/visited/missed, optional trip, date and time "
+    "(HH:MM, real for a reservation or approximate to order the day). A planned visit with no trip is the wishlist. "
+    "place is an id or a name: a name reuses an existing place (same name, and city if given) or creates one of the given "
+    "kind (default other). grade 1-5 only for a visited visit. " + _TRAVEL_FORMATS
+)
+_TRAVEL_LINK_DETAILS = (
+    "Links a finance transaction (by id) to this item as what paid for it; one transaction can be linked to several items "
+    "and counts once in the trip total. Transfers can't be linked. Costs are derived from the linked transactions."
+)
+
+TRIP_FLAGS = {
+    "--start": "start", "--end": "end", "--travelers": "travelers", "--preferences": "preferences",
+    "--notes": "notes", "--finance-tags": "finance_tags", **FLAG_TAGS, "--checklist-note": "checklist_note",
+}
+LEG_FLAGS = {
+    "--from": "origin", "--to": "destination", "--from-code": "origin_code", "--to-code": "destination_code",
+    "--departs": "departs", "--arrives": "arrives", "--departs-tz": "departs_tz", "--arrives-tz": "arrives_tz",
+    "--carrier": "carrier", "--number": "number", "--ref": "booking_ref", "--url": "booking_url", "--seat": "seat",
+    "--notes": "notes",
+}
+STAY_FLAGS = {
+    "--place": "place", "--hotel": "hotel", "--city": "city", "--country": "country", "--maps-url": "maps_url",
+    "--check-in": "check_in", "--check-out": "check_out", "--tz": "tz", "--ref": "booking_ref", "--url": "booking_url",
+    "--notes": "notes", "--grade": "grade", "--trip": "trip",
+}
+PLACE_FLAGS = {
+    "--kind": "kind", "--city": "city", "--country": "country", "--maps-url": "maps_url", "--lat": "lat", "--lng": "lng",
+    "--address": "address", "--notes": "notes", **FLAG_TAGS,
+}
+PLACE_LIST_FLAGS = {
+    "--kind": "kind", "--city": "city", "--country": "country", "--tag": "tag", "--min-grade": "min_grade",
+    "--status": "status", "--no-trip": "no_trip", **FLAG_LIMIT, "--offset": "offset",
+}
+VISIT_FLAGS = {
+    "--trip": "trip", "--date": "date", "--time": "time", "--status": "status", "--grade": "grade", "--notes": "notes",
+    "--kind": "kind", "--city": "city", "--country": "country", "--place": "place",
+}
+VISIT_LIST_FLAGS = {
+    "--trip": "trip", "--place": "place", "--status": "status", "--no-trip": "no_trip", "--from": "date_from",
+    "--to": "date_to", **FLAG_LIMIT, "--offset": "offset",
+}
+
 COMMAND_DEFINITIONS = {
     "task": {
         "add": {
@@ -1069,6 +1139,240 @@ COMMAND_DEFINITIONS = {
             "flags": {},
             "requires_args": True,
             "arg_keys": ["id"],
+        },
+    },
+    "travel_trip": {
+        "list": {
+            "description": "List trips: current (upcoming + ongoing, default), upcoming, ongoing, past or all; filter by tag or name",
+            "details": _TRIP_OVERVIEW + " The first argument is the status filter.",
+            "aliases": ["/trips", "/triplist"],
+            "flags": {"--tag": "tag", "--q": "q", **FLAG_LIMIT},
+            "arg_keys": ["status"],
+        },
+        "get": {
+            "description": "Show a trip (by id or name): dates, legs, stays, itinerary, warnings, leave-home time and cost",
+            "details": "The trip argument is an id or a name (the most relevant match is used). Planned and missed visits of an ended trip are hidden unless all_visits is true.",
+            "aliases": ["/trip", "/tripget"],
+            "flags": {"--all-visits": "all_visits"},
+            "requires_args": True,
+            "arg_keys": ["trip"],
+        },
+        "add": {
+            "description": "Create a trip: name, then --start and --end dates (YYYY-MM-DD), optional travelers, tags, finance tags",
+            "details": _TRIP_OVERVIEW,
+            "aliases": ["/tripadd"],
+            "flags": TRIP_FLAGS,
+            "requires_args": True,
+            "arg_keys": ["name"],
+        },
+        "update": {
+            "description": "Update a trip by ID: name, dates, travelers, preferences, notes, tags, finance tags, checklist note",
+            "details": _TRIP_OVERVIEW + " Passing tags replaces the whole tag list. Changing the dates does not retag existing expenses; use apply_tags.",
+            "aliases": ["/tripupdate"],
+            "flags": {**TRIP_FLAGS, "--name": "name"},
+            "requires_args": True,
+            "arg_keys": ["id"],
+        },
+        "delete": {
+            "description": "Delete a trip and its legs; its stays and visits are kept (detached) with their notes and grades",
+            "aliases": ["/tripdelete"],
+            "flags": {},
+            "requires_args": True,
+            "arg_keys": ["id"],
+        },
+        "costs": {
+            "description": "Cost of a trip by ID: total (each charge once), by kind and per leg / stay / visit",
+            "details": "Derived from linked finance transactions in EUR; transactions without an EUR amount are counted as unconverted, never as zero.",
+            "aliases": ["/tripcosts"],
+            "flags": {},
+            "requires_args": True,
+            "arg_keys": ["id"],
+        },
+        "apply_tags": {
+            "description": "Tag the expenses already dated within a trip with the trip's finance tags",
+            "details": "New expenses (manual or imported) pick the tags up on their own; use this after changing the dates or the finance tags. Only expenses are tagged.",
+            "aliases": ["/tripapplytags"],
+            "flags": {},
+            "requires_args": True,
+            "arg_keys": ["id"],
+        },
+    },
+    "travel_leg": {
+        "add": {
+            "description": "Add a leg to a trip: trip id, then mode; --from/--to, --departs/--arrives with --departs-tz/--arrives-tz",
+            "details": _LEG_OVERVIEW,
+            "aliases": ["/legadd"],
+            "flags": LEG_FLAGS,
+            "requires_args": True,
+            "arg_keys": ["trip_id", "mode"],
+        },
+        "update": {
+            "description": "Update a leg by ID (mode, origin, destination, times, carrier, number, booking ref, seat, notes)",
+            "details": _LEG_OVERVIEW,
+            "aliases": ["/legupdate"],
+            "flags": {**LEG_FLAGS, "--mode": "mode"},
+            "requires_args": True,
+            "arg_keys": ["id"],
+        },
+        "delete": {
+            "description": "Delete a leg by ID",
+            "aliases": ["/legdelete"],
+            "flags": {},
+            "requires_args": True,
+            "arg_keys": ["id"],
+        },
+        "link": {
+            "description": "Link a finance transaction to a leg (a ticket, seat, baggage or change fee)",
+            "details": _TRAVEL_LINK_DETAILS,
+            "aliases": ["/leglink"],
+            "flags": {},
+            "requires_args": True,
+            "arg_keys": ["id", "transaction_id"],
+        },
+        "unlink": {
+            "description": "Unlink a finance transaction from a leg",
+            "aliases": ["/legunlink"],
+            "flags": {},
+            "requires_args": True,
+            "arg_keys": ["id", "transaction_id"],
+        },
+    },
+    "travel_stay": {
+        "add": {
+            "description": "Add a stay: --place id or --hotel name, --check-in/--check-out with --tz; trip id as the argument",
+            "details": _STAY_OVERVIEW,
+            "aliases": ["/stayadd"],
+            "flags": STAY_FLAGS,
+            "arg_keys": ["trip_id"],
+        },
+        "update": {
+            "description": "Update a stay by ID (place, times, zone, booking ref, notes, grade, trip)",
+            "details": _STAY_OVERVIEW,
+            "aliases": ["/stayupdate"],
+            "flags": STAY_FLAGS,
+            "requires_args": True,
+            "arg_keys": ["id"],
+        },
+        "delete": {
+            "description": "Delete a stay by ID",
+            "aliases": ["/staydelete"],
+            "flags": {},
+            "requires_args": True,
+            "arg_keys": ["id"],
+        },
+        "link": {
+            "description": "Link a finance transaction to a stay (deposit, balance, city tax)",
+            "details": _TRAVEL_LINK_DETAILS,
+            "aliases": ["/staylink"],
+            "flags": {},
+            "requires_args": True,
+            "arg_keys": ["id", "transaction_id"],
+        },
+        "unlink": {
+            "description": "Unlink a finance transaction from a stay",
+            "aliases": ["/stayunlink"],
+            "flags": {},
+            "requires_args": True,
+            "arg_keys": ["id", "transaction_id"],
+        },
+    },
+    "travel_place": {
+        "add": {
+            "description": "Add a place: name, then --kind (hotel, restaurant, cafe, activity, museum, attraction, shop, other), city, country",
+            "details": _PLACE_OVERVIEW,
+            "aliases": ["/placeadd"],
+            "flags": PLACE_FLAGS,
+            "requires_args": True,
+            "arg_keys": ["name"],
+        },
+        "list": {
+            "description": "List places; the argument searches name, city and address. Filter by kind, city, tag, min grade, visit status",
+            "details": _PLACE_OVERVIEW + " no_trip=true keeps only places that belong to no trip. Each place carries its derived grade.",
+            "aliases": ["/places", "/placelist"],
+            "flags": PLACE_LIST_FLAGS,
+            "arg_keys": ["q"],
+        },
+        "get": {
+            "description": "Show a place (by id or name) with its visit and stay history, derived grade and lifetime cost",
+            "aliases": ["/place", "/placeget"],
+            "flags": {},
+            "requires_args": True,
+            "arg_keys": ["place"],
+        },
+        "update": {
+            "description": "Update a place by ID (name, kind, city, country, maps link, coordinates, address, notes, tags)",
+            "details": _PLACE_OVERVIEW + " Passing tags replaces the whole tag list.",
+            "aliases": ["/placeupdate"],
+            "flags": {**PLACE_FLAGS, "--name": "name"},
+            "requires_args": True,
+            "arg_keys": ["id"],
+        },
+        "delete": {
+            "description": "Delete a place by ID; refused while it has visits or stays",
+            "aliases": ["/placedelete"],
+            "flags": {},
+            "requires_args": True,
+            "arg_keys": ["id"],
+        },
+    },
+    "travel_visit": {
+        "add": {
+            "description": "Plan or log a visit: place id or name, then --trip, --date, --time, --status, --grade, --notes",
+            "details": _VISIT_OVERVIEW,
+            "aliases": ["/visitadd"],
+            "flags": VISIT_FLAGS,
+            "requires_args": True,
+            "arg_keys": ["place"],
+        },
+        "list": {
+            "description": "List visits, optionally for a trip, a place or a status; --no-trip true for the wishlist and home-city visits",
+            "details": _VISIT_OVERVIEW,
+            "aliases": ["/visits", "/visitlist"],
+            "flags": VISIT_LIST_FLAGS,
+        },
+        "update": {
+            "description": "Update a visit by ID (status, day, time, grade, notes, trip, place)",
+            "details": _VISIT_OVERVIEW + " Moving a graded visit back to planned or missed drops its grade.",
+            "aliases": ["/visitupdate"],
+            "flags": VISIT_FLAGS,
+            "requires_args": True,
+            "arg_keys": ["id"],
+        },
+        "visited": {
+            "description": "Mark a visit as visited, optionally with --grade 1-5 and --notes",
+            "aliases": ["/visited"],
+            "flags": {"--grade": "grade", "--notes": "notes", "--date": "date"},
+            "requires_args": True,
+            "arg_keys": ["id"],
+        },
+        "missed": {
+            "description": "Mark a planned visit as missed, optionally with --notes",
+            "aliases": ["/missed"],
+            "flags": {"--notes": "notes"},
+            "requires_args": True,
+            "arg_keys": ["id"],
+        },
+        "delete": {
+            "description": "Delete a visit by ID",
+            "aliases": ["/visitdelete"],
+            "flags": {},
+            "requires_args": True,
+            "arg_keys": ["id"],
+        },
+        "link": {
+            "description": "Link a finance transaction to a visit (a meal, an entry fee)",
+            "details": _TRAVEL_LINK_DETAILS,
+            "aliases": ["/visitlink"],
+            "flags": {},
+            "requires_args": True,
+            "arg_keys": ["id", "transaction_id"],
+        },
+        "unlink": {
+            "description": "Unlink a finance transaction from a visit",
+            "aliases": ["/visitunlink"],
+            "flags": {},
+            "requires_args": True,
+            "arg_keys": ["id", "transaction_id"],
         },
     },
     "routine": {

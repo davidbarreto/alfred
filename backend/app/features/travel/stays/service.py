@@ -2,8 +2,10 @@ import logging
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.features.core.embeddings.service import EmbeddingService
 from app.features.organizer.calendar_events.repository import CalendarEventRepository
 from app.features.travel.errors import TravelConflictError, TravelNotFoundError
+from app.features.travel.notes_index import STAY_NOTE, TravelNoteIndex
 from app.features.travel.places.repository import PlaceRepository
 from app.features.travel.stays.repository import StayRepository
 from app.features.travel.stays.schemas import StayCreate, StayRead, StayUpdate
@@ -16,7 +18,8 @@ _NOT_NULL = ("place_id", "check_in_at", "check_out_at", "timezone")
 
 
 class StayService:
-    def __init__(self, session: AsyncSession):
+    def __init__(self, session: AsyncSession, embedding_service: EmbeddingService | None = None):
+        self._notes = TravelNoteIndex(embedding_service)
         self._repo = StayRepository(session)
         self._trip_repo = TripRepository(session)
         self._place_repo = PlaceRepository(session)
@@ -46,6 +49,7 @@ class StayService:
                 raise TravelConflictError("That calendar event is already imported as a stay")
         stay = await self._repo.create_stay(data.model_dump())
         logger.info("Stay created: id=%d trip_id=%s place_id=%d", stay.id, stay.trip_id, stay.place_id)
+        await self._notes.sync(STAY_NOTE, stay.id, f"Stay at {stay.place.name}", stay.notes)
         return StayRead.model_validate(stay)
 
     async def update_stay(self, stay_id: int, data: StayUpdate) -> StayRead | None:
@@ -66,6 +70,8 @@ class StayService:
             raise ValueError("check_out_at cannot be before check_in_at")
         stay = await self._repo.update_stay(stay, changes)
         logger.info("Stay updated: id=%d fields=%s", stay_id, list(changes.keys()))
+        if changes.keys() & {"notes", "place_id"}:
+            await self._notes.sync(STAY_NOTE, stay.id, f"Stay at {stay.place.name}", stay.notes)
         return StayRead.model_validate(stay)
 
     async def delete_stay(self, stay_id: int) -> bool:
@@ -74,4 +80,5 @@ class StayService:
             return False
         await self._repo.delete_stay(stay)
         logger.info("Stay deleted: id=%d", stay_id)
+        await self._notes.remove(STAY_NOTE, stay_id)
         return True

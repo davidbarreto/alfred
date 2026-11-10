@@ -43,6 +43,8 @@ _KNOWN_INTENTS = {
     "metric.stop",
     "metric.log",
     "metric.open",
+    "travel_trip.list",
+    "travel_trip.get",
     "unknown",
 }
 

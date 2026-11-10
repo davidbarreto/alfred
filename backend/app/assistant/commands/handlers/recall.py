@@ -6,6 +6,7 @@ from fastapi import HTTPException, status
 from app.features.core.embeddings.schemas import EmbeddingSearchRequest
 from app.features.core.embeddings.service import EmbeddingService
 from app.features.organizer.notes.service import NoteService
+from app.features.travel.notes_index import NOTE_SOURCE_TYPES
 
 logger = logging.getLogger(__name__)
 
@@ -16,7 +17,9 @@ _RECALL_LIMIT = 8
 # "note" embedding (see app.features.organizer.notes.service) so short,
 # title-shaped queries still score well against notes with a long body.
 # It's collapsed back onto "note" below so a single note never appears twice.
-_SOURCE_TYPES = ["memory", "note", "note_title", "task"]
+# The travel notes columns (a trip, leg, stay, visit or place note) are indexed with their own source types;
+# their content starts with a label ("Stay at Hotel Example: ...") so a hit says what it belongs to.
+_SOURCE_TYPES = ["memory", "note", "note_title", "task", *NOTE_SOURCE_TYPES]
 _TITLE_TO_CANONICAL_TYPE = {"note_title": "note"}
 
 

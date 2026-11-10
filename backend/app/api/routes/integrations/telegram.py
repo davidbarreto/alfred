@@ -29,6 +29,7 @@ _MENU_COMMANDS = frozenset(
         "expense", "income", "transactionlist", "spendingreport", "budgetstatus",
         "mstart", "mstop", "mlog", "mopen",
         "studyplans", "csmentor", "recall", "weather", "focus", "remind",
+        "trips", "trip", "visited",
         "pause", "resume", "help",
     }
 )  # fmt: skip

@@ -2,7 +2,9 @@ import logging
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.features.core.embeddings.service import EmbeddingService
 from app.features.travel.errors import TravelNotFoundError
+from app.features.travel.notes_index import VISIT_NOTE, TravelNoteIndex
 from app.features.travel.places.repository import PlaceRepository
 from app.features.travel.trips.repository import TripRepository
 from app.features.travel.visits.repository import VisitRepository
@@ -14,7 +16,8 @@ _NOT_NULL = ("place_id", "status")
 
 
 class VisitService:
-    def __init__(self, session: AsyncSession):
+    def __init__(self, session: AsyncSession, embedding_service: EmbeddingService | None = None):
+        self._notes = TravelNoteIndex(embedding_service)
         self._repo = VisitRepository(session)
         self._trip_repo = TripRepository(session)
         self._place_repo = PlaceRepository(session)
@@ -38,6 +41,7 @@ class VisitService:
         await self._check_refs(data.trip_id, data.place_id)
         visit = await self._repo.create_visit(data.model_dump())
         logger.info("Visit created: id=%d place_id=%d trip_id=%s status=%s", visit.id, visit.place_id, visit.trip_id, visit.status)
+        await self._notes.sync(VISIT_NOTE, visit.id, f"Visit to {visit.place.name}", visit.notes)
         return VisitRead.model_validate(visit)
 
     async def update_visit(self, visit_id: int, data: VisitUpdate) -> VisitRead | None:
@@ -59,6 +63,8 @@ class VisitService:
                 changes["grade"] = None
         visit = await self._repo.update_visit(visit, changes)
         logger.info("Visit updated: id=%d fields=%s", visit_id, list(changes.keys()))
+        if changes.keys() & {"notes", "place_id"}:
+            await self._notes.sync(VISIT_NOTE, visit.id, f"Visit to {visit.place.name}", visit.notes)
         return VisitRead.model_validate(visit)
 
     async def delete_visit(self, visit_id: int) -> bool:
@@ -67,4 +73,5 @@ class VisitService:
             return False
         await self._repo.delete_visit(visit)
         logger.info("Visit deleted: id=%d", visit_id)
+        await self._notes.remove(VISIT_NOTE, visit_id)
         return True

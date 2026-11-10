@@ -24,6 +24,7 @@ from app.assistant.commands.handlers.interview_prep import handle_interview_prep
 from app.assistant.commands.handlers.interview_candidate import handle_interview_candidate
 from app.assistant.commands.handlers.language import handle_language
 from app.assistant.commands.handlers.metric import handle_metric
+from app.assistant.commands.handlers.travel import TravelServices, handle_travel
 from app.assistant.commands.handlers.memory import handle_memory
 from app.assistant.commands.handlers.note import handle_note
 from app.assistant.commands.handlers.pause import handle_pause
@@ -105,6 +106,7 @@ async def execute(
     interview_prep_service: InterviewPrepQuestionService | None = None,
     interview_candidate_service: InterviewCandidateQuestionService | None = None,
     metric_service: MetricEntryService | None = None,
+    travel_services: TravelServices | None = None,
     routine_service: RoutineService | None = None,
     day_plan_service: DayPlanService | None = None,
     planning_settings_service: PlanningSettingsService | None = None,
@@ -329,6 +331,14 @@ async def execute(
                 detail="Metric service not available",
             )
         return await handle_metric(command, arguments, metric_service, source)
+
+    if cmd_type.startswith("travel_"):
+        if travel_services is None:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Travel services not available",
+            )
+        return await handle_travel(cmd_type, command, arguments, travel_services)
 
     if cmd_type == "routine":
         if routine_service is None:

@@ -129,7 +129,7 @@ Personal measurement log: timed things (commute), values (weight) and counts (co
 
 Trips with their legs (flights, trains, ...), stays (hotels), an itinerary of planned/visited/missed visits, places with tags and a derived grade, linked card charges with derived costs, trip default finance tags and an import from the local calendar, a day-grouped timeline with maps links, and gap warnings (long wait before check-in, tight connections, overlapping legs). See [modules/travel.md](modules/travel.md).
 
-- **Portal:** `/travel` (filterable trips list), `/travel/{id}`, `/travel/places` (filterable), `/travel/places/{id}`. **API:** `/travel/*`.
+- **Portal:** `/travel` (filterable trips list), `/travel/{id}`, `/travel/places` (filterable), `/travel/places/{id}`. **Commands:** `travel_trip` / `travel_leg` / `travel_stay` / `travel_place` / `travel_visit` (`/trips`, `/trip`, `/visited` are in the Telegram menu); "what trips do I have coming up" and "show my Rome trip" work in natural language; notes are searchable with `recall`. **API:** `/travel/*`.
 
 ## Planning, routines and activities
 

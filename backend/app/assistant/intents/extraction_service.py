@@ -153,6 +153,15 @@ class MetricLogArgs(BaseModel):
     note: str | None = Field(default=None)
 
 
+class TravelTripGetArgs(BaseModel):
+    trip: str = Field(
+        description=(
+            "The trip the user means, as a short name or place from their wording, e.g. 'Rome' for 'my trip to Rome', "
+            "'December' for 'my December trip'. Use 'next' when they ask about their next or upcoming trip without naming it."
+        )
+    )
+
+
 _INTENT_SCHEMAS: dict[str, type[BaseModel]] = {
     "task.add": CreateTaskArgs,
     "task.list": GetTasksArgs,
@@ -172,6 +181,7 @@ _INTENT_SCHEMAS: dict[str, type[BaseModel]] = {
     "metric.start": MetricStartArgs,
     "metric.stop": MetricStopArgs,
     "metric.log": MetricLogArgs,
+    "travel_trip.get": TravelTripGetArgs,
 }
 
 _INTENTS_WITH_DATES = {"task.add", "event.add", "event.list", "finance.transaction_add", "weather.current", "reminder.set"}

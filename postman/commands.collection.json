@@ -2,7 +2,7 @@
   "info": {
     "name": "Alfred - Commands API",
     "_postman_id": "alfred-commands-v1",
-    "description": "Test suite for the Commands API. Flow: /commands/detect → /commands/extract (NL only) → /commands/execute → /commands/respond.",
+    "description": "Test suite for the Commands API. Flow: /commands/detect \u2192 /commands/extract (NL only) \u2192 /commands/execute \u2192 /commands/respond.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -33,13 +33,19 @@
         }
       ],
       "request": {
-        "auth": { "type": "noauth" },
+        "auth": {
+          "type": "noauth"
+        },
         "method": "GET",
         "header": [],
         "url": {
           "raw": "{{base_url}}/health",
-          "host": ["{{base_url}}"],
-          "path": ["health"]
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "health"
+          ]
         }
       }
     },
@@ -70,16 +76,30 @@
       ],
       "request": {
         "method": "POST",
-        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
         "body": {
           "mode": "raw",
           "raw": "{\n  \"text\": \"/taskadd Buy groceries\"\n}",
-          "options": { "raw": { "language": "json" } }
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
         },
         "url": {
           "raw": "{{base_url}}/commands/detect",
-          "host": ["{{base_url}}"],
-          "path": ["commands", "detect"]
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "commands",
+            "detect"
+          ]
         }
       }
     },
@@ -104,16 +124,30 @@
       ],
       "request": {
         "method": "POST",
-        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
         "body": {
           "mode": "raw",
           "raw": "{\n  \"text\": \"/tasklist\"\n}",
-          "options": { "raw": { "language": "json" } }
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
         },
         "url": {
           "raw": "{{base_url}}/commands/detect",
-          "host": ["{{base_url}}"],
-          "path": ["commands", "detect"]
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "commands",
+            "detect"
+          ]
         }
       }
     },
@@ -137,16 +171,30 @@
       ],
       "request": {
         "method": "POST",
-        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
         "body": {
           "mode": "raw",
           "raw": "{\n  \"text\": \"/taskadd Buy milk /tasklist\"\n}",
-          "options": { "raw": { "language": "json" } }
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
         },
         "url": {
           "raw": "{{base_url}}/commands/detect",
-          "host": ["{{base_url}}"],
-          "path": ["commands", "detect"]
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "commands",
+            "detect"
+          ]
         }
       }
     },
@@ -176,16 +224,30 @@
       ],
       "request": {
         "method": "POST",
-        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
         "body": {
           "mode": "raw",
           "raw": "{\n  \"text\": \"/taskadd buy chocolate /noteadd chocolate is good\",\n  \"command\": \"/taskadd\",\n  \"args\": \"buy chocolate\"\n}",
-          "options": { "raw": { "language": "json" } }
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
         },
         "url": {
           "raw": "{{base_url}}/commands/detect",
-          "host": ["{{base_url}}"],
-          "path": ["commands", "detect"]
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "commands",
+            "detect"
+          ]
         }
       }
     },
@@ -209,16 +271,30 @@
       ],
       "request": {
         "method": "POST",
-        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
         "body": {
           "mode": "raw",
           "raw": "{\n  \"text\": \"What's the capital of France?\"\n}",
-          "options": { "raw": { "language": "json" } }
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
         },
         "url": {
           "raw": "{{base_url}}/commands/detect",
-          "host": ["{{base_url}}"],
-          "path": ["commands", "detect"]
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "commands",
+            "detect"
+          ]
         }
       }
     },
@@ -247,16 +323,30 @@
       ],
       "request": {
         "method": "POST",
-        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
         "body": {
           "mode": "raw",
           "raw": "{\n  \"text\": \"I need to buy groceries tomorrow\",\n  \"intent\": \"task.add\"\n}",
-          "options": { "raw": { "language": "json" } }
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
         },
         "url": {
           "raw": "{{base_url}}/commands/extract",
-          "host": ["{{base_url}}"],
-          "path": ["commands", "extract"]
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "commands",
+            "extract"
+          ]
         }
       }
     },
@@ -282,16 +372,30 @@
       ],
       "request": {
         "method": "POST",
-        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
         "body": {
           "mode": "raw",
           "raw": "{\n  \"text\": \"Schedule a team meeting next Monday at 10am\",\n  \"intent\": \"event.add\"\n}",
-          "options": { "raw": { "language": "json" } }
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
         },
         "url": {
           "raw": "{{base_url}}/commands/extract",
-          "host": ["{{base_url}}"],
-          "path": ["commands", "extract"]
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "commands",
+            "extract"
+          ]
         }
       }
     },
@@ -315,16 +419,31 @@
       ],
       "request": {
         "method": "POST",
-        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
         "body": {
           "mode": "raw",
           "raw": "{\n  \"text\": \"I need to buy groceries tomorrow\",\n  \"source\": \"telegram\",\n  \"external_id\": \"postman_commands_test_chat\"\n}",
-          "options": { "raw": { "language": "json" } }
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
         },
         "url": {
           "raw": "{{base_url}}/core/messages/",
-          "host": ["{{base_url}}"],
-          "path": ["core", "messages", ""]
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "core",
+            "messages",
+            ""
+          ]
         }
       }
     },
@@ -350,16 +469,30 @@
       ],
       "request": {
         "method": "POST",
-        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
         "body": {
           "mode": "raw",
           "raw": "{\n  \"message_id\": {{core_message_id}},\n  \"type\": \"task\",\n  \"command\": \"add\",\n  \"args\": {\n    \"title\": \"Buy groceries\",\n    \"priority\": \"HIGH\",\n    \"deadline\": \"2026-06-20\"\n  }\n}",
-          "options": { "raw": { "language": "json" } }
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
         },
         "url": {
           "raw": "{{base_url}}/commands/execute",
-          "host": ["{{base_url}}"],
-          "path": ["commands", "execute"]
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "commands",
+            "execute"
+          ]
         }
       }
     },
@@ -385,16 +518,30 @@
       ],
       "request": {
         "method": "POST",
-        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
         "body": {
           "mode": "raw",
           "raw": "{\n  \"message_id\": {{core_message_id}},\n  \"type\": \"note\",\n  \"command\": \"add\",\n  \"args\": {\n    \"content\": \"My girlfriend likes oat milk\",\n    \"tags\": \"personal\"\n  }\n}",
-          "options": { "raw": { "language": "json" } }
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
         },
         "url": {
           "raw": "{{base_url}}/commands/execute",
-          "host": ["{{base_url}}"],
-          "path": ["commands", "execute"]
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "commands",
+            "execute"
+          ]
         }
       }
     },
@@ -420,16 +567,30 @@
       ],
       "request": {
         "method": "POST",
-        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
         "body": {
           "mode": "raw",
           "raw": "{\n  \"message_id\": {{core_message_id}},\n  \"type\": \"note\",\n  \"command\": \"get\",\n  \"args\": {\n    \"id\": \"{{cmd_note_id}}\"\n  }\n}",
-          "options": { "raw": { "language": "json" } }
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
         },
         "url": {
           "raw": "{{base_url}}/commands/execute",
-          "host": ["{{base_url}}"],
-          "path": ["commands", "execute"]
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "commands",
+            "execute"
+          ]
         }
       }
     },
@@ -448,16 +609,30 @@
       ],
       "request": {
         "method": "POST",
-        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
         "body": {
           "mode": "raw",
           "raw": "{\n  \"message_id\": {{core_message_id}},\n  \"type\": \"note\",\n  \"command\": \"get\",\n  \"args\": {\n    \"id\": \"999999\"\n  }\n}",
-          "options": { "raw": { "language": "json" } }
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
         },
         "url": {
           "raw": "{{base_url}}/commands/execute",
-          "host": ["{{base_url}}"],
-          "path": ["commands", "execute"]
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "commands",
+            "execute"
+          ]
         }
       }
     },
@@ -476,16 +651,30 @@
       ],
       "request": {
         "method": "POST",
-        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
         "body": {
           "mode": "raw",
           "raw": "{\n  \"message_id\": {{core_message_id}},\n  \"type\": \"note\",\n  \"command\": \"list\",\n  \"args\": {\n    \"task\": \"29\"\n  }\n}",
-          "options": { "raw": { "language": "json" } }
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
         },
         "url": {
           "raw": "{{base_url}}/commands/execute",
-          "host": ["{{base_url}}"],
-          "path": ["commands", "execute"]
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "commands",
+            "execute"
+          ]
         }
       }
     },
@@ -509,16 +698,30 @@
       ],
       "request": {
         "method": "POST",
-        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
         "body": {
           "mode": "raw",
           "raw": "{\n  \"message_id\": {{core_message_id}},\n  \"type\": \"task\",\n  \"command\": \"list\",\n  \"args\": {\n    \"status\": \"TODO\",\n    \"priority\": \"HIGH\"\n  }\n}",
-          "options": { "raw": { "language": "json" } }
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
         },
         "url": {
           "raw": "{{base_url}}/commands/execute",
-          "host": ["{{base_url}}"],
-          "path": ["commands", "execute"]
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "commands",
+            "execute"
+          ]
         }
       }
     },
@@ -542,16 +745,30 @@
       ],
       "request": {
         "method": "POST",
-        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
         "body": {
           "mode": "raw",
           "raw": "{\n  \"message_id\": {{core_message_id}}\n}",
-          "options": { "raw": { "language": "json" } }
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
         },
         "url": {
           "raw": "{{base_url}}/commands/respond",
-          "host": ["{{base_url}}"],
-          "path": ["commands", "respond"]
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "commands",
+            "respond"
+          ]
         }
       }
     },
@@ -574,16 +791,30 @@
       ],
       "request": {
         "method": "POST",
-        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
         "body": {
           "mode": "raw",
           "raw": "{\n  \"message_id\": 999999999\n}",
-          "options": { "raw": { "language": "json" } }
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
         },
         "url": {
           "raw": "{{base_url}}/commands/respond",
-          "host": ["{{base_url}}"],
-          "path": ["commands", "respond"]
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "commands",
+            "respond"
+          ]
         }
       }
     },
@@ -611,16 +842,30 @@
       ],
       "request": {
         "method": "POST",
-        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
         "body": {
           "mode": "raw",
           "raw": "{\n  \"message_id\": {{core_message_id}},\n  \"type\": \"cs\",\n  \"command\": \"context\",\n  \"args\": {}\n}",
-          "options": { "raw": { "language": "json" } }
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
         },
         "url": {
           "raw": "{{base_url}}/commands/execute",
-          "host": ["{{base_url}}"],
-          "path": ["commands", "execute"]
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "commands",
+            "execute"
+          ]
         }
       }
     },
@@ -1207,16 +1452,30 @@
       ],
       "request": {
         "method": "POST",
-        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
         "body": {
           "mode": "raw",
           "raw": "{\n  \"message_id\": {{core_message_id}},\n  \"type\": \"shopping\",\n  \"command\": \"add\",\n  \"args\": {\n    \"name\": \"Postman Command Oats\",\n    \"unit\": \"kg\",\n    \"quantity\": \"2\"\n  }\n}",
-          "options": { "raw": { "language": "json" } }
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
         },
         "url": {
           "raw": "{{base_url}}/commands/execute",
-          "host": ["{{base_url}}"],
-          "path": ["commands", "execute"]
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "commands",
+            "execute"
+          ]
         }
       }
     },
@@ -1238,16 +1497,30 @@
       ],
       "request": {
         "method": "POST",
-        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
         "body": {
           "mode": "raw",
           "raw": "{\n  \"message_id\": {{core_message_id}},\n  \"type\": \"shopping\",\n  \"command\": \"add\",\n  \"args\": {\n    \"name\": \"postman command oats\"\n  }\n}",
-          "options": { "raw": { "language": "json" } }
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
         },
         "url": {
           "raw": "{{base_url}}/commands/execute",
-          "host": ["{{base_url}}"],
-          "path": ["commands", "execute"]
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "commands",
+            "execute"
+          ]
         }
       }
     },
@@ -1267,16 +1540,30 @@
       ],
       "request": {
         "method": "POST",
-        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
         "body": {
           "mode": "raw",
           "raw": "{\n  \"message_id\": {{core_message_id}},\n  \"type\": \"shopping\",\n  \"command\": \"update\",\n  \"args\": {\n    \"id\": \"{{cmd_shopping_item_id}}\",\n    \"unit\": \"g\"\n  }\n}",
-          "options": { "raw": { "language": "json" } }
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
         },
         "url": {
           "raw": "{{base_url}}/commands/execute",
-          "host": ["{{base_url}}"],
-          "path": ["commands", "execute"]
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "commands",
+            "execute"
+          ]
         }
       }
     },
@@ -1296,16 +1583,30 @@
       ],
       "request": {
         "method": "POST",
-        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
         "body": {
           "mode": "raw",
           "raw": "{\n  \"message_id\": {{core_message_id}},\n  \"type\": \"shopping\",\n  \"command\": \"delete\",\n  \"args\": {\n    \"id\": \"{{cmd_shopping_item_id}}\"\n  }\n}",
-          "options": { "raw": { "language": "json" } }
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
         },
         "url": {
           "raw": "{{base_url}}/commands/execute",
-          "host": ["{{base_url}}"],
-          "path": ["commands", "execute"]
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "commands",
+            "execute"
+          ]
         }
       }
     },
@@ -1328,8 +1629,278 @@
         "header": [],
         "url": {
           "raw": "{{base_url}}/organizer/shopping-products/{{cmd_shopping_product_id}}",
-          "host": ["{{base_url}}"],
-          "path": ["organizer", "shopping-products", "{{cmd_shopping_product_id}}"]
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "organizer",
+            "shopping-products",
+            "{{cmd_shopping_product_id}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "36 - Execute: travel trip list (read)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Result lists trips', () => { const j = pm.response.json(); pm.expect(j.result.trips).to.be.an('array'); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/commands/execute",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "commands",
+            "execute"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"type\": \"travel_trip\",\n  \"command\": \"list\",\n  \"args\": {\n    \"status\": \"all\",\n    \"limit\": \"3\"\n  },\n  \"source\": \"mcp\"\n}"
+        }
+      }
+    },
+    {
+      "name": "37 - Execute: travel trip list with a bad status",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 400', () => pm.response.to.have.status(400));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/commands/execute",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "commands",
+            "execute"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"type\": \"travel_trip\",\n  \"command\": \"list\",\n  \"args\": {\n    \"status\": \"sometime\"\n  },\n  \"source\": \"mcp\"\n}"
+        }
+      }
+    },
+    {
+      "name": "38 - Execute: travel place add without a kind uses other",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "const j = pm.response.json();",
+              "pm.environment.set('travel_cmd_place_id', j.result.id);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/commands/execute",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "commands",
+            "execute"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"type\": \"travel_place\",\n  \"command\": \"add\",\n  \"args\": {\n    \"name\": \"Postman Place {{$timestamp}}\"\n  },\n  \"source\": \"mcp\"\n}"
+        }
+      }
+    },
+    {
+      "name": "39 - Execute: travel visit add by place name",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.environment.set('travel_cmd_visit_id', pm.response.json().result.id);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/commands/execute",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "commands",
+            "execute"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"type\": \"travel_visit\",\n  \"command\": \"add\",\n  \"args\": {\n    \"place\": \"{{travel_cmd_place_id}}\",\n    \"date\": \"2031-12-18\",\n    \"notes\": \"Postman visit\"\n  },\n  \"source\": \"mcp\"\n}"
+        }
+      }
+    },
+    {
+      "name": "40 - Execute: travel visit visited with grade",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Graded', () => pm.expect(pm.response.json().result.message).to.include('graded 4/5'));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/commands/execute",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "commands",
+            "execute"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"type\": \"travel_visit\",\n  \"command\": \"visited\",\n  \"args\": {\n    \"id\": \"{{travel_cmd_visit_id}}\",\n    \"grade\": \"4\"\n  },\n  \"source\": \"mcp\"\n}"
+        }
+      }
+    },
+    {
+      "name": "41 - Execute: travel visit delete (cleanup)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/commands/execute",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "commands",
+            "execute"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"type\": \"travel_visit\",\n  \"command\": \"delete\",\n  \"args\": {\n    \"id\": \"{{travel_cmd_visit_id}}\"\n  },\n  \"source\": \"mcp\"\n}"
+        }
+      }
+    },
+    {
+      "name": "42 - Execute: travel place delete (cleanup)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/commands/execute",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "commands",
+            "execute"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"type\": \"travel_place\",\n  \"command\": \"delete\",\n  \"args\": {\n    \"id\": \"{{travel_cmd_place_id}}\"\n  },\n  \"source\": \"mcp\"\n}"
         }
       }
     }

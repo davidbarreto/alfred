@@ -402,6 +402,22 @@ INTENT_EXAMPLES: list[IntentExample] = [
     IntentExample(id=315, text="Is my commute timer still running?", intent="metric.open"),
     IntentExample(id=316, text="Show my running timers", intent="metric.open"),
 
+    # --- travel_trip.list ---
+    IntentExample(id=320, text="What trips do I have coming up?", intent="travel_trip.list"),
+    IntentExample(id=321, text="Show my upcoming trips", intent="travel_trip.list"),
+    IntentExample(id=322, text="When is my next trip?", intent="travel_trip.list"),
+    IntentExample(id=323, text="List the trips I have planned", intent="travel_trip.list"),
+    IntentExample(id=324, text="Which trips have I taken before?", intent="travel_trip.list"),
+    IntentExample(id=325, text="Am I travelling anywhere soon?", intent="travel_trip.list"),
+
+    # --- travel_trip.get ---
+    IntentExample(id=326, text="Show me my trip to Rome", intent="travel_trip.get"),
+    IntentExample(id=327, text="What's the plan for the Stockholm trip?", intent="travel_trip.get"),
+    IntentExample(id=328, text="Give me the details of my December trip", intent="travel_trip.get"),
+    IntentExample(id=329, text="What flights and hotels do I have booked for the Lisbon trip?", intent="travel_trip.get"),
+    IntentExample(id=330, text="When do I need to leave for the airport on my next trip?", intent="travel_trip.get"),
+    IntentExample(id=331, text="What's the itinerary for my holiday?", intent="travel_trip.get"),
+
     # --- unknown ---
     IntentExample(id=141, text="What's the weather like today?", intent="weather.current"),
     IntentExample(id=142, text="Tell me a joke", intent="unknown"),

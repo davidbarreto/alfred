@@ -116,6 +116,7 @@ from app.features.metrics.entries.service import MetricEntryService
 from app.features.metrics.series.service import MetricSeriesService
 from app.features.metrics.stats.service import MetricStatsService
 from app.features.metrics.tags.service import MetricTagService
+from app.assistant.commands.handlers.travel import TravelServices
 from app.features.travel.calendar_import.service import CalendarImportService
 from app.features.travel.default_tags import TripDefaultTagService
 from app.features.travel.legs.service import LegService
@@ -639,16 +640,16 @@ def get_metric_tag_service(session: AsyncSession = Depends(get_session)) -> Metr
     return MetricTagService(session)
 
 def get_trip_service(session: AsyncSession = Depends(get_session)) -> TripService:
-    return TripService(session)
+    return TripService(session, EmbeddingService(session, get_embedding_provider()))
 
 def get_leg_service(session: AsyncSession = Depends(get_session)) -> LegService:
-    return LegService(session)
+    return LegService(session, EmbeddingService(session, get_embedding_provider()))
 
 def get_stay_service(session: AsyncSession = Depends(get_session)) -> StayService:
-    return StayService(session)
+    return StayService(session, EmbeddingService(session, get_embedding_provider()))
 
 def get_place_service(session: AsyncSession = Depends(get_session)) -> PlaceService:
-    return PlaceService(session)
+    return PlaceService(session, EmbeddingService(session, get_embedding_provider()))
 
 def get_travel_tag_service(session: AsyncSession = Depends(get_session)) -> TravelTagService:
     return TravelTagService(session)
@@ -657,7 +658,7 @@ def get_travel_settings_service(session: AsyncSession = Depends(get_session)) ->
     return TravelSettingsService(session)
 
 def get_visit_service(session: AsyncSession = Depends(get_session)) -> VisitService:
-    return VisitService(session)
+    return VisitService(session, EmbeddingService(session, get_embedding_provider()))
 
 def get_transaction_link_service(session: AsyncSession = Depends(get_session)) -> TransactionLinkService:
     return TransactionLinkService(session)
@@ -667,6 +668,13 @@ def get_trip_default_tag_service(session: AsyncSession = Depends(get_session)) -
 
 def get_calendar_import_service(session: AsyncSession = Depends(get_session)) -> CalendarImportService:
     return CalendarImportService(session)
+
+def get_travel_services(session: AsyncSession = Depends(get_session)) -> TravelServices:
+    return TravelServices(
+        trips=get_trip_service(session), legs=get_leg_service(session), stays=get_stay_service(session),
+        places=get_place_service(session), visits=get_visit_service(session),
+        links=TransactionLinkService(session), default_tags=TripDefaultTagService(session),
+    )
 
 def get_codeforces_sync_service(session: AsyncSession = Depends(get_session)) -> CodeforcesSyncService:
     return CodeforcesSyncService(session, CodeforcesClient())
@@ -803,4 +811,5 @@ VisitServiceDep = Annotated[VisitService, Depends(get_visit_service)]
 TransactionLinkServiceDep = Annotated[TransactionLinkService, Depends(get_transaction_link_service)]
 TripDefaultTagServiceDep = Annotated[TripDefaultTagService, Depends(get_trip_default_tag_service)]
 CalendarImportServiceDep = Annotated[CalendarImportService, Depends(get_calendar_import_service)]
+TravelServicesDep = Annotated[TravelServices, Depends(get_travel_services)]
 TravelTagServiceDep = Annotated[TravelTagService, Depends(get_travel_tag_service)]

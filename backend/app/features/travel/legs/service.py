@@ -2,9 +2,11 @@ import logging
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.features.core.embeddings.service import EmbeddingService
 from app.features.organizer.calendar_events.repository import CalendarEventRepository
 from app.features.travel.errors import TravelConflictError, TravelNotFoundError
 from app.features.travel.legs.repository import LegRepository
+from app.features.travel.notes_index import LEG_NOTE, TravelNoteIndex
 from app.features.travel.legs.schemas import LegCreate, LegRead, LegUpdate
 from app.features.travel.trips.repository import TripRepository
 from app.features.travel.zones import to_utc
@@ -15,7 +17,8 @@ _NOT_NULL = ("mode", "origin", "destination", "departs_at", "arrives_at", "depar
 
 
 class LegService:
-    def __init__(self, session: AsyncSession):
+    def __init__(self, session: AsyncSession, embedding_service: EmbeddingService | None = None):
+        self._notes = TravelNoteIndex(embedding_service)
         self._repo = LegRepository(session)
         self._trip_repo = TripRepository(session)
         self._calendar_repo = CalendarEventRepository(session)
@@ -39,6 +42,7 @@ class LegService:
                 raise TravelConflictError("That calendar event is already imported as a leg")
         leg = await self._repo.create_leg(data.model_dump())
         logger.info("Leg created: id=%d trip_id=%d mode=%s", leg.id, leg.trip_id, leg.mode)
+        await self._notes.sync(LEG_NOTE, leg.id, f"{leg.origin} to {leg.destination} ({leg.mode})", leg.notes)
         return LegRead.model_validate(leg)
 
     async def update_leg(self, leg_id: int, data: LegUpdate) -> LegRead | None:
@@ -60,6 +64,8 @@ class LegService:
             raise ValueError("arrives_at cannot be before departs_at")
         leg = await self._repo.update_leg(leg, changes)
         logger.info("Leg updated: id=%d fields=%s", leg_id, list(changes.keys()))
+        if changes.keys() & {"notes", "origin", "destination", "mode"}:
+            await self._notes.sync(LEG_NOTE, leg.id, f"{leg.origin} to {leg.destination} ({leg.mode})", leg.notes)
         return LegRead.model_validate(leg)
 
     async def delete_leg(self, leg_id: int) -> bool:
@@ -68,4 +74,5 @@ class LegService:
             return False
         await self._repo.delete_leg(leg)
         logger.info("Leg deleted: id=%d trip_id=%d", leg_id, leg.trip_id)
+        await self._notes.remove(LEG_NOTE, leg_id)
         return True

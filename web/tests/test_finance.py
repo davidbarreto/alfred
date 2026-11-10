@@ -2155,7 +2155,7 @@ class TestTagBudgetsEditPage:
         resp = client.get("/finance/budgets")
 
         assert "Tag budgets" in resp.text
-        assert resp.text.index("Groceries") < resp.text.index("Tag budgets") < resp.text.index("Travel")
+        assert resp.text.index("Groceries") < resp.text.index("Tag budgets") < resp.text.index("Travel", resp.text.index("Tag budgets"))
         assert 'data-tag-id="5"' in resp.text and 'value="1500.00"' in resp.text
 
     def test_only_budgeted_tags_are_shown_others_wait_in_the_picker(self, client, mock_api):
@@ -2219,7 +2219,7 @@ class TestTagBudgetsInOverviewAndHistory:
 
         resp = client.get("/finance/budgets/overview")
 
-        assert resp.text.index("Groceries") < resp.text.index(">Tags<") < resp.text.index("Travel")
+        assert resp.text.index("Groceries") < resp.text.index(">Tags<") < resp.text.index("Travel", resp.text.index(">Tags<"))
         assert "€200.00 of €1,500.00" in resp.text
         assert "€320.00 of €1,800.00" in resp.text  # total spans categories and tags
         assert "1 counted in an older tag budget" in resp.text
@@ -2259,7 +2259,7 @@ class TestTagBudgetsInOverviewAndHistory:
 
         resp = client.get("/finance/budgets/history")
 
-        assert resp.text.index("Groceries") < resp.text.index(">Tags<") < resp.text.index("Travel")
+        assert resp.text.index("Groceries") < resp.text.index(">Tags<") < resp.text.index("Travel", resp.text.index(">Tags<"))
         assert "€1,800.00" in resp.text
         assert "spent €300.00" in resp.text
 

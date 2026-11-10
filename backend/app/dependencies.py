@@ -116,6 +116,11 @@ from app.features.metrics.entries.service import MetricEntryService
 from app.features.metrics.series.service import MetricSeriesService
 from app.features.metrics.stats.service import MetricStatsService
 from app.features.metrics.tags.service import MetricTagService
+from app.features.travel.legs.service import LegService
+from app.features.travel.places.service import PlaceService
+from app.features.travel.stays.service import StayService
+from app.features.travel.tags.service import TravelTagService
+from app.features.travel.trips.service import TripService
 from app.shared.holiday import HolidayProvider
 from app.shared.pronunciation import PronunciationProvider
 from app.shared.conversation import ConversationProvider
@@ -628,6 +633,21 @@ def get_metric_stats_service(session: AsyncSession = Depends(get_session)) -> Me
 def get_metric_tag_service(session: AsyncSession = Depends(get_session)) -> MetricTagService:
     return MetricTagService(session)
 
+def get_trip_service(session: AsyncSession = Depends(get_session)) -> TripService:
+    return TripService(session)
+
+def get_leg_service(session: AsyncSession = Depends(get_session)) -> LegService:
+    return LegService(session)
+
+def get_stay_service(session: AsyncSession = Depends(get_session)) -> StayService:
+    return StayService(session)
+
+def get_place_service(session: AsyncSession = Depends(get_session)) -> PlaceService:
+    return PlaceService(session)
+
+def get_travel_tag_service(session: AsyncSession = Depends(get_session)) -> TravelTagService:
+    return TravelTagService(session)
+
 def get_codeforces_sync_service(session: AsyncSession = Depends(get_session)) -> CodeforcesSyncService:
     return CodeforcesSyncService(session, CodeforcesClient())
 
@@ -754,3 +774,8 @@ MetricEntryServiceDep = Annotated[MetricEntryService, Depends(get_metric_entry_s
 MetricSeriesServiceDep = Annotated[MetricSeriesService, Depends(get_metric_series_service)]
 MetricStatsServiceDep = Annotated[MetricStatsService, Depends(get_metric_stats_service)]
 MetricTagServiceDep = Annotated[MetricTagService, Depends(get_metric_tag_service)]
+TripServiceDep = Annotated[TripService, Depends(get_trip_service)]
+LegServiceDep = Annotated[LegService, Depends(get_leg_service)]
+StayServiceDep = Annotated[StayService, Depends(get_stay_service)]
+PlaceServiceDep = Annotated[PlaceService, Depends(get_place_service)]
+TravelTagServiceDep = Annotated[TravelTagService, Depends(get_travel_tag_service)]

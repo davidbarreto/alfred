@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% set active_page = "travel" %}
+{% block title %}Travel{% endblock %}
+
+{% block content %}
+<div class="p-6 space-y-6">
+
+  <div class="flex items-center justify-between">
+    <h1 class="text-base font-semibold text-gray-900">Travel</h1>
+    <button onclick="document.getElementById('new-trip').classList.toggle('hidden')"
+            class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#378ADD] text-xs font-medium text-white hover:bg-[#2f7bc4] transition-colors">
+      <i class="ti ti-plus text-sm"></i>New trip
+    </button>
+  </div>
+
+  <div id="new-trip" class="card bg-white hidden">
+    <div class="card-body p-5">
+      <form id="new-trip-form" class="flex flex-wrap items-end gap-3">
+        <label class="space-y-1"><span class="block text-xs text-gray-500">Name</span>
+          <input name="name" required maxlength="200" class="input input-sm input-bordered w-56"></label>
+        <label class="space-y-1"><span class="block text-xs text-gray-500">Start</span>
+          <input name="start_date" type="date" required class="input input-sm input-bordered"></label>
+        <label class="space-y-1"><span class="block text-xs text-gray-500">End</span>
+          <input name="end_date" type="date" required class="input input-sm input-bordered"></label>
+        <label class="space-y-1"><span class="block text-xs text-gray-500">Travelers</span>
+          <input name="travelers" class="input input-sm input-bordered w-40"></label>
+        <label class="space-y-1"><span class="block text-xs text-gray-500">Tags (comma separated)</span>
+          <input name="tags" class="input input-sm input-bordered w-44" list="trip-tag-options"></label>
+        <label class="space-y-1"><span class="block text-xs text-gray-500">Finance tags for its transactions</span>
+          <input name="default_tag_names" placeholder="Travel, Hotel" class="input input-sm input-bordered w-48"></label>
+        <button type="submit" class="btn btn-sm btn-outline">Create</button>
+        <span id="new-trip-error" class="text-xs text-red-600"></span>
+      </form>
+      <datalist id="trip-tag-options">{% for tag in all_tags %}<option value="{{ tag }}">{% endfor %}</datalist>
+    </div>
+  </div>
+
+  <form id="trip-filters" class="flex flex-wrap items-end gap-3"
+        hx-get="/travel/list" hx-target="#trips-list" hx-swap="innerHTML" hx-trigger="change, keyup changed delay:300ms from:#filter-q">
+    <label class="space-y-1"><span class="block text-xs text-gray-500">Show</span>
+      <select name="status" class="select select-sm select-bordered">
+        {% for key, label in statuses.items() %}<option value="{{ key }}" {{ 'selected' if filters.status == key }}>{{ label }}</option>{% endfor %}
+      </select></label>
+    <label class="space-y-1"><span class="block text-xs text-gray-500">Search</span>
+      <input id="filter-q" name="q" value="{{ filters.q }}" class="input input-sm input-bordered w-44" placeholder="Trip name"></label>
+    <label class="space-y-1"><span class="block text-xs text-gray-500">From</span>
+      <input name="date_from" type="date" value="{{ filters.date_from }}" class="input input-sm input-bordered"></label>
+    <label class="space-y-1"><span class="block text-xs text-gray-500">To</span>
+      <input name="date_to" type="date" value="{{ filters.date_to }}" class="input input-sm input-bordered"></label>
+    {% if all_tags %}
+    <div class="flex flex-wrap items-center gap-2 pb-1">
+      {% for tag in all_tags %}
+      <label class="inline-flex items-center gap-1 text-xs text-gray-600">
+        <input type="checkbox" name="tag" value="{{ tag }}" class="checkbox checkbox-xs" {{ 'checked' if tag in filters.tags }}>{{ tag }}
+      </label>
+      {% endfor %}
+    </div>
+    {% endif %}
+    <button type="button" class="btn btn-xs btn-ghost" onclick="this.form.reset(); this.form.querySelectorAll('input[type=checkbox]').forEach(c => c.checked = false); this.form.querySelector('[name=q]').value=''; this.form.querySelectorAll('input[type=date]').forEach(d => d.value=''); this.form.querySelector('[name=status]').value='current'; htmx.trigger(this.form, 'change');">Clear filters</button>
+  </form>
+
+  <div id="trips-list">
+    {% include "_travel_trips_list.html" %}
+  </div>
+</div>
+
+<script>
+document.getElementById('new-trip-form')?.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const form = new FormData(event.target);
+  const body = {
+    name: form.get('name'), start_date: form.get('start_date'), end_date: form.get('end_date'),
+    tags: (form.get('tags') || '').split(',').map(t => t.trim()).filter(Boolean),
+  };
+  for (const key of ['travelers', 'default_tag_names']) if (form.get(key)) body[key] = form.get(key);
+  const error = document.getElementById('new-trip-error');
+  error.textContent = '';
+  const res = await fetch('/travel/trips', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) { error.textContent = data.error || 'Something went wrong.'; return; }
+  location.href = `/travel/${data.id}`;
+});
+</script>
+{% endblock %}

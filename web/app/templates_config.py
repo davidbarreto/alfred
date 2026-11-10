@@ -90,10 +90,21 @@ def _number(value: int | float | None) -> str:
     return f"{float(value):.3f}".rstrip("0").rstrip(".")
 
 
+def _short_date(value: str | None) -> str:
+    """An ISO date or datetime rendered like '17 Dec 2026' (no timezone conversion: dates are local already)."""
+    if not value:
+        return ""
+    try:
+        return datetime.fromisoformat(str(value)[:10]).strftime("%d %b %Y")
+    except ValueError:
+        return str(value)[:10]
+
+
 templates.env.filters["timeago"] = _timeago
 templates.env.filters["duration"] = _duration
 templates.env.filters["local_dt"] = _local_dt
 templates.env.filters["number"] = _number
+templates.env.filters["short_date"] = _short_date
 templates.env.filters["compact_number"] = _compact_number
 templates.env.filters["money"] = _money
 templates.env.filters["country_flag"] = country_flag

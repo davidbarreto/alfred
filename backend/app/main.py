@@ -103,6 +103,11 @@ from app.api.routes.metrics.quick import router as metric_quick_router
 from app.api.routes.metrics.series import router as metric_series_router
 from app.api.routes.metrics.stats import router as metric_stats_router
 from app.api.routes.metrics.tags import router as metric_tags_router
+from app.api.routes.travel.legs import router as travel_legs_router
+from app.api.routes.travel.places import router as travel_places_router
+from app.api.routes.travel.stays import router as travel_stays_router
+from app.api.routes.travel.tags import router as travel_tags_router
+from app.api.routes.travel.trips import router as travel_trips_router
 from app.api.routes.study.plans import router as study_plans_router
 from app.api.routes.study.settings import router as study_settings_router
 from app.api.routes.study.tracks import router as study_tracks_router
@@ -233,6 +238,11 @@ app.include_router(metric_entries_router)
 app.include_router(metric_quick_router)
 app.include_router(metric_tags_router)
 app.include_router(study_tracks_router)
+app.include_router(travel_trips_router)
+app.include_router(travel_legs_router)
+app.include_router(travel_stays_router)
+app.include_router(travel_places_router)
+app.include_router(travel_tags_router)
 app.include_router(study_plans_router)
 app.include_router(study_settings_router)
 

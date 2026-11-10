@@ -124,6 +124,7 @@ jobs:
             interview_prep.collection.json
             interviews.collection.json
             metrics.collection.json
+            travel.collection.json
             notes.collection.json
             planning.collection.json
             routines.collection.json

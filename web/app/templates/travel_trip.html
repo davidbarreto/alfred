@@ -1,0 +1,363 @@
+{% extends "base.html" %}
+{% set active_page = "travel" %}
+{% block title %}{{ trip.name }}{% endblock %}
+
+{% block content %}
+<div class="p-6 space-y-6">
+
+  <a href="/travel" class="text-xs text-gray-500 hover:text-gray-700"><i class="ti ti-arrow-left"></i> All trips</a>
+
+  <div class="card bg-white">
+    <div class="card-body p-5 space-y-3">
+      <div class="flex items-start justify-between gap-3">
+        <div>
+          <h1 class="text-base font-semibold text-gray-900">{{ trip.name }}</h1>
+          <p class="text-xs text-gray-500">{{ trip.start_date | short_date }} → {{ trip.end_date | short_date }}{% if trip.travelers %} · {{ trip.travelers }}{% endif %}</p>
+        </div>
+        <div class="flex items-center gap-2">
+          <span class="px-2 py-0.5 rounded-full text-xs font-medium
+            {% if trip.status == 'ongoing' %}text-green-700 bg-green-50{% elif trip.status == 'upcoming' %}text-blue-700 bg-blue-50{% else %}text-gray-500 bg-gray-100{% endif %}">{{ trip.status }}</span>
+          <button class="btn btn-xs btn-outline" onclick="document.getElementById('edit-trip-wrap').classList.toggle('hidden')">Edit</button>
+          <button class="btn btn-xs btn-outline btn-error" id="delete-trip">Delete</button>
+        </div>
+      </div>
+      {% if trip.tags %}
+      <div class="flex flex-wrap gap-1">{% for tag in trip.tags %}<span class="px-2 py-0.5 rounded-full text-[11px] bg-gray-100 text-gray-600">{{ tag }}</span>{% endfor %}</div>
+      {% endif %}
+      {% if trip.notes %}<p class="text-sm text-gray-700 whitespace-pre-line">{{ trip.notes }}</p>{% endif %}
+      {% if trip.preferences %}<p class="text-xs text-gray-500 whitespace-pre-line"><strong>Preferences:</strong> {{ trip.preferences }}</p>{% endif %}
+      {% if trip.default_tag_names %}<p class="text-xs text-gray-400">Finance tags for its transactions: {{ trip.default_tag_names }}</p>{% endif %}
+
+      <div id="edit-trip-wrap" class="hidden">
+      <form id="edit-trip" class="flex flex-wrap items-end gap-3 pt-2 border-t border-gray-100">
+        <label class="space-y-1"><span class="block text-xs text-gray-500">Name</span>
+          <input name="name" value="{{ trip.name }}" required class="input input-sm input-bordered w-56"></label>
+        <label class="space-y-1"><span class="block text-xs text-gray-500">Start</span>
+          <input name="start_date" type="date" value="{{ trip.start_date }}" required class="input input-sm input-bordered"></label>
+        <label class="space-y-1"><span class="block text-xs text-gray-500">End</span>
+          <input name="end_date" type="date" value="{{ trip.end_date }}" required class="input input-sm input-bordered"></label>
+        <label class="space-y-1"><span class="block text-xs text-gray-500">Travelers</span>
+          <input name="travelers" value="{{ trip.travelers or '' }}" class="input input-sm input-bordered w-40"></label>
+        <label class="space-y-1"><span class="block text-xs text-gray-500">Tags</span>
+          <input name="tags" value="{{ trip.tags | join(', ') }}" class="input input-sm input-bordered w-44"></label>
+        <label class="space-y-1"><span class="block text-xs text-gray-500">Finance tags</span>
+          <input name="default_tag_names" value="{{ trip.default_tag_names or '' }}" class="input input-sm input-bordered w-44"></label>
+        <label class="space-y-1 w-full"><span class="block text-xs text-gray-500">Notes</span>
+          <textarea name="notes" rows="3" class="textarea textarea-bordered w-full text-sm">{{ trip.notes or '' }}</textarea></label>
+        <label class="space-y-1 w-full"><span class="block text-xs text-gray-500">Preferences</span>
+          <textarea name="preferences" rows="2" class="textarea textarea-bordered w-full text-sm">{{ trip.preferences or '' }}</textarea></label>
+        <button type="submit" class="btn btn-sm btn-outline">Save</button>
+        <span class="text-xs text-red-600 form-error"></span>
+      </form>
+      </div>
+    </div>
+  </div>
+
+  {% if trip.warnings %}
+  <div class="card bg-amber-50 border border-amber-200" id="warnings">
+    <div class="card-body p-4 space-y-1">
+      <p class="text-xs font-semibold text-amber-800"><i class="ti ti-alert-triangle"></i> Worth a look</p>
+      {% for w in trip.warnings %}<p class="text-sm text-amber-900">{{ w.message }}</p>{% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  <div class="card bg-white">
+    <div class="card-body p-5 space-y-4" id="timeline">
+      <h2 class="text-sm font-semibold text-gray-900">Timeline</h2>
+      {% if not days %}
+      <p class="text-sm text-gray-400">Nothing booked yet. Add flights and other tickets as legs, and hotels as stays.</p>
+      {% endif %}
+      {% for day, items in days.items() %}
+      <div>
+        <p class="text-xs font-semibold text-gray-500 mb-1">{{ day | short_date }}</p>
+        <ul class="space-y-1.5">
+          {% for item in items %}
+          <li class="flex items-start gap-3 text-sm">
+            <span class="w-12 text-xs text-gray-400 pt-0.5">{{ item.local[11:16] }}</span>
+            <i class="ti {{ 'ti-plane' if item.kind == 'leg' else ('ti-login' if item.kind == 'check_in' else 'ti-logout') }} text-gray-400 pt-0.5"></i>
+            <div class="flex-1">
+              <p class="text-gray-900">{{ item.title }}</p>
+              <p class="text-xs text-gray-400">{% if item.subtitle %}{{ item.subtitle }} · {% endif %}{{ item.timezone }}</p>
+              <p class="text-xs space-x-3">
+                {% for key, label in [('directions', 'Directions'), ('check_flight', 'Check flight'), ('map', 'Map'), ('cafes', 'Cafes nearby'), ('luggage', 'Luggage storage')] %}
+                {% if item.links.get(key) %}<a class="text-[#378ADD] hover:underline" href="{{ item.links[key] }}" target="_blank" rel="noopener">{{ label }}</a>{% endif %}
+                {% endfor %}
+              </p>
+            </div>
+          </li>
+          {% endfor %}
+        </ul>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 xl:grid-cols-2 gap-4">
+    <div class="card bg-white">
+      <div class="card-body p-5 space-y-3">
+        <div class="flex items-center justify-between">
+          <h2 class="text-sm font-semibold text-gray-900">Legs</h2>
+          <button class="btn btn-xs btn-outline" id="add-leg">Add leg</button>
+        </div>
+        {% for leg in trip.legs %}
+        <div class="flex items-start justify-between gap-2 text-sm" id="leg-{{ leg.id }}">
+          <div>
+            <p class="text-gray-900">{{ leg.origin }} → {{ leg.destination }} <span class="text-xs text-gray-400">{{ leg.mode }}{% if leg.carrier or leg.number %} · {{ leg.carrier or '' }} {{ leg.number or '' }}{% endif %}</span></p>
+            <p class="text-xs text-gray-500">{{ leg.departs_local[:10] | short_date }} {{ leg.departs_local[11:16] }} ({{ leg.departs_tz }}) → {{ leg.arrives_local[:10] | short_date }} {{ leg.arrives_local[11:16] }} ({{ leg.arrives_tz }})</p>
+            {% if leg.booking_ref or leg.seat %}<p class="text-xs text-gray-400">{% if leg.booking_ref %}Ref {{ leg.booking_ref }}{% endif %}{% if leg.seat %} · Seat {{ leg.seat }}{% endif %}</p>{% endif %}
+            {% if leg.booking_url %}<a class="text-xs text-[#378ADD] hover:underline" href="{{ leg.booking_url }}" target="_blank" rel="noopener">Booking</a>{% endif %}
+            {% if leg.notes %}<p class="text-xs text-gray-500 whitespace-pre-line">{{ leg.notes }}</p>{% endif %}
+          </div>
+          <div class="flex gap-1 whitespace-nowrap">
+            <button class="btn btn-xs btn-ghost edit-leg" data-item="{{ leg | tojson | forceescape }}">Edit</button>
+            <button class="btn btn-xs btn-ghost text-red-600 delete-item" data-url="/travel/legs/{{ leg.id }}">Delete</button>
+          </div>
+        </div>
+        {% else %}
+        <p class="text-sm text-gray-400">No legs yet.</p>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="card bg-white">
+      <div class="card-body p-5 space-y-3">
+        <div class="flex items-center justify-between">
+          <h2 class="text-sm font-semibold text-gray-900">Stays</h2>
+          <button class="btn btn-xs btn-outline" id="add-stay">Add stay</button>
+        </div>
+        {% for stay in trip.stays %}
+        <div class="flex items-start justify-between gap-2 text-sm" id="stay-{{ stay.id }}">
+          <div>
+            <p class="text-gray-900">{{ stay.place.name }}{% if stay.place.city %} <span class="text-xs text-gray-400">{{ stay.place.city }}</span>{% endif %}</p>
+            <p class="text-xs text-gray-500">{{ stay.check_in_local[:10] | short_date }} {{ stay.check_in_local[11:16] }} → {{ stay.check_out_local[:10] | short_date }} {{ stay.check_out_local[11:16] }} ({{ stay.timezone }})</p>
+            {% if stay.booking_ref %}<p class="text-xs text-gray-400">Ref {{ stay.booking_ref }}</p>{% endif %}
+            {% if stay.booking_url %}<a class="text-xs text-[#378ADD] hover:underline" href="{{ stay.booking_url }}" target="_blank" rel="noopener">Booking</a>{% endif %}
+            {% if stay.grade %}<p class="text-xs text-gray-500">Grade {{ stay.grade }}/5</p>{% endif %}
+            {% if stay.notes %}<p class="text-xs text-gray-500 whitespace-pre-line">{{ stay.notes }}</p>{% endif %}
+          </div>
+          <div class="flex gap-1 whitespace-nowrap">
+            <button class="btn btn-xs btn-ghost edit-stay" data-item="{{ stay | tojson | forceescape }}">Edit</button>
+            <button class="btn btn-xs btn-ghost text-red-600 delete-item" data-url="/travel/stays/{{ stay.id }}">Delete</button>
+          </div>
+        </div>
+        {% else %}
+        <p class="text-sm text-gray-400">No stays yet.</p>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <datalist id="zone-options">{% for z in zones %}<option value="{{ z }}">{% endfor %}</datalist>
+
+  <dialog id="leg-dialog" class="modal">
+    <form method="dialog" class="modal-box max-w-xl space-y-3" id="leg-form">
+      <h3 class="text-sm font-semibold" id="leg-title">Add leg</h3>
+      <div class="grid grid-cols-2 gap-3">
+        <label class="space-y-1"><span class="block text-xs text-gray-500">Mode</span>
+          <select name="mode" class="select select-sm select-bordered w-full">{% for m in leg_modes %}<option value="{{ m }}">{{ m }}</option>{% endfor %}</select></label>
+        <span></span>
+        <label class="space-y-1"><span class="block text-xs text-gray-500">From</span><input name="origin" required class="input input-sm input-bordered w-full"></label>
+        <label class="space-y-1"><span class="block text-xs text-gray-500">To</span><input name="destination" required class="input input-sm input-bordered w-full"></label>
+        <label class="space-y-1"><span class="block text-xs text-gray-500">From code (airport)</span><input name="origin_code" maxlength="8" class="input input-sm input-bordered w-full"></label>
+        <label class="space-y-1"><span class="block text-xs text-gray-500">To code</span><input name="destination_code" maxlength="8" class="input input-sm input-bordered w-full"></label>
+        <label class="space-y-1"><span class="block text-xs text-gray-500">Departs (local time there)</span><input name="departs_at" type="datetime-local" required class="input input-sm input-bordered w-full"></label>
+        <label class="space-y-1"><span class="block text-xs text-gray-500">Departure time zone</span><input name="departs_tz" list="zone-options" required class="input input-sm input-bordered w-full"></label>
+        <label class="space-y-1"><span class="block text-xs text-gray-500">Arrives (local time there)</span><input name="arrives_at" type="datetime-local" required class="input input-sm input-bordered w-full"></label>
+        <label class="space-y-1"><span class="block text-xs text-gray-500">Arrival time zone</span><input name="arrives_tz" list="zone-options" required class="input input-sm input-bordered w-full"></label>
+        <label class="space-y-1"><span class="block text-xs text-gray-500">Carrier</span><input name="carrier" class="input input-sm input-bordered w-full"></label>
+        <label class="space-y-1"><span class="block text-xs text-gray-500">Number</span><input name="number" class="input input-sm input-bordered w-full"></label>
+        <label class="space-y-1"><span class="block text-xs text-gray-500">Booking ref (PNR)</span><input name="booking_ref" class="input input-sm input-bordered w-full"></label>
+        <label class="space-y-1"><span class="block text-xs text-gray-500">Seat</span><input name="seat" class="input input-sm input-bordered w-full"></label>
+        <label class="space-y-1 col-span-2"><span class="block text-xs text-gray-500">Booking link</span><input name="booking_url" class="input input-sm input-bordered w-full"></label>
+        <label class="space-y-1 col-span-2"><span class="block text-xs text-gray-500">Notes</span><textarea name="notes" rows="2" class="textarea textarea-bordered w-full text-sm"></textarea></label>
+      </div>
+      <div class="flex items-center gap-3">
+        <button type="submit" class="btn btn-sm btn-outline">Save</button>
+        <button type="button" class="btn btn-sm btn-ghost" data-close>Cancel</button>
+        <span class="text-xs text-red-600 form-error"></span>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="stay-dialog" class="modal">
+    <form method="dialog" class="modal-box max-w-xl space-y-3" id="stay-form">
+      <h3 class="text-sm font-semibold" id="stay-title">Add stay</h3>
+      <div class="grid grid-cols-2 gap-3">
+        <label class="space-y-1 col-span-2"><span class="block text-xs text-gray-500">Place</span>
+          <select name="place_id" id="stay-place" class="select select-sm select-bordered w-full">
+            <option value="new">+ New place…</option>
+            {% for p in places if p.kind == 'hotel' or p.kind == 'other' %}<option value="{{ p.id }}">{{ p.name }}{% if p.city %} ({{ p.city }}){% endif %}</option>{% endfor %}
+          </select></label>
+        <div class="col-span-2 grid grid-cols-2 gap-3" id="new-place-fields">
+          <label class="space-y-1"><span class="block text-xs text-gray-500">Hotel name</span><input name="place_name" class="input input-sm input-bordered w-full"></label>
+          <label class="space-y-1"><span class="block text-xs text-gray-500">City</span><input name="place_city" class="input input-sm input-bordered w-full"></label>
+          <label class="space-y-1"><span class="block text-xs text-gray-500">Country</span><input name="place_country" class="input input-sm input-bordered w-full"></label>
+          <label class="space-y-1"><span class="block text-xs text-gray-500">Maps link (optional)</span><input name="place_maps_url" class="input input-sm input-bordered w-full"></label>
+        </div>
+        <label class="space-y-1"><span class="block text-xs text-gray-500">Check-in (local time there)</span><input name="check_in_at" type="datetime-local" required class="input input-sm input-bordered w-full"></label>
+        <label class="space-y-1"><span class="block text-xs text-gray-500">Check-out</span><input name="check_out_at" type="datetime-local" required class="input input-sm input-bordered w-full"></label>
+        <label class="space-y-1"><span class="block text-xs text-gray-500">Hotel time zone</span><input name="timezone" list="zone-options" required class="input input-sm input-bordered w-full"></label>
+        <label class="space-y-1"><span class="block text-xs text-gray-500">Booking ref</span><input name="booking_ref" class="input input-sm input-bordered w-full"></label>
+        <label class="space-y-1 col-span-2"><span class="block text-xs text-gray-500">Booking link</span><input name="booking_url" class="input input-sm input-bordered w-full"></label>
+        <label class="space-y-1"><span class="block text-xs text-gray-500">Grade (1-5)</span><input name="grade" type="number" min="1" max="5" class="input input-sm input-bordered w-full"></label>
+        <span></span>
+        <label class="space-y-1 col-span-2"><span class="block text-xs text-gray-500">Notes</span><textarea name="notes" rows="2" class="textarea textarea-bordered w-full text-sm"></textarea></label>
+      </div>
+      <div class="flex items-center gap-3">
+        <button type="submit" class="btn btn-sm btn-outline">Save</button>
+        <button type="button" class="btn btn-sm btn-ghost" data-close>Cancel</button>
+        <span class="text-xs text-red-600 form-error"></span>
+      </div>
+    </form>
+  </dialog>
+</div>
+
+<script>
+const TRIP_ID = {{ trip.id }};
+const DEFAULT_ZONE = {{ default_zone | tojson }};
+
+async function send(method, url, body) {
+  const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: body ? JSON.stringify(body) : undefined });
+  const data = await res.json().catch(() => ({}));
+  return { ok: res.ok, data };
+}
+
+// Empty text inputs are sent as null on edit (clears the field) and omitted on create.
+function collect(form, fields, { editing }) {
+  const body = {};
+  for (const name of fields) {
+    const value = form.elements[name].value.trim();
+    if (value) body[name] = value; else if (editing) body[name] = null;
+  }
+  return body;
+}
+
+document.getElementById('edit-trip').addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const form = event.target;
+  const body = collect(form, ['travelers', 'default_tag_names', 'notes', 'preferences'], { editing: true });
+  body.name = form.elements.name.value; body.start_date = form.elements.start_date.value; body.end_date = form.elements.end_date.value;
+  body.tags = form.elements.tags.value.split(',').map(t => t.trim()).filter(Boolean);
+  const { ok, data } = await send('PATCH', `/travel/trips/${TRIP_ID}`, body);
+  if (!ok) { form.querySelector('.form-error').textContent = data.error || 'Something went wrong.'; return; }
+  location.reload();
+});
+
+document.getElementById('delete-trip').addEventListener('click', async () => {
+  if (!confirm('Delete this trip and its legs? Stays and notes are kept.')) return;
+  const { ok, data } = await send('DELETE', `/travel/trips/${TRIP_ID}`);
+  if (!ok) { alert(data.error || 'Could not delete the trip.'); return; }
+  location.href = '/travel';
+});
+
+document.querySelectorAll('.delete-item').forEach((button) => button.addEventListener('click', async () => {
+  if (!confirm('Delete this item?')) return;
+  const { ok, data } = await send('DELETE', button.dataset.url);
+  if (!ok) { alert(data.error || 'Could not delete.'); return; }
+  location.reload();
+}));
+
+document.querySelectorAll('[data-close]').forEach((button) => button.addEventListener('click', () => button.closest('dialog').close()));
+
+const LOCAL = (iso) => (iso || '').slice(0, 16);
+
+// ---- legs ----
+const legDialog = document.getElementById('leg-dialog');
+const legForm = document.getElementById('leg-form');
+const LEG_FIELDS = ['origin', 'destination', 'origin_code', 'destination_code', 'carrier', 'number', 'booking_ref', 'seat', 'booking_url', 'notes'];
+let editingLeg = null;
+
+function openLeg(leg) {
+  editingLeg = leg;
+  legForm.reset();
+  legForm.querySelector('.form-error').textContent = '';
+  document.getElementById('leg-title').textContent = leg ? 'Edit leg' : 'Add leg';
+  legForm.elements.mode.value = leg ? leg.mode : 'flight';
+  for (const name of LEG_FIELDS) legForm.elements[name].value = leg ? (leg[name] || '') : '';
+  legForm.elements.departs_at.value = leg ? LOCAL(leg.departs_local) : '';
+  legForm.elements.arrives_at.value = leg ? LOCAL(leg.arrives_local) : '';
+  legForm.elements.departs_tz.value = leg ? leg.departs_tz : DEFAULT_ZONE;
+  legForm.elements.arrives_tz.value = leg ? leg.arrives_tz : DEFAULT_ZONE;
+  legDialog.showModal();
+}
+document.getElementById('add-leg').addEventListener('click', () => openLeg(null));
+document.querySelectorAll('.edit-leg').forEach((b) => b.addEventListener('click', () => openLeg(JSON.parse(b.dataset.item))));
+
+legForm.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const body = collect(legForm, LEG_FIELDS, { editing: !!editingLeg });
+  for (const name of ['mode', 'departs_at', 'arrives_at', 'departs_tz', 'arrives_tz']) body[name] = legForm.elements[name].value;
+  if (!editingLeg) body.trip_id = TRIP_ID;
+  const { ok, data } = editingLeg
+    ? await send('PATCH', `/travel/legs/${editingLeg.id}`, body)
+    : await send('POST', '/travel/legs', body);
+  if (!ok) { legForm.querySelector('.form-error').textContent = data.error || 'Something went wrong.'; return; }
+  location.reload();
+});
+
+// ---- stays ----
+const stayDialog = document.getElementById('stay-dialog');
+const stayForm = document.getElementById('stay-form');
+const newPlaceFields = document.getElementById('new-place-fields');
+const STAY_FIELDS = ['booking_ref', 'booking_url', 'notes'];
+let editingStay = null;
+
+function syncPlaceFields() {
+  const isNew = stayForm.elements.place_id.value === 'new';
+  newPlaceFields.classList.toggle('hidden', !isNew);
+  stayForm.elements.place_name.required = isNew;
+}
+stayForm.elements.place_id.addEventListener('change', syncPlaceFields);
+
+function openStay(stay) {
+  editingStay = stay;
+  stayForm.reset();
+  stayForm.querySelector('.form-error').textContent = '';
+  document.getElementById('stay-title').textContent = stay ? 'Edit stay' : 'Add stay';
+  stayForm.elements.place_id.value = stay ? String(stay.place_id) : 'new';
+  if (stay && stayForm.elements.place_id.value !== String(stay.place_id)) {
+    const option = new Option(stay.place.name, stay.place_id, true, true);
+    stayForm.elements.place_id.add(option);
+  }
+  for (const name of STAY_FIELDS) stayForm.elements[name].value = stay ? (stay[name] || '') : '';
+  stayForm.elements.grade.value = stay && stay.grade ? stay.grade : '';
+  stayForm.elements.check_in_at.value = stay ? LOCAL(stay.check_in_local) : '';
+  stayForm.elements.check_out_at.value = stay ? LOCAL(stay.check_out_local) : '';
+  stayForm.elements.timezone.value = stay ? stay.timezone : DEFAULT_ZONE;
+  syncPlaceFields();
+  stayDialog.showModal();
+}
+document.getElementById('add-stay').addEventListener('click', () => openStay(null));
+document.querySelectorAll('.edit-stay').forEach((b) => b.addEventListener('click', () => openStay(JSON.parse(b.dataset.item))));
+
+stayForm.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const error = stayForm.querySelector('.form-error');
+  let placeId = stayForm.elements.place_id.value;
+  if (placeId === 'new') {
+    const place = { kind: 'hotel', name: stayForm.elements.place_name.value.trim() };
+    for (const [field, input] of [['city', 'place_city'], ['country', 'place_country'], ['maps_url', 'place_maps_url']]) {
+      const value = stayForm.elements[input].value.trim();
+      if (value) place[field] = value;
+    }
+    const created = await send('POST', '/travel/places', place);
+    if (!created.ok) { error.textContent = created.data.error || 'Could not create the place.'; return; }
+    placeId = created.data.id;
+  }
+  const body = collect(stayForm, STAY_FIELDS, { editing: !!editingStay });
+  body.place_id = Number(placeId);
+  body.check_in_at = stayForm.elements.check_in_at.value;
+  body.check_out_at = stayForm.elements.check_out_at.value;
+  body.timezone = stayForm.elements.timezone.value;
+  const grade = stayForm.elements.grade.value;
+  if (grade) body.grade = Number(grade); else if (editingStay) body.grade = null;
+  if (!editingStay) body.trip_id = TRIP_ID;
+  const { ok, data } = editingStay
+    ? await send('PATCH', `/travel/stays/${editingStay.id}`, body)
+    : await send('POST', '/travel/stays', body);
+  if (!ok) { error.textContent = data.error || 'Something went wrong.'; return; }
+  location.reload();
+});
+</script>
+{% endblock %}

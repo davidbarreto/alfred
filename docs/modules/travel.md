@@ -1,0 +1,35 @@
+# Travel module
+
+Remember past travels and run an upcoming trip (`travel` schema). Design and phases: `docs/plans/travel.md` (gitignored). No AI and no external API: maps links are plain URLs, coordinates are optional and user-supplied.
+
+## Data model
+
+- **Trips** (`travel.trips`): `name`, `start_date`/`end_date`, `travelers`, `preferences`, `notes`, `checklist_note_id` (organizer note, SET NULL), `default_tag_names` (comma-separated *finance* tag names). **Status** (`upcoming` / `ongoing` / `past`) is derived from `local_today()`, never stored.
+- **Legs** (`travel.legs`): flights, trains, buses, ferries, cars. Belong to a trip (CASCADE). `departs_at`/`arrives_at` are UTC instants stored with the IANA zone of each end (`departs_tz`/`arrives_tz`); the read model adds `departs_local`/`arrives_local`. A flight with carrier + number gets a `check_flight_url` (a plain web search, no status API).
+- **Stays** (`travel.stays`): lodging periods, with a `place_id` (RESTRICT), an optional `trip_id` (SET NULL, so a trip's deletion keeps notes and grades), `timezone` of the lodging, `grade` 1-5.
+- **Places** (`travel.places`): independent of trips. `kind` in `PLACE_KINDS`, optional `maps_url`/`lat`/`lng`/`address`. `maps_link` is the user's URL, else pasted coordinates, else a name + city search.
+- **Tags** (`travel.tags` + `trips_tags`, ORM class `TravelTag`): describe the trip (Family, Work). Not the same as `default_tag_names`.
+- Enum sets (`PLACE_KINDS`, `LEG_MODES`, `VISIT_STATUSES`) live in `features/travel/constants.py` and feed Pydantic, CHECK constraints and MCP descriptions.
+
+## Times
+
+Create bodies accept naive wall times (read in the matching `*_tz`) or values with an offset; both are stored as UTC. On update a naive value is read in the zone sent with it, else the stored zone. `arrives_at >= departs_at` and `check_out_at >= check_in_at` are enforced in the service and by CHECK constraints.
+
+## Timeline and warnings
+
+`GET /travel/trips/{id}` returns the trip with its legs, stays, a chronological `timeline` (leg departures, check-ins, check-outs, each with maps links: transit directions, cafes near the hotel, luggage storage) and `warnings`, computed in `features/travel/trips/timeline.py` only from data that exists:
+
+- `long_wait_before_check_in`: a leg arrives in the stay's city more than 4 h (and less than 24 h) before check-in.
+- `tight_connection`: consecutive legs through the same place with under 90 min between them.
+- `arrives_after_check_out`: a leg to the stay's city departs before check-out and arrives after it.
+- `overlapping_legs`: a leg departs before the previous one arrives.
+
+City matching is a case-insensitive containment between a leg's `destination` and the stay place's `city`.
+
+## API
+
+`/travel/trips` (list filters: `status` = current (default) / upcoming / ongoing / past / all, repeated `tag`, `q`, `date_from`, `date_to`, `limit`, `offset`), `/travel/legs`, `/travel/stays`, `/travel/places` (filters `q`, `kind`, `city`, `country`; deleting a place with stays is a 409), `/travel/tags` (usage counts, rename, delete removes only link rows). Postman: `postman/travel.collection.json`.
+
+## Portal
+
+`/travel`: trips list with status, text, date-range and tag filters (HTMX partial `/travel/list`, `limit + 1` pagination). `/travel/{id}`: header with inline edit, warnings, day-grouped timeline, legs and stays with add/edit/delete dialogs; a new hotel can be created inline in the stay dialog. Writes proxy through `/travel/{trips,legs,stays,places}`.

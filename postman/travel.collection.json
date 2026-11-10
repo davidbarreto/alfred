@@ -1,0 +1,1088 @@
+{
+  "info": {
+    "name": "Alfred - Travel API",
+    "description": "Travel module: trips (with legs, stays, tags), places and the travel tag vocabulary. Run in order. Everything created is synthetic and deleted at the end.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{api_token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "01 - Create Trip",
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "exec": [
+              "pm.environment.set('travel_ts', Date.now());"
+            ],
+            "type": "text/javascript"
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+              "const j = pm.response.json();",
+              "pm.test('Tags attached', () => pm.expect(j.tags).to.eql(['postman-' + pm.environment.get('travel_ts')]));",
+              "pm.test('Status is derived', () => pm.expect(['upcoming','ongoing','past']).to.include(j.status));",
+              "pm.environment.set('travel_trip_id', j.id);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/trips",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "trips"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Postman trip {{travel_ts}}\",\n  \"start_date\": \"2031-12-17\",\n  \"end_date\": \"2031-12-24\",\n  \"travelers\": \"Test travelers\",\n  \"default_tag_names\": \"Travel, Hotel\",\n  \"tags\": [\n    \"postman-{{travel_ts}}\"\n  ]\n}"
+        }
+      }
+    },
+    {
+      "name": "02 - Create Trip With Reversed Dates",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 422', () => pm.response.to.have.status(422));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/trips",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "trips"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Bad\",\n  \"start_date\": \"2031-12-24\",\n  \"end_date\": \"2031-12-17\"\n}"
+        }
+      }
+    },
+    {
+      "name": "03 - List Trips (upcoming)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "const ids = pm.response.json().map(t => t.id);",
+              "pm.test('Created trip is listed', () => pm.expect(ids).to.include(Number(pm.environment.get('travel_trip_id'))));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/trips?status=upcoming&tag=postman-{{travel_ts}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "trips"
+          ],
+          "query": [
+            {
+              "key": "status",
+              "value": "upcoming"
+            },
+            {
+              "key": "tag",
+              "value": "postman-{{travel_ts}}"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "04 - List Trips Filtered By Unknown Tag",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Empty', () => pm.expect(pm.response.json()).to.eql([]));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/trips?status=all&tag=no-such-tag-postman",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "trips"
+          ],
+          "query": [
+            {
+              "key": "status",
+              "value": "all"
+            },
+            {
+              "key": "tag",
+              "value": "no-such-tag-postman"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "05 - List Trips With Bad Status",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 422', () => pm.response.to.have.status(422));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/trips?status=sometime",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "trips"
+          ],
+          "query": [
+            {
+              "key": "status",
+              "value": "sometime"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "06 - Create Place",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+              "const j = pm.response.json();",
+              "pm.test('Maps link is built', () => pm.expect(j.maps_link).to.include('https://'));",
+              "pm.environment.set('travel_place_id', j.id);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/places",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "places"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"kind\": \"hotel\",\n  \"name\": \"Hotel Postman\",\n  \"city\": \"Testville\",\n  \"country\": \"Testland\"\n}"
+        }
+      }
+    },
+    {
+      "name": "07 - Create Place With Bad Kind",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 422', () => pm.response.to.have.status(422));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/places",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "places"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"kind\": \"spaceship\",\n  \"name\": \"X\"\n}"
+        }
+      }
+    },
+    {
+      "name": "08 - List Places",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Created place is listed', () => pm.expect(pm.response.json().map(p => p.id)).to.include(Number(pm.environment.get('travel_place_id'))));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/places?kind=hotel&city=Testville",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "places"
+          ],
+          "query": [
+            {
+              "key": "kind",
+              "value": "hotel"
+            },
+            {
+              "key": "city",
+              "value": "Testville"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "09 - Update Place",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Notes saved', () => pm.expect(pm.response.json().notes).to.eql('Book the terrace'));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/places/{{travel_place_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "places",
+            "{{travel_place_id}}"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"notes\": \"Book the terrace\"\n}"
+        }
+      }
+    },
+    {
+      "name": "10 - Create Leg",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+              "const j = pm.response.json();",
+              "pm.test('Instants are UTC', () => pm.expect(j.arrives_at).to.include('T09:00:00'));",
+              "pm.test('Local time shown in the zone', () => pm.expect(j.arrives_local).to.eql('2031-12-17T10:00:00'));",
+              "pm.test('Flight lookup link', () => pm.expect(j.check_flight_url).to.include('XX'));",
+              "pm.environment.set('travel_leg_id', j.id);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/legs",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "legs"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"trip_id\": \"{{travel_trip_id}}\",\n  \"mode\": \"flight\",\n  \"origin\": \"Alpha\",\n  \"destination\": \"Beta\",\n  \"origin_code\": \"AAA\",\n  \"destination_code\": \"BBB\",\n  \"departs_at\": \"2031-12-17T06:00:00\",\n  \"arrives_at\": \"2031-12-17T10:00:00\",\n  \"departs_tz\": \"UTC\",\n  \"arrives_tz\": \"Europe/Stockholm\",\n  \"carrier\": \"XX\",\n  \"number\": \"123\"\n}"
+        }
+      }
+    },
+    {
+      "name": "11 - Create Leg Arriving Before Departure",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 422', () => pm.response.to.have.status(422));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/legs",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "legs"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"trip_id\": \"{{travel_trip_id}}\",\n  \"mode\": \"train\",\n  \"origin\": \"A\",\n  \"destination\": \"B\",\n  \"departs_at\": \"2031-12-17T10:00:00\",\n  \"arrives_at\": \"2031-12-17T08:00:00\",\n  \"departs_tz\": \"UTC\",\n  \"arrives_tz\": \"UTC\"\n}"
+        }
+      }
+    },
+    {
+      "name": "12 - Create Leg With Unknown Trip",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 404', () => pm.response.to.have.status(404));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/legs",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "legs"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"trip_id\": 999999999,\n  \"mode\": \"train\",\n  \"origin\": \"A\",\n  \"destination\": \"B\",\n  \"departs_at\": \"2031-12-17T08:00:00\",\n  \"arrives_at\": \"2031-12-17T10:00:00\",\n  \"departs_tz\": \"UTC\",\n  \"arrives_tz\": \"UTC\"\n}"
+        }
+      }
+    },
+    {
+      "name": "13 - Update Leg",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Seat saved', () => pm.expect(pm.response.json().seat).to.eql('1A'));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/legs/{{travel_leg_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "legs",
+            "{{travel_leg_id}}"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"seat\": \"1A\"\n}"
+        }
+      }
+    },
+    {
+      "name": "14 - Create Stay",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 201', () => pm.response.to.have.status(201));",
+              "const j = pm.response.json();",
+              "pm.test('Place embedded', () => pm.expect(j.place.name).to.eql('Hotel Postman'));",
+              "pm.test('Check-in local time', () => pm.expect(j.check_in_local).to.eql('2031-12-17T22:00:00'));",
+              "pm.environment.set('travel_stay_id', j.id);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/stays",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "stays"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"trip_id\": \"{{travel_trip_id}}\",\n  \"place_id\": \"{{travel_place_id}}\",\n  \"check_in_at\": \"2031-12-17T22:00:00\",\n  \"check_out_at\": \"2031-12-20T11:00:00\",\n  \"timezone\": \"Europe/Stockholm\"\n}"
+        }
+      }
+    },
+    {
+      "name": "15 - Create Stay With Unknown Place",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 404', () => pm.response.to.have.status(404));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/stays",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "stays"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"place_id\": 999999999,\n  \"check_in_at\": \"2031-12-17T22:00:00\",\n  \"check_out_at\": \"2031-12-20T11:00:00\",\n  \"timezone\": \"UTC\"\n}"
+        }
+      }
+    },
+    {
+      "name": "16 - Get Trip Detail",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "const j = pm.response.json();",
+              "pm.test('Has the leg and stay', () => { pm.expect(j.legs.length).to.eql(1); pm.expect(j.stays.length).to.eql(1); });",
+              "pm.test('Timeline is chronological', () => pm.expect(j.timeline.map(i => i.kind)).to.eql(['leg','check_in','check_out']));",
+              "pm.test('Long wait warning', () => pm.expect(j.warnings.map(w => w.kind)).to.include('long_wait_before_check_in'));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/trips/{{travel_trip_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "trips",
+            "{{travel_trip_id}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "17 - Delete Place In Use",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 409', () => pm.response.to.have.status(409));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "DELETE",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/places/{{travel_place_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "places",
+            "{{travel_place_id}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "18 - Update Trip Dates Out Of Order",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 422', () => pm.response.to.have.status(422));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/trips/{{travel_trip_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "trips",
+            "{{travel_trip_id}}"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"start_date\": \"2032-01-01\"\n}"
+        }
+      }
+    },
+    {
+      "name": "19 - Update Trip",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Tags replaced', () => pm.expect(pm.response.json().tags).to.eql(['postman-renamed-' + pm.environment.get('travel_ts')]));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/trips/{{travel_trip_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "trips",
+            "{{travel_trip_id}}"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"notes\": \"Overview\",\n  \"tags\": [\n    \"postman-renamed-{{travel_ts}}\"\n  ]\n}"
+        }
+      }
+    },
+    {
+      "name": "20 - List Tags",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "const mine = pm.response.json().find(t => t.name === 'postman-renamed-' + pm.environment.get('travel_ts'));",
+              "pm.test('Tag counted once', () => pm.expect(mine.trip_count).to.eql(1));",
+              "pm.environment.set('travel_tag_id', mine.id);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/tags",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "tags"
+          ]
+        }
+      }
+    },
+    {
+      "name": "21 - Rename Tag",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/tags/{{travel_tag_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "tags",
+            "{{travel_tag_id}}"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"postman-final-{{travel_ts}}\"\n}"
+        }
+      }
+    },
+    {
+      "name": "22 - Delete Leg",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 204', () => pm.response.to.have.status(204));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "DELETE",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/legs/{{travel_leg_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "legs",
+            "{{travel_leg_id}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "23 - Get Deleted Leg",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 404', () => pm.response.to.have.status(404));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/legs/{{travel_leg_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "legs",
+            "{{travel_leg_id}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "24 - Delete Stay",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 204', () => pm.response.to.have.status(204));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "DELETE",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/stays/{{travel_stay_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "stays",
+            "{{travel_stay_id}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "25 - Delete Place",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 204', () => pm.response.to.have.status(204));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "DELETE",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/places/{{travel_place_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "places",
+            "{{travel_place_id}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "26 - Delete Trip",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 204', () => pm.response.to.have.status(204));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "DELETE",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/trips/{{travel_trip_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "trips",
+            "{{travel_trip_id}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "27 - Delete Tag",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 204', () => pm.response.to.have.status(204));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "DELETE",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/tags/{{travel_tag_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "tags",
+            "{{travel_tag_id}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "28 - Get Deleted Trip",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 404', () => pm.response.to.have.status(404));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/trips/{{travel_trip_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "trips",
+            "{{travel_trip_id}}"
+          ]
+        }
+      }
+    }
+  ]
+}

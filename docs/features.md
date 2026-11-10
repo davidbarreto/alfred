@@ -125,6 +125,12 @@ Personal measurement log: timed things (commute), values (weight) and counts (co
 
 - **Portal:** `/metrics`. **Commands:** `metric` start / stop / log / open / history / discard. **API:** `/metrics/*` (including `/metrics/quick/*` for Shortcuts).
 
+## Travel
+
+Trips with their legs (flights, trains, ...), stays (hotels) and places, a day-grouped timeline with maps links, and gap warnings (long wait before check-in, tight connections, overlapping legs). See [modules/travel.md](modules/travel.md).
+
+- **Portal:** `/travel` (filterable trips list), `/travel/{id}`. **API:** `/travel/*`.
+
 ## Planning, routines and activities
 
 Claude plans a day or week from Alfred's data; Alfred stores what was agreed. See [modules/planning.md](modules/planning.md).

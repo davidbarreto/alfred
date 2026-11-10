@@ -1,0 +1,35 @@
+{% if not available %}
+<div class="card bg-white"><div class="card-body p-5"><p class="text-sm text-gray-400">Travel is unavailable right now.</p></div></div>
+{% elif not trips %}
+<div class="card bg-white"><div class="card-body p-5"><p class="text-sm text-gray-400">No trips match. Create one with <strong>New trip</strong>.</p></div></div>
+{% else %}
+<div class="space-y-3">
+  {% for t in trips %}
+  <a href="/travel/{{ t.id }}" class="card bg-white hover:shadow-md transition-shadow" id="trip-{{ t.id }}">
+    <div class="card-body p-4 flex flex-row items-start justify-between gap-3">
+      <div class="space-y-1">
+        <p class="text-sm font-semibold text-gray-900">{{ t.name }}</p>
+        <p class="text-xs text-gray-500">{{ t.start_date | short_date }} → {{ t.end_date | short_date }}{% if t.travelers %} · {{ t.travelers }}{% endif %}</p>
+        {% if t.tags %}
+        <div class="flex flex-wrap gap-1">
+          {% for tag in t.tags %}<span class="px-2 py-0.5 rounded-full text-[11px] bg-gray-100 text-gray-600">{{ tag }}</span>{% endfor %}
+        </div>
+        {% endif %}
+      </div>
+      <span class="px-2 py-0.5 rounded-full text-xs font-medium whitespace-nowrap
+        {% if t.status == 'ongoing' %}text-green-700 bg-green-50{% elif t.status == 'upcoming' %}text-blue-700 bg-blue-50{% else %}text-gray-500 bg-gray-100{% endif %}">{{ t.status }}</span>
+    </div>
+  </a>
+  {% endfor %}
+</div>
+{% if has_prev or has_next %}
+<div class="flex justify-between pt-3">
+  {% if has_prev %}
+  <button class="btn btn-xs btn-outline" hx-get="/travel/list?{{ query }}&offset={{ [offset - page_size, 0] | max }}" hx-target="#trips-list" hx-swap="innerHTML">Previous</button>
+  {% else %}<span></span>{% endif %}
+  {% if has_next %}
+  <button class="btn btn-xs btn-outline" hx-get="/travel/list?{{ query }}&offset={{ offset + page_size }}" hx-target="#trips-list" hx-swap="innerHTML">Next</button>
+  {% endif %}
+</div>
+{% endif %}
+{% endif %}

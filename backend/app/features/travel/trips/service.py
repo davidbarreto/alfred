@@ -1,0 +1,80 @@
+import logging
+
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.features.travel.legs.repository import LegRepository
+from app.features.travel.legs.schemas import LegRead
+from app.features.travel.stays.repository import StayRepository
+from app.features.travel.stays.schemas import StayRead
+from app.features.travel.tags.repository import TravelTagRepository
+from app.features.travel.trips.repository import TripRepository
+from app.features.travel.trips.schemas import TripCreate, TripDetail, TripFilters, TripRead, TripUpdate
+from app.features.travel.trips.timeline import build_timeline, find_warnings
+from app.shared.timezone import local_today
+
+logger = logging.getLogger(__name__)
+
+_NOT_NULL = ("name", "start_date", "end_date")
+
+
+class TripService:
+    def __init__(self, session: AsyncSession):
+        self._repo = TripRepository(session)
+        self._tag_repo = TravelTagRepository(session)
+        self._leg_repo = LegRepository(session)
+        self._stay_repo = StayRepository(session)
+
+    async def get_trips(self, filters: TripFilters) -> list[TripRead]:
+        trips = await self._repo.get_trips(filters, local_today())
+        logger.debug("Trips listed: count=%d status=%s", len(trips), filters.status)
+        return [TripRead.model_validate(t) for t in trips]
+
+    async def get_trip(self, trip_id: int) -> TripRead | None:
+        trip = await self._repo.get_trip(trip_id)
+        return TripRead.model_validate(trip) if trip else None
+
+    async def get_trip_detail(self, trip_id: int) -> TripDetail | None:
+        trip = await self._repo.get_trip(trip_id)
+        if trip is None:
+            return None
+        legs = [LegRead.model_validate(leg) for leg in await self._leg_repo.get_legs(trip_id)]
+        stays = [StayRead.model_validate(s) for s in await self._stay_repo.get_stays(trip_id)]
+        return TripDetail(
+            **TripRead.model_validate(trip).model_dump(exclude={"status"}),
+            legs=legs,
+            stays=stays,
+            timeline=build_timeline(legs, stays),
+            warnings=find_warnings(legs, stays),
+        )
+
+    async def create_trip(self, data: TripCreate) -> TripRead:
+        fields = data.model_dump(exclude={"tags"})
+        tags = await self._tag_repo.get_or_create_tags(data.tags)
+        trip = await self._repo.create_trip(fields, tags)
+        logger.info("Trip created: id=%d name=%r", trip.id, trip.name)
+        return TripRead.model_validate(trip)
+
+    async def update_trip(self, trip_id: int, data: TripUpdate) -> TripRead | None:
+        trip = await self._repo.get_trip(trip_id)
+        if trip is None:
+            logger.debug("Trip update: id=%d not found", trip_id)
+            return None
+        changes = data.model_dump(exclude_unset=True, exclude={"tags"})
+        for field in _NOT_NULL:
+            if field in changes and changes[field] is None:
+                raise ValueError(f"{field} cannot be null")
+        if changes.get("end_date", trip.end_date) < changes.get("start_date", trip.start_date):
+            raise ValueError("end_date cannot be before start_date")
+        tags = None
+        if data.tags is not None:
+            tags = await self._tag_repo.get_or_create_tags(data.tags)
+        trip = await self._repo.update_trip(trip, changes, tags)
+        fields = list(changes.keys()) + (["tags"] if tags is not None else [])
+        logger.info("Trip updated: id=%d fields=%s", trip_id, fields)
+        return TripRead.model_validate(trip)
+
+    async def delete_trip(self, trip_id: int) -> bool:
+        deleted = await self._repo.delete_trip(trip_id)
+        if deleted:
+            logger.info("Trip deleted: id=%d", trip_id)
+        return deleted

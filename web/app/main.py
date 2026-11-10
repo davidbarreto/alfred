@@ -13,7 +13,7 @@ from app.config import get_settings
 from app.routes import (
     auth, briefing, contacts, dashboard, overload, pause, tasks, tasks_insights, shopping, shopping_insights,
     calendar, notes, finance, chat, insights, language, watcher, cs, study, interviews, interview_prep, metrics,
-    activities, routines, plan,
+    activities, routines, plan, travel,
 )
 
 logging.basicConfig(level=logging.INFO)
@@ -65,6 +65,7 @@ app.include_router(watcher.router)
 app.include_router(cs.router)
 app.include_router(study.router)
 app.include_router(metrics.router)
+app.include_router(travel.router)
 app.include_router(activities.router)
 app.include_router(routines.router)
 app.include_router(plan.router)

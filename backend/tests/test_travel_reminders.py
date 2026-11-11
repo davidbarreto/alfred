@@ -161,7 +161,7 @@ class TestLeaveHomeTimeline:
     def test_timeline_has_a_leave_home_item_before_the_flight(self):
         legs = [_leg()]
         items = build_timeline(legs, [], leave_home_at(legs, 180))
-        assert [i.kind for i in items] == ["leave_home", "leg"]
+        assert [i.kind for i in items] == ["leave_home", "leg", "arrival"]
         assert items[0].local.hour == 9
 
 

@@ -69,9 +69,9 @@
   {% if costs and costs.total.transaction_count %}
   <div class="card bg-white" id="trip-costs">
     <div class="card-body p-5 space-y-2">
-      <div class="flex items-baseline justify-between">
+      <div class="flex items-baseline justify-between gap-3">
         <h2 class="text-sm font-semibold text-gray-900">Cost</h2>
-        <p class="text-lg font-semibold text-gray-900">{{ costs.total.total_eur | money }} €</p>
+        <p class="text-lg ml-3 font-semibold text-gray-900">{{ costs.total.total_eur | money }} €</p>
       </div>
       <p class="text-xs text-gray-400">{{ costs.total.transaction_count }} transaction(s), each counted once{% if costs.total.unconverted_count %} · {{ costs.total.unconverted_count }} without an EUR amount yet, not included{% endif %}</p>
       <div class="flex flex-wrap gap-x-5 gap-y-1 text-xs text-gray-600">
@@ -94,7 +94,7 @@
           {% for item in items %}
           <li class="flex items-start gap-3 text-sm">
             <span class="w-12 text-xs text-gray-400 pt-0.5">{{ item.local[11:16] }}</span>
-            <i class="ti {{ {'leg': 'ti-plane', 'check_in': 'ti-login', 'check_out': 'ti-logout', 'leave_home': 'ti-door-exit'}[item.kind] }} text-gray-400 pt-0.5"></i>
+            <i class="ti {{ {'leg': 'ti-plane-departure', 'arrival': 'ti-plane-arrival', 'check_in': 'ti-login', 'check_out': 'ti-logout', 'leave_home': 'ti-door-exit'}[item.kind] }} text-gray-400 pt-0.5"></i>
             <div class="flex-1">
               <p class="text-gray-900">{{ item.title }}</p>
               <p class="text-xs text-gray-400">{% if item.subtitle %}{{ item.subtitle }} · {% endif %}{{ item.timezone }}</p>
@@ -176,7 +176,7 @@
         <div class="flex items-start justify-between gap-2 text-sm" id="stay-{{ stay.id }}">
           <div>
             <p class="text-gray-900">{{ stay.place.name }}{% if stay.place.city %} <span class="text-xs text-gray-400">{{ stay.place.city }}</span>{% endif %} {{ cost_chip(entity_costs.stays.get(stay.id)) }}</p>
-            <p class="text-xs text-gray-500">{{ stay.check_in_local[:10] | short_date }} {{ stay.check_in_local[11:16] }} → {{ stay.check_out_local[:10] | short_date }} {{ stay.check_out_local[11:16] }} ({{ stay.timezone }})</p>
+            <p class="text-xs text-gray-500">{{ stay.check_in_local[:10] | short_date }} {{ stay.check_in_local[11:16] }} → {{ stay.check_out_local[:10] | short_date }} {{ stay.check_out_local[11:16] }} ({{ stay.timezone }}) · {{ stay.nights }} night{{ '' if stay.nights == 1 else 's' }}</p>
             {% if stay.booking_ref %}<p class="text-xs text-gray-400">Ref {{ stay.booking_ref }}</p>{% endif %}
             {% if stay.booking_url %}<a class="text-xs text-[#378ADD] hover:underline" href="{{ stay.booking_url }}" target="_blank" rel="noopener">Booking</a>{% endif %}
             {% if stay.grade %}<p class="text-xs text-gray-500">Grade {{ stay.grade }}/5</p>{% endif %}
@@ -394,7 +394,7 @@ legForm.addEventListener('submit', async (event) => {
 // ---- stays ----
 const stayDialog = document.getElementById('stay-dialog');
 const stayForm = document.getElementById('stay-form');
-initCityInput({ input: stayForm.elements.place_city, countryInput: stayForm.elements.place_country });
+initCityInput({ input: stayForm.elements.place_city, countryInput: stayForm.elements.place_country, zoneInput: stayForm.elements.timezone });
 const newPlaceFields = document.getElementById('new-place-fields');
 const STAY_FIELDS = ['booking_ref', 'booking_url', 'notes'];
 let editingStay = null;

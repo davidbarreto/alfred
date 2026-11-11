@@ -15,7 +15,7 @@ TIGHT_CONNECTION = timedelta(minutes=90)
 # How far from check-in a leg is still considered "the arrival for that stay".
 ARRIVAL_WINDOW = timedelta(hours=24)
 
-TimelineKind = Literal["leg", "check_in", "check_out", "leave_home"]
+TimelineKind = Literal["leg", "arrival", "check_in", "check_out", "leave_home"]
 WarningKind = Literal["long_wait_before_check_in", "tight_connection", "arrives_after_check_out", "overlapping_legs"]
 
 
@@ -62,6 +62,14 @@ def _leg_item(leg: LegRead) -> TimelineItem:
     )
 
 
+def _arrival_item(leg: LegRead) -> TimelineItem:
+    return TimelineItem(
+        kind="arrival", at=leg.arrives_at, local=leg.arrives_local, timezone=leg.arrives_tz,
+        title=f"Arrive: {leg.destination}", subtitle=f"{leg.origin} \u2192 {leg.destination}", ref_id=leg.id,
+        links={"map": maps_search_url(leg.destination)},
+    )
+
+
 def _stay_items(stay: StayRead) -> list[TimelineItem]:
     place = stay.place
     near = " ".join(p for p in (place.name, place.city) if p)
@@ -94,6 +102,7 @@ def build_timeline(
     legs: list[LegRead], stays: list[StayRead], leave_home: datetime | None = None
 ) -> list[TimelineItem]:
     items = [_leg_item(leg) for leg in legs]
+    items.extend(_arrival_item(leg) for leg in legs)
     if leave_home is not None:
         first = min(legs, key=lambda leg: (leg.departs_at, leg.id))
         items.append(TimelineItem(

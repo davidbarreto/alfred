@@ -129,7 +129,7 @@ class TestTripService:
         detail = await trips.get_trip_detail(1)
         assert len(detail.legs) == 1 and len(detail.stays) == 1
         # first leg is a flight departing 06:00: leave 3 h earlier
-        assert [i.kind for i in detail.timeline] == ["leave_home", "leg", "check_in", "check_out"]
+        assert [i.kind for i in detail.timeline] == ["leave_home", "leg", "arrival", "check_in", "check_out"]
         assert detail.leave_home_at == datetime(2026, 12, 17, 3, tzinfo=timezone.utc)
         assert detail.status in ("upcoming", "ongoing", "past")
 

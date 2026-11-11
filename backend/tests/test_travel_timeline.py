@@ -43,7 +43,14 @@ class TestBuildTimeline:
         leg = _leg(1, "Porto", "Lisbon", _dt(2, 8), _dt(2, 9))
         stay = _stay(5, _dt(2, 14), _dt(4, 10))
         items = build_timeline([leg], [stay])
-        assert [i.kind for i in items] == ["leg", "check_in", "check_out"]
+        assert [i.kind for i in items] == ["leg", "arrival", "check_in", "check_out"]
+
+    def test_arrival_item_uses_arrival_time_and_zone(self):
+        leg = _leg(1, "Porto", "Lisbon", _dt(2, 8), _dt(2, 9))
+        arrival = next(i for i in build_timeline([leg], []) if i.kind == "arrival")
+        assert arrival.at == _dt(2, 9)
+        assert arrival.timezone == "Europe/Lisbon"
+        assert arrival.title == "Arrive: Lisbon"
 
     def test_leg_links_have_directions_and_flight_lookup(self):
         leg = _leg(1, "Porto", "Lisbon", _dt(2, 8), _dt(2, 9), carrier="XX", number="123")
@@ -61,7 +68,7 @@ class TestBuildTimeline:
 
     def test_local_time_uses_the_item_zone(self):
         leg = _leg(1, "Porto", "Lisbon", datetime(2026, 7, 1, 10, tzinfo=timezone.utc), _dt(2, 9), departs_tz="Europe/Stockholm")
-        assert build_timeline([leg], [])[0].local.hour == 12
+        assert next(i for i in build_timeline([leg], []) if i.kind == "leg").local.hour == 12
 
 
 class TestWarnings:

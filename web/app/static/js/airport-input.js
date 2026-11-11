@@ -151,11 +151,11 @@
       citiesPromise = loadAirports().then((airports) => {
         const seen = new Set();
         const cities = [];
-        for (const [, city, , country] of airports) {
+        for (const [, city, , country, tz] of airports) {
           const key = `${city}|${country}`;
           if (!city || seen.has(key)) continue;
           seen.add(key);
-          cities.push([city, countryName(country)]);
+          cities.push([city, countryName(country), tz]);
         }
         return cities;
       });
@@ -177,16 +177,17 @@
     return hits.slice(0, MAX_RESULTS).map((h) => h[1]);
   }
 
-  // City typeahead for place forms: picking a city also fills the country (editable afterwards).
-  function initCityInput({ input, countryInput }) {
+  // City typeahead for place forms: picking a city also fills the country and, if given, the time zone (editable afterwards).
+  function initCityInput({ input, countryInput, zoneInput }) {
     attachDropdown({
       input,
       isActive: () => true,
       find: async (query) => searchCities(await loadCities(), query),
       label: ([city, country]) => [city, country],
-      pick: ([city, country]) => {
+      pick: ([city, country, tz]) => {
         input.value = city;
         countryInput.value = country;
+        if (zoneInput && tz) zoneInput.value = tz;
       },
     });
   }

@@ -77,3 +77,8 @@ class StayRead(BaseModel):
     @property
     def check_out_local(self) -> datetime:
         return to_local(self.check_out_at, self.timezone)
+
+    @computed_field
+    @property
+    def nights(self) -> int:
+        return max((self.check_out_local.date() - self.check_in_local.date()).days, 0)

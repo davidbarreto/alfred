@@ -4,7 +4,7 @@ Remember past travels and run an upcoming trip (`travel` schema). Design and pha
 
 ## Data model
 
-- **Trips** (`travel.trips`): `name`, `start_date`/`end_date`, `travelers`, `preferences`, `notes`, `checklist_note_id` (organizer note, SET NULL), `default_tag_names` (comma-separated *finance* tag names). **Status** (`upcoming` / `ongoing` / `past`) is derived from `local_today()`, never stored.
+- **Trips** (`travel.trips`): `name`, `start_date`/`end_date`, `travelers` (free text, one line per person: age, relation), `preferences`, `notes`, `checklist_note_id` (organizer note, SET NULL), `default_tag_names` (comma-separated *finance* tag names). **Status** (`upcoming` / `ongoing` / `past`) is derived from `local_today()`, never stored.
 - **Legs** (`travel.legs`): flights, trains, buses, ferries, cars. Belong to a trip (CASCADE). `departs_at`/`arrives_at` are UTC instants stored with the IANA zone of each end (`departs_tz`/`arrives_tz`); the read model adds `departs_local`/`arrives_local`. A flight with carrier + number gets a `check_flight_url` (a plain web search, no status API).
 - **Stays** (`travel.stays`): lodging periods, with a `place_id` (RESTRICT), an optional `trip_id` (SET NULL, so a trip's deletion keeps notes and grades), `timezone` of the lodging, `grade` 1-5.
 - **Places** (`travel.places`): independent of trips. `kind` in `PLACE_KINDS`, optional `maps_url`/`lat`/`lng`/`address`. `maps_link` is the user's URL, else pasted coordinates, else a name + city search.
@@ -54,6 +54,8 @@ A trip's itinerary is its visits, sorted by day then time; undated visits and th
 - **Numbers**: days, legs, stays, visits visited / missed / never done, spend (total, by kind, with the unconverted count), the cities and countries of its stays and of visits that actually happened.
 - **To complete**: every visited visit and every stay still lacking a grade and/or notes (blank notes count as missing), by date. Planned and missed visits are never asked for a grade.
 - **Highlights**: visits and stays graded 4 or 5, best first.
+
+**Fixing the gaps**: each *Still to write down* row has an *Edit* link to `/travel/{trip}?all_visits=1&edit=visit-<id>` (or `stay-<id>`), which opens that visit's or stay's edit dialog on the trip page.
 
 Search and filters: trips by `city` / `country` (a stay or visit in a place there), as well as status, tag, name and date range; places by kind, city, country, tag, minimum grade, `ungraded` (no grade from any visit or stay), visit status and `no_trip`.
 

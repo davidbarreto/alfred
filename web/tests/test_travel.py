@@ -168,6 +168,13 @@ class TestTripPage:
         html = client.get("/travel/1").text
         assert html.count("data-warning-row") == 1
 
+    def test_travelers_is_a_textarea_shown_on_its_own_lines(self, client, mock_api):
+        detail = _detail()
+        detail["travelers"] = "Ana, 34, partner\nLeo, 5, son"
+        _route(mock_api, {"/travel/trips/1/costs": None, "/travel/trips/1": detail, "/travel/places": []})
+        html = client.get("/travel/1").text
+        assert '<textarea name="travelers"' in html and "Leo, 5, son" in html
+
     def test_groups_timeline_by_local_day(self, client, mock_api):
         detail = _detail()
         detail["timeline"][1]["local"] = "2026-12-18T09:00:00"
@@ -518,6 +525,12 @@ class TestRecapPage:
         assert "1 missed · 2 never done" in html
         assert "Museum Example" in html and "5/5" in html
         assert "grade and notes missing" in html and "grade missing" in html and 'href="/travel/places/31"' in html
+
+    def test_each_missing_item_links_to_its_edit_dialog_on_the_trip_page(self, client, mock_api):
+        _route(mock_api, {"/travel/trips/1/recap": _recap()})
+        html = client.get("/travel/1/recap").text
+        assert 'href="/travel/1?all_visits=1&amp;edit=visit-11"' in html or 'href="/travel/1?all_visits=1&edit=visit-11"' in html
+        assert "edit=stay-7" in html
 
     def test_nothing_left_to_write_down(self, client, mock_api):
         _route(mock_api, {"/travel/trips/1/recap": _recap(to_complete=[], highlights=[])})

@@ -26,6 +26,8 @@ Create bodies accept naive wall times (read in the matching `*_tz`) or values wi
 - `arrives_after_check_out`: a leg to the stay's city departs before check-out and arrives after it.
 - `overlapping_legs`: a leg departs before the previous one arrives.
 
+**Airport picker (portal)**: in the leg form, when the mode is `flight`, From/To are a typeahead over `web/app/static/js/airports.json` (about 8k airports with an IATA code, rows of `[iata, city, name, country, tz]`, from the `airportsdata` package, MIT). Picking a row fills the city, the IATA code and the departure/arrival time zone; all stay editable, and typing without picking saves free text. Other modes are plain text. It is portal-only: there is no airports table or API, and the backend still stores `origin`/`destination` plus nullable `origin_code`/`destination_code`. Logic in `web/app/static/js/airport-input.js`.
+
 City matching is a case-insensitive containment between a leg's `destination` and the stay place's `city`.
 
 ## Itinerary and hiding

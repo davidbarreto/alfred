@@ -278,6 +278,7 @@
 
 <script src="/static/js/travel-visits.js"></script>
 <script src="/static/js/travel-transactions.js"></script>
+<script src="/static/js/airport-input.js"></script>
 <script>
 initTravelVisits({ tripId: {{ trip.id }}, placeId: null });
 initTravelTransactions();
@@ -370,6 +371,10 @@ function openLeg(leg, prefill = null, eventId = null) {
   legForm.elements.arrives_tz.value = source ? source.arrives_tz : DEFAULT_ZONE;
   legDialog.showModal();
 }
+// Flights pick an airport (fills city, code and time zone); other modes keep free text.
+const isFlight = () => legForm.elements.mode.value === 'flight';
+initAirportInput({ input: legForm.elements.origin, codeInput: legForm.elements.origin_code, zoneInput: legForm.elements.departs_tz, isActive: isFlight });
+initAirportInput({ input: legForm.elements.destination, codeInput: legForm.elements.destination_code, zoneInput: legForm.elements.arrives_tz, isActive: isFlight });
 document.getElementById('add-leg').addEventListener('click', () => openLeg(null));
 document.querySelectorAll('.edit-leg').forEach((b) => b.addEventListener('click', () => openLeg(JSON.parse(b.dataset.item))));
 

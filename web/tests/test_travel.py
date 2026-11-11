@@ -552,3 +552,17 @@ class TestSearchFilters:
         _route(mock_api, {"/travel/places": [_place(id=i) for i in range(1, 23)], "/travel/tags": []})
         assert 'name="ungraded"' in client.get("/travel/places").text
         assert "ungraded=1" in client.get("/travel/places/list?ungraded=1").text
+
+
+class TestAirportPicker:
+    def test_trip_page_loads_picker_script(self, client, mock_api):
+        _route(mock_api, {"/travel/trips/1/costs": None, "/travel/trips/1": _detail(), "/travel/places": []})
+        html = client.get("/travel/1").text
+        assert "/static/js/airport-input.js" in html and "initAirportInput" in html
+
+    def test_airport_data_is_served_with_zones(self, client):
+        rows = client.get("/static/js/airports.json").json()
+        by_code = {row[0]: row for row in rows}
+        assert by_code["OPO"][1] == "Porto" and by_code["OPO"][4] == "Europe/Lisbon"
+        assert by_code["LHR"][4] == "Europe/London" and by_code["ARN"][4] == "Europe/Stockholm"
+        assert all(len(row) == 5 and len(row[0]) == 3 and row[4] for row in rows)

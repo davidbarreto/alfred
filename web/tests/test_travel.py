@@ -175,6 +175,12 @@ class TestTripPage:
         html = client.get("/travel/1").text
         assert '<textarea name="travelers"' in html and "Leo, 5, son" in html
 
+    def test_trip_page_offers_the_map_download(self, client, mock_api):
+        _route(mock_api, {"/travel/trips/1/costs": None, "/travel/trips/1": _detail(), "/travel/places": []})
+        html = client.get("/travel/1").text
+        assert 'href="/travel/1/map.csv"' in html and 'href="/travel/1/map.csv?scope=visited"' in html
+        assert 'href="/travel/1/map.csv?scope=planned"' in html and 'href="/travel/1/map.csv?scope=missed"' in html
+
     def test_groups_timeline_by_local_day(self, client, mock_api):
         detail = _detail()
         detail["timeline"][1]["local"] = "2026-12-18T09:00:00"
@@ -598,3 +604,41 @@ class TestAirportPicker:
         html = client.get("/travel/1").text
         assert html.index("/static/js/airport-input.js") < html.index("/static/js/travel-visits.js")
         assert "initCityInput" in html and "initCityInput" in client.get("/static/js/airport-input.js").text
+
+
+class TestTripMapDownload:
+    def test_csv_has_one_row_per_pin(self, client, mock_api):
+        _route(mock_api, {"/travel/trips/1/map": {"trip_id": 1, "name": "T", "points": [
+            {"name": "Hotel Example", "address": "Hotel Example, Lisbon", "category": "lodging", "status": "visited", "description": "Stay 02 Mar"},
+            {"name": "OPO airport", "address": "OPO airport", "category": "airport", "status": "planned", "description": None},
+        ]}})
+        resp = client.get("/travel/1/map.csv")
+        assert resp.headers["content-type"].startswith("text/csv") and "attachment" in resp.headers["content-disposition"]
+        lines = resp.text.strip().splitlines()
+        assert lines[0] == "Name,Address,Category,Status,Description"
+        assert lines[1] == 'Hotel Example,"Hotel Example, Lisbon",lodging,visited,Stay 02 Mar'
+        assert lines[2] == "OPO airport,OPO airport,airport,planned,"
+        assert "map.csv" in resp.headers["content-disposition"] and "visited" not in resp.headers["content-disposition"]
+
+    def test_visited_scope_is_forwarded_and_named_in_the_file(self, client, mock_api):
+        _route(mock_api, {"/travel/trips/1/map": {"trip_id": 1, "name": "T", "points": []}})
+        resp = client.get("/travel/1/map.csv?scope=visited")
+        assert mock_api["get"].await_args.kwargs["params"] == {"scope": "visited"}
+        assert "map-visited.csv" in resp.headers["content-disposition"]
+
+    def test_each_scope_is_forwarded_and_named_in_the_file(self, client, mock_api):
+        _route(mock_api, {"/travel/trips/1/map": {"trip_id": 1, "name": "T", "points": []}})
+        for scope in ("planned", "visited", "missed"):
+            resp = client.get(f"/travel/1/map.csv?scope={scope}")
+            assert mock_api["get"].await_args.kwargs["params"] == {"scope": scope}
+            assert f"map-{scope}.csv" in resp.headers["content-disposition"]
+
+    def test_unknown_scope_falls_back_to_all(self, client, mock_api):
+        _route(mock_api, {"/travel/trips/1/map": {"trip_id": 1, "name": "T", "points": []}})
+        client.get("/travel/1/map.csv?scope=whatever")
+        assert mock_api["get"].await_args.kwargs["params"] == {"scope": "all"}
+
+    def test_unknown_trip_redirects_to_the_trip_page(self, client, mock_api):
+        _route(mock_api, {"/travel/trips/9/map": None})
+        resp = client.get("/travel/9/map.csv", follow_redirects=False)
+        assert resp.status_code == 302 and resp.headers["location"] == "/travel/9"

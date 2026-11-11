@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from app.api.auth import require_auth
 from app.dependencies import TripRecapServiceDep, TripServiceDep
 from app.features.travel.recap.schemas import TripRecap
+from app.features.travel.trips.map_points import MapScope, TripMap
 from app.features.travel.trips.schemas import TripCreate, TripDetail, TripFilters, TripRead, TripUpdate
 
 router = APIRouter(prefix="/travel/trips", tags=["travel"], dependencies=[Depends(require_auth)])
@@ -27,6 +28,19 @@ async def get_trip_recap(trip_id: int, service: TripRecapServiceDep) -> TripReca
     if recap is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Trip not found")
     return recap
+
+
+@router.get("/{trip_id}/map", response_model=TripMap)
+async def get_trip_map(
+    trip_id: int,
+    service: TripServiceDep,
+    scope: Annotated[MapScope, Query(description="all: planned and visited; visited: only what already happened")] = "all",
+) -> TripMap:
+    """The trip's pins (stays, planned and visited places, airports) to import into a map such as Google My Maps."""
+    result = await service.get_trip_map(trip_id, scope)
+    if result is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Trip not found")
+    return result
 
 
 @router.get("/{trip_id}", response_model=TripDetail)

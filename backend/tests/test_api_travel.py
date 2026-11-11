@@ -561,3 +561,31 @@ class TestCalendarImport:
             "calendar_event_id": 5,
         })
         assert r.status_code == 409
+
+
+class TestTripMap:
+    def test_returns_the_points(self, trips):
+        from app.features.travel.trips.map_points import MapPoint, TripMap
+
+        client, service = trips
+        service.get_trip_map.return_value = TripMap(
+            trip_id=1, name="Trip", points=[MapPoint(name="OPO airport", address="OPO airport", category="airport")]
+        )
+        resp = client.get("/travel/trips/1/map", headers=AUTH)
+        assert resp.status_code == 200 and resp.json()["points"][0]["name"] == "OPO airport"
+
+    def test_scope_is_passed_on_and_validated(self, trips):
+        from app.features.travel.trips.map_points import TripMap
+
+        client, service = trips
+        service.get_trip_map.return_value = TripMap(trip_id=1, name="Trip", points=[])
+        assert client.get("/travel/trips/1/map?scope=visited", headers=AUTH).status_code == 200
+        service.get_trip_map.assert_awaited_with(1, "visited")
+        for scope in ("planned", "missed"):
+            assert client.get(f"/travel/trips/1/map?scope={scope}", headers=AUTH).status_code == 200
+        assert client.get("/travel/trips/1/map?scope=bogus", headers=AUTH).status_code == 422
+
+    def test_unknown_trip_is_404(self, trips):
+        client, service = trips
+        service.get_trip_map.return_value = None
+        assert client.get("/travel/trips/9/map", headers=AUTH).status_code == 404

@@ -36,6 +36,10 @@ Create bodies accept naive wall times (read in the matching `*_tz`) or values wi
 
 City matching is a case-insensitive containment between a leg's `destination` and the stay place's `city`.
 
+## Map pins
+
+`GET /travel/trips/{id}/map?scope=all|planned|visited|missed` returns the trip's pins (`features/travel/trips/map_points.py`): one per place (stays, visits, and the airports of flight legs, `<IATA> airport`; a place used several times lists each use in its description). `address` is what a map importer geocodes: `lat,lng` when the place has coordinates, else name + address/city. Each pin has a `status` (`planned` / `visited` / `missed`; visited beats planned beats missed). Scopes: `planned` = still ahead (planned visits, stays not begun, flights not taken), the map to use during the trip; `visited` = visited visits, stays begun, flights taken; `missed` = visits marked missed (the last two for a history map after the trip); `all` (default) = everything, missed included, with the status in each pin. There is no Google integration: the portal's **Map pins** menu on a trip downloads `/travel/{id}/map.csv?scope=...` (columns Name, Address, Category, Status, Description), which Google My Maps imports (Create a new map, Import, position by *Address*, title by *Name*) into a saved map you can keep and share.
+
 ## Itinerary and hiding
 
 A trip's itinerary is its visits, sorted by day then time; undated visits and those without a time come last, in creation order. Once the trip has ended, planned and missed visits are hidden (`hidden_visit_count` says how many); `GET /travel/trips/{id}?all_visits=true` returns them all.
@@ -65,7 +69,7 @@ If a trip's first leg is a flight, the trip detail has `leave_home_at` (departur
 
 ## API
 
-`/travel/trips` (list filters: `status` = current (default) / upcoming / ongoing / past / all, repeated `tag`, `q`, `city`, `country`, `date_from`, `date_to`, `limit`, `offset`), `/travel/legs`, `/travel/stays`, `/travel/visits` (filters `trip_id`, `place_id`, `status`, `date_from`, `date_to`, `no_trip`), `/travel/places` (filters `q`, `kind`, `city`, `country`, repeated `tag`, `min_grade`, `ungraded`, `status` = has a visit with it, `no_trip` = no visit or stay belongs to a trip; `GET /{id}` returns the history; deleting a place with visits or stays is a 409), `/travel/settings` (GET/PUT), `/travel/trips/{id}/costs`, `/travel/trips/{id}/recap`, `/travel/trips/{id}/calendar-events`, `/travel/{kind}/{id}/transactions`, `/travel/tags` (usage counts, rename, delete removes only link rows). Postman: `postman/travel.collection.json`.
+`/travel/trips` (list filters: `status` = current (default) / upcoming / ongoing / past / all, repeated `tag`, `q`, `city`, `country`, `date_from`, `date_to`, `limit`, `offset`), `/travel/legs`, `/travel/stays`, `/travel/visits` (filters `trip_id`, `place_id`, `status`, `date_from`, `date_to`, `no_trip`), `/travel/places` (filters `q`, `kind`, `city`, `country`, repeated `tag`, `min_grade`, `ungraded`, `status` = has a visit with it, `no_trip` = no visit or stay belongs to a trip; `GET /{id}` returns the history; deleting a place with visits or stays is a 409), `/travel/settings` (GET/PUT), `/travel/trips/{id}/costs`, `/travel/trips/{id}/recap`, `/travel/trips/{id}/map`, `/travel/trips/{id}/calendar-events`, `/travel/{kind}/{id}/transactions`, `/travel/tags` (usage counts, rename, delete removes only link rows). Postman: `postman/travel.collection.json`.
 
 ## Portal
 

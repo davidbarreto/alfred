@@ -1875,6 +1875,126 @@
       }
     },
     {
+      "name": "47 - Get Trip Recap Map Pins",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Pins listed', () => { const j = pm.response.json(); pm.expect(j.points).to.be.an('array'); j.points.forEach(p => { pm.expect(p.name).to.be.a('string'); pm.expect(p.address).to.be.a('string'); }); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/trips/{{travel_trip_id}}/map",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "trips",
+            "{{travel_trip_id}}",
+            "map"
+          ]
+        }
+      }
+    },
+    {
+      "name": "47 - Get Trip Recap Map Pins Missed Only",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Pins listed', () => { const j = pm.response.json(); pm.expect(j.points).to.be.an('array'); j.points.forEach(p => { pm.expect(p.name).to.be.a('string'); pm.expect(p.address).to.be.a('string'); }); });",
+              "pm.test('Only missed pins', () => pm.response.json().points.forEach(p => pm.expect(p.status).to.eql('missed')));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/trips/{{travel_trip_id}}/map?scope=missed",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "trips",
+            "{{travel_trip_id}}",
+            "map"
+          ],
+          "query": [
+            {
+              "key": "scope",
+              "value": "missed"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "47 - Get Trip Recap Map Pins Bad Scope",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 422', () => pm.response.to.have.status(422));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/trips/{{travel_trip_id}}/map?scope=bogus",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "trips",
+            "{{travel_trip_id}}",
+            "map"
+          ],
+          "query": [
+            {
+              "key": "scope",
+              "value": "bogus"
+            }
+          ]
+        }
+      }
+    },
+    {
       "name": "48 - Get Recap Of Unknown Trip",
       "event": [
         {

@@ -1,7 +1,9 @@
+import csv
+import io
 from urllib.parse import urlencode
 
 from fastapi import APIRouter, HTTPException, Request
-from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Response
 
 import app.client as api
 from app.config import get_settings
@@ -298,6 +300,25 @@ async def place_page(place_id: int, request: Request):
     return templates.TemplateResponse(request, "travel_place.html", {
         "place": place, "place_kinds": _PLACE_KINDS, "place_cost": costs["total"] if costs else None,
     })
+
+
+@router.get("/{trip_id}/map.csv")
+async def trip_map_csv(trip_id: int, scope: str = "all"):
+    """The trip's pins as a CSV that Google My Maps imports (it geocodes the Address column).
+
+    scope=planned/visited/missed keeps only pins with that status; anything else means all.
+    """
+    scope = scope if scope in ("planned", "visited", "missed") else "all"
+    data = await safe_get(f"/travel/trips/{trip_id}/map", params={"scope": scope})
+    if data is None:
+        return RedirectResponse(f"/travel/{trip_id}", status_code=302)
+    out = io.StringIO()
+    writer = csv.writer(out)
+    writer.writerow(["Name", "Address", "Category", "Status", "Description"])
+    for point in data["points"]:
+        writer.writerow([point["name"], point["address"], point["category"], point["status"], point["description"] or ""])
+    filename = f"trip-{trip_id}-map{'' if scope == 'all' else '-' + scope}.csv"
+    return Response(out.getvalue(), media_type="text/csv", headers={"Content-Disposition": f'attachment; filename="{filename}"'})
 
 
 @router.get("/{trip_id}/recap", response_class=HTMLResponse)

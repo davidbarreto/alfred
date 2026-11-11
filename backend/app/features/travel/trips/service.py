@@ -1,4 +1,5 @@
 import logging
+from datetime import datetime, timezone
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -14,6 +15,7 @@ from app.features.travel.trips.repository import TripRepository
 from app.features.travel.trips.schemas import TripCreate, TripDetail, TripFilters, TripRead, TripUpdate
 from app.features.travel.visits.repository import VisitRepository
 from app.features.travel.visits.schemas import VisitRead
+from app.features.travel.trips.map_points import MapScope, TripMap, build_trip_map
 from app.features.travel.trips.timeline import build_timeline, find_warnings, leave_home_at
 from app.shared.timezone import local_today
 
@@ -66,6 +68,17 @@ class TripService:
             visits=visits,
             hidden_visit_count=hidden,
         )
+
+    async def get_trip_map(self, trip_id: int, scope: MapScope = "all") -> TripMap | None:
+        trip = await self._repo.get_trip(trip_id)
+        if trip is None:
+            return None
+        legs = [LegRead.model_validate(leg) for leg in await self._leg_repo.get_legs(trip_id)]
+        stays = [StayRead.model_validate(s) for s in await self._stay_repo.get_stays(trip_id)]
+        visits = [VisitRead.model_validate(v) for v in await self._visit_repo.get_trip_visits(trip_id)]
+        result = build_trip_map(trip.id, trip.name, legs, stays, visits, datetime.now(timezone.utc), scope)
+        logger.debug("Trip map: id=%d scope=%s points=%d", trip_id, scope, len(result.points))
+        return result
 
     async def create_trip(self, data: TripCreate) -> TripRead:
         fields = data.model_dump(exclude={"tags"})

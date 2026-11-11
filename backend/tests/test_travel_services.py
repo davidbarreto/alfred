@@ -122,6 +122,26 @@ class TestTripService:
         await trips.get_trips(TripFilters())
         assert isinstance(trips._repo.get_trips.await_args.args[1], date)
 
+    async def test_map_unknown_trip(self, trips):
+        trips._repo.get_trip.return_value = None
+        assert await trips.get_trip_map(9) is None
+
+    async def test_map_includes_all_visits_even_after_the_trip(self, trips):
+        trips._repo.get_trip.return_value = _trip()
+        trips._leg_repo.get_legs.return_value = []
+        trips._stay_repo.get_stays.return_value = [_stay()]
+        result = await trips.get_trip_map(1)
+        assert [p.category for p in result.points] == ["lodging"]
+        trips._visit_repo.get_trip_visits.assert_awaited_once_with(1)
+
+    async def test_map_scope_visited_drops_stays_not_begun_yet(self, trips):
+        trips._repo.get_trip.return_value = _trip()
+        trips._leg_repo.get_legs.return_value = []
+        trips._stay_repo.get_stays.return_value = [_stay(check_in_at=datetime(2999, 1, 1, tzinfo=timezone.utc),
+                                                         check_out_at=datetime(2999, 1, 3, tzinfo=timezone.utc))]
+        assert (await trips.get_trip_map(1, "visited")).points == []
+        assert len((await trips.get_trip_map(1)).points) == 1
+
     async def test_detail_combines_legs_stays_timeline_and_warnings(self, trips):
         trips._repo.get_trip.return_value = _trip()
         trips._leg_repo.get_legs.return_value = [_leg()]

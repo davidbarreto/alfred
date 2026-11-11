@@ -20,6 +20,16 @@
           <span class="px-2 py-0.5 rounded-full text-xs font-medium
             {% if trip.status == 'ongoing' %}text-green-700 bg-green-50{% elif trip.status == 'upcoming' %}text-blue-700 bg-blue-50{% else %}text-gray-500 bg-gray-100{% endif %}">{{ trip.status }}</span>
           <a class="btn btn-xs btn-outline" href="/travel/{{ trip.id }}/recap">Recap</a>
+          <div class="dropdown dropdown-end">
+            <label tabindex="0" class="btn btn-xs btn-outline"><i class="ti ti-map-pin"></i> Map pins</label>
+            <ul tabindex="0" class="dropdown-content menu menu-xs z-10 w-72 p-2 shadow bg-white rounded-box">
+              <li><a href="/travel/{{ trip.id }}/map.csv?scope=planned"><span>Planned<br><span class="text-[11px] text-gray-400">What is still ahead: the map to use during the trip</span></span></a></li>
+              <li><a href="/travel/{{ trip.id }}/map.csv?scope=visited"><span>Visited<br><span class="text-[11px] text-gray-400">What already happened: for your history map</span></span></a></li>
+              <li><a href="/travel/{{ trip.id }}/map.csv?scope=missed"><span>Missed<br><span class="text-[11px] text-gray-400">Visits you marked missed: places for next time</span></span></a></li>
+              <li><a href="/travel/{{ trip.id }}/map.csv"><span>All places<br><span class="text-[11px] text-gray-400">Everything, with a Status column to style by</span></span></a></li>
+              <li class="px-3 pt-1 text-[11px] text-gray-400 pointer-events-none">Import the CSV in Google My Maps (mymaps.google.com): Create a new map, Import, position by Address, title by Name.</li>
+            </ul>
+          </div>
           <button class="btn btn-xs btn-outline" id="import-calendar">Import from calendar</button>
           {% if trip.default_tag_names %}<button class="btn btn-xs btn-outline" id="apply-tags" title="Tag the expenses already dated within this trip">Apply finance tags</button>{% endif %}
           <button class="btn btn-xs btn-outline" onclick="document.getElementById('edit-trip-wrap').classList.toggle('hidden')">Edit</button>

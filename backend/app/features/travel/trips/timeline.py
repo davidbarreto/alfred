@@ -90,12 +90,17 @@ def _stay_after(leg: LegRead, stays: list[StayRead]) -> StayRead | None:
     return min(near, key=lambda s: s.check_in_at, default=None)
 
 
+def _food_links(near: str) -> dict[str, str]:
+    return {"cafes": maps_search_url(f"cafe near {near}"), "restaurants": maps_search_url(f"restaurants near {near}")}
+
+
 def _leg_item(leg: LegRead, stays: list[StayRead], home_address: str | None, is_first: bool) -> TimelineItem:
     links: dict[str, str] = {}
     label = None
     if leg.mode == "flight":
         # Getting to the airport: from the hotel the traveler is leaving, or from home on the first leg.
         airport = _airport(leg.origin_code, leg.origin)
+        links.update(_food_links(airport))
         stay = _stay_before(leg, stays)
         if stay is not None:
             links.update(_transfer_links(_lodging(stay.place), airport))
@@ -117,6 +122,8 @@ def _leg_item(leg: LegRead, stays: list[StayRead], home_address: str | None, is_
 
 def _arrival_item(leg: LegRead, stays: list[StayRead]) -> TimelineItem:
     links = {"map": maps_search_url(leg.destination)}
+    if leg.mode == "flight":
+        links.update(_food_links(_airport(leg.destination_code, leg.destination)))
     label = None
     stay = _stay_after(leg, stays) if leg.mode == "flight" else None
     if stay is not None:
@@ -135,7 +142,7 @@ def _stay_items(stay: StayRead) -> list[TimelineItem]:
     near = " ".join(p for p in (place.name, place.city) if p)
     links = {
         "map": place_maps_url(place.name, place.city, place.maps_url, place.lat, place.lng),
-        "cafes": maps_search_url(f"cafe near {near}"),
+        **_food_links(near),
         "luggage": maps_search_url(f"luggage storage near {near}"),
     }
     return [

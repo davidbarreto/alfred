@@ -181,6 +181,34 @@ class TestTripPage:
         assert 'href="/travel/1/map.csv"' in html and 'href="/travel/1/map.csv?scope=visited"' in html
         assert 'href="/travel/1/map.csv?scope=planned"' in html and 'href="/travel/1/map.csv?scope=missed"' in html
 
+    def test_long_timeline_is_cut_with_a_link_to_the_full_page(self, client, mock_api):
+        detail = _detail()
+        detail["timeline"] = [
+            {**detail["timeline"][0], "title": f"Step {n}", "local": f"2026-12-{10 + n:02d}T06:00:00"} for n in range(12)
+        ]
+        _route(mock_api, {"/travel/trips/1/costs": None, "/travel/trips/1": detail, "/travel/places": []})
+        html = client.get("/travel/1").text
+        assert "Step 7" in html and "Step 8" not in html
+        assert 'href="/travel/1/timeline"' in html and "See all 12 steps" in html
+
+    def test_short_timeline_has_no_see_all_link(self, client, mock_api):
+        _route(mock_api, {"/travel/trips/1/costs": None, "/travel/trips/1": _detail(), "/travel/places": []})
+        assert "See all" not in client.get("/travel/1").text
+
+    def test_timeline_page_lists_every_step(self, client, mock_api):
+        detail = _detail()
+        detail["timeline"] = [
+            {**detail["timeline"][0], "title": f"Step {n}", "local": f"2026-12-{10 + n:02d}T06:00:00"} for n in range(12)
+        ]
+        _route(mock_api, {"/travel/trips/1": detail})
+        html = client.get("/travel/1/timeline").text
+        assert "Step 0" in html and "Step 11" in html and "See all" not in html
+
+    def test_timeline_page_for_unknown_trip_redirects(self, client, mock_api):
+        _route(mock_api, {"/travel/trips/9": None})
+        resp = client.get("/travel/9/timeline", follow_redirects=False)
+        assert resp.status_code == 302 and resp.headers["location"] == "/travel"
+
     def test_groups_timeline_by_local_day(self, client, mock_api):
         detail = _detail()
         detail["timeline"][1]["local"] = "2026-12-18T09:00:00"

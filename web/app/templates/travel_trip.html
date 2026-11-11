@@ -92,36 +92,14 @@
   </div>
   {% endif %}
 
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
   <div class="card bg-white">
     <div class="card-body p-5 space-y-4" id="timeline">
       <h2 class="text-sm font-semibold text-gray-900">Timeline</h2>
-      {% if not days %}
-      <p class="text-sm text-gray-400">Nothing booked yet. Add flights and other tickets as legs, and hotels as stays.</p>
+      {% include "_travel_timeline_days.html" %}
+      {% if timeline_total > timeline_shown %}
+      <a class="text-xs text-[#378ADD] hover:underline" href="/travel/{{ trip.id }}/timeline">See all {{ timeline_total }} steps</a>
       {% endif %}
-      {% for day, items in days.items() %}
-      <div>
-        <p class="text-xs font-semibold text-gray-500 mb-1">{{ day | short_date }}</p>
-        <ul class="space-y-1.5">
-          {% for item in items %}
-          <li class="flex items-start gap-3 text-sm {% if item.warnings %}rounded-md bg-amber-50 border border-amber-200 -mx-2 px-2 py-1.5{% endif %}"{% if item.warnings %} data-warning-row{% endif %}>
-            <span class="w-12 text-xs text-gray-400 pt-0.5">{{ item.local[11:16] }}</span>
-            <i class="ti {{ {'leg': 'ti-plane-departure', 'arrival': 'ti-plane-arrival', 'check_in': 'ti-login', 'check_out': 'ti-logout', 'leave_home': 'ti-door-exit'}[item.kind] }} {% if item.warnings %}text-amber-600{% else %}text-gray-400{% endif %} pt-0.5"></i>
-            <div class="flex-1">
-              <p class="text-gray-900">{{ item.title }}</p>
-              <p class="text-xs text-gray-400">{% if item.subtitle %}{{ item.subtitle }} · {% endif %}{{ item.timezone }}</p>
-              {% for message in item.warnings %}<p class="text-xs text-amber-800"><i class="ti ti-alert-triangle"></i> {{ message }}</p>{% endfor %}
-              {% if item.transfer_label %}<p class="text-xs text-gray-500 pt-0.5">Getting there: {{ item.transfer_label }}</p>{% endif %}
-              <p class="text-xs space-x-3">
-                {% for key, label in [('directions', 'Transit'), ('drive', 'Taxi / car'), ('walk', 'Walk'), ('check_flight', 'Check flight'), ('map', 'Map'), ('cafes', 'Cafes nearby'), ('luggage', 'Luggage storage')] %}
-                {% if item.links.get(key) %}<a class="text-[#378ADD] hover:underline" href="{{ item.links[key] }}" target="_blank" rel="noopener">{{ label }}</a>{% endif %}
-                {% endfor %}
-              </p>
-            </div>
-          </li>
-          {% endfor %}
-        </ul>
-      </div>
-      {% endfor %}
     </div>
   </div>
 
@@ -149,6 +127,7 @@
       <p class="text-sm text-gray-400">Nothing planned. Add museums, restaurants and activities as planned visits, with or without a day.</p>
       {% endfor %}
     </div>
+  </div>
   </div>
 
   <div class="grid grid-cols-1 xl:grid-cols-2 gap-4">

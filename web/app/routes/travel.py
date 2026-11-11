@@ -13,6 +13,8 @@ from app.templates_config import templates
 router = APIRouter(prefix="/travel")
 
 _PAGE_SIZE = 20
+# The trip page shows this many timeline steps; the rest are on /travel/{id}/timeline.
+_TIMELINE_PREVIEW = 8
 _STATUSES = {"current": "Upcoming & ongoing", "upcoming": "Upcoming", "ongoing": "Ongoing", "past": "Past", "all": "All"}
 _PLACE_KINDS = ["hotel", "restaurant", "cafe", "activity", "museum", "attraction", "shop", "other"]
 _LEG_MODES = ["flight", "train", "bus", "ferry", "car", "other"]
@@ -321,6 +323,21 @@ async def trip_map_csv(trip_id: int, scope: str = "all"):
     return Response(out.getvalue(), media_type="text/csv", headers={"Content-Disposition": f'attachment; filename="{filename}"'})
 
 
+def _group_by_day(items: list[dict]) -> dict[str, list]:
+    days: dict[str, list] = {}
+    for item in items:
+        days.setdefault(item["local"][:10], []).append(item)
+    return days
+
+
+@router.get("/{trip_id}/timeline", response_class=HTMLResponse)
+async def timeline_page(trip_id: int, request: Request):
+    trip = await safe_get(f"/travel/trips/{trip_id}")
+    if trip is None:
+        return RedirectResponse("/travel", status_code=302)
+    return templates.TemplateResponse(request, "travel_timeline.html", {"trip": trip, "days": _group_by_day(trip["timeline"])})
+
+
 @router.get("/{trip_id}/recap", response_class=HTMLResponse)
 async def recap_page(trip_id: int, request: Request):
     recap = await safe_get(f"/travel/trips/{trip_id}/recap")
@@ -336,9 +353,7 @@ async def trip_page(trip_id: int, request: Request):
     if trip is None:
         return RedirectResponse("/travel", status_code=302)
     places = await safe_get("/travel/places", params={"limit": 500}, default=[])
-    days: dict[str, list] = {}
-    for item in trip["timeline"]:
-        days.setdefault(item["local"][:10], []).append(item)
+    preview = trip["timeline"][:_TIMELINE_PREVIEW]
     costs = await safe_get(f"/travel/trips/{trip_id}/costs")
     entity_costs = {
         kind: {item["id"]: item for item in (costs or {}).get(kind, [])} for kind in ("legs", "stays", "visits")
@@ -348,7 +363,9 @@ async def trip_page(trip_id: int, request: Request):
         visit_days.setdefault(visit["visit_date"], []).append(visit)
     return templates.TemplateResponse(request, "travel_trip.html", {
         "trip": trip,
-        "days": days,
+        "days": _group_by_day(preview),
+        "timeline_shown": len(preview),
+        "timeline_total": len(trip["timeline"]),
         "visit_days": visit_days,
         "costs": costs,
         "entity_costs": entity_costs,

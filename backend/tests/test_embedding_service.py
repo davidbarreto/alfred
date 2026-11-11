@@ -116,6 +116,8 @@ class TestEmbedBackgroundMethod:
 
         provider.embed.assert_awaited_once_with("A note")
         MockRepo.assert_any_call(new_session)
+        # The background task never reads the row back, so it must not refresh it: a delete
+        # landing between commit and refresh would otherwise raise "Could not refresh instance".
         repo_instance.upsert.assert_awaited_once_with(
             source_type="note",
             source_id=5,
@@ -123,6 +125,7 @@ class TestEmbedBackgroundMethod:
             vector=[0.1] * 1536,
             model="text-embedding-3-small",
             dimensions=1536,
+            refresh=False,
         )
         assert embedding_service_module._background_tasks == set()
 

@@ -34,7 +34,10 @@ class EmbeddingRepository:
         vector: list[float],
         model: str,
         dimensions: int,
+        refresh: bool = True,
     ) -> Embedding:
+        """Insert or update the embedding for a source. Pass `refresh=False` when the returned
+        row is discarded: refresh() raises if the row was deleted after the commit."""
         existing = await self.get_by_source(source_type, source_id)
         if existing is not None:
             existing.content = content
@@ -42,7 +45,8 @@ class EmbeddingRepository:
             existing.model = model
             existing.dimensions = dimensions
             await self._session.commit()
-            await self._session.refresh(existing)
+            if refresh:
+                await self._session.refresh(existing)
             return existing
 
         embedding = Embedding(
@@ -55,7 +59,8 @@ class EmbeddingRepository:
         )
         self._session.add(embedding)
         await self._session.commit()
-        await self._session.refresh(embedding)
+        if refresh:
+            await self._session.refresh(embedding)
         return embedding
 
     async def get_many(

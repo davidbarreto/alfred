@@ -68,6 +68,7 @@ class EmbeddingService:
                     vector=vector,
                     model=self._provider.model,
                     dimensions=self._provider.dimensions,
+                    refresh=False,  # nothing reads the row back, and a concurrent delete would make refresh() raise
                 )
             logger.debug(
                 "Background embedding upserted: source_type=%s source_id=%d model=%s",

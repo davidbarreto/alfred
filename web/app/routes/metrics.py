@@ -1,4 +1,5 @@
 import asyncio
+from datetime import date, timedelta
 from urllib.parse import quote
 
 from fastapi import APIRouter, Request
@@ -6,6 +7,7 @@ from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 
 import app.client as api
 from app.shared.forward import forward, safe_get
+from app.shared.timezone import local_today
 from app.templates_config import templates
 
 router = APIRouter(prefix="/metrics")
@@ -31,6 +33,30 @@ def _int_param(raw: str | None, default: int | None = None) -> int | None:
         return max(0, int(raw)) if raw not in (None, "") else default
     except ValueError:
         return default
+
+
+def _daily_chart(kind: str, daily: dict | None) -> dict | None:
+    """Chart.js inputs for a value or count series: one label per local day.
+
+    Count series get a zero for every day without events, so the bars show the gaps; value series only have
+    the days that were measured (a missing weigh-in is not a zero).
+    """
+    points = (daily or {}).get("points") or []
+    if kind not in ("value", "count") or not points:
+        return None
+    by_day = {p["date"]: p for p in points}
+    if kind == "value":
+        labels = [p["date"] for p in points]
+        return {
+            "kind": kind,
+            "labels": labels,
+            "total": [by_day[d]["total"] for d in labels],
+            "mean": [by_day[d]["mean"] for d in labels],
+        }
+    first = date.fromisoformat(points[0]["date"])
+    last = max(date.fromisoformat(points[-1]["date"]), local_today())
+    labels = [(first + timedelta(days=i)).isoformat() for i in range((last - first).days + 1)]
+    return {"kind": kind, "labels": labels, "n": [by_day[d]["n"] if d in by_day else 0 for d in labels]}
 
 
 @router.get("", response_class=HTMLResponse)
@@ -69,6 +95,12 @@ async def update_series(name: str, request: Request):
     )
 
 
+@router.delete("/series/{name}")
+async def delete_series(name: str):
+    """Delete the series with all its entries; the page asks for confirmation first."""
+    return await forward(api.delete(f"/metrics/series/{_seg(name)}?force=true"), "Could not delete the series.")
+
+
 @router.post("/quick/{action}")
 async def quick_action(action: str, request: Request):
     if action not in _QUICK_ACTIONS:
@@ -98,14 +130,16 @@ async def series_page(name: str, request: Request):
     if series is None:
         return RedirectResponse("/metrics", status_code=302)
     params = {k: v for k, v in {"tag": tag, "days": days}.items() if v is not None}
-    stats, open_entries, tags = await asyncio.gather(
+    stats, open_entries, tags, daily = await asyncio.gather(
         safe_get(f"/metrics/series/{_seg(name)}/stats", params=params),
         safe_get("/metrics/entries/open", default=[]),
         safe_get("/metrics/tags", default=[]),
+        safe_get(f"/metrics/series/{_seg(name)}/daily", params=params) if series["kind"] != "duration" else _none(),
     )
     return templates.TemplateResponse(request, "metrics_series.html", {
         "series": series,
         "stats": stats,
+        "chart": _daily_chart(series["kind"], daily),
         "running": next((e for e in open_entries if e["series_name"] == series["name"]), None),
         "tag_options": [t["name"] for t in tags],
         "selected_tag": tag,

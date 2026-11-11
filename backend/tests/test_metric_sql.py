@@ -85,6 +85,16 @@ class TestSchemaDefinition:
         assert index.unique and "lower" in str(CreateIndex(index).compile(dialect=postgresql.dialect())).lower()
 
 
+class TestSeriesDeleteQueries:
+    async def test_entry_delete_removes_tag_links_first(self):
+        session = _session()
+        await MetricSeriesRepository(session).delete_entries(1)
+        statements = [_sql(c.args[0]) for c in session.execute.call_args_list]
+        assert statements[0].startswith("delete from metrics.entries_tags")
+        assert statements[1].startswith("delete from metrics.entries where metrics.entries.series_id = 1")
+        session.commit.assert_awaited()
+
+
 class TestStatsQueries:
     @staticmethod
     async def _compile(**kwargs) -> str:
@@ -132,3 +142,12 @@ class TestStatsQueries:
         assert await MetricStatsRepository(session).count_over_cap(1, 21600) == 3
         sql = _sql(session.scalar.call_args.args[0])
         assert "> 21600" in sql and "status = 'closed'" in sql
+
+    async def test_daily_groups_closed_entries_by_local_day(self):
+        from app.features.metrics.stats.repository import MetricStatsRepository
+
+        session = _session()
+        await MetricStatsRepository(session).get_daily(1, "value", "Europe/Lisbon", 21600, tag="Home")
+        sql = _sql(session.execute.call_args.args[0])
+        assert "date(timezone('europe/lisbon'" in sql and "group by" in sql and "order by" in sql
+        assert "metrics.entries.status = 'closed'" in sql and "lower(metrics.tags.name) = 'home'" in sql

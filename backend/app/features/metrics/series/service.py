@@ -92,14 +92,18 @@ class MetricSeriesService:
         logger.info("Metric series merged: from=%r into=%r entries=%d", source_name, data.into, moved)
         return MetricSeriesRead.model_validate(target)
 
-    async def delete_series(self, name: str) -> bool:
+    async def delete_series(self, name: str, force: bool = False) -> bool:
+        """Delete an empty series; with `force`, its entries are permanently deleted first."""
         series = await self._repo.get_series_by_name(name)
         if series is None:
             return False
         count = await self._repo.count_entries(series.id)
-        if count:
-            raise MetricSeriesNotEmptyError(count)
         series_id = series.id
+        if count and not force:
+            raise MetricSeriesNotEmptyError(count)
+        if count:
+            await self._repo.delete_entries(series_id)
+            logger.info("Metric series entries deleted: series_id=%d name=%r entries=%d", series_id, name, count)
         deleted = await self._repo.delete_series(series_id)
         if deleted:
             logger.info("Metric series deleted: id=%d name=%r", series_id, name)

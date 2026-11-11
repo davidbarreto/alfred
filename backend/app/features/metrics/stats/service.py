@@ -7,7 +7,7 @@ from app.config import get_settings
 from app.features.metrics.entries.service import STALE_AFTER
 from app.features.metrics.series.repository import MetricSeriesRepository
 from app.features.metrics.stats.repository import GroupBy, MetricStatsRepository, StatRow
-from app.features.metrics.stats.schemas import MIN_SAMPLES, TREND_DAYS, GroupStat, MetricStats, MetricTrend
+from app.features.metrics.stats.schemas import MIN_SAMPLES, TREND_DAYS, DailyPoint, GroupStat, MetricDaily, MetricStats, MetricTrend
 
 logger = logging.getLogger(__name__)
 
@@ -109,4 +109,25 @@ class MetricStatsService:
             trend=trend,
             best_tag=_best(by_tag) if kind == "duration" else None,
             best_hour=_best(by_hour) if kind == "duration" else None,
+        )
+
+    async def get_daily(self, name: str, tag: str | None = None, days: int | None = None) -> MetricDaily | None:
+        series = await self._series.get_series_by_name(name)
+        if series is None:
+            logger.debug("Metric daily: series=%r not found", name)
+            return None
+        measured = series.kind != "count"
+        since = _now() - timedelta(days=days) if days else None
+        rows = await self._repo.get_daily(
+            series.id, series.kind, get_settings().timezone, _MAX_DURATION_S, since=since, tag=tag
+        )
+        logger.debug("Metric daily: series=%r days=%s tag=%r points=%d", series.name, days, tag, len(rows))
+        return MetricDaily(
+            series=series.name,
+            kind=series.kind,
+            unit=series.unit,
+            points=[
+                DailyPoint(date=r.day, n=r.n, total=r.total if measured else None, mean=r.mean if measured else None)
+                for r in rows
+            ],
         )

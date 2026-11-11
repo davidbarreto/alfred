@@ -83,6 +83,7 @@
         </label>
         <button type="submit" class="btn btn-sm btn-outline">Save</button>
         <span id="edit-series-error" class="text-xs text-red-600"></span>
+        <button type="button" onclick="deleteSeries()" class="btn btn-sm btn-ghost text-red-600 ml-auto"><i class="ti ti-trash"></i>Delete series</button>
       </form>
     </div>
   </div>
@@ -172,6 +173,24 @@
   <p class="text-xs text-gray-400">{{ stats.excluded_over_cap }} entr{{ 'y' if stats.excluded_over_cap == 1 else 'ies' }} longer than 6 h {{ 'is' if stats.excluded_over_cap == 1 else 'are' }} left out of these numbers (probably a forgotten stop).</p>
   {% endif %}
 
+  {% if chart %}
+  <!-- Over time -->
+  <div class="card bg-white" id="metric-chart-card">
+    <div class="card-body p-5 space-y-3">
+      <div class="flex items-center justify-between gap-3">
+        <p class="text-sm font-semibold text-gray-900">{{ 'Events per day' if chart.kind == 'count' else 'Over time' }}</p>
+        {% if chart.kind == 'value' %}
+        <div class="flex items-center gap-1 text-xs">
+          <button type="button" data-mode="mean" class="chart-mode px-2 py-1 rounded-md">Daily average</button>
+          <button type="button" data-mode="total" class="chart-mode px-2 py-1 rounded-md">Daily total</button>
+        </div>
+        {% endif %}
+      </div>
+      <div class="relative h-56"><canvas id="metric-chart"></canvas></div>
+    </div>
+  </div>
+  {% endif %}
+
   <!-- Breakdowns -->
   <div class="grid grid-cols-1 xl:grid-cols-2 gap-4">
     {{ breakdown('By tag', stats.by_tag, 'The options you compare') }}
@@ -217,6 +236,7 @@
 
 </div>
 
+{% if chart %}<script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>{% endif %}
 <script>
 const SERIES = {{ s.name | tojson }};
 
@@ -308,6 +328,65 @@ async function discardEntry(id) {
     alert(e.message);
   }
 }
+
+async function deleteSeries() {
+  if (!confirm(`Delete "${SERIES}" and all its entries? This cannot be undone.`)) return;
+  try {
+    const res = await fetch(`/metrics/series/${encodeURIComponent(SERIES)}`, { method: 'DELETE' });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || 'Something went wrong.');
+    location.href = '/metrics';
+  } catch (e) {
+    alert(e.message);
+  }
+}
+
+{% if chart %}
+(function renderMetricChart() {
+  const chart = {{ chart | tojson }};
+  const unit = {{ (s.unit or '') | tojson }};
+  const canvas = document.getElementById('metric-chart');
+  if (!canvas) return;
+  const axis = { grid: { display: false }, ticks: { font: { size: 10 }, maxTicksLimit: 8 } };
+  const isCount = chart.kind === 'count';
+  const config = {
+    type: isCount ? 'bar' : 'line',
+    data: { labels: chart.labels, datasets: [{
+      label: unit || 'value',
+      data: isCount ? chart.n : chart.mean,
+      borderColor: '#378ADD', backgroundColor: isCount ? '#378ADD' : 'rgba(55,138,221,0.08)',
+      fill: !isCount, tension: 0.3, pointRadius: 3, pointHoverRadius: 5, pointBackgroundColor: '#378ADD',
+      spanGaps: true, borderRadius: 3,
+    }] },
+    options: {
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: axis,
+        y: { beginAtZero: isCount, grid: { color: '#F3F4F6' }, ticks: { font: { size: 10 }, precision: isCount ? 0 : undefined } },
+      },
+    },
+  };
+  const chartObject = new Chart(canvas, config);
+  if (isCount) return;
+  const buttons = document.querySelectorAll('.chart-mode');
+  function setMode(mode) {
+    chartObject.data.datasets[0].data = chart[mode];
+    chartObject.update();
+    buttons.forEach(b => {
+      const active = b.dataset.mode === mode;
+      b.classList.toggle('bg-[#378ADD]', active);
+      b.classList.toggle('text-white', active);
+      b.classList.toggle('text-gray-400', !active);
+    });
+    try { localStorage.setItem('metric-chart-mode', mode); } catch (e) {}
+  }
+  buttons.forEach(b => b.addEventListener('click', () => setMode(b.dataset.mode)));
+  let saved = 'mean';
+  try { saved = localStorage.getItem('metric-chart-mode') === 'total' ? 'total' : 'mean'; } catch (e) {}
+  setMode(saved);
+})();
+{% endif %}
 
 document.getElementById('manual-form')?.addEventListener('submit', async (event) => {
   event.preventDefault();

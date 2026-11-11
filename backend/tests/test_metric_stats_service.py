@@ -1,11 +1,11 @@
-from datetime import datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from unittest.mock import AsyncMock
 
 import pytest
 
 from app.features.metrics.series.tables import MetricSeries
 from app.features.metrics.stats import service as stats_service
-from app.features.metrics.stats.repository import StatRow
+from app.features.metrics.stats.repository import DailyRow, StatRow
 from app.features.metrics.stats.service import MetricStatsService, _best, _group_stat, _label
 from app.features.metrics.stats.schemas import GroupStat
 
@@ -147,3 +147,34 @@ class TestGetStats:
 
         assert stats.overall.n == 0 and stats.overall.low_confidence is True
         assert stats.by_tag == [] and stats.by_hour == [] and stats.best_tag is None
+
+
+class TestGetDaily:
+    @pytest.fixture
+    def service(self):
+        svc = MetricStatsService(AsyncMock())
+        svc._repo = AsyncMock()
+        svc._series = AsyncMock()
+        svc._series.get_series_by_name.return_value = _series("value", "water")
+        return svc
+
+    async def test_unknown_series(self, service):
+        service._series.get_series_by_name.return_value = None
+        assert await service.get_daily("ghost") is None
+
+    async def test_value_series_keep_total_and_mean(self, service):
+        service._repo.get_daily.return_value = [DailyRow(day=date(2026, 10, 20), n=3, total=2.5, mean=0.8)]
+        daily = await service.get_daily("water")
+        assert (daily.points[0].n, daily.points[0].total, daily.points[0].mean) == (3, 2.5, 0.8)
+
+    async def test_count_series_keep_only_the_number_of_events(self, service):
+        service._series.get_series_by_name.return_value = _series("count", "coffee")
+        service._repo.get_daily.return_value = [DailyRow(day=date(2026, 10, 20), n=4, total=None, mean=None)]
+        point = (await service.get_daily("coffee")).points[0]
+        assert point.n == 4 and point.total is None and point.mean is None
+
+    async def test_window_and_tag_are_passed_to_the_repository(self, service):
+        service._repo.get_daily.return_value = []
+        await service.get_daily("water", tag="home", days=7)
+        kwargs = service._repo.get_daily.await_args.kwargs
+        assert kwargs["tag"] == "home" and kwargs["since"] == NOW - timedelta(days=7)

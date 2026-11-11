@@ -1,3 +1,4 @@
+from datetime import date
 from typing import Annotated
 
 from fastapi import Query
@@ -45,6 +46,22 @@ class MetricStats(BaseModel):
     trend: MetricTrend
     best_tag: GroupStat | None = None
     best_hour: GroupStat | None = None
+
+
+class DailyPoint(BaseModel):
+    """One local calendar day. `total` and `mean` are null for count series (only `n` is meaningful)."""
+
+    date: date
+    n: int
+    total: float | None = None
+    mean: float | None = None
+
+
+class MetricDaily(BaseModel):
+    series: str
+    kind: SeriesKind
+    unit: str | None
+    points: list[DailyPoint]
 
 
 class MetricStatsFilters:

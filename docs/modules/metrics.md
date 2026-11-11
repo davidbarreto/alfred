@@ -7,7 +7,7 @@ Personal measurement log (`metrics` schema). Design and phases: `docs/plans/metr
 - **Series** (`metrics.series`) = the thing measured (`commute-work`), with a kind: `duration` (start/stop), `value` (one number), `count` (one event). Names are lowercase slugs. Created automatically on first `/mstart` or `/mlog`.
 - **Entries** (`metrics.entries`): `started_at`, `ended_at`, `value`, `status` (`open`/`closed`/`discarded`), `source` (`telegram`/`shortcut`/`portal`/`mcp`), start/stop coordinates, `context` JSON (`{start: weather, end: weather}`). Duration is **derived** (`ended_at - started_at`), never stored. Weekday/hour are derived at query time in the configured timezone.
 - **Tags** (`metrics.tags` + `entries_tags`, ORM class `MetricTag`) are the options compared inside a series (`bus`, `metro`).
-- **No cascades**: every FK is `RESTRICT`. Entries are discarded, series archived or merged; deleting a series with entries is a 409.
+- **No cascades**: every FK is `RESTRICT`. Entries are discarded, series archived or merged; deleting a series with entries is a 409 unless `DELETE /metrics/series/{name}?force=true`, which hard-deletes the entries (and their tag links) first, then the series. The portal's "Delete series" button (edit panel) always uses `force` after a confirm.
 
 ## Start / stop rules
 
@@ -31,6 +31,10 @@ A best-effort snapshot (`ConditionsProvider.get_current_conditions`, 4 s timeout
 - Closed durations over 6 h are excluded and reported as `excluded_over_cap`.
 - Count series only get `n`.
 
+## Daily chart
+
+`GET /metrics/series/{name}/daily?tag=&days=`: closed entries grouped by local calendar day, as `{date, n, total, mean}` (total/mean are null for count series). The portal charts it for `value` series (line, toggle daily average / daily total, remembered in localStorage; days without a measurement are gaps) and `count` series (bars, days without events are zero-filled up to today). Timers have no chart.
+
 ## Portal
 
-`/metrics`, `/metrics/{name}`: series cards, start/stop/log buttons (the browser's geolocation is sent when allowed so the weather matches where you are), stats and breakdowns, paginated history, manual entry, discard. Writes go through `POST /metrics/{series,quick/{action},entries,entries/{id}/discard}` which proxy to the backend and relay its error message. The scoped Shortcut token is a later phase.
+`/metrics`, `/metrics/{name}`: series cards, start/stop/log buttons (the browser's geolocation is sent when allowed so the weather matches where you are), stats, the daily chart and breakdowns, paginated history, manual entry, discard. Writes go through `POST /metrics/{series,quick/{action},entries,entries/{id}/discard}` which proxy to the backend and relay its error message. The scoped Shortcut token is a later phase.

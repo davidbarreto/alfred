@@ -244,6 +244,12 @@ class TestSeries:
         response = client.delete("/metrics/series/commute-work", headers=AUTH)
         assert response.status_code == 409 and "12" in response.json()["detail"]
 
+    def test_delete_force_is_passed_to_the_service(self, series):
+        client, service = series
+        service.delete_series.return_value = True
+        assert client.delete("/metrics/series/test?force=true", headers=AUTH).status_code == 204
+        service.delete_series.assert_awaited_once_with("test", force=True)
+
     def test_delete_empty(self, series):
         client, service = series
         service.delete_series.return_value = True
@@ -312,6 +318,27 @@ class TestStats:
         client, service = stats
         service.get_stats.return_value = None
         assert client.get("/metrics/series/ghost/stats", headers=AUTH).status_code == 404
+
+    def test_daily_returns_points_and_passes_filters(self, stats):
+        from datetime import date
+
+        from app.features.metrics.stats.schemas import DailyPoint, MetricDaily
+
+        client, service = stats
+        service.get_daily.return_value = MetricDaily(
+            series="water", kind="value", unit="L", points=[DailyPoint(date=date(2026, 11, 10), n=3, total=2.5, mean=0.8)]
+        )
+
+        response = client.get("/metrics/series/Water/daily?tag=home&days=30", headers=AUTH)
+
+        assert response.status_code == 200
+        assert response.json()["points"] == [{"date": "2026-11-10", "n": 3, "total": 2.5, "mean": 0.8}]
+        service.get_daily.assert_awaited_once_with("water", tag="home", days=30)
+
+    def test_daily_unknown_series_is_404(self, stats):
+        client, service = stats
+        service.get_daily.return_value = None
+        assert client.get("/metrics/series/ghost/daily", headers=AUTH).status_code == 404
 
     def test_days_out_of_range_is_422(self, stats):
         client, _ = stats

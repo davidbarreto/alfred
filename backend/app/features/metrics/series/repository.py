@@ -5,6 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.features.metrics.entries.tables import MetricEntry
 from app.features.metrics.series.tables import MetricSeries
+from app.features.metrics.tags.tables import metric_entry_tag_links
 
 
 class MetricSeriesRepository:
@@ -58,6 +59,14 @@ class MetricSeriesRepository:
         result = await self._session.execute(
             update(MetricEntry).where(MetricEntry.series_id == from_series_id).values(series_id=to_series_id)
         )
+        await self._session.commit()
+        return result.rowcount
+
+    async def delete_entries(self, series_id: int) -> int:
+        """Hard-delete every entry of the series and its tag links (both FKs are RESTRICT, so links go first)."""
+        entry_ids = select(MetricEntry.id).where(MetricEntry.series_id == series_id)
+        await self._session.execute(delete(metric_entry_tag_links).where(metric_entry_tag_links.c.entry_id.in_(entry_ids)))
+        result = await self._session.execute(delete(MetricEntry).where(MetricEntry.series_id == series_id))
         await self._session.commit()
         return result.rowcount
 

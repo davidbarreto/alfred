@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import date, datetime
 from typing import Literal, NamedTuple
 
 from sqlalchemy import Float, case, cast, func, select
@@ -12,6 +12,13 @@ GroupBy = Literal["hour", "weekday", "weather", "tag"]
 
 # Rain starts at this much precipitation (mm) in the weather snapshot taken at the start of an entry.
 _RAIN_MM = 0.1
+
+
+class DailyRow(NamedTuple):
+    day: date
+    n: int
+    total: float | None
+    mean: float | None
 
 
 class StatRow(NamedTuple):
@@ -123,6 +130,30 @@ class MetricStatsRepository:
                 )
             )
         return result
+
+    async def get_daily(
+        self,
+        series_id: int,
+        kind: str,
+        timezone: str,
+        max_duration_s: int,
+        since: datetime | None = None,
+        tag: str | None = None,
+    ) -> list[DailyRow]:
+        """Closed entries grouped by local calendar day of their start, oldest first."""
+        measure = self._measure(kind)
+        day = func.date(func.timezone(timezone, MetricEntry.started_at))
+        stmt = (
+            select(day, func.count(), func.sum(measure), func.avg(measure))
+            .select_from(MetricEntry)
+            .where(*self._filters(series_id, kind, max_duration_s, since, None, tag))
+            .group_by(day)
+            .order_by(day)
+        )
+        return [
+            DailyRow(day=row[0], n=int(row[1]), total=_float(row[2]), mean=_float(row[3]))
+            for row in (await self._session.execute(stmt)).all()
+        ]
 
     async def count_over_cap(self, series_id: int, max_duration_s: int, since: datetime | None = None) -> int:
         """Closed duration entries that are longer than the cap, and so excluded from `get_stats`."""

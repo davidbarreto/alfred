@@ -1083,6 +1083,105 @@
       }
     },
     {
+      "name": "29b - Series Daily",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "const j = pm.response.json();",
+              "pm.test('One day with one entry', () => { pm.expect(j.points).to.have.lengthOf(1); pm.expect(j.points[0].n).to.eql(1); });",
+              "pm.test('Day is an ISO date', () => pm.expect(j.points[0].date).to.match(/^\\d{4}-\\d{2}-\\d{2}$/));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/metrics/series/{{metric_series}}/daily",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "metrics",
+            "series",
+            "{{metric_series}}",
+            "daily"
+          ]
+        }
+      }
+    },
+    {
+      "name": "29c - Daily For Unknown Series",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 404', () => pm.response.to.have.status(404));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/metrics/series/does-not-exist/daily",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "metrics",
+            "series",
+            "does-not-exist",
+            "daily"
+          ]
+        }
+      }
+    },
+    {
+      "name": "29d - Daily With Invalid Window",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 422', () => pm.response.to.have.status(422));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/metrics/series/{{metric_series}}/daily?days=0",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "metrics",
+            "series",
+            "{{metric_series}}",
+            "daily"
+          ],
+          "query": [
+            {
+              "key": "days",
+              "value": "0"
+            }
+          ]
+        }
+      }
+    },
+    {
       "name": "30 - Series Stats Filtered By Unknown Tag",
       "event": [
         {
@@ -1301,6 +1400,70 @@
         "body": {
           "mode": "raw",
           "raw": "{\n  \"is_archived\": true\n}"
+        }
+      }
+    },
+    {
+      "name": "36 - Force Delete Series With Entries",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 204', () => pm.response.to.have.status(204));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/metrics/series/{{metric_value_series}}?force=true",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "metrics",
+            "series",
+            "{{metric_value_series}}"
+          ],
+          "query": [
+            {
+              "key": "force",
+              "value": "true"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "37 - Deleted Series Is Gone",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 404', () => pm.response.to.have.status(404));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/metrics/series/{{metric_value_series}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "metrics",
+            "series",
+            "{{metric_value_series}}"
+          ]
         }
       }
     }

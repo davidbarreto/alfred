@@ -245,6 +245,79 @@ class TestSeriesPage:
         assert mock_api["get"].await_args_list[0].args[0] == "/metrics/series/a%3Fb"
 
 
+class TestDailyChart:
+    @staticmethod
+    def _value_routes(daily):
+        return {
+            "/metrics/series/weight/stats": _stats("value", unit="kg"),
+            "/metrics/series/weight/daily": daily,
+            "/metrics/series/weight": _series("weight", "value", unit="kg"),
+            "/metrics/entries/open": [], "/metrics/tags": [],
+        }
+
+    def test_value_series_charts_daily_average_and_total(self, client, mock_api):
+        _route(mock_api, self._value_routes({"points": [
+            {"date": "2026-11-01", "n": 1, "total": 80.5, "mean": 80.5},
+            {"date": "2026-11-03", "n": 2, "total": 160.0, "mean": 80.0},
+        ]}))
+        resp = client.get("/metrics/weight")
+        assert 'id="metric-chart"' in resp.text and "chart.js" in resp.text
+        assert '"2026-11-01"' in resp.text and '"2026-11-03"' in resp.text
+        assert "Daily total" in resp.text and "Daily average" in resp.text
+
+    def test_value_series_keeps_gaps_instead_of_zero_days(self):
+        from app.routes.metrics import _daily_chart
+
+        chart = _daily_chart("value", {"points": [
+            {"date": "2026-11-01", "n": 1, "total": 80.5, "mean": 80.5},
+            {"date": "2026-11-04", "n": 1, "total": 80.0, "mean": 80.0},
+        ]})
+        assert chart["labels"] == ["2026-11-01", "2026-11-04"] and chart["mean"] == [80.5, 80.0]
+
+    def test_count_series_zero_fills_days_up_to_today(self, monkeypatch):
+        from datetime import date
+
+        from app.routes import metrics
+
+        monkeypatch.setattr(metrics, "local_today", lambda: date(2026, 11, 5))
+        chart = metrics._daily_chart("count", {"points": [
+            {"date": "2026-11-01", "n": 2, "total": None, "mean": None},
+            {"date": "2026-11-03", "n": 1, "total": None, "mean": None},
+        ]})
+        assert chart["labels"][0] == "2026-11-01" and chart["labels"][-1] == "2026-11-05"
+        assert chart["n"] == [2, 0, 1, 0, 0]
+
+    def test_count_series_renders_a_chart(self, client, mock_api):
+        _route(mock_api, {
+            "/metrics/series/coffee/stats": _stats("count", n=3),
+            "/metrics/series/coffee/daily": {"points": [{"date": "2026-11-01", "n": 3, "total": None, "mean": None}]},
+            "/metrics/series/coffee": _series("coffee", "count"),
+            "/metrics/entries/open": [], "/metrics/tags": [],
+        })
+        resp = client.get("/metrics/coffee")
+        assert "Events per day" in resp.text and 'id="metric-chart"' in resp.text
+
+    def test_timers_have_no_chart_and_skip_the_daily_call(self, client, mock_api):
+        _route(mock_api, {
+            "/metrics/series/commute-work/stats": _stats(),
+            "/metrics/series/commute-work": _series(),
+            "/metrics/entries/open": [], "/metrics/tags": [],
+        })
+        resp = client.get("/metrics/commute-work")
+        assert 'id="metric-chart"' not in resp.text
+        assert not any(c.args[0].endswith("/daily") for c in mock_api["get"].await_args_list)
+
+    def test_no_points_means_no_chart(self, client, mock_api):
+        _route(mock_api, self._value_routes({"points": []}))
+        assert 'id="metric-chart"' not in client.get("/metrics/weight").text
+
+    def test_window_and_tag_are_forwarded_to_the_daily_call(self, client, mock_api):
+        _route(mock_api, self._value_routes({"points": []}))
+        client.get("/metrics/weight?tag=morning&days=30")
+        daily_call = next(c for c in mock_api["get"].await_args_list if c.args[0].endswith("/daily"))
+        assert daily_call.kwargs["params"] == {"tag": "morning", "days": 30}
+
+
 class TestHistory:
     def test_renders_rows_with_rain_and_discard(self, client, mock_api):
         _route(mock_api, {
@@ -330,6 +403,21 @@ class TestWrites:
         mock_api["patch"].side_effect = _status_error(409, "Series name already taken")
         resp = client.patch("/metrics/series/weight", json={"name": "sleep"})
         assert resp.status_code == 409 and resp.json()["error"] == "Series name already taken"
+
+    def test_delete_series_forces_removal_of_its_entries(self, client, mock_api):
+        mock_api["delete"].return_value = None
+        resp = client.delete("/metrics/series/test")
+        assert resp.status_code == 200
+        mock_api["delete"].assert_awaited_once_with("/metrics/series/test?force=true")
+
+    def test_delete_unknown_series_relays_the_404(self, client, mock_api):
+        mock_api["delete"].side_effect = _status_error(404, "Series not found")
+        resp = client.delete("/metrics/series/ghost")
+        assert resp.status_code == 404 and resp.json()["error"] == "Series not found"
+
+    def test_series_page_offers_the_delete_button(self, client, mock_api):
+        _route(mock_api, TestSeriesPage()._routes())
+        assert "deleteSeries()" in client.get("/metrics/commute-work").text
 
     def test_create_entry_and_discard(self, client, mock_api):
         mock_api["post"].return_value = {"id": 5}

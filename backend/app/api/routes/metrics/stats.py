@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 
 from app.api.auth import require_auth
 from app.dependencies import MetricStatsServiceDep
-from app.features.metrics.stats.schemas import MetricStats, MetricStatsFilters
+from app.features.metrics.stats.schemas import MetricDaily, MetricStats, MetricStatsFilters
 
 router = APIRouter(
     prefix="/metrics/series",
@@ -21,3 +21,13 @@ async def get_series_stats(
     if stats is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Series not found")
     return stats
+
+
+@router.get("/{name}/daily", response_model=MetricDaily)
+async def get_series_daily(
+    name: str, filters: Annotated[MetricStatsFilters, Depends()], service: MetricStatsServiceDep
+) -> MetricDaily:
+    daily = await service.get_daily(name.strip().lower(), tag=filters.tag, days=filters.days)
+    if daily is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Series not found")
+    return daily

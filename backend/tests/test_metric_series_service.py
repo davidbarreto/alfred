@@ -102,6 +102,26 @@ class TestDelete:
         service._repo.get_series_by_name.return_value = None
         assert await service.delete_series("ghost") is False
 
+    async def test_force_deletes_the_entries_before_the_series(self, service):
+        service._repo.get_series_by_name.return_value = _series()
+        service._repo.count_entries.return_value = 5
+        service._repo.delete_series.return_value = True
+        calls = []
+        service._repo.delete_entries.side_effect = lambda sid: calls.append("entries")
+        service._repo.delete_series.side_effect = lambda sid: calls.append("series") or True
+
+        assert await service.delete_series("commute-work", force=True) is True
+
+        assert calls == ["entries", "series"]
+        service._repo.delete_entries.assert_awaited_once_with(1)
+
+    async def test_force_on_an_empty_series_skips_the_entry_delete(self, service):
+        service._repo.get_series_by_name.return_value = _series()
+        service._repo.count_entries.return_value = 0
+        service._repo.delete_series.return_value = True
+        assert await service.delete_series("commute-work", force=True) is True
+        service._repo.delete_entries.assert_not_awaited()
+
 
 class TestMerge:
     async def test_moves_entries_then_removes_source(self, service):

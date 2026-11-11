@@ -66,13 +66,13 @@ async def merge_series(name: str, request: MetricSeriesMerge, service: MetricSer
 
 
 @router.delete("/{name}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_series(name: str, service: MetricSeriesServiceDep) -> Response:
+async def delete_series(name: str, service: MetricSeriesServiceDep, force: bool = False) -> Response:
     try:
-        deleted = await service.delete_series(name.strip().lower())
+        deleted = await service.delete_series(name.strip().lower(), force=force)
     except MetricSeriesNotEmptyError as exc:
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
-            detail=f"Series has {exc.entry_count} entries; archive it or merge it into another series instead",
+            detail=f"Series has {exc.entry_count} entries; archive it, merge it into another series, or delete with force=true to remove the entries too",
         )
     if not deleted:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Series not found")

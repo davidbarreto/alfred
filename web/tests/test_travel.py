@@ -155,6 +155,19 @@ class TestTripPage:
         assert "Check flight" in html and "Cafes nearby" in html and "Luggage storage" in html
         assert "Ref ABC123" in html and "Grade 4/5" in html
 
+    def test_stay_card_links_to_the_places_map(self, client, mock_api):
+        _route(mock_api, {"/travel/trips/1/costs": None, "/travel/trips/1": _detail(), "/travel/places": [_place()]})
+        html = client.get("/travel/1").text
+        stay_card = html[html.index('id="stay-'):]
+        assert 'href="https://maps.example/x"' in stay_card[: stay_card.index("Edit")]
+
+    def test_timeline_rows_with_warnings_are_highlighted(self, client, mock_api):
+        detail = _detail()
+        detail["timeline"][0]["warnings"] = ["Arrives 5 h before check-in"]
+        _route(mock_api, {"/travel/trips/1/costs": None, "/travel/trips/1": detail, "/travel/places": []})
+        html = client.get("/travel/1").text
+        assert html.count("data-warning-row") == 1
+
     def test_groups_timeline_by_local_day(self, client, mock_api):
         detail = _detail()
         detail["timeline"][1]["local"] = "2026-12-18T09:00:00"

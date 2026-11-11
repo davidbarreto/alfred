@@ -21,8 +21,10 @@ def settings():
 
 def test_get(settings):
     client, service = settings
-    service.get.return_value = TravelSettingsRead(airport_buffer_min=120, home_to_airport_min=45)
-    assert client.get("/travel/settings", headers=AUTH).json() == {"airport_buffer_min": 120, "home_to_airport_min": 45}
+    service.get.return_value = TravelSettingsRead(airport_buffer_min=120, home_to_airport_min=45, home_address="Rua Exemplo 1")
+    assert client.get("/travel/settings", headers=AUTH).json() == {
+        "airport_buffer_min": 120, "home_to_airport_min": 45, "home_address": "Rua Exemplo 1",
+    }
 
 
 def test_put_updates_only_given_fields(settings):
@@ -41,3 +43,10 @@ def test_put_out_of_range_is_422(settings):
 def test_requires_a_token(settings):
     client, _ = settings
     assert client.get("/travel/settings").status_code in (401, 403)
+
+
+def test_put_home_address(settings):
+    client, service = settings
+    service.update.return_value = TravelSettingsRead(airport_buffer_min=120, home_to_airport_min=45, home_address="Rua Exemplo 1")
+    assert client.put("/travel/settings", headers=AUTH, json={"home_address": "Rua Exemplo 1"}).status_code == 200
+    assert service.update.await_args.args[0].model_dump(exclude_unset=True) == {"home_address": "Rua Exemplo 1"}

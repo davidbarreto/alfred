@@ -6,6 +6,7 @@ from pydantic import BaseModel
 
 from app.features.travel.legs.schemas import LegRead
 from app.features.travel.links import maps_directions_url, maps_search_url, place_maps_url
+from app.features.travel.places.schemas import PlaceRead
 from app.features.travel.stays.schemas import StayRead
 from app.features.travel.zones import to_local
 
@@ -28,6 +29,10 @@ class TimelineItem(BaseModel):
     subtitle: str | None = None
     ref_id: int
     links: dict[str, str] = {}
+    # Airport transfer this row is about (where it goes), shown above its Maps links.
+    transfer_label: str | None = None
+    # Messages of the trip warnings that point at this row, so the portal can highlight it.
+    warnings: list[str] = []
 
 
 class TripWarning(BaseModel):
@@ -50,23 +55,78 @@ def _hours(delta: timedelta) -> str:
     return f"{hours} h {rest:02d} min" if hours else f"{rest} min"
 
 
-def _leg_item(leg: LegRead) -> TimelineItem:
-    links = {"directions": maps_directions_url(leg.origin, leg.destination)}
+def _airport(code: str | None, city: str) -> str:
+    return f"{code} airport" if code else f"{city} airport"
+
+
+def _lodging(place: PlaceRead) -> str:
+    """What to type into Maps for a stay: the address or coordinates when known, else name + city."""
+    if place.lat is not None and place.lng is not None:
+        return f"{place.lat},{place.lng}"
+    return " ".join(p for p in (place.name, place.address or place.city) if p)
+
+
+def _transfer_links(origin: str, destination: str) -> dict[str, str]:
+    """The options to compare in Maps for one transfer: public transport, taxi/car and walking."""
+    return {
+        "directions": maps_directions_url(origin, destination, "transit"),
+        "drive": maps_directions_url(origin, destination, "driving"),
+        "walk": maps_directions_url(origin, destination, "walking"),
+    }
+
+
+def _stay_before(leg: LegRead, stays: list[StayRead]) -> StayRead | None:
+    """The stay in the leg's origin city the traveler is leaving from (the latest one begun by departure)."""
+    started = [s for s in stays if _same_place(leg.origin, s.place.city) and s.check_in_at <= leg.departs_at]
+    return max(started, key=lambda s: s.check_in_at, default=None)
+
+
+def _stay_after(leg: LegRead, stays: list[StayRead]) -> StayRead | None:
+    """The stay in the leg's destination city the traveler is heading to (the first check-in near arrival)."""
+    near = [
+        s for s in stays
+        if _same_place(leg.destination, s.place.city) and timedelta(hours=-1) <= s.check_in_at - leg.arrives_at <= ARRIVAL_WINDOW
+    ]
+    return min(near, key=lambda s: s.check_in_at, default=None)
+
+
+def _leg_item(leg: LegRead, stays: list[StayRead], home_address: str | None, is_first: bool) -> TimelineItem:
+    links: dict[str, str] = {}
+    label = None
+    if leg.mode == "flight":
+        # Getting to the airport: from the hotel the traveler is leaving, or from home on the first leg.
+        airport = _airport(leg.origin_code, leg.origin)
+        stay = _stay_before(leg, stays)
+        if stay is not None:
+            links.update(_transfer_links(_lodging(stay.place), airport))
+            label = f"{stay.place.name} \u2192 {airport}"
+        elif is_first and home_address:
+            links.update(_transfer_links(home_address, airport))
+            label = f"Home \u2192 {airport}"
+    else:
+        links.update(_transfer_links(leg.origin, leg.destination))
     if leg.check_flight_url:
         links["check_flight"] = leg.check_flight_url
     ident = " ".join(part for part in (leg.carrier, leg.number) if part)
     return TimelineItem(
         kind="leg", at=leg.departs_at, local=leg.departs_local, timezone=leg.departs_tz,
-        title=f"{leg.origin} → {leg.destination}", subtitle=" · ".join(p for p in (leg.mode, ident) if p),
-        ref_id=leg.id, links=links,
+        title=f"{leg.origin} \u2192 {leg.destination}", subtitle=" \u00b7 ".join(p for p in (leg.mode, ident) if p),
+        ref_id=leg.id, links=links, transfer_label=label,
     )
 
 
-def _arrival_item(leg: LegRead) -> TimelineItem:
+def _arrival_item(leg: LegRead, stays: list[StayRead]) -> TimelineItem:
+    links = {"map": maps_search_url(leg.destination)}
+    label = None
+    stay = _stay_after(leg, stays) if leg.mode == "flight" else None
+    if stay is not None:
+        airport = _airport(leg.destination_code, leg.destination)
+        links.update(_transfer_links(airport, _lodging(stay.place)))
+        label = f"{airport} \u2192 {stay.place.name}"
     return TimelineItem(
         kind="arrival", at=leg.arrives_at, local=leg.arrives_local, timezone=leg.arrives_tz,
         title=f"Arrive: {leg.destination}", subtitle=f"{leg.origin} \u2192 {leg.destination}", ref_id=leg.id,
-        links={"map": maps_search_url(leg.destination)},
+        links=links, transfer_label=label,
     )
 
 
@@ -98,11 +158,34 @@ def leave_home_at(legs: list[LegRead], leave_minutes: int) -> datetime | None:
     return first.departs_at - timedelta(minutes=leave_minutes)
 
 
+# Which timeline rows a warning points at: (item kind, which id of the warning identifies it).
+_WARNING_ROWS = {
+    "long_wait_before_check_in": (("arrival", "leg_id"), ("check_in", "stay_id")),
+    "arrives_after_check_out": (("arrival", "leg_id"), ("check_out", "stay_id")),
+    "tight_connection": (("leg", "leg_id"),),
+    "overlapping_legs": (("leg", "leg_id"),),
+}
+
+
+def _flag_warnings(items: list[TimelineItem], warnings: list[TripWarning]) -> None:
+    for warning in warnings:
+        for kind, id_field in _WARNING_ROWS[warning.kind]:
+            ref_id = getattr(warning, id_field)
+            for item in items:
+                if item.kind == kind and item.ref_id == ref_id:
+                    item.warnings.append(warning.message)
+
+
 def build_timeline(
-    legs: list[LegRead], stays: list[StayRead], leave_home: datetime | None = None
+    legs: list[LegRead],
+    stays: list[StayRead],
+    leave_home: datetime | None = None,
+    home_address: str | None = None,
+    warnings: list[TripWarning] | None = None,
 ) -> list[TimelineItem]:
-    items = [_leg_item(leg) for leg in legs]
-    items.extend(_arrival_item(leg) for leg in legs)
+    first_id = min(legs, key=lambda leg: (leg.departs_at, leg.id)).id if legs else None
+    items = [_leg_item(leg, stays, home_address, leg.id == first_id) for leg in legs]
+    items.extend(_arrival_item(leg, stays) for leg in legs)
     if leave_home is not None:
         first = min(legs, key=lambda leg: (leg.departs_at, leg.id))
         items.append(TimelineItem(
@@ -111,6 +194,7 @@ def build_timeline(
         ))
     for stay in stays:
         items.extend(_stay_items(stay))
+    _flag_warnings(items, warnings or [])
     return sorted(items, key=lambda item: (item.at, item.ref_id))
 
 

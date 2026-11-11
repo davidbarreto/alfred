@@ -55,12 +55,13 @@ class TripService:
             hidden, visits = len(visits) - len(shown), shown
         settings = await self.settings_service.get()
         leave_at = leave_home_at(legs, settings.airport_buffer_min + settings.home_to_airport_min)
+        warnings = find_warnings(legs, stays)
         return TripDetail(
             **TripRead.model_validate(trip).model_dump(exclude={"status"}),
             legs=legs,
             stays=stays,
-            timeline=build_timeline(legs, stays, leave_at),
-            warnings=find_warnings(legs, stays),
+            timeline=build_timeline(legs, stays, leave_at, settings.home_address, warnings),
+            warnings=warnings,
             leave_home_at=leave_at,
             visits=visits,
             hidden_visit_count=hidden,

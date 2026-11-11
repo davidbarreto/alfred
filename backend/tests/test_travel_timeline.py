@@ -52,11 +52,74 @@ class TestBuildTimeline:
         assert arrival.timezone == "Europe/Lisbon"
         assert arrival.title == "Arrive: Lisbon"
 
-    def test_leg_links_have_directions_and_flight_lookup(self):
+    def test_flight_has_flight_lookup(self):
         leg = _leg(1, "Porto", "Lisbon", _dt(2, 8), _dt(2, 9), carrier="XX", number="123")
+        assert "XX+123" in build_timeline([leg], [])[0].links["check_flight"]
+
+    def test_non_flight_directions_run_between_its_ends_in_three_modes(self):
+        leg = _leg(1, "Porto", "Lisbon", _dt(2, 8), _dt(2, 9), mode="train")
+        links = build_timeline([leg], [])[0].links
+        assert "travelmode=transit" in links["directions"] and "origin=Porto" in links["directions"]
+        assert "travelmode=driving" in links["drive"] and "travelmode=walking" in links["walk"]
+
+    def test_first_flight_directions_go_from_home_to_the_origin_airport(self):
+        leg = _leg(1, "Porto", "Lisbon", _dt(2, 8), _dt(2, 9), origin_code="OPO")
+        item = build_timeline([leg], [], home_address="Rua Exemplo 1, Porto")[0]
+        assert "origin=Rua+Exemplo+1%2C+Porto" in item.links["directions"]
+        assert "destination=OPO+airport" in item.links["directions"]
+        assert item.transfer_label == "Home \u2192 OPO airport"
+
+    def test_first_flight_without_home_address_has_no_directions(self):
+        leg = _leg(1, "Porto", "Lisbon", _dt(2, 8), _dt(2, 9))
         item = build_timeline([leg], [])[0]
-        assert "travelmode=transit" in item.links["directions"]
-        assert "XX+123" in item.links["check_flight"]
+        assert "directions" not in item.links and item.transfer_label is None
+
+    def test_later_flight_without_a_stay_has_no_directions(self):
+        first = _leg(1, "Porto", "Madrid", _dt(2, 8), _dt(2, 9))
+        second = _leg(2, "Madrid", "Lisbon", _dt(2, 12), _dt(2, 13))
+        item = next(i for i in build_timeline([first, second], [], home_address="Home") if i.kind == "leg" and i.ref_id == 2)
+        assert "directions" not in item.links
+
+    def test_flight_leaving_a_hotel_directions_start_at_the_hotel(self):
+        leg = _leg(1, "Lisbon", "Porto", _dt(5, 18), _dt(5, 19), origin_code="LIS")
+        item = next(i for i in build_timeline([leg], [_stay(5, _dt(2, 14), _dt(5, 10))]) if i.kind == "leg")
+        assert "origin=Hotel+Example+Lisbon" in item.links["directions"]
+        assert "destination=LIS+airport" in item.links["directions"]
+        assert item.transfer_label == "Hotel Example \u2192 LIS airport"
+
+    def test_arrival_directions_go_from_the_airport_to_the_hotel(self):
+        leg = _leg(1, "Porto", "Lisbon", _dt(2, 8), _dt(2, 9), destination_code="LIS")
+        arrival = next(i for i in build_timeline([leg], [_stay(5, _dt(2, 14), _dt(4, 10))]) if i.kind == "arrival")
+        assert "origin=LIS+airport" in arrival.links["directions"]
+        assert "destination=Hotel+Example+Lisbon" in arrival.links["directions"]
+        assert arrival.transfer_label == "LIS airport \u2192 Hotel Example"
+
+    def test_arrival_without_a_stay_has_no_transfer(self):
+        leg = _leg(1, "Porto", "Lisbon", _dt(2, 8), _dt(2, 9))
+        arrival = next(i for i in build_timeline([leg], []) if i.kind == "arrival")
+        assert arrival.transfer_label is None and "directions" not in arrival.links
+
+    def test_hotel_coordinates_win_over_the_name(self):
+        stay = _stay(5, _dt(2, 14), _dt(4, 10))
+        stay.place.lat, stay.place.lng = 38.7, -9.1
+        leg = _leg(1, "Porto", "Lisbon", _dt(2, 8), _dt(2, 9))
+        arrival = next(i for i in build_timeline([leg], [stay]) if i.kind == "arrival")
+        assert "destination=38.7%2C-9.1" in arrival.links["directions"]
+
+    def test_warning_rows_are_flagged(self):
+        leg = _leg(1, "Porto", "Lisbon", _dt(2, 8), _dt(2, 9))
+        stay = _stay(5, _dt(2, 20), _dt(4, 10))
+        warnings = find_warnings([leg], [stay])
+        items = build_timeline([leg], [stay], warnings=warnings)
+        flagged = {i.kind for i in items if i.warnings}
+        assert flagged == {"arrival", "check_in"}
+        assert next(i for i in items if i.kind == "arrival").warnings == [warnings[0].message]
+
+    def test_tight_connection_flags_the_departing_leg(self):
+        first = _leg(1, "Porto", "Madrid", _dt(2, 8), _dt(2, 9))
+        second = _leg(2, "Madrid", "Lisbon", _dt(2, 9, 30), _dt(2, 11))
+        items = build_timeline([first, second], [], warnings=find_warnings([first, second], []))
+        assert [(i.kind, i.ref_id) for i in items if i.warnings] == [("leg", 2)]
 
     def test_non_flight_has_no_flight_lookup(self):
         leg = _leg(1, "Porto", "Lisbon", _dt(2, 8), _dt(2, 9), mode="train", carrier="XX", number="123")

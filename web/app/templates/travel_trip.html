@@ -92,14 +92,16 @@
         <p class="text-xs font-semibold text-gray-500 mb-1">{{ day | short_date }}</p>
         <ul class="space-y-1.5">
           {% for item in items %}
-          <li class="flex items-start gap-3 text-sm">
+          <li class="flex items-start gap-3 text-sm {% if item.warnings %}rounded-md bg-amber-50 border border-amber-200 -mx-2 px-2 py-1.5{% endif %}"{% if item.warnings %} data-warning-row{% endif %}>
             <span class="w-12 text-xs text-gray-400 pt-0.5">{{ item.local[11:16] }}</span>
-            <i class="ti {{ {'leg': 'ti-plane-departure', 'arrival': 'ti-plane-arrival', 'check_in': 'ti-login', 'check_out': 'ti-logout', 'leave_home': 'ti-door-exit'}[item.kind] }} text-gray-400 pt-0.5"></i>
+            <i class="ti {{ {'leg': 'ti-plane-departure', 'arrival': 'ti-plane-arrival', 'check_in': 'ti-login', 'check_out': 'ti-logout', 'leave_home': 'ti-door-exit'}[item.kind] }} {% if item.warnings %}text-amber-600{% else %}text-gray-400{% endif %} pt-0.5"></i>
             <div class="flex-1">
               <p class="text-gray-900">{{ item.title }}</p>
               <p class="text-xs text-gray-400">{% if item.subtitle %}{{ item.subtitle }} · {% endif %}{{ item.timezone }}</p>
+              {% for message in item.warnings %}<p class="text-xs text-amber-800"><i class="ti ti-alert-triangle"></i> {{ message }}</p>{% endfor %}
+              {% if item.transfer_label %}<p class="text-xs text-gray-500 pt-0.5">Getting there: {{ item.transfer_label }}</p>{% endif %}
               <p class="text-xs space-x-3">
-                {% for key, label in [('directions', 'Directions'), ('check_flight', 'Check flight'), ('map', 'Map'), ('cafes', 'Cafes nearby'), ('luggage', 'Luggage storage')] %}
+                {% for key, label in [('directions', 'Transit'), ('drive', 'Taxi / car'), ('walk', 'Walk'), ('check_flight', 'Check flight'), ('map', 'Map'), ('cafes', 'Cafes nearby'), ('luggage', 'Luggage storage')] %}
                 {% if item.links.get(key) %}<a class="text-[#378ADD] hover:underline" href="{{ item.links[key] }}" target="_blank" rel="noopener">{{ label }}</a>{% endif %}
                 {% endfor %}
               </p>
@@ -178,7 +180,10 @@
             <p class="text-gray-900">{{ stay.place.name }}{% if stay.place.city %} <span class="text-xs text-gray-400">{{ stay.place.city }}</span>{% endif %} {{ cost_chip(entity_costs.stays.get(stay.id)) }}</p>
             <p class="text-xs text-gray-500">{{ stay.check_in_local[:10] | short_date }} {{ stay.check_in_local[11:16] }} → {{ stay.check_out_local[:10] | short_date }} {{ stay.check_out_local[11:16] }} ({{ stay.timezone }}) · {{ stay.nights }} night{{ '' if stay.nights == 1 else 's' }}</p>
             {% if stay.booking_ref %}<p class="text-xs text-gray-400">Ref {{ stay.booking_ref }}</p>{% endif %}
-            {% if stay.booking_url %}<a class="text-xs text-[#378ADD] hover:underline" href="{{ stay.booking_url }}" target="_blank" rel="noopener">Booking</a>{% endif %}
+            <p class="text-xs space-x-3">
+              <a class="text-[#378ADD] hover:underline" href="{{ stay.place.maps_link }}" target="_blank" rel="noopener">Map</a>
+              {% if stay.booking_url %}<a class="text-[#378ADD] hover:underline" href="{{ stay.booking_url }}" target="_blank" rel="noopener">Booking</a>{% endif %}
+            </p>
             {% if stay.grade %}<p class="text-xs text-gray-500">Grade {{ stay.grade }}/5</p>{% endif %}
             {% if stay.notes %}<p class="text-xs text-gray-500 whitespace-pre-line">{{ stay.notes }}</p>{% endif %}
           </div>

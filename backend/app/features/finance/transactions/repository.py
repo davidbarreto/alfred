@@ -745,6 +745,7 @@ class TransactionRepository:
     ) -> list[Transaction]:
         query = (
             select(Transaction)
+            .options(selectinload(Transaction.tags))
             .where(
                 _spend_condition("expense"),
                 Transaction.date >= from_date,

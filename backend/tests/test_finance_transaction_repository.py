@@ -907,6 +907,19 @@ class TestGetTopExpenses:
         assert "amount_eur" in sql
         assert "transactions.currency =" not in sql
 
+    async def test_eager_loads_tags(self):
+        # TransactionRead reads .tags; without selectinload that lazy-loads in
+        # async code and raises MissingGreenlet (500 on GET /finance/transactions/top).
+        session = _make_session()
+        session.execute.return_value = _scalar_all([])
+        await TransactionRepository(session).get_top_expenses(
+            from_date=date(2026, 6, 1),
+            to_date=date(2026, 6, 30),
+            top_n=5,
+        )
+        query = session.execute.call_args.args[0]
+        assert any("Transaction.tags" in str(opt.path) for opt in query._with_options)
+
 
 class TestGetSpendingByCategory:
     async def test_includes_untracked_transfers(self):

@@ -28,6 +28,8 @@ Create bodies accept naive wall times (read in the matching `*_tz`) or values wi
 
 **Airport picker (portal)**: in the leg form, when the mode is `flight`, From/To are a typeahead over `web/app/static/js/airports.json` (about 8k airports with an IATA code, rows of `[iata, city, name, country, tz]`, from the `airportsdata` package, MIT). Picking a row fills the city, the IATA code and the departure/arrival time zone; all stay editable, and typing without picking saves free text. Other modes are plain text. It is portal-only: there is no airports table or API, and the backend still stores `origin`/`destination` plus nullable `origin_code`/`destination_code`. Logic in `web/app/static/js/airport-input.js`.
 
+**City picker (portal)**: the City field of the new-place forms (stay, visit) and of the place edit form is a typeahead over the distinct cities in the same airports file; picking one fills Country with the English country name (`Intl.DisplayNames` from the file's ISO code). Both stay editable, and free text still saves. Cities without an airport are typed by hand. Logic in `airport-input.js` (`initCityInput`).
+
 City matching is a case-insensitive containment between a leg's `destination` and the stay place's `city`.
 
 ## Itinerary and hiding

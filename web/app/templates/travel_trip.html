@@ -276,9 +276,9 @@
   </dialog>
 </div>
 
+<script src="/static/js/airport-input.js"></script>
 <script src="/static/js/travel-visits.js"></script>
 <script src="/static/js/travel-transactions.js"></script>
-<script src="/static/js/airport-input.js"></script>
 <script>
 initTravelVisits({ tripId: {{ trip.id }}, placeId: null });
 initTravelTransactions();
@@ -394,6 +394,7 @@ legForm.addEventListener('submit', async (event) => {
 // ---- stays ----
 const stayDialog = document.getElementById('stay-dialog');
 const stayForm = document.getElementById('stay-form');
+initCityInput({ input: stayForm.elements.place_city, countryInput: stayForm.elements.place_country });
 const newPlaceFields = document.getElementById('new-place-fields');
 const STAY_FIELDS = ['booking_ref', 'booking_url', 'notes'];
 let editingStay = null;

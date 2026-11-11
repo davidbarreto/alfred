@@ -89,6 +89,7 @@
   {% include "_travel_tx_dialog.html" %}
 </div>
 
+<script src="/static/js/airport-input.js"></script>
 <script src="/static/js/travel-visits.js"></script>
 <script src="/static/js/travel-transactions.js"></script>
 <script>
@@ -101,6 +102,8 @@ async function send(method, url, body) {
   return { ok: res.ok, data };
 }
 
+const editPlaceForm = document.getElementById('edit-place');
+initCityInput({ input: editPlaceForm.elements.city, countryInput: editPlaceForm.elements.country });
 document.getElementById('edit-place').addEventListener('submit', async (event) => {
   event.preventDefault();
   const form = event.target;

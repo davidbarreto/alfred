@@ -8,6 +8,7 @@ function initTravelVisits(config) {
   const placeSelect = form.elements.place_id;
   const newPlaceFields = document.getElementById('visit-new-place');
   let editing = null;
+  if (window.initCityInput && form.elements.place_city) initCityInput({ input: form.elements.place_city, countryInput: form.elements.place_country });
 
   async function send(method, url, body) {
     const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: body ? JSON.stringify(body) : undefined });

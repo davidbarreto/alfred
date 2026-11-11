@@ -566,3 +566,9 @@ class TestAirportPicker:
         assert by_code["OPO"][1] == "Porto" and by_code["OPO"][4] == "Europe/Lisbon"
         assert by_code["LHR"][4] == "Europe/London" and by_code["ARN"][4] == "Europe/Stockholm"
         assert all(len(row) == 5 and len(row[0]) == 3 and row[4] for row in rows)
+
+    def test_place_forms_load_city_picker(self, client, mock_api):
+        _route(mock_api, {"/travel/trips/1/costs": None, "/travel/trips/1": _detail(), "/travel/places": []})
+        html = client.get("/travel/1").text
+        assert html.index("/static/js/airport-input.js") < html.index("/static/js/travel-visits.js")
+        assert "initCityInput" in html and "initCityInput" in client.get("/static/js/airport-input.js").text

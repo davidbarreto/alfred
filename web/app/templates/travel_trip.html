@@ -454,7 +454,7 @@ stayForm.addEventListener('submit', async (event) => {
     ? await send('PATCH', `/travel/stays/${editingStay.id}`, body)
     : await send('POST', '/travel/stays', body);
   if (!ok) { error.textContent = data.error || 'Something went wrong.'; return; }
-  location.reload();
+  afterSave();
 });
 
 // ---- import from calendar ----

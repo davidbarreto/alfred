@@ -94,6 +94,18 @@ class TestBuildTimeline:
         assert "destination=Hotel+Example+Lisbon" in arrival.links["directions"]
         assert arrival.transfer_label == "LIS airport \u2192 Hotel Example"
 
+    def test_arrival_directions_still_found_when_check_in_is_days_later(self):
+        leg = _leg(1, "Porto", "Lisbon", _dt(2, 8), _dt(2, 9), destination_code="LIS")
+        arrival = next(i for i in build_timeline([leg], [_stay(5, _dt(5, 14), _dt(7, 10))]) if i.kind == "arrival")
+        assert "origin=LIS+airport" in arrival.links["directions"]
+
+    def test_flight_arrival_map_shows_the_airport_not_the_city(self):
+        leg = _leg(1, "Porto", "Lisbon", _dt(2, 8), _dt(2, 9), destination_code="LIS")
+        arrival = next(i for i in build_timeline([leg], []) if i.kind == "arrival")
+        assert "query=LIS+airport" in arrival.links["map"]
+        train = _leg(2, "Porto", "Lisbon", _dt(3, 8), _dt(3, 9), mode="train")
+        assert "query=Lisbon" in next(i for i in build_timeline([train], []) if i.kind == "arrival").links["map"]
+
     def test_arrival_without_a_stay_has_no_transfer(self):
         leg = _leg(1, "Porto", "Lisbon", _dt(2, 8), _dt(2, 9))
         arrival = next(i for i in build_timeline([leg], []) if i.kind == "arrival")

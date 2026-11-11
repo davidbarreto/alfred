@@ -20,7 +20,7 @@ function initTravelTransactions() {
     return { ok: res.ok, data };
   }
 
-  function row(text, label, onClick, danger) {
+  function row(text, label, onClick, danger, openId) {
     const el = document.createElement('div');
     el.className = 'flex items-center justify-between gap-2 text-xs';
     const span = document.createElement('span');
@@ -29,7 +29,17 @@ function initTravelTransactions() {
     button.className = 'btn btn-xs btn-ghost' + (danger ? ' text-red-600' : '');
     button.textContent = label;
     button.addEventListener('click', onClick);
-    el.append(span, button);
+    const actions = document.createElement('span');
+    actions.className = 'flex items-center gap-1 shrink-0';
+    if (openId) {
+      const open = document.createElement('a');
+      open.className = 'btn btn-xs btn-ghost text-[#378ADD]';
+      open.href = `/finance/transactions?open=${openId}`;
+      open.textContent = 'Open';
+      actions.append(open);
+    }
+    actions.append(button);
+    el.append(span, actions);
     return el;
   }
 
@@ -39,7 +49,7 @@ function initTravelTransactions() {
       if (!r.ok) { error.textContent = r.data.error || 'Could not unlink.'; return; }
       changed = true;
       load();
-    }, true)));
+    }, true, t.id)));
     if (!data.transactions.length) linked.textContent = 'Nothing linked yet.';
     const c = data.cost;
     cost.textContent = c.transaction_count

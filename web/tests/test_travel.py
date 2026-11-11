@@ -563,7 +563,7 @@ class TestRecapPage:
     def test_each_missing_item_links_to_its_edit_dialog_on_the_trip_page(self, client, mock_api):
         _route(mock_api, {"/travel/trips/1/recap": _recap()})
         html = client.get("/travel/1/recap").text
-        assert 'href="/travel/1?all_visits=1&amp;edit=visit-11"' in html or 'href="/travel/1?all_visits=1&edit=visit-11"' in html
+        assert "/travel/1?all_visits=1&amp;edit=visit-11&amp;back=/travel/1/recap" in html or "edit=visit-11&back=/travel/1/recap" in html
         assert "edit=stay-7" in html
 
     def test_nothing_left_to_write_down(self, client, mock_api):

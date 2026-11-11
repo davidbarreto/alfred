@@ -829,5 +829,6 @@ async function linkTransferCandidate(counterpartId) {
     errEl.classList.remove("hidden");
   }
 }
+{% if open_txn %}openEditTransaction({{ open_txn | tojson }});{% endif %}
 </script>
 {% endblock %}

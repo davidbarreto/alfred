@@ -647,6 +647,14 @@ async def auto_mirror_transfer(transaction_id: int):
 async def transactions_page(request: Request):
     filters, offset = _parse_txn_query(request)
     context = await _txn_list_context(filters, offset)
+    # ?open=<id> (from a travel stay/leg) opens that transaction's edit modal on load.
+    open_id = request.query_params.get("open", "")
+    context["open_txn"] = None
+    if open_id.isdigit():
+        try:
+            context["open_txn"] = await api.get(f"/finance/transactions/{open_id}")
+        except httpx.HTTPError:
+            pass
     return templates.TemplateResponse(request, "finance_transactions.html", context)
 
 

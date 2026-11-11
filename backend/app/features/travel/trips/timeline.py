@@ -87,7 +87,11 @@ def _stay_after(leg: LegRead, stays: list[StayRead]) -> StayRead | None:
         s for s in stays
         if _same_place(leg.destination, s.place.city) and timedelta(hours=-1) <= s.check_in_at - leg.arrives_at <= ARRIVAL_WINDOW
     ]
-    return min(near, key=lambda s: s.check_in_at, default=None)
+    if near:
+        return min(near, key=lambda s: s.check_in_at)
+    # Checking in more than a day later still means heading to that hotel: the first stay there that is not over yet.
+    later = [s for s in stays if _same_place(leg.destination, s.place.city) and s.check_out_at > leg.arrives_at]
+    return min(later, key=lambda s: s.check_in_at, default=None)
 
 
 def _food_links(near: str) -> dict[str, str]:
@@ -121,7 +125,8 @@ def _leg_item(leg: LegRead, stays: list[StayRead], home_address: str | None, is_
 
 
 def _arrival_item(leg: LegRead, stays: list[StayRead]) -> TimelineItem:
-    links = {"map": maps_search_url(leg.destination)}
+    # A flight lands at an airport: show the area around it, not the whole city.
+    links = {"map": maps_search_url(_airport(leg.destination_code, leg.destination) if leg.mode == "flight" else leg.destination)}
     if leg.mode == "flight":
         links.update(_food_links(_airport(leg.destination_code, leg.destination)))
     label = None

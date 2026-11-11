@@ -1,3 +1,9 @@
+// After a save: back to the recap when the edit was opened from it (?back=/travel/<id>/recap), else reload.
+function afterSave() {
+  const back = new URLSearchParams(location.search).get('back') || '';
+  if (/^\/travel\/\d+\/recap$/.test(back)) location.href = back; else location.reload();
+}
+
 // Visit dialog shared by the trip page and the place page (see templates/_travel_visit_dialog.html).
 // config: { tripId: number|null, placeId: number|null } -- a fixed place hides the place picker.
 function initTravelVisits(config) {
@@ -94,6 +100,6 @@ function initTravelVisits(config) {
       ? await send('PATCH', `/travel/visits/${editing.id}`, body)
       : await send('POST', '/travel/visits', body);
     if (!ok) { error.textContent = data.error || 'Something went wrong.'; return; }
-    location.reload();
+    afterSave();
   });
 }

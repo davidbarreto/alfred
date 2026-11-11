@@ -38,6 +38,22 @@ class TestTransactionsPage:
 
         assert ">Travel</span>" in resp.text and ">Work</span>" in resp.text
 
+    def test_open_param_opens_that_transaction_in_the_edit_modal(self, client, mock_api):
+        mock_api["get"].side_effect = [
+            [_txn(id=1, merchant="Continente")],
+            None,
+            [_category()],
+            [],
+            [_account()],
+            [],
+            [],
+            _txn(id=42, merchant="Some Airline"),
+        ]
+
+        resp = client.get("/finance/transactions?open=42")
+
+        assert "openEditTransaction({" in resp.text and "Some Airline" in resp.text
+
     def test_list_rows_cap_tags_and_count_the_rest(self, client, mock_api):
         mock_api["get"].side_effect = [
             [{**_txn(id=1, merchant="Continente"), "tags": ["A1", "B2", "C3", "D4", "E5"]}],

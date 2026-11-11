@@ -48,11 +48,11 @@
     <div class="card-body p-5 space-y-2">
       <h2 class="text-sm font-semibold text-gray-900">Still to write down</h2>
       {% for item in recap.to_complete %}
-      <div class="flex items-baseline justify-between gap-3 text-sm">
+      <div class="grid grid-cols-[minmax(0,1fr)_11rem_2rem] items-baseline gap-3 text-sm">
         <p><a class="hover:underline text-gray-900" href="/travel/places/{{ item.place_id }}">{{ item.place_name }}</a>
           <span class="text-xs text-gray-400">{{ item.kind }}{% if item.day %} · {{ item.day | short_date }}{% endif %}</span></p>
-        <p class="text-xs whitespace-nowrap"><span class="text-red-600">{{ item.missing | join(' and ') }} missing</span>
-          · <a class="text-[#378ADD] hover:underline" href="/travel/{{ recap.trip_id }}?all_visits=1&edit={{ item.kind }}-{{ item.id }}">Edit</a></p>
+        <p class="text-xs text-red-600">{{ item.missing | join(' and ') }} missing</p>
+        <a class="text-xs text-[#378ADD] hover:underline" href="/travel/{{ recap.trip_id }}?all_visits=1&edit={{ item.kind }}-{{ item.id }}&back=/travel/{{ recap.trip_id }}/recap">Edit</a>
       </div>
       {% else %}
       <p class="text-sm text-gray-400">Every visit and stay has a grade and notes.</p>

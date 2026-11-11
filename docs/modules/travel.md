@@ -19,7 +19,7 @@ Create bodies accept naive wall times (read in the matching `*_tz`) or values wi
 
 ## Timeline and warnings
 
-`GET /travel/trips/{id}` returns the trip with its legs, stays, a chronological `timeline` (leg departures, check-ins, check-outs, each with maps links: transit directions, cafes and restaurants near the hotel and at flight airports, luggage storage) and `warnings`, computed in `features/travel/trips/timeline.py` only from data that exists:
+`GET /travel/trips/{id}` returns the trip with its legs, stays, a chronological `timeline` (leg departures, check-ins, check-outs, each with maps links: transit directions, cafes and restaurants near the hotel and at flight airports, luggage storage; a flight arrival maps the airport and links transit to the hotel even when check-in is days later) and `warnings`, computed in `features/travel/trips/timeline.py` only from data that exists:
 
 - `long_wait_before_check_in`: a leg arrives in the stay's city more than 4 h (and less than 24 h) before check-in.
 - `tight_connection`: consecutive legs through the same place with under 90 min between them.

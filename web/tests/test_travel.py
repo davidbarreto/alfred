@@ -776,6 +776,40 @@ class TestTodayPage:
         assert "/travel/1/today" not in client.get("/travel/1").text
 
 
+class TestWarningsPreview:
+    def _warnings(self, n, kind="visit_without_stay"):
+        return [{"kind": kind, "message": f"Warning {i}", "visit_id": i} for i in range(n)]
+
+    def _events(self, n):
+        return [{"event_id": i, "title": f"Event {i}", "start_datetime": "2026-12-18T07:00:00+00:00",
+                 "end_datetime": "2026-12-18T08:00:00+00:00", "all_day": False, "recurring": False, "snoozed": False}
+                for i in range(n)]
+
+    def test_trip_page_shows_five_per_group_with_a_link_to_the_rest(self, client, mock_api):
+        warnings = self._warnings(8) + self._warnings(2, "tight_connection")
+        _route(mock_api, {"/travel/trips/1": _detail(warnings=warnings), "/travel/places": [], "/travel/trips/1/costs": None,
+                          "/travel/trips/1/other-events": self._events(7)})
+        html = client.get("/travel/1").text
+        assert "Warning 4" in html and "Warning 5" not in html
+        assert 'href="/travel/1/warnings#visit_without_stay"' in html and "See all 8" in html
+        assert 'href="/travel/1/warnings#tight_connection"' not in html
+        assert "Event 4" in html and "Event 5" not in html
+        assert 'href="/travel/1/warnings#other-events"' in html and "See all 7" in html
+
+    def test_warnings_page_lists_every_group_foldable(self, client, mock_api):
+        warnings = self._warnings(8) + self._warnings(2, "tight_connection")
+        _route(mock_api, {"/travel/trips/1": _detail(warnings=warnings), "/travel/trips/1/other-events": self._events(7)})
+        html = client.get("/travel/1/warnings").text
+        assert html.count("<details") == 3
+        assert "Warning 7" in html and "Event 6" in html
+        assert 'id="visit_without_stay"' in html and 'id="other-events"' in html
+
+    def test_warnings_page_redirects_for_a_missing_trip(self, client, mock_api):
+        _route(mock_api, {"/travel/trips/1": None})
+        response = client.get("/travel/1/warnings", follow_redirects=False)
+        assert response.status_code == 302 and response.headers["location"] == "/travel"
+
+
 class TestOtherEvents:
     def _events(self, snoozed):
         return [{"event_id": 5, "title": "Gym", "start_datetime": "2026-12-18T07:00:00+00:00",

@@ -17,6 +17,7 @@ _PAGE_SIZE = 20
 # The trip page shows this many timeline steps; the rest are on /travel/{id}/timeline.
 _TIMELINE_PREVIEW = 8
 _STATUSES = {"current": "Upcoming & ongoing", "upcoming": "Upcoming", "ongoing": "Ongoing", "past": "Past", "all": "All"}
+_WARNING_PREVIEW = 5
 _PLACE_KINDS = ["hotel", "restaurant", "cafe", "activity", "museum", "attraction", "shop", "other"]
 _LEG_MODES = ["flight", "train", "bus", "ferry", "car", "other"]
 # Suggestions for the time zone fields; any IANA name can still be typed.
@@ -412,6 +413,27 @@ async def print_page(trip_id: int, request: Request):
     return templates.TemplateResponse(request, "travel_print.html", {"trip": {**trip, "visits": visits}, "days": _print_days({**trip, "visits": visits})})
 
 
+_WARNING_LABELS = {
+    "long_wait_before_check_in": "Long wait before check-in", "tight_connection": "Tight connections",
+    "arrives_after_check_out": "Arrives after check-out", "overlapping_legs": "Overlapping legs",
+    "uncovered_night": "Nights without a stay", "no_return_leg": "No way back",
+    "visit_before_arrival": "Visits before arrival", "visit_after_departure": "Visits after departure",
+    "visit_overlaps_leg": "Visits during a trip leg", "visit_without_stay": "Visits without a stay",
+    "too_many_visits": "Busy days", "no_calendar_event": "Visits without a calendar event",
+    "linked_event_mismatch": "Calendar event differs", "linked_event_not_updated": "Calendar event not updated",
+}
+
+
+def _warning_groups(warnings: list[dict]) -> list[dict]:
+    """Warnings grouped by kind, in order of first appearance."""
+    groups: dict[str, dict] = {}
+    for warning in warnings:
+        kind = warning["kind"]
+        group = groups.setdefault(kind, {"kind": kind, "label": _WARNING_LABELS.get(kind, kind), "items": []})
+        group["items"].append(warning)
+    return list(groups.values())
+
+
 def _empty_days(trip: dict) -> list[str]:
     """Days of an upcoming or ongoing trip with no visit at all, as ISO dates (capped, to keep the hint short)."""
     if trip["status"] == "past":
@@ -441,6 +463,17 @@ async def today_page(trip_id: int, request: Request):
         return RedirectResponse("/travel", status_code=302)
     return templates.TemplateResponse(request, "travel_today.html", {
         "today": today, "countdown": _countdown(today["minutes_until_next"]),
+    })
+
+
+@router.get("/{trip_id}/warnings", response_class=HTMLResponse)
+async def warnings_page(trip_id: int, request: Request):
+    trip = await safe_get(f"/travel/trips/{trip_id}")
+    if trip is None:
+        return RedirectResponse("/travel", status_code=302)
+    other_events = await safe_get(f"/travel/trips/{trip_id}/other-events", default=[])
+    return templates.TemplateResponse(request, "travel_warnings.html", {
+        "trip": trip, "groups": _warning_groups(trip["warnings"]), "other_events": other_events or [],
     })
 
 
@@ -480,6 +513,8 @@ async def trip_page(trip_id: int, request: Request):
         "visit_days": visit_days,
         "costs": costs,
         "other_events": other_events or [],
+        "warning_groups": _warning_groups(trip["warnings"]),
+        "preview_size": _WARNING_PREVIEW,
         "forecast": forecast,
         "while_away": while_away,
         "unlinked": unlinked or [],

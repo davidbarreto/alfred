@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% set active_page = "travel" %}
+{% block title %}Warnings: {{ trip.name }}{% endblock %}
+
+{% block content %}
+<div class="p-4 sm:p-6 space-y-4 max-w-2xl mx-auto">
+
+  <a href="/travel/{{ trip.id }}" class="text-xs text-gray-500 hover:text-gray-700"><i class="ti ti-arrow-left"></i> {{ trip.name }}</a>
+  <div class="flex items-center justify-between gap-3">
+    <h1 class="text-base font-semibold text-gray-900">Worth a look</h1>
+    <button type="button" class="text-xs text-[#378ADD] hover:underline" id="toggle-groups">Fold all</button>
+  </div>
+
+  {% for g in groups %}
+  <details class="card bg-amber-50 border border-amber-200" id="{{ g.kind }}" open>
+    <summary class="cursor-pointer p-4 text-sm font-semibold text-amber-800">{{ g.label }} <span class="text-xs font-normal">({{ g['items']|length }})</span></summary>
+    <div class="px-4 pb-4 space-y-1">
+      {% for w in g['items'] %}<p class="text-sm text-amber-900">{{ w.message }}</p>{% endfor %}
+    </div>
+  </details>
+  {% endfor %}
+
+  {% if other_events %}
+  <details class="card bg-amber-50 border border-amber-200" id="other-events" open>
+    <summary class="cursor-pointer p-4 text-sm font-semibold text-amber-800">Other calendar events <span class="text-xs font-normal">({{ other_events|length }})</span></summary>
+    <div class="px-4 pb-4 space-y-1">
+      {% for e in other_events %}
+      <p class="text-sm text-amber-900">{{ e.start_datetime[:16].replace('T', ' ') }} · {{ e.title }}{% if e.recurring %} <span class="text-[11px]">(recurring)</span>{% endif %}{% if e.snoozed %} <span class="text-[11px]">· snoozed</span>{% endif %}</p>
+      {% endfor %}
+    </div>
+  </details>
+  {% endif %}
+
+  {% if not groups and not other_events %}
+  <p class="text-sm text-gray-400">Nothing to flag.</p>
+  {% endif %}
+</div>
+
+<script>
+  (function () {
+    var button = document.getElementById('toggle-groups');
+    var groups = document.querySelectorAll('details');
+    var target = location.hash && document.querySelector(location.hash);
+    if (target && target.tagName === 'DETAILS') target.open = true;
+    button.addEventListener('click', function () {
+      var fold = button.textContent === 'Fold all';
+      groups.forEach(function (d) { d.open = !fold; });
+      button.textContent = fold ? 'Unfold all' : 'Fold all';
+    });
+  })();
+</script>
+{% endblock %}

@@ -32,3 +32,11 @@ class TestHomeAddress:
         assert (await service.get()).home_address == "Rua Exemplo 1"
         values["organizer.home_address"] = ""
         assert (await service.get()).home_address is None
+
+
+class TestMaxVisitsPerDay:
+    @pytest.mark.asyncio
+    async def test_defaults_to_four_and_is_stored_in_the_travel_namespace(self, service):
+        assert (await service.get()).max_visits_per_day == 4
+        await service.update(TravelSettingsUpdate(max_visits_per_day=6))
+        service._settings.set_value.assert_awaited_once_with("travel.max_visits_per_day", "6")

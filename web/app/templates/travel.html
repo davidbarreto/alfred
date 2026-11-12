@@ -47,6 +47,8 @@
           <input name="airport_buffer_min" type="number" min="0" max="600" value="{{ settings.airport_buffer_min }}" class="input input-sm input-bordered w-28"></label>
         <label class="space-y-1"><span class="block text-xs text-gray-500">Minutes from home to the airport</span>
           <input name="home_to_airport_min" type="number" min="0" max="600" value="{{ settings.home_to_airport_min }}" class="input input-sm input-bordered w-28"></label>
+        <label class="space-y-1"><span class="block text-xs text-gray-500">Visits per day before a warning</span>
+          <input name="max_visits_per_day" type="number" min="1" max="20" value="{{ settings.max_visits_per_day }}" class="input input-sm input-bordered w-28"></label>
         <label class="space-y-1"><span class="block text-xs text-gray-500">Home address (start of the directions to the airport)</span>
           <input name="home_address" maxlength="300" value="{{ settings.home_address or '' }}" class="input input-sm input-bordered w-72"></label>
         <button type="submit" class="btn btn-sm btn-outline">Save</button>
@@ -133,7 +135,7 @@ document.getElementById('travel-settings-form')?.addEventListener('submit', asyn
     method: 'PUT', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       airport_buffer_min: Number(form.get('airport_buffer_min')), home_to_airport_min: Number(form.get('home_to_airport_min')),
-      home_address: String(form.get('home_address') || ''),
+      max_visits_per_day: Number(form.get('max_visits_per_day')), home_address: String(form.get('home_address') || ''),
     }),
   });
   const data = await res.json().catch(() => ({}));

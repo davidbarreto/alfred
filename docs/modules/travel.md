@@ -25,6 +25,12 @@ Create bodies accept naive wall times (read in the matching `*_tz`) or values wi
 - `tight_connection`: consecutive legs through the same place with under 90 min between them.
 - `arrives_after_check_out`: a leg to the stay's city departs before check-out and arrives after it.
 - `overlapping_legs`: a leg departs before the previous one arrives.
+- `uncovered_night`: nights between the first arrival and the last departure that no stay covers (one warning listing the dates; a night spent on an overnight leg does not count). `no_return_leg`: the last leg ends somewhere other than where the first began (the home city is not consulted, only the legs).
+- Visit checks (planned and visited, missed ones ignored; undated visits skipped, the time checks also need a time; a timed visit is read in the zone of the stay covering that day, else of the latest arrival): `visit_before_arrival`, `visit_after_departure`, `visit_overlaps_leg`, `visit_without_stay` (a stay exists on the trip but none in the place's city covers the day) and `too_many_visits` (more than `travel.max_visits_per_day`, default 4, in `/travel/settings`). Computed in `trips/coverage_warnings.py`; these have `visit_id` and no timeline row.
+
+**Home offset (27)**: each timeline item carries `home_offset` (`+1h`, `-3h`, `+5.5h` against the configured `TIMEZONE` at that instant; null when equal) and arrival rows with a difference of 3 h or more carry a one-line `sleep_hint`.
+
+**Ideas (9)**: `TripDetail.ideas` lists planned visits with no day (the trip's own, plus wishlist visits, i.e. planned with no trip, at places in a city the trip has a stay in), grouped by stay city (`trips/ideas.py`); empty once the trip is over. The portal's *Ideas to plan* card sets `trip_id` and `visit_date` in one PATCH.
 
 **Airport transfers**: for a flight leg the timeline offers Maps links (transit, taxi / car, walking; plain URLs, no integration) for the way *to* the departure airport (from the stay in the origin city that the traveler is leaving, else from `organizer.home_address` on the trip's first leg; none if neither is known) and, on the arrival row, for the way *from* the arrival airport to the stay in the destination city (first check-in within 24 h after landing). Airports are searched as `<IATA> airport`. Non-flight legs keep origin → destination directions.
 

@@ -1,3 +1,5 @@
+from zoneinfo import ZoneInfo
+
 from datetime import datetime, timezone
 
 from app.features.travel.legs.schemas import LegRead
@@ -202,3 +204,31 @@ class TestWarnings:
         a = _leg(1, "Porto", "Stockholm", _dt(2, 6), _dt(2, 9))
         b = _leg(2, "Stockholm", "Helsinki", _dt(2, 8), _dt(2, 12))
         assert [w.kind for w in find_warnings([a, b], [])] == ["overlapping_legs"]
+
+
+class TestHomeOffset:
+    HOME = ZoneInfo("Europe/Lisbon")
+
+    def _arrival(self, zone):
+        leg = _leg(1, "Alpha", "Beta", _dt(2, 8), _dt(2, 15), arrives_tz=zone)
+        return next(i for i in build_timeline([leg], [], home_zone=self.HOME) if i.kind == "arrival")
+
+    def test_same_zone_has_no_offset(self):
+        item = self._arrival("Europe/Lisbon")
+        assert item.home_offset is None and item.sleep_hint is None
+
+    def test_one_hour_ahead_shows_the_offset_without_a_hint(self):
+        item = self._arrival("Europe/Stockholm")
+        assert item.home_offset == "+1h" and item.sleep_hint is None
+
+    def test_large_difference_adds_a_sleep_hint_on_arrival(self):
+        item = self._arrival("America/Sao_Paulo")
+        assert item.home_offset == "-3h" and "behind home" in item.sleep_hint
+
+    def test_departure_rows_get_the_offset_but_no_hint(self):
+        leg = _leg(1, "Alpha", "Beta", _dt(2, 8), _dt(2, 15), departs_tz="Asia/Tokyo")
+        row = next(i for i in build_timeline([leg], [], home_zone=self.HOME) if i.kind == "leg")
+        assert row.home_offset == "+9h" and row.sleep_hint is None
+
+    def test_half_hour_zones_are_shown_exactly(self):
+        assert self._arrival("Asia/Kolkata").home_offset == "+5.5h"

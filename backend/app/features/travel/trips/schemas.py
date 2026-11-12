@@ -114,6 +114,13 @@ class TripFilters:
         self.offset = offset
 
 
+class IdeaGroup(BaseModel):
+    """Undated planned visits and wishlist places in one city of the trip."""
+
+    city: str
+    visits: list[VisitRead]
+
+
 class TripDetail(TripRead):
     legs: list[LegRead]
     stays: list[StayRead]
@@ -123,3 +130,5 @@ class TripDetail(TripRead):
     # Planned and missed visits of an ended trip are hidden unless asked for; this says how many.
     hidden_visit_count: int = 0
     warnings: list[TripWarning]
+    # Planned visits with no day yet (the trip's own and the wishlist's), by stay city; empty once the trip is over.
+    ideas: list[IdeaGroup] = []

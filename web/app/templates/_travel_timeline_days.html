@@ -12,7 +12,8 @@
       <i class="ti {{ {'leg': 'ti-plane-departure', 'arrival': 'ti-plane-arrival', 'check_in': 'ti-login', 'check_out': 'ti-logout', 'leave_home': 'ti-door-exit'}[item.kind] }} {% if item.warnings %}text-amber-600{% else %}text-gray-400{% endif %} pt-0.5"></i>
       <div class="flex-1">
         <p class="text-gray-900">{{ item.title }}</p>
-        <p class="text-xs text-gray-400">{% if item.subtitle %}{{ item.subtitle }} · {% endif %}{{ item.timezone }}</p>
+        <p class="text-xs text-gray-400">{% if item.subtitle %}{{ item.subtitle }} · {% endif %}{{ item.timezone }}{% if item.home_offset %} ({{ item.home_offset }} vs home){% endif %}</p>
+        {% if item.sleep_hint %}<p class="text-xs text-sky-700"><i class="ti ti-moon"></i> {{ item.sleep_hint }}</p>{% endif %}
         {% for message in item.warnings %}<p class="text-xs text-amber-800"><i class="ti ti-alert-triangle"></i> {{ message }}</p>{% endfor %}
         {% if item.transfer_label %}<p class="text-xs text-gray-500 pt-0.5">Getting there: {{ item.transfer_label }}</p>{% endif %}
         <p class="text-xs space-x-3">

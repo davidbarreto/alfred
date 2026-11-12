@@ -105,6 +105,30 @@
     </div>
   </div>
 
+  {% if trip.ideas %}
+  <div class="card bg-white" id="ideas">
+    <div class="card-body p-5 space-y-3">
+      <h2 class="text-sm font-semibold text-gray-900">Ideas to plan</h2>
+      <p class="text-xs text-gray-400">Planned places with no day yet: this trip's own and your wishlist in the cities you stay in.</p>
+      {% for group in trip.ideas %}
+      <div>
+        <p class="text-xs font-semibold text-gray-500 mb-1">{{ group.city }}</p>
+        <ul class="space-y-1">
+          {% for v in group.visits %}
+          <li class="flex flex-wrap items-center gap-2 text-sm" data-idea="{{ v.id }}">
+            <a href="/travel/places/{{ v.place_id }}" class="hover:underline">{{ v.place.name }}</a>
+            <span class="text-xs text-gray-400">{{ v.place.kind }}{% if not v.trip_id %} · wishlist{% endif %}</span>
+            <input type="date" class="input input-xs input-bordered idea-day" min="{{ trip.start_date }}" max="{{ trip.end_date }}" aria-label="Day for {{ v.place.name }}">
+            <button type="button" class="btn btn-xs btn-outline plan-idea" data-id="{{ v.id }}">Plan on day</button>
+          </li>
+          {% endfor %}
+        </ul>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
   <div class="card bg-white" id="itinerary">
     <div class="card-body p-5 space-y-3">
       <div class="flex items-center justify-between">
@@ -320,6 +344,14 @@ async function applyTags() {
   if (!ok) { alert(data.error || 'Could not tag the expenses.'); return false; }
   return data;
 }
+
+document.querySelectorAll('.plan-idea').forEach((button) => button.addEventListener('click', async () => {
+  const row = button.closest('[data-idea]');
+  const day = row.querySelector('.idea-day').value;
+  if (!day) { row.querySelector('.idea-day').focus(); return; }
+  const { ok, data } = await send('PATCH', `/travel/visits/${button.dataset.id}`, { trip_id: TRIP_ID, visit_date: day });
+  if (ok) location.reload(); else alert(data.error || 'Could not plan the visit.');
+}));
 
 document.getElementById('generate-checklist')?.addEventListener('click', async () => {
   const message = document.getElementById('generate-checklist-msg');

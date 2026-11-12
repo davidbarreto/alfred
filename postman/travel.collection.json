@@ -1300,7 +1300,8 @@
           "script": {
             "exec": [
               "pm.test('Status is 200', () => pm.response.to.have.status(200));",
-              "pm.test('Itinerary has the visit', () => { const j = pm.response.json(); pm.expect(j.visits.length).to.eql(1); pm.expect(j.hidden_visit_count).to.eql(0); });"
+              "pm.test('Itinerary has the visit', () => { const j = pm.response.json(); pm.expect(j.visits.length).to.eql(1); pm.expect(j.hidden_visit_count).to.eql(0); });",
+              "pm.test('Has the ideas list and warnings array', () => { const j = pm.response.json(); pm.expect(j.ideas).to.be.an('array'); pm.expect(j.warnings).to.be.an('array'); });"
             ],
             "type": "text/javascript"
           }
@@ -2770,7 +2771,8 @@
               "const j = pm.response.json();",
               "pm.test('Both settings present', () => { pm.expect(j.airport_buffer_min).to.be.a('number'); pm.expect(j.home_to_airport_min).to.be.a('number'); pm.expect(j).to.have.property('home_address'); });",
               "pm.environment.set('travel_buffer_original', j.airport_buffer_min);",
-              "pm.environment.set('travel_ride_original', j.home_to_airport_min);"
+              "pm.environment.set('travel_ride_original', j.home_to_airport_min);",
+              "pm.test('Visit limit has a default', () => pm.expect(pm.response.json().max_visits_per_day).to.be.a('number'));"
             ],
             "type": "text/javascript"
           }

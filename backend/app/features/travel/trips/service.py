@@ -16,6 +16,8 @@ from app.features.travel.trips.schemas import TripCreate, TripDetail, TripFilter
 from app.features.travel.visits.repository import VisitRepository
 from app.features.travel.visits.schemas import VisitRead
 from app.features.travel.trips.map_points import MapScope, TripMap, build_trip_map
+from app.features.travel.trips.ideas import build_ideas
+from app.features.travel.trips.coverage_warnings import find_lodging_warnings, find_visit_warnings
 from app.features.travel.trips.timeline import build_timeline, find_warnings, leave_home_at
 from app.shared.timezone import local_today
 
@@ -50,6 +52,7 @@ class TripService:
         legs = [LegRead.model_validate(leg) for leg in await self._leg_repo.get_legs(trip_id)]
         stays = [StayRead.model_validate(s) for s in await self._stay_repo.get_stays(trip_id)]
         visits = [VisitRead.model_validate(v) for v in await self._visit_repo.get_trip_visits(trip_id)]
+        all_visits = visits
         # Once the trip is over, what stayed planned or missed is noise unless the user asks to see it.
         hidden = 0
         if trip.end_date < local_today() and not include_all_visits:
@@ -57,7 +60,15 @@ class TripService:
             hidden, visits = len(visits) - len(shown), shown
         settings = await self.settings_service.get()
         leave_at = leave_home_at(legs, settings.airport_buffer_min + settings.home_to_airport_min)
-        warnings = find_warnings(legs, stays)
+        warnings = [
+            *find_warnings(legs, stays),
+            *find_lodging_warnings(legs, stays),
+            *find_visit_warnings(all_visits, legs, stays, settings.max_visits_per_day),
+        ]
+        ideas = []
+        if trip.end_date >= local_today():
+            wishlist = await self._visit_repo.get_wishlist_in_cities([s.place.city for s in stays if s.place.city])
+            ideas = build_ideas(all_visits, [VisitRead.model_validate(v) for v in wishlist], stays)
         return TripDetail(
             **TripRead.model_validate(trip).model_dump(exclude={"status"}),
             legs=legs,
@@ -67,6 +78,7 @@ class TripService:
             leave_home_at=leave_at,
             visits=visits,
             hidden_visit_count=hidden,
+            ideas=ideas,
         )
 
     async def get_trip_map(self, trip_id: int, scope: MapScope = "all") -> TripMap | None:

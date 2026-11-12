@@ -3,6 +3,7 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
 import pytest
+from freezegun import freeze_time
 from sqlalchemy.exc import IntegrityError
 
 from app.features.travel.errors import TravelNotFoundError
@@ -152,6 +153,25 @@ class TestTripService:
         assert [i.kind for i in detail.timeline] == ["leave_home", "leg", "arrival", "check_in", "check_out"]
         assert detail.leave_home_at == datetime(2026, 12, 17, 3, tzinfo=timezone.utc)
         assert detail.status in ("upcoming", "ongoing", "past")
+
+    @freeze_time("2026-12-10 10:00:00")
+    async def test_detail_loads_the_wishlist_for_the_cities_of_an_upcoming_trip(self, trips):
+        trips._repo.get_trip.return_value = _trip()
+        trips._leg_repo.get_legs.return_value = []
+        trips._stay_repo.get_stays.return_value = [_stay()]
+        trips._visit_repo.get_wishlist_in_cities.return_value = []
+        detail = await trips.get_trip_detail(1)
+        trips._visit_repo.get_wishlist_in_cities.assert_awaited_once_with(["Lisbon"])
+        assert detail.ideas == []
+
+    @freeze_time("2027-02-01 10:00:00")
+    async def test_detail_of_an_ended_trip_has_no_ideas_and_skips_the_wishlist(self, trips):
+        trips._repo.get_trip.return_value = _trip()
+        trips._leg_repo.get_legs.return_value = []
+        trips._stay_repo.get_stays.return_value = [_stay()]
+        detail = await trips.get_trip_detail(1)
+        trips._visit_repo.get_wishlist_in_cities.assert_not_awaited()
+        assert detail.ideas == []
 
     async def test_detail_unknown_trip(self, trips):
         trips._repo.get_trip.return_value = None

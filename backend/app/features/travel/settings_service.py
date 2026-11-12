@@ -14,9 +14,11 @@ HOME_ADDRESS_KEY = "organizer.home_address"
 # Stored in core.settings as "travel.<field>"; a missing row falls back to the default below.
 DEFAULT_AIRPORT_BUFFER_MIN = 120
 DEFAULT_HOME_TO_AIRPORT_MIN = 45
+DEFAULT_MAX_VISITS_PER_DAY = 4
 _DEFAULTS = {
     "airport_buffer_min": DEFAULT_AIRPORT_BUFFER_MIN,
     "home_to_airport_min": DEFAULT_HOME_TO_AIRPORT_MIN,
+    "max_visits_per_day": DEFAULT_MAX_VISITS_PER_DAY,
 }
 
 

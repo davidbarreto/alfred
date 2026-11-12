@@ -1,5 +1,6 @@
 """Pure functions: a trip's chronological timeline and its gap warnings. No DB or IO."""
 from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
 from typing import Literal
 
 from pydantic import BaseModel
@@ -9,6 +10,7 @@ from app.features.travel.links import maps_directions_url, maps_search_url, plac
 from app.features.travel.places.schemas import PlaceRead
 from app.features.travel.stays.schemas import StayRead
 from app.features.travel.zones import to_local
+from app.shared.timezone import local_timezone
 
 # Arriving this long before the room is ready is worth a heads-up (luggage storage, a cafe).
 LONG_WAIT_BEFORE_CHECK_IN = timedelta(hours=4)
@@ -17,7 +19,11 @@ TIGHT_CONNECTION = timedelta(minutes=90)
 ARRIVAL_WINDOW = timedelta(hours=24)
 
 TimelineKind = Literal["leg", "arrival", "check_in", "check_out", "leave_home"]
-WarningKind = Literal["long_wait_before_check_in", "tight_connection", "arrives_after_check_out", "overlapping_legs"]
+WarningKind = Literal[
+    "long_wait_before_check_in", "tight_connection", "arrives_after_check_out", "overlapping_legs",
+    "uncovered_night", "no_return_leg",
+    "visit_before_arrival", "visit_after_departure", "visit_overlaps_leg", "visit_without_stay", "too_many_visits",
+]
 
 
 class TimelineItem(BaseModel):
@@ -31,6 +37,10 @@ class TimelineItem(BaseModel):
     links: dict[str, str] = {}
     # Airport transfer this row is about (where it goes), shown above its Maps links.
     transfer_label: str | None = None
+    # Hours this row's zone is ahead of (+) or behind (-) home, e.g. "+1h"; None when the same as home.
+    home_offset: str | None = None
+    # One-line advice on arrival rows when the difference is large.
+    sleep_hint: str | None = None
     # Messages of the trip warnings that point at this row, so the portal can highlight it.
     warnings: list[str] = []
 
@@ -40,6 +50,7 @@ class TripWarning(BaseModel):
     message: str
     leg_id: int | None = None
     stay_id: int | None = None
+    visit_id: int | None = None
 
 
 def _same_place(name: str | None, city: str | None) -> bool:
@@ -47,6 +58,31 @@ def _same_place(name: str | None, city: str | None) -> bool:
         return False
     a, b = name.strip().lower(), city.strip().lower()
     return bool(a) and bool(b) and (a in b or b in a)
+
+
+# From this many hours of difference an arrival row gets a sleep hint.
+SLEEP_HINT_HOURS = 3
+
+
+def _offset_hours(instant: datetime, zone: str, home: ZoneInfo) -> float:
+    delta = instant.astimezone(ZoneInfo(zone)).utcoffset() - instant.astimezone(home).utcoffset()  # type: ignore[operator]
+    return delta.total_seconds() / 3600
+
+
+def _format_offset(hours: float) -> str:
+    whole = f"{abs(hours):g}"
+    return f"{'+' if hours > 0 else '-'}{whole}h"
+
+
+def _add_home_offsets(items: list["TimelineItem"], home: ZoneInfo) -> None:
+    for item in items:
+        hours = _offset_hours(item.at, item.timezone, home)
+        if hours == 0:
+            continue
+        item.home_offset = _format_offset(hours)
+        if item.kind == "arrival" and abs(hours) >= SLEEP_HINT_HOURS:
+            direction = "ahead of" if hours > 0 else "behind"
+            item.sleep_hint = f"{item.home_offset} {direction} home: expect jet lag, try to sleep on local time"
 
 
 def _hours(delta: timedelta) -> str:
@@ -181,7 +217,7 @@ _WARNING_ROWS = {
 
 def _flag_warnings(items: list[TimelineItem], warnings: list[TripWarning]) -> None:
     for warning in warnings:
-        for kind, id_field in _WARNING_ROWS[warning.kind]:
+        for kind, id_field in _WARNING_ROWS.get(warning.kind, ()):
             ref_id = getattr(warning, id_field)
             for item in items:
                 if item.kind == kind and item.ref_id == ref_id:
@@ -194,6 +230,7 @@ def build_timeline(
     leave_home: datetime | None = None,
     home_address: str | None = None,
     warnings: list[TripWarning] | None = None,
+    home_zone: ZoneInfo | None = None,
 ) -> list[TimelineItem]:
     first_id = min(legs, key=lambda leg: (leg.departs_at, leg.id)).id if legs else None
     items = [_leg_item(leg, stays, home_address, leg.id == first_id) for leg in legs]
@@ -207,6 +244,7 @@ def build_timeline(
     for stay in stays:
         items.extend(_stay_items(stay))
     _flag_warnings(items, warnings or [])
+    _add_home_offsets(items, home_zone or local_timezone())
     return sorted(items, key=lambda item: (item.at, item.ref_id))
 
 

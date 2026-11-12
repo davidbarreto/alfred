@@ -1,8 +1,9 @@
 from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.features.travel.places.tables import Place
 from app.features.travel.visits.schemas import VisitFilters
 from app.features.travel.visits.tables import Visit
 
@@ -36,6 +37,18 @@ class VisitRepository:
 
     async def get_trip_visits(self, trip_id: int) -> list[Visit]:
         stmt = select(Visit).where(Visit.trip_id == trip_id).order_by(*_ORDER)
+        return list((await self._session.scalars(stmt)).all())
+
+    async def get_wishlist_in_cities(self, cities: list[str]) -> list[Visit]:
+        """Planned visits that belong to no trip (the wishlist) at places in one of the cities, case-insensitive."""
+        lowered = [c.lower() for c in cities if c]
+        if not lowered:
+            return []
+        stmt = (
+            select(Visit).join(Place, Visit.place_id == Place.id)
+            .where(Visit.trip_id.is_(None), Visit.status == "planned", func.lower(Place.city).in_(lowered))
+            .order_by(*_ORDER)
+        )
         return list((await self._session.scalars(stmt)).all())
 
     async def get_place_visits(self, place_id: int) -> list[Visit]:

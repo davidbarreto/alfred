@@ -704,3 +704,26 @@ class TestChecklist:
         mock_api["put"].side_effect = _status_error(409, "'x' already exists under the other anchor")
         resp = client.put("/travel/checklist-template/end/x", json={"offset_days": 3})
         assert resp.status_code == 409 and "already exists" in resp.json()["error"]
+
+
+class TestTimelineHomeOffset:
+    def test_offset_and_sleep_hint_are_shown(self, client, mock_api):
+        timeline = _detail()["timeline"]
+        timeline[0].update(home_offset="-3h", sleep_hint="-3h behind home: expect jet lag, try to sleep on local time")
+        _route(mock_api, {"/travel/trips/1": _detail(timeline=timeline), "/travel/trips/1/costs": None})
+        html = client.get("/travel/1/timeline").text
+        assert "(-3h vs home)" in html and "expect jet lag" in html
+
+
+class TestIdeas:
+    def test_ideas_card_lists_undated_places_by_city(self, client, mock_api):
+        idea = _visit(21, day=None)
+        idea["trip_id"] = None
+        ideas = [{"city": "Beta", "visits": [idea]}]
+        _route(mock_api, {"/travel/trips/1": _detail(ideas=ideas), "/travel/places": [], "/travel/trips/1/costs": None})
+        html = client.get("/travel/1").text
+        assert "Ideas to plan" in html and "Cafe Example" in html and "wishlist" in html and "Plan on day" in html
+
+    def test_no_card_without_ideas(self, client, mock_api):
+        _route(mock_api, {"/travel/trips/1": _detail(ideas=[]), "/travel/places": [], "/travel/trips/1/costs": None})
+        assert "Ideas to plan" not in client.get("/travel/1").text

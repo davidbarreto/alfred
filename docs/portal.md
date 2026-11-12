@@ -19,6 +19,10 @@ The client sends `X-Alfred-Client: web` on every backend call.
 
 HTMX actions target the smallest possible DOM element. Full-page navigation uses standard `<a href>`. Form submissions use `fetch()` + manual DOM update (not `hx-post`) when the response replaces a larger container.
 
+## Capped cards
+
+Cards that list things that can grow (warnings, calendar events, unlinked charges) show the first 5 and a "See all N" link. Read-only lists link to a dedicated page (e.g. `/travel/{id}/warnings`, groups foldable with `<details>`); lists whose rows carry their own controls reveal the rest in place. Never render an unbounded list on a detail page.
+
 ## Pagination pattern
 
 All paginated sections follow the same offset-based pattern:

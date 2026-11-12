@@ -457,3 +457,30 @@ async def test_unknown_group_and_command(services):
         await run("travel_boat", "list", {}, services)
     with pytest.raises(HTTPException):
         await run("travel_trip", "teleport", {}, services)
+
+
+class TestToday:
+    @staticmethod
+    def _today():
+        from app.features.travel.trips.today import TripToday
+
+        return TripToday(trip_id=1, trip_name="Example trip", date=date(2031, 12, 18), timezone="UTC")
+
+    async def test_defaults_to_the_ongoing_trip(self, services):
+        services.trips.get_trips.return_value = [_trip()]
+        services.trips.get_today.return_value = self._today()
+        result = await run("travel_trip", "today", {}, services)
+        assert services.trips.get_trips.await_args.args[0].status == "ongoing"
+        assert result["trip_name"] == "Example trip"
+
+    async def test_no_ongoing_trip_is_not_found(self, services):
+        services.trips.get_trips.return_value = []
+        with pytest.raises(HTTPException) as exc:
+            await run("travel_trip", "today", {}, services)
+        assert exc.value.status_code == 404
+
+    async def test_a_named_trip_is_looked_up_by_name(self, services):
+        services.trips.get_trips.return_value = [_trip()]
+        services.trips.get_today.return_value = self._today()
+        await run("travel_trip", "today", {"trip": "example"}, services)
+        services.trips.get_today.assert_awaited_once_with(1)

@@ -300,6 +300,22 @@ async def _trip(command: str, arguments: dict[str, Any], services: TravelService
             raise _not_found("Trip", trip.id)
         return recap.model_dump(mode="json")
 
+    if command == "today":
+        ref = _text(arguments, "trip")
+        if ref:
+            trip = await _find_trip(services, ref)
+        else:
+            ongoing = await services.trips.get_trips(
+                TripFilters(status="ongoing", tag=None, q=None, date_from=None, date_to=None, limit=1, offset=0)
+            )
+            if not ongoing:
+                raise _not_found("Trip", "(no ongoing trip)")
+            trip = ongoing[0]
+        today = await services.trips.get_today(trip.id)
+        if today is None:
+            raise _not_found("Trip", trip.id)
+        return today.model_dump(mode="json")
+
     if command == "apply_tags":
         trip_id = require_int(arguments, "id")
         names, added = await services.default_tags.apply_to_existing(trip_id)

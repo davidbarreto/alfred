@@ -23,7 +23,7 @@ def test_get(settings):
     client, service = settings
     service.get.return_value = TravelSettingsRead(airport_buffer_min=120, home_to_airport_min=45, home_address="Rua Exemplo 1")
     assert client.get("/travel/settings", headers=AUTH).json() == {
-        "airport_buffer_min": 120, "home_to_airport_min": 45, "home_address": "Rua Exemplo 1", "max_visits_per_day": 4,
+        "airport_buffer_min": 120, "home_to_airport_min": 45, "home_address": "Rua Exemplo 1", "max_visits_per_day": 4, "visit_duration_min": 90,
     }
 
 

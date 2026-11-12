@@ -17,9 +17,10 @@ from app.features.travel.visits.repository import VisitRepository
 from app.features.travel.visits.schemas import VisitRead
 from app.features.travel.trips.map_points import MapScope, TripMap, build_trip_map
 from app.features.travel.trips.ideas import build_ideas
+from app.features.travel.trips.today import TripToday, build_today
 from app.features.travel.trips.coverage_warnings import find_lodging_warnings, find_visit_warnings
 from app.features.travel.trips.timeline import build_timeline, find_warnings, leave_home_at
-from app.shared.timezone import local_today
+from app.shared.timezone import local_timezone_name, local_today
 
 logger = logging.getLogger(__name__)
 
@@ -80,6 +81,13 @@ class TripService:
             hidden_visit_count=hidden,
             ideas=ideas,
         )
+
+    async def get_today(self, trip_id: int) -> TripToday | None:
+        """The next step and today's visits; planned and missed visits of past days stay out (include_all_visits)."""
+        detail = await self.get_trip_detail(trip_id, include_all_visits=True)
+        if detail is None:
+            return None
+        return build_today(detail, datetime.now(timezone.utc), local_timezone_name())
 
     async def get_trip_map(self, trip_id: int, scope: MapScope = "all") -> TripMap | None:
         trip = await self._repo.get_trip(trip_id)

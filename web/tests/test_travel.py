@@ -727,3 +727,50 @@ class TestIdeas:
     def test_no_card_without_ideas(self, client, mock_api):
         _route(mock_api, {"/travel/trips/1": _detail(ideas=[]), "/travel/places": [], "/travel/trips/1/costs": None})
         assert "Ideas to plan" not in client.get("/travel/1").text
+
+
+class TestVisitEvents:
+    def test_delete_forwards_the_event_choice(self, client, mock_api):
+        mock_api["delete"].return_value = None
+        assert client.delete("/travel/visits/5?delete_event=true").status_code == 200
+        mock_api["delete"].assert_awaited_with("/travel/visits/5?delete_event=true")
+        client.delete("/travel/visits/5")
+        mock_api["delete"].assert_awaited_with("/travel/visits/5")
+
+    def test_row_shows_the_event_icon_and_marks_the_delete_button(self, client, mock_api):
+        visit = _visit(21)
+        visit["calendar_event_id"] = 77
+        _route(mock_api, {"/travel/trips/1": _detail(visits=[visit]), "/travel/places": [], "/travel/trips/1/costs": None})
+        html = client.get("/travel/1").text
+        assert "ti-calendar-event" in html and 'data-event="77"' in html
+
+
+class TestTodayPage:
+    def _today(self, **kw):
+        item = {"kind": "leg", "at": "2026-12-18T10:00:00Z", "local": "2026-12-18T11:00:00", "timezone": "UTC",
+                "title": "Beta → Gamma", "subtitle": "train", "ref_id": 1, "links": {"directions": "https://maps.example/d"}}
+        today = {"trip_id": 1, "trip_name": "Example trip", "date": "2026-12-18", "timezone": "UTC",
+                 "next_item": item, "minutes_until_next": 135, "visits": [_visit(11)], "to_mark": 1}
+        today.update(kw)
+        return today
+
+    def test_shows_the_next_step_with_countdown_and_the_visits_to_mark(self, client, mock_api):
+        _route(mock_api, {"/travel/trips/1/today": self._today()})
+        html = client.get("/travel/1/today").text
+        assert "Beta → Gamma" in html and "in 2 h 15 min" in html and "Cafe Example" in html
+        assert "1 to mark" in html and "Visited" in html and "Transit" in html
+
+    def test_empty_day(self, client, mock_api):
+        _route(mock_api, {"/travel/trips/1/today": self._today(next_item=None, minutes_until_next=None, visits=[], to_mark=0)})
+        html = client.get("/travel/1/today").text
+        assert "Nothing left on the timeline" in html and "No visits planned for today" in html
+
+    def test_unknown_trip_redirects(self, client, mock_api):
+        _route(mock_api, {"/travel/trips/1/today": _status_error(404, "Trip not found")})
+        assert client.get("/travel/1/today", follow_redirects=False).status_code == 302
+
+    def test_link_only_while_ongoing(self, client, mock_api):
+        _route(mock_api, {"/travel/trips/1": _detail(status="ongoing"), "/travel/places": [], "/travel/trips/1/costs": None})
+        assert "/travel/1/today" in client.get("/travel/1").text
+        _route(mock_api, {"/travel/trips/1": _detail(status="upcoming"), "/travel/places": [], "/travel/trips/1/costs": None})
+        assert "/travel/1/today" not in client.get("/travel/1").text

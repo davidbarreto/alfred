@@ -307,8 +307,9 @@ async def update_visit(visit_id: int, request: Request):
 
 
 @router.delete("/visits/{visit_id}")
-async def delete_visit(visit_id: int):
-    return await forward(api.delete(f"/travel/visits/{visit_id}"), "Could not delete the visit.")
+async def delete_visit(visit_id: int, delete_event: bool = False):
+    path = f"/travel/visits/{visit_id}" + ("?delete_event=true" if delete_event else "")
+    return await forward(api.delete(path), "Could not delete the visit.")
 
 
 @router.get("/places/{place_id}", response_class=HTMLResponse)
@@ -354,6 +355,25 @@ async def timeline_page(trip_id: int, request: Request):
     if trip is None:
         return RedirectResponse("/travel", status_code=302)
     return templates.TemplateResponse(request, "travel_timeline.html", {"trip": trip, "days": _group_by_day(trip["timeline"])})
+
+
+def _countdown(minutes: int | None) -> str:
+    if minutes is None:
+        return ""
+    hours, rest = divmod(minutes, 60)
+    if hours >= 24:
+        return f"in {hours // 24} d {hours % 24} h"
+    return f"in {hours} h {rest:02d} min" if hours else f"in {rest} min"
+
+
+@router.get("/{trip_id}/today", response_class=HTMLResponse)
+async def today_page(trip_id: int, request: Request):
+    today = await safe_get(f"/travel/trips/{trip_id}/today")
+    if today is None:
+        return RedirectResponse("/travel", status_code=302)
+    return templates.TemplateResponse(request, "travel_today.html", {
+        "today": today, "countdown": _countdown(today["minutes_until_next"]),
+    })
 
 
 @router.get("/{trip_id}/recap", response_class=HTMLResponse)

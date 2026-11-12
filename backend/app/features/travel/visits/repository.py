@@ -35,6 +35,9 @@ class VisitRepository:
         stmt = stmt.order_by(*_ORDER).limit(filters.limit).offset(filters.offset)
         return list((await self._session.scalars(stmt)).all())
 
+    async def get_visit_by_calendar_event(self, event_id: int) -> Visit | None:
+        return await self._session.scalar(select(Visit).where(Visit.calendar_event_id == event_id))
+
     async def get_trip_visits(self, trip_id: int) -> list[Visit]:
         stmt = select(Visit).where(Visit.trip_id == trip_id).order_by(*_ORDER)
         return list((await self._session.scalars(stmt)).all())

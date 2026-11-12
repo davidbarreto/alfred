@@ -70,7 +70,9 @@ function initTravelVisits(config) {
 
   document.querySelectorAll('.delete-visit').forEach((b) => b.addEventListener('click', async () => {
     if (!confirm('Delete this visit?')) return;
-    const { ok, data } = await send('DELETE', `/travel/visits/${b.dataset.id}`);
+    // A visit with a calendar event asks what to do with it; the event is never deleted silently.
+    const withEvent = b.dataset.event && confirm('This visit has a calendar event. Delete the event too?\n\nOK = delete it, Cancel = keep it in the calendar.');
+    const { ok, data } = await send('DELETE', `/travel/visits/${b.dataset.id}${withEvent ? '?delete_event=true' : ''}`);
     if (!ok) { alert(data.error || 'Could not delete the visit.'); return; }
     location.reload();
   }));

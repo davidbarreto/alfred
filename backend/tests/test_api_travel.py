@@ -589,3 +589,9 @@ class TestTripMap:
         client, service = trips
         service.get_trip_map.return_value = None
         assert client.get("/travel/trips/9/map", headers=AUTH).status_code == 404
+
+
+def test_trip_today_is_404_for_an_unknown_trip():
+    client, service = _client("get_trip_service")
+    service.get_today.return_value = None
+    assert client.get("/travel/trips/9/today", headers=AUTH).status_code == 404

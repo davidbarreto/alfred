@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% set active_page = "travel" %}
+{% block title %}Today: {{ today.trip_name }}{% endblock %}
+
+{% block content %}
+<div class="p-4 sm:p-6 space-y-4 max-w-xl mx-auto">
+
+  <a href="/travel/{{ today.trip_id }}" class="text-xs text-gray-500 hover:text-gray-700"><i class="ti ti-arrow-left"></i> {{ today.trip_name }}</a>
+  <h1 class="text-base font-semibold text-gray-900">Today <span class="text-xs font-normal text-gray-400">{{ today.date | short_date }} · {{ today.timezone }}</span></h1>
+
+  {% set item = today.next_item %}
+  <div class="card bg-white" id="next-item">
+    <div class="card-body p-4 space-y-1">
+      <p class="text-xs font-semibold text-gray-500">Next</p>
+      {% if item %}
+      <p class="text-sm text-gray-900">{{ item.title }}</p>
+      <p class="text-xs text-gray-500">{{ item.local[:16].replace('T', ' ') }}{% if item.subtitle %} · {{ item.subtitle }}{% endif %}</p>
+      <p class="text-sm text-[#378ADD]" id="countdown">{{ countdown }}</p>
+      <p class="flex flex-wrap gap-3 text-xs">
+        {% for key in ['directions', 'map', 'drive', 'walk'] if item.links.get(key) %}
+        <a class="text-[#378ADD] hover:underline" href="{{ item.links[key] }}" target="_blank" rel="noopener">{{ {'directions': 'Transit', 'map': 'Map', 'drive': 'Drive', 'walk': 'Walk'}[key] }}</a>
+        {% endfor %}
+      </p>
+      {% else %}
+      <p class="text-sm text-gray-400">Nothing left on the timeline.</p>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="card bg-white" id="today-visits">
+    <div class="card-body p-4 space-y-3">
+      <p class="text-xs font-semibold text-gray-500">Visits today{% if today.to_mark %} · {{ today.to_mark }} to mark{% endif %}</p>
+      {% for v in today.visits %}
+      <div class="space-y-1" data-visit="{{ v.id }}">
+        <p class="text-sm text-gray-900">
+          {% if v.visit_time %}<span class="text-gray-500">{{ v.visit_time[:5] }}</span> {% endif %}{{ v.place.name }}
+          <span class="px-1.5 py-0.5 rounded-full text-[11px] {% if v.status == 'visited' %}text-green-700 bg-green-50{% elif v.status == 'missed' %}text-red-700 bg-red-50{% else %}text-blue-700 bg-blue-50{% endif %}">{{ v.status }}</span>
+          {% if v.grade %}<span class="text-xs text-amber-600">{{ v.grade }}/5</span>{% endif %}
+        </p>
+        <p class="text-xs"><a class="text-[#378ADD] hover:underline" href="{{ v.place.maps_link }}" target="_blank" rel="noopener">Open in Maps</a></p>
+        {% if v.status == 'planned' %}
+        <div class="flex flex-wrap items-center gap-2">
+          <button class="btn btn-sm btn-outline mark" data-status="visited">Visited</button>
+          <button class="btn btn-sm btn-ghost mark" data-status="missed">Missed</button>
+          <select class="select select-sm select-bordered grade" aria-label="Grade"><option value="">Grade</option>{% for g in range(1, 6) %}<option value="{{ g }}">{{ g }}/5</option>{% endfor %}</select>
+        </div>
+        <input class="input input-sm input-bordered w-full note" placeholder="Quick note (optional)">
+        {% endif %}
+      </div>
+      {% else %}
+      <p class="text-sm text-gray-400">No visits planned for today.</p>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+<script>
+document.querySelectorAll('#today-visits [data-visit]').forEach((row) => {
+  row.querySelectorAll('.mark').forEach((button) => button.addEventListener('click', async () => {
+    const body = { status: button.dataset.status };
+    const grade = row.querySelector('.grade')?.value;
+    if (grade && body.status === 'visited') body.grade = Number(grade);
+    const note = row.querySelector('.note')?.value.trim();
+    if (note) body.notes = note;
+    const res = await fetch(`/travel/visits/${row.dataset.visit}`, {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+    });
+    if (res.ok) location.reload();
+    else alert((await res.json().catch(() => ({}))).error || 'Could not update the visit.');
+  }));
+});
+</script>
+{% endblock %}

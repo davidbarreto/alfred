@@ -6,6 +6,7 @@ from app.api.auth import require_auth
 from app.dependencies import TripRecapServiceDep, TripServiceDep
 from app.features.travel.recap.schemas import TripRecap
 from app.features.travel.trips.map_points import MapScope, TripMap
+from app.features.travel.trips.today import TripToday
 from app.features.travel.trips.schemas import TripCreate, TripDetail, TripFilters, TripRead, TripUpdate
 
 router = APIRouter(prefix="/travel/trips", tags=["travel"], dependencies=[Depends(require_auth)])
@@ -28,6 +29,15 @@ async def get_trip_recap(trip_id: int, service: TripRecapServiceDep) -> TripReca
     if recap is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Trip not found")
     return recap
+
+
+@router.get("/{trip_id}/today", response_model=TripToday)
+async def get_trip_today(trip_id: int, service: TripServiceDep) -> TripToday:
+    """The next step with a countdown and today's visits, for use on the trip itself."""
+    result = await service.get_today(trip_id)
+    if result is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Trip not found")
+    return result
 
 
 @router.get("/{trip_id}/map", response_model=TripMap)

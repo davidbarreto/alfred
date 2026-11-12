@@ -1,6 +1,6 @@
 from datetime import date, datetime
 
-from sqlalchemy import and_, delete, or_, select
+from sqlalchemy import and_, delete, func, or_, select
 from sqlalchemy.orm import selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -74,7 +74,7 @@ class CalendarEventRepository:
         tags = []
         for name in tag_names:
             result = await self._session.execute(
-                select(Tag).where(Tag.provider_id == provider_id, Tag.name == name)
+                select(Tag).where(Tag.provider_id == provider_id, func.lower(Tag.name) == name.lower())
             )
             tag = result.scalars().first()
             if tag is None:

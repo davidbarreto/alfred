@@ -66,7 +66,7 @@ def _stay(**kw):
 
 def _visit(**kw):
     base = dict(id=11, place_id=3, place=_place(), trip_id=1, trip_name="Example trip", status="visited",
-                visit_date=date(2031, 12, 18), visit_time=time(20, 0), notes="Great pasta", grade=None, created_at=NOW, updated_at=NOW)
+                visit_date=date(2031, 12, 18), visit_time=time(20, 0), notes="Great pasta", grade=None, calendar_event_id=None, created_at=NOW, updated_at=NOW)
     base.update(kw)
     return SimpleNamespace(**base)
 

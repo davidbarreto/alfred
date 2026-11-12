@@ -353,6 +353,15 @@ class TestResolveTags:
         assert tags[0] is existing_tag
         session.add.assert_not_called()
 
+    async def test_lookup_ignores_case(self):
+        session = _make_session()
+        session.execute.return_value = _scalar_first(None)
+
+        await CalendarEventRepository(session)._resolve_tags(["Travel"], "gc-event-1")
+
+        sql = str(session.execute.call_args.args[0].compile(compile_kwargs={"literal_binds": True}))
+        assert "lower(" in sql and "'travel'" in sql
+
     async def test_creates_new_tag(self):
         session = _make_session()
         session.execute.return_value = _scalar_first(None)

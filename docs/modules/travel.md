@@ -65,6 +65,20 @@ A template of tasks to create for a trip, stored in `core.settings` as `travel.c
 - **API**: `GET /travel/checklist-template`, `PUT /travel/checklist-template/{anchor}/{name}` (`offset_days`), `DELETE` the same path. `POST /travel/trips/{id}/checklist` creates one normal task per item titled `"<title> (<trip name>)"`, due the day of `anchor date + offset` at 23:59 (moved to today if already past); an item whose task (same title) exists is skipped, so pressing it twice is safe. Tasks go through `TaskService` (Notion sync, overload and the normal reminder rules apply: a task reminds from its due day on).
 - **Portal**: a *Pre-trip checklist* card on `/travel` (items grouped *Around departure* / *After the trip*, inline offset edit, delete, add row) and a *Generate checklist* button on the trip page.
 
+## Calendar events for visits
+
+A **planned** visit of a trip with a day **and** a time gets a calendar event (`visits/calendar_sync.py`, through `CalendarEventService`, so it reaches Google). The id is kept in `visits.calendar_event_id` (migration 087; unique, and an event belongs to one leg, stay or visit, else 409; a deleted event just unlinks).
+
+- **Event**: title = place name, location = place address (else name + city), description = Maps link + visit notes, length = `travel.visit_duration_min` (default 90, in `/travel/settings`), profile `normal`, organizer tags = the trip's default tags (looked up case-insensitively, created if missing), time zone = the stay covering that day, else the local zone.
+- **Edits**: changing a visit's day, time, place or trip moves the linked event's **start/end** (length kept) and **location** only, never title or description. A recurring, guest-invited or all-day event is left alone. Giving a time to an unlinked planned visit creates the event; clearing the time or day leaves the event untouched.
+- **Failures** (Google not authorised, API down) are logged at WARNING and never fail the visit write.
+- **Delete**: `DELETE /travel/visits/{id}?delete_event=true|false` (default false). The portal asks whether to delete the event too.
+- **Link / unlink**: `calendar_event_id` on `POST`/`PATCH /travel/visits` (null unlinks; the event is kept). Linking does not rewrite the event.
+
+## During the trip: today
+
+`GET /travel/trips/{id}/today` (`trips/today.py`) returns the traveler's calendar day (in the zone of the stay covering now, else the home zone), the next timeline step with `minutes_until_next`, today's visits and how many are still unmarked (`to_mark`). Portal: `/travel/{id}/today` (mobile-friendly card; linked from an ongoing trip) with one-tap Visited / Missed, an optional grade and a quick note appended through `PATCH /travel/visits/{id}`. Command: `travel_trip today` / `/today` (the ongoing trip when no trip is given); not in the Telegram menu.
+
 ## After the trip: recap and search
 
 `GET /travel/trips/{id}/recap` (portal `/travel/{id}/recap`, command `travel_trip recap`) builds the recap from the trip with **all** its visits (hidden ones included) and its costs, in `features/travel/recap/builder.py`:

@@ -6,6 +6,7 @@
       {% if show_place %}<a href="/travel/places/{{ v.place_id }}" class="hover:underline">{{ v.place.name }}</a>{% else %}{{ v.visit_date | short_date if v.visit_date else 'No day yet' }}{% endif %}
       <span class="px-1.5 py-0.5 rounded-full text-[11px]
         {% if v.status == 'visited' %}text-green-700 bg-green-50{% elif v.status == 'missed' %}text-red-700 bg-red-50{% else %}text-blue-700 bg-blue-50{% endif %}">{{ v.status }}</span>
+      {% if v.calendar_event_id %}<i class="ti ti-calendar-event text-xs text-gray-400" title="Has a calendar event"></i>{% endif %}
       {% if v.grade %}<span class="text-xs text-amber-600">{{ v.grade }}/5</span>{% endif %}
       {% if entity_costs is defined %}{{ cost_chip(entity_costs.visits.get(v.id)) }}{% endif %}
     </p>
@@ -22,6 +23,6 @@
     {% if v.status == 'planned' %}<button class="btn btn-xs btn-ghost mark-visit" data-id="{{ v.id }}" data-status="missed">Missed</button>{% endif %}
     {{ tx_button('visits', v.id, v.place.name) }}
     <button class="btn btn-xs btn-ghost edit-visit" data-item="{{ v | tojson | forceescape }}">Edit</button>
-    <button class="btn btn-xs btn-ghost text-red-600 delete-visit" data-id="{{ v.id }}">Delete</button>
+    <button class="btn btn-xs btn-ghost text-red-600 delete-visit" data-id="{{ v.id }}"{% if v.calendar_event_id %} data-event="{{ v.calendar_event_id }}"{% endif %}>Delete</button>
   </div>
 </div>

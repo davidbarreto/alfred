@@ -123,6 +123,7 @@ from app.features.travel.legs.service import LegService
 from app.features.travel.transaction_links.service import TransactionLinkService
 from app.features.travel.places.service import PlaceService
 from app.features.travel.checklist.service import ChecklistService
+from app.features.travel.visits.calendar_sync import VisitCalendarSync
 from app.features.travel.recap.service import TripRecapService
 from app.features.travel.settings_service import TravelSettingsService
 from app.features.travel.stays.service import StayService
@@ -660,7 +661,8 @@ def get_travel_settings_service(session: AsyncSession = Depends(get_session)) ->
     return TravelSettingsService(session)
 
 def get_visit_service(session: AsyncSession = Depends(get_session)) -> VisitService:
-    return VisitService(session, EmbeddingService(session, get_embedding_provider()))
+    calendar = VisitCalendarSync(session, lambda: get_calendar_event_service(session))
+    return VisitService(session, EmbeddingService(session, get_embedding_provider()), calendar)
 
 def get_transaction_link_service(session: AsyncSession = Depends(get_session)) -> TransactionLinkService:
     return TransactionLinkService(session)

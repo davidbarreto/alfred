@@ -1196,6 +1196,13 @@ COMMAND_DEFINITIONS = {
             "requires_args": True,
             "arg_keys": ["trip"],
         },
+        "today": {
+            "description": "What matters now on an ongoing trip: the next step with a countdown and today's visits to mark",
+            "details": "The trip argument is an id or name; omit it for the ongoing trip. Use travel_visit update to mark a visit visited or missed.",
+            "aliases": ["/today"],
+            "flags": {},
+            "arg_keys": ["trip"],
+        },
         "apply_tags": {
             "description": "Tag the expenses already dated within a trip with the trip's finance tags",
             "details": "New expenses (manual or imported) pick the tags up on their own; use this after changing the dates or the finance tags. Only expenses are tagged.",

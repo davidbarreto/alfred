@@ -16,6 +16,8 @@ class VisitCreate(BaseModel):
     visit_time: time | None = None
     notes: str | None = None
     grade: int | None = Field(default=None, ge=1, le=5)
+    # An existing calendar event to link; Alfred then moves its start/end and location with the visit.
+    calendar_event_id: int | None = None
 
     @model_validator(mode="after")
     def _grade_needs_a_done_visit(self) -> "VisitCreate":
@@ -32,6 +34,8 @@ class VisitUpdate(BaseModel):
     visit_time: time | None = None
     notes: str | None = None
     grade: int | None = Field(default=None, ge=1, le=5)
+    # Set to link an existing event, null to unlink (the event itself is kept).
+    calendar_event_id: int | None = None
 
 
 class VisitPlace(BaseModel):

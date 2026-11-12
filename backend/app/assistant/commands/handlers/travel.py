@@ -1,6 +1,7 @@
 import logging
 from dataclasses import dataclass
-from datetime import date, time
+from datetime import date, datetime, time, timezone
+from zoneinfo import ZoneInfo
 from typing import Any
 
 from fastapi import HTTPException, status
@@ -20,6 +21,7 @@ from app.features.travel.transaction_links.service import TransactionLinkService
 from app.features.travel.trips.schemas import TripCreate, TripFilters, TripRead, TripUpdate
 from app.features.travel.trips.service import TripService
 from app.features.travel.visits.schemas import VisitCreate, VisitFilters, VisitRead, VisitUpdate
+from app.features.travel.visits.note_log import append_note, pick_note_visit
 from app.features.travel.visits.service import VisitService
 
 logger = logging.getLogger(__name__)
@@ -517,6 +519,26 @@ async def _visit(command: str, arguments: dict[str, Any], services: TravelServic
         )
         visits = await services.visits.get_visits(filters)
         return {"count": len(visits), "visits": [_visit_summary(v) for v in visits]}
+
+    if command == "note":
+        text = _text(arguments, "text")
+        if not text:
+            raise _bad_request("text is required")
+        ongoing = await services.trips.get_trips(
+            TripFilters(status="ongoing", tag=None, q=None, date_from=None, date_to=None, limit=1, offset=0)
+        )
+        if not ongoing:
+            raise _not_found("Trip", "(no ongoing trip)")
+        today = await services.trips.get_today(ongoing[0].id)
+        detail = await services.trips.get_trip_detail(ongoing[0].id, include_all_visits=True)
+        if today is None or detail is None:
+            raise _not_found("Trip", ongoing[0].id)
+        local_now = datetime.now(timezone.utc).astimezone(ZoneInfo(today.timezone)).replace(tzinfo=None)
+        target = pick_note_visit(detail.visits, local_now)
+        if target is None:
+            return {"message": "No visit has started yet, so the note was not saved. Use update to edit a specific visit."}
+        await services.visits.update_visit(target.id, VisitUpdate(notes=append_note(target.notes, local_now, text)))
+        return {"id": target.id, "message": f"Note added to the visit to {target.place.name}"}
 
     if command == "update":
         visit_id = require_int(arguments, "id")

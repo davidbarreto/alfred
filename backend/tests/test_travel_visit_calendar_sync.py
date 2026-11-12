@@ -130,6 +130,22 @@ class TestLazyCalendar:
         factory = AsyncMock(return_value=events)
         svc = VisitCalendarSync(AsyncMock(), factory)
         factory.assert_not_awaited()
-        await svc.event_exists(1)
-        await svc.event_exists(2)
+        await svc.update_event(_visit(calendar_event_id=1))
+        await svc.update_event(_visit(calendar_event_id=2))
         factory.assert_awaited_once()
+
+
+class TestEventStart:
+    async def test_reads_the_start_in_the_events_own_zone(self, sync):
+        # Stored starts are naive local time; 19:00 Lisbon in March is 20:00 in Stockholm.
+        sync._events.get_event.return_value = _event(start_datetime=datetime(2026, 3, 18, 19, 0), timezone="Europe/Stockholm")
+        from unittest.mock import patch
+        from zoneinfo import ZoneInfo
+        with patch("app.features.travel.visits.calendar_sync.local_timezone", return_value=ZoneInfo("Europe/Lisbon")):
+            assert await sync.event_start(77) == (date(2026, 3, 18), time(20, 0))
+
+    async def test_all_day_or_missing_events_have_no_start(self, sync):
+        sync._events.get_event.return_value = _event(all_day=True)
+        assert await sync.event_start(77) is None
+        sync._events.get_event.return_value = None
+        assert await sync.event_start(77) is None

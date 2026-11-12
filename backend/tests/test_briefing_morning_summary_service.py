@@ -124,6 +124,13 @@ def _make_category_orm(id, name):
 
 
 @pytest.fixture(autouse=True)
+def _patch_trip_block():
+    with patch("app.features.briefing.morning_summary_service.TripBriefService") as MockTripBrief:
+        MockTripBrief.return_value.morning = AsyncMock(return_value=None)
+        yield MockTripBrief
+
+
+@pytest.fixture(autouse=True)
 def _patch_shopping_repo():
     with patch("app.features.briefing.morning_summary_service.ShoppingRepository") as MockShoppingRepo:
         MockShoppingRepo.return_value.list = AsyncMock(return_value=[])

@@ -12,7 +12,7 @@ from app.features.travel.places.service import PlaceService
 from app.features.travel.tags.tables import TravelTag
 from app.features.travel.trips.service import TripService
 from app.features.travel.settings_schemas import TravelSettingsRead
-from app.features.travel.visits.schemas import VisitCreate, VisitFilters, VisitUpdate
+from app.features.travel.visits.schemas import VisitCreate, VisitFilters, VisitMove, VisitUpdate
 from app.features.travel.visits.service import VisitService
 
 NOW = datetime(2026, 1, 1, tzinfo=timezone.utc)
@@ -194,12 +194,7 @@ class TestTripItineraryHiding:
 @pytest.fixture
 def synced(visits):
     visits._calendar = AsyncMock()
-    visits._leg_repo = AsyncMock()
-    visits._stay_repo = AsyncMock()
-    visits._leg_repo.get_leg_by_calendar_event.return_value = None
-    visits._stay_repo.get_stay_by_calendar_event.return_value = None
-    visits._repo.get_visit_by_calendar_event.return_value = None
-    visits._calendar.event_exists.return_value = True
+    visits._event_links = AsyncMock()
     visits._place_repo.get_place.return_value = _place()
     return visits
 
@@ -272,25 +267,103 @@ class TestVisitCalendarEvent:
         await synced.delete_visit(11, delete_event=True)
         synced._calendar.delete_event.assert_awaited_once_with(77)
 
-    async def test_linking_an_unknown_event_is_not_found(self, synced):
-        synced._calendar.event_exists.return_value = False
-        with pytest.raises(TravelNotFoundError, match="Calendar event"):
-            await synced.create_visit(VisitCreate(place_id=3, calendar_event_id=9))
-
-    @pytest.mark.parametrize("taken_by", ["visit", "leg", "stay"])
-    async def test_an_event_used_by_another_item_is_a_conflict(self, synced, taken_by):
-        if taken_by == "visit":
-            synced._repo.get_visit_by_calendar_event.return_value = _visit(id=99)
-        elif taken_by == "leg":
-            synced._leg_repo.get_leg_by_calendar_event.return_value = object()
-        else:
-            synced._stay_repo.get_stay_by_calendar_event.return_value = object()
+    async def test_linking_checks_the_event_against_every_kind_of_item(self, synced):
+        synced._event_links.ensure_free.side_effect = TravelConflictError("taken")
         with pytest.raises(TravelConflictError):
             await synced.create_visit(VisitCreate(place_id=3, calendar_event_id=9))
+        synced._repo.create_visit.assert_not_awaited()
 
     async def test_relinking_the_same_event_to_its_own_visit_is_allowed(self, synced):
         visit = _visit(calendar_event_id=9)
         synced._repo.get_visit.return_value = visit
         synced._repo.update_visit.return_value = visit
-        synced._repo.get_visit_by_calendar_event.return_value = visit
         await synced.update_visit(11, VisitUpdate(calendar_event_id=9))
+        synced._event_links.ensure_free.assert_awaited_once_with(9, "visit", 11)
+
+
+class TestMoveVisits:
+    @staticmethod
+    def _at(id, day, status="planned", tags=()):
+        v = _visit(id=id, visit_date=date(2026, 12, day), status=status)
+        v.place = _place(tags=[TravelTag(name=t) for t in tags])
+        return v
+
+    @pytest.fixture
+    def mover(self, visits):
+        visits._trip_repo.get_trip.return_value = object()
+        visits.update_visit = AsyncMock()
+        return visits
+
+    async def test_moves_the_planned_visits_of_the_day_only(self, mover):
+        mover._repo.get_trip_visits.return_value = [
+            self._at(1, 18), self._at(2, 18, status="visited"), self._at(3, 19), self._at(4, 18),
+        ]
+        result = await mover.move_visits(1, VisitMove(from_date=date(2026, 12, 18), to_date=date(2026, 12, 20)))
+        assert result.moved == [1, 4] and result.failed == []
+        assert mover.update_visit.await_args_list[0].args[1].visit_date == date(2026, 12, 20)
+
+    async def test_can_be_limited_to_ids_and_to_a_place_tag(self, mover):
+        mover._repo.get_trip_visits.return_value = [
+            self._at(1, 18, tags=["Outdoor"]), self._at(2, 18, tags=["Indoor"]), self._at(3, 18, tags=["outdoor"]),
+        ]
+        result = await mover.move_visits(1, VisitMove(
+            from_date=date(2026, 12, 18), to_date=date(2026, 12, 20), only_tag="OUTDOOR", visit_ids=[1, 2]))
+        assert result.moved == [1]
+
+    async def test_one_failure_is_collected_and_the_rest_still_move(self, mover):
+        mover._repo.get_trip_visits.return_value = [self._at(1, 18), self._at(2, 18)]
+        mover.update_visit.side_effect = [RuntimeError("google down"), None]
+        result = await mover.move_visits(1, VisitMove(from_date=date(2026, 12, 18), to_date=date(2026, 12, 20)))
+        assert result.moved == [2] and result.failed == [1]
+
+    async def test_unknown_trip(self, mover):
+        mover._trip_repo.get_trip.return_value = None
+        with pytest.raises(TravelNotFoundError):
+            await mover.move_visits(9, VisitMove(from_date=date(2026, 12, 18), to_date=date(2026, 12, 20)))
+
+
+class TestEventActions:
+    async def test_create_stores_the_new_event_id(self, synced):
+        visit = _visit()
+        synced._repo.get_visit.return_value = visit
+        synced._calendar.create_event.return_value = 5
+        synced._repo.update_visit.return_value = _visit(calendar_event_id=5)
+        result = await synced.event_action(11, "create")
+        synced._repo.update_visit.assert_awaited_once_with(visit, {"calendar_event_id": 5})
+        assert result.calendar_event_id == 5
+
+    async def test_create_refuses_when_there_is_nothing_to_create_from(self, synced):
+        synced._repo.get_visit.return_value = _visit(calendar_event_id=5)
+        with pytest.raises(ValueError, match="already"):
+            await synced.event_action(11, "create")
+        synced._repo.get_visit.return_value = _visit(visit_time=None)
+        with pytest.raises(ValueError, match="day and a time"):
+            await synced.event_action(11, "create")
+        synced._repo.get_visit.return_value = _visit()
+        synced._calendar.create_event.return_value = None
+        with pytest.raises(ValueError, match="could not be created"):
+            await synced.event_action(11, "create")
+
+    async def test_update_event_reports_when_the_event_was_left_alone(self, synced):
+        synced._repo.get_visit.return_value = _visit(calendar_event_id=5)
+        synced._calendar.update_event.return_value = False
+        with pytest.raises(ValueError, match="not changed"):
+            await synced.event_action(11, "update_event")
+
+    async def test_update_visit_takes_the_events_day_and_time(self, synced):
+        visit = _visit(calendar_event_id=5)
+        synced._repo.get_visit.return_value = visit
+        synced._calendar.event_start.return_value = (date(2026, 12, 19), time(13, 30))
+        synced._repo.update_visit.return_value = visit
+        await synced.event_action(11, "update_visit")
+        synced._repo.update_visit.assert_awaited_once_with(visit, {"visit_date": date(2026, 12, 19), "visit_time": time(13, 30)})
+
+    async def test_update_visit_without_a_readable_event_fails_cleanly(self, synced):
+        synced._repo.get_visit.return_value = _visit(calendar_event_id=5)
+        synced._calendar.event_start.return_value = None
+        with pytest.raises(ValueError, match="missing"):
+            await synced.event_action(11, "update_visit")
+
+    async def test_unknown_visit(self, synced):
+        synced._repo.get_visit.return_value = None
+        assert await synced.event_action(9, "create") is None

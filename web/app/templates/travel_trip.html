@@ -20,6 +20,7 @@
           <span class="px-2 py-0.5 rounded-full text-xs font-medium
             {% if trip.status == 'ongoing' %}text-green-700 bg-green-50{% elif trip.status == 'upcoming' %}text-blue-700 bg-blue-50{% else %}text-gray-500 bg-gray-100{% endif %}">{{ trip.status }}</span>
           {% if trip.status == 'ongoing' %}<a class="btn btn-xs btn-outline" href="/travel/{{ trip.id }}/today">Today</a>{% endif %}
+          <a class="btn btn-xs btn-outline" href="/travel/{{ trip.id }}/print" target="_blank">Print</a>
           <a class="btn btn-xs btn-outline" href="/travel/{{ trip.id }}/recap">Recap</a>
           <div class="dropdown dropdown-end">
             <label tabindex="0" class="btn btn-xs btn-outline"><i class="ti ti-map-pin"></i> Map pins</label>
@@ -71,6 +72,18 @@
     </div>
   </div>
 
+  {% if other_events %}
+  <div class="card bg-amber-50 border border-amber-200" id="other-events">
+    <div class="card-body p-4 space-y-1">
+      <p class="text-xs font-semibold text-amber-800"><i class="ti ti-calendar-off"></i> {{ other_events|length }} other calendar event{{ '' if other_events|length == 1 else 's' }} during the trip</p>
+      <p class="text-[11px] text-amber-700">Not tagged with this trip's default tags and not linked to it. {% if other_events[0].snoozed is defined and other_events|selectattr('snoozed')|list %}Their reminders are snoozed.{% else %}Turn on snoozing in the travel settings to hold their reminders back.{% endif %}</p>
+      {% for e in other_events %}
+      <p class="text-sm text-amber-900">{{ e.start_datetime[:16].replace('T', ' ') }} · {{ e.title }}{% if e.recurring %} <span class="text-[11px]">(recurring)</span>{% endif %}{% if e.snoozed %} <span class="text-[11px]">· snoozed</span>{% endif %}</p>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
   {% if trip.warnings %}
   <div class="card bg-amber-50 border border-amber-200" id="warnings">
     <div class="card-body p-4 space-y-1">
@@ -105,6 +118,72 @@
       {% endif %}
     </div>
   </div>
+
+  {% if unlinked %}
+  <div class="card bg-white" id="unlinked">
+    <div class="card-body p-5 space-y-2">
+      <h2 class="text-sm font-semibold text-gray-900">Charges not linked to anything <span class="text-xs font-normal text-gray-400">{{ unlinked|length }}</span></h2>
+      <p class="text-xs text-gray-400">Dated within the trip or carrying its default tags, but not tied to a leg, stay or visit yet.</p>
+      {% for t in unlinked %}
+      <div class="flex flex-wrap items-center gap-2 text-sm" data-unlinked="{{ t.id }}">
+        <span class="text-gray-500 w-24">{{ t.date | short_date }}</span>
+        <span class="flex-1 min-w-[8rem]">{{ t.merchant or t.description or 'Charge' }}</span>
+        <span class="{{ 'text-green-700' if t.type == 'income' else '' }}">{{ t.amount }} {{ t.currency }}</span>
+        <select class="select select-xs select-bordered unlinked-target" aria-label="Link to">
+          <option value="">Link to…</option>
+          {% for leg in trip.legs %}<option value="legs:{{ leg.id }}">Leg: {{ leg.origin }} → {{ leg.destination }}</option>{% endfor %}
+          {% for stay in trip.stays %}<option value="stays:{{ stay.id }}">Stay: {{ stay.place.name }}</option>{% endfor %}
+          {% for v in trip.visits %}<option value="visits:{{ v.id }}">Visit: {{ v.place.name }}</option>{% endfor %}
+        </select>
+        <button type="button" class="btn btn-xs btn-outline link-unlinked" data-id="{{ t.id }}">Link</button>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  {% if while_away and (while_away.birthdays or while_away.tasks or while_away.charges) %}
+  <div class="card bg-white" id="while-away">
+    <div class="card-body p-5 space-y-2">
+      <h2 class="text-sm font-semibold text-gray-900">While you are away</h2>
+      {% if while_away.birthdays %}<div><p class="text-xs font-semibold text-gray-500">Birthdays</p>
+        {% for b in while_away.birthdays %}<p class="text-sm">{{ b.date | short_date }} · {{ b.name }}</p>{% endfor %}</div>{% endif %}
+      {% if while_away.tasks %}<div><p class="text-xs font-semibold text-gray-500">Tasks due</p>
+        {% for t in while_away.tasks %}<p class="text-sm">{{ t.due | short_date }} · {{ t.title }}</p>{% endfor %}</div>{% endif %}
+      {% if while_away.charges %}<div><p class="text-xs font-semibold text-gray-500">Recurring charges</p>
+        {% for c in while_away.charges %}<p class="text-sm">{{ c.date | short_date }} · {{ c.merchant or 'Charge' }} · {{ c.amount }} {{ c.currency }}</p>{% endfor %}</div>{% endif %}
+    </div>
+  </div>
+  {% endif %}
+
+  {% if forecast and forecast.mode != 'none' %}
+  <div class="card bg-white" id="forecast">
+    <div class="card-body p-5 space-y-2">
+      <h2 class="text-sm font-semibold text-gray-900">Weather <span class="text-xs font-normal text-gray-400">{{ 'forecast' if forecast.mode == 'forecast' else "last year's same dates" }}</span></h2>
+      {% if forecast.available %}
+      {% for city in forecast.cities %}
+      <div>
+        <p class="text-xs font-semibold text-gray-500 mb-1">{{ city.city }}</p>
+        <div class="flex flex-wrap gap-2">
+          {% for d in city.days %}
+          <div class="rounded-md border border-gray-200 px-2 py-1 text-center text-xs {{ 'bg-sky-50' if d.rain }}" data-weather-day="{{ d.date }}">
+            <p class="text-gray-400">{{ d.date | short_date }}</p>
+            <p class="text-gray-900">{{ d.min_c|round|int if d.min_c is not none else '–' }}° / {{ d.max_c|round|int if d.max_c is not none else '–' }}°</p>
+            <p class="text-sky-700">{% if d.rain %}<i class="ti ti-umbrella"></i> {{ d.precip_mm|round(1) }} mm{% else %}&nbsp;{% endif %}</p>
+            {% if d.rain and trip.visits|selectattr('visit_date', 'equalto', d.date|string)|selectattr('status', 'equalto', 'planned')|list %}
+            <button type="button" class="btn btn-xs btn-ghost move-day" data-from="{{ d.date }}" title="Move this day's planned visits to another day">Move visits</button>
+            {% endif %}
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% endfor %}
+      {% else %}
+      <p class="text-sm text-gray-400">{{ forecast.message or 'No weather available.' }}</p>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
 
   {% if trip.ideas %}
   <div class="card bg-white" id="ideas">
@@ -143,11 +222,14 @@
           <button class="btn btn-xs btn-outline" id="add-visit">Add visit</button>
         </div>
       </div>
+      {% if empty_days and trip.visits %}
+      <p class="text-xs text-gray-400" id="empty-days">No visits yet on: {% for d in empty_days %}{{ d | short_date }}{{ ', ' if not loop.last }}{% endfor %}</p>
+      {% endif %}
       {% for day, visits in visit_days.items() %}
       <div>
         <p class="text-xs font-semibold text-gray-500 mb-1">{{ day | short_date if day else 'No day yet' }}</p>
         <div class="space-y-2">
-          {% for v in visits %}{% set show_place = true %}{% set show_trip = false %}{% include "_travel_visit_row.html" %}{% endfor %}
+          {% for v in visits %}{% set show_place = true %}{% set show_trip = false %}{% set event_actions = true %}{% include "_travel_visit_row.html" %}{% endfor %}
         </div>
       </div>
       {% else %}
@@ -175,6 +257,7 @@
           </div>
           <div class="flex gap-1 whitespace-nowrap">
             {{ tx_button('legs', leg.id, leg.origin ~ ' → ' ~ leg.destination) }}
+            {% if leg.calendar_event_id %}<button class="btn btn-xs btn-ghost unlink-event" data-kind="legs" data-id="{{ leg.id }}" title="Detach the calendar event (it stays in the calendar)">Unlink event</button>{% else %}<button class="btn btn-xs btn-ghost link-event" data-kind="legs" data-id="{{ leg.id }}">Link event</button>{% endif %}
             <button class="btn btn-xs btn-ghost edit-leg" data-item="{{ leg | tojson | forceescape }}">Edit</button>
             <button class="btn btn-xs btn-ghost text-red-600 delete-item" data-url="/travel/legs/{{ leg.id }}">Delete</button>
           </div>
@@ -206,6 +289,7 @@
           </div>
           <div class="flex gap-1 whitespace-nowrap">
             {{ tx_button('stays', stay.id, stay.place.name) }}
+            {% if stay.calendar_event_id %}<button class="btn btn-xs btn-ghost unlink-event" data-kind="stays" data-id="{{ stay.id }}" title="Detach the calendar event (it stays in the calendar)">Unlink event</button>{% else %}<button class="btn btn-xs btn-ghost link-event" data-kind="stays" data-id="{{ stay.id }}">Link event</button>{% endif %}
             <button class="btn btn-xs btn-ghost edit-stay" data-item="{{ stay | tojson | forceescape }}">Edit</button>
             <button class="btn btn-xs btn-ghost text-red-600 delete-item" data-url="/travel/stays/{{ stay.id }}">Delete</button>
           </div>
@@ -220,6 +304,18 @@
   {% with places=places %}{% include "_travel_visit_dialog.html" %}{% endwith %}
 
   {% include "_travel_tx_dialog.html" %}
+
+  <dialog id="link-dialog" class="modal">
+    <div class="modal-box max-w-2xl space-y-3">
+      <h3 class="text-sm font-semibold">Link to a calendar event</h3>
+      <p class="text-xs text-gray-400">Events in Alfred's calendar copy during the trip that are not linked to anything yet. Linking does not change the event; later changes to a visit move its start, end and location.</p>
+      <div id="link-list" class="space-y-2"></div>
+      <div class="flex items-center gap-3">
+        <button type="button" class="btn btn-sm btn-ghost" id="link-close">Close</button>
+        <span class="text-xs text-red-600" id="link-error"></span>
+      </div>
+    </div>
+  </dialog>
 
   <dialog id="calendar-dialog" class="modal">
     <div class="modal-box max-w-2xl space-y-3">
@@ -272,8 +368,9 @@
         <label class="space-y-1 col-span-2"><span class="block text-xs text-gray-500">Place</span>
           <select name="place_id" id="stay-place" class="select select-sm select-bordered w-full">
             <option value="new">+ New place…</option>
-            {% for p in places if p.kind == 'hotel' or p.kind == 'other' %}<option value="{{ p.id }}">{{ p.name }}{% if p.city %} ({{ p.city }}){% endif %}</option>{% endfor %}
-          </select></label>
+            {% for p in places if p.kind == 'hotel' or p.kind == 'other' %}<option value="{{ p.id }}" data-href="/travel/places/{{ p.id }}" data-grade="{{ p.grade or 0 }}" data-count="{{ p.grade_count or 0 }}" data-tags="{{ p.tags | join(',') }}">{{ p.name }}{% if p.city %} ({{ p.city }}){% endif %}</option>{% endfor %}
+          </select>
+          <span class="block text-[11px] text-gray-500" id="stay-place-history"></span></label>
         <div class="col-span-2 grid grid-cols-2 gap-3" id="new-place-fields">
           <label class="space-y-1"><span class="block text-xs text-gray-500">Hotel name</span><input name="place_name" class="input input-sm input-bordered w-full"></label>
           <label class="space-y-1"><span class="block text-xs text-gray-500">City</span><input name="place_city" class="input input-sm input-bordered w-full"></label>
@@ -300,6 +397,7 @@
 
 <script src="/static/js/airport-input.js"></script>
 <script src="/static/js/travel-visits.js"></script>
+<script src="/static/js/travel-place-history.js"></script>
 <script src="/static/js/travel-transactions.js"></script>
 <script>
 initTravelVisits({ tripId: {{ trip.id }}, placeId: null });
@@ -352,6 +450,26 @@ document.querySelectorAll('.plan-idea').forEach((button) => button.addEventListe
   if (!day) { row.querySelector('.idea-day').focus(); return; }
   const { ok, data } = await send('PATCH', `/travel/visits/${button.dataset.id}`, { trip_id: TRIP_ID, visit_date: day });
   if (ok) location.reload(); else alert(data.error || 'Could not plan the visit.');
+}));
+
+document.querySelectorAll('.link-unlinked').forEach((button) => button.addEventListener('click', async () => {
+  const target = button.closest('[data-unlinked]').querySelector('.unlinked-target').value;
+  if (!target) return;
+  const [kind, id] = target.split(':');
+  const { ok, data } = await send('POST', `/travel/links/${kind}/${id}`, { transaction_id: Number(button.dataset.id) });
+  if (ok) location.reload(); else alert(data.error || 'Could not link the charge.');
+}));
+
+document.querySelectorAll('.move-day').forEach((button) => button.addEventListener('click', async () => {
+  const to = prompt(`Move the planned visits of ${button.dataset.from} to which day? (YYYY-MM-DD)`);
+  if (!to) return;
+  const outdoorOnly = confirm('Move only visits at places tagged Outdoor?\n\nOK = only Outdoor, Cancel = all planned visits of that day.');
+  const body = { from_date: button.dataset.from, to_date: to };
+  if (outdoorOnly) body.only_tag = 'Outdoor';
+  const { ok, data } = await send('POST', `/travel/trips/${TRIP_ID}/visits/move`, body);
+  if (!ok) { alert(data.error || 'Could not move the visits.'); return; }
+  if (data.failed.length) alert(`${data.failed.length} visit(s) could not be moved.`);
+  location.reload();
 }));
 
 document.getElementById('generate-checklist')?.addEventListener('click', async () => {
@@ -430,6 +548,7 @@ legForm.addEventListener('submit', async (event) => {
 
 // ---- stays ----
 const stayDialog = document.getElementById('stay-dialog');
+initPlaceHistory(document.getElementById('stay-place'), document.getElementById('stay-place-history'));
 const stayForm = document.getElementById('stay-form');
 initCityInput({ input: stayForm.elements.place_city, countryInput: stayForm.elements.place_country, zoneInput: stayForm.elements.timezone });
 const newPlaceFields = document.getElementById('new-place-fields');
@@ -453,6 +572,7 @@ function openStay(stay, prefill = null, eventId = null) {
   stayForm.querySelector('.form-error').textContent = '';
   document.getElementById('stay-title').textContent = stay ? 'Edit stay' : (eventId ? 'Add stay from calendar' : 'Add stay');
   stayForm.elements.place_id.value = stay ? String(stay.place_id) : 'new';
+  stayForm.elements.place_id.dispatchEvent(new Event('place-history:refresh'));
   if (stay && stayForm.elements.place_id.value !== String(stay.place_id)) {
     const option = new Option(stay.place.name, stay.place_id, true, true);
     stayForm.elements.place_id.add(option);
@@ -498,6 +618,47 @@ stayForm.addEventListener('submit', async (event) => {
   if (!ok) { error.textContent = data.error || 'Something went wrong.'; return; }
   afterSave();
 });
+
+// ---- link / unlink / repair calendar events ----
+const linkDialog = document.getElementById('link-dialog');
+const linkList = document.getElementById('link-list');
+const linkError = document.getElementById('link-error');
+document.getElementById('link-close').addEventListener('click', () => linkDialog.close());
+
+async function setEventLink(kind, id, eventId) {
+  const { ok, data } = await send('PATCH', `/travel/${kind}/${id}`, { calendar_event_id: eventId });
+  if (ok) location.reload(); else linkError.textContent = data.error || 'Could not change the link.';
+  return ok;
+}
+
+document.querySelectorAll('.link-event').forEach((button) => button.addEventListener('click', async () => {
+  linkError.textContent = '';
+  linkList.textContent = 'Loading…';
+  linkDialog.showModal();
+  const res = await fetch(`/travel/trips/${TRIP_ID}/calendar-events`);
+  const data = await res.json().catch(() => []);
+  if (!res.ok) { linkList.textContent = ''; linkError.textContent = data.error || 'Could not read the calendar.'; return; }
+  const free = data.filter((event) => !event.imported_as);
+  linkList.replaceChildren(...free.map((event) => {
+    const row = document.createElement('button');
+    row.type = 'button';
+    row.className = 'btn btn-sm btn-ghost justify-start w-full normal-case';
+    row.textContent = `${event.start_local.slice(0, 16).replace('T', ' ')} · ${event.title}`;
+    row.addEventListener('click', () => setEventLink(button.dataset.kind, button.dataset.id, event.event_id));
+    return row;
+  }));
+  if (!free.length) linkList.textContent = 'No unlinked calendar events during the trip.';
+}));
+
+document.querySelectorAll('.unlink-event').forEach((button) => button.addEventListener('click', async () => {
+  if (!confirm('Unlink the calendar event? The event itself stays in the calendar.')) return;
+  await setEventLink(button.dataset.kind, button.dataset.id, null);
+}));
+
+document.querySelectorAll('.event-action').forEach((button) => button.addEventListener('click', async () => {
+  const { ok, data } = await send('POST', `/travel/visits/${button.dataset.id}/event`, { action: button.dataset.action });
+  if (ok) location.reload(); else alert(data.error || 'Could not do that.');
+}));
 
 // ---- import from calendar ----
 const calendarDialog = document.getElementById('calendar-dialog');

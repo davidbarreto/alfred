@@ -1,8 +1,10 @@
 import logging
+from datetime import datetime, time, timedelta
 from decimal import Decimal
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.features.travel.default_tags import parse_default_tag_names
 from app.features.travel.errors import TravelNotFoundError
 from app.features.travel.legs.repository import LegRepository
 from app.features.travel.stays.repository import StayRepository
@@ -96,6 +98,19 @@ class TransactionLinkService:
             stays=await per_entity("stays", stays),
             visits=await per_entity("visits", visits),
         )
+
+    async def get_unlinked(self, trip_id: int) -> list[LinkedTransaction] | None:
+        """Charges that look like part of the trip but are not linked to any leg, stay or visit yet."""
+        trip = await self._trip_repo.get_trip(trip_id)
+        if trip is None:
+            return None
+        found = await self._repo.get_unlinked(
+            datetime.combine(trip.start_date, time.min),
+            datetime.combine(trip.end_date + timedelta(days=1), time.min),
+            parse_default_tag_names(trip.default_tag_names),
+        )
+        logger.debug("Unlinked transactions: trip_id=%d count=%d", trip_id, len(found))
+        return [LinkedTransaction.model_validate(t) for t in found]
 
     async def get_place_costs(self, place_id: int) -> PlaceCosts | None:
         if await self._place_repo.get_place(place_id) is None:

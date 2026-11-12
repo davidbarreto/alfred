@@ -5,7 +5,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from app.features.finance.recurring_transactions.service import (
     RecurringTransactionService,
     _add_months,
-    _next_occurrence,
+    next_occurrence,
 )
 from app.features.finance.recurring_transactions.schemas import (
     ProcessResult,
@@ -103,41 +103,41 @@ class TestDelete:
 
 class TestNextOccurrence:
     def test_monthly_advances_one_month(self):
-        result = _next_occurrence("FREQ=MONTHLY", date(2026, 1, 15))
+        result = next_occurrence("FREQ=MONTHLY", date(2026, 1, 15))
         assert result == date(2026, 2, 15)
 
     def test_monthly_clamps_end_of_month(self):
-        result = _next_occurrence("FREQ=MONTHLY", date(2026, 1, 31))
+        result = next_occurrence("FREQ=MONTHLY", date(2026, 1, 31))
         assert result == date(2026, 2, 28)
 
     def test_weekly_advances_seven_days(self):
-        result = _next_occurrence("FREQ=WEEKLY", date(2026, 1, 1))
+        result = next_occurrence("FREQ=WEEKLY", date(2026, 1, 1))
         assert result == date(2026, 1, 8)
 
     def test_biweekly_via_interval(self):
-        result = _next_occurrence("FREQ=WEEKLY;INTERVAL=2", date(2026, 1, 1))
+        result = next_occurrence("FREQ=WEEKLY;INTERVAL=2", date(2026, 1, 1))
         assert result == date(2026, 1, 15)
 
     def test_daily_advances_one_day(self):
-        result = _next_occurrence("FREQ=DAILY", date(2026, 1, 1))
+        result = next_occurrence("FREQ=DAILY", date(2026, 1, 1))
         assert result == date(2026, 1, 2)
 
     def test_yearly_advances_one_year(self):
-        result = _next_occurrence("FREQ=YEARLY", date(2026, 3, 1))
+        result = next_occurrence("FREQ=YEARLY", date(2026, 3, 1))
         assert result == date(2027, 3, 1)
 
     def test_until_on_boundary_is_included(self):
         # Occurrence landing on the UNTIL date is still valid
-        result = _next_occurrence("FREQ=MONTHLY;UNTIL=20260101", date(2025, 12, 1))
+        result = next_occurrence("FREQ=MONTHLY;UNTIL=20260101", date(2025, 12, 1))
         assert result == date(2026, 1, 1)
 
     def test_until_exhausted_returns_none(self):
         # Occurrence after UNTIL → exhausted
-        result = _next_occurrence("FREQ=MONTHLY;UNTIL=20260101", date(2026, 1, 1))
+        result = next_occurrence("FREQ=MONTHLY;UNTIL=20260101", date(2026, 1, 1))
         assert result is None
 
     def test_until_not_yet_reached(self):
-        result = _next_occurrence("FREQ=MONTHLY;UNTIL=20261201", date(2026, 10, 1))
+        result = next_occurrence("FREQ=MONTHLY;UNTIL=20261201", date(2026, 10, 1))
         assert result == date(2026, 11, 1)
 
 

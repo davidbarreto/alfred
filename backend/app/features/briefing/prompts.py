@@ -15,6 +15,8 @@ if a section lists many items, group or summarize the routine ones instead of re
 - Mention upcoming items from the next few days only briefly, in a sentence or two, so nothing catches David \
 off guard -- never let them overshadow today
 - If there are pending shopping or recurring items, remind briefly that they're waiting without listing every detail
+- If David is on a trip ("On a trip"), lead with that day's agenda, the leave-home time if given, and the spend so \
+far in a sentence; the trip comes before the routine tasks
 - Keep the whole briefing tight: a handful of short paragraphs, not an exhaustive report of every item fetched"""
 
 
@@ -33,5 +35,6 @@ suggest it as an optional quick win to close out before bed. Skip this part enti
 clear quick win -- never force one.
 - Finally, recommend exactly one thing to focus on tomorrow, chosen from the open tasks and tomorrow's events \
 together. Be direct: name the one thing, not a list.
+- If a trip line says visits are still to mark, add one short reminder to mark them as visited or missed.
 - Recent notes are background context only (what's on the user's mind) -- never recommend acting on a note itself.
 - If there are no open tasks and no events tomorrow, say the day ahead looks clear instead of forcing a focus."""

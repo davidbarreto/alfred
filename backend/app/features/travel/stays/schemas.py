@@ -38,6 +38,8 @@ class StayCreate(_StayFields):
 
 
 class StayUpdate(_StayFields):
+    # Link an existing calendar event, or send null to unlink (the event itself is kept).
+    calendar_event_id: int | None = None
     trip_id: int | None = None
     place_id: int | None = None
     check_in_at: datetime | None = None

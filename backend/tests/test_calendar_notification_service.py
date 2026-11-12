@@ -24,6 +24,7 @@ def service():
     svc._event_service = AsyncMock()
     svc._settings = AsyncMock()
     svc._working_memory_repo = AsyncMock()
+    svc._snooze = None
     return svc
 
 
@@ -102,3 +103,32 @@ class TestBuildDueDigest:
             digest = await service.build_due_digest()
 
         assert digest.has_content is True
+
+
+class TestTripSnooze:
+    async def test_a_snoozed_occurrence_is_not_reminded_but_others_are(self, service):
+        held, kept = _make_event(id=1, title="Gym"), _make_event(id=2, title="Dentist")
+        service._event_service.get_events.return_value = [held, kept]
+        service._settings.get_cascade.return_value = ["0"]
+        service._working_memory_repo.list.return_value = []
+        service._snooze = AsyncMock()
+        service._snooze.snoozed_for_digest.return_value = {(1, NOW)}
+
+        with _patch_now():
+            digest = await service.build_due_digest()
+
+        assert "Dentist" in digest.text and "Gym" not in digest.text
+        service._snooze.snoozed_for_digest.assert_awaited_once()
+
+    async def test_snooze_applies_to_the_occurrence_not_the_whole_series(self, service):
+        event = _make_event(id=1, title="Gym")
+        service._event_service.get_events.return_value = [event]
+        service._settings.get_cascade.return_value = ["0"]
+        service._working_memory_repo.list.return_value = []
+        service._snooze = AsyncMock()
+        service._snooze.snoozed_for_digest.return_value = {(1, datetime(2026, 8, 19, 10, 0))}
+
+        with _patch_now():
+            digest = await service.build_due_digest()
+
+        assert "Gym" in digest.text

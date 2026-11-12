@@ -57,6 +57,10 @@ def _build_context(digest: EveningDigest) -> str:
         for note in digest.notes:
             lines.append(f"  {note.title}")
 
+    if digest.trip:
+        lines.append("")
+        lines.append(f"Trip {digest.trip.trip_name}: {digest.trip.to_mark} visit(s) still to mark as visited or missed")
+
     return "\n".join(lines)
 
 

@@ -3,7 +3,7 @@ import logging
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.features.core.embeddings.service import EmbeddingService
-from app.features.organizer.calendar_events.repository import CalendarEventRepository
+from app.features.travel.event_links import EventLinkChecker
 from app.features.travel.errors import TravelConflictError, TravelNotFoundError
 from app.features.travel.notes_index import STAY_NOTE, TravelNoteIndex
 from app.features.travel.places.repository import PlaceRepository
@@ -23,7 +23,7 @@ class StayService:
         self._repo = StayRepository(session)
         self._trip_repo = TripRepository(session)
         self._place_repo = PlaceRepository(session)
-        self._calendar_repo = CalendarEventRepository(session)
+        self._event_links = EventLinkChecker(session)
 
     async def get_stays(self, trip_id: int) -> list[StayRead]:
         stays = await self._repo.get_stays(trip_id)
@@ -43,10 +43,7 @@ class StayService:
     async def create_stay(self, data: StayCreate) -> StayRead:
         await self._check_refs(data.trip_id, data.place_id)
         if data.calendar_event_id is not None:
-            if await self._calendar_repo.get_event(data.calendar_event_id) is None:
-                raise TravelNotFoundError(f"Calendar event {data.calendar_event_id} not found")
-            if await self._repo.get_stay_by_calendar_event(data.calendar_event_id) is not None:
-                raise TravelConflictError("That calendar event is already imported as a stay")
+            await self._event_links.ensure_free(data.calendar_event_id)
         stay = await self._repo.create_stay(data.model_dump())
         logger.info("Stay created: id=%d trip_id=%s place_id=%d", stay.id, stay.trip_id, stay.place_id)
         await self._notes.sync(STAY_NOTE, stay.id, f"Stay at {stay.place.name}", stay.notes)
@@ -62,6 +59,8 @@ class StayService:
             if field in changes and changes[field] is None:
                 raise ValueError(f"{field} cannot be null")
         await self._check_refs(changes.get("trip_id"), changes.get("place_id"))
+        if changes.get("calendar_event_id") is not None:
+            await self._event_links.ensure_free(changes["calendar_event_id"], "stay", stay_id)
         zone = changes.get("timezone", stay.timezone)
         for field in ("check_in_at", "check_out_at"):
             if field in changes:

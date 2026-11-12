@@ -126,3 +126,52 @@ class TestVisitWarnings:
 
     def test_missed_visits_are_ignored(self):
         assert self._run([_visit(1, 10, time(9, 0), status="missed")]) == []
+
+
+class TestEventWarnings:
+    from zoneinfo import ZoneInfo as _Z
+    ZONE = _Z("Europe/Lisbon")
+    TODAY = date(2026, 3, 10)
+
+    @staticmethod
+    def _v(id=1, day=18, at=time(20, 0), status="planned", event=None):
+        v = _visit(id, day, at, status=status)
+        return v.model_copy(update={"calendar_event_id": event})
+
+    @staticmethod
+    def _e(start, tz="Europe/Stockholm", **kw):
+        from types import SimpleNamespace
+        base = dict(start_datetime=start, timezone=tz, recurrence_rule=None, invitees=[], all_day=False)
+        base.update(kw)
+        return SimpleNamespace(**base)
+
+    def _run(self, visits, events):
+        from app.features.travel.trips.coverage_warnings import find_event_warnings
+        return find_event_warnings(visits, events, self.TODAY, self.ZONE)
+
+    def test_a_planned_timed_visit_without_an_event_is_flagged(self):
+        assert _kinds(self._run([self._v()], {})) == ["no_calendar_event"]
+
+    def test_past_untimed_visited_and_missed_visits_are_not_flagged(self):
+        visits = [self._v(1, day=5), self._v(2, at=None), self._v(3, status="visited"), self._v(4, status="missed")]
+        assert self._run(visits, {}) == []
+
+    def test_a_matching_event_is_fine_compared_in_the_events_own_zone(self):
+        # 19:00 Lisbon (UTC+0 in March) is 20:00 in Stockholm.
+        event = self._e(datetime(2026, 3, 18, 19, 0))
+        assert self._run([self._v(event=5)], {5: event}) == []
+
+    def test_a_different_time_is_a_mismatch(self):
+        event = self._e(datetime(2026, 3, 18, 18, 0))
+        assert _kinds(self._run([self._v(event=5)], {5: event})) == ["linked_event_mismatch"]
+
+    def test_a_different_day_is_a_mismatch(self):
+        event = self._e(datetime(2026, 3, 19, 19, 0))
+        assert _kinds(self._run([self._v(event=5)], {5: event})) == ["linked_event_mismatch"]
+
+    def test_an_untouchable_event_gets_the_not_updated_warning_instead(self):
+        event = self._e(datetime(2026, 3, 18, 18, 0), recurrence_rule="FREQ=WEEKLY")
+        assert _kinds(self._run([self._v(event=5)], {5: event})) == ["linked_event_not_updated"]
+
+    def test_a_linked_event_missing_from_the_local_copy_is_skipped(self):
+        assert self._run([self._v(event=5)], {}) == []

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import date, datetime
+from decimal import Decimal
 
 from pydantic import BaseModel
 
@@ -80,6 +81,23 @@ class LanguageBriefItem(BaseModel):
     quota_met: bool
 
 
+class TripBrief(BaseModel):
+    """The ongoing trip, for the morning briefing."""
+
+    trip_name: str
+    day: int
+    days: int
+    # Today's legs, check-ins/outs and visits, in time order, as ready-to-read lines.
+    agenda: list[str]
+    leave_home_at: datetime | None = None
+    spend_eur: Decimal | None = None
+
+
+class TripMarkBrief(BaseModel):
+    trip_name: str
+    to_mark: int
+
+
 class MorningBriefing(BaseModel):
     date: date
     lookahead_days: int = 1
@@ -91,6 +109,7 @@ class MorningBriefing(BaseModel):
     language: list[LanguageBriefItem] = []
     shopping: list[ShoppingBriefItem] = []
     recurring: list[RecurringBriefItem] = []
+    trip: TripBrief | None = None
 
 
 class WinItem(BaseModel):
@@ -129,6 +148,7 @@ class EveningDigest(BaseModel):
     tasks: list[EveningTaskItem]
     tomorrow_events: list[EveningEventItem]
     notes: list[EveningNoteItem]
+    trip: TripMarkBrief | None = None
 
 
 class FormattedBriefing(BaseModel):

@@ -59,8 +59,10 @@ def _patch_repos():
         patch("app.features.briefing.evening_summary_service.TaskRepository") as MockTaskRepo,
         patch("app.features.briefing.evening_summary_service.CalendarEventService") as MockEventService,
         patch("app.features.briefing.evening_summary_service.NoteRepository") as MockNoteRepo,
+        patch("app.features.briefing.evening_summary_service.TripBriefService") as MockTripBrief,
         patch("app.features.briefing.evening_summary_service.local_now", return_value=datetime(2026, 7, 18, 20, 0)),
     ):
+        MockTripBrief.return_value.evening = AsyncMock(return_value=None)
         MockTaskRepo.return_value.get_tasks = AsyncMock(return_value=[])
         MockTaskRepo.return_value.get_completed_task_ids_for_date = AsyncMock(return_value=set())
         MockTaskRepo.return_value.get_completions_by_task = AsyncMock(return_value={})

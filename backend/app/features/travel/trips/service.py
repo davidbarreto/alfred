@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.features.core.embeddings.service import EmbeddingService
+from app.features.organizer.calendar_events.service import CalendarEventService
 from app.features.travel.legs.repository import LegRepository
 from app.features.travel.legs.schemas import LegRead
 from app.features.travel.notes_index import LEG_NOTE, TRIP_NOTE, TravelNoteIndex
@@ -18,9 +19,9 @@ from app.features.travel.visits.schemas import VisitRead
 from app.features.travel.trips.map_points import MapScope, TripMap, build_trip_map
 from app.features.travel.trips.ideas import build_ideas
 from app.features.travel.trips.today import TripToday, build_today
-from app.features.travel.trips.coverage_warnings import find_lodging_warnings, find_visit_warnings
+from app.features.travel.trips.coverage_warnings import find_event_warnings, find_lodging_warnings, find_visit_warnings
 from app.features.travel.trips.timeline import build_timeline, find_warnings, leave_home_at
-from app.shared.timezone import local_timezone_name, local_today
+from app.shared.timezone import local_timezone, local_timezone_name, local_today
 
 logger = logging.getLogger(__name__)
 
@@ -36,6 +37,8 @@ class TripService:
         self._stay_repo = StayRepository(session)
         self._visit_repo = VisitRepository(session)
         self.settings_service = TravelSettingsService(session)
+        # The local calendar copy only: warnings never call Google.
+        self._calendar = CalendarEventService(provider=None, session=session)
 
     async def get_trips(self, filters: TripFilters) -> list[TripRead]:
         trips = await self._repo.get_trips(filters, local_today())
@@ -65,6 +68,7 @@ class TripService:
             *find_warnings(legs, stays),
             *find_lodging_warnings(legs, stays),
             *find_visit_warnings(all_visits, legs, stays, settings.max_visits_per_day),
+            *find_event_warnings(all_visits, await self._linked_events(all_visits), local_today(), local_timezone()),
         ]
         ideas = []
         if trip.end_date >= local_today():
@@ -81,6 +85,15 @@ class TripService:
             hidden_visit_count=hidden,
             ideas=ideas,
         )
+
+    async def _linked_events(self, visits: list[VisitRead]) -> dict:
+        events = {}
+        for visit in visits:
+            if visit.calendar_event_id is not None:
+                event = await self._calendar.get_event(visit.calendar_event_id)
+                if event is not None:
+                    events[visit.calendar_event_id] = event
+        return events
 
     async def get_today(self, trip_id: int) -> TripToday | None:
         """The next step and today's visits; planned and missed visits of past days stay out (include_all_visits)."""

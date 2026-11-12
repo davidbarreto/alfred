@@ -141,7 +141,7 @@ class TestBuildTimeline:
 
     def test_stay_links_cover_map_food_and_luggage(self):
         item = build_timeline([], [_stay(5, _dt(2, 14), _dt(4, 10))])[0]
-        assert set(item.links) == {"map", "cafes", "restaurants", "luggage"}
+        assert set(item.links) == {"map", "cafes", "restaurants", "luggage", "pharmacy", "supermarket", "atm"}
         assert "restaurants+near" in item.links["restaurants"]
 
     def test_flight_airports_get_cafes_and_restaurants_but_other_modes_do_not(self):
@@ -232,3 +232,10 @@ class TestHomeOffset:
 
     def test_half_hour_zones_are_shown_exactly(self):
         assert self._arrival("Asia/Kolkata").home_offset == "+5.5h"
+
+
+class TestStayEssentials:
+    def test_check_in_row_links_pharmacy_supermarket_and_atm_near_the_stay(self):
+        row = next(i for i in build_timeline([], [_stay(5, _dt(2, 14), _dt(4, 10))]) if i.kind == "check_in")
+        for key, word in (("pharmacy", "pharmacy"), ("supermarket", "supermarket"), ("atm", "ATM")):
+            assert word in row.links[key] and "Hotel+Example" in row.links[key].replace("%20", "+")

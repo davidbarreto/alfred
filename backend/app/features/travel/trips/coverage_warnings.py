@@ -1,5 +1,6 @@
 """Pure functions: warnings about gaps in a trip's lodging and about visits that cannot work. No DB or IO."""
 from datetime import date, datetime, timedelta
+from zoneinfo import ZoneInfo
 
 from app.features.travel.legs.schemas import LegRead
 from app.features.travel.stays.schemas import StayRead
@@ -110,4 +111,43 @@ def find_visit_warnings(
     for day, count in sorted(per_day.items()):
         if count > max_per_day:
             warnings.append(TripWarning(kind="too_many_visits", message=f"{count} visits on {day:%d %b} (more than {max_per_day})"))
+    return warnings
+
+
+def _event_wall_time(event, local_zone: ZoneInfo) -> datetime:
+    """An event's start as wall-clock time in its own zone (stored starts are naive local time)."""
+    zone = ZoneInfo(event.timezone) if event.timezone else local_zone
+    return event.start_datetime.replace(tzinfo=local_zone).astimezone(zone).replace(tzinfo=None)
+
+
+def find_event_warnings(visits: list[VisitRead], events: dict[int, object], today: date, local_zone: ZoneInfo) -> list[TripWarning]:
+    """Visits whose calendar event is missing or says something different (only what Alfred's local copy holds).
+
+    `events` maps event id -> EventRead for the visits' linked events; legs and stays are never compared."""
+    warnings: list[TripWarning] = []
+    for visit in visits:
+        if visit.visit_date is None or visit.visit_time is None or visit.status == "missed":
+            continue
+        when = f"{visit.visit_date:%d %b} {visit.visit_time:%H:%M}"
+        if visit.calendar_event_id is None:
+            if visit.status == "planned" and visit.visit_date >= today:
+                warnings.append(TripWarning(
+                    kind="no_calendar_event", visit_id=visit.id,
+                    message=f"{visit.place.name} ({when}) has no calendar event",
+                ))
+            continue
+        event = events.get(visit.calendar_event_id)
+        if event is None:
+            continue
+        if _event_wall_time(event, local_zone) == datetime.combine(visit.visit_date, visit.visit_time):
+            continue
+        touchable = not (event.recurrence_rule or event.invitees or event.all_day)
+        warnings.append(TripWarning(
+            kind="linked_event_mismatch" if touchable else "linked_event_not_updated", visit_id=visit.id,
+            message=(
+                f"{visit.place.name} ({when}) and its calendar event show different times"
+                if touchable else
+                f"{visit.place.name} ({when}) differs from its calendar event, which is recurring, has guests or is all-day, so Alfred leaves it alone"
+            ),
+        ))
     return warnings

@@ -33,7 +33,7 @@ def _add_months(d: date, months: int) -> date:
     return date(year, month, min(d.day, last_day))
 
 
-def _next_occurrence(rule: str, last: date) -> date | None:
+def next_occurrence(rule: str, last: date) -> date | None:
     """Return the next occurrence after `last`, or None if the rule is exhausted."""
     parts = _parse_rrule(rule)
     freq = parts.get("FREQ", "")
@@ -122,7 +122,7 @@ class RecurringTransactionService:
             occurrences_created = 0
 
             # First run: materialise today as the starting occurrence
-            next_date: date | None = today if rt.last_occurrence_date is None else _next_occurrence(rt.recurrence_rule, rt.last_occurrence_date)
+            next_date: date | None = today if rt.last_occurrence_date is None else next_occurrence(rt.recurrence_rule, rt.last_occurrence_date)
 
             while next_date is not None and next_date <= today:
                 if count_limit is not None and occurrences_created >= count_limit:
@@ -154,7 +154,7 @@ class RecurringTransactionService:
                     )
 
                 rt.last_occurrence_date = next_date
-                next_date = _next_occurrence(rt.recurrence_rule, next_date)
+                next_date = next_occurrence(rt.recurrence_rule, next_date)
 
             # Deactivate if the rule is now exhausted
             if next_date is None and rt.last_occurrence_date is not None:

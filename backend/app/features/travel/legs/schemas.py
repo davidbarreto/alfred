@@ -50,6 +50,8 @@ class LegCreate(_LegFields):
 class LegUpdate(_LegFields):
     """Naive times are read in the zone sent with them, else in the leg's stored zone."""
 
+    # Link an existing calendar event, or send null to unlink (the event itself is kept).
+    calendar_event_id: int | None = None
     mode: LegMode | None = None
     origin: str | None = Field(default=None, min_length=1, max_length=200)
     destination: str | None = Field(default=None, min_length=1, max_length=200)

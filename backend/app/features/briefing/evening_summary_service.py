@@ -1,10 +1,11 @@
 from __future__ import annotations
 
+import logging
 from datetime import date, datetime, time, timedelta
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.features.briefing.schemas import EveningDigest, EveningEventItem, EveningNoteItem, EveningTaskItem, WinItem
+from app.features.briefing.schemas import EveningDigest, EveningEventItem, EveningNoteItem, EveningTaskItem, TripMarkBrief, WinItem
 from app.features.organizer.calendar_events.schemas import EventFilters
 from app.features.organizer.calendar_events.service import CalendarEventService
 from app.features.organizer.notes.repository import NoteRepository
@@ -13,7 +14,10 @@ from app.features.organizer.tasks.ranking import task_priority_sort_key
 from app.features.organizer.tasks.recurrence import is_done_in_cycle, is_due_today
 from app.features.organizer.tasks.repository import TaskRepository
 from app.features.organizer.tasks.schemas import TaskFilters
+from app.features.travel.briefing import TripBriefService
 from app.shared.timezone import local_now
+
+logger = logging.getLogger(__name__)
 
 _NOTES_CONTEXT_LIMIT = 15
 
@@ -30,8 +34,17 @@ class EveningDigestSummaryService:
         wins, tasks = await self._collect_wins_and_tasks(today, now)
         tomorrow_events = await self._fetch_tomorrow_events(tomorrow)
         notes = await self._fetch_notes()
+        trip = await self._fetch_trip()
 
-        return EveningDigest(date=today, wins=wins, tasks=tasks, tomorrow_events=tomorrow_events, notes=notes)
+        return EveningDigest(date=today, wins=wins, tasks=tasks, tomorrow_events=tomorrow_events, notes=notes, trip=trip)
+
+    async def _fetch_trip(self) -> TripMarkBrief | None:
+        # A trip block must never take the digest down.
+        try:
+            return await TripBriefService(self._session).evening()
+        except Exception as exc:
+            logger.warning("Digest trip block failed: error=%s", exc)
+            return None
 
     async def _collect_wins_and_tasks(
         self, today: date, now: datetime

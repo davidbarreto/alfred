@@ -5,6 +5,7 @@ from app.dependencies import TransactionLinkServiceDep, TripDefaultTagServiceDep
 from app.features.travel.errors import TravelNotFoundError
 from app.features.travel.transaction_links.schemas import (
     ApplyDefaultTagsResult,
+    LinkedTransaction,
     LinkedTransactions,
     LinkKind,
     PlaceCosts,
@@ -22,6 +23,15 @@ async def get_trip_costs(trip_id: int, service: TransactionLinkServiceDep) -> Tr
     if costs is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Trip not found")
     return costs
+
+
+@router.get("/trips/{trip_id}/unlinked-transactions", response_model=list[LinkedTransaction])
+async def get_unlinked_transactions(trip_id: int, service: TransactionLinkServiceDep) -> list[LinkedTransaction]:
+    """Expenses dated within the trip (or tagged with its default tags) and tagged income not linked to any leg, stay or visit."""
+    found = await service.get_unlinked(trip_id)
+    if found is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Trip not found")
+    return found
 
 
 @router.post("/trips/{trip_id}/apply-default-tags", response_model=ApplyDefaultTagsResult)

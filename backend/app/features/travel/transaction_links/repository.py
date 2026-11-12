@@ -1,11 +1,11 @@
 from datetime import datetime
 from decimal import Decimal
 
-from sqlalchemy import Select, and_, case, func, literal, select, union
+from sqlalchemy import Select, and_, case, func, literal, or_, select, union
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.features.finance.tags.tables import transactions_tags
+from app.features.finance.tags.tables import FinanceTag, transactions_tags
 from app.features.finance.transactions.tables import Transaction
 from app.features.travel.legs.tables import Leg
 from app.features.travel.places.tables import Place
@@ -123,6 +123,37 @@ class TransactionLinkRepository:
         ).subquery()
         stmt = select(*_sum_columns()).select_from(Transaction).where(Transaction.id.in_(select(ids.c.transaction_id)))
         return _row_to_cost(*(await self._session.execute(stmt)).one())
+
+    async def get_unlinked(self, start: datetime, end: datetime, tag_names: list[str]) -> list[Transaction]:
+        """Expenses dated in [start, end) or carrying one of the tags, and income carrying one, that no leg, stay or
+        visit is linked to. Transfers are never a trip cost."""
+        linked = union(
+            select(legs_transactions.c.transaction_id),
+            select(stays_transactions.c.transaction_id),
+            select(visits_transactions.c.transaction_id),
+        ).subquery()
+        lowered = [n.lower() for n in tag_names]
+        tagged = (
+            Transaction.id.in_(
+                select(transactions_tags.c.transaction_id)
+                .join(FinanceTag, FinanceTag.id == transactions_tags.c.tag_id)
+                .where(func.lower(FinanceTag.name).in_(lowered))
+            )
+            if lowered else literal(False)
+        )
+        in_window = and_(Transaction.date >= start, Transaction.date < end)
+        stmt = (
+            select(Transaction)
+            .where(
+                or_(
+                    and_(Transaction.type == "expense", or_(in_window, tagged)),
+                    and_(Transaction.type == "income", tagged),
+                ),
+                Transaction.id.not_in(select(linked.c.transaction_id)),
+            )
+            .order_by(Transaction.date, Transaction.id)
+        )
+        return list((await self._session.scalars(stmt)).all())
 
     async def tag_expenses_between(self, start: datetime, end: datetime, tag_ids: list[int]) -> int:
         """Give every expense dated in [start, end) each tag it does not carry yet; returns the rows added."""

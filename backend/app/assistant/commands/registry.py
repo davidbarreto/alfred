@@ -1339,6 +1339,14 @@ COMMAND_DEFINITIONS = {
             "requires_args": True,
             "arg_keys": ["place"],
         },
+        "note": {
+            "description": "Add a timestamped note to the latest visit of the ongoing trip that has already started",
+            "details": "Appends '[date HH:MM] text' to that visit's notes. Older visits are edited with update. Nothing is written when no visit has started yet.",
+            "aliases": ["/tnote"],
+            "flags": {},
+            "requires_args": True,
+            "arg_keys": ["text"],
+        },
         "list": {
             "description": "List visits, optionally for a trip, a place or a status; --no-trip true for the wishlist and home-city visits",
             "details": _VISIT_OVERVIEW,

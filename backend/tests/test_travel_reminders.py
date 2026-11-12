@@ -204,7 +204,40 @@ class TestTravelReminderService:
             reminders = await svc.get_reminders()
         assert _kinds(reminders) == ["travel_trip_start"]
         first_day, last_day = svc._repo.get_trips_in_window.await_args.args
-        assert (first_day, last_day) == (date(2026, 12, 10), date(2026, 12, 17))
+        assert (first_day, last_day) == (date(2026, 12, 3), date(2026, 12, 17))
+
+
+class TestGradeNudge:
+    @staticmethod
+    def _ended(visited_grade=None, visited_notes=None):
+        from app.features.travel.visits.schemas import VisitPlace, VisitRead
+
+        place = VisitPlace(id=1, kind="museum", name="Museum Example", city="Beta", maps_url=None, lat=None, lng=None)
+        visit = VisitRead(
+            id=3, place_id=1, place=place, trip_id=1, trip_name="Example trip", status="visited",
+            visit_date=date(2026, 12, 20), visit_time=None, notes=visited_notes, grade=visited_grade,
+            created_at=CREATED, updated_at=CREATED,
+        )
+        trip = _trip(stays=[_stay()])
+        return trip.model_copy(update={"visits": [visit]})
+
+    @pytest.mark.parametrize("days_after", [1, 7])
+    def test_nudges_one_and_seven_days_after_the_end(self, days_after):
+        today = date(2026, 12, 24) + timedelta(days=days_after)
+        reminders = build_travel_reminders([self._ended()], _utc(25, 9), today, SETTINGS)
+        nudge = [r for r in reminders if r.kind == "travel_grade_nudge"]
+        assert len(nudge) == 1 and nudge[0].entity_id == 1
+        assert "2 places still to grade or note" in nudge[0].text and "/travel/1/recap" in nudge[0].text
+
+    @pytest.mark.parametrize("days_after", [0, 2, 6, 8])
+    def test_silent_on_other_days(self, days_after):
+        today = date(2026, 12, 24) + timedelta(days=days_after)
+        assert "travel_grade_nudge" not in _kinds(build_travel_reminders([self._ended()], _utc(25, 9), today, SETTINGS))
+
+    def test_silent_when_the_recap_is_complete(self):
+        trip = self._ended(visited_grade=4, visited_notes="great")
+        trip = trip.model_copy(update={"stays": [_stay().model_copy(update={"grade": 5, "notes": "nice"})]})
+        assert build_travel_reminders([trip], _utc(25, 9), date(2026, 12, 25), SETTINGS) == []
 
 
 class TestSchedulerIntegration:

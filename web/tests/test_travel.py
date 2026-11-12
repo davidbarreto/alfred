@@ -69,7 +69,7 @@ def _detail(**kw):
 
 def _route(mock_api, routes):
     # The checklist card on /travel reads this; most tests don't care about it.
-    routes = {"/travel/checklist-template": [], **routes}
+    routes = {"/travel/checklist-template": [], "/travel/trips/1/other-events": [], "/travel/trips/1/forecast": None, "/travel/trips/1/while-away": None, "/travel/trips/1/unlinked-transactions": [], **routes}
 
     async def get(path, params=None):
         for prefix in sorted(routes, key=len, reverse=True):
@@ -774,3 +774,180 @@ class TestTodayPage:
         assert "/travel/1/today" in client.get("/travel/1").text
         _route(mock_api, {"/travel/trips/1": _detail(status="upcoming"), "/travel/places": [], "/travel/trips/1/costs": None})
         assert "/travel/1/today" not in client.get("/travel/1").text
+
+
+class TestOtherEvents:
+    def _events(self, snoozed):
+        return [{"event_id": 5, "title": "Gym", "start_datetime": "2026-12-18T07:00:00+00:00",
+                 "end_datetime": "2026-12-18T08:00:00+00:00", "all_day": False, "recurring": True, "snoozed": snoozed}]
+
+    def test_warning_card_lists_the_events_and_the_snooze_state(self, client, mock_api):
+        _route(mock_api, {"/travel/trips/1": _detail(), "/travel/places": [], "/travel/trips/1/costs": None,
+                          "/travel/trips/1/other-events": self._events(True)})
+        html = client.get("/travel/1").text
+        assert "1 other calendar event during the trip" in html and "Gym" in html and "snoozed" in html
+
+    def test_card_hints_at_the_setting_when_nothing_is_snoozed(self, client, mock_api):
+        _route(mock_api, {"/travel/trips/1": _detail(), "/travel/places": [], "/travel/trips/1/costs": None,
+                          "/travel/trips/1/other-events": self._events(False)})
+        assert "Turn on snoozing" in client.get("/travel/1").text
+
+    def test_no_card_without_events_or_when_the_endpoint_fails(self, client, mock_api):
+        _route(mock_api, {"/travel/trips/1": _detail(), "/travel/places": [], "/travel/trips/1/costs": None,
+                          "/travel/trips/1/other-events": _status_error(500, "x")})
+        assert "other calendar event" not in client.get("/travel/1").text
+
+
+class TestForecast:
+    def _forecast(self, **kw):
+        base = {"trip_id": 1, "mode": "forecast", "available": True, "message": None, "cities": [{
+            "city": "Beta", "days": [
+                {"date": "2026-12-17", "min_c": 1.2, "max_c": 5.6, "precip_mm": 0.0, "rain": False},
+                {"date": "2026-12-18", "min_c": 0.0, "max_c": 3.0, "precip_mm": 4.2, "rain": True}]}]}
+        base.update(kw)
+        return base
+
+    def test_card_shows_days_and_marks_rain(self, client, mock_api):
+        _route(mock_api, {"/travel/trips/1": _detail(), "/travel/places": [], "/travel/trips/1/costs": None,
+                          "/travel/trips/1/forecast": self._forecast()})
+        html = client.get("/travel/1").text
+        assert 'data-weather-day="2026-12-18"' in html and "4.2 mm" in html and "6°" in html
+
+    def test_unavailable_weather_says_so_and_the_page_still_renders(self, client, mock_api):
+        _route(mock_api, {"/travel/trips/1": _detail(), "/travel/places": [], "/travel/trips/1/costs": None,
+                          "/travel/trips/1/forecast": self._forecast(available=False, cities=[], message="The weather service is not available")})
+        assert "The weather service is not available" in client.get("/travel/1").text
+
+    def test_no_card_for_a_finished_trip(self, client, mock_api):
+        _route(mock_api, {"/travel/trips/1": _detail(), "/travel/places": [], "/travel/trips/1/costs": None,
+                          "/travel/trips/1/forecast": self._forecast(mode="none", available=False)})
+        assert 'id="forecast"' not in client.get("/travel/1").text
+
+
+class TestWhileAway:
+    def test_card_lists_the_three_kinds(self, client, mock_api):
+        away = {"trip_id": 1, "birthdays": [{"contact_id": 1, "name": "Some Person", "date": "2026-12-20"}],
+                "tasks": [{"task_id": 2, "title": "Renew insurance", "due": "2026-12-22"}],
+                "charges": [{"recurring_id": 3, "merchant": "Streaming", "amount": "9.99", "currency": "EUR", "date": "2026-12-25"}]}
+        _route(mock_api, {"/travel/trips/1": _detail(), "/travel/places": [], "/travel/trips/1/costs": None,
+                          "/travel/trips/1/while-away": away})
+        html = client.get("/travel/1").text
+        assert "While you are away" in html and "Some Person" in html and "Renew insurance" in html and "9.99 EUR" in html
+
+    def test_no_card_when_nothing_happens(self, client, mock_api):
+        away = {"trip_id": 1, "birthdays": [], "tasks": [], "charges": []}
+        _route(mock_api, {"/travel/trips/1": _detail(), "/travel/places": [], "/travel/trips/1/costs": None,
+                          "/travel/trips/1/while-away": away})
+        assert "While you are away" not in client.get("/travel/1").text
+
+
+class TestPrintPage:
+    def test_day_by_day_with_flight_numbers_bookings_addresses_and_visits(self, client, mock_api):
+        detail = _detail(visits=[_visit(11, day="2026-12-18", notes="Corner table")])
+        detail["legs"][0]["booking_ref"] = "ABC123"
+        detail["stays"][0]["place"]["address"] = "Rua Exemplo 1"
+        detail["stays"][0]["booking_ref"] = "HTL789"
+        _route(mock_api, {"/travel/trips/1": detail})
+        html = client.get("/travel/1/print").text
+        assert "XX 12" in html and "Booking ABC123" in html
+        assert "Rua Exemplo 1" in html and "Booking HTL789" in html
+        assert "Cafe Example" in html and "Corner table" in html and "20:00" in html
+        assert "Save as PDF" in html
+
+    def test_missed_visits_are_left_out_and_unknown_trip_redirects(self, client, mock_api):
+        _route(mock_api, {"/travel/trips/1": _detail(visits=[_visit(11, status="missed")])})
+        assert "Cafe Example" not in client.get("/travel/1/print").text
+        _route(mock_api, {"/travel/trips/1": _status_error(404, "x")})
+        assert client.get("/travel/1/print", follow_redirects=False).status_code == 302
+
+
+class TestUnlinkedCharges:
+    def test_lists_charges_with_the_trips_items_as_link_targets(self, client, mock_api):
+        unlinked = [{"id": 31, "date": "2026-12-18T12:00:00", "merchant": "Some Shop", "description": None,
+                     "type": "expense", "amount": "12.50", "currency": "EUR", "amount_eur": "12.50"}]
+        _route(mock_api, {"/travel/trips/1": _detail(), "/travel/places": [], "/travel/trips/1/costs": None,
+                          "/travel/trips/1/unlinked-transactions": unlinked})
+        html = client.get("/travel/1").text
+        assert "Charges not linked to anything" in html and "Some Shop" in html and "12.50 EUR" in html
+        assert 'value="legs:' in html and 'value="stays:' in html
+
+    def test_no_card_when_everything_is_linked(self, client, mock_api):
+        _route(mock_api, {"/travel/trips/1": _detail(), "/travel/places": [], "/travel/trips/1/costs": None})
+        assert "Charges not linked" not in client.get("/travel/1").text
+
+
+class TestMoveVisitsPortal:
+    def test_proxy_relays_the_move(self, client, mock_api):
+        mock_api["post"].return_value = {"moved": [11], "failed": []}
+        body = {"from_date": "2026-12-18", "to_date": "2026-12-20"}
+        assert client.post("/travel/trips/1/visits/move", json=body).json() == {"moved": [11], "failed": []}
+        mock_api["post"].assert_awaited_with("/travel/trips/1/visits/move", json=body)
+
+    def test_rainy_day_with_planned_visits_offers_the_move(self, client, mock_api):
+        forecast = {"trip_id": 1, "mode": "forecast", "available": True, "message": None, "cities": [{"city": "Beta", "days": [
+            {"date": "2026-12-18", "min_c": 1, "max_c": 3, "precip_mm": 5.0, "rain": True},
+            {"date": "2026-12-19", "min_c": 1, "max_c": 3, "precip_mm": 6.0, "rain": True}]}]}
+        _route(mock_api, {"/travel/trips/1": _detail(visits=[_visit(11, day="2026-12-18")]), "/travel/places": [],
+                          "/travel/trips/1/costs": None, "/travel/trips/1/forecast": forecast})
+        html = client.get("/travel/1").text
+        assert html.count("move-day") >= 2 and 'data-from="2026-12-18"' in html and 'data-from="2026-12-19"' not in html
+
+
+class TestEventLinksPortal:
+    def _page(self, client, mock_api, visit, warnings=()):
+        detail = _detail(visits=[visit], warnings=list(warnings))
+        detail["legs"][0]["calendar_event_id"] = 5
+        _route(mock_api, {"/travel/trips/1": detail, "/travel/places": [], "/travel/trips/1/costs": None})
+        return client.get("/travel/1").text
+
+    def test_unlinked_visit_without_event_offers_create_and_link(self, client, mock_api):
+        visit = _visit(11)
+        visit["calendar_event_id"] = None
+        html = self._page(client, mock_api, visit, [{"kind": "no_calendar_event", "message": "m", "visit_id": 11}])
+        assert 'data-action="create"' in html and 'class="btn btn-xs btn-ghost link-event" data-kind="visits"' in html
+
+    def test_mismatch_offers_both_directions_and_unlink(self, client, mock_api):
+        visit = _visit(11)
+        visit["calendar_event_id"] = 77
+        html = self._page(client, mock_api, visit, [{"kind": "linked_event_mismatch", "message": "m", "visit_id": 11}])
+        assert 'data-action="update_event"' in html and 'data-action="update_visit"' in html and 'unlink-event" data-kind="visits"' in html
+
+    def test_legs_show_unlink_when_linked_and_link_otherwise(self, client, mock_api):
+        html = self._page(client, mock_api, _visit(11))
+        assert 'unlink-event" data-kind="legs"' in html and 'link-event" data-kind="stays"' in html
+
+    def test_place_page_rows_have_no_event_buttons(self, client, mock_api):
+        from app.routes import travel  # noqa: F401  (the shared row include is used there without event_actions)
+        visit = _visit(11)
+        visit["calendar_event_id"] = 77
+        _route(mock_api, {"/travel/places/3": {**_place(), "visits": [visit], "stays": [], "tags": [], "grade": None}, "/travel/places/3/costs": None})
+        resp = client.get("/travel/places/3")
+        assert "link-event" not in resp.text and "event-action" not in resp.text
+
+
+class TestPlaceHistoryHint:
+    def test_place_options_carry_grade_and_tags_for_the_dialogs(self, client, mock_api):
+        place = _place()
+        place.update(grade=4.5, grade_count=3, tags=["Would return"])
+        _route(mock_api, {"/travel/trips/1": _detail(), "/travel/places": [place], "/travel/trips/1/costs": None})
+        html = client.get("/travel/1").text
+        assert 'data-grade="4.5"' in html and 'data-count="3"' in html and 'data-tags="Would return"' in html
+        assert 'id="visit-place-history"' in html and 'id="stay-place-history"' in html
+        assert "/static/js/travel-place-history.js" in html
+
+
+class TestEmptyDays:
+    def test_days_without_visits_get_a_hint(self, client, mock_api):
+        detail = _detail(visits=[_visit(11, day="2026-12-18")])
+        detail.update(start_date="2026-12-17", end_date="2026-12-19", status="upcoming")
+        _route(mock_api, {"/travel/trips/1": detail, "/travel/places": [], "/travel/trips/1/costs": None})
+        html = client.get("/travel/1").text
+        assert 'id="empty-days"' in html and "17 Dec 2026, 19 Dec 2026" in html
+
+    def test_no_hint_for_a_past_trip_or_an_empty_itinerary(self, client, mock_api):
+        past = _detail(visits=[_visit(11)])
+        past.update(status="past")
+        _route(mock_api, {"/travel/trips/1": past, "/travel/places": [], "/travel/trips/1/costs": None})
+        assert 'id="empty-days"' not in client.get("/travel/1").text
+        _route(mock_api, {"/travel/trips/1": _detail(visits=[]), "/travel/places": [], "/travel/trips/1/costs": None})
+        assert 'id="empty-days"' not in client.get("/travel/1").text

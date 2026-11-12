@@ -244,6 +244,21 @@ async def _sql(call) -> str:
     return str(session.statements[0].compile(dialect=postgresql.dialect(), compile_kwargs={"literal_binds": True}))
 
 
+class TestUnlinkedService:
+    async def test_uses_the_trip_dates_and_default_tags(self, links):
+        links._trip_repo.get_trip.return_value = SimpleNamespace(
+            start_date=date(2026, 12, 17), end_date=date(2026, 12, 29), default_tag_names="Travel, Work")
+        links._repo.get_unlinked.return_value = [_txn()]
+        result = await links.get_unlinked(1)
+        start, end, names = links._repo.get_unlinked.await_args.args
+        assert (start, end, names) == (datetime(2026, 12, 17), datetime(2026, 12, 30), ["Travel", "Work"])
+        assert [t.id for t in result] == [9]
+
+    async def test_unknown_trip(self, links):
+        links._trip_repo.get_trip.return_value = None
+        assert await links.get_unlinked(9) is None
+
+
 class TestCostSql:
     async def test_trip_total_counts_each_transaction_once(self):
         sql = await _sql(lambda r: r.get_trip_total(1))
@@ -267,6 +282,16 @@ class TestCostSql:
 
     async def test_entity_costs_group_by_the_link_column(self):
         assert "GROUP BY travel.legs_transactions.leg_id" in await _sql(lambda r: r.get_entity_costs("legs", [1, 2]))
+
+    async def test_unlinked_query_excludes_linked_and_transfers_and_matches_tags_case_insensitively(self):
+        sql = await _sql(lambda r: r.get_unlinked(datetime(2026, 12, 17), datetime(2026, 12, 30), ["Travel"]))
+        assert "NOT IN" in sql and "UNION" in sql and "travel.visits_transactions" in sql
+        assert "lower(finance.tags.name) IN ('travel')" in sql
+        assert "type = 'expense'" in sql and "type = 'income'" in sql and "'transfer'" not in sql
+
+    async def test_unlinked_query_without_tags_only_matches_dated_expenses(self):
+        sql = await _sql(lambda r: r.get_unlinked(datetime(2026, 12, 17), datetime(2026, 12, 30), []))
+        assert "finance.tags" not in sql
 
     async def test_tagging_inserts_missing_rows_only(self):
         sql = await _sql(lambda r: r.tag_expenses_between(datetime(2026, 12, 17), datetime(2026, 12, 25), [5]))
@@ -333,25 +358,23 @@ class TestImportedEventsAreImportedOnce:
 
     async def test_leg_from_an_unknown_event(self):
         svc = LegService(AsyncMock())
-        svc._repo, svc._trip_repo, svc._calendar_repo = AsyncMock(), AsyncMock(), AsyncMock()
-        svc._calendar_repo.get_event.return_value = None
+        svc._repo, svc._trip_repo, svc._event_links = AsyncMock(), AsyncMock(), AsyncMock()
+        svc._event_links.ensure_free.side_effect = TravelNotFoundError("Calendar event 77 not found")
         with pytest.raises(TravelNotFoundError, match="Calendar event"):
             await svc.create_leg(self._leg())
 
     async def test_leg_from_an_event_already_imported(self):
         svc = LegService(AsyncMock())
-        svc._repo, svc._trip_repo, svc._calendar_repo = AsyncMock(), AsyncMock(), AsyncMock()
-        svc._calendar_repo.get_event.return_value = object()
-        svc._repo.get_leg_by_calendar_event.return_value = object()
+        svc._repo, svc._trip_repo, svc._event_links = AsyncMock(), AsyncMock(), AsyncMock()
+        svc._event_links.ensure_free.side_effect = TravelConflictError("taken")
         with pytest.raises(TravelConflictError):
             await svc.create_leg(self._leg())
         svc._repo.create_leg.assert_not_awaited()
 
     async def test_stay_from_an_event_already_imported(self):
         svc = StayService(AsyncMock())
-        svc._repo, svc._trip_repo, svc._place_repo, svc._calendar_repo = AsyncMock(), AsyncMock(), AsyncMock(), AsyncMock()
-        svc._calendar_repo.get_event.return_value = object()
-        svc._repo.get_stay_by_calendar_event.return_value = object()
+        svc._repo, svc._trip_repo, svc._place_repo, svc._event_links = AsyncMock(), AsyncMock(), AsyncMock(), AsyncMock()
+        svc._event_links.ensure_free.side_effect = TravelConflictError("taken")
         data = StayCreate(place_id=3, trip_id=1, check_in_at=datetime(2026, 12, 18, 15), check_out_at=datetime(2026, 12, 19, 11),
                           timezone="UTC", calendar_event_id=77)
         with pytest.raises(TravelConflictError):

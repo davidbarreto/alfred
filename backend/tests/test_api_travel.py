@@ -595,3 +595,61 @@ def test_trip_today_is_404_for_an_unknown_trip():
     client, service = _client("get_trip_service")
     service.get_today.return_value = None
     assert client.get("/travel/trips/9/today", headers=AUTH).status_code == 404
+
+
+def test_other_events_404_for_an_unknown_trip():
+    client, service = _client("get_trip_snooze_service")
+    service.get_other_events.return_value = None
+    assert client.get("/travel/trips/9/other-events", headers=AUTH).status_code == 404
+
+
+def test_forecast_404_for_an_unknown_trip():
+    client, service = _client("get_trip_forecast_service")
+    service.get_forecast.return_value = None
+    assert client.get("/travel/trips/9/forecast", headers=AUTH).status_code == 404
+
+
+def test_while_away_404_for_an_unknown_trip():
+    client, service = _client("get_while_away_service")
+    service.get_while_away.return_value = None
+    assert client.get("/travel/trips/9/while-away", headers=AUTH).status_code == 404
+
+
+def test_unlinked_transactions_404_for_an_unknown_trip():
+    client, service = _client("get_transaction_link_service")
+    service.get_unlinked.return_value = None
+    assert client.get("/travel/trips/9/unlinked-transactions", headers=AUTH).status_code == 404
+
+
+def test_move_visits_routes_to_the_service_and_maps_not_found():
+    from app.features.travel.errors import TravelNotFoundError
+    from app.features.travel.visits.schemas import VisitMoveResult
+
+    client, service = _client("get_visit_service")
+    service.move_visits.return_value = VisitMoveResult(moved=[1], failed=[])
+    body = {"from_date": "2026-12-18", "to_date": "2026-12-20", "only_tag": "Outdoor"}
+    resp = client.post("/travel/trips/1/visits/move", headers=AUTH, json=body)
+    assert resp.status_code == 200 and resp.json() == {"moved": [1], "failed": []}
+    service.move_visits.side_effect = TravelNotFoundError("Trip 1 not found")
+    assert client.post("/travel/trips/1/visits/move", headers=AUTH, json=body).status_code == 404
+
+
+@pytest.mark.parametrize("dep,path,method", [("get_leg_service", "/travel/legs/1", "update_leg"), ("get_stay_service", "/travel/stays/1", "update_stay")])
+def test_linking_an_event_maps_conflict_and_not_found_on_update(dep, path, method):
+    from app.features.travel.errors import TravelConflictError, TravelNotFoundError
+
+    client, service = _client(dep)
+    getattr(service, method).side_effect = TravelConflictError("taken")
+    assert client.patch(path, headers=AUTH, json={"calendar_event_id": 7}).status_code == 409
+    getattr(service, method).side_effect = TravelNotFoundError("Calendar event 7 not found")
+    assert client.patch(path, headers=AUTH, json={"calendar_event_id": 7}).status_code == 404
+
+
+def test_visit_event_action_maps_reason_and_not_found():
+    client, service = _client("get_visit_service")
+    service.event_action.side_effect = ValueError("The visit already has a calendar event")
+    assert client.post("/travel/visits/1/event", headers=AUTH, json={"action": "create"}).status_code == 422
+    service.event_action.side_effect = None
+    service.event_action.return_value = None
+    assert client.post("/travel/visits/1/event", headers=AUTH, json={"action": "create"}).status_code == 404
+    assert client.post("/travel/visits/1/event", headers=AUTH, json={"action": "explode"}).status_code == 422

@@ -29,6 +29,7 @@ function initTravelVisits(config) {
     form.elements.place_name.required = isNew;
   }
   placeSelect?.addEventListener('change', syncPlaceFields);
+  if (typeof initPlaceHistory === 'function') initPlaceHistory(placeSelect, document.getElementById('visit-place-history'));
 
   function syncGrade() {
     const visited = form.elements.status.value === 'visited';
@@ -54,6 +55,7 @@ function initTravelVisits(config) {
     form.elements.grade.value = visit && visit.grade ? visit.grade : '';
     form.elements.notes.value = visit ? (visit.notes || '') : '';
     syncPlaceFields();
+    placeSelect?.dispatchEvent(new Event('place-history:refresh'));
     syncGrade();
     dialog.showModal();
   }

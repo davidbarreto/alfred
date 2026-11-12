@@ -1,4 +1,5 @@
 import logging
+from typing import TYPE_CHECKING
 from datetime import datetime, timedelta, timezone
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -14,6 +15,9 @@ from app.features.organizer.calendar_events.service import CalendarEventService
 from app.shared.notification_offsets import parse_offset
 from app.shared.timezone import local_now
 
+if TYPE_CHECKING:
+    from app.features.travel.other_events import TripSnoozeService
+
 logger = logging.getLogger(__name__)
 
 _LOOKAHEAD = timedelta(days=7)
@@ -26,8 +30,12 @@ _DEDUP_TTL = timedelta(hours=6)
 
 class CalendarNotificationService:
 
-    def __init__(self, session: AsyncSession, event_service: CalendarEventService) -> None:
+    def __init__(
+        self, session: AsyncSession, event_service: CalendarEventService,
+        snooze: "TripSnoozeService | None" = None,
+    ) -> None:
         self._event_service = event_service
+        self._snooze = snooze
         self._settings = CalendarNotificationSettingsService(session)
         self._working_memory_repo = WorkingMemoryRepository(session)
 
@@ -42,8 +50,13 @@ class CalendarNotificationService:
             EventFilters(start_from=now - _MATCH_WINDOW, start_to=now + _LOOKAHEAD, limit=200)
         )
 
+        # Loaded once per run: reminders of events that are not part of a running trip are held back.
+        snoozed = await self._snooze.snoozed_for_digest(events) if self._snooze else set()
+
         lines: list[str] = []
         for event in events:
+            if (event.id, event.start_datetime) in snoozed:
+                continue
             profile = event.notification_profile or "normal"
             cascade = await self._settings.get_cascade(profile)
             for offset in cascade:

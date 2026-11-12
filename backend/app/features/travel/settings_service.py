@@ -34,10 +34,11 @@ class TravelSettingsService:
         self._settings = SettingService(session)
 
     async def get(self) -> TravelSettingsRead:
-        values: dict[str, int | str | None] = {}
+        values: dict[str, int | str | bool | None] = {}
         for field, default in _DEFAULTS.items():
             raw = await self._settings.get_value(_key(field))
             values[field] = int(raw) if raw else default
+        values["snooze_other_events"] = (await self._settings.get_value(_key("snooze_other_events"))) == "1"
         values["home_address"] = await self._settings.get_value(HOME_ADDRESS_KEY) or None
         return TravelSettingsRead(**values)
 
@@ -45,6 +46,7 @@ class TravelSettingsService:
         changes = data.model_dump(exclude_unset=True, exclude_none=True)
         for field, value in changes.items():
             key = HOME_ADDRESS_KEY if field == "home_address" else _key(field)
-            await self._settings.set_value(key, str(value).strip())
+            stored = ("1" if value else "0") if isinstance(value, bool) else str(value).strip()
+            await self._settings.set_value(key, stored)
         logger.info("Travel settings updated: fields=%s", list(changes.keys()))
         return await self.get()

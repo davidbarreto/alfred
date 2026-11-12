@@ -3,7 +3,7 @@ import logging
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.features.core.embeddings.service import EmbeddingService
-from app.features.organizer.calendar_events.repository import CalendarEventRepository
+from app.features.travel.event_links import EventLinkChecker
 from app.features.travel.errors import TravelConflictError, TravelNotFoundError
 from app.features.travel.legs.repository import LegRepository
 from app.features.travel.notes_index import LEG_NOTE, TravelNoteIndex
@@ -21,7 +21,7 @@ class LegService:
         self._notes = TravelNoteIndex(embedding_service)
         self._repo = LegRepository(session)
         self._trip_repo = TripRepository(session)
-        self._calendar_repo = CalendarEventRepository(session)
+        self._event_links = EventLinkChecker(session)
 
     async def get_legs(self, trip_id: int) -> list[LegRead]:
         legs = await self._repo.get_legs(trip_id)
@@ -36,10 +36,7 @@ class LegService:
         if await self._trip_repo.get_trip(data.trip_id) is None:
             raise TravelNotFoundError(f"Trip {data.trip_id} not found")
         if data.calendar_event_id is not None:
-            if await self._calendar_repo.get_event(data.calendar_event_id) is None:
-                raise TravelNotFoundError(f"Calendar event {data.calendar_event_id} not found")
-            if await self._repo.get_leg_by_calendar_event(data.calendar_event_id) is not None:
-                raise TravelConflictError("That calendar event is already imported as a leg")
+            await self._event_links.ensure_free(data.calendar_event_id)
         leg = await self._repo.create_leg(data.model_dump())
         logger.info("Leg created: id=%d trip_id=%d mode=%s", leg.id, leg.trip_id, leg.mode)
         await self._notes.sync(LEG_NOTE, leg.id, f"{leg.origin} to {leg.destination} ({leg.mode})", leg.notes)
@@ -54,6 +51,8 @@ class LegService:
         for field in _NOT_NULL:
             if field in changes and changes[field] is None:
                 raise ValueError(f"{field} cannot be null")
+        if changes.get("calendar_event_id") is not None:
+            await self._event_links.ensure_free(changes["calendar_event_id"], "leg", leg_id)
         departs_tz = changes.get("departs_tz", leg.departs_tz)
         arrives_tz = changes.get("arrives_tz", leg.arrives_tz)
         if "departs_at" in changes:

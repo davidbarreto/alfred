@@ -3,15 +3,14 @@ import logging
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.features.core.embeddings.service import EmbeddingService
-from app.features.travel.errors import TravelConflictError, TravelNotFoundError
+from app.features.travel.errors import TravelNotFoundError
 from app.features.travel.notes_index import VISIT_NOTE, TravelNoteIndex
-from app.features.travel.legs.repository import LegRepository
+from app.features.travel.event_links import EventLinkChecker
 from app.features.travel.places.repository import PlaceRepository
-from app.features.travel.stays.repository import StayRepository
 from app.features.travel.trips.repository import TripRepository
 from app.features.travel.visits.calendar_sync import VisitCalendarSync
 from app.features.travel.visits.repository import VisitRepository
-from app.features.travel.visits.schemas import VisitCreate, VisitFilters, VisitRead, VisitUpdate
+from app.features.travel.visits.schemas import VisitCreate, VisitFilters, VisitMove, VisitMoveResult, VisitRead, VisitUpdate
 
 logger = logging.getLogger(__name__)
 
@@ -24,8 +23,7 @@ class VisitService:
         calendar: VisitCalendarSync | None = None,
     ):
         self._calendar = calendar
-        self._leg_repo = LegRepository(session)
-        self._stay_repo = StayRepository(session)
+        self._event_links = EventLinkChecker(session)
         self._notes = TravelNoteIndex(embedding_service)
         self._repo = VisitRepository(session)
         self._trip_repo = TripRepository(session)
@@ -46,15 +44,6 @@ class VisitService:
         if place_id is not None and await self._place_repo.get_place(place_id) is None:
             raise TravelNotFoundError(f"Place {place_id} not found")
 
-    async def _check_event_free(self, event_id: int, visit_id: int | None = None) -> None:
-        """A calendar event belongs to at most one leg, stay or visit."""
-        if self._calendar is not None and not await self._calendar.event_exists(event_id):
-            raise TravelNotFoundError(f"Calendar event {event_id} not found")
-        taken = await self._repo.get_visit_by_calendar_event(event_id)
-        if (taken is not None and taken.id != visit_id) or await self._leg_repo.get_leg_by_calendar_event(event_id) \
-                or await self._stay_repo.get_stay_by_calendar_event(event_id):
-            raise TravelConflictError(f"Calendar event {event_id} is already linked to a leg, stay or visit")
-
     async def _create_event_if_due(self, visit) -> None:
         """A planned visit of a trip with a day and a time gets its own event (a failure only logs)."""
         if self._calendar is None or visit.calendar_event_id is not None or visit.status != "planned":
@@ -66,7 +55,7 @@ class VisitService:
     async def create_visit(self, data: VisitCreate) -> VisitRead:
         await self._check_refs(data.trip_id, data.place_id)
         if data.calendar_event_id is not None:
-            await self._check_event_free(data.calendar_event_id)
+            await self._event_links.ensure_free(data.calendar_event_id)
         visit = await self._repo.create_visit(data.model_dump())
         await self._create_event_if_due(visit)
         logger.info("Visit created: id=%d place_id=%d trip_id=%s status=%s", visit.id, visit.place_id, visit.trip_id, visit.status)
@@ -84,7 +73,7 @@ class VisitService:
                 raise ValueError(f"{field} cannot be null")
         await self._check_refs(changes.get("trip_id"), changes.get("place_id"))
         if changes.get("calendar_event_id") is not None:
-            await self._check_event_free(changes["calendar_event_id"], visit_id)
+            await self._event_links.ensure_free(changes["calendar_event_id"], "visit", visit_id)
         status = changes.get("status", visit.status)
         if status != "visited":
             # Moving a graded visit back to planned/missed drops the grade; sending both is a contradiction.
@@ -102,6 +91,61 @@ class VisitService:
             else:
                 await self._create_event_if_due(visit)
         return VisitRead.model_validate(visit)
+
+    async def event_action(self, visit_id: int, action: str) -> VisitRead | None:
+        """Repair the link between a visit and its calendar event, in either direction.
+
+        create: make the event for a visit that has none; update_event: push the visit's day, time and place to the
+        event; update_visit: take the event's day and time. Raises ValueError with the reason when nothing changed."""
+        visit = await self._repo.get_visit(visit_id)
+        if visit is None:
+            return None
+        if self._calendar is None:
+            raise ValueError("Calendar events are not available")
+        if action == "create":
+            if visit.calendar_event_id is not None:
+                raise ValueError("The visit already has a calendar event")
+            if visit.visit_date is None or visit.visit_time is None or visit.trip_id is None:
+                raise ValueError("The visit needs a trip, a day and a time first")
+            event_id = await self._calendar.create_event(visit)
+            if event_id is None:
+                raise ValueError("The event could not be created (is Google Calendar connected?)")
+            visit = await self._repo.update_visit(visit, {"calendar_event_id": event_id})
+        elif action == "update_event":
+            if visit.calendar_event_id is None or not await self._calendar.update_event(visit):
+                raise ValueError("The event was not changed (it is missing, recurring, has guests or is all-day)")
+        elif action == "update_visit":
+            start = await self._calendar.event_start(visit.calendar_event_id) if visit.calendar_event_id else None
+            if start is None:
+                raise ValueError("The event is missing or has no start time")
+            visit = await self._repo.update_visit(visit, {"visit_date": start[0], "visit_time": start[1]})
+        else:
+            raise ValueError("action must be create, update_event or update_visit")
+        logger.info("Visit event action: id=%d action=%s", visit_id, action)
+        return VisitRead.model_validate(visit)
+
+    async def move_visits(self, trip_id: int, data: VisitMove) -> VisitMoveResult:
+        """Move planned visits of one day to another; each linked calendar event moves with its visit."""
+        if await self._trip_repo.get_trip(trip_id) is None:
+            raise TravelNotFoundError(f"Trip {trip_id} not found")
+        tag = data.only_tag.strip().lower() if data.only_tag else None
+        moved: list[int] = []
+        failed: list[int] = []
+        for visit in await self._repo.get_trip_visits(trip_id):
+            if visit.status != "planned" or visit.visit_date != data.from_date:
+                continue
+            if data.visit_ids is not None and visit.id not in data.visit_ids:
+                continue
+            if tag and tag not in {t.name.lower() for t in visit.place.tags}:
+                continue
+            try:
+                await self.update_visit(visit.id, VisitUpdate(visit_date=data.to_date))
+                moved.append(visit.id)
+            except Exception as exc:  # one bad visit must not stop the rest
+                logger.warning("Visit move failed: id=%d error=%s", visit.id, exc)
+                failed.append(visit.id)
+        logger.info("Visits moved: trip_id=%d from=%s to=%s moved=%d failed=%d", trip_id, data.from_date, data.to_date, len(moved), len(failed))
+        return VisitMoveResult(moved=moved, failed=failed)
 
     async def delete_visit(self, visit_id: int, delete_event: bool = False) -> bool:
         """Delete the visit; its linked calendar event is deleted too only when `delete_event` is true."""

@@ -5,7 +5,7 @@ from datetime import date, datetime, time, timedelta
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.features.briefing.schemas import BirthdayItem, EventBriefItem, HolidayItem, LanguageBriefItem, MorningBriefing, RecurringBriefItem, ShoppingBriefItem, TaskBriefItem, WeatherForecast
+from app.features.briefing.schemas import BirthdayItem, EventBriefItem, HolidayItem, LanguageBriefItem, MorningBriefing, RecurringBriefItem, ShoppingBriefItem, TaskBriefItem, TripBrief, WeatherForecast
 from app.features.language.chunks.repository import ChunkRepository
 from app.features.language.sessions.repository import SessionRepository as LanguageSessionRepository
 from app.features.language.tracks.repository import TrackRepository as LanguageTrackRepository
@@ -20,6 +20,7 @@ from app.features.organizer.shopping_categories.repository import ShoppingCatego
 from app.features.organizer.tasks.recurrence import is_done_in_cycle, is_due_today
 from app.features.organizer.tasks.repository import TaskRepository
 from app.features.organizer.tasks.schemas import TaskFilters
+from app.features.travel.briefing import TripBriefService
 from app.shared.holiday import HolidayProvider
 from app.shared.timezone import local_now
 from app.shared.weather import WeatherProvider
@@ -67,6 +68,7 @@ class MorningBriefingSummaryService:
         recurring = await self._fetch_recurring()
         weather = await self._fetch_weather(today)
         holidays = await self._fetch_holidays(today, holiday_window_end)
+        trip = await self._fetch_trip()
 
         return MorningBriefing(
             date=today,
@@ -79,7 +81,16 @@ class MorningBriefingSummaryService:
             language=language,
             shopping=shopping,
             recurring=recurring,
+            trip=trip,
         )
+
+    async def _fetch_trip(self) -> TripBrief | None:
+        # A trip block must never take the briefing down.
+        try:
+            return await TripBriefService(self._session).morning()
+        except Exception as exc:
+            logger.warning("Briefing trip block failed: error=%s", exc)
+            return None
 
     async def _fetch_tasks(
         self, today: date, today_start: datetime, today_end: datetime, lookahead_end: datetime

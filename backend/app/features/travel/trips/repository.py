@@ -19,6 +19,11 @@ class TripRepository:
     async def get_trip(self, trip_id: int) -> Trip | None:
         return await self._session.get(Trip, trip_id)
 
+    async def get_trips_overlapping(self, start: date, end: date) -> list[Trip]:
+        """Trips whose dates intersect [start, end]."""
+        stmt = select(Trip).where(Trip.start_date <= end, Trip.end_date >= start).order_by(Trip.start_date, Trip.id)
+        return list((await self._session.scalars(stmt)).all())
+
     async def get_trips(self, filters: TripFilters, today: date) -> list[Trip]:
         stmt = select(Trip)
         past = Trip.end_date < today

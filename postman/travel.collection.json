@@ -2067,7 +2067,526 @@
       }
     },
     {
-      "name": "53 - Get Recap Of Unknown Trip",
+      "name": "53 - Get Other Events",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Is a list', () => pm.expect(pm.response.json()).to.be.an('array'));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/trips/{{travel_trip_id}}/other-events",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "trips",
+            "{{travel_trip_id}}",
+            "other-events"
+          ]
+        }
+      }
+    },
+    {
+      "name": "54 - Get Other Events Of Unknown Trip",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 404', () => pm.response.to.have.status(404));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/trips/999999999/other-events",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "trips",
+            "999999999",
+            "other-events"
+          ]
+        }
+      }
+    },
+    {
+      "name": "55 - Get Trip Forecast",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Degrades instead of failing', () => { const j = pm.response.json(); pm.expect(['forecast','climate','none']).to.include(j.mode); pm.expect(j.cities).to.be.an('array'); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/trips/{{travel_trip_id}}/forecast",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "trips",
+            "{{travel_trip_id}}",
+            "forecast"
+          ]
+        }
+      }
+    },
+    {
+      "name": "56 - Get Forecast Of Unknown Trip",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 404', () => pm.response.to.have.status(404));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/trips/999999999/forecast",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "trips",
+            "999999999",
+            "forecast"
+          ]
+        }
+      }
+    },
+    {
+      "name": "57 - Get While Away",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Three lists', () => { const j = pm.response.json(); ['birthdays','tasks','charges'].forEach(k => pm.expect(j[k]).to.be.an('array')); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/trips/{{travel_trip_id}}/while-away",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "trips",
+            "{{travel_trip_id}}",
+            "while-away"
+          ]
+        }
+      }
+    },
+    {
+      "name": "58 - Get While Away Of Unknown Trip",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 404', () => pm.response.to.have.status(404));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/trips/999999999/while-away",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "trips",
+            "999999999",
+            "while-away"
+          ]
+        }
+      }
+    },
+    {
+      "name": "59 - Get Unlinked Transactions",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Linked and out-of-range charges are not listed', () => { const ids = pm.response.json().map(t => t.id); pm.expect(ids).to.not.include(Number(pm.environment.get('travel_txn_id'))); pm.expect(ids).to.not.include(Number(pm.environment.get('travel_outside_id'))); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/trips/{{travel_trip_id}}/unlinked-transactions",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "trips",
+            "{{travel_trip_id}}",
+            "unlinked-transactions"
+          ]
+        }
+      }
+    },
+    {
+      "name": "60 - Get Unlinked Transactions Of Unknown Trip",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 404', () => pm.response.to.have.status(404));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/trips/999999999/unlinked-transactions",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "trips",
+            "999999999",
+            "unlinked-transactions"
+          ]
+        }
+      }
+    },
+    {
+      "name": "61 - Move Visits Of A Day",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Lists are returned', () => { const j = pm.response.json(); pm.expect(j.moved).to.be.an('array'); pm.expect(j.failed).to.be.an('array'); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/trips/{{travel_trip_id}}/visits/move",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "trips",
+            "{{travel_trip_id}}",
+            "visits",
+            "move"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"from_date\": \"2000-01-01\",\n  \"to_date\": \"2000-01-02\"\n}"
+        }
+      }
+    },
+    {
+      "name": "62 - Move Visits Of Unknown Trip",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 404', () => pm.response.to.have.status(404));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/trips/999999999/visits/move",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "trips",
+            "999999999",
+            "visits",
+            "move"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"from_date\": \"2000-01-01\",\n  \"to_date\": \"2000-01-02\"\n}"
+        }
+      }
+    },
+    {
+      "name": "63 - Visit Event Action With Bad Action",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 422', () => pm.response.to.have.status(422));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/visits/{{travel_visit_id}}/event",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "visits",
+            "{{travel_visit_id}}",
+            "event"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"action\": \"explode\"\n}"
+        }
+      }
+    },
+    {
+      "name": "64 - Visit Event Action With Update Visit",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Done, or refused with a reason (depends on whether Google is connected)', () => { pm.expect([200, 422]).to.include(pm.response.code); if (pm.response.code === 422) pm.expect(pm.response.json().detail).to.be.a('string'); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/visits/{{travel_visit_id}}/event",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "visits",
+            "{{travel_visit_id}}",
+            "event"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"action\": \"update_visit\"\n}"
+        }
+      }
+    },
+    {
+      "name": "65 - Link Leg To Unknown Calendar Event",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 404', () => pm.response.to.have.status(404));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/legs/{{travel_leg_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "legs",
+            "{{travel_leg_id}}"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"calendar_event_id\": 999999999\n}"
+        }
+      }
+    },
+    {
+      "name": "66 - Link Stay To Unknown Calendar Event",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 404', () => pm.response.to.have.status(404));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/stays/{{travel_stay_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "stays",
+            "{{travel_stay_id}}"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"calendar_event_id\": 999999999\n}"
+        }
+      }
+    },
+    {
+      "name": "67 - Get Recap Of Unknown Trip",
       "event": [
         {
           "listen": "test",
@@ -2102,7 +2621,7 @@
       }
     },
     {
-      "name": "54 - List Trips By City And Country",
+      "name": "68 - List Trips By City And Country",
       "event": [
         {
           "listen": "test",
@@ -2150,7 +2669,7 @@
       }
     },
     {
-      "name": "55 - List Trips In Another City",
+      "name": "69 - List Trips In Another City",
       "event": [
         {
           "listen": "test",
@@ -2194,7 +2713,7 @@
       }
     },
     {
-      "name": "56 - List Ungraded Places",
+      "name": "70 - List Ungraded Places",
       "event": [
         {
           "listen": "test",
@@ -2238,7 +2757,7 @@
       }
     },
     {
-      "name": "57 - Get Place Costs",
+      "name": "71 - Get Place Costs",
       "event": [
         {
           "listen": "test",
@@ -2274,7 +2793,7 @@
       }
     },
     {
-      "name": "58 - Apply Default Tags To Existing Expenses",
+      "name": "72 - Apply Default Tags To Existing Expenses",
       "event": [
         {
           "listen": "test",
@@ -2312,7 +2831,7 @@
       }
     },
     {
-      "name": "59 - List Calendar Candidates",
+      "name": "73 - List Calendar Candidates",
       "event": [
         {
           "listen": "test",
@@ -2348,7 +2867,7 @@
       }
     },
     {
-      "name": "60 - List Calendar Candidates Of Unknown Trip",
+      "name": "74 - List Calendar Candidates Of Unknown Trip",
       "event": [
         {
           "listen": "test",
@@ -2383,7 +2902,7 @@
       }
     },
     {
-      "name": "61 - Create Leg From Unknown Calendar Event",
+      "name": "75 - Create Leg From Unknown Calendar Event",
       "event": [
         {
           "listen": "test",
@@ -2420,7 +2939,7 @@
       }
     },
     {
-      "name": "62 - Unlink Refund From Stay",
+      "name": "76 - Unlink Refund From Stay",
       "event": [
         {
           "listen": "test",
@@ -2456,7 +2975,7 @@
       }
     },
     {
-      "name": "63 - Unlink Again",
+      "name": "77 - Unlink Again",
       "event": [
         {
           "listen": "test",
@@ -2492,7 +3011,7 @@
       }
     },
     {
-      "name": "64 - Delete Place With Visit",
+      "name": "78 - Delete Place With Visit",
       "event": [
         {
           "listen": "test",
@@ -2526,7 +3045,7 @@
       }
     },
     {
-      "name": "65 - Link Visit To Unknown Calendar Event",
+      "name": "79 - Link Visit To Unknown Calendar Event",
       "event": [
         {
           "listen": "test",
@@ -2564,7 +3083,7 @@
       }
     },
     {
-      "name": "66 - Create Visit Linked To Unknown Calendar Event",
+      "name": "80 - Create Visit Linked To Unknown Calendar Event",
       "event": [
         {
           "listen": "test",
@@ -2601,7 +3120,7 @@
       }
     },
     {
-      "name": "67 - Visit Has A Calendar Event Field",
+      "name": "81 - Visit Has A Calendar Event Field",
       "event": [
         {
           "listen": "test",
@@ -2636,7 +3155,7 @@
       }
     },
     {
-      "name": "68 - Delete Visit",
+      "name": "82 - Delete Visit",
       "event": [
         {
           "listen": "test",
@@ -2670,7 +3189,7 @@
       }
     },
     {
-      "name": "69 - Get Deleted Visit",
+      "name": "83 - Get Deleted Visit",
       "event": [
         {
           "listen": "test",
@@ -2704,7 +3223,7 @@
       }
     },
     {
-      "name": "70 - Delete Leg",
+      "name": "84 - Delete Leg",
       "event": [
         {
           "listen": "test",
@@ -2738,7 +3257,7 @@
       }
     },
     {
-      "name": "71 - Get Deleted Leg",
+      "name": "85 - Get Deleted Leg",
       "event": [
         {
           "listen": "test",
@@ -2772,7 +3291,7 @@
       }
     },
     {
-      "name": "72 - Delete Stay",
+      "name": "86 - Delete Stay",
       "event": [
         {
           "listen": "test",
@@ -2806,7 +3325,7 @@
       }
     },
     {
-      "name": "73 - Delete Place",
+      "name": "87 - Delete Place",
       "event": [
         {
           "listen": "test",
@@ -2840,7 +3359,7 @@
       }
     },
     {
-      "name": "74 - Delete Trip",
+      "name": "88 - Delete Trip",
       "event": [
         {
           "listen": "test",
@@ -2874,7 +3393,7 @@
       }
     },
     {
-      "name": "75 - Delete Tag",
+      "name": "89 - Delete Tag",
       "event": [
         {
           "listen": "test",
@@ -2908,7 +3427,7 @@
       }
     },
     {
-      "name": "76 - Get Deleted Trip",
+      "name": "90 - Get Deleted Trip",
       "event": [
         {
           "listen": "test",
@@ -2942,7 +3461,7 @@
       }
     },
     {
-      "name": "77 - Get Settings",
+      "name": "91 - Get Settings",
       "event": [
         {
           "listen": "test",
@@ -2980,7 +3499,7 @@
       }
     },
     {
-      "name": "78 - Update Settings",
+      "name": "92 - Update Settings",
       "event": [
         {
           "listen": "test",
@@ -3018,7 +3537,7 @@
       }
     },
     {
-      "name": "79 - Update Settings Out Of Range",
+      "name": "93 - Update Settings Out Of Range",
       "event": [
         {
           "listen": "test",
@@ -3055,7 +3574,7 @@
       }
     },
     {
-      "name": "80 - Restore Settings",
+      "name": "94 - Restore Settings",
       "event": [
         {
           "listen": "test",
@@ -3093,7 +3612,7 @@
       }
     },
     {
-      "name": "81 - Get Checklist Template",
+      "name": "95 - Get Checklist Template",
       "event": [
         {
           "listen": "test",
@@ -3127,7 +3646,7 @@
       }
     },
     {
-      "name": "82 - Put Checklist Item",
+      "name": "96 - Put Checklist Item",
       "event": [
         {
           "listen": "test",
@@ -3167,7 +3686,7 @@
       }
     },
     {
-      "name": "83 - Put Checklist Item Under The Other Anchor",
+      "name": "97 - Put Checklist Item Under The Other Anchor",
       "event": [
         {
           "listen": "test",
@@ -3206,7 +3725,7 @@
       }
     },
     {
-      "name": "84 - Put Checklist Item With Bad Anchor",
+      "name": "98 - Put Checklist Item With Bad Anchor",
       "event": [
         {
           "listen": "test",
@@ -3245,7 +3764,7 @@
       }
     },
     {
-      "name": "85 - Put Checklist Item With Bad Name",
+      "name": "99 - Put Checklist Item With Bad Name",
       "event": [
         {
           "listen": "test",
@@ -3284,7 +3803,7 @@
       }
     },
     {
-      "name": "86 - Delete Checklist Item",
+      "name": "100 - Delete Checklist Item",
       "event": [
         {
           "listen": "test",
@@ -3319,7 +3838,7 @@
       }
     },
     {
-      "name": "87 - Delete Checklist Item Again",
+      "name": "101 - Delete Checklist Item Again",
       "event": [
         {
           "listen": "test",
@@ -3354,7 +3873,7 @@
       }
     },
     {
-      "name": "88 - Generate Checklist For Unknown Trip",
+      "name": "102 - Generate Checklist For Unknown Trip",
       "event": [
         {
           "listen": "test",
@@ -3389,7 +3908,7 @@
       }
     },
     {
-      "name": "89 - Find Place Tag For Cleanup",
+      "name": "103 - Find Place Tag For Cleanup",
       "event": [
         {
           "listen": "test",
@@ -3425,7 +3944,7 @@
       }
     },
     {
-      "name": "90 - Delete Place Tag",
+      "name": "104 - Delete Place Tag",
       "event": [
         {
           "listen": "test",
@@ -3459,7 +3978,7 @@
       }
     },
     {
-      "name": "91 - Delete Expense Inside The Trip",
+      "name": "105 - Delete Expense Inside The Trip",
       "event": [
         {
           "listen": "test",
@@ -3493,7 +4012,7 @@
       }
     },
     {
-      "name": "92 - Delete Refund",
+      "name": "106 - Delete Refund",
       "event": [
         {
           "listen": "test",
@@ -3527,7 +4046,7 @@
       }
     },
     {
-      "name": "93 - Delete Expense Outside The Trip",
+      "name": "107 - Delete Expense Outside The Trip",
       "event": [
         {
           "listen": "test",
@@ -3561,7 +4080,7 @@
       }
     },
     {
-      "name": "94 - Delete Finance Account",
+      "name": "108 - Delete Finance Account",
       "event": [
         {
           "listen": "test",

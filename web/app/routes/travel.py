@@ -1,5 +1,6 @@
 import csv
 import io
+from datetime import date, timedelta
 from urllib.parse import urlencode
 
 from fastapi import APIRouter, HTTPException, Request
@@ -165,6 +166,13 @@ async def delete_link(kind: str, entity_id: int, transaction_id: int):
 @router.post("/trips/{trip_id}/apply-default-tags")
 async def apply_default_tags(trip_id: int):
     return await forward(api.post(f"/travel/trips/{trip_id}/apply-default-tags"), "Could not tag the expenses.")
+
+
+@router.post("/trips/{trip_id}/visits/move")
+async def move_visits(trip_id: int, request: Request):
+    return await forward(
+        api.post(f"/travel/trips/{trip_id}/visits/move", json=await request.json()), "Could not move the visits.",
+    )
 
 
 @router.get("/trips/{trip_id}/calendar-events")
@@ -357,6 +365,66 @@ async def timeline_page(trip_id: int, request: Request):
     return templates.TemplateResponse(request, "travel_timeline.html", {"trip": trip, "days": _group_by_day(trip["timeline"])})
 
 
+_PRINT_KINDS = {"leg", "arrival", "check_in", "check_out"}
+
+
+def _print_days(trip: dict) -> dict[str, list[dict]]:
+    """Legs, arrivals, check-ins/outs and visits as rows per local day, in time order."""
+    legs = {leg["id"]: leg for leg in trip["legs"]}
+    stays = {stay["id"]: stay for stay in trip["stays"]}
+    rows: dict[str, list[dict]] = {}
+
+    def add(day: str, time: str, title: str, detail: str | None = None, link: str | None = None):
+        rows.setdefault(day, []).append({"time": time, "title": title, "detail": detail, "link": link})
+
+    for item in trip["timeline"]:
+        if item["kind"] not in _PRINT_KINDS:
+            continue
+        day, time = item["local"][:10], item["local"][11:16]
+        details = []
+        if item["kind"] == "leg":
+            leg = legs.get(item["ref_id"], {})
+            if item.get("subtitle"):
+                details.append(item["subtitle"])
+            if leg.get("booking_ref"):
+                details.append(f"Booking {leg['booking_ref']}")
+        elif item["kind"] in ("check_in", "check_out"):
+            stay = stays.get(item["ref_id"], {})
+            place = stay.get("place", {})
+            if place.get("address"):
+                details.append(place["address"])
+            if stay.get("booking_ref"):
+                details.append(f"Booking {stay['booking_ref']}")
+        add(day, time, item["title"], " · ".join(details) or None, item.get("links", {}).get("map") if item["kind"] != "leg" else None)
+    for visit in trip["visits"]:
+        if visit["visit_date"]:
+            time = (visit["visit_time"] or "")[:5]
+            add(visit["visit_date"], time, visit["place"]["name"], visit["notes"], visit["place"]["maps_link"])
+    return {day: sorted(day_rows, key=lambda r: (r["time"] == "", r["time"])) for day, day_rows in sorted(rows.items())}
+
+
+@router.get("/{trip_id}/print", response_class=HTMLResponse)
+async def print_page(trip_id: int, request: Request):
+    trip = await safe_get(f"/travel/trips/{trip_id}", params={"all_visits": "true"})
+    if trip is None:
+        return RedirectResponse("/travel", status_code=302)
+    visits = [v for v in trip["visits"] if v["status"] != "missed"]
+    return templates.TemplateResponse(request, "travel_print.html", {"trip": {**trip, "visits": visits}, "days": _print_days({**trip, "visits": visits})})
+
+
+def _empty_days(trip: dict) -> list[str]:
+    """Days of an upcoming or ongoing trip with no visit at all, as ISO dates (capped, to keep the hint short)."""
+    if trip["status"] == "past":
+        return []
+    try:
+        start, end = date.fromisoformat(trip["start_date"]), date.fromisoformat(trip["end_date"])
+    except (KeyError, ValueError):
+        return []
+    planned = {v["visit_date"] for v in trip["visits"]}
+    days = [start + timedelta(days=i) for i in range(min((end - start).days + 1, 31))]
+    return [d.isoformat() for d in days if d.isoformat() not in planned]
+
+
 def _countdown(minutes: int | None) -> str:
     if minutes is None:
         return ""
@@ -393,6 +461,10 @@ async def trip_page(trip_id: int, request: Request):
     places = await safe_get("/travel/places", params={"limit": 500}, default=[])
     preview = trip["timeline"][:_TIMELINE_PREVIEW]
     costs = await safe_get(f"/travel/trips/{trip_id}/costs")
+    other_events = await safe_get(f"/travel/trips/{trip_id}/other-events", default=[])
+    forecast = await safe_get(f"/travel/trips/{trip_id}/forecast")
+    while_away = await safe_get(f"/travel/trips/{trip_id}/while-away")
+    unlinked = await safe_get(f"/travel/trips/{trip_id}/unlinked-transactions", default=[])
     entity_costs = {
         kind: {item["id"]: item for item in (costs or {}).get(kind, [])} for kind in ("legs", "stays", "visits")
     }
@@ -401,11 +473,16 @@ async def trip_page(trip_id: int, request: Request):
         visit_days.setdefault(visit["visit_date"], []).append(visit)
     return templates.TemplateResponse(request, "travel_trip.html", {
         "trip": trip,
+        "empty_days": _empty_days(trip),
         "days": _group_by_day(preview),
         "timeline_shown": len(preview),
         "timeline_total": len(trip["timeline"]),
         "visit_days": visit_days,
         "costs": costs,
+        "other_events": other_events or [],
+        "forecast": forecast,
+        "while_away": while_away,
+        "unlinked": unlinked or [],
         "entity_costs": entity_costs,
         "all_visits": all_visits,
         "places": places,

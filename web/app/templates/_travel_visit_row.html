@@ -21,6 +21,19 @@
   <div class="flex gap-1 whitespace-nowrap">
     {% if v.status != 'visited' %}<button class="btn btn-xs btn-ghost mark-visit" data-id="{{ v.id }}" data-status="visited">Visited</button>{% endif %}
     {% if v.status == 'planned' %}<button class="btn btn-xs btn-ghost mark-visit" data-id="{{ v.id }}" data-status="missed">Missed</button>{% endif %}
+    {% if event_actions is defined and event_actions %}
+    {% set kinds = (trip.warnings | selectattr('visit_id', 'equalto', v.id) | map(attribute='kind') | list) if trip is defined and trip.warnings is defined else [] %}
+    {% if v.calendar_event_id %}
+    {% if 'linked_event_mismatch' in kinds %}
+    <button class="btn btn-xs btn-ghost event-action" data-id="{{ v.id }}" data-action="update_event" title="Move the calendar event to this visit's day and time">Update event</button>
+    <button class="btn btn-xs btn-ghost event-action" data-id="{{ v.id }}" data-action="update_visit" title="Take the day and time from the calendar event">Update visit</button>
+    {% endif %}
+    <button class="btn btn-xs btn-ghost unlink-event" data-kind="visits" data-id="{{ v.id }}">Unlink event</button>
+    {% else %}
+    {% if 'no_calendar_event' in kinds %}<button class="btn btn-xs btn-ghost event-action" data-id="{{ v.id }}" data-action="create">Create event</button>{% endif %}
+    <button class="btn btn-xs btn-ghost link-event" data-kind="visits" data-id="{{ v.id }}">Link event</button>
+    {% endif %}
+    {% endif %}
     {{ tx_button('visits', v.id, v.place.name) }}
     <button class="btn btn-xs btn-ghost edit-visit" data-item="{{ v | tojson | forceescape }}">Edit</button>
     <button class="btn btn-xs btn-ghost text-red-600 delete-visit" data-id="{{ v.id }}"{% if v.calendar_event_id %} data-event="{{ v.calendar_event_id }}"{% endif %}>Delete</button>

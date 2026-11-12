@@ -38,6 +38,13 @@ class VisitRepository:
     async def get_visit_by_calendar_event(self, event_id: int) -> Visit | None:
         return await self._session.scalar(select(Visit).where(Visit.calendar_event_id == event_id))
 
+    async def get_imported_event_ids(self, event_ids: list[int]) -> dict[int, int]:
+        """Calendar event id -> id of the visit linked to it, for the given events."""
+        if not event_ids:
+            return {}
+        stmt = select(Visit.calendar_event_id, Visit.id).where(Visit.calendar_event_id.in_(event_ids))
+        return {event_id: visit_id for event_id, visit_id in (await self._session.execute(stmt)).all()}
+
     async def get_trip_visits(self, trip_id: int) -> list[Visit]:
         stmt = select(Visit).where(Visit.trip_id == trip_id).order_by(*_ORDER)
         return list((await self._session.scalars(stmt)).all())

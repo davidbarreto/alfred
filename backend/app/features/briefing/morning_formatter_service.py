@@ -129,6 +129,19 @@ def _build_context(briefing: MorningBriefing) -> str:
             else:
                 lines.append(f"  {label} — in {b.days_until} days ({b.date.strftime('%d %b')})")
 
+    if briefing.trip:
+        trip = briefing.trip
+        lines.append("")
+        lines.append(f"On a trip: {trip.trip_name}, day {trip.day} of {trip.days}")
+        if trip.leave_home_at:
+            lines.append(f"  Leave home at {trip.leave_home_at.astimezone(local_now().tzinfo):%H:%M}")
+        for entry in trip.agenda:
+            lines.append(f"  {entry}")
+        if not trip.agenda:
+            lines.append("  Nothing scheduled today.")
+        if trip.spend_eur is not None:
+            lines.append(f"  Spent so far on linked costs: {trip.spend_eur} EUR")
+
     if briefing.shopping:
         lines.append("")
         lines.append(f"Shopping list — pending items ({len(briefing.shopping)}):")

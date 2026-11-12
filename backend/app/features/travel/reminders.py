@@ -9,6 +9,7 @@ from zoneinfo import ZoneInfo
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.features.travel.recap.builder import build_recap
 from app.features.travel.settings_schemas import TravelSettingsRead
 from app.features.travel.trips.repository import TripRepository
 from app.features.travel.trips.schemas import TripDetail
@@ -25,6 +26,10 @@ CHECK_IN_OPENS_BEFORE = timedelta(hours=24)
 LEAVE_HOME_LEAD = timedelta(hours=1)
 # Trips starting further away than this are not loaded for reminders.
 LOOKAHEAD_DAYS = max(TRIP_START_REMINDER_DAYS)
+# Days after a trip ends on which to nudge about the places still to grade or write down.
+GRADE_NUDGE_DAYS = (1, 7)
+# Trips that ended up to this long ago are loaded too, for the nudge.
+LOOKBEHIND_DAYS = max(GRADE_NUDGE_DAYS)
 
 
 @dataclass(frozen=True)
@@ -56,6 +61,14 @@ def build_travel_reminders(
             if trip.checklist_note_id:
                 text += f" (checklist: note #{trip.checklist_note_id})"
             reminders.append(TravelReminder("travel_trip_start", trip.id, text))
+
+        if (today - trip.end_date).days in GRADE_NUDGE_DAYS:
+            pending = len(build_recap(trip, None).to_complete)
+            if pending:
+                reminders.append(TravelReminder(
+                    "travel_grade_nudge", trip.id,
+                    f"Trip '{trip.name}': {_plural(pending, 'place')} still to grade or note (recap: /travel/{trip.id}/recap)",
+                ))
 
         flights = [leg for leg in trip.legs if leg.mode == "flight"]
         for leg in flights:
@@ -98,7 +111,7 @@ class TravelReminderService:
     async def get_reminders(self) -> list[TravelReminder]:
         now = local_now()
         today = now.date()
-        trips = await self._repo.get_trips_in_window(today, today + timedelta(days=LOOKAHEAD_DAYS))
+        trips = await self._repo.get_trips_in_window(today - timedelta(days=LOOKBEHIND_DAYS), today + timedelta(days=LOOKAHEAD_DAYS))
         details = [d for d in [await self._trips.get_trip_detail(t.id) for t in trips] if d is not None]
         reminders = build_travel_reminders(details, now, today, await self._settings.get())
         logger.debug("Travel reminders: trips=%d candidates=%d", len(details), len(reminders))

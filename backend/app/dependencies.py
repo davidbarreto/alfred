@@ -123,6 +123,9 @@ from app.features.travel.legs.service import LegService
 from app.features.travel.transaction_links.service import TransactionLinkService
 from app.features.travel.places.service import PlaceService
 from app.features.travel.checklist.service import ChecklistService
+from app.features.travel.other_events import TripSnoozeService
+from app.features.travel.trips.forecast_service import TripForecastService
+from app.features.travel.trips.while_away_service import WhileAwayService
 from app.features.travel.visits.calendar_sync import VisitCalendarSync
 from app.features.travel.recap.service import TripRecapService
 from app.features.travel.settings_service import TravelSettingsService
@@ -256,7 +259,8 @@ def get_calendar_notification_settings_service(
     return CalendarNotificationSettingsService(session)
 
 def get_calendar_notification_service(session: AsyncSession = Depends(get_session)) -> CalendarNotificationService:
-    return CalendarNotificationService(session, CalendarEventService(provider=None, session=session))
+    events = CalendarEventService(provider=None, session=session)
+    return CalendarNotificationService(session, events, TripSnoozeService(session, events))
 
 def get_contact_birthday_settings_service(
     session: AsyncSession = Depends(get_session),
@@ -684,6 +688,15 @@ def get_travel_services(session: AsyncSession = Depends(get_session)) -> TravelS
 def get_checklist_service(session: AsyncSession = Depends(get_session)) -> ChecklistService:
     return ChecklistService(session, get_task_service(session))
 
+def get_trip_snooze_service(session: AsyncSession = Depends(get_session)) -> TripSnoozeService:
+    return TripSnoozeService(session, CalendarEventService(provider=None, session=session))
+
+def get_trip_forecast_service(session: AsyncSession = Depends(get_session)) -> TripForecastService:
+    return TripForecastService(session, get_weather_client())
+
+def get_while_away_service(session: AsyncSession = Depends(get_session)) -> WhileAwayService:
+    return WhileAwayService(session)
+
 def get_trip_recap_service(session: AsyncSession = Depends(get_session)) -> TripRecapService:
     return TripRecapService(session)
 
@@ -824,5 +837,8 @@ TripDefaultTagServiceDep = Annotated[TripDefaultTagService, Depends(get_trip_def
 CalendarImportServiceDep = Annotated[CalendarImportService, Depends(get_calendar_import_service)]
 TravelServicesDep = Annotated[TravelServices, Depends(get_travel_services)]
 ChecklistServiceDep = Annotated[ChecklistService, Depends(get_checklist_service)]
+TripSnoozeServiceDep = Annotated[TripSnoozeService, Depends(get_trip_snooze_service)]
+TripForecastServiceDep = Annotated[TripForecastService, Depends(get_trip_forecast_service)]
+WhileAwayServiceDep = Annotated[WhileAwayService, Depends(get_while_away_service)]
 TripRecapServiceDep = Annotated[TripRecapService, Depends(get_trip_recap_service)]
 TravelTagServiceDep = Annotated[TravelTagService, Depends(get_travel_tag_service)]

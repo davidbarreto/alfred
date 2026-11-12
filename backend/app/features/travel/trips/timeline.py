@@ -23,6 +23,7 @@ WarningKind = Literal[
     "long_wait_before_check_in", "tight_connection", "arrives_after_check_out", "overlapping_legs",
     "uncovered_night", "no_return_leg",
     "visit_before_arrival", "visit_after_departure", "visit_overlaps_leg", "visit_without_stay", "too_many_visits",
+    "no_calendar_event", "linked_event_mismatch", "linked_event_not_updated",
 ]
 
 
@@ -185,6 +186,9 @@ def _stay_items(stay: StayRead) -> list[TimelineItem]:
         "map": place_maps_url(place.name, place.city, place.maps_url, place.lat, place.lng),
         **_food_links(near),
         "luggage": maps_search_url(f"luggage storage near {near}"),
+        "pharmacy": maps_search_url(f"pharmacy near {near}"),
+        "supermarket": maps_search_url(f"supermarket near {near}"),
+        "atm": maps_search_url(f"ATM near {near}"),
     }
     return [
         TimelineItem(

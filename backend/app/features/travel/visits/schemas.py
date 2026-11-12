@@ -1,8 +1,8 @@
 from datetime import date, datetime, time
-from typing import Annotated
+from typing import Annotated, Literal
 
 from fastapi import Query
-from pydantic import BaseModel, Field, computed_field, model_validator
+from pydantic import BaseModel, Field, computed_field, field_validator, model_validator
 
 from app.features.travel.constants import PlaceKind, VisitStatus
 from app.features.travel.links import place_maps_url
@@ -74,6 +74,27 @@ class VisitRead(BaseModel):
     updated_at: datetime
 
     model_config = {"from_attributes": True}
+
+
+class VisitEventAction(BaseModel):
+    action: Literal["create", "update_event", "update_visit"]
+
+
+class VisitMove(BaseModel):
+    """Move a trip's planned visits from one day to another (e.g. away from a rainy day)."""
+
+    from_date: date
+    to_date: date
+    # Only these visits (they must be planned and on from_date); omit to move all of them.
+    visit_ids: list[int] | None = None
+    # Only visits at places carrying this travel tag, e.g. "Outdoor".
+    only_tag: str | None = None
+
+
+class VisitMoveResult(BaseModel):
+    moved: list[int]
+    # Visits that could not be moved (the reason is logged); they keep their old day.
+    failed: list[int]
 
 
 class VisitFilters:

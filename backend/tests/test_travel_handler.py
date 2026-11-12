@@ -484,3 +484,41 @@ class TestToday:
         services.trips.get_today.return_value = self._today()
         await run("travel_trip", "today", {"trip": "example"}, services)
         services.trips.get_today.assert_awaited_once_with(1)
+
+
+class TestNote:
+    @pytest.fixture
+    def noted(self, services):
+        from app.features.travel.trips.today import TripToday
+
+        services.trips.get_trips.return_value = [_trip()]
+        services.trips.get_today.return_value = TripToday(trip_id=1, trip_name="Example trip", date=date(2031, 12, 18), timezone="UTC")
+        services.trips.get_trip_detail.return_value = TripDetail(
+            **_trip().model_dump(exclude={"status"}), legs=[], stays=[], timeline=[], warnings=[], visits=[_visit()],
+        )
+        return services
+
+    async def test_appends_a_stamped_note_to_the_started_visit(self, noted):
+        from freezegun import freeze_time
+
+        with freeze_time("2031-12-18 12:00:00"):
+            result = await run("travel_visit", "note", {"text": "lovely"}, noted)
+        update = noted.visits.update_visit.await_args
+        assert update.args[0] == 11 and update.args[1].notes == "[2031-12-18 12:00] lovely"
+        assert "Museum Example" in result["message"]
+
+    async def test_writes_nothing_when_no_visit_has_started(self, noted):
+        from freezegun import freeze_time
+
+        with freeze_time("2031-12-18 08:00:00"):
+            result = await run("travel_visit", "note", {"text": "early"}, noted)
+        noted.visits.update_visit.assert_not_awaited()
+        assert "not saved" in result["message"]
+
+    async def test_needs_text_and_an_ongoing_trip(self, noted):
+        with pytest.raises(HTTPException):
+            await run("travel_visit", "note", {}, noted)
+        noted.trips.get_trips.return_value = []
+        with pytest.raises(HTTPException) as exc:
+            await run("travel_visit", "note", {"text": "x"}, noted)
+        assert exc.value.status_code == 404

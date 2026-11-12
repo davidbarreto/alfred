@@ -30,6 +30,10 @@ async def get_leg(leg_id: int, service: LegServiceDep) -> LegRead:
 async def update_leg(leg_id: int, request: LegUpdate, service: LegServiceDep) -> LegRead:
     try:
         leg = await service.update_leg(leg_id, request)
+    except TravelNotFoundError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))
+    except TravelConflictError as exc:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc))
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc))
     if leg is None:

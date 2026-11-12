@@ -40,3 +40,13 @@ class TestMaxVisitsPerDay:
         assert (await service.get()).max_visits_per_day == 4
         await service.update(TravelSettingsUpdate(max_visits_per_day=6))
         service._settings.set_value.assert_awaited_once_with("travel.max_visits_per_day", "6")
+
+
+class TestSnoozeOtherEvents:
+    @pytest.mark.asyncio
+    async def test_is_off_by_default_and_stored_as_zero_or_one(self, service):
+        assert (await service.get()).snooze_other_events is False
+        await service.update(TravelSettingsUpdate(snooze_other_events=True))
+        service._settings.set_value.assert_awaited_once_with("travel.snooze_other_events", "1")
+        service._settings.get_value.side_effect = lambda key: "1" if key == "travel.snooze_other_events" else None
+        assert (await service.get()).snooze_other_events is True

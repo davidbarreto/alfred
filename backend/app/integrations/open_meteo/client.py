@@ -9,6 +9,8 @@ from app.integrations.http.retry import request_with_retry
 
 _BASE_URL = "https://api.open-meteo.com/v1/forecast"
 _GEOCODING_URL = "https://geocoding-api.open-meteo.com/v1/search"
+_ARCHIVE_URL = "https://archive-api.open-meteo.com/v1/archive"
+_RANGE_DAILY = "temperature_2m_max,temperature_2m_min,precipitation_sum"
 
 
 class OpenMeteoClient:
@@ -50,3 +52,13 @@ class OpenMeteoClient:
         async with httpx.AsyncClient(timeout=5.0) as client:
             response = await request_with_retry(client, "GET", _BASE_URL, params=params, max_attempts=2, backoff_seconds=0.5)
         return response.json()["current"]
+
+    async def fetch_range(self, lat: float, lon: float, start: date, end: date, archive: bool = False) -> dict[str, Any]:
+        """Daily min/max temperature and precipitation for a date range: the forecast, or past days from the archive."""
+        params = {
+            "latitude": lat, "longitude": lon, "daily": _RANGE_DAILY, "timezone": "auto",
+            "start_date": start.isoformat(), "end_date": end.isoformat(),
+        }
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            response = await request_with_retry(client, "GET", _ARCHIVE_URL if archive else _BASE_URL, params=params)
+        return response.json()["daily"]

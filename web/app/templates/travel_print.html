@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{{ trip.name }}: itinerary</title>
+  <style>
+    body { font-family: system-ui, -apple-system, "Segoe UI", sans-serif; color: #111; max-width: 780px; margin: 24px auto; padding: 0 16px; font-size: 14px; line-height: 1.45; }
+    h1 { font-size: 22px; margin: 0 0 2px; }
+    h2 { font-size: 15px; margin: 22px 0 6px; padding-bottom: 3px; border-bottom: 1px solid #bbb; }
+    .sub { color: #555; margin: 0 0 12px; }
+    table { width: 100%; border-collapse: collapse; }
+    td { padding: 3px 6px 3px 0; vertical-align: top; }
+    td.time { width: 56px; color: #444; white-space: nowrap; }
+    .detail { color: #555; font-size: 12px; }
+    .actions { margin: 12px 0; }
+    a { color: #1a56b0; }
+    h2 { break-after: avoid; }
+    tr { break-inside: avoid; }
+    @media print { .actions { display: none; } body { margin: 0; max-width: none; } a { color: inherit; text-decoration: none; } }
+  </style>
+</head>
+<body>
+  <div class="actions"><button onclick="window.print()">Print / Save as PDF</button> · <a href="/travel/{{ trip.id }}">Back to the trip</a></div>
+  <h1>{{ trip.name }}</h1>
+  <p class="sub">{{ trip.start_date | short_date }} → {{ trip.end_date | short_date }}{% if trip.travelers %} · {{ trip.travelers }}{% endif %}</p>
+
+  {% for day, rows in days.items() %}
+  <h2>{{ day | short_date }}</h2>
+  <table>
+    {% for row in rows %}
+    <tr>
+      <td class="time">{{ row.time }}</td>
+      <td>{{ row.title }}{% if row.detail %}<div class="detail">{{ row.detail }}</div>{% endif %}{% if row.link %}<div class="detail"><a href="{{ row.link }}">{{ row.link }}</a></div>{% endif %}</td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% else %}
+  <p>Nothing planned yet.</p>
+  {% endfor %}
+</body>
+</html>

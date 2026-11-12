@@ -1,7 +1,7 @@
 """Google Calendar events for timed visits. A failure here never fails the visit write: it is logged and skipped."""
 import logging
 from collections.abc import Awaitable, Callable
-from datetime import datetime, timedelta
+from datetime import date, datetime, time, timedelta
 from zoneinfo import ZoneInfo
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -15,7 +15,7 @@ from app.features.travel.settings_service import DEFAULT_VISIT_DURATION_MIN as D
 from app.features.travel.stays.repository import StayRepository
 from app.features.travel.trips.repository import TripRepository
 from app.features.travel.visits.tables import Visit
-from app.shared.timezone import local_timezone_name
+from app.shared.timezone import local_timezone, local_timezone_name
 
 logger = logging.getLogger(__name__)
 
@@ -53,9 +53,6 @@ class VisitCalendarSync:
         if self._events is None:
             self._events = await self._events_factory()
         return self._events
-
-    async def event_exists(self, event_id: int) -> bool:
-        return await (await self._calendar()).get_event(event_id) is not None
 
     async def _zone(self, visit: Visit) -> str:
         """The zone of the stay covering the visit's day, else the local zone."""
@@ -114,6 +111,15 @@ class VisitCalendarSync:
             return False
         logger.info("Visit event updated: visit_id=%d event_id=%d", visit.id, visit.calendar_event_id)
         return True
+
+    async def event_start(self, event_id: int) -> tuple[date, time] | None:
+        """The day and wall-clock time an event starts at, in the event's own zone (None when it is gone or all-day)."""
+        event = await (await self._calendar()).get_event(event_id)
+        if event is None or event.all_day:
+            return None
+        zone = ZoneInfo(event.timezone) if event.timezone else local_timezone()
+        start = event.start_datetime.replace(tzinfo=local_timezone()).astimezone(zone)
+        return start.date(), start.time().replace(second=0, microsecond=0)
 
     async def delete_event(self, event_id: int) -> bool:
         try:

@@ -3,7 +3,12 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 
 from app.api.auth import require_auth
-from app.dependencies import TripRecapServiceDep, TripServiceDep
+from app.dependencies import TripForecastServiceDep, VisitServiceDep, TripRecapServiceDep, TripServiceDep, TripSnoozeServiceDep, WhileAwayServiceDep
+from app.features.travel.other_events import OtherEvent
+from app.features.travel.errors import TravelNotFoundError
+from app.features.travel.visits.schemas import VisitMove, VisitMoveResult
+from app.features.travel.trips.forecast import TripForecast
+from app.features.travel.trips.while_away import WhileAway
 from app.features.travel.recap.schemas import TripRecap
 from app.features.travel.trips.map_points import MapScope, TripMap
 from app.features.travel.trips.today import TripToday
@@ -29,6 +34,42 @@ async def get_trip_recap(trip_id: int, service: TripRecapServiceDep) -> TripReca
     if recap is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Trip not found")
     return recap
+
+
+@router.post("/{trip_id}/visits/move", response_model=VisitMoveResult)
+async def move_visits(trip_id: int, request: VisitMove, service: VisitServiceDep) -> VisitMoveResult:
+    """Move the planned visits of one day to another (optionally only those at places with a tag such as Outdoor)."""
+    try:
+        return await service.move_visits(trip_id, request)
+    except TravelNotFoundError as exc:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))
+
+
+@router.get("/{trip_id}/while-away", response_model=WhileAway)
+async def get_while_away(trip_id: int, service: WhileAwayServiceDep) -> WhileAway:
+    """Contact birthdays, task due dates and recurring expenses that fall inside the trip's dates."""
+    result = await service.get_while_away(trip_id)
+    if result is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Trip not found")
+    return result
+
+
+@router.get("/{trip_id}/forecast", response_model=TripForecast)
+async def get_trip_forecast(trip_id: int, service: TripForecastServiceDep) -> TripForecast:
+    """Daily weather per stay city: the forecast within 14 days of the start, else last year's same dates."""
+    result = await service.get_forecast(trip_id)
+    if result is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Trip not found")
+    return result
+
+
+@router.get("/{trip_id}/other-events", response_model=list[OtherEvent])
+async def get_other_events(trip_id: int, service: TripSnoozeServiceDep) -> list[OtherEvent]:
+    """Calendar events inside the trip's dates that are not part of it, and whether their reminders are snoozed."""
+    result = await service.get_other_events(trip_id)
+    if result is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Trip not found")
+    return result
 
 
 @router.get("/{trip_id}/today", response_model=TripToday)

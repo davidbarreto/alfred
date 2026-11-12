@@ -7,8 +7,9 @@
       <label class="space-y-1 col-span-2"><span class="block text-xs text-gray-500">Place</span>
         <select name="place_id" class="select select-sm select-bordered w-full">
           <option value="new">+ New place…</option>
-          {% for p in places %}<option value="{{ p.id }}">{{ p.name }}{% if p.city %} ({{ p.city }}){% endif %}</option>{% endfor %}
-        </select></label>
+          {% for p in places %}<option value="{{ p.id }}" data-href="/travel/places/{{ p.id }}" data-grade="{{ p.grade or 0 }}" data-count="{{ p.grade_count or 0 }}" data-tags="{{ p.tags | join(',') }}">{{ p.name }}{% if p.city %} ({{ p.city }}){% endif %}</option>{% endfor %}
+        </select>
+        <span class="block text-[11px] text-gray-500" id="visit-place-history"></span></label>
       <div class="col-span-2 grid grid-cols-2 gap-3" id="visit-new-place">
         <label class="space-y-1"><span class="block text-xs text-gray-500">Name</span><input name="place_name" class="input input-sm input-bordered w-full"></label>
         <label class="space-y-1"><span class="block text-xs text-gray-500">Kind</span>

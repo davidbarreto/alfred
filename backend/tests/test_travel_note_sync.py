@@ -115,7 +115,7 @@ class TestLegs:
     @pytest.fixture
     def svc(self, embeddings):
         svc = LegService(AsyncMock(), embeddings)
-        svc._repo, svc._trip_repo, svc._calendar_repo = AsyncMock(), AsyncMock(), AsyncMock()
+        svc._repo, svc._trip_repo, svc._event_links = AsyncMock(), AsyncMock(), AsyncMock()
         return svc
 
     async def test_create_update_delete(self, svc, embeddings):
@@ -144,7 +144,7 @@ class TestStays:
     @pytest.fixture
     def svc(self, embeddings):
         svc = StayService(AsyncMock(), embeddings)
-        svc._repo, svc._trip_repo, svc._place_repo, svc._calendar_repo = AsyncMock(), AsyncMock(), AsyncMock(), AsyncMock()
+        svc._repo, svc._trip_repo, svc._place_repo, svc._event_links = AsyncMock(), AsyncMock(), AsyncMock(), AsyncMock()
         return svc
 
     async def test_create_update_delete(self, svc, embeddings):

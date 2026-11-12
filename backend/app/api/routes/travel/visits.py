@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from app.api.auth import require_auth
 from app.dependencies import VisitServiceDep
 from app.features.travel.errors import TravelConflictError, TravelNotFoundError
-from app.features.travel.visits.schemas import VisitCreate, VisitFilters, VisitRead, VisitUpdate
+from app.features.travel.visits.schemas import VisitCreate, VisitEventAction, VisitFilters, VisitRead, VisitUpdate
 
 router = APIRouter(prefix="/travel/visits", tags=["travel"], dependencies=[Depends(require_auth)])
 
@@ -41,6 +41,18 @@ async def update_visit(visit_id: int, request: VisitUpdate, service: VisitServic
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(exc))
     except TravelConflictError as exc:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc))
+    except ValueError as exc:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc))
+    if visit is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Visit not found")
+    return visit
+
+
+@router.post("/{visit_id}/event", response_model=VisitRead)
+async def visit_event_action(visit_id: int, request: VisitEventAction, service: VisitServiceDep) -> VisitRead:
+    """create the visit's calendar event, push the visit to it (update_event) or pull its time back (update_visit)."""
+    try:
+        visit = await service.event_action(visit_id, request.action)
     except ValueError as exc:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc))
     if visit is None:

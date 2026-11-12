@@ -124,9 +124,11 @@ class TransactionLinkRepository:
         stmt = select(*_sum_columns()).select_from(Transaction).where(Transaction.id.in_(select(ids.c.transaction_id)))
         return _row_to_cost(*(await self._session.execute(stmt)).one())
 
-    async def get_unlinked(self, start: datetime, end: datetime, tag_names: list[str]) -> list[Transaction]:
-        """Expenses dated in [start, end) or carrying one of the tags, and income carrying one, that no leg, stay or
-        visit is linked to. Transfers are never a trip cost."""
+    async def get_unlinked(
+        self, start: datetime, end: datetime, tag_names: list[str], tag_start: datetime, tag_end: datetime,
+    ) -> list[Transaction]:
+        """Expenses dated in [start, end), expenses and income carrying one of the tags dated in
+        [tag_start, tag_end), that no leg, stay or visit is linked to. Transfers are never a trip cost."""
         linked = union(
             select(legs_transactions.c.transaction_id),
             select(stays_transactions.c.transaction_id),
@@ -141,6 +143,7 @@ class TransactionLinkRepository:
             )
             if lowered else literal(False)
         )
+        tagged = and_(tagged, Transaction.date >= tag_start, Transaction.date < tag_end)
         in_window = and_(Transaction.date >= start, Transaction.date < end)
         stmt = (
             select(Transaction)

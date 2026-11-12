@@ -25,6 +25,10 @@ from app.features.travel.visits.repository import VisitRepository
 
 logger = logging.getLogger(__name__)
 
+# Tagged charges count as trip charges from this long before the trip until this long after it (prepaid bookings).
+TAG_LEAD_DAYS = 90
+TAG_TAIL_DAYS = 30
+
 _NO_COST = (Decimal("0.00"), 0, 0)
 
 
@@ -108,6 +112,8 @@ class TransactionLinkService:
             datetime.combine(trip.start_date, time.min),
             datetime.combine(trip.end_date + timedelta(days=1), time.min),
             parse_default_tag_names(trip.default_tag_names),
+            datetime.combine(trip.start_date - timedelta(days=TAG_LEAD_DAYS), time.min),
+            datetime.combine(trip.end_date + timedelta(days=TAG_TAIL_DAYS + 1), time.min),
         )
         logger.debug("Unlinked transactions: trip_id=%d count=%d", trip_id, len(found))
         return [LinkedTransaction.model_validate(t) for t in found]

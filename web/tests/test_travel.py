@@ -833,6 +833,30 @@ class TestUnlinkedPreview:
         assert response.status_code == 302 and response.headers["location"] == "/travel"
 
 
+class TestTransactionDetail:
+    _tx = {"id": 9, "account_id": 2, "date": "2026-12-18T12:30:00", "amount": "42.50", "currency": "USD", "amount_eur": "39.10",
+           "type": "expense", "category_id": 4, "merchant": "Some Shop", "description": "Souvenirs", "bank_description": "SOME SHOP 123",
+           "note": "Gift", "tags": ["Travel"]}
+
+    def test_detail_partial_shows_the_fields_with_account_and_category_names(self, client, mock_api):
+        _route(mock_api, {"/finance/transactions/9": self._tx, "/finance/accounts": [{"id": 2, "name": "Test Account"}],
+                          "/finance/categories": [{"id": 4, "name": "Shopping"}]})
+        html = client.get("/travel/transactions/9/detail").text
+        for expected in ("Some Shop", "Souvenirs", "SOME SHOP 123", "Gift", "Test Account", "Shopping", "42.50 USD", "39.10 EUR", "Travel"):
+            assert expected in html
+
+    def test_detail_fails_softly_when_the_transaction_is_missing(self, client, mock_api):
+        _route(mock_api, {"/finance/transactions/9": None})
+        response = client.get("/travel/transactions/9/detail")
+        assert response.status_code == 502 and "Could not load" in response.text
+
+    def test_unlinked_page_rows_have_a_details_link_and_the_modal(self, client, mock_api):
+        charges = [{"id": 9, "date": "2026-12-18", "merchant": "Some Shop", "amount": "5.00", "currency": "EUR", "type": "expense"}]
+        _route(mock_api, {"/travel/trips/1": _detail(), "/travel/trips/1/unlinked-transactions": charges})
+        html = client.get("/travel/1/unlinked").text
+        assert 'class="text-xs text-[#378ADD] hover:underline tx-detail" data-id="9"' in html and 'id="tx-detail-dialog"' in html
+
+
 class TestOtherEvents:
     def _events(self, snoozed):
         return [{"event_id": 5, "title": "Gym", "start_datetime": "2026-12-18T07:00:00+00:00",

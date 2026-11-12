@@ -1,0 +1,13 @@
+<dl class="grid grid-cols-[7rem_1fr] gap-x-3 gap-y-1.5 text-sm">
+  <dt class="text-gray-500">Date</dt><dd>{{ t.date[:16].replace('T', ' ') }}</dd>
+  <dt class="text-gray-500">Type</dt><dd>{{ t.type }}</dd>
+  <dt class="text-gray-500">Amount</dt><dd>{{ t.amount }} {{ t.currency }}{% if t.amount_eur is not none and t.currency != 'EUR' %} <span class="text-gray-400">({{ t.amount_eur }} EUR)</span>{% endif %}</dd>
+  {% if t.merchant %}<dt class="text-gray-500">Merchant</dt><dd>{{ t.merchant }}</dd>{% endif %}
+  {% if t.description %}<dt class="text-gray-500">Description</dt><dd>{{ t.description }}</dd>{% endif %}
+  {% if t.bank_description %}<dt class="text-gray-500">Bank text</dt><dd class="break-words">{{ t.bank_description }}</dd>{% endif %}
+  {% if t.note %}<dt class="text-gray-500">Note</dt><dd>{{ t.note }}</dd>{% endif %}
+  {% if account %}<dt class="text-gray-500">Account</dt><dd>{{ account }}</dd>{% endif %}
+  {% if category %}<dt class="text-gray-500">Category</dt><dd>{{ category }}</dd>{% endif %}
+  {% if t.tags %}<dt class="text-gray-500">Tags</dt><dd>{{ t.tags | join(', ') }}</dd>{% endif %}
+</dl>
+<p class="text-xs mt-3"><a class="text-[#378ADD] hover:underline" href="/finance/transactions?search={{ (t.merchant or t.description or '') | urlencode }}" target="_blank" rel="noopener">Open in Finance</a></p>

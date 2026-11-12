@@ -8,3 +8,15 @@ document.querySelectorAll('.link-unlinked').forEach((button) => button.addEventL
   const data = await res.json().catch(() => ({}));
   if (res.ok) location.reload(); else alert(data.error || 'Could not link the charge.');
 }));
+
+const detailDialog = document.getElementById('tx-detail-dialog');
+if (detailDialog) {
+  document.getElementById('tx-detail-close').addEventListener('click', () => detailDialog.close());
+  document.querySelectorAll('.tx-detail').forEach((link) => link.addEventListener('click', async () => {
+    const body = document.getElementById('tx-detail-body');
+    body.innerHTML = '<p class="text-sm text-gray-400">Loading…</p>';
+    detailDialog.showModal();
+    const res = await fetch(`/travel/transactions/${link.dataset.id}/detail`);
+    body.innerHTML = await res.text();
+  }));
+}

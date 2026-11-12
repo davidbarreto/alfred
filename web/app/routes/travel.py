@@ -127,6 +127,21 @@ async def delete_checklist_item(anchor: str, name: str):
     return await forward(api.delete(f"/travel/checklist-template/{anchor}/{name}"), "Could not delete the checklist item.")
 
 
+@router.get("/transactions/{transaction_id}/detail", response_class=HTMLResponse)
+async def transaction_detail(transaction_id: int, request: Request):
+    """A finance transaction's details as a partial, for the modal on the unlinked charges."""
+    transaction = await safe_get(f"/finance/transactions/{transaction_id}")
+    if transaction is None:
+        return HTMLResponse('<p class="text-sm text-red-600">Could not load the transaction.</p>', status_code=502)
+    accounts = await safe_get("/finance/accounts", default=[])
+    categories = await safe_get("/finance/categories", default=[])
+    return templates.TemplateResponse(request, "_travel_tx_detail.html", {
+        "t": transaction,
+        "account": next((a["name"] for a in accounts or [] if a["id"] == transaction["account_id"]), None),
+        "category": next((c["name"] for c in categories or [] if c["id"] == transaction.get("category_id")), None),
+    })
+
+
 @router.post("/trips/{trip_id}/checklist")
 async def generate_checklist(trip_id: int):
     return await forward(api.post(f"/travel/trips/{trip_id}/checklist"), "Could not create the checklist tasks.")

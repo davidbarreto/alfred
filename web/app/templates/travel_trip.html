@@ -396,6 +396,7 @@
 <script src="/static/js/travel-visits.js"></script>
 <script src="/static/js/travel-place-history.js"></script>
 <script src="/static/js/travel-transactions.js"></script>
+{% include "_travel_tx_detail_dialog.html" %}
 <script src="/static/js/travel-unlinked.js"></script>
 <script>
 initTravelVisits({ tripId: {{ trip.id }}, placeId: null });

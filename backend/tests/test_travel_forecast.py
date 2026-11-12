@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, datetime
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
@@ -43,8 +43,9 @@ class TestDaysFromDaily:
         assert days[0].min_c is None and days[0].rain is False
 
 
-def _stay(city="Beta", lat=None, lng=None):
-    return SimpleNamespace(place=SimpleNamespace(city=city, country="Testland", lat=lat, lng=lng))
+def _stay(city="Beta", lat=None, lng=None, check_in=datetime(2026, 12, 17, 14), check_out=datetime(2026, 12, 19, 10)):
+    return SimpleNamespace(place=SimpleNamespace(city=city, country="Testland", lat=lat, lng=lng),
+                           check_in_at=check_in, check_out_at=check_out, timezone="UTC")
 
 
 @pytest.fixture
@@ -68,6 +69,23 @@ class TestService:
         service._client.geocode.assert_not_awaited()
         assert service._client.fetch_range.await_args.kwargs["archive"] is False
 
+    async def test_each_city_only_gets_the_days_the_trip_is_there(self, service):
+        service._stays.get_stays.return_value = [
+            _stay("Beta", 1.0, 2.0, datetime(2026, 12, 17, 14), datetime(2026, 12, 18, 10)),
+            _stay("Gamma", 3.0, 4.0, datetime(2026, 12, 18, 15), datetime(2026, 12, 19, 10)),
+        ]
+        result = await service.get_forecast(1)
+        days = {c.city: [d.date.day for d in c.days] for c in result.cities}
+        assert days == {"Beta": [17, 18], "Gamma": [18, 19]}
+
+    async def test_a_city_in_two_separate_stays_skips_the_days_between(self, service):
+        service._stays.get_stays.return_value = [
+            _stay("Beta", 1.0, 2.0, datetime(2026, 12, 17, 14), datetime(2026, 12, 17, 20)),
+            _stay("Beta", 1.0, 2.0, datetime(2026, 12, 19, 8), datetime(2026, 12, 19, 20)),
+        ]
+        result = await service.get_forecast(1)
+        assert [d.date.day for d in result.cities[0].days] == [17, 19]
+
     async def test_cities_without_coordinates_are_geocoded_by_name(self, service):
         service._stays.get_stays.return_value = [_stay(lat=None)]
         service._client.geocode.return_value = {"latitude": 3.0, "longitude": 4.0}
@@ -76,6 +94,7 @@ class TestService:
 
     async def test_far_trips_read_the_archive_for_last_year(self, service):
         service._trips.get_trip.return_value = SimpleNamespace(start_date=date(2027, 3, 1), end_date=date(2027, 3, 3))
+        service._stays.get_stays.return_value = [_stay(lat=1.0, lng=2.0, check_in=datetime(2027, 3, 1, 14), check_out=datetime(2027, 3, 3, 10))]
         result = await service.get_forecast(1)
         assert result.mode == "climate"
         args = service._client.fetch_range.await_args

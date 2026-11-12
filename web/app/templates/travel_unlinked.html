@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% set active_page = "travel" %}
+{% block title %}Unlinked charges: {{ trip.name }}{% endblock %}
+
+{% block content %}
+<div class="p-4 sm:p-6 space-y-4 max-w-2xl mx-auto">
+  <a href="/travel/{{ trip.id }}" class="text-xs text-gray-500 hover:text-gray-700"><i class="ti ti-arrow-left"></i> {{ trip.name }}</a>
+  <h1 class="text-base font-semibold text-gray-900">Charges not linked to anything <span class="text-xs font-normal text-gray-400">{{ unlinked|length }}</span></h1>
+  <p class="text-xs text-gray-400">Dated within the trip or carrying its default tags, but not tied to a leg, stay or visit yet.</p>
+  <div class="card bg-white" id="unlinked">
+    <div class="card-body p-5 space-y-2">
+      {% for t in unlinked %}
+      {% include "_travel_unlinked_row.html" %}
+      {% else %}
+      <p class="text-sm text-gray-400">Everything is linked.</p>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+<script src="/static/js/travel-unlinked.js"></script>
+{% endblock %}

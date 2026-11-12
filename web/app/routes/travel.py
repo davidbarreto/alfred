@@ -477,6 +477,15 @@ async def warnings_page(trip_id: int, request: Request):
     })
 
 
+@router.get("/{trip_id}/unlinked", response_class=HTMLResponse)
+async def unlinked_page(trip_id: int, request: Request):
+    trip = await safe_get(f"/travel/trips/{trip_id}")
+    if trip is None:
+        return RedirectResponse("/travel", status_code=302)
+    unlinked = await safe_get(f"/travel/trips/{trip_id}/unlinked-transactions", default=[])
+    return templates.TemplateResponse(request, "travel_unlinked.html", {"trip": trip, "unlinked": unlinked or []})
+
+
 @router.get("/{trip_id}/recap", response_class=HTMLResponse)
 async def recap_page(trip_id: int, request: Request):
     recap = await safe_get(f"/travel/trips/{trip_id}/recap")

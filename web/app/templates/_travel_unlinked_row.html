@@ -1,0 +1,12 @@
+<div class="flex flex-wrap items-center gap-2 text-sm" data-unlinked="{{ t.id }}">
+  <span class="text-gray-500 w-24">{{ t.date | short_date }}</span>
+  <span class="flex-1 min-w-[8rem]">{{ t.merchant or t.description or 'Charge' }}</span>
+  <span class="{{ 'text-green-700' if t.type == 'income' else '' }}">{{ t.amount }} {{ t.currency }}</span>
+  <select class="select select-xs select-bordered unlinked-target" aria-label="Link to">
+    <option value="">Link to…</option>
+    {% for leg in trip.legs %}<option value="legs:{{ leg.id }}">Leg: {{ leg.origin }} → {{ leg.destination }}</option>{% endfor %}
+    {% for stay in trip.stays %}<option value="stays:{{ stay.id }}">Stay: {{ stay.place.name }}</option>{% endfor %}
+    {% for v in trip.visits %}<option value="visits:{{ v.id }}">Visit: {{ v.place.name }}</option>{% endfor %}
+  </select>
+  <button type="button" class="btn btn-xs btn-outline link-unlinked" data-id="{{ t.id }}">Link</button>
+</div>

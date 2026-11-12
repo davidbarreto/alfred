@@ -811,14 +811,26 @@ class TestWarningsPreview:
 
 
 class TestUnlinkedPreview:
-    def test_only_five_charges_show_until_see_all(self, client, mock_api):
-        charges = [{"id": i, "date": "2026-12-18", "merchant": f"Shop {i}", "amount": "5.00", "currency": "EUR", "type": "expense"}
-                   for i in range(8)]
+    def _charges(self, n):
+        return [{"id": i, "date": "2026-12-18", "merchant": f"Shop {i}", "amount": "5.00", "currency": "EUR", "type": "expense"}
+                for i in range(n)]
+
+    def test_trip_page_shows_five_charges_and_a_link_to_the_rest(self, client, mock_api):
         _route(mock_api, {"/travel/trips/1": _detail(), "/travel/places": [], "/travel/trips/1/costs": None,
-                          "/travel/trips/1/unlinked-transactions": charges})
+                          "/travel/trips/1/unlinked-transactions": self._charges(8)})
         html = client.get("/travel/1").text
-        assert html.count("unlinked-extra") >= 3 and 'id="unlinked-more"' in html and "See all 8" in html
-        assert html.count(' hidden unlinked-extra"') == 3
+        assert "Shop 4" in html and "Shop 5" not in html
+        assert 'href="/travel/1/unlinked"' in html and "See all 8" in html
+
+    def test_unlinked_page_lists_every_charge(self, client, mock_api):
+        _route(mock_api, {"/travel/trips/1": _detail(), "/travel/trips/1/unlinked-transactions": self._charges(8)})
+        html = client.get("/travel/1/unlinked").text
+        assert "Shop 7" in html and html.count("data-unlinked=") == 8
+
+    def test_unlinked_page_redirects_for_a_missing_trip(self, client, mock_api):
+        _route(mock_api, {"/travel/trips/1": None})
+        response = client.get("/travel/1/unlinked", follow_redirects=False)
+        assert response.status_code == 302 and response.headers["location"] == "/travel"
 
 
 class TestOtherEvents:

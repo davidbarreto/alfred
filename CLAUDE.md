@@ -145,7 +145,7 @@ External provider integrations live under `app/integrations/<provider>/`:
 
 ### Web portal conventions
 
-Route handlers in `web/app/routes/` stay thin: fetch from the backend API through `web/app/client.py`, pass to a template. Full pages extend `base.html`; HTMX partials are prefixed `_` and never extend it. Paginated sections use the `limit + 1` / `_pagination()` pattern. **Cap list-like cards** (warnings, events, charges, anything that can grow long): show the first 5 and a "See all N" link, either to a dedicated page (read-only lists, grouped and foldable if there are several groups) or an in-place reveal (rows with their own controls). Never render an unbounded list on a detail page. Full conventions: `docs/portal.md`.
+Route handlers in `web/app/routes/` stay thin: fetch from the backend API through `web/app/client.py`, pass to a template. Full pages extend `base.html`; HTMX partials are prefixed `_` and never extend it. Paginated sections use the `limit + 1` / `_pagination()` pattern. **Cap list-like cards** (warnings, events, charges, anything that can grow long): the detail page shows only the first 5 plus a "See all N" link to a **separate page** that lists everything (grouped and foldable when there are several groups). Always a separate page, never an in-place expand, even when rows carry their own controls (the full page repeats them). Never render an unbounded list on a detail page. Full conventions: `docs/portal.md`.
 
 ### Test file naming
 

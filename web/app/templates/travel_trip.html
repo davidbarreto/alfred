@@ -132,7 +132,7 @@
       <h2 class="text-sm font-semibold text-gray-900">Charges not linked to anything <span class="text-xs font-normal text-gray-400">{{ unlinked|length }}</span></h2>
       <p class="text-xs text-gray-400">Dated within the trip or carrying its default tags, but not tied to a leg, stay or visit yet.</p>
       {% for t in unlinked %}
-      <div class="flex flex-wrap items-center gap-2 text-sm" data-unlinked="{{ t.id }}">
+      <div class="flex flex-wrap items-center gap-2 text-sm{{ ' hidden unlinked-extra' if loop.index > preview_size }}" data-unlinked="{{ t.id }}">
         <span class="text-gray-500 w-24">{{ t.date | short_date }}</span>
         <span class="flex-1 min-w-[8rem]">{{ t.merchant or t.description or 'Charge' }}</span>
         <span class="{{ 'text-green-700' if t.type == 'income' else '' }}">{{ t.amount }} {{ t.currency }}</span>
@@ -145,6 +145,7 @@
         <button type="button" class="btn btn-xs btn-outline link-unlinked" data-id="{{ t.id }}">Link</button>
       </div>
       {% endfor %}
+      {% if unlinked|length > preview_size %}<button type="button" class="text-xs text-[#378ADD] hover:underline" id="unlinked-more">See all {{ unlinked|length }}</button>{% endif %}
     </div>
   </div>
   {% endif %}
@@ -458,6 +459,11 @@ document.querySelectorAll('.plan-idea').forEach((button) => button.addEventListe
   const { ok, data } = await send('PATCH', `/travel/visits/${button.dataset.id}`, { trip_id: TRIP_ID, visit_date: day });
   if (ok) location.reload(); else alert(data.error || 'Could not plan the visit.');
 }));
+
+document.getElementById('unlinked-more')?.addEventListener('click', (event) => {
+  document.querySelectorAll('.unlinked-extra').forEach((row) => row.classList.remove('hidden'));
+  event.currentTarget.remove();
+});
 
 document.querySelectorAll('.link-unlinked').forEach((button) => button.addEventListener('click', async () => {
   const target = button.closest('[data-unlinked]').querySelector('.unlinked-target').value;

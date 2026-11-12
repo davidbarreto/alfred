@@ -810,6 +810,17 @@ class TestWarningsPreview:
         assert response.status_code == 302 and response.headers["location"] == "/travel"
 
 
+class TestUnlinkedPreview:
+    def test_only_five_charges_show_until_see_all(self, client, mock_api):
+        charges = [{"id": i, "date": "2026-12-18", "merchant": f"Shop {i}", "amount": "5.00", "currency": "EUR", "type": "expense"}
+                   for i in range(8)]
+        _route(mock_api, {"/travel/trips/1": _detail(), "/travel/places": [], "/travel/trips/1/costs": None,
+                          "/travel/trips/1/unlinked-transactions": charges})
+        html = client.get("/travel/1").text
+        assert html.count("unlinked-extra") >= 3 and 'id="unlinked-more"' in html and "See all 8" in html
+        assert html.count(' hidden unlinked-extra"') == 3
+
+
 class TestOtherEvents:
     def _events(self, snoozed):
         return [{"event_id": 5, "title": "Gym", "start_datetime": "2026-12-18T07:00:00+00:00",

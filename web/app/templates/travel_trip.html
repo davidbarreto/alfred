@@ -34,7 +34,7 @@
           </div>
           <button class="btn btn-xs btn-outline" id="import-calendar">Import from calendar</button>
           <button class="btn btn-xs btn-outline" id="generate-checklist" title="Create the template's tasks for this trip">Generate checklist</button>
-          {% if trip.default_tag_names %}<button class="btn btn-xs btn-outline" id="apply-tags" title="Tag the expenses already dated within this trip">Apply finance tags</button>{% endif %}
+          {% if trip.default_tag_names %}<button class="btn btn-xs btn-outline" id="apply-tags" title="Tag the expenses already dated within this trip">Apply default tags</button>{% endif %}
           <button class="btn btn-xs btn-outline" onclick="document.getElementById('edit-trip-wrap').classList.toggle('hidden')">Edit</button>
           <button class="btn btn-xs btn-outline btn-error" id="delete-trip">Delete</button>
         </div>
@@ -59,7 +59,7 @@
           <textarea name="travelers" rows="2" placeholder="Who is going: age, relation..." class="textarea textarea-bordered text-sm w-72">{{ trip.travelers or '' }}</textarea></label>
         <label class="space-y-1"><span class="block text-xs text-gray-500">Tags</span>
           <input name="tags" value="{{ trip.tags | join(', ') }}" class="input input-sm input-bordered w-44"></label>
-        <label class="space-y-1"><span class="block text-xs text-gray-500">Finance tags</span>
+        <label class="space-y-1"><span class="block text-xs text-gray-500">Default tags (transactions, calendar events)</span>
           <input name="default_tag_names" value="{{ trip.default_tag_names or '' }}" class="input input-sm input-bordered w-44"></label>
         <label class="space-y-1 w-full"><span class="block text-xs text-gray-500">Notes</span>
           <textarea name="notes" rows="3" class="textarea textarea-bordered w-full text-sm">{{ trip.notes or '' }}</textarea></label>

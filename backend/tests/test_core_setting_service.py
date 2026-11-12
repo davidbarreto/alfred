@@ -52,3 +52,21 @@ class TestSetValue:
         service._repo.set.assert_called_once_with("finance.cycle_start_day", "25")
         assert isinstance(result, SettingRead)
         assert result.value == "25"
+
+
+class TestListValues:
+    async def test_maps_keys_to_values(self, service):
+        first, second = AsyncMock(), AsyncMock()
+        first.key, first.value = "p.a", "1"
+        second.key, second.value = "p.b", "2"
+        service._repo.list_by_prefix.return_value = [first, second]
+
+        assert await service.list_values("p.") == {"p.a": "1", "p.b": "2"}
+        service._repo.list_by_prefix.assert_awaited_once_with("p.")
+
+
+class TestDeleteValue:
+    async def test_delegates_to_the_repository(self, service):
+        service._repo.delete.return_value = True
+
+        assert await service.delete_value("p.a") is True

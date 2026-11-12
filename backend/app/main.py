@@ -104,6 +104,7 @@ from app.api.routes.metrics.series import router as metric_series_router
 from app.api.routes.metrics.stats import router as metric_stats_router
 from app.api.routes.metrics.tags import router as metric_tags_router
 from app.api.routes.travel.calendar_import import router as travel_calendar_import_router
+from app.api.routes.travel.checklist import router as travel_checklist_router
 from app.api.routes.travel.legs import router as travel_legs_router
 from app.api.routes.travel.places import router as travel_places_router
 from app.api.routes.travel.settings import router as travel_settings_router
@@ -243,6 +244,7 @@ app.include_router(metric_quick_router)
 app.include_router(metric_tags_router)
 app.include_router(study_tracks_router)
 app.include_router(travel_settings_router)
+app.include_router(travel_checklist_router)
 app.include_router(travel_trips_router)
 app.include_router(travel_legs_router)
 app.include_router(travel_stays_router)

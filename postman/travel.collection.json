@@ -2910,7 +2910,303 @@
       }
     },
     {
-      "name": "73 - Find Place Tag For Cleanup",
+      "name": "73 - Get Checklist Template",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Seeded defaults are anchored and signed', () => { const j = pm.response.json(); pm.expect(j.length).to.be.above(0); pm.expect(j.every(i => ['start','end'].includes(i.anchor))).to.eql(true); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/checklist-template",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "checklist-template"
+          ]
+        }
+      }
+    },
+    {
+      "name": "74 - Put Checklist Item",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Title is humanized and offset kept', () => { const j = pm.response.json(); pm.expect(j.title).to.eql('postman check'); pm.expect(j.offset_days).to.eql(-2); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/checklist-template/end/postman-check",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "checklist-template",
+            "end",
+            "postman-check"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"offset_days\": -2\n}"
+        }
+      }
+    },
+    {
+      "name": "75 - Put Checklist Item Under The Other Anchor",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 409', () => pm.response.to.have.status(409));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/checklist-template/start/postman-check",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "checklist-template",
+            "start",
+            "postman-check"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"offset_days\": 1\n}"
+        }
+      }
+    },
+    {
+      "name": "76 - Put Checklist Item With Bad Anchor",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 422', () => pm.response.to.have.status(422));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/checklist-template/middle/postman-check",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "checklist-template",
+            "middle",
+            "postman-check"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"offset_days\": 1\n}"
+        }
+      }
+    },
+    {
+      "name": "77 - Put Checklist Item With Bad Name",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 422', () => pm.response.to.have.status(422));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/checklist-template/start/Bad%20Name",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "checklist-template",
+            "start",
+            "Bad%20Name"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"offset_days\": 1\n}"
+        }
+      }
+    },
+    {
+      "name": "78 - Delete Checklist Item",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 204', () => pm.response.to.have.status(204));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "DELETE",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/checklist-template/end/postman-check",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "checklist-template",
+            "end",
+            "postman-check"
+          ]
+        }
+      }
+    },
+    {
+      "name": "79 - Delete Checklist Item Again",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 404', () => pm.response.to.have.status(404));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "DELETE",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/checklist-template/end/postman-check",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "checklist-template",
+            "end",
+            "postman-check"
+          ]
+        }
+      }
+    },
+    {
+      "name": "80 - Generate Checklist For Unknown Trip",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 404', () => pm.response.to.have.status(404));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/trips/999999999/checklist",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "trips",
+            "999999999",
+            "checklist"
+          ]
+        }
+      }
+    },
+    {
+      "name": "81 - Find Place Tag For Cleanup",
       "event": [
         {
           "listen": "test",
@@ -2946,7 +3242,7 @@
       }
     },
     {
-      "name": "74 - Delete Place Tag",
+      "name": "82 - Delete Place Tag",
       "event": [
         {
           "listen": "test",
@@ -2980,7 +3276,7 @@
       }
     },
     {
-      "name": "75 - Delete Expense Inside The Trip",
+      "name": "83 - Delete Expense Inside The Trip",
       "event": [
         {
           "listen": "test",
@@ -3014,7 +3310,7 @@
       }
     },
     {
-      "name": "76 - Delete Refund",
+      "name": "84 - Delete Refund",
       "event": [
         {
           "listen": "test",
@@ -3048,7 +3344,7 @@
       }
     },
     {
-      "name": "77 - Delete Expense Outside The Trip",
+      "name": "85 - Delete Expense Outside The Trip",
       "event": [
         {
           "listen": "test",
@@ -3082,7 +3378,7 @@
       }
     },
     {
-      "name": "78 - Delete Finance Account",
+      "name": "86 - Delete Finance Account",
       "event": [
         {
           "listen": "test",

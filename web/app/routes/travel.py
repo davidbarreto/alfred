@@ -90,10 +90,11 @@ async def trips_page(request: Request):
     trips = await _fetch_trips(filters, 0)
     tags = await safe_get("/travel/tags", default=[])
     settings = await safe_get("/travel/settings")
+    checklist = await safe_get("/travel/checklist-template", default=[])
     context = _list_context(request, trips, 0, filters)
     return templates.TemplateResponse(request, "travel.html", {
         **context, "filters": filters, "statuses": _STATUSES, "all_tags": [t["name"] for t in tags or []],
-        "settings": settings,
+        "settings": settings, "checklist": checklist or [],
     })
 
 
@@ -110,6 +111,23 @@ async def trips_list(request: Request):
 @router.put("/settings")
 async def update_settings(request: Request):
     return await forward(api.put("/travel/settings", json=await request.json()), "Could not save the settings.")
+
+
+@router.put("/checklist-template/{anchor}/{name}")
+async def put_checklist_item(anchor: str, name: str, request: Request):
+    return await forward(
+        api.put(f"/travel/checklist-template/{anchor}/{name}", json=await request.json()), "Could not save the checklist item.",
+    )
+
+
+@router.delete("/checklist-template/{anchor}/{name}")
+async def delete_checklist_item(anchor: str, name: str):
+    return await forward(api.delete(f"/travel/checklist-template/{anchor}/{name}"), "Could not delete the checklist item.")
+
+
+@router.post("/trips/{trip_id}/checklist")
+async def generate_checklist(trip_id: int):
+    return await forward(api.post(f"/travel/trips/{trip_id}/checklist"), "Could not create the checklist tasks.")
 
 
 @router.get("/transactions/search")

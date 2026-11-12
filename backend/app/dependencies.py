@@ -122,6 +122,7 @@ from app.features.travel.default_tags import TripDefaultTagService
 from app.features.travel.legs.service import LegService
 from app.features.travel.transaction_links.service import TransactionLinkService
 from app.features.travel.places.service import PlaceService
+from app.features.travel.checklist.service import ChecklistService
 from app.features.travel.recap.service import TripRecapService
 from app.features.travel.settings_service import TravelSettingsService
 from app.features.travel.stays.service import StayService
@@ -678,6 +679,9 @@ def get_travel_services(session: AsyncSession = Depends(get_session)) -> TravelS
         recap=TripRecapService(session),
     )
 
+def get_checklist_service(session: AsyncSession = Depends(get_session)) -> ChecklistService:
+    return ChecklistService(session, get_task_service(session))
+
 def get_trip_recap_service(session: AsyncSession = Depends(get_session)) -> TripRecapService:
     return TripRecapService(session)
 
@@ -817,5 +821,6 @@ TransactionLinkServiceDep = Annotated[TransactionLinkService, Depends(get_transa
 TripDefaultTagServiceDep = Annotated[TripDefaultTagService, Depends(get_trip_default_tag_service)]
 CalendarImportServiceDep = Annotated[CalendarImportService, Depends(get_calendar_import_service)]
 TravelServicesDep = Annotated[TravelServices, Depends(get_travel_services)]
+ChecklistServiceDep = Annotated[ChecklistService, Depends(get_checklist_service)]
 TripRecapServiceDep = Annotated[TripRecapService, Depends(get_trip_recap_service)]
 TravelTagServiceDep = Annotated[TravelTagService, Depends(get_travel_tag_service)]

@@ -68,6 +68,9 @@ def _detail(**kw):
 
 
 def _route(mock_api, routes):
+    # The checklist card on /travel reads this; most tests don't care about it.
+    routes = {"/travel/checklist-template": [], **routes}
+
     async def get(path, params=None):
         for prefix in sorted(routes, key=len, reverse=True):
             if path == prefix or path.startswith(prefix):
@@ -670,3 +673,34 @@ class TestTripMapDownload:
         _route(mock_api, {"/travel/trips/9/map": None})
         resp = client.get("/travel/9/map.csv", follow_redirects=False)
         assert resp.status_code == 302 and resp.headers["location"] == "/travel/9"
+
+
+class TestChecklist:
+    def test_card_groups_items_by_anchor_and_shows_the_meaning(self, client, mock_api):
+        template = [
+            {"anchor": "start", "name": "plug-adapter", "title": "plug adapter", "offset_days": -7},
+            {"anchor": "end", "name": "send-photos", "title": "send photos", "offset_days": 3},
+        ]
+        _route(mock_api, {"/travel/trips": [], "/travel/tags": [], "/travel/settings": None, "/travel/checklist-template": template})
+        html = client.get("/travel").text
+        assert "Around departure" in html and "After the trip" in html
+        assert "7 days before the start" in html and "3 days after the end" in html
+
+    def test_card_survives_the_backend_being_down(self, client, mock_api):
+        _route(mock_api, {"/travel/trips": [], "/travel/tags": [], "/travel/settings": None, "/travel/checklist-template": _status_error(500, "x")})
+        assert client.get("/travel").status_code == 200
+
+    def test_put_delete_and_generate_proxy_to_the_backend(self, client, mock_api):
+        mock_api["put"].return_value = {"anchor": "end", "name": "x", "title": "x", "offset_days": 3}
+        assert client.put("/travel/checklist-template/end/x", json={"offset_days": 3}).status_code == 200
+        mock_api["put"].assert_awaited_with("/travel/checklist-template/end/x", json={"offset_days": 3})
+        mock_api["delete"].return_value = None
+        assert client.delete("/travel/checklist-template/end/x").status_code == 200
+        mock_api["delete"].assert_awaited_with("/travel/checklist-template/end/x")
+        mock_api["post"].return_value = {"created": ["a (T)"], "skipped": []}
+        assert client.post("/travel/trips/1/checklist").json() == {"created": ["a (T)"], "skipped": []}
+
+    def test_backend_conflict_message_is_relayed(self, client, mock_api):
+        mock_api["put"].side_effect = _status_error(409, "'x' already exists under the other anchor")
+        resp = client.put("/travel/checklist-template/end/x", json={"offset_days": 3})
+        assert resp.status_code == 409 and "already exists" in resp.json()["error"]

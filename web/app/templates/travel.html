@@ -57,6 +57,40 @@
   </details>
   {% endif %}
 
+  <details class="card bg-white" id="checklist-card">
+    <summary class="px-5 py-3 text-xs font-medium text-gray-600 cursor-pointer">Pre-trip checklist</summary>
+    <div class="card-body p-5 pt-2 space-y-4">
+      {% for anchor, heading in [('start', 'Around departure'), ('end', 'After the trip')] %}
+      <div>
+        <h3 class="text-xs font-medium text-gray-500 mb-1">{{ heading }}</h3>
+        <ul class="space-y-1">
+          {% for item in checklist if item.anchor == anchor %}
+          <li class="flex flex-wrap items-center gap-2 text-sm" data-anchor="{{ item.anchor }}" data-name="{{ item.name }}">
+            <span class="w-48">{{ item.title }}</span>
+            <input type="number" value="{{ item.offset_days }}" class="input input-xs input-bordered w-20 checklist-offset" aria-label="Days for {{ item.title }}">
+            <span class="text-xs text-gray-400">{{ item.offset_days|abs }} day{{ '' if item.offset_days|abs == 1 else 's' }} {{ 'after' if item.offset_days > 0 else ('before' if item.offset_days < 0 else 'on') }} the {{ 'start' if anchor == 'start' else 'end' }}{{ ' day' if item.offset_days == 0 else '' }}</span>
+            <button type="button" class="btn btn-xs btn-ghost checklist-delete">Delete</button>
+          </li>
+          {% else %}
+          <li class="text-xs text-gray-400">Nothing here.</li>
+          {% endfor %}
+        </ul>
+      </div>
+      {% endfor %}
+      <form id="checklist-add" class="flex flex-wrap items-end gap-2">
+        <label class="space-y-1"><span class="block text-xs text-gray-500">Item</span>
+          <input name="name" required pattern="[a-z0-9_-]+" placeholder="send-photos" class="input input-sm input-bordered w-44"></label>
+        <label class="space-y-1"><span class="block text-xs text-gray-500">Counted from</span>
+          <select name="anchor" class="select select-sm select-bordered"><option value="start">Trip start</option><option value="end">Trip end</option></select></label>
+        <label class="space-y-1"><span class="block text-xs text-gray-500">Days (negative = before)</span>
+          <input name="offset_days" type="number" value="-7" required class="input input-sm input-bordered w-24"></label>
+        <button type="submit" class="btn btn-sm btn-outline">Add</button>
+        <span id="checklist-msg" class="text-xs text-gray-500"></span>
+      </form>
+      <p class="text-xs text-gray-400">Each item becomes a task when you press "Generate checklist" on a trip. Names use lowercase letters, digits, - and _; a name is unique across both groups.</p>
+    </div>
+  </details>
+
   <form id="trip-filters" class="flex flex-wrap items-end gap-3"
         hx-get="/travel/list" hx-target="#trips-list" hx-swap="innerHTML" hx-trigger="change, keyup changed delay:300ms from:#filter-q">
     <label class="space-y-1"><span class="block text-xs text-gray-500">Show</span>
@@ -104,6 +138,34 @@ document.getElementById('travel-settings-form')?.addEventListener('submit', asyn
   });
   const data = await res.json().catch(() => ({}));
   message.textContent = res.ok ? 'Saved.' : (data.error || 'Something went wrong.');
+});
+
+async function saveChecklistItem(anchor, name, offset) {
+  const res = await fetch(`/travel/checklist-template/${anchor}/${name}`, {
+    method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ offset_days: offset }),
+  });
+  return { ok: res.ok, data: await res.json().catch(() => ({})) };
+}
+
+document.getElementById('checklist-add')?.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const form = new FormData(event.target);
+  const { ok, data } = await saveChecklistItem(form.get('anchor'), form.get('name'), Number(form.get('offset_days')));
+  if (ok) location.reload();
+  else document.getElementById('checklist-msg').textContent = data.error || 'Something went wrong.';
+});
+
+document.querySelectorAll('#checklist-card li[data-name]').forEach((row) => {
+  row.querySelector('.checklist-offset').addEventListener('change', async (event) => {
+    const { ok, data } = await saveChecklistItem(row.dataset.anchor, row.dataset.name, Number(event.target.value));
+    if (ok) location.reload();
+    else alert(data.error || 'Something went wrong.');
+  });
+  row.querySelector('.checklist-delete').addEventListener('click', async () => {
+    const res = await fetch(`/travel/checklist-template/${row.dataset.anchor}/${row.dataset.name}`, { method: 'DELETE' });
+    if (res.ok) location.reload();
+    else alert('Could not delete the item.');
+  });
 });
 
 document.getElementById('new-trip-form')?.addEventListener('submit', async (event) => {

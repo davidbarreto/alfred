@@ -65,6 +65,7 @@ class VisitRead(BaseModel):
     visit_time: time | None
     notes: str | None
     grade: int | None
+    calendar_event_id: int | None = None
     created_at: datetime
     updated_at: datetime
 

@@ -48,3 +48,38 @@ class TestSet:
 
         assert saved is setting
         session.commit.assert_awaited_once()
+
+
+class TestListByPrefix:
+    async def test_returns_settings_in_key_order(self):
+        session = _make_session()
+        rows = [Setting(key="travel.checklist.start.a", value="-1"), Setting(key="travel.checklist.start.b", value="-2")]
+        result = MagicMock()
+        result.scalars.return_value.all.return_value = rows
+        session.execute.return_value = result
+
+        found = await SettingRepository(session).list_by_prefix("travel.checklist.")
+
+        assert found == rows
+
+    async def test_prefix_is_escaped_so_underscores_are_literal(self):
+        session = _make_session()
+        result = MagicMock()
+        result.scalars.return_value.all.return_value = []
+        session.execute.return_value = result
+
+        await SettingRepository(session).list_by_prefix("travel_x.")
+
+        sql = str(session.execute.call_args.args[0].compile(compile_kwargs={"literal_binds": True}))
+        assert "travel/_x." in sql
+
+
+class TestDelete:
+    async def test_reports_whether_a_row_was_removed(self):
+        session = _make_session()
+        result = MagicMock()
+        result.rowcount = 1
+        session.execute.return_value = result
+
+        assert await SettingRepository(session).delete("a.b") is True
+        session.commit.assert_awaited()

@@ -31,6 +31,7 @@
             </ul>
           </div>
           <button class="btn btn-xs btn-outline" id="import-calendar">Import from calendar</button>
+          <button class="btn btn-xs btn-outline" id="generate-checklist" title="Create the template's tasks for this trip">Generate checklist</button>
           {% if trip.default_tag_names %}<button class="btn btn-xs btn-outline" id="apply-tags" title="Tag the expenses already dated within this trip">Apply finance tags</button>{% endif %}
           <button class="btn btn-xs btn-outline" onclick="document.getElementById('edit-trip-wrap').classList.toggle('hidden')">Edit</button>
           <button class="btn btn-xs btn-outline btn-error" id="delete-trip">Delete</button>
@@ -41,7 +42,8 @@
       {% endif %}
       {% if trip.notes %}<p class="text-sm text-gray-700 whitespace-pre-line">{{ trip.notes }}</p>{% endif %}
       {% if trip.preferences %}<p class="text-xs text-gray-500 whitespace-pre-line"><strong>Preferences:</strong> {{ trip.preferences }}</p>{% endif %}
-      {% if trip.default_tag_names %}<p class="text-xs text-gray-400">Finance tags for its expenses: {{ trip.default_tag_names }} <span id="apply-tags-msg" class="text-gray-500"></span></p>{% endif %}
+      {% if trip.default_tag_names %}<p class="text-xs text-gray-400">Default tags (expenses, calendar events): {{ trip.default_tag_names }} <span id="apply-tags-msg" class="text-gray-500"></span></p>{% endif %}
+      <p class="text-xs text-gray-500" id="generate-checklist-msg"></p>
 
       <div id="edit-trip-wrap" class="hidden">
       <form id="edit-trip" class="flex flex-wrap items-end gap-3 pt-2 border-t border-gray-100">
@@ -318,6 +320,13 @@ async function applyTags() {
   if (!ok) { alert(data.error || 'Could not tag the expenses.'); return false; }
   return data;
 }
+
+document.getElementById('generate-checklist')?.addEventListener('click', async () => {
+  const message = document.getElementById('generate-checklist-msg');
+  const { ok, data } = await send('POST', `/travel/trips/${TRIP_ID}/checklist`);
+  if (!ok) { message.textContent = data.error || 'Could not create the checklist tasks.'; return; }
+  message.textContent = `Checklist: ${data.created.length} task(s) created, ${data.skipped.length} already existed.`;
+});
 
 document.getElementById('apply-tags')?.addEventListener('click', async () => {
   const message = document.getElementById('apply-tags-msg');

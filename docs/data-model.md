@@ -44,5 +44,5 @@ PostgreSQL + pgvector, SQLAlchemy 2.0 `Mapped[]` models, Alembic migrations. Per
 | Metrics | `metrics.series`, `metrics.entries`, `metrics.tags`, `entries_tags` | [modules/metrics.md](modules/metrics.md) |
 | Reminders & overload | `core.overload_log`, `core.settings` | [modules/reminders-overload.md](modules/reminders-overload.md) |
 | Planning | `planning.day_plans`, `organizer.routines`, `routine_steps`, `activities`, `activity_logs`, `activities_tags`, `calendar_event_skips` (migration 080), `calendar_event_overrides` (migration 082) | [modules/planning.md](modules/planning.md) |
-| Travel | `travel.trips`, `legs`, `stays`, `places`, `tags`, `trips_tags` (migration 084), `visits`, `places_tags` (migration 085), `legs_transactions`, `stays_transactions`, `visits_transactions` and `calendar_event_id` on legs/stays (migration 086) | [modules/travel.md](modules/travel.md) |
+| Travel | `travel.trips`, `legs`, `stays`, `places`, `tags`, `trips_tags` (migration 084), `visits`, `places_tags` (migration 085), `legs_transactions`, `stays_transactions`, `visits_transactions` and `calendar_event_id` on legs/stays (migration 086) and visits (migration 087) | [modules/travel.md](modules/travel.md) |
 | Shopping | `organizer.shopping_products`, `shopping_items`, `recurrence_items` | [modules/shopping.md](modules/shopping.md) |

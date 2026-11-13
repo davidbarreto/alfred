@@ -58,7 +58,7 @@ All paginated sections follow the same offset-based pattern:
 | Metrics | The 4 most-used active series as 14-day sparklines (inline SVG, count series by entries per day, others by daily total) |
 | Briefing | The evening digest from 21:30 (until tonight's is saved it falls back to the morning briefing), the morning briefing otherwise. Latest saved one from `/briefing/history` (never generates one: the saved row is text only), clamped to 6 lines |
 
-Every card heading carries a Tabler icon. The morning briefing page keeps only the AI summary and upcoming events; weather, holidays, birthdays, priority tasks and pending shopping live on the dashboard.
+Every card heading carries a Tabler icon. The morning briefing page keeps only the AI summary; weather, holidays, birthdays, priority tasks, events and pending shopping live on the dashboard.
 
 ## Pages
 

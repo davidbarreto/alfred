@@ -25,7 +25,7 @@ class TestBriefingPage:
 
         assert resp.status_code == 200
         assert "2026-07-08" in resp.text
-        assert "Dentist" in resp.text
+        assert "Dentist" not in resp.text and "Upcoming events" not in resp.text
         assert "Partly cloudy" not in resp.text
         assert "Priority tasks" not in resp.text and "Upcoming birthdays" not in resp.text
         assert "Upcoming holidays" not in resp.text and "Pending shopping" not in resp.text

@@ -85,6 +85,17 @@ class TestTransactionsPage:
         assert "checked" in resp.text[resp.text.index('value="Travel"'):][:120]
         assert "history.replaceState" in resp.text
 
+    def test_amount_range_filter_is_restored_and_shows_the_clear_button(self, client, mock_api):
+        mock_api["get"].side_effect = [[], None, [_category()], [{"id": 5, "name": "Travel"}], [_account()], [], []]
+
+        resp = client.get("/finance/transactions?min_amount=10&max_amount=50.5")
+
+        assert 'id="txn-filter-min-amount"' in resp.text and 'value="10"' in resp.text
+        assert 'value="50.5"' in resp.text
+        assert "hidden" not in resp.text[resp.text.index('id="txn-clear-filters"'):][:250]
+        params = mock_api["get"].call_args_list[0].kwargs.get("params", {})
+        assert params.get("min_amount") == "10" and params.get("max_amount") == "50.5"
+
     def test_clear_buttons_exist_and_start_hidden_without_filters(self, client, mock_api):
         mock_api["get"].side_effect = [[], None, [_category()], [{"id": 5, "name": "Travel"}], [_account()], [], []]
 

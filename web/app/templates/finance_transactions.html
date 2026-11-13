@@ -123,6 +123,20 @@
         onchange="applyTxnFilters()" />
     </div>
     <div>
+      <label class="text-xs text-gray-500 mb-1 block">Amount (min – max)</label>
+      <div class="flex items-center gap-1">
+        <input id="txn-filter-min-amount" type="number" min="0" step="0.01" inputmode="decimal"
+          value="{{ query_filters.min_amount or '' }}" placeholder="Min"
+          class="w-24 border border-gray-200 rounded-lg px-2 py-1.5 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-[#378ADD]"
+          onchange="applyTxnFilters()" />
+        <span class="text-gray-400">–</span>
+        <input id="txn-filter-max-amount" type="number" min="0" step="0.01" inputmode="decimal"
+          value="{{ query_filters.max_amount or '' }}" placeholder="Max"
+          class="w-24 border border-gray-200 rounded-lg px-2 py-1.5 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-[#378ADD]"
+          onchange="applyTxnFilters()" />
+      </div>
+    </div>
+    <div>
       <label class="text-xs text-gray-500 mb-1 block">Sort by</label>
       <select id="txn-filter-sort" class="border border-gray-200 rounded-lg px-2 py-1.5 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-[#378ADD]" onchange="applyTxnFilters()">
         <option value="date_desc" {% if not query_filters.sort or query_filters.sort == 'date_desc' %}selected{% endif %}>Date (newest)</option>
@@ -146,7 +160,7 @@
       </label>
     </div>
     <button id="txn-clear-filters" onclick="clearTxnFilters()"
-      class="btn btn-sm btn-ghost text-gray-500 gap-1{% if not (query_filters.type or query_filters.category_id or query_filters.uncategorized or query_filters.tags or query_filters.account_id or query_filters.merchant or query_filters.search or query_filters.from_date or query_filters.to_date or query_filters.currency or query_filters.unconfirmed_transfer) %} hidden{% endif %}">
+      class="btn btn-sm btn-ghost text-gray-500 gap-1{% if not (query_filters.type or query_filters.category_id or query_filters.uncategorized or query_filters.tags or query_filters.account_id or query_filters.merchant or query_filters.search or query_filters.from_date or query_filters.to_date or query_filters.min_amount or query_filters.max_amount or query_filters.currency or query_filters.unconfirmed_transfer) %} hidden{% endif %}">
       <i class="ti ti-x text-xs"></i>Clear filters
     </button>
     {% if query_filters.account_id %}
@@ -364,6 +378,8 @@ function _txnQuery() {
   const search = document.getElementById("txn-filter-search").value.trim();
   const fromDate = document.getElementById("txn-filter-from").value;
   const toDate = document.getElementById("txn-filter-to").value;
+  const minAmount = document.getElementById("txn-filter-min-amount").value;
+  const maxAmount = document.getElementById("txn-filter-max-amount").value;
   const sort = document.getElementById("txn-filter-sort").value;
   const unconfirmedTransfer = document.getElementById("txn-filter-unconfirmed-transfer").checked;
   if (type) params.set("type", type);
@@ -376,6 +392,8 @@ function _txnQuery() {
   if (search) params.set("search", search);
   if (fromDate) params.set("from_date", fromDate);
   if (toDate) params.set("to_date", toDate);
+  if (minAmount) params.set("min_amount", minAmount);
+  if (maxAmount) params.set("max_amount", maxAmount);
   if (unconfirmedTransfer) params.set("unconfirmed_transfer", "true");
   if (sort && sort !== "date_desc") params.set("sort", sort);
   if (_txnCurrency) params.set("currency", _txnCurrency);
@@ -394,7 +412,7 @@ function refreshTxnList() {
 }
 
 function _hasTxnFilters() {
-  const ids = ["type", "category", "account", "merchant", "search", "from", "to"];
+  const ids = ["type", "category", "account", "merchant", "search", "from", "to", "min-amount", "max-amount"];
   return ids.some(id => document.getElementById("txn-filter-" + id).value)
     || document.getElementById("txn-filter-unconfirmed-transfer").checked
     || document.querySelector(".txn-filter-tag-checkbox:checked") !== null

@@ -963,6 +963,62 @@
           }
         },
         {
+          "name": "02e - List Transactions By Amount Range",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Every amount is within the absolute range', () => {",
+                  "    const json = pm.response.json();",
+                  "    pm.expect(json).to.be.an('array');",
+                  "    json.forEach((txn) => {",
+                  "        const abs = Math.abs(parseFloat(txn.amount));",
+                  "        pm.expect(abs).to.be.at.least(1);",
+                  "        pm.expect(abs).to.be.at.most(100000);",
+                  "    });",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/finance/transactions/?limit=50&currency=EUR&min_amount=1&max_amount=100000",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "finance",
+                "transactions",
+                ""
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "50"
+                },
+                {
+                  "key": "currency",
+                  "value": "EUR"
+                },
+                {
+                  "key": "min_amount",
+                  "value": "1"
+                },
+                {
+                  "key": "max_amount",
+                  "value": "100000"
+                }
+              ]
+            }
+          }
+        },
+        {
           "name": "02d - Transactions Sum (filtered net total)",
           "event": [
             {

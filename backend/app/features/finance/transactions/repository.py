@@ -184,6 +184,14 @@ def _filter_conditions(filters: Any, cycle_start_day: int = 1) -> list:
         )
     if filters.currency is not None and filters.currency != GLOBAL_CURRENCY:
         conditions.append(Transaction.currency == filters.currency)
+    min_amount = getattr(filters, "min_amount", None)
+    max_amount = getattr(filters, "max_amount", None)
+    if min_amount is not None or max_amount is not None:
+        abs_amount = func.abs(_amount_column(filters.currency or GLOBAL_CURRENCY))
+        if min_amount is not None:
+            conditions.append(abs_amount >= min_amount)
+        if max_amount is not None:
+            conditions.append(abs_amount <= max_amount)
     if filters.from_date is not None:
         conditions.append(Transaction.date >= filters.from_date)
     if filters.to_date is not None:

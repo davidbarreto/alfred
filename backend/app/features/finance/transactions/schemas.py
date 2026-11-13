@@ -186,6 +186,8 @@ class TransactionFilters:
         to_date: Annotated[date | None, Query()] = None,
         period: Annotated[str | None, Query()] = None,
         currency: Annotated[str | None, Query()] = None,
+        min_amount: Annotated[Decimal | None, Query(ge=0)] = None,
+        max_amount: Annotated[Decimal | None, Query(ge=0)] = None,
         installment_plan_id: Annotated[int | None, Query()] = None,
         unconfirmed_transfer: Annotated[bool, Query()] = False,
         tags: Annotated[list[str] | None, Query()] = None,
@@ -216,6 +218,11 @@ class TransactionFilters:
         self.to_date = to_date
         self.period = period
         self.currency = currency.upper() if currency is not None else None
+        self.min_amount = min_amount
+        self.max_amount = max_amount
+        """Inclusive bounds on the absolute amount (sign ignored, so 50 matches both a
+        -50 transfer and a 50 expense). Compared in the filtered currency, or in EUR
+        when no currency is set (same basis as the filtered sum)."""
         self.installment_plan_id = installment_plan_id
         self.unconfirmed_transfer = unconfirmed_transfer
         self.sort = sort

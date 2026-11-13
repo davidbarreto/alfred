@@ -33,6 +33,8 @@ def _parse_txn_query(request: Request) -> tuple[dict, int]:
         "from_date": qp.get("from_date") or None,
         "to_date": qp.get("to_date") or None,
         "currency": qp.get("currency") or None,
+        "min_amount": qp.get("min_amount") or None,
+        "max_amount": qp.get("max_amount") or None,
         "unconfirmed_transfer": qp.get("unconfirmed_transfer") or None,
         "sort": qp.get("sort") or None,
     }

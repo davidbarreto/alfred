@@ -452,6 +452,31 @@ class TestList:
         assert "installment_plan_id" in sql
         assert "EXISTS" in sql
 
+    async def test_amount_range_filter_uses_absolute_native_amount_for_a_currency(self):
+        session = _make_session()
+        session.execute.return_value = _scalar_all([])
+        await TransactionRepository(session).list(
+            TransactionFilters(currency="BRL", min_amount=Decimal("10"), max_amount=Decimal("50"))
+        )
+        sql = str(session.execute.call_args.args[0].compile(compile_kwargs={"literal_binds": True}))
+        assert "abs(finance.transactions.amount) >= 10" in sql
+        assert "abs(finance.transactions.amount) <= 50" in sql
+
+    async def test_amount_range_filter_uses_eur_amount_without_a_currency(self):
+        session = _make_session()
+        session.execute.return_value = _scalar_all([])
+        await TransactionRepository(session).list(TransactionFilters(min_amount=Decimal("10")))
+        sql = str(session.execute.call_args.args[0].compile(compile_kwargs={"literal_binds": True}))
+        assert "abs(finance.transactions.amount_eur) >= 10" in sql
+        assert "abs(finance.transactions.amount_eur) <=" not in sql
+
+    async def test_no_amount_bounds_adds_no_amount_condition(self):
+        session = _make_session()
+        session.execute.return_value = _scalar_all([])
+        await TransactionRepository(session).list(TransactionFilters())
+        sql = str(session.execute.call_args.args[0].compile(compile_kwargs={"literal_binds": True}))
+        assert "abs(" not in sql
+
     async def test_date_range_filter(self):
         session = _make_session()
         session.execute.return_value = _scalar_all([])

@@ -428,7 +428,7 @@
         },
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"trip_id\": \"{{travel_trip_id}}\",\n  \"mode\": \"flight\",\n  \"origin\": \"Alpha\",\n  \"destination\": \"Beta\",\n  \"origin_code\": \"AAA\",\n  \"destination_code\": \"BBB\",\n  \"departs_at\": \"2031-12-17T06:00:00\",\n  \"arrives_at\": \"2031-12-17T10:00:00\",\n  \"departs_tz\": \"UTC\",\n  \"arrives_tz\": \"Europe/Stockholm\",\n  \"carrier\": \"XX\",\n  \"number\": \"123\"\n}"
+          "raw": "{\n  \"trip_id\": \"{{travel_trip_id}}\",\n  \"mode\": \"flight\",\n  \"origin\": \"Alpha\",\n  \"destination\": \"Testville\",\n  \"origin_code\": \"AAA\",\n  \"destination_code\": \"BBB\",\n  \"departs_at\": \"2031-12-17T06:00:00\",\n  \"arrives_at\": \"2031-12-17T10:00:00\",\n  \"departs_tz\": \"UTC\",\n  \"arrives_tz\": \"Europe/Stockholm\",\n  \"carrier\": \"XX\",\n  \"number\": \"123\"\n}"
         }
       }
     },
@@ -633,7 +633,7 @@
               "pm.test('Status is 200', () => pm.response.to.have.status(200));",
               "const j = pm.response.json();",
               "pm.test('Has the leg and stay', () => { pm.expect(j.legs.length).to.eql(1); pm.expect(j.stays.length).to.eql(1); });",
-              "pm.test('Timeline is chronological', () => pm.expect(j.timeline.map(i => i.kind)).to.eql(['leave_home','leg','check_in','check_out']));",
+              "pm.test('Timeline is chronological', () => pm.expect(j.timeline.map(i => i.kind)).to.eql(['leave_home','leg','arrival','check_in','check_out']));",
               "pm.test('Leave-home time is set', () => pm.expect(j.leave_home_at).to.be.a('string'));",
               "pm.test('Long wait warning', () => pm.expect(j.warnings.map(w => w.kind)).to.include('long_wait_before_check_in'));"
             ],

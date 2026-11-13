@@ -379,7 +379,7 @@
                   "pm.test('Response has id and saves it', () => {",
                   "    const json = pm.response.json();",
                   "    pm.expect(json).to.have.property('id');",
-                  "    pm.expect(json.name).to.eql('Travel');",
+                  "    pm.expect(json.name).to.eql('Postman Tag');",
                   "    pm.environment.set('finance_tag_id', json.id);",
                   "});"
                 ],
@@ -407,7 +407,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Travel\"\n}",
+              "raw": "{\n  \"name\": \"Postman Tag\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -460,7 +460,7 @@
                   "pm.test('Response matches created tag', () => {",
                   "    const json = pm.response.json();",
                   "    pm.expect(String(json.id)).to.eql(String(pm.environment.get('finance_tag_id')));",
-                  "    pm.expect(json.name).to.eql('Travel');",
+                  "    pm.expect(json.name).to.eql('Postman Tag');",
                   "});"
                 ],
                 "type": "text/javascript"

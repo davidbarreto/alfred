@@ -69,7 +69,7 @@ class ChecklistService:
         created: list[str] = []
         skipped: list[str] = []
         for item in await self._items():
-            title = f"{item.title} ({trip.name})"
+            title = f"{item.title[:1].upper()}{item.title[1:]} ({trip.name})"
             existing = await self._tasks.get_tasks(TaskFilters(
                 limit=50, status="ALL", priority="ALL", urgency="ALL", tags=None, deadline_from=None, deadline_to=None,
                 include_recurring=True, due_today=False, context=None, available=False, q=title,
@@ -78,7 +78,7 @@ class ChecklistService:
                 skipped.append(title)
                 continue
             due = template.due_date(item, trip.start_date, trip.end_date, today)
-            await self._tasks.create_task(TaskCreate(title=title, deadline=datetime.combine(due, _DUE_TIME)))
+            await self._tasks.create_task(TaskCreate(title=title, priority="MEDIUM", deadline=datetime.combine(due, _DUE_TIME)))
             created.append(title)
         logger.info("Checklist generated: trip_id=%d created=%d skipped=%d", trip_id, len(created), len(skipped))
         return ChecklistGenerated(created=created, skipped=skipped)

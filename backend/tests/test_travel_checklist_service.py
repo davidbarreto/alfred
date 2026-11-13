@@ -72,9 +72,10 @@ class TestGenerate:
 
         result = await service.generate(1)
 
-        assert result.created == ["plug adapter (Christmas 2026)", "send photos (Christmas 2026)"]
+        assert result.created == ["Plug adapter (Christmas 2026)", "Send photos (Christmas 2026)"]
         deadlines = [c.args[0].deadline.date() for c in service._tasks.create_task.await_args_list]
         assert deadlines == [date(2026, 12, 10), date(2027, 1, 1)]
+        assert {c.args[0].priority for c in service._tasks.create_task.await_args_list} == {"MEDIUM"}
 
     @freeze_time("2026-11-12 10:00:00")
     async def test_skips_an_item_whose_task_exists(self, service):
@@ -87,7 +88,7 @@ class TestGenerate:
 
         result = await service.generate(1)
 
-        assert result.skipped == ["currency (Christmas 2026)"]
+        assert result.skipped == ["Currency (Christmas 2026)"]
         service._tasks.create_task.assert_not_awaited()
 
     async def test_unknown_trip_is_not_found(self, service):

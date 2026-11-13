@@ -216,6 +216,22 @@ class TestLanguageCard:
         assert cards.language_card(None, None) == []
 
 
+class TestUpcomingEvents:
+    def _event(self, title, is_today=False):
+        return {"title": title, "is_today": is_today}
+
+    def test_skips_today_and_caps(self):
+        events = [self._event("Now", True)] + [self._event(f"E{i}") for i in range(7)]
+
+        found = cards.upcoming_events(events)
+
+        assert [e["title"] for e in found["items"]] == ["E0", "E1", "E2", "E3", "E4"]
+        assert found["more"] == 2
+
+    def test_no_events(self):
+        assert cards.upcoming_events(None) == {"items": [], "more": 0}
+
+
 class TestStudyCard:
     def test_progress_and_next_open_item(self):
         overview = {"active": [{"title": "Graphs", "items": [
@@ -256,6 +272,11 @@ def _backend(overrides=None):
                         "precipitation_probability": 10, "wind_speed_max_kmh": 12.3,
                         "description": "Partly cloudy", "advice": ["Bring a light jacket"]},
             "holidays": [{"name": "Christmas Day", "local_name": "Natal", "days_until": 3}],
+            "lookahead_days": 3,
+            "events": [
+                {"title": "Standup", "date": "2026-11-13", "start_time": "09:00:00", "all_day": False, "is_today": True, "days_until": 0, "location": None},
+                {"title": "Dentist", "date": "2026-11-14", "start_time": "09:30:00", "all_day": False, "is_today": False, "days_until": 1, "location": "Clinic"},
+            ],
         },
         **(overrides or {}),
     }
@@ -307,6 +328,7 @@ class TestDashboardPage:
         assert "Spanish" in text and "2/5" in text and "Paused one" not in text
         assert "Partly cloudy" in text and "Bring a light jacket" in text
         assert "Natal" in text and "in 3 days" in text
+        assert "Upcoming events" in text and "Dentist" in text and "Clinic" in text and "Standup" not in text
         assert "ti-cake" in text and "ti-cloud" in text and "ti-flag" in text
         assert "glance" not in text
 

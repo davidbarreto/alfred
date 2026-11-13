@@ -144,6 +144,12 @@ def upcoming_birthdays(contacts: list[dict] | None, today: date) -> list[dict]:
     return found[:CARD_CAP]
 
 
+def upcoming_events(events: list[dict] | None) -> dict:
+    """Events after today from the morning briefing's look-ahead (today's have their own strip), capped."""
+    later = [e for e in events or [] if not e.get("is_today")]
+    return {"items": later[:CARD_CAP], "more": max(len(later) - CARD_CAP, 0)}
+
+
 def study_card(overview: dict | None) -> list[dict]:
     """Active study plans with progress and the next open item."""
     cards = []

@@ -95,6 +95,8 @@ async def dashboard(request: Request):
         "language": cards.language_card(language_tracks, language_progress),
         "weather": (morning or {}).get("weather"),
         "holidays": (morning or {}).get("holidays") or [],
+        "upcoming_events": cards.upcoming_events((morning or {}).get("events")),
+        "lookahead_days": (morning or {}).get("lookahead_days"),
         "briefing": latest_briefing,
         "briefing_kind": briefing_kind,
         "today": today.isoformat(),

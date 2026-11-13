@@ -211,6 +211,32 @@
     {% endif %}
   </div>
 
+  <!-- Upcoming events (after today) -->
+  <div class="card bg-white">
+    <div class="card-body p-4">
+      <div class="flex items-center justify-between mb-3">
+        <h2 class="text-sm font-medium text-gray-900"><i class="ti ti-calendar-event mr-1"></i>Upcoming events</h2>
+        <a href="/calendar/" class="text-xs text-[#378ADD] hover:underline">{% if upcoming_events.more %}See all {{ upcoming_events["items"] | length + upcoming_events.more }} →{% else %}Calendar →{% endif %}</a>
+      </div>
+      {% if upcoming_events["items"] %}
+      <ul class="space-y-2">
+        {% for ev in upcoming_events["items"] %}
+        <li class="flex items-baseline gap-2 text-sm min-w-0">
+          <span class="text-xs flex-shrink-0 w-32 text-gray-400">
+            {% if ev.days_until == 1 %}Tomorrow{% else %}{{ ev.date | short_date }}{% endif %}
+            · {% if ev.all_day %}All day{% else %}{{ ev.start_time[:5] }}{% endif %}
+          </span>
+          <span class="flex-1 truncate text-gray-700">{{ ev.title }}</span>
+          {% if ev.location %}<span class="text-xs text-gray-400 truncate flex-shrink-0 max-w-[10rem]">{{ ev.location }}</span>{% endif %}
+        </li>
+        {% endfor %}
+      </ul>
+      {% else %}
+      <p class="text-sm text-gray-400 py-2">No events in the next {{ lookahead_days or 3 }} days.</p>
+      {% endif %}
+    </div>
+  </div>
+
   <!-- Budgets + birthdays -->
   <div class="grid grid-cols-2 gap-4">
     <div class="card bg-white">

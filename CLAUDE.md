@@ -20,7 +20,7 @@ This file holds the rules that apply to every change. Reference material lives i
 | `docs/integrations.md` | Touching Notion, Google, Gemini/OpenAI, Open-Meteo or Telegram code |
 | `docs/assistant-layer.md` | Adding or editing a command, intent example, MCP tool or the Telegram menu |
 | `docs/portal.md` | Adding or changing a portal page, partial or paginated section |
-| `docs/operations.md` | Touching Docker, deploy, migrations on startup, cron workflows or `X-Alfred-Client` |
+| `docs/operations.md` | Touching Docker, deploy, migrations on startup, cron workflows, `X-Alfred-Client`, or troubleshooting a failed CI smoke test |
 | `docs/docker.md` | Changing compose services, volumes, startup/seed steps, deploy workflows, or where audio/statement files are stored |
 | `docs/configuration.md` | Adding or changing an env variable, a runtime setting (`core.settings`) or an auth path |
 | `docs/features.md` | Needing to know what a module does, or where a feature is exposed (portal / commands / API); update it when adding a user-facing feature |
@@ -239,7 +239,7 @@ logger.warning("Auth failed: invalid token")
 ### Testing
 - Unit tests mock DB and external services; no real I/O
 - The exception: tests that need a real Postgres (seeded migration data, TypeDecorator bind coercion, case-insensitive SQL) are marked `@pytest.mark.db`. There are none yet: add one only when fixing a bug a mock can't reproduce. They are deselected by default and run in the CI smoke job via `pytest -m db` (`TEST_DATABASE_URL` points at the migrated DB; the `db_session` fixture rolls back). Keep them few and only for bugs a mock can't see
-- The CI smoke job (`api-smoke-test.yml`) runs on pushes to `main` touching `backend/` or `postman/`, next to (not blocking) the deploys. When a push adds a migration it also downgrades that many revisions and upgrades to head. Postman tests that create uniquely-named rows (tags, categories) use a per-run name, because migrations seed rows
+- The CI smoke job (`api-smoke-test.yml`) runs on pushes to `main` touching `backend/` or `postman/`, next to (not blocking) the deploys. When a push adds a migration it also downgrades that many revisions and upgrades to head. Postman tests that create uniquely-named rows (tags, categories) use a per-run name, because migrations seed rows. Troubleshooting a red run (summary, logs, `api-log` artifact): `docs/operations.md`
 - Use `pytest` with fixtures for DB sessions and app client
 - Don't ignore warnings. Solve them whenever possible
 - Backend tests need `ALFRED_API_TOKEN=test-api-token` (exactly that value, the `TEST_TOKEN` in `tests/conftest.py`). `conftest.py` forces it, but if you ever see mass `401 == 200` failures, a real token in the shell is the cause: run `env -u ALFRED_API_TOKEN .venv/bin/python -m pytest` or set it to `test-api-token`. Never use another value like `test`.

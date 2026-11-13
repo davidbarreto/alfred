@@ -169,7 +169,8 @@ class TestTripPage:
         detail["timeline"][0]["warnings"] = ["Arrives 5 h before check-in"]
         _route(mock_api, {"/travel/trips/1/costs": None, "/travel/trips/1": detail, "/travel/places": []})
         html = client.get("/travel/1").text
-        assert html.count("data-warning-row") == 1
+        # the timeline row plus the leg and stay the default warning points at
+        assert html.count("data-warning-row") == 3
 
     def test_travelers_is_a_textarea_shown_on_its_own_lines(self, client, mock_api):
         detail = _detail()
@@ -855,6 +856,20 @@ class TestTransactionDetail:
         _route(mock_api, {"/travel/trips/1": _detail(), "/travel/trips/1/unlinked-transactions": charges})
         html = client.get("/travel/1/unlinked").text
         assert 'class="text-xs text-[#378ADD] hover:underline tx-detail" data-id="9"' in html and 'id="tx-detail-dialog"' in html
+
+
+class TestWarnedRows:
+    def test_legs_stays_and_visits_with_warnings_are_marked_with_their_messages(self, client, mock_api):
+        detail = _detail(warnings=[
+            {"kind": "leg_not_paid", "message": "Leg problem text", "leg_id": 1},
+            {"kind": "stay_not_paid", "message": "Stay problem text", "stay_id": 7},
+        ])
+        _route(mock_api, {"/travel/trips/1": detail, "/travel/places": [], "/travel/trips/1/costs": None})
+        html = client.get("/travel/1").text
+        leg_row = html[html.index('id="leg-1"') - 200:html.index('id="leg-1"') + 400]
+        assert "data-warning-row" in leg_row and "Leg problem text" in html
+        stay_row = html[html.index('id="stay-7"') - 200:html.index('id="stay-7"') + 400]
+        assert "data-warning-row" in stay_row and "Stay problem text" in html
 
 
 class TestOtherEvents:

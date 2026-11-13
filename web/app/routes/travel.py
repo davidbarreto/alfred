@@ -436,6 +436,9 @@ _WARNING_LABELS = {
     "visit_overlaps_leg": "Visits during a trip leg", "visit_without_stay": "Visits without a stay",
     "too_many_visits": "Busy days", "no_calendar_event": "Visits without a calendar event",
     "linked_event_mismatch": "Calendar event differs", "linked_event_not_updated": "Calendar event not updated", "leg_not_paid": "Legs not bought yet", "outside_trip_dates": "Outside the trip dates",
+    "broken_leg_chain": "Legs that do not connect", "overlapping_stays": "Overlapping stays", "stay_not_paid": "Stays not paid yet",
+    "no_booking_reference": "Missing booking references", "visits_overlap": "Visits that overlap",
+    "checklist_not_generated": "Checklist not generated",
 }
 
 

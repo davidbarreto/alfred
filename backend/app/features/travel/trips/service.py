@@ -5,6 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.features.core.embeddings.service import EmbeddingService
 from app.features.organizer.calendar_events.service import CalendarEventService
+from app.features.travel.checklist.service import ChecklistService
 from app.features.travel.legs.repository import LegRepository
 from app.features.travel.legs.schemas import LegRead
 from app.features.travel.notes_index import LEG_NOTE, TRIP_NOTE, TravelNoteIndex
@@ -21,14 +22,17 @@ from app.features.travel.trips.map_points import MapScope, TripMap, build_trip_m
 from app.features.travel.trips.ideas import build_ideas
 from app.features.travel.trips.today import TripToday, build_today
 from app.features.travel.trips.coverage_warnings import (
-    find_event_warnings, find_lodging_warnings, find_outside_dates_warnings, find_unpaid_leg_warnings,
-    find_visit_warnings,
+    find_booking_reference_warnings, find_chain_warnings, find_event_warnings, find_lodging_warnings,
+    find_outside_dates_warnings, find_stay_overlap_warnings, find_unpaid_leg_warnings, find_unpaid_stay_warnings,
+    find_visit_overlap_warnings, find_visit_warnings,
 )
-from app.features.travel.trips.timeline import build_timeline, find_warnings, leave_home_at
+from app.features.travel.trips.timeline import TripWarning, build_timeline, find_warnings, leave_home_at
 from app.shared.timezone import local_timezone, local_timezone_name, local_today
 
 logger = logging.getLogger(__name__)
 
+# The checklist nudge starts this many days before the trip.
+CHECKLIST_NUDGE_DAYS = 60
 _NOT_NULL = ("name", "start_date", "end_date")
 
 
@@ -41,6 +45,7 @@ class TripService:
         self._stay_repo = StayRepository(session)
         self._visit_repo = VisitRepository(session)
         self._link_repo = TransactionLinkRepository(session)
+        self._checklist = ChecklistService(session)
         self.settings_service = TravelSettingsService(session)
         # The local calendar copy only: warnings never call Google.
         self._calendar = CalendarEventService(provider=None, session=session)
@@ -69,17 +74,27 @@ class TripService:
             hidden, visits = len(visits) - len(shown), shown
         settings = await self.settings_service.get()
         leave_at = leave_home_at(legs, settings.airport_buffer_min + settings.home_to_airport_min)
+        today = local_today()
+        paid_legs = await self._link_repo.get_linked_ids("legs", [leg.id for leg in legs])
+        paid_stays = await self._link_repo.get_linked_ids("stays", [stay.id for stay in stays])
         warnings = [
             *find_warnings(legs, stays),
             *find_lodging_warnings(legs, stays),
             *find_visit_warnings(all_visits, legs, stays, settings.max_visits_per_day),
             *find_outside_dates_warnings(legs, stays, all_visits, trip.start_date, trip.end_date),
-            *find_unpaid_leg_warnings(
-                legs, await self._link_repo.get_linked_ids("legs", [leg.id for leg in legs]), trip.start_date, local_today(),
-                settings.unpaid_leg_days,
-            ),
-            *find_event_warnings(all_visits, await self._linked_events(all_visits), local_today(), local_timezone()),
+            *find_chain_warnings(legs),
+            *find_stay_overlap_warnings(stays),
+            *find_unpaid_leg_warnings(legs, paid_legs, trip.start_date, today, settings.unpaid_leg_days),
+            *find_unpaid_stay_warnings(stays, paid_stays, trip.start_date, today, settings.unpaid_leg_days),
+            *find_booking_reference_warnings(legs, stays, trip.start_date, today, settings.unpaid_leg_days),
+            *find_visit_overlap_warnings(all_visits, settings.visit_duration_min),
+            *find_event_warnings(all_visits, await self._linked_events(all_visits), today, local_timezone()),
         ]
+        if 0 <= (trip.start_date - today).days <= CHECKLIST_NUDGE_DAYS and await self._checklist.is_pending(trip.name):
+            warnings.append(TripWarning(
+                kind="checklist_not_generated",
+                message="The pre-trip checklist has not been generated yet (the Generate checklist button below)",
+            ))
         ideas = []
         if trip.end_date >= local_today():
             wishlist = await self._visit_repo.get_wishlist_in_cities([s.place.city for s in stays if s.place.city])

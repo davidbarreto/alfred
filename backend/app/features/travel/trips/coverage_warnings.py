@@ -149,6 +149,96 @@ def find_outside_dates_warnings(
     return warnings
 
 
+def find_chain_warnings(legs: list[LegRead]) -> list[TripWarning]:
+    """A leg that starts somewhere other than where the previous one ended."""
+    ordered = sorted(legs, key=lambda leg: (leg.departs_at, leg.id))
+    return [
+        TripWarning(
+            kind="broken_leg_chain", leg_id=nxt.id,
+            message=f"A leg ends in {prev.destination} but the next one starts in {nxt.origin} ({nxt.departs_local:%d %b})",
+        )
+        for prev, nxt in zip(ordered, ordered[1:])
+        if not (_same_place(prev.destination, nxt.origin) or _same_place(nxt.origin, prev.destination))
+    ]
+
+
+def find_stay_overlap_warnings(stays: list[StayRead]) -> list[TripWarning]:
+    """A stay that begins before the previous one has ended."""
+    ordered = sorted(stays, key=lambda stay: (stay.check_in_at, stay.id))
+    return [
+        TripWarning(
+            kind="overlapping_stays", stay_id=nxt.id,
+            message=f"{nxt.place.name} (from {nxt.check_in_local:%d %b}) overlaps {prev.place.name} (until {prev.check_out_local:%d %b})",
+        )
+        for prev, nxt in zip(ordered, ordered[1:])
+        if nxt.check_in_at < prev.check_out_at
+    ]
+
+
+def find_unpaid_stay_warnings(
+    stays: list[StayRead], paid_stay_ids: set[int], trip_start: date, today: date, days: int,
+) -> list[TripWarning]:
+    """Stays still to begin that have no linked charge, under the same window as unpaid legs."""
+    if days <= 0 or (trip_start - today).days > days:
+        return []
+    return [
+        TripWarning(
+            kind="stay_not_paid", stay_id=stay.id,
+            message=f"{stay.place.name} (from {stay.check_in_local:%d %b}) has no linked charge: not booked or paid yet?",
+        )
+        for stay in sorted(stays, key=lambda stay: (stay.check_in_at, stay.id))
+        if stay.id not in paid_stay_ids and stay.check_in_local.date() >= today
+    ]
+
+
+# Modes that come with a booking; walking-style legs (car, other) never get a reference.
+_BOOKED_MODES = {"flight", "train", "bus", "ferry"}
+
+
+def find_booking_reference_warnings(
+    legs: list[LegRead], stays: list[StayRead], trip_start: date, today: date, days: int,
+) -> list[TripWarning]:
+    """Booked legs and stays still to come with neither a booking reference nor a booking link."""
+    if days <= 0 or (trip_start - today).days > days:
+        return []
+    warnings = [
+        TripWarning(
+            kind="no_booking_reference", leg_id=leg.id,
+            message=f"{leg.origin} to {leg.destination} ({leg.departs_local:%d %b}) has no booking reference or link",
+        )
+        for leg in sorted(legs, key=lambda leg: (leg.departs_at, leg.id))
+        if leg.mode in _BOOKED_MODES and not (leg.booking_ref or leg.booking_url) and leg.departs_local.date() >= today
+    ]
+    warnings.extend(
+        TripWarning(
+            kind="no_booking_reference", stay_id=stay.id,
+            message=f"{stay.place.name} (from {stay.check_in_local:%d %b}) has no booking reference or link",
+        )
+        for stay in sorted(stays, key=lambda stay: (stay.check_in_at, stay.id))
+        if not (stay.booking_ref or stay.booking_url) and stay.check_in_local.date() >= today
+    )
+    return warnings
+
+
+def find_visit_overlap_warnings(visits: list[VisitRead], duration_min: int) -> list[TripWarning]:
+    """Timed visits of one day whose slots (the default event length) run into the next one."""
+    timed = sorted(
+        (v for v in visits if v.visit_date and v.visit_time and v.status != "missed"),
+        key=lambda v: (v.visit_date, v.visit_time, v.id),
+    )
+    warnings: list[TripWarning] = []
+    for prev, nxt in zip(timed, timed[1:]):
+        if prev.visit_date != nxt.visit_date:
+            continue
+        ends = datetime.combine(prev.visit_date, prev.visit_time) + timedelta(minutes=duration_min)
+        if datetime.combine(nxt.visit_date, nxt.visit_time) < ends:
+            warnings.append(TripWarning(
+                kind="visits_overlap", visit_id=nxt.id,
+                message=f"{nxt.place.name} ({nxt.visit_time:%H:%M}) starts before {prev.place.name} ({prev.visit_time:%H:%M}) is over",
+            ))
+    return warnings
+
+
 def find_unpaid_leg_warnings(
     legs: list[LegRead], paid_leg_ids: set[int], trip_start: date, today: date, days: int,
 ) -> list[TripWarning]:

@@ -1,0 +1,1 @@
+<p class="text-sm text-amber-900" data-other-event="{{ e.event_id }}">{{ e.start_datetime[:16].replace('T', ' ') }} · {{ e.title }}{% if e.recurring %} <span class="text-[11px]">(recurring)</span>{% endif %}{% if e.snoozed %} <span class="text-[11px]">· snoozed</span>{% endif %}</p>

@@ -78,7 +78,7 @@
       <p class="text-xs font-semibold text-amber-800"><i class="ti ti-calendar-off"></i> {{ other_events|length }} other calendar event{{ '' if other_events|length == 1 else 's' }} during the trip</p>
       <p class="text-[11px] text-amber-700">Not tagged with this trip's default tags and not linked to it. {% if other_events[0].snoozed is defined and other_events|selectattr('snoozed')|list %}Their reminders are snoozed.{% else %}Turn on snoozing in the travel settings to hold their reminders back.{% endif %}</p>
       {% for e in other_events[:preview_size] %}
-      <p class="text-sm text-amber-900">{{ e.start_datetime[:16].replace('T', ' ') }} · {{ e.title }}{% if e.recurring %} <span class="text-[11px]">(recurring)</span>{% endif %}{% if e.snoozed %} <span class="text-[11px]">· snoozed</span>{% endif %}</p>
+      {% include "_travel_other_event_row.html" %}
       {% endfor %}
       {% if other_events|length > preview_size %}<a class="text-xs text-[#378ADD] hover:underline" href="/travel/{{ trip.id }}/warnings#other-events">See all {{ other_events|length }}</a>{% endif %}
     </div>
@@ -244,8 +244,10 @@
           <button class="btn btn-xs btn-outline" id="add-leg">Add leg</button>
         </div>
         {% for leg in trip.legs %}
-        <div class="flex items-start justify-between gap-2 text-sm" id="leg-{{ leg.id }}">
+        {% set lw = warnings_for(trip.warnings, 'leg_id', leg.id) %}
+        <div class="flex items-start justify-between gap-2 text-sm{{ ' rounded-md bg-amber-50 border border-amber-200 -mx-2 px-2 py-1.5' if lw }}" id="leg-{{ leg.id }}"{{ ' data-warning-row' if lw }}>
           <div>
+            {% for message in lw %}<p class="text-xs text-amber-800"><i class="ti ti-alert-triangle"></i> {{ message }}</p>{% endfor %}
             <p class="text-gray-900">{{ leg.origin }} → {{ leg.destination }} <span class="text-xs text-gray-400">{{ leg.mode }}{% if leg.carrier or leg.number %} · {{ leg.carrier or '' }} {{ leg.number or '' }}{% endif %}</span> {{ cost_chip(entity_costs.legs.get(leg.id)) }}</p>
             <p class="text-xs text-gray-500">{{ leg.departs_local[:10] | short_date }} {{ leg.departs_local[11:16] }} ({{ leg.departs_tz }}) → {{ leg.arrives_local[:10] | short_date }} {{ leg.arrives_local[11:16] }} ({{ leg.arrives_tz }})</p>
             {% if leg.booking_ref or leg.seat %}<p class="text-xs text-gray-400">{% if leg.booking_ref %}Ref {{ leg.booking_ref }}{% endif %}{% if leg.seat %} · Seat {{ leg.seat }}{% endif %}</p>{% endif %}
@@ -272,8 +274,10 @@
           <button class="btn btn-xs btn-outline" id="add-stay">Add stay</button>
         </div>
         {% for stay in trip.stays %}
-        <div class="flex items-start justify-between gap-2 text-sm" id="stay-{{ stay.id }}">
+        {% set sw = warnings_for(trip.warnings, 'stay_id', stay.id) %}
+        <div class="flex items-start justify-between gap-2 text-sm{{ ' rounded-md bg-amber-50 border border-amber-200 -mx-2 px-2 py-1.5' if sw }}" id="stay-{{ stay.id }}"{{ ' data-warning-row' if sw }}>
           <div>
+            {% for message in sw %}<p class="text-xs text-amber-800"><i class="ti ti-alert-triangle"></i> {{ message }}</p>{% endfor %}
             <p class="text-gray-900">{{ stay.place.name }}{% if stay.place.city %} <span class="text-xs text-gray-400">{{ stay.place.city }}</span>{% endif %} {{ cost_chip(entity_costs.stays.get(stay.id)) }}</p>
             <p class="text-xs text-gray-500">{{ stay.check_in_local[:10] | short_date }} {{ stay.check_in_local[11:16] }} → {{ stay.check_out_local[:10] | short_date }} {{ stay.check_out_local[11:16] }} ({{ stay.timezone }}) · {{ stay.nights }} night{{ '' if stay.nights == 1 else 's' }}</p>
             {% if stay.booking_ref %}<p class="text-xs text-gray-400">Ref {{ stay.booking_ref }}</p>{% endif %}

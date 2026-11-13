@@ -3,7 +3,11 @@ from datetime import date, datetime, time, timezone
 from app.features.travel.legs.schemas import LegRead
 from app.features.travel.places.schemas import PlaceRead
 from app.features.travel.stays.schemas import StayRead
-from app.features.travel.trips.coverage_warnings import find_lodging_warnings, find_outside_dates_warnings, find_unpaid_leg_warnings, find_visit_warnings
+from app.features.travel.trips.coverage_warnings import (
+    find_booking_reference_warnings, find_chain_warnings, find_lodging_warnings, find_outside_dates_warnings,
+    find_stay_overlap_warnings, find_unpaid_leg_warnings, find_unpaid_stay_warnings, find_visit_overlap_warnings,
+    find_visit_warnings,
+)
 from app.features.travel.visits.schemas import VisitPlace, VisitRead
 
 NOW = datetime(2026, 1, 1, tzinfo=timezone.utc)
@@ -217,3 +221,50 @@ class TestOutsideDatesWarnings:
             ("outside_trip_dates", 1, None, None), ("outside_trip_dates", None, 2, None), ("outside_trip_dates", None, None, 3),
         ]
         assert "Leg Alpha to Beta (09 Mar)" in warnings[0].message and "Cafe Example (18 Mar)" in warnings[2].message
+
+
+class TestChainAndStayOverlap:
+    def test_a_leg_starting_elsewhere_breaks_the_chain(self):
+        legs = [_leg(1, "Alpha", "Beta", _dt(10, 8), _dt(10, 10)), _leg(2, "Gamma", "Alpha", _dt(14, 8), _dt(14, 10))]
+        warnings = find_chain_warnings(legs)
+        assert [(w.kind, w.leg_id) for w in warnings] == [("broken_leg_chain", 2)]
+        assert "ends in Beta" in warnings[0].message and "starts in Gamma" in warnings[0].message
+
+    def test_connected_legs_are_fine(self):
+        legs = [_leg(1, "Alpha", "Beta", _dt(10, 8), _dt(10, 10)), _leg(2, "Beta", "Alpha", _dt(14, 8), _dt(14, 10))]
+        assert find_chain_warnings(legs) == []
+
+    def test_overlapping_stays_are_flagged_but_back_to_back_ones_are_not(self):
+        assert [w.stay_id for w in find_stay_overlap_warnings([_stay(1, _dt(10, 14), _dt(13, 10)), _stay(2, _dt(12, 14), _dt(15, 10))])] == [2]
+        assert find_stay_overlap_warnings([_stay(1, _dt(10, 14), _dt(13, 10)), _stay(2, _dt(13, 10), _dt(15, 10))]) == []
+
+
+class TestUnpaidStaysAndBookingRefs:
+    START, TODAY = date(2026, 3, 10), date(2026, 2, 20)
+
+    def test_unpaid_stays_follow_the_same_window(self):
+        stays = [_stay(1, _dt(10, 14), _dt(12, 10)), _stay(2, _dt(12, 14), _dt(14, 10))]
+        assert [w.stay_id for w in find_unpaid_stay_warnings(stays, {1}, self.START, self.TODAY, 30)] == [2]
+        assert find_unpaid_stay_warnings(stays, set(), self.START, date(2026, 1, 1), 30) == []
+
+    def test_missing_booking_references_skip_cars_and_filled_ones(self):
+        legs = [
+            _leg(1, "Alpha", "Beta", _dt(10, 8), _dt(10, 10)),
+            _leg(2, "Beta", "Gamma", _dt(11, 8), _dt(11, 10), mode="car"),
+            _leg(3, "Gamma", "Alpha", _dt(14, 8), _dt(14, 10), booking_ref="ABC123"),
+        ]
+        stays = [_stay(1, _dt(10, 14), _dt(12, 10)), _stay(2, _dt(12, 14), _dt(14, 10)).model_copy(update={"booking_url": "https://example.com/b"})]
+        warnings = find_booking_reference_warnings(legs, stays, self.START, self.TODAY, 30)
+        assert [(w.leg_id, w.stay_id) for w in warnings] == [(1, None), (None, 1)]
+        assert find_booking_reference_warnings(legs, stays, self.START, self.TODAY, 0) == []
+
+
+class TestVisitOverlap:
+    def test_a_visit_starting_inside_the_previous_slot_is_flagged(self):
+        visits = [_visit(1, 12, time(10, 0)), _visit(2, 12, time(11, 0)), _visit(3, 12, time(14, 0)), _visit(4, 13, time(10, 30))]
+        warnings = find_visit_overlap_warnings(visits, 90)
+        assert [(w.kind, w.visit_id) for w in warnings] == [("visits_overlap", 2)]
+
+    def test_untimed_missed_and_other_day_visits_are_ignored(self):
+        visits = [_visit(1, 12, time(10, 0)), _visit(2, 12, None), _visit(3, 12, time(10, 30), status="missed")]
+        assert find_visit_overlap_warnings(visits, 90) == []

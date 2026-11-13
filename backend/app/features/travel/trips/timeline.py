@@ -24,6 +24,7 @@ WarningKind = Literal[
     "uncovered_night", "no_return_leg",
     "visit_before_arrival", "visit_after_departure", "visit_overlaps_leg", "visit_without_stay", "too_many_visits",
     "no_calendar_event", "linked_event_mismatch", "linked_event_not_updated", "leg_not_paid", "outside_trip_dates",
+    "broken_leg_chain", "overlapping_stays", "stay_not_paid", "no_booking_reference", "visits_overlap", "checklist_not_generated",
 ]
 
 
@@ -216,6 +217,12 @@ _WARNING_ROWS = {
     "arrives_after_check_out": (("arrival", "leg_id"), ("check_out", "stay_id")),
     "tight_connection": (("leg", "leg_id"),),
     "overlapping_legs": (("leg", "leg_id"),),
+    "leg_not_paid": (("leg", "leg_id"),),
+    "broken_leg_chain": (("leg", "leg_id"),),
+    "stay_not_paid": (("check_in", "stay_id"),),
+    "overlapping_stays": (("check_in", "stay_id"),),
+    "outside_trip_dates": (("leg", "leg_id"), ("check_in", "stay_id")),
+    "no_booking_reference": (("leg", "leg_id"), ("check_in", "stay_id")),
 }
 
 

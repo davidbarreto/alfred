@@ -14,6 +14,7 @@ def service():
     svc = ChecklistService(AsyncMock(), AsyncMock())
     svc._settings = AsyncMock()
     svc._trips = AsyncMock()
+    svc._task_repo = AsyncMock()
     svc._settings.get_value.return_value = "1"
     svc._settings.list_values.return_value = {}
     return svc
@@ -95,3 +96,21 @@ class TestGenerate:
         service._trips.get_trip.return_value = None
         with pytest.raises(TravelNotFoundError):
             await service.generate(9)
+
+
+class TestIsPending:
+    async def test_pending_when_the_template_has_items_and_no_task_exists(self, service):
+        service._settings.list_values.return_value = {"travel.checklist.start.currency": "-14"}
+        service._task_repo.get_tasks.return_value = []
+        assert await service.is_pending("Christmas 2026") is True
+
+    async def test_not_pending_once_a_task_for_the_trip_exists(self, service):
+        service._settings.list_values.return_value = {"travel.checklist.start.currency": "-14"}
+        existing = MagicMock()
+        existing.title = "Currency (Christmas 2026)"
+        service._task_repo.get_tasks.return_value = [existing]
+        assert await service.is_pending("Christmas 2026") is False
+
+    async def test_not_pending_with_an_empty_template(self, service):
+        assert await service.is_pending("Christmas 2026") is False
+        service._task_repo.get_tasks.assert_not_awaited()

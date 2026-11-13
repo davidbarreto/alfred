@@ -100,6 +100,12 @@ def _short_date(value: str | None) -> str:
         return str(value)[:10]
 
 
+def _warnings_for(warnings: list | None, field: str, ref_id: int) -> list[str]:
+    """Messages of the trip warnings that point at one leg, stay or visit (field: leg_id, stay_id or visit_id)."""
+    return [w["message"] for w in warnings or [] if w.get(field) == ref_id]
+
+
+templates.env.globals["warnings_for"] = _warnings_for
 templates.env.filters["timeago"] = _timeago
 templates.env.filters["duration"] = _duration
 templates.env.filters["local_dt"] = _local_dt

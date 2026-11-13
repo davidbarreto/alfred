@@ -5,6 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.features.core.settings.service import SettingService
 from app.features.organizer.tasks.schemas import TaskCreate, TaskFilters
+from app.features.organizer.tasks.repository import TaskRepository
 from app.features.organizer.tasks.service import TaskService
 from app.features.travel.checklist import template
 from app.features.travel.checklist.schemas import ChecklistGenerated, ChecklistItemRead
@@ -26,6 +27,7 @@ class ChecklistService:
         self._settings = SettingService(session)
         self._trips = TripRepository(session)
         self._tasks = task_service
+        self._task_repo = TaskRepository(session)
 
     async def _items(self) -> list[template.ChecklistItem]:
         """The template, writing the defaults the first time so that emptying the list later sticks."""
@@ -35,6 +37,17 @@ class ChecklistService:
             await self._settings.set_value(template.SEEDED_KEY, "1")
             logger.info("Checklist template seeded: items=%d", len(template.DEFAULT_ITEMS))
         return template.parse_items(await self._settings.list_values(template.KEY_PREFIX))
+
+    async def is_pending(self, trip_name: str) -> bool:
+        """The template has items but none of its tasks exists for this trip yet."""
+        if not await self._items():
+            return False
+        suffix = f"({trip_name})".lower()
+        found = await self._task_repo.get_tasks(TaskFilters(
+            limit=50, status="ALL", priority="ALL", urgency="ALL", tags=None, deadline_from=None, deadline_to=None,
+            include_recurring=True, due_today=False, context=None, available=False, q=suffix,
+        ))
+        return not any(t.title.lower().endswith(suffix) for t in found)
 
     async def get_template(self) -> list[ChecklistItemRead]:
         return [_read(i) for i in await self._items()]

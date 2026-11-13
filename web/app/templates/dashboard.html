@@ -9,12 +9,21 @@
   <div id="overload-banner" hx-get="/overload/banner" hx-trigger="load, catchup-applied from:body" hx-swap="innerHTML"></div>
   <div id="catchup-panel"></div>
 
+  {% if alerts.overdue or alerts.urgent %}
+  <a href="/tasks/" class="flex items-center gap-3 rounded-lg px-4 py-2.5 bg-[#FCEBEB] text-[#E24B4A] text-sm hover:shadow-sm transition-shadow">
+    <i class="ti ti-alert-triangle"></i>
+    {% if alerts.overdue %}<span><strong>{{ alerts.overdue }}</strong> overdue</span>{% endif %}
+    {% if alerts.urgent %}<span><strong>{{ alerts.urgent }}</strong> urgent</span>{% endif %}
+    <span class="ml-auto text-xs">Open tasks →</span>
+  </a>
+  {% endif %}
+
   <!-- 4 metric cards -->
   <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
     <a href="/tasks/" class="card bg-white hover:shadow-sm transition-shadow">
       <div class="card-body p-4">
         <p class="text-xs text-gray-400 uppercase tracking-wide">Active tasks</p>
-        <p class="text-2xl font-semibold text-[#378ADD] mt-1">{{ tasks | length }}</p>
+        <p class="text-2xl font-semibold text-[#378ADD] mt-1">{{ task_count }}</p>
       </div>
     </a>
     <a href="/shopping/" class="card bg-white hover:shadow-sm transition-shadow">
@@ -38,6 +47,84 @@
       </div>
     </a>
   </div>
+
+  <!-- Today's plan + next trip -->
+  <div class="grid grid-cols-2 gap-4">
+    <div class="card bg-white">
+      <div class="card-body p-4">
+        <div class="flex items-center justify-between mb-3">
+          <h2 class="text-sm font-medium text-gray-900">Today's plan</h2>
+          <a href="/plan" class="text-xs text-[#378ADD] hover:underline">
+            {% if plan and plan.more %}See all {{ plan.total }} →{% else %}Plan →{% endif %}
+          </a>
+        </div>
+        {% if plan and plan.blocks %}
+        <p class="text-xs text-gray-400 mb-2">{{ plan.done }} of {{ plan.total }} done{% if plan.missed %} · {{ plan.missed }} missed{% endif %}</p>
+        <ul class="space-y-2">
+          {% for block in plan.blocks %}
+          <li class="flex items-center gap-2 text-sm min-w-0 {% if block.current %}font-medium{% endif %}">
+            <span class="text-xs flex-shrink-0 w-24 {% if block.current %}text-[#378ADD]{% else %}text-gray-400{% endif %}">{{ block.start_clock }}–{{ block.end_clock }}</span>
+            <span class="flex-1 truncate {% if block.done %}line-through text-gray-400{% else %}text-gray-700{% endif %}">{{ block.title }}</span>
+            {% if block.current %}<span class="text-[10px] px-1.5 py-0.5 rounded bg-[#E6F1FB] text-[#378ADD] flex-shrink-0">now</span>{% endif %}
+          </li>
+          {% endfor %}
+        </ul>
+        {% elif plan and plan.finished %}
+        <p class="text-sm text-gray-400 py-2">Plan finished: {{ plan.done }} of {{ plan.total }} blocks done.</p>
+        {% else %}
+        <p class="text-sm text-gray-400 py-2">No plan for today. Ask Alfred to plan your day.</p>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="card bg-white">
+      <div class="card-body p-4">
+        <div class="flex items-center justify-between mb-3">
+          <h2 class="text-sm font-medium text-gray-900">{% if trip and trip.ongoing %}Current trip{% else %}Next trip{% endif %}</h2>
+          <a href="{% if trip %}/travel/{{ trip.id }}{% else %}/travel{% endif %}" class="text-xs text-[#378ADD] hover:underline">Travel →</a>
+        </div>
+        {% if trip %}
+        <p class="text-sm font-medium text-gray-900 truncate">{{ trip.name }}</p>
+        <p class="text-2xl font-semibold text-[#378ADD] mt-1">
+          {% if trip.ongoing %}Day {{ trip.day }} of {{ trip.days }}
+          {% elif trip.days_until == 0 %}Today
+          {% elif trip.days_until == 1 %}Tomorrow
+          {% else %}In {{ trip.days_until }} days{% endif %}
+        </p>
+        <p class="text-xs text-gray-400 mt-1">{{ trip.start | short_date }} – {{ trip.end | short_date }}</p>
+        {% if trip.warnings %}
+        <a href="/travel/{{ trip.id }}/warnings" class="inline-block mt-2 text-xs px-2 py-0.5 rounded bg-[#FAEEDA] text-[#BA7517]">
+          {{ trip.warnings }} warning{{ 's' if trip.warnings != 1 }}
+        </a>
+        {% endif %}
+        {% else %}
+        <p class="text-sm text-gray-400 py-2">No upcoming trips.</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Language -->
+  {% if language %}
+  <div class="card bg-white">
+    <div class="card-body p-4">
+      <div class="flex items-center justify-between mb-3">
+        <h2 class="text-sm font-medium text-gray-900">Language</h2>
+        <a href="/language/" class="text-xs text-[#378ADD] hover:underline">Language →</a>
+      </div>
+      <ul class="space-y-2">
+        {% for track in language %}
+        <li class="flex items-center gap-2 text-sm min-w-0">
+          <span class="flex-1 truncate text-gray-700">{{ track.name }}</span>
+          <span class="text-xs flex-shrink-0 {% if track.quota_met %}text-[#2E9E5B]{% else %}text-gray-400{% endif %}">
+            {{ track.completed_today }}/{{ track.daily_quota }}{% if track.quota_met %} ✓{% endif %}
+          </span>
+        </li>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+  {% endif %}
 
   <!-- 2-column row: tasks left, shopping right -->
   <div class="grid grid-cols-2 gap-4">
@@ -123,6 +210,124 @@
     </div>
     {% endif %}
   </div>
+
+  <!-- Budgets + birthdays -->
+  <div class="grid grid-cols-2 gap-4">
+    <div class="card bg-white">
+      <div class="card-body p-4">
+        <div class="flex items-center justify-between mb-3">
+          <h2 class="text-sm font-medium text-gray-900">Budgets</h2>
+          <a href="/finance/" class="text-xs text-[#378ADD] hover:underline">Finance →</a>
+        </div>
+        {% if budgets %}
+        <ul class="space-y-3">
+          {% for row in budgets %}
+          <li>
+            <div class="flex items-center justify-between text-sm">
+              <span class="truncate text-gray-700">{{ row.name }}</span>
+              <span class="text-xs text-gray-400 flex-shrink-0">€{{ row.spent | money(0) }} / €{{ row.limit | money(0) }}</span>
+            </div>
+            <div class="h-1.5 rounded-full bg-gray-100 mt-1">
+              <div class="h-1.5 rounded-full {% if row.ratio >= 1 %}bg-[#E24B4A]{% elif row.ratio >= 0.8 %}bg-[#BA7517]{% else %}bg-[#378ADD]{% endif %}"
+                   style="width: {{ [row.ratio * 100, 100] | min | round(0) | int }}%"></div>
+            </div>
+          </li>
+          {% endfor %}
+        </ul>
+        {% else %}
+        <p class="text-sm text-gray-400 py-2">No budgets set.</p>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="card bg-white">
+      <div class="card-body p-4">
+        <div class="flex items-center justify-between mb-3">
+          <h2 class="text-sm font-medium text-gray-900">Birthdays</h2>
+          <a href="/contacts/" class="text-xs text-[#378ADD] hover:underline">Contacts →</a>
+        </div>
+        {% if birthdays %}
+        <ul class="space-y-2">
+          {% for b in birthdays %}
+          <li class="flex items-center gap-2 text-sm min-w-0">
+            <span class="flex-1 truncate text-gray-700">{{ b.name }}</span>
+            <span class="text-xs flex-shrink-0 {% if b.days_until <= 1 %}text-[#BA7517]{% else %}text-gray-400{% endif %}">
+              {% if b.days_until == 0 %}Today{% elif b.days_until == 1 %}Tomorrow{% else %}in {{ b.days_until }} days · {{ b.date | short_date }}{% endif %}
+            </span>
+          </li>
+          {% endfor %}
+        </ul>
+        {% else %}
+        <p class="text-sm text-gray-400 py-2">No birthdays in the next 30 days.</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Study plans -->
+  {% if study %}
+  <div class="card bg-white">
+    <div class="card-body p-4">
+      <div class="flex items-center justify-between mb-3">
+        <h2 class="text-sm font-medium text-gray-900">Study</h2>
+        <a href="/study" class="text-xs text-[#378ADD] hover:underline">Study →</a>
+      </div>
+      <ul class="space-y-3">
+        {% for plan in study %}
+        <li>
+          <div class="flex items-center justify-between text-sm">
+            <span class="truncate text-gray-700">{{ plan.title }}</span>
+            <span class="text-xs text-gray-400 flex-shrink-0">{{ plan.done }} / {{ plan.total }}</span>
+          </div>
+          <div class="h-1.5 rounded-full bg-gray-100 mt-1">
+            <div class="h-1.5 rounded-full bg-[#378ADD]" style="width: {{ (plan.done * 100 / plan.total) | round(0) | int if plan.total else 0 }}%"></div>
+          </div>
+          {% if plan.next %}<p class="text-xs text-gray-400 mt-1 truncate">Next: {{ plan.next }}</p>{% endif %}
+        </li>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Metrics sparklines -->
+  {% if metrics %}
+  <div>
+    <div class="flex items-center justify-between mb-3">
+      <h2 class="text-sm font-medium text-gray-900">Metrics · last 14 days</h2>
+      <a href="/metrics" class="text-xs text-[#378ADD] hover:underline">All metrics →</a>
+    </div>
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      {% for m in metrics %}
+      <a href="/metrics/{{ m.name | urlencode }}" class="card bg-white hover:shadow-sm transition-shadow">
+        <div class="card-body p-3">
+          <p class="text-xs text-gray-400 truncate">{{ m.name }}</p>
+          <p class="text-lg font-semibold text-gray-900 mt-0.5">{{ m.today | number }}{% if m.unit %} <span class="text-xs font-normal text-gray-400">{{ m.unit }}</span>{% endif %}</p>
+          {% if m.points %}
+          <svg viewBox="0 0 100 24" class="w-full h-6 mt-1" preserveAspectRatio="none" aria-hidden="true">
+            <polyline points="{{ m.points }}" fill="none" stroke="#378ADD" stroke-width="1.5" vector-effect="non-scaling-stroke"/>
+          </svg>
+          {% endif %}
+          <p class="text-[10px] text-gray-400 mt-1">{{ m.week | number }} this week</p>
+        </div>
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Latest saved briefing: evening digest at night, morning briefing otherwise -->
+  {% if briefing %}
+  <div class="card bg-white">
+    <div class="card-body p-4">
+      <div class="flex items-center justify-between mb-3">
+        <h2 class="text-sm font-medium text-gray-900">{{ 'Evening digest' if briefing_kind == 'evening' else 'Morning briefing' }}{% if briefing.date != today %} <span class="text-xs font-normal text-gray-400">· {{ briefing.date | short_date }}</span>{% endif %}</h2>
+        <a href="{{ '/briefing/evening' if briefing_kind == 'evening' else '/briefing/' }}" class="text-xs text-[#378ADD] hover:underline">Read full →</a>
+      </div>
+      <div class="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed" style="display:-webkit-box;-webkit-line-clamp:6;-webkit-box-orient:vertical;overflow:hidden">{{ briefing.text }}</div>
+    </div>
+  </div>
+  {% endif %}
 
   <!-- Chat panel -->
   <div class="card bg-white">

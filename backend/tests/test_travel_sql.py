@@ -54,6 +54,35 @@ class TestTripQuery:
         assert "ORDER BY" in sql and "LIMIT 5" in sql
 
 
+class TestPlaceLocationQuery:
+    async def test_selects_city_and_country_of_places(self):
+        session = _ExecSession()
+        try:
+            await PlaceRepository(session).get_locations()
+        except _Stop:
+            pass
+        sql = _literal(session.statement)
+        assert "travel.places.city" in sql and "travel.places.country" in sql
+
+
+class TestTripLocationQueries:
+    async def _sql(self, call):
+        session = _ExecSession()
+        try:
+            await call(TripRepository(session))
+        except _Stop:
+            pass
+        return _literal(session.statement)
+
+    async def test_trip_locations_union_stays_and_visits(self):
+        sql = await self._sql(lambda repo: repo.get_trip_locations([1, 2]))
+        assert "UNION" in sql and "travel.stays" in sql and "travel.visits" in sql
+
+    async def test_locations_only_use_places_of_a_trip(self):
+        sql = await self._sql(lambda repo: repo.get_locations())
+        assert "UNION" in sql and "trip_id IS NOT NULL" in sql
+
+
 def test_travel_ddl_compiles_for_postgres():
     tables = [t for t in Base.metadata.sorted_tables if t.schema == "travel"]
     assert {t.name for t in tables} >= {"trips", "legs", "stays", "places", "tags", "trips_tags"}

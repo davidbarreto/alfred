@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, Response, status
 from app.api.auth import require_auth
 from app.dependencies import PlaceServiceDep
 from app.features.travel.places.detail import PlaceDetail
-from app.features.travel.places.schemas import PlaceCreate, PlaceFilters, PlaceRead, PlaceUpdate
+from app.features.travel.places.schemas import PlaceCreate, PlaceFilters, PlaceLocations, PlaceRead, PlaceUpdate
 from app.features.travel.places.service import PlaceInUseError
 
 router = APIRouter(prefix="/travel/places", tags=["travel"], dependencies=[Depends(require_auth)])
@@ -14,6 +14,12 @@ router = APIRouter(prefix="/travel/places", tags=["travel"], dependencies=[Depen
 @router.get("", response_model=list[PlaceRead])
 async def get_places(service: PlaceServiceDep, filters: Annotated[PlaceFilters, Depends()]) -> list[PlaceRead]:
     return await service.get_places(filters)
+
+
+@router.get("/locations", response_model=PlaceLocations)
+async def get_place_locations(service: PlaceServiceDep) -> PlaceLocations:
+    """Cities and countries of all places, for the filters' autocomplete."""
+    return await service.get_locations()
 
 
 @router.post("", response_model=PlaceRead, status_code=status.HTTP_201_CREATED)

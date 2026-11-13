@@ -9,6 +9,7 @@
     <div class="card-body p-4 flex flex-row items-start justify-between gap-3">
       <div class="space-y-1">
         <p class="text-sm font-semibold text-gray-900">{{ t.name }}</p>
+        {% if t.cities or t.countries %}<p class="text-xs text-gray-500" data-trip-places><i class="ti ti-map-pin"></i> {{ t.cities | join(', ') }}{% if t.cities and t.countries %} · {% endif %}{{ t.countries | join(', ') }}</p>{% endif %}
         <p class="text-xs text-gray-500">{{ t.start_date | short_date }} → {{ t.end_date | short_date }}{% if t.travelers %} · {{ t.travelers }}{% endif %}</p>
         {% if t.tags %}
         <div class="flex flex-wrap gap-1">

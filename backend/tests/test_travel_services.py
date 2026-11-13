@@ -124,8 +124,26 @@ class TestTripService:
 
     async def test_list_passes_local_today(self, trips):
         trips._repo.get_trips.return_value = [_trip()]
+        trips._repo.get_trip_locations.return_value = {}
         await trips.get_trips(TripFilters())
         assert isinstance(trips._repo.get_trips.await_args.args[1], date)
+
+    async def test_list_carries_the_cities_and_countries_of_each_trip(self, trips):
+        trips._repo.get_trips.return_value = [_trip(id=1), _trip(id=2)]
+        trips._repo.get_trip_locations.return_value = {1: (["Alpha", "Beta"], ["Examplia"]), 2: ([], [])}
+        found = await trips.get_trips(TripFilters())
+        assert (found[0].cities, found[0].countries) == (["Alpha", "Beta"], ["Examplia"])
+        assert (found[1].cities, found[1].countries) == ([], [])
+
+    async def test_empty_list_skips_the_locations_query(self, trips):
+        trips._repo.get_trips.return_value = []
+        assert await trips.get_trips(TripFilters()) == []
+        trips._repo.get_trip_locations.assert_not_awaited()
+
+    async def test_locations_for_the_filters(self, trips):
+        trips._repo.get_locations.return_value = (["Alpha"], ["Examplia"])
+        found = await trips.get_locations()
+        assert (found.cities, found.countries) == (["Alpha"], ["Examplia"])
 
     async def test_map_unknown_trip(self, trips):
         trips._repo.get_trip.return_value = None
@@ -324,6 +342,11 @@ def places():
 
 
 class TestPlaceService:
+    async def test_locations_for_the_filters(self, places):
+        places._repo.get_locations.return_value = (["Alpha"], ["Examplia"])
+        found = await places.get_locations()
+        assert (found.cities, found.countries) == (["Alpha"], ["Examplia"])
+
     async def test_create(self, places):
         places._repo.create_place.return_value = _place()
         result = await places.create_place(PlaceCreate(kind="hotel", name="Hotel Example", city="Lisbon"))

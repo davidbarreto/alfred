@@ -20,9 +20,11 @@
         {% for k in place_kinds %}<option value="{{ k }}" {{ 'selected' if filters.kind == k }}>{{ k }}</option>{% endfor %}
       </select></label>
     <label class="space-y-1"><span class="block text-xs text-gray-500">City</span>
-      <input name="city" value="{{ filters.city }}" class="input input-sm input-bordered w-32"></label>
+      <input name="city" value="{{ filters.city }}" list="city-options" autocomplete="off" class="input input-sm input-bordered w-32">
+      <datalist id="city-options">{% for c in locations.cities %}<option value="{{ c }}">{% endfor %}</datalist></label>
     <label class="space-y-1"><span class="block text-xs text-gray-500">Country</span>
-      <input name="country" value="{{ filters.country }}" class="input input-sm input-bordered w-32"></label>
+      <input name="country" value="{{ filters.country }}" list="country-options" autocomplete="off" class="input input-sm input-bordered w-32">
+      <datalist id="country-options">{% for c in locations.countries %}<option value="{{ c }}">{% endfor %}</datalist></label>
     <label class="space-y-1"><span class="block text-xs text-gray-500">Minimum grade</span>
       <select name="min_grade" class="select select-sm select-bordered">
         <option value="">Any</option>

@@ -9,6 +9,7 @@ from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse, Resp
 import app.client as api
 from app.config import get_settings
 from app.shared.forward import forward, safe_get
+from app.shared.timezone import local_today
 from app.templates_config import templates
 
 router = APIRouter(prefix="/travel")
@@ -93,10 +94,11 @@ async def trips_page(request: Request):
     tags = await safe_get("/travel/tags", default=[])
     settings = await safe_get("/travel/settings")
     checklist = await safe_get("/travel/checklist-template", default=[])
+    locations = await safe_get("/travel/trips/locations", default={"cities": [], "countries": []})
     context = _list_context(request, trips, 0, filters)
     return templates.TemplateResponse(request, "travel.html", {
         **context, "filters": filters, "statuses": _STATUSES, "all_tags": [t["name"] for t in tags or []],
-        "settings": settings, "checklist": checklist or [],
+        "settings": settings, "checklist": checklist or [], "locations": locations,
     })
 
 
@@ -296,9 +298,10 @@ async def places_page(request: Request):
     filters = _place_filters(request)
     places = await _fetch_places(filters, 0)
     tags = await safe_get("/travel/tags", default=[])
+    locations = await safe_get("/travel/places/locations", default={"cities": [], "countries": []})
     return templates.TemplateResponse(request, "travel_places.html", {
         **_places_context(places, 0, filters), "filters": filters, "place_kinds": _PLACE_KINDS,
-        "all_tags": [t["name"] for t in tags or []],
+        "all_tags": [t["name"] for t in tags or []], "locations": locations,
     })
 
 
@@ -378,7 +381,7 @@ async def timeline_page(trip_id: int, request: Request):
     trip = await safe_get(f"/travel/trips/{trip_id}")
     if trip is None:
         return RedirectResponse("/travel", status_code=302)
-    return templates.TemplateResponse(request, "travel_timeline.html", {"trip": trip, "days": _group_by_day(trip["timeline"])})
+    return templates.TemplateResponse(request, "travel_timeline.html", {"trip": trip, "days": _group_by_day(trip["timeline"]), "today": local_today().isoformat()})
 
 
 _PRINT_KINDS = {"leg", "arrival", "check_in", "check_out"}
@@ -535,6 +538,7 @@ async def trip_page(trip_id: int, request: Request):
         "trip": trip,
         "empty_days": _empty_days(trip),
         "days": _group_by_day(preview),
+        "today": local_today().isoformat(),
         "timeline_shown": len(preview),
         "timeline_total": len(trip["timeline"]),
         "visit_days": visit_days,

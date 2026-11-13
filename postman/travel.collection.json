@@ -2628,7 +2628,8 @@
           "script": {
             "exec": [
               "pm.test('Status is 200', () => pm.response.to.have.status(200));",
-              "pm.test('Found through its stay and visit', () => pm.expect(pm.response.json().map(t => t.id)).to.include(Number(pm.environment.get('travel_trip_id'))));"
+              "pm.test('Found through its stay and visit', () => pm.expect(pm.response.json().map(t => t.id)).to.include(Number(pm.environment.get('travel_trip_id'))));",
+              "pm.test('Carries its cities and countries', () => { const t = pm.response.json().find(t => t.id === Number(pm.environment.get('travel_trip_id'))); pm.expect(t.cities).to.include('Testville'); pm.expect(t.countries).to.include('Testland'); });"
             ],
             "type": "text/javascript"
           }
@@ -2713,6 +2714,41 @@
       }
     },
     {
+      "name": "69b - Trip Locations For The Filters Autocomplete",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Lists the trip places city and country', () => { const j = pm.response.json(); pm.expect(j.cities).to.include('Testville'); pm.expect(j.countries).to.include('Testland'); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/trips/locations",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "trips",
+            "locations"
+          ]
+        }
+      }
+    },
+    {
       "name": "70 - List Ungraded Places",
       "event": [
         {
@@ -2752,6 +2788,41 @@
               "key": "city",
               "value": "Testville"
             }
+          ]
+        }
+      }
+    },
+    {
+      "name": "70b - Place Locations For The Filters Autocomplete",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Lists the place city and country', () => { const j = pm.response.json(); pm.expect(j.cities).to.include('Testville'); pm.expect(j.countries).to.include('Testland'); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/places/locations",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "places",
+            "locations"
           ]
         }
       }

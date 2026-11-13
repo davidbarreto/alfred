@@ -12,14 +12,22 @@ from app.features.travel.trips.while_away import WhileAway
 from app.features.travel.recap.schemas import TripRecap
 from app.features.travel.trips.map_points import MapScope, TripMap
 from app.features.travel.trips.today import TripToday
-from app.features.travel.trips.schemas import TripCreate, TripDetail, TripFilters, TripRead, TripUpdate
+from app.features.travel.trips.schemas import (
+    TripCreate, TripDetail, TripFilters, TripListItem, TripLocations, TripRead, TripUpdate,
+)
 
 router = APIRouter(prefix="/travel/trips", tags=["travel"], dependencies=[Depends(require_auth)])
 
 
-@router.get("", response_model=list[TripRead])
-async def get_trips(service: TripServiceDep, filters: Annotated[TripFilters, Depends()]) -> list[TripRead]:
+@router.get("", response_model=list[TripListItem])
+async def get_trips(service: TripServiceDep, filters: Annotated[TripFilters, Depends()]) -> list[TripListItem]:
     return await service.get_trips(filters)
+
+
+@router.get("/locations", response_model=TripLocations)
+async def get_trip_locations(service: TripServiceDep) -> TripLocations:
+    """Cities and countries of the places trips stay at or visit, for the filters' autocomplete."""
+    return await service.get_locations()
 
 
 @router.post("", response_model=TripRead, status_code=status.HTTP_201_CREATED)

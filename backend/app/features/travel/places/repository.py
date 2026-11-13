@@ -60,6 +60,13 @@ class PlaceRepository:
         stmt = stmt.order_by(func.lower(Place.name), Place.id).limit(filters.limit).offset(filters.offset)
         return list((await self._session.scalars(stmt)).all())
 
+    async def get_locations(self) -> tuple[list[str], list[str]]:
+        """Distinct cities and countries over all places, sorted case-insensitively."""
+        rows = (await self._session.execute(select(Place.city, Place.country))).all()
+        cities = {city for city, _ in rows if city}
+        countries = {country for _, country in rows if country}
+        return sorted(cities, key=str.casefold), sorted(countries, key=str.casefold)
+
     async def get_grades(self, place_ids: list[int]) -> dict[int, tuple[float, int]]:
         """Average grade and how many grades went into it, for places that have any."""
         if not place_ids:

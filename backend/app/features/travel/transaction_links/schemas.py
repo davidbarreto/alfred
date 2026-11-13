@@ -16,6 +16,7 @@ class LinkedTransaction(BaseModel):
     date: datetime
     merchant: str | None
     description: str | None
+    bank_description: str | None = None
     type: str
     amount: Decimal
     currency: str

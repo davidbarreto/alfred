@@ -7,7 +7,7 @@ from app.features.core.embeddings.service import EmbeddingService
 from app.features.travel.notes_index import PLACE_NOTE, TravelNoteIndex
 from app.features.travel.places.detail import PlaceDetail
 from app.features.travel.places.repository import PlaceRepository
-from app.features.travel.places.schemas import PlaceCreate, PlaceFilters, PlaceRead, PlaceUpdate
+from app.features.travel.places.schemas import PlaceCreate, PlaceFilters, PlaceLocations, PlaceRead, PlaceUpdate
 from app.features.travel.places.tables import Place
 from app.features.travel.stays.repository import StayRepository
 from app.features.travel.stays.schemas import StayRead
@@ -43,6 +43,10 @@ class PlaceService:
         places = await self._repo.get_places(filters)
         logger.debug("Places listed: count=%d", len(places))
         return await self._read_all(places)
+
+    async def get_locations(self) -> PlaceLocations:
+        cities, countries = await self._repo.get_locations()
+        return PlaceLocations(cities=cities, countries=countries)
 
     async def get_place(self, place_id: int) -> PlaceRead | None:
         place = await self._repo.get_place(place_id)

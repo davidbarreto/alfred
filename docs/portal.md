@@ -21,7 +21,7 @@ HTMX actions target the smallest possible DOM element. Full-page navigation uses
 
 ## Capped cards
 
-Cards that list things that can grow (warnings, calendar events, unlinked charges) show the first 5 and a "See all N" link to a separate page with everything (`/travel/{id}/warnings`, `/travel/{id}/unlinked`), grouped and foldable with `<details>` when there are several groups. Never an in-place expand, even when rows carry their own controls: the full page repeats them (shared row partial and script). Never render an unbounded list on a detail page.
+The trip page's warnings card shows only its title and count, linking to `/travel/{id}/warnings`. Other cards that list things that can grow (calendar events, unlinked charges) show the first 5 and a "See all N" link to a separate page with everything (`/travel/{id}/warnings`, `/travel/{id}/unlinked`), grouped and foldable with `<details>` when there are several groups. Never an in-place expand, even when rows carry their own controls: the full page repeats them (shared row partial and script). Never render an unbounded list on a detail page.
 
 ## Pagination pattern
 

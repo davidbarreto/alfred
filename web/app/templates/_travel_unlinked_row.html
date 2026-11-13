@@ -1,6 +1,6 @@
 <div class="flex flex-wrap items-center gap-2 text-sm" data-unlinked="{{ t.id }}">
   <span class="text-gray-500 w-24">{{ t.date | short_date }}</span>
-  <span class="flex-1 min-w-[8rem]">{{ t.merchant or t.description or 'Charge' }} <button type="button" class="text-xs text-[#378ADD] hover:underline tx-detail" data-id="{{ t.id }}">Details</button></span>
+  <span class="flex-1 min-w-[8rem]">{{ t.merchant or t.description or t.bank_description or 'Charge' }} <button type="button" class="text-xs text-[#378ADD] hover:underline tx-detail" data-id="{{ t.id }}">Details</button></span>
   <span class="{{ 'text-green-700' if t.type == 'income' else '' }}">{{ t.amount }} {{ t.currency }}</span>
   <select class="select select-xs select-bordered unlinked-target" aria-label="Link to">
     <option value="">Link to…</option>

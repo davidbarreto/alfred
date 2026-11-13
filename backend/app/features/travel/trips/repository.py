@@ -1,7 +1,7 @@
 from datetime import date
 from typing import Any
 
-from sqlalchemy import and_, case, delete, func, or_, select
+from sqlalchemy import and_, case, delete, func, or_, select, union
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.features.travel.places.tables import Place
@@ -67,6 +67,33 @@ class TripRepository:
             .offset(filters.offset)
         )
         return list((await self._session.scalars(stmt)).all())
+
+    async def get_trip_locations(self, trip_ids: list[int]) -> dict[int, tuple[list[str], list[str]]]:
+        """Distinct cities and countries (sorted) of the places each trip stays at or visits."""
+        stays = select(Stay.trip_id, Place.city, Place.country).join(Place, Place.id == Stay.place_id)
+        visits = select(Visit.trip_id, Place.city, Place.country).join(Place, Place.id == Visit.place_id)
+        found = union(stays.where(Stay.trip_id.in_(trip_ids)), visits.where(Visit.trip_id.in_(trip_ids))).subquery()
+        cities: dict[int, set[str]] = {i: set() for i in trip_ids}
+        countries: dict[int, set[str]] = {i: set() for i in trip_ids}
+        for trip_id, city, country in (await self._session.execute(select(found))).all():
+            if city:
+                cities[trip_id].add(city)
+            if country:
+                countries[trip_id].add(country)
+        return {i: (sorted(cities[i], key=str.casefold), sorted(countries[i], key=str.casefold)) for i in trip_ids}
+
+    async def get_locations(self) -> tuple[list[str], list[str]]:
+        """Distinct cities and countries of every place used by a trip's stays or visits."""
+        used = union(
+            select(Stay.place_id.label("place_id")).where(Stay.trip_id.is_not(None)),
+            select(Visit.place_id.label("place_id")).where(Visit.trip_id.is_not(None)),
+        ).subquery()
+        rows = (await self._session.execute(
+            select(Place.city, Place.country).where(Place.id.in_(select(used.c.place_id)))
+        )).all()
+        cities = {city for city, _ in rows if city}
+        countries = {country for _, country in rows if country}
+        return sorted(cities, key=str.casefold), sorted(countries, key=str.casefold)
 
     async def get_trips_in_window(self, first_day: date, last_day: date) -> list[Trip]:
         """Trips that are ongoing or start by `last_day` and have not ended before `first_day`."""

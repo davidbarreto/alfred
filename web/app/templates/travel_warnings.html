@@ -24,6 +24,7 @@
   <details class="card bg-amber-50 border border-amber-200" id="other-events" open>
     <summary class="cursor-pointer p-4 text-sm font-semibold text-amber-800">Other calendar events <span class="text-xs font-normal">({{ other_events|length }})</span></summary>
     <div class="px-4 pb-4 space-y-1">
+      <p class="text-[11px] text-amber-700">Not tagged with this trip's default tags and not linked to it. {% if other_events|selectattr('snoozed')|list %}Their reminders are snoozed.{% else %}Turn on snoozing in the travel settings to hold their reminders back.{% endif %}</p>
       {% for e in other_events %}
       {% include "_travel_other_event_row.html" %}
       {% endfor %}

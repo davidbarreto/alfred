@@ -102,3 +102,10 @@ class PlaceFilters:
         self.no_trip = no_trip
         self.limit = limit
         self.offset = offset
+
+
+class PlaceLocations(BaseModel):
+    """Every city and country of any place, for the places filters' autocomplete."""
+
+    cities: list[str]
+    countries: list[str]

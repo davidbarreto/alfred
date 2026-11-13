@@ -1,3 +1,5 @@
+from datetime import date
+
 import httpx
 import pytest
 
@@ -9,6 +11,7 @@ def _trip(id=1, status="upcoming", tags=None, **kw):
         "id": id, "name": kw.get("name", "Example trip"), "start_date": "2026-12-17", "end_date": "2026-12-24",
         "travelers": kw.get("travelers"), "preferences": None, "checklist_note_id": None, "notes": kw.get("notes"),
         "default_tag_names": None, "tags": tags or [], "status": status,
+        "cities": kw.get("cities", []), "countries": kw.get("countries", []),
         "created_at": "2026-11-01T00:00:00Z", "updated_at": "2026-11-01T00:00:00Z",
     }
 
@@ -102,6 +105,25 @@ class TestTripsPage:
         assert "Example trip" in html and "17 Dec 2026" in html and "upcoming" in html
         assert "Family" in html and 'href="/travel/1"' in html
 
+    def test_trip_shows_its_cities_and_countries_below_the_title(self, client, mock_api):
+        trip = _trip(cities=["Alpha", "Beta"], countries=["Examplia"])
+        _route(mock_api, {"/travel/trips": [trip, _trip(id=2)], "/travel/tags": [], "/travel/settings": None})
+        html = client.get("/travel/list").text
+        assert html.count("data-trip-places") == 1
+        assert "Alpha, Beta · Examplia" in html and html.index("Example trip") < html.index("Alpha, Beta")
+
+    def test_city_and_country_filters_autocomplete_from_the_trip_locations(self, client, mock_api):
+        _route(mock_api, {"/travel/trips/locations": {"cities": ["Alpha", "Beta"], "countries": ["Examplia"]},
+                          "/travel/trips": [], "/travel/tags": [], "/travel/settings": None})
+        html = client.get("/travel").text
+        assert 'name="city" value="" list="city-options"' in html and 'name="country" value="" list="country-options"' in html
+        assert '<option value="Alpha">' in html and '<option value="Examplia">' in html
+
+    def test_filters_still_render_when_locations_are_unavailable(self, client, mock_api):
+        _route(mock_api, {"/travel/trips/locations": _status_error(500, "x"), "/travel/trips": [], "/travel/tags": [],
+                          "/travel/settings": None})
+        assert 'id="city-options"' in client.get("/travel").text
+
     def test_default_filter_is_current_and_page_size_plus_one(self, client, mock_api):
         _route(mock_api, {"/travel/trips": [], "/travel/tags": [], "/travel/settings": None})
         client.get("/travel")
@@ -194,6 +216,22 @@ class TestTripPage:
         html = client.get("/travel/1").text
         assert "Step 7" in html and "Step 8" not in html
         assert 'href="/travel/1/timeline"' in html and "See all 12 steps" in html
+
+    @pytest.mark.parametrize("path", ["/travel/1", "/travel/1/timeline"])
+    def test_timeline_highlights_todays_day(self, client, mock_api, monkeypatch, path):
+        detail = _detail()
+        detail["timeline"][0]["local"] = "2026-12-17T06:00:00"
+        _route(mock_api, {"/travel/trips/1/costs": None, "/travel/trips/1": detail, "/travel/places": []})
+        monkeypatch.setattr("app.routes.travel.local_today", lambda: date(2026, 12, 17))
+        assert client.get(path).text.count("data-today-row") == 1
+        monkeypatch.setattr("app.routes.travel.local_today", lambda: date(2026, 12, 16))
+        assert "data-today-row" not in client.get(path).text
+
+    def test_while_away_and_ideas_cards_show_an_empty_state(self, client, mock_api):
+        _route(mock_api, {"/travel/trips/1/costs": None, "/travel/trips/1": _detail(), "/travel/places": []})
+        html = client.get("/travel/1").text
+        assert 'id="while-away"' in html and "No birthdays, tasks or recurring charges" in html
+        assert 'id="ideas"' in html and "No ideas left to plan" in html
 
     def test_short_timeline_has_no_see_all_link(self, client, mock_api):
         _route(mock_api, {"/travel/trips/1/costs": None, "/travel/trips/1": _detail(), "/travel/places": []})
@@ -337,6 +375,13 @@ class TestItinerary:
 
 
 class TestPlacesPage:
+    def test_city_and_country_filters_autocomplete_from_the_place_locations(self, client, mock_api):
+        _route(mock_api, {"/travel/places/locations": {"cities": ["Alpha"], "countries": ["Examplia"]},
+                          "/travel/places": [], "/travel/tags": []})
+        html = client.get("/travel/places").text
+        assert 'list="city-options"' in html and 'list="country-options"' in html
+        assert '<option value="Alpha">' in html and '<option value="Examplia">' in html
+
     def test_lists_places_with_grade_and_tags(self, client, mock_api):
         _route(mock_api, {"/travel/places": [_place(tags=["Would return"], grade=4.5, grade_count=2)], "/travel/tags": [{"id": 1, "name": "Would return", "trip_count": 0, "place_count": 1}]})
         html = client.get("/travel/places").text
@@ -725,9 +770,9 @@ class TestIdeas:
         html = client.get("/travel/1").text
         assert "Ideas to plan" in html and "Cafe Example" in html and "wishlist" in html and "Plan on day" in html
 
-    def test_no_card_without_ideas(self, client, mock_api):
+    def test_empty_state_without_ideas(self, client, mock_api):
         _route(mock_api, {"/travel/trips/1": _detail(ideas=[]), "/travel/places": [], "/travel/trips/1/costs": None})
-        assert "Ideas to plan" not in client.get("/travel/1").text
+        assert "No ideas left to plan" in client.get("/travel/1").text
 
 
 class TestVisitEvents:
@@ -786,16 +831,15 @@ class TestWarningsPreview:
                  "end_datetime": "2026-12-18T08:00:00+00:00", "all_day": False, "recurring": False, "snoozed": False}
                 for i in range(n)]
 
-    def test_trip_page_shows_five_per_group_with_a_link_to_the_rest(self, client, mock_api):
+    def test_trip_page_shows_only_a_warnings_title_linking_to_the_full_page(self, client, mock_api):
         warnings = self._warnings(8) + self._warnings(2, "tight_connection")
         _route(mock_api, {"/travel/trips/1": _detail(warnings=warnings), "/travel/places": [], "/travel/trips/1/costs": None,
                           "/travel/trips/1/other-events": self._events(7)})
         html = client.get("/travel/1").text
-        assert "Warning 4" in html and "Warning 5" not in html
-        assert 'href="/travel/1/warnings#visit_without_stay"' in html and "See all 8" in html
-        assert 'href="/travel/1/warnings#tight_connection"' not in html
-        assert "Event 4" in html and "Event 5" not in html
-        assert 'href="/travel/1/warnings#other-events"' in html and "See all 7" in html
+        assert 'id="warnings" href="/travel/1/warnings"' in html and "Warning 0" not in html
+        assert "Worth a look" in html and "10 warnings" in html
+        assert 'id="other-events" href="/travel/1/warnings#other-events"' in html and "Event 0" not in html
+        assert "7 other calendar events during the trip" in html
 
     def test_warnings_page_lists_every_group_foldable(self, client, mock_api):
         warnings = self._warnings(8) + self._warnings(2, "tight_connection")
@@ -827,6 +871,12 @@ class TestUnlinkedPreview:
         _route(mock_api, {"/travel/trips/1": _detail(), "/travel/trips/1/unlinked-transactions": self._charges(8)})
         html = client.get("/travel/1/unlinked").text
         assert "Shop 7" in html and html.count("data-unlinked=") == 8
+
+    def test_charge_without_merchant_or_description_shows_the_bank_text(self, client, mock_api):
+        charge = {"id": 1, "date": "2026-12-18", "merchant": None, "description": None,
+                  "bank_description": "SOME SHOP 123", "amount": "5.00", "currency": "EUR", "type": "expense"}
+        _route(mock_api, {"/travel/trips/1": _detail(), "/travel/trips/1/unlinked-transactions": [charge]})
+        assert "SOME SHOP 123" in client.get("/travel/1/unlinked").text
 
     def test_unlinked_page_redirects_for_a_missing_trip(self, client, mock_api):
         _route(mock_api, {"/travel/trips/1": None})
@@ -877,16 +927,18 @@ class TestOtherEvents:
         return [{"event_id": 5, "title": "Gym", "start_datetime": "2026-12-18T07:00:00+00:00",
                  "end_datetime": "2026-12-18T08:00:00+00:00", "all_day": False, "recurring": True, "snoozed": snoozed}]
 
-    def test_warning_card_lists_the_events_and_the_snooze_state(self, client, mock_api):
+    def test_trip_card_is_a_title_and_the_warnings_page_lists_the_events_and_snooze_state(self, client, mock_api):
         _route(mock_api, {"/travel/trips/1": _detail(), "/travel/places": [], "/travel/trips/1/costs": None,
                           "/travel/trips/1/other-events": self._events(True)})
-        html = client.get("/travel/1").text
-        assert "1 other calendar event during the trip" in html and "Gym" in html and "snoozed" in html
+        trip_html = client.get("/travel/1").text
+        assert "1 other calendar event during the trip" in trip_html and "Gym" not in trip_html
+        html = client.get("/travel/1/warnings").text
+        assert "Gym" in html and "snoozed" in html
 
     def test_card_hints_at_the_setting_when_nothing_is_snoozed(self, client, mock_api):
         _route(mock_api, {"/travel/trips/1": _detail(), "/travel/places": [], "/travel/trips/1/costs": None,
                           "/travel/trips/1/other-events": self._events(False)})
-        assert "Turn on snoozing" in client.get("/travel/1").text
+        assert "Turn on snoozing" in client.get("/travel/1/warnings").text
 
     def test_no_card_without_events_or_when_the_endpoint_fails(self, client, mock_api):
         _route(mock_api, {"/travel/trips/1": _detail(), "/travel/places": [], "/travel/trips/1/costs": None,
@@ -930,11 +982,11 @@ class TestWhileAway:
         html = client.get("/travel/1").text
         assert "While you are away" in html and "Some Person" in html and "Renew insurance" in html and "9.99 EUR" in html
 
-    def test_no_card_when_nothing_happens(self, client, mock_api):
+    def test_empty_state_when_nothing_happens(self, client, mock_api):
         away = {"trip_id": 1, "birthdays": [], "tasks": [], "charges": []}
         _route(mock_api, {"/travel/trips/1": _detail(), "/travel/places": [], "/travel/trips/1/costs": None,
                           "/travel/trips/1/while-away": away})
-        assert "While you are away" not in client.get("/travel/1").text
+        assert "No birthdays, tasks or recurring charges" in client.get("/travel/1").text
 
 
 class TestPrintPage:

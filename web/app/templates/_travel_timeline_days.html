@@ -3,8 +3,8 @@
 <p class="text-sm text-gray-400">Nothing booked yet. Add flights and other tickets as legs, and hotels as stays.</p>
 {% endif %}
 {% for day, items in days.items() %}
-<div>
-  <p class="text-xs font-semibold text-gray-500 mb-1">{{ day | short_date }}</p>
+<div{% if day == today %} class="rounded-md bg-sky-50 border border-sky-200 -mx-2 px-2 py-1.5" data-today-row{% endif %}>
+  <p class="text-xs font-semibold {% if day == today %}text-sky-700{% else %}text-gray-500{% endif %} mb-1">{{ day | short_date }}{% if day == today %} · Today{% endif %}</p>
   <ul class="space-y-1.5">
     {% for item in items %}
     <li class="flex items-start gap-3 text-sm {% if item.warnings %}rounded-md bg-amber-50 border border-amber-200 -mx-2 px-2 py-1.5{% endif %}"{% if item.warnings %} data-warning-row{% endif %}>

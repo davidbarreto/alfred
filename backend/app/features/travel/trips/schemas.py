@@ -88,6 +88,20 @@ class TripRead(BaseModel):
         return trip_status(self.start_date, self.end_date, local_today())
 
 
+class TripListItem(TripRead):
+    """A trip in the list: also the cities and countries of the places it stays at or visits."""
+
+    cities: list[str] = []
+    countries: list[str] = []
+
+
+class TripLocations(BaseModel):
+    """Every city and country of a place a trip stays at or visits, for the list filters' autocomplete."""
+
+    cities: list[str]
+    countries: list[str]
+
+
 class TripFilters:
     def __init__(
         self,

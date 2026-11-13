@@ -15,7 +15,9 @@ from app.features.travel.stays.schemas import StayRead
 from app.features.travel.tags.repository import TravelTagRepository
 from app.features.travel.transaction_links.repository import TransactionLinkRepository
 from app.features.travel.trips.repository import TripRepository
-from app.features.travel.trips.schemas import TripCreate, TripDetail, TripFilters, TripRead, TripUpdate
+from app.features.travel.trips.schemas import (
+    TripCreate, TripDetail, TripFilters, TripListItem, TripLocations, TripRead, TripUpdate,
+)
 from app.features.travel.visits.repository import VisitRepository
 from app.features.travel.visits.schemas import VisitRead
 from app.features.travel.trips.map_points import MapScope, TripMap, build_trip_map
@@ -50,10 +52,19 @@ class TripService:
         # The local calendar copy only: warnings never call Google.
         self._calendar = CalendarEventService(provider=None, session=session)
 
-    async def get_trips(self, filters: TripFilters) -> list[TripRead]:
+    async def get_trips(self, filters: TripFilters) -> list[TripListItem]:
         trips = await self._repo.get_trips(filters, local_today())
         logger.debug("Trips listed: count=%d status=%s", len(trips), filters.status)
-        return [TripRead.model_validate(t) for t in trips]
+        locations = await self._repo.get_trip_locations([t.id for t in trips]) if trips else {}
+        items = []
+        for trip in trips:
+            cities, countries = locations.get(trip.id, ([], []))
+            items.append(TripListItem.model_validate(trip).model_copy(update={"cities": cities, "countries": countries}))
+        return items
+
+    async def get_locations(self) -> TripLocations:
+        cities, countries = await self._repo.get_locations()
+        return TripLocations(cities=cities, countries=countries)
 
     async def get_trip(self, trip_id: int) -> TripRead | None:
         trip = await self._repo.get_trip(trip_id)

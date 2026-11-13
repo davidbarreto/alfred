@@ -7,12 +7,12 @@ from fastapi.testclient import TestClient
 from app.features.travel.errors import TravelNotFoundError
 from app.features.travel.legs.schemas import LegRead
 from app.features.travel.places.detail import PlaceDetail
-from app.features.travel.places.schemas import PlaceRead
+from app.features.travel.places.schemas import PlaceLocations, PlaceRead
 from app.features.travel.places.service import PlaceInUseError
 from app.features.travel.stays.schemas import StayRead
 from app.features.travel.tags.schemas import TravelTagRead, TravelTagUsage
 from app.features.travel.tags.service import TravelTagNameTakenError
-from app.features.travel.trips.schemas import TripDetail, TripRead
+from app.features.travel.trips.schemas import TripDetail, TripListItem, TripLocations, TripRead
 from app.features.travel.visits.schemas import VisitPlace, VisitRead
 
 AUTH = {"Authorization": "Bearer test-api-token"}
@@ -117,6 +117,18 @@ class TestTrips:
         service.get_trips.return_value = []
         client.get("/travel/trips", headers=AUTH)
         assert service.get_trips.await_args.args[0].status == "current"
+
+    def test_list_exposes_cities_and_countries(self, trips):
+        client, service = trips
+        service.get_trips.return_value = [TripListItem(**_trip().model_dump(exclude={"status"}), cities=["Alpha"], countries=["Examplia"])]
+        body = client.get("/travel/trips", headers=AUTH).json()[0]
+        assert (body["cities"], body["countries"]) == (["Alpha"], ["Examplia"])
+
+    def test_locations_for_the_filters_autocomplete(self, trips):
+        client, service = trips
+        service.get_locations.return_value = TripLocations(cities=["Alpha"], countries=["Examplia"])
+        r = client.get("/travel/trips/locations", headers=AUTH)
+        assert r.status_code == 200 and r.json() == {"cities": ["Alpha"], "countries": ["Examplia"]}
 
     def test_unknown_status_is_422(self, trips):
         client, _ = trips
@@ -250,6 +262,12 @@ class TestStays:
 
 
 class TestPlaces:
+    def test_locations_for_the_filters_autocomplete(self, places):
+        client, service = places
+        service.get_locations.return_value = PlaceLocations(cities=["Alpha"], countries=["Examplia"])
+        r = client.get("/travel/places/locations", headers=AUTH)
+        assert r.status_code == 200 and r.json() == {"cities": ["Alpha"], "countries": ["Examplia"]}
+
     def test_create(self, places):
         client, service = places
         service.create_place.return_value = _place()

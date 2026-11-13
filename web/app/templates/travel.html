@@ -108,9 +108,11 @@
     <label class="space-y-1"><span class="block text-xs text-gray-500">Search</span>
       <input id="filter-q" name="q" value="{{ filters.q }}" class="input input-sm input-bordered w-44" placeholder="Trip name"></label>
     <label class="space-y-1"><span class="block text-xs text-gray-500">City</span>
-      <input name="city" value="{{ filters.city }}" class="input input-sm input-bordered w-32" placeholder="Visited or stayed"></label>
+      <input name="city" value="{{ filters.city }}" list="city-options" autocomplete="off" class="input input-sm input-bordered w-32" placeholder="Visited or stayed">
+      <datalist id="city-options">{% for c in locations.cities %}<option value="{{ c }}">{% endfor %}</datalist></label>
     <label class="space-y-1"><span class="block text-xs text-gray-500">Country</span>
-      <input name="country" value="{{ filters.country }}" class="input input-sm input-bordered w-32"></label>
+      <input name="country" value="{{ filters.country }}" list="country-options" autocomplete="off" class="input input-sm input-bordered w-32">
+      <datalist id="country-options">{% for c in locations.countries %}<option value="{{ c }}">{% endfor %}</datalist></label>
     <label class="space-y-1"><span class="block text-xs text-gray-500">From</span>
       <input name="date_from" type="date" value="{{ filters.date_from }}" class="input input-sm input-bordered"></label>
     <label class="space-y-1"><span class="block text-xs text-gray-500">To</span>

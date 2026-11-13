@@ -22,25 +22,25 @@
   <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
     <a href="/tasks/" class="card bg-white hover:shadow-sm transition-shadow">
       <div class="card-body p-4">
-        <p class="text-xs text-gray-400 uppercase tracking-wide">Active tasks</p>
+        <p class="text-xs text-gray-400 uppercase tracking-wide"><i class="ti ti-checklist mr-1"></i>Active tasks</p>
         <p class="text-2xl font-semibold text-[#378ADD] mt-1">{{ task_count }}</p>
       </div>
     </a>
     <a href="/shopping/" class="card bg-white hover:shadow-sm transition-shadow">
       <div class="card-body p-4">
-        <p class="text-xs text-gray-400 uppercase tracking-wide">Shopping items</p>
+        <p class="text-xs text-gray-400 uppercase tracking-wide"><i class="ti ti-shopping-cart mr-1"></i>Shopping items</p>
         <p class="text-2xl font-semibold text-gray-900 mt-1">{{ shopping_items | length }}</p>
       </div>
     </a>
     <a href="/calendar/" class="card bg-white hover:shadow-sm transition-shadow">
       <div class="card-body p-4">
-        <p class="text-xs text-gray-400 uppercase tracking-wide">Events today</p>
+        <p class="text-xs text-gray-400 uppercase tracking-wide"><i class="ti ti-calendar mr-1"></i>Events today</p>
         <p class="text-2xl font-semibold text-gray-900 mt-1">{{ events | length }}</p>
       </div>
     </a>
     <a href="/finance/" class="card bg-white hover:shadow-sm transition-shadow">
       <div class="card-body p-4">
-        <p class="text-xs text-gray-400 uppercase tracking-wide">Monthly spend</p>
+        <p class="text-xs text-gray-400 uppercase tracking-wide"><i class="ti ti-coin-euro mr-1"></i>Monthly spend</p>
         <p class="text-2xl font-semibold text-gray-900 mt-1">
           {% if spending %}€{{ spending.total | money(0) }}{% else %}—{% endif %}
         </p>
@@ -53,7 +53,7 @@
     <div class="card bg-white">
       <div class="card-body p-4">
         <div class="flex items-center justify-between mb-3">
-          <h2 class="text-sm font-medium text-gray-900">Today's plan</h2>
+          <h2 class="text-sm font-medium text-gray-900"><i class="ti ti-calendar-time mr-1"></i>Today's plan</h2>
           <a href="/plan" class="text-xs text-[#378ADD] hover:underline">
             {% if plan and plan.more %}See all {{ plan.total }} →{% else %}Plan →{% endif %}
           </a>
@@ -80,7 +80,7 @@
     <div class="card bg-white">
       <div class="card-body p-4">
         <div class="flex items-center justify-between mb-3">
-          <h2 class="text-sm font-medium text-gray-900">{% if trip and trip.ongoing %}Current trip{% else %}Next trip{% endif %}</h2>
+          <h2 class="text-sm font-medium text-gray-900"><i class="ti ti-plane mr-1"></i>{% if trip and trip.ongoing %}Current trip{% else %}Next trip{% endif %}</h2>
           <a href="{% if trip %}/travel/{{ trip.id }}{% else %}/travel{% endif %}" class="text-xs text-[#378ADD] hover:underline">Travel →</a>
         </div>
         {% if trip %}
@@ -109,7 +109,7 @@
   <div class="card bg-white">
     <div class="card-body p-4">
       <div class="flex items-center justify-between mb-3">
-        <h2 class="text-sm font-medium text-gray-900">Language</h2>
+        <h2 class="text-sm font-medium text-gray-900"><i class="ti ti-language mr-1"></i>Language</h2>
         <a href="/language/" class="text-xs text-[#378ADD] hover:underline">Language →</a>
       </div>
       <ul class="space-y-2">
@@ -132,7 +132,7 @@
     <div class="card bg-white">
       <div class="card-body p-4">
         <div class="flex items-center justify-between mb-3">
-          <h2 class="text-sm font-medium text-gray-900">Active tasks</h2>
+          <h2 class="text-sm font-medium text-gray-900"><i class="ti ti-checklist mr-1"></i>Active tasks</h2>
           <a href="/tasks/" class="text-xs text-[#378ADD] hover:underline">View all →</a>
         </div>
         {% if tasks %}
@@ -159,7 +159,7 @@
     <div class="card bg-white">
       <div class="card-body p-4">
         <div class="flex items-center justify-between mb-3">
-          <h2 class="text-sm font-medium text-gray-900">Shopping</h2>
+          <h2 class="text-sm font-medium text-gray-900"><i class="ti ti-shopping-cart mr-1"></i>Shopping</h2>
           <a href="/shopping/" class="text-xs text-[#378ADD] hover:underline">View all →</a>
         </div>
         {% if shopping_items %}
@@ -185,7 +185,7 @@
   <!-- Today's events strip -->
   <div>
     <div class="flex items-center justify-between mb-3">
-      <h2 class="text-sm font-medium text-gray-900">Today's events</h2>
+      <h2 class="text-sm font-medium text-gray-900"><i class="ti ti-calendar mr-1"></i>Today's events</h2>
       <a href="/calendar/" class="text-xs text-[#378ADD] hover:underline">Calendar →</a>
     </div>
     {% if events %}
@@ -216,7 +216,7 @@
     <div class="card bg-white">
       <div class="card-body p-4">
         <div class="flex items-center justify-between mb-3">
-          <h2 class="text-sm font-medium text-gray-900">Budgets</h2>
+          <h2 class="text-sm font-medium text-gray-900"><i class="ti ti-wallet mr-1"></i>Budgets</h2>
           <a href="/finance/" class="text-xs text-[#378ADD] hover:underline">Finance →</a>
         </div>
         {% if budgets %}
@@ -243,7 +243,7 @@
     <div class="card bg-white">
       <div class="card-body p-4">
         <div class="flex items-center justify-between mb-3">
-          <h2 class="text-sm font-medium text-gray-900">Birthdays</h2>
+          <h2 class="text-sm font-medium text-gray-900"><i class="ti ti-cake mr-1"></i>Birthdays</h2>
           <a href="/contacts/" class="text-xs text-[#378ADD] hover:underline">Contacts →</a>
         </div>
         {% if birthdays %}
@@ -264,12 +264,73 @@
     </div>
   </div>
 
+  <!-- Weather + holidays -->
+  <div class="grid grid-cols-2 gap-4">
+    <div class="card bg-white">
+      <div class="card-body p-4">
+        <h2 class="text-sm font-medium text-gray-900 mb-3"><i class="ti ti-cloud mr-1"></i>Weather</h2>
+        {% if weather %}
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <p class="text-xs text-gray-400">High / Low</p>
+            <p class="text-sm font-medium text-gray-900 mt-0.5">{{ weather.temperature_max_c | round(1) }}° / {{ weather.temperature_min_c | round(1) }}°</p>
+          </div>
+          <div>
+            <p class="text-xs text-gray-400">Feels like</p>
+            <p class="text-sm font-medium text-gray-900 mt-0.5">{{ weather.feels_like_max_c | round(1) }}°</p>
+          </div>
+          <div>
+            <p class="text-xs text-gray-400">Rain chance</p>
+            <p class="text-sm font-medium text-gray-900 mt-0.5">{{ weather.precipitation_probability }}%</p>
+          </div>
+          <div>
+            <p class="text-xs text-gray-400">Wind</p>
+            <p class="text-sm font-medium text-gray-900 mt-0.5">{{ weather.wind_speed_max_kmh | round(0) | int }} km/h</p>
+          </div>
+        </div>
+        <p class="text-sm text-gray-600 mt-3">{{ weather.description }}</p>
+        {% if weather.advice %}
+        <ul class="mt-2 space-y-1">
+          {% for tip in weather.advice %}
+          <li class="text-xs text-gray-500 flex items-start gap-1.5">
+            <i class="ti ti-point-filled text-gray-300 mt-0.5 flex-shrink-0"></i>{{ tip }}
+          </li>
+          {% endfor %}
+        </ul>
+        {% endif %}
+        {% else %}
+        <p class="text-sm text-gray-400 py-2">Weather unavailable.</p>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="card bg-white">
+      <div class="card-body p-4">
+        <h2 class="text-sm font-medium text-gray-900 mb-3"><i class="ti ti-flag mr-1"></i>Upcoming holidays</h2>
+        {% if holidays %}
+        <ul class="space-y-2">
+          {% for h in holidays %}
+          <li class="flex items-center gap-2 text-sm min-w-0">
+            <span class="flex-1 truncate text-gray-700">{{ h.local_name }}</span>
+            <span class="text-xs flex-shrink-0 {% if h.days_until <= 1 %}text-[#BA7517]{% else %}text-gray-400{% endif %}">
+              {% if h.days_until == 0 %}Today{% elif h.days_until == 1 %}Tomorrow{% else %}in {{ h.days_until }} days{% endif %}
+            </span>
+          </li>
+          {% endfor %}
+        </ul>
+        {% else %}
+        <p class="text-sm text-gray-400 py-2">No holidays in the next 7 days.</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
   <!-- Study plans -->
   {% if study %}
   <div class="card bg-white">
     <div class="card-body p-4">
       <div class="flex items-center justify-between mb-3">
-        <h2 class="text-sm font-medium text-gray-900">Study</h2>
+        <h2 class="text-sm font-medium text-gray-900"><i class="ti ti-school mr-1"></i>Study</h2>
         <a href="/study" class="text-xs text-[#378ADD] hover:underline">Study →</a>
       </div>
       <ul class="space-y-3">
@@ -294,7 +355,7 @@
   {% if metrics %}
   <div>
     <div class="flex items-center justify-between mb-3">
-      <h2 class="text-sm font-medium text-gray-900">Metrics · last 14 days</h2>
+      <h2 class="text-sm font-medium text-gray-900"><i class="ti ti-chart-line mr-1"></i>Metrics · last 14 days</h2>
       <a href="/metrics" class="text-xs text-[#378ADD] hover:underline">All metrics →</a>
     </div>
     <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -321,7 +382,7 @@
   <div class="card bg-white">
     <div class="card-body p-4">
       <div class="flex items-center justify-between mb-3">
-        <h2 class="text-sm font-medium text-gray-900">{{ 'Evening digest' if briefing_kind == 'evening' else 'Morning briefing' }}{% if briefing.date != today %} <span class="text-xs font-normal text-gray-400">· {{ briefing.date | short_date }}</span>{% endif %}</h2>
+        <h2 class="text-sm font-medium text-gray-900"><i class="ti {{ 'ti-moon' if briefing_kind == 'evening' else 'ti-sun' }} mr-1"></i>{{ 'Evening digest' if briefing_kind == 'evening' else 'Morning briefing' }}{% if briefing.date != today %} <span class="text-xs font-normal text-gray-400">· {{ briefing.date | short_date }}</span>{% endif %}</h2>
         <a href="{{ '/briefing/evening' if briefing_kind == 'evening' else '/briefing/' }}" class="text-xs text-[#378ADD] hover:underline">Read full →</a>
       </div>
       <div class="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed" style="display:-webkit-box;-webkit-line-clamp:6;-webkit-box-orient:vertical;overflow:hidden">{{ briefing.text }}</div>
@@ -333,7 +394,7 @@
   <div class="card bg-white">
     <div class="card-body p-4 flex flex-row items-center justify-between">
       <div>
-        <p class="text-sm font-medium text-gray-900">Chat with Alfred</p>
+        <p class="text-sm font-medium text-gray-900"><i class="ti ti-message-circle mr-1"></i>Chat with Alfred</p>
         <p class="text-xs text-gray-400 mt-0.5">Ask anything or give instructions</p>
       </div>
       <a href="/chat/" class="btn btn-sm btn-primary">Open chat →</a>

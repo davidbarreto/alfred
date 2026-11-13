@@ -51,10 +51,14 @@ All paginated sections follow the same offset-based pattern:
 | Current / next trip | `/travel/trips?status=current` (nearest by start date) + the trip's warning count, linking to `/travel/{id}/warnings` |
 | Language | `/language/tracks` + `/language/sessions/daily-progress`: today's reviews against each track's quota (no due counts: that needs a call per track) |
 | Budgets | `/finance/budgets/status`: the 3 categories closest to their limit |
+| Weather | Today's forecast from the structured `/briefing/morning` (no LLM call); empty card when unavailable |
+| Holidays | Public holidays in the next 7 days, also from `/briefing/morning` |
 | Birthdays | Contacts with a birthday in the next 30 days (computed in the portal; 29 Feb falls on 1 Mar in common years), 5 max |
 | Study | Active study plans from `/study/plans/overview`: progress and next open item |
 | Metrics | The 4 most-used active series as 14-day sparklines (inline SVG, count series by entries per day, others by daily total) |
-| Briefing | The evening digest from 21:30 (until tonight's is saved it falls back to the morning briefing), the morning briefing otherwise. Latest saved one from `/briefing/history` (never generates one, never calls `/briefing/morning`: the saved row is text only), clamped to 6 lines. Weather is read from it, not shown as its own card |
+| Briefing | The evening digest from 21:30 (until tonight's is saved it falls back to the morning briefing), the morning briefing otherwise. Latest saved one from `/briefing/history` (never generates one: the saved row is text only), clamped to 6 lines |
+
+Every card heading carries a Tabler icon. The morning briefing page keeps only the AI summary and upcoming events; weather, holidays, birthdays, priority tasks and pending shopping live on the dashboard.
 
 ## Pages
 

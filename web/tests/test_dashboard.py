@@ -251,6 +251,12 @@ def _backend(overrides=None):
         "/travel/trips/7/other-events": [],
         "/language/tracks": [{"id": 1, "name": "Spanish"}, {"id": 2, "name": "Paused one"}],
         "/language/sessions/daily-progress": [{"track_id": 1, "track_code": "es", "daily_quota": 5, "completed_today": 2, "quota_met": False}],
+        "/briefing/morning": {
+            "weather": {"temperature_max_c": 24.4, "temperature_min_c": 15.1, "feels_like_max_c": 23.0,
+                        "precipitation_probability": 10, "wind_speed_max_kmh": 12.3,
+                        "description": "Partly cloudy", "advice": ["Bring a light jacket"]},
+            "holidays": [{"name": "Christmas Day", "local_name": "Natal", "days_until": 3}],
+        },
         **(overrides or {}),
     }
 
@@ -299,6 +305,9 @@ class TestDashboardPage:
         assert "Graphs" in text and "Next: BFS" in text
         assert "coffee" in text and "Good morning David" in text
         assert "Spanish" in text and "2/5" in text and "Paused one" not in text
+        assert "Partly cloudy" in text and "Bring a light jacket" in text
+        assert "Natal" in text and "in 3 days" in text
+        assert "ti-cake" in text and "ti-cloud" in text and "ti-flag" in text
         assert "glance" not in text
 
     def test_one_failing_module_does_not_blank_the_page(self, client, mock_api):
@@ -312,6 +321,15 @@ class TestDashboardPage:
 
         assert resp.status_code == 200
         assert "No plan for today" in resp.text and "No upcoming trips" in resp.text
+        assert "Pay rent" in resp.text
+
+    def test_failing_morning_briefing_only_empties_weather_and_holidays(self, client, mock_api):
+        mock_api["get"].side_effect = _backend({"/briefing/morning": httpx.ConnectError("down")})
+
+        resp = client.get("/")
+
+        assert resp.status_code == 200
+        assert "Weather unavailable" in resp.text and "No holidays in the next 7 days" in resp.text
         assert "Pay rent" in resp.text
 
     def test_quiet_dashboard_has_no_alert_strip(self, client, mock_api):

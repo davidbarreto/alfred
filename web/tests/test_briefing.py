@@ -15,9 +15,8 @@ class TestBriefingPage:
                 "description": "Partly cloudy",
                 "advice": ["Bring a light jacket"],
             },
-            "tasks": [{"title": "Ship the feature", "is_today": True, "is_overdue": False,
-                       "urgency": "URGENT", "priority": "HIGH", "deadline": None}],
-            "events": [],
+            "events": [{"title": "Dentist", "date": "2026-07-08", "start_time": "09:30:00", "all_day": False,
+                        "is_today": True, "days_until": 0, "location": None}],
             "birthdays": [],
             "holidays": [],
         }
@@ -26,8 +25,10 @@ class TestBriefingPage:
 
         assert resp.status_code == 200
         assert "2026-07-08" in resp.text
-        assert "Partly cloudy" in resp.text
-        assert "Ship the feature" in resp.text
+        assert "Dentist" in resp.text
+        assert "Partly cloudy" not in resp.text
+        assert "Priority tasks" not in resp.text and "Upcoming birthdays" not in resp.text
+        assert "Upcoming holidays" not in resp.text and "Pending shopping" not in resp.text
         mock_api["get"].assert_awaited_once_with("/briefing/morning")
 
     def test_renders_empty_state_when_no_briefing_data(self, client, mock_api):

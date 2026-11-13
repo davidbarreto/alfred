@@ -216,6 +216,28 @@ class TestLanguageCard:
         assert cards.language_card(None, None) == []
 
 
+class TestTodaysEvents:
+    def _event(self, title, start, end, all_day=False):
+        return {"title": title, "start_datetime": start, "end_datetime": end, "all_day": all_day}
+
+    def test_includes_events_that_started_earlier_and_still_run(self):
+        events = [
+            self._event("Standup", "2026-11-13T09:00:00", "2026-11-13T09:30:00"),
+            self._event("Conference", "2026-11-12T09:00:00", "2026-11-14T17:00:00"),
+            self._event("Finished trip", "2026-11-05T09:00:00", "2026-11-12T17:00:00"),
+            self._event("Tomorrow", "2026-11-14T09:00:00", "2026-11-14T10:00:00"),
+        ]
+
+        found = cards.todays_events(events, TODAY)
+
+        assert [e["title"] for e in found] == ["Standup", "Conference"]
+        assert found[0]["ends_on"] is None
+        assert found[1]["ends_on"] == date(2026, 11, 14)
+
+    def test_no_events(self):
+        assert cards.todays_events(None, TODAY) == []
+
+
 class TestUpcomingEvents:
     def _event(self, title, is_today=False):
         return {"title": title, "is_today": is_today}
@@ -331,6 +353,24 @@ class TestDashboardPage:
         assert "Upcoming events" in text and "Dentist" in text and "Clinic" in text and "Standup" not in text
         assert "ti-cake" in text and "ti-cloud" in text and "ti-flag" in text
         assert "glance" not in text
+
+    def test_running_multi_day_event_shows_until_and_the_query_looks_back(self, client, mock_api):
+        running = {"title": "Conference", "start_datetime": "2026-11-12T09:00:00", "end_datetime": "2026-11-14T17:00:00",
+                   "all_day": False, "location": None}
+        calls = []
+        backend = _backend({"/organizer/calendar-events": [running]})
+
+        def spy(path, params=None):
+            calls.append((path, params))
+            return backend(path, params)
+
+        mock_api["get"].side_effect = spy
+
+        text = client.get("/").text
+
+        assert "Conference" in text and "Until 14 Nov" in text
+        params = next(p for path, p in calls if path == "/organizer/calendar-events")
+        assert params["start_from"] < "2026-11-13" and params["start_from"] >= "2026-10-29"
 
     def test_one_failing_module_does_not_blank_the_page(self, client, mock_api):
         mock_api["get"].side_effect = _backend({

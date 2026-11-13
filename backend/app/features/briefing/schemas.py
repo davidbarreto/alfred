@@ -31,6 +31,7 @@ class EventBriefItem(BaseModel):
     id: int
     title: str
     date: date
+    end_date: date | None = None
     start_time: str
     end_time: str | None
     location: str | None

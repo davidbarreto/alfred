@@ -31,6 +31,9 @@ _ACTIVE_STATUSES = {"TODO", "DOING"}
 _PRIORITY_ORDER = {"HIGH": 0, "MEDIUM": 1, "LOW": 2}
 _HOLIDAY_LOOKAHEAD_DAYS = 7
 _LOOKAHEAD_DAYS = 3
+# How far back to look for multi-day events that started earlier but are still running today
+_EVENT_LOOKBACK_DAYS = 14
+_EVENT_LIMIT = 500
 
 
 class MorningBriefingSummaryService:
@@ -145,12 +148,17 @@ class MorningBriefingSummaryService:
 
     async def _fetch_events(self, today: date, today_start: datetime, lookahead_end: datetime) -> list[EventBriefItem]:
         service = CalendarEventService(provider=None, session=self._session)
-        event_filter = EventFilters(start_from=today_start, start_to=lookahead_end)
+        event_filter = EventFilters(
+            start_from=today_start - timedelta(days=_EVENT_LOOKBACK_DAYS), start_to=lookahead_end, limit=_EVENT_LIMIT
+        )
         raw_events = await service.get_events(event_filter)
 
         items = []
         for event in raw_events:
+            if event.end_datetime < today_start:
+                continue
             event_date = event.start_datetime.date()
+            end_date = event.end_datetime.date()
             if event.all_day:
                 start_time = "All day"
                 end_time = None
@@ -163,13 +171,14 @@ class MorningBriefingSummaryService:
                     id=event.id,
                     title=event.title,
                     date=event_date,
+                    end_date=end_date,
                     start_time=start_time,
                     end_time=end_time,
                     location=event.location,
                     description=event.description,
                     all_day=event.all_day,
-                    is_today=event_date == today,
-                    days_until=(event_date - today).days,
+                    is_today=event_date <= today <= end_date,
+                    days_until=max((event_date - today).days, 0),
                 )
             )
 

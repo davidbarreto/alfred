@@ -198,6 +198,14 @@ class TestBuildContext:
         context = _build_context(briefing)
         assert "10:00 - 11:00" in context
 
+    def test_running_multi_day_event_says_until_instead_of_times(self):
+        event = _make_event_item(
+            title="Conference", date=date(2026, 6, 22), end_date=date(2026, 6, 24), start_time="09:00", end_time="17:00"
+        )
+        context = _build_context(_make_briefing(events=[event]))
+        assert "Conference | until Wed 24 Jun" in context
+        assert "09:00 - 17:00" not in context
+
     def test_includes_weather_description(self):
         briefing = _make_briefing()
         context = _build_context(briefing)

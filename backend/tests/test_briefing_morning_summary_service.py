@@ -2,6 +2,7 @@ from datetime import date, datetime, timedelta, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from freezegun import freeze_time
 
 from app.features.briefing.schemas import HolidayItem, WeatherForecast
 from app.features.briefing.morning_summary_service import MorningBriefingSummaryService
@@ -64,6 +65,12 @@ def _make_event_orm(
     event.location = location
     event.description = description
     return event
+
+
+@pytest.fixture(autouse=True)
+def _frozen_today():
+    with freeze_time("2026-06-23 12:00:00"):
+        yield
 
 
 @pytest.fixture
@@ -380,6 +387,41 @@ class TestBuild:
 
         assert result.events[0].start_time == "All day"
         assert result.events[0].end_time is None
+
+    @pytest.mark.asyncio
+    async def test_event_started_earlier_and_still_running_counts_as_today(self, service):
+        running = _make_event_orm(
+            id=1, title="Conference", start_datetime=datetime(2026, 6, 22, 9, 0), end_datetime=datetime(2026, 6, 24, 17, 0)
+        )
+        finished = _make_event_orm(
+            id=2, title="Old trip", start_datetime=datetime(2026, 6, 15, 9, 0), end_datetime=datetime(2026, 6, 20, 17, 0)
+        )
+        with (
+            patch("app.features.briefing.morning_summary_service.TaskRepository") as MockTaskRepo,
+            patch("app.features.briefing.morning_summary_service.CalendarEventService") as MockEventService,
+        ):
+            MockTaskRepo.return_value.get_tasks = AsyncMock(return_value=[])
+            MockEventService.return_value.get_events = AsyncMock(return_value=[finished, running])
+
+            result = await service.build()
+
+        assert [e.title for e in result.events] == ["Conference"]
+        assert result.events[0].is_today is True
+        assert result.events[0].end_date == date(2026, 6, 24)
+
+    @pytest.mark.asyncio
+    async def test_events_query_looks_back_for_running_events(self, service):
+        with (
+            patch("app.features.briefing.morning_summary_service.TaskRepository") as MockTaskRepo,
+            patch("app.features.briefing.morning_summary_service.CalendarEventService") as MockEventService,
+        ):
+            MockTaskRepo.return_value.get_tasks = AsyncMock(return_value=[])
+            MockEventService.return_value.get_events = AsyncMock(return_value=[])
+
+            await service.build()
+
+        event_filter = MockEventService.return_value.get_events.await_args.args[0]
+        assert event_filter.start_from.date() < date(2026, 6, 23)
 
     @pytest.mark.asyncio
     async def test_events_within_lookahead_marked_with_days_until(self, service):

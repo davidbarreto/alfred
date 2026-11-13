@@ -144,6 +144,21 @@ def upcoming_birthdays(contacts: list[dict] | None, today: date) -> list[dict]:
     return found[:CARD_CAP]
 
 
+def todays_events(events: list[dict] | None, today: date) -> list[dict]:
+    """Events happening today: those starting today plus multi-day ones that started earlier and still run.
+
+    The API returns naive local ISO datetimes. Running events get `ends_on` so the card can say "until ..."
+    instead of a clock range that belongs to another day.
+    """
+    iso = today.isoformat()
+    found = []
+    for event in events or []:
+        starts, ends = event["start_datetime"][:10], event["end_datetime"][:10]
+        if starts <= iso <= ends:
+            found.append({**event, "ends_on": date.fromisoformat(ends) if starts < iso else None})
+    return found
+
+
 def upcoming_events(events: list[dict] | None) -> dict:
     """Events after today from the morning briefing's look-ahead (today's have their own strip), capped."""
     later = [e for e in events or [] if not e.get("is_today")]

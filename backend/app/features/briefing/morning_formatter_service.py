@@ -70,7 +70,10 @@ def _build_context(briefing: MorningBriefing) -> str:
     lines.append(f"Events today ({len(today_events)}):")
     if today_events:
         for event in today_events[:_MAX_EVENTS_TODAY]:
-            time_str = event.start_time if event.all_day else f"{event.start_time} - {event.end_time}"
+            if event.date < briefing.date and event.end_date:
+                time_str = f"until {event.end_date.strftime('%a %d %b')}"
+            else:
+                time_str = event.start_time if event.all_day else f"{event.start_time} - {event.end_time}"
             location = f" at {event.location}" if event.location else ""
             lines.append(f"  {event.title} | {time_str}{location}")
         _append_overflow_note(lines, len(today_events), _MAX_EVENTS_TODAY, "events today")

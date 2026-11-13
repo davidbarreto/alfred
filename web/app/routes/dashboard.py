@@ -13,6 +13,9 @@ from app.templates_config import templates
 router = APIRouter()
 
 _TASK_SCAN_LIMIT = 200
+# Multi-day events that started earlier still show today: look back this far for them
+_EVENT_LOOKBACK_DAYS = 14
+_EVENT_LIMIT = 500
 
 
 async def _optional(path: str, params: dict | None = None):
@@ -47,7 +50,8 @@ async def _trip_card() -> dict | None:
 async def dashboard(request: Request):
     now = local_now()
     today = now.date()
-    today_start = now.replace(hour=0, minute=0, second=0, microsecond=0).isoformat()
+    today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    events_from = (today_start - timedelta(days=_EVENT_LOOKBACK_DAYS)).isoformat()
     today_end = now.replace(hour=23, minute=59, second=59, microsecond=0).isoformat()
 
     briefing_kind = cards.briefing_type(now)
@@ -56,7 +60,7 @@ async def dashboard(request: Request):
      trip, language_tracks, language_progress, morning) = await asyncio.gather(
         _optional("/organizer/tasks", {"status": "TODO", "limit": _TASK_SCAN_LIMIT}),
         _optional("/organizer/shopping", {"status": "pending", "limit": 8}),
-        _optional("/organizer/calendar-events", {"start_from": today_start, "start_to": today_end, "limit": 10}),
+        _optional("/organizer/calendar-events", {"start_from": events_from, "start_to": today_end, "limit": _EVENT_LIMIT}),
         _optional("/finance/transactions/report", {"period": "this month"}),
         _optional("/planning/saved", {"from": today.isoformat(), "to": today.isoformat()}),
         _optional("/finance/budgets/status"),
@@ -84,7 +88,7 @@ async def dashboard(request: Request):
         "task_count": len(open_tasks),
         "alerts": cards.task_alerts(open_tasks, now),
         "shopping_items": shopping_items or [],
-        "events": events or [],
+        "events": cards.todays_events(events, today),
         "spending": spending,
         "plan": cards.plan_card(saved_plans, today, now.strftime("%H:%M")),
         "trip": trip,

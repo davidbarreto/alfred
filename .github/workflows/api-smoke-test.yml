@@ -25,10 +25,35 @@ name: API Smoke Test
 # so most of their Postman tests should still pass; a few assertions that
 # expect real LLM output will legitimately fail and can be pruned later.
 
+# Triggers: every push to main that touches the backend, the Postman collections or this
+# workflow (it runs next to the deploy workflows, it never gates them), plus a daily run and a
+# manual one. A newer push cancels a run still in progress for an older commit.
+#
+# Extra checks that only run when they apply:
+#   - migration round trip: when a push adds (or edits) a file in backend/alembic/versions, the
+#     running stack is downgraded by that many revisions and upgraded to head again.
+#   - real-DB tests: pytest tests marked `db` run inside the api container against the same DB.
 on:
+  push:
+    branches: [main]
+    paths:
+      - 'backend/**'
+      - 'postman/**'
+      - 'infra/docker-compose.ci.yml'
+      - 'infra/postgres-init/**'
+      - '.github/workflows/api-smoke-test.yml'
   schedule:
     - cron: '0 6 * * *' # every day 06:00 UTC
   workflow_dispatch:
+    inputs:
+      migration_roundtrip:
+        description: 'Also downgrade the newest migration and upgrade again'
+        type: boolean
+        default: false
+
+concurrency:
+  group: api-smoke-test-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   check-changes:
@@ -85,6 +110,27 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # How many revisions the round trip must undo: the migration files this push added, or 1
+      # if it only edited existing ones. 0 means "skip the round trip".
+      - name: Detect new migrations
+        id: migrations
+        run: |
+          set -euo pipefail
+          count=0
+          before="${{ github.event.before }}"
+          if [ "${{ github.event_name }}" = "push" ] && [ -n "$before" ] \
+              && ! echo "$before" | grep -qE '^0+$' && git cat-file -e "$before^{commit}" 2>/dev/null; then
+            added=$(git diff --diff-filter=A --name-only "$before" "${{ github.sha }}" -- backend/alembic/versions | grep -c '\.py$' || true)
+            changed=$(git diff --name-only "$before" "${{ github.sha }}" -- backend/alembic/versions | grep -c '\.py$' || true)
+            if [ "$added" -gt 0 ]; then count=$added; elif [ "$changed" -gt 0 ]; then count=1; fi
+          elif [ "${{ github.event_name }}" = "workflow_dispatch" ] && [ "${{ inputs.migration_roundtrip }}" = "true" ]; then
+            count=1
+          fi
+          echo "Migrations to round-trip: $count"
+          echo "count=$count" >> "$GITHUB_OUTPUT"
 
       - name: Build and start API + DB
         working-directory: infra
@@ -106,6 +152,27 @@ jobs:
           docker compose -f docker-compose.ci.yml logs api
           exit 1
 
+      - name: Migration round trip (downgrade, then upgrade to head)
+        if: steps.migrations.outputs.count != '0'
+        working-directory: infra
+        run: |
+          set -euo pipefail
+          n="${{ steps.migrations.outputs.count }}"
+          docker compose -f docker-compose.ci.yml exec -T api sh -c "
+            set -e
+            echo '--- before:'; alembic current
+            echo '--- downgrade -$n'; alembic downgrade -$n
+            echo '--- upgrade head'; alembic upgrade head
+            echo '--- after:'; alembic current
+          "
+
+      - name: Real-database tests (pytest -m db)
+        working-directory: infra
+        run: |
+          # Exit code 5 means "no tests collected": fine while no db test exists yet.
+          docker compose -f docker-compose.ci.yml exec -T api sh -c \
+            'TEST_DATABASE_URL="$DATABASE_URL" python -m pytest -m db -q -p no:cacheprovider; rc=$?; [ "$rc" -eq 5 ] && exit 0; exit "$rc"'
+
       - name: Install newman
         run: npm install -g newman
 
@@ -113,6 +180,22 @@ jobs:
         working-directory: postman
         run: |
           set -e
+          mkdir -p ../newman-logs
+          status=0
+
+          # Output goes to the console and to newman-logs/ so the final step can print
+          # only the failed assertions. PIPESTATUS keeps newman's own exit code.
+          run_newman() {
+            local collection="$1"; shift
+            echo "==> $collection $*"
+            newman run "$collection" "$@" \
+              -e environment.json \
+              --env-var "base_url=http://localhost:8000" \
+              --env-var "api_token=ci-smoke-test-token" \
+              2>&1 | tee "../newman-logs/${collection%.collection.json}.log"
+            if [ "${PIPESTATUS[0]}" -ne 0 ]; then status=1; fi
+          }
+
           collections=(
             activities.collection.json
             briefing.collection.json
@@ -134,67 +217,76 @@ jobs:
             integration_llm_calls.collection.json
             integration_provider_calls.collection.json
           )
-          status=0
           for collection in "${collections[@]}"; do
-            echo "==> $collection"
-            newman run "$collection" \
-              -e environment.json \
-              --env-var "base_url=http://localhost:8000" \
-              --env-var "api_token=ci-smoke-test-token" \
-              || status=1
+            run_newman "$collection"
           done
 
-          echo "==> cs.collection.json (ci-safe folder only)"
-          newman run cs.collection.json \
-            --folder ci-safe \
-            -e environment.json \
-            --env-var "base_url=http://localhost:8000" \
-            --env-var "api_token=ci-smoke-test-token" \
-            || status=1
-
-          echo "==> study.collection.json (ci-safe folder only)"
-          newman run study.collection.json \
-            --folder ci-safe \
-            -e environment.json \
-            --env-var "base_url=http://localhost:8000" \
-            --env-var "api_token=ci-smoke-test-token" \
-            || status=1
+          run_newman cs.collection.json --folder ci-safe
+          run_newman study.collection.json --folder ci-safe
 
           exit $status
 
-      - name: Dump API logs on failure
-        if: failure()
-        working-directory: infra
-        run: docker compose -f docker-compose.ci.yml logs api
+      # The newman output above is long; this repeats only what failed, last in the log and in
+      # the run's summary page, so the cause is visible without scrolling.
+      - name: Failed assertions
+        if: always()
+        run: |
+          shopt -s nullglob
+          found=0
+          {
+            echo "## Failed Postman assertions"
+          } > failures.md
+          for log in newman-logs/*.log; do
+            name=$(basename "$log" .log)
+            sed 's/\x1b\[[0-9;]*m//g' "$log" > "$log.plain"
+            if grep -qE '^ *#  failure' "$log.plain"; then
+              found=1
+              {
+                echo "### $name"
+                echo '```'
+                awk '/^ *#  failure/{p=1} p' "$log.plain"
+                echo '```'
+              } >> failures.md
+              echo "::error title=Postman failures::$name has failing assertions (see the Failed assertions step)"
+            fi
+          done
+          if [ "$found" -eq 1 ]; then
+            cat failures.md
+            cat failures.md >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "No failed Postman assertions."
+          fi
 
       # Postman assertions only catch what the collections happen to check. A
       # request can return a response that satisfies every assertion while the
       # API logged an unrelated ERROR (e.g. a background task failing, a caught
       # exception logged but swallowed). This step fails the job on any
-      # ERROR-level log line regardless of newman's own result, and surfaces
-      # WARNING-level lines as visible (but non-failing) annotations so they
-      # don't go unnoticed.
-      - name: Check API logs for errors/warnings
+      # ERROR-level log line regardless of newman's own result. WARNING lines
+      # are mostly the expected 4xx from the negative tests, so they are only
+      # counted here; the whole log is uploaded as an artifact on failure.
+      - name: Check API logs for errors
         if: always()
         working-directory: infra
         run: |
-          docker compose -f docker-compose.ci.yml logs api > api.log 2>&1
+          docker compose -f docker-compose.ci.yml logs --no-color api > api.log 2>&1
 
-          if grep -q "WARNING:" api.log; then
-            echo "WARNING-level log lines found (not failing the job):"
-            grep -n "WARNING:" api.log | while IFS= read -r line; do
-              echo "::warning::${line#*:}"
-            done
-          fi
+          echo "WARNING-level log lines: $(grep -c 'WARNING:' api.log || true) (not failing the job)"
 
           if grep -q "ERROR:" api.log; then
             echo "ERROR-level log lines found:"
             grep -n "ERROR:" api.log
-            echo "::error::API logs contain ERROR-level line(s) — failing the job"
+            echo "::error::API logs contain ERROR-level line(s), failing the job"
             exit 1
           fi
 
           echo "No ERROR-level log lines found."
+
+      - name: Upload API log
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: api-log
+          path: infra/api.log
 
       - name: Tear down
         if: always()

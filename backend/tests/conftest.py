@@ -22,6 +22,7 @@ os.environ.setdefault("LLM_EXTRACTION_MODEL", "gemini-2.0-flash-lite")
 
 import pytest
 from fastapi.testclient import TestClient
+from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from unittest.mock import AsyncMock
 
 # Pre-load all ORM models so SQLAlchemy's mapper can resolve cross-module
@@ -58,3 +59,24 @@ def auth_headers():
 @pytest.fixture
 def mock_session():
     return AsyncMock()
+
+
+@pytest.fixture
+async def db_session():
+    """A session on a real, migrated Postgres (``TEST_DATABASE_URL``) for ``@pytest.mark.db`` tests.
+    Everything the test writes lives in an outer transaction that is rolled back afterwards."""
+    url = os.environ.get("TEST_DATABASE_URL")
+    if not url:
+        pytest.skip("TEST_DATABASE_URL is not set")
+    engine = create_async_engine(url)
+    try:
+        async with engine.connect() as conn:
+            outer = await conn.begin()
+            session = AsyncSession(bind=conn, join_transaction_mode="create_savepoint", expire_on_commit=False)
+            try:
+                yield session
+            finally:
+                await session.close()
+                await outer.rollback()
+    finally:
+        await engine.dispose()

@@ -372,6 +372,16 @@
           "name": "01 - Create Tag",
           "event": [
             {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "// Unique per run: the migrations seed tags (Travel, Hotel, ...) and tag names are case-insensitive unique.",
+                  "pm.environment.set('finance_tag_name', 'Postman Tag ' + Date.now());"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
               "listen": "test",
               "script": {
                 "exec": [
@@ -379,7 +389,7 @@
                   "pm.test('Response has id and saves it', () => {",
                   "    const json = pm.response.json();",
                   "    pm.expect(json).to.have.property('id');",
-                  "    pm.expect(json.name).to.eql('Postman Tag');",
+                  "    pm.expect(json.name).to.eql(pm.environment.get('finance_tag_name'));",
                   "    pm.environment.set('finance_tag_id', json.id);",
                   "});"
                 ],
@@ -407,7 +417,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Postman Tag\"\n}",
+              "raw": "{\n  \"name\": \"{{finance_tag_name}}\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -460,7 +470,7 @@
                   "pm.test('Response matches created tag', () => {",
                   "    const json = pm.response.json();",
                   "    pm.expect(String(json.id)).to.eql(String(pm.environment.get('finance_tag_id')));",
-                  "    pm.expect(json.name).to.eql('Postman Tag');",
+                  "    pm.expect(json.name).to.eql(pm.environment.get('finance_tag_name'));",
                   "});"
                 ],
                 "type": "text/javascript"
@@ -492,7 +502,7 @@
                 "exec": [
                   "pm.test('Status is 200', () => pm.response.to.have.status(200));",
                   "pm.test('Name was updated', () => {",
-                  "    pm.expect(pm.response.json().name).to.eql('Business Travel');",
+                  "    pm.expect(pm.response.json().name).to.eql(pm.environment.get('finance_tag_name') + ' renamed');",
                   "});"
                 ],
                 "type": "text/javascript"
@@ -520,7 +530,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Business Travel\"\n}",
+              "raw": "{\n  \"name\": \"{{finance_tag_name}} renamed\"\n}",
               "options": {
                 "raw": {
                   "language": "json"

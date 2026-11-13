@@ -91,7 +91,7 @@ The local stack is slow to build; for most changes the unit tests are the faster
 
 ## CI compose
 
-`infra/docker-compose.ci.yml` is a trimmed stack for the GitHub Actions smoke test (`api-smoke-test.yml`, daily at 06:00 UTC and on demand): database + API with `DISABLE_INTEGRATIONS=true` (null LLM and Notion providers) and throwaway credentials, then the Postman collections run against it with newman. It mirrors production's two-role split on purpose so a migration that forgets to grant the app user access to a new schema fails there.
+`infra/docker-compose.ci.yml` is a trimmed stack for the GitHub Actions smoke test (`api-smoke-test.yml`, on pushes to `main` touching `backend/` or `postman/`, and on demand): database + API with `DISABLE_INTEGRATIONS=true` (null LLM and Notion providers) and throwaway credentials, then the Postman collections run against it with newman. It mirrors production's two-role split on purpose so a migration that forgets to grant the app user access to a new schema fails there.
 
 ## Deploys
 

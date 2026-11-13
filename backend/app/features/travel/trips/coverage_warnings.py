@@ -184,7 +184,7 @@ def find_unpaid_stay_warnings(
     return [
         TripWarning(
             kind="stay_not_paid", stay_id=stay.id,
-            message=f"{stay.place.name} (from {stay.check_in_local:%d %b}) has no linked charge: not booked or paid yet?",
+            message=f"{stay.place.name} (from {stay.check_in_local:%d %b}) is not booked or paid yet: no charge is linked",
         )
         for stay in sorted(stays, key=lambda stay: (stay.check_in_at, stay.id))
         if stay.id not in paid_stay_ids and stay.check_in_local.date() >= today
@@ -248,7 +248,7 @@ def find_unpaid_leg_warnings(
     return [
         TripWarning(
             kind="leg_not_paid", leg_id=leg.id,
-            message=f"{leg.origin} to {leg.destination} ({leg.departs_local:%d %b}) has no linked charge: not bought yet?",
+            message=f"{leg.origin} to {leg.destination} ({leg.departs_local:%d %b}) is not bought yet: no charge is linked",
         )
         for leg in sorted(legs, key=lambda leg: (leg.departs_at, leg.id))
         if leg.id not in paid_leg_ids and leg.departs_local.date() >= today

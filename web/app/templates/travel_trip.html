@@ -247,7 +247,7 @@
         {% set lw = warnings_for(trip.warnings, 'leg_id', leg.id) %}
         <div class="flex items-start justify-between gap-2 text-sm{{ ' rounded-md bg-amber-50 border border-amber-200 -mx-2 px-2 py-1.5' if lw }}" id="leg-{{ leg.id }}"{{ ' data-warning-row' if lw }}>
           <div>
-            {% for message in lw %}<p class="text-xs text-amber-800"><i class="ti ti-alert-triangle"></i> {{ message }}</p>{% endfor %}
+            {% for message in lw %}<p class="text-sm font-medium text-amber-900"><i class="ti ti-alert-triangle text-amber-600"></i> {{ message }}</p>{% endfor %}
             <p class="text-gray-900">{{ leg.origin }} → {{ leg.destination }} <span class="text-xs text-gray-400">{{ leg.mode }}{% if leg.carrier or leg.number %} · {{ leg.carrier or '' }} {{ leg.number or '' }}{% endif %}</span> {{ cost_chip(entity_costs.legs.get(leg.id)) }}</p>
             <p class="text-xs text-gray-500">{{ leg.departs_local[:10] | short_date }} {{ leg.departs_local[11:16] }} ({{ leg.departs_tz }}) → {{ leg.arrives_local[:10] | short_date }} {{ leg.arrives_local[11:16] }} ({{ leg.arrives_tz }})</p>
             {% if leg.booking_ref or leg.seat %}<p class="text-xs text-gray-400">{% if leg.booking_ref %}Ref {{ leg.booking_ref }}{% endif %}{% if leg.seat %} · Seat {{ leg.seat }}{% endif %}</p>{% endif %}
@@ -277,7 +277,7 @@
         {% set sw = warnings_for(trip.warnings, 'stay_id', stay.id) %}
         <div class="flex items-start justify-between gap-2 text-sm{{ ' rounded-md bg-amber-50 border border-amber-200 -mx-2 px-2 py-1.5' if sw }}" id="stay-{{ stay.id }}"{{ ' data-warning-row' if sw }}>
           <div>
-            {% for message in sw %}<p class="text-xs text-amber-800"><i class="ti ti-alert-triangle"></i> {{ message }}</p>{% endfor %}
+            {% for message in sw %}<p class="text-sm font-medium text-amber-900"><i class="ti ti-alert-triangle text-amber-600"></i> {{ message }}</p>{% endfor %}
             <p class="text-gray-900">{{ stay.place.name }}{% if stay.place.city %} <span class="text-xs text-gray-400">{{ stay.place.city }}</span>{% endif %} {{ cost_chip(entity_costs.stays.get(stay.id)) }}</p>
             <p class="text-xs text-gray-500">{{ stay.check_in_local[:10] | short_date }} {{ stay.check_in_local[11:16] }} → {{ stay.check_out_local[:10] | short_date }} {{ stay.check_out_local[11:16] }} ({{ stay.timezone }}) · {{ stay.nights }} night{{ '' if stay.nights == 1 else 's' }}</p>
             {% if stay.booking_ref %}<p class="text-xs text-gray-400">Ref {{ stay.booking_ref }}</p>{% endif %}

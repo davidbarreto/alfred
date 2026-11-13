@@ -3,7 +3,7 @@
 {% set vw = warnings_for(trip.warnings, 'visit_id', v.id) if trip is defined and trip.warnings is defined else [] %}
 <div class="flex items-start justify-between gap-2 text-sm{{ ' rounded-md bg-amber-50 border border-amber-200 -mx-2 px-2 py-1.5' if vw }}" id="visit-{{ v.id }}"{{ ' data-warning-row' if vw }}>
   <div class="space-y-0.5">
-    {% for message in vw %}<p class="text-xs text-amber-800"><i class="ti ti-alert-triangle"></i> {{ message }}</p>{% endfor %}
+    {% for message in vw %}<p class="text-sm font-medium text-amber-900"><i class="ti ti-alert-triangle text-amber-600"></i> {{ message }}</p>{% endfor %}
     <p class="text-gray-900">
       {% if show_place %}<a href="/travel/places/{{ v.place_id }}" class="hover:underline">{{ v.place.name }}</a>{% else %}{{ v.visit_date | short_date if v.visit_date else 'No day yet' }}{% endif %}
       <span class="px-1.5 py-0.5 rounded-full text-[11px]

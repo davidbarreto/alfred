@@ -32,7 +32,7 @@ Create bodies accept naive wall times (read in the matching `*_tz`) or values wi
 - `checklist_not_generated`: the trip starts within 60 days (`CHECKLIST_NUDGE_DAYS`), the checklist template has items and no task titled `(<trip name>)` exists.
 - On the trip page, the leg, stay and visit rows a warning points at are tinted amber with the message above them (`data-warning-row`); the timeline rows are tinted as before.
 - `outside_trip_dates`: a leg, stay or dated visit (missed ones aside) on days outside the trip's start and end dates.
-- `leg_not_paid`: once the trip starts within `travel.unpaid_leg_days` days (default 30, `0` = never, in `/travel/settings`), every leg still to depart that has no linked transaction ("not bought yet?").
+- `leg_not_paid`: once the trip starts within `travel.unpaid_leg_days` days (default 30, `0` = never, in `/travel/settings`), every leg still to depart that has no linked transaction ("not bought yet").
 - Visit checks (planned and visited, missed ones ignored; undated visits skipped, the time checks also need a time; a timed visit is read in the zone of the stay covering that day, else of the latest arrival): `visit_before_arrival`, `visit_after_departure`, `visit_overlaps_leg`, `visit_without_stay` (a stay exists on the trip but none in the place's city covers the day) and `too_many_visits` (more than `travel.max_visits_per_day`, default 4, in `/travel/settings`). Computed in `trips/coverage_warnings.py`; these have `visit_id` and no timeline row.
 
 **Home offset (27)**: each timeline item carries `home_offset` (`+1h`, `-3h`, `+5.5h` against the configured `TIMEZONE` at that instant; null when equal) and arrival rows with a difference of 3 h or more carry a one-line `sleep_hint`.

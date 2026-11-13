@@ -14,7 +14,7 @@
         <p class="text-gray-900">{{ item.title }}</p>
         <p class="text-xs text-gray-400">{% if item.subtitle %}{{ item.subtitle }} · {% endif %}{{ item.timezone }}{% if item.home_offset %} ({{ item.home_offset }} vs home){% endif %}</p>
         {% if item.sleep_hint %}<p class="text-xs text-sky-700"><i class="ti ti-moon"></i> {{ item.sleep_hint }}</p>{% endif %}
-        {% for message in item.warnings %}<p class="text-xs text-amber-800"><i class="ti ti-alert-triangle"></i> {{ message }}</p>{% endfor %}
+        {% for message in item.warnings %}<p class="text-sm font-medium text-amber-900"><i class="ti ti-alert-triangle text-amber-600"></i> {{ message }}</p>{% endfor %}
         {% if item.transfer_label %}<p class="text-xs text-gray-500 pt-0.5">Getting there: {{ item.transfer_label }}</p>{% endif %}
         <p class="text-xs space-x-3">
           {% for key, label in [('directions', 'Transit'), ('drive', 'Taxi / car'), ('walk', 'Walk'), ('check_flight', 'Check flight'), ('map', 'Map'), ('cafes', 'Cafes nearby'), ('restaurants', 'Restaurants nearby'), ('luggage', 'Luggage storage'), ('pharmacy', 'Pharmacy'), ('supermarket', 'Supermarket'), ('atm', 'ATM')] %}

@@ -271,7 +271,7 @@ def _backend(overrides=None):
             "weather": {"temperature_max_c": 24.4, "temperature_min_c": 15.1, "feels_like_max_c": 23.0,
                         "precipitation_probability": 10, "wind_speed_max_kmh": 12.3,
                         "description": "Partly cloudy", "advice": ["Bring a light jacket"]},
-            "holidays": [{"name": "Christmas Day", "local_name": "Natal", "days_until": 3}],
+            "holidays": [{"name": "Christmas Day", "local_name": "Natal", "country": "PT", "days_until": 3}],
             "lookahead_days": 3,
             "events": [
                 {"title": "Standup", "date": "2026-11-13", "start_time": "09:00:00", "all_day": False, "is_today": True, "days_until": 0, "location": None},
@@ -327,7 +327,7 @@ class TestDashboardPage:
         assert "coffee" in text and "Good morning David" in text
         assert "Spanish" in text and "2/5" in text and "Paused one" not in text
         assert "Partly cloudy" in text and "Bring a light jacket" in text
-        assert "Natal" in text and "in 3 days" in text
+        assert "Natal" in text and "in 3 days" in text and ">PT</span>" in text
         assert "Upcoming events" in text and "Dentist" in text and "Clinic" in text and "Standup" not in text
         assert "ti-cake" in text and "ti-cloud" in text and "ti-flag" in text
         assert "glance" not in text

@@ -53,7 +53,7 @@ All paginated sections follow the same offset-based pattern:
 | Budgets | `/finance/budgets/status`: the 3 categories closest to their limit |
 | Weather | Today's forecast from the structured `/briefing/morning` (no LLM call); empty card when unavailable |
 | Upcoming events | Events after today within the briefing look-ahead, from `/briefing/morning` (today's have their own strip); 5 max, "See all N" links to the calendar |
-| Holidays | Public holidays in the next 7 days, also from `/briefing/morning` |
+| Holidays | Public holidays in the next 7 days, also from `/briefing/morning`, each tagged with its country code (PT, BR) |
 | Birthdays | Contacts with a birthday in the next 30 days (computed in the portal; 29 Feb falls on 1 Mar in common years), 5 max |
 | Study | Active study plans from `/study/plans/overview`: progress and next open item |
 | Metrics | The 4 most-used active series as 14-day sparklines (inline SVG, count series by entries per day, others by daily total) |

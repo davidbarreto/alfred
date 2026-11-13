@@ -338,6 +338,7 @@
           {% for h in holidays %}
           <li class="flex items-center gap-2 text-sm min-w-0">
             <span class="flex-1 truncate text-gray-700">{{ h.local_name }}</span>
+            {% if h.country %}<span class="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-500 flex-shrink-0">{{ h.country }}</span>{% endif %}
             <span class="text-xs flex-shrink-0 {% if h.days_until <= 1 %}text-[#BA7517]{% else %}text-gray-400{% endif %}">
               {% if h.days_until == 0 %}Today{% elif h.days_until == 1 %}Tomorrow{% else %}in {{ h.days_until }} days{% endif %}
             </span>

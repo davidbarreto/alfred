@@ -47,8 +47,8 @@ def plan_card(plans: list[dict] | None, today: date, now_clock: str) -> dict | N
     }
 
 
-def trip_card(trips: list[dict] | None, detail: dict | None, today: date) -> dict | None:
-    """The ongoing trip, else the nearest upcoming one, with its warning count."""
+def trip_card(trips: list[dict] | None, detail: dict | None, today: date, other_events: list[dict] | None = None) -> dict | None:
+    """The ongoing trip, else the nearest upcoming one, with the count of everything its warnings page lists."""
     if not trips:
         return None
     trip = min(trips, key=lambda t: t["start_date"])
@@ -63,7 +63,7 @@ def trip_card(trips: list[dict] | None, detail: dict | None, today: date) -> dic
         "days_until": (start - today).days,
         "day": (today - start).days + 1,
         "days": (end - start).days + 1,
-        "warnings": len((detail or {}).get("warnings") or []),
+        "warnings": len((detail or {}).get("warnings") or []) + len(other_events or []),
     }
 
 

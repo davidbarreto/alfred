@@ -37,8 +37,10 @@ async def _trip_card() -> dict | None:
     if not trips:
         return None
     nearest = min(trips, key=lambda t: t["start_date"])
-    detail = await _optional(f"/travel/trips/{nearest['id']}")
-    return cards.trip_card(trips, detail, local_today())
+    detail, other_events = await asyncio.gather(
+        _optional(f"/travel/trips/{nearest['id']}"), _optional(f"/travel/trips/{nearest['id']}/other-events"),
+    )
+    return cards.trip_card(trips, detail, local_today(), other_events)
 
 
 @router.get("/", response_class=HTMLResponse)

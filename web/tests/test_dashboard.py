@@ -79,6 +79,11 @@ class TestTripCard:
     def _trip(self, start, end, id=1):
         return {"id": id, "name": "Lisbon", "start_date": start, "end_date": end}
 
+    def test_card_counts_other_calendar_events_like_the_warnings_page(self):
+        card = cards.trip_card([self._trip("2026-12-17", "2026-12-24")], {"warnings": [{}, {}]}, TODAY, [{}, {}, {}])
+
+        assert card["warnings"] == 5
+
     def test_upcoming_trip_counts_days_and_warnings(self):
         card = cards.trip_card([self._trip("2026-12-17", "2026-12-24")], {"warnings": [{}, {}]}, TODAY)
 
@@ -243,6 +248,7 @@ def _backend(overrides=None):
         "/metrics/series/coffee/daily": {"points": [{"date": "2026-11-13", "n": 2, "total": None}]},
         "/travel/trips": [{"id": 7, "name": "Lisbon", "start_date": "2026-12-17", "end_date": "2026-12-24"}],
         "/travel/trips/7": {"warnings": [{"kind": "no_return_leg"}]},
+        "/travel/trips/7/other-events": [],
         "/language/tracks": [{"id": 1, "name": "Spanish"}, {"id": 2, "name": "Paused one"}],
         "/language/sessions/daily-progress": [{"track_id": 1, "track_code": "es", "daily_quota": 5, "completed_today": 2, "quota_met": False}],
         **(overrides or {}),

@@ -12,15 +12,11 @@ from .client import GooglePublicHolidayClient
 
 logger = logging.getLogger(__name__)
 
-_CALENDARS: dict[str, str] = {
-    "PT": "pt.portuguese#holiday@group.v.calendar.google.com",
-    "BR": "en.brazilian#holiday@group.v.calendar.google.com",
-}
-
 
 class GooglePublicHolidayProvider:
-    def __init__(self, client: GooglePublicHolidayClient) -> None:
+    def __init__(self, client: GooglePublicHolidayClient, calendars: dict[str, str]) -> None:
         self._client = client
+        self._calendars = calendars
 
     async def get_holidays(
         self, from_date: date, to_date: date, session: AsyncSession | None = None
@@ -29,7 +25,7 @@ class GooglePublicHolidayProvider:
         time_max = f"{(to_date + timedelta(days=1)).isoformat()}T00:00:00Z"
         results: list[HolidayItem] = []
 
-        for country, calendar_id in _CALENDARS.items():
+        for country, calendar_id in self._calendars.items():
             country_results: list[HolidayItem] = []
             error: str | None = None
             try:

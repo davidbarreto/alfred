@@ -1,7 +1,24 @@
 from functools import lru_cache
 
-from pydantic import Field
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings
+
+DEFAULT_HOLIDAY_CALENDARS = (
+    "PT=pt.portuguese#holiday@group.v.calendar.google.com,BR=en.brazilian#holiday@group.v.calendar.google.com"
+)
+
+
+def parse_holiday_calendars(raw: str) -> dict[str, str]:
+    """Parse "CODE=calendar_id,CODE=calendar_id" into {CODE: calendar_id}."""
+    calendars: dict[str, str] = {}
+    for pair in raw.split(","):
+        if not pair.strip():
+            continue
+        code, sep, calendar_id = (part.strip() for part in pair.partition("="))
+        if not sep or not code or not calendar_id:
+            raise ValueError(f"HOLIDAY_CALENDARS entry {pair.strip()!r} must look like CODE=calendar_id")
+        calendars[code] = calendar_id
+    return calendars
 
 
 class Settings(BaseSettings):
@@ -38,6 +55,9 @@ class Settings(BaseSettings):
     # Gemini key above; named distinctly to avoid colliding with the google-genai SDK's
     # implicit GOOGLE_API_KEY/GEMINI_API_KEY env var detection (it warns if both are set)
     gcp_api_key: str | None = Field(default=None, validation_alias="GCP_API_KEY")
+    # Public holiday calendars as "CODE=google_calendar_id" pairs, comma-separated; the code
+    # (any label, e.g. a country code) is shown next to each holiday. Empty falls back to the default.
+    holiday_calendars: str = Field(default=DEFAULT_HOLIDAY_CALENDARS, validation_alias="HOLIDAY_CALENDARS")
     llm_chat_model: str = Field(default="gemini-2.0-flash", validation_alias="LLM_CHAT_MODEL")
     llm_chat_temperature: float = Field(default=0.35, validation_alias="LLM_CHAT_TEMPERATURE")
     llm_extraction_model: str = Field(default="gemini-2.5-flash-lite", validation_alias="LLM_EXTRACTION_MODEL")
@@ -97,6 +117,19 @@ class Settings(BaseSettings):
     # deterministic null implementations so the API can boot and be exercised by
     # Postman tests without real third-party credentials.
     disable_integrations: bool = Field(default=False, validation_alias="DISABLE_INTEGRATIONS")
+
+    @field_validator("holiday_calendars")
+    @classmethod
+    def _holiday_calendars_valid(cls, value: str) -> str:
+        if not value.strip():
+            return DEFAULT_HOLIDAY_CALENDARS
+        parse_holiday_calendars(value)
+        return value
+
+    @property
+    def holiday_calendar_map(self) -> dict[str, str]:
+        return parse_holiday_calendars(self.holiday_calendars)
+
 
 @lru_cache()
 def get_settings() -> Settings:

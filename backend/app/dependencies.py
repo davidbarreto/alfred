@@ -379,7 +379,7 @@ def get_holiday_provider() -> HolidayProvider | None:
     client = get_holiday_client()
     if client is None:
         return None
-    return GooglePublicHolidayProvider(client)
+    return GooglePublicHolidayProvider(client, get_settings().holiday_calendar_map)
 
 async def get_google_contacts_client(session: AsyncSession = Depends(get_session)) -> GoogleContactsClient | None:
     s = get_settings()

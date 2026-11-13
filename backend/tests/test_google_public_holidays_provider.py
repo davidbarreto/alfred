@@ -17,7 +17,7 @@ class TestGetHolidays:
 
     @pytest.fixture
     def provider(self, client):
-        return GooglePublicHolidayProvider(client)
+        return GooglePublicHolidayProvider(client, {"PT": "pt-cal", "BR": "br-cal"})
 
     @pytest.mark.asyncio
     async def test_returns_holidays_for_each_calendar(self, provider, client):
@@ -113,3 +113,17 @@ class TestGetHolidays:
 
         statuses = {c.kwargs["provider_entity_id"]: c.kwargs["status"] for c in mock_log.call_args_list}
         assert "error" in statuses.values()
+
+
+class TestConfiguredCalendars:
+    @pytest.mark.asyncio
+    async def test_queries_only_the_configured_calendars(self):
+        client = AsyncMock()
+        client.fetch_events.return_value = [_event("Bank Holiday")]
+        provider = GooglePublicHolidayProvider(client, {"UK": "uk-cal"})
+
+        result = await provider.get_holidays(date(2026, 6, 24), date(2026, 6, 30))
+
+        assert [h.country for h in result] == ["UK"]
+        assert client.fetch_events.await_count == 1
+        assert client.fetch_events.await_args.args[0] == "uk-cal"

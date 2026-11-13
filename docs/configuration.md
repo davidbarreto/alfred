@@ -47,6 +47,7 @@ Values below are the defaults from `Settings` when the variable is optional. **R
 | `GOOGLE_CALENDAR_ID` | Calendar to sync (default `primary`) |
 | `GEMINI_API_KEY` | Gemini key for chat, extraction, transcription, pronunciation and TTS. Optional to boot, but chat and language features need it |
 | `GCP_API_KEY` | Separate Google Cloud key (public holidays API) |
+| `HOLIDAY_CALENDARS` | Optional. Comma-separated `CODE=google_calendar_id` pairs for the public holidays shown on the dashboard and in the briefing (the code is the badge shown next to each holiday). Unset or empty uses Portugal and Brazil. A malformed entry stops the backend at startup |
 | `OPENAI_API_KEY` | Optional alternative LLM provider |
 | `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHAT_ID` | Used by n8n to talk to Telegram; the backend only uses the token to register the command menu |
 | `LEETCODE_SESSION`, `LEETCODE_CSRF_TOKEN` | Copied from a logged-in browser session for the CS coach sync. They expire; renew them in `.env` when sync starts failing |

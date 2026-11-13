@@ -1207,6 +1207,7 @@ async def budgets_overview_page(request: Request, year_month: Optional[str] = No
         "averages_available": averages_available,
         "average_chart": {
             "labels": [r["category_name"] for r in rows],
+            "spent": [r["spent"] for r in rows],
             "budget": [r["limit"] for r in rows],
             "average": [r["average"] for r in rows],
         },

@@ -1807,6 +1807,7 @@ class TestBudgetsOverviewPage:
 
         assert 'id="chart-budget-average"' in resp.text
         assert '"average":[0.0,250.0]' in resp.text.replace(" ", "")
+        assert '"spent":[20.0,120.0]' in resp.text.replace(" ", "")
 
     def test_chart_hidden_when_averages_fail(self, client, mock_api):
         base = self._fake_get([_budget_status()])

@@ -87,7 +87,7 @@
 
   {% if rows and averages_available %}
   <div class="bg-white border border-gray-200 rounded-lg p-4">
-    <h2 class="text-sm font-medium text-gray-900 mb-3">Budget vs. 12-month average</h2>
+    <h2 class="text-sm font-medium text-gray-900 mb-3">Spent vs. budget vs. 12-month average</h2>
     <div class="relative h-64">
       <canvas id="chart-budget-average"></canvas>
     </div>
@@ -108,6 +108,7 @@
     data: {
       labels: data.labels,
       datasets: [
+        { label: "Spent", data: data.spent, backgroundColor: "#F59E0B", borderRadius: 3, borderSkipped: false },
         { label: "Budget", data: data.budget, backgroundColor: "#378ADD", borderRadius: 3, borderSkipped: false },
         { label: "12-month average", data: data.average, backgroundColor: "#E5E7EB", borderRadius: 3, borderSkipped: false }
       ]

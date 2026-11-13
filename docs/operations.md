@@ -10,7 +10,7 @@ Runbook for running, checking and debugging Alfred: commands and procedures only
 | App checkout and compose files | `/opt/stacks/alfred/` (`infra/docker-compose.yml`, `infra/.env`) |
 | Persistent data (DB, audio, statements, n8n, MCP) | `/srv/data/alfred/` |
 
-Production is read-only by default: do not create or edit files on the VPS by hand (not even for testing). Files reach it through commit, push and deploy.
+Production rules (read-only by default, no hand-made files on the VPS) are in `CLAUDE.md`.
 
 On the VPS, every command below uses this alias:
 
@@ -28,7 +28,7 @@ gh run view <id>                            # conclusion and failed step
 gh run view <id> --log-failed               # logs of the failing steps only
 ```
 
-Always confirm the result with `gh run view <id>`: `gh run watch --exit-status` has reported success on a failed `deploy-api.yml` run.
+`gh run view <id>` is the reliable check: `gh run watch --exit-status` has reported success on a failed `deploy-api.yml` run.
 
 Re-run a deploy without a new commit: `gh workflow run deploy-api.yml` (also `deploy-web`, `deploy-mcp`, `deploy-n8n`, `deploy-infra`).
 

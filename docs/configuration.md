@@ -6,7 +6,7 @@ Alfred has three layers of configuration:
 2. **Settings stored in the database** (`core.settings` and a few dedicated tables) that you change at runtime from the portal, Telegram/MCP or the API.
 3. **Authentication** for each entry point.
 
-`infra/.env.example` is the template; copy it to `infra/.env` and fill it in. `.env` is gitignored: never commit it.
+`infra/.env.example` is the template; copy it to `infra/.env` and fill it in. `.env` is gitignored.
 
 ## 1. Environment variables
 

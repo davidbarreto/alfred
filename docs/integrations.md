@@ -13,7 +13,7 @@ External providers live under `backend/app/integrations/<provider>/` (layout in 
 | **OpenAI** | LLM provider | Alternative `LlmProvider` implementation. |
 | **sentence-transformers** | Embedding provider | Local; feeds `core.embeddings`. |
 | **Open-Meteo** | Weather | Morning briefing and metrics weather snapshots; no API key required. |
-| **Telegram** | Input channel | **Only via n8n.** Never call the Telegram API directly from FastAPI. Command menu limits: [assistant-layer.md](assistant-layer.md#telegram-command-menu). |
+| **Telegram** | Input channel | Reaches Alfred only via n8n; FastAPI has no Telegram client. Command menu limits: [assistant-layer.md](assistant-layer.md#telegram-command-menu). |
 | **Codeforces / LeetCode** | Programming-practice sync | Feeds the `cs` schema. |
 
 Supporting modules: `oauth_tokens/` (generic OAuth refresh-token store), `llm_calls/` (every LLM call is logged), `provider_calls/` (integration sync log), `http/` (shared pagination helpers).

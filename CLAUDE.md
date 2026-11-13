@@ -71,6 +71,7 @@ Full tree: `docs/architecture.md`.
 ### Database (PostgreSQL + pgvector)
 - Schemas: `core`, `organizer`, `monitoring`, `finance`, `language`, `cs`, `study`, `metrics`, `planning` (what each holds: `docs/data-model.md`)
 - Write-through cache pattern for external integrations (Notion, Google Calendar, Google Contacts)
+- Alfred-only columns (e.g. task `estimate_minutes`, event `availability`) never go to the provider: the service strips them before every provider call and skips the call when an update touches only those fields
 - Embeddings live in a generic `core.embeddings` table; treat as a derived index, not source of truth
 - `core.memories` is polymorphic with a `type` discriminator column
 - All migrations via Alembic; never mutate the DB schema manually
@@ -176,7 +177,8 @@ One test class per logical group of behaviour (`TestComputeStreak`, `TestMissedC
 
 ### SQLAlchemy / Alembic
 - All models inherit from a shared `Base` with `created_at` / `updated_at` timestamps
-- Foreign keys are always explicit; use `ondelete` cascade where appropriate
+- Foreign keys are always explicit; use `ondelete` cascade only where the child has no value without the parent. Where history matters the FK is `RESTRICT` and deletion is refused with a 409 (metrics, shopping products, activities)
+- Enum value sets are defined once in Python (`TASK_CONTEXTS`, `EVENT_AVAILABILITIES`, `EVENT_PRESENCES`) and feed the Pydantic types, the CHECK constraints and the MCP descriptions
 - Alembic migrations must be reversible (`downgrade` implemented)
 - A migration is edited only while it is unpushed: when several unpushed commits change the same migration file, squash them so the file is introduced (or changed) in one commit. Once any commit that touches a migration has been pushed, never edit that file again; add a new migration instead
 - After schema changes, verify all affected modules still align
@@ -261,8 +263,10 @@ logger.warning("Auth failed: invalid token")
 
 ## Infrastructure Rules
 
-- Environment variables are injected at runtime; never bake secrets into images
+- Environment variables are injected at runtime; never bake secrets into images, and never commit `infra/.env`
+- nginx uses shared snippets for SSL termination and proxy headers; don't duplicate config per service
+- Production is read-only by default: never create or edit files on the VPS by hand (not even for testing); files reach it through commit, push and deploy. Confirm a deploy with `gh run view <id>`, not `gh run watch --exit-status`
 - Migrations run as `alembic upgrade head` on container startup, not manually
 - Every service that calls the backend API must send an `X-Alfred-Client` header (`web`, `mcp`, `n8n`, `claude`), including new n8n HTTP Request nodes hitting `http://api:8000`
 - The local Docker stack (`infra/docker-compose.yml`) works but is slow: default to unit tests and code review; the user tests in production. Start or rebuild it only when a change genuinely needs real container/DB/migration behaviour
-- More: `docs/operations.md`
+- Commands for checking and debugging prod and CI: `docs/operations.md`; services, volumes and deploy workflows: `docs/docker.md`

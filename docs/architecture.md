@@ -21,8 +21,7 @@ Telegram ──> n8n ──HTTP──> backend API <──HTTP── web portal
                                 └──HTTP── MCP server <── Claude
 ```
 
-- Telegram is **input only via n8n**; FastAPI never calls the Telegram API directly.
-- n8n HTTP Request nodes call the backend. Business logic is never embedded in n8n.
+- Telegram reaches Alfred only through n8n (FastAPI has no Telegram client); n8n HTTP Request nodes call the backend and hold no business logic.
 - Every caller identifies itself with an `X-Alfred-Client` header (`web`, `mcp`, `n8n`, plus `claude` for direct calls by Claude); see [docker.md](docker.md#api-caller-identity).
 - Commands (`/storyadd`, `/mstart`, ...) are defined once in a registry and reach the backend from Telegram (through n8n), the MCP server and the chat. See [assistant-layer.md](assistant-layer.md).
 
@@ -54,7 +53,6 @@ Alfred-only fields (for example task `estimate_minutes`, event `availability`) n
 - Use sub-workflow architecture; keep workflows focused and composable.
 - All sub-workflows return a consistent `{ success, message }` envelope.
 - Data passed between nodes follows the `alfred` envelope pattern.
-- HTTP Request nodes call the FastAPI backend; do not embed business logic in n8n.
 - Scheduled workflows (reminders hourly 08:00-22:00, morning briefing, evening digest, watchers) are cron triggers that call a backend endpoint and send the result. Reminder logic: [modules/reminders-overload.md](modules/reminders-overload.md).
 
 ## Repository structure

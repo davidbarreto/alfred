@@ -17,14 +17,9 @@ PostgreSQL + pgvector, SQLAlchemy 2.0 `Mapped[]` models, Alembic migrations. Per
 | `planning` | saved day plans (`day_plans`) |
 | `travel` | trips, legs, stays, places, visits, tags |
 
-## Rules
+## Conventions
 
-- All migrations go through Alembic and must be reversible (`downgrade` implemented). Never mutate the schema manually. Migrations run on container startup.
-- Foreign keys are explicit. Use `ondelete` cascade only where the child has no value without the parent. Where history matters the FK is `RESTRICT` and deletion is refused with a 409 (metrics, shopping products, activities).
-- `Base` is a plain `declarative_base()`; it does **not** add `created_at`/`updated_at`. Each new table declares both. Older tables that lack them are not retrofitted.
-- Booleans use plain state names (`active`, `enabled`, `all_day`), not `is_`; older `is_*` columns stay until standardised deliberately. State-change timestamps are `<verb>_at`.
-- Timestamps: `LocalDateTime` (`app/db/types.py`) stores UTC in `timestamptz` and exposes naive local datetimes; `Date` columns are local calendar dates. Full rules in `CLAUDE.md` (Dates & timezones).
-- Enum value sets are defined once in Python (`TASK_CONTEXTS`, `EVENT_AVAILABILITIES`, `EVENT_PRESENCES`) and feed the Pydantic types, the CHECK constraints and the MCP descriptions.
+Migrations, foreign keys, `created_at`/`updated_at`, boolean and timestamp naming, enum value sets and date handling are rules for every change: see `CLAUDE.md` (SQLAlchemy / Alembic, Dates & timezones).
 
 ## Notable patterns
 

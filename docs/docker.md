@@ -96,13 +96,6 @@ Each component has its own GitHub Actions workflow triggered by pushes to `main`
 
 `infra/.env` is **not** in git: it must already exist on the VPS next to the compose file. Changing it does not trigger a deploy; apply it with `docker compose up -d` on the server.
 
-## Conventions
-
-- **Secrets:** environment variables are injected at runtime; never bake them into images.
-- **Migrations:** run as part of container startup (`entrypoint.sh`), not manually. The same entrypoint loads the insert-only seed scripts.
-- **nginx:** shared snippets for SSL termination and proxy headers; do not duplicate config per service.
-- **Time zone:** containers run in UTC (no `TZ` set), so the server clock is not the user's clock. See `CLAUDE.md` (Dates & timezones).
-
 ## API caller identity
 
 Every service that calls the backend API sends an `X-Alfred-Client` header (`web`, `mcp`, `n8n`; `claude` for direct calls made by Claude). `ApiRequestLoggingMiddleware` records one `core.api_requests` row per request (missing header becomes `unknown`) for the Insights "API & MCP Usage" charts.

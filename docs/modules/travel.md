@@ -26,6 +26,8 @@ Create bodies accept naive wall times (read in the matching `*_tz`) or values wi
 - `arrives_after_check_out`: a leg to the stay's city departs before check-out and arrives after it.
 - `overlapping_legs`: a leg departs before the previous one arrives.
 - `uncovered_night`: nights between the first arrival and the last departure that no stay covers (one warning listing the dates; a night spent on an overnight leg does not count). `no_return_leg`: the last leg ends somewhere other than where the first began (the home city is not consulted, only the legs).
+- `outside_trip_dates`: a leg, stay or dated visit (missed ones aside) on days outside the trip's start and end dates.
+- `leg_not_paid`: once the trip starts within `travel.unpaid_leg_days` days (default 30, `0` = never, in `/travel/settings`), every leg still to depart that has no linked transaction ("not bought yet?").
 - Visit checks (planned and visited, missed ones ignored; undated visits skipped, the time checks also need a time; a timed visit is read in the zone of the stay covering that day, else of the latest arrival): `visit_before_arrival`, `visit_after_departure`, `visit_overlaps_leg`, `visit_without_stay` (a stay exists on the trip but none in the place's city covers the day) and `too_many_visits` (more than `travel.max_visits_per_day`, default 4, in `/travel/settings`). Computed in `trips/coverage_warnings.py`; these have `visit_id` and no timeline row.
 
 **Home offset (27)**: each timeline item carries `home_offset` (`+1h`, `-3h`, `+5.5h` against the configured `TIMEZONE` at that instant; null when equal) and arrival rows with a difference of 3 h or more carry a one-line `sleep_hint`.

@@ -80,6 +80,14 @@ class TransactionLinkRepository:
         )
         return {row[0]: _row_to_cost(*row[1:]) for row in (await self._session.execute(stmt)).all()}
 
+    async def get_linked_ids(self, kind: str, entity_ids: list[int]) -> set[int]:
+        """Which of these legs, stays or visits have at least one linked transaction."""
+        if not entity_ids:
+            return set()
+        table, column = LINK_TABLES[kind]
+        stmt = select(table.c[column]).where(table.c[column].in_(entity_ids)).distinct()
+        return set((await self._session.scalars(stmt)).all())
+
     def _trip_transaction_ids(self, trip_id: int) -> Select:
         """Distinct transactions linked anywhere in a trip."""
         return union(

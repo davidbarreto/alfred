@@ -72,6 +72,8 @@ def trips():
     svc._stay_repo = AsyncMock()
     svc._visit_repo = AsyncMock()
     svc._visit_repo.get_trip_visits.return_value = []
+    svc._link_repo = AsyncMock()
+    svc._link_repo.get_linked_ids.return_value = set()
     svc.settings_service = AsyncMock()
     svc.settings_service.get.return_value = TravelSettingsRead(airport_buffer_min=120, home_to_airport_min=60)
     return svc
@@ -153,6 +155,17 @@ class TestTripService:
         assert [i.kind for i in detail.timeline] == ["leave_home", "leg", "arrival", "check_in", "check_out"]
         assert detail.leave_home_at == datetime(2026, 12, 17, 3, tzinfo=timezone.utc)
         assert detail.status in ("upcoming", "ongoing", "past")
+
+    @freeze_time("2026-12-10 10:00:00")
+    async def test_detail_warns_about_legs_without_a_linked_charge(self, trips):
+        trips._repo.get_trip.return_value = _trip()
+        trips._leg_repo.get_legs.return_value = [_leg()]
+        trips._stay_repo.get_stays.return_value = [_stay()]
+        detail = await trips.get_trip_detail(1)
+        trips._link_repo.get_linked_ids.assert_awaited_once_with("legs", [1])
+        assert [w.kind for w in detail.warnings if w.kind == "leg_not_paid"] == ["leg_not_paid"]
+        trips._link_repo.get_linked_ids.return_value = {1}
+        assert not [w for w in (await trips.get_trip_detail(1)).warnings if w.kind == "leg_not_paid"]
 
     @freeze_time("2026-12-10 10:00:00")
     async def test_detail_loads_the_wishlist_for_the_cities_of_an_upcoming_trip(self, trips):

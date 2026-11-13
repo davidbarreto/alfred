@@ -120,6 +120,51 @@ def _event_wall_time(event, local_zone: ZoneInfo) -> datetime:
     return event.start_datetime.replace(tzinfo=local_zone).astimezone(zone).replace(tzinfo=None)
 
 
+def find_outside_dates_warnings(
+    legs: list[LegRead], stays: list[StayRead], visits: list[VisitRead], start: date, end: date,
+) -> list[TripWarning]:
+    """Legs, stays and dated visits (missed ones aside) that fall on days outside the trip's dates."""
+    def outside(first: date, last: date) -> bool:
+        return first < start or last > end
+
+    warnings: list[TripWarning] = []
+    for leg in sorted(legs, key=lambda leg: (leg.departs_at, leg.id)):
+        if outside(leg.departs_local.date(), leg.arrives_local.date()):
+            warnings.append(TripWarning(
+                kind="outside_trip_dates", leg_id=leg.id,
+                message=f"Leg {leg.origin} to {leg.destination} ({leg.departs_local:%d %b}) is outside the trip dates",
+            ))
+    for stay in sorted(stays, key=lambda stay: (stay.check_in_at, stay.id)):
+        if outside(stay.check_in_local.date(), stay.check_out_local.date()):
+            warnings.append(TripWarning(
+                kind="outside_trip_dates", stay_id=stay.id,
+                message=f"Stay at {stay.place.name} ({stay.check_in_local:%d %b} to {stay.check_out_local:%d %b}) is outside the trip dates",
+            ))
+    for visit in sorted((v for v in visits if v.visit_date and v.status != "missed"), key=lambda v: (v.visit_date, v.id)):
+        if outside(visit.visit_date, visit.visit_date):
+            warnings.append(TripWarning(
+                kind="outside_trip_dates", visit_id=visit.id,
+                message=f"{visit.place.name} ({visit.visit_date:%d %b}) is outside the trip dates",
+            ))
+    return warnings
+
+
+def find_unpaid_leg_warnings(
+    legs: list[LegRead], paid_leg_ids: set[int], trip_start: date, today: date, days: int,
+) -> list[TripWarning]:
+    """Legs still to travel that have no linked charge, once the trip starts within `days` days (0 turns it off)."""
+    if days <= 0 or (trip_start - today).days > days:
+        return []
+    return [
+        TripWarning(
+            kind="leg_not_paid", leg_id=leg.id,
+            message=f"{leg.origin} to {leg.destination} ({leg.departs_local:%d %b}) has no linked charge: not bought yet?",
+        )
+        for leg in sorted(legs, key=lambda leg: (leg.departs_at, leg.id))
+        if leg.id not in paid_leg_ids and leg.departs_local.date() >= today
+    ]
+
+
 def find_event_warnings(visits: list[VisitRead], events: dict[int, object], today: date, local_zone: ZoneInfo) -> list[TripWarning]:
     """Visits whose calendar event is missing or says something different (only what Alfred's local copy holds).
 

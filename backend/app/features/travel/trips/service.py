@@ -12,6 +12,7 @@ from app.features.travel.settings_service import TravelSettingsService
 from app.features.travel.stays.repository import StayRepository
 from app.features.travel.stays.schemas import StayRead
 from app.features.travel.tags.repository import TravelTagRepository
+from app.features.travel.transaction_links.repository import TransactionLinkRepository
 from app.features.travel.trips.repository import TripRepository
 from app.features.travel.trips.schemas import TripCreate, TripDetail, TripFilters, TripRead, TripUpdate
 from app.features.travel.visits.repository import VisitRepository
@@ -19,7 +20,10 @@ from app.features.travel.visits.schemas import VisitRead
 from app.features.travel.trips.map_points import MapScope, TripMap, build_trip_map
 from app.features.travel.trips.ideas import build_ideas
 from app.features.travel.trips.today import TripToday, build_today
-from app.features.travel.trips.coverage_warnings import find_event_warnings, find_lodging_warnings, find_visit_warnings
+from app.features.travel.trips.coverage_warnings import (
+    find_event_warnings, find_lodging_warnings, find_outside_dates_warnings, find_unpaid_leg_warnings,
+    find_visit_warnings,
+)
 from app.features.travel.trips.timeline import build_timeline, find_warnings, leave_home_at
 from app.shared.timezone import local_timezone, local_timezone_name, local_today
 
@@ -36,6 +40,7 @@ class TripService:
         self._leg_repo = LegRepository(session)
         self._stay_repo = StayRepository(session)
         self._visit_repo = VisitRepository(session)
+        self._link_repo = TransactionLinkRepository(session)
         self.settings_service = TravelSettingsService(session)
         # The local calendar copy only: warnings never call Google.
         self._calendar = CalendarEventService(provider=None, session=session)
@@ -68,6 +73,11 @@ class TripService:
             *find_warnings(legs, stays),
             *find_lodging_warnings(legs, stays),
             *find_visit_warnings(all_visits, legs, stays, settings.max_visits_per_day),
+            *find_outside_dates_warnings(legs, stays, all_visits, trip.start_date, trip.end_date),
+            *find_unpaid_leg_warnings(
+                legs, await self._link_repo.get_linked_ids("legs", [leg.id for leg in legs]), trip.start_date, local_today(),
+                settings.unpaid_leg_days,
+            ),
             *find_event_warnings(all_visits, await self._linked_events(all_visits), local_today(), local_timezone()),
         ]
         ideas = []

@@ -3,7 +3,7 @@ from datetime import date, datetime, time, timezone
 from app.features.travel.legs.schemas import LegRead
 from app.features.travel.places.schemas import PlaceRead
 from app.features.travel.stays.schemas import StayRead
-from app.features.travel.trips.coverage_warnings import find_lodging_warnings, find_visit_warnings
+from app.features.travel.trips.coverage_warnings import find_lodging_warnings, find_outside_dates_warnings, find_unpaid_leg_warnings, find_visit_warnings
 from app.features.travel.visits.schemas import VisitPlace, VisitRead
 
 NOW = datetime(2026, 1, 1, tzinfo=timezone.utc)
@@ -175,3 +175,45 @@ class TestEventWarnings:
 
     def test_a_linked_event_missing_from_the_local_copy_is_skipped(self):
         assert self._run([self._v(event=5)], {}) == []
+
+
+class TestUnpaidLegWarnings:
+    def _legs(self):
+        return [_leg(1, "Alpha", "Beta", _dt(10, 8), _dt(10, 10)), _leg(2, "Beta", "Alpha", _dt(15, 8), _dt(15, 10))]
+
+    def test_warns_about_legs_without_a_linked_charge_inside_the_window(self):
+        warnings = find_unpaid_leg_warnings(self._legs(), {1}, date(2026, 3, 10), date(2026, 2, 20), 30)
+        assert [(w.kind, w.leg_id) for w in warnings] == [("leg_not_paid", 2)]
+        assert "Beta to Alpha" in warnings[0].message and "15 Mar" in warnings[0].message
+
+    def test_silent_before_the_window_opens(self):
+        assert find_unpaid_leg_warnings(self._legs(), set(), date(2026, 3, 10), date(2026, 1, 20), 30) == []
+
+    def test_the_window_includes_its_first_day(self):
+        assert len(find_unpaid_leg_warnings(self._legs(), set(), date(2026, 3, 10), date(2026, 2, 8), 30)) == 2
+
+    def test_legs_already_travelled_are_not_flagged(self):
+        warnings = find_unpaid_leg_warnings(self._legs(), set(), date(2026, 3, 10), date(2026, 3, 12), 30)
+        assert [w.leg_id for w in warnings] == [2]
+
+    def test_zero_days_turns_it_off(self):
+        assert find_unpaid_leg_warnings(self._legs(), set(), date(2026, 3, 10), date(2026, 3, 9), 0) == []
+
+
+class TestOutsideDatesWarnings:
+    START, END = date(2026, 3, 10), date(2026, 3, 15)
+
+    def test_nothing_inside_the_trip_is_flagged(self):
+        legs = [_leg(1, "Alpha", "Beta", _dt(10, 8), _dt(10, 10)), _leg(2, "Beta", "Alpha", _dt(15, 8), _dt(15, 10))]
+        stays = [_stay(1, _dt(10, 14), _dt(15, 10))]
+        assert find_outside_dates_warnings(legs, stays, [_visit(1, 12)], self.START, self.END) == []
+
+    def test_legs_stays_and_visits_outside_are_flagged(self):
+        legs = [_leg(1, "Alpha", "Beta", _dt(9, 22), _dt(10, 2))]
+        stays = [_stay(2, _dt(14, 14), _dt(16, 10))]
+        visits = [_visit(3, 18), _visit(4, 9, status="missed"), _visit(5, None)]
+        warnings = find_outside_dates_warnings(legs, stays, visits, self.START, self.END)
+        assert [(w.kind, w.leg_id, w.stay_id, w.visit_id) for w in warnings] == [
+            ("outside_trip_dates", 1, None, None), ("outside_trip_dates", None, 2, None), ("outside_trip_dates", None, None, 3),
+        ]
+        assert "Leg Alpha to Beta (09 Mar)" in warnings[0].message and "Cafe Example (18 Mar)" in warnings[2].message

@@ -23,7 +23,7 @@ WarningKind = Literal[
     "long_wait_before_check_in", "tight_connection", "arrives_after_check_out", "overlapping_legs",
     "uncovered_night", "no_return_leg",
     "visit_before_arrival", "visit_after_departure", "visit_overlaps_leg", "visit_without_stay", "too_many_visits",
-    "no_calendar_event", "linked_event_mismatch", "linked_event_not_updated",
+    "no_calendar_event", "linked_event_mismatch", "linked_event_not_updated", "leg_not_paid", "outside_trip_dates",
 ]
 
 

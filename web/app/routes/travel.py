@@ -435,7 +435,7 @@ _WARNING_LABELS = {
     "visit_before_arrival": "Visits before arrival", "visit_after_departure": "Visits after departure",
     "visit_overlaps_leg": "Visits during a trip leg", "visit_without_stay": "Visits without a stay",
     "too_many_visits": "Busy days", "no_calendar_event": "Visits without a calendar event",
-    "linked_event_mismatch": "Calendar event differs", "linked_event_not_updated": "Calendar event not updated",
+    "linked_event_mismatch": "Calendar event differs", "linked_event_not_updated": "Calendar event not updated", "leg_not_paid": "Legs not bought yet", "outside_trip_dates": "Outside the trip dates",
 }
 
 

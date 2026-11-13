@@ -3472,7 +3472,7 @@
               "pm.test('Both settings present', () => { pm.expect(j.airport_buffer_min).to.be.a('number'); pm.expect(j.home_to_airport_min).to.be.a('number'); pm.expect(j).to.have.property('home_address'); });",
               "pm.environment.set('travel_buffer_original', j.airport_buffer_min);",
               "pm.environment.set('travel_ride_original', j.home_to_airport_min);",
-              "pm.test('Visit limit has a default', () => pm.expect(pm.response.json().max_visits_per_day).to.be.a('number'));"
+              "pm.test('Visit limit and unpaid-leg window have defaults', () => { pm.expect(pm.response.json().max_visits_per_day).to.be.a('number'); pm.expect(pm.response.json().unpaid_leg_days).to.be.a('number'); });"
             ],
             "type": "text/javascript"
           }

@@ -51,6 +51,8 @@
           <input name="max_visits_per_day" type="number" min="1" max="20" value="{{ settings.max_visits_per_day }}" class="input input-sm input-bordered w-28"></label>
         <label class="space-y-1"><span class="block text-xs text-gray-500">Event length when a visit gets a calendar event (min)</span>
           <input name="visit_duration_min" type="number" min="5" max="720" value="{{ settings.visit_duration_min }}" class="input input-sm input-bordered w-28"></label>
+        <label class="space-y-1"><span class="block text-xs text-gray-500">Warn about legs with no charge this many days before the trip (0 = never)</span>
+          <input name="unpaid_leg_days" type="number" min="0" max="365" value="{{ settings.unpaid_leg_days }}" class="input input-sm input-bordered w-28"></label>
         <label class="flex items-center gap-2 pb-1 text-xs text-gray-600"><input type="checkbox" name="snooze_other_events" class="toggle toggle-sm" {{ 'checked' if settings.snooze_other_events }}>
           Snooze reminders of other calendar events during a trip</label>
         <label class="space-y-1"><span class="block text-xs text-gray-500">Home address (start of the directions to the airport)</span>
@@ -139,7 +141,7 @@ document.getElementById('travel-settings-form')?.addEventListener('submit', asyn
     method: 'PUT', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       airport_buffer_min: Number(form.get('airport_buffer_min')), home_to_airport_min: Number(form.get('home_to_airport_min')),
-      max_visits_per_day: Number(form.get('max_visits_per_day')), visit_duration_min: Number(form.get('visit_duration_min')), snooze_other_events: form.get('snooze_other_events') === 'on', home_address: String(form.get('home_address') || ''),
+      max_visits_per_day: Number(form.get('max_visits_per_day')), visit_duration_min: Number(form.get('visit_duration_min')), unpaid_leg_days: Number(form.get('unpaid_leg_days')), snooze_other_events: form.get('snooze_other_events') === 'on', home_address: String(form.get('home_address') || ''),
     }),
   });
   const data = await res.json().catch(() => ({}));

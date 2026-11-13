@@ -103,7 +103,7 @@ Pushes to `main` deploy automatically over SSH with GitHub Actions, one workflow
 - [Integrations](docs/integrations.md) — Notion, Google, LLM providers, Telegram
 - [Assistant layer](docs/assistant-layer.md) — commands, intents, MCP, Telegram menu
 - [Web portal](docs/portal.md) — conventions and pagination pattern
-- [Operations](docs/operations.md) — hosting, cron workflows, caller identity
+- [Operations](docs/operations.md) — runbook: deploy checks, logs, migrations, database, smoke test troubleshooting
 - Modules: [interviews](docs/modules/interviews.md), [metrics](docs/modules/metrics.md), [reminders & overload](docs/modules/reminders-overload.md), [planning](docs/modules/planning.md), [shopping](docs/modules/shopping.md)
 
 Coding rules and conventions for contributors (and for Claude Code) are in [CLAUDE.md](CLAUDE.md).

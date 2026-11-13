@@ -20,8 +20,8 @@ This file holds the rules that apply to every change. Reference material lives i
 | `docs/integrations.md` | Touching Notion, Google, Gemini/OpenAI, Open-Meteo or Telegram code |
 | `docs/assistant-layer.md` | Adding or editing a command, intent example, MCP tool or the Telegram menu |
 | `docs/portal.md` | Adding or changing a portal page, partial or paginated section |
-| `docs/operations.md` | Touching Docker, deploy, migrations on startup, cron workflows, `X-Alfred-Client`, or troubleshooting a failed CI smoke test |
-| `docs/docker.md` | Changing compose services, volumes, startup/seed steps, deploy workflows, or where audio/statement files are stored |
+| `docs/operations.md` | Running or debugging anything on prod or CI: deploy checks, logs, restarts, migrations, database access, one-off scripts, a failed smoke test |
+| `docs/docker.md` | Changing compose services, volumes, startup/seed steps, deploy workflows, cron workflows, `X-Alfred-Client`, or where audio/statement files are stored |
 | `docs/configuration.md` | Adding or changing an env variable, a runtime setting (`core.settings`) or an auth path |
 | `docs/features.md` | Needing to know what a module does, or where a feature is exposed (portal / commands / API); update it when adding a user-facing feature |
 | `docs/modules/interviews.md` | Interview stories, prep questions, candidate questions, interview tags |

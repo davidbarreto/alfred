@@ -11,7 +11,7 @@ Alfred is a self-hosted personal AI assistant with four parts:
 3. **n8n workflows** (`n8n/`) — Telegram bot as the primary interface, plus scheduled triggers (reminders, briefing). Sub-workflow architecture.
 4. **MCP server** (`mcp/`) — exposes the backend's command catalog as `alfred_*` tools to MCP clients (Claude).
 
-The stack runs on a VPS via Docker Compose, with nginx as reverse proxy. See [operations.md](operations.md).
+The stack runs on a VPS via Docker Compose, with nginx as reverse proxy. See [docker.md](docker.md) and the runbook in [operations.md](operations.md).
 
 ## How the pieces talk
 
@@ -23,7 +23,7 @@ Telegram ──> n8n ──HTTP──> backend API <──HTTP── web portal
 
 - Telegram is **input only via n8n**; FastAPI never calls the Telegram API directly.
 - n8n HTTP Request nodes call the backend. Business logic is never embedded in n8n.
-- Every caller identifies itself with an `X-Alfred-Client` header (`web`, `mcp`, `n8n`, plus `claude` for direct calls by Claude); see [operations.md](operations.md#api-caller-identity).
+- Every caller identifies itself with an `X-Alfred-Client` header (`web`, `mcp`, `n8n`, plus `claude` for direct calls by Claude); see [docker.md](docker.md#api-caller-identity).
 - Commands (`/storyadd`, `/mstart`, ...) are defined once in a registry and reach the backend from Telegram (through n8n), the MCP server and the chat. See [assistant-layer.md](assistant-layer.md).
 
 ## Backend layering

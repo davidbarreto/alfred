@@ -76,18 +76,7 @@ audio/
 
 ## Everyday commands
 
-Run from `infra/` (compose reads `infra/.env`):
-
-```bash
-docker compose up -d --build            # build and start everything
-docker compose up -d --build api        # rebuild one service (runs migrations + seeds on start)
-docker compose logs -f api              # follow logs
-docker compose ps                       # status
-docker compose exec api alembic current # check the migration revision
-docker compose down                     # stop (data stays in the bind-mounted folders)
-```
-
-The local stack is slow to build; for most changes the unit tests are the faster check (see [operations.md](operations.md#local-stack)).
+Local commands are in [operations.md](operations.md#local-stack), production ones (logs, restart, migrations, database) in the rest of that runbook. The local stack is slow to build; for most changes the unit tests are the faster check.
 
 ## CI compose
 
@@ -106,3 +95,28 @@ Each component has its own GitHub Actions workflow triggered by pushes to `main`
 | `deploy-infra.yml` | `infra/docker-compose.yml` | pulls, ensures the `mcp-shared` network, runs `docker compose up -d` |
 
 `infra/.env` is **not** in git: it must already exist on the VPS next to the compose file. Changing it does not trigger a deploy; apply it with `docker compose up -d` on the server.
+
+## Conventions
+
+- **Secrets:** environment variables are injected at runtime; never bake them into images.
+- **Migrations:** run as part of container startup (`entrypoint.sh`), not manually. The same entrypoint loads the insert-only seed scripts.
+- **nginx:** shared snippets for SSL termination and proxy headers; do not duplicate config per service.
+- **Time zone:** containers run in UTC (no `TZ` set), so the server clock is not the user's clock. See `CLAUDE.md` (Dates & timezones).
+
+## API caller identity
+
+Every service that calls the backend API sends an `X-Alfred-Client` header (`web`, `mcp`, `n8n`; `claude` for direct calls made by Claude). `ApiRequestLoggingMiddleware` records one `core.api_requests` row per request (missing header becomes `unknown`) for the Insights "API & MCP Usage" charts.
+
+New callers, and new n8n HTTP Request nodes hitting `http://api:8000`, must send it too. `/health` and `/core/api-requests/*` are deliberately not logged.
+
+## Cron workflows
+
+Cron-triggered n8n workflows call backend endpoints:
+
+| Workflow | Schedule | Endpoint / purpose |
+|---|---|---|
+| `AlfredReminders` | hourly, 08:00-22:00 | `GET /core/reminders/due`, one digest message ([modules/reminders-overload.md](modules/reminders-overload.md)) |
+| Morning briefing / evening digest | daily | briefing endpoints (`app/api/routes/briefing.py`) |
+| Watchers | cron | monitoring executions and alerts |
+
+A global pause skips reminder runs (they are not logged as overload days); `POST /core/urgency-reset` is also used by Resume.

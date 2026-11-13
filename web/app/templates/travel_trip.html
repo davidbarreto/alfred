@@ -252,7 +252,7 @@
             <p class="text-xs text-gray-500">{{ leg.departs_local[:10] | short_date }} {{ leg.departs_local[11:16] }} ({{ leg.departs_tz }}) → {{ leg.arrives_local[:10] | short_date }} {{ leg.arrives_local[11:16] }} ({{ leg.arrives_tz }})</p>
             {% if leg.booking_ref or leg.seat %}<p class="text-xs text-gray-400">{% if leg.booking_ref %}Ref {{ leg.booking_ref }}{% endif %}{% if leg.seat %} · Seat {{ leg.seat }}{% endif %}</p>{% endif %}
             {% if leg.booking_url %}<a class="text-xs text-[#378ADD] hover:underline" href="{{ leg.booking_url }}" target="_blank" rel="noopener">Booking</a>{% endif %}
-            {% if leg.notes %}<p class="text-xs text-gray-500 whitespace-pre-line">{{ leg.notes }}</p>{% endif %}
+            {% if leg.notes %}<p class="text-sm text-gray-800 whitespace-pre-line"><i class="ti ti-notes text-gray-500"></i> {{ leg.notes }}</p>{% endif %}
           </div>
           <div class="flex gap-1 whitespace-nowrap">
             {{ tx_button('legs', leg.id, leg.origin ~ ' → ' ~ leg.destination) }}
@@ -286,7 +286,7 @@
               {% if stay.booking_url %}<a class="text-[#378ADD] hover:underline" href="{{ stay.booking_url }}" target="_blank" rel="noopener">Booking</a>{% endif %}
             </p>
             {% if stay.grade %}<p class="text-xs text-gray-500">Grade {{ stay.grade }}/5</p>{% endif %}
-            {% if stay.notes %}<p class="text-xs text-gray-500 whitespace-pre-line">{{ stay.notes }}</p>{% endif %}
+            {% if stay.notes %}<p class="text-sm text-gray-800 whitespace-pre-line"><i class="ti ti-notes text-gray-500"></i> {{ stay.notes }}</p>{% endif %}
           </div>
           <div class="flex gap-1 whitespace-nowrap">
             {{ tx_button('stays', stay.id, stay.place.name) }}

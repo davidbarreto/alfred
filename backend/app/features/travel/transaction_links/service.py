@@ -152,7 +152,7 @@ class TransactionLinkService:
         return tagged
 
     async def get_unlinked(self, trip_id: int) -> list[LinkedTransaction] | None:
-        """Charges that look like part of the trip but are not linked to any leg, stay or visit yet."""
+        """Untagged expenses dated within the trip and not linked to any leg, stay or visit: candidates to tag."""
         trip = await self._trip_repo.get_trip(trip_id)
         if trip is None:
             return None
@@ -160,8 +160,6 @@ class TransactionLinkService:
             datetime.combine(trip.start_date, time.min),
             datetime.combine(trip.end_date + timedelta(days=1), time.min),
             parse_default_tag_names(trip.default_tag_names),
-            datetime.combine(trip.start_date - timedelta(days=TAG_LEAD_DAYS), time.min),
-            datetime.combine(trip.end_date + timedelta(days=TAG_TAIL_DAYS + 1), time.min),
         )
         logger.debug("Unlinked transactions: trip_id=%d count=%d", trip_id, len(found))
         return [LinkedTransaction.model_validate(t) for t in found]

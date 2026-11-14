@@ -912,6 +912,13 @@ class TestTaggedCharges:
         assert 'href="/travel/1/tagged"' in html and "See all 8" in html
         assert "added to cost" in html and ">linked<" in html
 
+    def test_unlinked_tagged_charges_get_link_controls_and_linked_ones_do_not(self, client, mock_api):
+        _route(mock_api, {"/travel/trips/1": _detail(), "/travel/places": [], "/travel/trips/1/costs": None,
+                          "/travel/trips/1/tagged-transactions": self._tagged(2)})
+        html = client.get("/travel/1").text
+        assert html.count("link-unlinked") == 1 and 'value="legs:' in html
+        assert client.get("/travel/1/tagged").text.count("unlinked-target") == 1
+
     def test_cost_card_shows_the_tagged_part_apart_and_the_overall_total(self, client, mock_api):
         _route(mock_api, {"/travel/trips/1": _detail(), "/travel/places": [], "/travel/trips/1/costs": self._costs()})
         html = client.get("/travel/1").text
@@ -1104,7 +1111,7 @@ class TestUnlinkedCharges:
         _route(mock_api, {"/travel/trips/1": _detail(), "/travel/places": [], "/travel/trips/1/costs": None,
                           "/travel/trips/1/unlinked-transactions": unlinked})
         html = client.get("/travel/1").text
-        assert "Charges not linked to anything" in html and "Some Shop" in html and "12.50 EUR" in html
+        assert "Untagged charges during the trip" in html and "Some Shop" in html and "12.50 EUR" in html
         assert 'value="legs:' in html and 'value="stays:' in html
 
     def test_no_card_when_everything_is_linked(self, client, mock_api):

@@ -1,7 +1,7 @@
 from datetime import datetime
 from decimal import Decimal
 
-from sqlalchemy import Select, and_, case, func, literal, or_, select, union
+from sqlalchemy import Select, and_, case, func, literal, select, union
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -132,38 +132,30 @@ class TransactionLinkRepository:
         stmt = select(*_sum_columns()).select_from(Transaction).where(Transaction.id.in_(select(ids.c.transaction_id)))
         return _row_to_cost(*(await self._session.execute(stmt)).one())
 
-    async def get_unlinked(
-        self, start: datetime, end: datetime, tag_names: list[str], tag_start: datetime, tag_end: datetime,
-    ) -> list[Transaction]:
-        """Expenses dated in [start, end), expenses and income carrying one of the tags dated in
-        [tag_start, tag_end), that no leg, stay or visit is linked to. Transfers are never a trip cost."""
+    async def get_unlinked(self, start: datetime, end: datetime, tag_names: list[str]) -> list[Transaction]:
+        """Expenses dated in [start, end) that carry none of the tags and that no leg, stay or visit is
+        linked to: the ones to tag or link by hand. Tagged charges are listed apart (`get_tagged`)."""
         linked = union(
             select(legs_transactions.c.transaction_id),
             select(stays_transactions.c.transaction_id),
             select(visits_transactions.c.transaction_id),
         ).subquery()
         lowered = [n.lower() for n in tag_names]
-        tagged = (
-            Transaction.id.in_(
-                select(transactions_tags.c.transaction_id)
-                .join(FinanceTag, FinanceTag.id == transactions_tags.c.tag_id)
-                .where(func.lower(FinanceTag.name).in_(lowered))
+        conditions = [
+            Transaction.type == "expense",
+            Transaction.date >= start,
+            Transaction.date < end,
+            Transaction.id.not_in(select(linked.c.transaction_id)),
+        ]
+        if lowered:
+            conditions.append(
+                Transaction.id.not_in(
+                    select(transactions_tags.c.transaction_id)
+                    .join(FinanceTag, FinanceTag.id == transactions_tags.c.tag_id)
+                    .where(func.lower(FinanceTag.name).in_(lowered))
+                )
             )
-            if lowered else literal(False)
-        )
-        tagged = and_(tagged, Transaction.date >= tag_start, Transaction.date < tag_end)
-        in_window = and_(Transaction.date >= start, Transaction.date < end)
-        stmt = (
-            select(Transaction)
-            .where(
-                or_(
-                    and_(Transaction.type == "expense", or_(in_window, tagged)),
-                    and_(Transaction.type == "income", tagged),
-                ),
-                Transaction.id.not_in(select(linked.c.transaction_id)),
-            )
-            .order_by(Transaction.date, Transaction.id)
-        )
+        stmt = select(Transaction).where(*conditions).order_by(Transaction.date, Transaction.id)
         return list((await self._session.scalars(stmt)).all())
 
     async def get_tagged(self, tag_names: list[str], start: datetime, end: datetime) -> list[tuple[Transaction, bool]]:

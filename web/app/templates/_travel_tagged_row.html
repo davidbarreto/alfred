@@ -3,4 +3,7 @@
   <span class="flex-1 min-w-[8rem]">{{ t.merchant or t.description or t.bank_description or 'Charge' }} <button type="button" class="text-xs text-[#378ADD] hover:underline tx-detail" data-id="{{ t.id }}">Details</button></span>
   <span class="{{ 'text-green-700' if t.type == 'income' else '' }}">{{ t.amount }} {{ t.currency }}</span>
   <span class="text-xs {{ 'text-gray-400' if t.linked else 'text-amber-700' }}">{{ 'linked' if t.linked else 'added to cost' }}</span>
+  {% if not t.linked %}
+  {% include "_travel_link_controls.html" %}
+  {% endif %}
 </div>

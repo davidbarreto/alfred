@@ -1,5 +1,5 @@
 document.querySelectorAll('.link-unlinked').forEach((button) => button.addEventListener('click', async () => {
-  const target = button.closest('[data-unlinked]').querySelector('.unlinked-target').value;
+  const target = button.closest('[data-unlinked], [data-tagged]').querySelector('.unlinked-target').value;
   if (!target) return;
   const [kind, id] = target.split(':');
   const res = await fetch(`/travel/links/${kind}/${id}`, {

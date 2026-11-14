@@ -266,14 +266,13 @@ async def _sql(call) -> str:
 
 
 class TestUnlinkedService:
-    async def test_uses_the_trip_dates_and_default_tags(self, links):
+    async def test_uses_the_trip_dates_and_default_tags_to_leave_the_tagged_out(self, links):
         links._trip_repo.get_trip.return_value = SimpleNamespace(
             start_date=date(2026, 12, 17), end_date=date(2026, 12, 29), default_tag_names="Travel, Work")
         links._repo.get_unlinked.return_value = [_txn()]
         result = await links.get_unlinked(1)
-        start, end, names, tag_start, tag_end = links._repo.get_unlinked.await_args.args
+        start, end, names = links._repo.get_unlinked.await_args.args
         assert (start, end, names) == (datetime(2026, 12, 17), datetime(2026, 12, 30), ["travel", "work"])
-        assert (tag_start, tag_end) == (datetime(2026, 9, 18), datetime(2027, 1, 29))
         assert [t.id for t in result] == [9]
 
     async def test_unknown_trip(self, links):
@@ -333,15 +332,16 @@ class TestCostSql:
     async def test_entity_costs_group_by_the_link_column(self):
         assert "GROUP BY travel.legs_transactions.leg_id" in await _sql(lambda r: r.get_entity_costs("legs", [1, 2]))
 
-    async def test_unlinked_query_excludes_linked_and_transfers_and_matches_tags_case_insensitively(self):
-        sql = await _sql(lambda r: r.get_unlinked(datetime(2026, 12, 17), datetime(2026, 12, 30), ["Travel"], datetime(2026, 9, 18), datetime(2027, 1, 29)))
-        assert "NOT IN" in sql and "UNION" in sql and "travel.visits_transactions" in sql
+    async def test_unlinked_query_keeps_untagged_unlinked_trip_expenses_only(self):
+        sql = await _sql(lambda r: r.get_unlinked(datetime(2026, 12, 17), datetime(2026, 12, 30), ["Travel"]))
+        assert "travel.visits_transactions" in sql and "UNION" in sql
+        assert "NOT IN (SELECT finance.transactions_tags.transaction_id" in sql
         assert "lower(finance.tags.name) IN ('travel')" in sql
-        assert "type = 'expense'" in sql and "type = 'income'" in sql and "'transfer'" not in sql
-        assert "finance.transactions.date >= '2026-09-18" in sql and "finance.transactions.date < '2027-01-29" in sql
+        assert "type = 'expense'" in sql and "'income'" not in sql and "'transfer'" not in sql
+        assert "finance.transactions.date >= '2026-12-17" in sql and "finance.transactions.date < '2026-12-30" in sql
 
     async def test_unlinked_query_without_tags_only_matches_dated_expenses(self):
-        sql = await _sql(lambda r: r.get_unlinked(datetime(2026, 12, 17), datetime(2026, 12, 30), [], datetime(2026, 9, 18), datetime(2027, 1, 29)))
+        sql = await _sql(lambda r: r.get_unlinked(datetime(2026, 12, 17), datetime(2026, 12, 30), []))
         assert "finance.tags" not in sql
 
     async def test_tagging_inserts_missing_rows_only(self):

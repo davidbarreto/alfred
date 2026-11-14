@@ -929,6 +929,11 @@ class TestTaggedCharges:
         html = client.get("/travel/1").text
         assert 'id="tagged"' not in html and 'id="cost-tagged"' not in html
 
+    def test_card_shows_an_empty_message_when_the_trip_has_default_tags_but_no_charges(self, client, mock_api):
+        _route(mock_api, {"/travel/trips/1": _detail(default_tag_names="travel, hotel"), "/travel/places": [], "/travel/trips/1/costs": None})
+        html = client.get("/travel/1").text
+        assert 'id="tagged"' in html and "No charges carry the trip's tags yet" in html
+
     def test_tagged_page_lists_every_charge(self, client, mock_api):
         _route(mock_api, {"/travel/trips/1": _detail(), "/travel/trips/1/tagged-transactions": self._tagged(8)})
         html = client.get("/travel/1/tagged").text

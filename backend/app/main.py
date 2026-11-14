@@ -119,7 +119,7 @@ from app.api.routes.study.tracks import router as study_tracks_router
 from app.config import get_settings
 from app.db.session import async_session
 from app.dependencies import get_embedding_provider, get_notion_client
-from app.integrations.google_oauth.client import GoogleTokenExpiredError
+from app.integrations.google_oauth.client import GoogleRequestRejectedError, GoogleTokenExpiredError
 from app.integrations.oauth_tokens.repository import delete_oauth_token
 
 settings = get_settings()
@@ -290,6 +290,15 @@ async def _google_token_expired_handler(request: Request, exc: GoogleTokenExpire
             )
         },
     )
+
+
+@app.exception_handler(GoogleRequestRejectedError)
+async def _google_request_rejected_handler(request: Request, exc: GoogleRequestRejectedError) -> JSONResponse:
+    logger.warning("Google rejected request: provider=%s status=%s", exc.provider, exc.status_code)
+    detail = f"Google rejected this change ({exc.provider}, HTTP {exc.status_code})"
+    if exc.reason:
+        detail += f": {exc.reason}"
+    return JSONResponse(status_code=422, content={"detail": detail})
 
 
 @app.get("/health")

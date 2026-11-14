@@ -3,7 +3,11 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import httpx
 import pytest
 
-from app.integrations.google_oauth.client import GoogleOAuthClient, GoogleTokenExpiredError
+from app.integrations.google_oauth.client import (
+    GoogleOAuthClient,
+    GoogleRequestRejectedError,
+    GoogleTokenExpiredError,
+)
 
 
 def _mock_response(json_data: dict | None = None, status_code: int = 200, content: bytes = b"{}") -> MagicMock:
@@ -82,6 +86,37 @@ class TestRequest:
 
             with pytest.raises(httpx.HTTPStatusError):
                 await client._request("GET", "https://example.com/thing")
+
+
+class TestRejectedRequest:
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("status_code", [400, 403])
+    async def test_api_400_and_403_raise_request_rejected_error(self, status_code):
+        client = _client()
+        with patch("httpx.AsyncClient") as mock_http:
+            instance = mock_http.return_value.__aenter__.return_value
+            instance.post = AsyncMock(return_value=_mock_response({"access_token": "token-1"}))
+            instance.request = AsyncMock(return_value=_mock_response({}, status_code=status_code))
+
+            with pytest.raises(GoogleRequestRejectedError) as exc_info:
+                await client._request("PATCH", "https://example.com/thing")
+
+        assert exc_info.value.provider == "google_contacts"
+        assert exc_info.value.status_code == status_code
+
+    @pytest.mark.asyncio
+    async def test_api_500_still_raises_plain_http_status_error(self):
+        client = _client()
+        with patch("httpx.AsyncClient") as mock_http:
+            instance = mock_http.return_value.__aenter__.return_value
+            instance.post = AsyncMock(return_value=_mock_response({"access_token": "token-1"}))
+            instance.request = AsyncMock(return_value=_mock_response({}, status_code=500))
+
+            with pytest.raises(httpx.HTTPStatusError) as exc_info:
+                await client._request("PATCH", "https://example.com/thing")
+
+        assert not isinstance(exc_info.value, GoogleRequestRejectedError)
 
 
 class TestRefreshAccessToken:

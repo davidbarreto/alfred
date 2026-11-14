@@ -667,7 +667,7 @@ class TestAirportPicker:
     def test_trip_page_loads_picker_script(self, client, mock_api):
         _route(mock_api, {"/travel/trips/1/costs": None, "/travel/trips/1": _detail(), "/travel/places": []})
         html = client.get("/travel/1").text
-        assert "/static/js/airport-input.js" in html and "initAirportInput" in html
+        assert "/static/js/airport-input.js" in html and html.count("initTerminalInput({") == 2
 
     def test_airport_data_is_served_with_zones(self, client):
         rows = client.get("/static/js/airports.json").json()
@@ -675,6 +675,16 @@ class TestAirportPicker:
         assert by_code["OPO"][1] == "Porto" and by_code["OPO"][4] == "Europe/Lisbon"
         assert by_code["LHR"][4] == "Europe/London" and by_code["ARN"][4] == "Europe/Stockholm"
         assert all(len(row) == 5 and len(row[0]) == 3 and row[4] for row in rows)
+
+    def test_station_data_is_served_with_zones_and_codes_that_fit_the_leg_column(self, client):
+        rows = client.get("/static/js/stations.json").json()
+        by_code = {row[0]: row for row in rows if row[0]}
+        assert by_code["9430007"][1:4] == ["Lisboa Santa Apolónia", "PT", "Europe/Lisbon"]
+        assert all(len(row) == 6 and len(row[0]) <= 8 and row[1] and len(row[2]) == 2 and "/" in row[3] for row in rows)
+
+    def test_airport_rail_stations_and_stations_without_a_uic_code_are_listed(self, client):
+        names = {row[1] for row in client.get("/static/js/stations.json").json()}
+        assert {"Schiphol Airport", "Frankfurt (M) Flughafen Fernbf", "Lisboa Oriente"} <= names
 
     def test_place_forms_load_city_picker(self, client, mock_api):
         _route(mock_api, {"/travel/trips/1/costs": None, "/travel/trips/1": _detail(), "/travel/places": []})
@@ -939,6 +949,24 @@ class TestOtherEvents:
         _route(mock_api, {"/travel/trips/1": _detail(), "/travel/places": [], "/travel/trips/1/costs": None,
                           "/travel/trips/1/other-events": self._events(False)})
         assert "Turn on snoozing" in client.get("/travel/1/warnings").text
+
+    def test_recurring_events_get_a_checkbox_skip_button_and_bulk_bar_but_one_offs_do_not(self, client, mock_api):
+        events = self._events(False) + [{"event_id": 6, "title": "Dentist", "start_datetime": "2026-12-19T09:00:00",
+                                         "end_datetime": "2026-12-19T10:00:00", "all_day": False, "recurring": False, "snoozed": False}]
+        _route(mock_api, {"/travel/trips/1": _detail(), "/travel/places": [], "/travel/trips/1/costs": None,
+                          "/travel/trips/1/other-events": events})
+        html = client.get("/travel/1/warnings").text
+        gym = html[html.index('data-other-event="5"'):html.index('data-other-event="6"')]
+        dentist = html[html.index('data-other-event="6"'):]
+        assert 'data-date="2026-12-18"' in gym and "other-event-pick" in gym and "other-event-skip" in gym
+        assert "other-event-pick" not in dentist.split("</div>")[0] and "other-event-skip" not in dentist.split("</div>")[0]
+        assert 'id="other-skip-selected"' in html and 'id="other-select-all"' in html
+
+    def test_no_bulk_bar_when_nothing_is_recurring(self, client, mock_api):
+        events = [dict(self._events(False)[0], recurring=False)]
+        _route(mock_api, {"/travel/trips/1": _detail(), "/travel/places": [], "/travel/trips/1/costs": None,
+                          "/travel/trips/1/other-events": events})
+        assert 'id="other-skip-selected"' not in client.get("/travel/1/warnings").text
 
     def test_no_card_without_events_or_when_the_endpoint_fails(self, client, mock_api):
         _route(mock_api, {"/travel/trips/1": _detail(), "/travel/places": [], "/travel/trips/1/costs": None,

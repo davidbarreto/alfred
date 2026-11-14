@@ -153,14 +153,13 @@
       </div>
       {% for leg in trip.legs %}
       {% set lw = warnings_for(trip.warnings, 'leg_id', leg.id) %}
-      <div class="flex items-start justify-between gap-2 text-sm{{ ' rounded-md bg-amber-50 border border-amber-200 -mx-2 px-2 py-1.5' if lw }}" id="leg-{{ leg.id }}"{{ ' data-warning-row' if lw }}>
+      <div class="detail-row cursor-pointer flex items-start justify-between gap-2 text-sm{{ ' rounded-md bg-amber-50 border border-amber-200 -mx-2 px-2 py-1.5' if lw }}" id="leg-{{ leg.id }}"{{ ' data-warning-row' if lw }} data-detail-kind="leg" data-detail="{{ leg | tojson | forceescape }}">
         <div>
           {% for message in lw %}<p class="text-sm font-medium text-amber-900"><i class="ti ti-alert-triangle text-amber-600"></i> {{ message }}</p>{% endfor %}
-          <p class="text-gray-900">{{ leg.origin }} → {{ leg.destination }} <span class="text-xs text-gray-400">{{ leg.mode }}{% if leg.carrier or leg.number %} · {{ leg.carrier or '' }} {{ leg.number or '' }}{% endif %}</span> {{ cost_chip(entity_costs.legs.get(leg.id)) }}</p>
+          <p class="text-gray-900">{{ leg.origin }} → {{ leg.destination }} <span class="text-xs text-gray-400">{{ leg.mode }}{% if leg.carrier or leg.number %} · {{ leg.carrier or '' }} {{ leg.number or '' }}{% endif %}</span> {{ cost_chip(entity_costs.legs.get(leg.id)) }} {% if leg.notes %}<i class="ti ti-notes text-gray-400 text-xs" title="{{ leg.notes | e }}"></i>{% endif %}</p>
           <p class="text-xs text-gray-500">{{ leg.departs_local[:10] | short_date }} {{ leg.departs_local[11:16] }} ({{ leg.departs_tz }}) → {{ leg.arrives_local[:10] | short_date }} {{ leg.arrives_local[11:16] }} ({{ leg.arrives_tz }})</p>
           {% if leg.booking_ref or leg.seat %}<p class="text-xs text-gray-400">{% if leg.booking_ref %}Ref {{ leg.booking_ref }}{% endif %}{% if leg.seat %} · Seat {{ leg.seat }}{% endif %}</p>{% endif %}
           {% if leg.booking_url %}<a class="text-xs text-[#378ADD] hover:underline" href="{{ leg.booking_url }}" target="_blank" rel="noopener">Booking</a>{% endif %}
-          {% if leg.notes %}<p class="text-sm text-gray-800 whitespace-pre-line"><i class="ti ti-notes text-gray-500"></i> {{ leg.notes }}</p>{% endif %}
         </div>
         <div class="flex gap-1 whitespace-nowrap">
           {{ tx_button('legs', leg.id, leg.origin ~ ' → ' ~ leg.destination) }}
@@ -183,10 +182,10 @@
       </div>
       {% for stay in trip.stays %}
       {% set sw = warnings_for(trip.warnings, 'stay_id', stay.id) %}
-      <div class="flex items-start justify-between gap-2 text-sm{{ ' rounded-md bg-amber-50 border border-amber-200 -mx-2 px-2 py-1.5' if sw }}" id="stay-{{ stay.id }}"{{ ' data-warning-row' if sw }}>
+      <div class="detail-row cursor-pointer flex items-start justify-between gap-2 text-sm{{ ' rounded-md bg-amber-50 border border-amber-200 -mx-2 px-2 py-1.5' if sw }}" id="stay-{{ stay.id }}"{{ ' data-warning-row' if sw }} data-detail-kind="stay" data-detail="{{ stay | tojson | forceescape }}">
         <div>
           {% for message in sw %}<p class="text-sm font-medium text-amber-900"><i class="ti ti-alert-triangle text-amber-600"></i> {{ message }}</p>{% endfor %}
-          <p class="text-gray-900">{{ stay.place.name }}{% if stay.place.city %} <span class="text-xs text-gray-400">{{ stay.place.city }}</span>{% endif %} {{ cost_chip(entity_costs.stays.get(stay.id)) }}</p>
+          <p class="text-gray-900">{{ stay.place.name }}{% if stay.place.city %} <span class="text-xs text-gray-400">{{ stay.place.city }}</span>{% endif %} {{ cost_chip(entity_costs.stays.get(stay.id)) }} {% if stay.notes %}<i class="ti ti-notes text-gray-400 text-xs" title="{{ stay.notes | e }}"></i>{% endif %}</p>
           <p class="text-xs text-gray-500">{{ stay.check_in_local[:10] | short_date }} {{ stay.check_in_local[11:16] }} → {{ stay.check_out_local[:10] | short_date }} {{ stay.check_out_local[11:16] }} ({{ stay.timezone }}) · {{ stay.nights }} night{{ '' if stay.nights == 1 else 's' }}</p>
           {% if stay.booking_ref %}<p class="text-xs text-gray-400">Ref {{ stay.booking_ref }}</p>{% endif %}
           <p class="text-xs space-x-3">
@@ -194,7 +193,6 @@
             {% if stay.booking_url %}<a class="text-[#378ADD] hover:underline" href="{{ stay.booking_url }}" target="_blank" rel="noopener">Booking</a>{% endif %}
           </p>
           {% if stay.grade %}<p class="text-xs text-gray-500">Grade {{ stay.grade }}/5</p>{% endif %}
-          {% if stay.notes %}<p class="text-sm text-gray-800 whitespace-pre-line"><i class="ti ti-notes text-gray-500"></i> {{ stay.notes }}</p>{% endif %}
         </div>
         <div class="flex gap-1 whitespace-nowrap">
           {{ tx_button('stays', stay.id, stay.place.name) }}
@@ -292,6 +290,7 @@
   {% with places=places %}{% include "_travel_visit_dialog.html" %}{% endwith %}
 
   {% include "_travel_tx_dialog.html" %}
+  {% include "_travel_detail_dialog.html" %}
 
   <dialog id="link-dialog" class="modal">
     <div class="modal-box max-w-2xl space-y-3">
@@ -328,7 +327,7 @@
         <span></span>
         <label class="space-y-1"><span class="block text-xs text-gray-500">From</span><input name="origin" required class="input input-sm input-bordered w-full"></label>
         <label class="space-y-1"><span class="block text-xs text-gray-500">To</span><input name="destination" required class="input input-sm input-bordered w-full"></label>
-        <label class="space-y-1"><span class="block text-xs text-gray-500">From code (airport)</span><input name="origin_code" maxlength="8" class="input input-sm input-bordered w-full"></label>
+        <label class="space-y-1"><span class="block text-xs text-gray-500">From code (airport / station)</span><input name="origin_code" maxlength="8" class="input input-sm input-bordered w-full"></label>
         <label class="space-y-1"><span class="block text-xs text-gray-500">To code</span><input name="destination_code" maxlength="8" class="input input-sm input-bordered w-full"></label>
         <label class="space-y-1"><span class="block text-xs text-gray-500">Departs (local time there)</span><input name="departs_at" type="datetime-local" required class="input input-sm input-bordered w-full"></label>
         <label class="space-y-1"><span class="block text-xs text-gray-500">Departure time zone</span><input name="departs_tz" list="zone-options" required class="input input-sm input-bordered w-full"></label>
@@ -387,11 +386,13 @@
 <script src="/static/js/travel-visits.js"></script>
 <script src="/static/js/travel-place-history.js"></script>
 <script src="/static/js/travel-transactions.js"></script>
+<script src="/static/js/travel-detail.js"></script>
 {% include "_travel_tx_detail_dialog.html" %}
 <script src="/static/js/travel-unlinked.js"></script>
 <script>
 initTravelVisits({ tripId: {{ trip.id }}, placeId: null });
 initTravelTransactions();
+initTravelDetail();
 const TRIP_ID = {{ trip.id }};
 const TRIP_START = {{ trip.start_date | tojson }};
 const TRIP_END = {{ trip.end_date | tojson }};
@@ -508,10 +509,10 @@ function openLeg(leg, prefill = null, eventId = null) {
   legForm.elements.arrives_tz.value = source ? source.arrives_tz : DEFAULT_ZONE;
   legDialog.showModal();
 }
-// Flights pick an airport (fills city, code and time zone); other modes keep free text.
-const isFlight = () => legForm.elements.mode.value === 'flight';
-initAirportInput({ input: legForm.elements.origin, codeInput: legForm.elements.origin_code, zoneInput: legForm.elements.departs_tz, isActive: isFlight });
-initAirportInput({ input: legForm.elements.destination, codeInput: legForm.elements.destination_code, zoneInput: legForm.elements.arrives_tz, isActive: isFlight });
+// Flights pick an airport and trains a station (fills name, code and time zone); other modes keep free text.
+const legMode = () => legForm.elements.mode.value;
+initTerminalInput({ input: legForm.elements.origin, codeInput: legForm.elements.origin_code, zoneInput: legForm.elements.departs_tz, mode: legMode });
+initTerminalInput({ input: legForm.elements.destination, codeInput: legForm.elements.destination_code, zoneInput: legForm.elements.arrives_tz, mode: legMode });
 document.getElementById('add-leg').addEventListener('click', () => openLeg(null));
 document.querySelectorAll('.edit-leg').forEach((b) => b.addEventListener('click', () => openLeg(JSON.parse(b.dataset.item))));
 

@@ -1,4 +1,4 @@
-"""Pure function: the pins of a trip for a map (stays, visits that were not missed, flight airports). No DB or IO."""
+"""Pure function: the pins of a trip for a map (stays, visits that were not missed, flight airports and train stations). No DB or IO."""
 from datetime import datetime
 from typing import Literal
 
@@ -7,6 +7,7 @@ from pydantic import BaseModel
 from app.features.travel.legs.schemas import LegRead
 from app.features.travel.places.schemas import PlaceRead
 from app.features.travel.stays.schemas import StayRead
+from app.features.travel.trips.timeline import TERMINAL_MODES, terminal_query
 from app.features.travel.visits.schemas import VisitPlace, VisitRead
 
 
@@ -92,11 +93,12 @@ def build_trip_map(
     airports: dict[str, MapPoint] = {}
     for leg in sorted(legs, key=lambda l: l.departs_at):
         taken = leg.departs_at <= now
-        if leg.mode != "flight" or scope not in ("all", "visited" if taken else "planned"):
+        if leg.mode not in TERMINAL_MODES or scope not in ("all", "visited" if taken else "planned"):
             continue
         for code, city in ((leg.origin_code, leg.origin), (leg.destination_code, leg.destination)):
-            label = f"{code} airport" if code else f"{city} airport"
-            point = airports.setdefault(label.lower(), MapPoint(name=label, address=label, category="airport"))
+            label = terminal_query(leg.mode, code, city)
+            category = "station" if leg.mode == "train" else "airport"
+            point = airports.setdefault(label.lower(), MapPoint(name=label, address=label, category=category))
             if taken:
                 point.status = "visited"
     points.extend(airports.values())

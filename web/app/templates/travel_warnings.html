@@ -25,6 +25,15 @@
     <summary class="cursor-pointer p-4 text-sm font-semibold text-amber-800">Other calendar events <span class="text-xs font-normal">({{ other_events|length }})</span></summary>
     <div class="px-4 pb-4 space-y-1">
       <p class="text-[11px] text-amber-700">Not tagged with this trip's default tags and not linked to it. {% if other_events|selectattr('snoozed')|list %}Their reminders are snoozed.{% else %}Turn on snoozing in the travel settings to hold their reminders back.{% endif %}</p>
+      {% if other_events|selectattr('recurring')|list %}
+      <div class="flex flex-wrap items-center gap-2 py-1" id="other-events-bar">
+        <button type="button" class="text-xs text-[#378ADD] hover:underline" id="other-select-all">Select all</button>
+        <button type="button" class="text-xs text-[#378ADD] hover:underline" id="other-select-none">Select none</button>
+        <button type="button" class="btn btn-xs btn-outline" id="other-skip-selected" disabled>Skip selected</button>
+        <span class="text-[11px] text-amber-700">Only recurring events can be skipped, one occurrence at a time. Undo from the calendar.</span>
+        <span class="text-xs text-red-600" id="other-error"></span>
+      </div>
+      {% endif %}
       {% for e in other_events %}
       {% include "_travel_other_event_row.html" %}
       {% endfor %}
@@ -48,6 +57,53 @@
       groups.forEach(function (d) { d.open = !fold; });
       button.textContent = fold ? 'Unfold all' : 'Fold all';
     });
+  })();
+</script>
+<script>
+  (function () {
+    var rows = function () { return Array.prototype.slice.call(document.querySelectorAll('[data-other-event]')); };
+    var picks = function () { return rows().map(function (r) { return r.querySelector('.other-event-pick'); }).filter(Boolean); };
+    var skipSelected = document.getElementById('other-skip-selected');
+    var error = document.getElementById('other-error');
+    if (!skipSelected) return;
+
+    function refresh() {
+      var n = picks().filter(function (p) { return p.checked; }).length;
+      skipSelected.disabled = n === 0;
+      skipSelected.textContent = n ? 'Skip selected (' + n + ')' : 'Skip selected';
+    }
+    function setAll(value) { picks().forEach(function (p) { p.checked = value; }); refresh(); }
+
+    async function skip(row) {
+      var body = new FormData();
+      body.append('occurrence_date', row.dataset.date);
+      var res = await fetch('/calendar/' + row.dataset.otherEvent + '/skip', { method: 'POST', body: body });
+      if (res.ok) { row.remove(); return null; }
+      return (await res.text()) || 'Failed to skip.';
+    }
+    async function skipRows(targets) {
+      error.textContent = '';
+      var failures = [];
+      for (var i = 0; i < targets.length; i++) {
+        var message = await skip(targets[i]);
+        if (message) failures.push(message);
+      }
+      if (failures.length) error.textContent = failures.length + ' failed: ' + failures[0];
+      var left = rows().length;
+      document.querySelector('#other-events summary span').textContent = '(' + left + ')';
+      if (!left) document.getElementById('other-events').remove();
+      refresh();
+    }
+
+    document.getElementById('other-select-all').addEventListener('click', function () { setAll(true); });
+    document.getElementById('other-select-none').addEventListener('click', function () { setAll(false); });
+    skipSelected.addEventListener('click', function () {
+      skipRows(rows().filter(function (r) { var p = r.querySelector('.other-event-pick'); return p && p.checked; }));
+    });
+    document.querySelectorAll('.other-event-skip').forEach(function (b) {
+      b.addEventListener('click', function () { skipRows([b.closest('[data-other-event]')]); });
+    });
+    document.querySelectorAll('.other-event-pick').forEach(function (p) { p.addEventListener('change', refresh); });
   })();
 </script>
 {% endblock %}

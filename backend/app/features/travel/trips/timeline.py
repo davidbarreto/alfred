@@ -93,8 +93,14 @@ def _hours(delta: timedelta) -> str:
     return f"{hours} h {rest:02d} min" if hours else f"{rest} min"
 
 
-def _airport(code: str | None, city: str) -> str:
-    return f"{code} airport" if code else f"{city} airport"
+TERMINAL_MODES = ("flight", "train")
+
+
+def terminal_query(mode: str, code: str | None, name: str) -> str:
+    """What to search on Maps for the place a leg departs from or arrives at: an airport by its code, a station by its name."""
+    if mode == "train":
+        return name if "station" in name.lower() else f"{name} train station"
+    return f"{code} airport" if code else f"{name} airport"
 
 
 def _lodging(place: PlaceRead) -> str:
@@ -139,9 +145,9 @@ def _food_links(near: str) -> dict[str, str]:
 def _leg_item(leg: LegRead, stays: list[StayRead], home_address: str | None, is_first: bool) -> TimelineItem:
     links: dict[str, str] = {}
     label = None
-    if leg.mode == "flight":
-        # Getting to the airport: from the hotel the traveler is leaving, or from home on the first leg.
-        airport = _airport(leg.origin_code, leg.origin)
+    if leg.mode in TERMINAL_MODES:
+        # Getting to the airport or station: from the hotel the traveler is leaving, or from home on the first leg.
+        airport = terminal_query(leg.mode, leg.origin_code, leg.origin)
         links.update(_food_links(airport))
         stay = _stay_before(leg, stays)
         if stay is not None:
@@ -163,14 +169,15 @@ def _leg_item(leg: LegRead, stays: list[StayRead], home_address: str | None, is_
 
 
 def _arrival_item(leg: LegRead, stays: list[StayRead]) -> TimelineItem:
-    # A flight lands at an airport: show the area around it, not the whole city.
-    links = {"map": maps_search_url(_airport(leg.destination_code, leg.destination) if leg.mode == "flight" else leg.destination)}
-    if leg.mode == "flight":
-        links.update(_food_links(_airport(leg.destination_code, leg.destination)))
+    # A flight lands at an airport and a train at a station: show the area around it, not the whole city.
+    terminal = leg.mode in TERMINAL_MODES
+    airport = terminal_query(leg.mode, leg.destination_code, leg.destination)
+    links = {"map": maps_search_url(airport if terminal else leg.destination)}
+    if terminal:
+        links.update(_food_links(airport))
     label = None
-    stay = _stay_after(leg, stays) if leg.mode == "flight" else None
+    stay = _stay_after(leg, stays) if terminal else None
     if stay is not None:
-        airport = _airport(leg.destination_code, leg.destination)
         links.update(_transfer_links(airport, _lodging(stay.place)))
         label = f"{airport} \u2192 {stay.place.name}"
     return TimelineItem(

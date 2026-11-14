@@ -6,12 +6,15 @@
  * initCityInput({ input, countryInput }) is the same dropdown over distinct cities for place forms:
  * picking a city fills the country name (via Intl.DisplayNames).
  *
- * initAirportInput({ input, codeInput, zoneInput, isActive }) attaches a dropdown to `input`.
- * Picking a row fills the city, the IATA code and the IANA zone. Typing without picking is
- * untouched, so small airfields and non-flight legs still take free text.
+ * initTerminalInput({ input, codeInput, zoneInput, mode }) attaches a dropdown to `input`; `mode()` returns the
+ * leg's mode. For "flight" it searches the airports, for "train" the stations in /static/js/stations.json
+ * (rows of [uic, name, country, tz, main, alias], built by web/scripts/build_stations.py); other modes get no dropdown.
+ * Picking a row fills the city or station name, the code (IATA or UIC) and the IANA zone. Typing without
+ * picking is untouched, so small airfields, halts and other modes still take free text.
  */
 (function () {
   const MAX_RESULTS = 8;
+  const MAX_STATION_RESULTS = 12;
   let airportsPromise = null;
 
   function loadAirports() {
@@ -21,6 +24,38 @@
         .catch(() => []);
     }
     return airportsPromise;
+  }
+
+  let stationsPromise = null;
+
+  function loadStations() {
+    if (!stationsPromise) {
+      stationsPromise = fetch("/static/js/stations.json")
+        .then((res) => (res.ok ? res.json() : []))
+        .catch(() => []);
+    }
+    return stationsPromise;
+  }
+
+  // Accent- and case-insensitive: "lisboa santa apolonia" finds "Lisboa Santa Apolónia".
+  const fold = (text) => text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+
+  function searchStations(stations, query) {
+    const q = fold(query.trim());
+    if (q.length < 2) return [];
+    const hits = [];
+    for (const row of stations) {
+      const name = fold(row[1]);
+      const alias = fold(row[5]);
+      let s = null;
+      if (row[0] === q || name === q || alias === q) s = 0;
+      else if (name.startsWith(q) || alias.startsWith(q)) s = 1;
+      else if (name.includes(q) || alias.includes(q)) s = 2;
+      if (s !== null) hits.push([s, row]);
+    }
+    // Best match first, then main stations, then shorter names; a city has many stops, so show more than for airports.
+    hits.sort((a, b) => a[0] - b[0] || b[1][4] - a[1][4] || a[1][1].length - b[1][1].length || a[1][1].localeCompare(b[1][1]));
+    return hits.slice(0, MAX_STATION_RESULTS).map((h) => h[1]);
   }
 
   // Lower score is better; null means no match. Codes rank first, then city, then airport name.
@@ -120,16 +155,19 @@
     input.addEventListener("blur", close);
   }
 
-  function initAirportInput({ input, codeInput, zoneInput, isActive }) {
+  function initTerminalInput({ input, codeInput, zoneInput, mode }) {
     attachDropdown({
       input,
-      isActive,
-      find: async (query) => search(await loadAirports(), query),
-      label: ([iata, city, name, country]) => [`${city} (${iata})`, `${name} · ${country}`],
-      pick: ([iata, city, , , tz]) => {
-        input.value = city;
-        codeInput.value = iata;
-        zoneInput.value = tz;
+      isActive: () => mode() === "flight" || mode() === "train",
+      find: async (query) => (mode() === "train" ? searchStations(await loadStations(), query) : search(await loadAirports(), query)),
+      // airports: [iata, city, name, country, tz]; stations: [uic, name, country, tz]
+      label: (row) => (mode() === "train" ? [row[5] || row[1], row[5] ? `${row[2]} · ${row[1]}` : row[2]] : [`${row[1]} (${row[0]})`, `${row[2]} · ${row[3]}`]),
+      pick: (row) => {
+        // A station is saved under its English name when it has one, like airports and the stay city picker, so a
+        // leg's end still matches the city of the stay.
+        input.value = mode() === "train" ? row[5] || row[1] : row[1];
+        codeInput.value = row[0];
+        zoneInput.value = mode() === "train" ? row[3] : row[4];
       },
     });
   }
@@ -192,8 +230,9 @@
     });
   }
 
-  window.initAirportInput = initAirportInput;
+  window.initTerminalInput = initTerminalInput;
   window.initCityInput = initCityInput;
   window.searchAirports = search;
+  window.searchStations = searchStations;
   window.searchCities = searchCities;
 })();

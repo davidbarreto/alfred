@@ -87,14 +87,17 @@
 
   {% include "_travel_visit_dialog.html" %}
   {% include "_travel_tx_dialog.html" %}
+  {% include "_travel_detail_dialog.html" %}
 </div>
 
 <script src="/static/js/airport-input.js"></script>
 <script src="/static/js/travel-visits.js"></script>
 <script src="/static/js/travel-transactions.js"></script>
+<script src="/static/js/travel-detail.js"></script>
 <script>
 initTravelVisits({ tripId: null, placeId: {{ place.id }} });
 initTravelTransactions();
+initTravelDetail();
 
 async function send(method, url, body) {
   const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: body ? JSON.stringify(body) : undefined });

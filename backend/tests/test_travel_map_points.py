@@ -67,14 +67,18 @@ class TestBuildTripMap:
         assert len(points) == 1
         assert points[0].description == "Planned, 03 Mar 20:00; Planned, 05 Mar 20:00"
 
-    def test_flight_airports_are_pins_once_and_other_modes_are_not(self):
+    def test_flight_airports_and_train_stations_are_pins_once_and_other_modes_are_not(self):
         legs = [
             _leg(1, "Porto", "Lisbon", origin_code="OPO", destination_code="LIS", day=2),
             _leg(2, "Lisbon", "Porto", origin_code="LIS", destination_code="OPO", day=9),
             _leg(3, "Porto", "Braga", mode="train"),
+            _leg(4, "Porto", "Braga", mode="bus"),
         ]
         points = build_trip_map(1, "T", legs, [], []).points
-        assert [(p.name, p.category) for p in points] == [("OPO airport", "airport"), ("LIS airport", "airport")]
+        assert [(p.name, p.category) for p in points] == [
+            ("OPO airport", "airport"), ("LIS airport", "airport"),
+            ("Porto train station", "station"), ("Braga train station", "station"),
+        ]
 
     def test_airport_without_code_falls_back_to_the_city(self):
         points = build_trip_map(1, "T", [_leg(1, "Porto", "Lisbon")], [], []).points

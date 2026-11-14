@@ -1,7 +1,7 @@
 {% from "_travel_macros.html" import cost_chip, tx_button %}
 {# One visit. `show_place` names the place; `show_trip` links the trip. Actions need initTravelVisits on the page. #}
 {% set vw = warnings_for(trip.warnings, 'visit_id', v.id) if trip is defined and trip.warnings is defined else [] %}
-<div class="flex items-start justify-between gap-2 text-sm{{ ' rounded-md bg-amber-50 border border-amber-200 -mx-2 px-2 py-1.5' if vw }}" id="visit-{{ v.id }}"{{ ' data-warning-row' if vw }}>
+<div class="detail-row cursor-pointer flex items-start justify-between gap-2 text-sm{{ ' rounded-md bg-amber-50 border border-amber-200 -mx-2 px-2 py-1.5' if vw }}" id="visit-{{ v.id }}"{{ ' data-warning-row' if vw }} data-detail-kind="visit" data-detail="{{ v | tojson | forceescape }}">
   <div class="space-y-0.5">
     {% for message in vw %}<p class="text-sm font-medium text-amber-900"><i class="ti ti-alert-triangle text-amber-600"></i> {{ message }}</p>{% endfor %}
     <p class="text-gray-900">
@@ -11,6 +11,7 @@
       {% if v.calendar_event_id %}<i class="ti ti-calendar-event text-xs text-gray-400" title="Has a calendar event"></i>{% endif %}
       {% if v.grade %}<span class="text-xs text-amber-600">{{ v.grade }}/5</span>{% endif %}
       {% if entity_costs is defined %}{{ cost_chip(entity_costs.visits.get(v.id)) }}{% endif %}
+      {% if v.notes %}<i class="ti ti-notes text-gray-400 text-xs" title="{{ v.notes | e }}"></i>{% endif %}
     </p>
     <p class="text-xs text-gray-500">
       {% if show_place %}{{ v.visit_date | short_date if v.visit_date else 'No day yet' }}{% endif %}{% if v.visit_time %} {{ v.visit_time[:5] }}{% endif %}
@@ -18,7 +19,6 @@
       {% if show_trip and v.trip_id %} · <a class="hover:underline" href="/travel/{{ v.trip_id }}">{{ v.trip_name }}</a>{% endif %}
       · <a class="text-[#378ADD] hover:underline" href="{{ v.place.maps_link }}" target="_blank" rel="noopener">Map</a>
     </p>
-    {% if v.notes %}<p class="text-sm text-gray-800 whitespace-pre-line"><i class="ti ti-notes text-gray-500"></i> {{ v.notes }}</p>{% endif %}
   </div>
   <div class="flex gap-1 whitespace-nowrap">
     {% if v.status != 'visited' %}<button class="btn btn-xs btn-ghost mark-visit" data-id="{{ v.id }}" data-status="visited">Visited</button>{% endif %}

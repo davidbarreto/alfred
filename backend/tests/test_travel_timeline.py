@@ -58,11 +58,24 @@ class TestBuildTimeline:
         leg = _leg(1, "Porto", "Lisbon", _dt(2, 8), _dt(2, 9), carrier="XX", number="123")
         assert "XX+123" in build_timeline([leg], [])[0].links["check_flight"]
 
-    def test_non_flight_directions_run_between_its_ends_in_three_modes(self):
-        leg = _leg(1, "Porto", "Lisbon", _dt(2, 8), _dt(2, 9), mode="train")
+    def test_non_flight_non_train_directions_run_between_its_ends_in_three_modes(self):
+        leg = _leg(1, "Porto", "Lisbon", _dt(2, 8), _dt(2, 9), mode="bus")
         links = build_timeline([leg], [])[0].links
         assert "travelmode=transit" in links["directions"] and "origin=Porto" in links["directions"]
         assert "travelmode=driving" in links["drive"] and "travelmode=walking" in links["walk"]
+
+    def test_train_directions_go_from_the_hotel_to_the_departure_station_by_name(self):
+        leg = _leg(1, "Lisbon Santa Apolonia", "Porto Campanha", _dt(5, 18), _dt(5, 21), mode="train")
+        item = next(i for i in build_timeline([leg], [_stay(5, _dt(2, 14), _dt(5, 10))]) if i.kind == "leg")
+        assert "destination=Lisbon+Santa+Apolonia+train+station" in item.links["directions"]
+        assert item.transfer_label == "Hotel Example \u2192 Lisbon Santa Apolonia train station"
+
+    def test_train_arrival_maps_the_station_and_a_name_already_saying_station_is_kept(self):
+        leg = _leg(1, "Porto", "Lisbon Central Station", _dt(5, 18), _dt(5, 21), mode="train")
+        arrival = next(i for i in build_timeline([leg], []) if i.kind == "arrival")
+        assert "Lisbon+Central+Station" in arrival.links["map"] and "train+station" not in arrival.links["map"]
+        other = _leg(2, "Porto", "Lisbon", _dt(6, 18), _dt(6, 21), mode="train")
+        assert "Lisbon+train+station" in next(i for i in build_timeline([other], []) if i.kind == "arrival").links["map"]
 
     def test_first_flight_directions_go_from_home_to_the_origin_airport(self):
         leg = _leg(1, "Porto", "Lisbon", _dt(2, 8), _dt(2, 9), origin_code="OPO")
@@ -144,7 +157,7 @@ class TestBuildTimeline:
         assert set(item.links) == {"map", "cafes", "restaurants", "luggage", "pharmacy", "supermarket", "atm"}
         assert "restaurants+near" in item.links["restaurants"]
 
-    def test_flight_airports_get_cafes_and_restaurants_but_other_modes_do_not(self):
+    def test_flight_airports_and_train_stations_get_cafes_and_restaurants_but_other_modes_do_not(self):
         flight = _leg(1, "Porto", "Lisbon", _dt(2, 8), _dt(2, 9), origin_code="OPO", destination_code="LIS")
         items = build_timeline([flight], [])
         departure = next(i for i in items if i.kind == "leg")
@@ -152,7 +165,9 @@ class TestBuildTimeline:
         assert "cafe+near+OPO+airport" in departure.links["cafes"] and "restaurants+near+OPO+airport" in departure.links["restaurants"]
         assert "restaurants+near+LIS+airport" in arrival.links["restaurants"]
         train = _leg(2, "Porto", "Lisbon", _dt(3, 8), _dt(3, 9), mode="train")
-        assert all("restaurants" not in i.links for i in build_timeline([train], []))
+        assert "restaurants+near+Lisbon+train+station" in next(i for i in build_timeline([train], []) if i.kind == "arrival").links["restaurants"]
+        bus = _leg(3, "Porto", "Lisbon", _dt(4, 8), _dt(4, 9), mode="bus")
+        assert all("restaurants" not in i.links for i in build_timeline([bus], []))
 
     def test_local_time_uses_the_item_zone(self):
         leg = _leg(1, "Porto", "Lisbon", datetime(2026, 7, 1, 10, tzinfo=timezone.utc), _dt(2, 9), departs_tz="Europe/Stockholm")

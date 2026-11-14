@@ -6,7 +6,7 @@
 <div class="p-4 sm:p-6 space-y-4 max-w-2xl mx-auto">
   <a href="/travel/{{ trip.id }}" class="text-xs text-gray-500 hover:text-gray-700"><i class="ti ti-arrow-left"></i> {{ trip.name }}</a>
   <h1 class="text-base font-semibold text-gray-900">Charges with the trip's tags <span class="text-xs font-normal text-gray-400">{{ tagged.transactions|length }}</span></h1>
-  <p class="text-xs text-gray-400">Carrying a default tag of the trip. Those not linked to a leg, stay or visit (link them from here) add up to {{ tagged.cost.total_eur | money if tagged.cost else '0.00' }} € in the trip cost.</p>
+  <p class="text-xs text-gray-400">Carrying all the default tags of the trip (extra tags are fine). Those not linked to a leg, stay or visit (link them from here) add up to {{ tagged.cost.total_eur | money if tagged.cost else '0.00' }} € in the trip cost.</p>
   <div class="card bg-white" id="tagged">
     <div class="card-body p-5 space-y-2">
       {% for t in tagged.transactions %}

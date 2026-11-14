@@ -304,6 +304,16 @@ class TestCostSql:
         assert "lower(finance.tags.name) IN ('travel')" in sql and "type IN ('expense', 'income')" in sql
         assert "travel.legs_transactions" in sql and "travel.visits_transactions" in sql and "'transfer'" not in sql
 
+    async def test_tagged_query_requires_every_default_tag_not_just_one(self):
+        sql = await _sql(lambda r: r.get_tagged(["Travel", "Christmas", "travel"], datetime(2026, 9, 18), datetime(2027, 1, 30)))
+        assert "lower(finance.tags.name) IN ('christmas', 'travel')" in sql
+        assert "GROUP BY finance.transactions_tags.transaction_id" in sql
+        assert "count(distinct(lower(finance.tags.name))) = 2" in sql
+
+    async def test_unlinked_query_keeps_charges_that_carry_only_some_of_the_tags(self):
+        sql = await _sql(lambda r: r.get_unlinked(datetime(2026, 12, 17), datetime(2026, 12, 30), ["Travel", "Christmas"]))
+        assert "count(distinct(lower(finance.tags.name))) = 2" in sql
+
     async def test_tagged_query_without_tags_is_empty_without_touching_the_db(self):
         session = _Capture()
         assert await TransactionLinkRepository(session).get_tagged([], datetime(2026, 9, 18), datetime(2027, 1, 30)) == []

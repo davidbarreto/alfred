@@ -112,7 +112,7 @@
   <div class="card bg-white" id="tagged">
     <div class="card-body p-5 space-y-2">
       <h2 class="text-sm font-semibold text-gray-900">Charges with the trip's tags <span class="text-xs font-normal text-gray-400">{{ tagged.transactions|length }}</span></h2>
-      <p class="text-xs text-gray-400">Carrying a default tag of the trip. The ones not linked to a leg, stay or visit are added to the cost; link them to one to tie the cost to a place.</p>
+      <p class="text-xs text-gray-400">Carrying all the default tags of the trip (extra tags are fine). The ones not linked to a leg, stay or visit are added to the cost; link them to one to tie the cost to a place.</p>
       {% for t in tagged.transactions[:preview_size] %}
       {% include "_travel_tagged_row.html" %}
       {% else %}
@@ -260,7 +260,7 @@
   <div class="card bg-white" id="unlinked">
     <div class="card-body p-5 space-y-2">
       <h2 class="text-sm font-semibold text-gray-900">Untagged charges during the trip <span class="text-xs font-normal text-gray-400">{{ unlinked|length }}</span></h2>
-      <p class="text-xs text-gray-400">Expenses dated within the trip that carry none of its default tags and are not tied to a leg, stay or visit. Tag them to move them to the tagged charges.</p>
+      <p class="text-xs text-gray-400">Expenses dated within the trip that do not carry all of its default tags and are not tied to a leg, stay or visit. Tag them to move them to the tagged charges.</p>
       {% for t in unlinked[:preview_size] %}
       {% include "_travel_unlinked_row.html" %}
       {% endfor %}

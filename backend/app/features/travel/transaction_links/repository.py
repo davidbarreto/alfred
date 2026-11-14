@@ -34,6 +34,18 @@ def _row_to_cost(total, count, unconverted) -> tuple[Decimal, int, int]:
     return Decimal(total or 0).quantize(Decimal("0.01")), int(count), int(unconverted)
 
 
+def _carrying_all(lowered: list[str]):
+    """Ids of the transactions that carry every one of the (lowercase) tag names."""
+    names = sorted(set(lowered))
+    return (
+        select(transactions_tags.c.transaction_id)
+        .join(FinanceTag, FinanceTag.id == transactions_tags.c.tag_id)
+        .where(func.lower(FinanceTag.name).in_(names))
+        .group_by(transactions_tags.c.transaction_id)
+        .having(func.count(func.distinct(func.lower(FinanceTag.name))) == len(names))
+    )
+
+
 class TransactionLinkRepository:
     def __init__(self, session: AsyncSession):
         self._session = session
@@ -133,7 +145,7 @@ class TransactionLinkRepository:
         return _row_to_cost(*(await self._session.execute(stmt)).one())
 
     async def get_unlinked(self, start: datetime, end: datetime, tag_names: list[str]) -> list[Transaction]:
-        """Expenses dated in [start, end) that carry none of the tags and that no leg, stay or visit is
+        """Expenses dated in [start, end) that do not carry all the tags and that no leg, stay or visit is
         linked to: the ones to tag or link by hand. Tagged charges are listed apart (`get_tagged`)."""
         linked = union(
             select(legs_transactions.c.transaction_id),
@@ -149,17 +161,13 @@ class TransactionLinkRepository:
         ]
         if lowered:
             conditions.append(
-                Transaction.id.not_in(
-                    select(transactions_tags.c.transaction_id)
-                    .join(FinanceTag, FinanceTag.id == transactions_tags.c.tag_id)
-                    .where(func.lower(FinanceTag.name).in_(lowered))
-                )
+                Transaction.id.not_in(_carrying_all(lowered))
             )
         stmt = select(Transaction).where(*conditions).order_by(Transaction.date, Transaction.id)
         return list((await self._session.scalars(stmt)).all())
 
     async def get_tagged(self, tag_names: list[str], start: datetime, end: datetime) -> list[tuple[Transaction, bool]]:
-        """Expenses and income dated in [start, end) carrying one of the tags, each with whether a leg, stay or
+        """Expenses and income dated in [start, end) carrying all the tags, each with whether a leg, stay or
         visit is linked to it. Transfers are never a trip cost."""
         lowered = [n.lower() for n in tag_names]
         if not lowered:
@@ -175,11 +183,7 @@ class TransactionLinkRepository:
                 Transaction.type.in_(("expense", "income")),
                 Transaction.date >= start,
                 Transaction.date < end,
-                Transaction.id.in_(
-                    select(transactions_tags.c.transaction_id)
-                    .join(FinanceTag, FinanceTag.id == transactions_tags.c.tag_id)
-                    .where(func.lower(FinanceTag.name).in_(lowered))
-                ),
+                Transaction.id.in_(_carrying_all(lowered)),
             )
             .order_by(Transaction.date, Transaction.id)
         )

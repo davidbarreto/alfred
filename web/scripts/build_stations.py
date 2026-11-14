@@ -8,7 +8,7 @@ Kaggle as "Train stations in Europe"): a semicolon-separated stations.csv.
 
 Rows are [code, name, country (ISO-2), time zone, main, alias]; `main` is 1 for the dataset's main stations (they rank first in the picker), `alias` is the name with its city in English when that differs ("Wien Hbf" -> "Vienna Hbf"), else empty; the code is the UIC code, or empty when the dataset has none (the
 leg then stores only the name, and the Maps link is built from the name anyway). Kept: suggestable stations, one
-row per country and name. Stations flagged as airports are kept only when they have a UIC code (the rail stops at
+row per country and name; a code-less city entry takes the code of its unsuggested "<city> asema/Hbf/Centrale" row. Stations flagged as airports are kept only when they have a UIC code (the rail stops at
 airports such as Schiphol or Frankfurt Flughafen); the other airport entries are the airports themselves. Swiss
 stops without a UIC code are dropped unless they are main stations: the dataset lists thousands of bus stops there.
 
@@ -37,6 +37,10 @@ EXONYMS = {
 }
 EXONYMS = {local: english for local, english in EXONYMS.items() if local != english}
 
+# Words that make "<city> <word>" the city's main station ("Helsinki asema", "Gorizia Centrale"). The dataset flags
+# some of these as not suggestable and keeps the code-less city entry instead, so the city entry borrows the code.
+MAIN_STATION_WORDS = {"asema", "station", "centrale", "central", "centraal", "hbf", "stazione"}
+
 OUTPUT = Path(__file__).resolve().parents[1] / "app" / "static" / "js" / "stations.json"
 
 
@@ -58,16 +62,37 @@ def _alias(name: str) -> str:
     return ""
 
 
+def _main_station_codes(rows: list[dict[str, str]], by_name: dict[tuple[str, str], list[str]]) -> dict[tuple[str, str], str]:
+    """UIC codes for kept entries that have none, taken from an unsuggested "<city> <main station word>" row.
+
+    Only when that row's own name is not kept (else it is already in the list) and it gives exactly one code.
+    """
+    codeless = {key: (key[0], key[1].lower()) for key, row in by_name.items() if not row[0]}
+    by_lower = {value: key for key, value in codeless.items()}
+    found: dict[tuple[str, str], set[str]] = {}
+    for r in rows:
+        name = r["name"].strip()
+        city, _, word = name.rpartition(" ")
+        key = by_lower.get((r["country"], city.lower()))
+        if not key or word.lower() not in MAIN_STATION_WORDS or not r["uic"] or r["is_airport"] == "t" or (r["country"], name) in by_name:
+            continue
+        found.setdefault(key, set()).add(r["uic"])
+    return {key: next(iter(codes)) for key, codes in found.items() if len(codes) == 1}
+
+
 def trainline_rows(path: Path) -> list[list[str]]:
     with path.open(encoding="utf-8", newline="") as handle:
-        by_name: dict[tuple[str, str], list[str]] = {}
-        for r in csv.DictReader(handle, delimiter=";"):
-            if not _keep(r):
-                continue
-            key = (r["country"], r["name"].strip())
-            # A duplicate name keeps the entry that has a code.
-            if key not in by_name or (r["uic"] and not by_name[key][0]):
-                by_name[key] = [r["uic"], r["name"].strip(), r["country"], r["time_zone"], int(r["is_main_station"] == "t"), _alias(r["name"].strip())]
+        rows = list(csv.DictReader(handle, delimiter=";"))
+    by_name: dict[tuple[str, str], list[str]] = {}
+    for r in rows:
+        if not _keep(r):
+            continue
+        key = (r["country"], r["name"].strip())
+        # A duplicate name keeps the entry that has a code.
+        if key not in by_name or (r["uic"] and not by_name[key][0]):
+            by_name[key] = [r["uic"], r["name"].strip(), r["country"], r["time_zone"], int(r["is_main_station"] == "t"), _alias(r["name"].strip())]
+    for key, code in _main_station_codes(rows, by_name).items():
+        by_name[key][0] = code
     return list(by_name.values())
 
 

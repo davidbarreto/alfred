@@ -1,4 +1,4 @@
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
@@ -48,11 +48,17 @@ def _stay(city="Beta", lat=None, lng=None, check_in=datetime(2026, 12, 17, 14), 
                            check_in_at=check_in, check_out_at=check_out, timezone="UTC")
 
 
+def _leg(origin, destination, departs_at, arrives_at):
+    return SimpleNamespace(origin=origin, destination=destination, departs_at=departs_at.replace(tzinfo=timezone.utc),
+                           arrives_at=arrives_at.replace(tzinfo=timezone.utc), departs_tz="UTC", arrives_tz="UTC")
+
+
 @pytest.fixture
 def service():
     fc._cache.clear()
     svc = TripForecastService(AsyncMock(), AsyncMock())
-    svc._client, svc._trips, svc._stays = AsyncMock(), AsyncMock(), AsyncMock()
+    svc._client, svc._trips, svc._stays, svc._legs = AsyncMock(), AsyncMock(), AsyncMock(), AsyncMock()
+    svc._legs.get_legs.return_value = []
     svc._trips.get_trip.return_value = SimpleNamespace(start_date=date(2026, 12, 17), end_date=date(2026, 12, 19))
     svc._stays.get_stays.return_value = [_stay(lat=1.0, lng=2.0)]
     svc._client.fetch_range.return_value = {
@@ -106,9 +112,32 @@ class TestService:
         result = await service.get_forecast(1)
         assert result.available is False and "not available" in result.message
 
-    async def test_no_stays_no_forecast(self, service):
+    async def test_no_stays_and_no_legs_no_forecast(self, service):
         service._stays.get_stays.return_value = []
         assert (await service.get_forecast(1)).available is False
+
+    async def test_trip_ends_get_their_own_tiles_and_layovers_none(self, service):
+        service._legs.get_legs.return_value = [
+            _leg("Alpha", "Omega", datetime(2026, 12, 17, 8), datetime(2026, 12, 17, 10)),
+            _leg("Omega", "Alpha", datetime(2026, 12, 19, 18), datetime(2026, 12, 19, 20))]
+        result = await service.get_forecast(1)
+        days = {c.city: [d.date.day for d in c.days] for c in result.cities}
+        assert days == {"Beta": [17, 18, 19], "Alpha": [17, 19]}  # the layover city Omega gets nothing
+
+    async def test_a_home_city_at_both_ends_is_one_row_without_stays(self, service):
+        service._stays.get_stays.return_value = []
+        service._legs.get_legs.return_value = [
+            _leg("Alpha", "Omega", datetime(2026, 12, 17, 8), datetime(2026, 12, 17, 10)),
+            _leg("Omega", "Alpha", datetime(2026, 12, 19, 18), datetime(2026, 12, 19, 20))]
+        service._client.geocode.return_value = {"latitude": 3.0, "longitude": 4.0}
+        result = await service.get_forecast(1)
+        assert [(c.city, [d.date.day for d in c.days]) for c in result.cities if c.city == "Alpha"] == [("Alpha", [17, 19])]
+        assert len([c for c in result.cities if c.city == "Alpha"]) == 1
+
+    async def test_an_end_city_that_is_a_stay_city_shares_its_row(self, service):
+        service._legs.get_legs.return_value = [_leg("Alpha", "beta", datetime(2026, 12, 17, 8), datetime(2026, 12, 17, 10))]
+        result = await service.get_forecast(1)
+        assert [c.city for c in result.cities].count("Beta") == 1
 
     async def test_a_second_call_is_served_from_the_cache(self, service):
         await service.get_forecast(1)

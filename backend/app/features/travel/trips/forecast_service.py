@@ -1,8 +1,10 @@
 import logging
 from datetime import date, timedelta
+from types import SimpleNamespace
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.features.travel.legs.repository import LegRepository
 from app.features.travel.stays.repository import StayRepository
 from app.features.travel.trips.forecast import (
     CityForecast, TripForecast, a_year_earlier, cached, days_from_daily, pick_mode,
@@ -20,6 +22,7 @@ class TripForecastService:
         self._client = client
         self._trips = TripRepository(session)
         self._stays = StayRepository(session)
+        self._legs = LegRepository(session)
 
     async def _coordinates(self, place) -> tuple[float, float] | None:
         if place.lat is not None and place.lng is not None:
@@ -36,17 +39,26 @@ class TripForecastService:
         if mode == "none":
             return TripForecast(trip_id=trip_id, mode="none", available=False, message="The trip is over")
 
-        stays = await self._stays.get_stays(trip_id)
         places: dict[str, object] = {}
         stay_days: dict[str, set[date]] = {}
-        for stay in stays:
+        for stay in await self._stays.get_stays(trip_id):
             if stay.place.city:
                 key = stay.place.city.lower()
                 places.setdefault(key, stay.place)
                 check_in, check_out = to_local(stay.check_in_at, stay.timezone).date(), to_local(stay.check_out_at, stay.timezone).date()
                 stay_days.setdefault(key, set()).update(check_in + timedelta(days=i) for i in range((check_out - check_in).days + 1))
+        # The trip's two ends: where the first leg departs from (that day) and where the last one lands (that day).
+        # A city that is also a stay city shares its row.
+        legs = await self._legs.get_legs(trip_id)
+        if legs:
+            first, last = legs[0], max(legs, key=lambda l: l.arrives_at)
+            for city, day in ((first.origin, to_local(first.departs_at, first.departs_tz).date()),
+                              (last.destination, to_local(last.arrives_at, last.arrives_tz).date())):
+                key = city.strip().lower()
+                places.setdefault(key, SimpleNamespace(city=city.strip(), country=None, lat=None, lng=None))
+                stay_days.setdefault(key, set()).add(day)
         if not places:
-            return TripForecast(trip_id=trip_id, mode=mode, available=False, message="Add a stay to see the weather")
+            return TripForecast(trip_id=trip_id, mode=mode, available=False, message="Add a stay or a leg to see the weather")
 
         start, end = max(trip.start_date, today), trip.end_date
         if mode == "forecast":

@@ -2,6 +2,7 @@ from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.features.travel.tags.tables import TravelTag, places_tags, trips_tags
+from app.shared.tags import normalize_tag_name
 
 
 class TravelTagRepository:
@@ -21,7 +22,7 @@ class TravelTagRepository:
         for name in names:
             tag = await self.get_tag_by_name(name)
             if tag is None:
-                tag = TravelTag(name=name)
+                tag = TravelTag(name=normalize_tag_name(name))
                 self._session.add(tag)
                 await self._session.flush()
             tags.append(tag)

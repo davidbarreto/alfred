@@ -7,6 +7,7 @@ from pydantic import ValidationError
 from app.features.travel.legs.schemas import LegCreate
 from app.features.travel.places.schemas import PlaceCreate, PlaceRead
 from app.features.travel.stays.schemas import StayCreate
+from app.features.travel.tags.schemas import TravelTagUpdate
 from app.features.travel.trips.schemas import TripCreate, TripRead, TripUpdate, trip_status
 from app.features.travel.zones import to_local, to_utc
 
@@ -33,7 +34,14 @@ class TestTripSchemas:
 
     def test_tags_are_normalized(self):
         trip = TripCreate(name="X", start_date=date(2026, 5, 1), end_date=date(2026, 5, 2), tags=[" Family", "family", ""])
-        assert trip.tags == ["Family"]
+        assert trip.tags == ["family"]
+
+    def test_tags_are_stored_lowercase(self):
+        trip = TripCreate(name="X", start_date=date(2026, 5, 1), end_date=date(2026, 5, 2), tags=["Would Return", "FAMILY"])
+        assert trip.tags == ["would return", "family"]
+
+    def test_tag_rename_is_lowercased(self):
+        assert TravelTagUpdate(name="  Family Friendly ").name == "family friendly"
 
     def test_update_tags_none_stays_none(self):
         assert TripUpdate().tags is None

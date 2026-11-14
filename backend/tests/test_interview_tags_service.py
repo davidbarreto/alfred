@@ -22,8 +22,8 @@ def service(mock_repo):
 
 
 class TestNormalizeTags:
-    def test_trims_drops_blanks_and_case_insensitive_duplicates(self):
-        assert normalize_tags([" Ownership", "", "ownership", "Conflict "]) == ["Ownership", "Conflict"]
+    def test_trims_lowercases_and_drops_blanks_and_duplicates(self):
+        assert normalize_tags([" Ownership", "", "ownership", "Conflict "]) == ["ownership", "conflict"]
 
     def test_none_passes_through(self):
         assert normalize_tags(None) is None
@@ -50,7 +50,7 @@ class TestRenameTag:
         result = await service.rename_tag(1, InterviewTagUpdate(name=" Bias for Action "))
 
         assert result is not None and result.name == "Bias for Action"
-        mock_repo.rename_tag.assert_awaited_once_with(1, "Bias for Action")
+        mock_repo.rename_tag.assert_awaited_once_with(1, "bias for action")
 
     async def test_case_only_change_of_same_tag_is_allowed(self, service, mock_repo):
         mock_repo.get_tag_by_name.return_value = InterviewTag(id=1, name="ownership")

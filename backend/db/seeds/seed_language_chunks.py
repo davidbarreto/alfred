@@ -30,6 +30,7 @@ from sqlalchemy import select, update as sa_update
 
 from app.db.session import async_session
 from app.features.language.chunks.tables import Chunk, LanguageTag
+from app.shared.tags import normalize_tag_name
 from app.features.language.grammar_scope.tables import GrammarScope
 from app.features.language.tracks.tables import Track
 
@@ -107,7 +108,7 @@ async def _seed() -> None:
                 text = str(entry["text"])
                 gs_val = entry.get("grammar_scope")
                 scope_id = scope_by_value.get(gs_val) if isinstance(gs_val, str) else None
-                tag_names = [str(t) for t in (entry.get("tags") or [])]
+                tag_names = [normalize_tag_name(str(t)) for t in (entry.get("tags") or [])]
 
                 if text not in existing_texts:
                     example_translation = entry.get("example_translation")

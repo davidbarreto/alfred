@@ -64,7 +64,7 @@ class TestNameConflicts:
         service._repo.get_tag_by_name.return_value = _make_tag_orm(id=2, name="Work")
         with pytest.raises(TagNameConflictError):
             await service.update(1, TagUpdate(name="WORK"))
-        service._repo.get_tag_by_name.assert_awaited_once_with("WORK", exclude_id=1)
+        service._repo.get_tag_by_name.assert_awaited_once_with("work", exclude_id=1)
         service._repo.update_tag.assert_not_called()
 
     async def test_rename_to_other_case_of_itself_is_allowed(self, service):

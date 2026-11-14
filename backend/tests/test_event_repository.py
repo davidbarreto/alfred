@@ -360,7 +360,7 @@ class TestResolveTags:
         await CalendarEventRepository(session)._resolve_tags(["Travel"], "gc-event-1")
 
         sql = str(session.execute.call_args.args[0].compile(compile_kwargs={"literal_binds": True}))
-        assert "lower(" in sql and "'travel'" in sql
+        assert "'travel'" in sql and "'Travel'" not in sql
 
     async def test_creates_new_tag(self):
         session = _make_session()

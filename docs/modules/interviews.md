@@ -17,9 +17,9 @@
 
 ## Shared tags
 
-`organizer.interviews.tags` — one case-insensitive-unique vocabulary (`interview_tags`) attached to both stories (`interview_story_tag_links`) and prep questions (`interview_question_tag_links`), so the same label (e.g. `ownership`, `amazon:bias-for-action`) connects a story to the questions it fits.
+`organizer.interviews.tags` — one lowercase, unique vocabulary (`interview_tags`) attached to both stories (`interview_story_tag_links`) and prep questions (`interview_question_tag_links`), so the same label (e.g. `ownership`, `amazon:bias-for-action`) connects a story to the questions it fits.
 
-- Stories and questions take `tags: list[str]` on create/update plus `POST/DELETE .../{id}/tags/{tag}`; names resolve case-insensitively to the existing tag (first spelling wins), missing ones are created
+- Stories and questions take `tags: list[str]` on create/update plus `POST/DELETE .../{id}/tags/{tag}`; names are lowercased and resolve to the existing tag, missing ones are created
 - Filter with `?tag=` on both list endpoints (`/storylist --tag`, `/preplist --tag`); `GET .../tags` on each returns only tags currently in use there
 - `GET /organizer/interview-tags` (usage counts), `PATCH /{id}` (rename, 409 on name clash), `DELETE /{id}` manage the vocabulary; tags are not deleted automatically when their last story/question goes away
 - The prep question detail page floats stories sharing a tag with the question to the top of the "Link a story" picker

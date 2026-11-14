@@ -640,7 +640,7 @@ class TestCreate:
         )
         await TransactionRepository(session).create(data)
         created = session.add.call_args.args[0]
-        assert [t.name for t in created.tags] == ["Travel"]
+        assert [t.name for t in created.tags] == ["travel"]
 
 
 class TestUpdate:
@@ -697,7 +697,7 @@ class TestUpdate:
         txn = _make_txn_orm()
         session.execute.side_effect = [_scalar_first(txn), _scalar_first(None), _scalar_one(txn)]
         await TransactionRepository(session).update(1, TransactionUpdate(tags=["Work"]))
-        assert [t.name for t in txn.tags] == ["Work"]
+        assert [t.name for t in txn.tags] == ["work"]
 
     async def test_leaves_tags_untouched_when_not_provided(self):
         session = _make_session()

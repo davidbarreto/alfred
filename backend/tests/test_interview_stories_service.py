@@ -61,7 +61,7 @@ class TestCreateStory:
         assert result.id == 1
         assert result.created_at == _NOW
         assert [t.name for t in result.tags] == ["Leadership"]
-        assert mock_repo.create_story.call_args.kwargs["tags"] == ["Leadership"]
+        assert mock_repo.create_story.call_args.kwargs["tags"] == ["leadership"]
 
 
 class TestTagNormalization:
@@ -69,7 +69,7 @@ class TestTagNormalization:
         data = InterviewStoryCreate(
             situation="s", task="t", action="a", result="r", tags=[" Leadership", "", "Leadership", "Conflict "]
         )
-        assert data.tags == ["Leadership", "Conflict"]
+        assert data.tags == ["leadership", "conflict"]
 
     def test_rejects_overlong_tag(self):
         with pytest.raises(ValidationError):
@@ -83,7 +83,7 @@ class TestUpdateStory:
         result = await service.update_story(1, InterviewStoryUpdate(strength=5, tags=["Leadership"]))
 
         assert result is not None and result.strength == 5
-        mock_repo.update_story.assert_awaited_once_with(1, fields={"strength": 5}, tags=["Leadership"])
+        mock_repo.update_story.assert_awaited_once_with(1, fields={"strength": 5}, tags=["leadership"])
 
     async def test_explicit_null_is_ignored_not_written(self, service, mock_repo):
         mock_repo.update_story.return_value = _story()
@@ -106,7 +106,7 @@ class TestDeleteAndTags:
         mock_repo.add_tag.return_value = _story(tags=["Leadership"])
         result = await service.add_tag(1, " Leadership ")
         assert result is not None
-        mock_repo.add_tag.assert_awaited_once_with(1, "Leadership")
+        mock_repo.add_tag.assert_awaited_once_with(1, "leadership")
 
     async def test_add_tag_story_not_found(self, service, mock_repo):
         mock_repo.add_tag.return_value = None

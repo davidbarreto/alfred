@@ -2,6 +2,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.features.study.tags.tables import StudyTag
+from app.shared.tags import normalize_tag_name
 
 
 class StudyTagRepository:
@@ -16,7 +17,7 @@ class StudyTagRepository:
     async def resolve_tags(self, names: list[str]) -> list[StudyTag]:
         """Get-or-create every tag by name (same pattern as finance.tags)."""
         tags = []
-        for name in names:
+        for name in map(normalize_tag_name, names):
             result = await self._session.execute(select(StudyTag).where(StudyTag.name == name))
             tag = result.scalars().first()
             if tag is None:

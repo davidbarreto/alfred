@@ -16,6 +16,7 @@ from app.features.organizer.calendar_events.tables import (
     CalendarEvent, CalendarEventInvitee, CalendarEventOverride, CalendarEventSkip,
 )
 from app.features.organizer.calendar_events.schemas import EventCreate, EventUpdate, EventFilters
+from app.shared.tags import normalize_tag_name
 
 _EVENT_EXCLUDE = {"tags", "invitees"}
 
@@ -63,7 +64,7 @@ class CalendarEventRepository:
 
             query = query.where(or_(and_(*non_recurring_range), and_(*recurring_range)))
         if event_filter.tags:
-            query = query.where(CalendarEvent.tags.any(Tag.name.in_(event_filter.tags)))
+            query = query.where(CalendarEvent.tags.any(Tag.name.in_(map(normalize_tag_name, event_filter.tags))))
         if event_filter.q:
             query = query.where(CalendarEvent.title.ilike(f"%{event_filter.q}%"))
         query = query.order_by(CalendarEvent.start_datetime.asc()).limit(event_filter.limit)
@@ -72,9 +73,9 @@ class CalendarEventRepository:
 
     async def _resolve_tags(self, tag_names: list[str], provider_id: str) -> list[Tag]:
         tags = []
-        for name in tag_names:
+        for name in map(normalize_tag_name, tag_names):
             result = await self._session.execute(
-                select(Tag).where(Tag.provider_id == provider_id, func.lower(Tag.name) == name.lower())
+                select(Tag).where(Tag.provider_id == provider_id, Tag.name == name)
             )
             tag = result.scalars().first()
             if tag is None:

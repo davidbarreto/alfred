@@ -99,7 +99,7 @@ class TestTrips:
         }, services)
         data: TripCreate = services.trips.create_trip.await_args.args[0]
         assert (data.start_date, data.end_date, data.tags, data.default_tag_names) == (
-            date(2031, 12, 17), date(2031, 12, 24), ["Family", "Work"], "Travel, Hotel",
+            date(2031, 12, 17), date(2031, 12, 24), ["family", "work"], "Travel, Hotel",
         )
         assert result["id"] == 1
 
@@ -117,7 +117,7 @@ class TestTrips:
         services.trips.update_trip.return_value = _trip()
         await run("travel_trip", "update", {"id": "1", "notes": "", "tags": "A"}, services)
         update = services.trips.update_trip.await_args.args[1]
-        assert update.model_dump(exclude_unset=True) == {"notes": None, "tags": ["A"]}
+        assert update.model_dump(exclude_unset=True) == {"notes": None, "tags": ["a"]}
 
     async def test_update_nothing_is_a_400(self, services):
         with pytest.raises(HTTPException):
@@ -311,7 +311,7 @@ class TestPlaces:
         services.places.create_place.return_value = _place()
         await run("travel_place", "add", {"name": "Cafe Example", "city": "Lisbon", "tags": "Would return"}, services)
         data: PlaceCreate = services.places.create_place.await_args.args[0]
-        assert (data.kind, data.tags) == ("other", ["Would return"])
+        assert (data.kind, data.tags) == ("other", ["would return"])
 
     async def test_add_with_a_bad_kind_is_a_400(self, services):
         with pytest.raises(HTTPException) as exc:

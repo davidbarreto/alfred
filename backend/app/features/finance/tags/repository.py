@@ -41,7 +41,7 @@ class TagRepository:
             if tag is None:
                 tag = await self.get_tag_by_name(name)
                 if tag is None:
-                    tag = FinanceTag(name=name.strip())
+                    tag = FinanceTag(name=key)
                     self._session.add(tag)
                 seen[key] = tag
                 tags.append(tag)

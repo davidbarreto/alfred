@@ -7,6 +7,7 @@ from app.features.organizer.tags.tables import Tag, tasks_tags
 from app.features.organizer.tasks.tables import Task, TaskCompletion
 from app.features.organizer.tasks.schemas import TaskCreate, TaskUpdate, TaskFilters
 from app.shared.timezone import local_naive_now, local_today
+from app.shared.tags import normalize_tag_name
 
 _TASK_EXCLUDE = {"tags"}
 
@@ -72,7 +73,7 @@ class TaskRepository:
                 else:
                     query = query.where(deadline_cond)
         if task_filter.tags:
-            query = query.where(Task.tags.any(Tag.name.in_(task_filter.tags)))
+            query = query.where(Task.tags.any(Tag.name.in_(map(normalize_tag_name, task_filter.tags))))
         query = query.order_by(_URGENCY_ORDER, _PRIORITY_ORDER, Task.id.desc()).limit(task_filter.limit)
         result = await self._session.execute(query)
         return list(result.scalars().all())
@@ -90,7 +91,7 @@ class TaskRepository:
 
     async def _resolve_tags(self, tag_names: list[str], provider_id: str) -> list[Tag]:
         tags = []
-        for name in tag_names:
+        for name in map(normalize_tag_name, tag_names):
             result = await self._session.execute(
                 select(Tag).where(Tag.provider_id == provider_id, Tag.name == name)
             )

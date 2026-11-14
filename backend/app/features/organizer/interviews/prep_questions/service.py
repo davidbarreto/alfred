@@ -12,6 +12,7 @@ from app.features.organizer.interviews.prep_questions.schemas import (
     StoryLinkRead,
 )
 from app.features.organizer.interviews.tags.schemas import InterviewTagRead
+from app.shared.tags import normalize_tag_name
 
 logger = logging.getLogger(__name__)
 
@@ -82,7 +83,7 @@ class InterviewPrepQuestionService:
         return deleted
 
     async def add_tag(self, question_id: int, tag: str) -> InterviewPrepQuestionRead | None:
-        question = await self._repo.add_tag(question_id, tag.strip())
+        question = await self._repo.add_tag(question_id, normalize_tag_name(tag))
         if question is None:
             return None
         logger.info("Interview prep question tagged: id=%d tag=%r", question_id, tag.strip())

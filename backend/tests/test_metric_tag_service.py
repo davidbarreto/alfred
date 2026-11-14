@@ -16,8 +16,8 @@ def service():
 
 
 class TestNormalizeTags:
-    def test_dedupes_case_insensitively_first_spelling_wins(self):
-        assert normalize_tags([" Bus", "bus", "", "Metro"]) == ["Bus", "Metro"]
+    def test_lowercases_and_dedupes(self):
+        assert normalize_tags([" Bus", "bus", "", "Metro"]) == ["bus", "metro"]
 
     def test_none_stays_none(self):
         assert normalize_tags(None) is None

@@ -787,7 +787,7 @@
                   "    pm.expect(json.currency).to.eql('EUR');",
                   "    pm.expect(json.merchant).to.eql('Supermarket');",
                   "    pm.environment.set('finance_transaction_id', json.id);",
-                  "    pm.expect(json.tags.map(t => t.name || t)).to.include('PostmanTrip');",
+                  "    pm.expect(json.tags.map(t => t.name || t)).to.include('postmantrip');",
                   "});"
                 ],
                 "type": "text/javascript"
@@ -3556,7 +3556,7 @@
                   "pm.test('Status is 201', () => pm.response.to.have.status(201));",
                   "pm.test('Saves the tag id', () => {",
                   "    const json = pm.response.json();",
-                  "    pm.expect(json.name).to.eql('PostmanBudgetTag');",
+                  "    pm.expect(json.name).to.eql('postmanbudgettag');",
                   "    pm.environment.set('finance_budget_tag_id', json.id);",
                   "});"
                 ],
@@ -3585,7 +3585,7 @@
             },
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"PostmanBudgetTag\"\n}",
+              "raw": "{\n  \"name\": \"postmanbudgettag\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -3655,7 +3655,7 @@
                   "pm.test('Tag appears with its limit, spent and overlap count', () => {",
                   "    const item = pm.response.json().find(i => String(i.tag_id) === String(pm.environment.get('finance_budget_tag_id')));",
                   "    pm.expect(item).to.not.eql(undefined);",
-                  "    pm.expect(item.tag_name).to.eql('PostmanBudgetTag');",
+                  "    pm.expect(item.tag_name).to.eql('postmanbudgettag');",
                   "    pm.expect(item.limit_amount).to.eql('500.00');",
                   "    pm.expect(item).to.have.property('spent');",
                   "    pm.expect(item.overlap_count).to.eql(0);",

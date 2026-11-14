@@ -1375,7 +1375,7 @@
             "exec": [
               "pm.test('Status is 201', () => pm.response.to.have.status(201));",
               "const j = pm.response.json();",
-              "pm.test('Trip default tags were stamped', () => pm.expect(j.tags).to.include.members(['Travel', 'Hotel']));",
+              "pm.test('Trip default tags were stamped', () => pm.expect(j.tags).to.include.members(['travel', 'hotel']));",
               "pm.environment.set('travel_txn_id', j.id);"
             ],
             "type": "text/javascript"
@@ -2872,7 +2872,7 @@
             "exec": [
               "pm.test('Status is 200', () => pm.response.to.have.status(200));",
               "const j = pm.response.json();",
-              "pm.test('Tags named', () => pm.expect(j.tags).to.eql(['Travel', 'Hotel']));",
+              "pm.test('Tags named', () => pm.expect(j.tags).to.eql(['travel', 'hotel']));",
               "pm.test('Already stamped expenses are not tagged twice', () => pm.expect(j.added).to.eql(0));"
             ],
             "type": "text/javascript"

@@ -88,7 +88,7 @@ class TestTripService:
         result = await trips.create_trip(
             TripCreate(name="X", start_date=date(2026, 12, 17), end_date=date(2026, 12, 24), tags=["Family"])
         )
-        trips._tag_repo.get_or_create_tags.assert_awaited_once_with(["Family"])
+        trips._tag_repo.get_or_create_tags.assert_awaited_once_with(["family"])
         fields, tags = trips._repo.create_trip.await_args.args
         assert "tags" not in fields and tags[0].name == "Family"
         assert result.tags == ["Family"]

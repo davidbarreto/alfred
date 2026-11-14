@@ -60,13 +60,13 @@ class TestCrud:
         )
 
         assert [t.name for t in result.tags] == ["Ownership"]
-        mock_repo.create_question.assert_awaited_once_with(text="q", tags=["Ownership"])
+        mock_repo.create_question.assert_awaited_once_with(text="q", tags=["ownership"])
 
     async def test_update_passes_tags_through_only_when_set(self, service, mock_repo):
         mock_repo.update_question.return_value = _question(tags=["Conflict"])
 
         await service.update_question(1, InterviewPrepQuestionUpdate(tags=["Conflict"]))
-        mock_repo.update_question.assert_awaited_with(question_id=1, text=None, tags=["Conflict"])
+        mock_repo.update_question.assert_awaited_with(question_id=1, text=None, tags=["conflict"])
 
         await service.update_question(1, InterviewPrepQuestionUpdate(text="x"))
         mock_repo.update_question.assert_awaited_with(question_id=1, text="x", tags=None)
@@ -107,7 +107,7 @@ class TestTags:
 
         result = await service.add_tag(1, " Ownership ")
 
-        mock_repo.add_tag.assert_awaited_once_with(1, "Ownership")
+        mock_repo.add_tag.assert_awaited_once_with(1, "ownership")
         assert result is not None and [t.name for t in result.tags] == ["Ownership"]
 
     async def test_add_tag_question_not_found(self, service, mock_repo):

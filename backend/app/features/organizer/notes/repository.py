@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.features.organizer.tags.tables import Tag
 from app.features.organizer.notes.tables import Note
 from app.features.organizer.notes.schemas import NoteCreate, NoteUpdate, NoteFilters
+from app.shared.tags import normalize_tag_name
 
 _NOTE_EXCLUDE = {"tags"}
 
@@ -29,7 +30,7 @@ class NoteRepository:
             Note.archived_at.isnot(None) if note_filter.archived else Note.archived_at.is_(None)
         )
         if note_filter.tags:
-            query = query.where(Note.tags.any(Tag.name.in_(note_filter.tags)))
+            query = query.where(Note.tags.any(Tag.name.in_(map(normalize_tag_name, note_filter.tags))))
         if note_filter.q:
             query = query.where(Note.title.ilike(f"%{note_filter.q}%"))
         order_by = Note.updated_at.desc() if note_filter.sort == "updated" else Note.created_at.desc()
@@ -39,7 +40,7 @@ class NoteRepository:
 
     async def _resolve_tags(self, tag_names: list[str], provider_id: str) -> list[Tag]:
         tags = []
-        for name in tag_names:
+        for name in map(normalize_tag_name, tag_names):
             result = await self._session.execute(
                 select(Tag).where(Tag.provider_id == provider_id, Tag.name == name)
             )

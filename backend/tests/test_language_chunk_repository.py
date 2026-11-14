@@ -176,7 +176,7 @@ class TestResolveTags:
         tags = await ChunkRepository(session)._resolve_tags(["NewGroup"])
 
         assert len(tags) == 1
-        assert tags[0].name == "NewGroup"
+        assert tags[0].name == "newgroup"
         session.add.assert_called_once()
 
     async def test_empty_list_returns_empty(self):

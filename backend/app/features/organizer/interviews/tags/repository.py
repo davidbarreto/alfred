@@ -6,6 +6,7 @@ from app.features.organizer.interviews.tags.tables import (
     interview_question_tag_links,
     interview_story_tag_links,
 )
+from app.shared.tags import normalize_tag_name
 
 
 class InterviewTagRepository:
@@ -25,7 +26,7 @@ class InterviewTagRepository:
         for name in names:
             tag = await self.get_tag_by_name(name)
             if tag is None:
-                tag = InterviewTag(name=name)
+                tag = InterviewTag(name=normalize_tag_name(name))
                 self._session.add(tag)
                 await self._session.flush()
             tags.append(tag)

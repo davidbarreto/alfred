@@ -351,7 +351,7 @@ class TestManualEntries:
         )
 
         fields, tags = service._repo.create_entry.await_args.args
-        assert fields["status"] == "closed" and fields["source"] == "portal" and tags == ["Bus"]
+        assert fields["status"] == "closed" and fields["source"] == "portal" and tags == ["bus"]
 
     async def test_value_series_needs_a_value(self, make_service):
         service = make_service()

@@ -7,6 +7,7 @@ from sqlalchemy.orm import selectinload
 from app.features.organizer.activities.schemas import ActivityCreate, ActivityFilters, ActivityLogCreate, ActivityUpdate
 from app.features.organizer.activities.tables import Activity, ActivityLog
 from app.features.organizer.tags.tables import Tag
+from app.shared.tags import normalize_tag_name
 
 # Activities are Alfred-only, so their tags live under one fixed provider id.
 TAG_PROVIDER_ID = "alfred"
@@ -32,7 +33,7 @@ class ActivityRepository:
         if not filters.include_archived:
             query = query.where(Activity.archived_at.is_(None))
         if filters.tag:
-            query = query.where(Activity.tags.any(func.lower(Tag.name) == filters.tag.lower()))
+            query = query.where(Activity.tags.any(Tag.name == normalize_tag_name(filters.tag)))
         if filters.q:
             query = query.where(Activity.title.ilike(f"%{filters.q}%"))
         query = query.order_by(Activity.title, Activity.id).limit(filters.limit)
@@ -42,12 +43,12 @@ class ActivityRepository:
     async def _resolve_tags(self, names: list[str]) -> list[Tag]:
         tags: list[Tag] = []
         unique = {}
-        for name in (n.strip() for n in names):
+        for name in map(normalize_tag_name, names):
             if name:
-                unique.setdefault(name.lower(), name)  # first spelling wins
+                unique.setdefault(name, name)
         for name in unique.values():
             result = await self._session.execute(
-                select(Tag).where(Tag.provider_id == TAG_PROVIDER_ID, func.lower(Tag.name) == name.lower())
+                select(Tag).where(Tag.provider_id == TAG_PROVIDER_ID, Tag.name == name)
             )
             tag = result.scalars().first()
             if tag is None:

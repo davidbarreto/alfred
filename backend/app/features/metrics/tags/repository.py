@@ -2,6 +2,7 @@ from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.features.metrics.tags.tables import MetricTag, metric_entry_tag_links
+from app.shared.tags import normalize_tag_name
 
 
 class MetricTagRepository:
@@ -21,7 +22,7 @@ class MetricTagRepository:
         for name in names:
             tag = await self.get_tag_by_name(name)
             if tag is None:
-                tag = MetricTag(name=name)
+                tag = MetricTag(name=normalize_tag_name(name))
                 self._session.add(tag)
                 await self._session.flush()
             tags.append(tag)

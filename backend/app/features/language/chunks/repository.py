@@ -4,6 +4,7 @@ from sqlalchemy import func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.features.language.chunks.tables import Chunk, LanguageTag
+from app.shared.tags import normalize_tag_name
 from app.features.language.chunks.schemas import ChunkCreate, ChunkUpdate, ChunkFilters
 
 _CHUNK_CREATE_EXCLUDE = {"tags"}
@@ -16,7 +17,7 @@ class ChunkRepository:
 
     async def _resolve_tags(self, tag_names: list[str]) -> list[LanguageTag]:
         tags = []
-        for name in tag_names:
+        for name in map(normalize_tag_name, tag_names):
             result = await self._session.execute(select(LanguageTag).where(LanguageTag.name == name))
             tag = result.scalars().first()
             if tag is None:
@@ -58,7 +59,7 @@ class ChunkRepository:
         if filters.difficulty_max is not None:
             query = query.where(Chunk.difficulty < filters.difficulty_max)
         if filters.tags:
-            query = query.where(Chunk.tags.any(LanguageTag.name.in_(filters.tags)))
+            query = query.where(Chunk.tags.any(LanguageTag.name.in_(map(normalize_tag_name, filters.tags))))
         if filters.untagged_only:
             query = query.where(~Chunk.tags.any())
         if filters.search:
@@ -108,7 +109,7 @@ class ChunkRepository:
             Chunk.due_at <= now,
         )
         if tag_names:
-            base = base.where(Chunk.tags.any(LanguageTag.name.in_(tag_names)))
+            base = base.where(Chunk.tags.any(LanguageTag.name.in_(list(map(normalize_tag_name, tag_names)))))
         if states:
             base = base.where(Chunk.state.in_(states))
 
@@ -157,7 +158,7 @@ class ChunkRepository:
             Chunk.due_at <= now,
         )
         if tag_names:
-            query = query.where(Chunk.tags.any(LanguageTag.name.in_(tag_names)))
+            query = query.where(Chunk.tags.any(LanguageTag.name.in_(list(map(normalize_tag_name, tag_names)))))
         if states:
             query = query.where(Chunk.state.in_(states))
         result = await self._session.execute(query)
@@ -293,7 +294,7 @@ class ChunkRepository:
                     chunk.tags.append(tag)
                     changed += 1
         else:
-            tag_result = await self._session.execute(select(LanguageTag).where(LanguageTag.name == tag_name))
+            tag_result = await self._session.execute(select(LanguageTag).where(LanguageTag.name == normalize_tag_name(tag_name)))
             tag = tag_result.scalars().first()
             changed = 0
             if tag is not None:

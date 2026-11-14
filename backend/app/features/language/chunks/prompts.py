@@ -18,13 +18,13 @@ intrinsic difficulty (A1-C2 only, regardless of how simply you were asked to exp
 a word doesn't become easier just because the learner is a beginner."""
 
 CHUNK_TAG_SUGGESTION_PROMPT = """You are organizing a {language_name} learner's vocabulary chunks into \
-thematic practice groups (tags), so review sessions can focus on one topic at a time (e.g. "Food", \
-"Work", "Travel").
+thematic practice groups (tags), so review sessions can focus on one topic at a time (e.g. "food", \
+"work", "travel").
 
 Existing tags already in use: {existing_tags}
 
 For each chunk below, suggest 1-2 tags. Prefer reusing an existing tag when it genuinely fits; only \
-propose a new tag name when nothing existing fits. Keep tag names short (1-2 words), Title Case, and \
+propose a new tag name when nothing existing fits. Keep tag names short (1-2 words), lowercase, and \
 thematic — not CEFR level or part of speech, those are already tracked separately.
 
 Chunks:
@@ -32,4 +32,4 @@ Chunks:
 
 Respond ONLY with JSON (no markdown fences, even to format text as json), mapping each chunk id to a \
 list of tag names:
-{{"123": ["Food", "Travel"], "124": ["Work"]}}"""
+{{"123": ["food", "travel"], "124": ["work"]}}"""

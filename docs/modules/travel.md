@@ -9,7 +9,7 @@ Remember past travels and run an upcoming trip (`travel` schema). Design and pha
 - **Stays** (`travel.stays`): lodging periods, with a `place_id` (RESTRICT), an optional `trip_id` (SET NULL, so a trip's deletion keeps notes and grades), `timezone` of the lodging, `grade` 1-5.
 - **Places** (`travel.places`): independent of trips. `kind` in `PLACE_KINDS`, optional `maps_url`/`lat`/`lng`/`address`. `maps_link` is the user's URL, else pasted coordinates, else a name + city search.
 - **Visits** (`travel.visits`): one occurrence of going to a place (a dinner, a museum day), `planned` / `visited` / `missed`, optional `trip_id` (SET NULL) and `visit_date` / `visit_time`, `notes`, `grade` 1-5 (only a visited visit can carry one; moving it back to planned/missed clears it). Hotels use stays. A planned visit with no trip is the wishlist.
-- **Tags** (`travel.tags` + `trips_tags` / `places_tags`, ORM class `TravelTag`): describe the trip or place (Family, Would return). Not the same as `default_tag_names`.
+- **Tags** (`travel.tags` + `trips_tags` / `places_tags`, ORM class `TravelTag`): describe the trip or place (family, would return). Names are stored lowercase (lowercased on write, migration 089 converted the old ones), so they read the same everywhere. Not the same as `default_tag_names`.
 - **Derived grade**: a place's `grade` is the average over its graded visits and stays, with `grade_count`; never stored.
 - Enum sets (`PLACE_KINDS`, `LEG_MODES`, `VISIT_STATUSES`) live in `features/travel/constants.py` and feed Pydantic, CHECK constraints and MCP descriptions.
 

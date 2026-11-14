@@ -415,7 +415,7 @@ class TestPlaceDetailAndFilters:
         client, service = places
         service.create_place.return_value = _place()
         client.post("/travel/places", headers=AUTH, json={"kind": "cafe", "name": "X", "tags": [" Would return", "would return"]})
-        assert service.create_place.await_args.args[0].tags == ["Would return"]
+        assert service.create_place.await_args.args[0].tags == ["would return"]
 
 
 class TestTripDetailVisits:

@@ -14,6 +14,7 @@ from app.features.organizer.interviews.stories.schemas import (
 )
 from app.integrations.llm_calls.repository import create_llm_call
 from app.shared.llm import LlmProvider
+from app.shared.tags import normalize_tag_name
 
 logger = logging.getLogger(__name__)
 
@@ -74,7 +75,7 @@ class InterviewStoryService:
         return deleted
 
     async def add_tag(self, story_id: int, tag: str) -> InterviewStoryRead | None:
-        story = await self._repo.add_tag(story_id, tag.strip())
+        story = await self._repo.add_tag(story_id, normalize_tag_name(tag))
         if story is None:
             return None
         logger.info("Interview story tagged: id=%d tag=%r", story_id, tag)

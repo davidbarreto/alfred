@@ -70,7 +70,7 @@ class TestResolveTags:
         session.execute.return_value = _scalar_first(None)
         result = await TagRepository(session).resolve_tags(["Work"])
         assert len(result) == 1
-        assert result[0].name == "Work"
+        assert result[0].name == "work"
         session.add.assert_called_once()
 
     async def test_lookup_is_case_insensitive(self):
@@ -85,7 +85,7 @@ class TestResolveTags:
         session.execute.return_value = _scalar_first(None)
         result = await TagRepository(session).resolve_tags(["Rome", "rome", "ROME"])
         assert len(result) == 1
-        assert result[0].name == "Rome"
+        assert result[0].name == "rome"
         session.add.assert_called_once()
 
     async def test_empty_names_returns_empty_list(self):

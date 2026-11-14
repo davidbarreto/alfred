@@ -64,7 +64,7 @@ class TestQueries:
         session = _session()
         await ActivityRepository(session).get_activities(ActivityFilters(tag="Health", q="gy"))
         sql = _sql(session.execute.call_args.args[0])
-        assert "lower(organizer.tags.name) = 'health'" in sql
+        assert "organizer.tags.name = 'health'" in sql
         assert "activities.title ILIKE '%%gy%%'" in sql
 
     async def test_history_is_newest_first_and_paged(self):
@@ -114,7 +114,7 @@ class TestTags:
 
         added = [c.args[0] for c in session.add.call_args_list]
         tags = [a for a in added if isinstance(a, Tag)]
-        assert [(t.provider_id, t.name) for t in tags] == [(TAG_PROVIDER_ID, "Health"), (TAG_PROVIDER_ID, "out")]
+        assert [(t.provider_id, t.name) for t in tags] == [(TAG_PROVIDER_ID, "health"), (TAG_PROVIDER_ID, "out")]
 
 
 def _activity_with_tags():

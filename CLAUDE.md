@@ -182,6 +182,7 @@ One test class per logical group of behaviour (`TestComputeStreak`, `TestMissedC
 - Alembic migrations must be reversible (`downgrade` implemented)
 - A migration is edited only while it is unpushed: when several unpushed commits change the same migration file, squash them so the file is introduced (or changed) in one commit. Once any commit that touches a migration has been pushed, never edit that file again; add a new migration instead
 - After schema changes, verify all affected modules still align
+- Tag names (any tag table) are stored trimmed and lowercase: normalize on write with `normalize_tag_name` (`app/shared/tags.py`) or the schema validators, so "Family" and "family" never coexist
 - Boolean columns use plain adjective/state names (`active`, `enabled`, `all_day`, `case_sensitive`), not an `is_` prefix, and Pydantic fields mirror the column name. Some older columns still use `is_*` (`is_done`, `is_active`, `is_archived`, ...); leave them until they are standardized deliberately, but don't add new ones. State-change timestamps are `<verb>_at` (`archived_at`, `deleted_at`, `completed_at`); prefer a timestamp over a boolean when "when" matters.
 
 ### Dates & timezones

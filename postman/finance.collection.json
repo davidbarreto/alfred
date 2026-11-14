@@ -4421,7 +4421,7 @@
                   "    const rows = pm.response.json();",
                   "    pm.expect(rows.length).to.eql(1);",
                   "    const names = rows[0].tags.map(t => t.name || t);",
-                  "    pm.expect(names).to.include.members(['PostmanImport', 'PostmanRow']);",
+                  "    pm.expect(names).to.include.members(['postmanimport', 'postmanrow']);",
                   "});"
                 ],
                 "type": "text/javascript"

@@ -59,7 +59,7 @@ class TestCreate:
         sync._events.create_event.return_value = SimpleNamespace(id=5)
         assert await sync.create_event(_visit()) == 5
         event = sync._events.create_event.await_args.args[0]
-        assert event.title == "Cafe Example" and event.tags == ["Travel", "Work"]
+        assert event.title == "Cafe Example" and event.tags == ["travel", "work"]
         assert event.start_datetime == datetime(2026, 12, 18, 20, 0)
         assert event.end_datetime - event.start_datetime == timedelta(minutes=90)
         assert event.notification_profile == "normal"

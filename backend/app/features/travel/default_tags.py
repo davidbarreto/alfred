@@ -9,6 +9,7 @@ from app.features.finance.tags.repository import TagRepository
 from app.features.travel.errors import TravelNotFoundError
 from app.features.travel.transaction_links.repository import TransactionLinkRepository
 from app.features.travel.trips.repository import TripRepository
+from app.shared.tags import normalize_tag_name
 
 logger = logging.getLogger(__name__)
 
@@ -17,13 +18,13 @@ TAGGED_TYPE = "expense"
 
 
 def parse_default_tag_names(text: str | None) -> list[str]:
-    """Split on commas, trim, drop empties and case-insensitive duplicates (first spelling wins)."""
+    """Split on commas into normalized (trimmed, lowercase) tag names, dropping empties and duplicates."""
     names: list[str] = []
     seen: set[str] = set()
     for part in (text or "").split(","):
-        name = part.strip()
-        if name and name.lower() not in seen:
-            seen.add(name.lower())
+        name = normalize_tag_name(part)
+        if name and name not in seen:
+            seen.add(name)
             names.append(name)
     return names
 

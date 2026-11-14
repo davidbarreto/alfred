@@ -26,8 +26,8 @@ from app.features.travel.transaction_links.service import TransactionLinkService
 
 
 class TestParseDefaultTagNames:
-    def test_splits_trims_and_dedupes_case_insensitively(self):
-        assert parse_default_tag_names(" Travel, hotel ,, TRAVEL,Hotel") == ["Travel", "hotel"]
+    def test_splits_trims_and_lowercases_and_dedupes(self):
+        assert parse_default_tag_names(" Travel, hotel ,, TRAVEL,Hotel") == ["travel", "hotel"]
 
     def test_empty_and_none(self):
         assert parse_default_tag_names(None) == []
@@ -83,11 +83,11 @@ class TestTripDefaultTagService:
     async def test_windows_skip_trips_without_default_tags(self, tag_service):
         tag_service._trip_repo.get_trips_in_window.return_value = [_trip(), _trip(id=2, default_tag_names=None)]
         windows = await tag_service.windows_for(date(2026, 12, 1), date(2026, 12, 31))
-        assert windows.names_for(date(2026, 12, 18), "expense") == ["Travel", "Hotel"]
+        assert windows.names_for(date(2026, 12, 18), "expense") == ["travel", "hotel"]
 
     async def test_names_for_one_day_queries_that_day(self, tag_service):
         tag_service._trip_repo.get_trips_in_window.return_value = [_trip()]
-        assert await tag_service.names_for(date(2026, 12, 18), "expense") == ["Travel", "Hotel"]
+        assert await tag_service.names_for(date(2026, 12, 18), "expense") == ["travel", "hotel"]
         assert tag_service._trip_repo.get_trips_in_window.await_args.args == (date(2026, 12, 18), date(2026, 12, 18))
 
     async def test_apply_to_existing_tags_the_whole_trip_range(self, tag_service):
@@ -95,7 +95,7 @@ class TestTripDefaultTagService:
         tag_service._tag_repo.resolve_tags.return_value = [SimpleNamespace(id=5), SimpleNamespace(id=6)]
         tag_service._link_repo.tag_expenses_between.return_value = 7
         names, added = await tag_service.apply_to_existing(1)
-        assert (names, added) == (["Travel", "Hotel"], 7)
+        assert (names, added) == (["travel", "hotel"], 7)
         start, end, tag_ids = tag_service._link_repo.tag_expenses_between.await_args.args
         assert start == datetime(2026, 12, 17) and end == datetime(2026, 12, 25) and tag_ids == [5, 6]
 
@@ -272,7 +272,7 @@ class TestUnlinkedService:
         links._repo.get_unlinked.return_value = [_txn()]
         result = await links.get_unlinked(1)
         start, end, names, tag_start, tag_end = links._repo.get_unlinked.await_args.args
-        assert (start, end, names) == (datetime(2026, 12, 17), datetime(2026, 12, 30), ["Travel", "Work"])
+        assert (start, end, names) == (datetime(2026, 12, 17), datetime(2026, 12, 30), ["travel", "work"])
         assert (tag_start, tag_end) == (datetime(2026, 9, 18), datetime(2027, 1, 29))
         assert [t.id for t in result] == [9]
 
@@ -290,7 +290,7 @@ class TestTaggedService:
         ]
         result = await links.get_tagged(1)
         names, start, end = links._repo.get_tagged.await_args.args
-        assert names == ["Travel", "Work"] and (start, end) == (datetime(2026, 9, 18), datetime(2027, 1, 29))
+        assert names == ["travel", "work"] and (start, end) == (datetime(2026, 9, 18), datetime(2027, 1, 29))
         assert [(t.id, t.linked) for t in result.transactions] == [(1, True), (2, False)]
         assert result.cost.total_eur == Decimal("30.00") and result.cost.transaction_count == 1
 

@@ -376,7 +376,7 @@
               "script": {
                 "exec": [
                   "// Unique per run: the migrations seed tags (Travel, Hotel, ...) and tag names are case-insensitive unique.",
-                  "pm.environment.set('finance_tag_name', 'Postman Tag ' + Date.now());"
+                  "pm.environment.set('finance_tag_name', 'postman tag ' + Date.now());"
                 ],
                 "type": "text/javascript"
               }

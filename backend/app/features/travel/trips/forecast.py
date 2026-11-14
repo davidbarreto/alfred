@@ -1,8 +1,7 @@
-"""Weather for a trip's stay cities: the forecast when the trip is near, else last year's same dates. No DB."""
+"""Weather for a trip's cities: the forecast when the trip is near, else last year's same dates. Pure helpers, no DB."""
 import logging
-import time as _time
 from datetime import date, timedelta
-from typing import Any, Awaitable, Callable, Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel
 
@@ -11,9 +10,9 @@ logger = logging.getLogger(__name__)
 # Open-Meteo forecasts reach 16 days; stay safely inside.
 FORECAST_HORIZON_DAYS = 14
 RAIN_MM = 2.0
-_CACHE_TTL_SECONDS = 3600
 
-ForecastMode = Literal["forecast", "climate", "none"]
+# "actual": archive values of a finished trip; "mixed": a finished trip holding more than one kind of day.
+ForecastMode = Literal["forecast", "climate", "actual", "mixed", "none"]
 
 
 class ForecastDay(BaseModel):
@@ -34,12 +33,14 @@ class TripForecast(BaseModel):
     mode: ForecastMode
     available: bool
     message: str | None = None
+    # The trip is over: the saved snapshot is shown and Open-Meteo is no longer asked.
+    finished: bool = False
+    # When the newest day shown was fetched; older than today means the weather service could not be reached.
+    as_of: date | None = None
     cities: list[CityForecast] = []
 
 
-def pick_mode(start: date, end: date, today: date) -> ForecastMode:
-    if end < today:
-        return "none"
+def pick_mode(start: date, today: date) -> ForecastMode:
     return "forecast" if start <= today + timedelta(days=FORECAST_HORIZON_DAYS) else "climate"
 
 
@@ -65,14 +66,3 @@ def days_from_daily(daily: dict[str, Any], dates: list[date]) -> list[ForecastDa
         for i, day in enumerate(dates)
     ]
 
-
-_cache: dict[tuple, tuple[float, list[ForecastDay]]] = {}
-
-
-async def cached(key: tuple, load: Callable[[], Awaitable[list[ForecastDay]]]) -> list[ForecastDay]:
-    hit = _cache.get(key)
-    if hit and _time.monotonic() - hit[0] < _CACHE_TTL_SECONDS:
-        return hit[1]
-    value = await load()
-    _cache[key] = (_time.monotonic(), value)
-    return value

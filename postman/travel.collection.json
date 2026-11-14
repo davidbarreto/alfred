@@ -2145,7 +2145,7 @@
           "script": {
             "exec": [
               "pm.test('Status is 200', () => pm.response.to.have.status(200));",
-              "pm.test('Degrades instead of failing', () => { const j = pm.response.json(); pm.expect(['forecast','climate','none']).to.include(j.mode); pm.expect(j.cities).to.be.an('array'); });"
+              "pm.test('Degrades instead of failing', () => { const j = pm.response.json(); pm.expect(['forecast','climate','none']).to.include(j.mode); pm.expect(j.cities).to.be.an('array'); pm.expect(j.finished).to.be.a('boolean'); });"
             ],
             "type": "text/javascript"
           }

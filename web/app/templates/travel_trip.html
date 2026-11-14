@@ -210,7 +210,7 @@
   {% if forecast and forecast.mode != 'none' %}
   <div class="card bg-white" id="forecast">
     <div class="card-body p-5 space-y-2">
-      <h2 class="text-sm font-semibold text-gray-900">Weather <span class="text-xs font-normal text-gray-400">{{ 'forecast' if forecast.mode == 'forecast' else "last year's same dates" }}</span></h2>
+      <h2 class="text-sm font-semibold text-gray-900">Weather <span class="text-xs font-normal text-gray-400">{{ {'forecast': 'forecast', 'climate': "last year's same dates", 'actual': 'actual weather', 'mixed': 'forecast and actual'}[forecast.mode] }}{% if forecast.as_of %} · {{ 'saved, ' if forecast.finished }}updated {{ forecast.as_of | short_date }}{% endif %}</span></h2>
       {% if forecast.available %}
       {% for city in forecast.cities %}
       <div>
@@ -224,7 +224,7 @@
             <p class="text-gray-400">{{ d.date | short_date }}</p>
             <p class="text-gray-900">{{ d.min_c|round|int if d.min_c is not none else '–' }}° / {{ d.max_c|round|int if d.max_c is not none else '–' }}°</p>
             <p class="text-sky-700">{% if d.rain %}<i class="ti ti-umbrella"></i> {{ d.precip_mm|round(1) }} mm{% else %}&nbsp;{% endif %}</p>
-            {% if d.rain and trip.visits|selectattr('visit_date', 'equalto', d.date|string)|selectattr('status', 'equalto', 'planned')|list %}
+            {% if d.rain and not forecast.finished and trip.visits|selectattr('visit_date', 'equalto', d.date|string)|selectattr('status', 'equalto', 'planned')|list %}
             <button type="button" class="btn btn-xs btn-ghost move-day" data-from="{{ d.date }}" title="Move this day's planned visits to another day">Move visits</button>
             {% endif %}
           </div>

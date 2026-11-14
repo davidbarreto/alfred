@@ -109,7 +109,6 @@
   </div>
   {% endif %}
 
-  {% if tagged.transactions or trip.default_tag_names %}
   <div class="card bg-white" id="tagged">
     <div class="card-body p-5 space-y-2">
       <h2 class="text-sm font-semibold text-gray-900">Charges with the trip's tags <span class="text-xs font-normal text-gray-400">{{ tagged.transactions|length }}</span></h2>
@@ -117,12 +116,11 @@
       {% for t in tagged.transactions[:preview_size] %}
       {% include "_travel_tagged_row.html" %}
       {% else %}
-      <p class="text-xs text-gray-500">No charges carry the trip's tags yet ({{ trip.default_tag_names }}).</p>
+      <p class="text-xs text-gray-500">{% if trip.default_tag_names %}No charges carry the trip's tags yet ({{ trip.default_tag_names }}).{% else %}This trip has no default tags yet; set them in the trip's edit form.{% endif %}</p>
       {% endfor %}
       {% if tagged.transactions|length > preview_size %}<a class="text-xs text-[#378ADD] hover:underline" href="/travel/{{ trip.id }}/tagged">See all {{ tagged.transactions|length }}</a>{% endif %}
     </div>
   </div>
-  {% endif %}
 
   <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
   <div class="card bg-white">

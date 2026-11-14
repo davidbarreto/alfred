@@ -135,6 +135,20 @@ class TestService:
         days = {c.city: [d.date.day for d in c.days] for c in result.cities}
         assert days == {"Beta": [17, 18, 19], "Alpha": [17, 19]}  # the layover city Omega gets nothing
 
+    async def test_origin_city_comes_first_and_destination_city_last(self, service):
+        service._legs.get_legs.return_value = [_leg("Alpha", "Omega", datetime(2026, 12, 17, 8), datetime(2026, 12, 19, 10))]
+        service._client.geocode.return_value = {"latitude": 3.0, "longitude": 4.0}
+        result = await service.get_forecast(1)
+        assert [c.city for c in result.cities] == ["Alpha", "Beta", "Omega"]
+
+    async def test_a_home_city_at_both_ends_comes_first_before_the_stay_cities(self, service):
+        service._legs.get_legs.return_value = [
+            _leg("Alpha", "Omega", datetime(2026, 12, 17, 8), datetime(2026, 12, 17, 10)),
+            _leg("Omega", "Alpha", datetime(2026, 12, 19, 18), datetime(2026, 12, 19, 20))]
+        service._client.geocode.return_value = {"latitude": 3.0, "longitude": 4.0}
+        result = await service.get_forecast(1)
+        assert [c.city for c in result.cities] == ["Alpha", "Beta"]
+
     async def test_a_home_city_at_both_ends_is_one_row_without_stays(self, service):
         service._stays.get_stays.return_value = []
         service._legs.get_legs.return_value = [

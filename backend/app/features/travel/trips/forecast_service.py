@@ -46,7 +46,8 @@ class TripForecastService:
         return (found["latitude"], found["longitude"]) if found else None
 
     async def _wanted_days(self, trip_id: int) -> dict[str, tuple[object, set[date]]]:
-        """City key -> (place, the days the trip needs weather there): stay days, plus the two ends of the journey."""
+        """City key -> (place, the days the trip needs weather there), in display order: the first leg's origin, the stay
+        cities, the last leg's destination (a home city at both ends is only first)."""
         places: dict[str, object] = {}
         days: dict[str, set[date]] = {}
         for stay in await self._stays.get_stays(trip_id):
@@ -58,6 +59,7 @@ class TripForecastService:
         # The first leg's origin on its departure day and the last leg's destination on its arrival day.
         # A city that is also a stay city shares its row.
         legs = await self._legs.get_legs(trip_id)
+        first_key = last_key = None
         if legs:
             first, last = legs[0], max(legs, key=lambda l: l.arrives_at)
             for city, day in ((first.origin, to_local(first.departs_at, first.departs_tz).date()),
@@ -65,7 +67,14 @@ class TripForecastService:
                 key = city.strip().lower()
                 places.setdefault(key, SimpleNamespace(city=city.strip(), country=None, lat=None, lng=None))
                 days.setdefault(key, set()).add(day)
-        return {key: (places[key], days[key]) for key in places}
+            first_key, last_key = first.origin.strip().lower(), last.destination.strip().lower()
+        # Origin city first, destination city last; the same city at both ends goes first.
+        order = [k for k in places if k not in (first_key, last_key)]
+        if first_key:
+            order.insert(0, first_key)
+            if last_key != first_key:
+                order.append(last_key)
+        return {key: (places[key], days[key]) for key in order}
 
     async def get_forecast(self, trip_id: int) -> TripForecast | None:
         trip = await self._trips.get_trip(trip_id)

@@ -144,6 +144,33 @@ async def transaction_detail(transaction_id: int, request: Request):
     })
 
 
+_TX_EDITABLE = ("amount", "date", "type", "account_id", "category_id", "merchant", "description", "note", "tags")
+
+
+@router.get("/transactions/{transaction_id}/edit", response_class=HTMLResponse)
+async def transaction_edit_form(transaction_id: int, request: Request):
+    """The edit form for a finance transaction, loaded into the modal on the unlinked charges."""
+    transaction = await safe_get(f"/finance/transactions/{transaction_id}")
+    if transaction is None:
+        return HTMLResponse('<p class="text-sm text-red-600">Could not load the transaction.</p>', status_code=502)
+    return templates.TemplateResponse(request, "_travel_tx_edit.html", {
+        "t": transaction,
+        "accounts": await safe_get("/finance/accounts", default=[]) or [],
+        "categories": await safe_get("/finance/categories", default=[]) or [],
+        "tags": await safe_get("/finance/tags", default=[]) or [],
+    })
+
+
+@router.patch("/transactions/{transaction_id}")
+async def update_transaction(transaction_id: int, request: Request):
+    """Save an edit made from the trip page; only the form's fields are forwarded, the rest stays untouched."""
+    body = await request.json()
+    payload = {key: body[key] for key in _TX_EDITABLE if key in body}
+    if "date" in payload:
+        payload["date"] = f"{payload['date']}T00:00:00"
+    return await forward(api.patch(f"/finance/transactions/{transaction_id}", json=payload), "Could not save the transaction.")
+
+
 @router.post("/trips/{trip_id}/checklist")
 async def generate_checklist(trip_id: int):
     return await forward(api.post(f"/travel/trips/{trip_id}/checklist"), "Could not create the checklist tasks.")

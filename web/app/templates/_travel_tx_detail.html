@@ -10,4 +10,4 @@
   {% if category %}<dt class="text-gray-500">Category</dt><dd>{{ category }}</dd>{% endif %}
   {% if t.tags %}<dt class="text-gray-500">Tags</dt><dd>{{ t.tags | join(', ') }}</dd>{% endif %}
 </dl>
-<p class="text-xs mt-3"><a class="text-[#378ADD] hover:underline" href="/finance/transactions?search={{ (t.merchant or t.description or '') | urlencode }}" target="_blank" rel="noopener">Open in Finance</a></p>
+<p class="text-xs mt-3"><button type="button" class="btn btn-xs btn-outline tx-edit" data-id="{{ t.id }}">Edit</button> <a class="text-[#378ADD] hover:underline" href="/finance/transactions?search={{ (t.merchant or t.description or '') | urlencode }}" target="_blank" rel="noopener">Open in Finance</a></p>

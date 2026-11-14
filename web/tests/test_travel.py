@@ -985,6 +985,48 @@ class TestTransactionDetail:
         assert 'class="text-xs text-[#378ADD] hover:underline tx-detail" data-id="9"' in html and 'id="tx-detail-dialog"' in html
 
 
+class TestTransactionEdit:
+    _tx = TestTransactionDetail._tx
+
+    def test_detail_partial_offers_an_edit_button(self, client, mock_api):
+        _route(mock_api, {"/finance/transactions/9": self._tx, "/finance/accounts": [], "/finance/categories": []})
+        assert 'class="btn btn-xs btn-outline tx-edit" data-id="9"' in client.get("/travel/transactions/9/detail").text
+
+    def test_edit_form_is_prefilled_and_offers_accounts_categories_and_known_tags(self, client, mock_api):
+        _route(mock_api, {
+            "/finance/transactions/9": self._tx,
+            "/finance/accounts": [{"id": 2, "name": "Test Account"}, {"id": 3, "name": "Other"}],
+            "/finance/categories": [{"id": 4, "name": "Shopping"}],
+            "/finance/tags": [{"name": "travel"}, {"name": "work"}],
+        })
+        html = client.get("/travel/transactions/9/edit").text
+        assert 'value="42.50"' in html and 'value="2026-12-18"' in html and 'data-original-date="2026-12-18"' in html
+        assert 'value="Some Shop"' in html and 'value="Travel"' in html
+        assert '<option value="2" selected>' in html and '<option value="4" selected>' in html
+        assert "Other" in html and "work" in html
+
+    def test_edit_form_fails_softly_when_the_transaction_is_missing(self, client, mock_api):
+        _route(mock_api, {"/finance/transactions/9": None})
+        response = client.get("/travel/transactions/9/edit")
+        assert response.status_code == 502 and "Could not load" in response.text
+
+    def test_save_forwards_only_the_editable_fields(self, client, mock_api):
+        mock_api["patch"].return_value = {"id": 9}
+        response = client.patch("/travel/transactions/9", json={"merchant": "Shop", "tags": ["travel"], "amount_eur": "1", "id": 5})
+        assert response.status_code == 200
+        mock_api["patch"].assert_awaited_once_with("/finance/transactions/9", json={"merchant": "Shop", "tags": ["travel"]})
+
+    def test_save_sends_a_changed_date_as_midnight(self, client, mock_api):
+        mock_api["patch"].return_value = {"id": 9}
+        client.patch("/travel/transactions/9", json={"date": "2026-12-19"})
+        mock_api["patch"].assert_awaited_once_with("/finance/transactions/9", json={"date": "2026-12-19T00:00:00"})
+
+    def test_save_relays_the_backend_error(self, client, mock_api):
+        mock_api["patch"].side_effect = _status_error(422, "Unknown account")
+        response = client.patch("/travel/transactions/9", json={"account_id": 99})
+        assert response.status_code == 422 and response.json() == {"error": "Unknown account"}
+
+
 class TestWarnedRows:
     def test_legs_stays_and_visits_with_warnings_are_marked_with_their_messages(self, client, mock_api):
         detail = _detail(warnings=[

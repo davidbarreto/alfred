@@ -192,6 +192,7 @@ class TestTransactionLinkService:
 
     async def test_trip_costs_combine_total_kinds_and_items(self, links):
         links._trip_repo.get_trip.return_value = _trip()
+        links._repo.get_tagged.return_value = []
         links._leg_repo.get_legs.return_value = [SimpleNamespace(id=1), SimpleNamespace(id=2)]
         links._stay_repo.get_stays.return_value = [SimpleNamespace(id=3)]
         links._visit_repo.get_trip_visits.return_value = []
@@ -205,6 +206,26 @@ class TestTransactionLinkService:
         assert costs.total.total_eur == Decimal("250.00") and costs.total.unconverted_count == 1
         assert [k.kind for k in costs.by_kind] == ["flight", "lodging"]
         assert [e.id for e in costs.legs] == [1] and [e.id for e in costs.stays] == [3] and costs.visits == []
+
+    async def test_tagged_charges_not_linked_are_a_separate_part_added_to_the_overall(self, links):
+        links._trip_repo.get_trip.return_value = SimpleNamespace(
+            start_date=date(2026, 12, 17), end_date=date(2026, 12, 29), default_tag_names="Travel")
+        links._leg_repo.get_legs.return_value = []
+        links._stay_repo.get_stays.return_value = []
+        links._visit_repo.get_trip_visits.return_value = []
+        links._repo.get_trip_total.return_value = (Decimal("100.00"), 1, 0)
+        links._repo.get_trip_costs_by_kind.return_value = {}
+        links._repo.get_entity_costs.return_value = {}
+        links._repo.get_tagged.return_value = [
+            (_txn(id=1, amount_eur=Decimal("-100.00")), True),
+            (_txn(id=2, amount_eur=Decimal("-30.00")), False),
+            (_txn(id=3, type="income", amount_eur=Decimal("5.00")), False),
+            (_txn(id=4, amount_eur=None), False),
+        ]
+        costs = await links.get_trip_costs(1)
+        assert costs.total.total_eur == Decimal("100.00")
+        assert (costs.tagged.total_eur, costs.tagged.transaction_count, costs.tagged.unconverted_count) == (Decimal("25.00"), 3, 1)
+        assert (costs.overall.total_eur, costs.overall.transaction_count, costs.overall.unconverted_count) == (Decimal("125.00"), 4, 1)
 
     async def test_trip_costs_unknown_trip(self, links):
         links._trip_repo.get_trip.return_value = None
@@ -260,7 +281,35 @@ class TestUnlinkedService:
         assert await links.get_unlinked(9) is None
 
 
+class TestTaggedService:
+    async def test_lists_every_tagged_charge_with_its_link_state_and_counts_only_unlinked(self, links):
+        links._trip_repo.get_trip.return_value = SimpleNamespace(
+            start_date=date(2026, 12, 17), end_date=date(2026, 12, 29), default_tag_names="Travel, Work")
+        links._repo.get_tagged.return_value = [
+            (_txn(id=1, amount_eur=Decimal("40.00")), True), (_txn(id=2, amount_eur=Decimal("-30.00")), False),
+        ]
+        result = await links.get_tagged(1)
+        names, start, end = links._repo.get_tagged.await_args.args
+        assert names == ["Travel", "Work"] and (start, end) == (datetime(2026, 9, 18), datetime(2027, 1, 29))
+        assert [(t.id, t.linked) for t in result.transactions] == [(1, True), (2, False)]
+        assert result.cost.total_eur == Decimal("30.00") and result.cost.transaction_count == 1
+
+    async def test_unknown_trip(self, links):
+        links._trip_repo.get_trip.return_value = None
+        assert await links.get_tagged(9) is None
+
+
 class TestCostSql:
+    async def test_tagged_query_matches_tags_case_insensitively_and_flags_linked_ones(self):
+        sql = await _sql(lambda r: r.get_tagged(["Travel"], datetime(2026, 9, 18), datetime(2027, 1, 30)))
+        assert "lower(finance.tags.name) IN ('travel')" in sql and "type IN ('expense', 'income')" in sql
+        assert "travel.legs_transactions" in sql and "travel.visits_transactions" in sql and "'transfer'" not in sql
+
+    async def test_tagged_query_without_tags_is_empty_without_touching_the_db(self):
+        session = _Capture()
+        assert await TransactionLinkRepository(session).get_tagged([], datetime(2026, 9, 18), datetime(2027, 1, 30)) == []
+        assert session.statements == []
+
     async def test_trip_total_counts_each_transaction_once(self):
         sql = await _sql(lambda r: r.get_trip_total(1))
         assert "UNION" in sql and "travel.legs_transactions" in sql and "travel.stays_transactions" in sql

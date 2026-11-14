@@ -15,8 +15,8 @@
           {% if recap.status != 'past' %}· <span class="text-amber-600">{{ recap.status }}: not finished yet</span>{% endif %}</p>
       </div>
       <div class="grid grid-cols-2 md:grid-cols-4 gap-4" id="recap-numbers">
-        <div><p class="text-xs text-gray-400">Spent</p><p class="text-lg font-semibold text-gray-900">{{ recap.spend.total_eur | money }} €</p>
-          <p class="text-[11px] text-gray-400">{{ recap.spend.transaction_count }} transaction(s){% if recap.spend.unconverted_count %} · {{ recap.spend.unconverted_count }} not in EUR yet, not counted{% endif %}</p></div>
+        <div><p class="text-xs text-gray-400">Spent</p><p class="text-lg font-semibold text-gray-900">{{ recap.spend_overall.total_eur | money }} €</p>
+          <p class="text-[11px] text-gray-400">{{ recap.spend_overall.transaction_count }} transaction(s){% if recap.spend_overall.unconverted_count %} · {{ recap.spend_overall.unconverted_count }} not in EUR yet, not counted{% endif %}</p></div>
         <div><p class="text-xs text-gray-400">Visited</p><p class="text-lg font-semibold text-gray-900">{{ recap.visits_visited }}</p>
           <p class="text-[11px] text-gray-400">{{ recap.visits_missed }} missed · {{ recap.visits_planned }} never done</p></div>
         <div><p class="text-xs text-gray-400">Travel</p><p class="text-lg font-semibold text-gray-900">{{ recap.leg_count }} leg{{ '' if recap.leg_count == 1 else 's' }}</p>
@@ -24,6 +24,12 @@
         <div><p class="text-xs text-gray-400">Places</p><p class="text-sm text-gray-700">{{ recap.cities | join(', ') or '—' }}</p>
           <p class="text-[11px] text-gray-400">{{ recap.countries | join(', ') }}</p></div>
       </div>
+      {% if recap.spend_tagged.transaction_count %}
+      <div class="flex flex-wrap gap-x-5 gap-y-1 text-xs text-gray-600" id="recap-parts">
+        <span>Linked to the trip: <strong>{{ recap.spend.total_eur | money }} €</strong> <span class="text-gray-400">({{ recap.spend.transaction_count }})</span></span>
+        <span>Tagged, not linked: <strong>{{ recap.spend_tagged.total_eur | money }} €</strong> <span class="text-gray-400">({{ recap.spend_tagged.transaction_count }})</span></span>
+      </div>
+      {% endif %}
       {% if recap.spend_by_kind %}
       <div class="flex flex-wrap gap-x-5 gap-y-1 text-xs text-gray-600" id="recap-kinds">
         {% for k in recap.spend_by_kind %}<span>{{ k.kind }}: <strong>{{ k.total_eur | money }} €</strong></span>{% endfor %}

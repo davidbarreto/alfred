@@ -442,6 +442,8 @@ from app.features.travel.transaction_links.schemas import (  # noqa: E402
     LinkedTransaction,
     LinkedTransactions,
     PlaceCosts,
+    TaggedTransaction,
+    TaggedTransactions,
     TripCosts,
 )
 from app.features.travel.transaction_links.service import TransferNotLinkableError  # noqa: E402
@@ -527,6 +529,20 @@ class TestCostsAndDefaultTags:
         client, service = link_service
         service.get_trip_costs.return_value = None
         assert client.get("/travel/trips/1/costs", headers=AUTH).status_code == 404
+
+    def test_tagged_transactions(self, link_service):
+        client, service = link_service
+        service.get_tagged.return_value = TaggedTransactions(
+            transactions=[TaggedTransaction(
+                id=1, date=datetime(2026, 12, 18), merchant="M", description=None, type="expense", amount=Decimal("10.00"),
+                currency="EUR", amount_eur=Decimal("10.00"), linked=False,
+            )],
+            cost=Cost(total_eur=Decimal("10.00"), transaction_count=1),
+        )
+        body = client.get("/travel/trips/1/tagged-transactions", headers=AUTH).json()
+        assert body["transactions"][0]["linked"] is False and body["cost"]["total_eur"] == "10.00"
+        service.get_tagged.return_value = None
+        assert client.get("/travel/trips/1/tagged-transactions", headers=AUTH).status_code == 404
 
     def test_place_costs(self, link_service):
         client, service = link_service

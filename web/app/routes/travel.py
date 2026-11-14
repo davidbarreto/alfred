@@ -507,6 +507,15 @@ async def unlinked_page(trip_id: int, request: Request):
     return templates.TemplateResponse(request, "travel_unlinked.html", {"trip": trip, "unlinked": unlinked or []})
 
 
+@router.get("/{trip_id}/tagged", response_class=HTMLResponse)
+async def tagged_page(trip_id: int, request: Request):
+    trip = await safe_get(f"/travel/trips/{trip_id}")
+    if trip is None:
+        return RedirectResponse("/travel", status_code=302)
+    tagged = await safe_get(f"/travel/trips/{trip_id}/tagged-transactions")
+    return templates.TemplateResponse(request, "travel_tagged.html", {"trip": trip, "tagged": tagged or {"transactions": [], "cost": None}})
+
+
 @router.get("/{trip_id}/recap", response_class=HTMLResponse)
 async def recap_page(trip_id: int, request: Request):
     recap = await safe_get(f"/travel/trips/{trip_id}/recap")
@@ -528,6 +537,7 @@ async def trip_page(trip_id: int, request: Request):
     forecast = await safe_get(f"/travel/trips/{trip_id}/forecast")
     while_away = await safe_get(f"/travel/trips/{trip_id}/while-away")
     unlinked = await safe_get(f"/travel/trips/{trip_id}/unlinked-transactions", default=[])
+    tagged = await safe_get(f"/travel/trips/{trip_id}/tagged-transactions")
     entity_costs = {
         kind: {item["id"]: item for item in (costs or {}).get(kind, [])} for kind in ("legs", "stays", "visits")
     }
@@ -549,6 +559,7 @@ async def trip_page(trip_id: int, request: Request):
         "forecast": forecast,
         "while_away": while_away,
         "unlinked": unlinked or [],
+        "tagged": tagged or {"transactions": [], "cost": None},
         "entity_costs": entity_costs,
         "all_visits": all_visits,
         "places": places,

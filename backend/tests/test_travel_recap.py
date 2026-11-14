@@ -55,6 +55,8 @@ def _detail(visits=(), stays=(), legs=0):
 
 COSTS = TripCosts(
     total=Cost(total_eur=Decimal("250.00"), transaction_count=3, unconverted_count=1),
+    tagged=Cost(total_eur=Decimal("40.00"), transaction_count=2),
+    overall=Cost(total_eur=Decimal("290.00"), transaction_count=5, unconverted_count=1),
     by_kind=[KindCost(kind="flight", total_eur=Decimal("120.00"), transaction_count=1)], legs=[], stays=[], visits=[],
 )
 
@@ -69,8 +71,13 @@ class TestBuildRecap:
         assert recap.spend.total_eur == Decimal("250.00") and recap.spend.unconverted_count == 1
         assert recap.spend_by_kind[0].kind == "flight"
 
+    def test_tagged_charges_are_a_separate_part_with_the_overall_beside_it(self):
+        recap = build_recap(_detail(), COSTS)
+        assert recap.spend_tagged.total_eur == Decimal("40.00") and recap.spend_overall.total_eur == Decimal("290.00")
+
     def test_no_costs_means_zero_spend_not_missing(self):
         recap = build_recap(_detail(), None)
+        assert recap.spend_tagged.total_eur == Decimal("0.00") and recap.spend_overall.transaction_count == 0
         assert recap.spend.total_eur == Decimal("0.00") and recap.spend.transaction_count == 0 and recap.spend_by_kind == []
 
     def test_cities_and_countries_come_from_stays_and_visited_visits_only(self):

@@ -9,6 +9,7 @@ from app.features.travel.transaction_links.schemas import (
     LinkedTransactions,
     LinkKind,
     PlaceCosts,
+    TaggedTransactions,
     TransactionLinkCreate,
     TripCosts,
 )
@@ -29,6 +30,15 @@ async def get_trip_costs(trip_id: int, service: TransactionLinkServiceDep) -> Tr
 async def get_unlinked_transactions(trip_id: int, service: TransactionLinkServiceDep) -> list[LinkedTransaction]:
     """Expenses dated within the trip (or tagged with its default tags) and tagged income not linked to any leg, stay or visit."""
     found = await service.get_unlinked(trip_id)
+    if found is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Trip not found")
+    return found
+
+
+@router.get("/trips/{trip_id}/tagged-transactions", response_model=TaggedTransactions)
+async def get_tagged_transactions(trip_id: int, service: TransactionLinkServiceDep) -> TaggedTransactions:
+    """Charges carrying the trip's default tags; `cost` adds only those no leg, stay or visit is linked to."""
+    found = await service.get_tagged(trip_id)
     if found is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Trip not found")
     return found

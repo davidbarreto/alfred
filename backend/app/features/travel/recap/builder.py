@@ -54,5 +54,6 @@ def build_recap(trip: TripDetail, costs: TripCosts | None) -> TripRecap:
         visits_planned=sum(v.status == "planned" for v in all_visits),
         cities=place_cities, countries=countries,
         spend=costs.total if costs else Cost(), spend_by_kind=costs.by_kind if costs else [],
+        spend_tagged=costs.tagged if costs else Cost(), spend_overall=costs.overall if costs else Cost(),
         to_complete=to_complete, highlights=highlights,
     )

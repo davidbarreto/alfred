@@ -44,6 +44,10 @@ class TripRecap(BaseModel):
     countries: list[str]
     spend: Cost
     spend_by_kind: list[KindCost]
+    # Charges with the trip's default tags that no leg, stay or visit counts: a separate part, not in `spend`.
+    spend_tagged: Cost
+    # `spend` plus `spend_tagged`.
+    spend_overall: Cost
     # Visited visits and stays with no grade and/or no notes: what is left to write down after the trip.
     to_complete: list[RecapItem]
     highlights: list[RecapHighlight]

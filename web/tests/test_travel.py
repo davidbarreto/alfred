@@ -72,7 +72,7 @@ def _detail(**kw):
 
 def _route(mock_api, routes):
     # The checklist card on /travel reads this; most tests don't care about it.
-    routes = {"/travel/checklist-template": [], "/travel/trips/1/other-events": [], "/travel/trips/1/forecast": None, "/travel/trips/1/while-away": None, "/travel/trips/1/unlinked-transactions": [], **routes}
+    routes = {"/travel/checklist-template": [], "/travel/trips/1/other-events": [], "/travel/trips/1/forecast": None, "/travel/trips/1/while-away": None, "/travel/trips/1/unlinked-transactions": [], "/travel/trips/1/tagged-transactions": {"transactions": [], "cost": None}, **routes}
 
     async def get(path, params=None):
         for prefix in sorted(routes, key=len, reverse=True):
@@ -480,7 +480,7 @@ def _cost(total="120.00", count=1, unconverted=0, **kw):
 
 def _costs(**kw):
     costs = {
-        "total": _cost("250.00", 3, 1),
+        "total": _cost("250.00", 3, 1), "tagged": _cost("0.00", 0), "overall": _cost("250.00", 3, 1),
         "by_kind": [{"kind": "flight", **_cost("120.00")}, {"kind": "lodging", **_cost("130.00", 2, 1)}],
         "legs": [{"id": 1, **_cost("120.00")}],
         "stays": [{"id": 7, **_cost("130.00", 2, 1)}],
@@ -588,7 +588,7 @@ def _recap(**kw):
         "trip_id": 1, "name": "Example trip", "start_date": "2031-12-17", "end_date": "2031-12-24", "status": "past", "days": 8,
         "leg_count": 2, "stay_count": 1, "visits_visited": 3, "visits_missed": 1, "visits_planned": 2,
         "cities": ["Lisbon", "Porto"], "countries": ["Portugal"],
-        "spend": _cost("250.00", 3, 1), "spend_by_kind": [{"kind": "flight", **_cost("120.00")}],
+        "spend": _cost("250.00", 3, 1), "spend_tagged": _cost("0.00", 0), "spend_overall": _cost("250.00", 3, 1), "spend_by_kind": [{"kind": "flight", **_cost("120.00")}],
         "to_complete": [
             {"kind": "visit", "id": 11, "place_id": 31, "place_name": "Cafe Example", "day": "2031-12-19", "missing": ["grade", "notes"]},
             {"kind": "stay", "id": 7, "place_id": 3, "place_name": "Hotel Example", "day": None, "missing": ["grade"]},
@@ -892,6 +892,61 @@ class TestUnlinkedPreview:
         _route(mock_api, {"/travel/trips/1": None})
         response = client.get("/travel/1/unlinked", follow_redirects=False)
         assert response.status_code == 302 and response.headers["location"] == "/travel"
+
+
+class TestTaggedCharges:
+    def _tagged(self, n, linked_every=2):
+        items = [{"id": i, "date": "2026-12-18", "merchant": f"Shop {i}", "amount": "5.00", "currency": "EUR", "type": "expense",
+                  "linked": i % linked_every == 0} for i in range(n)]
+        return {"transactions": items, "cost": _cost("15.00", 3)}
+
+    def _costs(self):
+        return {"total": _cost("100.00", 2), "tagged": _cost("15.00", 3), "overall": _cost("115.00", 5),
+                "by_kind": [], "legs": [], "stays": [], "visits": []}
+
+    def test_trip_page_lists_five_with_a_link_to_the_rest_and_marks_the_linked_ones(self, client, mock_api):
+        _route(mock_api, {"/travel/trips/1": _detail(), "/travel/places": [], "/travel/trips/1/costs": None,
+                          "/travel/trips/1/tagged-transactions": self._tagged(8)})
+        html = client.get("/travel/1").text
+        assert "Shop 4" in html and "Shop 5" not in html
+        assert 'href="/travel/1/tagged"' in html and "See all 8" in html
+        assert "added to cost" in html and ">linked<" in html
+
+    def test_cost_card_shows_the_tagged_part_apart_and_the_overall_total(self, client, mock_api):
+        _route(mock_api, {"/travel/trips/1": _detail(), "/travel/places": [], "/travel/trips/1/costs": self._costs()})
+        html = client.get("/travel/1").text
+        assert "115.00 €" in html and 'id="cost-tagged"' in html
+        assert "Linked to the trip: <strong>100.00 €" in html and "Tagged, not linked: <strong>15.00 €" in html
+
+    def test_cost_card_appears_for_tagged_charges_alone(self, client, mock_api):
+        costs = {**self._costs(), "total": _cost("0.00", 0), "overall": _cost("15.00", 3)}
+        _route(mock_api, {"/travel/trips/1": _detail(), "/travel/places": [], "/travel/trips/1/costs": costs})
+        assert 'id="trip-costs"' in client.get("/travel/1").text
+
+    def test_no_tagged_charges_means_no_card_and_no_tagged_part(self, client, mock_api):
+        costs = {**self._costs(), "tagged": _cost("0.00", 0), "overall": _cost("100.00", 2)}
+        _route(mock_api, {"/travel/trips/1": _detail(), "/travel/places": [], "/travel/trips/1/costs": costs})
+        html = client.get("/travel/1").text
+        assert 'id="tagged"' not in html and 'id="cost-tagged"' not in html
+
+    def test_tagged_page_lists_every_charge(self, client, mock_api):
+        _route(mock_api, {"/travel/trips/1": _detail(), "/travel/trips/1/tagged-transactions": self._tagged(8)})
+        html = client.get("/travel/1/tagged").text
+        assert "Shop 7" in html and html.count("data-tagged=") == 8 and "15.00 €" in html
+
+    def test_tagged_page_redirects_for_a_missing_trip(self, client, mock_api):
+        _route(mock_api, {"/travel/trips/1": None})
+        response = client.get("/travel/1/tagged", follow_redirects=False)
+        assert response.status_code == 302 and response.headers["location"] == "/travel"
+
+    def test_recap_shows_the_tagged_part_separately(self, client, mock_api):
+        _route(mock_api, {"/travel/trips/1/recap": _recap(spend_tagged=_cost("40.00", 2), spend_overall=_cost("290.00", 5))})
+        html = client.get("/travel/1/recap").text
+        assert "290.00 €" in html and 'id="recap-parts"' in html and "Tagged, not linked: <strong>40.00 €" in html
+
+    def test_recap_without_tagged_charges_has_no_separate_part(self, client, mock_api):
+        _route(mock_api, {"/travel/trips/1/recap": _recap()})
+        assert 'id="recap-parts"' not in client.get("/travel/1/recap").text
 
 
 class TestTransactionDetail:

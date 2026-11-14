@@ -166,6 +166,33 @@ class TransactionLinkRepository:
         )
         return list((await self._session.scalars(stmt)).all())
 
+    async def get_tagged(self, tag_names: list[str], start: datetime, end: datetime) -> list[tuple[Transaction, bool]]:
+        """Expenses and income dated in [start, end) carrying one of the tags, each with whether a leg, stay or
+        visit is linked to it. Transfers are never a trip cost."""
+        lowered = [n.lower() for n in tag_names]
+        if not lowered:
+            return []
+        linked = union(
+            select(legs_transactions.c.transaction_id),
+            select(stays_transactions.c.transaction_id),
+            select(visits_transactions.c.transaction_id),
+        ).subquery()
+        stmt = (
+            select(Transaction, Transaction.id.in_(select(linked.c.transaction_id)))
+            .where(
+                Transaction.type.in_(("expense", "income")),
+                Transaction.date >= start,
+                Transaction.date < end,
+                Transaction.id.in_(
+                    select(transactions_tags.c.transaction_id)
+                    .join(FinanceTag, FinanceTag.id == transactions_tags.c.tag_id)
+                    .where(func.lower(FinanceTag.name).in_(lowered))
+                ),
+            )
+            .order_by(Transaction.date, Transaction.id)
+        )
+        return [(row[0], bool(row[1])) for row in (await self._session.execute(stmt)).all()]
+
     async def tag_expenses_between(self, start: datetime, end: datetime, tag_ids: list[int]) -> int:
         """Give every expense dated in [start, end) each tag it does not carry yet; returns the rows added."""
         added = 0

@@ -198,10 +198,12 @@ class TestRecapAndFilters:
         services.recap.get_recap.return_value = TripRecap(
             trip_id=1, name="Example trip", start_date=date(2031, 12, 17), end_date=date(2031, 12, 24), status="past", days=8,
             leg_count=2, stay_count=1, visits_visited=3, visits_missed=1, visits_planned=0, cities=["Lisbon"], countries=[],
-            spend=Cost(total_eur="250.00", transaction_count=3), spend_by_kind=[], to_complete=[], highlights=[],
+            spend=Cost(total_eur="250.00", transaction_count=3), spend_by_kind=[],
+            spend_tagged=Cost(total_eur="40.00", transaction_count=1), spend_overall=Cost(total_eur="290.00", transaction_count=4), to_complete=[], highlights=[],
         )
         result = await run("travel_trip", "recap", {"trip": "example"}, services)
         assert result["days"] == 8 and result["spend"]["total_eur"] == "250.00"
+        assert result["spend_tagged"]["total_eur"] == "40.00" and result["spend_overall"]["total_eur"] == "290.00"
         services.recap.get_recap.assert_awaited_once_with(1)
 
     async def test_recap_needs_a_trip(self, services):

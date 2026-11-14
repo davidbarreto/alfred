@@ -17,6 +17,8 @@ from app.features.travel.transaction_links.schemas import (
     LinkedTransactions,
     LinkKind,
     PlaceCosts,
+    TaggedTransaction,
+    TaggedTransactions,
     TripCosts,
 )
 from app.features.travel.trips.repository import TripRepository
@@ -39,6 +41,29 @@ class TransferNotLinkableError(ValueError):
 def _cost(row: tuple[Decimal, int, int]) -> Cost:
     total, count, unconverted = row
     return Cost(total_eur=total, transaction_count=count, unconverted_count=unconverted)
+
+
+def _signed_eur(t: TaggedTransaction) -> Decimal:
+    if t.amount_eur is None:
+        return Decimal("0.00")
+    return -abs(t.amount_eur) if t.type == "income" else abs(t.amount_eur)
+
+
+def _sum_cost(items: list[TaggedTransaction]) -> Cost:
+    """Same rule as the SQL costs: expenses add, refunds subtract, no EUR amount is reported, not zeroed."""
+    return Cost(
+        total_eur=sum((_signed_eur(t) for t in items), Decimal("0.00")).quantize(Decimal("0.01")),
+        transaction_count=len(items),
+        unconverted_count=sum(t.amount_eur is None for t in items),
+    )
+
+
+def _add_costs(a: Cost, b: Cost) -> Cost:
+    return Cost(
+        total_eur=a.total_eur + b.total_eur,
+        transaction_count=a.transaction_count + b.transaction_count,
+        unconverted_count=a.unconverted_count + b.unconverted_count,
+    )
 
 
 class TransactionLinkService:
@@ -84,7 +109,8 @@ class TransactionLinkService:
         return removed
 
     async def get_trip_costs(self, trip_id: int) -> TripCosts | None:
-        if await self._trip_repo.get_trip(trip_id) is None:
+        trip = await self._trip_repo.get_trip(trip_id)
+        if trip is None:
             return None
         legs = await self._leg_repo.get_legs(trip_id)
         stays = await self._stay_repo.get_stays(trip_id)
@@ -95,13 +121,35 @@ class TransactionLinkService:
             return [EntityCost(id=i.id, **_cost(costs[i.id]).model_dump()) for i in items if i.id in costs]
 
         by_kind = await self._repo.get_trip_costs_by_kind(trip_id)
+        total = _cost(await self._repo.get_trip_total(trip_id))
+        tagged = (await self._tagged(trip)).cost
         return TripCosts(
-            total=_cost(await self._repo.get_trip_total(trip_id)),
+            total=total,
+            tagged=tagged,
+            overall=_add_costs(total, tagged),
             by_kind=[KindCost(kind=kind, **_cost(row).model_dump()) for kind, row in by_kind.items()],
             legs=await per_entity("legs", legs),
             stays=await per_entity("stays", stays),
             visits=await per_entity("visits", visits),
         )
+
+    async def _tagged(self, trip) -> TaggedTransactions:
+        found = await self._repo.get_tagged(
+            parse_default_tag_names(trip.default_tag_names),
+            datetime.combine(trip.start_date - timedelta(days=TAG_LEAD_DAYS), time.min),
+            datetime.combine(trip.end_date + timedelta(days=TAG_TAIL_DAYS + 1), time.min),
+        )
+        items = [TaggedTransaction(**LinkedTransaction.model_validate(t).model_dump(), linked=linked) for t, linked in found]
+        return TaggedTransactions(transactions=items, cost=_sum_cost([i for i in items if not i.linked]))
+
+    async def get_tagged(self, trip_id: int) -> TaggedTransactions | None:
+        """Charges carrying the trip's default tags, with the cost of those no leg, stay or visit counts yet."""
+        trip = await self._trip_repo.get_trip(trip_id)
+        if trip is None:
+            return None
+        tagged = await self._tagged(trip)
+        logger.debug("Tagged transactions: trip_id=%d count=%d", trip_id, len(tagged.transactions))
+        return tagged
 
     async def get_unlinked(self, trip_id: int) -> list[LinkedTransaction] | None:
         """Charges that look like part of the trip but are not linked to any leg, stay or visit yet."""

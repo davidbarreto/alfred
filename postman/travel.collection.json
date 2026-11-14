@@ -2351,6 +2351,77 @@
       }
     },
     {
+      "name": "60a - Get Tagged Transactions",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 200', () => pm.response.to.have.status(200));",
+              "pm.test('Charges and the unlinked cost are returned', () => { const j = pm.response.json(); pm.expect(j.transactions).to.be.an('array'); pm.expect(j.cost).to.have.property('total_eur'); });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/trips/{{travel_trip_id}}/tagged-transactions",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "trips",
+            "{{travel_trip_id}}",
+            "tagged-transactions"
+          ]
+        }
+      }
+    },
+    {
+      "name": "60b - Get Tagged Transactions Of Unknown Trip",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status is 404', () => pm.response.to.have.status(404));"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/travel/trips/999999999/tagged-transactions",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "travel",
+            "trips",
+            "999999999",
+            "tagged-transactions"
+          ]
+        }
+      }
+    },
+    {
       "name": "61 - Move Visits Of A Day",
       "event": [
         {

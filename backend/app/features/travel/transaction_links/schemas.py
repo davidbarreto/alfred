@@ -34,6 +34,19 @@ class Cost(BaseModel):
     unconverted_count: int = 0
 
 
+class TaggedTransaction(LinkedTransaction):
+    """A charge carrying one of the trip's default tags; `linked` says a leg, stay or visit already counts it."""
+
+    linked: bool
+
+
+class TaggedTransactions(BaseModel):
+    """`cost` covers only the tagged charges that are not linked, because linked ones are already in the trip cost."""
+
+    transactions: list[TaggedTransaction]
+    cost: Cost
+
+
 class LinkedTransactions(BaseModel):
     transactions: list[LinkedTransaction]
     cost: Cost
@@ -52,6 +65,10 @@ class TripCosts(BaseModel):
     stays as `lodging` and visits by place kind, so a charge linked under two kinds appears under both."""
 
     total: Cost
+    # Charges carrying the trip's default tags that no leg, stay or visit is linked to: a separate part, not in `total`.
+    tagged: Cost = Cost()
+    # `total` plus `tagged`: every charge counted once.
+    overall: Cost = Cost()
     by_kind: list[KindCost]
     legs: list[EntityCost]
     stays: list[EntityCost]

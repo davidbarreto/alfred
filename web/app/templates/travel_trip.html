@@ -43,6 +43,14 @@
       <div class="flex flex-wrap gap-1">{% for tag in trip.tags %}<span class="px-2 py-0.5 rounded-full text-[11px] bg-gray-100 text-gray-600">{{ tag }}</span>{% endfor %}</div>
       {% endif %}
       {% if trip.notes %}<p class="text-sm text-gray-700 whitespace-pre-line">{{ trip.notes }}</p>{% endif %}
+      {% if checklist_note %}
+      <details id="checklist-note">
+        <summary class="text-xs text-gray-500 cursor-pointer"><i class="ti ti-checklist"></i> Checklist note: <strong>{{ checklist_note.title }}</strong> <span class="text-gray-400">#{{ checklist_note.id }}</span></summary>
+        <p class="mt-1 text-xs text-gray-700 whitespace-pre-line max-h-60 overflow-y-auto">{{ checklist_note.content }}</p>
+      </details>
+      {% elif trip.checklist_note_id %}
+      <p class="text-xs text-gray-400" id="checklist-note">Checklist note #{{ trip.checklist_note_id }} (archived or unavailable)</p>
+      {% endif %}
       {% if trip.preferences %}<p class="text-xs text-gray-500 whitespace-pre-line"><strong>Preferences:</strong> {{ trip.preferences }}</p>{% endif %}
       {% if trip.default_tag_names %}<p class="text-xs text-gray-400">Default tags (expenses, calendar events): {{ trip.default_tag_names }} <span id="apply-tags-msg" class="text-gray-500"></span></p>{% endif %}
       <p class="text-xs text-gray-500" id="generate-checklist-msg"></p>
@@ -61,6 +69,14 @@
           <input name="tags" value="{{ trip.tags | join(', ') }}" class="input input-sm input-bordered w-44"></label>
         <label class="space-y-1"><span class="block text-xs text-gray-500">Default tags (transactions, calendar events)</span>
           <input name="default_tag_names" value="{{ trip.default_tag_names or '' }}" class="input input-sm input-bordered w-44"></label>
+        <label class="space-y-1"><span class="block text-xs text-gray-500">Checklist note</span>
+          <select name="checklist_note_id" class="select select-sm select-bordered w-56">
+            <option value="">None</option>
+            {% if trip.checklist_note_id and not (notes | selectattr('id', 'equalto', trip.checklist_note_id) | list) %}
+            <option value="{{ trip.checklist_note_id }}" selected>#{{ trip.checklist_note_id }}{% if checklist_note %} {{ checklist_note.title }}{% endif %}</option>
+            {% endif %}
+            {% for note in notes %}<option value="{{ note.id }}" {% if note.id == trip.checklist_note_id %}selected{% endif %}>{{ note.title }}</option>{% endfor %}
+          </select></label>
         <label class="space-y-1 w-full"><span class="block text-xs text-gray-500">Notes</span>
           <textarea name="notes" rows="3" class="textarea textarea-bordered w-full text-sm">{{ trip.notes or '' }}</textarea></label>
         <label class="space-y-1 w-full"><span class="block text-xs text-gray-500">Preferences</span>
@@ -440,6 +456,7 @@ document.getElementById('edit-trip').addEventListener('submit', async (event) =>
   const body = collect(form, ['travelers', 'default_tag_names', 'notes', 'preferences'], { editing: true });
   body.name = form.elements.name.value; body.start_date = form.elements.start_date.value; body.end_date = form.elements.end_date.value;
   body.tags = form.elements.tags.value.split(',').map(t => t.trim()).filter(Boolean);
+  body.checklist_note_id = form.elements.checklist_note_id.value ? Number(form.elements.checklist_note_id.value) : null;
   const { ok, data } = await send('PATCH', `/travel/trips/${TRIP_ID}`, body);
   if (!ok) { form.querySelector('.form-error').textContent = data.error || 'Something went wrong.'; return; }
   const datesChanged = body.start_date !== TRIP_START || body.end_date !== TRIP_END;

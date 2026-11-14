@@ -72,7 +72,7 @@ def _detail(**kw):
 
 def _route(mock_api, routes):
     # The checklist card on /travel reads this; most tests don't care about it.
-    routes = {"/travel/checklist-template": [], "/travel/trips/1/other-events": [], "/travel/trips/1/forecast": None, "/travel/trips/1/while-away": None, "/travel/trips/1/unlinked-transactions": [], "/travel/trips/1/tagged-transactions": {"transactions": [], "cost": None}, **routes}
+    routes = {"/travel/checklist-template": [], "/travel/trips/1/other-events": [], "/travel/trips/1/forecast": None, "/travel/trips/1/while-away": None, "/travel/trips/1/unlinked-transactions": [], "/travel/trips/1/tagged-transactions": {"transactions": [], "cost": None}, "/organizer/notes": [], **routes}
 
     async def get(path, params=None):
         for prefix in sorted(routes, key=len, reverse=True):
@@ -193,6 +193,28 @@ class TestTripPage:
         html = client.get("/travel/1").text
         # the timeline row plus the leg and stay the default warning points at
         assert html.count("data-warning-row") == 3
+
+    def test_checklist_note_picker_lists_notes_and_preselects_the_linked_one(self, client, mock_api):
+        detail = _detail(checklist_note_id=5)
+        notes = [{"id": 4, "title": "Packing", "content": "socks"}, {"id": 5, "title": "Pre-trip", "content": "passport\nvisa"}]
+        _route(mock_api, {"/travel/trips/1/costs": None, "/travel/trips/1": detail, "/travel/places": [],
+                          "/organizer/notes/5": notes[1], "/organizer/notes": notes})
+        html = client.get("/travel/1").text
+        assert '<select name="checklist_note_id"' in html
+        assert '<option value="5" selected>Pre-trip</option>' in html and '<option value="4" >Packing</option>' in html
+        assert 'id="checklist-note"' in html and "Checklist note: <strong>Pre-trip</strong>" in html and "passport" in html
+
+    def test_unavailable_linked_note_is_kept_selectable(self, client, mock_api):
+        _route(mock_api, {"/travel/trips/1/costs": None, "/travel/trips/1": _detail(checklist_note_id=9), "/travel/places": [],
+                          "/organizer/notes/9": None})
+        html = client.get("/travel/1").text
+        assert '<option value="9" selected>#9</option>' in html
+        assert "Checklist note #9 (archived or unavailable)" in html
+
+    def test_no_linked_note_shows_no_note_line(self, client, mock_api):
+        _route(mock_api, {"/travel/trips/1/costs": None, "/travel/trips/1": _detail(), "/travel/places": []})
+        html = client.get("/travel/1").text
+        assert 'id="checklist-note"' not in html and '<option value="">None</option>' in html
 
     def test_travelers_is_a_textarea_shown_on_its_own_lines(self, client, mock_api):
         detail = _detail()

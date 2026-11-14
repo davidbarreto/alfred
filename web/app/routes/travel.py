@@ -565,6 +565,10 @@ async def trip_page(trip_id: int, request: Request):
     while_away = await safe_get(f"/travel/trips/{trip_id}/while-away")
     unlinked = await safe_get(f"/travel/trips/{trip_id}/unlinked-transactions", default=[])
     tagged = await safe_get(f"/travel/trips/{trip_id}/tagged-transactions")
+    notes = await safe_get("/organizer/notes", params={"limit": 200}, default=[])
+    checklist_note = (
+        await safe_get(f"/organizer/notes/{trip['checklist_note_id']}") if trip.get("checklist_note_id") else None
+    )
     entity_costs = {
         kind: {item["id"]: item for item in (costs or {}).get(kind, [])} for kind in ("legs", "stays", "visits")
     }
@@ -587,6 +591,8 @@ async def trip_page(trip_id: int, request: Request):
         "while_away": while_away,
         "unlinked": unlinked or [],
         "tagged": tagged or {"transactions": [], "cost": None},
+        "notes": notes or [],
+        "checklist_note": checklist_note,
         "entity_costs": entity_costs,
         "all_visits": all_visits,
         "places": places,
